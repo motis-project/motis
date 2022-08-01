@@ -42,27 +42,33 @@ void csa::import(motis::module::import_dispatcher& reg) {
 }
 
 void csa::init(motis::module::registry& reg) {
-  reg.register_op("/csa", [&](msg_ptr const& msg) {
+  reg.register_op("/csa",
+                  [&](msg_ptr const& msg) {
 #ifdef MOTIS_AVX
-    return route(msg, implementation_type::CPU_SSE);
+                    return route(msg, implementation_type::CPU_SSE);
 #else
-    return route(msg, implementation_type::CPU);
+                    return route(msg, implementation_type::CPU);
 #endif
-  });
-  reg.register_op("/csa/cpu", [&](msg_ptr const& msg) {
-    return route(msg, implementation_type::CPU);
-  });
+                  },
+                  {kScheduleReadAccess});
+  reg.register_op(
+      "/csa/cpu",
+      [&](msg_ptr const& msg) { return route(msg, implementation_type::CPU); },
+      {kScheduleReadAccess});
 
 #ifdef MOTIS_AVX
-  reg.register_op("/csa/cpu/sse", [&](msg_ptr const& msg) {
-    return route(msg, implementation_type::CPU_SSE);
-  });
+  reg.register_op("/csa/cpu/sse",
+                  [&](msg_ptr const& msg) {
+                    return route(msg, implementation_type::CPU_SSE);
+                  },
+                  {kScheduleReadAccess});
 #endif
 
 #ifdef MOTIS_CUDA
-  reg.register_op("/csa/gpu", [&](msg_ptr const& msg) {
-    return route(msg, implementation_type::GPU);
-  });
+  reg.register_op(
+      "/csa/gpu",
+      [&](msg_ptr const& msg) { return route(msg, implementation_type::GPU); },
+      {kScheduleReadAccess});
 #endif
 
   reg.register_op(

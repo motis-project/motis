@@ -1,9 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import { useAtomCallback } from "jotai/utils";
 import { zip } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
 import {
@@ -21,7 +21,7 @@ import {
   RtCancelMeasureData,
   isRtCancelMeasureU,
 } from "@/data/measures";
-import { scheduleAtom } from "@/data/simulation";
+import { scheduleAtom } from "@/data/multiverse";
 
 import classNames from "@/util/classNames";
 

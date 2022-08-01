@@ -75,7 +75,7 @@ type alias Model =
     , fromName : Maybe String
     , toName : Maybe String
     , lastRequestId : Int
-    , hoveredTripSegments : Maybe ( List RVConnectionSegmentTrip )
+    , hoveredTripSegments : Maybe (List RVConnectionSegmentTrip)
     , hoveredWalkSegment : Maybe RVConnectionSegmentWalk
     }
 
@@ -180,6 +180,7 @@ type Msg
     | MapSetTooltip MapTooltip
     | MouseEnterConnection Int Journey
     | MouseLeaveConnection Int Journey
+    | ResetAll
 
 
 type ExtendIntervalType
@@ -339,6 +340,30 @@ update msg model =
 
         MouseLeaveConnection idx journey ->
             model ! [ RailViz.highlightConnections [] ]
+
+        ResetAll ->
+            { model
+                | loading = False
+                , loadingBefore = False
+                , loadingAfter = False
+                , journeys = []
+                , journeyTransportGraphs = []
+                , indexOffset = 0
+                , errorMessage = Nothing
+                , errorBefore = Nothing
+                , errorAfter = Nothing
+                , scheduleInfo = Nothing
+                , routingRequest = Nothing
+                , newJourneys = []
+                , allowExtend = True
+                , labels = []
+                , fromName = Nothing
+                , toName = Nothing
+                , lastRequestId = 0
+                , hoveredTripSegments = Nothing
+                , hoveredWalkSegment = Nothing
+            }
+                ! [ RailViz.setConnections [] ]
 
 
 extendSearchInterval :
@@ -981,7 +1006,7 @@ extendIntervalButton direction (Config { internalMsg }) locale model =
         ]
 
 
-journeyIsHighlighted : Int -> Maybe ( List RVConnectionSegmentTrip ) -> Maybe RVConnectionSegmentWalk -> Bool
+journeyIsHighlighted : Int -> Maybe (List RVConnectionSegmentTrip) -> Maybe RVConnectionSegmentWalk -> Bool
 journeyIsHighlighted idx mbTripSegs mbWalkSeg =
     let
         checkTrip tripSeg =

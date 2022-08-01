@@ -156,7 +156,8 @@ raptor::~raptor() = default;
 void raptor::init(motis::module::registry& reg) {
   impl_ = std::make_unique<impl>(get_sched(), config_);
 
-  reg.register_op("/raptor_cpu", [&](auto&& m) { return impl_->route_cpu(m); });
+  reg.register_op("/raptor_cpu", [&](auto&& m) { return impl_->route_cpu(m); },
+                  {kScheduleReadAccess});
 
   reg.register_op(
       "/raptor/update_timetable",
@@ -169,10 +170,13 @@ void raptor::init(motis::module::registry& reg) {
           ctx::access_t::WRITE}});
 
 #if defined(MOTIS_CUDA)
-  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); });
-  reg.register_op("/raptor_gpu", [&](auto&& m) { return impl_->route_gpu(m); });
+  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); },
+                  {kScheduleReadAccess});
+  reg.register_op("/raptor_gpu", [&](auto&& m) { return impl_->route_gpu(m); },
+                  {kScheduleReadAccess});
 #else
-  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); });
+  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); },
+                  {kScheduleReadAccess});
 #endif
 }
 

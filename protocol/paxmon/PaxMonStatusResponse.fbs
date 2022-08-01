@@ -4,6 +4,7 @@ namespace motis.paxmon;
 
 table PaxMonStatusResponse {
   system_time: ulong;
+  multiverse_id: long;
 
   active_groups: ulong;
   trip_count: ulong;

@@ -121,13 +121,7 @@ struct trip {
     route_edge(edge const* e) {  // NOLINT
       if (e != nullptr) {
         route_node_ = e->from_;
-        for (auto i = 0U; i < route_node_->edges_.size(); ++i) {
-          if (&route_node_->edges_[i] == e) {
-            outgoing_edge_idx_ = i;
-            return;
-          }
-        }
-        assert(false);
+        outgoing_edge_idx_ = route_node_->edges_.index_of(e);
       }
     }
 
@@ -166,6 +160,7 @@ struct trip {
   };
 
   full_trip_id id_;
+  mcd::string gtfs_trip_id_;
   ptr<mcd::vector<route_edge> const> edges_{nullptr};
   lcon_idx_t lcon_idx_{0U};
   trip_idx_t trip_idx_{0U};  // position in schedule.trip_mem_

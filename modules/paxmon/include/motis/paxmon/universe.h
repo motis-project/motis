@@ -30,6 +30,7 @@
 #include "motis/paxmon/rt_update_context.h"
 #include "motis/paxmon/statistics.h"
 #include "motis/paxmon/trip_data_container.h"
+#include "motis/paxmon/universe_id.h"
 #include "motis/paxmon/update_tracker.h"
 
 namespace motis::paxmon {
@@ -161,8 +162,6 @@ struct edge {
   merged_trips_idx trips_{};
   pci_index pci_{};
 };
-
-using universe_id = std::uint32_t;
 
 struct universe {
   passenger_group const* get_passenger_group(passenger_group_index id) const;

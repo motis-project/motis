@@ -80,11 +80,13 @@ void rt::init(motis::module::registry& reg) {
       },
       {});
 
-  reg.register_op("/rt/dump", [&](motis::module::msg_ptr const& msg) {
-    auto const m = motis_content(RtWriteGraphRequest, msg);
-    write_graph(m->path()->str(), get_sched());
-    return motis::module::msg_ptr{};
-  });
+  reg.register_op("/rt/dump",
+                  [&](motis::module::msg_ptr const& msg) {
+                    auto const m = motis_content(RtWriteGraphRequest, msg);
+                    write_graph(m->path()->str(), get_sched());
+                    return motis::module::msg_ptr{};
+                  },
+                  {::motis::module::kScheduleReadAccess});
 }
 
 rt_handler& rt::get_or_create_rt_handler(schedule& sched,

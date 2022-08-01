@@ -25,6 +25,14 @@ struct statistics {
     c("track", s.track_change_msgs_);
     c("free text", s.free_text_msgs_);
 
+    o << "\nseparate trip:\n";
+    c("edge fit", s.edge_fit_);
+    c("trip fit", s.trip_fit_);
+    c("edge fit | trip fit", s.edge_fit_or_trip_fit_);
+    c("edge fit & trip fit", s.edge_fit_and_trip_fit_);
+    c("edge fit 1", s.edge_fit_1_);
+    c("total", s.total_);
+
     o << "\nevs:\n";
     c("total", s.total_evs_);
     c("invalid time", s.ev_invalid_time_);
@@ -184,6 +192,13 @@ struct statistics {
             additional_station_mismatch_ + additional_duplicate_trip_ +
             canceled_trp_not_found_) != 0;
   }
+
+  unsigned edge_fit_ = 0;
+  unsigned trip_fit_ = 0;
+  unsigned edge_fit_and_trip_fit_ = 0;
+  unsigned edge_fit_or_trip_fit_ = 0;
+  unsigned edge_fit_1_ = 0;
+  unsigned total_ = 0;
 
   unsigned delay_msgs_ = 0;
   unsigned cancel_msgs_ = 0;

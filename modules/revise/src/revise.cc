@@ -15,7 +15,8 @@ revise::revise() : module("Revise", "revise") {}
 revise::~revise() = default;
 
 void revise::init(motis::module::registry& reg) {
-  reg.register_op("/revise", [&](msg_ptr const& m) { return update(m); });
+  reg.register_op("/revise", [&](msg_ptr const& m) { return update(m); },
+                  {kScheduleReadAccess});
 }
 
 msg_ptr revise::update(msg_ptr const& msg) {

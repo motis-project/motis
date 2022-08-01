@@ -519,7 +519,7 @@ private:
     if (trp == nullptr) {
       trp = sched_.trip_mem_
                 .emplace_back(mcd::make_unique<trip>(
-                    ftid, edges, lcon_idx,
+                    ftid, "", edges, lcon_idx,
                     static_cast<trip_idx_t>(sched_.trip_mem_.size()),
                     trip_debug{}, mcd::vector<uint32_t>{},
                     boost::uuids::nil_uuid()))

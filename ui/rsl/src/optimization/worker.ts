@@ -48,6 +48,7 @@ async function optimizeTripV1(
   const forkResponse = await sendPaxMonForkUniverseRequest({
     universe: baseUniverse,
     fork_schedule: false,
+    ttl: 120,
   });
   const simUniverse = forkResponse.universe;
   log(

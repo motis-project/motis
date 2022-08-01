@@ -2,13 +2,13 @@ port module Port exposing
     ( clearRailVizError
     , handleRailVizError
     , localStorageSet
+    , setGBFSSearchOptions
     , setPPRSearchOptions
     , setRoutingResponses
     , setSimulationTime
     , setTimeOffset
     , showStationDetails
     , showTripDetails
-    , setGBFSSearchOptions
     )
 
 import Data.Connection.Types exposing (TripId)

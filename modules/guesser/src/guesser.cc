@@ -32,22 +32,30 @@ std::string trim(std::string const& s) {
 guesser::guesser() : module("Guesser Options", "guesser") {}
 
 void guesser::init(motis::module::registry& reg) {
+  add_shared_data(to_res_id(global_res_id::GUESSER_DATA), 0);
   update_stations();
-  reg.register_op("/guesser", [this](msg_ptr const& m) { return guess(m); });
-  reg.subscribe("/rt/update", [this](msg_ptr const& m) {
-    using namespace motis::rt;
-    auto const update = motis_content(RtUpdates, m);
-    if (update->schedule() != 0U) {
-      return nullptr;  // multiple schedules not yet supported
-    }
-    if (std::any_of(update->updates()->begin(), update->updates()->end(),
-                    [](RtUpdate const* u) {
-                      return u->content_type() == Content_RtStationAdded;
-                    })) {
-      update_stations();
-    }
-    return nullptr;
-  });
+  reg.register_op(
+      "/guesser", [this](msg_ptr const& m) { return guess(m); },
+      {kScheduleReadAccess,
+       {to_res_id(global_res_id::GUESSER_DATA), ctx::access_t::READ}});
+  reg.subscribe(
+      "/rt/update",
+      [this](msg_ptr const& m) {
+        using namespace motis::rt;
+        auto const update = motis_content(RtUpdates, m);
+        if (update->schedule() != 0U) {
+          return nullptr;  // multiple schedules not yet supported
+        }
+        if (std::any_of(update->updates()->begin(), update->updates()->end(),
+                        [](RtUpdate const* u) {
+                          return u->content_type() == Content_RtStationAdded;
+                        })) {
+          update_stations();
+        }
+        return nullptr;
+      },
+      {kScheduleReadAccess,
+       {to_res_id(global_res_id::GUESSER_DATA), ctx::access_t::WRITE}});
 }
 
 void guesser::update_stations() {

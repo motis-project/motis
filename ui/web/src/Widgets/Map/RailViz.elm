@@ -377,8 +377,8 @@ mapId =
 view : Localization -> String -> Model -> Html Msg
 view locale permalink model =
     div [ class "map-container" ]
-        [ div [ id ( mapId ++  "-background" ) ] []
-        , div [ id ( mapId ++  "-foreground" ) ] []
+        [ div [ id (mapId ++ "-background") ] []
+        , div [ id (mapId ++ "-foreground") ] []
         , railVizTooltip locale model
         , div [ class "map-bottom-overlay" ]
             [ simulationTimeOverlay locale permalink model

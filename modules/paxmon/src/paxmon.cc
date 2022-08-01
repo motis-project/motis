@@ -33,6 +33,7 @@
 #include "motis/paxmon/api/get_interchanges.h"
 #include "motis/paxmon/api/get_status.h"
 #include "motis/paxmon/api/get_trip_load_info.h"
+#include "motis/paxmon/api/keep_alive.h"
 #include "motis/paxmon/api/remove_groups.h"
 
 #include "motis/paxmon/broken_interchanges_report.h"
@@ -128,7 +129,7 @@ void paxmon::reg_subc(motis::module::subc_reg& r) {
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
   add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
-  data_.multiverse_.create_default_universe();
+  data_.multiverse_->create_default_universe();
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
@@ -181,16 +182,22 @@ void paxmon::init(motis::module::registry& reg) {
         }
         LOG(info) << "tracking " << primary_universe().passenger_groups_.size()
                   << " passenger groups";
+
+        shared_data_->register_timer("PaxMon Universe GC",
+                                     boost::posix_time::seconds{10},
+                                     [this]() { universe_gc(); }, {});
       },
       {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
                            ctx::access_t::READ},
        ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
                            ctx::access_t::READ}});
 
-  reg.register_op("/paxmon/flush", [&](msg_ptr const&) -> msg_ptr {
-    stats_writer_->flush();
-    return {};
-  });
+  reg.register_op("/paxmon/flush",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    stats_writer_->flush();
+                    return {};
+                  },
+                  {});
 
   reg.subscribe("/rt/update",
                 [&](msg_ptr const& msg) { return rt_update(msg); }, {});
@@ -361,6 +368,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/destroy_universe",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::destroy_universe(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/keep_alive",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::keep_alive(data_, msg);
                   },
                   {});
 
@@ -540,7 +553,7 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   auto const update = motis_content(RtUpdates, msg);
   auto const schedule_res_id = update->schedule();
   auto const uv_ids =
-      data_.multiverse_.universes_using_schedule(schedule_res_id);
+      data_.multiverse_->universes_using_schedule(schedule_res_id);
   for (auto const uv_id : uv_ids) {
     auto const uv_access =
         get_universe_and_schedule(data_, uv_id, ctx::access_t::WRITE);
@@ -555,7 +568,7 @@ void paxmon::rt_updates_applied(msg_ptr const& msg) {
   auto const rgu = motis_content(RtGraphUpdated, msg);
   auto const schedule_res_id = rgu->schedule();
   auto const uv_ids =
-      data_.multiverse_.universes_using_schedule(schedule_res_id);
+      data_.multiverse_->universes_using_schedule(schedule_res_id);
   for (auto const uv_id : uv_ids) {
     auto const uv_access =
         get_universe_and_schedule(data_, uv_id, ctx::access_t::WRITE);
@@ -656,6 +669,10 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
     utl::verify(check_graph_integrity(uv, sched),
                 "rt_updates_applied: check_graph_integrity (end)");
   }
+}
+
+void paxmon::universe_gc() const {
+  data_.multiverse_->destroy_expired_universes();
 }
 
 universe& paxmon::primary_universe() {

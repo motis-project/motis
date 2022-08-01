@@ -29,23 +29,26 @@ struct intermodal_itest : public motis_instance_test {
   intermodal_itest()
       : motis::test::motis_instance_test(dataset_opt,
                                          {"intermodal", "routing", "lookup"}) {
-    instance_->register_op("/osrm/one_to_many", [](msg_ptr const& msg) {
-      auto const req = motis_content(OSRMOneToManyRequest, msg);
-      auto one = latlng{req->one()->lat(), req->one()->lng()};
+    instance_->register_op(
+        "/osrm/one_to_many",
+        [](msg_ptr const& msg) {
+          auto const req = motis_content(OSRMOneToManyRequest, msg);
+          auto one = latlng{req->one()->lat(), req->one()->lng()};
 
-      std::vector<Cost> costs;
-      for (auto const& loc : *req->many()) {
-        auto dist = distance(one, {loc->lat(), loc->lng()});
-        costs.emplace_back(dist / WALK_SPEED, dist);
-      }
+          std::vector<Cost> costs;
+          for (auto const& loc : *req->many()) {
+            auto dist = distance(one, {loc->lat(), loc->lng()});
+            costs.emplace_back(dist / WALK_SPEED, dist);
+          }
 
-      message_creator mc;
-      mc.create_and_finish(
-          MsgContent_OSRMOneToManyResponse,
-          CreateOSRMOneToManyResponse(mc, mc.CreateVectorOfStructs(costs))
-              .Union());
-      return make_msg(mc);
-    });
+          message_creator mc;
+          mc.create_and_finish(
+              MsgContent_OSRMOneToManyResponse,
+              CreateOSRMOneToManyResponse(mc, mc.CreateVectorOfStructs(costs))
+                  .Union());
+          return make_msg(mc);
+        },
+        {});
   }
 };
 

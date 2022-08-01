@@ -131,27 +131,35 @@ void path::init(registry& r) {
   }
 
   // used by: railviz
-  r.register_op("/path/boxes", [this](msg_ptr const&) { return boxes(); });
+  r.register_op("/path/boxes", [this](msg_ptr const&) { return boxes(); },
+                {{to_res_id(global_res_id::PATH_DATA), ctx::access_t::READ}});
 
   // used by: railviz, sim, legacydebugger
   r.register_op("/path/by_trip_id",
-                [this](msg_ptr const& m) { return by_trip_id(m); });
+                [this](msg_ptr const& m) { return by_trip_id(m); },
+                {{to_res_id(global_res_id::PATH_DATA), ctx::access_t::READ},
+                 kScheduleReadAccess});
 
   // used by: sim, legacydebugger
   r.register_op("/path/by_station_seq",
-                [this](msg_ptr const& m) { return by_station_seq(m); });
+                [this](msg_ptr const& m) { return by_station_seq(m); },
+                {{to_res_id(global_res_id::PATH_DATA), ctx::access_t::READ}});
 
   // used by: railviz
   r.register_op("/path/by_trip_id_batch",
-                [this](msg_ptr const& m) { return by_trip_id_batch(m); });
+                [this](msg_ptr const& m) { return by_trip_id_batch(m); },
+                {{to_res_id(global_res_id::PATH_DATA), ctx::access_t::READ},
+                 kScheduleReadAccess});
 
   // used by: debugger
   r.register_op("/path/by_tile_feature",
-                [this](msg_ptr const& m) { return by_tile_feature(m); });
+                [this](msg_ptr const& m) { return by_tile_feature(m); },
+                {{to_res_id(global_res_id::PATH_DATA), ctx::access_t::READ}});
 
   // used by: debugger
   r.register_op("/path/tiles",
-                [this](msg_ptr const& m) { return path_tiles(m); });
+                [this](msg_ptr const& m) { return path_tiles(m); },
+                {{to_res_id(global_res_id::PATH_DATA), ctx::access_t::READ}});
 }
 
 msg_ptr path::boxes() const {

@@ -520,14 +520,15 @@ encodeGBFSOptions opt =
                 , "enabled" => Encode.bool gbfs.enabled
                 ]
     in
-        opt |> List.map encodeGBFS |> Encode.list 
+    opt |> List.map encodeGBFS |> Encode.list
 
 
 getGBFSOptions : Model -> List ModePicker.GBFS
 getGBFSOptions model =
-    (Dict.union
+    Dict.union
         (model.fromModes.gbfs |> Dict.filter (\k v -> v.enabled))
-        (model.toModes.gbfs |> Dict.filter (\k v -> v.enabled))) |> Dict.values
+        (model.toModes.gbfs |> Dict.filter (\k v -> v.enabled))
+        |> Dict.values
 
 
 getCombinedSearchProfile : Model -> SearchOptions
@@ -553,19 +554,26 @@ getCombinedSearchProfile model =
 checkTypeaheadUpdate : Typeahead.Msg -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
 checkTypeaheadUpdate msg ( model, cmds ) =
     let
-        model_ =
+        ( model_, connCmd ) =
             case msg of
                 Typeahead.StationSuggestionsError err ->
                     let
-                        ( m, _ ) =
+                        ( m, connCmd ) =
                             Connections.update (Connections.SetError err) model.connections
                     in
-                    { model | connections = m }
+                    ( { model | connections = m }, Cmd.map ConnectionsUpdate connCmd )
+
+                Typeahead.Empty ->
+                    let
+                        ( m, connCmd ) =
+                            Connections.update Connections.ResetAll model.connections
+                    in
+                    ( { model | connections = m }, Cmd.map ConnectionsUpdate connCmd )
 
                 _ ->
-                    model
+                    ( model, Cmd.none )
     in
-    checkRoutingRequest ( model_, Cmd.batch [ cmds, setMapMarkers model_ ] )
+    checkRoutingRequest ( model_, Cmd.batch [ cmds, setMapMarkers model_, connCmd ] )
 
 
 setMapMarkers : Model -> Cmd msg

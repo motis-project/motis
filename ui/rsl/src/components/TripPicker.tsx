@@ -9,7 +9,7 @@ import { PaxMonTripInfo } from "@/api/protocol/motis/paxmon";
 import { ServiceClass } from "@/api/constants";
 import { usePaxMonFindTripsQuery } from "@/api/paxmon";
 
-import { universeAtom } from "@/data/simulation";
+import { universeAtom } from "@/data/multiverse";
 
 import classNames from "@/util/classNames";
 

@@ -1,6 +1,6 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { useQuery } from "react-query";
 
 import { Station, TripId } from "@/api/protocol/motis";
 import { GroupedPassengerGroups } from "@/api/protocol/motis/paxmon";
@@ -13,7 +13,7 @@ import {
   getArrivalTime,
   getDepartureTime,
 } from "@/data/journey";
-import { scheduleAtom } from "@/data/simulation";
+import { scheduleAtom } from "@/data/multiverse";
 
 import { formatTime } from "@/util/dateFormat";
 
@@ -135,17 +135,19 @@ function CombinedGroup({
             {formatTime(getDepartureTime(j))} &rarr;{" "}
             {formatTime(getArrivalTime(j))}, {j.transfers} Umstiege:
             <span className="inline-flex gap-3 pl-2">
-              {j.tripLegs.map((leg, legIdx) => (
-                <Tooltip.Root key={legIdx}>
-                  <Tooltip.Trigger className="cursor-default">
-                    <JourneyTripNameView jt={leg.trips[0]} />
-                  </Tooltip.Trigger>
-                  <Tooltip.Content>
-                    <TripTooltip tripId={leg.trips[0].trip.id} />
-                    <Tooltip.Arrow className="text-white fill-current" />
-                  </Tooltip.Content>
-                </Tooltip.Root>
-              ))}
+              <Tooltip.Provider>
+                {j.tripLegs.map((leg, legIdx) => (
+                  <Tooltip.Root key={legIdx}>
+                    <Tooltip.Trigger className="cursor-default">
+                      <JourneyTripNameView jt={leg.trips[0]} />
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>
+                      <TripTooltip tripId={leg.trips[0].trip.id} />
+                      <Tooltip.Arrow className="text-white fill-current" />
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                ))}
+              </Tooltip.Provider>
             </span>
           </li>
         ))}
@@ -154,7 +156,7 @@ function CombinedGroup({
   ) : isLoading ? (
     <div>Suche nach Alternativverbindungen...</div>
   ) : (
-    <div>Fehler: {error instanceof Error ? error.message : error}</div>
+    <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
   );
 
   return (

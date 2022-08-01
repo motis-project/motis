@@ -839,22 +839,29 @@ void gbfs::import(import_dispatcher& reg) {
 }
 
 void gbfs::init(motis::module::registry& r) {
+  add_shared_data(to_res_id(global_res_id::GBFS_DATA), 0);
   impl_ = std::make_unique<impl>(get_data_directory() / "gbfs", config_,
                                  get_sched());
   r.register_op("/gbfs/route",
-                [&](msg_ptr const& m) { return impl_->route(get_sched(), m); });
-  r.register_op("/gbfs/info", [&](msg_ptr const&) { return impl_->info(); });
+                [&](msg_ptr const& m) { return impl_->route(get_sched(), m); },
+                {kScheduleReadAccess,
+                 {to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
+  r.register_op("/gbfs/info", [&](msg_ptr const&) { return impl_->info(); },
+                {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
   r.register_op("/gbfs/tiles",
-                [&](msg_ptr const& m) { return impl_->tiles(m); });
-  r.subscribe("/init", [&]() {
-    shared_data_->register_timer(
-        "GBFS Update",
-        boost::posix_time::minutes{config_.update_interval_minutes_},
-        [&]() { impl_->init(); },
-        ctx::accesses_t{ctx::access_request{
-            to_res_id(::motis::module::global_res_id::SCHEDULE),
-            ctx::access_t::READ}});
-  });
+                [&](msg_ptr const& m) { return impl_->tiles(m); },
+                {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
+  r.subscribe(
+      "/init",
+      [&]() {
+        shared_data_->register_timer(
+            "GBFS Update",
+            boost::posix_time::minutes{config_.update_interval_minutes_},
+            [&]() { impl_->init(); },
+            {kScheduleReadAccess,
+             {to_res_id(global_res_id::GBFS_DATA), ctx::access_t::WRITE}});
+      },
+      {});
 }
 
 }  // namespace motis::gbfs
