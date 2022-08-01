@@ -1,8 +1,8 @@
 import { PencilIcon, TrashIcon } from "@heroicons/react/solid";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PrimitiveAtom, atom, useAtom } from "jotai";
 import { useAtomCallback, useUpdateAtom } from "jotai/utils";
 import { useCallback } from "react";
-import { useMutation, useQueryClient } from "react-query";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
 import { LoadLevel, MeasureWrapper } from "@/api/protocol/motis/paxforecast";
@@ -19,11 +19,11 @@ import {
   newEmptyMeasure,
   toMeasureWrapper,
 } from "@/data/measures";
+import { universeAtom } from "@/data/multiverse";
 import {
   SimulationResult,
   selectedSimResultAtom,
   simResultsAtom,
-  universeAtom,
 } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
@@ -264,7 +264,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         console.log("measures applied");
         const result: SimulationResult = {
           universe,
-          startedAt: context.startedAt,
+          startedAt: context?.startedAt ?? new Date(),
           finishedAt: new Date(),
           measures: variables,
           response: data,

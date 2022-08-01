@@ -5,9 +5,6 @@ import {
   PaxForecastApplyMeasuresResponse,
 } from "@/api/protocol/motis/paxforecast";
 
-export const universeAtom = atom(0);
-export const scheduleAtom = atom(0);
-
 export interface SimulationResult {
   universe: number;
   startedAt: Date;

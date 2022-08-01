@@ -3,9 +3,9 @@ import {
   ChevronRightIcon,
   ExclamationIcon,
 } from "@heroicons/react/solid";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useState } from "react";
-import { useQuery, useQueryClient } from "react-query";
 
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
@@ -16,9 +16,9 @@ import {
   usePaxMonStatusQuery,
 } from "@/api/paxmon";
 
+import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
-import { universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";

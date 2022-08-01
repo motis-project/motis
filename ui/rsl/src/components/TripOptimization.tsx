@@ -9,8 +9,8 @@ import { getApiEndpoint } from "@/api/endpoint";
 import { sendPaxMonDestroyUniverseRequest } from "@/api/paxmon";
 
 import { measuresAtom } from "@/data/measures";
+import { scheduleAtom, universeAtom } from "@/data/multiverse";
 import { showOptimizationDebugLogAtom } from "@/data/settings";
-import { scheduleAtom, universeAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 

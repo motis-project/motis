@@ -1,4 +1,8 @@
-import { UseQueryOptions, UseQueryResult, useQuery } from "react-query";
+import {
+  UseQueryOptions,
+  UseQueryResult,
+  useQuery,
+} from "@tanstack/react-query";
 
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
@@ -18,6 +22,8 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonKeepAliveRequest,
+  PaxMonKeepAliveResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
 } from "@/api/protocol/motis/paxmon";
@@ -43,10 +49,7 @@ export function usePaxMonStatusQuery(
     queryKeys.status(universe),
     () => sendPaxMonStatusRequest({ universe }),
     {
-      refetchInterval: 30 * 1000,
-      refetchOnWindowFocus: true,
       staleTime: 0,
-      notifyOnChangeProps: "tracked",
     }
   );
 }
@@ -198,6 +201,18 @@ export function usePaxMonFilterTripsRequest(
   );
 }
 
+export async function sendPaxMonKeepAliveRequest(
+  content: PaxMonKeepAliveRequest
+): Promise<PaxMonKeepAliveResponse> {
+  const msg = await sendRequest(
+    "/paxmon/keep_alive",
+    "PaxMonKeepAliveRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonKeepAliveResponse");
+  return msg.content as PaxMonKeepAliveResponse;
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -214,4 +229,6 @@ export const queryKeys = {
     [...queryKeys.all, "filter_trips", req] as const,
   addressableGroups: (req: PaxMonGetAddressableGroupsRequest) =>
     [...queryKeys.all, "addressable_groups", req] as const,
+  keepAlive: (req: PaxMonKeepAliveRequest) =>
+    [...queryKeys.all, "keep_alive", req] as const,
 };

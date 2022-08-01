@@ -105,6 +105,8 @@ include "paxmon/PaxMonGetInterchangesRequest.fbs";
 include "paxmon/PaxMonGetInterchangesResponse.fbs";
 include "paxmon/PaxMonGetAddressableGroupsRequest.fbs";
 include "paxmon/PaxMonGetAddressableGroupsResponse.fbs";
+include "paxmon/PaxMonKeepAliveRequest.fbs";
+include "paxmon/PaxMonKeepAliveResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -284,7 +286,9 @@ union MsgContent {
   motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131,
   motis.osrm.OSRMManyToManyRequest                                        = 132,
   motis.osrm.OSRMManyToManyResponse                                       = 133,
-  motis.gbfs.GBFSProvidersResponse                                        = 134
+  motis.gbfs.GBFSProvidersResponse                                        = 134,
+  motis.paxmon.PaxMonKeepAliveRequest                                     = 135,
+  motis.paxmon.PaxMonKeepAliveResponse                                    = 136
 }
 
 // Destination Examples:

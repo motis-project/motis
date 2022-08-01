@@ -20,7 +20,8 @@ msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg) {
       MsgContent_PaxMonStatusResponse,
       CreatePaxMonStatusResponse(
           mc, static_cast<std::uint64_t>(sched.system_time_),
-          uv.passenger_groups_.active_groups(), uv.trip_data_.size())
+          data.multiverse_->id(), uv.passenger_groups_.active_groups(),
+          uv.trip_data_.size())
           .Union());
   return make_msg(mc);
 }
