@@ -4,6 +4,8 @@
 #include <optional>
 #include <utility>
 
+#include "boost/uuid/uuid.hpp"
+
 #include "cista/hashing.h"
 #include "cista/offset_t.h"
 #include "cista/reflection/comparable.h"
@@ -164,6 +166,7 @@ struct trip {
   trip_idx_t trip_idx_{0U};  // position in schedule.trip_mem_
   trip_debug dbg_;
   mcd::vector<uint32_t> stop_seq_numbers_;
+  boost::uuids::uuid uuid_{};
 };
 
 }  // namespace motis

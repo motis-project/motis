@@ -28,7 +28,7 @@
 #include "motis/module/context/motis_spawn.h"
 #include "motis/module/message.h"
 
-#include "motis/paxmon/capacity_maps.h"
+#include "motis/paxmon/capacity.h"
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/debug.h"
 #include "motis/paxmon/get_universe.h"

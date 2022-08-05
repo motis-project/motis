@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <string_view>
 
+#include "boost/uuid/uuid.hpp"
+
 #include "rapidjson/document.h"
 
 #include "utl/verify.h"
@@ -44,5 +46,7 @@ T get_parsed_number(rapidjson::Value const& obj, char const* key) {
               "not a number ({}): {}", key, s);
   return val;
 }
+
+boost::uuids::uuid get_uuid(rapidjson::Value const& obj, char const* key);
 
 }  // namespace motis::json

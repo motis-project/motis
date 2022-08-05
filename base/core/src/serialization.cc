@@ -1,9 +1,31 @@
 #include "motis/core/schedule/serialization.h"
 
+#include <tuple>
+
 #include "cista/serialization.h"
 
 #include "motis/core/common/dynamic_fws_multimap.h"
 #include "motis/core/common/logging.h"
+
+namespace cista {
+
+cista::hash_t type_hash(boost::uuids::uuid const& el, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>& done) {
+  return cista::hash_combine(cista::type_hash(el.data, h, done));
+}
+
+template <typename Ctx>
+inline void serialize(Ctx&, boost::uuids::uuid const*, cista::offset_t const) {}
+
+template <typename Ctx>
+inline void deserialize(Ctx const&, boost::uuids::uuid*) {}
+
+template <>
+inline auto to_tuple(boost::uuids::uuid const& t) {
+  return std::tie(t.data);
+}
+
+}  // namespace cista
 
 namespace motis {
 

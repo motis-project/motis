@@ -15,6 +15,7 @@
 #include "motis/core/access/bfs.h"
 #include "motis/core/access/service_access.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/uuids.h"
 
 #include "motis/rt/expanded_trips.h"
 #include "motis/rt/in_out_allowed.h"
@@ -163,15 +164,19 @@ inline void update_expanded_trips(
   }
 }
 
-inline void update_trips(schedule& sched, ev_key const& k,
-                         std::map<trip::route_edge, trip::route_edge>& edges,
-                         int32_t old_route_id, int32_t new_route_id,
-                         update_msg_builder& update_builder) {
+inline std::map<trip const*, ptr<mcd::vector<trip::route_edge> const>>
+update_trips(schedule& sched, ev_key const& k,
+             std::map<trip::route_edge, trip::route_edge>& edges,
+             int32_t old_route_id, int32_t new_route_id,
+             update_msg_builder& update_builder) {
+  auto old_trip_edges =
+      std::map<trip const*, ptr<mcd::vector<trip::route_edge> const>>{};
   auto const trips = route_trips(sched, k);
   update_expanded_trips(sched, trips, edges, old_route_id, new_route_id, k,
                         update_builder);
 
   for (auto const& t : trips) {
+    old_trip_edges[t] = t->edges_;
     sched.trip_edges_.emplace_back(
         mcd::make_unique<mcd::vector<trip::route_edge>>(
             mcd::to_vec(*t->edges_, [&](trip::route_edge const& e) {
@@ -181,6 +186,7 @@ inline void update_trips(schedule& sched, ev_key const& k,
     const_cast<trip*>(t)->lcon_idx_ = 0;  // NOLINT
     update_builder.trip_separated(t);
   }
+  return old_trip_edges;
 }
 
 inline void build_change_edges(
@@ -283,6 +289,39 @@ inline void update_delays(
   }
 }
 
+inline void update_event_uuids(
+    schedule& sched, ev_key const& old_first_dep,
+    std::map<trip::route_edge, trip::route_edge> const& edges,
+    std::map<trip const*, ptr<mcd::vector<trip::route_edge> const>> const&
+        old_trip_edges) {
+  auto const update_event_mapping = [&](trip const* trp, ev_key const& orig_k,
+                                        ev_key const& new_k) {
+    if (auto const maybe_uuid =
+            motis::access::get_event_uuid(sched, trp, orig_k);
+        maybe_uuid.has_value()) {
+      auto const uuid = maybe_uuid.value();
+      auto const trip_and_new_ev_key = mcd::pair{ptr<trip const>{trp}, new_k};
+      sched.event_to_uuid_[trip_and_new_ev_key] = uuid;
+      sched.uuid_to_event_[uuid] = trip_and_new_ev_key;
+    }
+  };
+
+  auto const lcon_idx = old_first_dep.lcon_idx_;
+  for (auto const& [trp, old_edges] : old_trip_edges) {
+    for (auto const& old_edge : *old_edges) {
+      auto const& new_edge = edges.at(old_edge);
+
+      auto const orig_dep = ev_key{old_edge, lcon_idx, event_type::DEP};
+      auto const new_dep = ev_key{new_edge, 0, event_type::DEP};
+      auto const orig_arr = ev_key{old_edge, lcon_idx, event_type::ARR};
+      auto const new_arr = ev_key{new_edge, 0, event_type::ARR};
+
+      update_event_mapping(trp, orig_dep, new_dep);
+      update_event_mapping(trp, orig_arr, new_arr);
+    }
+  }
+}
+
 inline void separate_trip(schedule& sched, ev_key const& k,
                           update_msg_builder& update_builder) {
   auto const in_out_allowed = get_route_in_out_allowed(k);
@@ -297,12 +336,14 @@ inline void separate_trip(schedule& sched, ev_key const& k,
 
   auto const old_route_id = k.get_node()->route_;
   auto const new_route_id = copy_trip_route(sched, k, nodes, edges, lcons);
-  update_trips(sched, k, edges, old_route_id,
-               static_cast<int32_t>(new_route_id), update_builder);
+  auto const old_trip_edges =
+      update_trips(sched, k, edges, old_route_id,
+                   static_cast<int32_t>(new_route_id), update_builder);
   build_change_edges(sched, in_out_allowed, nodes, lcons, incoming);
   add_outgoing_edges_from_new_route(nodes, incoming);
   patch_incoming_edges(incoming);
   update_delays(k.lcon_idx_, edges, sched);
+  update_event_uuids(sched, k, edges, old_trip_edges);
 }
 
 inline void separate_trip(schedule& sched, trip const* trp,

@@ -36,6 +36,7 @@ Offset<StationInfo> parse_station(context& ctx, rapidjson::Value const& stop) {
 }
 
 Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
+  auto const uuid = get_str(data, "fahrtid");
   auto const& rel = get_obj(data, "fahrtrelation");
   auto const& start_stop = get_obj(rel, "starthaltestelle");
   auto const& dest_stop = get_obj(rel, "zielhaltestelle");
@@ -53,6 +54,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
 
   return CreateFullTripId(
       ctx.b_,
+      // NOLINTNEXTLINE(readability-suspicious-call-argument)
       CreateTripId(ctx.b_,
                    ctx.b_.CreateSharedString(start_station_eva.data(),
                                              start_station_eva.size()),
@@ -60,7 +62,7 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
                    ctx.b_.CreateSharedString(dest_station_eva.data(),
                                              dest_station_eva.size()),
                    target_time, ctx.b_.CreateString(line)),
-      start_si, dest_si);
+      ctx.b_.CreateString(uuid), start_si, dest_si);
 }
 
 void parse_categories(context& ctx, rapidjson::Value const& data) {
@@ -122,6 +124,8 @@ TimestampType parse_timestamp_type(rapidjson::Value const& ev,
 
 Offset<TripEvent> parse_event(context& ctx, rapidjson::Value const& ev,
                               event_type const ev_type) {
+  auto const uuid =
+      get_str(ev, ev_type == event_type::DEP ? "abfahrtid" : "ankunftid");
   auto const station = parse_station(ctx, get_obj(ev, "haltestelle"));
   auto const schedule_time = get_schedule_timestamp(
       ctx, ev,
@@ -137,9 +141,9 @@ Offset<TripEvent> parse_event(context& ctx, rapidjson::Value const& ev,
       ev_type == event_type::DEP ? "planabfahrtort" : "planankunftort");
   auto const current_track = parse_track(
       ctx, ev, ev_type == event_type::DEP ? "abfahrtort" : "ankunftort");
-  return CreateTripEvent(ctx.b_, station, schedule_time, current_time,
-                         current_time_type, interchange_allowed, schedule_track,
-                         current_track);
+  return CreateTripEvent(ctx.b_, ctx.b_.CreateString(uuid), station,
+                         schedule_time, current_time, current_time_type,
+                         interchange_allowed, schedule_track, current_track);
 }
 
 Offset<TripSection> parse_section(context& ctx, rapidjson::Value const& sec) {
@@ -183,15 +187,13 @@ void to_ris_message(std::string_view s,
     auto const& data = get_obj(doc, "data");
     auto const created_at = get_timestamp(meta, "created", "%FT%H:%M:%S%Ez");
     auto ctx = context{created_at};
-    auto const ext_trip_ref = get_str(data, "fahrtid");
     auto const trp_id = parse_trip_id(ctx, data);
     parse_categories(ctx, data);
     parse_lines(ctx, data);
     parse_providers(ctx, data);
     auto const sections_data = get_array(data, "allFahrtabschnitt");
     auto const sections = parse_sections(ctx, sections_data);
-    auto const trip_msg = CreateFullTripMessage(
-        ctx.b_, trp_id, ctx.b_.CreateString(ext_trip_ref), sections);
+    auto const trip_msg = CreateFullTripMessage(ctx.b_, trp_id, sections);
     ctx.b_.Finish(CreateMessage(ctx.b_, ctx.earliest_, ctx.latest_,
                                 ctx.timestamp_, MessageUnion_FullTripMessage,
                                 trip_msg.Union()));

@@ -27,6 +27,7 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/uuids.h"
 #include "motis/core/conv/trip_conv.h"
 
 using namespace flatbuffers;
@@ -36,8 +37,16 @@ namespace uu = boost::uuids;
 namespace motis::lookup {
 
 /* Current limitations:
- * - All UUIDs are randomly generated for every request and can
+ * - Most UUIDs are randomly generated for every request and can
  *   only be used to parse the message (i.e. they are not stable and not stored)
+ *   Random UUIDs:
+ *   - stations
+ *   - providers
+ *   - categories
+ *   - lines
+ *   - tracks
+ *   - trips (unless a RI Basis message for the trip has been received)
+ *   - events (unless a RI Basis message for the trip has been received)
  * - All lines with the same name have the same UUID
  * - All tracks with the same name (even at different stations) have the same
  *   UUID
@@ -134,16 +143,28 @@ struct rib_ctx {
   }
 
   Offset<String> trip_id(trip const* trp) {
-    return utl::get_or_create(trip_ids_, trp, [&]() { return rand_uuid(); });
+    return utl::get_or_create(trip_ids_, trp, [&]() {
+      return trp->uuid_.is_nil() ? rand_uuid() : uuid_to_string(trp->uuid_);
+    });
   }
 
   Offset<String> event_key(trip const* trp, ev_key const ev) {
-    return utl::get_or_create(event_keys_, mcd::pair{trp, ev},
-                              [&]() { return rand_uuid(); });
+    return utl::get_or_create(event_keys_, mcd::pair{trp, ev}, [&]() {
+      if (auto const uuid = access::get_event_uuid(sched_, trp, ev);
+          uuid.has_value()) {
+        return uuid_to_string(uuid.value());
+      } else {
+        return rand_uuid();
+      }
+    });
   }
 
   Offset<String> rand_uuid() {
     return fbb_.CreateString(uu::to_string(uuid_gen_()));
+  }
+
+  Offset<String> uuid_to_string(uu::uuid const& u) {
+    return fbb_.CreateString(uu::to_string(u));
   }
 
   FlatBufferBuilder& fbb_;

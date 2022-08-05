@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "boost/uuid/nil_generator.hpp"
+
 #include "utl/get_or_create.h"
 #include "utl/verify.h"
 
@@ -234,7 +236,7 @@ struct additional_service_builder {
                          first_lcon.full_con_->con_info_->line_identifier_}},
         "", sched_.trip_edges_.back().get(), 0U,
         static_cast<trip_idx_t>(sched_.trip_mem_.size()), trip_debug{},
-        seq_numbers));
+        seq_numbers, boost::uuids::nil_uuid()));
 
     auto const trp = sched_.trip_mem_.back().get();
     auto const trp_entry = mcd::pair{trp->id_.primary_, ptr<trip>(trp)};
