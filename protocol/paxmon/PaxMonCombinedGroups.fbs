@@ -9,6 +9,6 @@ table PaxMonCombinedGroups {
 }
 
 table PaxMonCombinedGroupIds {
-  groups: [ulong];
+  groups: [uint];
   dist: PaxMonDistribution;
 }

@@ -8,7 +8,7 @@ table PaxMonDataSource {
 }
 
 table PaxMonGroup {
-  id: ulong;
+  id: uint;
   source: PaxMonDataSource;
   passenger_count: uint;
   planned_journey: PaxMonCompactJourney;
@@ -22,7 +22,7 @@ table PaxMonGroup {
 }
 
 struct PaxMonGroupBaseInfo {
-  id: ulong (key);
+  id: uint (key);
   n: uint; // passengers
   p: float; // probability
 }

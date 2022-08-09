@@ -45,7 +45,7 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
   auto total_active_groups = 0ULL;
   auto filtered_original_groups = 0ULL;
   auto filtered_forecast_groups = 0ULL;
-  std::vector<std::uint64_t> selected_group_ids;
+  std::vector<passenger_group_index> selected_group_ids;
   std::vector<passenger_localization> localizations;
   mcd::hash_set<data_source> selected_ds;
 

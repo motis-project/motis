@@ -11,6 +11,6 @@ table PaxMonFilterGroupsResponse {
   filtered_original_groups: ulong;
   filtered_forecast_groups: ulong;
 
-  group_ids: [ulong];
+  group_ids: [uint];
   localizations: [PaxMonLocalizationWrapper];
 }

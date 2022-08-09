@@ -12,12 +12,11 @@
 
 #include "motis/paxmon/compact_journey.h"
 #include "motis/paxmon/graph_index.h"
+#include "motis/paxmon/index_types.h"
 
 namespace motis::paxmon {
 
 struct edge;
-
-using passenger_group_index = std::uint64_t;
 
 struct data_source {
   CISTA_COMPARABLE()
@@ -94,7 +93,7 @@ inline passenger_group make_passenger_group(
     float const probability = 1.0F, motis::time added_time = INVALID_TIME,
     std::optional<std::uint64_t> previous_version = std::nullopt,
     std::uint8_t generation = 0, std::int16_t estimated_delay = 0,
-    std::uint64_t id = 0ULL) {
+    passenger_group_index id = 0) {
   return passenger_group{std::move(cj),
                          id,
                          source,

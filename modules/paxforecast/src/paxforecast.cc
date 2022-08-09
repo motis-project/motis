@@ -138,7 +138,7 @@ auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
 auto const constexpr ADD_GROUPS_BATCH_SIZE = 10'000;
 
 void send_remove_groups(universe const& uv,
-                        std::vector<std::uint64_t>& groups_to_remove,
+                        std::vector<passenger_group_index>& groups_to_remove,
                         tick_statistics& tick_stats) {
   if (groups_to_remove.empty()) {
     return;
@@ -166,7 +166,7 @@ void update_tracked_groups(
   using namespace flatbuffers;
 
   message_creator add_groups_mc;
-  auto groups_to_remove = std::vector<std::uint64_t>{};
+  auto groups_to_remove = std::vector<passenger_group_index>{};
   auto groups_to_add = std::vector<Offset<PaxMonGroup>>{};
   auto remove_group_count = 0ULL;
   auto add_group_count = 0ULL;
@@ -419,7 +419,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   std::vector<std::unique_ptr<passenger_group>> removed_groups;
   auto removed_group_count = 0ULL;
   if (delayed_groups > 0) {
-    std::vector<std::uint64_t> groups_to_remove;
+    std::vector<passenger_group_index> groups_to_remove;
     for (auto& cgs : combined_groups) {
       for (auto& cpg : cgs.second) {
         if (!cpg.has_major_delay_groups_) {
