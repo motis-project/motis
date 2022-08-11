@@ -1,0 +1,13 @@
+namespace motis.paxmon;
+
+table PaxMonUniverseKeepAliveInfo {
+  universe: uint;
+  schedule: ulong;
+  expires_in: uint; // seconds, 0 = never
+}
+
+table PaxMonKeepAliveResponse {
+  multiverse_id: long;
+  alive: [PaxMonUniverseKeepAliveInfo];
+  expired: [uint];
+}

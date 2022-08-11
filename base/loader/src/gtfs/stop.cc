@@ -9,6 +9,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/hash_map.h"
+#include "utl/to_vec.h"
 
 using namespace utl;
 using std::get;
@@ -21,12 +22,17 @@ static const column_mapping<gtfs_stop> columns = {
     {"stop_id", "stop_name", "stop_timezone", "parent_station", "stop_lat",
      "stop_lon"}};
 
-std::set<stop*> stop::get_metas(std::vector<stop*> const& stops,
-                                geo::point_rtree const& stop_rtree) {
+void stop::compute_close_stations(geo::point_rtree const& stop_rtree) {
+  close_ = utl::to_vec(stop_rtree.in_radius(coord_, 100), [](size_t const idx) {
+    return static_cast<unsigned>(idx);
+  });
+}
+
+std::set<stop*> stop::get_metas(std::vector<stop*> const& stops) {
   std::set<stop*> todo, done;
   todo.emplace(this);
   todo.insert(begin(same_name_), end(same_name_));
-  for (auto const& idx : stop_rtree.in_radius(coord_, 100)) {
+  for (auto const& idx : close_) {
     todo.insert(stops[idx]);
   }
 

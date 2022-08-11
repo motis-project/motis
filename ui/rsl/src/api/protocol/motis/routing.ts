@@ -3,6 +3,7 @@ import {
   Connection,
   DirectConnection,
   Interval,
+  SearchDir,
   Statistics,
   TripId,
 } from "@/api/protocol/motis";
@@ -107,9 +108,6 @@ export type SearchType =
   | "Accessibility"
   | "DefaultPrice"
   | "DefaultPriceRegional";
-
-// routing/RoutingRequest.fbs
-export type SearchDir = "Forward" | "Backward";
 
 // routing/RoutingRequest.fbs
 export interface RoutingRequest {

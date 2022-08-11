@@ -158,54 +158,65 @@ void tiles::import(mm::import_dispatcher& reg) {
 }
 
 void tiles::init(mm::registry& reg) {
-  reg.register_op("/tiles", [&](auto const& msg) {
-    auto tile =
-        ::tiles::parse_tile_url(msg->get()->destination()->target()->str());
-    if (!tile) {
-      throw std::system_error(error::invalid_request);
-    }
+  reg.register_op(
+      "/tiles",
+      [&](auto const& msg) {
+        auto tile =
+            ::tiles::parse_tile_url(msg->get()->destination()->target()->str());
+        if (!tile) {
+          throw std::system_error(error::invalid_request);
+        }
 
-    ::tiles::null_perf_counter pc;
-    auto rendered_tile = ::tiles::get_tile(
-        data_->db_handle_, data_->pack_handle_, data_->render_ctx_, *tile, pc);
+        ::tiles::null_perf_counter pc;
+        auto rendered_tile =
+            ::tiles::get_tile(data_->db_handle_, data_->pack_handle_,
+                              data_->render_ctx_, *tile, pc);
 
-    mm::message_creator mc;
-    std::vector<fb::Offset<HTTPHeader>> headers;
-    fb::Offset<fb::String> payload;
-    if (rendered_tile) {
-      headers.emplace_back(CreateHTTPHeader(
-          mc, mc.CreateString("Content-Type"),
-          mc.CreateString("application/vnd.mapbox-vector-tile")));
-      headers.emplace_back(CreateHTTPHeader(
-          mc, mc.CreateString("Content-Encoding"), mc.CreateString("deflate")));
-      payload = mc.CreateString(rendered_tile->data(), rendered_tile->size());
-    } else {
-      payload = mc.CreateString("");
-    }
+        mm::message_creator mc;
+        std::vector<fb::Offset<HTTPHeader>> headers;
+        fb::Offset<fb::String> payload;
+        if (rendered_tile) {
+          headers.emplace_back(CreateHTTPHeader(
+              mc, mc.CreateString("Content-Type"),
+              mc.CreateString("application/vnd.mapbox-vector-tile")));
+          headers.emplace_back(
+              CreateHTTPHeader(mc, mc.CreateString("Content-Encoding"),
+                               mc.CreateString("deflate")));
+          payload =
+              mc.CreateString(rendered_tile->data(), rendered_tile->size());
+        } else {
+          payload = mc.CreateString("");
+        }
 
-    mc.create_and_finish(
-        MsgContent_HTTPResponse,
-        CreateHTTPResponse(mc, HTTPStatus_OK, mc.CreateVector(headers), payload)
-            .Union());
+        mc.create_and_finish(
+            MsgContent_HTTPResponse,
+            CreateHTTPResponse(mc, HTTPStatus_OK, mc.CreateVector(headers),
+                               payload)
+                .Union());
 
-    return make_msg(mc);
-  });
+        return make_msg(mc);
+      },
+      {});
 
-  reg.register_op("/tiles/glyphs", [&](auto const& msg) {
-    std::string decoded;
-    net::url_decode(msg->get()->destination()->target()->str(), decoded);
-    auto const mem = pbf_sdf_fonts_res::get_resource(decoded.substr(14));
+  reg.register_op(
+      "/tiles/glyphs",
+      [&](auto const& msg) {
+        std::string decoded;
+        net::url_decode(msg->get()->destination()->target()->str(), decoded);
+        auto const mem = pbf_sdf_fonts_res::get_resource(decoded.substr(14));
 
-    mm::message_creator mc;
-    mc.create_and_finish(
-        MsgContent_HTTPResponse,
-        CreateHTTPResponse(
-            mc, HTTPStatus_OK,
-            mc.CreateVector(std::vector<fb::Offset<HTTPHeader>>{}),
-            mc.CreateString(reinterpret_cast<char const*>(mem.ptr_), mem.size_))
-            .Union());
-    return make_msg(mc);
-  });
+        mm::message_creator mc;
+        mc.create_and_finish(
+            MsgContent_HTTPResponse,
+            CreateHTTPResponse(
+                mc, HTTPStatus_OK,
+                mc.CreateVector(std::vector<fb::Offset<HTTPHeader>>{}),
+                mc.CreateString(reinterpret_cast<char const*>(mem.ptr_),
+                                mem.size_))
+                .Union());
+        return make_msg(mc);
+      },
+      {});
 }
 
 bool tiles::import_successful() const { return data_ != nullptr; }

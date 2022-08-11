@@ -77,7 +77,10 @@ void to_ris_message(knowledge_context& knowledge,
       reinterpret_cast<void const*>(s.data()), s.size());
 
   if (!success) {
-    LOG(logging::error) << "GTFS-RT unable to parse protobuf message " << tag;
+    LOG(logging::error) << "GTFS-RT unable to parse protobuf message " << tag
+                        << ": \""
+                        << s.substr(0, std::min(s.size(), size_t{1000U}))
+                        << (s.size() > 1000U ? "..." : "") << "\"";
     return;
   }
 
@@ -86,21 +89,27 @@ void to_ris_message(knowledge_context& knowledge,
     return;
   }
 
-  LOG(info) << (tag.empty() ? "" : tag + ": ") << "parsing "
-            << feed_message.entity().size() << " GTFS-RT updates";
-
+  auto successful = 0U;
   auto const message_time =
       static_cast<unixtime>(feed_message.header().timestamp());
   for (auto const& entity : feed_message.entity()) {
     try {
       parse_entity(knowledge, is_additional_skip_allowed, entity, message_time,
                    cb, tag);
+      ++successful;
     } catch (const std::exception& e) {
       LOG(logging::error) << "Exception on entity " << entity.id()
                           << " for message with timestamp " << message_time
-                          << ": " << e.what();
+                          << ": " << e.what()
+                          << ", message=" << entity.DebugString();
     }
   }
+  LOG(info) << (tag.empty() ? "" : tag.substr(0, tag.size() - 1) + ": ")
+            << "parsed " << feed_message.entity().size()
+            << " GTFS-RT updates: " << successful << "/"
+            << feed_message.entity().size() << " ("
+            << (100.0 * successful / feed_message.entity().size()) << "%)"
+            << " successful";
   knowledge.sort_known_lists();
 }
 

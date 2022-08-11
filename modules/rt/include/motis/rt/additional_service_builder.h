@@ -19,6 +19,7 @@
 
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
+#include "motis/rt/expanded_trips.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/update_msg_builder.h"
@@ -231,7 +232,7 @@ struct additional_service_builder {
                      secondary_trip_id{
                          last_station->id_, last_lcon.a_time_,
                          first_lcon.full_con_->con_info_->line_identifier_}},
-        sched_.trip_edges_.back().get(), 0U,
+        "", sched_.trip_edges_.back().get(), 0U,
         static_cast<trip_idx_t>(sched_.trip_mem_.size()), trip_debug{},
         seq_numbers));
 
@@ -249,6 +250,11 @@ struct additional_service_builder {
     for (auto const& trp_edge : trip_edges) {
       trp_edge.get_edge()->m_.route_edge_.conns_[0].trips_ = new_trps_id;
     }
+
+    auto const new_route_id = first_edge->from_->route_;
+    auto const new_eti =
+        add_trip_to_new_expanded_route(sched_, trp, new_route_id);
+    update_builder_.expanded_trip_added(trp, new_eti);
 
     return trp;
   }

@@ -189,12 +189,14 @@ export interface PaxMonFindTripsResponse {
 export interface PaxMonForkUniverseRequest {
   universe: number;
   fork_schedule: boolean;
+  ttl: number;
 }
 
 // paxmon/PaxMonForkUniverseResponse.fbs
 export interface PaxMonForkUniverseResponse {
   universe: number;
   schedule: number;
+  ttl: number;
 }
 
 // paxmon/PaxMonGetAddressableGroupsRequest.fbs
@@ -381,6 +383,26 @@ export interface PaxMonGroupBaseInfo {
   p: number;
 }
 
+// paxmon/PaxMonKeepAliveRequest.fbs
+export interface PaxMonKeepAliveRequest {
+  multiverse_id: number;
+  universes: number[];
+}
+
+// paxmon/PaxMonKeepAliveResponse.fbs
+export interface PaxMonUniverseKeepAliveInfo {
+  universe: number;
+  schedule: number;
+  expires_in: number;
+}
+
+// paxmon/PaxMonKeepAliveResponse.fbs
+export interface PaxMonKeepAliveResponse {
+  multiverse_id: number;
+  alive: PaxMonUniverseKeepAliveInfo[];
+  expired: number[];
+}
+
 // paxmon/PaxMonLocalization.fbs
 export interface PaxMonAtStation {
   station: Station;
@@ -422,6 +444,7 @@ export interface PaxMonStatusRequest {
 // paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
+  multiverse_id: number;
   active_groups: number;
   trip_count: number;
 }

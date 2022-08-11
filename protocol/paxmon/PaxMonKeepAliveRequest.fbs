@@ -1,0 +1,6 @@
+namespace motis.paxmon;
+
+table PaxMonKeepAliveRequest {
+  multiverse_id: long;
+  universes: [uint];
+}

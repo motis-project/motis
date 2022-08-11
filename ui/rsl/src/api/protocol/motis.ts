@@ -48,6 +48,8 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonKeepAliveRequest,
+  PaxMonKeepAliveResponse,
   PaxMonRemoveGroupsRequest,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
@@ -197,6 +199,9 @@ export type ProblemType =
   | "NO_PROBLEM"
   | "INTERCHANGE_TIME_VIOLATED"
   | "CANCELED_TRAIN";
+
+// base/SearchDir.fbs
+export type SearchDir = "Forward" | "Backward";
 
 // base/ServiceInfo.fbs
 export interface ServiceInfo {
@@ -367,7 +372,9 @@ export type MsgContent =
   | LookupRiBasisResponse
   | PaxForecastApplyMeasuresResponse
   | PaxMonGetAddressableGroupsRequest
-  | PaxMonGetAddressableGroupsResponse;
+  | PaxMonGetAddressableGroupsResponse
+  | PaxMonKeepAliveRequest
+  | PaxMonKeepAliveResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -429,7 +436,9 @@ export type MsgContentType =
   | "LookupRiBasisResponse"
   | "PaxForecastApplyMeasuresResponse"
   | "PaxMonGetAddressableGroupsRequest"
-  | "PaxMonGetAddressableGroupsResponse";
+  | "PaxMonGetAddressableGroupsResponse"
+  | "PaxMonKeepAliveRequest"
+  | "PaxMonKeepAliveResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

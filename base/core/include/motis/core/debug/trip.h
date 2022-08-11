@@ -3,8 +3,11 @@
 #include <iomanip>
 #include <iostream>
 
+#include "motis/hash_set.h"
+
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/core/access/bfs.h"
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_iterator.h"
 
@@ -52,7 +55,8 @@ struct trip {
     auto const& sched = t.sched_;
     auto const* trp = t.trp_;
     out << "{"
-        << "ptr=" << trp << ", id=" << trip_id{sched, trp->id_}
+        << "ptr=" << trp << ", idx=" << trp->trip_idx_
+        << ", id=" << trip_id{sched, trp->id_}
         << ", edges=" << trp->edges_->size() << ", lcon_idx=" << trp->lcon_idx_
         << ", dbg=" << trp->dbg_.str() << "}";
     return out;
@@ -94,7 +98,7 @@ struct trip_with_sections {
           << ", route=" << kd.get_node()->route_
           << ", merged_trips=" << sec.lcon().trips_ << " [ ";
       for (auto const& mt : *sched.merged_trips_[sec.lcon().trips_]) {
-        out << cista::ptr_cast(mt) << " ";
+        out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
       }
       out << "]";
       if (sec_idx != 0U && last_merged_trips != sec.lcon().trips_) {
@@ -112,8 +116,44 @@ struct trip_with_sections {
       if (ka.get_time() < kd.get_time()) {
         out << "    !!! time < previous departure time !!!";
       }
-      out << "\n\n";
+      out << "\n";
 
+      for (auto const& te : sec.from_node()->incoming_edges_) {
+        if (te->type() == edge::THROUGH_EDGE) {
+          out << "    incoming through edge from:\n";
+          for (auto const& re : te->from_->incoming_edges_) {
+            if (!re->empty()) {
+              auto const& through_lc =
+                  re->m_.route_edge_.conns_.at(trp->lcon_idx_);
+              out << "      merged_trips=" << through_lc.trips_ << " [ ";
+              for (auto const& mt : *sched.merged_trips_[through_lc.trips_]) {
+                out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
+              }
+              out << "] arriving from "
+                  << station{sched, re->from_->get_station()->id_} << "\n";
+            }
+          }
+        }
+      }
+      for (auto const& te : sec.to_node()->edges_) {
+        if (te.type() == edge::THROUGH_EDGE) {
+          out << "    outgoing through edge to:\n";
+          for (auto const& re : te.to_->edges_) {
+            if (!re.empty()) {
+              auto const& through_lc =
+                  re.m_.route_edge_.conns_.at(trp->lcon_idx_);
+              out << "      merged_trips=" << through_lc.trips_ << " [ ";
+              for (auto const& mt : *sched.merged_trips_[through_lc.trips_]) {
+                out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
+              }
+              out << "] departing to "
+                  << station{sched, re.to_->get_station()->id_} << "\n";
+            }
+          }
+        }
+      }
+
+      out << "\n";
       ++sec_idx;
       last_time = ka.get_time();
       last_merged_trips = sec.lcon().trips_;
@@ -124,6 +164,44 @@ struct trip_with_sections {
 
   schedule const& sched_;
   motis::trip const* trp_;
+};
+
+struct rule_service_trip_with_sections {
+  friend std::ostream& operator<<(std::ostream& out,
+                                  rule_service_trip_with_sections const& t) {
+    auto const& sched = t.sched_;
+    auto const* main_trp = t.main_trp_;
+    auto const lcon_idx = main_trp->lcon_idx_;
+
+    if (main_trp->edges_->empty()) {
+      out << "trip " << trip{sched, main_trp} << ": <no sections>\n";
+      return out;
+    }
+
+    mcd::hash_set<::motis::trip const*> trips;
+    auto const first_dep =
+        ev_key{main_trp->edges_->front().get_edge(), lcon_idx, event_type::DEP};
+
+    for (auto const& e : route_bfs(first_dep, bfs_direction::BOTH)) {
+      auto const& lcon = e->m_.route_edge_.conns_.at(lcon_idx);
+      for (auto const& trp : *sched.merged_trips_.at(lcon.trips_)) {
+        trips.insert(cista::ptr_cast(trp));
+      }
+    }
+
+    out << trip_with_sections{sched, main_trp};
+
+    for (auto const* trp : trips) {
+      if (trp != main_trp) {
+        out << "related " << trip_with_sections{sched, trp};
+      }
+    }
+
+    return out;
+  }
+
+  schedule const& sched_;
+  motis::trip const* main_trp_;
 };
 
 }  // namespace motis::debug

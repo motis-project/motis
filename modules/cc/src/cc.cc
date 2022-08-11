@@ -21,8 +21,8 @@ struct interchange {
 };
 
 void cc::init(motis::module::registry& reg) {
-  reg.register_op("/cc",
-                  [&](msg_ptr const& m) { return cc::check_journey(m); });
+  reg.register_op("/cc", [&](msg_ptr const& m) { return cc::check_journey(m); },
+                  {kScheduleReadAccess});
 }
 
 ev_key get_event_at(schedule const& sched, Connection const* con,

@@ -121,7 +121,7 @@ view locale highlighting model =
     Html.Lazy.lazy3 graphView locale highlighting model
 
 
-graphView : Localization -> ( Bool, Maybe ( List RVConnectionSegmentTrip), Maybe RVConnectionSegmentWalk ) -> Model -> Html Msg
+graphView : Localization -> ( Bool, Maybe (List RVConnectionSegmentTrip), Maybe RVConnectionSegmentWalk ) -> Model -> Html Msg
 graphView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
     div
         [ Html.Attributes.classList
@@ -134,7 +134,7 @@ graphView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
 
 transportsView :
     Localization
-    -> ( Bool, Maybe ( List RVConnectionSegmentTrip ), Maybe RVConnectionSegmentWalk )
+    -> ( Bool, Maybe (List RVConnectionSegmentTrip), Maybe RVConnectionSegmentWalk )
     -> Model
     -> List (Html Msg)
 transportsView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
@@ -164,7 +164,7 @@ transportsView locale ( useHighlighting, hoveredTrips, hoveredWalk ) model =
         ++ List.map Tuple.second renderedParts
 
 
-isPartHighlighted : Maybe (List RVConnectionSegmentTrip ) -> Maybe RVConnectionSegmentWalk -> Part -> Bool
+isPartHighlighted : Maybe (List RVConnectionSegmentTrip) -> Maybe RVConnectionSegmentWalk -> Part -> Bool
 isPartHighlighted hoveredTrips hoveredWalk part =
     case ( hoveredTrips, part.train ) of
         ( Just segments, Just train ) ->

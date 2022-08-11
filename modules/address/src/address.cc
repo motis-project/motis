@@ -165,9 +165,9 @@ void address::init(motis::module::registry& reg) {
   address_typeahead::typeahead t{context};
 
   impl_ = std::make_unique<impl>(db_file());
-  reg.register_op("/address", [this](msg_ptr const& msg) {
-    return impl_->get_guesses(msg);
-  });
+  reg.register_op(
+      "/address",
+      [this](msg_ptr const& msg) { return impl_->get_guesses(msg); }, {});
 }
 
 }  // namespace motis::address

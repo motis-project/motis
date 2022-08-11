@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "utl/enumerate.h"
+#include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/pairwise.h"
 #include "utl/parser/csv.h"
@@ -26,12 +27,14 @@ namespace motis::loader::gtfs {
 std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   utl::verify(!trips_.empty(), "empty block not allowed");
 
-  auto const no_stop_times_t =
-      std::find_if(begin(trips_), end(trips_),
-                   [](trip const* t) { return t->stop_times_.empty(); });
-  utl::verify(no_stop_times_t == end(trips_),
-              "invalid trip \"{}\" with no stop times",
-              no_stop_times_t == end(trips_) ? "" : (*no_stop_times_t)->id_);
+  utl::erase_if(trips_, [](trip const* t) {
+    auto const is_empty = t->stop_times_.empty();
+    if (is_empty) {
+      LOG(logging::warn) << "trip " << t->id_ << " has no stop times";
+    }
+    return is_empty;
+  });
+
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;

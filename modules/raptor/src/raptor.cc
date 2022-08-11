@@ -68,13 +68,19 @@ msg_ptr make_response(schedule const& sched, std::vector<journey> const& js,
 struct raptor::impl {
   impl(schedule const& sched, [[maybe_unused]] config const& config)
       : sched_{sched} {
-    std::tie(meta_info_, timetable_) = get_raptor_timetable(sched);
+#if defined(MOTIS_CUDA)
+    queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
+#endif
+    init_timetable();
+  }
+
+  void init_timetable() {
+    std::tie(meta_info_, timetable_) = get_raptor_timetable(sched_);
 
 #if defined(MOTIS_CUDA)
     h_gtt_ = get_host_gpu_timetable(*timetable_);
     d_gtt_ = get_device_gpu_timetable(*h_gtt_);
 
-    queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
     mem_store_.init(*meta_info_, *timetable_, queries_per_device_);
 #endif
   }
@@ -150,13 +156,27 @@ raptor::~raptor() = default;
 void raptor::init(motis::module::registry& reg) {
   impl_ = std::make_unique<impl>(get_sched(), config_);
 
-  reg.register_op("/raptor_cpu", [&](auto&& m) { return impl_->route_cpu(m); });
+  reg.register_op("/raptor_cpu", [&](auto&& m) { return impl_->route_cpu(m); },
+                  {kScheduleReadAccess});
+
+  reg.register_op(
+      "/raptor/update_timetable",
+      [&](auto&&) -> msg_ptr {
+        impl_->init_timetable();
+        return {};
+      },
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
 
 #if defined(MOTIS_CUDA)
-  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); });
-  reg.register_op("/raptor_gpu", [&](auto&& m) { return impl_->route_gpu(m); });
+  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_gpu(m); },
+                  {kScheduleReadAccess});
+  reg.register_op("/raptor_gpu", [&](auto&& m) { return impl_->route_gpu(m); },
+                  {kScheduleReadAccess});
 #else
-  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); });
+  reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); },
+                  {kScheduleReadAccess});
 #endif
 }
 

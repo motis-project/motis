@@ -25,10 +25,10 @@ struct loader_options {
   bool cache_graph_{false};
   bool apply_rules_{true};
   bool adjust_footpaths_{false};
-  bool expand_trips_{true};
   bool expand_footpaths_{true};
   bool use_platforms_{false};
   bool no_local_transport_{false};
+  bool debug_broken_trips_{false};
   duration planned_transfer_delta_{30};
   std::string graph_path_{"default"};
   std::string wzr_classes_path_{};

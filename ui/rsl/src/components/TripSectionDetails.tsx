@@ -12,7 +12,7 @@ import {
 
 import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
 
-import { universeAtom } from "@/data/simulation";
+import { universeAtom } from "@/data/multiverse";
 
 import CombinedGroup from "@/components/CombinedGroup";
 
@@ -92,7 +92,7 @@ function TripSectionDetails({
   ) : error || !groupsInTrip ? (
     <div>
       Error loading trip section data:{" "}
-      {error instanceof Error ? error.message : error}
+      {error instanceof Error ? error.message : `${error}`}
     </div>
   ) : (
     <div>

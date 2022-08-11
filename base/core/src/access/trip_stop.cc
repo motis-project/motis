@@ -30,6 +30,16 @@ light_connection const& trip_stop::dep_lcon() const {
   return get_lcon(trip_->edges_->at(index_).get_edge(), trip_->lcon_idx_);
 }
 
+ev_key trip_stop::arr() const {
+  return ev_key{trip_->edges_->at(index_ - 1).get_edge(), trip_->lcon_idx_,
+                event_type::ARR};
+}
+
+ev_key trip_stop::dep() const {
+  return ev_key{trip_->edges_->at(index_).get_edge(), trip_->lcon_idx_,
+                event_type::DEP};
+}
+
 connection_info const& trip_stop::arr_info(schedule const& sched) const {
   return get_connection_info(sched, arr_lcon(), trip_);
 }
