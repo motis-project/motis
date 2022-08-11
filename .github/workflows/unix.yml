@@ -213,7 +213,7 @@ jobs:
             skipui: true
           - preset: linux-debug
             skipui: true
-            emulator: valgrind
+            emulator: valgrind --error-exitcode=1
     env:
       BUILDCACHE_DIR: /buildcache
       BUILDCACHE_DIRECT_MODE: true
