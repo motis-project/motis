@@ -279,7 +279,7 @@ struct reconstructor {
 
 //TODO reproduce another ij assignments from reconstruct_journey, fix bugs
     rounds& result = q.result();
-    for(label& l : result.getAllLabelsForStop(q.target_, max_raptor_round)) {
+    for(label& l : result.getAllLabelsForStop(q.target_, max_raptor_round * 2)) {
       intermediate_journey ij = intermediate_journey(l.changes_count_, q.ontrip_, q.source_time_begin_);
 
       label& current_station_label = l;
