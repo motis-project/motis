@@ -245,7 +245,7 @@ void mc_raptor::invoke_cpu_raptor() {
     collect_routes_serving_updated_stops();
     scan_routes();
     // TODO: check if there no marks true
-    if(stops_for_routes_.empty()) {
+    if(stops_for_routes_.no_marked_stops()) {
       break;
     }
     start_new_round();

@@ -1,4 +1,5 @@
 #include "motis/mcraptor/cpu/mark_store.h"
+#include <algorithm>
 
 namespace motis::mcraptor {
 
@@ -14,8 +15,8 @@ void cpu_mark_store::reset() {
   std::fill(std::begin(marks_), std::end(marks_), false);
 }
 
-bool cpu_mark_store::empty() {
-  return marks_.empty();
+bool cpu_mark_store::no_marked_stops() {
+  return std::all_of(marks_.begin(), marks_.end(), [](bool mark){return !mark;});
 }
 
 }  // namespace motis::mcraptor
