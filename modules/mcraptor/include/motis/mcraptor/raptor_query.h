@@ -5,7 +5,7 @@
 
 #include "motis/mcraptor/additional_start.h"
 #include "motis/mcraptor/raptor_result.h"
-#include "Rounds.h"
+#include "rounds.h"
 
 #if defined(MOTIS_CUDA)
 #include "motis/mcraptor/raptor_util.h"

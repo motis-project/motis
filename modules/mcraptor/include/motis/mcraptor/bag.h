@@ -1,7 +1,7 @@
 #pragma once
 
 #include <map>
-#include "Label.h"
+#include "label.h"
 
 namespace motis::mcraptor {
 

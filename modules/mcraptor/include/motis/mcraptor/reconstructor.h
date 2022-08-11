@@ -10,7 +10,7 @@
 #include "motis/routing/output/stop.h"
 #include "motis/routing/output/to_journey.h"
 #include "motis/routing/output/transport.h"
-#include "Label.h"
+#include "label.h"
 
 namespace motis::mcraptor {
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Bag.h"
-#include "Label.h"
-#include "motis/mcraptor/raptor_timetable.h"
 #include "motis/mcraptor/raptor_query.h"
+#include "motis/mcraptor/raptor_timetable.h"
+#include "bag.h"
+#include "label.h"
 
 namespace motis::mcraptor {
 

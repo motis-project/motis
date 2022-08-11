@@ -1,5 +1,5 @@
 #include "motis/mcraptor/cpu/cpu_raptor.h"
-#include "motis/mcraptor/Bag.h"
+#include "motis/mcraptor/bag.h"
 #include <map>
 
 namespace motis::mcraptor {
