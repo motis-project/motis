@@ -52,12 +52,10 @@ jobs:
           key: deps-${{ hashFiles('.pkg') }}
           restore-keys: deps-
 
+      - uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build
         run: |
-          $devShell = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -find **\Microsoft.VisualStudio.DevShell.dll
-          $installPath = &"${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationpath
-          Import-Module $devShell
-          Enter-VsDevShell -VsInstallPath $installPath -SkipAutomaticLocation -DevCmdArguments "-arch=amd64"
           cmake `
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} `
