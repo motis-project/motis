@@ -289,13 +289,14 @@ struct reconstructor {
       stop_id parent_station = current_station_label.parent_station_;
       time last_departure = invalid<time>;
       while(r_k > 0) {
-        if(current_station != parent_station) {
-          last_departure = ij.add_route(parent_station, current_station_label.route_id_, current_station_label.current_trip_id_,
-                                        current_station_label.stop_offset_, raptor_sched_, timetable_);
-        }
-        else {
-          ij.add_footpath(current_station, current_station_label.arrival_time_, current_station_label.parent_departure_time_,
-                          current_station_label.footpath_duration_, raptor_sched_);
+        if(r_k % 2 == 0) {
+          if (current_station_label.footpath_duration_ == invalid<time>) {
+            last_departure = ij.add_route(parent_station, current_station_label.route_id_,current_station_label.current_trip_id_,
+                current_station_label.stop_offset_, raptor_sched_, timetable_);
+          } else {
+            ij.add_footpath(current_station, current_station_label.arrival_time_,current_station_label.parent_departure_time_,
+                current_station_label.footpath_duration_, raptor_sched_);
+          }
         }
 
         r_k--;
@@ -304,6 +305,7 @@ struct reconstructor {
         parent_label_index = current_station_label.parent_label_index_;
         parent_station = current_station_label.parent_station_;
       }
+
 
       ij.add_start_station(current_station, raptor_sched_, last_departure);
       journeys_.push_back(ij);

@@ -240,7 +240,7 @@ void mc_raptor::invoke_cpu_raptor() {
   init_arrivals();
   relax_transfers();
 
-  for (auto i = 0; i < max_raptor_round; ++i) {
+  for (auto i = 0; i < max_raptor_round * 2; ++i) {
     start_new_round();
     collect_routes_serving_updated_stops();
     scan_routes();
