@@ -6,7 +6,7 @@ include_directories(include)
 file(GLOB_RECURSE motis-tiles-files src/*.cc)
 add_library(motis-tiles STATIC ${motis-tiles-files})
 target_include_directories(motis-tiles PUBLIC include)
-target_compile_features(motis-tiles PUBLIC cxx_std_17)
+target_compile_features(motis-tiles PUBLIC cxx_std_20)
 target_link_libraries(motis-tiles 
   boost-system
   motis-module

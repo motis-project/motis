@@ -15,6 +15,8 @@
 #include "motis/core/common/interval_map.h"
 #include "motis/core/journey/journey.h"
 #include "motis/module/event_collector.h"
+#include "utl/pairwise.h"
+#include "utl/parser/csv.h"
 
 namespace fs = std::filesystem;
 namespace fbs = flatbuffers;
@@ -57,6 +59,35 @@ unixtime to_motis_unixtime(n::unixtime_t const t) {
           .count()};
 }
 
+mcd::string get_station_id(std::vector<std::string> const& tags,
+                           n::timetable const& tt, n::location_idx_t const l) {
+  return tags.at(to_idx(tt.locations_.src_.at(l))) +
+         tt.locations_.ids_.at(l).str();
+}
+
+extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
+                                       n::timetable const& tt,
+                                       n::trip_idx_t const trip,
+                                       n::day_idx_t const day) {
+  auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
+  auto const first_location =
+      tt.route_location_seq_[tt.transport_route_[transport]][0].location_idx();
+  auto const id = tt.trip_ids_.at(trip).back();
+  auto const [admin, train_nr, first_stop_eva, fist_start_time, last_stop_eva,
+              last_stop_time, line] =
+      utl::split<'/', utl::cstr, unsigned, utl::cstr, unsigned, utl::cstr,
+                 unsigned, utl::cstr>(utl::cstr{id.id_});
+  return extern_trip{
+      .station_id_ = get_station_id(tags, tt, first_location),
+      .train_nr_ = train_nr,
+      .time_ = to_motis_unixtime(tt.event_time(
+          {transport, day}, stop_range.from_, n::event_type::kDep)),
+      .target_station_id_ = last_stop_eva.to_str(),
+      .target_time_ = to_motis_unixtime(
+          tt.event_time({transport, day}, stop_range.to_, n::event_type::kArr)),
+      .line_id_ = line.to_str()};
+}
+
 journey nigiri_to_motis_journey(n::timetable const& tt,
                                 std::vector<std::string> const& tags,
                                 n::routing::journey const& nj) {
@@ -65,11 +96,9 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
   auto const fill_stop_info = [&](motis::journey::stop& s,
                                   n::location_idx_t const l) {
     auto const& l_name = tt.locations_.names_.at(l);
-    auto const& l_id = tt.locations_.ids_.at(l);
-    auto const& src = tt.locations_.src_.at(l);
     auto const& pos = tt.locations_.coordinates_.at(l);
     s.name_ = l_name.str();
-    s.eva_no_ = tags.at(to_idx(src)) + l_id.str();
+    s.eva_no_ = get_station_id(tags, tt, l);
     s.lat_ = pos.lat_;
     s.lng_ = pos.lng_;
   };
@@ -84,13 +113,14 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
     auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
     fill_stop_info(to_stop, leg.to_);
 
-    mj.transports_.emplace_back(journey::transport{
-        .from_ = from_idx,
-        .to_ = to_idx,
-        .is_walk_ = true,
-        .duration_ =
-            static_cast<unsigned>((leg.arr_time_ - leg.dep_time_).count()),
-        .mumo_id_ = -1});
+    auto t = journey::transport{};
+    t.from_ = from_idx;
+    t.to_ = to_idx;
+    t.is_walk_ = true;
+    t.duration_ =
+        static_cast<unsigned>((leg.arr_time_ - leg.dep_time_).count());
+    t.mumo_id_ = mumo_id;
+    mj.transports_.emplace_back(std::move(t));
   };
 
   for (auto const& leg : nj.legs_) {
@@ -98,13 +128,17 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
         [&](n::routing::journey::transport_enter_exit const& t) {
           auto const& route_idx = tt.transport_route_.at(t.t_.t_idx_);
           auto const& stop_seq = tt.route_location_seq_.at(route_idx);
-          auto const& stop_times = tt.transport_stop_times_.at(t.t_.t_idx_);
 
           interval_map<journey::transport> transports;
           interval_map<extern_trip> trips;
 
+          //          (void)transports;
+          //          (void)trips;
+          //          for (auto const& section : utl::pairwise(t.stop_range_)) {
+          //            (void)section;
+          //          }
+
           for (auto const& stop_idx : t.stop_range_) {
-            auto const location_idx = stop_seq.at(stop_idx).location_idx();
             auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
             auto const enter = (stop_idx == t.stop_range_.from_);
 
@@ -156,8 +190,10 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
 mm::msg_ptr to_routing_response(
     n::timetable const& tt,
     n::pareto_set<n::routing::journey> const& journeys) {
+  (void)tt;
+  (void)journeys;
   mm::message_creator mc;
-  routing::CreateRoutingResponse();
+  //  routing::CreateRoutingResponse();
   return make_msg(mc);
 }
 

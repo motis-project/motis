@@ -15,6 +15,8 @@ namespace motis::module {
 
 struct event_collector : std::enable_shared_from_this<event_collector> {
   struct dependency_matcher {
+    dependency_matcher(std::string name, std::function<bool(msg_ptr)> fn)
+        : name_{std::move(name)}, matcher_fn_{std::move(fn)} {}
     dependency_matcher() = default;
     dependency_matcher& operator=(dependency_matcher const&) = delete;
     dependency_matcher(dependency_matcher const&) = delete;
