@@ -303,7 +303,7 @@ struct preprocessing {
       std::vector<std::thread> threads;
       threads.reserve(thread_count);
       for (auto t = 0U; t < thread_count; ++t) {
-        threads.emplace_back([=]() {
+        threads.emplace_back([this, t, thread_count]() {
           precompute_transfers_thread(static_cast<trip_id>(t),
                                       static_cast<trip_id>(thread_count));
         });
@@ -349,7 +349,7 @@ struct preprocessing {
       std::vector<std::thread> threads;
       threads.reserve(thread_count);
       for (auto t = 0U; t < thread_count; ++t) {
-        threads.emplace_back([=]() {
+        threads.emplace_back([this, t, thread_count]() {
           precompute_reverse_transfers_thread(
               static_cast<trip_id>(t), static_cast<trip_id>(thread_count));
         });

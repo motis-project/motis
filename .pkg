@@ -97,4 +97,4 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=dbf2b471dee82ad24d61a6e2e390c5d9c56002cf
+  commit=ccecc60dc5d97d024c2c58d6cb1d128faea2e84f
