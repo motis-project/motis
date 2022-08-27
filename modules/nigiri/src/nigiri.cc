@@ -71,7 +71,13 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                                        n::day_idx_t const day) {
   auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
   auto const first_location =
-      tt.route_location_seq_[tt.transport_route_[transport]][0].location_idx();
+      tt.route_location_seq_[tt.transport_route_[transport]]
+          .front()
+          .location_idx();
+  auto const last_location =
+      tt.route_location_seq_[tt.transport_route_[transport]]
+          .back()
+          .location_idx();
   auto const id = tt.trip_ids_.at(trip).back();
   auto const [admin, train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time, line] =
@@ -82,7 +88,7 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
       .train_nr_ = train_nr,
       .time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.from_, n::event_type::kDep)),
-      .target_station_id_ = last_stop_eva.to_str(),
+      .target_station_id_ = get_station_id(tags, tt, last_location),
       .target_time_ = to_motis_unixtime(
           tt.event_time({transport, day}, stop_range.to_, n::event_type::kArr)),
       .line_id_ = line.to_str()};
