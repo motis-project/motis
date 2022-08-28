@@ -19,6 +19,8 @@
 
 namespace motis::path {
 
+constexpr auto const kInvalidDistance = std::numeric_limits<uint32_t>::max();
+
 osm_graph_contractor::osm_graph_contractor(osm_graph const& graph)
     : graph_{graph} {
   nodes_ = utl::to_vec(graph_.nodes_, [](auto const&) {
@@ -138,8 +140,6 @@ struct contract_cluster {
       node_idx_to_mat_idx[pair.second] = i;
     }
 
-    constexpr auto const kInvalidDistance =
-        std::numeric_limits<uint32_t>::max();
     auto mat =
         make_flat_matrix<uint32_t>(cluster_nodes_.size(), kInvalidDistance);
 

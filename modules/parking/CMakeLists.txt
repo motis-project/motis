@@ -24,7 +24,7 @@ file(GLOB_RECURSE motis-parking-files src/*.cc)
 add_library(motis-parking STATIC ${motis-parking-files})
 target_include_directories(motis-parking PUBLIC include)
 target_include_directories(motis-parking PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../ppr/include)
-target_compile_features(motis-parking PUBLIC cxx_std_20)
+target_compile_features(motis-parking PUBLIC cxx_std_17)
 add_dependencies(motis-parking generated-motis-parking-dbschema-headers)
 target_link_libraries(motis-parking
   boost-system

@@ -19,7 +19,7 @@ build_flatbuffers(
 file(GLOB_RECURSE motis-loader-files src/*.cc)
 add_library(motis-loader STATIC ${motis-loader-files})
 target_include_directories(motis-loader PUBLIC include)
-target_compile_features(motis-loader PUBLIC cxx_std_20)
+target_compile_features(motis-loader PUBLIC cxx_std_17)
 add_dependencies(motis-loader generated-schedule-headers)
 target_link_libraries(motis-loader
   boost-system

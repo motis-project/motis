@@ -4,7 +4,7 @@ project(motis)
 file(GLOB_RECURSE motis-raptor-files src/*.cc)
 add_library(motis-raptor STATIC ${motis-raptor-files})
 target_include_directories(motis-raptor PUBLIC include)
-target_compile_features(motis-raptor PUBLIC cxx_std_20)
+target_compile_features(motis-raptor PUBLIC cxx_std_17)
 target_link_libraries(motis-raptor
         motis-routing
         motis-module

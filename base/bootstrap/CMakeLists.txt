@@ -24,6 +24,6 @@ configure_file (
 file(GLOB_RECURSE motis-bootstrap-files src/*.cc)
 add_library(motis-bootstrap STATIC ${motis-bootstrap-files})
 target_include_directories(motis-bootstrap PUBLIC include)
-target_compile_features(motis-bootstrap PUBLIC cxx_std_20)
+target_compile_features(motis-bootstrap PUBLIC cxx_std_17)
 target_compile_options(motis-bootstrap PRIVATE ${MOTIS_CXX_FLAGS})
 target_link_libraries(motis-bootstrap conf utl motis-loader motis-module ${module-targets})

@@ -6,7 +6,7 @@ if (NOT MOTIS_SCHEDULE_MODE STREQUAL "raw")
 endif()
 
 add_library(motis-data INTERFACE)
-target_compile_features(motis-data INTERFACE cxx_std_20)
+target_compile_features(motis-data INTERFACE cxx_std_17)
 target_include_directories(motis-data INTERFACE include)
 target_link_libraries(motis-data INTERFACE cista)
 if (MOTIS_SCHEDULE_MODE STREQUAL "raw")

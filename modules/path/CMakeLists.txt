@@ -11,7 +11,7 @@ file(GLOB_RECURSE motis-path-files
 
 add_library(motis-path STATIC ${motis-path-files})
 target_include_directories(motis-path PUBLIC include)
-target_compile_features(motis-path PUBLIC cxx_std_20)
+target_compile_features(motis-path PUBLIC cxx_std_17)
 target_include_directories(motis-path PUBLIC include)
 add_dependencies(motis-path generated-motis-libpath-fbs-headers)
 target_link_libraries(motis-path
@@ -34,7 +34,7 @@ file(GLOB_RECURSE motis-path-prepare-files
 # path-prepare library
 ################################
 add_library(motis-path-prepare STATIC ${motis-path-prepare-files})
-target_compile_features(motis-path-prepare PUBLIC cxx_std_20)
+target_compile_features(motis-path-prepare PUBLIC cxx_std_17)
 add_dependencies(motis-path-prepare generated-motis-libpath-fbs-headers)
 target_include_directories(motis-path-prepare PUBLIC include)
 target_link_libraries(motis-path-prepare
@@ -64,7 +64,7 @@ target_link_libraries(motis-path motis-path-prepare)
 file(GLOB_RECURSE motis-path-prepare-main-files src/prepare_main.cc)
 
 add_executable(path-prepare EXCLUDE_FROM_ALL ${motis-path-prepare-main-files})
-target_compile_features(path-prepare PUBLIC cxx_std_20)
+target_compile_features(path-prepare PUBLIC cxx_std_17)
 add_dependencies(path-prepare generated-motis-libpath-fbs-headers)
 target_include_directories(path-prepare PUBLIC include)
 target_link_libraries(path-prepare motis-path-prepare)

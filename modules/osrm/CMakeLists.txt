@@ -7,7 +7,7 @@ file(GLOB_RECURSE motis-osrm-files src/*.cc)
 
 add_library(motis-osrm STATIC ${motis-osrm-files})
 target_include_directories(motis-osrm PUBLIC include)
-target_compile_features(motis-osrm PUBLIC cxx_std_20)
+target_compile_features(motis-osrm PUBLIC cxx_std_17)
 target_link_libraries(motis-osrm
   boost-system
   boost-filesystem

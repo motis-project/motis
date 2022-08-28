@@ -10,6 +10,24 @@
 
 namespace motis {
 
+inline bool incoming_edges_correct_2(schedule const& sched) {
+  auto const check_edges = [](node const* n) {
+    return std::all_of(
+        begin(n->incoming_edges_), end(n->incoming_edges_), [n](edge* const e) {
+          auto const& out = e->from_->edges_;
+          return e->to_ == n && e >= out.begin() && e < out.end();
+        });
+  };
+
+  return std::all_of(
+      begin(sched.station_nodes_), end(sched.station_nodes_), [&](auto&& sn) {
+        return check_edges(sn.get()) &&
+               std::all_of(
+                   begin(sn->incoming_edges_), end(sn->incoming_edges_),
+                   [&](auto const& e) { return check_edges(e->from_); });
+      });
+}
+
 inline void validate_graph(schedule const& sched) {
   utl::verify(
       [&] {
@@ -58,7 +76,7 @@ inline void validate_graph(schedule const& sched) {
 
         return std::all_of(
             begin(sched.station_nodes_), end(sched.station_nodes_),
-            [&](auto&& sn) {
+            [&](mcd::unique_ptr<station_node> const& sn) {
               return check_edges(sn.get()) &&
                      std::all_of(
                          begin(sn->edges_), end(sn->edges_),
@@ -67,27 +85,7 @@ inline void validate_graph(schedule const& sched) {
       }(),
       "incoming edges correct 1");
 
-  utl::verify(
-      [&] {
-        auto const check_edges = [](node const* n) {
-          return std::all_of(begin(n->incoming_edges_), end(n->incoming_edges_),
-                             [n](edge* const e) {
-                               auto const& out = e->from_->edges_;
-                               return e->to_ == n && e >= out.begin() &&
-                                      e < out.end();
-                             });
-        };
-
-        return std::all_of(
-            begin(sched.station_nodes_), end(sched.station_nodes_),
-            [&](auto&& sn) {
-              return check_edges(sn.get()) &&
-                     std::all_of(
-                         begin(sn->incoming_edges_), end(sn->incoming_edges_),
-                         [&](auto const& e) { return check_edges(e->from_); });
-            });
-      }(),
-      "incoming edges correct 2");
+  utl::verify(incoming_edges_correct_2(sched), "incoming edges correct 2");
 
   auto const check_edges = [](node const* n) {
     return std::all_of(begin(n->edges_), end(n->edges_),

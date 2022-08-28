@@ -13,5 +13,5 @@ target_link_libraries(motis-address
   motis-core
 )
 target_include_directories(motis-address PUBLIC include)
-target_compile_features(motis-address PUBLIC cxx_std_20)
+target_compile_features(motis-address PUBLIC cxx_std_17)
 target_compile_options(motis-address PRIVATE ${MOTIS_CXX_FLAGS})

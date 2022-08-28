@@ -15,5 +15,5 @@ target_link_libraries(motis-tripbased
   geo
   date
 )
-target_compile_features(motis-tripbased PUBLIC cxx_std_20)
+target_compile_features(motis-tripbased PUBLIC cxx_std_17)
 target_compile_options(motis-tripbased PRIVATE ${MOTIS_CXX_FLAGS})

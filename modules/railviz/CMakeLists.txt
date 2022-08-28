@@ -6,7 +6,7 @@ include_directories(include)
 file(GLOB_RECURSE motis-railviz-files src/*.cc)
 add_library(motis-railviz STATIC ${motis-railviz-files})
 target_include_directories(motis-railviz PUBLIC include)
-target_compile_features(motis-railviz PUBLIC cxx_std_20)
+target_compile_features(motis-railviz PUBLIC cxx_std_17)
 target_link_libraries(motis-railviz
   boost-system
   motis-module
