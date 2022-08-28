@@ -55,7 +55,7 @@ std::vector<hrd_service::section> parse_section(
       train_num.empty() ? last_section.train_num_ : parse<int>(train_num),
       admin.empty() ? last_section.admin_ : admin);
 
-  return std::move(sections);
+  return sections;
 }
 
 std::vector<std::pair<cstr, range>> compute_ranges(
