@@ -28,6 +28,12 @@ namespace motis::nigiri {
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state_tsp;
 
+struct transport_display_info {
+  CISTA_COMPARABLE()
+  n::clasz clasz_;
+  n::string display_name_;
+};
+
 struct nigiri::impl {
   std::shared_ptr<n::timetable> tt_;
   std::vector<std::string> tags_;
@@ -132,14 +138,30 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
     mj.transports_.emplace_back(std::move(t));
   };
 
-  //  interval_map<journey::transport> transports;
-  //  interval_map<extern_trip> trips;
-  //
-  //  auto const add_transports = [](n::transport const t, unsigned section_idx)
-  //  {
-  //       tt.route_section_clasz_
-  //  };
-  //  auto const add_trips = [](n::transport const t, unsigned section_idx) {};
+  interval_map<transport_display_info> transports;
+  interval_map<extern_trip> extern_trips;
+
+  auto const add_transports = [&](n::transport const t, unsigned section_idx) {
+    auto x = journey::transport{};
+    x.from_ = x.to_ = section_idx;
+
+    for (auto const trip : tt.merged_trips_.at(
+             tt.transport_to_trip_section_.at(t.t_idx_).at(section_idx))) {
+      transports.add_entry(
+          transport_display_info{
+              .clasz_ =
+                  tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_))
+                      .at(section_idx),
+              .display_name_ = tt.trip_display_names_.at(trip)},
+          mj.stops_.size() - 1);
+
+      // TODO(felix) maybe the day index needs to be changed according to the
+      // offset between the occurance in a rule service expanded trip vs. the
+      // reference trip. For now, no rule services are implemented.
+      extern_trips.add_entry(nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
+                             mj.stops_.size() - 1);
+    }
+  };
 
   for (auto const& leg : nj.legs_) {
     leg.uses_.apply(utl::overloaded{
@@ -147,20 +169,9 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
           auto const& route_idx = tt.transport_route_.at(t.t_.t_idx_);
           auto const& stop_seq = tt.route_location_seq_.at(route_idx);
 
-          //          (void)transports;
-          //          (void)trips;
-          //          for (auto const& section : utl::pairwise(t.stop_range_)) {
-          //            (void)section;
-          //          }
-
           for (auto const& stop_idx : t.stop_range_) {
             auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
             auto const enter = (stop_idx == t.stop_range_.from_);
-
-            if (!exit) {
-              add_transports(t.t_, stop_idx);
-              add_trips(t.t_, stop_idx);
-            }
 
             // for entering: create a new stop if it's the first stop in journey
             // otherwise: create a new stop
@@ -198,6 +209,10 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
                   .timestamp_reason_ = timestamp_reason::SCHEDULE,
                   .track_ = "",
                   .schedule_track_ = ""};
+            }
+
+            if (!exit) {
+              add_transports(t.t_, stop_idx);
             }
           }
         },
