@@ -32,7 +32,8 @@ struct nigiri::impl {
   std::vector<std::string> tags_;
 };
 
-nigiri::nigiri() = default;
+nigiri::nigiri() : module("Next Generation Routing", "nigiri") {}
+
 nigiri::~nigiri() = default;
 
 n::location_id get_id(std::vector<std::string> const& tags,
