@@ -2,7 +2,6 @@
 
 #include "utl/to_vec.h"
 
-#include "motis/core/schedule/category.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
@@ -95,7 +94,6 @@ journey create_journey1() {
   j.transports_.resize(3);
   {
     auto& transport = j.transports_[0];
-    transport.category_id_ = 0;
     transport.category_name_ = "ICE";
     transport.direction_ = "X";
     transport.duration_ = 10;
@@ -110,7 +108,6 @@ journey create_journey1() {
   }
   {
     auto& transport = j.transports_[1];
-    transport.category_id_ = 1;
     transport.category_name_ = "IC";
     transport.direction_ = "Y";
     transport.duration_ = 11;
@@ -129,7 +126,6 @@ journey create_journey1() {
     transport.duration_ = 5;
     transport.from_ = 2;
     transport.to_ = 3;
-    transport.category_id_ = 0;
     transport.category_name_ = "";
     transport.direction_ = "";
     transport.line_identifier_ = "";
@@ -232,7 +228,6 @@ journey create_journey2() {
   j.transports_.resize(1);
   {
     auto& transport = j.transports_[0];
-    transport.category_id_ = 0;
     transport.category_name_ = "ICE";
     transport.direction_ = "X";
     transport.duration_ = 15;
@@ -306,7 +301,6 @@ TEST(core_convert_journey, journey_message_journey) {
     for (auto t = 0UL; t < o.transports_.size(); ++t) {
       auto const& ot = o.transports_[t];
       auto const& jt = j.transports_[t];
-      ASSERT_EQ(ot.category_id_, jt.category_id_);
       ASSERT_EQ(ot.category_name_, jt.category_name_);
       ASSERT_EQ(ot.direction_, jt.direction_);
       ASSERT_EQ(ot.duration_, jt.duration_);
