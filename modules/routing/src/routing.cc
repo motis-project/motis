@@ -68,8 +68,8 @@ msg_ptr routing::route(msg_ptr const& msg) {
 
   mem_retriever mem(mem_pool_mutex_, mem_pool_, LABEL_STORE_START_SIZE);
   query.mem_ = &mem.get();
-
-  auto res = search_dispatch(query, req->start_type(), req->search_type(),
+  //                                                   req->search_type()
+  auto res = search_dispatch(query, req->start_type(), SearchType_Ondemand,
                              req->search_dir());
 
   MOTIS_STOP_TIMING(routing_timing);

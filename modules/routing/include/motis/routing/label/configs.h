@@ -8,6 +8,7 @@
 #include "motis/routing/label/criteria/transfers.h"
 #include "motis/routing/label/criteria/travel_time.h"
 #include "motis/routing/label/criteria/weighted.h"
+#include "motis/routing/label/criteria/ondemand.h"
 #include "motis/routing/label/dominance.h"
 #include "motis/routing/label/filter.h"
 #include "motis/routing/label/initializer.h"
@@ -99,5 +100,12 @@ using accessibility_label =
           dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
                     transfers_dominance, accessibility_dominance>,
           comparator<transfers_dominance, accessibility_dominance>>;
+
+template <search_dir Dir>
+using ondemand_label =
+    label<Dir, MAX_WEIGHTED_OD, false, get_ondemand_lb, label_data<ondemand>,
+          initializer<ondemand_initializer>, updater<ondemand_updater>,
+          filter<ondemand_filter>, dominance<default_tb, ondemand_dominance>,
+          dominance<post_search_tb>, comparator<ondemand_dominance>>;
 
 }  // namespace motis::routing

@@ -1,15 +1,9 @@
-#ifndef MOTIS_ONDEMAND_H
-#define MOTIS_ONDEMAND_H
-
-#endif  // MOTIS_ONDEMAND_H
-
 #pragma once
 
 #include <cmath>
 #include <cstdint>
-#include "/transfers.h"
-#include "/travel_time.h"
-#include "../../../../../../../base/core/include/motis/core/schedule/edges.h"
+#include "transfers.h"
+#include "travel_time.h"
 
 namespace motis::routing {
 
@@ -109,4 +103,4 @@ struct ondemand_filter {
   }
 };
 
-}  // namespace motis::routing
+}   // namespace motis::routing

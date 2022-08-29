@@ -53,6 +53,8 @@ inline search_result search_dispatch(search_query const& q,
       return get_connections<late_connections_label_for_tests<Dir>, Gen>(q);
     case SearchType_Accessibility:
       return get_connections<accessibility_label<Dir>, Gen>(q);
+    case SearchType_Ondemand:
+      return get_connections<ondemand_label<Dir>, Gen>(q);
     default: break;
   }
   throw std::system_error(error::search_type_not_supported);
