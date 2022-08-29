@@ -19,12 +19,13 @@
 #include "utl/parser/csv.h"
 
 namespace fs = std::filesystem;
-namespace fbs = flatbuffers;
+// namespace fbs = flatbuffers;
 namespace mm = motis::module;
 namespace n = ::nigiri;
 
 namespace motis::nigiri {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state_tsp;
 
 struct nigiri::impl {
@@ -36,8 +37,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {}
 
 nigiri::~nigiri() = default;
 
-n::location_id get_id(std::vector<std::string> const& tags,
-                      std::string const& station_id) {
+n::location_id motis_station_to_nigiri_id(std::vector<std::string> const& tags,
+                                          std::string const& station_id) {
   auto const it = utl::find_if(
       tags, [&](auto&& tag) { return station_id.starts_with(tag); });
   return it == end(tags)
@@ -51,7 +52,8 @@ n::location_id get_id(std::vector<std::string> const& tags,
 n::location_idx_t get_location_idx(std::vector<std::string> const& tags,
                                    n::timetable const& tt,
                                    std::string const& station_id) {
-  return tt.locations_.location_id_to_idx_.at(get_id(tags, station_id));
+  return tt.locations_.location_id_to_idx_.at(
+      motis_station_to_nigiri_id(tags, station_id));
 }
 
 unixtime to_motis_unixtime(n::unixtime_t const t) {
@@ -130,14 +132,20 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
     mj.transports_.emplace_back(std::move(t));
   };
 
+  //  interval_map<journey::transport> transports;
+  //  interval_map<extern_trip> trips;
+  //
+  //  auto const add_transports = [](n::transport const t, unsigned section_idx)
+  //  {
+  //       tt.route_section_clasz_
+  //  };
+  //  auto const add_trips = [](n::transport const t, unsigned section_idx) {};
+
   for (auto const& leg : nj.legs_) {
     leg.uses_.apply(utl::overloaded{
         [&](n::routing::journey::transport_enter_exit const& t) {
           auto const& route_idx = tt.transport_route_.at(t.t_.t_idx_);
           auto const& stop_seq = tt.route_location_seq_.at(route_idx);
-
-          interval_map<journey::transport> transports;
-          interval_map<extern_trip> trips;
 
           //          (void)transports;
           //          (void)trips;
@@ -148,6 +156,11 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
           for (auto const& stop_idx : t.stop_range_) {
             auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
             auto const enter = (stop_idx == t.stop_range_.from_);
+
+            if (!exit) {
+              add_transports(t.t_, stop_idx);
+              add_trips(t.t_, stop_idx);
+            }
 
             // for entering: create a new stop if it's the first stop in journey
             // otherwise: create a new stop
@@ -251,19 +264,19 @@ void nigiri::init(motis::module::registry& reg) {
         auto tt = impl_->tt_;
         switch (req->search_dir()) {
           case SearchDir_Forward:
-            n::routing::raptor<n::direction::kForward>{
-                tt, *search_state_tsp.get(), std::move(q)}
+            n::routing::raptor<n::direction::kForward>{tt, *search_state_tsp,
+                                                       std::move(q)}
                 .route();
             break;
 
           case SearchDir_Backward:
-            n::routing::raptor<n::direction::kBackward>{
-                tt, *search_state_tsp.get(), std::move(q)}
+            n::routing::raptor<n::direction::kBackward>{tt, *search_state_tsp,
+                                                        std::move(q)}
                 .route();
             break;
         }
 
-        return to_routing_response(*tt, search_state_tsp.get()->results_);
+        return to_routing_response(*tt, search_state_tsp->results_);
       },
       {});
 }

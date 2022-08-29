@@ -57,7 +57,6 @@ journey::transport to_transport(Transport const& transport, uint16_t duration) {
   t.to_ = transport.range()->to();
   t.is_walk_ = false;
   t.category_name_ = transport.category_name()->c_str();
-  t.category_id_ = transport.category_id();
   t.clasz_ = transport.clasz();
   t.direction_ = transport.direction()->c_str();
   t.line_identifier_ = transport.line_id()->c_str();
