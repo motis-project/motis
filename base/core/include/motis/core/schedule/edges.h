@@ -85,7 +85,7 @@ public:
   /** foot edge constructor. */
   edge(node* from, node* to, uint8_t type, uint16_t time_cost, uint16_t price,
        bool transfer, int mumo_id = 0, uint16_t interval_begin = 0,
-       uint16_t interval_end = 0, uint16_t accessibility = 0)
+       uint16_t interval_end = 0, uint16_t accessibility = 0, bool is_od = false)
       : from_(from), to_(to) {
     m_.type_ = type;
     m_.foot_edge_.time_cost_ = time_cost;
@@ -95,6 +95,7 @@ public:
     m_.foot_edge_.interval_begin_ = interval_begin;
     m_.foot_edge_.interval_end_ = interval_end;
     m_.foot_edge_.accessibility_ = accessibility;
+    m_.foot_edge_.is_od_ = is_od;
 
     assert(m_.type_ != ROUTE_EDGE);
   }
@@ -187,6 +188,15 @@ public:
 
   static inline edge_cost get_foot_edge_no_cost() {
     return edge_cost(0, false, 0, 0);
+  }
+
+  static bool get_is_ondemand(const edge* e)
+  {
+    if(e->type() == MUMO_EDGE)
+    {
+      return e->m_.foot_edge_.is_od_;
+    }
+    else return false;
   }
 
   edge_cost get_minimum_cost() const {
@@ -476,6 +486,7 @@ public:
 
       // id for mumo edge
       int32_t mumo_id_;
+      bool is_od_;
 
       // interval: time-dependent/periodic mumo edge
       uint16_t interval_begin_;
@@ -489,6 +500,7 @@ public:
         transfer_ = false;
         mumo_id_ = -1;
         accessibility_ = 0;
+        is_od_ = false;
       }
     } foot_edge_;
 
@@ -552,9 +564,9 @@ inline edge make_after_train_bwd_edge(node* from, node* to,
 
 inline edge make_mumo_edge(node* from, node* to, uint16_t time_cost = 0,
                            uint16_t price = 0, uint16_t accessibility = 0,
-                           int mumo_id = 0) {
+                           int mumo_id = 0, bool is_od = false) {
   return edge(from, to, edge::MUMO_EDGE, time_cost, price, false, mumo_id, 0, 0,
-              accessibility);
+              accessibility, is_od);
 }
 
 inline edge make_time_dependent_mumo_edge(node* from, node* to,

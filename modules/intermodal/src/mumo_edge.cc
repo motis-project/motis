@@ -85,8 +85,14 @@ void osrm_edges(latlng const& pos, int max_dur, int max_dist,
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
 
+  std::string type_profile = to_string(type);
+  if(to_string(type) == "on_demand")
+  {
+    type_profile = "car";
+  }
+
   auto const osrm_msg =
-      motis_call(make_osrm_request(pos, stations, to_string(type), direction))
+      motis_call(make_osrm_request(pos, stations, type_profile, direction))
           ->val();
   auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
 
@@ -304,6 +310,20 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         break;
       }
 
+      case Mode_OnDemand: {
+        auto max_dur =
+          reinterpret_cast<OnDemand const*>(wrapper->mode())->max_duration();
+        auto max_dist = max_dur * CAR_SPEED;
+        osrm_edges(pos, max_dur, max_dist, mumo_type::ON_DEMAND, search_dir,
+                   appender);
+        auto max_dur2 =
+          reinterpret_cast<Foot const*>(wrapper->mode())->max_duration();
+        auto max_dist2 = max_dur2 * WALK_SPEED;
+        osrm_edges(pos, max_dur2, max_dist2, mumo_type::FOOT, search_dir,
+                   appender);
+        break;
+      }
+
       case Mode_GBFS: {
         auto const gbfs = reinterpret_cast<GBFS const*>(wrapper->mode());
         gbfs_edges(appender, search_dir, pos, direct_target,
@@ -388,23 +408,45 @@ std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
   for (auto const& edge : starts) {
     auto const edge_id = static_cast<int>(edge_mapping.size());
     edge_mapping.emplace_back(&edge);
-    edges.emplace_back(CreateAdditionalEdgeWrapper(
-        fbb, AdditionalEdge_MumoEdge,
-        CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
-                       fbb.CreateString(edge.to_), edge.duration_, 0,
-                       edge.accessibility_, edge_id)
-            .Union()));
+    if(edge.type_ == mumo_type::ON_DEMAND)
+    {
+      edges.emplace_back(CreateAdditionalEdgeWrapper(
+          fbb, AdditionalEdge_MumoEdge,
+          CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
+                         fbb.CreateString(edge.to_), static_cast<int>(std::round(edge.duration_ * 1.5)), 0,
+                         edge.accessibility_, edge_id, true)
+              .Union()));
+    }
+    else {
+      edges.emplace_back(CreateAdditionalEdgeWrapper(
+          fbb, AdditionalEdge_MumoEdge,
+          CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
+                         fbb.CreateString(edge.to_), edge.duration_, 0,
+                         edge.accessibility_, edge_id, false)
+              .Union()));
+    }
   }
 
   for (auto const& edge : destinations) {
     auto const edge_id = static_cast<int>(edge_mapping.size());
     edge_mapping.emplace_back(&edge);
-    edges.emplace_back(CreateAdditionalEdgeWrapper(
-        fbb, AdditionalEdge_MumoEdge,
-        CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
-                       fbb.CreateString(edge.to_), edge.duration_, 0,
-                       edge.accessibility_, edge_id)
-            .Union()));
+    if(edge.type_ == mumo_type::ON_DEMAND)
+    {
+      edges.emplace_back(CreateAdditionalEdgeWrapper(
+          fbb, AdditionalEdge_MumoEdge,
+          CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
+                         fbb.CreateString(edge.to_), static_cast<int>(std::round(edge.duration_ * 1.5)), 0,
+                         edge.accessibility_, edge_id, true)
+              .Union()));
+    }
+    else {
+      edges.emplace_back(CreateAdditionalEdgeWrapper(
+          fbb, AdditionalEdge_MumoEdge,
+          CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
+                         fbb.CreateString(edge.to_), edge.duration_, 0,
+                         edge.accessibility_, edge_id, false)
+              .Union()));
+    }
   }
 
   return edges;
