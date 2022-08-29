@@ -21,6 +21,7 @@ table MumoEdge {
   price:ushort;
   accessibility:ushort;
   mumo_id:int;
+  is_od:bool;
 }
 
 table PeriodicMumoEdge {
@@ -97,6 +98,7 @@ enum SearchType : byte {
   LateConnections,
   LateConnectionsTest,
   Accessibility,
+  Ondemand,
   DefaultPrice,
   DefaultPriceRegional
 }

@@ -78,6 +78,8 @@ RailViz.API = (function () {
         return 'bike';
       case 'car':
         return 'car';
+      case 'ondemand':
+        return 'car';
       default:
         return 'foot';
     }

@@ -53,9 +53,11 @@ type alias Model =
     , walkEnabled : Bool
     , bikeEnabled : Bool
     , carEnabled : Bool
+    , ondemandEnabled : Bool
     , pprSearchOptions : SearchOptions
     , bikeMaxDuration : Int
     , carMaxDuration : Int
+    , ondemandMaxDuration : Int
     , useCarParking : Bool
     , editorVisible : Bool
     , gbfs : Dict String GBFS
@@ -103,9 +105,11 @@ init storedSelections pprMode =
             , walkEnabled = True
             , bikeEnabled = False
             , carEnabled = False
+            , ondemandEnabled = False
             , pprSearchOptions = defaultSearchProfile
             , bikeMaxDuration = 15
             , carMaxDuration = 15
+            , ondemandMaxDuration = 15
             , useCarParking = True
             , editorVisible = False
             , gbfs = Dict.empty
@@ -128,6 +132,7 @@ getModes model =
         [ [ getWalkMode model
           , getBikeMode model
           , getCarMode model
+          , getOnDemandMode model
           ]
         , getGBFSModes model
         ]
@@ -151,6 +156,13 @@ getBikeMode model =
     else
         Nothing
 
+getOnDemandMode : Model -> Maybe Intermodal.Mode
+getOnDemandMode model =
+    if model.ondemandEnabled then
+        Just (Intermodal.OnDemand { maxDuration = model.ondemandMaxDuration * 60 })
+
+    else
+        Nothing
 
 getCarMode : Model -> Maybe Intermodal.Mode
 getCarMode model =
@@ -213,6 +225,10 @@ maxCarDuration : Model -> Int
 maxCarDuration model =
     30
 
+maxOndemandDuration : Model -> Int
+maxOndemandDuration model =
+    30
+
 
 
 -- clamp : number -> number -> number -> number
@@ -243,7 +259,9 @@ clampCarDuration : Model -> Int -> Int
 clampCarDuration model val =
     clamp 0 (maxCarDuration model) val
 
-
+clampOndemandDuration : Model -> Int -> Int
+clampOndemandDuration model val =
+    clamp 0 (maxOndemandDuration model) val
 
 -- UPDATE
 
@@ -254,10 +272,12 @@ type Msg
     | ToggleWalk
     | ToggleBike
     | ToggleCar
+    | ToggleOndemand
     | ToggleUseCarParking
     | WalkMaxDurationInput String
     | BikeMaxDurationInput String
     | CarMaxDurationInput String
+    | OndemandMaxDurationInput String
     | SelectProfile String
     | GBFSInfoError ApiError
     | UpdateGBFSInfo GBFSInfo
@@ -286,6 +306,9 @@ update msg model =
 
         ToggleUseCarParking ->
             { model | useCarParking = not model.useCarParking }
+
+        ToggleOndemand ->
+            { model | ondemandEnabled = not model.ondemandEnabled }
 
         WalkMaxDurationInput str ->
             case String.toFloat str of
@@ -321,6 +344,14 @@ update msg model =
 
                 _ ->
                     model
+
+        OndemandMaxDurationInput str ->
+            case String.toInt str of
+               Ok val ->
+                   { model | ondemandMaxDuration = clampOndemandDuration model val }
+
+               _ ->
+                   model
 
         SelectProfile id ->
             selectPresetProfile model id
@@ -461,6 +492,7 @@ clampValues model =
     { model
         | bikeMaxDuration = clampBikeDuration model model.bikeMaxDuration
         , carMaxDuration = clampCarDuration model model.carMaxDuration
+        , ondemandMaxDuration = clampOndemandDuration model model.ondemandMaxDuration
         , pprSearchOptions = updatedPprProfile
     }
 
@@ -493,6 +525,13 @@ buttonView locale model =
                 ]
             ]
             [ i [ class "icon" ] [ text "directions_car" ] ]
+        , div
+            [ classList
+                [ "mode" => True
+                , "enabled" => model.ondemandEnabled
+                ]
+            ]
+            [ i [ class "icon" ] [ text "directions_ondemand" ] ]
         ]
 
 
@@ -573,6 +612,31 @@ bikeView locale model =
             ]
         ]
 
+ondemandView : Localization -> Model -> Html Msg
+ondemandView locale model =
+    fieldset
+        [ classList
+            [ "mode" => True
+            , "ondemand" => True
+            , "disabled" => not model.ondemandEnabled
+            ]
+        ]
+        [ legend [ class "mode-header" ]
+            [ label []
+                [ input
+                    [ type_ "checkbox"
+                    , checked model.ondemandEnabled
+                    , onClick ToggleOndemand
+                    ]
+                    []
+                , text locale.t.connections.ondemand
+                ]
+            ]
+        , div [ class "option" ]
+            [ div [ class "label" ] [ text locale.t.search.maxDuration ]
+            , numericSliderView model.ondemandMaxDuration 0 (maxOndemandDuration model) 1 OndemandMaxDurationInput
+            ]
+        ]
 
 carView : Localization -> Model -> Html Msg
 carView locale model =
@@ -719,6 +783,7 @@ editorView locale label model =
                 [ [ walkView locale model
                   , bikeView locale model
                   , carView locale model
+                  , ondemandView locale model
                   ]
                 , gbfsView locale model
                 ]
@@ -783,6 +848,11 @@ encodeModel model =
                 , "max_duration" => Encode.int model.carMaxDuration
                 , "use_parking" => Encode.bool model.useCarParking
                 ]
+        , "ondemand"
+            => Encode.object
+                [ "enabled" => Encode.bool model.ondemandEnabled
+                , "max_duration" => Encode.int model.ondemandMaxDuration
+                ]
         , "gbfs"
             => Encode.list (model.gbfs |> Dict.values |> List.map encodeGbfs)
         ]
@@ -804,9 +874,11 @@ decodeModel =
         |> requiredAt [ "walk", "enabled" ] Decode.bool
         |> requiredAt [ "bike", "enabled" ] Decode.bool
         |> requiredAt [ "car", "enabled" ] Decode.bool
+        |> requiredAt [ "ondemand", "enabled" ] Decode.bool
         |> requiredAt [ "walk", "search_profile" ] decodeSearchOptions
         |> requiredAt [ "bike", "max_duration" ] Decode.int
         |> requiredAt [ "car", "max_duration" ] Decode.int
+        |> requiredAt [ "ondemand", "max_duration" ] Decode.int
         |> optionalAt [ "car", "use_parking" ] Decode.bool True
         |> hardcoded False
         |> optional "gbfs" (Decode.map gbfsToDict (Decode.list decodeGbfs)) Dict.empty

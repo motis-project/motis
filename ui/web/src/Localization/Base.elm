@@ -81,6 +81,7 @@ type alias Translations =
         , walk : String
         , bike : String
         , car : String
+        , ondemand : String
         , trainNr : String
         , lineId : String
         , parking : String

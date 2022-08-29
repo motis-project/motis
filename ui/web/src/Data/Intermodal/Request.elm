@@ -378,6 +378,12 @@ encodeMode mode =
                 , "mode" => Encode.object [ "max_duration" => Encode.int info.maxDuration ]
                 ]
 
+        OnDemand info ->
+            Encode.object
+                [ "mode_type" => Encode.string "OnDemand"
+                , "mode" => Encode.object [ "max_duration" => Encode.int info.maxDuration ]
+                ]
+
         FootPPR info ->
             Encode.object
                 [ "mode_type" => Encode.string "FootPPR"

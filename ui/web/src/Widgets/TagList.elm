@@ -41,6 +41,7 @@ type Tag
     = WalkTag TagOptions
     | BikeTag TagOptions
     | CarTag TagOptions
+    | OnDemandTag TagOptions
 
 
 type alias TagOptions =
@@ -58,6 +59,7 @@ init storedSelections =
         [ WalkTag { maxDuration = defaultMaxDuration }
         , BikeTag { maxDuration = defaultMaxDuration }
         , CarTag { maxDuration = defaultMaxDuration }
+        , OnDemandTag { maxDuration = defaultMaxDuration }
         ]
     , selected =
         storedSelections
@@ -85,6 +87,10 @@ getTagOptions tag =
         CarTag o ->
             o
 
+        OnDemandTag o ->
+            o
+
+
 
 updateTagOptions : (TagOptions -> TagOptions) -> Tag -> Tag
 updateTagOptions f tag =
@@ -98,6 +104,8 @@ updateTagOptions f tag =
         CarTag o ->
             CarTag (f o)
 
+        OndemandTag o ->
+            OnDemandTag (f o)
 
 
 -- UPDATE
@@ -237,6 +245,9 @@ tagIcon tag =
         CarTag _ ->
             "directions_car"
 
+        OnDemandTag _ ->
+            "directions_ondemand"
+
 
 view : Localization -> String -> Model -> Html Msg
 view locale label model =
@@ -281,6 +292,12 @@ encodeTag tag =
                 , "max_duration" => Encode.int o.maxDuration
                 ]
 
+        OnDemandTag o ->
+            Encode.object
+                [ "type" => Encode.string "OnDemand"
+                , "max_duration" => Encode.int o.maxDuration
+                ]
+
 
 decodeTag : Decode.Decoder Tag
 decodeTag =
@@ -299,6 +316,10 @@ decodeTag =
                 "Car" ->
                     decodeOptions
                         |> Decode.map CarTag
+
+                "OnDemand" ->
+                    decodeOptions
+                        |> Decode.map OnDemandTag
 
                 _ ->
                     Decode.fail "unknown tag type"

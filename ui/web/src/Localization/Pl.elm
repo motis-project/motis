@@ -100,6 +100,7 @@ plTranslations =
         , walk = "Spacer"
         , bike = "Rower"
         , car = "Samochód"
+        , ondemand = "On Demand"
         , trainNr = "Numer kursu"
         , lineId = "Linia"
         , parking = "Parking"
