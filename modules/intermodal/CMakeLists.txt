@@ -14,5 +14,7 @@ target_link_libraries(motis-intermodal
   motis-bootstrap
   geo
   ppr-routing
+  motis-libjson
+  http-client
 )
 target_compile_options(motis-intermodal PRIVATE ${MOTIS_CXX_FLAGS})
