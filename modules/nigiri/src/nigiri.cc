@@ -139,7 +139,7 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
   };
 
   interval_map<transport_display_info> transports;
-  interval_map<extern_trip> extern_trips;
+  interval_map<std::pair<extern_trip, std::string>> extern_trips;
 
   auto const add_transports = [&](n::transport const t, unsigned section_idx) {
     auto x = journey::transport{};
@@ -158,8 +158,10 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
       // TODO(felix) maybe the day index needs to be changed according to the
       // offset between the occurance in a rule service expanded trip vs. the
       // reference trip. For now, no rule services are implemented.
-      extern_trips.add_entry(nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
-                             mj.stops_.size() - 1);
+      extern_trips.add_entry(
+          std::pair{nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
+                    tt.trip_debug_.at(trip)[0].str()},
+          mj.stops_.size() - 1);
     }
   };
 
@@ -219,6 +221,27 @@ journey nigiri_to_motis_journey(n::timetable const& tt,
         [&](n::footpath_idx_t const) { add_walk(leg, -1); },
         [&](std::uint8_t const x) { add_walk(leg, x); }});
   }
+
+  for (auto const& [x, ranges] : transports.get_attribute_ranges()) {
+    for (auto const& r : ranges) {
+      auto t = journey::transport{};
+      t.from_ = r.from_;
+      t.to_ = r.to_;
+      t.clasz_ = static_cast<std::underlying_type_t<n::clasz>>(x.clasz_);
+      t.name_ = x.display_name_;
+      mj.transports_.emplace_back(std::move(t));
+    }
+  }
+
+  for (auto const& [et, ranges] : extern_trips.get_attribute_ranges()) {
+    for (auto const& r : ranges) {
+      mj.trips_.emplace_back(journey::trip{.from_ = r.from_,
+                                           .to_ = r.to_,
+                                           .extern_trip_ = et.first,
+                                           .debug_ = et.second});
+    }
+  }
+
   return mj;
 }
 
