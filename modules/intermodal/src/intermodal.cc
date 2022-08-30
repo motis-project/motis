@@ -23,6 +23,7 @@
 #include "motis/intermodal/mumo_edge.h"
 #include "motis/intermodal/query_bounds.h"
 #include "motis/intermodal/statistics.h"
+#include "motis/intermodal/ondemand_availability.h"
 
 #include "motis/protocol/Message_generated.h"
 
@@ -34,8 +35,6 @@ using namespace motis::routing;
 using namespace motis::revise;
 
 namespace motis::intermodal {
-
-//Test 
 
 intermodal::intermodal() : module("Intermodal Options", "intermodal") {
   param(router_, "router", "routing module");
@@ -94,6 +93,17 @@ struct parking_patch {
   mumo_edge const* e_{};
   unsigned from_{};
   unsigned to_{};
+};
+
+struct od_patch {
+  od_patch(mumo_edge const* e, unsigned transport_from,
+           unsigned transport_to, journey j_todelete)
+      : e_(e), from_(transport_from), to_(transport_to), j_(j_todelete) {}
+
+  mumo_edge const* e_{};
+  unsigned from_{};
+  unsigned to_{};
+  journey j_{};
 };
 
 struct split_transport_result {
@@ -284,6 +294,211 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
   }
 }
 
+std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
+                                  std::vector<od_patch> patches,
+                                  std::vector<availability_response> ares)
+{
+  if(ares.empty() || patches.empty())
+  {
+    return -1;
+  }
+  auto const all = journeys->size();
+  printf("------ size vorher: %llu\n", all);
+  printf("ares size: %llu; journeys size: %llu; patches size: %llu\n", ares.size(), journeys->size(), patches.size());
+  vector<int> indices;
+  utl::erase_if(*journeys, [&](journey const& j){
+    bool eins = false, zwei = false, drei = false, vier = false;
+    int z = 0;
+    for(auto& t : j.transports_)
+    {
+      if(t.mumo_type_ == to_string(mumo_type::ON_DEMAND))
+      {
+        vier = true;
+        break;
+      }
+    }
+    if(vier)
+    {
+      for(od_patch p : patches){
+        if(j.operator==(p.j_))
+        {
+          eins = true;
+          if(p.e_->duration_ <= 5.0){
+            zwei = true;
+          }
+          break;
+        }
+        z++;
+      }
+      if(!ares.at(z).available) drei = true;
+      else if(ares.at(z).available && !zwei) indices.push_back(z);
+    }
+    return eins && (zwei || drei);
+  });
+  if(indices.empty())
+  {
+    size_t retv = all - (all - journeys->size());
+    printf("-- im neuen if ---- size nachher: %llu\n", retv);
+    return all - journeys->size();
+  }
+  int i = 0;
+  for(auto& patch : patches)
+  {
+    parking_patch pp{patches.at(indices.at(i)).e_, patches.at(indices.at(i)).from_, patches.at(indices.at(i)).to_};
+    vector<parking_patch> od_parkingpatches{pp};
+    /*
+     *  replace: S --od--> T
+     *  with:    S --walk--> PU --od--> T
+     *  replace: T --od--> S
+     *  with:    T --walk--> PU --od--> S
+     */
+    if(ares.at(indices.at(i)).walkDur[0] != 0 && ares.at(indices.at(i)).walkDur[1] == 0) {
+      auto& t1 = get_transport(patch.j_, patch.from_, patch.to_);
+      auto splitted_one = split_transport(patch.j_, od_parkingpatches, t1);
+
+      splitted_one.parking_stop_.eva_no_ = ares.at(indices.at(i)).codenumber_id;
+      splitted_one.parking_stop_.name_ = ares.at(indices.at(i)).codenumber_id;
+      splitted_one.parking_stop_.lat_ = ares.at(indices.at(i)).startpoint.lat;
+      splitted_one.parking_stop_.lng_ = ares.at(indices.at(i)).startpoint.lng;
+      splitted_one.parking_stop_.arrival_.valid_ = true;
+      splitted_one.parking_stop_.arrival_.timestamp_ =
+          patch.j_.stops_[patch.from_].departure_.timestamp_ +
+          ares.at(indices.at(i)).walkDur[0];
+      splitted_one.parking_stop_.arrival_.schedule_timestamp_ =
+          patch.j_.stops_[patch.from_].departure_.schedule_timestamp_ +
+          ares.at(indices.at(i)).walkDur[0];
+      splitted_one.parking_stop_.arrival_.timestamp_reason_ =
+          patch.j_.stops_[patch.from_].departure_.timestamp_reason_;
+      splitted_one.parking_stop_.departure_ = splitted_one.parking_stop_.arrival_;
+
+      splitted_one.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      splitted_one.second_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
+    }
+    /*  replace: S --od--> T
+     *  with:    S --od--> DO --walk--> T
+     *  replace: T --od--> S
+     *  with:    T --od--> DO --walk--> S
+     *
+     *  unsicher
+     */
+    else if(ares.at(indices.at(i)).walkDur[0] == 0 && ares.at(indices.at(i)).walkDur[1] != 0) {
+      auto& t2 = get_transport(patch.j_, patch.from_, patch.to_);
+      auto splitted_two = split_transport(patch.j_, od_parkingpatches, t2);
+
+      splitted_two.parking_stop_.eva_no_ = ares.at(indices.at(i)).codenumber_id;
+      splitted_two.parking_stop_.name_ = ares.at(indices.at(i)).codenumber_id;
+      splitted_two.parking_stop_.lat_ = ares.at(indices.at(i)).startpoint.lat;
+      splitted_two.parking_stop_.lng_ = ares.at(indices.at(i)).startpoint.lng;
+      splitted_two.parking_stop_.arrival_.valid_ = true;
+      splitted_two.parking_stop_.arrival_.timestamp_ =
+          patch.j_.stops_[patch.from_].departure_.timestamp_;
+      splitted_two.parking_stop_.arrival_.schedule_timestamp_ =
+          patch.j_.stops_[patch.from_].departure_.schedule_timestamp_;
+      splitted_two.parking_stop_.arrival_.timestamp_reason_ =
+          patch.j_.stops_[patch.from_].departure_.timestamp_reason_;
+      splitted_two.parking_stop_.departure_ = splitted_two.parking_stop_.arrival_;
+
+      splitted_two.first_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
+      splitted_two.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+    }
+    /*  replace: S --od--> T
+     *  with:    S --walk--> PU --od--> DO --walk--> T
+     *  replace: T --od--> S
+     *  with:    T --walk--> PU --od--> DO --walk--> S
+     *
+     *  unsicher
+     */
+    else if(ares.at(indices.at(i)).walkDur[0] != 0 && ares.at(indices.at(i)).walkDur[1] != 0)
+    {
+      auto& t3 = get_transport(patch.j_, patch.from_, patch.to_);
+      auto splitted_three = split_transport(patch.j_, od_parkingpatches, t3);
+      auto splitted_four = split_transport(patch.j_, od_parkingpatches, splitted_three.second_transport_);
+
+      splitted_three.first_transport_ = get_transport(patch.j_, patch.from_, patch.from_ + 1);
+      splitted_three.second_transport_ = get_transport(patch.j_, patch.from_ + 1, patch.from_ + 2);
+      splitted_four.first_transport_ = get_transport(patch.j_, patch.from_ + 1, patch.from_ + 2);
+      splitted_four.second_transport_ = get_transport(patch.j_, patch.from_ + 2, patch.from_ + 3);
+
+      auto& split3 = patch.j_.stops_.at(patch.from_ + 1);
+      split3.eva_no_ = ares.at(indices.at(i)).codenumber_id;
+      split3.name_ = ares.at(indices.at(i)).codenumber_id;
+      split3.lat_ = ares.at(indices.at(i)).startpoint.lat;
+      split3.lng_ = ares.at(indices.at(i)).startpoint.lng;
+      split3.arrival_.valid_ = true;
+      split3.arrival_.timestamp_ =
+          patch.j_.stops_[patch.from_].departure_.timestamp_ + ares.at(indices.at(i)).walkDur[0];
+      split3.arrival_.schedule_timestamp_ =
+          patch.j_.stops_[patch.from_].departure_.schedule_timestamp_ + ares.at(indices.at(i)).walkDur[0];
+      split3.arrival_.timestamp_reason_ =
+          patch.j_.stops_[patch.from_].departure_.timestamp_reason_;
+      split3.departure_ = split3.arrival_;
+
+      auto& split4 = patch.j_.stops_.at(patch.from_ + 2);
+      split4.eva_no_ = ares.at(indices.at(i)).codenumber_id;
+      split4.name_ = ares.at(indices.at(i)).codenumber_id;
+      split4.lat_ = ares.at(indices.at(i)).endpoint.lat;
+      split4.lng_ = ares.at(indices.at(i)).endpoint.lat;
+      split4.arrival_.valid_ = true;
+      split4.arrival_.timestamp_ =
+          split3.departure_.timestamp_ + (ares.at(indices.at(i)).dropoffTime - ares.at(indices.at(i)).pickupTime);
+      split4.arrival_.schedule_timestamp_ =
+          split3.departure_.schedule_timestamp_ + (ares.at(indices.at(i)).dropoffTime - ares.at(indices.at(i)).pickupTime);
+      split4.arrival_.timestamp_reason_ =
+          patch.j_.stops_[patch.from_ + 1].departure_.timestamp_reason_;
+      split4.departure_ = split4.arrival_;
+
+      splitted_three.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      splitted_three.second_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
+      splitted_four.first_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
+      splitted_four.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+    }
+    i++;
+  }
+  size_t retv = all - (all - journeys->size());
+  printf("------ size nachher: %llu\n", retv);
+  return all - journeys->size();
+}
+
+availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
+                                             statistics& stats)
+{
+  availability_request areq;
+  //mars.productID = "prd_518a82c3-2e77-4ff3-953f-2aa3cdb6611c";
+  areq.duration = static_cast<int>(round(e.duration_ * 60 * 1.5));
+  if(start)
+  {
+    areq.start = true;
+    areq.startpoint.lat = j.stops_.front().lat_;
+    areq.startpoint.lng = j.stops_.front().lng_;
+    areq.endpoint.lat = j.stops_.at(1).lat_;
+    areq.endpoint.lng = j.stops_.at(1).lng_;
+    areq.departureTime = j.stops_.front().departure_.timestamp_;
+    areq.arrivalTime_onnext = j.stops_.at(1).arrival_.timestamp_;
+  }
+  else
+  {
+    areq.start = false;
+    int lastindex = static_cast<int>(j.stops_.size()) - 1;
+    areq.startpoint.lat = j.stops_.at(lastindex - 1).lat_;
+    areq.startpoint.lng = j.stops_.at(lastindex - 1).lng_;
+    areq.endpoint.lat = j.stops_.back().lat_;
+    areq.endpoint.lng = j.stops_.back().lng_;
+    areq.departureTime = j.stops_.at(lastindex - 1).departure_.timestamp_;
+    areq.arrivalTime = j.stops_.at(lastindex - 1).arrival_.timestamp_;
+    areq.arrivalTime_onnext = j.stops_.back().arrival_.timestamp_;
+  }
+  //mars.maxWalkDist = 200;
+  //printf("mars start: lat: %f; lng: %f\n", mars.startpoint.lat, mars.startpoint.lng);
+  //printf("mars end: lat: %f; lng: %f\n", mars.endpoint.lat, mars.endpoint.lng);
+  //MOTIS_START_TIMING(check_od_availability_timing);
+  availability_response ares = check_od_availability(areq);
+  //MOTIS_STOP_TIMING(check_od_availability_timing);
+  //stats.od_availability_check_duration_accumulated_ +=
+      //static_cast<uint64_t>(MOTIS_TIMING_MS(check_od_availability_timing));
+  return ares;
+}
+
+
 msg_ptr postprocess_response(msg_ptr const& response_msg,
                              query_start const& q_start,
                              query_dest const& q_dest,
@@ -309,6 +524,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   stats.direct_connection_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
 
+  auto ondemand_patches = std::vector<od_patch>{};
+  std::vector<availability_response> vares;
   message_creator mc;
   for (auto& journey : journeys) {
     auto& stops = journey.stops_;
@@ -347,11 +564,24 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         parking_patches.emplace_back(e, t.from_, t.to_);
       } else if (e->type_ == mumo_type::GBFS) {
         gbfs_patches.emplace_back(e, t.from_, t.to_);
+      } else if(e->type_ == mumo_type::ON_DEMAND)
+      {
+        bool start = q_start.is_intermodal_;
+        bool end = q_dest.is_intermodal_;
+        availability_response ares;
+        if(start)
+          ares = apply_ondemand_patches(journey, true, *e, stats);
+        if(end)
+          ares = apply_ondemand_patches(journey, false, *e, stats);
+        vares.emplace_back(ares);
+        ondemand_patches.emplace_back(e, t.from_, t.to_, journey);
       }
     }
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
   }
+  printf("bei post process angekommen: remove...\n");
+  remove_na_od_journeys(&journeys, ondemand_patches, vares);
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });
   std::sort(
