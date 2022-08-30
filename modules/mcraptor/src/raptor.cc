@@ -84,12 +84,12 @@ struct mcraptor::impl {
 
     auto const req = motis_content(RoutingRequest, msg);
 
-    auto const base_query = get_base_query(req, sched_, *meta_info_);
-    auto q = raptor_query{base_query, *meta_info_, *timetable_};
+    auto base_query = get_base_query(req, sched_, *meta_info_);
+
 
     raptor_statistics stats;
     auto const journeys =
-        cpu_raptor(q, stats, sched_, *meta_info_, *timetable_);
+        cpu_raptor(base_query, stats, sched_, *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, journeys, req, stats);

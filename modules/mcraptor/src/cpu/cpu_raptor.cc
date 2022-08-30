@@ -4,15 +4,17 @@
 
 namespace motis::mcraptor {
 
-void mc_raptor::init_arrivals() {
+template <class T, class L>
+void mc_raptor<T, L>::init_arrivals() {
   start_new_round();
-  label new_label(0, query_.source_time_begin_, round_);
+  L new_label(0, query_.source_time_begin_, round_);
   new_label.parent_station_ = query_.source_;
   arrival_by_route(query_.source_, new_label);
   start_new_round();
 }
 
-void mc_raptor::arrival_by_route(stop_id stop, label& new_label) {
+template <class T, class L>
+void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
   // ??? checking for empty
   // check if this label may be dominated by other existing labels
   if(transfer_labels_[query_.target_].dominates(new_label)) {
@@ -28,7 +30,8 @@ void mc_raptor::arrival_by_route(stop_id stop, label& new_label) {
   stops_for_routes_.mark(stop);
 }
 
-void mc_raptor::arrival_by_transfer(stop_id stop, label& new_label) {
+template <class T, class L>
+void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
   // checking for empty??
   // check if this label may be dominated by other existing labels
   if(transfer_labels_[query_.target_].dominates(new_label)) {
@@ -43,7 +46,8 @@ void mc_raptor::arrival_by_transfer(stop_id stop, label& new_label) {
   stops_for_transfers_.mark(stop);
 }
 
-void mc_raptor::relax_transfers() {
+template <class T, class L>
+void mc_raptor<T, L>::relax_transfers() {
   stops_for_transfers_.reset();
   routes_serving_updated_stops_.clear();
   // iterate through all station and find marked
@@ -52,10 +56,10 @@ void mc_raptor::relax_transfers() {
       continue;
     }
     stops_for_transfers_.mark(stop);
-    bag& bag = previous_round()[stop];
+    bag<L>& bag = previous_round()[stop];
     current_round()[stop].labels_.resize(bag.size());
     for(size_t i = 0; i < bag.size(); ++i) {
-      current_round()[stop][i] = label(bag[i], stop, i);
+      current_round()[stop][i] = L(bag[i], stop, i);
     }
   }
 
@@ -63,7 +67,7 @@ void mc_raptor::relax_transfers() {
     if (!stops_for_routes_.marked(stop)) {
       continue;
     }
-    bag& bag = previous_round()[stop];
+    bag<L>& bag = previous_round()[stop];
 
     // iterate through footpaths - coming from the update_footpath()
     auto index_into_transfers = query_.tt_.stops_[stop].index_to_transfers_;
@@ -73,7 +77,7 @@ void mc_raptor::relax_transfers() {
       auto const& to_stop = query_.tt_.footpaths_[current_index].to_;
       auto const& duration = query_.tt_.footpaths_[current_index].duration_;
       for(size_t i = 0; i < bag.size(); ++i) {
-        label new_label;
+        L new_label;
         new_label.arrival_time_ = bag[i].arrival_time_ + duration;
         new_label.parent_station_ = stop;
         new_label.parent_label_index_ = i;
@@ -86,7 +90,8 @@ void mc_raptor::relax_transfers() {
   }
 }
 
-void mc_raptor::collect_routes_serving_updated_stops() {
+template <class T, class L>
+void mc_raptor<T, L>::collect_routes_serving_updated_stops() {
   // find marked stations
   for(stop_id stop = 0; stop < query_.tt_.stop_count(); stop++) {
     if (!stops_for_transfers_.marked(stop)) {
@@ -116,7 +121,8 @@ void mc_raptor::collect_routes_serving_updated_stops() {
   }
 }
 
-void mc_raptor::scan_routes() {
+template <class T, class L>
+void mc_raptor<T, L>::scan_routes() {
   stops_for_routes_.reset();
   for(auto i = routes_serving_updated_stops_.begin(); i != routes_serving_updated_stops_.end(); ++i) {
     route_id route_id = i->first;
@@ -132,7 +138,7 @@ void mc_raptor::scan_routes() {
     route_bag new_route_bag;
     while(stop_offset < trip_size - 1) {
       for(size_t j = 0; j < previous_round()[stop].size(); ++j) {
-        const label& label = previous_round()[stop][j];
+        const L& label = previous_round()[stop][j];
         const stop_time* trip = first_trip;
         trip_id current_trip_id = 0;
         while((trip < last_trip) && (trip[stop_offset].departure_ < label.arrival_time_)) {
@@ -155,7 +161,7 @@ void mc_raptor::scan_routes() {
       stop_offset++;
       stop = query_.tt_.route_stops_[route.index_to_route_stops_ + stop_offset];
       for(route_label& r_label : new_route_bag.labels_) {
-        label new_label;
+        L new_label;
         new_label.arrival_time_ = r_label.trip_[stop_offset].arrival_;
         new_label.parent_station_ = r_label.parent_stop_;
         new_label.parent_label_index_ = r_label.parent_label_index_;
@@ -171,15 +177,18 @@ void mc_raptor::scan_routes() {
   }
 }
 
-bag* mc_raptor::current_round() {
+template <class T, class L>
+bag<L>* mc_raptor<T, L>::current_round() {
   return result_[round_];
 }
 
-bag* mc_raptor::previous_round() {
+template <class T, class L>
+bag<L>* mc_raptor<T, L>::previous_round() {
   return result_[round_ - 1];
 }
 
-void mc_raptor::start_new_round() {
+template <class T, class L>
+void mc_raptor<T, L>::start_new_round() {
   round_ += 1;
 
 
@@ -189,7 +198,7 @@ void mc_raptor::start_new_round() {
 
   int r_k = round_ - 2;
   if(r_k >= 0) {
-    bag& target_bag = result_[r_k][query_.target_];
+    bag<L>& target_bag = result_[r_k][query_.target_];
     if (target_bag.is_valid()) {
       stop_id current_station = query_.target_;
       size_t label = 0;
@@ -209,7 +218,8 @@ void mc_raptor::start_new_round() {
 // searches through all routes in station
 //
 // returns vector of pairs with route itself and index to the given station
-inline std::vector<std::pair<route_id, route_stops_index>> mc_raptor::get_routes_times_for_stop(stop_id stop_id) {
+template <class T, class L>
+inline std::vector<std::pair<route_id, route_stops_index>> mc_raptor<T, L>::get_routes_times_for_stop(stop_id stop_id) {
   std::vector<std::pair<route_id, route_stops_index>> result = std::vector<std::pair<route_id, route_stops_index>>();
   // go through all routes for the given station using the first route as base
   // and adding offset to this base until the base + offset = count of routes in current station
@@ -231,7 +241,8 @@ inline std::vector<std::pair<route_id, route_stops_index>> mc_raptor::get_routes
   return result;
 }
 
-void mc_raptor::invoke_cpu_raptor() {
+template <class T, class L>
+void mc_raptor<T, L>::invoke_cpu_raptor() {
   std::cout << "Target: " << query_.target_ << std::endl;
   std::cout << "Source: " << query_.source_ << std::endl;
 
@@ -252,6 +263,37 @@ void mc_raptor::invoke_cpu_raptor() {
     relax_transfers();
   }
 }
+
+
+
+
+//departure mc_raptor
+label_departure mc_raptor_departure::create_label() {
+  return label_departure();
+}
+
+label_departure mc_raptor_departure::create_label(time departure_time, time arrival_time, size_t changes_count) {
+  return label_departure(departure_time, arrival_time, changes_count);
+}
+
+label_departure mc_raptor_departure::create_label(label_departure& parent_label, stop_id parent_station, size_t parent_index) {
+  return label_departure(parent_label, parent_station, parent_index);
+}
+
+//arrival mc_raptor
+label_arrival mc_raptor_arrival::create_label() {
+  return label_arrival();
+}
+
+label_arrival mc_raptor_arrival::create_label(time departure_time, time arrival_time, size_t changes_count) {
+  return label_arrival(departure_time, arrival_time, changes_count);
+}
+
+label_arrival mc_raptor_arrival::create_label(label_arrival& parent_label, stop_id parent_station, size_t parent_index) {
+  return label_arrival(parent_label, parent_station, parent_index);
+}
+
+
 
 }  // namespace motis::mcraptor
 

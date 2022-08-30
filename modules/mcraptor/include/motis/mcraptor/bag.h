@@ -4,23 +4,23 @@
 #include "label.h"
 
 namespace motis::mcraptor {
-
+template <class L>
 struct bag {
-  std::vector<label> labels_;
+  std::vector<L> labels_;
 
   bag() {
-    labels_ = std::vector<label>();
+    labels_ = std::vector<L>();
   }
 
-  inline label& operator[](const size_t index) { return labels_[index]; }
+  inline L& operator[](const size_t index) { return labels_[index]; }
 
-  inline const label& operator[](const size_t i) const {
+  inline const L& operator[](const size_t i) const {
     return labels_[i];
   }
 
   inline size_t size() const { return labels_.size(); }
 
-  bool merge(label& other_label) noexcept {
+  bool merge(L& other_label) noexcept {
     size_t removed_labels = 0;
     for (size_t i = 0; i < labels_.size(); i++) {
       if (labels_[i].dominates(other_label)) return false;
@@ -35,7 +35,7 @@ struct bag {
     return true;
   }
 
-  void merge_undominated(label& other_label) noexcept {
+  void merge_undominated(L& other_label) noexcept {
     if(dominates(other_label)){ //TODO why is it asserted in original?
 //      std::cout << "mergeUndominated returns" << std::endl;
       return;
@@ -54,13 +54,13 @@ struct bag {
 
   // possibly delete
   void merge(bag& other_bag) {
-    for(label& other_label : other_bag.labels_) {
+    for(L& other_label : other_bag.labels_) {
       merge(other_label);
     }
   }
 
-  bool dominates(label& other_label) {
-    for(label& label : labels_) {
+  bool dominates(L& other_label) {
+    for(L& label : labels_) {
       if(label.dominates(other_label)) {
         return true;
       }
@@ -73,7 +73,7 @@ struct bag {
       return true;
     }
 
-    for(label& label : other_bag.labels_) {
+    for(L& label : other_bag.labels_) {
       if(!dominates(label)) {
         return false;
       }
@@ -87,7 +87,7 @@ struct bag {
 
   time get_earliest_arrival_time() {
     time res = invalid<time>;
-    for(label& label : labels_) {
+    for(L& label : labels_) {
       res = std::min(res, label.arrival_time_);
     }
     return res;

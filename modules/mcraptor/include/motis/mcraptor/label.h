@@ -5,23 +5,23 @@
 
 namespace motis::mcraptor {
 
-
+template <class T>
 struct label {
 
   inline bool arrival_time_rule(label& other) {
-    return arrival_time_ <= other.arrival_time_;
+    static_cast<T*>(this)->arrival_time_rule(other);
   }
 
   inline bool departure_time_rule(label& other) {
-    return departure_time_ >= other.departure_time_;
+    static_cast<T*>(this)->departure_time_rule(other);
   }
 
   inline bool changes_count_rule(label& other) {
-    return changes_count_ <= other.changes_count_;
+    static_cast<T*>(this)->changes_count_rule(other);
   }
 
   inline bool travel_duration_rule(label& other) {
-    return (arrival_time_ - departure_time_) <= (other.arrival_time_ - other.departure_time_);
+    static_cast<T*>(this)->travel_duration_rule(other);
   }
 
 public:
@@ -88,6 +88,62 @@ struct route_label {
   }
 };
 
+struct label_departure : public label<label_departure> {
+
+  label_departure() {
+  }
+
+  label_departure(time departure_time, time arrival_time, size_t changes_count)
+      : label(departure_time, arrival_time, changes_count){ }
+
+  // to create labels for current round from labels from previous round for certain station
+  label_departure(label_departure& parent_label, stop_id parent_station, size_t parent_index)
+      : label(parent_label, parent_station, parent_index) { }
+
+  inline bool arrival_time_rule(label& other) {
+    return arrival_time_ <= other.arrival_time_;
+  }
+  inline bool departure_time_rule(label& other) {
+    return departure_time_ >= other.departure_time_;
+  }
+
+  inline bool changes_count_rule(label& other) {
+    return changes_count_ <= other.changes_count_;
+  }
+
+  inline bool travel_duration_rule(label& other) {
+    return (arrival_time_ - departure_time_) <= (other.arrival_time_ - other.departure_time_);
+  }
+
+};
+
+struct label_arrival : public label<label_arrival> {
+
+  label_arrival() {
+  }
+
+  label_arrival(time departure_time, time arrival_time, size_t changes_count)
+      : label(departure_time, arrival_time, changes_count){ }
+
+  // to create labels for current round from labels from previous round for certain station
+  label_arrival(label_arrival& parent_label, stop_id parent_station, size_t parent_index)
+      : label(parent_label, parent_station, parent_index) { }
+
+  inline bool arrival_time_rule(label& other) {
+    return arrival_time_ >= other.arrival_time_;
+  }
+  inline bool departure_time_rule(label& other) {
+    return departure_time_ >= other.departure_time_;
+  }
+
+  inline bool changes_count_rule(label& other) {
+    return changes_count_ <= other.changes_count_;
+  }
+
+  inline bool travel_duration_rule(label& other) {
+    return (arrival_time_ - departure_time_) <= (other.arrival_time_ - other.departure_time_);
+  }
+};
 
 } // namespace motis::mcraptor
 

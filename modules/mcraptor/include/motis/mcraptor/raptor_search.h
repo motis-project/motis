@@ -31,19 +31,19 @@ inline auto get_departure_range(time const begin, time const end,
   return std::pair(lower, upper);
 }
 
-template <typename RaptorFun, typename Query>
-inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
+template <class L, class MCRaptor>
+inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& stats,
                                        schedule const& sched,
                                        raptor_meta_info const& raptor_sched,
                                        raptor_timetable const& timetable,
-                                       RaptorFun const& raptor_search) {
+                                       MCRaptor raptor) {
   reconstructor reconstructor(sched, raptor_sched, timetable);
 
   if (q.ontrip_) {
     stats.raptor_queries_ = 1;
 
     MOTIS_START_TIMING(raptor_time);
-    raptor_search(q);
+    raptor.invoke_cpu_raptor();
     stats.raptor_time_ = MOTIS_GET_TIMING_MS(raptor_time);
 
     MOTIS_START_TIMING(rec_timing);
@@ -63,7 +63,7 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   stats.raptor_queries_ += 1;
   q.source_time_begin_ = q.source_time_end_ + 1;
   MOTIS_START_TIMING(plus_one_time);
-  raptor_search(q);
+  raptor.invoke_cpu_raptor();
   stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
 
   MOTIS_START_TIMING(plus_one_rec_time);
@@ -87,15 +87,24 @@ inline std::vector<journey> raptor_gen(Query& q, raptor_statistics& stats,
   return reconstructor.get_journeys();
 }
 
-inline std::vector<journey> cpu_raptor(raptor_query& q,
+inline std::vector<journey> cpu_raptor(base_query& bq,
                                        raptor_statistics& stats,
                                        schedule const& sched,
                                        raptor_meta_info const& raptor_sched,
                                        raptor_timetable const& tt) {
-  return raptor_gen(q, stats, sched, raptor_sched, tt, [&](raptor_query& q) {
-    mc_raptor mcraptor = mc_raptor(q);
-    return mcraptor.invoke_cpu_raptor();
-  });
+  if(bq.forward_) {
+    raptor_query<label_departure> q =
+        raptor_query<label_departure>{bq, raptor_sched, tt};
+    return raptor_gen<label_departure, mc_raptor_departure>( q, stats, sched, raptor_sched, tt,mc_raptor_departure(q));
+  }
+  else {
+    raptor_query<label_arrival> q =
+        raptor_query<label_arrival>{bq, raptor_sched, tt};
+    return raptor_gen<label_arrival, mc_raptor_arrival>(q, stats, sched, raptor_sched, tt, mc_raptor_arrival(q));
+  }
+
+
+
 }
 
 #if defined(MOTIS_CUDA)

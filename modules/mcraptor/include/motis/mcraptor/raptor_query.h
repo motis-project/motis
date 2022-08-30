@@ -38,6 +38,7 @@ base_query get_base_query(routing::RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_meta_info const& meta_info);
 
+template <class L>
 struct raptor_query : public base_query {
   raptor_query() = delete;
   raptor_query(raptor_query const&) = delete;
@@ -51,15 +52,15 @@ struct raptor_query : public base_query {
         tt_{tt},
         add_starts_{get_add_starts(meta_info, source_, use_start_footpaths_,
                                    use_start_metas_)},
-        result_{std::make_unique<rounds>(tt_.stop_count())} {}
+        result_{std::make_unique<rounds<L>>(tt_.stop_count())} {}
 
   ~raptor_query() = default;
 
-  rounds& result() const { return *result_; }
+  rounds<L>& result() const { return *result_; }
 
   raptor_timetable const& tt_;
   std::vector<additional_start> add_starts_;
-  std::unique_ptr<rounds> result_;
+  std::unique_ptr<rounds<L>> result_;
 };
 
 #if defined(MOTIS_CUDA)
