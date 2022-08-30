@@ -12,6 +12,7 @@
 #include "nigiri/routing/raptor.h"
 #include "nigiri/routing/search_state.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/module/event_collector.h"
@@ -73,7 +74,7 @@ mm::msg_ptr to_routing_response(
                 return to_connection(fbb, nigiri_to_motis_journey(tt, tags, j));
               })),
           to_motis_unixtime(search_interval.from_),
-          to_motis_unixtime(search_interval.to_))
+          to_motis_unixtime(search_interval.to_ - std::chrono::minutes{1}))
           .Union());
   return make_msg(fbb);
 }
@@ -100,7 +101,8 @@ void nigiri::init(motis::module::registry& reg) {
                 {n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
                      std::chrono::seconds{start->interval()->begin()})},
                  n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
-                     std::chrono::seconds{start->interval()->end()})}},
+                     std::chrono::seconds{start->interval()->end()})} +
+                     std::chrono::minutes{1}},
             .start_ = {n::routing::offset{
                 .location_ = get_location_idx(impl_->tags_, *impl_->tt_,
                                               start->station()->id()->str()),
@@ -162,10 +164,14 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           });
           utl::verify(c != end(n::loader::hrd::configs),
                       "no loader applicable to {}", path);
+          LOG(logging::info) << "loading nigiri timetable with configuration "
+                             << c->version_.view();
           n::loader::hrd::load_timetable(n::source_idx_t{i}, *c, *d,
                                          *impl_->tt_);
           impl_->tags_.emplace_back(p->tag()->str() + "-");
         }
+
+        import_successful_ = true;
       })
       ->require("SCHEDULE", [](mm::msg_ptr const& msg) {
         if (msg->get()->content_type() != MsgContent_FileEvent) {
