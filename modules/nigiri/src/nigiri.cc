@@ -62,7 +62,7 @@ mm::msg_ptr to_routing_response(
     n::pareto_set<n::routing::journey> const& journeys,
     n::interval<n::unixtime_t> search_interval) {
   mm::message_creator fbb;
-  std::vector<flatbuffers::Offset<Statistics>> stats{};
+  std::vector<fbs::Offset<Statistics>> stats{};
   fbb.create_and_finish(
       MsgContent_RoutingResponse,
       routing::CreateRoutingResponse(
