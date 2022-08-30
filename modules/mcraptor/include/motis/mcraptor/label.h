@@ -9,22 +9,21 @@ template <class T>
 struct label {
 
   inline bool arrival_time_rule(label& other) {
-    static_cast<T*>(this)->arrival_time_rule(other);
+    return static_cast<T*>(this)->arrival_time_rule(other);
   }
 
   inline bool departure_time_rule(label& other) {
-    static_cast<T*>(this)->departure_time_rule(other);
+    return static_cast<T*>(this)->departure_time_rule(other);
   }
 
   inline bool changes_count_rule(label& other) {
-    static_cast<T*>(this)->changes_count_rule(other);
+    return static_cast<T*>(this)->changes_count_rule(other);
   }
 
   inline bool travel_duration_rule(label& other) {
-    static_cast<T*>(this)->travel_duration_rule(other);
+    return static_cast<T*>(this)->travel_duration_rule(other);
   }
 
-public:
   // Parameters
   time departure_time_ = invalid<time>;
   size_t changes_count_ = invalid<size_t>;

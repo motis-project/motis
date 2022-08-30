@@ -268,30 +268,11 @@ void mc_raptor<T, L>::invoke_cpu_raptor() {
 
 
 //departure mc_raptor
-label_departure mc_raptor_departure::create_label() {
-  return label_departure();
-}
 
-label_departure mc_raptor_departure::create_label(time departure_time, time arrival_time, size_t changes_count) {
-  return label_departure(departure_time, arrival_time, changes_count);
-}
 
-label_departure mc_raptor_departure::create_label(label_departure& parent_label, stop_id parent_station, size_t parent_index) {
-  return label_departure(parent_label, parent_station, parent_index);
-}
 
 //arrival mc_raptor
-label_arrival mc_raptor_arrival::create_label() {
-  return label_arrival();
-}
 
-label_arrival mc_raptor_arrival::create_label(time departure_time, time arrival_time, size_t changes_count) {
-  return label_arrival(departure_time, arrival_time, changes_count);
-}
-
-label_arrival mc_raptor_arrival::create_label(label_arrival& parent_label, stop_id parent_station, size_t parent_index) {
-  return label_arrival(parent_label, parent_station, parent_index);
-}
 
 
 
