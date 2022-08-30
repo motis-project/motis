@@ -16,6 +16,10 @@
 
 #include "motis/module/context/motis_http_req.h"
 
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+
 using namespace std;
 using namespace motis::module;
 using namespace motis::json;
@@ -25,72 +29,6 @@ using namespace rapidjson;
 
 namespace motis::intermodal {
 #define DELAY 900  // 15min
-
-bool check_area(vector<Dot> polygon_area, Dot testdot) {
-  bool res = false;
-  int poly_size = static_cast<int>(polygon_area.size());
-  if (poly_size < 3) {
-    return res;
-  }
-  Dot infinity_dot;
-  infinity_dot.lat = testdot.lat;
-  infinity_dot.lng = 181;
-  int result = 0;
-  int j = 1;
-  auto alignment = [&](Dot const* point, Dot const* dot,
-                       Dot const* third) -> int {
-    double val = (dot->lat - point->lat) * (third->lng - dot->lng) -
-                 (dot->lng - point->lng) * (third->lat - dot->lat);
-    if (val == 0.0)  // epsilon ?
-    {
-      // collinear
-      return 0;
-    }
-    // 1 - below || 2 - above
-    return (val > 0.0) ? 1 : 2;
-  };
-  auto onLine = [&](Dot const* point, Dot const* dot, Dot const* third) -> int {
-    if (dot->lng <= max(point->lng, third->lng) &&
-        dot->lng >= min(point->lng, third->lng) &&
-        dot->lat <= max(point->lat, third->lat) &&
-        dot->lat >= min(point->lat, third->lat))
-      return true;
-    return false;
-  };
-  auto find_intersection = [&](Dot const* point_one, Dot const* point_two,
-                               Dot const* test_point,
-                               Dot const* infinity_dot) -> bool {
-    int orientation1 = alignment(point_one, point_two, test_point);
-    int orientation2 = alignment(point_one, point_two, infinity_dot);
-    int orientation3 = alignment(test_point, infinity_dot, point_one);
-    int orientation4 = alignment(test_point, infinity_dot, point_two);
-    if (orientation1 != orientation2 && orientation3 != orientation4)
-      return true;
-    if (orientation1 == 0 && onLine(point_one, test_point, point_two))
-      return true;
-    if (orientation2 == 0 && onLine(point_one, infinity_dot, point_two))
-      return true;
-    if (orientation3 == 0 && onLine(test_point, point_one, infinity_dot))
-      return true;
-    if (orientation4 == 0 && onLine(test_point, point_two, infinity_dot))
-      return true;
-    return false;
-  };
-  for (int i = 0; i < poly_size; i++) {
-    if (find_intersection(&polygon_area[i], &polygon_area[j], &testdot,
-                          &infinity_dot)) {
-      if (alignment(&polygon_area[i], &testdot, &polygon_area[j]) == 0) {
-        res = onLine(&polygon_area[i], &testdot, &polygon_area[j]);
-        return res;
-      }
-      result++;
-    }
-    j++;
-    if (j == poly_size) j = 0;
-  }
-  res = result % 2 == 1;
-  return res;
-}
 
 availability_response read_result(const response& result, bool first, vector<Dot> dots)
 {
@@ -113,7 +51,7 @@ availability_response read_result(const response& result, bool first, vector<Dot
                       docu.GetErrorOffset());
     }
     auto const& data = get_obj(docu, "data");
-    auto read_jay_key_string = [&](char const* key, char const* name) -> string
+    auto read_json_key_string = [&](char const* key, char const* name) -> string
     {
       auto const it = data.FindMember(key);
       if (it != data.MemberEnd() && it->value.IsString())
@@ -130,7 +68,7 @@ availability_response read_result(const response& result, bool first, vector<Dot
       }
       return "";
     };
-    auto read_jay_key_int = [&](char const* key, char const* name) -> int
+    auto read_json_key_int = [&](char const* key, char const* name) -> int
     {
       auto const it = data.FindMember(key);
       if (it != data.MemberEnd() && it->value.IsInt())
@@ -147,7 +85,7 @@ availability_response read_result(const response& result, bool first, vector<Dot
       }
       return -1;
     };
-    auto read_jay_key_double = [&](char const* key, char const* name) -> double
+    auto read_json_key_double = [&](char const* key, char const* name) -> double
     {
       auto const it = data.FindMember(key);
       if (it != data.MemberEnd() && it->value.IsDouble())
@@ -164,7 +102,7 @@ availability_response read_result(const response& result, bool first, vector<Dot
       }
       return -1.0;
     };
-    auto read_jay_key_array = [&](char const* key, char const* name) -> vector<vector<double>>
+    auto read_json_key_array = [&](char const* key, char const* name) -> vector<vector<double>>
     {
       auto const it = data.FindMember(key);
       vector<vector<double>> vec;
@@ -192,8 +130,8 @@ availability_response read_result(const response& result, bool first, vector<Dot
 
     if(first)
     {
-      ares.codenumber_id = read_jay_key_string("id", " ");
-      vector<vector<double>> polypoints = read_jay_key_array("area", "coordinates");
+      ares.codenumber_id = read_json_key_string("id", " ");
+      vector<vector<double>> polypoints = read_json_key_array("area", "coordinates");
       vector<Dot> polygon_area;
       polygon_area.resize(polypoints.size());
       int k = 0;
@@ -215,26 +153,41 @@ availability_response read_result(const response& result, bool first, vector<Dot
         }
         k++;
       }
-      bool inside_start = check_area(polygon_area, dots.at(0));
-      bool inside_end = check_area(polygon_area, dots.at(1));
+      typedef boost::geometry::model::d2::point_xy<double> point_type;
+      typedef boost::geometry::model::polygon<point_type> polygon_type;
+      point_type point_one(dots.at(0).lat, dots.at(0).lng);
+      point_type point_two(dots.at(1).lat, dots.at(1).lng);
+      polygon_type poly;
+      std::vector<Dot>::iterator it;
+      for(it = polygon_area.begin(); it != polygon_area.end(); it++)
+      {
+        Dot dot = *it;
+        boost::geometry::append(poly, boost::geometry::make<point_type>(dot.lat, dot.lng));
+      }
+      // zwei zeilen falls der erste und letzte punkt nicht übereinstimmen - last dot vorne anhängen?
+      //Dot last_dot = polygon_area[polygon_area.size()-1];
+      //boost::geometry::append(poly, boost::geometry::make<point_type>(last_dot.lat, last_dot.lng));
+      //boost::geometry::correct(poly); // correct the polygon orientation
+      bool inside_start = boost::geometry::within(point_one, poly);
+      bool inside_end = boost::geometry::within(point_two, poly);
       ares.available = inside_start && inside_end;
       return ares;
     }
     else
     {
-      ares.codenumber_id = read_jay_key_string("id", " ");
-      ares.startpoint.lat  = read_jay_key_double("pickup", "lat");
-      ares.startpoint.lng = read_jay_key_double("pickup", "lng");
-      ares.endpoint.lat = read_jay_key_double("dropoff", "lat");
-      ares.endpoint.lng = read_jay_key_double("dropoff", "lng");
-      ares.price = read_jay_key_double("fare", "final_price");
-      ares.walkDur[0] = read_jay_key_int("pickup", "walking_duration");
-      ares.walkDur[1] = read_jay_key_int("dropoff", "walking_duration");
-      //string pu_time1 = read_jay_key_string("pickup", "time");
-      string pu_time2 = read_jay_key_string("pickup", "negotiation_time");
+      ares.codenumber_id = read_json_key_string("id", " ");
+      ares.startpoint.lat  = read_json_key_double("pickup", "lat");
+      ares.startpoint.lng = read_json_key_double("pickup", "lng");
+      ares.endpoint.lat = read_json_key_double("dropoff", "lat");
+      ares.endpoint.lng = read_json_key_double("dropoff", "lng");
+      ares.price = read_json_key_double("fare", "final_price");
+      ares.walkDur[0] = read_json_key_int("pickup", "walking_duration");
+      ares.walkDur[1] = read_json_key_int("dropoff", "walking_duration");
+      //string pu_time1 = read_json_key_string("pickup", "time");
+      string pu_time2 = read_json_key_string("pickup", "negotiation_time");
       //string pu_time3 = read_jay_key_string("pickup", "negotiation_time_max");
       //string do_time1 = read_jay_key_string("dropoff", "time");
-      string do_time2 = read_jay_key_string("dropoff", "negotiation_time");
+      string do_time2 = read_json_key_string("dropoff", "negotiation_time");
       //string do_time3 = read_jay_key_string("dropoff", "negotiation_time_max");
       //"2017-09-06T15:13:43Z" -> 1504703623
       auto traveltime_to_unixtime = [&](const string& timestring) -> int64_t
@@ -463,7 +416,7 @@ bool checking(const availability_request& areq, const availability_response& are
 availability_response check_od_availability(const availability_request areq)
 {
   printf("check_od_availability!\n");
-  string addr = "http://127.0.0.1:9000/"; //TESTSERVER
+  string addr = ""; //TESTSERVER
   request::method m = request::GET;
   map<string, string> hdrs;
   hdrs.insert(pair<string, string>("Accept","application/json"));
