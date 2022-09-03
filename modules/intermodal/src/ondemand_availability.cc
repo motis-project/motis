@@ -35,12 +35,39 @@ namespace motis::intermodal {
 
 availability_response read_result(const response& result, bool first, vector<Dot> dots)
 {
-  printf("read_result\n");
+  printf("read_result: status code: %d\n", result.status_code);
   availability_response ares;
-  if(result.body.empty())
+  if(result.status_code != 200)
   {
-    printf("Result Body Empty!\n");
     ares.available = false;
+    if(result.status_code == 400)
+    {
+      LOG(logging::error) << "invalid inquiry "
+                            " http error code is: "
+                         << result.status_code << "!"
+                         << "availability is set to false";
+    }
+    else if(result.status_code == 422)
+    {
+      LOG(logging::error) << " ride not available "
+                             " This went wrong: "
+                          << result.body << "!"
+                          << "availability is set to false";
+    }
+    else if(result.status_code == 500)
+    {
+      LOG(logging::error) << " an unexpected http error occured "
+                             " http error code is: "
+                          << result.status_code << "!"
+                          << "availability is set to false";
+    }
+    else
+    {
+      LOG(logging::error) << " something unexpected happened "
+                             " http error code is: "
+                          << result.status_code << "!"
+                          << "availability is set to false";
+    }
     return ares;
   }
   else
@@ -417,6 +444,7 @@ struct server_info{
   string header_second;
   string first_addr;
   string second_addr;
+  string id;
 };
 
 vector<server_info> get_server_info()
@@ -427,6 +455,7 @@ vector<server_info> get_server_info()
   description.add_options()
       ("address", opt::value<string>()->required())
       ("address2", opt::value<string>())
+      ("productid", opt::value<string>())
       ("hdr0", opt::value<string>())
       ("hdr1", opt::value<string>())
       ("hdr2", opt::value<string>())
@@ -472,6 +501,10 @@ vector<server_info> get_server_info()
     {
       si.second_addr = sval;
     }
+    else if(si.key_name == "productid")
+    {
+      si.id = sval;
+    }
     else
     {
       size_t idx = sval.find(',');
@@ -483,7 +516,7 @@ vector<server_info> get_server_info()
   return result;
 }
 
-availability_response check_od_availability(const availability_request areq)
+availability_response check_od_availability(availability_request areq)
 {
   printf("check_od_availability!\n");
 
@@ -505,6 +538,10 @@ availability_response check_od_availability(const availability_request areq)
     {
       addr2 = it->second_addr;
     }
+    else if(it->key_name == "productid")
+    {
+      areq.productID = it->id;
+    }
   }
 
   request::method m = request::GET;
@@ -522,12 +559,12 @@ availability_response check_od_availability(const availability_request areq)
 
   response firstresult = motis_http(req)->val();
   availability_response response_first = read_result(firstresult, true, req_dots);
-  if(!response_first.available)
+  /*if(!response_first.available)
   {
     return response_first;
   }
   else
-  {
+  {*/
     request::method m2 = request::POST;
     //UUID uuid;
     //UuidCreate(&uuid);
@@ -540,7 +577,7 @@ availability_response check_od_availability(const availability_request areq)
     availability_response response_second = read_result(secondresult, false, req_dots);
     response_second.available = checking(areq, response_second);
     return response_second;
-  }
+  //}
 }
 
 } // namespace intermodal

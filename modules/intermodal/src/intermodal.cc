@@ -463,7 +463,6 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
                                              statistics& stats)
 {
   availability_request areq;
-  //mars.productID = "prd_518a82c3-2e77-4ff3-953f-2aa3cdb6611c";
   areq.duration = static_cast<int>(round(e.duration_ * 60 * 1.5));
   if(start)
   {
