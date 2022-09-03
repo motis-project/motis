@@ -19,6 +19,9 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+#include <boost/program_options.hpp>
+
+namespace opt = boost::program_options;
 
 using namespace std;
 using namespace motis::module;
@@ -164,10 +167,6 @@ availability_response read_result(const response& result, bool first, vector<Dot
         Dot dot = *it;
         boost::geometry::append(poly, boost::geometry::make<point_type>(dot.lat, dot.lng));
       }
-      // zwei zeilen falls der erste und letzte punkt nicht übereinstimmen - last dot vorne anhängen?
-      //Dot last_dot = polygon_area[polygon_area.size()-1];
-      //boost::geometry::append(poly, boost::geometry::make<point_type>(last_dot.lat, last_dot.lng));
-      //boost::geometry::correct(poly); // correct the polygon orientation
       bool inside_start = boost::geometry::within(point_one, poly);
       bool inside_end = boost::geometry::within(point_two, poly);
       ares.available = inside_start && inside_end;
@@ -254,8 +253,7 @@ availability_response read_result(const response& result, bool first, vector<Dot
 string create_json_body(const availability_request& areq)
 {
   // Creates a Ride Inquiry object with estimations and availability information - POST api/passenger/ride_inquiry IOKI
-  string json = R"( {
-                      "data": {
+  string json = R"( { "data": {
                       "product_id": ")" + areq.productID + "\","
                 + R"( "origin": {
                         "lat": )" + to_string(areq.startpoint.lat) + ","
@@ -267,9 +265,9 @@ string create_json_body(const availability_request& areq)
                          "city": "",
                          "county": "",
                          "country": "Germany",
-                         "time": )" + to_string(areq.departureTime)
-                + R"( "station_id": "string" + "},"
-                      + "destination": {
+                         "time": )" + to_string(areq.departureTime) + ","
+                + R"( "station_id": "string" },
+                        "destination": {
                         "lat": )" + to_string(areq.endpoint.lat) + ","
                 + R"( "lng": )" + to_string(areq.endpoint.lng) + ","
                 + R"(  "location_name": "string",
@@ -279,7 +277,7 @@ string create_json_body(const availability_request& areq)
                          "city": "string",
                          "county": "string",
                          "country": "string",
-                         "station_id": ""
+                         "station_id": "",
                          "time": )" + to_string(areq.arrivalTime_onnext)
                 + "}}}";
   /*
@@ -413,14 +411,105 @@ bool checking(const availability_request& areq, const availability_response& are
   return result;
 }
 
+struct server_info{
+  string key_name;
+  string header_first;
+  string header_second;
+  string first_addr;
+  string second_addr;
+};
+
+vector<server_info> get_server_info()
+{
+  vector<server_info> result;
+  opt::variables_map var_map;
+  opt::options_description description("Server");
+  description.add_options()
+      ("address", opt::value<string>()->required())
+      ("address2", opt::value<string>())
+      ("hdr0", opt::value<string>())
+      ("hdr1", opt::value<string>())
+      ("hdr2", opt::value<string>())
+      ("hdr3", opt::value<string>())
+      ("hdr4", opt::value<string>())
+      ("hdr5", opt::value<string>())
+      ("hdr6", opt::value<string>())
+      ("hdr7", opt::value<string>())
+      ("hdr8", opt::value<string>());
+  try {
+    opt::store(opt::parse_config_file<char>("ondemand_server.cfg", description), var_map);
+  } catch (const opt::reading_file& er) {
+    LOG(logging::error) << " an error occured while reading ondemand_server.cfg file "
+                        << er.what() << "!";
+  }
+  try {
+    opt::notify(var_map);
+  } catch (const opt::required_option& e) {
+    LOG(logging::error) << " a required option is NOT set "
+                        << e.what() << "!"
+                        << "please check ondemand_server.cfg file";
+  }
+
+  for(auto it = var_map.begin(); it != var_map.end(); ++it)
+  {
+    server_info si;
+    si.key_name = it->first;
+    opt::variable_value value = it->second;
+    string sval;
+    if(!value.empty())
+    {
+      const type_info& type = value.value().type();
+      if (type == typeid(string))
+      {
+        sval = value.as<string>();
+      }
+    }
+    if(si.key_name == "address")
+    {
+      si.first_addr = sval;
+    }
+    else if(si.key_name == "address2")
+    {
+      si.second_addr = sval;
+    }
+    else
+    {
+      size_t idx = sval.find(',');
+      si.header_first = sval.substr(0, idx);
+      si.header_second = sval.substr(idx+1);
+    }
+    result.emplace_back(si);
+  }
+  return result;
+}
+
 availability_response check_od_availability(const availability_request areq)
 {
   printf("check_od_availability!\n");
-  string addr = ""; //TESTSERVER
-  request::method m = request::GET;
+
+  vector<server_info> all_server_info = get_server_info();
+  string addr;
+  string addr2;
   map<string, string> hdrs;
-  hdrs.insert(pair<string, string>("Accept","application/json"));
+  for(auto it = all_server_info.begin(); it != all_server_info.end(); ++it)
+  {
+    if(!it->header_first.empty() && !it->header_second.empty())
+    {
+      hdrs.insert(pair<string, string>(it->header_first,it->header_second));
+    }
+    else if(it->key_name == "address")
+    {
+      addr = it->first_addr;
+    }
+    else if(it->key_name == "address2")
+    {
+      addr2 = it->second_addr;
+    }
+  }
+
+  request::method m = request::GET;
   request req(addr, m, hdrs, "");
+
   Dot req_dot_start;
   Dot req_dot_end;
   req_dot_end.lat = areq.endpoint.lat;
@@ -430,6 +519,7 @@ availability_response check_od_availability(const availability_request areq)
   vector<Dot> req_dots;
   req_dots.emplace_back(req_dot_start);
   req_dots.emplace_back(req_dot_end);
+
   response firstresult = motis_http(req)->val();
   availability_response response_first = read_result(firstresult, true, req_dots);
   if(!response_first.available)
@@ -439,18 +529,13 @@ availability_response check_od_availability(const availability_request areq)
   else
   {
     request::method m2 = request::POST;
-    map<string, string> hdrs2;
     //UUID uuid;
     //UuidCreate(&uuid);
     //char* random_uuid_str;
     //UuidToStringA(&uuid, (RPC_CSTR*)&random_uuid_str);
-    //hdrs2.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
-    hdrs2.insert(pair<string, string>("Accept","application/json"));
+    //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
     string body = create_json_body(areq);
-    request req2(addr); //Testserver
-    req2.req_method = m2;
-    req2.headers = hdrs2;
-    req2.body = body;
+    request req2(addr2, m2, hdrs, body);
     response secondresult = motis_http(req2)->val();
     availability_response response_second = read_result(secondresult, false, req_dots);
     response_second.available = checking(areq, response_second);
