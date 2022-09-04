@@ -252,7 +252,7 @@ struct test_server::impl {
         : ios{ios}, serve{ios} {}
 
     void listen_tome(std::string const& host, string const& port,
-                     boost::system::error_code& eric)
+                     boost::system::error_code& erco)
     {
       serve.on_http_request([this](net::test_server::http_req_t const& req,
                                    net::test_server::http_res_cb_t const& cb, bool)
@@ -260,13 +260,13 @@ struct test_server::impl {
       serve.on_upgrade_ok([](net::test_server::http_req_t const& req) {
         return req.target() == "/" ;
       });
-      serve.init(host, port, eric);
+      serve.init(host, port, erco);
       serve.set_timeout(std::chrono::seconds(5*60));
-      if (eric) {
-        cout << "testserver: init error: " << eric.message() << "\n";
+      if (erco) {
+        cout << "testserver: init error: " << erco.message() << "\n";
       }
       cout << "testserver is running on http://" + host + ":" + port + "/ \n "
-                  "eric:" + eric.message() + "\n";
+                  "info:" + erco.message() + "\n";
       serve.run();
     }
 

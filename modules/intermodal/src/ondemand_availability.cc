@@ -45,28 +45,28 @@ availability_response read_result(const response& result, bool first, vector<Dot
       LOG(logging::error) << "invalid inquiry "
                             " http error code is: "
                          << result.status_code << "!"
-                         << "availability is set to false";
+                            "availability is set to false";
     }
     else if(result.status_code == 422)
     {
       LOG(logging::error) << " ride not available "
                              " This went wrong: "
                           << result.body << "!"
-                          << "availability is set to false";
+                             "availability is set to false";
     }
     else if(result.status_code == 500)
     {
       LOG(logging::error) << " an unexpected http error occured "
                              " http error code is: "
                           << result.status_code << "!"
-                          << "availability is set to false";
+                             "availability is set to false";
     }
     else
     {
       LOG(logging::error) << " something unexpected happened "
                              " http error code is: "
                           << result.status_code << "!"
-                          << "availability is set to false";
+                             "availability is set to false";
     }
     return ares;
   }
@@ -279,6 +279,31 @@ availability_response read_result(const response& result, bool first, vector<Dot
 
 string create_json_body(const availability_request& areq)
 {
+  // 1504703623 -> "2017-09-06T15:13:43Z"
+  auto unixtime_to_traveltime = [&](const unixtime& timeunix) -> string
+  {
+    string result;
+    time_t thistime = static_cast<time_t>(timeunix);
+    struct tm tm_info = {0};
+    localtime_s(&tm_info, &thistime);
+    string month = to_string(tm_info.tm_mon + 1);
+    string day = to_string(tm_info.tm_mday);
+    string hour = to_string(tm_info.tm_hour);
+    string minutes = to_string(tm_info.tm_min);
+    string seconds = to_string(tm_info.tm_sec);
+    string year = to_string(tm_info.tm_year + 1900);
+    if(tm_info.tm_mon < 10) month = "0" + to_string(tm_info.tm_mon);
+    if(tm_info.tm_mday < 10) day = "0" + to_string(tm_info.tm_mday);
+    if(tm_info.tm_hour < 10) hour = "0" + to_string(tm_info.tm_hour);
+    if(tm_info.tm_min < 10) minutes = "0" + to_string(tm_info.tm_min);
+    if(tm_info.tm_sec < 10) seconds = "0" + to_string(tm_info.tm_sec);
+    result = year + "-" + month + "-" + day + "T" + hour + ":" + minutes + ":"
+               + seconds + "Z";
+    return result;
+  };
+
+  string dep_time = unixtime_to_traveltime(areq.departureTime);
+  string arr_time = unixtime_to_traveltime(areq.arrivalTime_onnext);
   // Creates a Ride Inquiry object with estimations and availability information - POST api/passenger/ride_inquiry IOKI
   string json = R"( { "data": {
                       "product_id": ")" + areq.productID + "\","
@@ -292,7 +317,7 @@ string create_json_body(const availability_request& areq)
                          "city": "",
                          "county": "",
                          "country": "Germany",
-                         "time": )" + to_string(areq.departureTime) + ","
+                         "time": ")" + dep_time + "\","
                 + R"( "station_id": "string" },
                         "destination": {
                         "lat": )" + to_string(areq.endpoint.lat) + ","
@@ -305,8 +330,8 @@ string create_json_body(const availability_request& areq)
                          "county": "string",
                          "country": "string",
                          "station_id": "",
-                         "time": )" + to_string(areq.arrivalTime_onnext)
-                + "}}}";
+                         "time": ")" + arr_time
+                + "\"}}}";
   /*
    + "," + R"( "maxWalkDistance": )" + to_string(mars.maxWalkDist)
    + "}}";*/
@@ -559,12 +584,12 @@ availability_response check_od_availability(availability_request areq)
 
   response firstresult = motis_http(req)->val();
   availability_response response_first = read_result(firstresult, true, req_dots);
-  /*if(!response_first.available)
+  if(!response_first.available)
   {
     return response_first;
   }
   else
-  {*/
+  {
     request::method m2 = request::POST;
     //UUID uuid;
     //UuidCreate(&uuid);
@@ -577,7 +602,7 @@ availability_response check_od_availability(availability_request areq)
     availability_response response_second = read_result(secondresult, false, req_dots);
     response_second.available = checking(areq, response_second);
     return response_second;
-  //}
+  }
 }
 
 } // namespace intermodal
