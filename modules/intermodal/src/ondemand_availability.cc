@@ -139,21 +139,38 @@ availability_response read_result(const response& result, bool first, vector<Dot
       if (it != data.MemberEnd() && it->value.IsObject())
       {
         auto const ar = it->value.FindMember(name);
-        //Gesamtarray
+        //Gesamtarray: wenn so aufgebaut wie angegeben
         //ar->value[0].GetArray()[0]
         //ar->value[0].GetArray()[0].Size()
         //erstes Koordinatenarray
         //ar->value[0].GetArray()[0].GetArray()[0]
         //Inhalt des ersten Koordinatenarrays (Koordinate 0)
         //ar->value[0].GetArray()[0].GetArray()[0].GetArray()[0]
-        vec.resize(ar->value[0].GetArray()[0].Size());
-        for(SizeType k = 0; k < ar->value[0].GetArray()[0].Size(); k++)
+        // ansonsten -> ohne zusaetzliche Klammern
+        if(ar->value[0].Size() > 3)
         {
-          const rapidjson::Value &data_vec = ar->value[0].GetArray()[0].GetArray()[k];
-          for(SizeType j = 0; j < data_vec.Size(); j++)
-            vec[k].push_back(data_vec[j].GetDouble());
+          vec.resize(ar->value[0].Size());
+          for(SizeType a = 0; a < ar->value[0].Size(); a++)
+          {
+            const rapidjson::Value &data_vec = ar->value[0].GetArray()[a];
+            for(SizeType b = 0; b < data_vec.Size(); b++)
+            {
+              vec[a].push_back(data_vec[b].GetDouble());
+            }
+          }
+          return vec;
         }
-        return vec;
+        else
+        {
+          vec.resize(ar->value[0].GetArray()[0].Size());
+          for(SizeType k = 0; k < ar->value[0].GetArray()[0].Size(); k++)
+          {
+            const rapidjson::Value &data_vec = ar->value[0].GetArray()[0].GetArray()[k];
+            for(SizeType j = 0; j < data_vec.Size(); j++)
+              vec[k].push_back(data_vec[j].GetDouble());
+          }
+          return vec;
+        }
       }
       return vec;
     };
