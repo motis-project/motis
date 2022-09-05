@@ -100,13 +100,17 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     auto x = journey::transport{};
     x.from_ = x.to_ = section_idx;
 
-    for (auto const trip : tt.merged_trips_.at(
-             tt.transport_to_trip_section_.at(t.t_idx_).at(section_idx))) {
+    auto const trips_on_section = tt.transport_to_trip_section_.at(t.t_idx_);
+    auto const merged_trips_idx =
+        trips_on_section.at(trips_on_section.size() == 1U ? 0U : section_idx);
+    for (auto const trip : tt.merged_trips_.at(merged_trips_idx)) {
+      auto const clasz_sections =
+          tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_));
+      auto const clasz =
+          clasz_sections.at(clasz_sections.size() == 1U ? 0U : section_idx);
       transports.add_entry(
           transport_display_info{
-              .clasz_ =
-                  tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_))
-                      .at(section_idx),
+              .clasz_ = clasz,
               .display_name_ = tt.trip_display_names_.at(trip).view()},
           mj.stops_.size() - 1);
 
