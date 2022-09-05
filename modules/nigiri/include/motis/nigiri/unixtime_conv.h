@@ -14,4 +14,9 @@ inline unixtime to_motis_unixtime(::nigiri::unixtime_t const t) {
           .count()};
 }
 
+inline ::nigiri::unixtime_t to_nigiri_unixtime(unixtime const t) {
+  return ::nigiri::unixtime_t{std::chrono::duration_cast<::nigiri::i32_minutes>(
+      std::chrono::seconds{t})};
+}
+
 }  // namespace motis::nigiri

@@ -17,7 +17,7 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 struct routing_itest : public motis_instance_test {
   routing_itest()
       : motis::test::motis_instance_test(
-            dataset_opt, {"routing", "csa", "raptor", "tripbased"},
+            dataset_opt, {"routing", "csa", "raptor", "tripbased", "nigiri"},
             {"--tripbased.use_data_file=false"}) {}
 
   msg_ptr make_routing_request(std::string const& target) {
@@ -47,7 +47,8 @@ TEST_F(routing_itest, all_routings_deliver_equal_journey) {
   auto const reference = message_to_journeys(
       motis_content(RoutingResponse, call(make_routing_request("/routing"))));
   EXPECT_EQ(reference.size(), 1U);
-  for (auto const& target : {"/routing", "/tripbased", "/raptor_cpu", "/csa"}) {
+  for (auto const& target :
+       {"/routing", "/tripbased", "/raptor_cpu", "/csa", "/nigiri"}) {
     auto const testee = message_to_journeys(
         motis_content(RoutingResponse, call(make_routing_request(target))));
     EXPECT_EQ(reference, testee);

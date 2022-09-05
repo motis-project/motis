@@ -81,33 +81,40 @@ mm::msg_ptr to_routing_response(
 
 void nigiri::init(motis::module::registry& reg) {
   reg.register_op(
-      "/nigiri/routing",
+      "/nigiri",
       [&](mm::msg_ptr const& msg) {
         using motis::routing::RoutingRequest;
         auto const req = motis_content(RoutingRequest, msg);
 
-        utl::verify(req->start_type() == routing::Start_PretripStart,
-                    "nigiri currently only supports pre-trip queries");
-
-        auto const start =
-            reinterpret_cast<routing::PretripStart const*>(req->start());
-        utl::verify(start->min_connection_count() == 0U &&
-                        !start->extend_interval_earlier() &&
-                        !start->extend_interval_later(),
-                    "nigiri currently does not support interval extension");
+        auto start_time = n::routing::start_time_t{};
+        auto start_station = n::location_idx_t::invalid();
+        if (req->start_type() == routing::Start_PretripStart) {
+          auto const start =
+              reinterpret_cast<routing::PretripStart const*>(req->start());
+          utl::verify(start->min_connection_count() == 0U &&
+                          !start->extend_interval_earlier() &&
+                          !start->extend_interval_later(),
+                      "nigiri currently does not support interval extension");
+          start_time = n::interval<n::unixtime_t>{
+              to_nigiri_unixtime(start->interval()->begin()),
+              to_nigiri_unixtime(start->interval()->end()) +
+                  std::chrono::minutes{1}};
+        } else if (req->start_type() == routing::Start_OntripStationStart) {
+          auto const start =
+              reinterpret_cast<routing::OntripStationStart const*>(
+                  req->start());
+          start_time = to_nigiri_unixtime(start->departure_time());
+          start_station = get_location_idx(impl_->tags_, *impl_->tt_,
+                                           start->station()->id()->str());
+        } else {
+          throw utl::fail("OntripTrainStart not supported");
+        }
 
         auto q = n::routing::query{
-            .interval_ =
-                {n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
-                     std::chrono::seconds{start->interval()->begin()})},
-                 n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
-                     std::chrono::seconds{start->interval()->end()})} +
-                     std::chrono::minutes{1}},
-            .start_ = {n::routing::offset{
-                .location_ = get_location_idx(impl_->tags_, *impl_->tt_,
-                                              start->station()->id()->str()),
-                .offset_ = n::duration_t{0U},
-                .type_ = 0U}},
+            .start_time_ = start_time,
+            .start_ = {n::routing::offset{.location_ = start_station,
+                                          .offset_ = n::duration_t{0U},
+                                          .type_ = 0U}},
             .destinations_ = {n::vector<n::routing::offset>{n::routing::offset{
                 .location_ = get_location_idx(impl_->tags_, *impl_->tt_,
                                               req->destination()->id()->str()),

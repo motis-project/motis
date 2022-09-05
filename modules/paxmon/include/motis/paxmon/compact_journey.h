@@ -15,7 +15,7 @@
 namespace motis::paxmon {
 
 struct journey_leg {
-  friend auto operator<=>(journey_leg const&, journey_leg const&) = default;
+  friend bool operator==(journey_leg const&, journey_leg const&) = default;
 
   cista::hash_t hash() const {
     return cista::build_hash(trip_idx_, enter_station_id_, exit_station_id_,
@@ -31,8 +31,8 @@ struct journey_leg {
 };
 
 struct compact_journey {
-  friend auto operator<=>(compact_journey const&,
-                          compact_journey const&) = default;
+  friend bool operator==(compact_journey const&,
+                         compact_journey const&) = default;
 
   inline unsigned start_station_id() const {
     return legs_.front().enter_station_id_;

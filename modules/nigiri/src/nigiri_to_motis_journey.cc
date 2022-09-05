@@ -35,26 +35,26 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                                        n::day_idx_t const day) {
   auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
   auto const first_location =
-      tt.route_location_seq_[tt.transport_route_[transport]]
-          .front()
+      n::timetable::stop{
+          tt.route_location_seq_[tt.transport_route_[transport]].front()}
           .location_idx();
   auto const last_location =
-      tt.route_location_seq_[tt.transport_route_[transport]]
-          .back()
+      n::timetable::stop{
+          tt.route_location_seq_[tt.transport_route_[transport]].back()}
           .location_idx();
-  auto const id = tt.trip_ids_.at(trip).back();
+  auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back());
   auto const [admin, train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time, line] =
       utl::split<'/', utl::cstr, unsigned, utl::cstr, unsigned, utl::cstr,
-                 unsigned, utl::cstr>(utl::cstr{id.id_});
+                 unsigned, utl::cstr>(id.view());
   return extern_trip{
       .station_id_ = get_station_id(tags, tt, first_location),
       .train_nr_ = train_nr,
       .time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.from_, n::event_type::kDep)),
       .target_station_id_ = get_station_id(tags, tt, last_location),
-      .target_time_ = to_motis_unixtime(
-          tt.event_time({transport, day}, stop_range.to_, n::event_type::kArr)),
+      .target_time_ = to_motis_unixtime(tt.event_time(
+          {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
       .line_id_ = line.to_str()};
 }
 
@@ -107,15 +107,19 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               .clasz_ =
                   tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_))
                       .at(section_idx),
-              .display_name_ = tt.trip_display_names_.at(trip)},
+              .display_name_ = tt.trip_display_names_.at(trip).view()},
           mj.stops_.size() - 1);
 
       // TODO(felix) maybe the day index needs to be changed according to the
       // offset between the occurance in a rule service expanded trip vs. the
       // reference trip. For now, no rule services are implemented.
       extern_trips.add_entry(
-          std::pair{nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
-                    tt.trip_debug_.at(trip)[0].str()},
+          std::pair{
+              nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
+              std::string{tt.source_file_names_
+                              .at(tt.trip_debug_.at(trip)[0].source_file_idx_)
+                              .view()} +
+                  std::to_string(tt.trip_debug_.at(trip)[0].line_number_)},
           mj.stops_.size() - 1);
     }
   };
@@ -135,7 +139,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
             auto const reuse_arrival = enter && !mj.stops_.empty();
             auto& stop =
                 reuse_arrival ? mj.stops_.back() : mj.stops_.emplace_back();
-            fill_stop_info(stop, stop_seq.at(stop_idx).location_idx());
+            fill_stop_info(
+                stop, n::timetable::stop{stop_seq.at(stop_idx)}.location_idx());
 
             if (exit) {
               stop.exit_ = true;
