@@ -316,24 +316,6 @@ void add_direct_connections(std::vector<journey>& journeys,
         fwd ? static_cast<unixtime>(q_start.time_ + d.duration_ * 60)
             : q_start.time_;
 
-    availability_request areq;
-    if(d.type_ == mumo_type::ON_DEMAND)
-    {
-      areq.startpoint.lat = q_start.pos_.lat_;
-      areq.startpoint.lng = q_start.pos_.lng_;
-      areq.endpoint.lat = q_dest.pos_.lat_;
-      areq.endpoint.lat = q_dest.pos_.lng_;
-      areq.duration = d.duration_;
-      areq.departureTime = dep_time;
-      areq.arrivalTime = arr_time;
-      areq.start = fwd;
-      availability_response ares = check_od_availability(areq);
-      if(!ares.available)
-      {
-        continue;
-      }
-    }
-
     auto& j = journeys.emplace_back();
     auto& start = j.stops_.emplace_back();
     start.name_ = STATION_START;
