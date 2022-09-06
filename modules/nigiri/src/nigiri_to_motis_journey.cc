@@ -43,10 +43,10 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
           tt.route_location_seq_[tt.transport_route_[transport]].back()}
           .location_idx();
   auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back());
-  auto const [admin, train_nr, first_stop_eva, fist_start_time, last_stop_eva,
+  auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time, line] =
-      utl::split<'/', utl::cstr, unsigned, utl::cstr, unsigned, utl::cstr,
-                 unsigned, utl::cstr>(id.view());
+      utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned,
+                 utl::cstr>(id.view());
   return extern_trip{
       .station_id_ = get_station_id(tags, tt, first_location),
       .train_nr_ = train_nr,
@@ -74,6 +74,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   };
 
   auto const add_walk = [&](n::routing::journey::leg const& leg, int mumo_id) {
+    if (leg.from_ == leg.to_) {
+      return;  // transfer
+    }
+
     auto& from_stop =
         mj.stops_.empty() ? mj.stops_.emplace_back() : mj.stops_.back();
     auto const from_idx = static_cast<unsigned>(mj.stops_.size() - 1);
@@ -112,7 +116,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
           transport_display_info{
               .clasz_ = clasz,
               .display_name_ = tt.trip_display_names_.at(trip).view()},
-          mj.stops_.size() - 1);
+          mj.stops_.size() - 1, mj.stops_.size());
 
       // TODO(felix) maybe the day index needs to be changed according to the
       // offset between the occurance in a rule service expanded trip vs. the
@@ -124,7 +128,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                               .at(tt.trip_debug_.at(trip)[0].source_file_idx_)
                               .view()} +
                   std::to_string(tt.trip_debug_.at(trip)[0].line_number_)},
-          mj.stops_.size() - 1);
+          mj.stops_.size() - 1, mj.stops_.size());
     }
   };
 

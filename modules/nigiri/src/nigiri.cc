@@ -175,7 +175,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                              << c->version_.view();
           n::loader::hrd::load_timetable(n::source_idx_t{i}, *c, *d,
                                          *impl_->tt_);
-          impl_->tags_.emplace_back(p->tag()->str() + "-");
+          auto const tag = p->options()->str();
+          impl_->tags_.emplace_back(tag + (tag.empty() ? "" : "-"));
         }
 
         import_successful_ = true;
