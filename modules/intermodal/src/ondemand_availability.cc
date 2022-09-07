@@ -1,4 +1,4 @@
-//#include <rpc.h> //war fuer die uuid
+//#include <rpc.h> // fuer die uuid
 #include <ctime>
 #include "motis/core/common/unixtime.h"
 #include "motis/core/common/logging.h"
@@ -35,7 +35,7 @@ namespace motis::intermodal {
 
 availability_response read_result(const response& result, bool first, vector<Dot> dots)
 {
-  printf("read_result: status code: %d\n", result.status_code);
+  //printf("read_result: \n");
   availability_response ares;
   if(result.status_code != 200)
   {
@@ -321,7 +321,7 @@ string create_json_body(const availability_request& areq)
 
   string dep_time = unixtime_to_traveltime(areq.departureTime);
   string arr_time = unixtime_to_traveltime(areq.arrivalTime_onnext);
-  // Creates a Ride Inquiry object with estimations and availability information - POST api/passenger/ride_inquiry IOKI
+  // Creates a Ride Inquiry object with estimations and availability information - POST
   string json = R"( { "data": {
                       "product_id": ")" + areq.productID + "\","
                 + R"( "origin": {
@@ -355,7 +355,6 @@ string create_json_body(const availability_request& areq)
   return json;
 }
 
-// schauen ob man das vereinfachen kann...
 bool checking(const availability_request& areq, const availability_response& ares)
 {
   auto coord_equality = [&](const string& eins, const string& zwei) -> bool
@@ -390,15 +389,15 @@ bool checking(const availability_request& areq, const availability_response& are
       return one == two;
     }
   };
-  bool coord_start, coord_end, walklength, walktime, timewindow, waiting;
+  bool coord_start, coord_end, walklength, walktime, timewindow, waiting = true;
   bool result;
   if(areq.start)
   {
-    waiting = areq.departureTime + DELAY > ares.pickupTime[1] && // 1300 +15 = 1315 > 1310
-              areq.departureTime - DELAY < ares.pickupTime[1]; // 1300 -15 = 1245 < 1310
+    //waiting = areq.departureTime + DELAY > ares.pickupTime[1] && // 1300 +15 = 1315 > 1310
+    //          areq.departureTime - DELAY < ares.pickupTime[1]; // 1300 -15 = 1245 < 1310
     //printf("waiting: %lld + 15 > %lld \n -- %lld - 15 < %lld\n", areq.departureTime, ares.pickupTime[1], areq.departureTime, ares.pickupTime[1]);
     //printf("duration: %lld \n response duration complete: %lld \n", areq.duration,
-    // (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0] + ares.walkDur[1]);
+     //(ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0] + ares.walkDur[1]);
     if(ares.walkDur[0] == 0 && ares.walkDur[1] == 0)
     {
       coord_start = coord_equality(to_string(areq.startpoint.lat), to_string(ares.startpoint.lat))
@@ -438,8 +437,8 @@ bool checking(const availability_request& areq, const availability_response& are
   }
   else
   {
-    waiting = areq.departureTime + DELAY > ares.pickupTime[1] // 1300 +15 = 1315 > 1310
-              && areq.arrivalTime < ares.pickupTime[1];       // 1258 < 1310
+    //waiting = areq.departureTime + DELAY > ares.pickupTime[1] // 1300 +15 = 1315 > 1310
+    //          && areq.arrivalTime < ares.pickupTime[1];       // 1258 < 1310
     //printf("waiting: %lld + 15 > %lld \n -- %lld < %lld\n", areq.departureTime, ares.pickupTime[1], areq.arrivalTime, ares.pickupTime[1]);
     if(ares.walkDur[0] == 0 && ares.walkDur[1] == 0)
     {
@@ -456,6 +455,7 @@ bool checking(const availability_request& areq, const availability_response& are
       walktime = areq.departureTime + ares.walkDur[0] < ares.pickupTime[1] && ares.walkDur[0] < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
       walklength = areq.maxWalkDist >= ares.walkDur[0] * WALK_SPEED;
       timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0];
+      //printf("walk: %lld + %d < %lld && %d < %d \n", areq.departureTime, ares.walkDur[0], ares.pickupTime[1], ares.walkDur[0], MAX_WALK_TIME);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
@@ -560,7 +560,7 @@ vector<server_info> get_server_info()
 
 availability_response check_od_availability(availability_request areq)
 {
-  printf("check_od_availability!\n");
+  //printf("check_od_availability!\n");
 
   vector<server_info> all_server_info = get_server_info();
   string addr;

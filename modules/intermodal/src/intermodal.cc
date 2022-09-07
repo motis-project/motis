@@ -303,8 +303,8 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
     return -1;
   }
   auto const all = journeys->size();
-  printf("------ size vorher: %llu\n", all);
-  printf("ares size: %llu; journeys size: %llu; patches size: %llu\n", ares.size(), journeys->size(), patches.size());
+  //printf("------ size vorher: %llu\n", all);
+  //printf("ares size: %llu; journeys size: %llu; patches size: %llu\n", ares.size(), journeys->size(), patches.size());
   vector<int> indices;
   utl::erase_if(*journeys, [&](journey const& j){
     bool eins = false, zwei = false, drei = false, vier = false;
@@ -338,7 +338,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
   if(indices.empty())
   {
     size_t retv = all - (all - journeys->size());
-    printf("-- im neuen if ---- size nachher: %llu\n", retv);
+    //printf("-- im neuen if ---- size nachher: %llu\n", retv);
     return all - journeys->size();
   }
   for(auto& idx : indices)
@@ -458,7 +458,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
     }
   }
   size_t retv = all - (all - journeys->size());
-  printf("------ size nachher: %llu\n", retv);
+  //printf("------ size nachher: %llu\n", retv);
   return all - journeys->size();
 }
 
@@ -489,14 +489,10 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
     areq.arrivalTime = j.stops_.at(lastindex - 1).arrival_.timestamp_;
     areq.arrivalTime_onnext = j.stops_.back().arrival_.timestamp_;
   }
-  //mars.maxWalkDist = 200;
-  //printf("mars start: lat: %f; lng: %f\n", mars.startpoint.lat, mars.startpoint.lng);
-  //printf("mars end: lat: %f; lng: %f\n", mars.endpoint.lat, mars.endpoint.lng);
-  //MOTIS_START_TIMING(check_od_availability_timing);
+  //areq.maxWalkDist = 200;
+  //printf("areq start: lat: %f; lng: %f\n", areq.startpoint.lat, areq.startpoint.lng);
+  //printf("areq end: lat: %f; lng: %f\n", areq.endpoint.lat, areq.endpoint.lng);
   availability_response ares = check_od_availability(areq);
-  //MOTIS_STOP_TIMING(check_od_availability_timing);
-  //stats.od_availability_check_duration_accumulated_ +=
-      //static_cast<uint64_t>(MOTIS_TIMING_MS(check_od_availability_timing));
   return ares;
 }
 
@@ -582,7 +578,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
   }
-  printf("bei post process angekommen: remove...\n");
+  //printf("bei post process angekommen: remove...\n");
   remove_na_od_journeys(&journeys, ondemand_patches, vares);
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });

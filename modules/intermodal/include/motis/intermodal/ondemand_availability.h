@@ -1,8 +1,3 @@
-#ifndef MOTIS_ONDEMAND_AVAILABILITY_H
-#define MOTIS_ONDEMAND_AVAILABILITY_H
-
-#endif  // MOTIS_ONDEMAND_AVAILABILITY_H
-
 #include "motis/core/common/unixtime.h"
 
 using namespace std;

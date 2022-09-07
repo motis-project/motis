@@ -22,7 +22,6 @@ using namespace boost::beast::http;
 using namespace motis::json;
 using namespace rapidjson;
 
-int zahl = 0;
 int minutes = 0;
 
 string create_resbody(net::test_server::http_req_t const& req, bool post)
@@ -38,23 +37,6 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
                       document.GetErrorOffset());
     }
     auto const& data = get_obj(document, "data");
-    auto read_jay_key_string = [&](char const* key, char const* name) -> string
-    {
-      auto const it = data.FindMember(key);
-      if (it != data.MemberEnd() && it->value.IsString())
-      {
-        return it->value.GetString();
-      }
-      else if(it != data.MemberEnd() && it->value.HasMember(name))
-      {
-        auto const at = it->value.FindMember(name);
-        if(at->value.IsString())
-        {
-          return at->value.GetString();
-        }
-      }
-      return "";
-    };
     auto read_jay_key_double = [&](char const* key, char const* name) -> double
     {
       auto const it = data.FindMember(key);
@@ -72,24 +54,18 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
       }
       return -1.0;
     };
-    //47.33128°N 7.55302°E Schelten
-    //47.28749°N 7.71105°E Oensingen
-    string start = read_jay_key_string("start", "");
     double startlat = read_jay_key_double("origin", "lat");
     double startlng = read_jay_key_double("origin", "lng");
     double endlat = read_jay_key_double("destination", "lat");
     double endlng = read_jay_key_double("destination", "lng");
-    //uhrzeit
+
     time_t timenow = time(nullptr);
     struct tm tmtimenow = {0};
     localtime_s(&tmtimenow, &timenow);
     size_t num = 40;
     char* timechar = new char[num];
     asctime_s(timechar, num, &tmtimenow);
-    // TEST Variable
-    //string timestring = "Wed Aug 09 15:00:11 2022";
     string timestring(timechar);
-    //printf("time: %s\n", timestring.c_str());
     size_t firstcolon = timestring.find(':');
     size_t tagidx = firstcolon - 5;
     string day = timestring.substr(tagidx, 2);
@@ -107,7 +83,6 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
     string min2;
     int ihour = stoi(hour);
     int imin = stoi(min);
-    //printf("!! hour: %d, min: %d\n", ihour, imin);
     if(minutes > 60)
     {
       imin += minutes - 60;
@@ -121,7 +96,7 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
       if(ihour > 24)
       {
         ihour = ihour - 24; // nicht sicher ist 2400 = 0000 ?
-        //iday++; und monat und jahr ??
+        //iday++;
       }
     }
     else if(imin < 0)
@@ -134,6 +109,7 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
     {
       null = "0";
     }
+    ihour++;
     hour = to_string(ihour);
     min = to_string(imin);
     int ihour2 = ihour;
@@ -149,7 +125,6 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
     }
     min2 = to_string(imin2);
     hour2 = to_string(ihour2);
-    //printf("minutes: %d \n time berechnet: %s:%s\n", minutes, hour.c_str(), min.c_str());
     string month = timestring.substr(tagidx - 4, 3);
     auto month_number = [&](string const& mon) -> string
     {
@@ -211,23 +186,6 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
   }
   else
   {
-    /* polygon mit endpunkt drin, komplett um zürich
-     * 47.42316°N 8.52577°E Punkt
-     * request:  47.423941; lng: 8.528864
-     * response: 47.423160; lng: 8.525770
-     * [[47.34225,8.48875],
-     * [47.35574,8.61960],
-     * [47.41847,8.66390],
-     * [47.47000,8.57736],
-     * [47.45701,8.48188],
-     * [47.40152,8.36958]]},
-     *
-     * Schelten - Oensingen
-     * beides komplett drin
-     *
-     * dot: lat - lng: 47.348532 - 7.411257
-     + dot: lat - lng: 47.335937 - 7.551919
-     */
       auto result = R"( {
             "data": {
               "id": "1234567890",
@@ -266,7 +224,7 @@ struct test_server::impl {
         cout << "testserver: init error: " << erco.message() << "\n";
       }
       cout << "testserver is running on http://" + host + ":" + port + "/ \n "
-                  "info:" + erco.message() + "\n";
+                  "info: " + erco.message() + "\n";
       serve.run();
     }
 
@@ -287,7 +245,6 @@ struct test_server::impl {
         }
         case verb::post:
         {
-          zahl += 2;
           string sres = create_resbody(req, true);
           minutes += 5;
           string_view resbody{sres};
@@ -317,7 +274,7 @@ struct test_server::impl {
           break;
         }
         default:
-          cb(server_error_response(req, "NOTHING TO SEE HERE - GO AWAY!"));
+          cb(server_error_response(req, "SERVER ERROR!"));
       }
     }
     boost::asio::io_service& ios;
