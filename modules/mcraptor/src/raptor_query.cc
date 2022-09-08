@@ -111,7 +111,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
 
   if(q.target_ == 1) {
     for(raptor_edge edge : q.raptor_edges_end_) {
-      q.targets_.push_back(edge.to_);
+      q.targets_.push_back(edge.from_);
     }
   }
   else {

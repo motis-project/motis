@@ -304,46 +304,63 @@ struct reconstructor {
 
 //TODO reproduce another ij assignments from reconstruct_journey, fix bugs
     rounds<L>& result = q.result();
-    for(L& l : result.getAllLabelsForStop(q.target_, max_raptor_round * 2)) {
-      intermediate_journey ij = intermediate_journey(l.changes_count_, q.ontrip_, q.source_time_begin_);
+    for(stop_id target : q.targets_) {
+      for (L& l : result.getAllLabelsForStop(target, max_raptor_round * 2)) {
+        intermediate_journey ij = intermediate_journey(
+            l.changes_count_, q.ontrip_, q.source_time_begin_);
 
-      L& current_station_label = l;
-      raptor_round r_k = current_station_label.changes_count_;
-      stop_id current_station = q.target_;
-      size_t parent_label_index = current_station_label.parent_label_index_;
-      stop_id parent_station = current_station_label.parent_station_;
-      time last_departure = invalid<time>;
-      while(r_k > 0) {
-        if(r_k % 2 == 0) {
-          if (current_station_label.footpath_duration_ == invalid<time>) {
-            last_departure = ij.add_route(parent_station, current_station_label.route_id_,current_station_label.current_trip_id_,
-                current_station_label.stop_offset_, raptor_sched_, timetable_);
-          } else {
-            ij.add_footpath(current_station, current_station_label.arrival_time_,current_station_label.parent_departure_time_,
-                current_station_label.footpath_duration_, raptor_sched_);
+        if(q.target_ == 1) {
+          for(raptor_edge edge : q.raptor_edges_end_) {
+            if(edge.from_ == target) {
+              ij.add_end_footpath(l.arrival_time_ + edge.duration_, edge.duration_, raptor_sched_);
+              break;
+            }
           }
         }
 
-        r_k--;
-        current_station_label = result[r_k][parent_station][parent_label_index];
-        current_station = parent_station;
-        parent_label_index = current_station_label.parent_label_index_;
-        parent_station = current_station_label.parent_station_;
-      }
-
-
-      if(q.source_ == 0) {
-        for(raptor_edge edge : q.raptor_edges_start_) {
-          if(edge.to_ == current_station) {
-            ij.add_start_footpath(current_station, last_departure, edge.duration_, raptor_sched_);
-            break;
+        L& current_station_label = l;
+        raptor_round r_k = current_station_label.changes_count_;
+        stop_id current_station = target;
+        size_t parent_label_index = current_station_label.parent_label_index_;
+        stop_id parent_station = current_station_label.parent_station_;
+        time last_departure = invalid<time>;
+        while (r_k > 0) {
+          if (r_k % 2 == 0) {
+            if (current_station_label.footpath_duration_ == invalid<time>) {
+              last_departure =
+                  ij.add_route(parent_station, current_station_label.route_id_,
+                               current_station_label.current_trip_id_,
+                               current_station_label.stop_offset_,
+                               raptor_sched_, timetable_);
+            } else {
+              ij.add_footpath(
+                  current_station, current_station_label.arrival_time_,
+                  current_station_label.parent_departure_time_,
+                  current_station_label.footpath_duration_, raptor_sched_);
+            }
           }
+
+          r_k--;
+          current_station_label =
+              result[r_k][parent_station][parent_label_index];
+          current_station = parent_station;
+          parent_label_index = current_station_label.parent_label_index_;
+          parent_station = current_station_label.parent_station_;
         }
+
+        if (q.source_ == 0) {
+          for (raptor_edge edge : q.raptor_edges_start_) {
+            if (edge.to_ == current_station) {
+              ij.add_start_footpath(current_station, last_departure,
+                                    edge.duration_, raptor_sched_);
+              break;
+            }
+          }
+        } else {
+          ij.add_start_station(current_station, raptor_sched_, last_departure);
+        }
+        journeys_.push_back(ij);
       }
-      else {
-        ij.add_start_station(current_station, raptor_sched_, last_departure);
-      }
-      journeys_.push_back(ij);
     }
   }
 
