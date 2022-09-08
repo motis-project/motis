@@ -53,9 +53,10 @@ public:
     return &bags_[static_cast<ptrdiff_t>(index) * stop_count_];
   };
 
-  std::vector<L> getAllLabelsForStop(stop_id stop_id, raptor_round max_round) {
+  std::vector<L> getAllLabelsForStop(stop_id stop_id, raptor_round max_round, bool exclude_ends_with_transfer = true) {
     std::vector<L> res = std::vector<L>();
-    for(int i = 0; i < max_round; i++) {
+    int add_i = exclude_ends_with_transfer ? 2 : 1;
+    for(int i = 0; i < max_round; i += add_i) {
       bag<L>& bag = (*this)[i][stop_id];
       if(bag.is_valid()) {
         for(L& l : bag.labels_) {

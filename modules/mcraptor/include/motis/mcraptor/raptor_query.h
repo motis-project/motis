@@ -17,6 +17,12 @@
 
 namespace motis::mcraptor {
 
+struct raptor_edge {
+  time duration_;
+  stop_id from_;
+  stop_id to_;
+};
+
 struct base_query {
   bool ontrip_{true};
 
@@ -32,6 +38,10 @@ struct base_query {
   bool use_dest_metas_{true};
 
   bool use_start_footpaths_{true};
+//  std::vector<edge> query_edges_;
+  std::vector<raptor_edge> raptor_edges_start_;
+  std::vector<raptor_edge> raptor_edges_end_;
+  std::vector<stop_id> targets_;
 };
 
 base_query get_base_query(routing::RoutingRequest const* routing_request,

@@ -7,9 +7,28 @@ namespace motis::mcraptor {
 template <class T, class L>
 void mc_raptor<T, L>::init_arrivals() {
   start_new_round();
-  L new_label(0, query_.source_time_begin_, round_);
-  new_label.parent_station_ = query_.source_;
-  arrival_by_route(query_.source_, new_label);
+
+  if (query_.source_ == 0) {
+    for (raptor_edge edge : query_.raptor_edges_start_) {
+      // std::cout << "EDGE from: " << edge.from_ << "; to: " << edge.to_ << "; time: " << edge.time_ << std::endl;
+      time edge_to_time = query_.source_time_begin_ + edge.duration_;
+      L new_label(0, edge_to_time, round_);
+      new_label.parent_station_ = edge.to_;
+      arrival_by_route(edge.to_, new_label);
+    }
+  } else {
+    L new_label(0, query_.source_time_begin_, round_);
+    new_label.parent_station_ = query_.source_;
+    arrival_by_route(query_.source_, new_label);
+
+    for (auto const& add_start : query_.add_starts_) {
+      time add_start_time = query_.source_time_begin_ + add_start.offset_;
+      new_label = L(0, add_start_time, round_);
+      new_label.parent_station_ = add_start.s_id_;
+      // std::cout << "Add start: " << add_start.s_id_ << std::endl;
+      arrival_by_route(add_start.s_id_, new_label);
+    }
+  }
   start_new_round();
 }
 
@@ -17,8 +36,10 @@ template <class T, class L>
 void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
   // ??? checking for empty
   // check if this label may be dominated by other existing labels
-  if(transfer_labels_[query_.target_].dominates(new_label)) {
-    return;
+  for(stop_id target : query_.targets_) {
+    if(transfer_labels_[target].dominates(new_label)) {
+      return;
+    }
   }
   if(!route_labels_[stop].merge(new_label)) {
     return;
@@ -34,8 +55,10 @@ template <class T, class L>
 void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
   // checking for empty??
   // check if this label may be dominated by other existing labels
-  if(transfer_labels_[query_.target_].dominates(new_label)) {
-    return;
+  for(stop_id target : query_.targets_) {
+    if(transfer_labels_[target].dominates(new_label)) {
+      return;
+    }
   }
   if(!transfer_labels_[stop].merge(new_label)) {
     return;

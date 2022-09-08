@@ -34,6 +34,24 @@ struct intermediate_journey {
     stops_.emplace_back(stops_.size(), motis_index, 0, 0, 0, 0, a_time, d_time,
                         a_time, d_time, timestamp_reason::SCHEDULE,
                         timestamp_reason::SCHEDULE, false, true);
+    transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, -1, 0,
+                             0);
+  }
+
+  void add_start_footpath(time const d_time, time const duration, raptor_meta_info const& raptor_sched) {
+    auto const motis_index = raptor_sched.station_id_to_index_[0];
+    stops_.emplace_back(stops_.size(), motis_index, 0, 0, 0, 0, INVALID_TIME, d_time,
+                        INVALID_TIME, d_time, timestamp_reason::SCHEDULE,
+                        timestamp_reason::SCHEDULE, false, false);
+    transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
+                             0);
+  }
+
+  void add_end_footpath(time const a_time, time const duration, raptor_meta_info const& raptor_sched) {
+    auto const motis_index = raptor_sched.station_id_to_index_[1];
+    stops_.emplace_back(stops_.size(), motis_index, 0, 0, 0, 0, a_time, INVALID_TIME,
+                        a_time, INVALID_TIME, timestamp_reason::SCHEDULE,
+                        timestamp_reason::SCHEDULE, false, false);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
                              0);
   }

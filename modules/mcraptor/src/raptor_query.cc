@@ -1,6 +1,7 @@
 #include "motis/mcraptor/raptor_query.h"
 
 #include "motis/core/access/error.h"
+#include "motis/core/access/station_access.h"
 
 #include "utl/verify.h"
 
@@ -77,6 +78,45 @@ base_query get_base_query(RoutingRequest const* routing_request,
   q.use_dest_metas_ = routing_request->use_dest_metas();
 
   q.use_start_footpaths_ = routing_request->use_start_footpaths();
+
+//  q.query_edges_ = create_additional_edges(routing_request->additional_edges(), sched);
+  std::vector<raptor_edge> edges;
+  for (auto const& e : *routing_request->additional_edges()) {
+    switch (e->additional_edge_type()) {
+      case AdditionalEdge_MumoEdge: {
+        auto const info =
+            reinterpret_cast<MumoEdge const*>(e->additional_edge());
+        auto from = info->from_station_id()->str();
+        auto to = info->to_station_id()->str();
+        if(!q.forward_) {
+          auto t = from;
+          from = to;
+          to = t;
+        }
+        edges.push_back(raptor_edge{(time)(info->duration() / 60),
+                                             meta_info.eva_to_raptor_id_.at(from),
+                                             meta_info.eva_to_raptor_id_.at(to)});
+        break;
+      }
+    }
+  }
+  for(raptor_edge edge : edges){
+    if(edge.from_ == 0) {
+      q.raptor_edges_start_.push_back(edge);
+    }
+    else if(edge.to_ == 0) {
+      q.raptor_edges_end_.push_back(edge);
+    }
+  }
+
+  if(q.target_ == 1) {
+    for(raptor_edge edge : q.raptor_edges_end_) {
+      q.targets_.push_back(edge.to_);
+    }
+  }
+  else {
+    q.targets_.push_back(q.target_);
+  }
 
   return q;
 }
