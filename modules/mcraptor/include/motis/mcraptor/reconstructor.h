@@ -44,11 +44,11 @@ struct intermediate_journey {
     auto const enter = !transports_.empty() && !transports_.back().is_walk();
     auto const d_track =
         enter ? transports_.back().con_->full_con_->d_track_ : 0;
-    stops_.emplace_back(stops_.size(), motis_index_to, 0, d_track, 0, d_track, to_d_time, to_d_time,
-                        to_d_time, to_d_time, timestamp_reason::SCHEDULE,
+    stops_.emplace_back(stops_.size(), motis_index_to, 0, d_track, 0, d_track, to_d_time - 2, to_d_time,
+                        to_d_time - 2, to_d_time, timestamp_reason::SCHEDULE,
                         timestamp_reason::SCHEDULE, false, enter);
-    stops_.emplace_back(stops_.size(), motis_index_START, 0, 0, 0, 0, INVALID_TIME, to_d_time - duration,
-                        INVALID_TIME, to_d_time - duration, timestamp_reason::SCHEDULE,
+    stops_.emplace_back(stops_.size(), motis_index_START, 0, 0, 0, 0, INVALID_TIME, to_d_time - duration - 2,
+                        INVALID_TIME, to_d_time - duration - 2, timestamp_reason::SCHEDULE,
                         timestamp_reason::SCHEDULE, false, false);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
                              0);
