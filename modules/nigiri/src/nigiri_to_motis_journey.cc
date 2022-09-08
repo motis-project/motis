@@ -26,7 +26,7 @@ struct transport_display_info {
 mcd::string get_station_id(std::vector<std::string> const& tags,
                            n::timetable const& tt, n::location_idx_t const l) {
   return tags.at(to_idx(tt.locations_.src_.at(l))) +
-         tt.locations_.ids_.at(l).str();
+         std::string{tt.locations_.ids_.at(l).view()};
 }
 
 extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
@@ -42,11 +42,11 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
       n::timetable::stop{
           tt.route_location_seq_[tt.transport_route_[transport]].back()}
           .location_idx();
-  auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back());
+  auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time, line] =
       utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned,
-                 utl::cstr>(id.view());
+                 utl::cstr>(id);
   return extern_trip{
       .station_id_ = get_station_id(tags, tt, first_location),
       .train_nr_ = train_nr,
@@ -67,7 +67,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                                   n::location_idx_t const l) {
     auto const& l_name = tt.locations_.names_.at(l);
     auto const& pos = tt.locations_.coordinates_.at(l);
-    s.name_ = l_name.str();
+    s.name_ = l_name.view();
     s.eva_no_ = get_station_id(tags, tt, l);
     s.lat_ = pos.lat_;
     s.lng_ = pos.lng_;
@@ -98,7 +98,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   };
 
   interval_map<transport_display_info> transports;
-  interval_map<std::pair<extern_trip, std::string>> extern_trips;
+  interval_map<std::pair<extern_trip, std::string /* debug */>> extern_trips;
+  interval_map<attribute> attributes;
 
   auto const add_transports = [&](n::transport const t, unsigned section_idx) {
     auto x = journey::transport{};
@@ -127,8 +128,25 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               std::string{tt.source_file_names_
                               .at(tt.trip_debug_.at(trip)[0].source_file_idx_)
                               .view()} +
+                  ":" +
                   std::to_string(tt.trip_debug_.at(trip)[0].line_number_)},
           mj.stops_.size() - 1, mj.stops_.size());
+
+      auto const section_attributes =
+          tt.transport_section_attributes_.at(t.t_idx_);
+      if (!section_attributes.empty()) {
+        auto const attribute_combi = section_attributes.size() == 1U
+                                         ? section_attributes.at(0)
+                                         : section_attributes.at(section_idx);
+
+        for (auto const& attr :
+             tt.attribute_combinations_.at(attribute_combi)) {
+          attributes.add_entry(
+              attribute{.code_ = tt.attributes_.at(attr).code_,
+                        .text_ = tt.attributes_.at(attr).text_},
+              mj.stops_.size() - 1, mj.stops_.size());
+        }
+      }
     }
   };
 
@@ -209,6 +227,17 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                                            .debug_ = et.second});
     }
   }
+
+  for (auto const& [attr, ranges] : attributes.get_attribute_ranges()) {
+    for (auto const& r : ranges) {
+      mj.attributes_.emplace_back(journey::ranged_attribute{
+          .from_ = r.from_, .to_ = r.to_, .attr_ = attr});
+    }
+  }
+
+  std::sort(begin(mj.transports_), end(mj.transports_));
+  std::sort(begin(mj.trips_), end(mj.trips_));
+  std::sort(begin(mj.attributes_), end(mj.attributes_));
 
   return mj;
 }

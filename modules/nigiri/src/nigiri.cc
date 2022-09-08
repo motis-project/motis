@@ -74,7 +74,8 @@ mm::msg_ptr to_routing_response(
                 return to_connection(fbb, nigiri_to_motis_journey(tt, tags, j));
               })),
           to_motis_unixtime(search_interval.from_),
-          to_motis_unixtime(search_interval.to_ - std::chrono::minutes{1}))
+          to_motis_unixtime(search_interval.to_ - std::chrono::minutes{1}),
+          fbb.CreateVector(std::vector<fbs::Offset<DirectConnection>>{}))
           .Union());
   return make_msg(fbb);
 }
@@ -112,14 +113,23 @@ void nigiri::init(motis::module::registry& reg) {
 
         auto q = n::routing::query{
             .start_time_ = start_time,
+            .start_match_mode_ =
+                req->use_start_metas()
+                    ? n::routing::location_match_mode::kEquivalent
+                    : n::routing::location_match_mode::kOnlyChildren,
+            .dest_match_mode_ =
+                req->use_dest_metas()
+                    ? n::routing::location_match_mode::kEquivalent
+                    : n::routing::location_match_mode::kOnlyChildren,
             .start_ = {n::routing::offset{.location_ = start_station,
                                           .offset_ = n::duration_t{0U},
                                           .type_ = 0U}},
-            .destinations_ = {n::vector<n::routing::offset>{n::routing::offset{
-                .location_ = get_location_idx(impl_->tags_, *impl_->tt_,
-                                              req->destination()->id()->str()),
-                .offset_ = n::duration_t{0U},
-                .type_ = 0U}}},
+            .destinations_ = {std::vector<n::routing::offset>{
+                n::routing::offset{.location_ = get_location_idx(
+                                       impl_->tags_, *impl_->tt_,
+                                       req->destination()->id()->str()),
+                                   .offset_ = n::duration_t{0U},
+                                   .type_ = 0U}}},
             .via_destinations_ = {},
             .allowed_classes_ = cista::bitset<n::kNumClasses>{},
             .max_transfers_ = n::routing::kMaxTransfers,
@@ -142,7 +152,8 @@ void nigiri::init(motis::module::registry& reg) {
               .route();
         }
 
-        return to_routing_response(*tt, impl_->tags_, search_state->results_,
+        return to_routing_response(*tt, impl_->tags_,
+                                   search_state->results_.at(0),
                                    search_state->search_interval_);
       },
       {});

@@ -108,12 +108,13 @@ Offset<Service> service_builder::create_service(
       create_sections(s.sections_, cb, pb, lb, ab, bb, db, sb, fbb),
       create_tracks(s.sections_, s.stops_, track_rules_, bb, fbb),
       create_times(s.stops_, fbb), rb.get_or_create_route(s.stops_, sb, fbb).o,
-      CreateServiceDebugInfo(
-          fbb,
-          utl::get_or_create(
-              filenames_, s.origin_.filename_,
-              [&fbb, &s]() { return fbb.CreateString(s.origin_.filename_); }),
-          s.origin_.line_number_from_, s.origin_.line_number_to_),
+      CreateServiceDebugInfo(fbb,
+                             utl::get_or_create(filenames_, s.origin_.filename_,
+                                                [&fbb, &s]() {
+                                                  return fbb.CreateString(
+                                                      s.origin_.filename_);
+                                                }),
+                             s.origin_.line_number_from_),
       static_cast<uint8_t>(is_rule_participant ? 1U : 0U) != 0U,
       s.initial_train_num_));
   return fbs_services_.back();

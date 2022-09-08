@@ -129,14 +129,18 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
     out << "  d: ";
     print_event(out, stop.departure_, local_time, rt_format);
     if (stop.exit_) {
-      out << " exit";
+      out << "  exit";
     } else {
-      out << "     ";
+      out << "      ";
     }
     if (stop.enter_) {
       out << " enter";
+    } else {
+      out << "      ";
     }
-    out << std::endl;
+    out << " " << stop.arrival_.track_;
+    out << " " << stop.departure_.track_;
+    out << "\n";
   }
 
   out << "\nTransports:" << std::endl;

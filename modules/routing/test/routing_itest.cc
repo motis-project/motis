@@ -49,8 +49,9 @@ TEST_F(routing_itest, all_routings_deliver_equal_journey) {
   EXPECT_EQ(reference.size(), 1U);
   for (auto const& target :
        {"/routing", "/tripbased", "/raptor_cpu", "/csa", "/nigiri"}) {
-    auto const testee = message_to_journeys(
-        motis_content(RoutingResponse, call(make_routing_request(target))));
+    std::vector<journey> testee;
+    EXPECT_NO_THROW(testee = message_to_journeys(motis_content(
+                        RoutingResponse, call(make_routing_request(target)))));
     if (reference != testee) {
       std::cerr << "REF\n";
       for (auto const& x : reference) {

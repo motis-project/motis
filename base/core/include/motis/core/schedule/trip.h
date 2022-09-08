@@ -65,8 +65,7 @@ struct trip_debug {
   std::string str() const {
     return file_ == nullptr ? ""
                             : static_cast<std::string>(*file_) + ":" +
-                                  std::to_string(line_from_) + ":" +
-                                  std::to_string(line_to_);
+                                  std::to_string(line_from_);
   }
 
   mcd::string* file_{nullptr};
