@@ -98,6 +98,7 @@ inline bool is_virtual_station(journey::stop const& stop) {
 
 bool print_journey(journey const& j, std::ostream& out, bool local_time,
                    realtime_format rt_format) {
+  out << std::setfill(' ');
   out << "Journey: duration=" << std::left << std::setw(3) << j.duration_
       << " transfers=" << std::left << std::setw(2) << j.transfers_
       << " accessibility=" << std::left << std::setw(3) << j.accessibility_

@@ -21,7 +21,16 @@ struct transport_display_info {
   CISTA_COMPARABLE()
   n::clasz clasz_;
   n::string display_name_;
+  n::string direction_;
+  n::string provider_;
 };
+
+n::location_idx_t resolve_parent(n::timetable const& tt,
+                                 n::location_idx_t const x) {
+  return tt.locations_.types_.at(x) == n::location_type::kTrack
+             ? tt.locations_.parents_.at(x)
+             : x;
+}
 
 mcd::string get_station_id(std::vector<std::string> const& tags,
                            n::timetable const& tt, n::location_idx_t const l) {
@@ -34,14 +43,16 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                                        n::trip_idx_t const trip,
                                        n::day_idx_t const day) {
   auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
-  auto const first_location =
+  auto const first_location = resolve_parent(
+      tt,
       n::timetable::stop{
           tt.route_location_seq_[tt.transport_route_[transport]].front()}
-          .location_idx();
-  auto const last_location =
+          .location_idx());
+  auto const last_location = resolve_parent(
+      tt,
       n::timetable::stop{
           tt.route_location_seq_[tt.transport_route_[transport]].back()}
-          .location_idx();
+          .location_idx());
   auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time, line] =
@@ -64,7 +75,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   journey mj;
 
   auto const fill_stop_info = [&](motis::journey::stop& s,
-                                  n::location_idx_t const l) {
+                                  n::location_idx_t const x) {
+    auto const l = resolve_parent(tt, x);
     auto const& l_name = tt.locations_.names_.at(l);
     auto const& pos = tt.locations_.coordinates_.at(l);
     s.name_ = l_name.view();
@@ -74,7 +86,11 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   };
 
   auto const add_walk = [&](n::routing::journey::leg const& leg, int mumo_id) {
-    if (leg.from_ == leg.to_) {
+    if (leg.from_ == leg.to_ ||
+        (tt.locations_.parents_.at(leg.from_) ==
+             tt.locations_.parents_.at(leg.to_) &&
+         (tt.locations_.types_.at(leg.from_) == n::location_type::kTrack ||
+          tt.locations_.types_.at(leg.to_) == n::location_type::kTrack))) {
       return;  // transfer
     }
 
@@ -165,8 +181,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
             auto const reuse_arrival = enter && !mj.stops_.empty();
             auto& stop =
                 reuse_arrival ? mj.stops_.back() : mj.stops_.emplace_back();
-            fill_stop_info(
-                stop, n::timetable::stop{stop_seq.at(stop_idx)}.location_idx());
+            auto const l =
+                n::timetable::stop{stop_seq.at(stop_idx)}.location_idx();
+            fill_stop_info(stop, l);
 
             if (exit) {
               stop.exit_ = true;
@@ -178,25 +195,33 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
             if (!enter) {
               auto const time = to_motis_unixtime(
                   tt.event_time(t.t_, stop_idx, n::event_type::kArr));
+              auto const track =
+                  tt.locations_.types_.at(l) == n::location_type::kTrack
+                      ? tt.locations_.names_.at(l).view()
+                      : "";
               stop.arrival_ = journey::stop::event_info{
                   .valid_ = true,
                   .timestamp_ = time,
                   .schedule_timestamp_ = time,
                   .timestamp_reason_ = timestamp_reason::SCHEDULE,
-                  .track_ = "",
-                  .schedule_track_ = ""};
+                  .track_ = std::string{track},
+                  .schedule_track_ = std::string{track}};
             }
 
             if (!exit) {
               auto const time = to_motis_unixtime(
                   tt.event_time(t.t_, stop_idx, n::event_type::kDep));
+              auto const track =
+                  tt.locations_.types_.at(l) == n::location_type::kTrack
+                      ? tt.locations_.names_.at(l).view()
+                      : "";
               stop.departure_ = journey::stop::event_info{
                   .valid_ = true,
                   .timestamp_ = time,
                   .schedule_timestamp_ = time,
                   .timestamp_reason_ = timestamp_reason::SCHEDULE,
-                  .track_ = "",
-                  .schedule_track_ = ""};
+                  .track_ = std::string{track},
+                  .schedule_track_ = std::string{track}};
             }
 
             if (!exit) {
