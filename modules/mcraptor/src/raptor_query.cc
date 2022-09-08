@@ -93,7 +93,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
           from = to;
           to = t;
         }
-        edges.push_back(raptor_edge{(time)(info->duration() / 60),
+        edges.push_back(raptor_edge{info->duration(),
                                              meta_info.eva_to_raptor_id_.at(from),
                                              meta_info.eva_to_raptor_id_.at(to)});
         break;
@@ -104,7 +104,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
     if(edge.from_ == 0) {
       q.raptor_edges_start_.push_back(edge);
     }
-    else if(edge.to_ == 0) {
+    else if(edge.to_ == 1) {
       q.raptor_edges_end_.push_back(edge);
     }
   }

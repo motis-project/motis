@@ -38,10 +38,17 @@ struct intermediate_journey {
                              0);
   }
 
-  void add_start_footpath(time const d_time, time const duration, raptor_meta_info const& raptor_sched) {
-    auto const motis_index = raptor_sched.station_id_to_index_[0];
-    stops_.emplace_back(stops_.size(), motis_index, 0, 0, 0, 0, INVALID_TIME, d_time,
-                        INVALID_TIME, d_time, timestamp_reason::SCHEDULE,
+  void add_start_footpath(stop_id to, time to_d_time, time const duration, raptor_meta_info const& raptor_sched) {
+    auto const motis_index_to = raptor_sched.station_id_to_index_[to];
+    auto const motis_index_START = raptor_sched.station_id_to_index_[0];
+    auto const enter = !transports_.empty() && !transports_.back().is_walk();
+    auto const d_track =
+        enter ? transports_.back().con_->full_con_->d_track_ : 0;
+    stops_.emplace_back(stops_.size(), motis_index_to, 0, d_track, 0, d_track, to_d_time, to_d_time,
+                        to_d_time, to_d_time, timestamp_reason::SCHEDULE,
+                        timestamp_reason::SCHEDULE, false, enter);
+    stops_.emplace_back(stops_.size(), motis_index_START, 0, 0, 0, 0, INVALID_TIME, to_d_time - duration,
+                        INVALID_TIME, to_d_time - duration, timestamp_reason::SCHEDULE,
                         timestamp_reason::SCHEDULE, false, false);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
                              0);
@@ -325,7 +332,17 @@ struct reconstructor {
       }
 
 
-      ij.add_start_station(current_station, raptor_sched_, last_departure);
+      if(q.source_ == 0) {
+        for(raptor_edge edge : q.raptor_edges_start_) {
+          if(edge.to_ == current_station) {
+            ij.add_start_footpath(current_station, last_departure, edge.duration_, raptor_sched_);
+            break;
+          }
+        }
+      }
+      else {
+        ij.add_start_station(current_station, raptor_sched_, last_departure);
+      }
       journeys_.push_back(ij);
     }
   }
