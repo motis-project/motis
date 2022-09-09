@@ -205,8 +205,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
         for (auto const& attr :
              tt.attribute_combinations_.at(attribute_combi)) {
           attributes.add_entry(
-              attribute{.code_ = tt.attributes_.at(attr).code_,
-                        .text_ = tt.attributes_.at(attr).text_},
+              attribute{.code_ = tt.attributes_.at(attr).code_.view(),
+                        .text_ = tt.attributes_.at(attr).text_.view()},
               mj.stops_.size() - 1, mj.stops_.size());
         }
       }
