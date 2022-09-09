@@ -20,9 +20,10 @@ namespace motis::nigiri {
 struct transport_display_info {
   CISTA_COMPARABLE()
   n::clasz clasz_;
-  n::string display_name_;
-  n::string direction_;
-  n::string provider_;
+  std::string display_name_;
+  std::string direction_;
+  std::string provider_;
+  std::string line_;
 };
 
 n::location_idx_t resolve_parent(n::timetable const& tt,
@@ -129,10 +130,56 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
           tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_));
       auto const clasz =
           clasz_sections.at(clasz_sections.size() == 1U ? 0U : section_idx);
+
+      auto const provider_sections =
+          tt.transport_section_providers_.at(t.t_idx_);
+      auto const provider_idx = provider_sections.at(
+          provider_sections.size() == 1U ? 0U : section_idx);
+      auto const provider =
+          std::string{tt.providers_.at(provider_idx).long_name_.view()};
+
+      auto const direction_sections =
+          tt.transport_section_directions_.at(t.t_idx_);
+      std::string direction;
+      if (!direction_sections.empty()) {
+        auto const direction_idx = direction_sections.size() == 1U
+                                       ? direction_sections.at(0)
+                                       : direction_sections.at(section_idx);
+        if (direction_idx != n::trip_direction_idx_t::invalid()) {
+          direction = tt.trip_directions_.at(direction_idx)
+                          .apply(utl::overloaded{
+                              [&](n::trip_direction_string_idx_t const i) {
+                                std::cerr
+                                    << "direction: "
+                                    << tt.trip_direction_strings_.at(i).view()
+                                    << "\n";
+                                return tt.trip_direction_strings_.at(i).view();
+                              },
+                              [&](n::location_idx_t const i) {
+                                return tt.locations_.names_.at(i).view();
+                              }});
+        }
+      }
+
+      auto const line_sections = tt.transport_section_lines_.at(t.t_idx_);
+      std::string line;
+      if (!line_sections.empty()) {
+        auto const line_idx = line_sections.size() == 1U
+                                  ? line_sections.at(0U)
+                                  : line_sections.at(section_idx);
+        if (line_idx != n::trip_line_idx_t::invalid()) {
+          line = tt.trip_lines_.at(line_idx).view();
+        }
+      }
+
       transports.add_entry(
           transport_display_info{
               .clasz_ = clasz,
-              .display_name_ = tt.trip_display_names_.at(trip).view()},
+              .display_name_ =
+                  std::string{tt.trip_display_names_.at(trip).view()},
+              .direction_ = direction,
+              .provider_ = provider,
+              .line_ = line},
           mj.stops_.size() - 1, mj.stops_.size());
 
       // TODO(felix) maybe the day index needs to be changed according to the
@@ -240,6 +287,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       t.to_ = r.to_;
       t.clasz_ = static_cast<std::underlying_type_t<n::clasz>>(x.clasz_);
       t.name_ = x.display_name_;
+      t.provider_ = x.provider_;
+      t.direction_ = x.direction_;
+      t.line_identifier_ = x.line_;
       mj.transports_.emplace_back(std::move(t));
     }
   }
@@ -260,7 +310,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     }
   }
 
-  std::sort(begin(mj.transports_), end(mj.transports_));
+  std::sort(begin(mj.transports_), end(mj.transports_),
+            [](auto&& a, auto&& b) { return a.from_ < b.from_; });
   std::sort(begin(mj.trips_), end(mj.trips_));
   std::sort(begin(mj.attributes_), end(mj.attributes_));
 

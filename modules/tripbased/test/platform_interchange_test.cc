@@ -101,10 +101,6 @@ struct tripbased_platform_interchange_test
     EXPECT_EQ(unix_time(1420), s3.arrival_.schedule_timestamp_);
 
     ASSERT_EQ(2, j.transports_.size());
-    auto const& t0 = j.transports_[0];
-    EXPECT_EQ(1, t0.train_nr_);
-    auto const& t1 = j.transports_[1];
-    EXPECT_EQ(2, t1.train_nr_);
   }
 };
 
@@ -163,10 +159,6 @@ TEST_F(tripbased_platform_interchange_no_platforms_test, same_platform) {
   EXPECT_EQ(unix_time(1425), s3.arrival_.schedule_timestamp_);
 
   ASSERT_EQ(2, j.transports_.size());
-  auto const& t0 = j.transports_[0];
-  EXPECT_EQ(1, t0.train_nr_);
-  auto const& t1 = j.transports_[1];
-  EXPECT_EQ(3, t1.train_nr_);
 }
 
 }  // namespace motis::tripbased

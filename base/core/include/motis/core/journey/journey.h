@@ -34,9 +34,7 @@ struct journey {
     unsigned from_{0}, to_{0};
     bool is_walk_{false};
     std::string name_;
-    std::string category_name_;
     unsigned clasz_{0};
-    unsigned train_nr_{0};
     std::string line_identifier_;
     unsigned duration_{0};
     int mumo_id_{0};

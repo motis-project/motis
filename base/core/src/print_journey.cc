@@ -158,8 +158,11 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
           << trans.mumo_accessibility_ << std::endl;
     } else {
       out << std::left << std::setw(10) << trans.name_
-          << "                duration=" << std::left << std::setw(3)
-          << trans.duration_ << std::endl;
+          << "                duration=" << trans.duration_ << ", provider=\""
+          << trans.provider_ << "\", direction=\"" << trans.direction_
+          << "\", line=\"" << trans.line_identifier_
+          << "\", clasz=" << static_cast<int>(trans.clasz_) << ", duration=\""
+          << trans.duration_ << "\"\n";
     }
   }
 
