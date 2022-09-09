@@ -1,11 +1,11 @@
 [address-typeahead]
   url=git@github.com:motis-project/address-typeahead.git
   branch=master
-  commit=d16126b3fea13f18263e58c0f680807d68d315cf
+  commit=b6b5e60faac2921f1c0b3813da9c11731a3ca31d
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=nigiri
-  commit=82e0d52ba6ce9fe4bb85d1ff0c74936bc2089410
+  commit=010f4f61f865f6332d4a4b7febdae84a76582530
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=e3b4199986bf0324fdd1f0c770e7f90b83de6994
+  commit=6214a010957fe3a946e54754be9f9224163c0507
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=motis
-  commit=225ebce8dc40f6fc1bb1ee12df9f583101ca1ab2
+  commit=ee4c42271616cf82498bb7e10c780d7594c24965
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
