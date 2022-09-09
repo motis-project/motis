@@ -32,7 +32,7 @@ using namespace rapidjson;
 namespace motis::intermodal {
 #define DELAY 900  // 15min
 
-availability_response read_result(const response& result, bool first, std::vector<Dot> dots)
+availability_response read_result(const response& result, bool first, std::vector<geo::latlng> dots)
 {
   //printf("read_result: \n");
   availability_response ares;
@@ -178,15 +178,15 @@ availability_response read_result(const response& result, bool first, std::vecto
     {
       ares.codenumber_id = read_json_key_string("id", " ");
       std::vector<std::vector<double>> polypoints = read_json_key_array("area", "coordinates");
-      std::vector<Dot> polygon_area;
+      std::vector<geo::latlng> polygon_area;
       polygon_area.resize(polypoints.size());
       int k = 0;
-      for(std::vector<double> vec : polypoints)
+      for(auto const& vec : polypoints)
       {
         if(vec.size() == 2)
         {
-          polygon_area[k].lat = vec[0];
-          polygon_area[k].lng = vec[1];
+          polygon_area[k].lat_ = vec.at(0);
+          polygon_area[k].lng_ = vec.at(1);
         }
         else
         {
@@ -201,14 +201,14 @@ availability_response read_result(const response& result, bool first, std::vecto
       }
       typedef boost::geometry::model::d2::point_xy<double> point_type;
       typedef boost::geometry::model::polygon<point_type> polygon_type;
-      point_type point_one(dots.at(0).lat, dots.at(0).lng);
-      point_type point_two(dots.at(1).lat, dots.at(1).lng);
+      point_type point_one(dots.at(0).lat_, dots.at(0).lng_);
+      point_type point_two(dots.at(1).lat_, dots.at(1).lng_);
       polygon_type poly;
-      std::vector<Dot>::iterator it;
+      std::vector<geo::latlng>::iterator it;
       for(it = polygon_area.begin(); it != polygon_area.end(); it++)
       {
-        Dot dot = *it;
-        boost::geometry::append(poly, boost::geometry::make<point_type>(dot.lat, dot.lng));
+        geo::latlng dot = *it;
+        boost::geometry::append(poly, boost::geometry::make<point_type>(dot.lat_, dot.lng_));
       }
       bool inside_start = boost::geometry::within(point_one, poly);
       bool inside_end = boost::geometry::within(point_two, poly);
@@ -218,19 +218,15 @@ availability_response read_result(const response& result, bool first, std::vecto
     else
     {
       ares.codenumber_id = read_json_key_string("id", " ");
-      ares.startpoint.lat  = read_json_key_double("pickup", "lat");
-      ares.startpoint.lng = read_json_key_double("pickup", "lng");
-      ares.endpoint.lat = read_json_key_double("dropoff", "lat");
-      ares.endpoint.lng = read_json_key_double("dropoff", "lng");
+      ares.startpoint.lat_  = read_json_key_double("pickup", "lat");
+      ares.startpoint.lng_ = read_json_key_double("pickup", "lng");
+      ares.endpoint.lat_ = read_json_key_double("dropoff", "lat");
+      ares.endpoint.lng_ = read_json_key_double("dropoff", "lng");
       ares.price = read_json_key_double("fare", "final_price");
-      ares.walkDur[0] = read_json_key_int("pickup", "walking_duration");
-      ares.walkDur[1] = read_json_key_int("dropoff", "walking_duration");
-      //string pu_time1 = read_json_key_string("pickup", "time");
+      ares.walkDur.emplace_back(read_json_key_int("pickup", "walking_duration"));
+      ares.walkDur.emplace_back(read_json_key_int("dropoff", "walking_duration"));
       std::string pu_time2 = read_json_key_string("pickup", "negotiation_time");
-      //string pu_time3 = read_jay_key_string("pickup", "negotiation_time_max");
-      //string do_time1 = read_jay_key_string("dropoff", "time");
       std::string do_time2 = read_json_key_string("dropoff", "negotiation_time");
-      //string do_time3 = read_jay_key_string("dropoff", "negotiation_time_max");
       //"2017-09-06T15:13:43Z" -> 1504703623
       auto traveltime_to_unixtime = [&](const std::string& timestring) -> int64_t
       {
@@ -282,12 +278,8 @@ availability_response read_result(const response& result, bool first, std::vecto
         time_t result = mktime(&name);
         return result;
       };
-      //euros.arrivalTime[0] = traveltime_to_unixtime(pu_time1);
-      ares.pickupTime[1] = traveltime_to_unixtime(pu_time2);
-      //euros.arrivalTime[2] = traveltime_to_unixtime(pu_time1);
-      //euros.departureTime[0] = traveltime_to_unixtime(do_time1);
-      ares.dropoffTime[1] = traveltime_to_unixtime(do_time2);
-      //euros.departureTime[2] = traveltime_to_unixtime(do_time3);
+      ares.pickupTime = traveltime_to_unixtime(pu_time2);
+      ares.dropoffTime = traveltime_to_unixtime(do_time2);
       return ares;
     }
   }
@@ -324,12 +316,12 @@ std::string create_json_body(const availability_request& areq)
   std::string json = R"( { "data": {
                       "product_id": ")" + areq.productID + "\","
                 + R"( "origin": {
-                      "lat": )" + std::to_string(areq.startpoint.lat) + ","
-                + R"( "lng": )" + std::to_string(areq.startpoint.lng) + ","
+                      "lat": )" + std::to_string(areq.startpoint.lat_) + ","
+                + R"( "lng": )" + std::to_string(areq.startpoint.lng_) + ","
                 + R"( "time": ")" + dep_time + "\","
                 + R"(  }, "destination": {
-                      "lat": )" + std::to_string(areq.endpoint.lat) + ","
-                + R"( "lng": )" + std::to_string(areq.endpoint.lng) + ","
+                      "lat": )" + std::to_string(areq.endpoint.lat_) + ","
+                + R"( "lng": )" + std::to_string(areq.endpoint.lng_) + ","
                 + R"( "time": ")" + arr_time
                 + "\"}}}";
   /*
@@ -380,40 +372,40 @@ bool checking(const availability_request& areq, const availability_response& are
     //          areq.departureTime - DELAY < ares.pickupTime[1]; // 1300 -15 = 1245 < 1310
     //printf("waiting: %lld + 15 > %lld \n -- %lld - 15 < %lld\n", areq.departureTime, ares.pickupTime[1], areq.departureTime, ares.pickupTime[1]);
     //printf("duration: %lld \n response duration complete: %lld \n", areq.duration,
-     //(ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0] + ares.walkDur[1]);
-    if(ares.walkDur[0] == 0 && ares.walkDur[1] == 0)
+     //(ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur.at(0) + ares.walkDur.at(1));
+    if(ares.walkDur.at(0) == 0 && ares.walkDur.at(1) == 0)
     {
-      coord_start = coord_equality(std::to_string(areq.startpoint.lat), std::to_string(ares.startpoint.lat))
-                    && coord_equality(std::to_string(areq.startpoint.lng), std::to_string(ares.startpoint.lng));
-      coord_end = coord_equality(std::to_string(areq.endpoint.lat), std::to_string(ares.endpoint.lat)) &&
-                  coord_equality(std::to_string(areq.endpoint.lng), std::to_string(ares.endpoint.lng));
-      timewindow = areq.duration >= ares.dropoffTime[1] - ares.pickupTime[1];
+      coord_start = coord_equality(std::to_string(areq.startpoint.lat_), std::to_string(ares.startpoint.lat_))
+                    && coord_equality(std::to_string(areq.startpoint.lng_), std::to_string(ares.startpoint.lng_));
+      coord_end = coord_equality(std::to_string(areq.endpoint.lat_), std::to_string(ares.endpoint.lat_)) &&
+                  coord_equality(std::to_string(areq.endpoint.lng_), std::to_string(ares.endpoint.lng_));
+      timewindow = areq.duration >= ares.dropoffTime - ares.pickupTime;
       //printf("checking start: waiting: %d; coord_start: %d; coord_end: %d; timewindow: %d\n", waiting, coord_start, coord_end, timewindow);
       result = coord_start && coord_end && waiting && timewindow;
     }
-    else if(ares.walkDur[0] != 0 && ares.walkDur[1] == 0)
+    else if(ares.walkDur.at(0) != 0 && ares.walkDur.at(1) == 0)
     {
-      walktime = ares.walkDur[0] < MAX_WALK_TIME;
-      walklength = areq.maxWalkDist >= ares.walkDur[0] * WALK_SPEED;
-      timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0];
+      walktime = ares.walkDur.at(0) < MAX_WALK_TIME;
+      walklength = areq.maxWalkDist >= ares.walkDur.at(0) * WALK_SPEED;
+      timewindow = areq.duration >= (ares.dropoffTime - ares.pickupTime) + ares.walkDur.at(0);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-    else if(ares.walkDur[1] != 0 && ares.walkDur[0] == 0)
+    else if(ares.walkDur.at(1) != 0 && ares.walkDur.at(0) == 0)
     {
-      walktime = ares.walkDur[1] < MAX_WALK_TIME &&
-                 ares.dropoffTime[1] + ares.walkDur[1] < areq.arrivalTime_onnext; // 1350 +5 = 1355 < 1400
-      walklength = areq.maxWalkDist >= ares.walkDur[1] * WALK_SPEED;
-      timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[1];
+      walktime = ares.walkDur.at(1) < MAX_WALK_TIME &&
+                 ares.dropoffTime + ares.walkDur.at(1) < areq.arrivalTime_onnext; // 1350 +5 = 1355 < 1400
+      walklength = areq.maxWalkDist >= ares.walkDur.at(1) * WALK_SPEED;
+      timewindow = areq.duration >= (ares.dropoffTime - ares.pickupTime) + ares.walkDur.at(1);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
     else
     {
-      walktime = ares.walkDur[0] < MAX_WALK_TIME && ares.walkDur[1] < MAX_WALK_TIME
-                 && ares.dropoffTime[1] + ares.walkDur[1] < areq.arrivalTime_onnext;
-      walklength = areq.maxWalkDist >= ares.walkDur[1] * WALK_SPEED && areq.maxWalkDist >= ares.walkDur[0] * WALK_SPEED;
-      timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0] + ares.walkDur[1];
+      walktime = ares.walkDur.at(0) < MAX_WALK_TIME && ares.walkDur.at(1) < MAX_WALK_TIME
+                 && ares.dropoffTime + ares.walkDur.at(1) < areq.arrivalTime_onnext;
+      walklength = areq.maxWalkDist >= ares.walkDur.at(1) * WALK_SPEED && areq.maxWalkDist >= ares.walkDur.at(0) * WALK_SPEED;
+      timewindow = areq.duration >= (ares.dropoffTime - ares.pickupTime) + ares.walkDur.at(0) + ares.walkDur.at(1);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
@@ -423,39 +415,39 @@ bool checking(const availability_request& areq, const availability_response& are
     //waiting = areq.departureTime + DELAY > ares.pickupTime[1] // 1300 +15 = 1315 > 1310
     //          && areq.arrivalTime < ares.pickupTime[1];       // 1258 < 1310
     //printf("waiting: %lld + 15 > %lld \n -- %lld < %lld\n", areq.departureTime, ares.pickupTime[1], areq.arrivalTime, ares.pickupTime[1]);
-    if(ares.walkDur[0] == 0 && ares.walkDur[1] == 0)
+    if(ares.walkDur.at(0) == 0 && ares.walkDur.at(1) == 0)
     {
-      coord_start = coord_equality(std::to_string(areq.startpoint.lat), std::to_string(ares.startpoint.lat)) &&
-                    coord_equality(std::to_string(areq.startpoint.lng), std::to_string(ares.startpoint.lng));
-      coord_end = coord_equality(std::to_string(areq.endpoint.lat), std::to_string(ares.endpoint.lat)) &&
-                  coord_equality(std::to_string(areq.endpoint.lng), std::to_string(ares.endpoint.lng));
-      timewindow = areq.duration >= ares.dropoffTime[1] - ares.pickupTime[1];
+      coord_start = coord_equality(std::to_string(areq.startpoint.lat_), std::to_string(ares.startpoint.lat_)) &&
+                    coord_equality(std::to_string(areq.startpoint.lng_), std::to_string(ares.startpoint.lng_));
+      coord_end = coord_equality(std::to_string(areq.endpoint.lat_), std::to_string(ares.endpoint.lat_)) &&
+                  coord_equality(std::to_string(areq.endpoint.lng_), std::to_string(ares.endpoint.lng_));
+      timewindow = areq.duration >= ares.dropoffTime - ares.pickupTime;
       //printf("checking end: waiting: %d; coord_start: %d; coord_end: %d; timewindow: %d\n", waiting, coord_start, coord_end, timewindow);
       result = coord_start && coord_end && waiting && timewindow;
     }
-    else if(ares.walkDur[0] != 0 && ares.walkDur[1] == 0)
+    else if(ares.walkDur.at(0) != 0 && ares.walkDur.at(1) == 0)
     {
-      walktime = areq.departureTime + ares.walkDur[0] < ares.pickupTime[1] && ares.walkDur[0] < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
-      walklength = areq.maxWalkDist >= ares.walkDur[0] * WALK_SPEED;
-      timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0];
-      //printf("walk: %lld + %d < %lld && %d < %d \n", areq.departureTime, ares.walkDur[0], ares.pickupTime[1], ares.walkDur[0], MAX_WALK_TIME);
+      walktime = areq.departureTime + ares.walkDur.at(0) < ares.pickupTime && ares.walkDur.at(0) < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
+      walklength = areq.maxWalkDist >= ares.walkDur.at(0) * WALK_SPEED;
+      timewindow = areq.duration >= (ares.dropoffTime - ares.pickupTime) + ares.walkDur.at(0);
+      //printf("walk: %lld + %d < %lld && %d < %d \n", areq.departureTime, ares.walkDur.at(0), ares.pickupTime[1], ares.walkDur.at(0), MAX_WALK_TIME);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-    else if(ares.walkDur[1] != 0 && ares.walkDur[0] == 0)
+    else if(ares.walkDur.at(1) != 0 && ares.walkDur.at(0) == 0)
     {
-      walktime = ares.walkDur[1] < MAX_WALK_TIME;
-      walklength = areq.maxWalkDist >= ares.walkDur[1] * WALK_SPEED;
-      timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[1]; // evtl egal -> dann länge der kante anpassen ?
+      walktime = ares.walkDur.at(1) < MAX_WALK_TIME;
+      walklength = areq.maxWalkDist >= ares.walkDur.at(1) * WALK_SPEED;
+      timewindow = areq.duration >= (ares.dropoffTime - ares.pickupTime) + ares.walkDur.at(1); // evtl egal -> dann länge der kante anpassen ?
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
     else
     {
-      walktime = ares.walkDur[0] < MAX_WALK_TIME && ares.walkDur[1] < MAX_WALK_TIME
-                 && areq.departureTime + ares.walkDur[0] < ares.pickupTime[1];
-      walklength = areq.maxWalkDist >= ares.walkDur[1] * WALK_SPEED && areq.maxWalkDist >= ares.walkDur[0] * WALK_SPEED;
-      timewindow = areq.duration >= (ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur[0] + ares.walkDur[1];
+      walktime = ares.walkDur.at(0) < MAX_WALK_TIME && ares.walkDur.at(1) < MAX_WALK_TIME
+                 && areq.departureTime + ares.walkDur.at(0) < ares.pickupTime;
+      walklength = areq.maxWalkDist >= ares.walkDur.at(1) * WALK_SPEED && areq.maxWalkDist >= ares.walkDur.at(0) * WALK_SPEED;
+      timewindow = areq.duration >= (ares.dropoffTime - ares.pickupTime) + ares.walkDur.at(0) + ares.walkDur.at(1);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
@@ -572,13 +564,13 @@ availability_response check_od_availability(availability_request areq)
   request::method m = request::GET;
   request req(addr, m, hdrs, "");
 
-  Dot req_dot_start;
-  Dot req_dot_end;
-  req_dot_end.lat = areq.endpoint.lat;
-  req_dot_end.lng = areq.endpoint.lng;
-  req_dot_start.lat = areq.startpoint.lat;
-  req_dot_start.lng = areq.startpoint.lng;
-  std::vector<Dot> req_dots;
+  geo::latlng req_dot_start;
+  geo::latlng req_dot_end;
+  req_dot_end.lat_ = areq.endpoint.lat_;
+  req_dot_end.lng_ = areq.endpoint.lng_;
+  req_dot_start.lat_ = areq.startpoint.lat_;
+  req_dot_start.lng_ = areq.startpoint.lng_;
+  std::vector<geo::latlng> req_dots;
   req_dots.emplace_back(req_dot_start);
   req_dots.emplace_back(req_dot_end);
 

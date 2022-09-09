@@ -351,22 +351,22 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
      *  replace: T --od--> S
      *  with:    T --walk--> PU --od--> S
      */
-    if(ares.at(idx).walkDur[0] != 0 && ares.at(idx).walkDur[1] == 0)
+    if(ares.at(idx).walkDur.at(0) != 0 && ares.at(idx).walkDur.at(1) == 0)
     {
       auto& t1 = get_transport(patches.at(idx).j_, patches.at(idx).from_, patches.at(idx).to_);
       auto splitted_one = split_transport(patches.at(idx).j_, od_parkingpatches, t1);
 
       splitted_one.parking_stop_.eva_no_ = ares.at(idx).codenumber_id;
       splitted_one.parking_stop_.name_ = ares.at(idx).codenumber_id;
-      splitted_one.parking_stop_.lat_ = ares.at(idx).startpoint.lat;
-      splitted_one.parking_stop_.lng_ = ares.at(idx).startpoint.lng;
+      splitted_one.parking_stop_.lat_ = ares.at(idx).startpoint.lat_;
+      splitted_one.parking_stop_.lng_ = ares.at(idx).startpoint.lng_;
       splitted_one.parking_stop_.arrival_.valid_ = true;
       splitted_one.parking_stop_.arrival_.timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_ +
-          ares.at(idx).walkDur[0];
+          ares.at(idx).walkDur.at(0);
       splitted_one.parking_stop_.arrival_.schedule_timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.schedule_timestamp_ +
-          ares.at(idx).walkDur[0];
+          ares.at(idx).walkDur.at(0);
       splitted_one.parking_stop_.arrival_.timestamp_reason_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_reason_;
       splitted_one.parking_stop_.departure_ = splitted_one.parking_stop_.arrival_;
@@ -379,14 +379,14 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
      *  replace: T --od--> S
      *  with:    T --od--> DO --walk--> S
      */
-    else if(ares.at(idx).walkDur[0] == 0 && ares.at(idx).walkDur[1] != 0) {
+    else if(ares.at(idx).walkDur.at(0) == 0 && ares.at(idx).walkDur.at(1) != 0) {
       auto& t2 = get_transport(patches.at(idx).j_, patches.at(idx).from_, patches.at(idx).to_);
       auto splitted_two = split_transport(patches.at(idx).j_, od_parkingpatches, t2);
 
       splitted_two.parking_stop_.eva_no_ = ares.at(idx).codenumber_id;
       splitted_two.parking_stop_.name_ = ares.at(idx).codenumber_id;
-      splitted_two.parking_stop_.lat_ = ares.at(idx).startpoint.lat;
-      splitted_two.parking_stop_.lng_ = ares.at(idx).startpoint.lng;
+      splitted_two.parking_stop_.lat_ = ares.at(idx).startpoint.lat_;
+      splitted_two.parking_stop_.lng_ = ares.at(idx).startpoint.lng_;
       splitted_two.parking_stop_.arrival_.valid_ = true;
       splitted_two.parking_stop_.arrival_.timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_;
@@ -404,7 +404,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
      *  replace: T --od--> S
      *  with:    T --walk--> PU --od--> DO --walk--> S
      */
-    else if(ares.at(idx).walkDur[0] != 0 && ares.at(idx).walkDur[1] != 0)
+    else if(ares.at(idx).walkDur.at(0) != 0 && ares.at(idx).walkDur.at(1) != 0)
     {
       auto& t3 = get_transport(patches.at(idx).j_, patches.at(idx).from_, patches.at(idx).to_);
       auto splitted_three = split_transport(patches.at(idx).j_, od_parkingpatches, t3);
@@ -422,15 +422,15 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
       auto& split3 = patches.at(idx).j_.stops_.at(patches.at(idx).from_ + 1);
       split3.eva_no_ = ares.at(idx).codenumber_id;
       split3.name_ = ares.at(idx).codenumber_id;
-      split3.lat_ = ares.at(idx).startpoint.lat;
-      split3.lng_ = ares.at(idx).startpoint.lng;
+      split3.lat_ = ares.at(idx).startpoint.lat_;
+      split3.lng_ = ares.at(idx).startpoint.lng_;
       split3.arrival_.valid_ = true;
       split3.arrival_.timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_
-          + ares.at(idx).walkDur[0];
+          + ares.at(idx).walkDur.at(0);
       split3.arrival_.schedule_timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.schedule_timestamp_
-          + ares.at(idx).walkDur[0];
+          + ares.at(idx).walkDur.at(0);
       split3.arrival_.timestamp_reason_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_reason_;
       split3.departure_ = split3.arrival_;
@@ -438,8 +438,8 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
       auto& split4 = patches.at(idx).j_.stops_.at(patches.at(idx).from_ + 2);
       split4.eva_no_ = ares.at(idx).codenumber_id;
       split4.name_ = ares.at(idx).codenumber_id;
-      split4.lat_ = ares.at(idx).endpoint.lat;
-      split4.lng_ = ares.at(idx).endpoint.lat;
+      split4.lat_ = ares.at(idx).endpoint.lat_;
+      split4.lng_ = ares.at(idx).endpoint.lat_;
       split4.arrival_.valid_ = true;
       split4.arrival_.timestamp_ =
           split3.departure_.timestamp_ + (ares.at(idx).dropoffTime
@@ -470,10 +470,10 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
   if(start)
   {
     areq.start = true;
-    areq.startpoint.lat = j.stops_.front().lat_;
-    areq.startpoint.lng = j.stops_.front().lng_;
-    areq.endpoint.lat = j.stops_.at(1).lat_;
-    areq.endpoint.lng = j.stops_.at(1).lng_;
+    areq.startpoint.lat_ = j.stops_.front().lat_;
+    areq.startpoint.lng_ = j.stops_.front().lng_;
+    areq.endpoint.lat_ = j.stops_.at(1).lat_;
+    areq.endpoint.lng_ = j.stops_.at(1).lng_;
     areq.departureTime = j.stops_.front().departure_.timestamp_;
     areq.arrivalTime_onnext = j.stops_.at(1).arrival_.timestamp_;
   }
@@ -481,10 +481,10 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
   {
     areq.start = false;
     int lastindex = static_cast<int>(j.stops_.size()) - 1;
-    areq.startpoint.lat = j.stops_.at(lastindex - 1).lat_;
-    areq.startpoint.lng = j.stops_.at(lastindex - 1).lng_;
-    areq.endpoint.lat = j.stops_.back().lat_;
-    areq.endpoint.lng = j.stops_.back().lng_;
+    areq.startpoint.lat_ = j.stops_.at(lastindex - 1).lat_;
+    areq.startpoint.lng_ = j.stops_.at(lastindex - 1).lng_;
+    areq.endpoint.lat_ = j.stops_.back().lat_;
+    areq.endpoint.lng_ = j.stops_.back().lng_;
     areq.departureTime = j.stops_.at(lastindex - 1).departure_.timestamp_;
     areq.arrivalTime = j.stops_.at(lastindex - 1).arrival_.timestamp_;
     areq.arrivalTime_onnext = j.stops_.back().arrival_.timestamp_;
