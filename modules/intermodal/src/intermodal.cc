@@ -351,7 +351,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
      *  replace: T --od--> S
      *  with:    T --walk--> PU --od--> S
      */
-    if(ares.at(idx).walkDur.at(0) != 0 && ares.at(idx).walkDur.at(1) == 0)
+    if(ares.at(idx).walk_dur.at(0) != 0 && ares.at(idx).walk_dur.at(1) == 0)
     {
       auto& t1 = get_transport(patches.at(idx).j_, patches.at(idx).from_, patches.at(idx).to_);
       auto splitted_one = split_transport(patches.at(idx).j_, od_parkingpatches, t1);
@@ -363,10 +363,10 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
       splitted_one.parking_stop_.arrival_.valid_ = true;
       splitted_one.parking_stop_.arrival_.timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_ +
-          ares.at(idx).walkDur.at(0);
+          ares.at(idx).walk_dur.at(0);
       splitted_one.parking_stop_.arrival_.schedule_timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.schedule_timestamp_ +
-          ares.at(idx).walkDur.at(0);
+          ares.at(idx).walk_dur.at(0);
       splitted_one.parking_stop_.arrival_.timestamp_reason_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_reason_;
       splitted_one.parking_stop_.departure_ = splitted_one.parking_stop_.arrival_;
@@ -379,7 +379,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
      *  replace: T --od--> S
      *  with:    T --od--> DO --walk--> S
      */
-    else if(ares.at(idx).walkDur.at(0) == 0 && ares.at(idx).walkDur.at(1) != 0) {
+    else if(ares.at(idx).walk_dur.at(0) == 0 && ares.at(idx).walk_dur.at(1) != 0) {
       auto& t2 = get_transport(patches.at(idx).j_, patches.at(idx).from_, patches.at(idx).to_);
       auto splitted_two = split_transport(patches.at(idx).j_, od_parkingpatches, t2);
 
@@ -404,7 +404,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
      *  replace: T --od--> S
      *  with:    T --walk--> PU --od--> DO --walk--> S
      */
-    else if(ares.at(idx).walkDur.at(0) != 0 && ares.at(idx).walkDur.at(1) != 0)
+    else if(ares.at(idx).walk_dur.at(0) != 0 && ares.at(idx).walk_dur.at(1) != 0)
     {
       auto& t3 = get_transport(patches.at(idx).j_, patches.at(idx).from_, patches.at(idx).to_);
       auto splitted_three = split_transport(patches.at(idx).j_, od_parkingpatches, t3);
@@ -427,10 +427,10 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
       split3.arrival_.valid_ = true;
       split3.arrival_.timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_
-          + ares.at(idx).walkDur.at(0);
+          + ares.at(idx).walk_dur.at(0);
       split3.arrival_.schedule_timestamp_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.schedule_timestamp_
-          + ares.at(idx).walkDur.at(0);
+          + ares.at(idx).walk_dur.at(0);
       split3.arrival_.timestamp_reason_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_].departure_.timestamp_reason_;
       split3.departure_ = split3.arrival_;
@@ -442,11 +442,11 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
       split4.lng_ = ares.at(idx).endpoint.lat_;
       split4.arrival_.valid_ = true;
       split4.arrival_.timestamp_ =
-          split3.departure_.timestamp_ + (ares.at(idx).dropoffTime
-                                          - ares.at(idx).pickupTime);
+          split3.departure_.timestamp_ + (ares.at(idx).dropoff_time
+                                          - ares.at(idx).pickup_time);
       split4.arrival_.schedule_timestamp_ =
           split3.departure_.schedule_timestamp_ +
-          (ares.at(idx).dropoffTime - ares.at(idx).pickupTime);
+          (ares.at(idx).dropoff_time - ares.at(idx).pickup_time);
       split4.arrival_.timestamp_reason_ =
           patches.at(idx).j_.stops_[patches.at(idx).from_ + 1].departure_.timestamp_reason_;
       split4.departure_ = split4.arrival_;
@@ -474,8 +474,8 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
     areq.startpoint.lng_ = j.stops_.front().lng_;
     areq.endpoint.lat_ = j.stops_.at(1).lat_;
     areq.endpoint.lng_ = j.stops_.at(1).lng_;
-    areq.departureTime = j.stops_.front().departure_.timestamp_;
-    areq.arrivalTime_onnext = j.stops_.at(1).arrival_.timestamp_;
+    areq.departure_time = j.stops_.front().departure_.timestamp_;
+    areq.arrival_time_onnext = j.stops_.at(1).arrival_.timestamp_;
   }
   else
   {
@@ -485,9 +485,9 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
     areq.startpoint.lng_ = j.stops_.at(lastindex - 1).lng_;
     areq.endpoint.lat_ = j.stops_.back().lat_;
     areq.endpoint.lng_ = j.stops_.back().lng_;
-    areq.departureTime = j.stops_.at(lastindex - 1).departure_.timestamp_;
-    areq.arrivalTime = j.stops_.at(lastindex - 1).arrival_.timestamp_;
-    areq.arrivalTime_onnext = j.stops_.back().arrival_.timestamp_;
+    areq.departure_time = j.stops_.at(lastindex - 1).departure_.timestamp_;
+    areq.arrival_time = j.stops_.at(lastindex - 1).arrival_.timestamp_;
+    areq.arrival_time_onnext = j.stops_.back().arrival_.timestamp_;
   }
   //areq.maxWalkDist = 200;
   //printf("areq start: lat: %f; lng: %f\n", areq.startpoint.lat, areq.startpoint.lng);
