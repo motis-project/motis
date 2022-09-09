@@ -2,8 +2,6 @@
 
 #include "boost/asio/io_service.hpp"
 
-using namespace std;
-
 namespace motis::intermodal {
 
 struct test_server {
@@ -23,7 +21,7 @@ struct test_server {
 
 private:
   struct impl;
-  unique_ptr<impl> impl_;
+  std::unique_ptr<impl> impl_;
 };
 
 

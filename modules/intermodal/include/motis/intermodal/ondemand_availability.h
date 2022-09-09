@@ -1,7 +1,5 @@
 #include "motis/core/common/unixtime.h"
 
-using namespace std;
-
 namespace motis::intermodal {
 
 struct Dot {
@@ -11,7 +9,7 @@ struct Dot {
 
 struct availability_response {
   bool available = false;
-  string codenumber_id = " ";
+  std::string codenumber_id = " ";
   Dot startpoint = {-1.0, -1.0};
   Dot endpoint = {-1.0, -1.0};
   unixtime pickupTime[3] = {-1, -1, -1};
@@ -22,7 +20,7 @@ struct availability_response {
 
 struct availability_request {
   bool start = false;
-  string productID = "string";
+  std::string productID = "string";
   int64_t duration = -1; // in sekunden
   Dot startpoint = {-1.0, -1.0};
   Dot endpoint = {-1.0, -1.0};

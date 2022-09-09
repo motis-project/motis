@@ -305,7 +305,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
   auto const all = journeys->size();
   //printf("------ size vorher: %llu\n", all);
   //printf("ares size: %llu; journeys size: %llu; patches size: %llu\n", ares.size(), journeys->size(), patches.size());
-  vector<int> indices;
+  std::vector<int> indices;
   utl::erase_if(*journeys, [&](journey const& j){
     bool eins = false, zwei = false, drei = false, vier = false;
     int z = 0;
@@ -344,7 +344,7 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
   for(auto& idx : indices)
   {
     parking_patch pp{patches.at(idx).e_, patches.at(idx).from_, patches.at(idx).to_};
-    vector<parking_patch> od_parkingpatches{pp};
+    std::vector<parking_patch> od_parkingpatches{pp};
     /*
      *  replace: S --od--> T
      *  with:    S --walk--> PU --od--> T

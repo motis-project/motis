@@ -1,3 +1,5 @@
+#include "test_server_impl.h"
+
 #include <iostream>
 #include <memory>
 #include <ctime>
@@ -9,14 +11,11 @@
 #include "motis/json/json.h"
 
 #include "motis/module/receiver.h"
-#include "test_server_impl.h"
 #include "test_server.h"
-#include "net/stop_handler.h"
 #include "net/web_server/responses.h"
 
 namespace motis::intermodal {
 
-using namespace std;
 using namespace net;
 using namespace boost::beast::http;
 using namespace motis::json;
@@ -24,7 +23,7 @@ using namespace rapidjson;
 
 int minutes = 0;
 
-string create_resbody(net::test_server::http_req_t const& req, bool post)
+std::string create_resbody(net::test_server::http_req_t const& req, bool post)
 {
   if(post)
   {
@@ -65,22 +64,22 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
     size_t num = 40;
     char* timechar = new char[num];
     asctime_s(timechar, num, &tmtimenow);
-    string timestring(timechar);
+    std::string timestring(timechar);
     size_t firstcolon = timestring.find(':');
     size_t tagidx = firstcolon - 5;
-    string day = timestring.substr(tagidx, 2);
+    std::string day = timestring.substr(tagidx, 2);
     if(day.substr(0, 1) == " ")
     {
       day = "0" + day.substr(1, 1);
     }
-    string time = timestring.substr(firstcolon - 2, 8);
-    string hour = time.substr(0, 2);
-    string min = time.substr(3, 2);
-    string sec = time.substr(6, 2);
-    string null = "";
-    string null2 = "";
-    string hour2;
-    string min2;
+    std::string time = timestring.substr(firstcolon - 2, 8);
+    std::string hour = time.substr(0, 2);
+    std::string min = time.substr(3, 2);
+    std::string sec = time.substr(6, 2);
+    std::string null = "";
+    std::string null2 = "";
+    std::string hour2;
+    std::string min2;
     int ihour = stoi(hour);
     int imin = stoi(min);
     if(minutes > 60)
@@ -110,8 +109,8 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
       null = "0";
     }
     ihour++;
-    hour = to_string(ihour);
-    min = to_string(imin);
+    hour = std::to_string(ihour);
+    min = std::to_string(imin);
     int ihour2 = ihour;
     int imin2 = imin+10;
     if(imin2 > 60)
@@ -123,10 +122,10 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
     {
       null2 = "0";
     }
-    min2 = to_string(imin2);
-    hour2 = to_string(ihour2);
-    string month = timestring.substr(tagidx - 4, 3);
-    auto month_number = [&](string const& mon) -> string
+    min2 = std::to_string(imin2);
+    hour2 = std::to_string(ihour2);
+    std::string month = timestring.substr(tagidx - 4, 3);
+    auto month_number = [&](std::string const& mon) -> std::string
     {
       if("Jan" == mon) return "01";
       if("Feb" == mon) return "02";
@@ -143,7 +142,7 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
       else return "00";
     };
     month = month_number(month);
-    string year = timestring.substr(firstcolon + 7, 4);
+    std::string year = timestring.substr(firstcolon + 7, 4);
     int walk = 10;
     int walk2 = 0;
     auto res = R"( { "data": {
@@ -160,9 +159,9 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
                             "negotiation_time": ")" + year + "-" + month + "-"
                + day + "T" + hour + ":" + null + min + ":" + sec + "Z\"," +
               R"( "negotiation_time_max": "2022-08-08T15:20:00Z",
-                "lat": )" + to_string(startlat) + "," +
-            R"( "lng": )" + to_string(startlng) + "," +
-            R"( "walking_duration": )" + to_string(walk) + "," +
+                "lat": )" + std::to_string(startlat) + "," +
+            R"( "lng": )" + std::to_string(startlng) + "," +
+            R"( "walking_duration": )" + std::to_string(walk) + "," +
             R"( "walking_track": "_iajH_oyo@_pR_pR_pR_pR_pR_pR_pR_pR"},
                 "dropoff": {
                             "id": "cap_12345-abcde-1a2b3c-d6a51d19b7a0",
@@ -172,9 +171,9 @@ string create_resbody(net::test_server::http_req_t const& req, bool post)
                + day + "T" + hour2 + ":" + null2 + min2 + ":" + sec + "Z\"," +
             R"( "negotiation_time_max": "2022-08-08T15:40:00Z",
                 "waypoint_type": "dropoff",
-                "lat": )" + to_string(endlat) + "," +
-            R"( "lng": )" + to_string(endlng) + "," +
-            R"( "walking_duration": )" + to_string(walk2) + "," +
+                "lat": )" + std::to_string(endlat) + "," +
+            R"( "lng": )" + std::to_string(endlng) + "," +
+            R"( "walking_duration": )" + std::to_string(walk2) + "," +
             R"( "walking_track": "_sdpH_y|u@_pR_pR_pR_pR_pR_pR_pR_pR"},
                 "fare": {
                         "type": "fare",
@@ -209,7 +208,7 @@ struct test_server::impl {
     impl(boost::asio::io_service& ios)
         : ios{ios}, serve{ios} {}
 
-    void listen_tome(std::string const& host, string const& port,
+    void listen_tome(std::string const& host, std::string const& port,
                      boost::system::error_code& erco)
     {
       serve.on_http_request([this](net::test_server::http_req_t const& req,
@@ -221,14 +220,14 @@ struct test_server::impl {
       serve.init(host, port, erco);
       serve.set_timeout(std::chrono::seconds(5*60));
       if (erco) {
-        cout << "testserver: init error: " << erco.message() << "\n";
+        std::cout << "testserver: init error: " << erco.message() << "\n";
       }
-      cout << "testserver is running on http://" + host + ":" + port + "/ \n "
+      std::cout << "testserver is running on http://" + host + ":" + port + "/ \n "
                   "info: " + erco.message() + "\n";
       serve.run();
     }
 
-    void stop_it() { serve.stop(); cout << "testserver: stopped \n";}
+    void stop_it() { serve.stop(); std::cout << "testserver: stopped \n";}
 
     void on_http_request(net::test_server::http_req_t const& req,
                          net::test_server::http_res_cb_t const& cb)
@@ -237,39 +236,39 @@ struct test_server::impl {
       {
         case verb::options:
         {
-          string_view resbody = "allow: post, head, get";
+          std::string_view resbody = "allow: post, head, get";
           status status = status::ok;
-          string_view contenttype = "text/html";
+          std::string_view contenttype = "text/html";
           cb(string_response(req, resbody, status, contenttype));
           break;
         }
         case verb::post:
         {
-          string sres = create_resbody(req, true);
+          std::string sres = create_resbody(req, true);
           minutes += 5;
-          string_view resbody{sres};
+          std::string_view resbody{sres};
           if(req.body().empty())
           {
             cb(server_error_response(req, "SEND REQUEST BODY"));
             break;
           }
           status status = status::ok;
-          string_view contenttype = "application/json";
+          std::string_view contenttype = "application/json";
           cb(string_response(req, resbody, status, contenttype));
           break;
         }
         case verb::head:
         {
           status status = status::ok;
-          string_view contenttype = "text/html";
+          std::string_view contenttype = "text/html";
           cb(empty_response(req, status, contenttype));
           break;
         }
         case verb::get: {
-          string sres = create_resbody(req, false);
-          string_view resbody{sres};
+          std::string sres = create_resbody(req, false);
+          std::string_view resbody{sres};
           status status = status::ok;
-          string_view contenttype = "application/json";
+          std::string_view contenttype = "application/json";
           cb(string_response(req, resbody, status, contenttype));
           break;
         }
