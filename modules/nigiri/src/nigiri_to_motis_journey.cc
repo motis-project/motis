@@ -2,7 +2,7 @@
 
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
-#include "utl/parser/csv.h"
+#include "utl/parser/split.h"
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/timetable.h"
