@@ -13,6 +13,7 @@
 #include "motis/module/receiver.h"
 #include "test_server.h"
 #include "net/web_server/responses.h"
+#include "date/date.h"
 
 namespace motis::intermodal {
 
@@ -59,92 +60,16 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post)
     double endlng = read_jay_key_double("destination", "lng");
 
     time_t timenow = time(nullptr);
-    struct tm tmtimenow = {0};
-    localtime_s(&tmtimenow, &timenow);
-    size_t num = 40;
-    char* timechar = new char[num];
-    asctime_s(timechar, num, &tmtimenow);
-    std::string timestring(timechar);
-    size_t firstcolon = timestring.find(':');
-    size_t tagidx = firstcolon - 5;
-    std::string day = timestring.substr(tagidx, 2);
-    if(day.substr(0, 1) == " ")
-    {
-      day = "0" + day.substr(1, 1);
-    }
-    std::string time = timestring.substr(firstcolon - 2, 8);
-    std::string hour = time.substr(0, 2);
-    std::string min = time.substr(3, 2);
-    std::string sec = time.substr(6, 2);
-    std::string null = "";
-    std::string null2 = "";
-    std::string hour2;
-    std::string min2;
-    int ihour = stoi(hour);
-    int imin = stoi(min);
-    if(minutes > 60)
-    {
-      imin += minutes - 60;
-      ihour++;
-    }
-    else imin += minutes;
-    if(imin >= 60)
-    {
-      imin = imin - 60;
-      ihour++;
-      if(ihour > 24)
-      {
-        ihour = ihour - 24; // nicht sicher ist 2400 = 0000 ?
-        //iday++;
-      }
-    }
-    else if(imin < 0)
-    {
-      imin = 60 + imin;
-      ihour--;
-      if(ihour < 0) ihour = 24 + ihour;
-    }
-    else if(imin > 0 && imin < 10)
-    {
-      null = "0";
-    }
-    ihour++;
-    hour = std::to_string(ihour);
-    min = std::to_string(imin);
-    int ihour2 = ihour;
-    int imin2 = imin+10;
-    if(imin2 > 60)
-    {
-      imin2 += imin - 60;
-      ihour2++;
-    }
-    else if(imin2 > 0 && imin2 < 10)
-    {
-      null2 = "0";
-    }
-    min2 = std::to_string(imin2);
-    hour2 = std::to_string(ihour2);
-    std::string month = timestring.substr(tagidx - 4, 3);
-    auto month_number = [&](std::string const& mon) -> std::string
-    {
-      if("Jan" == mon) return "01";
-      if("Feb" == mon) return "02";
-      if("Mar" == mon) return "03";
-      if("Apr" == mon) return "04";
-      if("May" == mon) return "05";
-      if("Jun" == mon) return "06";
-      if("Jul" == mon) return "07";
-      if("Aug" == mon) return "08";
-      if("Sep" == mon) return "09";
-      if("Oct" == mon) return "10";
-      if("Nov" == mon) return "11";
-      if("Dez" == mon) return "12";
-      else return "00";
-    };
-    month = month_number(month);
-    std::string year = timestring.substr(firstcolon + 7, 4);
-    int walk = 10;
-    int walk2 = 0;
+    timenow += minutes * 60;
+    using time_point = std::chrono::system_clock::time_point;
+    time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(timenow))};
+    std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
+    timenow += 900;
+    time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(timenow))};
+    std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
+
+    int walk = 0;
+    int walk2 = 10;
     auto res = R"( { "data": {
                       "id": "rid_12345-abcde-1a2b3c",
                       "created_at": "2017-09-06T15:08:43Z",
@@ -156,8 +81,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post)
                             "type": "calculated_point",
                             "waypoint_type": "pickup",
                             "time": "2022-08-08T15:20:00Z",
-                            "negotiation_time": ")" + year + "-" + month + "-"
-               + day + "T" + hour + ":" + null + min + ":" + sec + "Z\"," +
+                            "negotiation_time": ")" + s_time_dep + "\"," +
               R"( "negotiation_time_max": "2022-08-08T15:20:00Z",
                 "lat": )" + std::to_string(startlat) + "," +
             R"( "lng": )" + std::to_string(startlng) + "," +
@@ -167,8 +91,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post)
                             "id": "cap_12345-abcde-1a2b3c-d6a51d19b7a0",
                             "type": "calculated_point",
                             "time": "2022-08-06T15:42:00Z",
-                            "negotiation_time": ")" + year + "-" + month + "-"
-               + day + "T" + hour2 + ":" + null2 + min2 + ":" + sec + "Z\"," +
+                            "negotiation_time": ")" + s_time_arr + "\"," +
             R"( "negotiation_time_max": "2022-08-08T15:40:00Z",
                 "waypoint_type": "dropoff",
                 "lat": )" + std::to_string(endlat) + "," +
