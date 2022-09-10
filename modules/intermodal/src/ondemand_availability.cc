@@ -30,9 +30,8 @@ using namespace ctx;
 using namespace rapidjson;
 
 namespace motis::intermodal {
-#define DELAY 900  // 15min
 
-availability_response read_result(const response& result, bool first, std::vector<geo::latlng> dots)
+availability_response read_result(response const& result, bool first, std::vector<geo::latlng> const& dots)
 {
   //printf("read_result: \n");
   availability_response ares;
@@ -44,28 +43,28 @@ availability_response read_result(const response& result, bool first, std::vecto
       LOG(logging::error) << "invalid inquiry "
                             " http error code is: "
                          << result.status_code << "!"
-                            "availability is set to false";
+                            " Availability is set to false";
     }
     else if(result.status_code == 422)
     {
       LOG(logging::error) << " ride not available "
                              " This went wrong: "
                           << result.body << "!"
-                             "availability is set to false";
+                             " Availability is set to false";
     }
     else if(result.status_code == 500)
     {
       LOG(logging::error) << " an unexpected http error occured "
                              " http error code is: "
                           << result.status_code << "!"
-                             "availability is set to false";
+                             " Availability is set to false";
     }
     else
     {
       LOG(logging::error) << " something unexpected happened "
                              " http error code is: "
                           << result.status_code << "!"
-                             "availability is set to false";
+                             " Availability is set to false";
     }
     return ares;
   }
@@ -135,7 +134,7 @@ availability_response read_result(const response& result, bool first, std::vecto
     {
       auto const it = data.FindMember(key);
       std::vector<std::vector<double>> vec;
-      if (it != data.MemberEnd() && it->value.IsObject())
+      if(it != data.MemberEnd() && it->value.IsObject())
       {
         auto const ar = it->value.FindMember(name);
         //Gesamtarray: wenn so aufgebaut wie angegeben
@@ -228,7 +227,7 @@ availability_response read_result(const response& result, bool first, std::vecto
       std::string s_pickup_time = read_json_key_string("pickup", "negotiation_time");
       std::string s_dropoff_time = read_json_key_string("dropoff", "negotiation_time");
       // "2022-09-09T19:22:00Z" -> 1662751320
-      auto traveltime_to_unixtime = [&](const std::string& timestring) -> date::sys_seconds
+      auto traveltime_to_unixtime = [&](std::string const& timestring) -> date::sys_seconds
       {
         std::istringstream in(timestring);
         date::sys_seconds tp;
@@ -248,7 +247,7 @@ availability_response read_result(const response& result, bool first, std::vecto
   }
 }
 
-std::string create_json_body(const availability_request& areq)
+std::string create_json_body(availability_request const& areq)
 {
   // 1662751320 -> "2022-09-09T19:22:00Z"
   using time_point = std::chrono::system_clock::time_point;
@@ -269,14 +268,13 @@ std::string create_json_body(const availability_request& areq)
                 + R"( "lng": )" + std::to_string(areq.endpoint.lng_) + ","
                 + R"( "time": ")" + arr_time
                 + "\"}}}";
-  printf("body...find error: %s\n\n", json.c_str());
   /*
    + "," + R"( "maxWalkDistance": )" + to_string(mars.maxWalkDist)
    + "}}";*/
   return json;
 }
 
-bool checking(const availability_request& areq, const availability_response& ares)
+bool checking(availability_request const& areq, availability_response const& ares)
 {
   double delta = 0.00001;
   bool coord_start, coord_end, walklength, walktime, timewindow, waiting = true;
@@ -406,16 +404,15 @@ std::vector<server_info> get_server_info()
                         << e.what() << "!"
                         << "please check ondemand_server.cfg file";
   }
-
-  for(auto it = var_map.begin(); it != var_map.end(); ++it)
+  for(auto const& it : var_map)
   {
     server_info si;
-    si.key_name = it->first;
-    opt::variable_value value = it->second;
+    si.key_name = it.first;
+    opt::variable_value value = it.second;
     std::string sval;
     if(!value.empty())
     {
-      const type_info& type = value.value().type();
+      type_info const& type = value.value().type();
       if (type == typeid(std::string))
       {
         sval = value.as<std::string>();
@@ -447,28 +444,27 @@ std::vector<server_info> get_server_info()
 availability_response check_od_availability(availability_request areq)
 {
   //printf("check_od_availability!\n");
-
   std::vector<server_info> all_server_info = get_server_info();
   std::string addr;
   std::string addr2;
   std::map<std::string, std::string> hdrs;
-  for(auto it = all_server_info.begin(); it != all_server_info.end(); ++it)
+  for(auto const& it : all_server_info)
   {
-    if(!it->header_first.empty() && !it->header_second.empty())
+    if(!it.header_first.empty() && !it.header_second.empty())
     {
-      hdrs.insert(std::pair<std::string, std::string>(it->header_first,it->header_second));
+      hdrs.insert(std::pair<std::string, std::string>(it.header_first,it.header_second));
     }
-    else if(it->key_name == "address")
+    else if(it.key_name == "address")
     {
-      addr = it->first_addr;
+      addr = it.first_addr;
     }
-    else if(it->key_name == "address2")
+    else if(it.key_name == "address2")
     {
-      addr2 = it->second_addr;
+      addr2 = it.second_addr;
     }
-    else if(it->key_name == "productid")
+    else if(it.key_name == "productid")
     {
-      areq.product_id = it->id;
+      areq.product_id = it.id;
     }
   }
 

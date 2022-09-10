@@ -4,6 +4,7 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 #include "utl/erase_if.h"
 #include "utl/to_vec.h"
@@ -98,7 +99,7 @@ struct parking_patch {
 struct od_patch {
   od_patch(mumo_edge const* e, unsigned transport_from,
            unsigned transport_to, journey j_todelete)
-      : e_(e), from_(transport_from), to_(transport_to), j_(j_todelete) {}
+      : e_(e), from_(transport_from), to_(transport_to), j_(std::move(j_todelete)) {}
 
   mumo_edge const* e_{};
   unsigned from_{};
@@ -294,33 +295,30 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
   }
 }
 
-std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
-                                  std::vector<od_patch> patches,
-                                  std::vector<availability_response> ares)
+std::size_t remove_na_od_journeys(std::vector<journey>& journeys,
+                                  std::vector<od_patch>& patches,
+                                  std::vector<availability_response> const& ares)
 {
   if(ares.empty() || patches.empty())
   {
     return -1;
   }
-  auto const all = journeys->size();
+  auto const all = journeys.size();
   //printf("------ size vorher: %llu\n", all);
   //printf("ares size: %llu; journeys size: %llu; patches size: %llu\n", ares.size(), journeys->size(), patches.size());
   std::vector<int> indices;
-  utl::erase_if(*journeys, [&](journey const& j){
-    bool eins = false, zwei = false, drei = false, vier = false;
+  utl::erase_if(journeys, [&](journey const& j){
+    bool eins = false, zwei = false, drei = false;
     int z = 0;
-    for(auto& t : j.transports_)
-    {
-      if(t.mumo_type_ == to_string(mumo_type::ON_DEMAND))
-      {
-        vier = true;
-        break;
-      }
+    if(!std::any_of(begin(j.transports_), end(j.transports_), [&](journey::transport const& t){
+      return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);}
+                     )){
+      return false;
     }
-    if(vier)
+    else
     {
       for(od_patch p : patches){
-        if(j.operator==(p.j_))
+        if(j == p.j_)
         {
           eins = true;
           if(p.e_->duration_ <= 5.0){
@@ -330,18 +328,22 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
         }
         z++;
       }
-      if(!ares.at(z).available) drei = true;
-      else if(ares.at(z).available && !zwei) indices.push_back(z);
+      if(!ares.at(z).available) {
+        drei = true;
+      }
+      else if(ares.at(z).available && !zwei) {
+        indices.push_back(z);
+      }
     }
     return eins && (zwei || drei);
   });
   if(indices.empty())
   {
-    size_t retv = all - (all - journeys->size());
-    //printf("-- im neuen if ---- size nachher: %llu\n", retv);
-    return all - journeys->size();
+    size_t retv = all - (all - journeys.size());
+    printf("-- im neuen if ---- size nachher: %llu\n", retv);
+    return all - journeys.size();
   }
-  for(auto& idx : indices)
+  for(auto const& idx : indices)
   {
     parking_patch pp{patches.at(idx).e_, patches.at(idx).from_, patches.at(idx).to_};
     std::vector<parking_patch> od_parkingpatches{pp};
@@ -457,12 +459,12 @@ std::size_t remove_na_od_journeys(std::vector<journey>* journeys,
       splitted_four.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
     }
   }
-  size_t retv = all - (all - journeys->size());
-  //printf("------ size nachher: %llu\n", retv);
-  return all - journeys->size();
+  size_t retv = all - (all - journeys.size());
+  printf("------ size nachher: %llu\n", retv);
+  return all - journeys.size();
 }
 
-availability_response apply_ondemand_patches(journey j, bool start, mumo_edge e,
+availability_response apply_ondemand_patches(journey j, bool start, mumo_edge const& e,
                                              statistics& stats)
 {
   availability_request areq;
@@ -562,15 +564,16 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         parking_patches.emplace_back(e, t.from_, t.to_);
       } else if (e->type_ == mumo_type::GBFS) {
         gbfs_patches.emplace_back(e, t.from_, t.to_);
-      } else if(e->type_ == mumo_type::ON_DEMAND)
-      {
+      } else if(e->type_ == mumo_type::ON_DEMAND) {
         bool start = q_start.is_intermodal_;
         bool end = q_dest.is_intermodal_;
         availability_response ares;
-        if(start)
+        if(start) {
           ares = apply_ondemand_patches(journey, true, *e, stats);
-        if(end)
+        }
+        if(end) {
           ares = apply_ondemand_patches(journey, false, *e, stats);
+        }
         vares.emplace_back(ares);
         ondemand_patches.emplace_back(e, t.from_, t.to_, journey);
       }
@@ -578,8 +581,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
   }
-  //printf("bei post process angekommen: remove...\n");
-  remove_na_od_journeys(&journeys, ondemand_patches, vares);
+  remove_na_od_journeys(journeys, ondemand_patches, vares);
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });
   std::sort(
