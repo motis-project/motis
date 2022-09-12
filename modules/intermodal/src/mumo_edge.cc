@@ -86,8 +86,7 @@ void osrm_edges(latlng const& pos, int max_dur, int max_dist,
   auto const stations = geo_resp->stations();
 
   std::string type_profile = to_string(type);
-  if(to_string(type) == "on_demand")
-  {
+  if(to_string(type) == "on_demand") {
     type_profile = "car";
   }
 
@@ -316,10 +315,10 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dist = max_dur * CAR_SPEED;
         osrm_edges(pos, max_dur, max_dist, mumo_type::ON_DEMAND, search_dir,
                    appender);
-        auto max_dur2 =
+        auto max_dur_foot =
           reinterpret_cast<Foot const*>(wrapper->mode())->max_duration();
-        auto max_dist2 = max_dur2 * WALK_SPEED;
-        osrm_edges(pos, max_dur2, max_dist2, mumo_type::FOOT, search_dir,
+        auto max_dist_foot = max_dur_foot * WALK_SPEED;
+        osrm_edges(pos, max_dur_foot, max_dist_foot, mumo_type::FOOT, search_dir,
                    appender);
         break;
       }
@@ -408,8 +407,7 @@ std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
   for (auto const& edge : starts) {
     auto const edge_id = static_cast<int>(edge_mapping.size());
     edge_mapping.emplace_back(&edge);
-    if(edge.type_ == mumo_type::ON_DEMAND)
-    {
+    if(edge.type_ == mumo_type::ON_DEMAND) {
       edges.emplace_back(CreateAdditionalEdgeWrapper(
           fbb, AdditionalEdge_MumoEdge,
           CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
@@ -430,8 +428,7 @@ std::vector<Offset<AdditionalEdgeWrapper>> write_edges(
   for (auto const& edge : destinations) {
     auto const edge_id = static_cast<int>(edge_mapping.size());
     edge_mapping.emplace_back(&edge);
-    if(edge.type_ == mumo_type::ON_DEMAND)
-    {
+    if(edge.type_ == mumo_type::ON_DEMAND) {
       edges.emplace_back(CreateAdditionalEdgeWrapper(
           fbb, AdditionalEdge_MumoEdge,
           CreateMumoEdge(fbb, fbb.CreateString(edge.from_),
