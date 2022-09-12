@@ -31,138 +31,102 @@ using namespace rapidjson;
 
 namespace motis::intermodal {
 
-availability_response read_result(response const& result, bool first, std::vector<geo::latlng> const& dots)
-{
-  //printf("read_result: \n");
-  availability_response ares;
-  if(result.status_code != 200)
-  {
-    ares.available = false;
-    if(result.status_code == 400)
-    {
-      LOG(logging::error) << "invalid inquiry "
-                            " http error code is: "
-                         << result.status_code << "!"
-                            " Availability is set to false";
+availability_response read_result(response const& result, bool first, std::vector<geo::latlng> const& dots) {
+    availability_response ares;
+    if(result.status_code != 200) {
+      ares.available = false;
+      switch (result.status_code) {
+        case 400: {
+          LOG(logging::error) << "invalid inquiry "
+                                 " http error code is: "
+                              << result.status_code << "!"
+                                 " Availability is set to false";
+        }
+        case 422: {
+          LOG(logging::error) << " ride not available "
+                                 " This went wrong: "
+                              << result.body << "!"
+                                 " Availability is set to false";
+        }
+        case 500: {
+          LOG(logging::error) << " an unexpected http error occured "
+                                 " http error code is: "
+                              << result.status_code << "!"
+                                 " Availability is set to false";
+        }
+        default:
+          LOG(logging::error) << " something unexpected happened "
+                                 " http error code is: "
+                              << result.status_code << "!"
+                                 " Availability is set to false";
+     }
+     return ares;
     }
-    else if(result.status_code == 422)
-    {
-      LOG(logging::error) << " ride not available "
-                             " This went wrong: "
-                          << result.body << "!"
-                             " Availability is set to false";
-    }
-    else if(result.status_code == 500)
-    {
-      LOG(logging::error) << " an unexpected http error occured "
-                             " http error code is: "
-                          << result.status_code << "!"
-                             " Availability is set to false";
-    }
-    else
-    {
-      LOG(logging::error) << " something unexpected happened "
-                             " http error code is: "
-                          << result.status_code << "!"
-                             " Availability is set to false";
-    }
-    return ares;
-  }
-  else
-  {
+    else {
     Document docu;
-    if (docu.Parse(result.body.c_str()).HasParseError())
-    {
+    if (docu.Parse(result.body.c_str()).HasParseError()) {
       docu.GetParseError();
       throw utl::fail("On-Demand Availability Check Response: Bad JSON: {} at offset {}",
                       GetParseError_En(docu.GetParseError()),
                       docu.GetErrorOffset());
     }
     auto const& data = get_obj(docu, "data");
-    auto read_json_key_string = [&](char const* key, char const* name) -> std::string
-    {
+    auto read_json_key_string = [&](char const* key, char const* name) -> std::string {
       auto const it = data.FindMember(key);
-      if (it != data.MemberEnd() && it->value.IsString())
-      {
+      if (it != data.MemberEnd() && it->value.IsString()) {
         return it->value.GetString();
       }
-      else if(it != data.MemberEnd() && it->value.HasMember(name))
-      {
+      else if(it != data.MemberEnd() && it->value.HasMember(name)) {
         auto const at = it->value.FindMember(name);
-        if(at->value.IsString())
-        {
+        if(at->value.IsString()) {
           return at->value.GetString();
         }
       }
       return "";
     };
-    auto read_json_key_int = [&](char const* key, char const* name) -> int
-    {
+    auto read_json_key_int = [&](char const* key, char const* name) -> int {
       auto const it = data.FindMember(key);
-      if (it != data.MemberEnd() && it->value.IsInt())
-      {
+      if (it != data.MemberEnd() && it->value.IsInt()) {
         return it->value.GetInt();
       }
-      else if(it != data.MemberEnd() && it->value.HasMember(name))
-      {
+      else if(it != data.MemberEnd() && it->value.HasMember(name)) {
         auto const at = it->value.FindMember(name);
-        if(at->value.IsInt())
-        {
+        if(at->value.IsInt()) {
           return at->value.GetInt();
         }
       }
       return -1;
     };
-    auto read_json_key_double = [&](char const* key, char const* name) -> double
-    {
+    auto read_json_key_double = [&](char const* key, char const* name) -> double {
       auto const it = data.FindMember(key);
-      if (it != data.MemberEnd() && it->value.IsDouble())
-      {
+      if (it != data.MemberEnd() && it->value.IsDouble()) {
         return it->value.GetDouble();
       }
-      else if(it != data.MemberEnd() && it->value.HasMember(name))
-      {
+      else if(it != data.MemberEnd() && it->value.HasMember(name)) {
         auto const at = it->value.FindMember(name);
-        if(at->value.IsDouble())
-        {
+        if(at->value.IsDouble()) {
           return at->value.GetDouble();
         }
       }
       return -1.0;
     };
-    auto read_json_key_array = [&](char const* key, char const* name) -> std::vector<std::vector<double>>
-    {
+    auto read_json_key_array = [&](char const* key, char const* name) -> std::vector<std::vector<double>> {
       auto const it = data.FindMember(key);
       std::vector<std::vector<double>> vec;
-      if(it != data.MemberEnd() && it->value.IsObject())
-      {
+      if(it != data.MemberEnd() && it->value.IsObject()) {
         auto const ar = it->value.FindMember(name);
-        //Gesamtarray: wenn so aufgebaut wie angegeben
-        //ar->value[0].GetArray()[0]
-        //ar->value[0].GetArray()[0].Size()
-        //erstes Koordinatenarray
-        //ar->value[0].GetArray()[0].GetArray()[0]
-        //Inhalt des ersten Koordinatenarrays (Koordinate 0)
-        //ar->value[0].GetArray()[0].GetArray()[0].GetArray()[0]
-        // ansonsten -> ohne zusaetzliche Klammern
-        if(ar->value[0].Size() > 3)
-        {
+        if(ar->value[0].Size() > 3) {
           vec.resize(ar->value[0].Size());
-          for(SizeType a = 0; a < ar->value[0].Size(); a++)
-          {
+          for(SizeType a = 0; a < ar->value[0].Size(); a++) {
             const rapidjson::Value &data_vec = ar->value[0].GetArray()[a];
-            for(SizeType b = 0; b < data_vec.Size(); b++)
-            {
+            for(SizeType b = 0; b < data_vec.Size(); b++) {
               vec[a].push_back(data_vec[b].GetDouble());
             }
           }
           return vec;
-        }
-        else
-        {
+        } else {
           vec.resize(ar->value[0].GetArray()[0].Size());
-          for(SizeType k = 0; k < ar->value[0].GetArray()[0].Size(); k++)
-          {
+          for(SizeType k = 0; k < ar->value[0].GetArray()[0].Size(); k++) {
             const rapidjson::Value &data_vec = ar->value[0].GetArray()[0].GetArray()[k];
             for(SizeType j = 0; j < data_vec.Size(); j++)
               vec[k].push_back(data_vec[j].GetDouble());
@@ -173,22 +137,18 @@ availability_response read_result(response const& result, bool first, std::vecto
       return vec;
     };
 
-    if(first)
-    {
+    if(first) {
       ares.codenumber_id = read_json_key_string("id", " ");
       std::vector<std::vector<double>> polypoints = read_json_key_array("area", "coordinates");
       std::vector<geo::latlng> polygon_area;
       polygon_area.resize(polypoints.size());
       int k = 0;
-      for(auto const& vec : polypoints)
-      {
-        if(vec.size() == 2)
-        {
+      for(auto const& vec : polypoints) {
+        if(vec.size() == 2) {
           polygon_area[k].lat_ = vec.at(0);
           polygon_area[k].lng_ = vec.at(1);
         }
-        else
-        {
+        else {
           LOG(logging::warn) << "invalid number of coordinates. "
                                 "In http (get) result, with id: "
                              << ares.codenumber_id << "!"
@@ -204,8 +164,7 @@ availability_response read_result(response const& result, bool first, std::vecto
       point_type point_two(dots.at(1).lat_, dots.at(1).lng_);
       polygon_type poly;
       std::vector<geo::latlng>::iterator it;
-      for(it = polygon_area.begin(); it != polygon_area.end(); it++)
-      {
+      for(it = polygon_area.begin(); it != polygon_area.end(); it++) {
         geo::latlng dot = *it;
         boost::geometry::append(poly, boost::geometry::make<point_type>(dot.lat_, dot.lng_));
       }
@@ -214,8 +173,7 @@ availability_response read_result(response const& result, bool first, std::vecto
       ares.available = inside_start && inside_end;
       return ares;
     }
-    else
-    {
+    else {
       ares.codenumber_id = read_json_key_string("id", " ");
       ares.startpoint.lat_  = read_json_key_double("pickup", "lat");
       ares.startpoint.lng_ = read_json_key_double("pickup", "lng");
@@ -227,13 +185,11 @@ availability_response read_result(response const& result, bool first, std::vecto
       std::string s_pickup_time = read_json_key_string("pickup", "negotiation_time");
       std::string s_dropoff_time = read_json_key_string("dropoff", "negotiation_time");
       // "2022-09-09T19:22:00Z" -> 1662751320
-      auto traveltime_to_unixtime = [&](std::string const& timestring) -> date::sys_seconds
-      {
+      auto traveltime_to_unixtime = [&](std::string const& timestring) -> date::sys_seconds {
         std::istringstream in(timestring);
         date::sys_seconds tp;
         in >> date::parse("%FT%TZ", tp);
-        if (in.fail())
-        {
+        if (in.fail()) {
           in.clear();
           in.str(timestring);
           in >> date::parse("%FT%T%z", tp);
@@ -247,8 +203,7 @@ availability_response read_result(response const& result, bool first, std::vecto
   }
 }
 
-std::string create_json_body(availability_request const& areq)
-{
+std::string create_json_body(availability_request const& areq) {
   // 1662751320 -> "2022-09-09T19:22:00Z"
   using time_point = std::chrono::system_clock::time_point;
   time_point time_convertion_departure{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(areq.departure_time))};
@@ -274,36 +229,31 @@ std::string create_json_body(availability_request const& areq)
   return json;
 }
 
-bool checking(availability_request const& areq, availability_response const& ares)
-{
+bool checking(availability_request const& areq, availability_response const& ares) {
   double delta = 0.00001;
   bool coord_start, coord_end, walklength, walktime, timewindow, waiting = true;
   bool result;
-  if(areq.start)
-  {
+  if(areq.start) {
     //waiting = areq.departureTime + DELAY > ares.pickupTime[1] && // 1300 +15 = 1315 > 1310
     //          areq.departureTime - DELAY < ares.pickupTime[1]; // 1300 -15 = 1245 < 1310
     //printf("waiting: %lld + 15 > %lld \n -- %lld - 15 < %lld\n", areq.departureTime, ares.pickupTime[1], areq.departureTime, ares.pickupTime[1]);
     //printf("duration: %lld \n response duration complete: %lld \n", areq.duration,
      //(ares.dropoffTime[1] - ares.pickupTime[1]) + ares.walkDur.at(0) + ares.walkDur.at(1));
-    if(ares.walk_dur.at(0) == 0 && ares.walk_dur.at(1) == 0)
-    {
+    if(ares.walk_dur.at(0) == 0 && ares.walk_dur.at(1) == 0) {
       coord_start = areq.startpoint.lat_ - ares.startpoint.lat_ < delta && areq.startpoint.lng_ - ares.startpoint.lng_ < delta;
       coord_end = areq.endpoint.lat_ - ares.endpoint.lat_ < delta && areq.endpoint.lng_ - ares.endpoint.lng_ < delta;
       timewindow = areq.duration >= ares.dropoff_time - ares.pickup_time;
       //printf("checking start: waiting: %d; coord_start: %d; coord_end: %d; timewindow: %d\n", waiting, coord_start, coord_end, timewindow);
       result = coord_start && coord_end && waiting && timewindow;
     }
-    else if(ares.walk_dur.at(0) != 0 && ares.walk_dur.at(1) == 0)
-    {
+    else if(ares.walk_dur.at(0) != 0 && ares.walk_dur.at(1) == 0) {
       walktime = ares.walk_dur.at(0) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist >= ares.walk_dur.at(0) * WALK_SPEED;
       timewindow = areq.duration >= (ares.dropoff_time - ares.pickup_time) + ares.walk_dur.at(0);
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-    else if(ares.walk_dur.at(1) != 0 && ares.walk_dur.at(0) == 0)
-    {
+    else if(ares.walk_dur.at(1) != 0 && ares.walk_dur.at(0) == 0) {
       walktime = ares.walk_dur.at(1) < MAX_WALK_TIME &&
                  ares.dropoff_time + ares.walk_dur.at(1) < areq.arrival_time_onnext; // 1350 +5 = 1355 < 1400
       walklength = areq.max_walk_dist >= ares.walk_dur.at(1) * WALK_SPEED;
@@ -311,8 +261,7 @@ bool checking(availability_request const& areq, availability_response const& are
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-    else
-    {
+    else {
       walktime = ares.walk_dur.at(0) < MAX_WALK_TIME && ares.walk_dur.at(1) < MAX_WALK_TIME
                  && ares.dropoff_time + ares.walk_dur.at(1) < areq.arrival_time_onnext;
       walklength = areq.max_walk_dist >= ares.walk_dur.at(1) * WALK_SPEED && areq.max_walk_dist >= ares.walk_dur.at(0) * WALK_SPEED;
@@ -320,22 +269,18 @@ bool checking(availability_request const& areq, availability_response const& are
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-  }
-  else
-  {
+  } else {
     //waiting = areq.departureTime + DELAY > ares.pickupTime[1] // 1300 +15 = 1315 > 1310
     //          && areq.arrivalTime < ares.pickupTime[1];       // 1258 < 1310
     //printf("waiting: %lld + 15 > %lld \n -- %lld < %lld\n", areq.departureTime, ares.pickupTime[1], areq.arrivalTime, ares.pickupTime[1]);
-    if(ares.walk_dur.at(0) == 0 && ares.walk_dur.at(1) == 0)
-    {
+    if(ares.walk_dur.at(0) == 0 && ares.walk_dur.at(1) == 0) {
       coord_start = areq.startpoint.lat_ - ares.startpoint.lat_ < delta && areq.startpoint.lng_ - ares.startpoint.lng_ < delta;
       coord_end = areq.endpoint.lat_ - ares.endpoint.lat_ < delta && areq.endpoint.lng_ - ares.endpoint.lng_ < delta;
       timewindow = areq.duration >= ares.dropoff_time - ares.pickup_time;
       //printf("checking end: waiting: %d; coord_start: %d; coord_end: %d; timewindow: %d\n", waiting, coord_start, coord_end, timewindow);
       result = coord_start && coord_end && waiting && timewindow;
     }
-    else if(ares.walk_dur.at(0) != 0 && ares.walk_dur.at(1) == 0)
-    {
+    else if(ares.walk_dur.at(0) != 0 && ares.walk_dur.at(1) == 0) {
       walktime = areq.departure_time + ares.walk_dur.at(0) < ares.pickup_time && ares.walk_dur.at(0) < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
       walklength = areq.max_walk_dist >= ares.walk_dur.at(0) * WALK_SPEED;
       timewindow = areq.duration >= (ares.dropoff_time - ares.pickup_time) + ares.walk_dur.at(0);
@@ -343,16 +288,14 @@ bool checking(availability_request const& areq, availability_response const& are
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-    else if(ares.walk_dur.at(1) != 0 && ares.walk_dur.at(0) == 0)
-    {
+    else if(ares.walk_dur.at(1) != 0 && ares.walk_dur.at(0) == 0) {
       walktime = ares.walk_dur.at(1) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist >= ares.walk_dur.at(1) * WALK_SPEED;
       timewindow = areq.duration >= (ares.dropoff_time - ares.pickup_time) + ares.walk_dur.at(1); // evtl egal -> dann länge der kante anpassen ?
       //printf("checking: waiting: %d; walktime: %d; walklength: %d; timewindow: %d\n", waiting, walktime, walklength, timewindow);
       result = walklength && walktime && waiting && timewindow;
     }
-    else
-    {
+    else {
       walktime = ares.walk_dur.at(0) < MAX_WALK_TIME && ares.walk_dur.at(1) < MAX_WALK_TIME
                  && areq.departure_time + ares.walk_dur.at(0) < ares.pickup_time;
       walklength = areq.max_walk_dist >= ares.walk_dur.at(1) * WALK_SPEED && areq.max_walk_dist >= ares.walk_dur.at(0) * WALK_SPEED;
@@ -364,7 +307,7 @@ bool checking(availability_request const& areq, availability_response const& are
   return result;
 }
 
-struct server_info{
+struct server_info {
   std::string key_name;
   std::string header_first;
   std::string header_second;
@@ -373,8 +316,7 @@ struct server_info{
   std::string id;
 };
 
-std::vector<server_info> get_server_info()
-{
+std::vector<server_info> get_server_info() {
   std::vector<server_info> result;
   opt::variables_map var_map;
   opt::options_description description("Server");
@@ -404,34 +346,27 @@ std::vector<server_info> get_server_info()
                         << e.what() << "!"
                         << "please check ondemand_server.cfg file";
   }
-  for(auto const& it : var_map)
-  {
+  for(auto const& it : var_map) {
     server_info si;
     si.key_name = it.first;
     opt::variable_value value = it.second;
     std::string sval;
-    if(!value.empty())
-    {
+    if(!value.empty()) {
       type_info const& type = value.value().type();
-      if (type == typeid(std::string))
-      {
+      if (type == typeid(std::string)) {
         sval = value.as<std::string>();
       }
     }
-    if(si.key_name == "address")
-    {
+    if(si.key_name == "address") {
       si.first_addr = sval;
     }
-    else if(si.key_name == "address2")
-    {
+    else if(si.key_name == "address2") {
       si.second_addr = sval;
     }
-    else if(si.key_name == "productid")
-    {
+    else if(si.key_name == "productid") {
       si.id = sval;
     }
-    else
-    {
+    else {
       size_t idx = sval.find(',');
       si.header_first = sval.substr(0, idx);
       si.header_second = sval.substr(idx+1);
@@ -441,29 +376,22 @@ std::vector<server_info> get_server_info()
   return result;
 }
 
-availability_response check_od_availability(availability_request areq)
-{
-  //printf("check_od_availability!\n");
+availability_response check_od_availability(availability_request areq) {
   std::vector<server_info> all_server_info = get_server_info();
   std::string addr;
   std::string addr2;
   std::map<std::string, std::string> hdrs;
-  for(auto const& it : all_server_info)
-  {
-    if(!it.header_first.empty() && !it.header_second.empty())
-    {
+  for(auto const& it : all_server_info) {
+    if(!it.header_first.empty() && !it.header_second.empty()) {
       hdrs.insert(std::pair<std::string, std::string>(it.header_first,it.header_second));
     }
-    else if(it.key_name == "address")
-    {
+    else if(it.key_name == "address") {
       addr = it.first_addr;
     }
-    else if(it.key_name == "address2")
-    {
+    else if(it.key_name == "address2") {
       addr2 = it.second_addr;
     }
-    else if(it.key_name == "productid")
-    {
+    else if(it.key_name == "productid") {
       areq.product_id = it.id;
     }
   }
@@ -483,12 +411,10 @@ availability_response check_od_availability(availability_request areq)
 
   response firstresult = motis_http(req)->val();
   availability_response response_first = read_result(firstresult, true, req_dots);
-  if(!response_first.available)
-  {
+  if(!response_first.available) {
     return response_first;
   }
-  else
-  {
+  else {
     request::method m2 = request::POST;
     //UUID uuid;
     //UuidCreate(&uuid);
