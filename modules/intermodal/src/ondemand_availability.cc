@@ -307,97 +307,31 @@ bool checking(availability_request const& areq, availability_response const& are
   return result;
 }
 
-struct server_info {
-  std::string key_name;
-  std::string header_first;
-  std::string header_second;
-  std::string first_addr;
-  std::string second_addr;
-  std::string id;
-};
-
-std::vector<server_info> get_server_info() {
-  std::vector<server_info> result;
-  opt::variables_map var_map;
-  opt::options_description description("Server");
-  description.add_options()
-      ("address", opt::value<std::string>()->required())
-      ("address2", opt::value<std::string>())
-      ("productid", opt::value<std::string>())
-      ("hdr0", opt::value<std::string>())
-      ("hdr1", opt::value<std::string>())
-      ("hdr2", opt::value<std::string>())
-      ("hdr3", opt::value<std::string>())
-      ("hdr4", opt::value<std::string>())
-      ("hdr5", opt::value<std::string>())
-      ("hdr6", opt::value<std::string>())
-      ("hdr7", opt::value<std::string>())
-      ("hdr8", opt::value<std::string>());
-  try {
-    opt::store(opt::parse_config_file<char>("ondemand_server.cfg", description), var_map);
-  } catch (const opt::reading_file& er) {
-    LOG(logging::error) << " an error occured while reading ondemand_server.cfg file "
-                        << er.what() << "!";
-  }
-  try {
-    opt::notify(var_map);
-  } catch (const opt::required_option& e) {
-    LOG(logging::error) << " a required option is NOT set "
-                        << e.what() << "!"
-                        << "please check ondemand_server.cfg file";
-  }
-  for(auto const& it : var_map) {
-    server_info si;
-    si.key_name = it.first;
-    opt::variable_value value = it.second;
-    std::string sval;
-    if(!value.empty()) {
-      type_info const& type = value.value().type();
-      if (type == typeid(std::string)) {
-        sval = value.as<std::string>();
-      }
-    }
-    if(si.key_name == "address") {
-      si.first_addr = sval;
-    }
-    else if(si.key_name == "address2") {
-      si.second_addr = sval;
-    }
-    else if(si.key_name == "productid") {
-      si.id = sval;
-    }
-    else {
-      size_t idx = sval.find(',');
-      si.header_first = sval.substr(0, idx);
-      si.header_second = sval.substr(idx+1);
-    }
-    result.emplace_back(si);
-  }
-  return result;
-}
-
-availability_response check_od_availability(availability_request areq) {
-  std::vector<server_info> all_server_info = get_server_info();
+availability_response check_od_availability(availability_request areq,
+                                            std::vector<std::string> const& server_infos) {
   std::string addr;
-  std::string addr2;
+  std::string second_addr;
   std::map<std::string, std::string> hdrs;
-  for(auto const& it : all_server_info) {
-    if(!it.header_first.empty() && !it.header_second.empty()) {
-      hdrs.insert(std::pair<std::string, std::string>(it.header_first,it.header_second));
+  for(auto const& info : server_infos) {
+    size_t index = info.find(':');
+    if(index == -1) {
+      size_t idx = info.find(',');
+      hdrs.insert(std::pair<std::string, std::string>(info.substr(0, idx), info.substr(idx+1)));
     }
-    else if(it.key_name == "address") {
-      addr = it.first_addr;
+    std::string name = info.substr(0, index);
+    if(name == "address") {
+      addr = info.substr(index+1);
     }
-    else if(it.key_name == "address2") {
-      addr2 = it.second_addr;
+    else if(name == "address2") {
+      second_addr = info.substr(index+1);
     }
-    else if(it.key_name == "productid") {
-      areq.product_id = it.id;
+    else if(name == "productid") {
+      areq.product_id = info.substr(index+1);
     }
   }
 
-  request::method m = request::GET;
-  request req(addr, m, hdrs, "");
+  request::method m_get = request::GET;
+  request req(addr, m_get, hdrs, "");
 
   geo::latlng req_dot_start;
   geo::latlng req_dot_end;
@@ -415,14 +349,14 @@ availability_response check_od_availability(availability_request areq) {
     return response_first;
   }
   else {
-    request::method m2 = request::POST;
+    request::method m_post = request::POST;
     //UUID uuid;
     //UuidCreate(&uuid);
     //char* random_uuid_str;
     //UuidToStringA(&uuid, (RPC_CSTR*)&random_uuid_str);
     //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
     std::string body = create_json_body(areq);
-    request req2(addr2, m2, hdrs, body);
+    request req2(second_addr, m_post, hdrs, body);
     response secondresult = motis_http(req2)->val();
     availability_response response_second = read_result(secondresult, false, req_dots);
     response_second.available = checking(areq, response_second);

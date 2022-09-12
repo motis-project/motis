@@ -40,6 +40,7 @@ namespace motis::intermodal {
 intermodal::intermodal() : module("Intermodal Options", "intermodal") {
   param(router_, "router", "routing module");
   param(revise_, "revise", "revise connections");
+  param(ondemand_infos_, "ondemand", "ondemand server infos");
 }
 
 intermodal::~intermodal() = default;
@@ -455,13 +456,13 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
       splitted_four.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
     }
   }
-  size_t retv = all - (all - journeys.size());
-  printf("------ size nachher: %llu\n", retv);
+  //size_t retv = all - (all - journeys.size());
+  //printf("------ size nachher: %llu\n", retv);
   return all - journeys.size();
 }
 
 availability_response apply_ondemand_patches(journey j, bool start, mumo_edge const& e,
-                                             statistics& stats) {
+                                             statistics& stats, std::vector<std::string> const& server_info) {
   availability_request areq;
   areq.duration = static_cast<int>(round(e.duration_ * 60 * 1.5));
   if(start) {
@@ -487,7 +488,7 @@ availability_response apply_ondemand_patches(journey j, bool start, mumo_edge co
   //areq.maxWalkDist = 200;
   //printf("areq start: lat: %f; lng: %f\n", areq.startpoint.lat, areq.startpoint.lng);
   //printf("areq end: lat: %f; lng: %f\n", areq.endpoint.lat, areq.endpoint.lng);
-  availability_response ares = check_od_availability(areq);
+  availability_response ares = check_od_availability(areq, server_info);
   return ares;
 }
 
@@ -499,7 +500,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              std::vector<mumo_edge const*> const& edge_mapping,
                              statistics& stats, bool const revise,
                              std::vector<stats_category> const& mumo_stats,
-                             ppr_profiles const& profiles) {
+                             ppr_profiles const& profiles,
+                             std::vector<std::string> const& server_infos) {
   auto const dir = req->search_dir();
   auto routing_response =
       response_msg ? motis_content(RoutingResponse, response_msg) : nullptr;
@@ -563,10 +565,10 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         bool end = q_dest.is_intermodal_;
         availability_response ares;
         if(start) {
-          ares = apply_ondemand_patches(journey, true, *e, stats);
+          ares = apply_ondemand_patches(journey, true, *e, stats, server_infos);
         }
         if(end) {
-          ares = apply_ondemand_patches(journey, false, *e, stats);
+          ares = apply_ondemand_patches(journey, false, *e, stats, server_infos);
         }
         vares.emplace_back(ares);
         ondemand_patches.emplace_back(e, t.from_, t.to_, journey, journey_id);
@@ -775,7 +777,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   }
 
   return postprocess_response(routing_resp, start, dest, req, edge_mapping,
-                              stats, revise_, mumo_stats, ppr_profiles_);
+                              stats, revise_, mumo_stats, ppr_profiles_, ondemand_infos_);
 }
 
 }  // namespace motis::intermodal
