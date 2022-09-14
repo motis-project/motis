@@ -327,7 +327,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
         }
         idx_count++;
       }
-      if (!ares.at(idx_count).available) {
+      if (!ares.at(idx_count).available_) {
         not_available = true;
       }
       journey_id++;
@@ -363,21 +363,21 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
      *  replace: T --od--> S
      *  with:    T --walk--> PU --od--> S
     */
-    if(ares.walk_dur.at(0) != 0 && ares.walk_dur.at(1) == 0) {
+    if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
       auto& t1 = get_transport(j, patch.from_, patch.to_);
       auto splitted_one = split_transport(j, patches, t1);
 
-      splitted_one.parking_stop_.eva_no_ = ares.codenumber_id;
-      splitted_one.parking_stop_.name_ = ares.codenumber_id;
-      splitted_one.parking_stop_.lat_ = ares.startpoint.lat_;
-      splitted_one.parking_stop_.lng_ = ares.startpoint.lng_;
+      splitted_one.parking_stop_.eva_no_ = ares.codenumber_id_;
+      splitted_one.parking_stop_.name_ = ares.codenumber_id_;
+      splitted_one.parking_stop_.lat_ = ares.startpoint_.lat_;
+      splitted_one.parking_stop_.lng_ = ares.startpoint_.lng_;
       splitted_one.parking_stop_.arrival_.valid_ = true;
       splitted_one.parking_stop_.arrival_.timestamp_ =
           j.stops_[patch.from_].departure_.timestamp_ +
-          ares.walk_dur.at(0);
+          ares.walk_dur_.at(0);
       splitted_one.parking_stop_.arrival_.schedule_timestamp_ =
           j.stops_[patch.from_].departure_.schedule_timestamp_ +
-          ares.walk_dur.at(0);
+          ares.walk_dur_.at(0);
       splitted_one.parking_stop_.arrival_.timestamp_reason_ =
           j.stops_[patch.from_].departure_.timestamp_reason_;
       splitted_one.parking_stop_.departure_ = splitted_one.parking_stop_.arrival_;
@@ -391,22 +391,22 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
      *  replace: T --od--> S
      *  with:    T --od--> DO --walk--> S
     */
-    else if(ares.walk_dur.at(0) == 0 && ares.walk_dur.at(1) != 0) {
+    else if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) != 0) {
       printf("hier\n");
       auto& t2 = get_transport(j, patch.from_, patch.to_);
       auto splitted_two = split_transport(j, patches, t2);
 
-      splitted_two.parking_stop_.eva_no_ = ares.codenumber_id;
-      splitted_two.parking_stop_.name_ = ares.codenumber_id;
-      splitted_two.parking_stop_.lat_ = ares.startpoint.lat_;
-      splitted_two.parking_stop_.lng_ = ares.startpoint.lng_;
+      splitted_two.parking_stop_.eva_no_ = ares.codenumber_id_;
+      splitted_two.parking_stop_.name_ = ares.codenumber_id_;
+      splitted_two.parking_stop_.lat_ = ares.startpoint_.lat_;
+      splitted_two.parking_stop_.lng_ = ares.startpoint_.lng_;
       splitted_two.parking_stop_.arrival_.valid_ = true;
       splitted_two.parking_stop_.arrival_.timestamp_ =
           j.stops_[patch.from_].departure_.timestamp_ +
-          ares.walk_dur.at(1);
+          ares.walk_dur_.at(1);
       splitted_two.parking_stop_.arrival_.schedule_timestamp_ =
           j.stops_[patch.from_].departure_.schedule_timestamp_ +
-          ares.walk_dur.at(1);
+          ares.walk_dur_.at(1);
       splitted_two.parking_stop_.arrival_.timestamp_reason_ =
           j.stops_[patch.from_].departure_.timestamp_reason_;
       splitted_two.parking_stop_.departure_ = splitted_two.parking_stop_.arrival_;
@@ -420,7 +420,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
      *  replace: T --od--> S
      *  with:    T --walk--> PU --od--> DO --walk--> S
     */
-    else if(ares.walk_dur.at(0) != 0 && ares.walk_dur.at(1) != 0) {
+    else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) != 0) {
       auto& t3 = get_transport(j, patch.from_, patch.to_);
       auto splitted_three = split_transport(j, patches, t3);
       auto splitted_four = split_transport(j, patches, splitted_three.second_transport_);
@@ -431,30 +431,30 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
       splitted_four.second_transport_ = get_transport(j, patch.from_ + 2, patch.from_ + 3);
 
       auto& split3 = j.stops_.at(patch.from_ + 1);
-      split3.eva_no_ = ares.codenumber_id;
-      split3.name_ = ares.codenumber_id;
-      split3.lat_ = ares.startpoint.lat_;
-      split3.lng_ = ares.startpoint.lng_;
+      split3.eva_no_ = ares.codenumber_id_;
+      split3.name_ = ares.codenumber_id_;
+      split3.lat_ = ares.startpoint_.lat_;
+      split3.lng_ = ares.startpoint_.lng_;
       split3.arrival_.valid_ = true;
       split3.arrival_.timestamp_ = j.stops_[patch.from_].departure_.timestamp_
-          + ares.walk_dur.at(0);
+          + ares.walk_dur_.at(0);
       split3.arrival_.schedule_timestamp_ =
           j.stops_[patch.from_].departure_.schedule_timestamp_
-          + ares.walk_dur.at(0);
+          + ares.walk_dur_.at(0);
       split3.arrival_.timestamp_reason_ =
           j.stops_[patch.from_].departure_.timestamp_reason_;
       split3.departure_ = split3.arrival_;
 
       auto& split4 = j.stops_.at(patch.from_ + 2);
-      split4.eva_no_ = ares.codenumber_id;
-      split4.name_ = ares.codenumber_id;
-      split4.lat_ = ares.endpoint.lat_;
-      split4.lng_ = ares.endpoint.lat_;
+      split4.eva_no_ = ares.codenumber_id_;
+      split4.name_ = ares.codenumber_id_;
+      split4.lat_ = ares.endpoint_.lat_;
+      split4.lng_ = ares.endpoint_.lat_;
       split4.arrival_.valid_ = true;
       split4.arrival_.timestamp_ =
-          split3.departure_.timestamp_ + (ares.dropoff_time - ares.pickup_time);
+          split3.departure_.timestamp_ + (ares.dropoff_time_ - ares.pickup_time_);
       split4.arrival_.schedule_timestamp_ = split3.departure_.schedule_timestamp_
-          + (ares.dropoff_time - ares.pickup_time);
+          + (ares.dropoff_time_ - ares.pickup_time_);
       split4.arrival_.timestamp_reason_ =
           j.stops_[patch.from_ + 1].departure_.timestamp_reason_;
       split4.departure_ = split4.arrival_;
@@ -471,26 +471,26 @@ availability_response ondemand_availability(journey j, bool start, mumo_edge con
                                              statistics& stats, std::vector<std::string> const& server_info) {
   printf("availability check:\n");
   availability_request areq;
-  areq.duration = static_cast<int>(round(e.duration_ * 60 * 1.5));
+  areq.duration_ = static_cast<int>(round(e.duration_ * 60 * 1.5));
   if(start) {
-    areq.start = true;
-    areq.startpoint.lat_ = j.stops_.front().lat_;
-    areq.startpoint.lng_ = j.stops_.front().lng_;
-    areq.endpoint.lat_ = j.stops_.at(1).lat_;
-    areq.endpoint.lng_ = j.stops_.at(1).lng_;
-    areq.departure_time = j.stops_.front().departure_.timestamp_;
-    areq.arrival_time_onnext = j.stops_.at(1).arrival_.timestamp_;
+    areq.start_ = true;
+    areq.startpoint_.lat_ = j.stops_.front().lat_;
+    areq.startpoint_.lng_ = j.stops_.front().lng_;
+    areq.endpoint_.lat_ = j.stops_.at(1).lat_;
+    areq.endpoint_.lng_ = j.stops_.at(1).lng_;
+    areq.departure_time_ = j.stops_.front().departure_.timestamp_;
+    areq.arrival_time_onnext_ = j.stops_.at(1).arrival_.timestamp_;
   }
   else {
-    areq.start = false;
+    areq.start_ = false;
     int lastindex = static_cast<int>(j.stops_.size()) - 1;
-    areq.startpoint.lat_ = j.stops_.at(lastindex - 1).lat_;
-    areq.startpoint.lng_ = j.stops_.at(lastindex - 1).lng_;
-    areq.endpoint.lat_ = j.stops_.back().lat_;
-    areq.endpoint.lng_ = j.stops_.back().lng_;
-    areq.departure_time = j.stops_.at(lastindex - 1).departure_.timestamp_;
-    areq.arrival_time = j.stops_.at(lastindex - 1).arrival_.timestamp_;
-    areq.arrival_time_onnext = j.stops_.back().arrival_.timestamp_;
+    areq.startpoint_.lat_ = j.stops_.at(lastindex - 1).lat_;
+    areq.startpoint_.lng_ = j.stops_.at(lastindex - 1).lng_;
+    areq.endpoint_.lat_ = j.stops_.back().lat_;
+    areq.endpoint_.lng_ = j.stops_.back().lng_;
+    areq.departure_time_ = j.stops_.at(lastindex - 1).departure_.timestamp_;
+    areq.arrival_time_ = j.stops_.at(lastindex - 1).arrival_.timestamp_;
+    areq.arrival_time_onnext_ = j.stops_.back().arrival_.timestamp_;
   }
   //areq.maxWalkDist = 200;
   availability_response ares = check_od_availability(areq, server_info, stats);
