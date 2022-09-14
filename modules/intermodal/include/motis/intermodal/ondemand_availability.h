@@ -3,6 +3,7 @@
 
 #include "motis/core/common/unixtime.h"
 #include "geo/latlng.h"
+#include "motis/intermodal/statistics.h"
 
 namespace motis::intermodal {
 
@@ -29,6 +30,6 @@ struct availability_request {
   int max_walk_dist = 500; // meter
 };
 
-availability_response check_od_availability(availability_request, std::vector<std::string> const&);
+availability_response check_od_availability(availability_request, std::vector<std::string> const&, statistics& stats);
 
 } //namespace motis::intermodal

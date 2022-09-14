@@ -61,8 +61,8 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(timenow))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
-    int walk_before = 0;
-    int walk_after = 10;
+    int walk_before = 15;
+    int walk_after = 0;
     auto res = R"( { "data": {
                       "id": "rid_12345-abcde-1a2b3c",
                       "created_at": "2017-09-06T15:08:43Z",

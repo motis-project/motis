@@ -10,6 +10,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/constants.h"
+#include "motis/core/common/timing.h"
 #include "motis/module/context/motis_http_req.h"
 #include "net/http/client/request.h"
 #include "net/http/client/response.h"
@@ -308,7 +309,8 @@ bool checking(availability_request const& areq, availability_response const& are
 }
 
 availability_response check_od_availability(availability_request areq,
-                                            std::vector<std::string> const& server_infos) {
+                                            std::vector<std::string> const& server_infos,
+                                            statistics& stats) {
   std::string addr;
   std::string second_addr;
   std::map<std::string, std::string> hdrs;
@@ -343,7 +345,12 @@ availability_response check_od_availability(availability_request areq,
   req_dots.emplace_back(req_dot_start);
   req_dots.emplace_back(req_dot_end);
 
+  MOTIS_START_TIMING(ondemand_server_first);
   response firstresult = motis_http(req)->val();
+  MOTIS_STOP_TIMING(ondemand_server_first);
+  stats.ondemand_server_first_inquery_ +=
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_first));
+
   availability_response response_first = read_result(firstresult, true, req_dots);
   if(!response_first.available) {
     return response_first;
@@ -357,7 +364,13 @@ availability_response check_od_availability(availability_request areq,
     //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
     std::string body = create_json_body(areq);
     request req2(second_addr, m_post, hdrs, body);
+
+    MOTIS_START_TIMING(ondemand_server_second);
     response secondresult = motis_http(req2)->val();
+    MOTIS_STOP_TIMING(ondemand_server_second);
+    stats.ondemand_server_second_inquery_ +=
+        static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_second));
+
     availability_response response_second = read_result(secondresult, false, req_dots);
     response_second.available = checking(areq, response_second);
     return response_second;
