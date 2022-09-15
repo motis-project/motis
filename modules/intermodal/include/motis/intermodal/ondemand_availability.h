@@ -30,6 +30,6 @@ struct availability_request {
   int max_walk_dist_ = 500; // meter
 };
 
-availability_response check_od_availability(availability_request, std::vector<std::string> const&, statistics& stats);
+availability_response check_od_availability(availability_request, std::vector<std::string> const&, statistics&);
 
 } //namespace motis::intermodal

@@ -23,6 +23,7 @@ using namespace motis::json;
 using namespace rapidjson;
 
 int minutes = 0;
+int count = 0;
 
 std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
   if(post) {
@@ -61,11 +62,19 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(timenow))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
-    int walk_before = 15;
+    int walk_before = 0;
     int walk_after = 0;
+    if(count%2==0) {
+      walk_before+= 5;
+      walk_after+= 2;
+    }
+    if(count%4==0) {
+      walk_before = 0;
+    }
+    std::string id = "rid_12345-abcde-1a2b3c-" + std::to_string(count);
     auto res = R"( { "data": {
-                      "id": "rid_12345-abcde-1a2b3c",
-                      "created_at": "2017-09-06T15:08:43Z",
+                      "id": ")" + id + "\"," +
+               R"( "created_at": "2017-09-06T15:08:43Z",
                       "updated_at": "2017-09-06T15:08:43Z",
                       "type": "ride",
                       "product_id": "prd_12345-abcde-1a2b3c-1a2b3cca33e34",
@@ -99,6 +108,9 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
             } )";
     return res;
   } else {
+    if(count%3==0) {
+      return "";
+    }
       auto result = R"( {
             "data": {
               "id": "1234567890",
@@ -164,6 +176,7 @@ struct test_server::impl {
         case verb::post: {
           std::string sres = create_resbody(req, true);
           minutes += 5;
+          count++;
           std::string_view resbody{sres};
           if(req.body().empty()) {
             cb(server_error_response(req, "SEND REQUEST BODY"));
@@ -181,6 +194,7 @@ struct test_server::impl {
           break;
         }
         case verb::get: {
+          count++;
           std::string sres = create_resbody(req, false);
           std::string_view resbody{sres};
           status status = status::ok;

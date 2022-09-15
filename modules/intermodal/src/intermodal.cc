@@ -97,8 +97,8 @@ struct parking_patch {
   unsigned to_{};
 };
 
-struct od_patch {
-  od_patch(mumo_edge const* e, unsigned transport_from,
+struct ondemand_patch {
+  ondemand_patch(mumo_edge const* e, unsigned transport_from,
            unsigned transport_to, journey j_todelete, int j_id)
       : e_(e), from_(transport_from), to_(transport_to), j_(std::move(j_todelete)),
         j_id_(j_id) {}
@@ -299,15 +299,14 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
 }
 
 std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
-                                  std::vector<od_patch>& patches,
+                                  std::vector<ondemand_patch>& od_patches,
                                   std::vector<availability_response>& ares) {
-  if (ares.empty() || patches.empty()) {
+  if (ares.empty() || od_patches.empty()) {
     return -1;
   }
   printf("remove\n");
   auto const all = journeys.size();
   int journey_id = 0;
-  std::vector<bool> to_erase;
   utl::erase_if(journeys, [&](motis::journey j) {
     bool found_journey = false, to_short = false, not_available = false;
     int idx_count = 0;
@@ -317,7 +316,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                      })) {
       return false;
     } else {
-      for (auto const& p : patches) {
+      for (auto const& p : od_patches) {
         if (journey_id == p.j_id_) {
           found_journey = true;
           if (p.e_->duration_ <= 5.0) {
@@ -332,23 +331,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
       }
       journey_id++;
     }
-    if(found_journey && (to_short || not_available)) {
-      to_erase.emplace_back(true);
-      return true;
-    }
-    to_erase.emplace_back(false);
-    return false;
-  });
-  std::vector<std::pair<availability_response, bool>> pairing;
-  for(int k = 0; k < ares.size(); k++)
-  {
-    std::pair<availability_response, bool> erase_pair;
-    erase_pair.first = ares.at(k);
-    erase_pair.second = to_erase.at(k);
-    pairing.emplace_back(erase_pair);
-  }
-  utl::erase_if(pairing, [&](std::pair<availability_response, bool> const& pair){
-    return pair.second;
+    return found_journey && (to_short || not_available);
   });
   return all - journeys.size();
 }
@@ -356,6 +339,9 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
 void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
                             availability_response ares) {
   printf("apply ondemand patches\n");
+  if(ares.walk_dur_.empty() || !ares.available_) {
+    return;
+  }
   for(auto const& patch : patches) {
     /* V
      *  replace: S --od--> T
@@ -364,6 +350,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
      *  with:    T --walk--> PU --od--> S
     */
     if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
+      printf("S --walk--> PU --od--> T\n");
       auto& t1 = get_transport(j, patch.from_, patch.to_);
       auto splitted_one = split_transport(j, patches, t1);
 
@@ -392,7 +379,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
      *  with:    T --od--> DO --walk--> S
     */
     else if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) != 0) {
-      printf("hier\n");
+      printf("S --od--> DO --walk--> T\n");
       auto& t2 = get_transport(j, patch.from_, patch.to_);
       auto splitted_two = split_transport(j, patches, t2);
 
@@ -421,6 +408,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
      *  with:    T --walk--> PU --od--> DO --walk--> S
     */
     else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) != 0) {
+      printf("S --walk--> PU --od--> DO --walk--> T\n");
       auto& t3 = get_transport(j, patch.from_, patch.to_);
       auto splitted_three = split_transport(j, patches, t3);
       auto splitted_four = split_transport(j, patches, splitted_three.second_transport_);
@@ -525,11 +513,10 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
 
   printf("intermodal start:\n");
-  std::vector<size_t> vorher;
-  auto ondemand_patches = std::vector<od_patch>{};
-  auto ondemand_parkingpatches = std::vector<std::vector<parking_patch>>{};
+  auto ondemand_patches = std::vector<ondemand_patch>{};
   std::vector<availability_response> vares;
   int journey_id = 0;
+
   message_creator mc;
   for (auto& journey : journeys) {
     auto& stops = journey.stops_;
@@ -551,7 +538,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
 
     auto gbfs_patches = std::vector<parking_patch>{};
     auto parking_patches = std::vector<parking_patch>{};
-    auto ondemand_parking_patch = std::vector<parking_patch>{};
+    auto ondemand_parking_patches = std::vector<parking_patch>{};
+    availability_response ares;
     for (auto& t : journey.transports_) {
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
@@ -570,10 +558,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       } else if (e->type_ == mumo_type::GBFS) {
         gbfs_patches.emplace_back(e, t.from_, t.to_);
       } else if(e->type_ == mumo_type::ON_DEMAND) {
-        vorher.emplace_back(journey.transports_.size());
         bool start = q_start.is_intermodal_;
         bool end = q_dest.is_intermodal_;
-        availability_response ares;
         if(start) {
           ares = ondemand_availability(journey, true, *e, stats, server_infos);
         }
@@ -582,28 +568,19 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         }
         vares.emplace_back(ares);
         ondemand_patches.emplace_back(e, t.from_, t.to_, journey, journey_id);
-        ondemand_parking_patch.emplace_back(e, t.from_, t.to_);
+        ondemand_parking_patches.emplace_back(e, t.from_, t.to_);
       }
     }
-    journey_id++;
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
-    ondemand_parkingpatches.emplace_back(ondemand_parking_patch);
+    apply_ondemand_patches(journey, ondemand_parking_patches, ares);
+    journey_id++;
   }
-  //MOTIS_START_TIMING(ondemand_remove);
-  //remove_not_available_od_journeys(journeys, ondemand_patches, vares);
-  //MOTIS_STOP_TIMING(ondemand_remove);
-  //stats.ondemand_remove_not_available_ =
-  //    static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_remove));
-  printf("vor der neuen for schleife\n");
-  for(int k = 0; k < journeys.size(); k++) {
-    if(std::any_of(begin(journeys.at(k).transports_), end(journeys.at(k).transports_),
-                     [&](journey::transport const& t) {
-                       return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
-                     })) {
-      apply_ondemand_patches(journeys.at(k), ondemand_parkingpatches.at(k), vares.at(k));
-    }
-  }
+  MOTIS_START_TIMING(ondemand_remove);
+  remove_not_available_od_journeys(journeys, ondemand_patches, vares);
+  MOTIS_STOP_TIMING(ondemand_remove);
+  stats.ondemand_remove_not_available_ =
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_remove));
   printf("intermodal end:\n");
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });

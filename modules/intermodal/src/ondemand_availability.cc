@@ -67,6 +67,10 @@ availability_response read_result(response const& result, bool first, std::vecto
     Document docu;
     if (docu.Parse(result.body.c_str()).HasParseError()) {
       docu.GetParseError();
+      if(docu.GetParseError() == rapidjson::kParseErrorDocumentEmpty) {
+        ares.available_ = false;
+        return ares;
+      }
       throw utl::fail("On-Demand Availability Check Response: Bad JSON: {} at offset {}",
                       GetParseError_En(docu.GetParseError()),
                       docu.GetErrorOffset());
@@ -141,6 +145,10 @@ availability_response read_result(response const& result, bool first, std::vecto
     if(first) {
       ares.codenumber_id_ = read_json_key_string("id", " ");
       std::vector<std::vector<double>> polypoints = read_json_key_array("area", "coordinates");
+      if(polypoints.empty()) {
+        ares.available_ = false;
+        return ares;
+      }
       std::vector<geo::latlng> polygon_area;
       polygon_area.resize(polypoints.size());
       int k = 0;
