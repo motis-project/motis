@@ -15,7 +15,8 @@ struct availability_response {
   unixtime pickup_time_ = -1;
   unixtime dropoff_time_ = -1;
   double price_ = -1.0;
-  std::vector<int> walk_dur_;  // start, ziel; in sekunden
+  std::vector<int> walk_dur_ = {0, 0};  // start, ziel; in sekunden
+  unixtime complete_duration_ = -1;
 };
 
 struct availability_request {

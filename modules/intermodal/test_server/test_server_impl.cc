@@ -48,25 +48,54 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
       }
       return -1.0;
     };
+    auto read_json_key_string = [&](char const* key, char const* name) -> std::string {
+      auto const it = data.FindMember(key);
+      if (it != data.MemberEnd() && it->value.IsString()) {
+        return it->value.GetString();
+      }
+      else if(it != data.MemberEnd() && it->value.HasMember(name)) {
+        auto const at = it->value.FindMember(name);
+        if(at->value.IsString()) {
+          return at->value.GetString();
+        }
+      }
+      return "";
+    };
     double startlat = read_json_key_double("origin", "lat");
     double startlng = read_json_key_double("origin", "lng");
     double endlat = read_json_key_double("destination", "lat");
     double endlng = read_json_key_double("destination", "lng");
+    std::string departure = read_json_key_string("origin", "time");
+    std::string arrival = read_json_key_string("destination", "time");
 
-    time_t timenow = time(nullptr);
-    timenow += minutes * 60;
+    auto traveltime_to_unixtime = [&](std::string const& timestring) -> date::sys_seconds {
+      std::istringstream in(timestring);
+      date::sys_seconds tp;
+      in >> date::parse("%FT%TZ", tp);
+      if (in.fail()) {
+        in.clear();
+        in.str(timestring);
+        in >> date::parse("%FT%T%z", tp);
+      }
+      return tp;
+    };
+
+    time_t tests_time_dep = traveltime_to_unixtime(departure).time_since_epoch().count();
+    time_t tests_time_arr = traveltime_to_unixtime(arrival).time_since_epoch().count();
+    tests_time_dep += minutes * 60;
     using time_point = std::chrono::system_clock::time_point;
-    time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(timenow))};
+    time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
-    timenow += 900;
-    time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(timenow))};
+    time_t diff = (tests_time_arr - tests_time_dep) + minutes;
+    tests_time_dep += (diff - 120); // wie lange die fahrt dauert
+    time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
     int walk_before = 0;
     int walk_after = 0;
     if(count%2==0) {
-      walk_before+= 5;
-      walk_after+= 2;
+      walk_before+= 300;
+      walk_after+= 120;
     }
     if(count%4==0) {
       walk_before = 0;
