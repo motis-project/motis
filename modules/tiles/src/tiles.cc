@@ -1,8 +1,7 @@
 #include "motis/tiles/tiles.h"
 
 #include <cstdlib>
-
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "lmdb/lmdb.hpp"
 
@@ -35,7 +34,7 @@
 namespace c = cista;
 namespace mm = motis::module;
 namespace fb = flatbuffers;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::tiles {
 

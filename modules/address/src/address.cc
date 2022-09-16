@@ -139,7 +139,7 @@ void address::import(motis::module::import_dispatcher& reg) {
                                         osm->hash(), osm->size()};
 
         if (read_ini<import_state>(dir / "import.ini") != state) {
-          boost::filesystem::create_directories(dir);
+          std::filesystem::create_directories(dir);
           std::ofstream out{db_file().c_str(), std::ios::binary};
           address_typeahead::extract(osm->path()->str(), out);
           write_ini(dir / "import.ini", state);

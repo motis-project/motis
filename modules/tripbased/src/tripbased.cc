@@ -655,7 +655,7 @@ void tripbased::import(motis::module::import_dispatcher& reg) {
 
         if (use_data_file_) {
           auto const dir = get_data_directory() / "tripbased";
-          boost::filesystem::create_directories(dir);
+          std::filesystem::create_directories(dir);
           auto const filename = dir / "tripbased.bin";
 
           auto const state = import_state{schedule->hash()};

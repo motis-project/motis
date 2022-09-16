@@ -30,7 +30,7 @@ struct parking : public motis::module::module {
   bool import_successful() const override { return import_successful_; }
 
 private:
-  boost::filesystem::path module_data_dir() const;
+  std::filesystem::path module_data_dir() const;
   std::string db_file() const;
 
   // import

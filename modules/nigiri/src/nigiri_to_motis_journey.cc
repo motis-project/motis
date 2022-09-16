@@ -149,10 +149,6 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
           direction = tt.trip_directions_.at(direction_idx)
                           .apply(utl::overloaded{
                               [&](n::trip_direction_string_idx_t const i) {
-                                std::cerr
-                                    << "direction: "
-                                    << tt.trip_direction_strings_.at(i).view()
-                                    << "\n";
                                 return tt.trip_direction_strings_.at(i).view();
                               },
                               [&](n::location_idx_t const i) {
