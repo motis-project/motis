@@ -118,6 +118,10 @@ struct label_departure : public label<label_departure> {
 
 struct label_arrival : public label<label_arrival> {
 
+  stop_id backward_parent_station = invalid<stop_id>;
+  size_t backward_parent_label_index_ = invalid<size_t>;
+
+
   label_arrival() {
   }
 

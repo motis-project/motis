@@ -52,10 +52,22 @@ struct mc_raptor {
 
 struct mc_raptor_departure: public mc_raptor<mc_raptor_departure, label_departure> {
   mc_raptor_departure(raptor_query<label_departure> const& q) : mc_raptor(q) { }
+  void init_arrivals();
+  void init_new_label(bag<label_departure> bag, stop_id stop, time8 duration, stop_id to_stop);
+  void scan_route(stop_id stop, route_stops_index stop_offset,
+                  const stop_count trip_size, const stop_time* first_trip,
+                  const stop_time* last_trip, raptor_route route,
+                  route_id route_id);
 };
 
 struct mc_raptor_arrival: public mc_raptor<mc_raptor_arrival, label_arrival> {
   mc_raptor_arrival(raptor_query<label_arrival> const& q) : mc_raptor(q) { }
+  void init_arrivals();
+  void init_new_label(bag<label_arrival> bag, stop_id stop, time8 duration, stop_id to_stop);
+  void scan_route(stop_id stop, route_stops_index stop_offset,
+                  const stop_count trip_size, const stop_time* first_trip,
+                  const stop_time* last_trip, raptor_route route,
+                  route_id route_id);
 };
 
 template class mc_raptor<mc_raptor_departure, label_departure>;
