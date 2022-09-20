@@ -1,4 +1,5 @@
 #include <iterator>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -112,6 +113,54 @@ TEST(dynamic_fws_multimap_test, int_1) {
   EXPECT_EQ(2, mm[0].size());
   EXPECT_THAT(mm[1], ElementsAreArray({4, 8, 15, 16}));
   EXPECT_EQ(4, mm[1].size());
+
+  // begin / end
+  EXPECT_THAT(std::vector<int>(mm[0].begin(), mm[0].end()),
+              ElementsAreArray({42, 23}));
+  EXPECT_THAT(std::vector<int>(mm[1].begin(), mm[1].end()),
+              ElementsAreArray({4, 8, 15, 16}));
+  EXPECT_THAT(std::vector<int>(std::begin(mm[0]), std::end(mm[0])),
+              ElementsAreArray({42, 23}));
+  EXPECT_THAT(std::vector<int>(std::begin(mm[1]), std::end(mm[1])),
+              ElementsAreArray({4, 8, 15, 16}));
+  EXPECT_THAT(std::vector<int>(begin(mm[0]), end(mm[0])),
+              ElementsAreArray({42, 23}));
+  EXPECT_THAT(std::vector<int>(begin(mm[1]), end(mm[1])),
+              ElementsAreArray({4, 8, 15, 16}));
+
+  // cbegin / cend
+  EXPECT_THAT(std::vector<int>(mm[0].cbegin(), mm[0].cend()),
+              ElementsAreArray({42, 23}));
+  EXPECT_THAT(std::vector<int>(mm[1].cbegin(), mm[1].cend()),
+              ElementsAreArray({4, 8, 15, 16}));
+  EXPECT_THAT(std::vector<int>(std::cbegin(mm[0]), std::cend(mm[0])),
+              ElementsAreArray({42, 23}));
+  EXPECT_THAT(std::vector<int>(std::cbegin(mm[1]), std::cend(mm[1])),
+              ElementsAreArray({4, 8, 15, 16}));
+
+  // rbegin / rend
+  EXPECT_THAT(std::vector<int>(mm[0].rbegin(), mm[0].rend()),
+              ElementsAreArray({23, 42}));
+  EXPECT_THAT(std::vector<int>(mm[1].rbegin(), mm[1].rend()),
+              ElementsAreArray({16, 15, 8, 4}));
+  EXPECT_THAT(std::vector<int>(std::rbegin(mm[0]), std::rend(mm[0])),
+              ElementsAreArray({23, 42}));
+  EXPECT_THAT(std::vector<int>(std::rbegin(mm[1]), std::rend(mm[1])),
+              ElementsAreArray({16, 15, 8, 4}));
+  EXPECT_THAT(std::vector<int>(rbegin(mm[0]), rend(mm[0])),
+              ElementsAreArray({23, 42}));
+  EXPECT_THAT(std::vector<int>(rbegin(mm[1]), rend(mm[1])),
+              ElementsAreArray({16, 15, 8, 4}));
+
+  // crbegin / crend
+  EXPECT_THAT(std::vector<int>(mm[0].crbegin(), mm[0].crend()),
+              ElementsAreArray({23, 42}));
+  EXPECT_THAT(std::vector<int>(mm[1].crbegin(), mm[1].crend()),
+              ElementsAreArray({16, 15, 8, 4}));
+  EXPECT_THAT(std::vector<int>(std::crbegin(mm[0]), std::crend(mm[0])),
+              ElementsAreArray({23, 42}));
+  EXPECT_THAT(std::vector<int>(std::crbegin(mm[1]), std::crend(mm[1])),
+              ElementsAreArray({16, 15, 8, 4}));
 }
 
 TEST(dynamic_fws_multimap_test, graph_1) {
