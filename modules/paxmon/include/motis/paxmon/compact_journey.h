@@ -91,7 +91,8 @@ struct compact_journey_base {
 
 struct compact_journey : public compact_journey_base<compact_journey> {
   compact_journey() = default;
-  compact_journey(std::vector<journey_leg>&& legs) : legs_{std::move(legs)} {}
+  explicit compact_journey(std::vector<journey_leg>&& legs)
+      : legs_{std::move(legs)} {}
 
   inline std::vector<journey_leg>& legs() { return legs_; }
   inline std::vector<journey_leg> const& legs() const { return legs_; }
@@ -121,7 +122,8 @@ inline compact_journey to_compact_journey(compact_journey const& cj) {
 }
 
 inline compact_journey to_compact_journey(fws_compact_journey const& cj) {
-  return {std::vector<journey_leg>(cj.legs().begin(), cj.legs().end())};
+  return compact_journey{
+      std::vector<journey_leg>(cj.legs().begin(), cj.legs().end())};
 }
 
 inline fws_compact_journey to_fws_compact_journey(

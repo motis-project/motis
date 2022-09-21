@@ -96,8 +96,8 @@ Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
 
 compact_journey from_fbs(schedule const& sched,
                          PaxMonCompactJourney const* cj) {
-  return {utl::to_vec(*cj->legs(),
-                      [&](auto const& leg) { return from_fbs(sched, leg); })};
+  return compact_journey{utl::to_vec(
+      *cj->legs(), [&](auto const& leg) { return from_fbs(sched, leg); })};
 }
 
 Offset<PaxMonDataSource> to_fbs(FlatBufferBuilder& fbb, data_source const& ds) {
