@@ -275,7 +275,6 @@ struct passenger_group_container {
   // TODO(groups): remove custom allocator
   allocator<passenger_group> allocator_;
   std::vector<group_pointer> groups_;
-  // TODO(groups): vector no longer needed, 1:1 mapping now
   mcd::hash_map<data_source, mcd::vector<passenger_group_index>>
       groups_by_source_;
   std::size_t active_groups_{};
