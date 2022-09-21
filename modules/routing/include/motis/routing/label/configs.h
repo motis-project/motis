@@ -5,10 +5,11 @@
 #include "motis/routing/label/criteria/accessibility.h"
 #include "motis/routing/label/criteria/late_connections.h"
 #include "motis/routing/label/criteria/no_intercity.h"
+#include "motis/routing/label/criteria/ondemand_weighted.h"
+#include "motis/routing/label/criteria/ondemand.h"
 #include "motis/routing/label/criteria/transfers.h"
 #include "motis/routing/label/criteria/travel_time.h"
 #include "motis/routing/label/criteria/weighted.h"
-#include "motis/routing/label/criteria/ondemand.h"
 #include "motis/routing/label/dominance.h"
 #include "motis/routing/label/filter.h"
 #include "motis/routing/label/initializer.h"
@@ -102,10 +103,25 @@ using accessibility_label =
           comparator<transfers_dominance, accessibility_dominance>>;
 
 template <search_dir Dir>
-using ondemand_label =
-    label<Dir, MAX_WEIGHTED_OD, false, get_ondemand_lb, label_data<ondemand>,
-          initializer<ondemand_initializer>, updater<ondemand_updater>,
-          filter<ondemand_filter>, dominance<default_tb, ondemand_dominance>,
-          dominance<post_search_tb>, comparator<ondemand_dominance>>;
+using ondemand_weighted_label =
+    label<Dir, MAX_WEIGHTED_OD, false, get_ondemand_weighted_lb, label_data<ondemand_weighted>,
+          initializer<ondemand_weighted_initializer>, updater<ondemand_weighted_updater>,
+          filter<ondemand_weighted_filter>, dominance<default_tb, ondemand_weighted_dominance>,
+          dominance<post_search_tb>, comparator<ondemand_weighted_dominance>>;
+
+template <search_dir Dir>
+using ondemand_label = label<
+    Dir, MAX_TRAVEL_TIME, false, get_travel_time_lb,
+    label_data<travel_time, transfers, ondemand, absurdity>,
+    initializer<travel_time_initializer, transfers_initializer,
+                ondemand_initializer, absurdity_initializer>,
+    updater<travel_time_updater, transfers_updater, ondemand_updater,
+            absurdity_updater>,
+    filter<travel_time_filter, transfers_filter>,
+    dominance<absurdity_tb, travel_time_dominance, transfers_dominance,
+              ondemand_dominance>,
+    dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
+              transfers_dominance>,
+    comparator<transfers_dominance>>;
 
 }  // namespace motis::routing

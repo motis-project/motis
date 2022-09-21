@@ -98,6 +98,7 @@ enum SearchType : byte {
   LateConnections,
   LateConnectionsTest,
   Accessibility,
+  OndemandWeighted,
   Ondemand,
   DefaultPrice,
   DefaultPriceRegional
