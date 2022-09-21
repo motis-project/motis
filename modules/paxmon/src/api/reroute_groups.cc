@@ -40,7 +40,6 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
     auto const old_route_idx =
         static_cast<local_group_route_index>(rr->old_route_index());
     auto const reason = static_cast<reroute_reason_t>(rr->reason());
-    auto const& pg = uv.passenger_groups_.group(pgi);
     auto routes = uv.passenger_groups_.routes(pgi);
 
     auto routes_backup = utl::to_vec(
