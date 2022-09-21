@@ -5,5 +5,4 @@ namespace motis.paxmon;
 
 table PaxMonGetGroupsResponse {
   groups: [PaxMonGroup];
-  localizations: [PaxMonLocalizationWrapper];
 }

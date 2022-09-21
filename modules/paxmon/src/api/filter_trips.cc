@@ -135,11 +135,12 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       if (!include_edges && ignore_section) {
         continue;
       }
-      auto const groups = uv.pax_connection_info_.groups_[e->pci_];
-      auto const pdf = get_load_pdf(uv.passenger_groups_, groups);
+      auto const group_routes = uv.pax_connection_info_.group_routes(e->pci_);
+      auto const pdf = get_load_pdf(uv.passenger_groups_, group_routes);
       auto const cdf = get_cdf(pdf);
       auto const capacity = e->capacity();
-      auto const pax_limits = get_pax_limits(uv.passenger_groups_, groups);
+      auto const pax_limits =
+          get_pax_limits(uv.passenger_groups_, group_routes);
       auto const expected_pax = get_expected_load(uv, e->pci_);
       ti.max_pax_range_ = std::max(
           ti.max_pax_range_,

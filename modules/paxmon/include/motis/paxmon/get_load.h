@@ -16,6 +16,7 @@
 
 #include "cista/reflection/comparable.h"
 
+#include "motis/paxmon/additional_group.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
@@ -51,31 +52,30 @@ struct pax_stats {
 
 using lf_df_t = std::map<float, float>;
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline pax_limits get_pax_limits(passenger_group_container const& pgc,
-                                 Groups const& groups) {
+                                 GroupRoutes const& group_routes) {
   auto limits = pax_limits{};
-  for (auto const grp_id : groups) {
-    auto const* grp = pgc[grp_id];
-    auto const pax = grp->passengers_;
-    if (grp->probability_ == 1.0F) {
+  for (auto const& pgwr : group_routes) {
+    auto const pax = pgc[pgwr.pg_]->passengers_;
+    auto const prob = pgc.route(pgwr).probability_;
+    if (prob == 1.0F) {
       limits.min_ += pax;
     }
-    if (grp->probability_ != 0.0F) {
+    if (prob != 0.0F) {
       limits.max_ += pax;
     }
   }
   return limits;
 }
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline std::uint16_t get_base_load(passenger_group_container const& pgc,
-                                   Groups const& groups) {
+                                   GroupRoutes const& group_routes) {
   std::uint16_t load = 0;
-  for (auto const grp_id : groups) {
-    auto const* grp = pgc[grp_id];
-    if (grp->probability_ == 1.0F) {
-      load += grp->passengers_;
+  for (auto const& pgwr : group_routes) {
+    if (pgc.route(pgwr).probability_ == 1.0F) {
+      load += pgc[pgwr.pg_]->passengers_;
     }
   }
   return load;
@@ -101,17 +101,17 @@ inline void convolve_base(pax_pdf& pdf, std::uint16_t const grp_size,
   }
 }
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
-                                 Groups const& groups) {
-  auto const limits = get_pax_limits(pgc, groups);
+                                 GroupRoutes const& group_routes) {
+  auto const limits = get_pax_limits(pgc, group_routes);
   auto pdf = pax_pdf{};
   pdf.data_.resize(limits.max_ + 1);
   pdf.data_[limits.min_] = 1.0F;
-  for (auto const grp_id : groups) {
-    auto const* grp = pgc[grp_id];
-    if (grp->probability_ != 1.0F && grp->probability_ != 0.0F) {
-      convolve_base(pdf, grp->passengers_, grp->probability_);
+  for (auto const& pgwr : group_routes) {
+    auto const prob = pgc.route(pgwr).probability_;
+    if (prob != 1.0F && prob != 0.0F) {
+      convolve_base(pdf, pgc[pgwr.pg_]->passengers_, prob);
     }
   }
   return pdf;
@@ -161,20 +161,20 @@ inline void convolve_avx(pax_pdf& pdf, std::uint16_t const grp_size,
   }
 }
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
-                                Groups const& groups) {
-  auto const limits = get_pax_limits(pgc, groups);
+                                GroupRoutes const& group_routes) {
+  auto const limits = get_pax_limits(pgc, group_routes);
   auto pdf = pax_pdf{};
   auto const pdf_size = limits.max_ + 1;
   pdf.data_.resize(round_up<8>(pdf_size));
   pdf.data_[limits.min_] = 1.0F;
   auto buf = std::vector<float>(pdf.data_.size() + 8);
 
-  for (auto const grp_id : groups) {
-    auto const* grp = pgc[grp_id];
-    if (grp->probability_ != 1.0F && grp->probability_ != 0.0F) {
-      convolve_avx(pdf, grp->passengers_, grp->probability_, limits, buf);
+  for (auto const& pgwr : group_routes) {
+    auto const prob = pgc.route(pgwr).probability_;
+    if (prob != 1.0F && prob != 0.0F) {
+      convolve_avx(pdf, pgc[pgwr.pg_]->passengers_, prob, limits, buf);
     }
   }
 
@@ -184,34 +184,34 @@ inline pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
 
 #endif
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline pax_pdf get_load_pdf(passenger_group_container const& pgc,
-                            Groups const& groups) {
+                            GroupRoutes const& group_routes) {
 #ifdef MOTIS_AVX2
-  return get_load_pdf_avx(pgc, groups);
+  return get_load_pdf_avx(pgc, group_routes);
 #else
-  return get_load_pdf_base(pgc, groups);
+  return get_load_pdf_base(pgc, group_routes);
 #endif
 }
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline pax_cdf get_load_cdf(passenger_group_container const& pgc,
-                            Groups const& groups) {
-  return get_cdf(get_load_pdf(pgc, groups));
+                            GroupRoutes const& group_routes) {
+  return get_cdf(get_load_pdf(pgc, group_routes));
 }
 
 pax_cdf get_cdf(pax_pdf const& pdf);
 
-template <typename Groups>
+template <typename GroupRoutes>
 inline std::uint16_t get_mean_load(passenger_group_container const& pgc,
-                                   Groups const& groups) {
-  if (groups.empty()) {
+                                   GroupRoutes const& group_routes) {
+  if (group_routes.empty()) {
     return 0;
   }
   auto mean = 0.0F;
-  for (auto const grp_id : groups) {
-    auto const* grp = pgc[grp_id];
-    mean += static_cast<float>(grp->passengers_) * grp->probability_;
+  for (auto const& pgwr : group_routes) {
+    mean += static_cast<float>(pgc[pgwr.pg_]->passengers_) *
+            pgc.route(pgwr).probability_;
   }
   return static_cast<std::uint16_t>(mean);
 }
@@ -224,8 +224,7 @@ lf_df_t to_load_factor(pax_pdf const& pdf, std::uint16_t capacity);
 lf_df_t to_load_factor(pax_cdf const& cdf, std::uint16_t capacity);
 
 void add_additional_groups(
-    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
-                      additional_groups);
+    pax_pdf& pdf, std::vector<additional_group> const& additional_groups);
 
 bool load_factor_possibly_ge(pax_pdf const& pdf, std::uint16_t capacity,
                              float threshold);

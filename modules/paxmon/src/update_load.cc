@@ -9,27 +9,31 @@
 
 namespace motis::paxmon {
 
-void update_load(passenger_group* pg, reachability_info const& reachability,
+void update_load(passenger_group_with_route const pgwr,
+                 reachability_info const& reachability,
                  passenger_localization const& localization, universe& uv) {
-  auto disabled_edges = pg->edges_;
-  pg->edges_.clear();
+  auto const& gr = uv.passenger_groups_.route(pgwr);
+  auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+  auto disabled_edges =
+      std::vector<edge_index>(route_edges.begin(), route_edges.end());
+  route_edges.clear();
 
   auto const add_to_edge = [&](edge_index const& ei, edge* e) {
     if (std::find(begin(disabled_edges), end(disabled_edges), ei) ==
         end(disabled_edges)) {
       auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-      add_passenger_group_to_edge(uv, e, pg);
+      add_group_route_to_edge(uv, e, pgwr);
     } else {
       utl::erase(disabled_edges, ei);
     }
-    pg->edges_.emplace_back(ei);
+    route_edges.emplace_back(ei);
   };
 
   auto const add_interchange = [&](reachable_trip const& rt,
                                    event_node* exit_node) {
     utl::verify(exit_node != nullptr,
                 "paxmon::update_load: add_interchange: missing exit_node");
-    auto const transfer_time = get_transfer_duration(rt.leg_->enter_transfer_);
+    auto const transfer_time = get_transfer_duration(rt.leg_.enter_transfer_);
     auto enter_node =
         uv.trip_data_.edges(rt.tdi_)[rt.enter_edge_idx_].get(uv)->from(uv);
     for (auto& e : exit_node->outgoing_edges(uv)) {
@@ -89,7 +93,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   for (auto const& ei : disabled_edges) {
     auto* e = ei.get(uv);
     auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-    remove_passenger_group_from_edge(uv, e, pg);
+    remove_group_route_from_edge(uv, e, pgwr);
   }
 }
 

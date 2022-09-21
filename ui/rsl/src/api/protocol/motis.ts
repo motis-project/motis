@@ -30,8 +30,6 @@ import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
   PaxMonDestroyUniverseRequest,
-  PaxMonFilterGroupsRequest,
-  PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
   PaxMonFilterTripsResponse,
   PaxMonFindTripsRequest,
@@ -51,6 +49,8 @@ import {
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
   PaxMonRemoveGroupsRequest,
+  PaxMonRerouteGroupsRequest,
+  PaxMonRerouteGroupsResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
   PaxMonTripLoadInfo,
@@ -351,8 +351,6 @@ export type MsgContent =
   | PaxMonStatusResponse
   | PaxMonGetGroupsRequest
   | PaxMonGetGroupsResponse
-  | PaxMonFilterGroupsRequest
-  | PaxMonFilterGroupsResponse
   | PaxMonFilterTripsRequest
   | PaxMonFilterTripsResponse
   | PaxMonGetTripLoadInfosRequest
@@ -374,7 +372,9 @@ export type MsgContent =
   | PaxMonGetAddressableGroupsRequest
   | PaxMonGetAddressableGroupsResponse
   | PaxMonKeepAliveRequest
-  | PaxMonKeepAliveResponse;
+  | PaxMonKeepAliveResponse
+  | PaxMonRerouteGroupsRequest
+  | PaxMonRerouteGroupsResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -415,8 +415,6 @@ export type MsgContentType =
   | "PaxMonStatusResponse"
   | "PaxMonGetGroupsRequest"
   | "PaxMonGetGroupsResponse"
-  | "PaxMonFilterGroupsRequest"
-  | "PaxMonFilterGroupsResponse"
   | "PaxMonFilterTripsRequest"
   | "PaxMonFilterTripsResponse"
   | "PaxMonGetTripLoadInfosRequest"
@@ -438,7 +436,9 @@ export type MsgContentType =
   | "PaxMonGetAddressableGroupsRequest"
   | "PaxMonGetAddressableGroupsResponse"
   | "PaxMonKeepAliveRequest"
-  | "PaxMonKeepAliveResponse";
+  | "PaxMonKeepAliveResponse"
+  | "PaxMonRerouteGroupsRequest"
+  | "PaxMonRerouteGroupsResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

@@ -38,15 +38,13 @@ inline void add_group_to_alternative(schedule const& sched,
                                      motis::paxmon::capacity_maps const& caps,
                                      motis::paxmon::universe& uv,
                                      simulation_result& result,
-                                     motis::paxmon::passenger_group const& grp,
-                                     alternative const& alt,
-                                     float const probability) {
-  auto const total_probability = grp.probability_ * probability;
+                                     motis::paxmon::additional_group const& ag,
+                                     alternative const& alt) {
   for_each_edge(
       sched, caps, uv, alt.compact_journey_,
       [&](motis::paxmon::journey_leg const&, motis::paxmon::edge const* e) {
         if (e->is_trip()) {
-          result.additional_groups_[e].emplace_back(&grp, total_probability);
+          result.additional_groups_[e].emplace_back(ag);
         }
       });
 }
@@ -77,39 +75,43 @@ inline void simulate_behavior_for_cpg(schedule const& sched,
                                       PassengerBehavior& pb,
                                       combined_passenger_group const& cpg,
                                       sim_data& sd) {
-  if (cpg.groups_.empty()) {
+  if (cpg.group_routes_.empty()) {
     return;
   }
-  auto const allocation =
-      pb.pick_routes(*cpg.groups_.front(), cpg.alternatives_);
+  auto const allocation = pb.pick_routes(cpg.alternatives_);
   auto guard = std::lock_guard{sd.result_mutex_};
-  sd.result_.stats_.group_count_ += cpg.groups_.size();
-  for (auto const& grp : cpg.groups_) {
-    auto& group_result = sd.result_.group_results_[grp];
-    group_result.localization_ = &cpg.localization_;
+  sd.result_.stats_.group_route_count_ += cpg.group_routes_.size();
+  for (auto const& pgwrap : cpg.group_routes_) {
+    auto& group_route_result = sd.result_.group_route_results_[pgwrap.pgwr_];
+    group_route_result.localization_ = &cpg.localization_;
     std::uint8_t picked = 0;
     for (auto const& [alt, probability] :
          utl::zip(cpg.alternatives_, allocation)) {
       if (probability < 0.01F) {
         continue;
       }
-      group_result.alternatives_.emplace_back(&alt, probability);
-      add_group_to_alternative(sched, caps, uv, sd.result_, *grp, alt,
-                               probability);
+      auto const new_probability = pgwrap.probability_ * probability;
+      group_route_result.alternative_probabilities_.emplace_back(
+          &alt, new_probability);
+      add_group_to_alternative(
+          sched, caps, uv, sd.result_,
+          paxmon::additional_group{pgwrap.passengers_, new_probability}, alt);
       ++picked;
     }
     sd.found_alt_count_.emplace_back(
         static_cast<std::uint8_t>(cpg.alternatives_.size()));
     sd.picked_alt_count_.emplace_back(picked);
     if (picked == 1) {
-      sd.best_alt_prob_.emplace_back(group_result.alternatives_.front().second);
+      sd.best_alt_prob_.emplace_back(
+          group_route_result.alternative_probabilities_.front().second);
     } else if (picked > 1) {
       auto top = std::vector<std::pair<alternative const*, float>>(2);
-      std::partial_sort_copy(begin(group_result.alternatives_),
-                             end(group_result.alternatives_), begin(top),
-                             end(top), [](auto const& lhs, auto const& rhs) {
-                               return lhs.second > rhs.second;
-                             });
+      std::partial_sort_copy(
+          begin(group_route_result.alternative_probabilities_),
+          end(group_route_result.alternative_probabilities_), begin(top),
+          end(top), [](auto const& lhs, auto const& rhs) {
+            return lhs.second > rhs.second;
+          });
       sd.best_alt_prob_.emplace_back(top[0].second);
       sd.second_alt_prob_.emplace_back(top[1].second);
     }

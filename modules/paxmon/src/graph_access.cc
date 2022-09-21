@@ -299,20 +299,21 @@ void update_trip_route(schedule const& sched, capacity_maps const& caps,
                 updated_interchange_edges);
 }
 
-void add_passenger_group_to_edge(universe& uv, edge* e, passenger_group* pg) {
-  auto groups = uv.pax_connection_info_.groups_[e->pci_];
-  auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
-  if (it == end(groups) || *it != pg->id_) {
-    groups.insert(it, pg->id_);
+void add_group_route_to_edge(universe& uv, edge* e,
+                             passenger_group_with_route const& entry) {
+  auto group_routes = uv.pax_connection_info_.group_routes_[e->pci_];
+  auto it = std::lower_bound(begin(group_routes), end(group_routes), entry);
+  if (it == end(group_routes) || *it != entry) {
+    group_routes.insert(it, entry);
   }
 }
 
-void remove_passenger_group_from_edge(universe& uv, edge* e,
-                                      passenger_group* pg) {
-  auto groups = uv.pax_connection_info_.groups_[e->pci_];
-  auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
-  if (it != end(groups) && *it == pg->id_) {
-    groups.erase(it);
+void remove_group_route_from_edge(universe& uv, edge* e,
+                                  passenger_group_with_route const& entry) {
+  auto group_routes = uv.pax_connection_info_.group_routes_[e->pci_];
+  auto it = std::lower_bound(begin(group_routes), end(group_routes), entry);
+  if (it != end(group_routes) && *it == entry) {
+    group_routes.erase(it);
   }
 }
 

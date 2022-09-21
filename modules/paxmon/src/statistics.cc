@@ -38,7 +38,7 @@ graph_statistics calc_graph_statistics(schedule const& sched,
         ++stats.canceled_edges_;
       } else if (e.is_trip() && e.has_capacity() &&
                  get_base_load(uv.passenger_groups_,
-                               uv.pax_connection_info_.groups_[e.pci_]) >
+                               uv.pax_connection_info_.group_routes(e.pci_)) >
                      e.capacity()) {
         ++stats.edges_over_capacity_;
         auto const& edge_trips = e.get_trips(sched);
@@ -59,9 +59,7 @@ graph_statistics calc_graph_statistics(schedule const& sched,
       continue;
     }
     stats.passengers_ += pg->passengers_;
-    if (!pg->ok_) {
-      ++stats.broken_passenger_groups_;
-    }
+    // TODO(groups): stats.broken_passenger_groups_
   }
 
   return stats;

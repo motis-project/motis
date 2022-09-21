@@ -83,7 +83,16 @@ Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
                                     FlatBufferBuilder& fbb,
                                     compact_journey const& cj) {
   return CreatePaxMonCompactJourney(
-      fbb, fbb.CreateVector(utl::to_vec(cj.legs_, [&](journey_leg const& leg) {
+      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
+        return to_fbs(sched, fbb, leg);
+      })));
+}
+
+Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
+                                    FlatBufferBuilder& fbb,
+                                    fws_compact_journey const& cj) {
+  return CreatePaxMonCompactJourney(
+      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
         return to_fbs(sched, fbb, leg);
       })));
 }
@@ -102,30 +111,89 @@ data_source from_fbs(PaxMonDataSource const* ds) {
   return {ds->primary_ref(), ds->secondary_ref()};
 }
 
-Offset<PaxMonGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                           passenger_group const& pg) {
-  return CreatePaxMonGroup(
-      fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
-      to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_,
-      to_fbs_time(sched, pg.planned_arrival_time_),
-      static_cast<std::underlying_type_t<group_source_flags>>(pg.source_flags_),
-      pg.generation_, pg.previous_version_, to_fbs_time(sched, pg.added_time_),
-      pg.estimated_delay());
+Offset<PaxMonGroupRoute> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
+                                temp_group_route const& tgr) {
+  return CreatePaxMonGroupRoute(
+      fbb, tgr.index_, to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
+      to_fbs_time(sched, tgr.planned_arrival_time_), tgr.estimated_delay_,
+      static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_);
 }
 
-passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
-  return make_passenger_group(
-      from_fbs(sched, pg->planned_journey()), from_fbs(pg->source()),
-      static_cast<std::uint16_t>(pg->passenger_count()),
-      from_fbs_time(sched, pg->planned_arrival_time()),
-      static_cast<group_source_flags>(pg->source_flags()), pg->probability(),
-      from_fbs_time(sched, pg->added_time()), pg->previous_version(),
-      pg->generation(), pg->estimated_delay(), pg->id());
+Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
+                                passenger_group_container const& pgc,
+                                FlatBufferBuilder& fbb, group_route const& gr) {
+  return CreatePaxMonGroupRoute(
+      fbb, gr.local_group_route_index_,
+      to_fbs(sched, fbb, pgc.journey(gr.compact_journey_index_)),
+      gr.probability_, to_fbs_time(sched, gr.planned_arrival_time_),
+      gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_));
 }
 
-PaxMonGroupBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
-                                     passenger_group const& pg) {
-  return PaxMonGroupBaseInfo{pg.id_, pg.passengers_, pg.probability_};
+temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
+  return temp_group_route{static_cast<local_group_route_index>(gr->index()),
+                          gr->probability(),
+                          from_fbs(sched, gr->journey()),
+                          from_fbs_time(sched, gr->planned_arrival_time()),
+                          gr->estimated_delay(),
+                          static_cast<route_source_flags>(gr->source_flags()),
+                          gr->planned()};
+}
+
+Offset<PaxMonGroup> to_fbs(schedule const& sched,
+                           passenger_group_container const& pgc,
+                           FlatBufferBuilder& fbb, passenger_group const& pg) {
+  return CreatePaxMonGroup(fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
+                           fbb.CreateVector(utl::to_vec(
+                               pgc.routes(pg.id_), [&](group_route const& gr) {
+                                 return to_fbs(sched, pgc, fbb, gr);
+                               })));
+}
+
+temp_passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
+  return temp_passenger_group{
+      pg->id(), from_fbs(pg->source()), pg->passenger_count(),
+      utl::to_vec(*pg->routes(), [&](PaxMonGroupRoute const* gr) {
+        return from_fbs(sched, gr);
+      })};
+}
+
+temp_passenger_group_with_route from_fbs(schedule const& sched,
+                                         PaxMonGroupWithRoute const* pgwr) {
+  return temp_passenger_group_with_route{
+      static_cast<passenger_group_index>(pgwr->group_id()),
+      from_fbs(pgwr->source()), pgwr->passenger_count(),
+      from_fbs(sched, pgwr->route())};
+}
+
+Offset<PaxMonGroupWithRoute> to_fbs(schedule const& sched,
+                                    passenger_group_container const& pgc,
+                                    FlatBufferBuilder& fbb,
+                                    passenger_group_with_route const& pgwr) {
+  auto const& pg = pgc.group(pgwr.pg_);
+  auto const& gr = pgc.route(pgwr);
+  return CreatePaxMonGroupWithRoute(fbb, pg.id_, to_fbs(fbb, pg.source_),
+                                    pg.passengers_,
+                                    to_fbs(sched, pgc, fbb, gr));
+}
+
+Offset<PaxMonGroupWithRoute> to_fbs(
+    schedule const& sched, FlatBufferBuilder& fbb,
+    temp_passenger_group_with_route const& tpgr) {
+  return CreatePaxMonGroupWithRoute(
+      fbb, tpgr.group_id_, to_fbs(fbb, tpgr.source_), tpgr.passengers_);
+}
+
+PaxMonGroupRouteBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
+                                          passenger_group const& pg,
+                                          group_route const& gr) {
+  return PaxMonGroupRouteBaseInfo{pg.id_, gr.local_group_route_index_,
+                                  pg.passengers_, gr.probability_};
+}
+
+PaxMonGroupRouteBaseInfo to_fbs_base_info(
+    FlatBufferBuilder& fbb, passenger_group_container const& pgc,
+    passenger_group_with_route const& pgwr) {
+  return to_fbs_base_info(fbb, pgc.group(pgwr.pg_), pgc.route(pgwr));
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
@@ -193,11 +261,13 @@ Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
                                          to_fbs(sched, fbb, loc));
 }
 
-Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                           monitoring_event const& me) {
+Offset<PaxMonEvent> to_fbs(schedule const& sched,
+                           passenger_group_container const& pgc,
+                           FlatBufferBuilder& fbb, monitoring_event const& me) {
   return CreatePaxMonEvent(
       fbb, static_cast<PaxMonEventType>(me.type_),
-      to_fbs(sched, fbb, me.group_), fbs_localization_type(me.localization_),
+      to_fbs(sched, pgc, fbb, me.pgwr_),
+      fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
       static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
       to_fbs_time(sched, me.expected_arrival_time_));

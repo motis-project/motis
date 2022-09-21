@@ -180,28 +180,32 @@ event_node* get_or_insert_node(universe& uv, trip_data_index const tdi,
       tek.schedule_time_, tek.schedule_time_, tek.type_, true, tek.station_id_);
 }
 
-std::set<passenger_group*> collect_passenger_groups(universe& uv,
-                                                    trip_data_index const tdi) {
-  std::set<passenger_group*> affected_passenger_groups;
+std::set<passenger_group_with_route> collect_and_remove_group_routes(
+    universe& uv, trip_data_index const tdi) {
+  std::set<passenger_group_with_route> affected_group_routes;
   for (auto const& tei : uv.trip_data_.edges(tdi)) {
     auto* te = tei.get(uv);
-    auto groups = uv.pax_connection_info_.groups_[te->pci_];
-    for (auto pg_id : groups) {
-      auto* pg = uv.passenger_groups_[pg_id];
-      affected_passenger_groups.insert(pg);
-      utl::erase(pg->edges_, tei);
+    auto group_routes = uv.pax_connection_info_.group_routes(te->pci_);
+    for (auto const& pgwr : group_routes) {
+      auto const& route = uv.passenger_groups_.route(pgwr);
+      auto edges = uv.passenger_groups_.route_edges(route.edges_index_);
+      affected_group_routes.insert(pgwr);
+      utl::erase(edges, tei);
     }
-    groups.clear();
+    group_routes.clear();
   }
-  return affected_passenger_groups;
+  return affected_group_routes;
 }
 
-bool update_passenger_group(trip_data_index const tdi, trip const* trp,
-                            passenger_group* pg, universe& uv) {
+bool update_group_route(trip_data_index const tdi, trip const* trp,
+                        passenger_group_with_route const pgwr, universe& uv) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   // TODO(pablo): does not support merged trips
-  for (auto const& leg : pg->compact_planned_journey_.legs_) {
+  auto const& gr = uv.passenger_groups_.route(pgwr);
+  auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
+  auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+  for (auto const& leg : cj.legs()) {
     if (leg.trip_idx_ == trp->trip_idx_) {
       auto const edges = uv.trip_data_.edges(tdi);
       auto enter_index = INVALID_INDEX;
@@ -223,8 +227,8 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
         for (auto idx = enter_index; idx <= exit_index; ++idx) {
           auto const& ei = edges[idx];
           auto* e = ei.get(uv);
-          add_passenger_group_to_edge(uv, e, pg);
-          pg->edges_.emplace_back(ei);
+          add_group_route_to_edge(uv, e, pgwr);
+          route_edges.emplace_back(ei);
         }
         return true;
       }
@@ -249,7 +253,7 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
                    std::vector<edge_index>& updated_interchange_edges) {
   auto const unknown_capacity =
       encode_capacity({UNKNOWN_CAPACITY, capacity_source::SPECIAL});
-  auto const affected_passenger_groups = collect_passenger_groups(uv, tdi);
+  auto const affected_group_routes = collect_and_remove_group_routes(uv, tdi);
   auto diff = diff_route(old_route, new_route);
 
   std::vector<event_node*> new_nodes;
@@ -296,8 +300,8 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
 
   update_trip_capacity(uv, sched, caps, trp, false);
 
-  for (auto pg : affected_passenger_groups) {
-    update_passenger_group(tdi, trp, pg, uv);
+  for (auto const& pgwr : affected_group_routes) {
+    update_group_route(tdi, trp, pgwr, uv);
   }
 
   for (auto* n : removed_nodes) {

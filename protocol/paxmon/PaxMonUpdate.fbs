@@ -19,7 +19,7 @@ enum PaxMonReachabilityStatus : byte {
 
 table PaxMonEvent {
   type: PaxMonEventType;
-  group: PaxMonGroup;
+  group_route: PaxMonGroupWithRoute;
   localization: PaxMonLocalization;
   reachability_status: PaxMonReachabilityStatus;
   expected_arrival_time: ulong; // 0 for broken journeys

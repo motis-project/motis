@@ -21,8 +21,7 @@ struct conditional_logit_passenger_behavior {
         coeff_transfer_{coeff_transfer},
         best_only_{best_only} {}
 
-  std::vector<float> pick_routes(motis::paxmon::passenger_group const& /*grp*/,
-                                 std::vector<alternative> const& alternatives) {
+  std::vector<float> pick_routes(std::vector<alternative> const& alternatives) {
     if (alternatives.empty()) {
       return {};
     }

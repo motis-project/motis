@@ -102,17 +102,18 @@ struct compact_journey : public compact_journey_base<compact_journey> {
 };
 
 struct fws_compact_journey : public compact_journey_base<fws_compact_journey> {
-  using bucket_type = typename dynamic_fws_multimap<journey_leg>::const_bucket;
-  using index_type = typename dynamic_fws_multimap<journey_leg>::size_type;
+  using fws_type = dynamic_fws_multimap<journey_leg>;
+  using bucket_type = typename fws_type::const_bucket;
+  using index_type = typename fws_type::size_type;
 
-  fws_compact_journey(bucket_type const& bucket) : bucket_{bucket} {}
+  explicit fws_compact_journey(bucket_type const& bucket) : bucket_{bucket} {}
 
   inline bucket_type const& legs() const { return bucket_; }
   inline index_type index() const { return bucket_.index(); }
 
   auto cista_members() noexcept { return std::tie(bucket_); }
 
-  bucket_type const& bucket_;
+  bucket_type const bucket_;
 };
 
 inline compact_journey to_compact_journey(compact_journey const& cj) {
@@ -121,6 +122,16 @@ inline compact_journey to_compact_journey(compact_journey const& cj) {
 
 inline compact_journey to_compact_journey(fws_compact_journey const& cj) {
   return {std::vector<journey_leg>(cj.legs().begin(), cj.legs().end())};
+}
+
+inline fws_compact_journey to_fws_compact_journey(
+    typename fws_compact_journey::fws_type& fws, compact_journey const& cj) {
+  auto bucket = fws.emplace_back();
+  bucket.reserve(cj.legs().size());
+  for (auto const& leg : cj.legs()) {
+    bucket.push_back(leg);
+  }
+  return fws_compact_journey{bucket};
 }
 
 }  // namespace motis::paxmon

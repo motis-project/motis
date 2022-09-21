@@ -43,7 +43,7 @@ struct reachable_trip {
 
   trip_idx_t trip_idx_{};
   trip_data_index tdi_{};
-  journey_leg const* leg_{};
+  journey_leg const leg_{};
   time enter_schedule_time_{INVALID_TIME};
   time exit_schedule_time_{INVALID_TIME};
   time enter_real_time_{INVALID_TIME};
@@ -68,6 +68,6 @@ struct reachability_info {
 };
 
 reachability_info get_reachability(universe const& uv,
-                                   compact_journey const& j);
+                                   fws_compact_journey const& j);
 
 }  // namespace motis::paxmon

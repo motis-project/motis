@@ -16,15 +16,16 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast {
 
-Offset<PaxForecastGroup> get_passenger_group_forecast(
-    FlatBufferBuilder& fbb, schedule const& sched, passenger_group const& grp,
+Offset<PaxForecastGroupRoute> get_passenger_group_route_forecast(
+    FlatBufferBuilder& fbb, schedule const& sched, universe const& uv,
+    passenger_group_with_route const& pgwr,
     group_simulation_result const& group_result) {
-  return CreatePaxForecastGroup(
-      fbb, to_fbs(sched, fbb, grp),
+  return CreatePaxForecastGroupRoute(
+      fbb, to_fbs(sched, uv.passenger_groups_, fbb, pgwr),
       fbs_localization_type(*group_result.localization_),
       to_fbs(sched, fbb, *group_result.localization_),
-      fbb.CreateVector(
-          utl::to_vec(group_result.alternatives_, [&](auto const& alt) {
+      fbb.CreateVector(utl::to_vec(
+          group_result.alternative_probabilities_, [&](auto const& alt) {
             return CreatePaxForecastAlternative(
                 fbb, to_fbs(sched, fbb, alt.first->compact_journey_),
                 alt.second);
@@ -48,10 +49,11 @@ msg_ptr make_forecast_update_msg(schedule const& sched, universe const& uv,
       MsgContent_PaxForecastUpdate,
       CreatePaxForecastUpdate(fbb, uv.id_, sched.system_time_,
                               fbb.CreateVector(utl::to_vec(
-                                  sim_result.group_results_,
+                                  sim_result.group_route_results_,
                                   [&](auto const& entry) {
-                                    return get_passenger_group_forecast(
-                                        fbb, sched, *entry.first, entry.second);
+                                    return get_passenger_group_route_forecast(
+                                        fbb, sched, uv, entry.first,
+                                        entry.second);
                                   })),
                               to_fbs(fbb, sched, uv, lfc))
           .Union(),

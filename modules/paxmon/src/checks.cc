@@ -22,9 +22,10 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
 
   for (auto const& n : uv.graph_.nodes_) {
     for (auto const& e : n.outgoing_edges(uv)) {
-      for (auto const pg_id : uv.pax_connection_info_.groups_[e.pci_]) {
-        auto const* pg = uv.passenger_groups_.at(pg_id);
-        if (pg->probability_ <= 0.0 || pg->passengers_ >= 200) {
+      for (auto const& pgwr : uv.pax_connection_info_.group_routes_[e.pci_]) {
+        auto const* pg = uv.passenger_groups_.at(pgwr.pg_);
+        auto const& gr = uv.passenger_groups_.route(pgwr);
+        if (gr.probability_ <= 0.0 || pg->passengers_ >= 200) {
           std::cout << "!! invalid psi @" << e.type() << ": id=" << pg->id_
                     << "\n";
           ok = false;
@@ -32,20 +33,21 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
         if (!e.is_trip()) {
           continue;
         }
-        if (std::find_if(begin(pg->edges_), end(pg->edges_),
-                         [&](auto const& ei) { return ei.get(uv) == &e; }) ==
-            end(pg->edges_)) {
-          std::cout << "!! edge missing in pg.edges @" << e.type() << "\n";
+        auto const edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+        if (std::find_if(begin(edges), end(edges), [&](auto const& ei) {
+              return ei.get(uv) == &e;
+            }) == end(edges)) {
+          std::cout << "!! edge missing in route_edges @" << e.type() << "\n";
           ok = false;
         }
         auto trip_leg_found = false;
         auto const& trips = e.get_trips(sched);
+        auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
         for (auto const& trp : trips) {
-          if (std::find_if(begin(pg->compact_planned_journey_.legs_),
-                           end(pg->compact_planned_journey_.legs_),
+          if (std::find_if(begin(cj.legs()), end(cj.legs()),
                            [&](journey_leg const& leg) {
                              return leg.trip_idx_ == trp->trip_idx_;
-                           }) != end(pg->compact_planned_journey_.legs_)) {
+                           }) != end(cj.legs())) {
             trip_leg_found = true;
             break;
           }
@@ -56,7 +58,8 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
         }
       }
       if (e.is_trip() && e.is_valid(uv)) {
-        auto grp_count = uv.pax_connection_info_.groups_[e.pci_].size();
+        auto grp_route_count =
+            uv.pax_connection_info_.group_routes_[e.pci_].size();
         auto const& trips = e.get_trips(sched);
         for (auto const& trp : trips) {
           auto const td_edges = uv.trip_data_.edges(trp);
@@ -64,7 +67,7 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
                 return ei.get(uv) == &e;
               }) == end(td_edges)) {
             std::cout << "!! edge missing in trip_data.edges @" << e.type()
-                      << ", grp_count=" << grp_count << "\n";
+                      << ", grp_route_count=" << grp_route_count << "\n";
             ok = false;
           }
         }
@@ -159,13 +162,20 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
     if (pg == nullptr) {
       continue;
     }
-    for (auto const& ei : pg->edges_) {
-      auto const* e = ei.get(uv);
-      auto const groups = uv.pax_connection_info_.groups_[e->pci_];
-      if (std::find(begin(groups), end(groups), pg->id_) == end(groups)) {
-        std::cout << "!! passenger group not on edge: id=" << pg->id_ << " @"
-                  << e->type() << "\n";
-        ok = false;
+    for (auto const& gr : uv.passenger_groups_.routes(pg->id_)) {
+      auto const pgwr =
+          passenger_group_with_route{pg->id_, gr.local_group_route_index_};
+      auto const edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+      for (auto const& ei : edges) {
+        auto const* e = ei.get(uv);
+        auto const group_routes = uv.pax_connection_info_.group_routes(e->pci_);
+        if (std::find(begin(group_routes), end(group_routes), pgwr) ==
+            end(group_routes)) {
+          std::cout << "!! group route not on edge: pg=" << pg->id_
+                    << ", gr=" << gr.local_group_route_index_ << " @"
+                    << e->type() << "\n";
+          ok = false;
+        }
       }
     }
   }

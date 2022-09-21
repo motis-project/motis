@@ -88,8 +88,6 @@ include "paxmon/PaxMonGetGroupsResponse.fbs";
 include "paxmon/PaxMonStatusRequest.fbs";
 include "paxmon/PaxMonStatusResponse.fbs";
 include "paxmon/PaxMonTripLoadInfo.fbs";
-include "paxmon/PaxMonFilterGroupsRequest.fbs";
-include "paxmon/PaxMonFilterGroupsResponse.fbs";
 include "paxmon/PaxMonFilterTripsRequest.fbs";
 include "paxmon/PaxMonFilterTripsResponse.fbs";
 include "paxmon/PaxMonGetTripLoadInfosRequest.fbs";
@@ -107,6 +105,8 @@ include "paxmon/PaxMonGetAddressableGroupsRequest.fbs";
 include "paxmon/PaxMonGetAddressableGroupsResponse.fbs";
 include "paxmon/PaxMonKeepAliveRequest.fbs";
 include "paxmon/PaxMonKeepAliveResponse.fbs";
+include "paxmon/PaxMonRerouteGroupsRequest.fbs";
+include "paxmon/PaxMonRerouteGroupsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -259,8 +259,6 @@ union MsgContent {
   motis.paxmon.PaxMonStatusResponse                                       = 104,
   motis.paxmon.PaxMonGetGroupsRequest                                     = 105,
   motis.paxmon.PaxMonGetGroupsResponse                                    = 106,
-  motis.paxmon.PaxMonFilterGroupsRequest                                  = 107,
-  motis.paxmon.PaxMonFilterGroupsResponse                                 = 108,
   motis.paxmon.PaxMonFilterTripsRequest                                   = 109,
   motis.paxmon.PaxMonFilterTripsResponse                                  = 110,
   motis.paxmon.PaxMonGetTripLoadInfosRequest                              = 111,
@@ -288,7 +286,9 @@ union MsgContent {
   motis.osrm.OSRMManyToManyResponse                                       = 133,
   motis.gbfs.GBFSProvidersResponse                                        = 134,
   motis.paxmon.PaxMonKeepAliveRequest                                     = 135,
-  motis.paxmon.PaxMonKeepAliveResponse                                    = 136
+  motis.paxmon.PaxMonKeepAliveResponse                                    = 136,
+  motis.paxmon.PaxMonRerouteGroupsRequest                                 = 137,
+  motis.paxmon.PaxMonRerouteGroupsResponse                                = 138
 }
 
 // Destination Examples:

@@ -9,8 +9,8 @@ table PaxForecastAlternative {
   probability: float;
 }
 
-table PaxForecastGroup {
-  group: motis.paxmon.PaxMonGroup;
+table PaxForecastGroupRoute {
+  group_route: motis.paxmon.PaxMonGroupWithRoute;
   localization: motis.paxmon.PaxMonLocalization;
   forecast_alternatives: [PaxForecastAlternative];
 }
@@ -18,6 +18,6 @@ table PaxForecastGroup {
 table PaxForecastUpdate {
   universe: uint;
   system_time: ulong;
-  groups: [PaxForecastGroup];
+  groups: [PaxForecastGroupRoute];
   trips: [motis.paxmon.PaxMonTripLoadInfo];
 }

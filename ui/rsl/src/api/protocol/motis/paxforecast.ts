@@ -2,7 +2,7 @@
 import { TripId } from "@/api/protocol/motis";
 import {
   PaxMonCompactJourney,
-  PaxMonGroup,
+  PaxMonGroupWithRoute,
   PaxMonLocalization,
   PaxMonLocalizationType,
   PaxMonTrackedUpdates,
@@ -122,8 +122,8 @@ export interface PaxForecastAlternative {
 }
 
 // paxforecast/PaxForecastUpdate.fbs
-export interface PaxForecastGroup {
-  group: PaxMonGroup;
+export interface PaxForecastGroupRoute {
+  group_route: PaxMonGroupWithRoute;
   localization_type: PaxMonLocalizationType;
   localization: PaxMonLocalization;
   forecast_alternatives: PaxForecastAlternative[];
@@ -133,6 +133,6 @@ export interface PaxForecastGroup {
 export interface PaxForecastUpdate {
   universe: number;
   system_time: number;
-  groups: PaxForecastGroup[];
+  groups: PaxForecastGroupRoute[];
   trips: PaxMonTripLoadInfo[];
 }

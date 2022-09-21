@@ -103,7 +103,7 @@ inline compact_journey get_suffix(schedule const& sched,
                                   CompactJourney const& cj,
                                   passenger_localization const& loc) {
   if (loc.first_station_) {
-    return cj;
+    return to_compact_journey(cj);
   }
 
   auto suffix = compact_journey{};

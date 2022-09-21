@@ -38,7 +38,7 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
     }
     auto const& additional_groups = entry.second;
     auto pdf = get_load_pdf(uv.passenger_groups_,
-                            uv.pax_connection_info_.groups_[e->pci_]);
+                            uv.pax_connection_info_.group_routes(e->pci_));
     add_additional_groups(pdf, additional_groups);
     auto cdf = get_cdf(pdf);
 
@@ -62,9 +62,9 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
                 if (it != end(edges)) {
                   return it->second;
                 } else {
-                  auto pdf =
-                      get_load_pdf(uv.passenger_groups_,
-                                   uv.pax_connection_info_.groups_[e->pci_]);
+                  auto pdf = get_load_pdf(
+                      uv.passenger_groups_,
+                      uv.pax_connection_info_.group_routes(e->pci_));
                   auto cdf = get_cdf(pdf);
                   return make_edge_load_info(uv, e, std::move(pdf),
                                              std::move(cdf), false);

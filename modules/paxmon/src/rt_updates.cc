@@ -28,7 +28,7 @@ void check_broken_interchanges(
     universe& uv, std::vector<edge_index> const& updated_interchange_edges,
     int arrival_delay_threshold) {
   static std::set<edge*> broken_interchanges;
-  static std::set<passenger_group*> affected_passenger_groups;
+  static std::set<passenger_group_with_route> affected_group_routes;
   for (auto& icei : updated_interchange_edges) {
     auto* ice = icei.get(uv);
     if (ice->type_ != edge_type::INTERCHANGE) {
@@ -46,31 +46,31 @@ void check_broken_interchanges(
       if (broken_interchanges.insert(ice).second) {
         ++uv.system_stats_.total_broken_interchanges_;
       }
-      for (auto pg_id : uv.pax_connection_info_.groups_[ice->pci_]) {
-        auto* grp = uv.passenger_groups_[pg_id];
-        if (affected_passenger_groups.insert(grp).second) {
-          uv.system_stats_.total_affected_passengers_ += grp->passengers_;
-          grp->ok_ = false;
+      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
+        // TODO(groups): affected number of passengers statistics?
+        // uv.system_stats_.total_affected_passengers_ += grp->passengers_;
+        if (affected_group_routes.insert(pgwr).second) {
+          auto& gr = uv.passenger_groups_.route(pgwr);
+          gr.broken_ = true;
+          uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
-        uv.rt_update_ctx_.groups_affected_by_last_update_.insert(grp->id_);
       }
     } else if (ice->broken_) {
       // interchange valid again
       ice->broken_ = false;
-      for (auto pg_id : uv.pax_connection_info_.groups_[ice->pci_]) {
-        auto* grp = uv.passenger_groups_[pg_id];
-        uv.rt_update_ctx_.groups_affected_by_last_update_.insert(grp->id_);
+      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
+        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
       }
     } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
       // check for delayed arrival at destination
       auto const estimated_arrival = static_cast<int>(from->schedule_time());
-      for (auto pg_id : uv.pax_connection_info_.groups_[ice->pci_]) {
-        auto* grp = uv.passenger_groups_[pg_id];
+      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
+        auto const& gr = uv.passenger_groups_.route(pgwr);
         auto const estimated_delay =
-            estimated_arrival - static_cast<int>(grp->planned_arrival_time_);
-        if (grp->planned_arrival_time_ != INVALID_TIME &&
+            estimated_arrival - static_cast<int>(gr.planned_arrival_time_);
+        if (gr.planned_arrival_time_ != INVALID_TIME &&
             estimated_delay >= arrival_delay_threshold) {
-          uv.rt_update_ctx_.groups_affected_by_last_update_.insert(grp->id_);
+          uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
       }
     }
@@ -137,13 +137,13 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
 }
 
 monitoring_event_type get_monitoring_event_type(
-    passenger_group const* pg, reachability_info const& reachability,
+    group_route const& gr, reachability_info const& reachability,
     int const arrival_delay_threshold) {
   if (!reachability.ok_) {
     return monitoring_event_type::TRANSFER_BROKEN;
   } else if (arrival_delay_threshold >= 0 &&
-             pg->planned_arrival_time_ != INVALID_TIME &&
-             pg->estimated_delay() >= arrival_delay_threshold) {
+             gr.planned_arrival_time_ != INVALID_TIME &&
+             gr.estimated_delay_ >= arrival_delay_threshold) {
     return monitoring_event_type::MAJOR_DELAY_EXPECTED;
   } else {
     return monitoring_event_type::NO_PROBLEM;
@@ -164,15 +164,19 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
 
   uv.tick_stats_.system_time_ = sched.system_time_;
 
-  auto const affected_passenger_count =
+  // TODO(groups): only count each group once
+  auto const affected_passenger_count = 0;
+  /*
       std::accumulate(begin(uv.rt_update_ctx_.groups_affected_by_last_update_),
                       end(uv.rt_update_ctx_.groups_affected_by_last_update_),
                       0ULL, [&](auto const sum, auto const pgi) {
                         return sum + uv.passenger_groups_.at(pgi)->passengers_;
                       });
+  */
 
+  // TODO(groups): update statistics
   uv.tick_stats_.affected_groups_ =
-      uv.rt_update_ctx_.groups_affected_by_last_update_.size();
+      uv.rt_update_ctx_.group_routes_affected_by_last_update_.size();
   uv.tick_stats_.affected_passengers_ = affected_passenger_count;
 
   message_creator mc;
@@ -211,17 +215,18 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
   };
 
   motis_parallel_for(
-      uv.rt_update_ctx_.groups_affected_by_last_update_, [&](auto const pgi) {
-        auto const& pg = uv.passenger_groups_.at(pgi);
+      uv.rt_update_ctx_.group_routes_affected_by_last_update_,
+      [&](auto const& pgwr) {
+        auto& gr = uv.passenger_groups_.route(pgwr);
+        auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
         MOTIS_START_TIMING(reachability);
-        auto const reachability =
-            get_reachability(uv, pg->compact_planned_journey_);
-        pg->ok_ = reachability.ok_;
+        auto const reachability = get_reachability(uv, cj);
+        gr.broken_ = !reachability.ok_;
         if (reachability.ok_) {
-          pg->estimated_delay_ = static_cast<std::int16_t>(
+          gr.estimated_delay_ = static_cast<std::int16_t>(
               static_cast<int>(
                   reachability.reachable_trips_.back().exit_real_time_) -
-              static_cast<int>(pg->planned_arrival_time_));
+              static_cast<int>(gr.planned_arrival_time_));
         }
         MOTIS_STOP_TIMING(reachability);
 
@@ -230,21 +235,22 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
         MOTIS_STOP_TIMING(localization);
 
         auto const event_type = get_monitoring_event_type(
-            pg, reachability, arrival_delay_threshold);
+            gr, reachability, arrival_delay_threshold);
         auto const expected_arrival_time =
             event_type == monitoring_event_type::TRANSFER_BROKEN
                 ? INVALID_TIME
                 : reachability.reachable_trips_.back().exit_real_time_;
 
         MOTIS_START_TIMING(update_load);
-        update_load(pg, reachability, localization, uv);
+        // update_load needs synchronization!
+        std::lock_guard guard{update_mutex};
+        update_load(pgwr, reachability, localization, uv);
         MOTIS_STOP_TIMING(update_load);
 
         MOTIS_START_TIMING(fbs_events);
-        std::lock_guard guard{update_mutex};
         fbs_events.emplace_back(to_fbs(
-            sched, mc,
-            monitoring_event{event_type, *pg, localization,
+            sched, uv.passenger_groups_, mc,
+            monitoring_event{event_type, pgwr, localization,
                              reachability.status_, expected_arrival_time}));
         if (fbs_events.size() >= 10'000) {
           make_monitoring_msg();
@@ -260,6 +266,7 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
           print_timing();
         }
 
+        auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
         switch (event_type) {
           case monitoring_event_type::NO_PROBLEM:
             ++uv.tick_stats_.ok_groups_;
@@ -268,12 +275,12 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
           case monitoring_event_type::TRANSFER_BROKEN:
             ++uv.tick_stats_.broken_groups_;
             ++uv.system_stats_.groups_broken_count_;
-            uv.tick_stats_.broken_passengers_ += pg->passengers_;
+            uv.tick_stats_.broken_passengers_ += pg.passengers_;
             break;
           case monitoring_event_type::MAJOR_DELAY_EXPECTED:
             ++uv.tick_stats_.major_delay_groups_;
             ++uv.system_stats_.groups_major_delay_count_;
-            uv.tick_stats_.major_delay_passengers_ += pg->passengers_;
+            uv.tick_stats_.major_delay_passengers_ += pg.passengers_;
             break;
         }
       });

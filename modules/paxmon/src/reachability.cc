@@ -8,19 +8,19 @@
 namespace motis::paxmon {
 
 reachability_info get_reachability(universe const& uv,
-                                   compact_journey const& j) {
-  utl::verify(!j.legs_.empty(), "empty journey");
-
+                                   fws_compact_journey const& j) {
   auto reachability = reachability_info{};
   auto ok = true;
-  auto const& first_leg = j.legs_.front();
+  auto const legs = j.legs();
+  utl::verify(!legs.empty(), "empty journey");
+  auto const& first_leg = legs.front();
   auto station_arrival_time = first_leg.enter_time_;
 
   reachability.reachable_interchange_stations_.emplace_back(
       reachable_station{first_leg.enter_station_id_, first_leg.enter_time_,
                         first_leg.enter_time_});
 
-  for (auto const& [leg_idx, leg] : utl::enumerate(j.legs_)) {
+  for (auto const& [leg_idx, leg] : utl::enumerate(legs)) {
     auto const tdi = uv.trip_data_.get_index(leg.trip_idx_);
     auto in_trip = false;
     auto entry_ok = false;
@@ -42,7 +42,7 @@ reachability_info get_reachability(universe const& uv,
           }
           in_trip = true;
           reachability.reachable_trips_.emplace_back(
-              reachable_trip{leg.trip_idx_, tdi, &leg, from->schedule_time(),
+              reachable_trip{leg.trip_idx_, tdi, leg, from->schedule_time(),
                              INVALID_TIME, from->current_time(), INVALID_TIME,
                              edge_idx, reachable_trip::INVALID_INDEX});
           entry_ok = true;
@@ -78,7 +78,7 @@ reachability_info get_reachability(universe const& uv,
     }
     if (!ok) {
       auto const is_first_leg = leg_idx == 0;
-      auto const is_last_leg = leg_idx == j.legs_.size() - 1;
+      auto const is_last_leg = leg_idx == legs.size() - 1;
       if (!entry_ok) {
         if (is_first_leg) {
           reachability.status_ = reachability_status::BROKEN_INITIAL_ENTRY;

@@ -8,9 +8,13 @@
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/paxmon/group_route.h"
 #include "motis/paxmon/load_info.h"
 #include "motis/paxmon/monitoring_event.h"
+#include "motis/paxmon/passenger_group.h"
+#include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/service_info.h"
+#include "motis/paxmon/temp_passenger_group.h"
 #include "motis/paxmon/universe.h"
 
 #include "motis/module/message.h"
@@ -21,6 +25,10 @@ flatbuffers::Offset<PaxMonCompactJourney> to_fbs(
     schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
     compact_journey const& cj);
 
+flatbuffers::Offset<PaxMonCompactJourney> to_fbs(
+    schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
+    fws_compact_journey const& cj);
+
 compact_journey from_fbs(schedule const& sched, PaxMonCompactJourney const* cj);
 
 flatbuffers::Offset<PaxMonDataSource> to_fbs(
@@ -28,14 +36,43 @@ flatbuffers::Offset<PaxMonDataSource> to_fbs(
 
 data_source from_fbs(PaxMonDataSource const* ds);
 
+flatbuffers::Offset<PaxMonGroupRoute> to_fbs(
+    schedule const& sched, passenger_group_container const& pgc,
+    flatbuffers::FlatBufferBuilder& fbb, group_route const& gr);
+
+flatbuffers::Offset<PaxMonGroupRoute> to_fbs(
+    schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
+    temp_group_route const& tgr);
+
+temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr);
+
 flatbuffers::Offset<PaxMonGroup> to_fbs(schedule const& sched,
+                                        passenger_group_container const& pgc,
                                         flatbuffers::FlatBufferBuilder& fbb,
                                         passenger_group const& pg);
 
-passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg);
+temp_passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg);
 
-PaxMonGroupBaseInfo to_fbs_base_info(flatbuffers::FlatBufferBuilder& fbb,
-                                     passenger_group const& pg);
+flatbuffers::Offset<PaxMonGroupWithRoute> to_fbs(
+    schedule const& sched, passenger_group_container const& pgc,
+    flatbuffers::FlatBufferBuilder& fbb,
+    passenger_group_with_route const& pgwr);
+
+flatbuffers::Offset<PaxMonGroupWithRoute> to_fbs(
+    schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
+    temp_passenger_group_with_route const& tpgr);
+
+temp_passenger_group_with_route from_fbs(schedule const& sched,
+                                         PaxMonGroupWithRoute const* pgwr);
+
+PaxMonGroupRouteBaseInfo to_fbs_base_info(
+    flatbuffers::FlatBufferBuilder& /*fbb*/, passenger_group const& pg,
+    group_route const& gr);
+
+PaxMonGroupRouteBaseInfo to_fbs_base_info(
+    flatbuffers::FlatBufferBuilder& /*fbb*/,
+    passenger_group_container const& pgc,
+    passenger_group_with_route const& pgwr);
 
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 
@@ -55,6 +92,7 @@ passenger_localization from_fbs(schedule const& sched,
                                 PaxMonLocalizationWrapper const* loc_wrapper);
 
 flatbuffers::Offset<PaxMonEvent> to_fbs(schedule const& sched,
+                                        passenger_group_container const& pgc,
                                         flatbuffers::FlatBufferBuilder& fbb,
                                         monitoring_event const& me);
 

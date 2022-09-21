@@ -41,17 +41,4 @@ compact_journey to_compact_journey(journey const& j, schedule const& sched) {
   return cj;
 }
 
-fws_compact_journey to_fws_compact_journey(
-    journey const& j, schedule const& sched,
-    dynamic_fws_multimap<journey_leg>& fws) {
-  auto bucket = fws.emplace_back();
-
-  journey_to_cj_legs(j, sched,
-                     [&](journey_leg&& leg) { bucket.emplace_back(leg); });
-
-  utl::verify(!bucket.empty(), "to_fws_compact_journey: empty journey");
-
-  return {bucket};
-}
-
 }  // namespace motis::paxmon
