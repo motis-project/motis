@@ -185,7 +185,8 @@ void update_tracked_groups(
     simulation_result const& sim_result,
     std::map<passenger_group_with_route, monitoring_event_type> const&
         pgwr_event_types,
-    tick_statistics& tick_stats) {
+    tick_statistics& tick_stats,
+    reroute_reason_t const default_reroute_reason) {
   using namespace flatbuffers;
 
   auto const system_time =
@@ -215,11 +216,10 @@ void update_tracked_groups(
       continue;
     }
 
-    auto event_type = monitoring_event_type::NO_PROBLEM;
-    // TODO(groups): check if missing event type is even possible/allowed
+    auto reroute_reason = default_reroute_reason;
     if (auto const it = pgwr_event_types.find(pgwr);
         it != end(pgwr_event_types)) {
-      event_type = it->second;
+      reroute_reason = to_reroute_reason(it->second);
     }
 
     auto const& gr = uv.passenger_groups_.route(pgwr);
@@ -276,7 +276,7 @@ void update_tracked_groups(
 
     reroutes.emplace_back(CreatePaxMonRerouteGroup(
         mc, pgwr.pg_, pgwr.route_, mc.CreateVector(new_routes),
-        static_cast<PaxMonRerouteReason>(to_reroute_reason(event_type))));
+        static_cast<PaxMonRerouteReason>(reroute_reason)));
 
     if (reroutes.size() >= REROUTE_BATCH_SIZE) {
       send_reroutes();
@@ -575,7 +575,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   MOTIS_START_TIMING(update_tracked_groups);
   scoped_timer update_tracked_groups_timer{"update tracked groups"};
-  update_tracked_groups(sched, uv, sim_result, pgwr_event_types, tick_stats);
+  update_tracked_groups(sched, uv, sim_result, pgwr_event_types, tick_stats,
+                        reroute_reason_t::REVERT_FORECAST);
   MOTIS_STOP_TIMING(update_tracked_groups);
   tick_stats.t_update_tracked_groups_ = MOTIS_TIMING_MS(update_tracked_groups);
 
@@ -768,7 +769,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
 
     manual_timer update_groups_timer{"update groups"};
     tick_statistics tick_stats;
-    update_tracked_groups(sched, uv, sim_result, {}, tick_stats);
+    update_tracked_groups(sched, uv, sim_result, {}, tick_stats,
+                          reroute_reason_t::SIMULATION);
     update_groups_timer.stop_and_print();
     t_update_groups += update_groups_timer.duration_ms();
   }
