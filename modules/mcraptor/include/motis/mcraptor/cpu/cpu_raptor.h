@@ -12,12 +12,15 @@ template <class T, class L>
 struct mc_raptor {
 
   mc_raptor(raptor_query<L> const& q) : query_(q),
+                                        source_time_begin_(q.source_time_begin_),
                                     result_(q.result()),
                                     route_labels_(q.tt_.stop_count()),
                                     transfer_labels_(q.tt_.stop_count()),
                                     stops_for_transfers_(* new cpu_mark_store(q.tt_.stop_count())),
                                     stops_for_routes_(* new cpu_mark_store(q.tt_.stop_count())),
                                     round_(-1) {};
+
+  void set_query_source_time(time other_time);
 
   void invoke_cpu_raptor();
 
@@ -34,11 +37,13 @@ struct mc_raptor {
 
   inline std::vector<std::pair<route_id, route_stops_index>> get_routes_times_for_stop(stop_id stop);
 
-  //static derived methods
+  void reset();
 
+  //static derived methods
 
   //fields
   raptor_query<L> const& query_;
+  time source_time_begin_;
   rounds<L>& result_;
   int round_;
 

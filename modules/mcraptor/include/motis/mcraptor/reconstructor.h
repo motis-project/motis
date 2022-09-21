@@ -92,7 +92,7 @@ struct intermediate_journey {
 
       // we is_exit at the last station -> d_time is invalid
       if (!valid(d_time) || s_offset == exit_offset) {
-        if (transports_.empty() || transports_.back().is_walk()) {
+        if (transports_.empty() || transports_.back().is_walk() || transports_.back().mumo_id_ == -1) {
           d_time = a_time;
         } else {
           d_time = transports_.back().con_->d_time_;
@@ -100,7 +100,7 @@ struct intermediate_journey {
       }
 
       auto const& get_d_track = [&](auto&& lcon) {
-        if (transports_.empty() || transports_.back().is_walk()) {
+        if (transports_.empty() || transports_.back().is_walk() || transports_.back().mumo_id_ == -1) {
           return lcon->full_con_->d_track_;
         } else {
           return transports_.back().con_->full_con_->d_track_;
@@ -325,8 +325,8 @@ struct reconstructor {
         stop_id parent_station = current_station_label.parent_station_;
         time last_departure = invalid<time>;
         while (r_k > 0) {
-          if (r_k % 2 == 0) {
-            if (current_station_label.footpath_duration_ == invalid<time>) {
+          if (r_k > 1) {
+            if (r_k % 2 == 0 && current_station_label.route_id_) {
               last_departure =
                   ij.add_route(parent_station, current_station_label.route_id_,
                                current_station_label.current_trip_id_,
@@ -359,7 +359,17 @@ struct reconstructor {
         } else {
           ij.add_start_station(current_station, raptor_sched_, last_departure);
         }
+
+        /*if(std::find_if(journeys_.begin(), journeys_.end(), [&ij](intermediate_journey j) {
+              return j.get_arrival() == ij.get_arrival() &&
+                     j.get_departure() == ij.get_departure() &&
+                     j.get_duration() == ij.get_duration();
+            } ) == journeys_.end()) {
+          journeys_.push_back(ij);
+        }*/
+
         journeys_.push_back(ij);
+
       }
     }
   }

@@ -39,20 +39,6 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
                                        MCRaptor raptor) {
   reconstructor reconstructor(sched, raptor_sched, timetable);
 
-  if (q.ontrip_) {
-    stats.raptor_queries_ = 1;
-
-    MOTIS_START_TIMING(raptor_time);
-    raptor.invoke_cpu_raptor();
-    stats.raptor_time_ = MOTIS_GET_TIMING_MS(raptor_time);
-
-    MOTIS_START_TIMING(rec_timing);
-    reconstructor.add(q);
-    stats.rec_time_ = MOTIS_GET_TIMING_US(rec_timing);
-
-    return reconstructor.get_journeys();
-  }
-
   // Get departure range before we do the +1 query
   auto const& dep_events = q.use_start_metas_
                                ? raptor_sched.departure_events_with_metas_
@@ -61,8 +47,9 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
       q.source_time_begin_, q.source_time_end_, dep_events[q.source_]);
 
   stats.raptor_queries_ += 1;
-  q.source_time_begin_ = q.source_time_end_ + 1;
+  /*q.source_time_begin_ = q.source_time_end_ + 1;*/
   MOTIS_START_TIMING(plus_one_time);
+  raptor.set_query_source_time(q.source_time_end_ + 1);
   raptor.invoke_cpu_raptor();
   stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
 
@@ -70,18 +57,25 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
   reconstructor.add(q);
   stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
 
-//  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
-//    stats.raptor_queries_ += 1;
-//    q.source_time_begin_ = dep_events[q.source_][dep_idx];
-//
-//    MOTIS_START_TIMING(raptor_time);
-//    raptor_search(q);
-//    stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
-//
-//    MOTIS_START_TIMING(rec_timing);
-//    reconstructor.add(q);
-//    stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
-//  }
+  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
+    raptor.reset();
+    stats.raptor_queries_ += 1;
+    time new_query_time = dep_events[q.source_][dep_idx];
+    q.source_time_begin_ = new_query_time;
+
+    MOTIS_START_TIMING(raptor_time);
+    raptor.set_query_source_time(new_query_time);
+    raptor.invoke_cpu_raptor();
+    stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
+
+    MOTIS_START_TIMING(rec_timing);
+    reconstructor.add(q);
+    stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
+  }
+
+  /*std::cout << "Lower" << lower * 60 + sched.schedule_begin_;
+  std::cout << "\nUpper" << upper * 60 + sched.schedule_begin_ << "\n";
+  std::cout << stats.raptor_queries_ << "\n";*/
 
   //return reconstructor.get_journeys(q.source_time_end_);
   return reconstructor.get_journeys();

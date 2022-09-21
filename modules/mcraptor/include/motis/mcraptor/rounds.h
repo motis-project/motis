@@ -39,7 +39,7 @@ public:
     size_t const number_of_entries = byte_size() / sizeof(bag<L>);
     //    std::fill(bags, bags + number_of_entries, Bag());
     for(int i = 0; i < number_of_entries; ++i) {
-      bags_[i] = bag<L>();
+      bags_[i].labels_.clear();
     }
   }
 

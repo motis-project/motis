@@ -148,7 +148,7 @@ void mc_raptor<T, L>::start_new_round() {
 
   //test output
 
-  std::cout << std::endl << std::endl << std::endl << "Round: " << round_ - 2 << std::endl;
+  /*std::cout << std::endl << std::endl << std::endl << "Round: " << round_ - 2 << std::endl;
 
   int r_k = round_ - 2;
   if(r_k >= 0) {
@@ -166,7 +166,7 @@ void mc_raptor<T, L>::start_new_round() {
         r_k--;
       }
     }
-  }
+  }*/
 }
 
 // searches through all routes in station
@@ -196,11 +196,27 @@ inline std::vector<std::pair<route_id, route_stops_index>> mc_raptor<T, L>::get_
 }
 
 template <class T, class L>
+void mc_raptor<T, L>::set_query_source_time(time other_time) {
+  source_time_begin_ = other_time;
+}
+
+template <class T, class L>
+void mc_raptor<T, L>::reset() {
+  round_ = -1;
+  //route_labels_.resize(0);
+  //route_labels_.resize(query_.tt_.stop_count());
+  //transfer_labels_.resize(0);
+  //transfer_labels_.resize(query_.tt_.stop_count());
+  //routes_serving_updated_stops_.clear();
+  stops_for_routes_.reset();
+  stops_for_transfers_.reset();
+  result_.reset();
+}
+
+template <class T, class L>
 void mc_raptor<T, L>::invoke_cpu_raptor() {
-  std::cout << "Target: " << query_.target_ << std::endl;
-  std::cout << "Source: " << query_.source_ << std::endl;
-
-
+  /*std::cout << "Target: " << query_.target_ << std::endl;
+  std::cout << "Source: " << query_.source_ << std::endl;*/
 
   init_arrivals();
   relax_transfers();
@@ -209,15 +225,13 @@ void mc_raptor<T, L>::invoke_cpu_raptor() {
     start_new_round();
     collect_routes_serving_updated_stops();
     scan_routes();
-    // TODO: check if there no marks true
+    // TODO: check if there are no marks true
     if(stops_for_routes_.no_marked_stops()) {
       break;
     }
     start_new_round();
     relax_transfers();
   }
-
-
 }
 
 
@@ -229,18 +243,18 @@ void mc_raptor_departure::init_arrivals() {
   if (query_.source_ == 0) {
     for (raptor_edge edge : query_.raptor_edges_start_) {
       // std::cout << "EDGE from: " << edge.from_ << "; to: " << edge.to_ << "; time: " << edge.time_ << std::endl;
-      time edge_to_time = query_.source_time_begin_ + edge.duration_;
+      time edge_to_time = source_time_begin_ + edge.duration_;
       label_departure new_label(0, edge_to_time, round_);
       new_label.parent_station_ = edge.to_;
       arrival_by_route(edge.to_, new_label);
     }
   } else {
-    label_departure new_label(0, query_.source_time_begin_, round_);
+    label_departure new_label(0, source_time_begin_, round_);
     new_label.parent_station_ = query_.source_;
     arrival_by_route(query_.source_, new_label);
 
     for (auto const& add_start : query_.add_starts_) {
-      time add_start_time = query_.source_time_begin_ + add_start.offset_;
+      time add_start_time = source_time_begin_ + add_start.offset_;
       new_label = label_departure(0, add_start_time, round_);
       new_label.parent_station_ = add_start.s_id_;
       // std::cout << "Add start: " << add_start.s_id_ << std::endl;
