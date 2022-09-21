@@ -29,6 +29,7 @@ struct statistics {
   uint64_t labels_equals_popped_{};
   uint64_t travel_time_lb_{};
   uint64_t transfers_lb_{};
+  uint64_t ondemand_weighted_lb_{};
   uint64_t price_l_b_{};
   uint64_t total_calculation_time_{};
   uint64_t pareto_dijkstra_{};
@@ -70,6 +71,7 @@ struct statistics {
     add_entry("total_calculation_time", s.total_calculation_time_);
     add_entry("transfers_lb", s.transfers_lb_);
     add_entry("travel_time_lb", s.travel_time_lb_);
+    add_entry("ondemand_weighted_lb", s.ondemand_weighted_lb_);
     add_entry("interval_extensions", s.interval_extensions_);
 
     return CreateStatistics(fbb, fbb.CreateString(category),
@@ -102,6 +104,7 @@ struct statistics {
          {"total_calculation_time", s.total_calculation_time_},
          {"transfers_lb", s.transfers_lb_},
          {"travel_time_lb", s.travel_time_lb_},
+         {"ondemand_weighted_lb", s.ondemand_weighted_lb_},
          {"interval_extensions", s.interval_extensions_}}};
   }
 };

@@ -17,6 +17,7 @@ struct statistics {
   uint64_t ondemand_server_first_inquery_{};
   uint64_t ondemand_server_second_inquery_{};
   uint64_t ondemand_remove_not_available_{};
+  uint64_t ondemand_removed_journeys_{};
 };
 
 inline stats_category to_stats_category(char const* name, statistics const& s) {
@@ -33,7 +34,8 @@ inline stats_category to_stats_category(char const* name, statistics const& s) {
        //{"ondemand_duration", s.ondemand_duration_},
        {"ondemand_server_first_inquery", s.ondemand_server_first_inquery_},
        {"ondemand_server_second_inquery", s.ondemand_server_second_inquery_},
-       {"ondemand_remove_not_available", s.ondemand_remove_not_available_}}};
+       {"ondemand_remove_not_available", s.ondemand_remove_not_available_},
+       {"ondemand_removed_journeys", s.ondemand_removed_journeys_}}};
 }
 
 }  // namespace motis::intermodal
