@@ -252,16 +252,12 @@ TEST(paxmon_get_load, base_eq_avx) {
 
     ASSERT_THAT(pdf_avx.data_, Pointwise(FloatNear(1E-5F), pdf_base.data_));
 
-    auto add_pgs = std::vector<passenger_group>{};
-    auto add_grps = std::vector<std::pair<passenger_group const*, float>>{};
+    auto add_grps = std::vector<additional_group>{};
     auto const add_group_count = add_group_count_dist(gen);
-    add_pgs.reserve(add_group_count);
     add_grps.reserve(add_group_count);
     for (auto grp = 0; grp < add_group_count; ++grp) {
       auto const prob = prob_dist(gen);
-      auto const& pg =
-          add_pgs.emplace_back(make_passenger_group({}, get_group_size()));
-      add_grps.emplace_back(&pg, prob);
+      add_grps.emplace_back(additional_group{get_group_size(), prob});
     }
 
     add_additional_groups_base(pdf_base, add_grps);
