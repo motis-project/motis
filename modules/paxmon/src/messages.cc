@@ -1,8 +1,5 @@
 #include "motis/paxmon/messages.h"
 
-#include <cassert>
-#include <algorithm>
-
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -177,8 +174,7 @@ Offset<PaxMonGroupWithRoute> to_fbs(schedule const& sched,
 }
 
 Offset<PaxMonGroupWithRoute> to_fbs(
-    schedule const& sched, FlatBufferBuilder& fbb,
-    temp_passenger_group_with_route const& tpgr) {
+    FlatBufferBuilder& fbb, temp_passenger_group_with_route const& tpgr) {
   return CreatePaxMonGroupWithRoute(
       fbb, tpgr.group_id_, to_fbs(fbb, tpgr.source_), tpgr.passengers_);
 }
