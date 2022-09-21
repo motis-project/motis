@@ -189,9 +189,6 @@ void update_tracked_groups(
     reroute_reason_t const default_reroute_reason) {
   using namespace flatbuffers;
 
-  auto const system_time =
-      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-
   message_creator mc;
   auto reroutes = std::vector<Offset<PaxMonRerouteGroup>>{};
 
@@ -291,6 +288,7 @@ void update_tracked_groups(
             << add_group_count;
   tick_stats.added_groups_ += add_group_count;
    */
+  (void)tick_stats;
 }
 
 bool has_better_alternative(std::vector<alternative> const& alts,
