@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
       - name: Install RSL Web Interface Dependencies
@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
             buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
             buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-
@@ -216,7 +216,7 @@ jobs:
             skipui: true
           - preset: linux-debug
             skipui: true
-            emulator: valgrind
+            emulator: valgrind --error-exitcode=1
     env:
       BUILDCACHE_DIR: /buildcache
       BUILDCACHE_DIRECT_MODE: true
