@@ -8,11 +8,6 @@
 
 namespace motis::nigiri {
 
-struct config {
-  std::vector<std::string> timetables_;
-  bool cache_timetable_{true};
-};
-
 struct nigiri : public motis::module::module {
   nigiri();
   ~nigiri() override;
@@ -32,7 +27,7 @@ private:
 
   struct impl;
   std::unique_ptr<impl> impl_;
-  config config_;
+  bool no_cache_{false};
 };
 
 }  // namespace motis::nigiri

@@ -205,6 +205,8 @@ int xtract(int argc, char const** argv) {
       }
     }
     for (auto const& fp : footpaths) {
+      std::cout << "footpath: " << fp.from_id_ << " --" << fp.duration_
+                << "--> " << fp.to_id_ << "\n";
       meta_bhf_out << fp.from_id_ << " " << fp.to_id_ << " " << std::setw(3)
                    << std::setfill('0') << fp.duration_ << "\n";
     }

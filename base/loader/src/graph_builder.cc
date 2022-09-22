@@ -108,7 +108,7 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
               s->trip_id() == nullptr ? "" : s->trip_id()->str(), nullptr, 0U,
               static_cast<trip_idx_t>(sched_.trip_mem_.size()),
               s->debug() == nullptr
-                  ? trip_debug{}
+                  ? trip_debug{nullptr, 0, 0}
                   : trip_debug{utl::get_or_create(
                                    filenames_, s->debug()->file(),
                                    [&]() {

@@ -25,7 +25,9 @@ struct nigiri::impl {
   std::vector<std::string> tags_;
 };
 
-nigiri::nigiri() : module("Next Generation Routing", "nigiri") {}
+nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
+  param(no_cache_, "no_cache", "disable timetable caching");
+}
 
 nigiri::~nigiri() = default;
 
@@ -73,7 +75,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         auto const dir = get_data_directory() / "nigiri";
         auto const dump_file_path = dir / fmt::to_string(h);
-        if (std::filesystem::is_regular_file(dump_file_path)) {
+        if (!no_cache_ && std::filesystem::is_regular_file(dump_file_path)) {
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               n::timetable::read(cista::memory_holder{cista::buf<cista::mmap>{
                   cista::mmap{dump_file_path.string().c_str(),
@@ -86,8 +88,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                                << c->version_.view();
             n::loader::hrd::load_timetable(s, *c, *d, **impl_->tt_);
           }
-          std::filesystem::create_directories(dir);
-          (*impl_->tt_)->write(dump_file_path);
+
+          if (!no_cache_) {
+            std::filesystem::create_directories(dir);
+            (*impl_->tt_)->write(dump_file_path);
+          }
         }
 
         import_successful_ = true;

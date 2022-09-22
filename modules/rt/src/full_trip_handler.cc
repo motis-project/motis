@@ -500,7 +500,7 @@ private:
                 .emplace_back(mcd::make_unique<trip>(
                     ftid, "", edges, lcon_idx,
                     static_cast<trip_idx_t>(sched_.trip_mem_.size()),
-                    trip_debug{}))
+                    trip_debug{nullptr, 0, 0}))
                 .get();
 
       auto const trp_entry =

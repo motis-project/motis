@@ -43,6 +43,7 @@ struct pareto_dijkstra {
 
   void add_start_labels(std::vector<Label*> const& start_labels) {
     for (auto const& l : start_labels) {
+      std::cout << "ADDING START LABEL: " << l->get_node()->id_ << "\n";
       if (!l->is_filtered()) {
         node_labels_[l->get_node()->id_].emplace_back(l);
         queue_.push(l);

@@ -6,6 +6,8 @@
 
 #include "motis/core/common/timing.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/validate_graph.h"
+#include "motis/core/journey/print_trip.h"
 #include "motis/routing/lower_bounds.h"
 #include "motis/routing/output/labels_to_journey.h"
 #include "motis/routing/pareto_dijkstra.h"
@@ -102,7 +104,14 @@ struct search {
     lbs.travel_time_.run();
     MOTIS_STOP_TIMING(travel_time_lb_timing);
 
-    if (!lbs.travel_time_.is_reachable(lbs.travel_time_[q.from_])) {
+    auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
+    if (!lbs.travel_time_.is_reachable(lbs.travel_time_[q.from_]) &&
+        (!q.use_start_metas_ ||
+         std::none_of(
+             begin(meta_froms), end(meta_froms), [&](station const* meta) {
+               auto const* sn = q.sched_->station_nodes_.at(meta->index_).get();
+               return lbs.travel_time_.is_reachable(lbs.travel_time_[sn]);
+             }))) {
       return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
     }
 
@@ -129,7 +138,6 @@ struct search {
       }
       meta_edges.push_back(start_edge);
     } else {
-      auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
       if (q.use_start_metas_ &&
           std::all_of(begin(meta_froms), end(meta_froms),
                       [&lbs, &q](station const* s) {
