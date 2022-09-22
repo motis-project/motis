@@ -59,7 +59,13 @@ graph_statistics calc_graph_statistics(schedule const& sched,
       continue;
     }
     stats.passengers_ += pg->passengers_;
-    // TODO(groups): stats.broken_passenger_groups_
+    auto routes = uv.passenger_groups_.routes(pg->id_);
+    stats.passenger_group_routes_ += routes.size();
+    for (auto const& gr : routes) {
+      if (gr.broken_) {
+        ++stats.broken_passenger_group_routes_;
+      }
+    }
   }
 
   return stats;

@@ -776,15 +776,11 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   t_update_tracker = update_tracker_timer.duration_ms();
 
   auto const paxmon_tick_stats = uv.update_tracker_.get_tick_statistics();
-  auto groups_broken = 0ULL;
-  auto pax_broken = 0ULL;
-  auto groups_with_major_delay = 0ULL;
-  auto pax_with_major_delay = 0ULL;
+  auto group_routes_broken = 0ULL;
+  auto group_routes_with_major_delay = 0ULL;
   for (auto const& pmts : paxmon_tick_stats) {
-    groups_broken += pmts.broken_groups_;
-    pax_broken += pmts.broken_passengers_;
-    groups_with_major_delay += pmts.major_delay_groups_;
-    pax_with_major_delay += pmts.major_delay_passengers_;
+    group_routes_broken += pmts.broken_group_routes_;
+    group_routes_with_major_delay += pmts.major_delay_group_routes_;
   }
 
   mc.create_and_finish(
@@ -794,8 +790,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
           CreatePaxForecastApplyMeasuresStatistics(
               mc, measure_time_points, total_measures_applied,
               total_affected_groups, total_alternative_routings,
-              total_alternatives_found, groups_broken, pax_broken,
-              groups_with_major_delay, pax_with_major_delay, t_rt_updates,
+              total_alternatives_found, group_routes_broken,
+              group_routes_with_major_delay, t_rt_updates,
               t_get_affected_groups, t_find_alternatives,
               t_add_alternatives_to_graph, t_behavior_simulation,
               t_update_groups, t_update_tracker),

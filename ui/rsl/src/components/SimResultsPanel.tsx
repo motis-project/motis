@@ -188,8 +188,8 @@ function SimResultDetails({
             Angebotsbeeinflussende Maßnahmen
           </div>
           <div className="ml-3">
-            {`Reisendengruppen mit gebrochenen Reiseketten: ${formatNumber(
-              r.stats.groups_broken
+            {`Gebrochene Reiseketten: ${formatNumber(
+              r.stats.group_routes_broken
             )}`}
           </div>
         </div>

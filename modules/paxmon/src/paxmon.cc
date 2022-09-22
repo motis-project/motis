@@ -600,14 +600,15 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
   }
 
   if (write_mcfp_scenarios_ &&
-      uv.tick_stats_.broken_groups_ >= mcfp_scenario_min_broken_groups_) {
+      uv.tick_stats_.broken_group_routes_ >= mcfp_scenario_min_broken_groups_) {
     auto const dir =
         fs::path{mcfp_scenario_dir_} /
         fs::path{fmt::format(
             "{}_{}", format_unix_time(sched.system_time_, "%Y-%m-%d_%H-%M"),
-            uv.tick_stats_.broken_groups_)};
-    LOG(info) << "writing MCFP scenario with " << uv.tick_stats_.broken_groups_
-              << " broken groups to " << dir.string();
+            uv.tick_stats_.broken_group_routes_)};
+    LOG(info) << "writing MCFP scenario with "
+              << uv.tick_stats_.broken_group_routes_
+              << " broken group routes to " << dir.string();
     fs::create_directories(dir);
     output::write_scenario(dir, sched, data_.capacity_maps_, uv, messages,
                            mcfp_scenario_include_trip_info_);
@@ -623,27 +624,13 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
   uv.tick_stats_.t_publish_ =
       static_cast<std::uint64_t>(MOTIS_TIMING_MS(publish));
 
-  uv.tick_stats_.total_ok_groups_ = uv.system_stats_.groups_ok_count_;
-  uv.tick_stats_.total_broken_groups_ = uv.system_stats_.groups_broken_count_;
-  uv.tick_stats_.total_major_delay_groups_ =
-      uv.system_stats_.groups_major_delay_count_;
-
   LOG(info) << "affected by last rt update: "
             << uv.rt_update_ctx_.group_routes_affected_by_last_update_.size()
-            << " passenger groups routes";
+            << " passenger group routes";
 
   uv.rt_update_ctx_.group_routes_affected_by_last_update_.clear();
-  // TODO(groups): update statistics
-  LOG(info) << "passenger groups: " << uv.tick_stats_.ok_groups_ << " ok, "
-            << uv.tick_stats_.broken_groups_
-            << " broken - passengers affected by broken groups: "
-            << uv.tick_stats_.broken_passengers_;
-  LOG(info) << "groups: " << uv.system_stats_.groups_ok_count_ << " ok + "
-            << uv.system_stats_.groups_broken_count_ << " broken";
-
-  // TODO(groups): update:
-  // uv.tick_stats_.tracked_ok_groups_
-  // uv.tick_stats_.tracked_broken_groups_
+  LOG(info) << "passenger group routes: " << uv.tick_stats_.ok_group_routes_
+            << " ok, " << uv.tick_stats_.broken_group_routes_ << " broken";
 
   MOTIS_STOP_TIMING(total);
   uv.tick_stats_.t_rt_updates_applied_total_ =

@@ -52,11 +52,6 @@ struct update_tracker::impl {
 
   struct updated_trip_info {
     Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> before_edges_{};
-    /*
-    mcd::hash_set<passenger_group_index> added_groups_;
-    mcd::hash_set<passenger_group_index> removed_groups_;
-    mcd::hash_set<passenger_group_index> reused_groups_;
-    */
     mcd::hash_set<passenger_group_with_route> updated_group_routes_;
     critical_trip_info before_cti_;
     critical_trip_info after_cti_;
@@ -161,8 +156,7 @@ struct update_tracker::impl {
               });
 
     auto const fb_updates = CreatePaxMonTrackedUpdates(
-        mc_, 0 /* TODO(groups): updated_group_count */,
-        updated_trip_infos_.size(),
+        mc_, group_route_infos_.size(), updated_trip_infos_.size(),
         mc_.CreateVector(utl::to_vec(sorted_trips,
                                      [&](auto& entry) {
                                        return get_fbs_updated_trip(

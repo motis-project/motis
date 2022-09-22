@@ -340,6 +340,7 @@ export interface PaxMonGroupRoute {
   planned_arrival_time: number;
   estimated_delay: number;
   source_flags: number;
+  planned: boolean;
 }
 
 // paxmon/PaxMonGroup.fbs
@@ -512,7 +513,7 @@ export interface PaxMonUpdatedTrip {
 
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonTrackedUpdates {
-  updated_group_count: number;
+  updated_group_route_count: number;
   updated_trip_count: number;
   updated_trips: PaxMonUpdatedTrip[];
   updated_group_routes: PaxMonGroupRouteUpdateInfo[];

@@ -29,7 +29,7 @@ table PaxMonUpdatedTrip {
 }
 
 table PaxMonTrackedUpdates {
-  updated_group_count: ulong;
+  updated_group_route_count: ulong;
   updated_trip_count: ulong;
   updated_trips: [PaxMonUpdatedTrip];
   updated_group_routes: [PaxMonGroupRouteUpdateInfo];

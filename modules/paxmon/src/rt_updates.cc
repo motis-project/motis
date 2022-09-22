@@ -47,8 +47,6 @@ void check_broken_interchanges(
         ++uv.system_stats_.total_broken_interchanges_;
       }
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        // TODO(groups): affected number of passengers statistics?
-        // uv.system_stats_.total_affected_passengers_ += grp->passengers_;
         if (affected_group_routes.insert(pgwr).second) {
           auto& gr = uv.passenger_groups_.route(pgwr);
           gr.broken_ = true;
@@ -164,20 +162,8 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
 
   uv.tick_stats_.system_time_ = sched.system_time_;
 
-  // TODO(groups): only count each group once
-  auto const affected_passenger_count = 0;
-  /*
-      std::accumulate(begin(uv.rt_update_ctx_.groups_affected_by_last_update_),
-                      end(uv.rt_update_ctx_.groups_affected_by_last_update_),
-                      0ULL, [&](auto const sum, auto const pgi) {
-                        return sum + uv.passenger_groups_.at(pgi)->passengers_;
-                      });
-  */
-
-  // TODO(groups): update statistics
-  uv.tick_stats_.affected_groups_ =
+  uv.tick_stats_.affected_group_routes_ =
       uv.rt_update_ctx_.group_routes_affected_by_last_update_.size();
-  uv.tick_stats_.affected_passengers_ = affected_passenger_count;
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonEvent>> fbs_events;
@@ -269,18 +255,13 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
         auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
         switch (event_type) {
           case monitoring_event_type::NO_PROBLEM:
-            ++uv.tick_stats_.ok_groups_;
-            ++uv.system_stats_.groups_ok_count_;
+            ++uv.tick_stats_.ok_group_routes_;
             break;
           case monitoring_event_type::TRANSFER_BROKEN:
-            ++uv.tick_stats_.broken_groups_;
-            ++uv.system_stats_.groups_broken_count_;
-            uv.tick_stats_.broken_passengers_ += pg.passengers_;
+            ++uv.tick_stats_.broken_group_routes_;
             break;
           case monitoring_event_type::MAJOR_DELAY_EXPECTED:
-            ++uv.tick_stats_.major_delay_groups_;
-            ++uv.system_stats_.groups_major_delay_count_;
-            uv.tick_stats_.major_delay_passengers_ += pg.passengers_;
+            ++uv.tick_stats_.major_delay_group_routes_;
             break;
         }
       });
