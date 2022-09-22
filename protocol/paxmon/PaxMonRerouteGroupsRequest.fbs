@@ -1,14 +1,7 @@
 include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonRerouteReason.fbs";
 
 namespace motis.paxmon;
-
-enum PaxMonRerouteReason : byte {
-  MANUAL,
-  TRANSFER_BROKEN,
-  MAJOR_DELAY_EXPECTED,
-  REVERT_FORECAST,
-  SIMULATION
-}
 
 table PaxMonRerouteGroup {
   group: uint;

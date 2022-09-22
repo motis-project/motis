@@ -274,6 +274,7 @@ export interface PaxMonGetGroupsRequest {
   universe: number;
   ids: number[];
   sources: PaxMonDataSource[];
+  include_reroute_log: boolean;
 }
 
 // paxmon/PaxMonGetGroupsResponse.fbs
@@ -349,6 +350,7 @@ export interface PaxMonGroup {
   source: PaxMonDataSource;
   passenger_count: number;
   routes: PaxMonGroupRoute[];
+  reroute_log: PaxMonRerouteLogEntry[];
 }
 
 // paxmon/PaxMonGroup.fbs
@@ -436,14 +438,6 @@ export interface PaxMonRemoveGroupsRequest {
 }
 
 // paxmon/PaxMonRerouteGroupsRequest.fbs
-export type PaxMonRerouteReason =
-  | "MANUAL"
-  | "TRANSFER_BROKEN"
-  | "MAJOR_DELAY_EXPECTED"
-  | "REVERT_FORECAST"
-  | "SIMULATION";
-
-// paxmon/PaxMonRerouteGroupsRequest.fbs
 export interface PaxMonRerouteGroup {
   group: number;
   old_route_index: number;
@@ -475,6 +469,30 @@ export interface PaxMonRerouteGroupResult {
 export interface PaxMonRerouteGroupsResponse {
   reroutes: PaxMonRerouteGroupResult[];
 }
+
+// paxmon/PaxMonRerouteLog.fbs
+export interface PaxMonRerouteLogRoute {
+  index: number;
+  previous_probability: number;
+  new_probability: number;
+}
+
+// paxmon/PaxMonRerouteLog.fbs
+export interface PaxMonRerouteLogEntry {
+  system_time: number;
+  reroute_time: number;
+  reason: PaxMonRerouteReason;
+  old_route: PaxMonRerouteLogRoute;
+  new_routes: PaxMonRerouteLogRoute[];
+}
+
+// paxmon/PaxMonRerouteReason.fbs
+export type PaxMonRerouteReason =
+  | "Manual"
+  | "BrokenTransfer"
+  | "MajorDelayExpected"
+  | "RevertForecast"
+  | "Simulation";
 
 // paxmon/PaxMonStatusRequest.fbs
 export interface PaxMonStatusRequest {
@@ -561,7 +579,7 @@ export interface PaxMonUniverseForked {
 // paxmon/PaxMonUpdate.fbs
 export type PaxMonEventType =
   | "NO_PROBLEM"
-  | "TRANSFER_BROKEN"
+  | "BROKEN_TRANSFER"
   | "MAJOR_DELAY_EXPECTED";
 
 // paxmon/PaxMonUpdate.fbs

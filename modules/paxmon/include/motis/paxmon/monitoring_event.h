@@ -12,7 +12,7 @@ namespace motis::paxmon {
 
 enum class monitoring_event_type : std::uint8_t {
   NO_PROBLEM,
-  TRANSFER_BROKEN,
+  BROKEN_TRANSFER,
   MAJOR_DELAY_EXPECTED
 };
 

@@ -123,7 +123,8 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
       fbb, gr.local_group_route_index_,
       to_fbs(sched, fbb, pgc.journey(gr.compact_journey_index_)),
       gr.probability_, to_fbs_time(sched, gr.planned_arrival_time_),
-      gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_));
+      gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_),
+      gr.planned_);
 }
 
 temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
@@ -136,14 +137,38 @@ temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
                           gr->planned()};
 }
 
+Offset<PaxMonRerouteLogEntry> to_fbs(FlatBufferBuilder& fbb,
+                                     passenger_group_container const& pgc,
+                                     reroute_log_entry const& entry) {
+  return CreatePaxMonRerouteLogEntry(
+      fbb, entry.system_time_, entry.reroute_time_,
+      static_cast<PaxMonRerouteReason>(entry.reason_),
+      CreatePaxMonRerouteLogRoute(fbb, entry.old_route_,
+                                  entry.old_route_probability_, 0),
+      fbb.CreateVector(utl::to_vec(pgc.log_entry_new_routes_.at(entry.index_),
+                                   [&](auto const& new_route) {
+                                     return CreatePaxMonRerouteLogRoute(
+                                         fbb, new_route.new_route_,
+                                         new_route.previous_probability_,
+                                         new_route.new_probability_);
+                                   })));
+}
+
 Offset<PaxMonGroup> to_fbs(schedule const& sched,
                            passenger_group_container const& pgc,
-                           FlatBufferBuilder& fbb, passenger_group const& pg) {
-  return CreatePaxMonGroup(fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
-                           fbb.CreateVector(utl::to_vec(
-                               pgc.routes(pg.id_), [&](group_route const& gr) {
-                                 return to_fbs(sched, pgc, fbb, gr);
-                               })));
+                           FlatBufferBuilder& fbb, passenger_group const& pg,
+                           bool const with_reroute_log) {
+  return CreatePaxMonGroup(
+      fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
+      fbb.CreateVector(utl::to_vec(
+          pgc.routes(pg.id_),
+          [&](group_route const& gr) { return to_fbs(sched, pgc, fbb, gr); })),
+      fbb.CreateVector(with_reroute_log
+                           ? utl::to_vec(pgc.reroute_log_entries(pg.id_),
+                                         [&](auto const& entry) {
+                                           return to_fbs(fbb, pgc, entry);
+                                         })
+                           : std::vector<Offset<PaxMonRerouteLogEntry>>{}));
 }
 
 temp_passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {

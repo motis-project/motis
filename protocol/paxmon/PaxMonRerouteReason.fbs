@@ -1,0 +1,9 @@
+namespace motis.paxmon;
+
+enum PaxMonRerouteReason : byte {
+  Manual,
+  BrokenTransfer,
+  MajorDelayExpected,
+  RevertForecast,
+  Simulation
+}

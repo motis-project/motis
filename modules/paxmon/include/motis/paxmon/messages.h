@@ -49,7 +49,8 @@ temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr);
 flatbuffers::Offset<PaxMonGroup> to_fbs(schedule const& sched,
                                         passenger_group_container const& pgc,
                                         flatbuffers::FlatBufferBuilder& fbb,
-                                        passenger_group const& pg);
+                                        passenger_group const& pg,
+                                        bool with_reroute_log);
 
 temp_passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg);
 

@@ -1,4 +1,5 @@
 include "paxmon/PaxMonCompactJourney.fbs";
+include "paxmon/PaxMonRerouteLog.fbs";
 
 namespace motis.paxmon;
 
@@ -22,6 +23,7 @@ table PaxMonGroup {
   source: PaxMonDataSource;
   passenger_count: ushort;
   routes: [PaxMonGroupRoute];
+  reroute_log: [PaxMonRerouteLogEntry];
 }
 
 table PaxMonGroupWithRoute {

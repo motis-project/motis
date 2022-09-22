@@ -138,7 +138,7 @@ monitoring_event_type get_monitoring_event_type(
     group_route const& gr, reachability_info const& reachability,
     int const arrival_delay_threshold) {
   if (!reachability.ok_) {
-    return monitoring_event_type::TRANSFER_BROKEN;
+    return monitoring_event_type::BROKEN_TRANSFER;
   } else if (arrival_delay_threshold >= 0 &&
              gr.planned_arrival_time_ != INVALID_TIME &&
              gr.estimated_delay_ >= arrival_delay_threshold) {
@@ -223,7 +223,7 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
         auto const event_type = get_monitoring_event_type(
             gr, reachability, arrival_delay_threshold);
         auto const expected_arrival_time =
-            event_type == monitoring_event_type::TRANSFER_BROKEN
+            event_type == monitoring_event_type::BROKEN_TRANSFER
                 ? INVALID_TIME
                 : reachability.reachable_trips_.back().exit_real_time_;
 
@@ -256,7 +256,7 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
           case monitoring_event_type::NO_PROBLEM:
             ++uv.tick_stats_.ok_group_routes_;
             break;
-          case monitoring_event_type::TRANSFER_BROKEN:
+          case monitoring_event_type::BROKEN_TRANSFER:
             ++uv.tick_stats_.broken_group_routes_;
             break;
           case monitoring_event_type::MAJOR_DELAY_EXPECTED:

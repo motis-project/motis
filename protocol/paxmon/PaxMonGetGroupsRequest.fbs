@@ -7,4 +7,6 @@ table PaxMonGetGroupsRequest {
 
   ids: [ulong];
   sources: [PaxMonDataSource];
+
+  include_reroute_log: bool;
 }

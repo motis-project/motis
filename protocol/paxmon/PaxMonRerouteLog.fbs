@@ -1,0 +1,17 @@
+include "paxmon/PaxMonRerouteReason.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonRerouteLogRoute {
+  index: ushort;
+  previous_probability: float;
+  new_probability: float;
+}
+
+table PaxMonRerouteLogEntry {
+  system_time: ulong;
+  reroute_time: ulong;
+  reason: PaxMonRerouteReason;
+  old_route: PaxMonRerouteLogRoute;
+  new_routes: [PaxMonRerouteLogRoute];
+}

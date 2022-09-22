@@ -170,8 +170,8 @@ void send_remove_group_routes(
 
 inline reroute_reason_t to_reroute_reason(monitoring_event_type const met) {
   switch (met) {
-    case monitoring_event_type::TRANSFER_BROKEN:
-      return reroute_reason_t::TRANSFER_BROKEN;
+    case monitoring_event_type::BROKEN_TRANSFER:
+      return reroute_reason_t::BROKEN_TRANSFER;
     case monitoring_event_type::MAJOR_DELAY_EXPECTED:
       return reroute_reason_t::MAJOR_DELAY_EXPECTED;
     case monitoring_event_type::NO_PROBLEM:

@@ -11,7 +11,7 @@ namespace motis::paxmon {
 
 enum class reroute_reason_t : std::uint8_t {
   MANUAL,
-  TRANSFER_BROKEN,
+  BROKEN_TRANSFER,
   MAJOR_DELAY_EXPECTED,
   REVERT_FORECAST,
   SIMULATION

@@ -19,6 +19,7 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
   auto& uv = uv_access.uv_;
+  auto const include_reroute_log = req->include_reroute_log();
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonGroup>> groups;
@@ -28,7 +29,8 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
         it != end(uv.passenger_groups_.groups_by_source_)) {
       for (auto const pgid : it->second) {
         if (auto const pg = uv.passenger_groups_.at(pgid); pg != nullptr) {
-          groups.emplace_back(to_fbs(sched, uv.passenger_groups_, mc, *pg));
+          groups.emplace_back(to_fbs(sched, uv.passenger_groups_, mc, *pg,
+                                     include_reroute_log));
         }
       }
     }
@@ -36,7 +38,8 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
 
   for (auto const pgid : *req->ids()) {
     if (auto const pg = uv.passenger_groups_.at(pgid); pg != nullptr) {
-      groups.emplace_back(to_fbs(sched, uv.passenger_groups_, mc, *pg));
+      groups.emplace_back(
+          to_fbs(sched, uv.passenger_groups_, mc, *pg, include_reroute_log));
     }
   }
 

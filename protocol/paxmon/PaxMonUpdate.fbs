@@ -5,7 +5,7 @@ namespace motis.paxmon;
 
 enum PaxMonEventType : byte {
   NO_PROBLEM,
-  TRANSFER_BROKEN,
+  BROKEN_TRANSFER,
   MAJOR_DELAY_EXPECTED,
 }
 
