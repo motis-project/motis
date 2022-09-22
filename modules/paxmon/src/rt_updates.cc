@@ -252,7 +252,6 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
           print_timing();
         }
 
-        auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
         switch (event_type) {
           case monitoring_event_type::NO_PROBLEM:
             ++uv.tick_stats_.ok_group_routes_;
