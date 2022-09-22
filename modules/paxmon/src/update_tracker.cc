@@ -89,9 +89,7 @@ struct update_tracker::impl {
       auto const& gr = uv_.passenger_groups_.route(pgwr);
       auto const cj = uv_.passenger_groups_.journey(gr.compact_journey_index_);
       for (auto const& leg : cj.legs()) {
-        // TODO(groups): get_updated_trip_info would be better here (error if it
-        // doesn't exist already)
-        auto& uti = get_or_create_updated_trip_info(leg.trip_idx_);
+        auto& uti = get_updated_trip_info(leg.trip_idx_);
         uti.updated_group_routes_.insert(pgwr);
       }
     } else {
@@ -188,6 +186,10 @@ private:
       uti.before_cti_ = get_critical_trip_info(tli);
       return uti;
     });
+  }
+
+  updated_trip_info& get_updated_trip_info(trip_idx_t const ti) {
+    return updated_trip_infos_.at(ti);
   }
 
   void finish_trips() {

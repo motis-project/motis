@@ -472,7 +472,6 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
         // group routes with better alternatives are removed from the paxmon
         // graph and included in the simulation
-        // TODO(groups)
         for (auto const& pgwrap : cpg.group_routes_) {
           if (pgwr_event_types.at(pgwrap.pgwr_) ==
               monitoring_event_type::MAJOR_DELAY_EXPECTED) {
