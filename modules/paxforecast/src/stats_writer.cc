@@ -14,16 +14,16 @@ void stats_writer::write_header() {
   csv_ << "system_time"
        //
        << "monitoring_events"
-       << "groups"
+       << "group_routes"
        << "combined_groups"
-       << "major_delay_groups"
+       << "major_delay_group_routes"
        //
        << "routing_requests"
        << "alternatives_found"
        //
-       << "added_groups"
-       << "removed_groups"
-       << "major_delay_groups_with_alternatives"
+       << "rerouted_group_routes"
+       << "removed_group_routes"
+       << "major_delay_group_routes_with_alternatives"
        //
        << "t_find_alternatives"
        << "t_add_alternatives"
@@ -42,14 +42,14 @@ void stats_writer::write_header() {
 void stats_writer::write_tick(const tick_statistics& ts) {
   csv_ << ts.system_time_
        //
-       << ts.monitoring_events_ << ts.groups_ << ts.combined_groups_
-       << ts.major_delay_groups_
+       << ts.monitoring_events_ << ts.group_routes_ << ts.combined_groups_
+       << ts.major_delay_group_routes_
        //
        << ts.routing_requests_
        << ts.alternatives_found_
        //
-       << ts.added_groups_ << ts.removed_groups_
-       << ts.major_delay_groups_with_alternatives_
+       << ts.rerouted_group_routes_ << ts.removed_group_routes_
+       << ts.major_delay_group_routes_with_alternatives_
        //
        << ts.t_find_alternatives_ << ts.t_add_alternatives_
        << ts.t_passenger_behavior_ << ts.t_calc_load_forecast_

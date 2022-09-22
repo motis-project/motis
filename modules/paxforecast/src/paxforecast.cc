@@ -146,7 +146,7 @@ void send_remove_group_routes(
   if (group_routes_to_remove.empty()) {
     return;
   }
-  tick_stats.removed_groups_ += group_routes_to_remove.size();  // TODO(groups)
+  tick_stats.removed_group_routes_ += group_routes_to_remove.size();
   message_creator mc;
   mc.create_and_finish(
       MsgContent_PaxMonRerouteGroupsRequest,
@@ -191,6 +191,7 @@ void update_tracked_groups(
 
   message_creator mc;
   auto reroutes = std::vector<Offset<PaxMonRerouteGroup>>{};
+  auto reroute_count = 0;
 
   auto const send_reroutes = [&]() {
     if (reroutes.empty()) {
@@ -274,6 +275,7 @@ void update_tracked_groups(
     reroutes.emplace_back(CreatePaxMonRerouteGroup(
         mc, pgwr.pg_, pgwr.route_, mc.CreateVector(new_routes),
         static_cast<PaxMonRerouteReason>(reroute_reason)));
+    ++reroute_count;
 
     if (reroutes.size() >= REROUTE_BATCH_SIZE) {
       send_reroutes();
@@ -282,13 +284,7 @@ void update_tracked_groups(
 
   send_reroutes();
 
-  // TODO(groups): stats
-  /*
-  LOG(info) << "update_tracked_groups: -" << remove_group_count << " +"
-            << add_group_count;
-  tick_stats.added_groups_ += add_group_count;
-   */
-  (void)tick_stats;
+  tick_stats.rerouted_group_routes_ += reroute_count;
 }
 
 bool has_better_alternative(std::vector<alternative> const& alts,
@@ -327,7 +323,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       combined_groups;
   std::map<passenger_group_with_route, monitoring_event_type> pgwr_event_types;
   std::map<passenger_group_with_route, time> expected_arrival_times;
-  auto delayed_groups = 0ULL;
+  auto delayed_group_routes = 0ULL;
 
   for (auto const& event : *mon_update->events()) {
     if (event->type() == PaxMonEventType_NO_PROBLEM) {
@@ -346,7 +342,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         event->type() == PaxMonEventType_MAJOR_DELAY_EXPECTED;
 
     if (major_delay) {
-      ++delayed_groups;
+      ++delayed_group_routes;
       expected_arrival_times.insert(
           {pgwr, unix_to_motistime(sched.schedule_begin_,
                                    event->expected_arrival_time())});
@@ -391,9 +387,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
             << " combined groups";
 
   tick_stats.monitoring_events_ = mon_update->events()->size();
-  tick_stats.groups_ = pgwr_event_types.size();  // TODO(groups)
+  tick_stats.group_routes_ = pgwr_event_types.size();
   tick_stats.combined_groups_ = combined_groups.size();
-  tick_stats.major_delay_groups_ = delayed_groups;
+  tick_stats.major_delay_group_routes_ = delayed_group_routes;
 
   auto routing_requests = 0ULL;
   auto alternatives_found = 0ULL;
@@ -447,7 +443,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   tick_stats.alternatives_found_ = alternatives_found;
 
   auto removed_group_route_count = 0ULL;
-  if (delayed_groups > 0) {
+  if (delayed_group_routes > 0) {
     std::vector<passenger_group_with_route> group_routes_to_remove;
     for (auto& cgs : combined_groups) {
       for (auto& cpg : cgs.second) {
@@ -481,7 +477,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
           if (pgwr_event_types.at(pgwrap.pgwr_) ==
               monitoring_event_type::MAJOR_DELAY_EXPECTED) {
             group_routes_to_remove.emplace_back(pgwrap.pgwr_);
-            ++tick_stats.major_delay_groups_with_alternatives_;
+            ++tick_stats.major_delay_group_routes_with_alternatives_;
             ++removed_group_route_count;
           }
         }
@@ -494,9 +490,9 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     }
     send_remove_group_routes(uv, group_routes_to_remove, tick_stats,
                              reroute_reason_t::MAJOR_DELAY_EXPECTED);
-    LOG(info) << "delayed groups: " << delayed_groups
+    LOG(info) << "delayed group routes: " << delayed_group_routes
               << ", removed group routes: " << removed_group_route_count
-              << " (tick total: " << tick_stats.removed_groups_ << ")";
+              << " (tick total: " << tick_stats.removed_group_routes_ << ")";
   }
 
   MOTIS_START_TIMING(passenger_behavior);
@@ -582,15 +578,16 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   tick_stats.t_total_ = MOTIS_TIMING_MS(total);
 
   LOG(info) << "paxforecast tick stats: " << tick_stats.monitoring_events_
-            << " monitoring events, " << tick_stats.groups_ << " groups ("
-            << tick_stats.combined_groups_ << " combined), "
-            << tick_stats.major_delay_groups_ << " major delay groups ("
-            << tick_stats.major_delay_groups_with_alternatives_
+            << " monitoring events, " << tick_stats.group_routes_
+            << " group routes (" << tick_stats.combined_groups_
+            << " combined), " << tick_stats.major_delay_group_routes_
+            << " major delay group routes ("
+            << tick_stats.major_delay_group_routes_with_alternatives_
             << " with alternatives), " << tick_stats.routing_requests_
             << " routing requests, " << tick_stats.alternatives_found_
-            << " alternatives found, " << tick_stats.added_groups_
-            << " groups added, " << tick_stats.removed_groups_
-            << " groups removed";
+            << " alternatives found, " << tick_stats.rerouted_group_routes_
+            << " group routes rerouted, " << tick_stats.removed_group_routes_
+            << " group routes removed";
   if (uv.id_ == 0) {
     stats_writer_->write_tick(tick_stats);
     stats_writer_->flush();
