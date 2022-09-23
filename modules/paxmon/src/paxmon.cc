@@ -23,6 +23,7 @@
 
 #include "motis/paxmon/api/add_groups.h"
 #include "motis/paxmon/api/destroy_universe.h"
+#include "motis/paxmon/api/filter_groups.h"
 #include "motis/paxmon/api/filter_trips.h"
 #include "motis/paxmon/api/find_trips.h"
 #include "motis/paxmon/api/fork_universe.h"
@@ -338,6 +339,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/get_groups",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::get_groups(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/filter_groups",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::filter_groups(data_, msg);
                   },
                   {});
 

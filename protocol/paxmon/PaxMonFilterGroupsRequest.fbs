@@ -1,0 +1,29 @@
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+enum PaxMonFilterGroupsSortOrder : byte {
+  GroupId,
+  ScheduledDepartureTime,
+  MaxEstimatedDelay,
+  ExpectedEstimatedDelay
+}
+
+table PaxMonFilterGroupsRequest {
+  universe: uint;
+
+  sort_by: PaxMonFilterGroupsSortOrder;
+  max_results: uint; // 0 = unlimited
+  skip_first: uint; // skip the first x results (for subsequent calls)
+
+  include_reroute_log: bool;
+
+  filter_by_start: [string]; // station ids
+  filter_by_destination: [string]; // station ids
+  filter_by_via: [string]; // station ids
+
+  filter_by_group_id: [uint];
+  filter_by_data_source: [PaxMonDataSource];
+
+  filter_by_train_nr: [uint];
+}

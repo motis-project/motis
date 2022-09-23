@@ -18,7 +18,7 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
-  auto& uv = uv_access.uv_;
+  auto const& uv = uv_access.uv_;
   auto const include_reroute_log = req->include_reroute_log();
 
   message_creator mc;

@@ -47,7 +47,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
-  auto& uv = uv_access.uv_;
+  auto const& uv = uv_access.uv_;
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
 

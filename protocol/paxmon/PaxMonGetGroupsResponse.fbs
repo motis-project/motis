@@ -1,5 +1,4 @@
 include "paxmon/PaxMonGroup.fbs";
-include "paxmon/PaxMonLocalization.fbs";
 
 namespace motis.paxmon;
 

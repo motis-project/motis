@@ -30,6 +30,8 @@ import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
   PaxMonDestroyUniverseRequest,
+  PaxMonFilterGroupsRequest,
+  PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
   PaxMonFilterTripsResponse,
   PaxMonFindTripsRequest,
@@ -351,6 +353,8 @@ export type MsgContent =
   | PaxMonStatusResponse
   | PaxMonGetGroupsRequest
   | PaxMonGetGroupsResponse
+  | PaxMonFilterGroupsRequest
+  | PaxMonFilterGroupsResponse
   | PaxMonFilterTripsRequest
   | PaxMonFilterTripsResponse
   | PaxMonGetTripLoadInfosRequest
@@ -415,6 +419,8 @@ export type MsgContentType =
   | "PaxMonStatusResponse"
   | "PaxMonGetGroupsRequest"
   | "PaxMonGetGroupsResponse"
+  | "PaxMonFilterGroupsRequest"
+  | "PaxMonFilterGroupsResponse"
   | "PaxMonFilterTripsRequest"
   | "PaxMonFilterTripsResponse"
   | "PaxMonGetTripLoadInfosRequest"
