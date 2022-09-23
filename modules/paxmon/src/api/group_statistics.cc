@@ -105,6 +105,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto h_expected_est_delay =
       histogram{LOWEST_ALLOWED_DELAY, HIGHEST_ALLOWED_DELAY};
   auto h_routes_per_group = histogram{0, HIGHEST_ROUTES_PER_GROUP};
+  auto h_active_routes_per_group = histogram{0, HIGHEST_ROUTES_PER_GROUP};
   auto h_reroutes_per_group = histogram{0, HIGHEST_REROUTES_PER_GROUP};
 
   for (auto const& pg : pgc) {
@@ -117,12 +118,12 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
     auto min_estimated_delay = HIGHEST_ALLOWED_DELAY;
     auto max_estimated_delay = LOWEST_ALLOWED_DELAY;
     auto expected_estimated_delay = 0.F;
-    auto valid_routes = 0;
+    auto active_routes = 0;
     for (auto const& gr : routes) {
       if (gr.probability_ == 0) {
         continue;
       }
-      ++valid_routes;
+      ++active_routes;
       if (gr.estimated_delay_ < min_estimated_delay) {
         min_estimated_delay = gr.estimated_delay_;
       }
@@ -131,7 +132,8 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       }
       expected_estimated_delay += gr.probability_ * gr.estimated_delay_;
     }
-    if (valid_routes == 0) {
+    h_active_routes_per_group.add(active_routes);
+    if (active_routes == 0) {
       continue;
     }
 
@@ -157,6 +159,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
           histogram_to_fbs(h_max_est_delay),
           histogram_to_fbs(h_expected_est_delay),
           histogram_to_fbs(h_routes_per_group),
+          histogram_to_fbs(h_active_routes_per_group),
           histogram_to_fbs(h_reroutes_per_group))
           .Union());
   return make_msg(mc);

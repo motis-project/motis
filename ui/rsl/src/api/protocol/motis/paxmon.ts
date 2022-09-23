@@ -447,6 +447,7 @@ export interface PaxMonGroupStatisticsResponse {
   max_estimated_delay: PaxMonHistogram;
   expected_estimated_delay: PaxMonHistogram;
   routes_per_group: PaxMonHistogram;
+  active_routes_per_group: PaxMonHistogram;
   reroutes_per_group: PaxMonHistogram;
 }
 
