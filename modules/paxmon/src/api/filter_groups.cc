@@ -120,9 +120,11 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
     auto trip_filter_match = !filter_by_trips;
 
     for (auto const& gr : pgc.routes(pgi)) {
-      gi.max_estimated_delay_ =
-          std::max(gi.max_estimated_delay_, gr.estimated_delay_);
-      gi.expected_estimated_delay_ += gr.probability_ * gr.estimated_delay_;
+      if (gr.probability_ != 0) {
+        gi.max_estimated_delay_ =
+            std::max(gi.max_estimated_delay_, gr.estimated_delay_);
+        gi.expected_estimated_delay_ += gr.probability_ * gr.estimated_delay_;
+      }
       if (gr.planned_ && gi.scheduled_departure_ == INVALID_TIME) {
         auto const cj = pgc.journey(gr.compact_journey_index_);
         assert(!cj.legs().empty());

@@ -109,6 +109,8 @@ include "paxmon/PaxMonKeepAliveRequest.fbs";
 include "paxmon/PaxMonKeepAliveResponse.fbs";
 include "paxmon/PaxMonRerouteGroupsRequest.fbs";
 include "paxmon/PaxMonRerouteGroupsResponse.fbs";
+include "paxmon/PaxMonGroupStatisticsRequest.fbs";
+include "paxmon/PaxMonGroupStatisticsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -292,7 +294,9 @@ union MsgContent {
   motis.paxmon.PaxMonKeepAliveRequest                                     = 135,
   motis.paxmon.PaxMonKeepAliveResponse                                    = 136,
   motis.paxmon.PaxMonRerouteGroupsRequest                                 = 137,
-  motis.paxmon.PaxMonRerouteGroupsResponse                                = 138
+  motis.paxmon.PaxMonRerouteGroupsResponse                                = 138,
+  motis.paxmon.PaxMonGroupStatisticsRequest                               = 139,
+  motis.paxmon.PaxMonGroupStatisticsResponse                              = 140
 }
 
 // Destination Examples:

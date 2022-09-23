@@ -33,6 +33,7 @@
 #include "motis/paxmon/api/get_interchanges.h"
 #include "motis/paxmon/api/get_status.h"
 #include "motis/paxmon/api/get_trip_load_info.h"
+#include "motis/paxmon/api/group_statistics.h"
 #include "motis/paxmon/api/keep_alive.h"
 #include "motis/paxmon/api/remove_groups.h"
 #include "motis/paxmon/api/reroute_groups.h"
@@ -345,6 +346,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/filter_groups",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::filter_groups(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/group_statistics",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::group_statistics(data_, msg);
                   },
                   {});
 
