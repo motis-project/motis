@@ -4,6 +4,7 @@ namespace motis.paxmon;
 
 table PaxMonGroupWithStats {
   group: PaxMonGroup;
+  min_estimated_delay: short;
   max_estimated_delay: short;
   expected_estimated_delay: float;
 }

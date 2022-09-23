@@ -15,6 +15,7 @@ table PaxMonHistogram {
 table PaxMonGroupStatisticsResponse {
   group_count: uint;
 
+  min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;
   expected_estimated_delay: PaxMonHistogram;
 

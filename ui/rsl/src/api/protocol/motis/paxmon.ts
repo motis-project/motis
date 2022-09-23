@@ -85,7 +85,8 @@ export type PaxMonFilterGroupsSortOrder =
   | "GroupId"
   | "ScheduledDepartureTime"
   | "MaxEstimatedDelay"
-  | "ExpectedEstimatedDelay";
+  | "ExpectedEstimatedDelay"
+  | "MinEstimatedDelay";
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
 export interface PaxMonFilterGroupsRequest {
@@ -105,6 +106,7 @@ export interface PaxMonFilterGroupsRequest {
 // paxmon/PaxMonFilterGroupsResponse.fbs
 export interface PaxMonGroupWithStats {
   group: PaxMonGroup;
+  min_estimated_delay: number;
   max_estimated_delay: number;
   expected_estimated_delay: number;
 }
@@ -420,6 +422,32 @@ export interface PaxMonGroupRouteUpdateInfo {
   n: number;
   p: number;
   pp: number;
+}
+
+// paxmon/PaxMonGroupStatisticsRequest.fbs
+export interface PaxMonGroupStatisticsRequest {
+  universe: number;
+}
+
+// paxmon/PaxMonGroupStatisticsResponse.fbs
+export interface PaxMonHistogram {
+  min_value: number;
+  max_value: number;
+  avg_value: number;
+  median_value: number;
+  max_count: number;
+  total_count: number;
+  counts: number[];
+}
+
+// paxmon/PaxMonGroupStatisticsResponse.fbs
+export interface PaxMonGroupStatisticsResponse {
+  group_count: number;
+  min_estimated_delay: PaxMonHistogram;
+  max_estimated_delay: PaxMonHistogram;
+  expected_estimated_delay: PaxMonHistogram;
+  routes_per_group: PaxMonHistogram;
+  reroutes_per_group: PaxMonHistogram;
 }
 
 // paxmon/PaxMonKeepAliveRequest.fbs

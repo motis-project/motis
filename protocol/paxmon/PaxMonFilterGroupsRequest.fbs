@@ -6,7 +6,8 @@ enum PaxMonFilterGroupsSortOrder : byte {
   GroupId,
   ScheduledDepartureTime,
   MaxEstimatedDelay,
-  ExpectedEstimatedDelay
+  ExpectedEstimatedDelay,
+  MinEstimatedDelay
 }
 
 table PaxMonFilterGroupsRequest {

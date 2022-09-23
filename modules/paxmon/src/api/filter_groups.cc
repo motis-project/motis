@@ -31,6 +31,7 @@ struct group_info {
 
   time scheduled_departure_{INVALID_TIME};
 
+  std::int16_t min_estimated_delay_{std::numeric_limits<std::int16_t>::max()};
   std::int16_t max_estimated_delay_{std::numeric_limits<std::int16_t>::min()};
   float expected_estimated_delay_{};
 };
@@ -121,6 +122,8 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
 
     for (auto const& gr : pgc.routes(pgi)) {
       if (gr.probability_ != 0) {
+        gi.min_estimated_delay_ =
+            std::min(gi.min_estimated_delay_, gr.estimated_delay_);
         gi.max_estimated_delay_ =
             std::max(gi.max_estimated_delay_, gr.estimated_delay_);
         gi.expected_estimated_delay_ += gr.probability_ * gr.estimated_delay_;
@@ -226,6 +229,15 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
                                          rhs.max_estimated_delay_);
                        });
       break;
+    case PaxMonFilterGroupsSortOrder_MinEstimatedDelay:
+      std::stable_sort(begin(selected_groups), end(selected_groups),
+                       [](group_info const& lhs, group_info const& rhs) {
+                         return std::tie(lhs.min_estimated_delay_,
+                                         lhs.expected_estimated_delay_) <
+                                std::tie(rhs.min_estimated_delay_,
+                                         rhs.expected_estimated_delay_);
+                       });
+      break;
     default: break;
   }
 
@@ -257,6 +269,7 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
                                             to_fbs(sched, pgc, mc,
                                                    pgc.group(gi.pgi_),
                                                    include_reroute_log),
+                                            gi.min_estimated_delay_,
                                             gi.max_estimated_delay_,
                                             gi.expected_estimated_delay_);
                                       })))

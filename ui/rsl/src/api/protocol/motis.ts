@@ -48,6 +48,8 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonGroupStatisticsRequest,
+  PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
   PaxMonRemoveGroupsRequest,
@@ -378,7 +380,9 @@ export type MsgContent =
   | PaxMonKeepAliveRequest
   | PaxMonKeepAliveResponse
   | PaxMonRerouteGroupsRequest
-  | PaxMonRerouteGroupsResponse;
+  | PaxMonRerouteGroupsResponse
+  | PaxMonGroupStatisticsRequest
+  | PaxMonGroupStatisticsResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -444,7 +448,9 @@ export type MsgContentType =
   | "PaxMonKeepAliveRequest"
   | "PaxMonKeepAliveResponse"
   | "PaxMonRerouteGroupsRequest"
-  | "PaxMonRerouteGroupsResponse";
+  | "PaxMonRerouteGroupsResponse"
+  | "PaxMonGroupStatisticsRequest"
+  | "PaxMonGroupStatisticsResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

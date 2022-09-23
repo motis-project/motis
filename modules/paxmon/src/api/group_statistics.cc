@@ -100,6 +100,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto const& uv = uv_access.uv_;
   auto const& pgc = uv.passenger_groups_;
 
+  auto h_min_est_delay = histogram{LOWEST_ALLOWED_DELAY, HIGHEST_ALLOWED_DELAY};
   auto h_max_est_delay = histogram{LOWEST_ALLOWED_DELAY, HIGHEST_ALLOWED_DELAY};
   auto h_expected_est_delay =
       histogram{LOWEST_ALLOWED_DELAY, HIGHEST_ALLOWED_DELAY};
@@ -113,6 +114,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
     h_routes_per_group.add(routes.size());
     h_reroutes_per_group.add(reroute_log.size());
 
+    auto min_estimated_delay = HIGHEST_ALLOWED_DELAY;
     auto max_estimated_delay = LOWEST_ALLOWED_DELAY;
     auto expected_estimated_delay = 0.F;
     auto valid_routes = 0;
@@ -121,6 +123,9 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
         continue;
       }
       ++valid_routes;
+      if (gr.estimated_delay_ < min_estimated_delay) {
+        min_estimated_delay = gr.estimated_delay_;
+      }
       if (gr.estimated_delay_ > max_estimated_delay) {
         max_estimated_delay = gr.estimated_delay_;
       }
@@ -130,6 +135,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       continue;
     }
 
+    h_min_est_delay.add(min_estimated_delay);
     h_max_est_delay.add(max_estimated_delay);
     h_expected_est_delay.add(
         static_cast<unsigned>(std::round(expected_estimated_delay)));
@@ -147,7 +153,8 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   mc.create_and_finish(
       MsgContent_PaxMonGroupStatisticsResponse,
       CreatePaxMonGroupStatisticsResponse(
-          mc, uv.passenger_groups_.size(), histogram_to_fbs(h_max_est_delay),
+          mc, uv.passenger_groups_.size(), histogram_to_fbs(h_min_est_delay),
+          histogram_to_fbs(h_max_est_delay),
           histogram_to_fbs(h_expected_est_delay),
           histogram_to_fbs(h_routes_per_group),
           histogram_to_fbs(h_reroutes_per_group))
