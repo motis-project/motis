@@ -55,10 +55,8 @@ struct histogram {
     auto count_sum = 0.;
     auto const half_total_count = static_cast<double>(total_count_) / 2.0;
     auto calc_median = true;
-    auto checksum = 0U;
     for (auto const [index, count] : utl::enumerate(counts_)) {
       auto const value = static_cast<int>(index) - offset_;
-      checksum += count;
       avg_value_ += value * (static_cast<double>(count) /
                              static_cast<double>(total_count_));
       if (count > max_count_) {
@@ -96,7 +94,6 @@ auto const constexpr HIGHEST_REROUTES_PER_GROUP = 1000;
 msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGroupStatisticsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
-  auto const& sched = uv_access.sched_;
   auto const& uv = uv_access.uv_;
   auto const& pgc = uv.passenger_groups_;
 
