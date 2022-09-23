@@ -250,9 +250,13 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
           skip_first + selected_groups.size(),
           mc.CreateVector(utl::to_vec(selected_groups,
                                       [&](group_info const& gi) {
-                                        return to_fbs(sched, pgc, mc,
-                                                      pgc.group(gi.pgi_),
-                                                      include_reroute_log);
+                                        return CreatePaxMonGroupWithStats(
+                                            mc,
+                                            to_fbs(sched, pgc, mc,
+                                                   pgc.group(gi.pgi_),
+                                                   include_reroute_log),
+                                            gi.max_estimated_delay_,
+                                            gi.expected_estimated_delay_);
                                       })))
           .Union());
   return make_msg(mc);

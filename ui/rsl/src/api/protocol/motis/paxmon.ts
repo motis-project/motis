@@ -103,12 +103,19 @@ export interface PaxMonFilterGroupsRequest {
 }
 
 // paxmon/PaxMonFilterGroupsResponse.fbs
+export interface PaxMonGroupWithStats {
+  group: PaxMonGroup;
+  max_estimated_delay: number;
+  expected_estimated_delay: number;
+}
+
+// paxmon/PaxMonFilterGroupsResponse.fbs
 export interface PaxMonFilterGroupsResponse {
   total_matching_groups: number;
   filtered_groups: number;
   remaining_groups: number;
   next_skip: number;
-  groups: PaxMonGroup[];
+  groups: PaxMonGroupWithStats[];
 }
 
 // paxmon/PaxMonFilterTripsRequest.fbs

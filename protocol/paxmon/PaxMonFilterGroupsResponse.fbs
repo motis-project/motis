@@ -2,11 +2,17 @@ include "paxmon/PaxMonGroup.fbs";
 
 namespace motis.paxmon;
 
+table PaxMonGroupWithStats {
+  group: PaxMonGroup;
+  max_estimated_delay: short;
+  expected_estimated_delay: float;
+}
+
 table PaxMonFilterGroupsResponse {
   total_matching_groups: ulong; // total number of matching groups
   filtered_groups: ulong; // number of groups included in response
   remaining_groups: ulong; // number of remaining matching groups
   next_skip: ulong; // skip_next parameter for next call
 
-  groups: [PaxMonGroup];
+  groups: [PaxMonGroupWithStats];
 }
