@@ -10,9 +10,9 @@
 #include "motis/core/schedule/time.h"
 #include "motis/core/schedule/trip.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/compact_journey.h"
 #include "motis/paxmon/universe.h"
-#include "motis/paxmon/broken_transfer_info.h"
 
 namespace motis::paxmon {
 
@@ -61,7 +61,6 @@ struct reachable_station {
   time schedule_time_{INVALID_TIME};
   time real_time_{INVALID_TIME};
 };
-
 
 struct reachability_info {
   std::vector<reachable_trip> reachable_trips_;
