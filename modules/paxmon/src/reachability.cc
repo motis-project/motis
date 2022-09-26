@@ -15,6 +15,9 @@ reachability_info get_reachability(universe const& uv,
   utl::verify(!legs.empty(), "empty journey");
   auto const& first_leg = legs.front();
   auto station_arrival_time = first_leg.enter_time_;
+  auto current_transfer_departure_time = INVALID_TIME;
+  auto current_transfer_arrival_time = INVALID_TIME;
+  auto required_transfer_time = std::uint16_t{0};
 
   reachability.reachable_interchange_stations_.emplace_back(
       reachable_station{first_leg.enter_station_id_, first_leg.enter_time_,
@@ -25,18 +28,24 @@ reachability_info get_reachability(universe const& uv,
     auto in_trip = false;
     auto entry_ok = false;
     auto exit_ok = false;
+    auto arrival_canceled = false;
+    auto departure_canceled = false;
     for (auto [edge_idx, ei] : utl::enumerate(uv.trip_data_.edges(tdi))) {
       auto const* e = ei.get(uv);
+      current_transfer_departure_time = INVALID_TIME;
       if (!in_trip) {
         auto const from = e->from(uv);
         if (from->station_idx() == leg.enter_station_id_ &&
             from->schedule_time() == leg.enter_time_) {
+          current_transfer_departure_time = from->current_time();
           auto required_arrival_time_at_station = from->current_time();
           if (leg.enter_transfer_) {
-            required_arrival_time_at_station -= leg.enter_transfer_->duration_;
+            required_transfer_time = leg.enter_transfer_->duration_;
+            required_arrival_time_at_station -= required_transfer_time;
           }
           if (station_arrival_time > required_arrival_time_at_station ||
               from->is_canceled()) {
+            departure_canceled = from->is_canceled();
             ok = false;
             break;
           }
@@ -51,12 +60,16 @@ reachability_info get_reachability(universe const& uv,
       if (in_trip) {
         auto const to = e->to(uv);
         if (to->schedule_time() > leg.exit_time_) {
+          arrival_canceled = true;
           ok = false;
           break;
         }
         if (to->station_idx() == leg.exit_station_id_ &&
             to->schedule_time() == leg.exit_time_) {
+          current_transfer_arrival_time = to->current_time();
           if (to->is_canceled()) {
+            arrival_canceled = true;
+            required_transfer_time = 0;
             ok = false;
             break;
           }
@@ -79,6 +92,14 @@ reachability_info get_reachability(universe const& uv,
     if (!ok) {
       auto const is_first_leg = leg_idx == 0;
       auto const is_last_leg = leg_idx == legs.size() - 1;
+      reachability.first_unreachable_transfer_ = broken_transfer_info{
+          static_cast<std::uint16_t>(leg_idx),
+          !entry_ok ? transfer_direction_t::ENTER : transfer_direction_t::EXIT,
+          current_transfer_arrival_time,
+          current_transfer_departure_time,
+          required_transfer_time,
+          arrival_canceled,
+          departure_canceled};
       if (!entry_ok) {
         if (is_first_leg) {
           reachability.status_ = reachability_status::BROKEN_INITIAL_ENTRY;

@@ -5,6 +5,7 @@
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/index_types.h"
 
 namespace motis::paxmon {
@@ -24,6 +25,7 @@ struct reroute_log_entry {
   motis::unixtime system_time_{};  // schedule system timestamp
   motis::unixtime reroute_time_{};  // current time
   reroute_reason_t reason_{reroute_reason_t::MANUAL};
+  std::optional<broken_transfer_info> broken_transfer_;
 };
 
 struct reroute_log_new_route {

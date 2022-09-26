@@ -140,8 +140,10 @@ auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
 auto const constexpr REROUTE_BATCH_SIZE = 5'000;
 
 void send_remove_group_routes(
-    universe const& uv,
+    schedule const& sched, universe const& uv,
     std::vector<passenger_group_with_route>& group_routes_to_remove,
+    std::map<passenger_group_with_route,
+             std::optional<broken_transfer_info>> const& broken_transfer_infos,
     tick_statistics& tick_stats, reroute_reason_t const reason) {
   if (group_routes_to_remove.empty()) {
     return;
@@ -159,7 +161,8 @@ void send_remove_group_routes(
                     mc, pgwr.pg_, pgwr.route_,
                     mc.CreateVector(
                         std::vector<flatbuffers::Offset<PaxMonGroupRoute>>{}),
-                    static_cast<PaxMonRerouteReason>(reason));
+                    static_cast<PaxMonRerouteReason>(reason),
+                    to_fbs(mc, sched, broken_transfer_infos.at(pgwr)));
               })))
           .Union(),
       "/paxmon/reroute_groups");
@@ -185,6 +188,8 @@ void update_tracked_groups(
     simulation_result const& sim_result,
     std::map<passenger_group_with_route, monitoring_event_type> const&
         pgwr_event_types,
+    std::map<passenger_group_with_route,
+             std::optional<broken_transfer_info>> const& broken_transfer_infos,
     tick_statistics& tick_stats,
     reroute_reason_t const default_reroute_reason) {
   using namespace flatbuffers;
@@ -272,9 +277,13 @@ void update_tracked_groups(
       new_routes.emplace_back(to_fbs(sched, mc, tgr));
     }
 
+    auto const bti_it = broken_transfer_infos.find(pgwr);
     reroutes.emplace_back(CreatePaxMonRerouteGroup(
         mc, pgwr.pg_, pgwr.route_, mc.CreateVector(new_routes),
-        static_cast<PaxMonRerouteReason>(reroute_reason)));
+        static_cast<PaxMonRerouteReason>(reroute_reason),
+        to_fbs(mc, sched,
+               bti_it != end(broken_transfer_infos) ? bti_it->second
+                                                    : std::nullopt)));
     ++reroute_count;
 
     if (reroutes.size() >= REROUTE_BATCH_SIZE) {
@@ -323,6 +332,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       combined_groups;
   std::map<passenger_group_with_route, monitoring_event_type> pgwr_event_types;
   std::map<passenger_group_with_route, time> expected_arrival_times;
+  std::map<passenger_group_with_route, std::optional<broken_transfer_info>>
+      broken_transfer_infos;
   auto delayed_group_routes = 0ULL;
 
   for (auto const& event : *mon_update->events()) {
@@ -352,6 +363,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         {pgwr, static_cast<monitoring_event_type>(event->type())});
     utl::verify(inserted.second,
                 "multiple monitoring updates for passenger group");
+    broken_transfer_infos[pgwr] = from_fbs(sched, event->broken_transfer());
     auto const localization =
         from_fbs(sched, event->localization_type(), event->localization());
     auto const destination_station_id = get_destination_station_id(
@@ -482,12 +494,14 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         }
 
         if (group_routes_to_remove.size() >= REMOVE_GROUPS_BATCH_SIZE) {
-          send_remove_group_routes(uv, group_routes_to_remove, tick_stats,
+          send_remove_group_routes(sched, uv, group_routes_to_remove,
+                                   broken_transfer_infos, tick_stats,
                                    reroute_reason_t::MAJOR_DELAY_EXPECTED);
         }
       }
     }
-    send_remove_group_routes(uv, group_routes_to_remove, tick_stats,
+    send_remove_group_routes(sched, uv, group_routes_to_remove,
+                             broken_transfer_infos, tick_stats,
                              reroute_reason_t::MAJOR_DELAY_EXPECTED);
     LOG(info) << "delayed group routes: " << delayed_group_routes
               << ", removed group routes: " << removed_group_route_count
@@ -568,7 +582,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
   MOTIS_START_TIMING(update_tracked_groups);
   scoped_timer update_tracked_groups_timer{"update tracked groups"};
-  update_tracked_groups(sched, uv, sim_result, pgwr_event_types, tick_stats,
+  update_tracked_groups(sched, uv, sim_result, pgwr_event_types,
+                        broken_transfer_infos, tick_stats,
                         reroute_reason_t::REVERT_FORECAST);
   MOTIS_STOP_TIMING(update_tracked_groups);
   tick_stats.t_update_tracked_groups_ = MOTIS_TIMING_MS(update_tracked_groups);
@@ -763,7 +778,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
 
     manual_timer update_groups_timer{"update groups"};
     tick_statistics tick_stats;
-    update_tracked_groups(sched, uv, sim_result, {}, tick_stats,
+    update_tracked_groups(sched, uv, sim_result, {}, {}, tick_stats,
                           reroute_reason_t::SIMULATION);
     update_groups_timer.stop_and_print();
     t_update_groups += update_groups_timer.duration_ms();

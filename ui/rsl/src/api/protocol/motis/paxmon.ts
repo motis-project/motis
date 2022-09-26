@@ -17,6 +17,20 @@ export interface PaxMonAddGroupsResponse {
   ids: number[];
 }
 
+// paxmon/PaxMonBrokenTransferInfo.fbs
+export type PaxMonTransferDirection = "Enter" | "Exit";
+
+// paxmon/PaxMonBrokenTransferInfo.fbs
+export interface PaxMonBrokenTransferInfo {
+  leg_index: number;
+  direction: PaxMonTransferDirection;
+  current_arrival_time: number;
+  current_departure_time: number;
+  required_transfer_time: number;
+  arrival_canceled: boolean;
+  departure_canceled: boolean;
+}
+
 // paxmon/PaxMonCombinedGroups.fbs
 export interface PaxMonCombinedGroupRoutes {
   group_routes: PaxMonGroupRouteBaseInfo[];
@@ -443,6 +457,8 @@ export interface PaxMonHistogram {
 // paxmon/PaxMonGroupStatisticsResponse.fbs
 export interface PaxMonGroupStatisticsResponse {
   group_count: number;
+  total_group_route_count: number;
+  active_group_route_count: number;
   min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;
   expected_estimated_delay: PaxMonHistogram;
@@ -510,6 +526,7 @@ export interface PaxMonRerouteGroup {
   old_route_index: number;
   new_routes: PaxMonGroupRoute[];
   reason: PaxMonRerouteReason;
+  broken_transfer: PaxMonBrokenTransferInfo[];
 }
 
 // paxmon/PaxMonRerouteGroupsRequest.fbs
@@ -549,6 +566,7 @@ export interface PaxMonRerouteLogEntry {
   system_time: number;
   reroute_time: number;
   reason: PaxMonRerouteReason;
+  broken_transfer: PaxMonBrokenTransferInfo[];
   old_route: PaxMonRerouteLogRoute;
   new_routes: PaxMonRerouteLogRoute[];
 }
@@ -665,6 +683,7 @@ export interface PaxMonEvent {
   localization: PaxMonLocalization;
   reachability_status: PaxMonReachabilityStatus;
   expected_arrival_time: number;
+  broken_transfer: PaxMonBrokenTransferInfo[];
 }
 
 // paxmon/PaxMonUpdate.fbs

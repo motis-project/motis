@@ -234,10 +234,11 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
         MOTIS_STOP_TIMING(update_load);
 
         MOTIS_START_TIMING(fbs_events);
-        fbs_events.emplace_back(to_fbs(
-            sched, uv.passenger_groups_, mc,
-            monitoring_event{event_type, pgwr, localization,
-                             reachability.status_, expected_arrival_time}));
+        fbs_events.emplace_back(
+            to_fbs(sched, uv.passenger_groups_, mc,
+                   monitoring_event{event_type, pgwr, localization,
+                                    reachability.status_, expected_arrival_time,
+                                    reachability.first_unreachable_transfer_}));
         if (fbs_events.size() >= 10'000) {
           make_monitoring_msg();
         }

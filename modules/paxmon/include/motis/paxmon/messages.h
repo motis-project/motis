@@ -2,12 +2,14 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/group_route.h"
 #include "motis/paxmon/load_info.h"
 #include "motis/paxmon/monitoring_event.h"
@@ -74,6 +76,16 @@ PaxMonGroupRouteBaseInfo to_fbs_base_info(
     flatbuffers::FlatBufferBuilder& /*fbb*/,
     passenger_group_container const& pgc,
     passenger_group_with_route const& pgwr);
+
+std::optional<broken_transfer_info> from_fbs(
+    schedule const& sched,
+    flatbuffers::Vector<flatbuffers::Offset<PaxMonBrokenTransferInfo>> const*
+        opt);
+
+flatbuffers::Offset<
+    flatbuffers::Vector<flatbuffers::Offset<PaxMonBrokenTransferInfo>>>
+to_fbs(flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
+       std::optional<broken_transfer_info> const& opt);
 
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 

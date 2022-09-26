@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
@@ -11,6 +12,7 @@
 
 #include "motis/paxmon/compact_journey.h"
 #include "motis/paxmon/universe.h"
+#include "motis/paxmon/broken_transfer_info.h"
 
 namespace motis::paxmon {
 
@@ -60,11 +62,13 @@ struct reachable_station {
   time real_time_{INVALID_TIME};
 };
 
+
 struct reachability_info {
   std::vector<reachable_trip> reachable_trips_;
   std::vector<reachable_station> reachable_interchange_stations_;
   bool ok_{true};
   reachability_status status_{reachability_status::OK};
+  std::optional<broken_transfer_info> first_unreachable_transfer_;
 };
 
 reachability_info get_reachability(universe const& uv,

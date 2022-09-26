@@ -1,5 +1,6 @@
 include "paxmon/PaxMonGroup.fbs";
 include "paxmon/PaxMonLocalization.fbs";
+include "paxmon/PaxMonBrokenTransferInfo.fbs";
 
 namespace motis.paxmon;
 
@@ -23,6 +24,7 @@ table PaxMonEvent {
   localization: PaxMonLocalization;
   reachability_status: PaxMonReachabilityStatus;
   expected_arrival_time: ulong; // 0 for broken journeys
+  broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
 }
 
 table PaxMonUpdate {

@@ -40,6 +40,7 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
     auto const old_route_idx =
         static_cast<local_group_route_index>(rr->old_route_index());
     auto const reason = static_cast<reroute_reason_t>(rr->reason());
+    auto const bti = from_fbs(sched, rr->broken_transfer());
     auto routes = uv.passenger_groups_.routes(pgi);
 
     auto routes_backup = utl::to_vec(
@@ -62,7 +63,7 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         reroute_log_entry{
             static_cast<reroute_log_entry_index>(log_new_routes.index()),
             old_route_idx, old_route_probability, sched.system_time_, now(),
-            reason});
+            reason, bti});
 
     auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
       auto const tgr = from_fbs(sched, nr);

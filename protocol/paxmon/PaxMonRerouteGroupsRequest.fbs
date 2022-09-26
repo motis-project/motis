@@ -1,5 +1,6 @@
 include "paxmon/PaxMonGroup.fbs";
 include "paxmon/PaxMonRerouteReason.fbs";
+include "paxmon/PaxMonBrokenTransferInfo.fbs";
 
 namespace motis.paxmon;
 
@@ -8,6 +9,7 @@ table PaxMonRerouteGroup {
   old_route_index: uint;
   new_routes: [PaxMonGroupRoute];
   reason: PaxMonRerouteReason;
+  broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
 }
 
 table PaxMonRerouteGroupsRequest {

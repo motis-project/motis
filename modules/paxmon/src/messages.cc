@@ -137,12 +137,53 @@ temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
                           gr->planned()};
 }
 
-Offset<PaxMonRerouteLogEntry> to_fbs(FlatBufferBuilder& fbb,
+std::optional<broken_transfer_info> from_fbs(
+    schedule const& sched,
+    Vector<Offset<PaxMonBrokenTransferInfo>> const* opt) {
+  if (opt->size() == 1) {
+    auto const* bti = opt->Get(0);
+    return {broken_transfer_info{
+        bti->leg_index(), static_cast<transfer_direction_t>(bti->direction()),
+        from_fbs_time(sched, bti->current_arrival_time()),
+        from_fbs_time(sched, bti->current_departure_time()),
+        bti->required_transfer_time(), bti->arrival_canceled(),
+        bti->departure_canceled()}};
+  } else if (opt->size() == 0) {
+    return {};
+  } else {
+    throw utl::fail(
+        "invalid optional PaxMonBrokenTransferInfo: {} entries (expected 0 or "
+        "1)",
+        opt->size());
+  }
+}
+
+Offset<Vector<Offset<PaxMonBrokenTransferInfo>>> to_fbs(
+    FlatBufferBuilder& fbb, schedule const& sched,
+    std::optional<broken_transfer_info> const& opt) {
+  if (opt.has_value()) {
+    auto const& bti = opt.value();
+    return fbb.CreateVector(std::vector<Offset<PaxMonBrokenTransferInfo>>{
+        CreatePaxMonBrokenTransferInfo(
+            fbb, bti.leg_index_,
+            static_cast<PaxMonTransferDirection>(bti.direction_),
+            to_fbs_time(sched, bti.current_arrival_time_),
+            to_fbs_time(sched, bti.current_departure_time_),
+            bti.required_transfer_time_, bti.arrival_canceled_,
+            bti.departure_canceled_)});
+  } else {
+    return fbb.CreateVector(std::vector<Offset<PaxMonBrokenTransferInfo>>{});
+  }
+}
+
+Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
+                                     FlatBufferBuilder& fbb,
                                      passenger_group_container const& pgc,
                                      reroute_log_entry const& entry) {
   return CreatePaxMonRerouteLogEntry(
       fbb, entry.system_time_, entry.reroute_time_,
       static_cast<PaxMonRerouteReason>(entry.reason_),
+      to_fbs(fbb, sched, entry.broken_transfer_),
       CreatePaxMonRerouteLogRoute(fbb, entry.old_route_,
                                   entry.old_route_probability_, 0),
       fbb.CreateVector(utl::to_vec(pgc.log_entry_new_routes_.at(entry.index_),
@@ -166,7 +207,8 @@ Offset<PaxMonGroup> to_fbs(schedule const& sched,
       fbb.CreateVector(with_reroute_log
                            ? utl::to_vec(pgc.reroute_log_entries(pg.id_),
                                          [&](auto const& entry) {
-                                           return to_fbs(fbb, pgc, entry);
+                                           return to_fbs(sched, fbb, pgc,
+                                                         entry);
                                          })
                            : std::vector<Offset<PaxMonRerouteLogEntry>>{}));
 }
@@ -291,7 +333,8 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched,
       fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
       static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
-      to_fbs_time(sched, me.expected_arrival_time_));
+      to_fbs_time(sched, me.expected_arrival_time_),
+      to_fbs(fbb, sched, me.broken_transfer_));
 }
 
 Offset<Vector<PaxMonPdfEntry const*>> pdf_to_fbs(FlatBufferBuilder& fbb,

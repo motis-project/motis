@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include "motis/core/schedule/time.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/index_types.h"
 #include "motis/paxmon/localization.h"
 #include "motis/paxmon/reachability.h"
@@ -22,6 +24,7 @@ struct monitoring_event {
   passenger_localization localization_;
   reachability_status reachability_status_{reachability_status::OK};
   time expected_arrival_time_{INVALID_TIME};
+  std::optional<broken_transfer_info> broken_transfer_;
 };
 
 }  // namespace motis::paxmon

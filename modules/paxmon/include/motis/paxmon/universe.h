@@ -164,8 +164,6 @@ struct edge {
 };
 
 struct universe {
-  passenger_group const* get_passenger_group(passenger_group_index id) const;
-
   bool uses_default_schedule() const {
     return schedule_res_id_ ==
            motis::module::to_res_id(motis::module::global_res_id::SCHEDULE);
