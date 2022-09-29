@@ -1,3 +1,4 @@
+include "base/Interval.fbs";
 include "paxmon/PaxMonGroup.fbs";
 
 namespace motis.paxmon;
@@ -8,6 +9,12 @@ enum PaxMonFilterGroupsSortOrder : byte {
   MaxEstimatedDelay,
   ExpectedEstimatedDelay,
   MinEstimatedDelay
+}
+
+enum PaxMonFilterGroupsTimeFilter : byte {
+  NoFilter, // don't filter based on time
+  DepartureTime, // scheduled departure must be in interval
+  DepartureOrArrivalTime // scheduled departure or arrival must be in interval
 }
 
 table PaxMonFilterGroupsRequest {
@@ -27,4 +34,8 @@ table PaxMonFilterGroupsRequest {
   filter_by_data_source: [PaxMonDataSource];
 
   filter_by_train_nr: [uint];
+
+  // filter by time
+  filter_by_time: PaxMonFilterGroupsTimeFilter;
+  filter_interval: Interval;
 }

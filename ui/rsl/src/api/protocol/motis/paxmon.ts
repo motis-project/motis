@@ -103,6 +103,12 @@ export type PaxMonFilterGroupsSortOrder =
   | "MinEstimatedDelay";
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
+export type PaxMonFilterGroupsTimeFilter =
+  | "NoFilter"
+  | "DepartureTime"
+  | "DepartureOrArrivalTime";
+
+// paxmon/PaxMonFilterGroupsRequest.fbs
 export interface PaxMonFilterGroupsRequest {
   universe: number;
   sort_by: PaxMonFilterGroupsSortOrder;
@@ -115,6 +121,8 @@ export interface PaxMonFilterGroupsRequest {
   filter_by_group_id: number[];
   filter_by_data_source: PaxMonDataSource[];
   filter_by_train_nr: number[];
+  filter_by_time: PaxMonFilterGroupsTimeFilter;
+  filter_interval: Interval;
 }
 
 // paxmon/PaxMonFilterGroupsResponse.fbs
@@ -128,6 +136,7 @@ export interface PaxMonGroupWithStats {
 // paxmon/PaxMonFilterGroupsResponse.fbs
 export interface PaxMonFilterGroupsResponse {
   total_matching_groups: number;
+  total_matching_passengers: number;
   filtered_groups: number;
   remaining_groups: number;
   next_skip: number;

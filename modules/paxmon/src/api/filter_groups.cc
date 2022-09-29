@@ -104,8 +104,17 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
 
   auto const filter_by_trips = req->filter_by_train_nr()->size() > 0;
 
+  auto const time_filter_type = req->filter_by_time();
+  auto const filter_by_time =
+      time_filter_type != PaxMonFilterGroupsTimeFilter_NoFilter;
+  auto const filter_interval_begin =
+      unix_to_motistime(sched.schedule_begin_, req->filter_interval()->begin());
+  auto const filter_interval_end =
+      unix_to_motistime(sched.schedule_begin_, req->filter_interval()->end());
+
   std::vector<group_info> selected_groups;
   selected_groups.reserve(pgc.size());
+  auto total_matching_passengers = 0ULL;
 
   auto check_trip_filter = [&](fws_compact_journey const cj) {
     return std::any_of(begin(cj.legs()), end(cj.legs()), [&](auto const& leg) {
@@ -114,11 +123,26 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
     });
   };
 
+  auto check_time_filter = [&](fws_compact_journey const cj) {
+    auto const dep = cj.legs().front().enter_time_;
+    auto const arr = cj.legs().back().exit_time_;
+    if (time_filter_type == PaxMonFilterGroupsTimeFilter_DepartureTime) {
+      return dep >= filter_interval_begin && dep < filter_interval_end;
+    } else if (time_filter_type ==
+               PaxMonFilterGroupsTimeFilter_DepartureOrArrivalTime) {
+      return (dep >= filter_interval_begin && dep < filter_interval_end) ||
+             (arr >= filter_interval_begin && arr < filter_interval_end);
+    } else {
+      return true;
+    }
+  };
+
   auto const handle_group = [&](passenger_group const* pg) {
     auto const pgi = pg->id_;
     auto gi = group_info{pgi};
     auto station_filter_match = !filter_by_journey;
     auto trip_filter_match = !filter_by_trips;
+    auto time_filter_match = !filter_by_time;
 
     for (auto const& gr : pgc.routes(pgi)) {
       if (gr.probability_ != 0) {
@@ -134,6 +158,9 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
         gi.scheduled_departure_ = cj.legs().front().enter_time_;
         if (!trip_filter_match) {
           trip_filter_match = check_trip_filter(cj);
+        }
+        if (!time_filter_match) {
+          time_filter_match = check_time_filter(cj);
         }
         if (!station_filter_match) {
           // check station filter
@@ -163,15 +190,34 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
                   });
           station_filter_match = via_matches;
         }
-      } else if (!trip_filter_match) {
-        trip_filter_match =
-            check_trip_filter(pgc.journey(gr.compact_journey_index_));
+      } else if (!trip_filter_match || !time_filter_match) {
+        auto const cj = pgc.journey(gr.compact_journey_index_);
+        if (!trip_filter_match) {
+          trip_filter_match = check_trip_filter(cj);
+        }
+        if (!time_filter_match) {
+          time_filter_match = check_time_filter(cj);
+        }
       }
     }
 
-    if (station_filter_match && trip_filter_match) {
+    if (station_filter_match && trip_filter_match && time_filter_match) {
       selected_groups.emplace_back(gi);
+      total_matching_passengers += pg->passengers_;
     }
+  };
+
+  auto const add_by_data_source = [&](data_source const& ds) -> bool {
+    if (auto const it = pgc.groups_by_source_.find(ds);
+        it != end(pgc.groups_by_source_)) {
+      for (auto const pgid : it->second) {
+        if (auto const pg = pgc.at(pgid); pg != nullptr) {
+          handle_group(pg);
+        }
+      }
+      return true;
+    }
+    return false;
   };
 
   if (filter_by_ids) {
@@ -181,13 +227,13 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
       }
     }
 
-    for (auto const& ds : filter_sources) {
-      if (auto const it = pgc.groups_by_source_.find(ds);
-          it != end(pgc.groups_by_source_)) {
-        for (auto const pgid : it->second) {
-          if (auto const pg = pgc.at(pgid); pg != nullptr) {
-            handle_group(pg);
-          }
+    for (auto ds : filter_sources) {
+      if (ds.secondary_ref_ != 0) {
+        add_by_data_source(ds);
+      } else {
+        ds.secondary_ref_ = 1;
+        while (add_by_data_source(ds)) {
+          ++ds.secondary_ref_;
         }
       }
     }
@@ -257,23 +303,23 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
   }
 
   message_creator mc;
-  mc.create_and_finish(
-      MsgContent_PaxMonFilterGroupsResponse,
-      CreatePaxMonFilterGroupsResponse(
-          mc, total_matching_groups, selected_groups.size(), remaining_groups,
-          skip_first + selected_groups.size(),
-          mc.CreateVector(utl::to_vec(selected_groups,
-                                      [&](group_info const& gi) {
-                                        return CreatePaxMonGroupWithStats(
-                                            mc,
-                                            to_fbs(sched, pgc, mc,
-                                                   pgc.group(gi.pgi_),
-                                                   include_reroute_log),
-                                            gi.min_estimated_delay_,
-                                            gi.max_estimated_delay_,
-                                            gi.expected_estimated_delay_);
-                                      })))
-          .Union());
+  mc.create_and_finish(MsgContent_PaxMonFilterGroupsResponse,
+                       CreatePaxMonFilterGroupsResponse(
+                           mc, total_matching_groups, total_matching_passengers,
+                           selected_groups.size(), remaining_groups,
+                           skip_first + selected_groups.size(),
+                           mc.CreateVector(utl::to_vec(
+                               selected_groups,
+                               [&](group_info const& gi) {
+                                 return CreatePaxMonGroupWithStats(
+                                     mc,
+                                     to_fbs(sched, pgc, mc, pgc.group(gi.pgi_),
+                                            include_reroute_log),
+                                     gi.min_estimated_delay_,
+                                     gi.max_estimated_delay_,
+                                     gi.expected_estimated_delay_);
+                               })))
+                           .Union());
   return make_msg(mc);
 }
 

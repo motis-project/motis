@@ -24,7 +24,7 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonGroup>> groups;
 
-  auto const add_by_data_source = [&](data_source const& ds) {
+  auto const add_by_data_source = [&](data_source const& ds) -> bool {
     if (auto const it = uv.passenger_groups_.groups_by_source_.find(ds);
         it != end(uv.passenger_groups_.groups_by_source_)) {
       for (auto const pgid : it->second) {
@@ -33,7 +33,9 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
                                      include_reroute_log));
         }
       }
+      return true;
     }
+    return false;
   };
 
   for (auto const pgid : *req->ids()) {
@@ -43,8 +45,16 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
     }
   }
 
-  for (auto const ds : *req->sources()) {
-    add_by_data_source(from_fbs(ds));
+  for (auto const fbs_ds : *req->sources()) {
+    auto ds = from_fbs(fbs_ds);
+    if (ds.secondary_ref_ != 0) {
+      add_by_data_source(ds);
+    } else {
+      ds.secondary_ref_ = 1;
+      while (add_by_data_source(ds)) {
+        ++ds.secondary_ref_;
+      }
+    }
   }
 
   mc.create_and_finish(
