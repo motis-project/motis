@@ -6,10 +6,10 @@ import { Station, TripServiceInfo } from "@/api/protocol/motis";
 
 import { MeasureUnion } from "@/data/measures";
 
-import StationPicker from "@/components/StationPicker";
-import TripPicker from "@/components/TripPicker";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
-import TimeInput from "@/components/measures/TimeInput";
+import StationPicker from "@/components/inputs/StationPicker";
+import TimeInput from "@/components/inputs/TimeInput";
+import TripPicker from "@/components/inputs/TripPicker";
 
 export type SharedDataEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -140,7 +140,11 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
                 </li>
               ))}
             </ul>
-            <StationPicker onStationPicked={addStation} clearOnPick={true} />
+            <StationPicker
+              onStationPicked={addStation}
+              clearOnPick={true}
+              clearButton={false}
+            />
           </div>
         </>
       )}

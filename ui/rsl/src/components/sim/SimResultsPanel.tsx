@@ -25,7 +25,7 @@ import {
 import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
-import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
+import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
 type SimResultsListEntryProps = {
   simResultAtom: PrimitiveAtom<SimulationResult>;

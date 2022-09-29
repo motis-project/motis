@@ -25,7 +25,7 @@ import { scheduleAtom } from "@/data/multiverse";
 
 import classNames from "@/util/classNames";
 
-import TripPicker from "@/components/TripPicker";
+import TripPicker from "@/components/inputs/TripPicker";
 
 export type RtCancelMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

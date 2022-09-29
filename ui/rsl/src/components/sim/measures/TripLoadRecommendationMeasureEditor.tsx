@@ -11,12 +11,12 @@ import {
   isTripLoadRecommendationMeasureU,
 } from "@/data/measures";
 
-import StationPicker from "@/components/StationPicker";
 import {
   highLoadLevels,
   lowOrUnknownLoadLevels,
-} from "@/components/measures/LoadInput";
-import TripAndLoadInput from "@/components/measures/TripAndLoadInput";
+} from "@/components/inputs/LoadInput";
+import StationPicker from "@/components/inputs/StationPicker";
+import TripAndLoadInput from "@/components/sim/measures/TripAndLoadInput";
 
 export type TripLoadRecommendationMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -116,6 +116,7 @@ function TripLoadRecommendationMeasureEditor({
         <StationPicker
           onStationPicked={setPlannedDestination}
           clearOnPick={false}
+          clearButton={false}
           initialStation={data.planned_destination}
         />
       </div>

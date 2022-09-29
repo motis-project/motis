@@ -4,8 +4,8 @@ import { TripId } from "@/api/protocol/motis";
 
 import { showLegacyLoadForecastChartAtom } from "@/data/settings";
 
-import TripLoadForecastChart from "@/components/TripLoadForecastChart";
-import TripRoute from "@/components/TripRoute";
+import TripLoadForecastChart from "@/components/trips/TripLoadForecastChart";
+import TripRoute from "@/components/trips/TripRoute";
 
 type TripDetailsProps = {
   tripId: TripId;

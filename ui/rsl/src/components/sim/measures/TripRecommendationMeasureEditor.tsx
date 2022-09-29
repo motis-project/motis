@@ -6,8 +6,8 @@ import { Station, TripServiceInfo } from "@/api/protocol/motis";
 
 import { MeasureUnion, isTripRecommendationMeasureU } from "@/data/measures";
 
-import StationPicker from "@/components/StationPicker";
-import TripPicker from "@/components/TripPicker";
+import StationPicker from "@/components/inputs/StationPicker";
+import TripPicker from "@/components/inputs/TripPicker";
 
 export type TripRecommendationMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -50,6 +50,7 @@ function TripRecommendationMeasureEditor({
         <StationPicker
           onStationPicked={setTripRecDestination}
           clearOnPick={false}
+          clearButton={false}
           initialStation={data.planned_destination}
         />
       </div>

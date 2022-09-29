@@ -8,6 +8,8 @@ import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
   PaxMonDestroyUniverseRequest,
+  PaxMonFilterGroupsRequest,
+  PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
   PaxMonFilterTripsResponse,
   PaxMonFindTripsRequest,
@@ -22,6 +24,8 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonGroupStatisticsRequest,
+  PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
   PaxMonStatusRequest,
@@ -201,6 +205,26 @@ export function usePaxMonFilterTripsRequest(
   );
 }
 
+export async function sendPaxMonFilterGroupsRequest(
+  content: PaxMonFilterGroupsRequest
+): Promise<PaxMonFilterGroupsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/filter_groups",
+    "PaxMonFilterGroupsRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonFilterGroupsResponse");
+  return msg.content as PaxMonFilterGroupsResponse;
+}
+
+export function usePaxMonFilterGroupsRequest(
+  content: PaxMonFilterGroupsRequest
+): UseQueryResult<PaxMonFilterGroupsResponse> {
+  return useQuery(queryKeys.filterGroups(content), () =>
+    sendPaxMonFilterGroupsRequest(content)
+  );
+}
+
 export async function sendPaxMonKeepAliveRequest(
   content: PaxMonKeepAliveRequest
 ): Promise<PaxMonKeepAliveResponse> {
@@ -211,6 +235,26 @@ export async function sendPaxMonKeepAliveRequest(
   );
   verifyContentType(msg, "PaxMonKeepAliveResponse");
   return msg.content as PaxMonKeepAliveResponse;
+}
+
+export async function sendPaxMonGroupStatisticsRequest(
+  content: PaxMonGroupStatisticsRequest
+): Promise<PaxMonGroupStatisticsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/group_statistics",
+    "PaxMonGroupStatisticsRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonGroupStatisticsResponse");
+  return msg.content as PaxMonGroupStatisticsResponse;
+}
+
+export function usePaxMonGroupStatisticsQuery(
+  universe: number
+): UseQueryResult<PaxMonGroupStatisticsResponse> {
+  return useQuery(queryKeys.groupStatistics(universe), () =>
+    sendPaxMonGroupStatisticsRequest({ universe })
+  );
 }
 
 export const queryKeys = {
@@ -227,8 +271,12 @@ export const queryKeys = {
     [...queryKeys.all, "interchanges", req] as const,
   filterTrips: (req: PaxMonFilterTripsRequest) =>
     [...queryKeys.all, "filter_trips", req] as const,
+  filterGroups: (req: PaxMonFilterGroupsRequest) =>
+    [...queryKeys.all, "filter_groups", req] as const,
   addressableGroups: (req: PaxMonGetAddressableGroupsRequest) =>
     [...queryKeys.all, "addressable_groups", req] as const,
   keepAlive: (req: PaxMonKeepAliveRequest) =>
     [...queryKeys.all, "keep_alive", req] as const,
+  groupStatistics: (universe: number) =>
+    [...queryKeys.all, "group_statistics", universe] as const,
 };

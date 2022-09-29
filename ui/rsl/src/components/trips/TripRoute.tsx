@@ -24,9 +24,9 @@ import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
-import SectionLoadGraph from "@/components/SectionLoadGraph";
-import TripOptimization from "@/components/TripOptimization";
-import TripSectionDetails from "@/components/TripSectionDetails";
+import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
+import TripOptimization from "@/components/trips/TripOptimization";
+import TripSectionDetails from "@/components/trips/TripSectionDetails";
 
 type TripRouteProps = {
   tripId: TripId;
@@ -148,7 +148,7 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
         <div>
           <ChevronIcon className="w-5 h-5 mt-0.5 group-hover:fill-db-red-500" />
         </div>
-        <div className="w-80">
+        <div className="w-80 shrink-0">
           <div className="flex gap-1">
             <div className="flex justify-between w-24 shrink-0">
               <span className="text-gray-600 w-1/2">
@@ -203,7 +203,7 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
             </>
           ) : null}
         </div>
-        <div className="flex-grow">
+        <div className="grow shrink">
           <div className="w-full h-16">
             <SectionLoadGraph
               section={section}

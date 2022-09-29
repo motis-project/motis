@@ -7,8 +7,8 @@ import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
 import { MeasureUnion, isTripLoadInfoMeasureU } from "@/data/measures";
 
-import { knownLoadLevels } from "@/components/measures/LoadInput";
-import TripAndLoadInput from "@/components/measures/TripAndLoadInput";
+import { knownLoadLevels } from "@/components/inputs/LoadInput";
+import TripAndLoadInput from "@/components/sim/measures/TripAndLoadInput";
 
 export type TripLoadInfoMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;

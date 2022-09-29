@@ -3,8 +3,8 @@ import React, { ReactNode } from "react";
 import { TripServiceInfo } from "@/api/protocol/motis";
 import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
-import TripPicker from "@/components/TripPicker";
-import LoadInput, { allLoadLevels } from "@/components/measures/LoadInput";
+import LoadInput, { allLoadLevels } from "@/components/inputs/LoadInput";
+import TripPicker from "@/components/inputs/TripPicker";
 
 export type TripAndLoadInputProps = {
   selectedTrip: TripServiceInfo | undefined;

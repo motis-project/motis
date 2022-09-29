@@ -18,7 +18,7 @@ import { scheduleAtom } from "@/data/multiverse";
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
-import { TripTooltip } from "@/components/TripTooltip";
+import { TripTooltip } from "@/components/trips/TripTooltip";
 
 export type GroupByDirection = "Origin" | "Destination" | "None";
 

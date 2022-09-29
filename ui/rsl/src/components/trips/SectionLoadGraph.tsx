@@ -206,7 +206,7 @@ function SectionLoadGraph({
 
   return (
     <div className="group relative">
-      <svg width={width} height={height}>
+      <svg width="100%" height={height}>
         <g>{bgSections}</g>
         <rect
           x={margin.left}

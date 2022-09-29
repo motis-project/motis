@@ -1,6 +1,6 @@
 import { atomWithStorage } from "jotai/utils";
 
-import { SectionLoadGraphPlotType } from "@/components/SectionLoadGraph";
+import { SectionLoadGraphPlotType } from "@/components/trips/SectionLoadGraph";
 
 export const sectionGraphPlotTypeAtom =
   atomWithStorage<SectionLoadGraphPlotType>(

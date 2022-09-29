@@ -1,4 +1,4 @@
-import { ChevronDownIcon } from "@heroicons/react/solid";
+import { ChevronDownIcon, XIcon } from "@heroicons/react/solid";
 import { useCombobox } from "downshift";
 import { useState } from "react";
 
@@ -9,12 +9,14 @@ import { useStationGuesserQuery } from "@/api/guesser";
 type StationPickerProps = {
   onStationPicked: (station: Station | undefined) => void;
   clearOnPick: boolean;
+  clearButton: boolean;
   initialStation?: Station | undefined;
 };
 
 function StationPicker({
   onStationPicked,
   clearOnPick,
+  clearButton,
   initialStation,
 }: StationPickerProps): JSX.Element {
   const [input, setInput] = useState("");
@@ -32,6 +34,7 @@ function StationPicker({
     getComboboxProps,
     highlightedIndex,
     getItemProps,
+    selectedItem,
     reset,
   } = useCombobox({
     items: stationList,
@@ -60,14 +63,25 @@ function StationPicker({
           type="text"
           className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
         />
-        <button
-          type="button"
-          {...getToggleButtonProps()}
-          aria-label="toggle menu"
-          className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
-        >
-          <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-        </button>
+        {selectedItem && clearButton ? (
+          <button
+            tabIndex={-1}
+            onClick={() => reset()}
+            aria-label="clear selection"
+            className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
+          >
+            <XIcon className="h-4 w-4 text-gray-500" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            {...getToggleButtonProps()}
+            aria-label="toggle menu"
+            className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
+          >
+            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+          </button>
+        )}
       </div>
       <ul
         {...getMenuProps()}

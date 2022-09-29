@@ -12,7 +12,7 @@ import {
 
 import classNames from "@/util/classNames";
 
-import { SectionLoadGraphPlotType } from "@/components/SectionLoadGraph";
+import { SectionLoadGraphPlotType } from "@/components/trips/SectionLoadGraph";
 
 const sectionGraphPlotTypes: Array<{
   plotType: SectionLoadGraphPlotType;
@@ -109,14 +109,14 @@ function OptimizationSettings() {
 
 function Settings(): JSX.Element {
   return (
-    <div className="absolute top-2 right-2">
+    <div className="flex justify-center items-center h-full">
       <Popover className="relative">
         {({ open }) => (
           <>
             <Popover.Button
               className={classNames(
                 open ? "opacity-100" : "opacity-30 hover:opacity-100",
-                "p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
+                "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
               )}
             >
               <CogIcon className="w-4 h-4" aria-hidden="true" />

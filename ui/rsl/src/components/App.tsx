@@ -1,14 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { useAtom } from "jotai";
 
-import getQueryParameters from "@/util/queryParameters";
+import { mainPageAtom, showSimPanelAtom } from "@/data/views";
 
-import MainSection from "@/components/MainSection";
-import Settings from "@/components/Settings";
-import SimPanel from "@/components/SimPanel";
-import TimeControl from "@/components/TimeControl";
-import TripList from "@/components/TripList";
-import UniverseControl from "@/components/UniverseControl";
+import classNames from "@/util/classNames";
+
+import GroupsMainSection from "@/components/groups/GroupsMainSection";
+import Header from "@/components/header/Header";
+import SimPanel from "@/components/sim/SimPanel";
+import TripsMainSection from "@/components/trips/TripsMainSection";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,32 +17,42 @@ const queryClient = new QueryClient({
   },
 });
 
-const allowForwarding = getQueryParameters().get("allowForwarding") === "yes";
+function MainPage(): JSX.Element {
+  const [mainPage] = useAtom(mainPageAtom);
+
+  switch (mainPage) {
+    case "trips":
+      return <TripsMainSection />;
+    case "groups":
+      return <GroupsMainSection />;
+    case "stats":
+      return <div>Statistiken</div>;
+  }
+}
+
+function MainContent(): JSX.Element {
+  const [showSimPanel] = useAtom(showSimPanelAtom);
+  return (
+    <div className="flex justify-between items-stretch overflow-y-auto grow">
+      <MainPage />
+      <div
+        className={classNames(
+          "bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0",
+          showSimPanel ? "block" : "hidden"
+        )}
+      >
+        <SimPanel />
+      </div>
+    </div>
+  );
+}
 
 function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="w-full h-screen flex flex-col">
-        <div
-          className="flex justify-center items-baseline space-x-4 p-2
-            bg-db-cool-gray-200 dark:bg-gray-800 text-black dark:text-neutral-300 divide-x-2 divide-db-cool-gray-400"
-        >
-          <TimeControl allowForwarding={allowForwarding} />
-          <UniverseControl />
-        </div>
-        <Settings />
-
-        <div className="flex justify-between items-stretch overflow-y-auto grow">
-          <div className="bg-db-cool-gray-200 dark:bg-gray-800 w-[25rem] overflow-y-auto p-2 shrink-0">
-            <TripList />
-          </div>
-          <div className="overflow-y-auto grow p-2">
-            <MainSection />
-          </div>
-          <div className="bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0">
-            <SimPanel />
-          </div>
-        </div>
+        <Header />
+        <MainContent />
       </div>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

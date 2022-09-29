@@ -5,8 +5,8 @@ import { hasSimResultsAtom } from "@/data/simulation";
 
 import classNames from "@/util/classNames";
 
-import SimResultsPanel from "@/components/SimResultsPanel";
-import MeasurePanel from "@/components/measures/MeasurePanel";
+import SimResultsPanel from "@/components/sim/SimResultsPanel";
+import MeasurePanel from "@/components/sim/measures/MeasurePanel";
 
 type TabId = "measures" | "results";
 

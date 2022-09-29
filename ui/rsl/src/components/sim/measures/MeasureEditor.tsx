@@ -7,12 +7,12 @@ import { MeasureUnion } from "@/data/measures";
 import { selectedTripAtom } from "@/data/selectedTrip";
 import { showLegacyMeasureTypesAtom } from "@/data/settings";
 
-import RtCancelMeasureEditor from "@/components/measures/RtCancelMeasureEditor";
-import RtUpdateMeasureEditor from "@/components/measures/RtUpdateMeasureEditor";
-import SharedDataEditor from "@/components/measures/SharedDataEditor";
-import TripLoadInfoMeasureEditor from "@/components/measures/TripLoadInfoMeasureEditor";
-import TripLoadRecommendationMeasureEditor from "@/components/measures/TripLoadRecommendationMeasureEditor";
-import TripRecommendationMeasureEditor from "@/components/measures/TripRecommendationMeasureEditor";
+import RtCancelMeasureEditor from "@/components/sim/measures/RtCancelMeasureEditor";
+import RtUpdateMeasureEditor from "@/components/sim/measures/RtUpdateMeasureEditor";
+import SharedDataEditor from "@/components/sim/measures/SharedDataEditor";
+import TripLoadInfoMeasureEditor from "@/components/sim/measures/TripLoadInfoMeasureEditor";
+import TripLoadRecommendationMeasureEditor from "@/components/sim/measures/TripLoadRecommendationMeasureEditor";
+import TripRecommendationMeasureEditor from "@/components/sim/measures/TripRecommendationMeasureEditor";
 import ModalDialog from "@/components/util/ModalDialog";
 
 export type MeasureEditorProps = {

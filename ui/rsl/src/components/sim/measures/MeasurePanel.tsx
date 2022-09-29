@@ -8,8 +8,8 @@ import {
   measuresAtom,
 } from "@/data/measures";
 
-import MeasureEditor from "@/components/measures/MeasureEditor";
-import MeasureList from "@/components/measures/MeasureList";
+import MeasureEditor from "@/components/sim/measures/MeasureEditor";
+import MeasureList from "@/components/sim/measures/MeasureList";
 
 export type MeasurePanelProps = {
   onSimulationFinished: () => void;

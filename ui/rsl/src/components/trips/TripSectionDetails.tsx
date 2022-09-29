@@ -14,7 +14,7 @@ import { usePaxMonGroupsInTripQuery } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 
-import CombinedGroup from "@/components/CombinedGroup";
+import CombinedGroup from "@/components/trips/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,

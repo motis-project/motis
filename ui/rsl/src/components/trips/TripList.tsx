@@ -23,13 +23,14 @@ import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
-import { formatPercent } from "@/data/numberFormat";
+import { formatNumber, formatPercent } from "@/data/numberFormat";
 import { selectedTripAtom } from "@/data/selectedTrip";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
+import { extractNumbers } from "@/util/extractNumbers";
 
-import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
+import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
 type LabeledFilterOption = {
   option: PaxMonFilterTripsSortOrder;
@@ -96,9 +97,7 @@ function TripList(): JSX.Element {
     ServiceClass.IC,
   ]);
 
-  const filterTrainNrs = [...trainNrFilter.matchAll(/\d+/g)].map((m) =>
-    parseInt(m[0])
-  );
+  const filterTrainNrs = extractNumbers(trainNrFilter);
 
   const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
@@ -264,7 +263,8 @@ function TripList(): JSX.Element {
       </div>
       {totalNumberOfTrips !== undefined && (
         <div className="pb-2 text-lg">
-          {totalNumberOfTrips} {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
+          {formatNumber(totalNumberOfTrips)}{" "}
+          {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
         </div>
       )}
       <div className="grow">

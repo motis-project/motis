@@ -37,9 +37,9 @@ import {
   toRiBasis,
 } from "@/data/rtMeasureFormData";
 
-import StationPicker from "@/components/StationPicker";
-import TripPicker from "@/components/TripPicker";
-import TimeInput from "@/components/measures/TimeInput";
+import StationPicker from "@/components/inputs/StationPicker";
+import TimeInput from "@/components/inputs/TimeInput";
+import TripPicker from "@/components/inputs/TripPicker";
 
 export type RtUpdateMeasureEditorProps = {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -262,6 +262,7 @@ function TripSectionEditor({
                         onStationPicked={onChange}
                         initialStation={value}
                         clearOnPick={false}
+                        clearButton={false}
                       />
                     )}
                   />

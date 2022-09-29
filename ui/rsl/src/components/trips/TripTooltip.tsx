@@ -10,7 +10,7 @@ import { universeAtom } from "@/data/multiverse";
 
 import { formatDateTime } from "@/util/dateFormat";
 
-import MiniTripLoadGraph from "@/components/MiniTripLoadGraph";
+import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
 export type TripTooltipProps = {
   tripId: TripId;
