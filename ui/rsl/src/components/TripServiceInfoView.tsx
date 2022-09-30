@@ -15,7 +15,7 @@ function TripServiceInfoView({
     ...new Set(tsi.service_infos.map((si) => `${si.category} ${si.train_nr}`)),
   ];
   if (format === "Short") {
-    return <span>{names[0] ?? "?"}</span>;
+    return <span>{names[0] ?? tsi.trip.train_nr}</span>;
   } else {
     return (
       <div className="w-full">

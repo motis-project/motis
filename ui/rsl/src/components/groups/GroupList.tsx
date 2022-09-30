@@ -21,6 +21,7 @@ import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber } from "@/data/numberFormat";
+import { selectedGroupAtom } from "@/data/selectedGroup";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -89,6 +90,7 @@ function getFilterGroupsRequest(
 
 function GroupList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
+  const [selectedGroup, setSelectedGroup] = useAtom(selectedGroupAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -185,6 +187,7 @@ function GroupList(): JSX.Element {
     ? data.pages.flatMap((p) => p.groups)
     : [];
   const totalNumberOfGroups = data?.pages[0]?.total_matching_groups;
+  const totalNumberOfPassengers = data?.pages[0]?.total_matching_passengers;
 
   return (
     <div className="h-full flex flex-col">
@@ -326,6 +329,7 @@ function GroupList(): JSX.Element {
         <div className="pb-2 text-lg">
           {formatNumber(totalNumberOfGroups)}{" "}
           {totalNumberOfGroups === 1 ? "Gruppe" : "Gruppen"}
+          {` (${formatNumber(totalNumberOfPassengers || 0)} Reisende)`}
         </div>
       )}
       <div className="grow">
@@ -335,7 +339,12 @@ function GroupList(): JSX.Element {
             increaseViewportBy={500}
             endReached={loadMore}
             itemContent={(index, groupWithStats) => (
-              <GroupListEntry groupWithStats={groupWithStats} idType={idType} />
+              <GroupListEntry
+                groupWithStats={groupWithStats}
+                idType={idType}
+                selectedGroup={selectedGroup}
+                setSelectedGroup={setSelectedGroup}
+              />
             )}
           />
         ) : (
@@ -370,20 +379,33 @@ function GroupRouteInfo({ route }: GroupRouteInfoProps): JSX.Element {
 type GroupListEntryProps = {
   groupWithStats: PaxMonGroupWithStats;
   idType: GroupIdType;
+  selectedGroup: number | undefined;
+  setSelectedGroup: (id: number) => void;
 };
 
 function GroupListEntry({
   groupWithStats,
   idType,
+  selectedGroup,
+  setSelectedGroup,
 }: GroupListEntryProps): JSX.Element {
   const group = groupWithStats.group;
   const totalRouteCount = group.routes.length;
   const activeRouteCount = group.routes.filter((r) => r.probability > 0).length;
   const firstRoute = totalRouteCount > 0 ? group.routes[0] : null;
+  const isSelected = selectedGroup === group.id;
 
   return (
     <div className="pr-1 pb-3">
-      <div className="p-2 rounded bg-db-cool-gray-100">
+      <div
+        className={classNames(
+          "cursor-pointer p-2 rounded",
+          isSelected
+            ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
+            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
+        )}
+        onClick={() => setSelectedGroup(group.id)}
+      >
         <div className="flex justify-between">
           {idType === "internal" ? (
             <div

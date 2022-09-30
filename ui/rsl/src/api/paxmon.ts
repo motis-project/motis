@@ -20,6 +20,8 @@ import {
   PaxMonGetAddressableGroupsResponse,
   PaxMonGetGroupsInTripRequest,
   PaxMonGetGroupsInTripResponse,
+  PaxMonGetGroupsRequest,
+  PaxMonGetGroupsResponse,
   PaxMonGetInterchangesRequest,
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
@@ -225,6 +227,26 @@ export function usePaxMonFilterGroupsRequest(
   );
 }
 
+export async function sendPaxMonGetGroupsRequest(
+  content: PaxMonGetGroupsRequest
+): Promise<PaxMonGetGroupsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/get_groups",
+    "PaxMonGetGroupsRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonGetGroupsResponse");
+  return msg.content as PaxMonGetGroupsResponse;
+}
+
+export function usePaxMonGetGroupsRequest(
+  content: PaxMonGetGroupsRequest
+): UseQueryResult<PaxMonGetGroupsResponse> {
+  return useQuery(queryKeys.getGroups(content), () =>
+    sendPaxMonGetGroupsRequest(content)
+  );
+}
+
 export async function sendPaxMonKeepAliveRequest(
   content: PaxMonKeepAliveRequest
 ): Promise<PaxMonKeepAliveResponse> {
@@ -273,6 +295,8 @@ export const queryKeys = {
     [...queryKeys.all, "filter_trips", req] as const,
   filterGroups: (req: PaxMonFilterGroupsRequest) =>
     [...queryKeys.all, "filter_groups", req] as const,
+  getGroups: (req: PaxMonGetGroupsRequest) =>
+    [...queryKeys.all, "get_groups", req] as const,
   addressableGroups: (req: PaxMonGetAddressableGroupsRequest) =>
     [...queryKeys.all, "addressable_groups", req] as const,
   keepAlive: (req: PaxMonKeepAliveRequest) =>
