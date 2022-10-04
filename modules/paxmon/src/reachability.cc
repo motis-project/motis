@@ -17,6 +17,8 @@ reachability_info get_reachability(universe const& uv,
   auto station_arrival_time = first_leg.enter_time_;
   auto current_transfer_departure_time = INVALID_TIME;
   auto current_transfer_arrival_time = INVALID_TIME;
+  auto arrival_canceled = false;
+  auto departure_canceled = false;
   auto required_transfer_time = std::uint16_t{0};
 
   reachability.reachable_interchange_stations_.emplace_back(
@@ -28,8 +30,6 @@ reachability_info get_reachability(universe const& uv,
     auto in_trip = false;
     auto entry_ok = false;
     auto exit_ok = false;
-    auto arrival_canceled = false;
-    auto departure_canceled = false;
     for (auto [edge_idx, ei] : utl::enumerate(uv.trip_data_.edges(tdi))) {
       auto const* e = ei.get(uv);
       current_transfer_departure_time = INVALID_TIME;
@@ -92,6 +92,12 @@ reachability_info get_reachability(universe const& uv,
     if (!ok) {
       auto const is_first_leg = leg_idx == 0;
       auto const is_last_leg = leg_idx == legs.size() - 1;
+      if (current_transfer_arrival_time == INVALID_TIME) {
+        arrival_canceled = true;
+      }
+      if (current_transfer_departure_time == INVALID_TIME) {
+        departure_canceled = true;
+      }
       reachability.first_unreachable_transfer_ = broken_transfer_info{
           static_cast<std::uint16_t>(leg_idx),
           !entry_ok ? transfer_direction_t::ENTER : transfer_direction_t::EXIT,
