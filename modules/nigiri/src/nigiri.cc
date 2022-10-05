@@ -95,6 +95,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
         }
 
+        LOG(logging::info) << "nigiri timetable: stations="
+                           << (*impl_->tt_)->locations_.names_.size() << "\n";
+
         import_successful_ = true;
       })
       ->require("SCHEDULE", [](mm::msg_ptr const& msg) {

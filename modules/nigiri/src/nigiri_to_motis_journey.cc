@@ -294,9 +294,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
         [&, i = i, leg = leg](n::footpath_idx_t const) {
           add_walk(leg, -1, i == nj.legs_.size() - 1U);
         },
-        [&, i = i, leg = leg](std::uint8_t const x) {
-          add_walk(leg, x, false);
-        }});
+        [&, leg = leg](std::uint8_t const x) { add_walk(leg, x, false); }});
   }
 
   for (auto const& [x, ranges] : transports.get_attribute_ranges()) {
