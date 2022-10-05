@@ -12,6 +12,7 @@
 #include "motis/core/common/unixtime.h"
 
 #include "motis/nigiri/unixtime_conv.h"
+#include "utl/enumerate.h"
 
 namespace n = ::nigiri;
 
@@ -86,32 +87,50 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     s.lng_ = pos.lng_;
   };
 
-  auto const add_walk = [&](n::routing::journey::leg const& leg, int mumo_id) {
-    if (leg.from_ == leg.to_ ||
+  auto const add_walk = [&](n::routing::journey::leg const& leg, int mumo_id,
+                            bool const is_last) {
+    auto const is_transfer =
+        leg.from_ == leg.to_ ||
         (tt.locations_.parents_.at(leg.from_) ==
              tt.locations_.parents_.at(leg.to_) &&
          (tt.locations_.types_.at(leg.from_) == n::location_type::kTrack ||
-          tt.locations_.types_.at(leg.to_) == n::location_type::kTrack))) {
-      return;  // transfer
+          tt.locations_.types_.at(leg.to_) == n::location_type::kTrack));
+
+    if (is_transfer && is_last) {
+      return;
     }
 
     auto& from_stop =
         mj.stops_.empty() ? mj.stops_.emplace_back() : mj.stops_.back();
     auto const from_idx = static_cast<unsigned>(mj.stops_.size() - 1);
     fill_stop_info(from_stop, leg.from_);
+    from_stop.departure_.valid_ = true;
+    from_stop.departure_.timestamp_ = to_motis_unixtime(leg.dep_time_);
+    from_stop.departure_.schedule_timestamp_ = to_motis_unixtime(leg.dep_time_);
+    fmt::print("Writing departure time at {} ({}): {}.\n", from_stop.name_,
+               from_stop.eva_no_,
+               format_unix_time(from_stop.departure_.timestamp_));
 
-    auto& to_stop = mj.stops_.emplace_back();
-    auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
-    fill_stop_info(to_stop, leg.to_);
+    if (!is_transfer) {
+      auto& to_stop = is_transfer ? mj.stops_.back() : mj.stops_.emplace_back();
+      auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
+      fill_stop_info(to_stop, leg.to_);
+      to_stop.arrival_.valid_ = true;
+      to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.arr_time_);
+      to_stop.arrival_.schedule_timestamp_ = to_motis_unixtime(leg.arr_time_);
+      fmt::print("Writing arrival time at {} ({}): {}.\n", to_stop.name_,
+                 to_stop.eva_no_,
+                 format_unix_time(to_stop.arrival_.timestamp_));
 
-    auto t = journey::transport{};
-    t.from_ = from_idx;
-    t.to_ = to_idx;
-    t.is_walk_ = true;
-    t.duration_ =
-        static_cast<unsigned>((leg.arr_time_ - leg.dep_time_).count());
-    t.mumo_id_ = mumo_id;
-    mj.transports_.emplace_back(std::move(t));
+      auto t = journey::transport{};
+      t.from_ = from_idx;
+      t.to_ = to_idx;
+      t.is_walk_ = true;
+      t.duration_ =
+          static_cast<unsigned>((leg.arr_time_ - leg.dep_time_).count());
+      t.mumo_id_ = mumo_id;
+      mj.transports_.emplace_back(std::move(t));
+    }
   };
 
   interval_map<transport_display_info> transports;
@@ -184,11 +203,13 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       extern_trips.add_entry(
           std::pair{
               nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
-              std::string{tt.source_file_names_
-                              .at(tt.trip_debug_.at(trip)[0].source_file_idx_)
-                              .view()} +
-                  ":" +
-                  std::to_string(tt.trip_debug_.at(trip)[0].line_number_)},
+              fmt::format(
+                  "{}:{}:{}",
+                  tt.source_file_names_
+                      .at(tt.trip_debug_.at(trip)[0].source_file_idx_)
+                      .view(),
+                  std::to_string(tt.trip_debug_.at(trip)[0].line_number_from_),
+                  std::to_string(tt.trip_debug_.at(trip)[0].line_number_to_))},
           mj.stops_.size() - 1, mj.stops_.size());
 
       auto const section_attributes =
@@ -209,7 +230,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     }
   };
 
-  for (auto const& leg : nj.legs_) {
+  for (auto const& [i, leg] : utl::enumerate(nj.legs_)) {
     leg.uses_.apply(utl::overloaded{
         [&](n::routing::journey::transport_enter_exit const& t) {
           auto const& route_idx = tt.transport_route_.at(t.t_.t_idx_);
@@ -242,13 +263,12 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   tt.locations_.types_.at(l) == n::location_type::kTrack
                       ? tt.locations_.names_.at(l).view()
                       : "";
-              stop.arrival_ = journey::stop::event_info{
-                  .valid_ = true,
-                  .timestamp_ = time,
-                  .schedule_timestamp_ = time,
-                  .timestamp_reason_ = timestamp_reason::SCHEDULE,
-                  .track_ = std::string{track},
-                  .schedule_track_ = std::string{track}};
+              stop.arrival_.valid_ = true;
+              stop.arrival_.timestamp_ = time;
+              stop.arrival_.schedule_timestamp_ = time;
+              stop.arrival_.timestamp_reason_ = timestamp_reason::SCHEDULE;
+              stop.arrival_.track_ = std::string{track};
+              stop.arrival_.schedule_track_ = std::string{track};
             }
 
             if (!exit) {
@@ -258,13 +278,12 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   tt.locations_.types_.at(l) == n::location_type::kTrack
                       ? tt.locations_.names_.at(l).view()
                       : "";
-              stop.departure_ = journey::stop::event_info{
-                  .valid_ = true,
-                  .timestamp_ = time,
-                  .schedule_timestamp_ = time,
-                  .timestamp_reason_ = timestamp_reason::SCHEDULE,
-                  .track_ = std::string{track},
-                  .schedule_track_ = std::string{track}};
+              stop.departure_.valid_ = true;
+              stop.departure_.timestamp_ = time;
+              stop.departure_.schedule_timestamp_ = time;
+              stop.departure_.timestamp_reason_ = timestamp_reason::SCHEDULE;
+              stop.departure_.track_ = std::string{track};
+              stop.departure_.schedule_track_ = std::string{track};
             }
 
             if (!exit) {
@@ -272,8 +291,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
             }
           }
         },
-        [&](n::footpath_idx_t const) { add_walk(leg, -1); },
-        [&](std::uint8_t const x) { add_walk(leg, x); }});
+        [&](n::footpath_idx_t const) {
+          add_walk(leg, -1, i == nj.legs_.size() - 1U);
+        },
+        [&](std::uint8_t const x) { add_walk(leg, x, false); }});
   }
 
   for (auto const& [x, ranges] : transports.get_attribute_ranges()) {

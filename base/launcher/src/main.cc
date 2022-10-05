@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -100,7 +101,19 @@ int main(int argc, char const** argv) {
     instance.init_remotes(remote_opt.get_remotes());
 
     if (!launcher_opt.init_.empty()) {
-      instance.call(launcher_opt.init_, launcher_opt.num_threads_);
+      if (launcher_opt.init_.starts_with(".") &&
+          std::filesystem::is_regular_file(launcher_opt.init_)) {
+        std::ifstream in{launcher_opt.init_};
+        std::string json;
+        while (!in.eof() && in.peek() != EOF) {
+          std::getline(in, json);
+          auto const res =
+              instance.call(make_msg(json), launcher_opt.num_threads_);
+          std::cout << res->to_json() << std::endl;
+        }
+      } else {
+        instance.call(launcher_opt.init_, launcher_opt.num_threads_);
+      }
     }
 
     if (launcher_opt.mode_ == launcher_settings::motis_mode_t::SERVER) {

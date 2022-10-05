@@ -9,6 +9,7 @@
 
 #include "motis/core/common/dial.h"
 
+#include "motis/core/schedule/schedule.h"
 #include "motis/routing/mem_manager.h"
 #include "motis/routing/statistics.h"
 
@@ -29,11 +30,12 @@ struct pareto_dijkstra {
   };
 
   pareto_dijkstra(
-      int node_count, unsigned int station_node_count,
+      schedule const& sched, int node_count, unsigned int station_node_count,
       boost::container::vector<bool> const& is_goal,
       mcd::hash_map<node const*, std::vector<edge>> additional_edges,
       LowerBounds& lower_bounds, mem_manager& label_store)
-      : is_goal_(is_goal),
+      : sched_(sched),
+        is_goal_(is_goal),
         station_node_count_(station_node_count),
         node_labels_(*label_store.get_node_labels<Label>(node_count)),
         additional_edges_(std::move(additional_edges)),
@@ -43,7 +45,10 @@ struct pareto_dijkstra {
 
   void add_start_labels(std::vector<Label*> const& start_labels) {
     for (auto const& l : start_labels) {
-      std::cout << "ADDING START LABEL: " << l->get_node()->id_ << "\n";
+      std::cout << "START: ";
+      l->print(sched_, std::cout);
+      std::cout << "\n";
+
       if (!l->is_filtered()) {
         node_labels_[l->get_node()->id_].emplace_back(l);
         queue_.push(l);
@@ -230,6 +235,7 @@ private:
     }
   }
 
+  schedule const& sched_;
   boost::container::vector<bool> const& is_goal_;
   unsigned int station_node_count_;
   std::vector<std::vector<Label*>>& node_labels_;

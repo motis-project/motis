@@ -313,18 +313,6 @@ int xtract(int argc, char const** argv) {
     }
   }
 
-  for (auto const& file : {BASIC_DATA, TIMEZONES, MIN_CT_FILE}) {
-    fs::copy_file(schedule_path / CORE_DATA / parser_config.files(file),
-                  new_schedule_path / CORE_DATA / parser_config.files(file),
-                  fs::copy_option::overwrite_if_exists);
-  }
-
-  for (auto const& file : {ATTRIBUTES, TRACKS, INFOTEXT, THROUGH_SERVICES,
-                           MERGE_SPLIT_SERVICES, DIRECTIONS}) {
-    std::ofstream out{
-        (new_schedule_path / CORE_DATA / parser_config.files(file)).c_str()};
-  }
-
   return 0;
 }
 

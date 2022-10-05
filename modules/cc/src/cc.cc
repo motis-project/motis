@@ -46,7 +46,16 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
       });
   utl::verify(trp_it != std::end(*con->trips()),
               "no trip end/start at interchange");
-  auto const trp = from_fbs(sched, trp_it->id());
+
+  trip const* trp;
+
+  try {
+    trp = from_fbs(sched, trp_it->id());
+  } catch (std::exception const& e) {
+    fmt::print("trip not found: {} (dbg={})\n",
+               to_extern_trip(trp_it->id()).to_str(), trp_it->debug()->c_str());
+    throw;
+  }
 
   auto const edge_it = std::find_if(
       begin(*trp->edges_), end(*trp->edges_), [&](trip::route_edge const& e) {
@@ -60,7 +69,13 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
                  e->from_->get_station()->id_ == station_idx &&
                  schedule_time == ev_time));
       });
-  utl::verify(edge_it != end(*trp->edges_), "important event not in trip");
+  utl::verify(edge_it != end(*trp->edges_),
+              "important event (type={}, schedule_time={}, station=(id={}, "
+              "name={})) not in trip {} (dbg={})",
+              ev_type == event_type::DEP ? "DEP" : "ARR", format_time(ev_time),
+              sched.stations_.at(station_idx)->name_,
+              sched.stations_.at(station_idx)->eva_nr_,
+              to_extern_trip(sched, trp).to_str(), trp->dbg_);
 
   return ev_key{*edge_it, trp->lcon_idx_, ev_type};
 }
@@ -137,12 +152,30 @@ void check_interchange(schedule const& sched, Connection const* con,
 }
 
 msg_ptr cc::check_journey(msg_ptr const& msg) {
-  auto const con = motis_content(Connection, msg);
-  auto const& sched = get_sched();
-  for (auto const& ic : get_interchanges(sched, con)) {
-    check_interchange(sched, con, ic);
+  switch (msg->get()->content_type()) {
+    case MsgContent_Connection: {
+      auto const con = motis_content(Connection, msg);
+      auto const& sched = get_sched();
+      for (auto const& ic : get_interchanges(sched, con)) {
+        check_interchange(sched, con, ic);
+      }
+      return make_success_msg();
+    }
+
+    case MsgContent_RoutingResponse: {
+      using motis::routing::RoutingResponse;
+      auto const res = motis_content(RoutingResponse, msg);
+      auto const& sched = get_sched();
+      for (auto const& con : *res->connections()) {
+        for (auto const& ic : get_interchanges(sched, con)) {
+          check_interchange(sched, con, ic);
+        }
+      }
+      return make_success_msg();
+    }
+
+    default: throw std::system_error(error::unexpected_message_type);
   }
-  return make_success_msg();
 }
 
 }  // namespace motis::cc

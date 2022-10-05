@@ -1,6 +1,7 @@
 #pragma once
 
 #include "motis/core/schedule/edges.h"
+#include "motis/core/schedule/schedule.h"
 #include "motis/routing/lower_bounds.h"
 
 namespace motis::routing {
@@ -26,6 +27,28 @@ struct label : public Data {  // NOLINT
         now_(now),
         dominated_(false) {
     Init::init(*this, lb);
+  }
+
+  void print(schedule const& sched, std::ostream& out) {
+    label const* l = this;
+    while (l != nullptr) {
+      auto const station_id = l->edge_->to_->get_station()->id_;
+      auto const& station = *sched.stations_[station_id];
+      out << (l == this ? "" : "  ");
+      out << station.name_ << " " << l->edge_->to_->type_str() << " ["
+          << station.eva_nr_ << "] @ " << format_time(l->now_) << " <--";
+      if (l->connection_ != nullptr) {
+        out << get_service_name(sched, l->connection_->full_con_->con_info_)
+            << " ";
+      }
+      out << l->edge_->type_str() << "--";
+      if (l->pred_ == nullptr) {
+        out << l->edge_->from_;
+      }
+      out << "\n";
+      l = l->pred_;
+    }
+    out << "\n";
   }
 
   node const* get_node() const { return edge_->get_destination<Dir>(); }

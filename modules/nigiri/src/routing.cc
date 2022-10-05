@@ -99,6 +99,7 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
       .dest_match_mode_ = req->use_dest_metas()
                               ? n::routing::location_match_mode::kEquivalent
                               : n::routing::location_match_mode::kOnlyChildren,
+      .use_start_footpaths_ = req->use_start_footpaths(),
       .start_ = {n::routing::offset{.location_ = start_station,
                                     .offset_ = n::duration_t{0U},
                                     .type_ = 0U}},

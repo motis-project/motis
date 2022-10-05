@@ -147,7 +147,11 @@ struct search {
                       })) {
         return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
       }
+      std::cout << "FROM:" << q.sched_->stations_.at(q.from_->id_)->name_ << "["
+                << q.sched_->stations_.at(q.from_->id_)->eva_nr_ << "]\n";
       for (auto const& meta_from : meta_froms) {
+        std::cout << "META FROM: " << meta_from->name_ << " ["
+                  << meta_from->eva_nr_ << "]\n";
         auto meta_edge = create_start_edge(
             q.sched_->station_nodes_[meta_from->index_].get());
         meta_edges.push_back(meta_edge);
@@ -160,7 +164,7 @@ struct search {
     }
 
     pareto_dijkstra<Dir, Label, lower_bounds> pd(
-        q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
+        *q.sched_, q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
         std::move(additional_edges), lbs, *q.mem_);
 
     auto const add_start_labels = [&](time interval_begin, time interval_end) {
