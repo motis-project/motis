@@ -2,8 +2,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include "transfers.h"
-#include "travel_time.h"
 
 namespace motis::routing {
 
