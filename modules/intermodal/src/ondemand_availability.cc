@@ -220,7 +220,6 @@ std::string create_json_body(availability_request const& areq) {
   time_point time_convertion_arrival{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(areq.arrival_time_onnext_))};
   std::string dep_time = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_departure));
   std::string arr_time = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arrival));
-
   // Creates a Ride Inquiry object with estimations and availability information - POST
   std::string json = R"( { "data": {
                       "product_id": ")" + areq.product_id_ + "\","
@@ -243,7 +242,7 @@ bool checking(availability_request const& areq, availability_response const& are
   double epsilon = 0.00001;
   unixtime delta = 900;
   bool coord_start = false, coord_end = false, walklength = false, walktime = false, timewindow;
-  bool result;
+  bool result = false;
   unixtime timediff_dep = abs(areq.departure_time_ - ares.pickup_time_);
   unixtime timediff_arr = abs(areq.arrival_time_onnext_ - ares.dropoff_time_);
   if(timediff_dep > delta || timediff_arr > delta) {
@@ -254,57 +253,62 @@ bool checking(availability_request const& areq, availability_response const& are
     if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0) {
       coord_start = areq.startpoint_.lat_ - ares.startpoint_.lat_ < epsilon && areq.startpoint_.lng_ - ares.startpoint_.lng_ < epsilon;
       coord_end = areq.endpoint_.lat_ - ares.endpoint_.lat_ < epsilon && areq.endpoint_.lng_ - ares.endpoint_.lng_ < epsilon;
-      result = coord_start && coord_end && timewindow;
+      result = (coord_start & coord_end & timewindow);
     }
     else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
       walktime = ares.walk_dur_.at(0) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = walklength && walktime && timewindow;
+      result = (walklength & walktime & timewindow);
     }
     else if(ares.walk_dur_.at(1) != 0 && ares.walk_dur_.at(0) == 0) {
       walktime = ares.walk_dur_.at(1) < MAX_WALK_TIME &&
                  ares.dropoff_time_ + ares.walk_dur_.at(1) < areq.arrival_time_onnext_; // 1350 +5 = 1355 < 1400
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED;
-      result = walklength && walktime && timewindow;
+      result = (walklength & walktime & timewindow);
     }
     else {
       walktime = ares.walk_dur_.at(0) < MAX_WALK_TIME && ares.walk_dur_.at(1) < MAX_WALK_TIME
                  && ares.dropoff_time_ + ares.walk_dur_.at(1) < areq.arrival_time_onnext_;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED && areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = walklength && walktime && timewindow;
+      result = (walklength & walktime & timewindow);
     }
   } else {
     if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0) {
       coord_start = areq.startpoint_.lat_ - ares.startpoint_.lat_ < epsilon && areq.startpoint_.lng_ - ares.startpoint_.lng_ < epsilon;
       coord_end = areq.endpoint_.lat_ - ares.endpoint_.lat_ < epsilon && areq.endpoint_.lng_ - ares.endpoint_.lng_ < epsilon;
-      result = coord_start && coord_end && timewindow;
+      result = (coord_start & coord_end & timewindow);
     }
     else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
       walktime = areq.departure_time_ + ares.walk_dur_.at(0) < ares.pickup_time_ && ares.walk_dur_.at(0) < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = walklength && walktime && timewindow;
+      result = (walklength & walktime & timewindow);
     }
     else if(ares.walk_dur_.at(1) != 0 && ares.walk_dur_.at(0) == 0) {
       walktime = ares.walk_dur_.at(1) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED;
-      result = walklength && walktime && timewindow;
+      result = (walklength & walktime & timewindow);
     }
     else {
       walktime = ares.walk_dur_.at(0) < MAX_WALK_TIME && ares.walk_dur_.at(1) < MAX_WALK_TIME
                  && areq.departure_time_ + ares.walk_dur_.at(0) < ares.pickup_time_;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED && areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = walklength && walktime && timewindow;
+      result = (walklength & walktime & timewindow);
     }
   }
   return result;
 }
 
-availability_response check_od_availability(availability_request areq,
-                                            std::vector<std::string> const& server_infos,
-                                            statistics& stats) {
-  std::string addr;
-  std::string second_addr;
+int grafzahl = 0;
+int timelord = 0;
+
+bool check_od_area(geo::latlng from, geo::latlng to,
+                   std::vector<std::string> const& server_infos,
+                   statistics& stats) {
+  grafzahl++;
+  std::string area_check_addr;
   std::map<std::string, std::string> hdrs;
+  hdrs.insert(std::pair<std::string, std::string>("Accept","application/json"));
+  hdrs.insert(std::pair<std::string, std::string>("Accept-Language","de"));
   for(auto const& info : server_infos) {
     size_t index = info.find(':');
     if(index == -1) {
@@ -313,59 +317,79 @@ availability_response check_od_availability(availability_request areq,
     }
     std::string name = info.substr(0, index);
     if(name == "address") {
-      addr = info.substr(index+1);
+      area_check_addr = info.substr(index+1);
     }
-    else if(name == "address2") {
-      second_addr = info.substr(index+1);
+  }
+
+  if(area_check_addr != "http://127.0.0.1:9000/") {
+    hdrs.insert(std::pair<std::string, std::string>("Content-Type","application/json"));
+    hdrs.insert(std::pair<std::string, std::string>("X-Client-Version","0.0.1"));
+    hdrs.insert(std::pair<std::string, std::string>("X-Api-Version","20210101"));
+    hdrs.insert(std::pair<std::string, std::string>("X-Client-Identifier","demo.motis.rmv.platform"));
+  }
+  request::method m_get = request::GET;
+  request area_check_req(area_check_addr, m_get, hdrs, "");
+  std::vector<geo::latlng> req_dots;
+  req_dots.emplace_back(from);
+  req_dots.emplace_back(to);
+
+  MOTIS_START_TIMING(ondemand_server_area);
+  response area_check_result = motis_http(area_check_req)->val();
+  MOTIS_STOP_TIMING(ondemand_server_area);
+  stats.ondemand_server_area_inquery_ +=
+      static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_server_area));
+  availability_response area_check_response = read_result(area_check_result, true, req_dots);
+  return area_check_response.available_;
+}
+
+availability_response check_od_availability(availability_request areq,
+                                            std::vector<std::string> const& server_infos,
+                                            statistics& stats) {
+  grafzahl++;
+  timelord+=5;
+  std::string product_check_addr;
+  std::map<std::string, std::string> hdrs;
+  hdrs.insert(std::pair<std::string, std::string>("Accept","application/json"));
+  hdrs.insert(std::pair<std::string, std::string>("Accept-Language","de"));
+  for(auto const& info : server_infos) {
+    size_t index = info.find(':');
+    if(index == -1) {
+      size_t idx = info.find(',');
+      hdrs.insert(std::pair<std::string, std::string>(info.substr(0, idx), info.substr(idx+1)));
     }
-    else if(name == "productid") {
+    std::string name = info.substr(0, index);
+    if(name == "product_check_address") {
+      product_check_addr = info.substr(index+1);
+    }
+    else if(name == "product_id") {
       areq.product_id_ = info.substr(index+1);
     }
   }
 
-  request::method m_get = request::GET;
-  request req(addr, m_get, hdrs, "");
-
-  geo::latlng req_dot_start;
-  geo::latlng req_dot_end;
-  req_dot_end.lat_ = areq.endpoint_.lat_;
-  req_dot_end.lng_ = areq.endpoint_.lng_;
-  req_dot_start.lat_ = areq.startpoint_.lat_;
-  req_dot_start.lng_ = areq.startpoint_.lng_;
-  std::vector<geo::latlng> req_dots;
-  req_dots.emplace_back(req_dot_start);
-  req_dots.emplace_back(req_dot_end);
-
-  MOTIS_START_TIMING(ondemand_server_first);
-  response firstresult = motis_http(req)->val();
-  MOTIS_STOP_TIMING(ondemand_server_first);
-  stats.ondemand_server_first_inquery_ +=
-      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_first));
-
-  availability_response response_first = read_result(firstresult, true, req_dots);
-  if(!response_first.available_) {
-    return response_first;
+  if(product_check_addr != "http://127.0.0.1:9000/") {
+    hdrs.insert(std::pair<std::string, std::string>("Content-Type","application/json"));
+    hdrs.insert(std::pair<std::string, std::string>("X-Client-Version","0.0.1"));
+    hdrs.insert(std::pair<std::string, std::string>("X-Api-Version","20210101"));
+    hdrs.insert(std::pair<std::string, std::string>("X-Client-Identifier","demo.motis.rmv.platform"));
   }
-  else {
-    request::method m_post = request::POST;
-    //UUID uuid;
-    //UuidCreate(&uuid);
-    //char* random_uuid_str;
-    //UuidToStringA(&uuid, (RPC_CSTR*)&random_uuid_str);
-    //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
-    std::string body = create_json_body(areq);
-    request req2(second_addr, m_post, hdrs, body);
+  request::method m_post = request::POST;
+  std::vector<geo::latlng> req_dots{};
+  //UUID uuid;
+  //UuidCreate(&uuid);
+  //char* random_uuid_str;
+  //UuidToStringA(&uuid, (RPC_CSTR*)&random_uuid_str);
+  //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
+  std::string body = create_json_body(areq);
+  request product_check_req(product_check_addr, m_post, hdrs, body);
 
-    MOTIS_START_TIMING(ondemand_server_second);
-    response secondresult = motis_http(req2)->val();
-    MOTIS_STOP_TIMING(ondemand_server_second);
-    stats.ondemand_server_second_inquery_ +=
-        static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_second));
-
-    availability_response response_second = read_result(secondresult, false, req_dots);
-    response_second.available_ = checking(areq, response_second);
-    return response_second;
-  }
+  MOTIS_START_TIMING(ondemand_server_product);
+  response product_check_result = motis_http(product_check_req)->val();
+  MOTIS_STOP_TIMING(ondemand_server_product);
+  stats.ondemand_server_product_inquery_ +=
+      static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_server_product));
+  availability_response product_check_response = read_result(product_check_result, false, req_dots);
+  product_check_response.available_ = checking(areq, product_check_response);
+  return product_check_response;
 }
 
 } // namespace intermodal

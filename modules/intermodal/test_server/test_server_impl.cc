@@ -65,8 +65,14 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
     double startlng = read_json_key_double("origin", "lng");
     double endlat = read_json_key_double("destination", "lat");
     double endlng = read_json_key_double("destination", "lng");
+    if(startlat == -1.0 || startlng == -1.0 || endlat == -1.0 || endlng == -1.0) {
+      return "";
+    }
     std::string departure = read_json_key_string("origin", "time");
     std::string arrival = read_json_key_string("destination", "time");
+    if(departure.empty() || arrival.empty()) {
+      return "";
+    }
 
     auto traveltime_to_unixtime = [&](std::string const& timestring) -> date::sys_seconds {
       std::istringstream in(timestring);
@@ -82,23 +88,30 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
 
     time_t tests_time_dep = traveltime_to_unixtime(departure).time_since_epoch().count();
     time_t tests_time_arr = traveltime_to_unixtime(arrival).time_since_epoch().count();
+    if(count%4==0) {
+      minutes = 0;
+    }
     tests_time_dep += minutes * 60;
     using time_point = std::chrono::system_clock::time_point;
     time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
     time_t diff = (tests_time_arr - tests_time_dep) + minutes;
-    tests_time_dep += (diff - 120); // wie lange die fahrt dauert
+    tests_time_dep += (diff - 120); // wie lange die Fahrt dauert
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
     int walk_before = 0;
     int walk_after = 0;
     if(count%2==0) {
-      walk_before+= 300;
-      walk_after+= 120;
+      walk_before+= 120;
+      walk_after = 0;
+    }
+    if(count%3==0) {
+      walk_after += 60;
     }
     if(count%4==0) {
       walk_before = 0;
+      walk_after = 0;
     }
     std::string id = "rid_12345-abcde-1a2b3c-" + std::to_string(count);
     auto res = R"( { "data": {
@@ -137,9 +150,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
             } )";
     return res;
   } else {
-    if(count%3==0) {
-      return "";
-    }
+    // hier wieder leeren string einfuegen, damits auch mal direkt nicht verfuegbar ist
       auto result = R"( {
             "data": {
               "id": "1234567890",
@@ -169,30 +180,32 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
 }
 
 struct test_server::impl {
-    impl(boost::asio::io_service& ios)
-        : ios{ios}, serve{ios} {}
+    explicit impl(boost::asio::io_service& ios)
+        : ios_{ios}, serve_{ios} {}
 
     void listen_tome(std::string const& host, std::string const& port,
-                     boost::system::error_code& erco) {
-      serve.on_http_request([this](net::test_server::http_req_t const& req,
+                     boost::system::error_code& erco) const {
+      serve_.on_http_request([](net::test_server::http_req_t const& req,
                                    net::test_server::http_res_cb_t const& cb, bool)
                             { on_http_request(req, cb); });
-      serve.on_upgrade_ok([](net::test_server::http_req_t const& req) {
+      serve_.on_upgrade_ok([](net::test_server::http_req_t const& req) {
         return req.target() == "/" ;
       });
-      serve.init(host, port, erco);
-      serve.set_timeout(std::chrono::seconds(5*60));
+      serve_.init(host, port, erco);
+      serve_.set_timeout(std::chrono::seconds(5*60));
+      serve_.set_request_body_limit(1024 * 1024);
+      serve_.set_request_queue_limit(1001);
       if (erco) {
         std::cout << "testserver: init error: " << erco.message() << "\n";
       }
       std::cout << "testserver is running on http://" + host + ":" + port + "/ \n "
                   "info: " + erco.message() + "\n";
-      serve.run();
+      serve_.run();
     }
 
-    void stop_it() { serve.stop(); std::cout << "testserver: stopped \n";}
+    void stop_it() const { serve_.stop(); std::cout << "testserver: stopped \n";}
 
-    void on_http_request(net::test_server::http_req_t const& req,
+    static void on_http_request(net::test_server::http_req_t const& req,
                          net::test_server::http_res_cb_t const& cb) {
       switch(req.method()) {
         case verb::options: {
@@ -203,14 +216,14 @@ struct test_server::impl {
           break;
         }
         case verb::post: {
-          std::string sres = create_resbody(req, true);
-          minutes += 5;
-          count++;
-          std::string_view resbody{sres};
           if(req.body().empty()) {
             cb(server_error_response(req, "SEND REQUEST BODY"));
             break;
           }
+          std::string sres = create_resbody(req, true);
+          minutes += 5;
+          count++;
+          std::string_view resbody{sres};
           status status = status::ok;
           std::string_view contenttype = "application/json";
           cb(string_response(req, resbody, status, contenttype));
@@ -235,8 +248,8 @@ struct test_server::impl {
           cb(server_error_response(req, "SERVER ERROR!"));
       }
     }
-    boost::asio::io_service& ios;
-    net::test_server serve;
+    boost::asio::io_service& ios_;
+    net::test_server serve_;
 };
 
   test_server::test_server(boost::asio::io_service& ios)

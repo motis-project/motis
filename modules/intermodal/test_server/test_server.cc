@@ -45,7 +45,6 @@ struct test_server::impl {
             boost::system::error_code& ec) {
     asio::ip::tcp::resolver resolver{ioc_};
     asio::ip::tcp::endpoint endpoint = *resolver.resolve({host, port});
-    settings_->timeout_ = std::chrono::seconds(5*60);
 
     acceptor_.open(endpoint.protocol(), ec);
     if (ec) {
@@ -80,7 +79,7 @@ struct test_server::impl {
 
   void stop() { acceptor_.close(); }
 
-  void set_timeout(std::chrono::nanoseconds const& timeout) const {
+  void set_timeout(std::chrono::seconds const& timeout) const {
     settings_->timeout_ = timeout;
   }
 
@@ -143,7 +142,7 @@ void test_server::run() const { impl_->run(); }
 
 void test_server::stop() const { impl_->stop(); }
 
-void test_server::set_timeout(std::chrono::nanoseconds const& timeout) const {
+void test_server::set_timeout(std::chrono::seconds const& timeout) const {
   impl_->set_timeout(timeout);
 }
 

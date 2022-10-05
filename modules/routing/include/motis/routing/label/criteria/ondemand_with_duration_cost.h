@@ -2,35 +2,36 @@
 
 #include <cmath>
 #include <cstdint>
-#include "transfers.h"
-#include "travel_time.h"
 
 namespace motis::routing {
 
-struct ondemand {
+struct ondemand_with_duration_cost {
   bool is_ondemand_;
+  duration edge_duration_;
 };
 
-struct ondemand_initializer {
+struct ondemand_with_duration_cost_initializer {
   template <typename Label, typename LowerBounds>
-  static void init(Label& l, LowerBounds& lb) {
+  static void init(Label& l, LowerBounds&) {
     l.is_ondemand_ = false;
+    l.edge_duration_ = 0;
   }
 };
 
-struct ondemand_updater {
+struct ondemand_with_duration_cost_updater {
   template <typename Label, typename LowerBounds>
-  static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
+  static void update(Label& l, edge_cost const& ec, LowerBounds&) {
     l.is_ondemand_ = edge::get_is_ondemand(l.edge_);
+    l.edge_duration_ = ec.time_;
   }
 };
 
-struct ondemand_dominance {
+struct ondemand_with_duration_cost_dominance {
   template <typename Label>
   struct domination_info {
     domination_info(Label const& a, Label const& b)
-        : greater_(a.is_ondemand_ > b.is_ondemand_),
-          smaller_(a.is_ondemand_ < b.is_ondemand_){}
+        : greater_(a.edge_duration_ > b.edge_duration_ && (a.is_ondemand_ > b.is_ondemand_)),
+          smaller_(a.edge_duration_ < b.edge_duration_ && (a.is_ondemand_ < b.is_ondemand_)){}
     inline bool greater() const { return greater_; }
     inline bool smaller() const { return smaller_; }
     bool greater_, smaller_;

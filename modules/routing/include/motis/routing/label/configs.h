@@ -5,8 +5,8 @@
 #include "motis/routing/label/criteria/accessibility.h"
 #include "motis/routing/label/criteria/late_connections.h"
 #include "motis/routing/label/criteria/no_intercity.h"
-#include "motis/routing/label/criteria/ondemand_weighted.h"
 #include "motis/routing/label/criteria/ondemand.h"
+#include "motis/routing/label/criteria/ondemand_with_duration_cost.h"
 #include "motis/routing/label/criteria/transfers.h"
 #include "motis/routing/label/criteria/travel_time.h"
 #include "motis/routing/label/criteria/weighted.h"
@@ -104,10 +104,11 @@ using accessibility_label =
 
 template <search_dir Dir>
 using ondemand_weighted_label =
-    label<Dir, MAX_WEIGHTED_OD, false, get_ondemand_weighted_lb, label_data<ondemand_weighted>,
-          initializer<ondemand_weighted_initializer>, updater<ondemand_weighted_updater>,
-          filter<ondemand_weighted_filter>, dominance<default_tb, ondemand_weighted_dominance>,
-          dominance<post_search_tb>, comparator<ondemand_weighted_dominance>>;
+    label<Dir, MAX_WEIGHTED, false, get_weighted_lb, label_data<weighted, ondemand>,
+          initializer<weighted_initializer, ondemand_initializer>,
+          updater<weighted_updater, ondemand_updater>, filter<weighted_filter>,
+          dominance<default_tb, weighted_dominance, ondemand_dominance>,
+          dominance<post_search_tb>, comparator<weighted_dominance>>;
 
 template <search_dir Dir>
 using ondemand_label = label<

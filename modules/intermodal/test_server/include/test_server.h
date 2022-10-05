@@ -11,7 +11,7 @@
 
 #if defined(NET_TLS)
 #include "boost/asio/ssl/context.hpp"
-#endif()
+#endif
 
 #include "boost/beast/http/buffer_body.hpp"
 #include "boost/beast/http/empty_body.hpp"
@@ -61,14 +61,14 @@ struct test_server {
   test_server(test_server const&) = delete;
   test_server& operator=(test_server const&) = delete;
 
-  void init(std::string const& host, std::string const& port,
-            boost::system::error_code& ec) const;
+  void init(std::string const&, std::string const&,
+            boost::system::error_code&) const;
   void run() const;
   void stop() const;
 
-  void set_timeout(std::chrono::nanoseconds const& timeout) const;
-  void set_request_body_limit(std::uint64_t limit) const;
-  void set_request_queue_limit(std::size_t limit) const;
+  void set_timeout(std::chrono::seconds const&) const;
+  void set_request_body_limit(std::uint64_t) const;
+  void set_request_queue_limit(std::size_t) const;
 
   void on_http_request(http_req_cb_t) const;
   void on_ws_msg(ws_msg_cb_t) const;

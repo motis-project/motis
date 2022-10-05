@@ -1,11 +1,11 @@
 #pragma once
 
 #include "boost/asio/io_service.hpp"
-
+#include "test_server.h"
 namespace motis::intermodal {
 
 struct test_server {
-  test_server(boost::asio::io_service&);
+  explicit test_server(boost::asio::io_service&);
   ~test_server();
 
   test_server(test_server&&) = default;
@@ -14,8 +14,8 @@ struct test_server {
   test_server(test_server const&) = delete;
   test_server& operator = (test_server const&) = delete;
 
-  void listen_tome(std::string const& host, std::string const& port,
-                   boost::system::error_code& ec);
+  void listen_tome(std::string const&, std::string const&,
+                   boost::system::error_code&);
 
   void stop_it();
 
