@@ -253,58 +253,54 @@ bool checking(availability_request const& areq, availability_response const& are
     if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0) {
       coord_start = areq.startpoint_.lat_ - ares.startpoint_.lat_ < epsilon && areq.startpoint_.lng_ - ares.startpoint_.lng_ < epsilon;
       coord_end = areq.endpoint_.lat_ - ares.endpoint_.lat_ < epsilon && areq.endpoint_.lng_ - ares.endpoint_.lng_ < epsilon;
-      result = (coord_start & coord_end & timewindow);
+      result = coord_start & coord_end & timewindow;
     }
     else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
       walktime = ares.walk_dur_.at(0) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = (walklength & walktime & timewindow);
+      result = walklength & walktime & timewindow;
     }
     else if(ares.walk_dur_.at(1) != 0 && ares.walk_dur_.at(0) == 0) {
       walktime = ares.walk_dur_.at(1) < MAX_WALK_TIME &&
                  ares.dropoff_time_ + ares.walk_dur_.at(1) < areq.arrival_time_onnext_; // 1350 +5 = 1355 < 1400
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED;
-      result = (walklength & walktime & timewindow);
+      result = walklength & walktime & timewindow;
     }
     else {
       walktime = ares.walk_dur_.at(0) < MAX_WALK_TIME && ares.walk_dur_.at(1) < MAX_WALK_TIME
                  && ares.dropoff_time_ + ares.walk_dur_.at(1) < areq.arrival_time_onnext_;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED && areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = (walklength & walktime & timewindow);
+      result = walklength & walktime & timewindow;
     }
   } else {
     if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0) {
       coord_start = areq.startpoint_.lat_ - ares.startpoint_.lat_ < epsilon && areq.startpoint_.lng_ - ares.startpoint_.lng_ < epsilon;
       coord_end = areq.endpoint_.lat_ - ares.endpoint_.lat_ < epsilon && areq.endpoint_.lng_ - ares.endpoint_.lng_ < epsilon;
-      result = (coord_start & coord_end & timewindow);
+      result = coord_start & coord_end & timewindow;
     }
     else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
       walktime = areq.departure_time_ + ares.walk_dur_.at(0) < ares.pickup_time_ && ares.walk_dur_.at(0) < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = (walklength & walktime & timewindow);
+      result = walklength & walktime & timewindow;
     }
     else if(ares.walk_dur_.at(1) != 0 && ares.walk_dur_.at(0) == 0) {
       walktime = ares.walk_dur_.at(1) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED;
-      result = (walklength & walktime & timewindow);
+      result = walklength & walktime & timewindow;
     }
     else {
       walktime = ares.walk_dur_.at(0) < MAX_WALK_TIME && ares.walk_dur_.at(1) < MAX_WALK_TIME
                  && areq.departure_time_ + ares.walk_dur_.at(0) < ares.pickup_time_;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED && areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
-      result = (walklength & walktime & timewindow);
+      result = walklength & walktime & timewindow;
     }
   }
   return result;
 }
 
-int grafzahl = 0;
-int timelord = 0;
-
 bool check_od_area(geo::latlng from, geo::latlng to,
                    std::vector<std::string> const& server_infos,
                    statistics& stats) {
-  grafzahl++;
   std::string area_check_addr;
   std::map<std::string, std::string> hdrs;
   hdrs.insert(std::pair<std::string, std::string>("Accept","application/json"));
@@ -336,7 +332,7 @@ bool check_od_area(geo::latlng from, geo::latlng to,
   MOTIS_START_TIMING(ondemand_server_area);
   response area_check_result = motis_http(area_check_req)->val();
   MOTIS_STOP_TIMING(ondemand_server_area);
-  stats.ondemand_server_area_inquery_ +=
+  stats.ondemand_server_area_inquery_us_ +=
       static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_server_area));
   availability_response area_check_response = read_result(area_check_result, true, req_dots);
   return area_check_response.available_;
@@ -345,8 +341,6 @@ bool check_od_area(geo::latlng from, geo::latlng to,
 availability_response check_od_availability(availability_request areq,
                                             std::vector<std::string> const& server_infos,
                                             statistics& stats) {
-  grafzahl++;
-  timelord+=5;
   std::string product_check_addr;
   std::map<std::string, std::string> hdrs;
   hdrs.insert(std::pair<std::string, std::string>("Accept","application/json"));
@@ -385,7 +379,7 @@ availability_response check_od_availability(availability_request areq,
   MOTIS_START_TIMING(ondemand_server_product);
   response product_check_result = motis_http(product_check_req)->val();
   MOTIS_STOP_TIMING(ondemand_server_product);
-  stats.ondemand_server_product_inquery_ +=
+  stats.ondemand_server_product_inquery_us_ +=
       static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_server_product));
   availability_response product_check_response = read_result(product_check_result, false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);

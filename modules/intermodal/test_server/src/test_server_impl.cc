@@ -3,6 +3,8 @@
 #include <iostream>
 #include <memory>
 #include <ctime>
+#include <utility>
+#include <thread>
 
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/document.h"
@@ -25,7 +27,7 @@ using namespace rapidjson;
 int minutes = 0;
 int count = 0;
 
-std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
+std::string create_resbody(net::test_server::http_req_t const& req, bool post, int area) {
   if(post) {
     Document document;
     if (document.Parse(req.body().c_str()).HasParseError()) {
@@ -150,8 +152,10 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
             } )";
     return res;
   } else {
+    auto result = "";
     // hier wieder leeren string einfuegen, damits auch mal direkt nicht verfuegbar ist
-      auto result = R"( {
+    if(area == 0) {
+      result = R"( {
             "data": {
               "id": "1234567890",
               "area": {
@@ -175,17 +179,18 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post) {
                       ]]]},
               "message": "This is a default message"
     }})";
+    }
     return result;
   }
 }
 
 struct test_server::impl {
-    explicit impl(boost::asio::io_service& ios)
-        : ios_{ios}, serve_{ios} {}
+    impl(boost::asio::io_service& ios, std::vector<std::string> server_arguments)
+        : ios_{ios}, serve_{ios}, server_argv_{std::move(server_arguments)} {}
 
     void listen_tome(std::string const& host, std::string const& port,
                      boost::system::error_code& erco) const {
-      serve_.on_http_request([](net::test_server::http_req_t const& req,
+      serve_.on_http_request([this](net::test_server::http_req_t const& req,
                                    net::test_server::http_res_cb_t const& cb, bool)
                             { on_http_request(req, cb); });
       serve_.on_upgrade_ok([](net::test_server::http_req_t const& req) {
@@ -205,8 +210,28 @@ struct test_server::impl {
 
     void stop_it() const { serve_.stop(); std::cout << "testserver: stopped \n";}
 
-    static void on_http_request(net::test_server::http_req_t const& req,
-                         net::test_server::http_res_cb_t const& cb) {
+    void on_http_request(net::test_server::http_req_t const& req,
+                         net::test_server::http_res_cb_t const& cb) const {
+      int area = 0;
+      for(auto const& s : server_argv_) {
+        if(s == "medium") {
+          printf("Angekommen und funktioniert\n");
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        else if(s == "high") {
+          std::this_thread::sleep_for(std::chrono::seconds(2));
+        }
+        else if(s == "1") {
+          area = 1;
+        }
+        else if(s == "2") {
+          area = 2;
+        }
+        else if(s == "3") {
+          area = 3;
+        }
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
       switch(req.method()) {
         case verb::options: {
           std::string_view resbody = "allow: post, head, get";
@@ -220,7 +245,7 @@ struct test_server::impl {
             cb(server_error_response(req, "SEND REQUEST BODY"));
             break;
           }
-          std::string sres = create_resbody(req, true);
+          std::string sres = create_resbody(req, true, area);
           minutes += 5;
           count++;
           std::string_view resbody{sres};
@@ -237,7 +262,7 @@ struct test_server::impl {
         }
         case verb::get: {
           count++;
-          std::string sres = create_resbody(req, false);
+          std::string sres = create_resbody(req, false, area);
           std::string_view resbody{sres};
           status status = status::ok;
           std::string_view contenttype = "application/json";
@@ -250,10 +275,11 @@ struct test_server::impl {
     }
     boost::asio::io_service& ios_;
     net::test_server serve_;
+    std::vector<std::string> server_argv_;
 };
 
-  test_server::test_server(boost::asio::io_service& ios)
-      : impl_(new impl(ios)) {}
+  test_server::test_server(boost::asio::io_service& ios, std::vector<std::string> server_args)
+      : impl_(new impl(ios, std::move(server_args))) {}
 
   test_server::~test_server() = default;
 

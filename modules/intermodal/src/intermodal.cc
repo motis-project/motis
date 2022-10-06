@@ -340,11 +340,12 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
 
 void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
                             availability_response ares) {
-  if(ares.walk_dur_.empty() || !ares.available_ || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
+  if(ares.walk_dur_.empty() || !ares.available_
+      || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
     return;
   }
   for(auto const& patch : patches) {
-    /* V
+    /*
      *  replace: S --od--> T
      *  with:    S --walk--> PU --od--> T
      *  replace: T --od--> S
@@ -371,7 +372,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
       splitted_one.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
       splitted_one.second_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
     }
-    /* funktioniert noch nicht ??
+    /*
      *  replace: S --od--> T
      *  with:    S --od--> DO --walk--> T
      *  replace: T --od--> S
@@ -469,7 +470,7 @@ availability_response ondemand_availability(journey j, bool start, mumo_edge con
   availability_response ares = check_od_availability(areq, server_info, stats);
   MOTIS_STOP_TIMING(ondemand_check);
   stats.ondemand_check_availability_ +=
-      static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_check));
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_check));
   return ares;
 }
 
@@ -530,6 +531,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       dest.lng_ = q_dest.pos_.lng_;
     }
 
+    bool ondemand_journey = false;
     auto gbfs_patches = std::vector<parking_patch>{};
     auto parking_patches = std::vector<parking_patch>{};
     auto ondemand_parking_patches = std::vector<parking_patch>{};
@@ -551,6 +553,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       } else if (e->type_ == mumo_type::GBFS) {
         gbfs_patches.emplace_back(e, t.from_, t.to_);
       } else if(e->type_ == mumo_type::ON_DEMAND) {
+        ondemand_journey = true;
         if(!std::any_of(std::begin(checked_to), std::end(checked_to),
                         [&](geo::latlng pos){
                           return pos == e->to_pos_;})
@@ -578,12 +581,15 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     apply_gbfs_patches(journey, gbfs_patches);
     apply_ondemand_patches(journey, ondemand_parking_patches, ares);
     journey_id++;
+    if(ondemand_journey) {
+      stats.ondemand_journey_count_++;
+    }
   }
   MOTIS_START_TIMING(ondemand_remove);
   stats.ondemand_removed_journeys_ =
    remove_not_available_od_journeys(journeys, ondemand_patches, vares);
   MOTIS_STOP_TIMING(ondemand_remove);
-  stats.ondemand_remove_not_available_ =
+  stats.ondemand_remove_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_remove));
   stats.journey_count_end_ += journeys.size();
 

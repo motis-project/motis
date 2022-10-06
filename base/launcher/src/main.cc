@@ -28,7 +28,7 @@
 #include "motis/launcher/launcher_settings.h"
 #include "motis/launcher/server_settings.h"
 #include "motis/launcher/web_server.h"
-#include "test_server_impl.h"
+//#include "test_server_impl.h"
 
 #include "version.h"
 
@@ -50,9 +50,6 @@ int main(int argc, char const** argv) {
   }
 
   web_server server(instance.runner_.ios(), instance);
-  // TCEDIT
-  intermodal::test_server servertest(instance.runner_.ios());
-  // TCEDIT
 
   server_settings server_opt;
   dataset_settings dataset_opt;
@@ -119,14 +116,6 @@ int main(int argc, char const** argv) {
         std::cout << "unable to start server: " << ec.message() << "\n";
         return 1;
       }
-      //TCEDIT
-      boost::system::error_code ectest;
-      servertest.listen_tome("127.0.0.1", "9000", ectest);
-      if (ectest) {
-        std::cout << "unable to start testserver: " << ectest.message() << "\n";
-        return 1;
-      }
-      //TCEDIT
     } else if (launcher_opt.mode_ == launcher_settings::motis_mode_t::INIT) {
       return 0;
     }
