@@ -7,7 +7,9 @@ import { usePaxMonGroupStatisticsQuery } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber } from "@/data/numberFormat";
 
-import Histogram from "@/components/stats/Histogram";
+import Histogram, {
+  ResponsiveHistogramProps,
+} from "@/components/stats/Histogram";
 
 function GroupStatistics(): JSX.Element {
   const [universe] = useAtom(universeAtom);
@@ -28,13 +30,6 @@ function GroupStatistics(): JSX.Element {
       <GroupHistograms data={data} />
     </div>
   );
-}
-
-function formatDurationTick(mins: number): string {
-  if (mins >= 60 || mins <= -60) {
-    return `${Math.floor(mins / 60)}h${Math.abs(mins % 60)}m`;
-  }
-  return `${mins}m`;
 }
 
 type GroupHistogramsProps = {
@@ -63,33 +58,67 @@ function GroupHistograms({ data }: GroupHistogramsProps): JSX.Element {
         </div>
       </div>
       <div>
-        <div>Erwartete Zielverspätung in Minuten</div>
+        <div>Erwartete Zielverspätung</div>
         <div className="h-96">
-          <Histogram
-            data={data.expected_estimated_delay}
-            xTickFormat={formatDurationTick}
-          />
+          <DurationHistogram data={data.expected_estimated_delay} />
         </div>
       </div>
       <div>
-        <div>Minimale Zielverspätung in Minuten</div>
+        <div>Minimale Zielverspätung</div>
         <div className="h-96">
-          <Histogram
-            data={data.min_estimated_delay}
-            xTickFormat={formatDurationTick}
-          />
+          <DurationHistogram data={data.min_estimated_delay} />
         </div>
       </div>
       <div>
-        <div>Maximale Zielverspätung in Minuten</div>
+        <div>Maximale Zielverspätung</div>
         <div className="h-96">
-          <Histogram
-            data={data.max_estimated_delay}
-            xTickFormat={formatDurationTick}
-          />
+          <DurationHistogram data={data.max_estimated_delay} />
         </div>
       </div>
     </div>
+  );
+}
+
+function formatDurationTick(mins: number): string {
+  if (mins >= 60 || mins <= -60) {
+    const hrs = Math.floor(mins / 60);
+    mins = Math.abs(mins % 60);
+    return mins === 0 ? `${hrs}h` : `${hrs}h${mins}m`;
+  }
+  return `${mins}m`;
+}
+
+type DurationHistogramProps = Omit<
+  ResponsiveHistogramProps,
+  "xTickFormat" | "xTickValues" | "xNumTicks"
+>;
+
+function DurationHistogram({
+  data,
+  ...rest
+}: DurationHistogramProps): JSX.Element {
+  const totalRange = data.max_value - data.min_value;
+  const maxTickCount = 15;
+  const minTickStep = totalRange > 10 * 60 ? 60 : totalRange > 5 * 10 ? 30 : 10;
+  const tickStep =
+    Math.floor(totalRange / maxTickCount / minTickStep) * minTickStep;
+  const xTickValues: number[] = [0];
+  for (
+    let x = Math.ceil(data.min_value / 60) * 60;
+    x < data.max_value;
+    x += tickStep
+  ) {
+    if (x !== 0) {
+      xTickValues.push(x);
+    }
+  }
+  return (
+    <Histogram
+      data={data}
+      xTickFormat={formatDurationTick}
+      xTickValues={xTickValues}
+      {...rest}
+    />
   );
 }
 

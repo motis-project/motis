@@ -4,7 +4,13 @@ import getTickFormatter from "@visx/axis/lib/utils/getTickFormatter";
 import { Grid } from "@visx/grid";
 import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
-import { ScaleInput, scaleBand, scaleLinear, scaleLog } from "@visx/scale";
+import {
+  ScaleInput,
+  getTicks,
+  scaleBand,
+  scaleLinear,
+  scaleLog,
+} from "@visx/scale";
 import { Bar } from "@visx/shape";
 import { range } from "d3-array";
 
@@ -21,7 +27,7 @@ const defaultMargin = {
 
 type ScaleType = "linear" | "log";
 
-type HistogramProps = {
+export type HistogramProps = {
   data: PaxMonHistogram;
   width: number;
   height: number;
@@ -30,6 +36,8 @@ type HistogramProps = {
   barClass?: string;
   yScaleType?: ScaleType;
   xTickFormat?: TickFormatter<number>;
+  xTickValues?: number[];
+  xNumTicks?: number;
 };
 
 const xAxisHeight = 25;
@@ -44,6 +52,8 @@ function Histogram({
   barClass = "fill-blue-800",
   yScaleType = "log",
   xTickFormat,
+  xTickValues,
+  xNumTicks = 10,
 }: HistogramProps): JSX.Element {
   margin ??= defaultMargin;
   const innerWidth = width - margin.left - margin.right;
@@ -73,6 +83,7 @@ function Histogram({
         });
 
   xTickFormat ??= getTickFormatter(xScale);
+  xTickValues ??= getTicks(xScale, xNumTicks);
 
   const yTickFormat =
     yScaleType === "log"
@@ -127,14 +138,15 @@ function Histogram({
         top={margin.top + yMax}
         left={margin.left + yAxisWidth}
         tickFormat={xTickFormat}
+        tickValues={xTickValues}
       />
     </svg>
   );
 }
 
-function ResponsiveHistogram(
-  props: Omit<HistogramProps, "width" | "height">
-): JSX.Element {
+export type ResponsiveHistogramProps = Omit<HistogramProps, "width" | "height">;
+
+function ResponsiveHistogram(props: ResponsiveHistogramProps): JSX.Element {
   return (
     <ParentSize>
       {({ width, height }) => (
