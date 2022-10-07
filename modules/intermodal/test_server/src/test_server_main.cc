@@ -9,6 +9,7 @@ int main(int argc, char** argv) {
   std::vector<std::string> server_arguments;
   std::string load = "low";
   std::string area = "0";
+  std::string fleet = "off";
   for (int i = 1; i < argc; i = i+2) {
     std::string arg = argv[i];
     if ((arg == "-h") || (arg == "--help")) {
@@ -19,6 +20,8 @@ int main(int argc, char** argv) {
                    "To simulate the compute time for the server [low]\n"
                 << "\t-a,--area\tPossible Options: 0,1,2,3 "
                    "On which area configuration should the server run? [swiss complete: 0]\n"
+                << "\t-f,--fleet\tPossible Options: little (10), normal (15), big (20), off "
+                   "Choose how many cars the ondemand service have, with off, you can turn this feature off [off] \n"
                 << std::endl;
       return 0;
     }
@@ -47,6 +50,18 @@ int main(int argc, char** argv) {
         return 1;
       }
     }
+    else if((arg == "-f") || (arg == "--fleet")) {
+      if (i + 1 < argc) {
+        server_arguments.emplace_back(argv[i+1]);
+        fleet = argv[i+1];
+      } else {
+        std::cerr << "--fleet option requires one argument: "
+                     "'little' or 'normal' or 'big' or 'off' for the fleet size\t"
+                  << "Or use --help to show usage information\n"
+                  << std::endl;
+        return 1;
+      }
+    }
     else {
       std::cout << "This is NOT an option. \n"
                    "Use --help to to show usage information and possible server options. \n"
@@ -56,6 +71,7 @@ int main(int argc, char** argv) {
 
   std::cout << "\nOptions in use: \n"
                "load option: " << load << "\n"
+               "fleet option: " << fleet << "\n"
                "area option: " << area << "\n\n";
 
   motis::bootstrap::motis_instance new_instance;

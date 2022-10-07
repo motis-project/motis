@@ -26,6 +26,8 @@ using namespace rapidjson;
 
 int minutes = 0;
 int count = 0;
+bool on = false;
+std::vector<std::vector<int>> fleet;
 
 std::string create_resbody(net::test_server::http_req_t const& req, bool post, int area) {
   if(post) {
@@ -102,6 +104,43 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
+    if(on) {
+      size_t indexT_dep = s_time_dep.find('T');
+      std::string hour_start = s_time_dep.substr(indexT_dep + 1, 2);
+      size_t indexT_arr = s_time_dep.find('T');
+      std::string hour_end = s_time_dep.substr(indexT_arr + 1, 2);
+      int free_from = std::stoi(hour_start);
+      int free_to = std::stoi(hour_end);
+      bool no_one_free = true;
+      for (auto& k : fleet) {
+        if (free_from == free_to) {
+          if (k.at(free_from)) {
+            k.at(free_from) = 0;
+            no_one_free = false;
+            break;
+          }
+        } else {
+          int all_free = 0;
+          int while_count = 0;
+          while(free_from <= free_to) { // Tageswechsel....
+            if(k.at(free_from)) {
+              k.at(free_from) = 0;
+              all_free++;
+            }
+            free_from++;
+            while_count++;
+          }
+          if(while_count == all_free) {
+            no_one_free = false;
+          }
+          break;
+        }
+      }
+      if(no_one_free) {
+        return "";
+      }
+    }
+
     int walk_before = 0;
     int walk_after = 0;
     if(count%2==0) {
@@ -153,11 +192,11 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     return res;
   } else {
     auto result = "";
-    // hier wieder leeren string einfuegen, damits auch mal direkt nicht verfuegbar ist
     if(area == 0) {
+      // Swiss complete
       result = R"( {
             "data": {
-              "id": "1234567890",
+              "id": "swiss complete",
               "area": {
                     "type": "MultiPolygon",
                     "coordinates": [[[
@@ -176,6 +215,96 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                       [46.84473,10.46449],
                       [47.09196,9.46443],
                       [47.53852,9.54136]
+                      ]]]},
+              "message": "This is a default message"
+    }})";
+    }
+    else if(area == 1) {
+      // around the towns: Basel, Bern, Genf, Zuerich
+      result = R"( {
+            "data": {
+              "id": "Basel,Bern,Genf,Zuerich",
+              "area": {
+                    "type": "MultiPolygon",
+                    "coordinates": [[
+                    [ [47.54456,7.49078],
+                      [47.46669,7.60892],
+                      [47.47411,7.82322],
+                      [47.57604,7.68859],
+                      [47.60196,7.53474],
+                      [47.54456,7.49078]
+                    ][
+                      [47.60196,7.53474],
+                      [47.57604,7.68859],
+                      [47.47411,7.82322],
+                      [47.46669,7.60892],
+                      [47.54456,7.49078],
+                      [47.04296,7.41119],
+                      [46.96248,7.27382],
+                      [47.60196,7.53474]
+                    ][
+                      [46.13197,5.91837],
+                      [46.22889,6.31125],
+                      [46.41842,6.06948],
+                      [46.54882,6.14916],
+                      [46.62050,6.57501],
+                      [46.49027,6.85799],
+                      [46.34648,6.77282],
+                      [46.13197,5.91837]
+                    ][
+                      [47.53034,8.52952],
+                      [47.51366,8.70810],
+                      [47.36701,8.73832],
+                      [47.31680,8.53501],
+                      [47.38746,8.18060],
+                      [47.48585,8.30972],
+                      [47.53034,8.52952]
+                    ]
+                    ]]},
+              "message": "This is a default message"
+    }})";
+    }
+    else if(area == 2) {
+      // west side of Swiss, west of Basel, to Luzern.
+      result = R"( {
+            "data": {
+              "id": "west of Swiss",
+              "area": {
+                    "type": "MultiPolygon",
+                    "coordinates": [[[
+                      [47.43504,7.38199],
+                      [47.30121,7.91499],
+                      [47.30121,7.91499],
+                      [47.30121,7.91499],
+                      [46.28280,8.05785],
+                      [45.93269,7.83256],
+                      [46.17268,6.79404],
+                      [46.16508,5.97531],
+                      [46.93140,6.44787],
+                      [47.36073,6.99735],
+                      [47.43504,7.38199]
+                      ]]]},
+              "message": "This is a default message"
+    }})";
+    }
+    else if(area == 3) {
+      // east of Swiss,
+      result = R"( {
+            "data": {
+              "id": "east of Swiss",
+              "area": {
+                    "type": "MultiPolygon",
+                    "coordinates": [[[
+                      [47.59721,8.18823],
+                      [47.09138,8.67178],
+                      [46.49385,9.37512],
+                      [46.22109,10.04549],
+                      [46.53541,10.49606],
+                      [46.94543,10.44111],
+                      [47.08764,9.52348],
+                      [47.47862,9.63887],
+                      [47.86514,8.91512],
+                      [47.59721,8.18823]
                       ]]]},
               "message": "This is a default message"
     }})";
@@ -215,7 +344,6 @@ struct test_server::impl {
       int area = 0;
       for(auto const& s : server_argv_) {
         if(s == "medium") {
-          printf("Angekommen und funktioniert\n");
           std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         else if(s == "high") {
@@ -229,6 +357,48 @@ struct test_server::impl {
         }
         else if(s == "3") {
           area = 3;
+        }
+        else if(s == "little") {
+          on = true;
+          fleet.resize(10);
+          for(auto & i : fleet) {
+            i.resize(24);
+            for(int j = 0; j < i.size(); j++) {
+              if(j < 6) {
+                i.at(j) = 0;
+              } else {
+                i.at(j) = 1;
+              }
+            }
+          }
+        }
+        else if(s == "normal") {
+          on = true;
+          fleet.resize(15);
+          for(auto & i : fleet) {
+            i.resize(24);
+            for(int j = 0; j < i.size(); j++) {
+              if(j < 6) {
+                i.at(j) = 0;
+              } else {
+                i.at(j) = 1;
+              }
+            }
+          }
+        }
+        else if(s == "big") {
+          on = true;
+          fleet.resize(20);
+          for(auto & i : fleet) {
+            i.resize(24);
+            for(int j = 0; j < i.size(); j++) {
+              if(j < 6) {
+                i.at(j) = 0;
+              } else {
+                i.at(j) = 1;
+              }
+            }
+          }
         }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
