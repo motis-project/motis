@@ -4,11 +4,13 @@ import getTickFormatter from "@visx/axis/lib/utils/getTickFormatter";
 import { Grid } from "@visx/grid";
 import { Group } from "@visx/group";
 import { ParentSize } from "@visx/responsive";
-import { scaleBand, scaleLinear, scaleSymlog } from "@visx/scale";
+import { ScaleInput, scaleBand, scaleLinear, scaleLog } from "@visx/scale";
 import { Bar } from "@visx/shape";
 import { range } from "d3-array";
 
 import { PaxMonHistogram } from "@/api/protocol/motis/paxmon";
+
+import { formatNumber } from "@/data/numberFormat";
 
 const defaultMargin = {
   top: 4,
@@ -17,7 +19,7 @@ const defaultMargin = {
   left: 4,
 };
 
-type ScaleType = "linear" | "symlog";
+type ScaleType = "linear" | "log";
 
 type HistogramProps = {
   data: PaxMonHistogram;
@@ -40,7 +42,7 @@ function Histogram({
   margin = defaultMargin,
   bgClass = "fill-gray-200",
   barClass = "fill-blue-800",
-  yScaleType = "linear",
+  yScaleType = "log",
   xTickFormat,
 }: HistogramProps): JSX.Element {
   margin ??= defaultMargin;
@@ -56,14 +58,13 @@ function Histogram({
   const xScale = scaleBand<number>({
     domain: range(data.min_value, data.max_value),
     range: [0, xMax],
-
     paddingInner: 0.1,
   });
 
   const yScale =
-    yScaleType === "symlog"
-      ? scaleSymlog({
-          domain: [0, data.max_count],
+    yScaleType === "log"
+      ? scaleLog({
+          domain: [0.5, data.max_count],
           range: [yMax, 0],
         })
       : scaleLinear({
@@ -72,6 +73,15 @@ function Histogram({
         });
 
   xTickFormat ??= getTickFormatter(xScale);
+
+  const yTickFormat =
+    yScaleType === "log"
+      ? (((v: number) => {
+          const asString = formatNumber(v);
+          // label only major ticks
+          return asString.match(/^[.01]*$/) ? asString : "";
+        }) as TickFormatter<ScaleInput<typeof yScale>>)
+      : getTickFormatter(yScale);
 
   const barWidth = xScale.bandwidth();
 
@@ -91,7 +101,7 @@ function Histogram({
       <Group top={margin.top} left={margin.left + yAxisWidth}>
         {data.counts.map((count, idx) => {
           const value = data.min_value + idx;
-          const barHeight = yMax - yScale(count) ?? 0;
+          const barHeight = count === 0 ? 0 : yMax - yScale(count);
           const barX = xScale(value);
           const barY = yMax - barHeight;
           return (
@@ -110,6 +120,7 @@ function Histogram({
         scale={yScale}
         top={margin.top}
         left={margin.left + yAxisWidth}
+        tickFormat={yTickFormat}
       />
       <AxisBottom
         scale={xScale}
