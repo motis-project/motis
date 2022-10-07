@@ -24,10 +24,10 @@ struct histogram {
     counts_.resize(highest_allowed - lowest_allowed + 1);
   }
 
-  void add(int value) {
+  void add(int value, int const count = 1) {
     value = std::clamp(value, lowest_allowed_, highest_allowed_);
-    ++counts_[value + offset_];
-    ++total_count_;
+    counts_[value + offset_] += count;
+    total_count_ += count;
     if (value < min_value_) {
       min_value_ = value;
     }
@@ -96,6 +96,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& uv = uv_access.uv_;
   auto const& pgc = uv.passenger_groups_;
+  auto const count_passengers = req->count_passengers();
 
   auto h_min_est_delay = histogram{LOWEST_ALLOWED_DELAY, HIGHEST_ALLOWED_DELAY};
   auto h_max_est_delay = histogram{LOWEST_ALLOWED_DELAY, HIGHEST_ALLOWED_DELAY};
@@ -139,10 +140,12 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       continue;
     }
 
-    h_min_est_delay.add(min_estimated_delay);
-    h_max_est_delay.add(max_estimated_delay);
+    auto const count = count_passengers ? pg->passengers_ : 1;
+
+    h_min_est_delay.add(min_estimated_delay, count);
+    h_max_est_delay.add(max_estimated_delay, count);
     h_expected_est_delay.add(
-        static_cast<unsigned>(std::round(expected_estimated_delay)));
+        static_cast<unsigned>(std::round(expected_estimated_delay)), count);
   }
 
   message_creator mc;

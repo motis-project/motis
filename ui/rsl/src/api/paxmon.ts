@@ -272,10 +272,10 @@ export async function sendPaxMonGroupStatisticsRequest(
 }
 
 export function usePaxMonGroupStatisticsQuery(
-  universe: number
+  content: PaxMonGroupStatisticsRequest
 ): UseQueryResult<PaxMonGroupStatisticsResponse> {
-  return useQuery(queryKeys.groupStatistics(universe), () =>
-    sendPaxMonGroupStatisticsRequest({ universe })
+  return useQuery(queryKeys.groupStatistics(content), () =>
+    sendPaxMonGroupStatisticsRequest(content)
   );
 }
 
@@ -301,6 +301,6 @@ export const queryKeys = {
     [...queryKeys.all, "addressable_groups", req] as const,
   keepAlive: (req: PaxMonKeepAliveRequest) =>
     [...queryKeys.all, "keep_alive", req] as const,
-  groupStatistics: (universe: number) =>
-    [...queryKeys.all, "group_statistics", universe] as const,
+  groupStatistics: (req: PaxMonGroupStatisticsRequest) =>
+    [...queryKeys.all, "group_statistics", req] as const,
 };

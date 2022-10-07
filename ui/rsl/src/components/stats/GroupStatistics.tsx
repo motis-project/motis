@@ -13,7 +13,10 @@ import Histogram, {
 
 function GroupStatistics(): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const { data } = usePaxMonGroupStatisticsQuery(universe);
+  const { data } = usePaxMonGroupStatisticsQuery({
+    universe,
+    count_passengers: true,
+  });
 
   if (!data) {
     return <div>Gruppenstatistiken werden geladen...</div>;

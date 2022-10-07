@@ -450,6 +450,7 @@ export interface PaxMonGroupRouteUpdateInfo {
 // paxmon/PaxMonGroupStatisticsRequest.fbs
 export interface PaxMonGroupStatisticsRequest {
   universe: number;
+  count_passengers: boolean;
 }
 
 // paxmon/PaxMonGroupStatisticsResponse.fbs
