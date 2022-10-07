@@ -36,6 +36,7 @@ type LabeledSortOrder = {
 };
 
 const sortOptions: Array<LabeledSortOrder> = [
+  { option: "GroupId", label: "Gruppen sortiert nach ID" },
   {
     option: "ExpectedEstimatedDelay",
     label: "Gruppen sortiert nach erwarteter Verspätung",
@@ -52,7 +53,6 @@ const sortOptions: Array<LabeledSortOrder> = [
     option: "ScheduledDepartureTime",
     label: "Gruppen sortiert nach Reisebeginn",
   },
-  { option: "GroupId", label: "Gruppen sortiert nach ID" },
 ];
 
 type GroupIdType = "internal" | "source";

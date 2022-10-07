@@ -9,6 +9,7 @@ import classNames from "@/util/classNames";
 import GroupsMainSection from "@/components/groups/GroupsMainSection";
 import Header from "@/components/header/Header";
 import SimPanel from "@/components/sim/SimPanel";
+import GroupStatistics from "@/components/stats/GroupStatistics";
 import TripsMainSection from "@/components/trips/TripsMainSection";
 
 const queryClient = new QueryClient({
@@ -26,7 +27,7 @@ function MainPage(): JSX.Element {
     case "groups":
       return <GroupsMainSection />;
     case "stats":
-      return <div>Statistiken</div>;
+      return <GroupStatistics />;
   }
 }
 
