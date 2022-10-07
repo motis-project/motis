@@ -66,7 +66,7 @@ function Histogram({
   }
 
   const xScale = scaleBand<number>({
-    domain: range(data.min_value, data.max_value),
+    domain: range(data.min_value, data.max_value + 1),
     range: [0, xMax],
     paddingInner: 0.1,
   });
