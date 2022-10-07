@@ -47,8 +47,11 @@ void check_broken_interchanges(
         ++uv.system_stats_.total_broken_interchanges_;
       }
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
+        auto& gr = uv.passenger_groups_.route(pgwr);
+        if (gr.probability_ == 0) {
+          continue;
+        }
         if (affected_group_routes.insert(pgwr).second) {
-          auto& gr = uv.passenger_groups_.route(pgwr);
           gr.broken_ = true;
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
@@ -57,13 +60,19 @@ void check_broken_interchanges(
       // interchange valid again
       ice->broken_ = false;
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
+        auto const& gr = uv.passenger_groups_.route(pgwr);
+        if (gr.probability_ != 0) {
+          uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
+        }
       }
     } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
       // check for delayed arrival at destination
       auto const estimated_arrival = static_cast<int>(from->schedule_time());
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
         auto const& gr = uv.passenger_groups_.route(pgwr);
+        if (gr.probability_ == 0) {
+          continue;
+        }
         auto const estimated_delay =
             estimated_arrival - static_cast<int>(gr.planned_arrival_time_);
         if (gr.planned_arrival_time_ != INVALID_TIME &&
