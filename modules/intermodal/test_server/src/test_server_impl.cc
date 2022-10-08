@@ -344,10 +344,10 @@ struct test_server::impl {
       int area = 0;
       for(auto const& s : server_argv_) {
         if(s == "medium") {
-          std::this_thread::sleep_for(std::chrono::seconds(1));
+          std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
         else if(s == "high") {
-          std::this_thread::sleep_for(std::chrono::seconds(2));
+          std::this_thread::sleep_for(std::chrono::seconds(1));
         }
         else if(s == "1") {
           area = 1;
@@ -401,7 +401,7 @@ struct test_server::impl {
           }
         }
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      std::this_thread::sleep_for(std::chrono::milliseconds(250));
       switch(req.method()) {
         case verb::options: {
           std::string_view resbody = "allow: post, head, get";

@@ -13,8 +13,8 @@ struct statistics {
   uint64_t routing_duration_{};
   uint64_t direct_connection_duration_{};
   uint64_t revise_duration_{};
-  uint64_t ondemand_server_area_inquery_us_{};
-  uint64_t ondemand_server_product_inquery_us_{};
+  uint64_t ondemand_server_area_inquery_{};
+  uint64_t ondemand_server_product_inquery_{};
   uint64_t ondemand_remove_duration_{};
   uint64_t ondemand_removed_journeys_{};
   uint64_t ondemand_check_availability_{};
@@ -34,8 +34,8 @@ inline stats_category to_stats_category(char const* name, statistics const& s) {
        {"routing_duration", s.routing_duration_},
        {"direct_connection_duration", s.direct_connection_duration_},
        {"revise_duration", s.revise_duration_},
-       {"ondemand_server_area_inquery_us", s.ondemand_server_area_inquery_us_},
-       {"ondemand_server_product_inquery_us", s.ondemand_server_product_inquery_us_},
+       {"ondemand_server_area_inquery", s.ondemand_server_area_inquery_},
+       {"ondemand_server_product_inquery", s.ondemand_server_product_inquery_},
        {"ondemand_remove_duration", s.ondemand_remove_duration_},
        {"ondemand_removed_journeys", s.ondemand_removed_journeys_},
        {"ondemand_check_availability", s.ondemand_check_availability_},

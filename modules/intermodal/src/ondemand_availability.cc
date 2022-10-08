@@ -332,8 +332,8 @@ bool check_od_area(geo::latlng from, geo::latlng to,
   MOTIS_START_TIMING(ondemand_server_area);
   response area_check_result = motis_http(area_check_req)->val();
   MOTIS_STOP_TIMING(ondemand_server_area);
-  stats.ondemand_server_area_inquery_us_ +=
-      static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_server_area));
+  stats.ondemand_server_area_inquery_ +=
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_area));
   availability_response area_check_response = read_result(area_check_result, true, req_dots);
   return area_check_response.available_;
 }
@@ -379,8 +379,8 @@ availability_response check_od_availability(availability_request areq,
   MOTIS_START_TIMING(ondemand_server_product);
   response product_check_result = motis_http(product_check_req)->val();
   MOTIS_STOP_TIMING(ondemand_server_product);
-  stats.ondemand_server_product_inquery_us_ +=
-      static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_server_product));
+  stats.ondemand_server_product_inquery_ +=
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_product));
   availability_response product_check_response = read_result(product_check_result, false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);
   return product_check_response;
