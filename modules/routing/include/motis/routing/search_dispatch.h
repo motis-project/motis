@@ -57,6 +57,10 @@ inline search_result search_dispatch(search_query const& q,
       return get_connections<ondemand_weighted_label<Dir>, Gen>(q);
     case SearchType_Ondemand:
       return get_connections<ondemand_label<Dir>, Gen>(q);
+    case SearchType_OndemandWithDurationCost:
+      return get_connections<ondemand_with_duration_cost_label<Dir>, Gen>(q);
+    case SearchType_OndemandWithDurationCostWeighted:
+      return get_connections<ondemand_with_duration_cost_weighted_label<Dir>, Gen>(q);
     default: break;
   }
   throw std::system_error(error::search_type_not_supported);

@@ -100,6 +100,8 @@ enum SearchType : byte {
   Accessibility,
   OndemandWeighted,
   Ondemand,
+  OndemandWithDurationCost,
+  OndemandWithDurationCostWeighted,
   DefaultPrice,
   DefaultPriceRegional
 }

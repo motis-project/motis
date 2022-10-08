@@ -5,6 +5,8 @@
 
 namespace motis::routing {
 
+constexpr auto ONDEMAND_COST = 20;
+
 struct ondemand_with_duration_cost {
   bool is_ondemand_;
   duration edge_duration_;
@@ -22,7 +24,11 @@ struct ondemand_with_duration_cost_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds&) {
     l.is_ondemand_ = edge::get_is_ondemand(l.edge_);
-    l.edge_duration_ = ec.time_;
+    if(l.is_ondemand_) {
+      l.edge_duration_ += (ec.time_ / 1.5) * ONDEMAND_COST;
+    } else {
+      l.edge_duration_ += ec.time_;
+    }
   }
 };
 
