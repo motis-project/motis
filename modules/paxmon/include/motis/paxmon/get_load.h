@@ -60,21 +60,37 @@ template <typename GroupRoutes>
 inline pax_limits get_pax_limits(passenger_group_container const& pgc,
                                  GroupRoutes const& group_routes) {
   auto limits = pax_limits{};
-  auto last_pgi = INVALID_PGI;
+  auto current_pgi = INVALID_PGI;
+  auto current_prob = 0.0F;
+
   for (auto const& pgwr : group_routes) {
-    if (pgwr.pg_ == last_pgi) {
+    auto const prob = pgc.route(pgwr).probability_;
+    if (prob == 0.0F) {
       continue;
     }
-    auto const pax = pgc[pgwr.pg_]->passengers_;
-    auto const prob = pgc.route(pgwr).probability_;
-    if (prob != 0.0F) {
-      last_pgi = pgwr.pg_;
-      limits.max_ += pax;
-      if (prob == 1.0F) {
-        limits.min_ += pax;
+    if (current_pgi != pgwr.pg_) {
+      if (current_pgi != INVALID_PGI /*&& current_prob != 0.0F*/) {
+        auto const current_pax = pgc[current_pgi]->passengers_;
+        limits.max_ += current_pax;
+        if (current_prob == 1.0F) {
+          limits.min_ += current_pax;
+        }
       }
+      current_pgi = pgwr.pg_;
+      current_prob = prob;
+    } else {
+      current_prob += prob;
     }
   }
+
+  if (current_pgi != INVALID_PGI /*&& current_prob != 0.0F*/) {
+    auto const current_pax = pgc[current_pgi]->passengers_;
+    limits.max_ += current_pax;
+    if (current_prob == 1.0F) {
+      limits.min_ += current_pax;
+    }
+  }
+
   return limits;
 }
 
@@ -125,7 +141,8 @@ inline pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
     auto const prob = pgc.route(pgwr).probability_;
     if (prob != 1.0F && prob != 0.0F) {
       if (current_pgi != pgwr.pg_) {
-        if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+        if (current_pgi != INVALID_PGI && current_prob != 0.0F &&
+            current_prob != 1.0F) {
           convolve_base(pdf, pgc[current_pgi]->passengers_, current_prob);
         }
         current_pgi = pgwr.pg_;
@@ -136,7 +153,8 @@ inline pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
     }
   }
 
-  if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+  if (current_pgi != INVALID_PGI && current_prob != 0.0F &&
+      current_prob != 1.0F) {
     convolve_base(pdf, pgc[current_pgi]->passengers_, current_prob);
   }
 
@@ -204,7 +222,8 @@ inline pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
     auto const prob = pgc.route(pgwr).probability_;
     if (prob != 1.0F && prob != 0.0F) {
       if (current_pgi != pgwr.pg_) {
-        if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+        if (current_pgi != INVALID_PGI && current_prob != 0.0F &&
+            current_prob != 1.0F) {
           convolve_avx(pdf, pgc[current_pgi]->passengers_, current_prob, limits,
                        buf);
         }
@@ -216,7 +235,8 @@ inline pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
     }
   }
 
-  if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+  if (current_pgi != INVALID_PGI && current_prob != 0.0F &&
+      current_prob != 1.0F) {
     convolve_avx(pdf, pgc[current_pgi]->passengers_, current_prob, limits, buf);
   }
 
