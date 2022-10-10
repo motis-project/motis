@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <utility>
@@ -52,18 +53,26 @@ struct pax_stats {
 
 using lf_df_t = std::map<float, float>;
 
+auto const constexpr INVALID_PGI =
+    std::numeric_limits<passenger_group_index>::max();
+
 template <typename GroupRoutes>
 inline pax_limits get_pax_limits(passenger_group_container const& pgc,
                                  GroupRoutes const& group_routes) {
   auto limits = pax_limits{};
+  auto last_pgi = INVALID_PGI;
   for (auto const& pgwr : group_routes) {
+    if (pgwr.pg_ == last_pgi) {
+      continue;
+    }
     auto const pax = pgc[pgwr.pg_]->passengers_;
     auto const prob = pgc.route(pgwr).probability_;
-    if (prob == 1.0F) {
-      limits.min_ += pax;
-    }
     if (prob != 0.0F) {
+      last_pgi = pgwr.pg_;
       limits.max_ += pax;
+      if (prob == 1.0F) {
+        limits.min_ += pax;
+      }
     }
   }
   return limits;
@@ -108,12 +117,29 @@ inline pax_pdf get_load_pdf_base(passenger_group_container const& pgc,
   auto pdf = pax_pdf{};
   pdf.data_.resize(limits.max_ + 1);
   pdf.data_[limits.min_] = 1.0F;
+
+  auto current_pgi = INVALID_PGI;
+  auto current_prob = 0.0F;
+
   for (auto const& pgwr : group_routes) {
     auto const prob = pgc.route(pgwr).probability_;
     if (prob != 1.0F && prob != 0.0F) {
-      convolve_base(pdf, pgc[pgwr.pg_]->passengers_, prob);
+      if (current_pgi != pgwr.pg_) {
+        if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+          convolve_base(pdf, pgc[current_pgi]->passengers_, current_prob);
+        }
+        current_pgi = pgwr.pg_;
+        current_prob = prob;
+      } else {
+        current_prob += prob;
+      }
     }
   }
+
+  if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+    convolve_base(pdf, pgc[current_pgi]->passengers_, current_prob);
+  }
+
   return pdf;
 }
 
@@ -171,11 +197,27 @@ inline pax_pdf get_load_pdf_avx(passenger_group_container const& pgc,
   pdf.data_[limits.min_] = 1.0F;
   auto buf = std::vector<float>(pdf.data_.size() + 8);
 
+  auto current_pgi = INVALID_PGI;
+  auto current_prob = 0.0F;
+
   for (auto const& pgwr : group_routes) {
     auto const prob = pgc.route(pgwr).probability_;
     if (prob != 1.0F && prob != 0.0F) {
-      convolve_avx(pdf, pgc[pgwr.pg_]->passengers_, prob, limits, buf);
+      if (current_pgi != pgwr.pg_) {
+        if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+          convolve_avx(pdf, pgc[current_pgi]->passengers_, current_prob, limits,
+                       buf);
+        }
+        current_pgi = pgwr.pg_;
+        current_prob = prob;
+      } else {
+        current_prob += prob;
+      }
     }
+  }
+
+  if (current_pgi != INVALID_PGI && current_prob != 0.0F) {
+    convolve_avx(pdf, pgc[current_pgi]->passengers_, current_prob, limits, buf);
   }
 
   pdf.data_.resize(pdf_size);
