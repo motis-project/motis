@@ -316,6 +316,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                      [&](journey::transport const& t) {
                        return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
                      })) {
+      printf("how often?\n");
       return false;
     } else {
       for (auto const& p : od_patches) {
@@ -449,7 +450,13 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
 availability_response ondemand_availability(journey j, bool start, mumo_edge const& e,
                                              statistics& stats, std::vector<std::string> const& server_info) {
   availability_request areq;
-  areq.duration_ = static_cast<int>(round(e.duration_ * 60 * 1.5));
+  if(j.transports_.size() == 1) {
+    areq.direct_con_ = true;
+    areq.duration_ = static_cast<int>(round(j.transports_.at(0).duration_ * 60));
+  } else {
+    areq.direct_con_ = false;
+    areq.duration_ = static_cast<int>(round(e.duration_ * 60));
+  }
   areq.startpoint_.lat_ = e.from_pos_.lat_;
   areq.startpoint_.lng_ = e.from_pos_.lng_;
   areq.endpoint_.lat_ = e.to_pos_.lat_;

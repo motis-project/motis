@@ -340,7 +340,11 @@ void add_direct_connections(std::vector<journey>& journeys,
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
-    transport.mumo_id_ = d.mumo_id_;
+    if(transport.mumo_type_ == to_string(mumo_type::ON_DEMAND)) {
+      transport.mumo_id_ = 1;
+    } else {
+      transport.mumo_id_ = d.mumo_id_;
+    }
   }
 }
 
