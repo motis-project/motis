@@ -61,6 +61,15 @@ function GroupHistograms({ data }: GroupHistogramsProps): JSX.Element {
         </div>
       </div>
       <div>
+        <div>Reisekettenwahrscheinlichkeit</div>
+        <div className="h-96">
+          <Histogram
+            data={data.group_route_probabilities}
+            xTickFormat={formatPercentageTick}
+          />
+        </div>
+      </div>
+      <div>
         <div>Erwartete Zielverspätung</div>
         <div className="h-96">
           <DurationHistogram data={data.expected_estimated_delay} />
@@ -89,6 +98,10 @@ function formatDurationTick(mins: number): string {
     return mins === 0 ? `${hrs}h` : `${hrs}h${mins}m`;
   }
   return `${mins}m`;
+}
+
+function formatPercentageTick(percent: number): string {
+  return `${percent} %`;
 }
 
 type DurationHistogramProps = Omit<

@@ -475,6 +475,7 @@ export interface PaxMonGroupStatisticsResponse {
   routes_per_group: PaxMonHistogram;
   active_routes_per_group: PaxMonHistogram;
   reroutes_per_group: PaxMonHistogram;
+  group_route_probabilities: PaxMonHistogram;
 }
 
 // paxmon/PaxMonKeepAliveRequest.fbs

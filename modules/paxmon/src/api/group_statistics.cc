@@ -1,5 +1,6 @@
 #include "motis/paxmon/api/group_statistics.h"
 
+#include <cmath>
 #include <algorithm>
 
 #include "utl/enumerate.h"
@@ -105,6 +106,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto h_routes_per_group = histogram{0, HIGHEST_ROUTES_PER_GROUP};
   auto h_active_routes_per_group = histogram{0, HIGHEST_ROUTES_PER_GROUP};
   auto h_reroutes_per_group = histogram{0, HIGHEST_REROUTES_PER_GROUP};
+  auto h_group_route_probabilities = histogram{0, 100};
 
   auto total_group_route_count = 0U;
   auto active_group_route_count = 0U;
@@ -132,6 +134,8 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
         max_estimated_delay = gr.estimated_delay_;
       }
       expected_estimated_delay += gr.probability_ * gr.estimated_delay_;
+      h_group_route_probabilities.add(
+          static_cast<int>(std::round(gr.probability_ * 100)));
     }
     h_active_routes_per_group.add(active_routes);
     total_group_route_count += routes.size();
@@ -166,7 +170,8 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
           histogram_to_fbs(h_expected_est_delay),
           histogram_to_fbs(h_routes_per_group),
           histogram_to_fbs(h_active_routes_per_group),
-          histogram_to_fbs(h_reroutes_per_group))
+          histogram_to_fbs(h_reroutes_per_group),
+          histogram_to_fbs(h_group_route_probabilities))
           .Union());
   return make_msg(mc);
 }
