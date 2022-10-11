@@ -1,5 +1,7 @@
 #include "motis/paxmon/api/reroute_groups.h"
 
+#include <algorithm>
+
 #include "utl/to_vec.h"
 
 #include "motis/core/common/date_time_util.h"
@@ -17,10 +19,42 @@ namespace motis::paxmon::api {
 namespace {
 
 template <typename CompactJourney>
-void before_journey_load_updated(universe& uv, CompactJourney const& cj) {
+inline void before_journey_load_updated(universe& uv,
+                                        CompactJourney const& cj) {
   for (auto const& leg : cj.legs()) {
     uv.update_tracker_.before_trip_load_updated(leg.trip_idx_);
   }
+}
+
+inline typename dynamic_fws_multimap<reroute_log_new_route>::mutable_bucket
+append_or_extend_log_entry(universe& uv, schedule const& sched,
+                           passenger_group_index const pgi,
+                           local_group_route_index const old_route_idx,
+                           float const old_route_probability,
+                           reroute_reason_t const reason,
+                           std::optional<broken_transfer_info> const& bti,
+                           bool const has_new_routes) {
+  auto& pgc = uv.passenger_groups_;
+  auto const system_time = sched.system_time_;
+  auto log_entries = pgc.reroute_log_entries(pgi);
+  if (has_new_routes && reason == reroute_reason_t::MAJOR_DELAY_EXPECTED) {
+    if (auto it = std::find_if(
+            log_entries.rbegin(), log_entries.rend(),
+            [&](reroute_log_entry const& entry) {
+              return entry.reason_ == reroute_reason_t::MAJOR_DELAY_EXPECTED &&
+                     entry.old_route_ == old_route_idx &&
+                     entry.system_time_ == system_time &&
+                     pgc.log_entry_new_routes_.at(entry.index_).empty();
+            });
+        it != log_entries.rend()) {
+      return pgc.log_entry_new_routes_.at(it->index_);
+    }
+  }
+  auto log_new_routes = pgc.log_entry_new_routes_.emplace_back();
+  log_entries.emplace_back(reroute_log_entry{
+      static_cast<reroute_log_entry_index>(log_new_routes.index()),
+      old_route_idx, old_route_probability, system_time, now(), reason, bti});
+  return log_new_routes;
 }
 
 }  // namespace
@@ -57,13 +91,9 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         passenger_group_with_route{pgi, old_route_idx}, old_route_probability,
         0, false);
 
-    auto log_new_routes =
-        uv.passenger_groups_.log_entry_new_routes_.emplace_back();
-    uv.passenger_groups_.reroute_log_entries(pgi).emplace_back(
-        reroute_log_entry{
-            static_cast<reroute_log_entry_index>(log_new_routes.index()),
-            old_route_idx, old_route_probability, sched.system_time_, now(),
-            reason, bti});
+    auto log_new_routes = append_or_extend_log_entry(
+        uv, sched, pgi, old_route_idx, old_route_probability, reason, bti,
+        rr->new_routes()->size() != 0);
 
     auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
       auto const tgr = from_fbs(sched, nr);
