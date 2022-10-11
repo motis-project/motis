@@ -92,6 +92,10 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
 
   auto const filter_trip_indices = get_trips(sched, req->filter_by_train_nr());
 
+  auto const filter_reroute_reasons = utl::to_vec(
+      *req->filter_by_reroute_reason(),
+      [](auto const& rr) { return static_cast<reroute_reason_t>(rr); });
+
   auto const filter_by_start = !filter_start_stations.empty();
   auto const filter_by_destination = !filter_destination_stations.empty();
   auto const filter_by_via = !filter_via_stations.empty();
@@ -111,6 +115,8 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
       unix_to_motistime(sched.schedule_begin_, req->filter_interval()->begin());
   auto const filter_interval_end =
       unix_to_motistime(sched.schedule_begin_, req->filter_interval()->end());
+
+  auto const filter_by_reroute_reason = !filter_reroute_reasons.empty();
 
   std::vector<group_info> selected_groups;
   selected_groups.reserve(pgc.size());
@@ -143,6 +149,18 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
     auto station_filter_match = !filter_by_journey;
     auto trip_filter_match = !filter_by_trips;
     auto time_filter_match = !filter_by_time;
+
+    if (filter_by_reroute_reason) {
+      auto const log = pgc.reroute_log_entries(pgi);
+      if (!std::any_of(
+              log.begin(), log.end(), [&](reroute_log_entry const& entry) {
+                return std::find(filter_reroute_reasons.begin(),
+                                 filter_reroute_reasons.end(),
+                                 entry.reason_) != filter_reroute_reasons.end();
+              })) {
+        return;
+      }
+    }
 
     for (auto const& gr : pgc.routes(pgi)) {
       if (gr.probability_ != 0) {

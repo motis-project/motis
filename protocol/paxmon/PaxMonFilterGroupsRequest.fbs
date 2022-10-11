@@ -1,5 +1,6 @@
 include "base/Interval.fbs";
 include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonRerouteReason.fbs";
 
 namespace motis.paxmon;
 
@@ -38,4 +39,6 @@ table PaxMonFilterGroupsRequest {
   // filter by time
   filter_by_time: PaxMonFilterGroupsTimeFilter;
   filter_interval: Interval;
+
+  filter_by_reroute_reason: [PaxMonRerouteReason];
 }

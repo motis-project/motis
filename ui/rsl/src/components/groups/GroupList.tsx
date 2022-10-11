@@ -85,6 +85,7 @@ function getFilterGroupsRequest(
       begin: selectedDate ? getUnixTime(selectedDate) : 0,
       end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
     },
+    filter_by_reroute_reason: [],
   };
 }
 

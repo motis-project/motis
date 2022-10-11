@@ -123,6 +123,7 @@ export interface PaxMonFilterGroupsRequest {
   filter_by_train_nr: number[];
   filter_by_time: PaxMonFilterGroupsTimeFilter;
   filter_interval: Interval;
+  filter_by_reroute_reason: PaxMonRerouteReason[];
 }
 
 // paxmon/PaxMonFilterGroupsResponse.fbs
