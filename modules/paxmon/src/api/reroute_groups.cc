@@ -26,14 +26,18 @@ inline void before_journey_load_updated(universe& uv,
   }
 }
 
-inline typename dynamic_fws_multimap<reroute_log_new_route>::mutable_bucket
-append_or_extend_log_entry(universe& uv, schedule const& sched,
-                           passenger_group_index const pgi,
-                           local_group_route_index const old_route_idx,
-                           float const old_route_probability,
-                           reroute_reason_t const reason,
-                           std::optional<broken_transfer_info> const& bti,
-                           bool const has_new_routes) {
+struct log_entry_info {
+  typename dynamic_fws_multimap<reroute_log_new_route>::mutable_bucket
+      new_routes_;
+  bool extended_entry_{};
+  float old_route_probability_{};
+};
+
+inline log_entry_info append_or_extend_log_entry(
+    universe& uv, schedule const& sched, passenger_group_index const pgi,
+    local_group_route_index const old_route_idx,
+    float const old_route_probability, reroute_reason_t const reason,
+    std::optional<broken_transfer_info> const& bti, bool const has_new_routes) {
   auto& pgc = uv.passenger_groups_;
   auto const system_time = sched.system_time_;
   auto log_entries = pgc.reroute_log_entries(pgi);
@@ -47,14 +51,15 @@ append_or_extend_log_entry(universe& uv, schedule const& sched,
                      pgc.log_entry_new_routes_.at(entry.index_).empty();
             });
         it != log_entries.rend()) {
-      return pgc.log_entry_new_routes_.at(it->index_);
+      return {pgc.log_entry_new_routes_.at(it->index_), true,
+              it->old_route_probability_};
     }
   }
   auto log_new_routes = pgc.log_entry_new_routes_.emplace_back();
   log_entries.emplace_back(reroute_log_entry{
       static_cast<reroute_log_entry_index>(log_new_routes.index()),
       old_route_idx, old_route_probability, system_time, now(), reason, bti});
-  return log_new_routes;
+  return {log_new_routes, false, old_route_probability};
 }
 
 }  // namespace
@@ -91,9 +96,9 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         passenger_group_with_route{pgi, old_route_idx}, old_route_probability,
         0, false);
 
-    auto log_new_routes = append_or_extend_log_entry(
-        uv, sched, pgi, old_route_idx, old_route_probability, reason, bti,
-        rr->new_routes()->size() != 0);
+    auto lei = append_or_extend_log_entry(uv, sched, pgi, old_route_idx,
+                                          old_route_probability, reason, bti,
+                                          rr->new_routes()->size() != 0);
 
     auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
       auto const tgr = from_fbs(sched, nr);
@@ -102,9 +107,13 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
       }
       auto const result =
           add_group_route(uv, sched, data.capacity_maps_, pgi, tgr);
-      log_new_routes.emplace_back(reroute_log_new_route{
-          result.pgwr_.route_, result.previous_probability_,
-          result.new_probability_});
+      auto const previous_probability =
+          lei.extended_entry_ && result.pgwr_.route_ == old_route_idx &&
+                  result.previous_probability_ == 0.0F
+              ? lei.old_route_probability_
+              : result.previous_probability_;
+      lei.new_routes_.emplace_back(reroute_log_new_route{
+          result.pgwr_.route_, previous_probability, result.new_probability_});
       uv.update_tracker_.after_group_route_updated(
           result.pgwr_, result.previous_probability_, result.new_probability_,
           result.new_route_);
