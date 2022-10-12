@@ -1,4 +1,4 @@
-import { DownloadIcon } from "@heroicons/react/solid";
+import { ArrowDownTrayIcon } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { CSSProperties, useRef } from "react";
@@ -532,7 +532,7 @@ function TripLoadForecastChart({
             onClick={() => saveAsSVG(svgEl.current, baseFileName)}
             className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
           >
-            <DownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            <ArrowDownTrayIcon className="w-5 h-5 mr-2" aria-hidden="true" />
             SVG
           </button>
           <button
@@ -540,7 +540,7 @@ function TripLoadForecastChart({
             onClick={() => saveAsPNG(svgEl.current, baseFileName)}
             className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
           >
-            <DownloadIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            <ArrowDownTrayIcon className="w-5 h-5 mr-2" aria-hidden="true" />
             PNG
           </button>
         </div>

@@ -1,9 +1,17 @@
-import { UsersIcon } from "@heroicons/react/outline";
+import {
+  ArrowUturnUpIcon,
+  ClockIcon,
+  CpuChipIcon,
+  ExclamationTriangleIcon,
+  UsersIcon,
+  WrenchIcon,
+} from "@heroicons/react/24/outline";
 import { useAtom } from "jotai";
 import React from "react";
 
 import {
   PaxMonCompactJourneyLeg,
+  PaxMonGroup,
   PaxMonGroupRoute,
   PaxMonRerouteLogEntry,
   PaxMonRerouteReason,
@@ -11,9 +19,11 @@ import {
 
 import { usePaxMonGetGroupsRequest } from "@/api/paxmon";
 
+import { formatShortDuration } from "@/data/durationFormat";
 import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 
+import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
@@ -83,17 +93,18 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
             ? "1 Route"
             : `${group.routes.length} Routen`}
         </div>
-        <div className="pl-4 space-y-2">
+        <div className="inline-flex flex-col gap-y-2">
           {group.routes.map((route) => (
             <GroupRoute route={route} key={route.index} />
           ))}
         </div>
       </div>
       <div className="mt-6">
-        <div className="text-lg">Änderungsprotokoll</div>
-        <div className="pl-4 space-y-2">
+        <div className="text-lg mb-3">Änderungsprotokoll</div>
+        <div className="relative inline-flex flex-col">
+          <div className="absolute top-0 left-4 h-full -ml-px bg-db-cool-gray-300 w-0.5"></div>
           {group.reroute_log.map((log, idx) => (
-            <RerouteLogEntry log={log} key={idx} />
+            <RerouteLogEntry key={idx} log={log} group={group} />
           ))}
         </div>
       </div>
@@ -107,10 +118,12 @@ type GroupRouteProps = {
 
 function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   return (
-    <div>
-      <div className="flex gap-4">
-        <div>Route #{route.index}</div>
-        <div>{formatPercent(route.probability)} Wahrscheinlichkeit</div>
+    <div className="bg-db-cool-gray-200 rounded px-4 py-2">
+      <div className="flex gap-4 items-baseline">
+        <div className="text-lg">Route #{route.index}</div>
+        <div className="text-lg">
+          {formatPercent(route.probability)} Wahrscheinlichkeit
+        </div>
         {route.planned && <div>(planmäßige Route)</div>}
       </div>
       <div className="flex gap-4">
@@ -118,33 +131,54 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
           Erwartete Zielverspätung: <Delay minutes={route.estimated_delay} />
         </div>
       </div>
-      <div className="pl-4">
-        {route.journey.legs.map((leg, idx) => (
-          <JourneyLeg leg={leg} key={idx} />
-        ))}
-      </div>
+      <table className="mt-1">
+        <thead>
+          <tr className="font-semibold">
+            <td className="pr-2 sr-only">Abschnitt</td>
+            <td className="pr-2">Zug</td>
+            <td className="pr-2" title="Benötigte Umstiegszeit">
+              Umstieg
+            </td>
+            <td className="pr-2" colSpan={2}>
+              Planmäßige Abfahrt
+            </td>
+            <td className="pr-2" colSpan={2}>
+              Planmäßige Ankunft
+            </td>
+          </tr>
+        </thead>
+        <tbody>
+          {route.journey.legs.map((leg, idx) => (
+            <JourneyLeg key={idx} leg={leg} index={idx} />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 type JourneyLegProps = {
   leg: PaxMonCompactJourneyLeg;
+  index: number;
 };
 
-function JourneyLeg({ leg }: JourneyLegProps): JSX.Element {
+function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
   return (
-    <div className="flex flex-wrap gap-2">
-      <TripServiceInfoView tsi={leg.trip} format={"Short"} />
-      <div className="space-x-1">
-        <span>{formatDateTime(leg.enter_time)}</span>
-        <span>{leg.enter_station.name}</span>
-      </div>
-      <div>&rarr;</div>
-      <div className="space-x-1">
-        <span>{formatDateTime(leg.exit_time)}</span>
-        <span>{leg.exit_station.name}</span>
-      </div>
-    </div>
+    <tr>
+      <td className="pr-2">{index + 1}.</td>
+      <td className="pr-2">
+        <TripServiceInfoView tsi={leg.trip} format={"Short"} />
+      </td>
+      <td className="pr-2">
+        {leg.enter_transfer.type !== "NONE"
+          ? formatShortDuration(leg.enter_transfer.duration)
+          : "—"}
+      </td>
+      <td className="pr-2">{formatDateTime(leg.enter_time)}</td>
+      <td className="pr-2">{leg.enter_station.name}</td>
+      <td className="pr-2">{formatDateTime(leg.exit_time)}</td>
+      <td className="">{leg.exit_station.name}</td>
+    </tr>
   );
 }
 
@@ -165,62 +199,118 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
 
 type RerouteLogEntryProps = {
   log: PaxMonRerouteLogEntry;
+  group: PaxMonGroup;
 };
 
 function RerouteLogEntry({ log }: RerouteLogEntryProps): JSX.Element {
   const broken_transfer =
     log.broken_transfer.length === 1 ? log.broken_transfer[0] : undefined;
+  const { icon, bgColor } = getRerouteReasonIcon(log.reason);
+
   return (
-    <div>
-      <div>
-        {formatDateTime(log.system_time)}: {rerouteReasonText(log.reason)}
+    <div className="relative">
+      <div
+        className={classNames(
+          "absolute w-8 h-8 rounded-full inline-flex items-center justify-center text-white",
+          bgColor
+        )}
+      >
+        {icon}
       </div>
-      <div>
-        Umleitung von Route #{log.old_route.index} (
-        {formatPercent(log.old_route.previous_probability)}) auf:
-      </div>
-      <div className="pl-4">
-        {log.new_routes.map((route) => (
-          <div key={route.index}>
-            Route #{route.index}: {formatPercent(route.previous_probability)}{" "}
-            &rarr; {formatPercent(route.new_probability)}
-          </div>
-        ))}
-      </div>
-      {broken_transfer && (
-        <div>
-          <div className="space-x-1">
-            <span>
-              Gebrochener Umstieg: Fahrtabschnitt{" "}
-              {broken_transfer.leg_index + 1}
-            </span>
-            <span>
-              ({broken_transfer.direction === "Enter" ? "Einstieg" : "Ausstieg"}
-              )
-            </span>
-            <span>
-              Benötigte Umstiegszeit: {broken_transfer.required_transfer_time}m
-            </span>
-          </div>
-          <div className="ml-4">
-            Ankunft:{" "}
-            {broken_transfer.current_arrival_time !== 0
-              ? formatDateTime(broken_transfer.current_arrival_time)
-              : "—"}
-            {broken_transfer.arrival_canceled && " (ausgefallen)"}
-          </div>
-          <div className="ml-4">
-            {" "}
-            Abfahrt:{" "}
-            {broken_transfer.current_departure_time !== 0
-              ? formatDateTime(broken_transfer.current_departure_time)
-              : "—"}
-            {broken_transfer.departure_canceled && " (ausgefallen)"}
-          </div>
+      <div className="ml-12 w-auto pt-1">
+        <div className="flex justify-between">
+          <span className="font-semibold">{rerouteReasonText(log.reason)}</span>
+          <span className="text-db-cool-gray-500">
+            {formatDateTime(log.system_time)}
+          </span>
         </div>
-      )}
+        <div>
+          Umleitung von Route #{log.old_route.index} (
+          {formatPercent(log.old_route.previous_probability)}) auf:
+        </div>
+        <div className="pl-4">
+          {log.new_routes.map((route) => (
+            <div key={route.index}>
+              Route #{route.index}: {formatPercent(route.previous_probability)}{" "}
+              &rarr; {formatPercent(route.new_probability)}
+            </div>
+          ))}
+        </div>
+        {broken_transfer && (
+          <div>
+            <div className="space-x-1">
+              <span>
+                Gebrochener Umstieg: Fahrtabschnitt{" "}
+                {broken_transfer.leg_index + 1}
+              </span>
+              <span>
+                (
+                {broken_transfer.direction === "Enter"
+                  ? "Einstieg"
+                  : "Ausstieg"}
+                )
+              </span>
+              <span>
+                Benötigte Umstiegszeit:{" "}
+                {formatShortDuration(broken_transfer.required_transfer_time)}
+              </span>
+            </div>
+            <div className="ml-4">
+              Ankunft:{" "}
+              {broken_transfer.current_arrival_time !== 0
+                ? formatDateTime(broken_transfer.current_arrival_time)
+                : "—"}
+              {broken_transfer.arrival_canceled && " (ausgefallen)"}
+            </div>
+            <div className="ml-4">
+              {" "}
+              Abfahrt:{" "}
+              {broken_transfer.current_departure_time !== 0
+                ? formatDateTime(broken_transfer.current_departure_time)
+                : "—"}
+              {broken_transfer.departure_canceled && " (ausgefallen)"}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+type RerouteReasonIcon = {
+  icon: JSX.Element;
+  bgColor: string;
+};
+
+function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
+  const style = "w-6 h-6";
+  switch (reason) {
+    case "Manual":
+      return {
+        icon: <WrenchIcon className={style} />,
+        bgColor: "bg-green-500",
+      };
+    case "BrokenTransfer":
+      return {
+        icon: <ExclamationTriangleIcon className={style} />,
+        bgColor: "bg-red-500",
+      };
+    case "MajorDelayExpected":
+      return {
+        icon: <ClockIcon className={style} />,
+        bgColor: "bg-amber-500",
+      };
+    case "RevertForecast":
+      return {
+        icon: <ArrowUturnUpIcon className={style} />,
+        bgColor: "bg-blue-500",
+      };
+    case "Simulation":
+      return {
+        icon: <CpuChipIcon className={style} />,
+        bgColor: "bg-green-500",
+      };
+  }
 }
 
 export default GroupDetails;

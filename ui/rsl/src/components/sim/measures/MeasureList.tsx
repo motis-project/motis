@@ -1,4 +1,4 @@
-import { PencilIcon, TrashIcon } from "@heroicons/react/solid";
+import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { PrimitiveAtom, atom, useAtom } from "jotai";
 import { useAtomCallback, useUpdateAtom } from "jotai/utils";
@@ -204,11 +204,11 @@ function MeasureListEntry({
           </div>
           <div className="text-sm font-medium">
             <button onClick={() => select(measureAtom)} className="p-1">
-              <PencilIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
+              <PencilIcon className="h-5 w-5 text-gray-900 hover:text-gray-600" />
               <span className="sr-only">Bearbeiten</span>
             </button>
             <button onClick={() => remove(measureAtom)} className="p-1 ml-1">
-              <TrashIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
+              <TrashIcon className="h-5 w-5 text-gray-900 hover:text-gray-600" />
               <span className="sr-only">Löschen</span>
             </button>
           </div>

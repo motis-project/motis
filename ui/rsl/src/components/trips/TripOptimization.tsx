@@ -1,4 +1,4 @@
-import { SparklesIcon } from "@heroicons/react/solid";
+import { SparklesIcon } from "@heroicons/react/20/solid";
 import { atom, useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -143,7 +143,7 @@ function TripOptimization({
               : "bg-db-red-500 hover:bg-db-red-600 text-white"
           )}
         >
-          <SparklesIcon className="w-4 h-4" aria-hidden="true" />
+          <SparklesIcon className="w-5 h-5" aria-hidden="true" />
           Maßnahmen zur Auslastungsreduktion ermitteln
         </button>
       </div>

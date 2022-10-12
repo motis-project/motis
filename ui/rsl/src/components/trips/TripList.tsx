@@ -1,9 +1,9 @@
 import { Listbox, Transition } from "@headlessui/react";
 import {
-  AdjustmentsIcon,
+  AdjustmentsVerticalIcon,
   CheckIcon,
-  SelectorIcon,
-} from "@heroicons/react/solid";
+  ChevronUpDownIcon,
+} from "@heroicons/react/20/solid";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
@@ -175,7 +175,7 @@ function TripList(): JSX.Element {
           <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white dark:bg-gray-700 rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
             <span className="block truncate">{selectedSort.label}</span>
             <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <SelectorIcon
+              <ChevronUpDownIcon
                 className="w-5 h-5 text-gray-400"
                 aria-hidden="true"
               />
@@ -330,7 +330,7 @@ function TripListOptions({
     >
       <div className="relative">
         <Listbox.Button className="p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
-          <AdjustmentsIcon className="w-4 h-4" aria-hidden="true" />
+          <AdjustmentsVerticalIcon className="w-5 h-5" aria-hidden="true" />
         </Listbox.Button>
         <Transition
           as={Fragment}

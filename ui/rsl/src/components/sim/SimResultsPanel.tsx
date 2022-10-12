@@ -1,11 +1,11 @@
 import { Listbox, Transition } from "@headlessui/react";
 import {
-  ArrowSmDownIcon,
+  ArrowSmallDownIcon,
   CheckCircleIcon,
   CheckIcon,
+  ChevronUpDownIcon,
   ExclamationCircleIcon,
-  SelectorIcon,
-} from "@heroicons/react/solid";
+} from "@heroicons/react/20/solid";
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
@@ -65,7 +65,7 @@ function SimResultsList(): JSX.Element {
               )}
             </span>
             <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <SelectorIcon
+              <ChevronUpDownIcon
                 className="w-5 h-5 text-gray-400"
                 aria-hidden="true"
               />
@@ -285,7 +285,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
         </ul>
         <div className="flex flex-col items-center gap-1">
           <MiniTripLoadGraph edges={ut.before_edges} />
-          <ArrowSmDownIcon className="w-5 h-5 fill-gray-500" />
+          <ArrowSmallDownIcon className="w-5 h-5 fill-gray-500" />
           <MiniTripLoadGraph edges={ut.after_edges} />
         </div>
       </div>

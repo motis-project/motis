@@ -1,3 +1,5 @@
+import { formatShortDuration } from "@/data/durationFormat";
+
 type DelayProps = {
   minutes: number;
 };
@@ -17,19 +19,11 @@ function getDelayColor(mins: number): string {
 }
 
 function Delay({ minutes }: DelayProps): JSX.Element {
-  let mins = Math.round(minutes);
-  const color = getDelayColor(mins);
-
-  let text = "";
-  if (mins >= 60) {
-    const hours = Math.floor(mins / 60);
-    mins = mins % 60;
-    text = `${hours}h${mins}m`;
-  } else {
-    text = `${mins}m`;
-  }
-
-  return <span className={color}>{text}</span>;
+  return (
+    <span className={getDelayColor(Math.round(minutes))}>
+      {formatShortDuration(minutes)}
+    </span>
+  );
 }
 
 export default Delay;

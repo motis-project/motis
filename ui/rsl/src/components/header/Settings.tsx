@@ -1,5 +1,5 @@
 import { Popover, Transition } from "@headlessui/react";
-import { CogIcon } from "@heroicons/react/solid";
+import { Cog6ToothIcon } from "@heroicons/react/20/solid";
 import { useAtom } from "jotai";
 import { Fragment } from "react";
 
@@ -119,7 +119,7 @@ function Settings(): JSX.Element {
                 "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
               )}
             >
-              <CogIcon className="w-4 h-4" aria-hidden="true" />
+              <Cog6ToothIcon className="w-5 h-5" aria-hidden="true" />
             </Popover.Button>
             <Transition
               as={Fragment}

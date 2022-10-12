@@ -1,8 +1,8 @@
 import {
   ChevronDownIcon,
   ChevronRightIcon,
-  ExclamationIcon,
-} from "@heroicons/react/solid";
+  ExclamationTriangleIcon,
+} from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useState } from "react";
@@ -195,7 +195,7 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
           {section.prob_over_capacity >= 0.01 ? (
             <>
               <span>
-                <ExclamationIcon className="w-5 h-5 fill-db-red-500" />
+                <ExclamationTriangleIcon className="w-5 h-5 fill-db-red-500" />
               </span>
               <span className="text-xs text-db-red-500">
                 {formatPercent(section.prob_over_capacity)}

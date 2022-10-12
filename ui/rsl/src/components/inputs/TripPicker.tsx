@@ -1,4 +1,4 @@
-import { ChevronDownIcon, XIcon } from "@heroicons/react/solid";
+import { ChevronDownIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import { useCombobox } from "downshift";
 import { useAtom } from "jotai";
 import { useState } from "react";
@@ -115,7 +115,7 @@ function TripPicker({
             aria-label="clear selection"
             className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
           >
-            <XIcon className="h-4 w-4 text-gray-500" />
+            <XMarkIcon className="h-5 w-5 text-gray-500" />
           </button>
         ) : (
           <button
@@ -124,7 +124,7 @@ function TripPicker({
             aria-label="toggle menu"
             className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
           >
-            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+            <ChevronDownIcon className="h-5 w-5 text-gray-500" />
           </button>
         )}
       </div>

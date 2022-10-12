@@ -21,14 +21,13 @@ const queryClient = new QueryClient({
 function MainPage(): JSX.Element {
   const [mainPage] = useAtom(mainPageAtom);
 
-  switch (mainPage) {
-    case "trips":
-      return <TripsMainSection />;
-    case "groups":
-      return <GroupsMainSection />;
-    case "stats":
-      return <GroupStatistics />;
-  }
+  return (
+    <>
+      <TripsMainSection visible={mainPage === "trips"} />
+      <GroupsMainSection visible={mainPage === "groups"} />
+      <GroupStatistics visible={mainPage === "stats"} />
+    </>
+  );
 }
 
 function MainContent(): JSX.Element {

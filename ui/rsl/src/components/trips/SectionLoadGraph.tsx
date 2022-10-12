@@ -244,7 +244,7 @@ function SectionLoadGraph({
         <AxisBottom scale={paxScale} top={margin.top + innerHeight} />
       </svg>
       <div
-        className="absolute hidden group-hover:block z-10 pointer-events-none w-32
+        className="absolute hidden group-hover:block z-10 pointer-events-none w-40
          bg-white text-black shadow-lg rounded p-1 text-xs opacity-95"
         style={tooltipStyle}
       >
@@ -276,6 +276,22 @@ function SectionLoadGraph({
             >
               Planmäßig
             </TooltipRow>
+            {!simpleGraph && (
+              <>
+                <tr>
+                  <td>Spannbreite (Min–Max)</td>
+                  <td className="text-right">
+                    {section.dist.max - section.dist.min}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Spannbreite (5%–95%)</td>
+                  <td className="text-right">
+                    {section.dist.q95 - section.dist.q5}
+                  </td>
+                </tr>
+              </>
+            )}
             <tr>
               <td>Kapazität</td>
               <td className="text-right">

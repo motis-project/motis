@@ -1,4 +1,4 @@
-import { TrashIcon } from "@heroicons/react/solid";
+import { TrashIcon } from "@heroicons/react/20/solid";
 import { PrimitiveAtom, useAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
 import React, { useCallback, useMemo } from "react";
@@ -149,7 +149,7 @@ function TripLoadRecommendationMeasureEditor({
                   className="p-1"
                   onClick={() => removeAlternative(idx)}
                 >
-                  <TrashIcon className="h-4 w-4 text-gray-900 hover:text-gray-600" />
+                  <TrashIcon className="h-5 w-5 text-gray-900 hover:text-gray-600" />
                   <span className="sr-only">Löschen</span>
                 </button>
               </TripAndLoadInput>

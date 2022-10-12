@@ -2,6 +2,8 @@ import { useAtom } from "jotai";
 
 import { selectedTripAtom } from "@/data/selectedTrip";
 
+import classNames from "@/util/classNames";
+
 import TripDetails from "@/components/trips/TripDetails";
 import TripList from "@/components/trips/TripList";
 
@@ -20,13 +22,25 @@ function SelectedTripDetails(): JSX.Element {
   }
 }
 
-function TripsMainSection(): JSX.Element {
+type TripsMainSectionProps = {
+  visible?: boolean;
+};
+
+function TripsMainSection({
+  visible = true,
+}: TripsMainSectionProps): JSX.Element {
+  const visibilityClass = visible ? "block" : "hidden";
   return (
     <>
-      <div className="bg-db-cool-gray-200 dark:bg-gray-800 w-[25rem] overflow-y-auto p-2 shrink-0">
+      <div
+        className={classNames(
+          visibilityClass,
+          "bg-db-cool-gray-200 dark:bg-gray-800 w-[25rem] overflow-y-auto p-2 shrink-0"
+        )}
+      >
         <TripList />
       </div>
-      <div className="overflow-y-auto grow p-2">
+      <div className={classNames(visibilityClass, "overflow-y-auto grow p-2")}>
         <SelectedTripDetails />
       </div>
     </>
