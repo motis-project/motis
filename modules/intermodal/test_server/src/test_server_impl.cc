@@ -135,6 +135,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
               k.at(free_to) = 0;
               no_one_free = false;
               break;
+            }
           }
           while(free_from <= free_to) {
             if(k.at(free_from)) {
