@@ -305,6 +305,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                                   std::vector<ondemand_patch>& od_patches,
                                   std::vector<availability_response>& ares) {
   if (ares.empty() || od_patches.empty()) {
+    //printf("how often here?\n");
     return 0;
   }
   auto const all = journeys.size();
@@ -316,7 +317,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                      [&](journey::transport const& t) {
                        return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
                      })) {
-      printf("how often?\n");
+      printf("how often? \n");
       return false;
     } else {
       for (auto const& p : od_patches) {
@@ -499,8 +500,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   auto journeys = routing_response == nullptr
                       ? std::vector<journey>{}
                       : message_to_journeys(routing_response);
-  printf("    JOURNEYS: %llu\n", journeys.size());
-  stats.journey_count_begin_ += journeys.size();
+  //printf("    JOURNEYS: %llu\n", journeys.size());
+  stats.journey_count_begin_ = journeys.size();
 
   MOTIS_START_TIMING(direct_connection_timing);
   auto const direct =
@@ -598,6 +599,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   MOTIS_STOP_TIMING(ondemand_remove);
   stats.ondemand_remove_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_remove));
+  //printf("journey end: ------- %llu\n", journeys.size());
   stats.journey_count_end_ += journeys.size();
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });
@@ -693,7 +695,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   statistics stats{};
 
   masterwho++;
-  printf("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| master %d\n", masterwho);
+  //printf("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| master %d\n", masterwho);
 
   auto const& sched = get_sched();
   auto const start = parse_query_start(mc, req, sched);

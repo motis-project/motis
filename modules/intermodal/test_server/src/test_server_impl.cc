@@ -24,12 +24,19 @@ using namespace boost::beast::http;
 using namespace motis::json;
 using namespace rapidjson;
 
+int sleeping = 2;
 int minutes = 0;
 int count = 0;
 bool on = false;
 std::vector<std::vector<int>> fleet;
 
 std::string create_resbody(net::test_server::http_req_t const& req, bool post, int area) {
+  // funktioniert nicht mit dem warten
+  //time_t timenow = time(nullptr);
+  //time_t timeend = timenow + sleeping;
+  //while(timenow < timeend) {
+    //timenow++;
+  //}
   if(post) {
     Document document;
     if (document.Parse(req.body().c_str()).HasParseError()) {
@@ -122,7 +129,14 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
         } else {
           int all_free = 0;
           int while_count = 0;
-          while(free_from <= free_to) { // Tageswechsel....
+          if(free_from == 23 && free_to == 0) {
+            if (k.at(free_from) && k.at(free_to)) {
+              k.at(free_from) = 0;
+              k.at(free_to) = 0;
+              no_one_free = false;
+              break;
+          }
+          while(free_from <= free_to) {
             if(k.at(free_from)) {
               k.at(free_from) = 0;
               all_free++;
@@ -130,7 +144,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
             free_from++;
             while_count++;
           }
-          if(while_count == all_free) {
+          if((while_count == all_free) && while_count != 0 && all_free != 0) {
             no_one_free = false;
           }
           break;
@@ -141,7 +155,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       }
     }
 
-    int walk_before = 0;
+    int walk_before = 1;
     int walk_after = 0;
     if(count%2==0) {
       walk_before+= 120;
@@ -344,10 +358,10 @@ struct test_server::impl {
       int area = 0;
       for(auto const& s : server_argv_) {
         if(s == "medium") {
-          std::this_thread::sleep_for(std::chrono::milliseconds(500));
+          sleeping = 500;
         }
         else if(s == "high") {
-          std::this_thread::sleep_for(std::chrono::seconds(1));
+          sleeping = 1000;
         }
         else if(s == "1") {
           area = 1;
@@ -401,7 +415,6 @@ struct test_server::impl {
           }
         }
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(250));
       switch(req.method()) {
         case verb::options: {
           std::string_view resbody = "allow: post, head, get";
