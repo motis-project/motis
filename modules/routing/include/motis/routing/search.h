@@ -109,14 +109,23 @@ struct search {
     lbs.travel_time_.run();
     MOTIS_STOP_TIMING(travel_time_lb_timing);
 
-    auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
-    if (!lbs.travel_time_.is_reachable(lbs.travel_time_[q.from_]) &&
-        (!q.use_start_metas_ ||
-         std::none_of(
-             begin(meta_froms), end(meta_froms), [&](station const* meta) {
-               auto const* sn = q.sched_->station_nodes_.at(meta->index_).get();
-               return lbs.travel_time_.is_reachable(lbs.travel_time_[sn]);
-             }))) {
+    auto const reachable_start = [&]() {
+      if (lbs.travel_time_.is_reachable(lbs.travel_time_[q.from_])) {
+        return true;
+      } else if (!q.use_start_metas_ ||
+                 q.from_->id_ >= q.sched_->stations_.size()) {
+        return false;
+      } else {
+        auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
+        return std::any_of(
+            begin(meta_froms), end(meta_froms), [&](station const* meta) {
+              auto const* sn = q.sched_->station_nodes_.at(meta->index_).get();
+              return lbs.travel_time_.is_reachable(lbs.travel_time_[sn]);
+            });
+      }
+    };
+
+    if (!reachable_start()) {
       return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
     }
 
@@ -143,22 +152,10 @@ struct search {
       }
       meta_edges.push_back(start_edge);
     } else {
-      if (q.use_start_metas_ &&
-          std::all_of(begin(meta_froms), end(meta_froms),
-                      [&lbs, &q](station const* s) {
-                        return !lbs.travel_time_.is_reachable(
-                            lbs.travel_time_[q.sched_->station_nodes_[s->index_]
-                                                 .get()]);
-                      })) {
-        return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
-      }
-      //      std::cout << "FROM:" <<
-      //      q.sched_->stations_.at(q.from_->id_)->name_ << "["
-      //                << q.sched_->stations_.at(q.from_->id_)->eva_nr_ <<
-      //                "]\n";
+      utl::verify(q.from_->id_ < q.sched_->stations_.size(),
+                  "invalid start node with meta station search");
+      auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
       for (auto const& meta_from : meta_froms) {
-        //        std::cout << "META FROM: " << meta_from->name_ << " ["
-        //                  << meta_from->eva_nr_ << "]\n";
         auto meta_edge = create_start_edge(
             q.sched_->station_nodes_[meta_from->index_].get());
         meta_edges.push_back(meta_edge);
