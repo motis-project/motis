@@ -55,11 +55,11 @@ inline log_entry_info append_or_extend_log_entry(
     }
   }
   auto log_new_routes = pgc.log_entry_new_routes_.emplace_back();
-  auto const entry_idx = log_entries.emplace_back(reroute_log_entry{
+  log_entries.emplace_back(reroute_log_entry{
       static_cast<reroute_log_entry_index>(log_new_routes.index()),
       reroute_log_route_info{old_route_idx, old_route_probability, 0},
       system_time, now(), reason, bti});
-  return {log_entries[entry_idx], log_new_routes, false};
+  return {log_entries.back(), log_new_routes, false};
 }
 
 }  // namespace
