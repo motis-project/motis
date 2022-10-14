@@ -45,9 +45,6 @@ add_group_route_result add_group_route(
     passenger_group_index const pgi, compact_journey const& cj,
     float probability, motis::time planned_arrival_time,
     route_source_flags const source_flags, bool const planned) {
-  utl::verify(probability >= 0 && probability <= 1.05,
-              "paxmon::add_group_route: invalid probability = {}", probability);
-  probability = std::clamp(probability, 0.F, 1.F);
   utl::verify(!cj.legs().empty(), "paxmon::add_group_route: empty journey");
 
   auto routes = uv.passenger_groups_.routes(pgi);
@@ -57,7 +54,7 @@ add_group_route_result add_group_route(
     if (uv.passenger_groups_.journey(gr.compact_journey_index_) == cj) {
       auto const previous_probability = gr.probability_;
       auto const new_probability = gr.probability_ + probability;
-      utl::verify(new_probability >= 0 && new_probability <= 1.05,
+      utl::verify(new_probability >= -0.05 && new_probability <= 1.05,
                   "paxmon::add_group_route: new probability = {} (previous = "
                   "{}, added = {}), existing route = {}",
                   new_probability, previous_probability, probability,
@@ -77,6 +74,9 @@ add_group_route_result add_group_route(
   }
 
   // add new group route
+  utl::verify(probability >= -0.05 && probability <= 1.05,
+              "paxmon::add_group_route: invalid probability = {}", probability);
+  probability = std::clamp(probability, 0.F, 1.F);
   auto const fws_cj = add_compact_journey(uv, cj);
   auto const lgr_index = static_cast<local_group_route_index>(routes.size());
   auto const gre_index = static_cast<group_route_edges_index>(
