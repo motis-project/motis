@@ -84,7 +84,8 @@ int rewrite_queries(int argc, char const** argv) {
       default: std::cerr << "unsupported message content type\n"; return 1;
     }
     fbb.create_and_finish(msg_in->get()->content_type(), content.Union(),
-                          opt.new_target_);
+                          opt.new_target_, DestinationType_Module,
+                          msg_in->id());
     out << make_msg(fbb)->to_json(true) << "\n";
 
     ++count;

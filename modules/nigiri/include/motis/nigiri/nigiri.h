@@ -28,6 +28,8 @@ private:
   struct impl;
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
+  std::string first_day_;
+  std::uint16_t num_days_{0U};
 };
 
 }  // namespace motis::nigiri

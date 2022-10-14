@@ -6,6 +6,7 @@
 #include "motis/core/access/station_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "utl/enumerate.h"
 
 using namespace motis::module;
 
@@ -107,6 +108,72 @@ std::vector<interchange> get_interchanges(schedule const& sched,
   return interchanges;
 }
 
+using dist_t = duration;
+struct label {
+  label(node const* node, uint32_t dist) : node_(node), dist_(dist) {}
+
+  friend bool operator>(label const& a, label const& b) {
+    return a.dist_ > b.dist_;
+  }
+
+  node const* node_;
+  dist_t dist_;
+};
+struct get_bucket {
+  std::size_t operator()(label const& l) const { return l.dist_; }
+};
+
+duration get_shortest_footpath(schedule const& sched, node const* from_node,
+                               node const* to_node) {
+  dial<label, MAX_TRAVEL_TIME_MINUTES, get_bucket> pq_;
+  mcd::vector<dist_t> dists_;
+  mcd::vector<edge const*> pred_;
+  dists_.resize(sched.next_node_id_, std::numeric_limits<dist_t>::max());
+  pred_.resize(sched.next_node_id_, nullptr);
+  pq_.push(label{from_node, 0});
+  while (!pq_.empty()) {
+    auto l = pq_.top();
+    pq_.pop();
+
+    if (l.node_ == to_node) {
+      break;
+    }
+
+    for (auto const& e : l.node_->edges_) {
+      if (e.type() != edge::ROUTE_EDGE && e.type() != edge::HOTEL_EDGE) {
+        auto const new_dist = l.dist_ + e.get_foot_edge_cost().time_;
+        if (new_dist < dists_[e.to_->id_] &&
+            new_dist <= MAX_TRAVEL_TIME_MINUTES) {
+          dists_[e.to_->id_] = new_dist;
+          pred_[e.to_->id_] = &e;
+          pq_.push(label(e.to_, new_dist));
+        }
+      }
+    }
+  }
+
+  auto const print_edge = [&](edge const* e) {
+    if (e == nullptr) {
+      return;
+    }
+    auto const& from = *sched.stations_.at(e->from_->get_station()->id_);
+    auto const& to = *sched.stations_.at(e->to_->get_station()->id_);
+    std::cout << from.name_ << " (" << from.eva_nr_ << ")"
+              << " --" << e->type_str() << "--" << e->get_foot_edge_cost().time_
+              << "--> " << to.name_ << "(" << to.eva_nr_ << ")\n";
+  };
+  edge const* pred = pred_[to_node->id_];
+  while (pred != nullptr && pred->from_ != from_node) {
+    print_edge(pred);
+    pred = pred_[pred->from_->id_];
+  }
+  print_edge(pred);
+
+  std::cout << "distance: " << dists_[to_node->id_] << "\n";
+
+  return dists_[to_node->id_];
+}
+
 motis::time get_foot_edge_duration(schedule const& sched, Connection const* con,
                                    std::size_t src_stop_idx) {
   utl::verify(src_stop_idx + 1 < con->stops()->Length(),
@@ -122,32 +189,37 @@ motis::time get_foot_edge_duration(schedule const& sched, Connection const* con,
 
   utl::verify(from_node->foot_node_ != nullptr,
               "walk src node has no foot node");
-  auto const& foot_edges = from_node->foot_node_->edges_;
-  auto const fe_it = std::find_if(
-      begin(foot_edges), end(foot_edges), [&to_node](edge const& e) {
-        return e.type() == edge::FWD_EDGE && e.to_ == to_node;
-      });
-  utl::verify(fe_it != end(foot_edges), "foot edge not found");
 
-  return fe_it->m_.foot_edge_.time_cost_;
+  auto const shorted_footpath =
+      get_shortest_footpath(sched, from_node, to_node);
+  utl::verify(shorted_footpath != std::numeric_limits<dist_t>::max(),
+              "foot edge {} ({}) --> {} ({}) not found, shorted_footpath={}",
+              from->name_, from->eva_nr_, to->name_, to->eva_nr_,
+              shorted_footpath);
+
+  return shorted_footpath;
 }
 
 void check_interchange(schedule const& sched, Connection const* con,
                        interchange const& ic) {
   auto const transfer_time = ic.enter_.get_time() - ic.exit_.get_time();
   if (ic.exit_stop_idx_ == ic.enter_stop_idx_) {
-    utl::verify(
-        transfer_time >= sched.stations_.at(ic.enter_.get_station_idx())
-                             ->get_transfer_time_between_tracks(
-                                 ic.exit_.get_track(), ic.enter_.get_track()),
-        "transfer time below station transfer time");
+    auto const track_transfer_time =
+        sched.stations_.at(ic.enter_.get_station_idx())
+            ->get_transfer_time_between_tracks(ic.exit_.get_track(),
+                                               ic.enter_.get_track());
+    utl::verify(transfer_time >= track_transfer_time,
+                "transfer time {} below station transfer time {}");
   } else {
     auto min_transfer_time = 0;
     for (auto i = ic.exit_stop_idx_; i < ic.enter_stop_idx_; ++i) {
       min_transfer_time += get_foot_edge_duration(sched, con, i);
     }
     utl::verify(transfer_time >= min_transfer_time,
-                "transfer time below walk duration");
+                "transfer_time={} < min_transfer_time={} (exit_stop_idx={}, "
+                "enter_stop_idx={})",
+                transfer_time, min_transfer_time, ic.exit_stop_idx_,
+                ic.enter_stop_idx_);
   }
 }
 
@@ -166,9 +238,13 @@ msg_ptr cc::check_journey(msg_ptr const& msg) {
       using motis::routing::RoutingResponse;
       auto const res = motis_content(RoutingResponse, msg);
       auto const& sched = get_sched();
-      for (auto const& con : *res->connections()) {
-        for (auto const& ic : get_interchanges(sched, con)) {
-          check_interchange(sched, con, ic);
+      for (auto const& [i, con] : utl::enumerate(*res->connections())) {
+        try {
+          for (auto const& ic : get_interchanges(sched, con)) {
+            check_interchange(sched, con, ic);
+          }
+        } catch (std::exception const& e) {
+          throw utl::fail("connection {}: {}", i, e.what());
         }
       }
       return make_success_msg();

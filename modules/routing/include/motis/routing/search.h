@@ -78,11 +78,16 @@ struct search {
     }
 
     auto const& meta_goals = q.sched_->stations_[q.to_->id_]->equivalent_;
+    //    std::cout << "GOAL: " << q.sched_->stations_[q.to_->id_]->name_ << "
+    //    ("
+    //              << q.sched_->stations_[q.to_->id_]->eva_nr_ << ")\n";
     std::vector<int> goal_ids;
     boost::container::vector<bool> is_goal(q.sched_->stations_.size(), false);
     for (auto const& meta_goal : meta_goals) {
       goal_ids.push_back(meta_goal->index_);
       is_goal[meta_goal->index_] = true;
+      //      std::cout << "meta_goal: " << meta_goal->name_ << " ("
+      //                << meta_goal->eva_nr_ << ")\n";
       if (!q.use_dest_metas_) {
         break;
       }
@@ -147,11 +152,13 @@ struct search {
                       })) {
         return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
       }
-      std::cout << "FROM:" << q.sched_->stations_.at(q.from_->id_)->name_ << "["
-                << q.sched_->stations_.at(q.from_->id_)->eva_nr_ << "]\n";
+      //      std::cout << "FROM:" <<
+      //      q.sched_->stations_.at(q.from_->id_)->name_ << "["
+      //                << q.sched_->stations_.at(q.from_->id_)->eva_nr_ <<
+      //                "]\n";
       for (auto const& meta_from : meta_froms) {
-        std::cout << "META FROM: " << meta_from->name_ << " ["
-                  << meta_from->eva_nr_ << "]\n";
+        //        std::cout << "META FROM: " << meta_from->name_ << " ["
+        //                  << meta_from->eva_nr_ << "]\n";
         auto meta_edge = create_start_edge(
             q.sched_->station_nodes_[meta_from->index_].get());
         meta_edges.push_back(meta_edge);

@@ -140,10 +140,18 @@ void parse_and_add(loaded_file const& metabhf_file,
         f_equal = line.length() > 23 ? line.substr(23, size(1)) == "F" : false;
       };
 
-      footpaths.insert({parse<int>(line.substr(c.meta_.footpaths_.from_)),
-                        parse<int>(line.substr(c.meta_.footpaths_.to_)),
-                        parse<int>(line.substr(c.meta_.footpaths_.duration_)),
-                        f_equal});
+      auto const fp = station_meta_data::footpath{
+          parse<int>(line.substr(c.meta_.footpaths_.from_)),
+          parse<int>(line.substr(c.meta_.footpaths_.to_)),
+          parse<int>(line.substr(c.meta_.footpaths_.duration_)), f_equal};
+      if (auto const it = footpaths.find(fp); it != end(footpaths)) {
+        if (it->duration_ > fp.duration_) {
+          footpaths.erase(it);
+          footpaths.insert(fp);
+        }
+      } else {
+        footpaths.insert(it, fp);
+      }
     }
   });
 }
