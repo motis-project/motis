@@ -111,7 +111,8 @@ data_source from_fbs(PaxMonDataSource const* ds) {
 Offset<PaxMonGroupRoute> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                                 temp_group_route const& tgr) {
   return CreatePaxMonGroupRoute(
-      fbb, tgr.index_, to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
+      fbb, tgr.index_.has_value() ? tgr.index_.value() : -1,
+      to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
       to_fbs_time(sched, tgr.planned_arrival_time_), tgr.estimated_delay_,
       static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_);
 }
@@ -128,13 +129,16 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
 }
 
 temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
-  return temp_group_route{static_cast<local_group_route_index>(gr->index()),
-                          gr->probability(),
-                          from_fbs(sched, gr->journey()),
-                          from_fbs_time(sched, gr->planned_arrival_time()),
-                          gr->estimated_delay(),
-                          static_cast<route_source_flags>(gr->source_flags()),
-                          gr->planned()};
+  return temp_group_route{
+      gr->index() >= 0 ? std::optional<local_group_route_index>{static_cast<
+                             local_group_route_index>(gr->index())}
+                       : std::nullopt,
+      gr->probability(),
+      from_fbs(sched, gr->journey()),
+      from_fbs_time(sched, gr->planned_arrival_time()),
+      gr->estimated_delay(),
+      static_cast<route_source_flags>(gr->source_flags()),
+      gr->planned()};
 }
 
 std::optional<broken_transfer_info> from_fbs(
@@ -158,7 +162,7 @@ std::optional<broken_transfer_info> from_fbs(
   }
 }
 
-Offset<Vector<Offset<PaxMonBrokenTransferInfo>>> to_fbs(
+Offset<Vector<Offset<PaxMonBrokenTransferInfo>>> broken_transfer_info_to_fbs(
     FlatBufferBuilder& fbb, schedule const& sched,
     std::optional<broken_transfer_info> const& opt) {
   if (opt.has_value()) {
@@ -189,7 +193,8 @@ Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
   return CreatePaxMonRerouteLogEntry(
       fbb, entry.system_time_, entry.reroute_time_,
       static_cast<PaxMonRerouteReason>(entry.reason_),
-      to_fbs(fbb, sched, entry.broken_transfer_), to_fbs(fbb, entry.old_route_),
+      broken_transfer_info_to_fbs(fbb, sched, entry.broken_transfer_),
+      to_fbs(fbb, entry.old_route_),
       fbb.CreateVector(utl::to_vec(
           pgc.log_entry_new_routes_.at(entry.index_),
           [&](auto const& new_route) { return to_fbs(fbb, new_route); })));
@@ -334,7 +339,7 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched,
       to_fbs(sched, fbb, me.localization_),
       static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
       to_fbs_time(sched, me.expected_arrival_time_),
-      to_fbs(fbb, sched, me.broken_transfer_));
+      broken_transfer_info_to_fbs(fbb, sched, me.broken_transfer_));
 }
 
 Offset<Vector<PaxMonPdfEntry const*>> pdf_to_fbs(FlatBufferBuilder& fbb,

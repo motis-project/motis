@@ -1,5 +1,7 @@
 #include "motis/paxmon/access/groups.h"
 
+#include <optional>
+
 #include "utl/verify.h"
 
 #include "motis/paxmon/access/journeys.h"
@@ -25,51 +27,57 @@ passenger_group* add_passenger_group(universe& uv, schedule const& sched,
       make_passenger_group(tpg.source_, tpg.passengers_));
 
   for (auto const& tgr : tpg.routes_) {
-    add_group_route(uv, sched, caps, pg->id_, tgr);
+    add_group_route(uv, sched, caps, pg->id_, tgr, true);
   }
 
   return pg;
 }
 
-add_group_route_result add_group_route(universe& uv, schedule const& sched,
-                                       capacity_maps const& caps,
-                                       passenger_group_index const pgi,
-                                       temp_group_route const& tgr) {
-  return add_group_route(uv, sched, caps, pgi, tgr.journey_, tgr.probability_,
-                         tgr.planned_arrival_time_, tgr.source_flags_,
-                         tgr.planned_);
-}
-
 add_group_route_result add_group_route(
     universe& uv, schedule const& sched, capacity_maps const& caps,
-    passenger_group_index const pgi, compact_journey const& cj,
-    float probability, motis::time planned_arrival_time,
-    route_source_flags const source_flags, bool const planned) {
-  utl::verify(!cj.legs().empty(), "paxmon::add_group_route: empty journey");
+    passenger_group_index const pgi,
+    std::optional<local_group_route_index> const opt_route_index,
+    compact_journey const& cj, float probability,
+    motis::time planned_arrival_time, route_source_flags const source_flags,
+    bool const planned, bool const override_probabilities) {
 
   auto routes = uv.passenger_groups_.routes(pgi);
+
+  auto const update_route = [&](group_route& gr) {
+    auto const previous_probability = gr.probability_;
+    auto const new_probability =
+        override_probabilities ? probability : gr.probability_ + probability;
+    utl::verify(new_probability >= -0.05 && new_probability <= 1.05,
+                "paxmon::add_group_route: new probability = {} (previous = "
+                "{}, added = {}), existing route = {}",
+                new_probability, previous_probability, probability,
+                gr.local_group_route_index_);
+    gr.probability_ = std::clamp(new_probability, 0.F, 1.F);
+    if (gr.disabled_) {
+      auto const add_to_graph_result = add_group_route_to_graph(
+          sched, caps, uv, uv.passenger_groups_.group(pgi), gr);
+      gr.disabled_ = false;
+      update_estimated_delay(gr, add_to_graph_result);
+    }
+    return add_group_route_result{{pgi, gr.local_group_route_index_},
+                                  false,
+                                  previous_probability,
+                                  gr.probability_};
+  };
+
+  if (opt_route_index.has_value() && cj.legs_.empty()) {
+    auto const route_idx = opt_route_index.value();
+    utl::verify(route_idx < routes.size(),
+                "paxmon::add_group_route: invalid route index");
+    return update_route(routes.at(route_idx));
+  }
+
+  utl::verify(!cj.legs().empty(), "paxmon::add_group_route: empty journey");
 
   // check if group route already exists
   for (auto& gr : routes) {
     if (uv.passenger_groups_.journey(gr.compact_journey_index_) == cj) {
-      auto const previous_probability = gr.probability_;
-      auto const new_probability = gr.probability_ + probability;
-      utl::verify(new_probability >= -0.05 && new_probability <= 1.05,
-                  "paxmon::add_group_route: new probability = {} (previous = "
-                  "{}, added = {}), existing route = {}",
-                  new_probability, previous_probability, probability,
-                  gr.local_group_route_index_);
-      gr.probability_ = std::clamp(new_probability, 0.F, 1.F);
-      if (gr.disabled_) {
-        auto const add_to_graph_result = add_group_route_to_graph(
-            sched, caps, uv, uv.passenger_groups_.group(pgi), gr);
-        gr.disabled_ = false;
-        update_estimated_delay(gr, add_to_graph_result);
-      }
-      return {{pgi, gr.local_group_route_index_},
-              false,
-              previous_probability,
-              gr.probability_};
+      return update_route(gr);
     }
   }
 
@@ -93,6 +101,17 @@ add_group_route_result add_group_route(
       sched, caps, uv, uv.passenger_groups_.group(pgi), gr);
   update_estimated_delay(gr, add_to_graph_result);
   return {pgwr, true, 0, probability};
+}
+
+add_group_route_result add_group_route(universe& uv, schedule const& sched,
+                                       capacity_maps const& caps,
+                                       passenger_group_index const pgi,
+                                       temp_group_route const& tgr,
+                                       bool const override_probabilities) {
+  return add_group_route(uv, sched, caps, pgi, tgr.index_, tgr.journey_,
+                         tgr.probability_, tgr.planned_arrival_time_,
+                         tgr.source_flags_, tgr.planned_,
+                         override_probabilities);
 }
 
 void remove_passenger_group(universe& uv, passenger_group_index pgi) {

@@ -46,6 +46,7 @@
 #include "motis/paxforecast/measures/measures.h"
 #include "motis/paxforecast/measures/storage.h"
 #include "motis/paxforecast/messages.h"
+#include "motis/paxforecast/revert_forecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
 #include "motis/paxforecast/statistics.h"
 
@@ -78,6 +79,8 @@ paxforecast::paxforecast()
   param(min_delay_improvement_, "min_delay_improvement",
         "minimum required arrival time improvement for major delay "
         "alternatives (minutes)");
+  param(revert_forecasts_, "revert_forecasts",
+        "revert forecasts if broken transfers become valid again");
 }
 
 paxforecast::~paxforecast() = default;
@@ -162,7 +165,9 @@ void send_remove_group_routes(
                     mc.CreateVector(
                         std::vector<flatbuffers::Offset<PaxMonGroupRoute>>{}),
                     static_cast<PaxMonRerouteReason>(reason),
-                    to_fbs(mc, sched, broken_transfer_infos.at(pgwr)));
+                    broken_transfer_info_to_fbs(mc, sched,
+                                                broken_transfer_infos.at(pgwr)),
+                    false);
               })))
           .Union(),
       "/paxmon/reroute_groups");
@@ -266,7 +271,7 @@ void update_tracked_groups(
       }
 
       auto const tgr = temp_group_route{
-          0 /* index - ignored */,
+          std::nullopt /* index */,
           prob,
           new_journey,
           gr.planned_arrival_time_,
@@ -281,9 +286,11 @@ void update_tracked_groups(
     reroutes.emplace_back(CreatePaxMonRerouteGroup(
         mc, pgwr.pg_, pgwr.route_, mc.CreateVector(new_routes),
         static_cast<PaxMonRerouteReason>(reroute_reason),
-        to_fbs(mc, sched,
-               bti_it != end(broken_transfer_infos) ? bti_it->second
-                                                    : std::nullopt)));
+        broken_transfer_info_to_fbs(mc, sched,
+                                    bti_it != end(broken_transfer_infos)
+                                        ? bti_it->second
+                                        : std::nullopt),
+        false));
     ++reroute_count;
 
     if (reroutes.size() >= REROUTE_BATCH_SIZE) {
@@ -334,13 +341,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   std::map<passenger_group_with_route, time> expected_arrival_times;
   std::map<passenger_group_with_route, std::optional<broken_transfer_info>>
       broken_transfer_infos;
+  std::vector<passenger_group_with_route> unbroken_transfers;
   auto delayed_group_routes = 0ULL;
 
   for (auto const& event : *mon_update->events()) {
-    if (event->type() == PaxMonEventType_NO_PROBLEM) {
-      continue;
-    }
-
     auto const pgwr = passenger_group_with_route{
         static_cast<passenger_group_index>(event->group_route()->group_id()),
         static_cast<local_group_route_index>(
@@ -348,6 +352,11 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     auto pgwrap = passenger_group_with_route_and_probability{
         pgwr, event->group_route()->route()->probability(),
         event->group_route()->passenger_count()};
+
+    if (event->type() == PaxMonEventType_NO_PROBLEM) {
+      unbroken_transfers.push_back(pgwr);
+      continue;
+    }
 
     auto const major_delay =
         event->type() == PaxMonEventType_MAJOR_DELAY_EXPECTED;
@@ -388,6 +397,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         cpg->has_major_delay_groups_ = true;
       }
     }
+  }
+
+  if (!unbroken_transfers.empty() && revert_forecasts_) {
+    revert_forecasts(uv, sched, unbroken_transfers);
   }
 
   if (combined_groups.empty()) {

@@ -110,9 +110,10 @@ void write_groups(fs::path const& dir, schedule const& sched,
       }
       auto const loc =
           from_fbs(sched, event->localization_type(), event->localization());
-      auto const pgwr =
-          passenger_group_with_route{event->group_route()->group_id(),
-                                     event->group_route()->route()->index()};
+      auto const pgwr = passenger_group_with_route{
+          event->group_route()->group_id(),
+          static_cast<local_group_route_index>(
+              event->group_route()->route()->index())};
       auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
       auto const& gr = uv.passenger_groups_.route(pgwr);
       auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);

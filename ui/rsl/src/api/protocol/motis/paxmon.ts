@@ -539,6 +539,7 @@ export interface PaxMonRerouteGroup {
   new_routes: PaxMonGroupRoute[];
   reason: PaxMonRerouteReason;
   broken_transfer: PaxMonBrokenTransferInfo[];
+  override_probabilities: boolean;
 }
 
 // paxmon/PaxMonRerouteGroupsRequest.fbs

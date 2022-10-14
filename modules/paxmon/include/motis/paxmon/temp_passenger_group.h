@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include "motis/core/schedule/time.h"
@@ -12,7 +13,7 @@
 namespace motis::paxmon {
 
 struct temp_group_route {
-  local_group_route_index index_{};
+  std::optional<local_group_route_index> index_{};
   float probability_{};
   compact_journey journey_;
   motis::time planned_arrival_time_{INVALID_TIME};

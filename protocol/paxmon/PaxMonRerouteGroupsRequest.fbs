@@ -10,6 +10,7 @@ table PaxMonRerouteGroup {
   new_routes: [PaxMonGroupRoute];
   reason: PaxMonRerouteReason;
   broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
+  override_probabilities: bool;
 }
 
 table PaxMonRerouteGroupsRequest {

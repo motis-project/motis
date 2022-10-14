@@ -22,13 +22,8 @@ struct add_group_route_result {
 add_group_route_result add_group_route(universe& uv, schedule const& sched,
                                        capacity_maps const& caps,
                                        passenger_group_index pgi,
-                                       temp_group_route const& tgr);
-
-add_group_route_result add_group_route(
-    universe& uv, schedule const& sched, capacity_maps const& caps,
-    passenger_group_index pgi, compact_journey const& cj, float probability,
-    motis::time planned_arrival_time, route_source_flags source_flags,
-    bool planned);
+                                       temp_group_route const& tgr,
+                                       bool override_probabilities);
 
 void remove_passenger_group(universe& uv, passenger_group_index pgi);
 

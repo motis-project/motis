@@ -237,7 +237,8 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
         </div>
         <div>
           Umleitung von Route #{log.old_route.index} (
-          {formatPercent(log.old_route.previous_probability)}) auf:
+          {formatPercent(log.old_route.previous_probability)} &rarr;{" "}
+          {formatPercent(log.old_route.new_probability)}) auf:
         </div>
         <div className="pl-4">
           {log.new_routes.map((route) => (
@@ -299,7 +300,7 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "Manual":
       return {
         icon: <WrenchIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-blue-500",
       };
     case "BrokenTransfer":
       return {
@@ -314,7 +315,7 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "RevertForecast":
       return {
         icon: <ArrowUturnUpIcon className={style} />,
-        bgColor: "bg-blue-500",
+        bgColor: "bg-green-500",
       };
     case "Simulation":
       return {

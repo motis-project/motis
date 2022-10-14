@@ -9,7 +9,7 @@ table PaxMonDataSource {
 }
 
 table PaxMonGroupRoute {
-  index: ushort;
+  index: int;
   journey: PaxMonCompactJourney;
   probability: float;
   planned_arrival_time: ulong;

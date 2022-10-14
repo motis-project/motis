@@ -84,8 +84,9 @@ std::optional<broken_transfer_info> from_fbs(
 
 flatbuffers::Offset<
     flatbuffers::Vector<flatbuffers::Offset<PaxMonBrokenTransferInfo>>>
-to_fbs(flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
-       std::optional<broken_transfer_info> const& opt);
+broken_transfer_info_to_fbs(flatbuffers::FlatBufferBuilder& fbb,
+                            schedule const& sched,
+                            std::optional<broken_transfer_info> const& opt);
 
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 

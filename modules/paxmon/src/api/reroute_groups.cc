@@ -80,6 +80,7 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         static_cast<local_group_route_index>(rr->old_route_index());
     auto const reason = static_cast<reroute_reason_t>(rr->reason());
     auto const bti = from_fbs(sched, rr->broken_transfer());
+    auto const override_probabilities = rr->override_probabilities();
     auto routes = uv.passenger_groups_.routes(pgi);
 
     auto routes_backup = utl::to_vec(
@@ -105,13 +106,15 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
       if (tracking_updates) {
         before_journey_load_updated(uv, tgr.journey_);
       }
-      auto const result =
-          add_group_route(uv, sched, data.capacity_maps_, pgi, tgr);
+      auto const result = add_group_route(uv, sched, data.capacity_maps_, pgi,
+                                          tgr, override_probabilities);
       auto const previous_probability =
           lei.extended_entry_ && result.pgwr_.route_ == old_route_idx &&
                   result.previous_probability_ == 0.0F
               ? lei.entry_.old_route_.previous_probability_
-              : result.previous_probability_;
+              : (result.pgwr_.route_ == old_route_idx
+                     ? old_route_probability
+                     : result.previous_probability_);
       lei.new_routes_.emplace_back(reroute_log_route_info{
           result.pgwr_.route_, previous_probability, result.new_probability_});
       uv.update_tracker_.after_group_route_updated(
