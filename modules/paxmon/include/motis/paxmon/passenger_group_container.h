@@ -291,7 +291,7 @@ struct passenger_group_container {
   // index: passenger_group_index
   dynamic_fws_multimap<reroute_log_entry> reroute_log_entries_;
   // index: reroute_log_entry_index
-  dynamic_fws_multimap<reroute_log_new_route> log_entry_new_routes_;
+  dynamic_fws_multimap<reroute_log_route_info> log_entry_new_routes_;
 };
 
 }  // namespace motis::paxmon

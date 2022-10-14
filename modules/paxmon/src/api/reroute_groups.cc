@@ -27,10 +27,10 @@ inline void before_journey_load_updated(universe& uv,
 }
 
 struct log_entry_info {
-  typename dynamic_fws_multimap<reroute_log_new_route>::mutable_bucket
+  reroute_log_entry& entry_;
+  typename dynamic_fws_multimap<reroute_log_route_info>::mutable_bucket
       new_routes_;
   bool extended_entry_{};
-  float old_route_probability_{};
 };
 
 inline log_entry_info append_or_extend_log_entry(
@@ -46,20 +46,20 @@ inline log_entry_info append_or_extend_log_entry(
             log_entries.rbegin(), log_entries.rend(),
             [&](reroute_log_entry const& entry) {
               return entry.reason_ == reroute_reason_t::MAJOR_DELAY_EXPECTED &&
-                     entry.old_route_ == old_route_idx &&
+                     entry.old_route_.route_ == old_route_idx &&
                      entry.system_time_ == system_time &&
                      pgc.log_entry_new_routes_.at(entry.index_).empty();
             });
         it != log_entries.rend()) {
-      return {pgc.log_entry_new_routes_.at(it->index_), true,
-              it->old_route_probability_};
+      return {*it, pgc.log_entry_new_routes_.at(it->index_), true};
     }
   }
   auto log_new_routes = pgc.log_entry_new_routes_.emplace_back();
-  log_entries.emplace_back(reroute_log_entry{
+  auto const entry_idx = log_entries.emplace_back(reroute_log_entry{
       static_cast<reroute_log_entry_index>(log_new_routes.index()),
-      old_route_idx, old_route_probability, system_time, now(), reason, bti});
-  return {log_new_routes, false, old_route_probability};
+      reroute_log_route_info{old_route_idx, old_route_probability, 0},
+      system_time, now(), reason, bti});
+  return {log_entries[entry_idx], log_new_routes, false};
 }
 
 }  // namespace
@@ -110,13 +110,16 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
       auto const previous_probability =
           lei.extended_entry_ && result.pgwr_.route_ == old_route_idx &&
                   result.previous_probability_ == 0.0F
-              ? lei.old_route_probability_
+              ? lei.entry_.old_route_.previous_probability_
               : result.previous_probability_;
-      lei.new_routes_.emplace_back(reroute_log_new_route{
+      lei.new_routes_.emplace_back(reroute_log_route_info{
           result.pgwr_.route_, previous_probability, result.new_probability_});
       uv.update_tracker_.after_group_route_updated(
           result.pgwr_, result.previous_probability_, result.new_probability_,
           result.new_route_);
+      if (result.pgwr_.route_ == old_route_idx) {
+        lei.entry_.old_route_.new_probability_ = result.new_probability_;
+      }
       return PaxMonRerouteRouteInfo{result.pgwr_.route_,
                                     result.previous_probability_,
                                     result.new_probability_};
