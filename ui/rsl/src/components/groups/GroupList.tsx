@@ -101,7 +101,7 @@ function GroupList(): JSX.Element {
   const [toStationFilter, setToStationFilter] = useState<Station | undefined>();
   const [trainNrFilter, setTrainNrFilter] = useState("");
   const [groupIdFilter, setGroupIdFilter] = useState("");
-  const [externalGroupIds, setExternalGroupIds] = useState(true);
+  const [externalGroupIds, setExternalGroupIds] = useState(false);
 
   const filterTrainNrs = extractNumbers(trainNrFilter);
 

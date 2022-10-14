@@ -87,25 +87,33 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
         Planmäßige Ankunftszeit:{" "}
         {formatDateTime(group.routes[0].planned_arrival_time)}
       </div>
-      <div className="mt-4">
-        <div className="text-lg">
-          {group.routes.length === 1
-            ? "1 Route"
-            : `${group.routes.length} Routen`}
+      <div className="mt-4 flex flex-wrap gap-8">
+        <div>
+          <div className="text-lg">
+            {group.routes.length === 1
+              ? "1 Route"
+              : `${group.routes.length} Routen`}
+          </div>
+          <div className="inline-flex flex-col gap-y-2">
+            {group.routes.map((route) => (
+              <GroupRoute route={route} key={route.index} />
+            ))}
+          </div>
         </div>
-        <div className="inline-flex flex-col gap-y-2">
-          {group.routes.map((route) => (
-            <GroupRoute route={route} key={route.index} />
-          ))}
-        </div>
-      </div>
-      <div className="mt-6">
-        <div className="text-lg mb-3">Änderungsprotokoll</div>
-        <div className="relative inline-flex flex-col">
-          <div className="absolute top-0 left-4 h-full -ml-px bg-db-cool-gray-300 w-0.5"></div>
-          {group.reroute_log.map((log, idx) => (
-            <RerouteLogEntry key={idx} log={log} group={group} />
-          ))}
+        <div>
+          <div className="text-lg mb-3">Änderungsprotokoll</div>
+          <div className="relative inline-flex flex-col">
+            <div className="absolute top-0 left-4 h-full -ml-px bg-db-cool-gray-300 w-0.5"></div>
+            {group.reroute_log.map((log, idx) => (
+              <RerouteLogEntry
+                key={idx}
+                log={log}
+                logIndex={idx}
+                group={group}
+              />
+            ))}
+          </div>
+          <RerouteLogTable group={group} />
         </div>
       </div>
     </div>
@@ -199,10 +207,11 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
 
 type RerouteLogEntryProps = {
   log: PaxMonRerouteLogEntry;
+  logIndex: number;
   group: PaxMonGroup;
 };
 
-function RerouteLogEntry({ log }: RerouteLogEntryProps): JSX.Element {
+function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   const broken_transfer =
     log.broken_transfer.length === 1 ? log.broken_transfer[0] : undefined;
   const { icon, bgColor } = getRerouteReasonIcon(log.reason);
@@ -219,7 +228,9 @@ function RerouteLogEntry({ log }: RerouteLogEntryProps): JSX.Element {
       </div>
       <div className="ml-12 w-auto pt-1">
         <div className="flex justify-between">
-          <span className="font-semibold">{rerouteReasonText(log.reason)}</span>
+          <span className="font-semibold">
+            V{logIndex + 1}: {rerouteReasonText(log.reason)}
+          </span>
           <span className="text-db-cool-gray-500">
             {formatDateTime(log.system_time)}
           </span>
@@ -311,6 +322,74 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
         bgColor: "bg-green-500",
       };
   }
+}
+
+type RerouteLogTableProps = {
+  group: PaxMonGroup;
+};
+
+function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
+  const probs = [group.routes.map((r) => r.probability)];
+  const diffs: Array<Array<number>> = [];
+
+  for (let i = group.reroute_log.length - 1; i >= 0; --i) {
+    const le = group.reroute_log[i];
+    const new_probs = [...probs[0]];
+    const diff = group.routes.map(() => 0);
+    new_probs[le.old_route.index] = le.old_route.previous_probability;
+    diff[le.old_route.index] = -le.old_route.previous_probability;
+    for (const nr of le.new_routes) {
+      new_probs[nr.index] = nr.previous_probability;
+      diff[nr.index] = nr.new_probability - nr.previous_probability;
+    }
+    probs.unshift(new_probs);
+    diffs.unshift(diff);
+  }
+  diffs.unshift(group.routes.map(() => 0));
+
+  return (
+    <table className="mt-2">
+      <thead>
+        <tr className="font-semibold">
+          <td className="pr-4 sr-only">V</td>
+          {group.routes.map((r) => (
+            <td key={r.index} className="pr-4 text-center">
+              {r.index}
+            </td>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {probs.map((row, rowIdx) => (
+          <tr key={rowIdx}>
+            <td className="pr-4 font-semibold">V{rowIdx}</td>
+            {row.map((p, colIdx) => (
+              <td
+                key={colIdx}
+                className={classNames(
+                  "pr-4 text-center",
+                  p === 0
+                    ? diffs[rowIdx][colIdx] < 0
+                      ? "text-db-red-300"
+                      : "text-db-cool-gray-300"
+                    : diffs[rowIdx][colIdx] > 0
+                    ? "text-green-600"
+                    : diffs[rowIdx][colIdx] < 0
+                    ? "text-yellow-500"
+                    : "text-black"
+                )}
+                title={`Exakter Wert: ${p}, Änderung: ${formatPercent(
+                  diffs[rowIdx][colIdx]
+                )} (${diffs[rowIdx][colIdx]})`}
+              >
+                {formatPercent(p)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export default GroupDetails;
