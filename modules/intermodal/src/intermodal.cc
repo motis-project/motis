@@ -316,7 +316,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                      [&](journey::transport const& t) {
                        return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
                      })) {
-      printf("how often?\n");
+      //printf("how often?\n");
       return false;
     } else {
       for (auto const& p : od_patches) {
@@ -340,12 +340,14 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
 }
 
 void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
-                            availability_response ares) {
-  if(ares.walk_dur_.empty() || !ares.available_
-      || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
-    return;
-  }
+                            std::vector<availability_response> v_ares) {
+  int i = 0;
   for(auto const& patch : patches) {
+    availability_response ares = v_ares.at(i);
+    if(ares.walk_dur_.empty() || !ares.available_
+        || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
+      continue;
+    }
     /*
      *  replace: S --od--> T
      *  with:    S --walk--> PU --od--> T
@@ -444,6 +446,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
       get_transport(j, patch.from_ + 2, patch.from_ + 3).mumo_type_ =
           to_string(mumo_type::FOOT);
     }
+    i++;
   }
 }
 
@@ -542,6 +545,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     auto gbfs_patches = std::vector<parking_patch>{};
     auto parking_patches = std::vector<parking_patch>{};
     auto ondemand_parking_patches = std::vector<parking_patch>{};
+    std::vector<availability_response> v_ares;
     availability_response ares;
     for (auto& t : journey.transports_) {
       if (!t.is_walk_ || t.mumo_id_ < 0) {
@@ -580,13 +584,14 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
           ares = ondemand_availability(journey, false, *e, stats, server_infos);
         }
         vares.emplace_back(ares);
+        v_ares.emplace_back(ares);
         ondemand_patches.emplace_back(e, t.from_, t.to_, journey, journey_id);
         ondemand_parking_patches.emplace_back(e, t.from_, t.to_);
       }
     }
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
-    apply_ondemand_patches(journey, ondemand_parking_patches, ares);
+    apply_ondemand_patches(journey, ondemand_parking_patches, v_ares);
     journey_id++;
     if(ondemand_journey) {
       stats.ondemand_journey_count_++;

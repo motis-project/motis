@@ -11,7 +11,6 @@
 
 #include "motis/core/common/unixtime.h"
 #include "motis/module/context/motis_spawn.h"
-#include "motis/intermodal/ondemand_availability.h"
 
 using namespace geo;
 using namespace flatbuffers;

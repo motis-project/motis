@@ -384,7 +384,7 @@ availability_response check_od_availability(availability_request areq,
       static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_product));
   availability_response product_check_response = read_result(product_check_result, false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);
-  printf("available: %d\n", product_check_response.available_);
+  //printf("available: %d\n", product_check_response.available_);
   return product_check_response;
 }
 
