@@ -114,16 +114,6 @@ struct ondemand_patch {
   int j_id_{};
 };
 
-struct patches {
-  patches(journey& journey,
-          std::vector<parking_patch> od_parking_patches, int j_id)
-      : journey_(std::move(journey)), od_pp_(std::move(od_parking_patches)), j_id_(j_id) {}
-
-  journey journey_ {};
-  std::vector<parking_patch> od_pp_ {};
-  int j_id_{};
-};
-
 struct split_transport_result {
   journey::stop& parking_stop_;
   journey::transport& first_transport_;
@@ -351,14 +341,15 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
   return all - journeys.size();
 }
 
-//die funktion evtl in die ondemand availability klasse
 void apply_ondemand_patches(journey& j, std::vector<parking_patch>& p_patches,
-                            availability_response ares) {
-  if(ares.walk_dur_.empty() || !ares.available_
-      || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
-    return;
-  }
+                            std::vector<availability_response> v_ares) {
+  int i = 0;
   for(auto const& patch : p_patches) {
+    availability_response ares = v_ares.at(i);
+    if(ares.walk_dur_.empty() || !ares.available_
+        || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
+      return;
+    }
     /*
      *  replace: S --od--> T
      *  with:    S --walk--> PU --od--> T
@@ -457,6 +448,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& p_patches,
       get_transport(j, patch.from_ + 2, patch.from_ + 3).mumo_type_ =
           to_string(mumo_type::FOOT);
     }
+    i++;
   }
 }
 
@@ -543,7 +535,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
 
   auto ondemand_patches = std::vector<ondemand_patch>{};
-  auto all_patches = std::vector<patches>{};
+  std::vector<std::vector<parking_patch>> all_od_parking_patches{};
   std::vector<availability_request> vareq;
   int journey_id = 0;
   auto checked_to = std::vector<geo::latlng>{};
@@ -610,6 +602,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
             && q_dest.pos_.lng_ == e->to_pos_.lng_ && area) {
           areq = ondemand_availability(journey, false, *e, stats, server_infos);
         }
+        areq.journey_id_ = journey_id;
         vareq.emplace_back(areq);
         ondemand_patches.emplace_back(e, t.from_, t.to_, journey, journey_id);
         ondemand_parking_patches.emplace_back(e, t.from_, t.to_);
@@ -617,9 +610,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     }
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
-    all_patches.emplace_back(journey, ondemand_parking_patches, journey_id);
-    // Den Aufruf für apply patches in die Funktion die parallel ausgeführt wird übertragen. WIE?
-    //apply_ondemand_patches(journey, ondemand_parking_patches, ares);
+    all_od_parking_patches.emplace_back(ondemand_parking_patches);
     journey_id++;
     if(ondemand_journey) {
       stats.ondemand_journey_count_++;
@@ -628,9 +619,16 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   // unbedingt schauen ob das so klappt mit vares!!!!
   std::vector<availability_response> vares{};
   motis_parallel_for(vareq, [&](auto&& areq) { check_od_availability(areq, stats, vares); });
-  //motis_parallel_for(all_patches, [&](auto&& patches) { apply_ondemand_patches(patches, vares); });
 
-
+  for(int i = 0; i < journeys.size(); i++) {
+    std::vector<availability_response> v_ares{};
+    for(auto & v : vares) {
+      if(v.journey_id_ == i) {
+        v_ares.emplace_back(v);
+      }
+    }
+    apply_ondemand_patches(journeys.at(i), all_od_parking_patches.at(i), v_ares);
+  }
 
   MOTIS_START_TIMING(ondemand_remove);
   stats.ondemand_removed_journeys_ =

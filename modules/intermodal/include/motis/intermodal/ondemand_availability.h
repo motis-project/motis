@@ -19,6 +19,7 @@ struct availability_response {
   double price_ = -1.0;
   std::vector<int> walk_dur_ = {0, 0};  // start, ziel; in sekunden
   unixtime complete_duration_ = -1;
+  int journey_id_ = -1;
 };
 
 struct availability_request {
@@ -35,6 +36,7 @@ struct availability_request {
 
   std::string product_check_addr_;
   std::map<std::string, std::string> hdrs_;
+  int journey_id_ = -1;
 };
 
 void check_od_availability(const availability_request&, statistics&, std::vector<availability_response>&);

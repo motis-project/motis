@@ -360,6 +360,7 @@ void check_od_availability(const availability_request& areq,
 
   availability_response product_check_response = read_result(f_product_check->val(), false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);
+  product_check_response.journey_id_ = areq.journey_id_;
   auto const lock = std::scoped_lock{lock_vares_};
   vares.emplace_back(product_check_response);
 }
