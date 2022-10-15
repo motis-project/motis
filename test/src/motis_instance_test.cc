@@ -34,6 +34,7 @@ motis_instance_test::motis_instance_test(
   auto modules_cmdline_opt_patched = modules_cmdline_opt;
   modules_cmdline_opt_patched.emplace_back("--ris.db_max_size=1048576");
   modules_cmdline_opt_patched.emplace_back("--ris.clear_db=true");
+  modules_cmdline_opt_patched.emplace_back("--nigiri.no_cache=true");
 
   std::vector<conf::configuration*> confs;
   for (auto const& module : instance_->modules()) {
