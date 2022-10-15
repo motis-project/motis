@@ -17,7 +17,6 @@
 namespace fs = std::filesystem;
 namespace mm = motis::module;
 namespace n = ::nigiri;
-namespace fbs = flatbuffers;
 
 namespace motis::nigiri {
 

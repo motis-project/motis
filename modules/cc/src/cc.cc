@@ -48,7 +48,7 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
   utl::verify(trp_it != std::end(*con->trips()),
               "no trip end/start at interchange");
 
-  trip const* trp;
+  trip const* trp = nullptr;
 
   try {
     trp = from_fbs(sched, trp_it->id());
@@ -125,15 +125,15 @@ struct get_bucket {
 
 duration get_shortest_footpath(schedule const& sched, node const* from_node,
                                node const* to_node) {
-  dial<label, MAX_TRAVEL_TIME_MINUTES, get_bucket> pq_;
-  mcd::vector<dist_t> dists_;
-  mcd::vector<edge const*> pred_;
-  dists_.resize(sched.next_node_id_, std::numeric_limits<dist_t>::max());
-  pred_.resize(sched.next_node_id_, nullptr);
-  pq_.push(label{from_node, 0});
-  while (!pq_.empty()) {
-    auto l = pq_.top();
-    pq_.pop();
+  dial<label, MAX_TRAVEL_TIME_MINUTES, get_bucket> pq;
+  mcd::vector<dist_t> dists;
+  mcd::vector<edge const*> pred_edge;
+  dists.resize(sched.next_node_id_, std::numeric_limits<dist_t>::max());
+  pred_edge.resize(sched.next_node_id_, nullptr);
+  pq.push(label{from_node, 0});
+  while (!pq.empty()) {
+    auto l = pq.top();
+    pq.pop();
 
     if (l.node_ == to_node) {
       break;
@@ -142,11 +142,11 @@ duration get_shortest_footpath(schedule const& sched, node const* from_node,
     for (auto const& e : l.node_->edges_) {
       if (e.type() != edge::ROUTE_EDGE && e.type() != edge::HOTEL_EDGE) {
         auto const new_dist = l.dist_ + e.get_foot_edge_cost().time_;
-        if (new_dist < dists_[e.to_->id_] &&
+        if (new_dist < dists[e.to_->id_] &&
             new_dist <= MAX_TRAVEL_TIME_MINUTES) {
-          dists_[e.to_->id_] = new_dist;
-          pred_[e.to_->id_] = &e;
-          pq_.push(label(e.to_, new_dist));
+          dists[e.to_->id_] = new_dist;
+          pred_edge[e.to_->id_] = &e;
+          pq.push(label(e.to_, new_dist));
         }
       }
     }
@@ -162,16 +162,16 @@ duration get_shortest_footpath(schedule const& sched, node const* from_node,
               << " --" << e->type_str() << "--" << e->get_foot_edge_cost().time_
               << "--> " << to.name_ << "(" << to.eva_nr_ << ")\n";
   };
-  edge const* pred = pred_[to_node->id_];
+  edge const* pred = pred_edge[to_node->id_];
   while (pred != nullptr && pred->from_ != from_node) {
     print_edge(pred);
-    pred = pred_[pred->from_->id_];
+    pred = pred_edge[pred->from_->id_];
   }
   print_edge(pred);
 
-  std::cout << "distance: " << dists_[to_node->id_] << "\n";
+  std::cout << "distance: " << dists[to_node->id_] << "\n";
 
-  return dists_[to_node->id_];
+  return dists[to_node->id_];
 }
 
 motis::time get_foot_edge_duration(schedule const& sched, Connection const* con,
