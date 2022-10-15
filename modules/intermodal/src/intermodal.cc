@@ -346,6 +346,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
     availability_response ares = v_ares.at(i);
     if(ares.walk_dur_.empty() || !ares.available_
         || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
+      i++;
       continue;
     }
     /*
@@ -496,6 +497,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              std::vector<std::string> const& server_infos) {
   doctorwho++;
   printf("----------------------------------------------------------------------COUNT: %d\n", doctorwho);
+  MOTIS_START_TIMING(post_timing);
   auto const dir = req->search_dir();
   auto routing_response =
       response_msg ? motis_content(RoutingResponse, response_msg) : nullptr;
@@ -619,6 +621,9 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                                : utl::to_vec(journeys, [&mc](journey const& j) {
                                    return to_connection(mc, j);
                                  });
+  MOTIS_STOP_TIMING(post_timing);
+  stats.postprocess_timing_ = static_cast<uint64_t>(MOTIS_TIMING_MS(post_timing));
+
   auto all_stats =
       routing_response == nullptr
           ? std::vector<Offset<Statistics>>{}

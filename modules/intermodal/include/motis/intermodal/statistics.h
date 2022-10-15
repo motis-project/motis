@@ -21,6 +21,7 @@ struct statistics {
   uint64_t ondemand_journey_count_{};
   uint64_t journey_count_begin_{};
   uint64_t journey_count_end_{};
+  uint64_t postprocess_timing_{};
 };
 
 inline stats_category to_stats_category(char const* name, statistics const& s) {
@@ -41,7 +42,8 @@ inline stats_category to_stats_category(char const* name, statistics const& s) {
        {"ondemand_check_availability", s.ondemand_check_availability_},
        {"ondemand_jounrey_count", s.ondemand_journey_count_},
        {"journey_count_begin", s.journey_count_begin_},
-       {"journey_count_end", s.journey_count_end_}}};
+       {"journey_count_end", s.journey_count_end_},
+       {"postprocess_timing", s.postprocess_timing_}}};
 }
 
 }  // namespace motis::intermodal

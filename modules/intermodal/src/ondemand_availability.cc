@@ -295,7 +295,7 @@ bool checking(availability_request const& areq, availability_response const& are
       result = walklength & walktime & timewindow;
     }
   }
-  printf("|| %d; %d | %d; %d -> %d \n", coord_start, coord_end, walklength, walktime, timewindow);
+  //printf("|| %d; %d | %d; %d -> %d \n", coord_start, coord_end, walklength, walktime, timewindow);
   return result;
 }
 
