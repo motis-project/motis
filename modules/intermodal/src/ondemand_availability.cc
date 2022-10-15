@@ -338,34 +338,9 @@ bool check_od_area(geo::latlng from, geo::latlng to,
   return area_check_response.available_;
 }
 
-availability_response check_od_availability(availability_request areq,
-                                            std::vector<std::string> const& server_infos,
-                                            statistics& stats) {
-  std::string product_check_addr;
-  std::map<std::string, std::string> hdrs;
-  hdrs.insert(std::pair<std::string, std::string>("Accept","application/json"));
-  hdrs.insert(std::pair<std::string, std::string>("Accept-Language","de"));
-  for(auto const& info : server_infos) {
-    size_t index = info.find(':');
-    if(index == -1) {
-      size_t idx = info.find(',');
-      hdrs.insert(std::pair<std::string, std::string>(info.substr(0, idx), info.substr(idx+1)));
-    }
-    std::string name = info.substr(0, index);
-    if(name == "product_check_address") {
-      product_check_addr = info.substr(index+1);
-    }
-    else if(name == "product_id") {
-      areq.product_id_ = info.substr(index+1);
-    }
-  }
-
-  if(product_check_addr != "http://127.0.0.1:9000/") {
-    hdrs.insert(std::pair<std::string, std::string>("Content-Type","application/json"));
-    hdrs.insert(std::pair<std::string, std::string>("X-Client-Version","0.0.1"));
-    hdrs.insert(std::pair<std::string, std::string>("X-Api-Version","20210101"));
-    hdrs.insert(std::pair<std::string, std::string>("X-Client-Identifier","demo.motis.rmv.platform"));
-  }
+void check_od_availability(const availability_request& areq,
+                                            statistics& stats,
+                                            std::vector<availability_response>& vares) {
   request::method m_post = request::POST;
   std::vector<geo::latlng> req_dots{};
   //UUID uuid;
@@ -374,16 +349,19 @@ availability_response check_od_availability(availability_request areq,
   //UuidToStringA(&uuid, (RPC_CSTR*)&random_uuid_str);
   //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
   std::string body = create_json_body(areq);
-  request product_check_req(product_check_addr, m_post, hdrs, body);
+  request product_check_req(areq.product_check_addr_, m_post, areq.hdrs_, body);
+  auto f_product_check = http_future_t{};
 
   MOTIS_START_TIMING(ondemand_server_product);
-  response product_check_result = motis_http(product_check_req)->val();
+  f_product_check = motis_http(product_check_req);
   MOTIS_STOP_TIMING(ondemand_server_product);
   stats.ondemand_server_product_inquery_ +=
       static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_product));
-  availability_response product_check_response = read_result(product_check_result, false, req_dots);
+
+  availability_response product_check_response = read_result(f_product_check->val(), false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);
-  return product_check_response;
+  auto const lock = std::scoped_lock{lock_vares_};
+  vares.emplace_back(product_check_response);
 }
 
 } // namespace intermodal

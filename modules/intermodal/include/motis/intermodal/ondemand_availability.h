@@ -1,5 +1,7 @@
 #include <string>
 #include <vector>
+#include <map>
+#include <mutex>
 
 #include "motis/core/common/unixtime.h"
 #include "geo/latlng.h"
@@ -30,9 +32,13 @@ struct availability_request {
   unixtime arrival_time_ = -1;
   unixtime arrival_time_onnext_ = -1;
   int max_walk_dist_ = 500; // meter
+
+  std::string product_check_addr_;
+  std::map<std::string, std::string> hdrs_;
 };
 
-availability_response check_od_availability(availability_request, std::vector<std::string> const&, statistics&);
+void check_od_availability(const availability_request&, statistics&, std::vector<availability_response>&);
 bool check_od_area(geo::latlng, geo::latlng, std::vector<std::string> const&, statistics&);
+std::mutex lock_vares_;
 
 } //namespace motis::intermodal
