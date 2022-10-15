@@ -34,7 +34,7 @@ struct availability_request {
   unixtime arrival_time_onnext_ = -1;
   int max_walk_dist_ = 500; // meter
 
-  std::string product_check_addr_;
+  std::string product_check_addr_ = "http://127.0.0.1:9000/"; //Testserver
   std::map<std::string, std::string> hdrs_;
   int journey_id_ = -1;
 };

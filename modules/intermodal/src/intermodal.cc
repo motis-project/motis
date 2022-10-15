@@ -348,7 +348,8 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& p_patches,
     availability_response ares = v_ares.at(i);
     if(ares.walk_dur_.empty() || !ares.available_
         || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
-      return;
+      i++;
+      continue;
     }
     /*
      *  replace: S --od--> T
@@ -616,7 +617,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       stats.ondemand_journey_count_++;
     }
   }
-  // unbedingt schauen ob das so klappt mit vares!!!!
+
   std::vector<availability_response> vares{};
   motis_parallel_for(vareq, [&](auto&& areq) { check_od_availability(areq, stats, vares); });
 
