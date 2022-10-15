@@ -41,6 +41,5 @@ struct availability_request {
 
 void check_od_availability(const availability_request&, statistics&, std::vector<availability_response>&);
 bool check_od_area(geo::latlng, geo::latlng, std::vector<std::string> const&, statistics&);
-std::mutex lock_vares_;
 
 } //namespace motis::intermodal

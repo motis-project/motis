@@ -343,6 +343,7 @@ void check_od_availability(const availability_request& areq,
                                             std::vector<availability_response>& vares) {
   request::method m_post = request::POST;
   std::vector<geo::latlng> req_dots{};
+  auto vares_mutex = std::mutex{};
   //UUID uuid;
   //UuidCreate(&uuid);
   //char* random_uuid_str;
@@ -361,7 +362,7 @@ void check_od_availability(const availability_request& areq,
   availability_response product_check_response = read_result(f_product_check->val(), false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);
   product_check_response.journey_id_ = areq.journey_id_;
-  auto const lock = std::scoped_lock{lock_vares_};
+  std::lock_guard guard{vares_mutex};
   vares.emplace_back(product_check_response);
 }
 
