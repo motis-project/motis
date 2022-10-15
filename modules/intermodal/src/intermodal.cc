@@ -619,8 +619,12 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
     }
   }
 
+  MOTIS_START_TIMING(ondemand_server_product);
   std::vector<availability_response> vares{};
   motis_parallel_for(vareq, [&](auto&& areq) { check_od_availability(areq, stats, vares); });
+  MOTIS_STOP_TIMING(ondemand_server_product);
+  stats.ondemand_server_product_inquery_ =
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_product));
 
   for(int i = 0; i < journeys.size(); i++) {
     std::vector<availability_response> v_ares{};

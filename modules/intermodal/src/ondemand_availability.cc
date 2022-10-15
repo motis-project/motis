@@ -353,11 +353,7 @@ void check_od_availability(const availability_request& areq,
   request product_check_req(areq.product_check_addr_, m_post, areq.hdrs_, body);
   auto f_product_check = http_future_t{};
 
-  MOTIS_START_TIMING(ondemand_server_product);
   f_product_check = motis_http(product_check_req);
-  MOTIS_STOP_TIMING(ondemand_server_product);
-  stats.ondemand_server_product_inquery_ +=
-      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_product));
 
   availability_response product_check_response = read_result(f_product_check->val(), false, req_dots);
   product_check_response.available_ = checking(areq, product_check_response);
