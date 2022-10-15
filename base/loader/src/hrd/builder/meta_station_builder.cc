@@ -26,17 +26,10 @@ Offset<Vector<Offset<MetaStation>>> create_meta_stations(
       |
       transform([&](auto&& m) -> std::optional<Offset<MetaStation>> {
         try {
-          //          std::cout << "\nstation: " << m.eva_ << "\n";
-          //          std::cout << "  direct:\n    ";
-          //          for (auto const& eq : m.equivalent_) {
-          //            std::cout << eq << " ";
-          //          }
-          //          std::cout << "\n  indirect:\n    ";
           return std::make_optional(CreateMetaStation(
               fbb, sb.get_or_create_station(m.eva_, fbb),
               fbb.CreateVector(utl::to_vec(
                   get_equivalent_stations(m, hrd_meta_stations), [&](auto&& e) {
-                    //                    std::cout << e << " ";
                     return sb.get_or_create_station(e, fbb);
                   }))));
         } catch (std::exception const& e) {

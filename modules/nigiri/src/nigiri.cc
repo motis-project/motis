@@ -1,6 +1,6 @@
 #include "motis/nigiri/nigiri.h"
 
-#include "boost/filesystem.hpp"
+#include "conf/date_time.h"
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
@@ -12,7 +12,6 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/routing.h"
-#include "conf/date_time.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
