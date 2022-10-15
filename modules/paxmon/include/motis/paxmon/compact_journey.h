@@ -31,7 +31,7 @@ struct journey_leg {
 };
 
 struct compact_journey {
-  CISTA_COMPARABLE()
+  CISTA_FRIEND_COMPARABLE(compact_journey)
 
   inline unsigned start_station_id() const {
     return legs_.front().enter_station_id_;
