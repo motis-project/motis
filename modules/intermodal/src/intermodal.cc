@@ -64,7 +64,7 @@ void intermodal::init(motis::module::registry& r) {
 }
 
 int doctorwho = 0;
-int masterwho = 0;
+//int masterwho = 0;
 
 std::vector<Offset<Connection>> revise_connections(
     std::vector<journey> const& journeys, statistics& stats,
@@ -316,7 +316,6 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                      [&](journey::transport const& t) {
                        return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
                      })) {
-      //printf("how often?\n");
       return false;
     } else {
       for (auto const& p : od_patches) {
@@ -504,7 +503,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   auto journeys = routing_response == nullptr
                       ? std::vector<journey>{}
                       : message_to_journeys(routing_response);
-  printf("    JOURNEYS: %llu\n", journeys.size());
+  //printf("    JOURNEYS: %llu\n", journeys.size());
   stats.journey_count_begin_ += journeys.size();
 
   MOTIS_START_TIMING(direct_connection_timing);
@@ -702,8 +701,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   message_creator mc;
   statistics stats{};
 
-  masterwho++;
-  printf("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| master %d\n", masterwho);
+  //masterwho++;
+  //printf("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| master %d\n", masterwho);
 
   auto const& sched = get_sched();
   auto const start = parse_query_start(mc, req, sched);
