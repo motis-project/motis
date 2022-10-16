@@ -24,13 +24,16 @@ using namespace boost::beast::http;
 using namespace motis::json;
 using namespace rapidjson;
 
-int sleeping = 2;
-int minutes = 0;
-int count = 0;
+//int sleeping = 2;
+//int minutes = 0;
+//int count = 0;
 bool on = false;
 std::vector<std::vector<int>> fleet;
 
+//error executing /intermodal: invalid vector subscript
+
 std::string create_resbody(net::test_server::http_req_t const& req, bool post, int area) {
+  //std::this_thread::sleep_for(std::chrono::milliseconds(250));
   // funktioniert nicht mit dem warten
   //time_t timenow = time(nullptr);
   //time_t timeend = timenow + sleeping;
@@ -99,14 +102,14 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
 
     time_t tests_time_dep = traveltime_to_unixtime(departure).time_since_epoch().count();
     time_t tests_time_arr = traveltime_to_unixtime(arrival).time_since_epoch().count();
-    if(count%4==0) {
-      minutes = 0;
-    }
-    tests_time_dep += minutes * 60;
+    //if(count%4==0) {
+      //minutes = 0;
+    //}
+    //tests_time_dep += minutes * 60;
     using time_point = std::chrono::system_clock::time_point;
     time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
-    time_t diff = (tests_time_arr - tests_time_dep) + minutes;
+    time_t diff = (tests_time_arr - tests_time_dep) ; //+ minutes;
     tests_time_dep += (diff - 120); // wie lange die Fahrt dauert
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
@@ -156,9 +159,9 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       }
     }
 
-    int walk_before = 1;
+    int walk_before = 3;
     int walk_after = 0;
-    if(count%2==0) {
+    /*if(count%2==0) {
       walk_before+= 120;
       walk_after = 0;
     }
@@ -168,8 +171,8 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     if(count%4==0) {
       walk_before = 0;
       walk_after = 0;
-    }
-    std::string id = "rid_12345-abcde-1a2b3c-" + std::to_string(count);
+    }*/
+    std::string id = "rid_12345-abcde-1a2b3c-" ;// + std::to_string(count);
     auto res = R"( { "data": {
                       "id": ")" + id + "\"," +
                R"( "created_at": "2017-09-06T15:08:43Z",
@@ -358,13 +361,13 @@ struct test_server::impl {
                          net::test_server::http_res_cb_t const& cb) const {
       int area = 0;
       for(auto const& s : server_argv_) {
-        if(s == "medium") {
-          sleeping = 500;
-        }
-        else if(s == "high") {
-          sleeping = 1000;
-        }
-        else if(s == "1") {
+        //if(s == "medium") {
+          //sleeping = 500;
+        //}
+        //else if(s == "high") {
+          //sleeping = 1000;
+        //}
+        if(s == "1") {
           area = 1;
         }
         else if(s == "2") {
@@ -430,8 +433,8 @@ struct test_server::impl {
             break;
           }
           std::string sres = create_resbody(req, true, area);
-          minutes += 5;
-          count++;
+          //minutes += 5;
+          //count++;
           std::string_view resbody{sres};
           status status = status::ok;
           std::string_view contenttype = "application/json";
@@ -445,7 +448,7 @@ struct test_server::impl {
           break;
         }
         case verb::get: {
-          count++;
+          //count++;
           std::string sres = create_resbody(req, false, area);
           std::string_view resbody{sres};
           status status = status::ok;
