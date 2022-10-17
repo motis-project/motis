@@ -114,7 +114,8 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       fbb, tgr.index_.has_value() ? tgr.index_.value() : -1,
       to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
       to_fbs_time(sched, tgr.planned_arrival_time_), tgr.estimated_delay_,
-      static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_);
+      static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_,
+      false /* broken */, false /* disabled */);
 }
 
 Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
@@ -125,7 +126,7 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
       to_fbs(sched, fbb, pgc.journey(gr.compact_journey_index_)),
       gr.probability_, to_fbs_time(sched, gr.planned_arrival_time_),
       gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_),
-      gr.planned_);
+      gr.planned_, gr.broken_, gr.disabled_);
 }
 
 temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {

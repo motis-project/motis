@@ -16,6 +16,8 @@ table PaxMonGroupRoute {
   estimated_delay: short;
   source_flags: ubyte;
   planned: bool;
+  broken: bool;
+  disabled: bool;
 }
 
 table PaxMonGroup {

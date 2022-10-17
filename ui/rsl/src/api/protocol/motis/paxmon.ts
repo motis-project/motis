@@ -411,6 +411,8 @@ export interface PaxMonGroupRoute {
   estimated_delay: number;
   source_flags: number;
   planned: boolean;
+  broken: boolean;
+  disabled: boolean;
 }
 
 // paxmon/PaxMonGroup.fbs

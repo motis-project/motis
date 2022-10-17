@@ -133,6 +133,8 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
           {formatPercent(route.probability)} Wahrscheinlichkeit
         </div>
         {route.planned && <div>(planmäßige Route)</div>}
+        {route.broken && <div className="text-red-600">(gebrochen)</div>}
+        {route.disabled && <div className="text-pink-600">(deaktiviert)</div>}
       </div>
       <div className="flex gap-4">
         <div>
@@ -183,9 +185,13 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
           : "—"}
       </td>
       <td className="pr-2">{formatDateTime(leg.enter_time)}</td>
-      <td className="pr-2">{leg.enter_station.name}</td>
+      <td className="pr-2" title={leg.enter_station.id}>
+        {leg.enter_station.name}
+      </td>
       <td className="pr-2">{formatDateTime(leg.exit_time)}</td>
-      <td className="">{leg.exit_station.name}</td>
+      <td className="" title={leg.exit_station.id}>
+        {leg.exit_station.name}
+      </td>
     </tr>
   );
 }
