@@ -16,6 +16,9 @@ table PaxMonInterchangeInfo {
   departure: [PaxMonTripStopInfo];
   groups: PaxMonCombinedGroupRoutes;
   transfer_time: uint; // minutes
+  valid: bool;
+  disabled: bool;
+  broken: bool;
 }
 
 table PaxMonGetInterchangesResponse {

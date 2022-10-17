@@ -355,6 +355,8 @@ export interface PaxMonGetInterchangesRequest {
   max_count: number;
   include_meta_stations: boolean;
   include_group_infos: boolean;
+  include_broken_interchanges: boolean;
+  include_disabled_group_routes: boolean;
 }
 
 // paxmon/PaxMonGetInterchangesResponse.fbs
@@ -371,6 +373,9 @@ export interface PaxMonInterchangeInfo {
   departure: PaxMonTripStopInfo[];
   groups: PaxMonCombinedGroupRoutes;
   transfer_time: number;
+  valid: boolean;
+  disabled: boolean;
+  broken: boolean;
 }
 
 // paxmon/PaxMonGetInterchangesResponse.fbs
