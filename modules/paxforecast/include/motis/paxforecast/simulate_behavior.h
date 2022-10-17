@@ -16,6 +16,7 @@
 #include "motis/paxmon/localization.h"
 #include "motis/paxmon/universe.h"
 
+#include "motis/paxforecast/behavior/util.h"
 #include "motis/paxforecast/combined_passenger_group.h"
 #include "motis/paxforecast/simulation_result.h"
 
@@ -74,7 +75,8 @@ inline void simulate_behavior_for_cpg(schedule const& sched,
                                       motis::paxmon::universe& uv,
                                       PassengerBehavior& pb,
                                       combined_passenger_group const& cpg,
-                                      sim_data& sd) {
+                                      sim_data& sd,
+                                      float const probability_threshold) {
   if (cpg.group_routes_.empty()) {
     return;
   }
@@ -84,18 +86,19 @@ inline void simulate_behavior_for_cpg(schedule const& sched,
   for (auto const& pgwrap : cpg.group_routes_) {
     auto& group_route_result = sd.result_.group_route_results_[pgwrap.pgwr_];
     group_route_result.localization_ = &cpg.localization_;
+    auto const new_probs = behavior::calc_new_probabilites(
+        pgwrap.probability_, allocation, probability_threshold);
     std::uint8_t picked = 0;
     for (auto const& [alt, probability] :
-         utl::zip(cpg.alternatives_, allocation)) {
-      if (probability < 0.01F) {
+         utl::zip(cpg.alternatives_, new_probs)) {
+      if (probability == 0.0F) {
         continue;
       }
-      auto const new_probability = pgwrap.probability_ * probability;
-      group_route_result.alternative_probabilities_.emplace_back(
-          &alt, new_probability);
+      group_route_result.alternative_probabilities_.emplace_back(&alt,
+                                                                 probability);
       add_group_to_alternative(
           sched, caps, uv, sd.result_,
-          paxmon::additional_group{pgwrap.passengers_, new_probability}, alt);
+          paxmon::additional_group{pgwrap.passengers_, probability}, alt);
       ++picked;
     }
     sd.found_alt_count_.emplace_back(
@@ -124,13 +127,13 @@ inline simulation_result simulate_behavior(
     motis::paxmon::universe& uv,
     std::map<unsigned, std::vector<combined_passenger_group>> const&
         combined_groups,
-    PassengerBehavior& pb) {
+    PassengerBehavior& pb, float const probability_threshold) {
   simulation_result result;
   sim_data sd{result};
   motis_parallel_for(combined_groups, ([&](auto const& cpgs) {
                        for (auto const& cpg : cpgs.second) {
-                         simulate_behavior_for_cpg(sched, caps, uv, pb, cpg,
-                                                   sd);
+                         simulate_behavior_for_cpg(sched, caps, uv, pb, cpg, sd,
+                                                   probability_threshold);
                        }
                      }));
   sd.finish_stats(combined_groups.size());
@@ -144,12 +147,13 @@ inline simulation_result simulate_behavior(
     mcd::hash_map<mcd::pair<motis::paxmon::passenger_localization,
                             motis::paxmon::compact_journey>,
                   combined_passenger_group> const& combined_groups,
-    PassengerBehavior& pb) {
+    PassengerBehavior& pb, float const probability_threshold) {
   simulation_result result;
   sim_data sd{result};
   motis_parallel_for(combined_groups, ([&](auto const& cpgs) {
                        simulate_behavior_for_cpg(sched, caps, uv, pb,
-                                                 cpgs.second, sd);
+                                                 cpgs.second, sd,
+                                                 probability_threshold);
                      }));
   sd.finish_stats(combined_groups.size());
   return result;

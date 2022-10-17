@@ -81,6 +81,9 @@ paxforecast::paxforecast()
         "alternatives (minutes)");
   param(revert_forecasts_, "revert_forecasts",
         "revert forecasts if broken transfers become valid again");
+  param(probability_threshold_, "probability_threshold",
+        "minimum allowed route probability (routes with lower probability are "
+        "dropped)");
 }
 
 paxforecast::~paxforecast() = default;
@@ -524,8 +527,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   MOTIS_START_TIMING(passenger_behavior);
   manual_timer sim_timer{"passenger behavior simulation"};
   auto pb = behavior::default_behavior{deterministic_mode_};
-  auto const sim_result =
-      simulate_behavior(sched, caps, uv, combined_groups, pb.pb_);
+  auto const sim_result = simulate_behavior(sched, caps, uv, combined_groups,
+                                            pb.pb_, probability_threshold_);
   sim_timer.stop_and_print();
   MOTIS_STOP_TIMING(passenger_behavior);
   tick_stats.t_passenger_behavior_ = MOTIS_TIMING_MS(passenger_behavior);
@@ -784,8 +787,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
 
     manual_timer sim_timer{"passenger behavior simulation"};
     auto pb = behavior::default_behavior{deterministic_mode_};
-    auto const sim_result =
-        simulate_behavior(sched, caps, uv, combined, pb.pb_);
+    auto const sim_result = simulate_behavior(sched, caps, uv, combined, pb.pb_,
+                                              probability_threshold_);
     sim_timer.stop_and_print();
     t_behavior_simulation += sim_timer.duration_ms();
 
