@@ -47,7 +47,7 @@ add_group_route_result add_group_route(
     auto const previous_probability = gr.probability_;
     auto const new_probability =
         override_probabilities ? probability : gr.probability_ + probability;
-    utl::verify(new_probability >= -0.05 && new_probability <= 1.05,
+    utl::verify(new_probability >= -0.1 && new_probability <= 1.1,
                 "paxmon::add_group_route: new probability = {} (previous = "
                 "{}, added = {}), existing route = {}",
                 new_probability, previous_probability, probability,
@@ -82,7 +82,7 @@ add_group_route_result add_group_route(
   }
 
   // add new group route
-  utl::verify(probability >= -0.05 && probability <= 1.05,
+  utl::verify(probability >= -0.1 && probability <= 1.1,
               "paxmon::add_group_route: invalid probability = {}", probability);
   probability = std::clamp(probability, 0.F, 1.F);
   auto const fws_cj = add_compact_journey(uv, cj);
