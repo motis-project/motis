@@ -11,4 +11,5 @@ table PaxMonDebugGraphRequest {
   trip_ids: [motis.TripId];
 
   filter_groups: bool;
+  include_full_trips_from_group_routes: bool;
 }

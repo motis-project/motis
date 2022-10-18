@@ -35,6 +35,8 @@ msg_ptr debug_graph(paxmon_data& data, msg_ptr const& msg) {
         return passenger_group_with_route{pgwr->g(), pgwr->r()};
       });
   auto const req_filter_groups = req->filter_groups();
+  auto const include_full_trips_from_group_routes =
+      req->include_full_trips_from_group_routes();
 
   auto node_indices = std::set<event_node_index>();
   auto edge_indices = std::set<edge_index>{};
@@ -68,6 +70,15 @@ msg_ptr debug_graph(paxmon_data& data, msg_ptr const& msg) {
     for (auto const& ei :
          uv.passenger_groups_.route_edges(route.edges_index_)) {
       add_edge(ei);
+    }
+    if (include_full_trips_from_group_routes) {
+      for (auto const& leg :
+           uv.passenger_groups_.journey(route.compact_journey_index_).legs()) {
+        for (auto const& ei :
+             uv.trip_data_.edges(uv.trip_data_.get_index(leg.trip_idx_))) {
+          add_edge(ei);
+        }
+      }
     }
   }
 
@@ -138,6 +149,9 @@ msg_ptr debug_graph(paxmon_data& data, msg_ptr const& msg) {
   };
 
   auto const get_trip_indices = [&](edge const* e) {
+    if (!e->has_trips()) {
+      return std::vector<unsigned>{};
+    }
     return utl::to_vec(e->get_trips(sched), [&](auto const& trp) {
       return utl::get_or_create(trips_map, trp, [&]() {
         auto const idx = static_cast<unsigned>(fbs_trips.size());

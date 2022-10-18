@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -104,9 +105,12 @@ struct edge {
 
   inline edge_type type() const { return type_; }
 
+  inline bool has_trips() const { return is_trip() || is_wait(); }
+
   inline merged_trips_idx get_merged_trips_idx() const { return trips_; }
 
   inline mcd::vector<ptr<trip>> const& get_trips(schedule const& sched) const {
+    assert(has_trips());
     return *sched.merged_trips_.at(trips_);
   }
 
