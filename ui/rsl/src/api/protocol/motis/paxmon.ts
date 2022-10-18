@@ -67,6 +67,92 @@ export interface PaxMonCompactJourney {
   legs: PaxMonCompactJourneyLeg[];
 }
 
+// paxmon/PaxMonDebugGraphRequest.fbs
+export interface PaxMonDebugGraphRequest {
+  universe: number;
+  node_indices: number[];
+  group_routes: PaxMonGroupWithRouteId[];
+  trip_ids: TripId[];
+  filter_groups: boolean;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugNodeLogEntry {
+  system_time: number;
+  node_time: number;
+  valid: boolean;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugNode {
+  index: number;
+  schedule_time: number;
+  current_time: number;
+  arrival: boolean;
+  valid: boolean;
+  station: Station;
+  log: PaxMonDebugNodeLogEntry[];
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export type PaxMonDebugEdgeType =
+  | "Trip"
+  | "Interchange"
+  | "Wait"
+  | "Through"
+  | "Disabled";
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugEdgeLogEntry {
+  system_time: number;
+  required_transfer_time: number;
+  available_transfer_time: number;
+  edge_type: PaxMonDebugEdgeType;
+  broken: boolean;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export type PaxMonDebugPaxLogAction = "RouteAdded" | "RouteRemoved";
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export type PaxMonDebugPaxLogReason =
+  | "Unknown"
+  | "Api"
+  | "TripReroute"
+  | "UpdateLoad";
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugPaxLogEntry {
+  system_time: number;
+  action: PaxMonDebugPaxLogAction;
+  reason: PaxMonDebugPaxLogReason;
+  group_route: PaxMonGroupWithRouteId;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugEdge {
+  from_node: number;
+  to_node: number;
+  out_edge_index: number;
+  type: PaxMonDebugEdgeType;
+  broken: boolean;
+  valid: boolean;
+  transfer_time: number;
+  expected_load: number;
+  group_routes: PaxMonGroupRouteBaseInfo[];
+  trip_indices: number[];
+  edge_log: PaxMonDebugEdgeLogEntry[];
+  pax_log: PaxMonDebugPaxLogEntry[];
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugGraphResponse {
+  graph_log_enabled: boolean;
+  nodes: PaxMonDebugNode[];
+  edges: PaxMonDebugEdge[];
+  trips: TripServiceInfo[];
+}
+
 // paxmon/PaxMonDestroyUniverseRequest.fbs
 export interface PaxMonDestroyUniverseRequest {
   universe: number;

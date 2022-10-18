@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <optional>
@@ -22,6 +23,17 @@
 #include "motis/module/message.h"
 
 namespace motis::paxmon {
+
+inline std::uint64_t to_fbs_time(schedule const& sched, time const t) {
+  return t != INVALID_TIME ? static_cast<std::uint64_t>(
+                                 motis_to_unixtime(sched.schedule_begin_, t))
+                           : 0ULL;
+}
+
+inline time from_fbs_time(schedule const& sched, std::uint64_t const ut) {
+  return ut != 0ULL ? unix_to_motistime(sched.schedule_begin_, ut)
+                    : INVALID_TIME;
+}
 
 flatbuffers::Offset<PaxMonCompactJourney> to_fbs(
     schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,

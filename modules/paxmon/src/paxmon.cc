@@ -22,6 +22,7 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/api/add_groups.h"
+#include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
 #include "motis/paxmon/api/filter_groups.h"
 #include "motis/paxmon/api/filter_trips.h"
@@ -384,6 +385,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/keep_alive",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::keep_alive(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/debug_graph",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::debug_graph(data_, msg);
                   },
                   {});
 

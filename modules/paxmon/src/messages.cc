@@ -16,17 +16,6 @@ using namespace flatbuffers;
 
 namespace motis::paxmon {
 
-inline std::uint64_t to_fbs_time(schedule const& sched, time const t) {
-  return t != INVALID_TIME ? static_cast<std::uint64_t>(
-                                 motis_to_unixtime(sched.schedule_begin_, t))
-                           : 0ULL;
-}
-
-inline time from_fbs_time(schedule const& sched, std::uint64_t const ut) {
-  return ut != 0ULL ? unix_to_motistime(sched.schedule_begin_, ut)
-                    : INVALID_TIME;
-}
-
 Offset<PaxMonTransferInfo> to_fbs(FlatBufferBuilder& fbb,
                                   std::optional<transfer_info> const& ti) {
   if (ti) {

@@ -29,6 +29,8 @@ import {
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
+  PaxMonDebugGraphRequest,
+  PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
@@ -382,7 +384,9 @@ export type MsgContent =
   | PaxMonRerouteGroupsRequest
   | PaxMonRerouteGroupsResponse
   | PaxMonGroupStatisticsRequest
-  | PaxMonGroupStatisticsResponse;
+  | PaxMonGroupStatisticsResponse
+  | PaxMonDebugGraphRequest
+  | PaxMonDebugGraphResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -450,7 +454,9 @@ export type MsgContentType =
   | "PaxMonRerouteGroupsRequest"
   | "PaxMonRerouteGroupsResponse"
   | "PaxMonGroupStatisticsRequest"
-  | "PaxMonGroupStatisticsResponse";
+  | "PaxMonGroupStatisticsResponse"
+  | "PaxMonDebugGraphRequest"
+  | "PaxMonDebugGraphResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";
