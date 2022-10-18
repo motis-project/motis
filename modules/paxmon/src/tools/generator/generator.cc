@@ -213,7 +213,7 @@ private:
                                     group_size,
                                     {{0, 1.0F, cj, cj.scheduled_arrival_time(),
                                       0, route_source_flags::NONE, true}}};
-    auto const* pg = add_passenger_group(uv_, sched_, caps_, tpg);
+    auto const* pg = add_passenger_group(uv_, sched_, caps_, tpg, false);
     auto const pgwr = passenger_group_with_route{pg->id_, 0};
     auto const& gr = uv_.passenger_groups_.route(pgwr);
     auto const gr_edges = uv_.passenger_groups_.route_edges(gr.edges_index_);
@@ -227,7 +227,7 @@ private:
                      static_cast<std::uint16_t>(e->capacity() * max_load_);
         });
     if (over_capacity) {
-      remove_passenger_group(uv_, pg->id_);
+      remove_passenger_group(uv_, sched_, pg->id_, false);
       ++over_capacity_skipped_;
       return false;
     }

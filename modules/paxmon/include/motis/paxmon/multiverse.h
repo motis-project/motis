@@ -41,7 +41,7 @@ struct multiverse : std::enable_shared_from_this<multiverse> {
                 std::chrono::system_clock::now().time_since_epoch())
                 .count()} {}
 
-  void create_default_universe();
+  universe* create_default_universe();
 
   std::int64_t id() const { return id_; }
 

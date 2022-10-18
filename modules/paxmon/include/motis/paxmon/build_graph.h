@@ -21,9 +21,12 @@ struct add_group_route_to_graph_result {
 
 add_group_route_to_graph_result add_group_route_to_graph(
     schedule const& sched, capacity_maps const& caps, universe& uv,
-    passenger_group const& grp, group_route const& gr);
+    passenger_group const& grp, group_route const& gr, bool log,
+    pci_log_reason_t reason);
 
-void remove_group_route_from_graph(universe& uv, passenger_group const& grp,
-                                   group_route const& gr);
+void remove_group_route_from_graph(universe& uv, schedule const& sched,
+                                   passenger_group const& grp,
+                                   group_route const& gr, bool log,
+                                   pci_log_reason_t reason);
 
 }  // namespace motis::paxmon

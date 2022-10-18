@@ -19,11 +19,13 @@ namespace {
 void add_interchange(event_node_index const from, event_node_index const to,
                      passenger_group_with_route const pgwr,
                      dynamic_fws_multimap<edge_index>::mutable_bucket& edges,
-                     duration const transfer_time, universe& uv) {
+                     duration const transfer_time, universe& uv,
+                     schedule const& sched, bool const log,
+                     pci_log_reason_t const reason) {
   for (auto& e : uv.graph_.outgoing_edges(from)) {
     if (e.type_ == edge_type::INTERCHANGE && e.to_ == to &&
         e.transfer_time() == transfer_time) {
-      add_group_route_to_edge(uv, &e, pgwr);
+      add_group_route_to_edge(uv, sched, &e, pgwr, log, reason);
       edges.emplace_back(get_edge_index(uv, &e));
       return;
     }
@@ -35,6 +37,11 @@ void add_interchange(event_node_index const from, event_node_index const to,
       add_edge(uv, make_interchange_edge(from, to, transfer_time, pci));
   auto const ei = get_edge_index(uv, e);
   edges.emplace_back(ei);
+
+  if (log && uv.graph_log_.enabled_) {
+    uv.graph_log_.pci_log_[pci].emplace_back(pci_log_entry{
+        sched.system_time_, pci_log_action_t::ROUTE_ADDED, reason, pgwr});
+  }
 
   auto const from_station = uv.graph_.nodes_[from].station_idx();
   auto const to_station = uv.graph_.nodes_[to].station_idx();
@@ -48,7 +55,8 @@ void add_interchange(event_node_index const from, event_node_index const to,
 
 add_group_route_to_graph_result add_group_route_to_graph(
     schedule const& sched, capacity_maps const& caps, universe& uv,
-    passenger_group const& grp, group_route const& gr) {
+    passenger_group const& grp, group_route const& gr, bool const log,
+    pci_log_reason_t const reason) {
   auto result = add_group_route_to_graph_result{};
   auto edges = uv.passenger_groups_.route_edges(gr.edges_index_);
   auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
@@ -90,12 +98,12 @@ add_group_route_to_graph_result add_group_route_to_graph(
           }
           auto const transfer_time = get_transfer_duration(leg.enter_transfer_);
           add_interchange(exit_node, from->index_, pgwr, edges, transfer_time,
-                          uv);
+                          uv, sched, log, reason);
         }
       }
       if (in_trip) {
         auto* e = ei.get(uv);
-        add_group_route_to_edge(uv, e, pgwr);
+        add_group_route_to_edge(uv, sched, e, pgwr, log, reason);
         edges.emplace_back(ei);
         auto const to = e->to(uv);
         if (to->station_ == leg.exit_station_id_ &&
@@ -112,7 +120,7 @@ add_group_route_to_graph_result add_group_route_to_graph(
     if (!enter_found || !exit_found) {
       for (auto const& ei : edges) {
         auto* e = ei.get(uv);
-        remove_group_route_from_edge(uv, e, pgwr);
+        remove_group_route_from_edge(uv, sched, e, pgwr, log, reason);
       }
       edges.clear();
 
@@ -139,22 +147,24 @@ add_group_route_to_graph_result add_group_route_to_graph(
   if (exit_node != INVALID_EVENT_NODE_INDEX &&
       last_trip != INVALID_TRIP_DATA_INDEX) {
     add_interchange(exit_node, uv.trip_data_.enter_exit_node(last_trip), pgwr,
-                    edges, 0, uv);
+                    edges, 0, uv, sched, log, reason);
   }
 
   utl::verify(!edges.empty(), "empty passenger group edges");
   return result;
 }
 
-void remove_group_route_from_graph(universe& uv, passenger_group const& grp,
-                                   group_route const& gr) {
+void remove_group_route_from_graph(universe& uv, schedule const& sched,
+                                   passenger_group const& grp,
+                                   group_route const& gr, bool const log,
+                                   pci_log_reason_t reason) {
   auto edges = uv.passenger_groups_.route_edges(gr.edges_index_);
   auto const pgwr =
       passenger_group_with_route{grp.id_, gr.local_group_route_index_};
   for (auto const& ei : edges) {
     auto* e = ei.get(uv);
     auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-    remove_group_route_from_edge(uv, e, pgwr);
+    remove_group_route_from_edge(uv, sched, e, pgwr, log, reason);
   }
   edges.clear();
 }

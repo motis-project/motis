@@ -13,7 +13,7 @@ using namespace motis::module;
 
 namespace motis::paxmon {
 
-void multiverse::create_default_universe() {
+universe* multiverse::create_default_universe() {
   std::lock_guard lock{mutex_};
   utl::verify(universe_info_map_.find(0) == end(universe_info_map_),
               "default paxmon universe already exists");
@@ -23,11 +23,13 @@ void multiverse::create_default_universe() {
       motis::module::global_res_id::PAX_DEFAULT_UNIVERSE);
   auto uvp = std::make_unique<universe>();
   uvp->schedule_res_id_ = default_schedule_res_id;
+  auto* uv = uvp.get();
   mod_.add_shared_data(default_uv_res_id, std::move(uvp));
   universe_info_storage_[0] = std::make_shared<universe_info>(
       shared_from_this(), 0, default_uv_res_id, default_schedule_res_id);
   universe_info_map_[0] = universe_info_storage_[0];
   universes_using_schedule_[default_schedule_res_id].emplace_back(0);
+  return uv;
 }
 
 universe_access multiverse::get(universe_id const id,

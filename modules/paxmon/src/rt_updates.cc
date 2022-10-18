@@ -25,7 +25,8 @@ using namespace motis::module;
 namespace motis::paxmon {
 
 void check_broken_interchanges(
-    universe& uv, std::vector<edge_index> const& updated_interchange_edges,
+    universe& uv, schedule const& sched,
+    std::vector<edge_index> const& updated_interchange_edges,
     int arrival_delay_threshold) {
   static std::set<edge*> broken_interchanges;
   static std::set<passenger_group_with_route> affected_group_routes;
@@ -36,7 +37,8 @@ void check_broken_interchanges(
     }
     auto const from = ice->from(uv);
     auto const to = ice->to(uv);
-    auto const ic = static_cast<int>(to->time_) - static_cast<int>(from->time_);
+    auto const ic = static_cast<int>(to->current_time()) -
+                    static_cast<int>(from->current_time());
     if (ice->is_canceled(uv) || (from->station_ != 0 && to->station_ != 0 &&
                                  ic < ice->transfer_time())) {
       if (ice->broken_) {
@@ -80,6 +82,11 @@ void check_broken_interchanges(
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
       }
+    }
+    if (uv.graph_log_.enabled_) {
+      uv.graph_log_.edge_log_[ice->pci_].emplace_back(edge_log_entry{
+          sched.system_time_, ice->transfer_time(),
+          static_cast<std::int16_t>(ic), ice->type(), ice->is_broken()});
     }
   }
 }
@@ -139,7 +146,7 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
       default: break;
     }
   }
-  check_broken_interchanges(uv, updated_interchange_edges,
+  check_broken_interchanges(uv, sched, updated_interchange_edges,
                             arrival_delay_threshold);
 }
 
@@ -239,7 +246,7 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
         MOTIS_START_TIMING(update_load);
         // update_load needs synchronization!
         std::lock_guard guard{update_mutex};
-        update_load(pgwr, reachability, localization, uv);
+        update_load(pgwr, reachability, localization, uv, sched);
         MOTIS_STOP_TIMING(update_load);
 
         MOTIS_START_TIMING(fbs_events);

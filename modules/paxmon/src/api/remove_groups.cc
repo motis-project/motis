@@ -32,7 +32,7 @@ msg_ptr remove_groups(paxmon_data& data, bool const check_graph_integrity_end,
       continue;
     }
     ++removed_groups;
-    remove_passenger_group(uv, pg->id_);
+    remove_passenger_group(uv, sched, pg->id_, true, pci_log_reason_t::API);
   }
 
   LOG(info) << "remove_groups: " << removed_groups << " removed (universe "

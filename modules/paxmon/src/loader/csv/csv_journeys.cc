@@ -525,10 +525,10 @@ loader_result load_journeys(schedule const& sched, universe& uv,
           ++tpg.source_.secondary_ref_;
           distributed += group_size;
           tpg.passengers_ = group_size;
-          add_passenger_group(uv, sched, caps, tpg);
+          add_passenger_group(uv, sched, caps, tpg, false);
         }
       } else {
-        add_passenger_group(uv, sched, caps, tpg);
+        add_passenger_group(uv, sched, caps, tpg, false);
       }
     } else {
       if (!all_trips_found) {

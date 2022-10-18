@@ -78,6 +78,10 @@ void revert_forecast(universe& uv, schedule const& sched,
   std::cout << "revert_forecast: pg=" << pgwr.pg_ << ", route=" << pgwr.route_
             << ", log_entries=" << log_entries.size() << "\n";
 
+  for (auto const& entry : log_entries) {
+    std::cout << "  " << print_log_entry{entry, pgc} << "\n";
+  }
+
   auto const routes = pgc.routes(pgwr.pg_);
   auto orig_probs = utl::to_vec(
       routes, [](group_route const& gr) { return gr.probability_; });
@@ -121,7 +125,8 @@ void revert_forecast(universe& uv, schedule const& sched,
     new_routes.emplace_back(
         to_fbs(sched, fbb,
                temp_group_route{
-                   i, p, compact_journey{}, INVALID_TIME,
+                   static_cast<local_group_route_index>(i), p,
+                   compact_journey{}, INVALID_TIME,
                    0 /* estimated delay - updated by reroute groups api */,
                    route_source_flags::NONE, false /* planned */
                }));

@@ -11,7 +11,8 @@ namespace motis::paxmon {
 
 void update_load(passenger_group_with_route const pgwr,
                  reachability_info const& reachability,
-                 passenger_localization const& localization, universe& uv) {
+                 passenger_localization const& localization, universe& uv,
+                 schedule const& sched) {
   auto const& gr = uv.passenger_groups_.route(pgwr);
   auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
   auto disabled_edges =
@@ -22,7 +23,8 @@ void update_load(passenger_group_with_route const pgwr,
     if (std::find(begin(disabled_edges), end(disabled_edges), ei) ==
         end(disabled_edges)) {
       auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-      add_group_route_to_edge(uv, e, pgwr);
+      add_group_route_to_edge(uv, sched, e, pgwr, true,
+                              pci_log_reason_t::UPDATE_LOAD);
     } else {
       utl::erase(disabled_edges, ei);
     }
@@ -93,7 +95,8 @@ void update_load(passenger_group_with_route const pgwr,
   for (auto const& ei : disabled_edges) {
     auto* e = ei.get(uv);
     auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-    remove_group_route_from_edge(uv, e, pgwr);
+    remove_group_route_from_edge(uv, sched, e, pgwr, true,
+                                 pci_log_reason_t::UPDATE_LOAD);
   }
 }
 

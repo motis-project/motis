@@ -28,7 +28,7 @@ void load_journey(schedule const& sched, universe& uv,
                            passengers,
                            {{0, 1.0F, to_compact_journey(j, sched),
                              planned_arrival_time, 0, source_flags, true}}};
-  add_passenger_group(uv, sched, caps, tpg);
+  add_passenger_group(uv, sched, caps, tpg, false);
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,

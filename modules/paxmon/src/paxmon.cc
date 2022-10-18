@@ -113,6 +113,7 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
         "required number of broken groups in an update for mcfp scenarios");
   param(mcfp_scenario_include_trip_info_, "mcfp_scenario_include_trip_info",
         "include trip info (category + train_nr) in mcfp scenarios");
+  param(graph_log_enabled_, "graph_log", "enable graph log");
 }
 
 paxmon::~paxmon() = default;
@@ -125,7 +126,8 @@ void paxmon::reg_subc(motis::module::subc_reg& r) {
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
   add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
-  data_.multiverse_->create_default_universe();
+  auto* uv = data_.multiverse_->create_default_universe();
+  uv->graph_log_.enabled_ = graph_log_enabled_;
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,

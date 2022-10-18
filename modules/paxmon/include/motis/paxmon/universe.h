@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <ostream>
 #include <unordered_map>
 #include <vector>
 
@@ -24,7 +23,9 @@
 #include "motis/module/global_res_ids.h"
 
 #include "motis/paxmon/capacity_data.h"
+#include "motis/paxmon/edge_type.h"
 #include "motis/paxmon/graph_index.h"
+#include "motis/paxmon/graph_log.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
 #include "motis/paxmon/rt_update_context.h"
@@ -75,25 +76,6 @@ struct event_node {
   bool valid_{true};
   std::uint32_t station_{0};
 };
-
-enum class edge_type : std::uint8_t {
-  TRIP,
-  INTERCHANGE,
-  WAIT,
-  THROUGH,
-  DISABLED
-};
-
-inline std::ostream& operator<<(std::ostream& out, edge_type const et) {
-  switch (et) {
-    case edge_type::TRIP: return out << "TRIP";
-    case edge_type::INTERCHANGE: return out << "INTERCHANGE";
-    case edge_type::WAIT: return out << "WAIT";
-    case edge_type::THROUGH: return out << "THROUGH";
-    case edge_type::DISABLED: return out << "DISABLED";
-  }
-  return out;
-}
 
 struct edge {
   inline bool is_valid(universe const& u) const {
@@ -177,6 +159,7 @@ struct universe {
   passenger_group_container passenger_groups_;
   pci_container pax_connection_info_;
   dynamic_fws_multimap<edge_index> interchanges_at_station_;
+  graph_log graph_log_;
 
   rt_update_context rt_update_ctx_;
   system_statistics system_stats_;
