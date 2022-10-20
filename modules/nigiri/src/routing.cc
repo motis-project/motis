@@ -40,8 +40,10 @@ mm::msg_ptr to_routing_response(
   std::vector<fbs::Offset<Statistics>> statistics{CreateStatistics(
       fbb, fbb.CreateString("nigiri.raptor"),
       fbb.CreateVector(std::vector<fbs::Offset<StatisticsEntry>>{
-          CreateStatisticsEntry(fbb, fbb.CreateString("routing_time"),
+          CreateStatisticsEntry(fbb, fbb.CreateString("routing_time_ms"),
                                 stats.n_routing_time_),
+          CreateStatisticsEntry(fbb, fbb.CreateString("lower_bounds_time_ms"),
+                                stats.lb_time_),
           CreateStatisticsEntry(fbb, fbb.CreateString("footpaths_visited"),
                                 stats.n_footpaths_visited_),
           CreateStatisticsEntry(fbb, fbb.CreateString("routes_visited"),
