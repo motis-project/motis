@@ -75,6 +75,7 @@ export interface PaxMonDebugGraphRequest {
   trip_ids: TripId[];
   filter_groups: boolean;
   include_full_trips_from_group_routes: boolean;
+  include_canceled_trip_nodes: boolean;
 }
 
 // paxmon/PaxMonDebugGraphResponse.fbs

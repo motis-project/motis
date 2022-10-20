@@ -12,4 +12,5 @@ table PaxMonDebugGraphRequest {
 
   filter_groups: bool;
   include_full_trips_from_group_routes: bool;
+  include_canceled_trip_nodes: bool;
 }
