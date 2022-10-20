@@ -91,9 +91,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const dump_file_path = data_dir / fmt::to_string(h);
         if (!no_cache_ && std::filesystem::is_regular_file(dump_file_path)) {
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
-              n::timetable::read(cista::memory_holder{cista::buf<cista::mmap>{
-                  cista::mmap{dump_file_path.string().c_str(),
-                              cista::mmap::protection::READ}}}));
+              n::timetable::read(cista::memory_holder{
+                  cista::file{dump_file_path.string().c_str(), "r"}
+                      .content()}));
         } else {
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               cista::raw::make_unique<n::timetable>());

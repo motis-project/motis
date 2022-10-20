@@ -29,7 +29,7 @@ mm::msg_ptr to_routing_response(
     n::timetable const& tt, std::vector<std::string> const& tags,
     n::pareto_set<n::routing::journey> const& journeys,
     n::interval<n::unixtime_t> search_interval,
-    std::uint64_t const routing_timing) {
+    n::routing::stats const& stats) {
   mm::message_creator fbb;
   MOTIS_START_TIMING(conversion);
   auto const connections =
@@ -37,17 +37,35 @@ mm::msg_ptr to_routing_response(
         return to_connection(fbb, nigiri_to_motis_journey(tt, tags, j));
       });
   MOTIS_STOP_TIMING(conversion);
-  std::vector<fbs::Offset<Statistics>> stats{CreateStatistics(
+  std::vector<fbs::Offset<Statistics>> statistics{CreateStatistics(
       fbb, fbb.CreateString("nigiri.raptor"),
       fbb.CreateVector(std::vector<fbs::Offset<StatisticsEntry>>{
-          CreateStatisticsEntry(fbb, fbb.CreateString("total_calculation_time"),
-                                routing_timing),
+          CreateStatisticsEntry(fbb, fbb.CreateString("routing_time"),
+                                stats.n_routing_time_),
+          CreateStatisticsEntry(fbb, fbb.CreateString("footpaths_visited"),
+                                stats.n_footpaths_visited_),
+          CreateStatisticsEntry(fbb, fbb.CreateString("routes_visited"),
+                                stats.n_routes_visited_),
+          CreateStatisticsEntry(fbb, fbb.CreateString("earliest_trip_calls"),
+                                stats.n_earliest_trip_calls_),
+          CreateStatisticsEntry(
+              fbb, fbb.CreateString("earliest_arrival_updated_by_route"),
+              stats.n_earliest_arrival_updated_by_route_),
+          CreateStatisticsEntry(
+              fbb, fbb.CreateString("earliest_arrival_updated_by_footpath"),
+              stats.n_earliest_arrival_updated_by_footpath_),
+          CreateStatisticsEntry(
+              fbb, fbb.CreateString("fp_update_prevented_by_lower_bound"),
+              stats.fp_update_prevented_by_lower_bound_),
+          CreateStatisticsEntry(
+              fbb, fbb.CreateString("route_update_prevented_by_lower_bound"),
+              stats.route_update_prevented_by_lower_bound_),
           CreateStatisticsEntry(fbb, fbb.CreateString("conversion"),
                                 MOTIS_TIMING_MS(conversion))}))};
   fbb.create_and_finish(
       MsgContent_RoutingResponse,
       routing::CreateRoutingResponse(
-          fbb, fbb.CreateVectorOfSortedTables(&stats),
+          fbb, fbb.CreateVectorOfSortedTables(&statistics),
           fbb.CreateVector(connections),
           to_motis_unixtime(search_interval.from_),
           to_motis_unixtime(search_interval.to_ - std::chrono::minutes{1}),
@@ -118,19 +136,24 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
     search_state.reset(new n::routing::search_state{});
   }
 
+  n::routing::stats stats;
   MOTIS_START_TIMING(routing);
   if (req->search_dir() == SearchDir_Forward) {
-    n::routing::raptor<n::direction::kForward>{tt, *search_state, std::move(q)}
-        .route();
+    auto r = n::routing::raptor<n::direction::kForward>{tt, *search_state,
+                                                        std::move(q)};
+    r.route();
+    stats = r.get_stats();
   } else {
-    n::routing::raptor<n::direction::kBackward>{tt, *search_state, std::move(q)}
-        .route();
+    auto r = n::routing::raptor<n::direction::kBackward>{tt, *search_state,
+                                                         std::move(q)};
+    r.route();
+    stats = r.get_stats();
   }
   MOTIS_STOP_TIMING(routing);
+  stats.n_routing_time_ = MOTIS_TIMING_MS(routing);
 
   return to_routing_response(tt, tags, search_state->results_.at(0),
-                             search_state->search_interval_,
-                             MOTIS_TIMING_MS(routing));
+                             search_state->search_interval_, stats);
 }
 
 }  // namespace motis::nigiri

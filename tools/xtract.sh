@@ -37,7 +37,10 @@ cd /tmp
 ${DIR}/motis compare ${DIR}/$1_nigiri_response.json ${DIR}/$1_routing_response.json ${DIR}/fail_queries/$1_routing.json
 cd $DIR
 
-./motis print ${DIR}/$1_nigiri_response.json ${DIR}/$1_routing_response.json
+./motis print $1_nigiri_response.json $1_routing_response.json
+
+./motis analyze $1_nigiri_response.json
+./motis analyze $1_routing_response.json
 
 ./motis rewrite --in ${DIR}/$1_nigiri_response.json --out ${DIR}/$1_nigiri_response_check.json --target /cc
 ./motis rewrite --in ${DIR}/$1_routing_response.json --out ${DIR}/$1_routing_response_check.json --target /cc
