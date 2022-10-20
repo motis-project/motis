@@ -17,19 +17,35 @@
 
 namespace motis::paxmon {
 
+bool check_edge_in_incoming(universe const& uv, edge const& e) {
+  for (auto const& ie : uv.graph_.incoming_edges(e.to_)) {
+    if (&ie == &e) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool check_edge_in_outgoing(universe const& uv, edge const& e) {
+  for (auto const& oe : uv.graph_.outgoing_edges(e.from_)) {
+    if (&oe == &e) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool check_graph_integrity(universe const& uv, schedule const& sched) {
   auto ok = true;
 
   for (auto const& n : uv.graph_.nodes_) {
     for (auto const& e : n.outgoing_edges(uv)) {
+      if (!check_edge_in_incoming(uv, e)) {
+        std::cout << "!! outdoing edge missing in target incoming edges\n";
+        ok = false;
+      }
       for (auto const& pgwr : uv.pax_connection_info_.group_routes_[e.pci_]) {
-        auto const* pg = uv.passenger_groups_.at(pgwr.pg_);
         auto const& gr = uv.passenger_groups_.route(pgwr);
-        if (gr.probability_ <= 0.0 || pg->passengers_ >= 200) {
-          std::cout << "!! invalid psi @" << e.type() << ": id=" << pg->id_
-                    << "\n";
-          ok = false;
-        }
         if (!e.is_trip()) {
           continue;
         }
@@ -71,6 +87,13 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
             ok = false;
           }
         }
+      }
+    }
+
+    for (auto const& e : n.incoming_edges(uv)) {
+      if (!check_edge_in_outgoing(uv, e)) {
+        std::cout << "!! incoming edge missing in source outgoing edges\n";
+        ok = false;
       }
     }
 
