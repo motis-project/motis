@@ -20,15 +20,17 @@ void update_load(passenger_group_with_route const pgwr,
   route_edges.clear();
 
   auto const add_to_edge = [&](edge_index const& ei, edge* e) {
+    route_edges.emplace_back(ei);
     if (std::find(begin(disabled_edges), end(disabled_edges), ei) ==
         end(disabled_edges)) {
+      // TODO(pablo): move lock
       auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-      add_group_route_to_edge(uv, sched, e, pgwr, true,
-                              pci_log_reason_t::UPDATE_LOAD);
+      return add_group_route_to_edge(uv, sched, e, pgwr, true,
+                                     pci_log_reason_t::UPDATE_LOAD);
     } else {
       utl::erase(disabled_edges, ei);
+      return false;
     }
-    route_edges.emplace_back(ei);
   };
 
   auto const add_interchange = [&](reachable_trip const& rt,
@@ -41,7 +43,11 @@ void update_load(passenger_group_with_route const pgwr,
     for (auto& e : exit_node->outgoing_edges(uv)) {
       if (e.type_ == edge_type::INTERCHANGE && e.to(uv) == enter_node &&
           e.transfer_time() == transfer_time) {
-        add_to_edge(get_edge_index(uv, &e), &e);
+        auto const added = add_to_edge(get_edge_index(uv, &e), &e);
+        if (added) {
+          remove_broken_group_route_from_edge(uv, sched, &e, pgwr, true,
+                                              pci_log_reason_t::UPDATE_LOAD);
+        }
         return;
       }
     }
@@ -49,6 +55,7 @@ void update_load(passenger_group_with_route const pgwr,
   };
 
   if (reachability.ok_) {
+    // TODO(pablo): check
     utl::verify(!reachability.reachable_trips_.empty(),
                 "update_load: no reachable trips but reachability ok");
     auto* exit_node = &uv.graph_.nodes_.at(uv.trip_data_.enter_exit_node(
@@ -94,9 +101,14 @@ void update_load(passenger_group_with_route const pgwr,
 
   for (auto const& ei : disabled_edges) {
     auto* e = ei.get(uv);
+    // TODO(pablo): move lock out of loop/function
     auto guard = std::lock_guard{uv.pax_connection_info_.mutex(e->pci_)};
-    remove_group_route_from_edge(uv, sched, e, pgwr, true,
-                                 pci_log_reason_t::UPDATE_LOAD);
+    auto const removed = remove_group_route_from_edge(
+        uv, sched, e, pgwr, true, pci_log_reason_t::UPDATE_LOAD);
+    if (removed && e->is_interchange()) {
+      add_broken_group_route_to_edge(uv, sched, e, pgwr, true,
+                                     pci_log_reason_t::UPDATE_LOAD);
+    }
   }
 }
 

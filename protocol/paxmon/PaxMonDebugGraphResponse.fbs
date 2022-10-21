@@ -35,7 +35,9 @@ table PaxMonDebugEdgeLogEntry {
 
 enum PaxMonDebugPaxLogAction : ubyte {
   RouteAdded,
-  RouteRemoved
+  RouteRemoved,
+  BrokenRouteAdded,
+  BrokenRouteRemoved
 }
 
 enum PaxMonDebugPaxLogReason : ubyte {

@@ -145,6 +145,7 @@ void paxforecast::init(motis::module::registry& reg) {
 auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
 auto const constexpr REROUTE_BATCH_SIZE = 5'000;
 
+// TODO(pablo): major delay groups -> "broken_group_routes"
 void send_remove_group_routes(
     schedule const& sched, universe const& uv,
     std::vector<passenger_group_with_route>& group_routes_to_remove,

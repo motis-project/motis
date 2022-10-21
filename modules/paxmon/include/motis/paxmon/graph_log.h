@@ -34,7 +34,13 @@ struct edge_log_entry {
   bool broken_{};
 };
 
-enum class pci_log_action_t : std::uint8_t { ROUTE_ADDED, ROUTE_REMOVED };
+enum class pci_log_action_t : std::uint8_t {
+  ROUTE_ADDED,
+  ROUTE_REMOVED,
+  BROKEN_ROUTE_ADDED,
+  BROKEN_ROUTE_REMOVED
+};
+
 enum class pci_log_reason_t : std::uint8_t {
   UNKNOWN,
   API,

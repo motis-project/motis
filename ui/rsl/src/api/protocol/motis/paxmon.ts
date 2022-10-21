@@ -114,7 +114,11 @@ export interface PaxMonDebugEdgeLogEntry {
 }
 
 // paxmon/PaxMonDebugGraphResponse.fbs
-export type PaxMonDebugPaxLogAction = "RouteAdded" | "RouteRemoved";
+export type PaxMonDebugPaxLogAction =
+  | "RouteAdded"
+  | "RouteRemoved"
+  | "BrokenRouteAdded"
+  | "BrokenRouteRemoved";
 
 // paxmon/PaxMonDebugGraphResponse.fbs
 export type PaxMonDebugPaxLogReason =

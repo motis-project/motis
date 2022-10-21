@@ -67,6 +67,10 @@ void check_broken_interchanges(
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
       }
+      for (auto const& pgwr :
+           uv.pax_connection_info_.broken_group_routes(ice->pci_)) {
+        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
+      }
     } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
       // check for delayed arrival at destination
       auto const estimated_arrival = static_cast<int>(from->schedule_time());
@@ -81,6 +85,7 @@ void check_broken_interchanges(
             estimated_delay >= arrival_delay_threshold) {
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
+        // TODO(pablo): check broken groups
       }
     }
     if (uv.graph_log_.enabled_) {

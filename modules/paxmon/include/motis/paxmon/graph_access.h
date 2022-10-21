@@ -84,13 +84,22 @@ inline edge make_through_edge(universe& uv, event_node_index from,
               uv.pax_connection_info_.insert()};
 }
 
-void add_group_route_to_edge(universe& uv, schedule const& sched, edge* e,
+bool add_group_route_to_edge(universe& uv, schedule const& sched, edge* e,
                              passenger_group_with_route const& entry, bool log,
                              pci_log_reason_t reason);
 
-void remove_group_route_from_edge(universe& uv, schedule const& sched, edge* e,
+bool remove_group_route_from_edge(universe& uv, schedule const& sched, edge* e,
                                   passenger_group_with_route const& entry,
                                   bool log, pci_log_reason_t reason);
+
+bool add_broken_group_route_to_edge(universe& uv, schedule const& sched,
+                                    edge* e,
+                                    passenger_group_with_route const& entry,
+                                    bool log, pci_log_reason_t reason);
+
+bool remove_broken_group_route_from_edge(
+    universe& uv, schedule const& sched, edge* e,
+    passenger_group_with_route const& entry, bool log, pci_log_reason_t reason);
 
 void for_each_trip(
     schedule const& sched, capacity_maps const& caps, universe& uv,
