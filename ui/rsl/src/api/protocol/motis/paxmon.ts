@@ -188,7 +188,8 @@ export type PaxMonFilterGroupsSortOrder =
   | "ScheduledDepartureTime"
   | "MaxEstimatedDelay"
   | "ExpectedEstimatedDelay"
-  | "MinEstimatedDelay";
+  | "MinEstimatedDelay"
+  | "RerouteLogEntries";
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
 export type PaxMonFilterGroupsTimeFilter =

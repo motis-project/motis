@@ -34,6 +34,7 @@ struct group_info {
   std::int16_t min_estimated_delay_{std::numeric_limits<std::int16_t>::max()};
   std::int16_t max_estimated_delay_{std::numeric_limits<std::int16_t>::min()};
   float expected_estimated_delay_{};
+  std::uint32_t log_entries_{};
 };
 
 mcd::hash_set<std::uint32_t> get_stations(
@@ -150,8 +151,9 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
     auto trip_filter_match = !filter_by_trips;
     auto time_filter_match = !filter_by_time;
 
+    auto const log = pgc.reroute_log_entries(pgi);
+    gi.log_entries_ = log.size();
     if (filter_by_reroute_reason) {
-      auto const log = pgc.reroute_log_entries(pgi);
       if (!std::any_of(
               log.begin(), log.end(), [&](reroute_log_entry const& entry) {
                 return std::find(filter_reroute_reasons.begin(),
@@ -300,6 +302,12 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
                                          lhs.expected_estimated_delay_) <
                                 std::tie(rhs.min_estimated_delay_,
                                          rhs.expected_estimated_delay_);
+                       });
+      break;
+    case PaxMonFilterGroupsSortOrder_RerouteLogEntries:
+      std::stable_sort(begin(selected_groups), end(selected_groups),
+                       [](group_info const& lhs, group_info const& rhs) {
+                         return lhs.log_entries_ > rhs.log_entries_;
                        });
       break;
     default: break;

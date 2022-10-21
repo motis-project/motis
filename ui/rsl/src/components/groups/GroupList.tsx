@@ -53,6 +53,10 @@ const sortOptions: Array<LabeledSortOrder> = [
     option: "ScheduledDepartureTime",
     label: "Gruppen sortiert nach Reisebeginn",
   },
+  {
+    option: "RerouteLogEntries",
+    label: "Gruppen sortiert nach Änderungsanzahl",
+  },
 ];
 
 type GroupIdType = "internal" | "source";

@@ -9,7 +9,8 @@ enum PaxMonFilterGroupsSortOrder : byte {
   ScheduledDepartureTime,
   MaxEstimatedDelay,
   ExpectedEstimatedDelay,
-  MinEstimatedDelay
+  MinEstimatedDelay,
+  RerouteLogEntries
 }
 
 enum PaxMonFilterGroupsTimeFilter : byte {
