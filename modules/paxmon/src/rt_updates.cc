@@ -1,5 +1,6 @@
 #include "motis/paxmon/rt_updates.h"
 
+#include <limits>
 #include <numeric>
 #include <set>
 
@@ -190,7 +191,6 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
   std::vector<flatbuffers::Offset<PaxMonEvent>> fbs_events;
   std::vector<msg_ptr> messages;
 
-  std::mutex update_mutex;
   auto total_reachability = 0ULL;
   auto total_localization = 0ULL;
   auto total_update_load = 0ULL;
@@ -221,71 +221,77 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
     mc.Clear();
   };
 
-  motis_parallel_for(
-      uv.rt_update_ctx_.group_routes_affected_by_last_update_,
-      [&](auto const& pgwr) {
-        auto& gr = uv.passenger_groups_.route(pgwr);
-        auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
-        MOTIS_START_TIMING(reachability);
-        auto const reachability = get_reachability(uv, cj);
-        gr.broken_ = !reachability.ok_;
-        if (reachability.ok_) {
-          gr.estimated_delay_ = static_cast<std::int16_t>(
-              static_cast<int>(
-                  reachability.reachable_trips_.back().exit_real_time_) -
-              static_cast<int>(gr.planned_arrival_time_));
-        }
-        MOTIS_STOP_TIMING(reachability);
+  auto last_group = std::numeric_limits<passenger_group_index>::max();
 
-        MOTIS_START_TIMING(localization);
-        auto const localization = localize(sched, reachability, search_time);
-        MOTIS_STOP_TIMING(localization);
+  for (auto const& pgwr :
+       uv.rt_update_ctx_.group_routes_affected_by_last_update_) {
+    auto const same_as_last_group = pgwr.pg_ == last_group;
+    last_group = pgwr.pg_;
 
-        auto const event_type = get_monitoring_event_type(
-            gr, reachability, arrival_delay_threshold);
-        auto const expected_arrival_time =
-            event_type == monitoring_event_type::BROKEN_TRANSFER
-                ? INVALID_TIME
-                : reachability.reachable_trips_.back().exit_real_time_;
+    auto& gr = uv.passenger_groups_.route(pgwr);
+    auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
+    MOTIS_START_TIMING(reachability);
+    auto const reachability = get_reachability(uv, cj);
+    gr.broken_ = !reachability.ok_;
+    if (reachability.ok_) {
+      gr.estimated_delay_ = static_cast<std::int16_t>(
+          static_cast<int>(
+              reachability.reachable_trips_.back().exit_real_time_) -
+          static_cast<int>(gr.planned_arrival_time_));
+    }
+    MOTIS_STOP_TIMING(reachability);
 
-        MOTIS_START_TIMING(update_load);
-        // update_load needs synchronization!
-        std::lock_guard guard{update_mutex};
-        update_load(pgwr, reachability, localization, uv, sched);
-        MOTIS_STOP_TIMING(update_load);
+    if (!reachability.ok_ && gr.probability_ == 0.0F) {
+      continue;
+    }
 
-        MOTIS_START_TIMING(fbs_events);
-        fbs_events.emplace_back(
-            to_fbs(sched, uv.passenger_groups_, mc,
-                   monitoring_event{event_type, pgwr, localization,
-                                    reachability.status_, expected_arrival_time,
-                                    reachability.first_unreachable_transfer_}));
-        if (fbs_events.size() >= 10'000) {
-          make_monitoring_msg();
-        }
-        MOTIS_STOP_TIMING(fbs_events);
+    MOTIS_START_TIMING(localization);
+    auto const localization = localize(sched, reachability, search_time);
+    MOTIS_STOP_TIMING(localization);
 
-        total_reachability += MOTIS_TIMING_US(reachability);
-        total_localization += MOTIS_TIMING_US(localization);
-        total_update_load += MOTIS_TIMING_US(update_load);
-        total_fbs_events += MOTIS_TIMING_US(fbs_events);
+    auto const event_type =
+        get_monitoring_event_type(gr, reachability, arrival_delay_threshold);
+    auto const expected_arrival_time =
+        event_type == monitoring_event_type::BROKEN_TRANSFER
+            ? INVALID_TIME
+            : reachability.reachable_trips_.back().exit_real_time_;
 
-        if (fbs_events.size() % 10000 == 0) {
-          print_timing();
-        }
+    MOTIS_START_TIMING(update_load);
+    update_load(pgwr, reachability, localization, uv, sched);
+    MOTIS_STOP_TIMING(update_load);
 
-        switch (event_type) {
-          case monitoring_event_type::NO_PROBLEM:
-            ++uv.tick_stats_.ok_group_routes_;
-            break;
-          case monitoring_event_type::BROKEN_TRANSFER:
-            ++uv.tick_stats_.broken_group_routes_;
-            break;
-          case monitoring_event_type::MAJOR_DELAY_EXPECTED:
-            ++uv.tick_stats_.major_delay_group_routes_;
-            break;
-        }
-      });
+    MOTIS_START_TIMING(fbs_events);
+    fbs_events.emplace_back(
+        to_fbs(sched, uv.passenger_groups_, mc,
+               monitoring_event{event_type, pgwr, localization,
+                                reachability.status_, expected_arrival_time,
+                                reachability.first_unreachable_transfer_}));
+    if (fbs_events.size() >= 10'000 && !same_as_last_group) {
+      make_monitoring_msg();
+    }
+    MOTIS_STOP_TIMING(fbs_events);
+
+    total_reachability += MOTIS_TIMING_US(reachability);
+    total_localization += MOTIS_TIMING_US(localization);
+    total_update_load += MOTIS_TIMING_US(update_load);
+    total_fbs_events += MOTIS_TIMING_US(fbs_events);
+
+    if (fbs_events.size() % 10000 == 0) {
+      print_timing();
+    }
+
+    switch (event_type) {
+      case monitoring_event_type::NO_PROBLEM:
+        ++uv.tick_stats_.ok_group_routes_;
+        break;
+      case monitoring_event_type::BROKEN_TRANSFER:
+        ++uv.tick_stats_.broken_group_routes_;
+        break;
+      case monitoring_event_type::MAJOR_DELAY_EXPECTED:
+        ++uv.tick_stats_.major_delay_group_routes_;
+        break;
+    }
+  }
 
   print_timing();
   make_monitoring_msg();
