@@ -362,6 +362,10 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
       continue;
     }
 
+    if (pgwrap.probability_ == 0.0F) {
+      continue;
+    }
+
     auto const major_delay =
         event->type() == PaxMonEventType_MAJOR_DELAY_EXPECTED;
 
@@ -403,11 +407,14 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
     }
   }
 
-  if (!unbroken_transfers.empty() && revert_forecasts_) {
-    revert_forecasts(uv, sched, unbroken_transfers);
-  }
+  auto const handle_unbroken_transfers = [&]() {
+    if (!unbroken_transfers.empty() && revert_forecasts_) {
+      revert_forecasts(uv, sched, unbroken_transfers);
+    }
+  };
 
   if (combined_groups.empty()) {
+    handle_unbroken_transfers();
     return;
   }
 
@@ -604,6 +611,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
                         reroute_reason_t::REVERT_FORECAST);
   MOTIS_STOP_TIMING(update_tracked_groups);
   tick_stats.t_update_tracked_groups_ = MOTIS_TIMING_MS(update_tracked_groups);
+
+  handle_unbroken_transfers();
 
   MOTIS_STOP_TIMING(total);
   tick_stats.t_total_ = MOTIS_TIMING_MS(total);
