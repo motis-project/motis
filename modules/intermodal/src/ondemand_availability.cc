@@ -121,14 +121,28 @@ availability_response read_result(response const& result, bool first, std::vecto
       if(it != data.MemberEnd() && it->value.IsObject()) {
         auto const ar = it->value.FindMember(name);
         if(ar->value[0].Size() > 3) {
-          vec.resize(ar->value[0].Size());
-          for(SizeType a = 0; a < ar->value[0].Size(); a++) {
-            const rapidjson::Value &data_vec = ar->value[0].GetArray()[a];
-            for(SizeType b = 0; b < data_vec.Size(); b++) {
-              vec[a].push_back(data_vec[b].GetDouble());
+          if(ar->value[0].GetArray()[0].IsArray()) {
+            SizeType size_count = 0;
+            for(SizeType x = 0; x < ar->value[0].Size(); x++) {
+              vec.resize(vec.size() + ar->value[0].GetArray()[x].Size());
+              for(SizeType k = 0; k < ar->value[0].GetArray()[x].Size(); k++) {
+                const rapidjson::Value &data_vec = ar->value[0].GetArray()[x].GetArray()[k];
+                for(SizeType j = 0; j < data_vec.Size(); j++) {
+                  vec[size_count+k].push_back(data_vec[j].GetDouble());
+                }
+              }
+              size_count = vec.size();
             }
+          } else {
+            vec.resize(ar->value[0].Size());
+            for (SizeType a = 0; a < ar->value[0].Size(); a++) {
+              const rapidjson::Value& data_vec = ar->value[0].GetArray()[a];
+              for (SizeType b = 0; b < data_vec.Size(); b++) {
+                vec[a].push_back(data_vec[b].GetDouble());
+              }
+            }
+            return vec;
           }
-          return vec;
         } else {
           vec.resize(ar->value[0].GetArray()[0].Size());
           for(SizeType k = 0; k < ar->value[0].GetArray()[0].Size(); k++) {
