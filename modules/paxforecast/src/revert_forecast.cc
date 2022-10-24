@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <limits>
 
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
@@ -160,7 +161,13 @@ void revert_forecasts(universe& uv, schedule const& sched,
     mc.Clear();
   };
 
+  auto last_group = std::numeric_limits<passenger_group_index>::max();
   for (auto const& pgwr : pgwrs) {
+    if (pgwr.pg_ == last_group) {
+      // TODO(pablo): for now, always revert the earliest route
+      continue;
+    }
+    last_group = pgwr.pg_;
     revert_forecast(uv, sched, mc, reroutes, pgwr);
     if (reroutes.size() >= BATCH_SIZE) {
       send_reroutes();
