@@ -10,7 +10,7 @@ int main(int argc, char** argv) {
   std::string load = "low";
   std::string area = "0";
   std::string fleet = "off";
-  int threads = 500;
+  int threads = 75;
   for (int i = 1; i < argc; i = i+2) {
     std::string arg = argv[i];
     if ((arg == "-h") || (arg == "--help")) {
@@ -67,10 +67,10 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "\n|---- Options in use: ----|\n"
-               "|-- load option: " << load << " --|\n"
-               "|-- fleet option: " << fleet << " --|\n"
-               "|-- area option: " << area << " --|\n\n"
-               "|-- thread count: " << std::to_string(threads) << " --|\n\n";
+               "|-- load option: " << load << "\n"
+               "|-- fleet option: " << fleet << "\n"
+               "|-- area option: " << area << "\n\n"
+               "|-- thread count: " << std::to_string(1) << "\n\n";
 
   motis::bootstrap::motis_instance new_instance;
   motis::intermodal::test_server servertest(new_instance.runner_.ios(), server_arguments);
@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   new_instance.runner_.run(threads, false);
+  //new_instance.runner_.run(1, false);
   return 0;
 }
 

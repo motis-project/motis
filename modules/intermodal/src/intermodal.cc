@@ -310,19 +310,20 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
   auto const all = journeys.size();
   int journey_id = 0;
   utl::erase_if(journeys, [&](motis::journey j) {
-    bool found_journey = false, to_short = false, not_available = false;
+    bool found_journey = false, too_short = false, not_available = false;
     int idx_count = 0;
     if (!std::any_of(begin(j.transports_), end(j.transports_),
                      [&](journey::transport const& t) {
                        return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
                      })) {
+      journey_id++;
       return false;
     } else {
       for (auto const& p : od_patches) {
         if (journey_id == p.j_id_) {
           found_journey = true;
           if (p.e_->duration_ <= 5.0) {
-            to_short = true;
+            too_short = true;
           }
           if (!ares.at(idx_count).available_) {
             not_available = true;
@@ -333,7 +334,7 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
       }
       journey_id++;
     }
-    return found_journey && (to_short || not_available);
+    return found_journey && (too_short || not_available);
   });
   return all - journeys.size();
 }
@@ -496,6 +497,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              std::vector<std::string> const& server_infos) {
   doctorwho++;
   printf("----------------------------------------------------------------------COUNT: %d\n", doctorwho);
+
   MOTIS_START_TIMING(post_timing);
   auto const dir = req->search_dir();
   auto routing_response =
@@ -504,8 +506,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                       ? std::vector<journey>{}
                       : message_to_journeys(routing_response);
   //printf("    JOURNEYS: %llu\n", journeys.size());
-  stats.journey_count_begin_ += journeys.size();
 
+  stats.journey_count_begin_ = journeys.size();
   MOTIS_START_TIMING(direct_connection_timing);
   auto const direct =
       get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
@@ -598,6 +600,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       stats.ondemand_journey_count_++;
     }
   }
+
   MOTIS_START_TIMING(ondemand_remove);
   stats.ondemand_removed_journeys_ =
    remove_not_available_od_journeys(journeys, ondemand_patches, vares);
