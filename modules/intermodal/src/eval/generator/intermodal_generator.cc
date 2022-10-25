@@ -164,16 +164,17 @@ inline double scale_factor(geo::merc_xy const& mc) {
 std::string query(int id, unixtime interval_begin, unixtime interval_end,
                   geo::latlng start_pos, geo::latlng dest_pos,
                   search_dir dir = search_dir::FWD,
-                  int max_walk_duration = 15 * 60, Mode mode = Mode_FootPPR,
-                  SearchType type = SearchType_Default) {
+                  int max_walk_duration = 15 * 60, Mode start_mode = Mode_NONE,
+                  Mode dest_mode = Mode_NONE, SearchType type = SearchType_Default) {
   message_creator fbb;
   auto const start = Position(start_pos.lat_, start_pos.lng_);
   auto const interval = Interval(interval_begin, interval_end);
 
-  std::vector<Offset<ModeWrapper>> modes{};
-  switch (mode) {
+  std::vector<Offset<ModeWrapper>> start_modes{};
+  std::vector<Offset<ModeWrapper>> dest_modes{};
+  switch (start_mode) {
     case Mode_FootPPR: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_FootPPR,
           CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
                                                  max_walk_duration))
@@ -181,47 +182,107 @@ std::string query(int id, unixtime interval_begin, unixtime interval_end,
       break;
     }
     case Mode_Foot: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_Foot, CreateFoot(fbb, max_walk_duration)
               .Union()));
       break;
     }
     case Mode_Bike: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_Bike, CreateBike(fbb, max_walk_duration)
               .Union()));
       break;
     }
     case Mode_Car: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_Car, CreateCar(fbb, max_walk_duration)
               .Union()));
       break;
     }
     case Mode_CarParking: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_CarParking, CreateCarParking(fbb, max_walk_duration)
                .Union()));
       break;
     }
     case Mode_OnDemand: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_OnDemand, CreateOnDemand(fbb, max_walk_duration)
                .Union()));
       break;
     }
     case Mode_GBFS: {
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
           fbb, Mode_GBFS, CreateGBFS(fbb, max_walk_duration)
                .Union()));
       break;
     }
+    case Mode_NONE: {
+      start_modes.clear();
+      break;
+    }
     default:
-      modes.emplace_back(CreateModeWrapper(
+      start_modes.emplace_back(CreateModeWrapper(
         fbb, Mode_FootPPR,
         CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
                                                max_walk_duration))
             .Union()));
+  }
+  switch (dest_mode) {
+    case Mode_FootPPR: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_FootPPR,
+          CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
+                                                 max_walk_duration))
+              .Union()));
+      break;
+    }
+    case Mode_Foot: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_Foot, CreateFoot(fbb, max_walk_duration)
+                              .Union()));
+      break;
+    }
+    case Mode_Bike: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_Bike, CreateBike(fbb, max_walk_duration)
+                              .Union()));
+      break;
+    }
+    case Mode_Car: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_Car, CreateCar(fbb, max_walk_duration)
+                             .Union()));
+      break;
+    }
+    case Mode_CarParking: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_CarParking, CreateCarParking(fbb, max_walk_duration)
+                                    .Union()));
+      break;
+    }
+    case Mode_OnDemand: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_OnDemand, CreateOnDemand(fbb, max_walk_duration)
+                                  .Union()));
+      break;
+    }
+    case Mode_GBFS: {
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_GBFS, CreateGBFS(fbb, max_walk_duration)
+                              .Union()));
+      break;
+    }
+    case Mode_NONE: {
+      dest_modes.clear();
+      break;
+    }
+    default:
+      dest_modes.emplace_back(CreateModeWrapper(
+          fbb, Mode_FootPPR,
+          CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
+                                                 max_walk_duration))
+              .Union()));
   }
 
   fbb.create_and_finish(
@@ -230,9 +291,9 @@ std::string query(int id, unixtime interval_begin, unixtime interval_end,
           fbb, IntermodalStart_IntermodalPretripStart,
           CreateIntermodalPretripStart(fbb, &start, &interval, 0, false, false)
               .Union(),
-          fbb.CreateVector(modes), IntermodalDestination_InputPosition,
+          fbb.CreateVector(start_modes), IntermodalDestination_InputPosition,
           CreateInputPosition(fbb, dest_pos.lat_, dest_pos.lng_).Union(),
-          fbb.CreateVector(modes), type,
+          fbb.CreateVector(dest_modes), type,
           dir == search_dir::FWD ? SearchDir_Forward : SearchDir_Backward)
           .Union(),
       "/intermodal");
@@ -437,23 +498,19 @@ int generate(int argc, char const** argv) {
     auto const dest_pt =
         point_gen.random_point_near({to->lat(), to->lng()}, radius);
 
-    auto mode = Mode_OnDemand;
+    auto dest_mode = Mode_OnDemand;
+    //auto start_mode = Mode_Car;
+    auto start_mode = Mode_Foot;
+    //auto dest_mode = Mode_OnDemand;
     max_walk_duration = 20 * 60;
-    //if((i % 5) == 0) {
-    //  mode = Mode_FootPPR;
-    //  max_walk_duration = 15 * 60;
-    //}
-    //if((i % 21) == 0) {
-    //  mode = Mode_Car;
-    //  max_walk_duration = 25 * 60;
-    //}
+    //max_walk_duration = 15 * 60;
     auto const type = SearchType_Ondemand;
 
     out_fwd << query(i, interval_start, interval_end, start_pt, dest_pt,
-                     search_dir::FWD, max_walk_duration, mode, type)
+                     search_dir::FWD, max_walk_duration, start_mode, dest_mode, type)
             << "\n";
     out_bwd << query(i, interval_start, interval_end, start_pt, dest_pt,
-                     search_dir::BWD, max_walk_duration, mode, type)
+                     search_dir::BWD, max_walk_duration, start_mode, dest_mode, type)
             << "\n";
   }
   return 0;
