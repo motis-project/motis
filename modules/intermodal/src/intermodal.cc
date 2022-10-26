@@ -64,7 +64,6 @@ void intermodal::init(motis::module::registry& r) {
 }
 
 int doctorwho = 0;
-//int masterwho = 0;
 
 std::vector<Offset<Connection>> revise_connections(
     std::vector<journey> const& journeys, statistics& stats,
@@ -703,9 +702,6 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   auto const req = motis_content(IntermodalRoutingRequest, msg);
   message_creator mc;
   statistics stats{};
-
-  //masterwho++;
-  //printf("|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| master %d\n", masterwho);
 
   auto const& sched = get_sched();
   auto const start = parse_query_start(mc, req, sched);
