@@ -512,6 +512,7 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
   stats.dominated_by_direct_connection_ =
       remove_dominated_journeys(journeys, direct);
+  stats.direct_connection_count_ = direct.size();
   add_direct_connections(journeys, direct, q_start, q_dest, req);
   MOTIS_STOP_TIMING(direct_connection_timing);
   stats.direct_connection_duration_ =

@@ -246,9 +246,6 @@ std::string create_json_body(availability_request const& areq) {
                 + R"( "lng": )" + std::to_string(areq.endpoint_.lng_) + ","
                 + R"( "time": ")" + arr_time
                 + "\"}}}";
-  /*
-   + "," + R"( "maxWalkDistance": )" + to_string(mars.maxWalkDist)
-   + "}}";*/
   return json;
 }
 
