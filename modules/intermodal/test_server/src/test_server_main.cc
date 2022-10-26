@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
                "|-- load option: " << load << "\n"
                "|-- fleet option: " << fleet << "\n"
                "|-- area option: " << area << "\n\n"
-               "|-- thread count: " << std::to_string(1) << "\n\n";
+               "|-- thread count: " << std::to_string(threads) << "\n\n";
 
   motis::bootstrap::motis_instance new_instance;
   motis::intermodal::test_server servertest(new_instance.runner_.ios(), server_arguments);
@@ -81,7 +81,6 @@ int main(int argc, char** argv) {
     return 1;
   }
   new_instance.runner_.run(threads, false);
-  //new_instance.runner_.run(1, false);
   return 0;
 }
 

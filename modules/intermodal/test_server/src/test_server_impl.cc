@@ -24,6 +24,8 @@ using namespace boost::beast::http;
 using namespace motis::json;
 using namespace rapidjson;
 
+int walk_before = 0;
+int walk_after = 0;
 int area = 0;
 int minutes = 0;
 int count = 0;
@@ -161,14 +163,11 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       printf("\n");
     }
 
-    int walk_before = 2;
-    int walk_after = 0;
     if(count%2==0) {
-      walk_before+= 120;
-      walk_after = 0;
+      walk_before+= 60;
     }
     if(count%3==0) {
-      walk_after += 60;
+      walk_after += 120;
     }
     if(count%4==0) {
       walk_before = 0;

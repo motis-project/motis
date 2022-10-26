@@ -20,9 +20,6 @@ struct ondemand_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
     l.is_ondemand_ = edge::get_is_ondemand(l.edge_) || l.is_ondemand_;
-    if(edge::get_is_intermodal(l.edge_) && !edge::get_is_ondemand(l.edge_)) {
-      l.is_ondemand_ = false;
-    }
   }
 };
 
