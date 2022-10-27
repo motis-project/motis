@@ -31,7 +31,6 @@ function StationPicker({
     getToggleButtonProps,
     getMenuProps,
     getInputProps,
-    getComboboxProps,
     highlightedIndex,
     getItemProps,
     selectedItem,
@@ -57,7 +56,7 @@ function StationPicker({
 
   return (
     <div className="relative flex">
-      <div {...getComboboxProps()} className="relative w-full">
+      <div className="relative w-full">
         <input
           {...getInputProps()}
           type="text"

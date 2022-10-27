@@ -33,14 +33,14 @@
     "d3-array": "^3.2.0",
     "d3-force": "^3.0.0",
     "date-fns": "^2.29.3",
-    "downshift": "^6.1.12",
+    "downshift": "^7.0.0",
     "jotai": "^1.9.0",
     "lodash-es": "^4.17.21",
     "optics-ts": "^2.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.38.0",
-    "react-virtuoso": "^2.19.1",
+    "react-virtuoso": "^3.1.1",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

@@ -71,7 +71,6 @@ function TripPicker({
     getToggleButtonProps,
     getMenuProps,
     getInputProps,
-    getComboboxProps,
     highlightedIndex,
     getItemProps,
     selectedItem,
@@ -102,7 +101,7 @@ function TripPicker({
   return (
     <div className={classNames("relative flex", className)}>
       {/* <label {...getLabelProps()}>Trip:</label> */}
-      <div {...getComboboxProps()} className="relative w-full">
+      <div className="relative w-full">
         <input
           {...getInputProps()}
           type="text"
