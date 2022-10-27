@@ -13,6 +13,7 @@
 #include "motis/core/debug/trip.h"
 
 #include "motis/paxmon/debug.h"
+#include "motis/paxmon/reachability.h"
 #include "motis/paxmon/service_info.h"
 
 namespace motis::paxmon {
@@ -337,6 +338,59 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
     std::cout << "compact journey (errors above):\n";
     for (auto const& leg : cj.legs_) {
       print_leg(sched, leg);
+    }
+  }
+
+  return ok;
+}
+
+bool check_group_routes(universe const& uv, schedule const& sched) {
+  auto const& pgc = uv.passenger_groups_;
+  auto ok = true;
+
+  for (auto const& pg : pgc) {
+    auto p_sum = 0.0F;
+    for (auto const& gr : pgc.routes(pg->id_)) {
+      auto const edges = pgc.route_edges(gr.edges_index_);
+      auto const cj = pgc.journey(gr.compact_journey_index_);
+      auto const reachability = get_reachability(uv, cj);
+
+      p_sum += gr.probability_;
+
+      if (gr.disabled_) {
+        if (gr.probability_ != 0.0F) {
+          ok = false;
+          std::cout << "!! group " << pg->id_ << ": route "
+                    << gr.local_group_route_index_
+                    << " disabled, but probability " << gr.probability_ << "\n";
+        }
+        if (!edges.empty()) {
+          ok = false;
+          std::cout << "!! group " << pg->id_ << ": route "
+                    << gr.local_group_route_index_ << " disabled, but on "
+                    << edges.size() << " graph edges\n";
+        }
+      } else {
+        if (edges.empty()) {
+          ok = false;
+          std::cout << "!! group " << pg->id_ << ": route "
+                    << gr.local_group_route_index_
+                    << " not disabled, probability = " << gr.probability_
+                    << ", but on no graph edges\n";
+        }
+      }
+      if (gr.broken_ && gr.probability_ != 0.0F) {
+        ok = false;
+        std::cout << "!! group " << pg->id_ << ": route "
+                  << gr.local_group_route_index_
+                  << " broken, but probability = " << gr.probability_ << "\n";
+      }
+    }
+
+    if (p_sum < 0.0F || p_sum > 1.05F) {
+      ok = false;
+      std::cout << "!! group " << pg->id_ << ": probability sum=" << p_sum
+                << "\n";
     }
   }
 
