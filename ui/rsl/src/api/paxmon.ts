@@ -7,6 +7,8 @@ import {
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
+  PaxMonDebugGraphRequest,
+  PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
@@ -279,6 +281,18 @@ export function usePaxMonGroupStatisticsQuery(
   );
 }
 
+export async function sendPaxMonDebugGraphRequest(
+  content: PaxMonDebugGraphRequest
+): Promise<PaxMonDebugGraphResponse> {
+  const msg = await sendRequest(
+    "/paxmon/debug_graph",
+    "PaxMonDebugGraphRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonDebugGraphResponse");
+  return msg.content as PaxMonDebugGraphResponse;
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -303,4 +317,6 @@ export const queryKeys = {
     [...queryKeys.all, "keep_alive", req] as const,
   groupStatistics: (req: PaxMonGroupStatisticsRequest) =>
     [...queryKeys.all, "group_statistics", req] as const,
+  debugGraph: (req: PaxMonDebugGraphRequest) =>
+    [...queryKeys.all, "debug_graph", req] as const,
 };
