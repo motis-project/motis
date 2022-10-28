@@ -63,7 +63,7 @@ void intermodal::init(motis::module::registry& r) {
   r.subscribe("/init", [this]() { ppr_profiles_.update(); }, {});
 }
 
-int doctorwho = 0;
+int query_id = 0;
 
 std::vector<Offset<Connection>> revise_connections(
     std::vector<journey> const& journeys, statistics& stats,
@@ -453,13 +453,7 @@ void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
 availability_response ondemand_availability(journey j, bool start, mumo_edge const& e,
                                              statistics& stats, std::vector<std::string> const& server_info) {
   availability_request areq;
-  if(j.transports_.size() == 1) {
-    areq.direct_con_ = true;
-    areq.duration_ = static_cast<int>(round(j.transports_.at(0).duration_ * 60));
-  } else {
-    areq.direct_con_ = false;
-    areq.duration_ = static_cast<int>(round(e.duration_ * 60));
-  }
+  areq.product_id_ = std::to_string(query_id);
   areq.startpoint_.lat_ = e.from_pos_.lat_;
   areq.startpoint_.lng_ = e.from_pos_.lng_;
   areq.endpoint_.lat_ = e.to_pos_.lat_;
@@ -475,6 +469,13 @@ availability_response ondemand_availability(journey j, bool start, mumo_edge con
     areq.departure_time_ = j.stops_.at(lastindex - 1).departure_.timestamp_;
     areq.arrival_time_ = j.stops_.at(lastindex - 1).arrival_.timestamp_;
     areq.arrival_time_onnext_ = j.stops_.back().arrival_.timestamp_;
+  }
+  if(j.transports_.size() == 1) {
+    areq.direct_con_ = true;
+    areq.duration_ = static_cast<int>(round(j.transports_.at(0).duration_ * 60));
+  } else {
+    areq.direct_con_ = false;
+    areq.duration_ = areq.arrival_time_onnext_ - areq.departure_time_;
   }
   MOTIS_START_TIMING(ondemand_check);
   availability_response ares = check_od_availability(areq, server_info, stats);
@@ -494,8 +495,8 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              std::vector<stats_category> const& mumo_stats,
                              ppr_profiles const& profiles,
                              std::vector<std::string> const& server_infos) {
-  doctorwho++;
-  printf("----------------------------------------------------------------------COUNT: %d\n", doctorwho);
+  query_id++;
+  printf("----------------------------------------------------------------------COUNT: %d\n", query_id);
 
   MOTIS_START_TIMING(post_timing);
   auto const dir = req->search_dir();

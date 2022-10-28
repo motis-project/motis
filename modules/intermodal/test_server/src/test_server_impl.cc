@@ -31,10 +31,11 @@ int minutes = 0;
 int count = 0;
 bool on = false;
 int sleeping_ms = 100;
+std::string last_customer("0");
 std::vector<std::vector<int>> fleet;
 
 std::string create_resbody(net::test_server::http_req_t const& req, bool post, int zone) {
-  std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
+  //std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
   if(post) {
     Document document;
     if (document.Parse(req.body().c_str()).HasParseError()) {
@@ -70,6 +71,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       }
       return "";
     };
+    std::string customer_id = read_json_key_string("product_id", "");
     double startlat = read_json_key_double("origin", "lat");
     double startlng = read_json_key_double("origin", "lng");
     double endlat = read_json_key_double("destination", "lat");
@@ -97,64 +99,71 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
 
     time_t tests_time_dep = traveltime_to_unixtime(departure).time_since_epoch().count();
     time_t tests_time_arr = traveltime_to_unixtime(arrival).time_since_epoch().count();
-    if(count%4==0) {
+    if(count%3==0) {
       minutes = 0;
     }
     tests_time_dep += minutes * 60;
+    tests_time_arr += minutes * 60;
+    if(count%4==0) {
+      tests_time_arr += 2*minutes * 60;
+    }
     using time_point = std::chrono::system_clock::time_point;
     time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
-    time_t diff = (tests_time_arr - tests_time_dep) + minutes;
-    tests_time_dep += (diff - 120); // wie lange die Fahrt dauert
+    time_t diff = tests_time_arr - tests_time_dep;
+    tests_time_dep += (diff - 180); // wie lange die Fahrt dauert
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
     if(on) {
-      size_t indexT_dep = s_time_dep.find('T');
-      std::string hour_start = s_time_dep.substr(indexT_dep + 1, 2);
-      size_t indexT_arr = s_time_dep.find('T');
-      std::string hour_end = s_time_dep.substr(indexT_arr + 1, 2);
-      int free_from = std::stoi(hour_start);
-      int free_to = std::stoi(hour_end);
-      bool no_one_free = true;
-      for (auto& k : fleet) {
-        if (free_from == free_to) {
-          if (k.at(free_from)) {
-            k.at(free_from) = 0;
-            no_one_free = false;
-            break;
-          }
-        } else {
-          int all_free = 0;
-          int while_count = 0;
-          if(free_from == 23 && free_to == 0) {
-            if(k.at(free_from) && k.at(free_to)) {
+      if(last_customer != customer_id) {
+        last_customer = customer_id;
+        size_t indexT_dep = s_time_dep.find('T');
+        std::string hour_start = s_time_dep.substr(indexT_dep + 1, 2);
+        size_t indexT_arr = s_time_dep.find('T');
+        std::string hour_end = s_time_dep.substr(indexT_arr + 1, 2);
+        int free_from = std::stoi(hour_start);
+        int free_to = std::stoi(hour_end);
+        bool no_one_free = true;
+        for (auto& k : fleet) {
+          if (free_from == free_to) {
+            if (k.at(free_from)) {
               k.at(free_from) = 0;
-              k.at(free_to) = 0;
               no_one_free = false;
               break;
             }
-          }
-          while(free_from <= free_to) {
-            if(k.at(free_from)) {
-              k.at(free_from) = 0;
-              all_free++;
+          } else {
+            int all_free = 0;
+            int while_count = 0;
+            if(free_from == 23 && free_to == 0) {
+              if(k.at(free_from) && k.at(free_to)) {
+                k.at(free_from) = 0;
+                k.at(free_to) = 0;
+                no_one_free = false;
+                break;
+              }
             }
-            free_from++;
-            while_count++;
+            while(free_from <= free_to) {
+              if(k.at(free_from)) {
+                k.at(free_from) = 0;
+                all_free++;
+              }
+              free_from++;
+              while_count++;
+            }
+            if(while_count == all_free && while_count != 0 && all_free != 0) {
+              no_one_free = false;
+            }
+            break;
           }
-          if(while_count == all_free && while_count != 0 && all_free != 0) {
-            no_one_free = false;
-          }
-          break;
         }
-      }
-      if(no_one_free) {
-        return "";
+        if(no_one_free) {
+          return "";
+        }
       }
     }
 
-    for(auto f : fleet)
+    /*for(auto f : fleet)
     {
       for(int i = 0; i < f.size(); i++)
       {
@@ -162,15 +171,14 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       }
       printf("\n");
     }
+    printf("\n");*/
 
-    if(count%2==0) {
-      walk_before+= 60;
-    }
+    walk_before += 60;
+    walk_after += 60;
     if(count%3==0) {
-      walk_after += 120;
+      walk_before = 0;
     }
     if(count%4==0) {
-      walk_before = 0;
       walk_after = 0;
     }
     std::string id = "rid_12345-abcde-1a2b3c-" + std::to_string(count);
@@ -284,46 +292,59 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     }})";
     }
     else if(zone == 2) {
-      // west side of Swiss, west of Basel, to Luzern.
+      // Wallis, Zürich und Luzern.
       result = R"( {
             "data": {
               "id": "west of Swiss",
               "area": {
                     "type": "MultiPolygon",
-                    "coordinates": [[[
-                      [47.43504,7.38199],
-                      [47.30121,7.91499],
-                      [47.30121,7.91499],
-                      [47.30121,7.91499],
-                      [46.28280,8.05785],
-                      [45.93269,7.83256],
-                      [46.17268,6.79404],
-                      [46.16508,5.97531],
-                      [46.93140,6.44787],
-                      [47.36073,6.99735],
-                      [47.43504,7.38199]
-                      ]]]},
+                    "coordinates": [[
+                    [ [46.14554,6.92314],
+                      [46.36946,7.31327],
+                      [46.42624,7.71989],
+                      [46.55851,8.42048],
+                      [46.45461,8.44520],
+                      [46.26710,8.07980],
+                      [45.97604,7.72813],
+                      [45.99321,7.01930],
+                      [46.00939,7.81109],
+                      [46.14554,6.92314]
+                    ],[
+                      [47.51569,8.36627],
+                      [47.42478,8.14373],
+                      [47.34674,7.85525],
+                      [47.22572,7.83327],
+                      [46.86290,7.84701],
+                      [46.78591,8.49265],
+                      [46.92292,8.92949],
+                      [47.21454,9.04488],
+                      [47.47648,8.88318],
+                      [47.56730,8.57821],
+                      [47.51569,8.36627]
+                    ]
+                    ]]},
               "message": "This is a default message"
     }})";
     }
     else if(zone == 3) {
-      // east of Swiss,
+      // Kantone Bern und Freiburg:
       result = R"( {
             "data": {
               "id": "east of Swiss",
               "area": {
                     "type": "MultiPolygon",
                     "coordinates": [[[
-                      [47.59721,8.18823],
-                      [47.09138,8.67178],
-                      [46.49385,9.37512],
-                      [46.22109,10.04549],
-                      [46.53541,10.49606],
-                      [46.94543,10.44111],
-                      [47.08764,9.52348],
-                      [47.47862,9.63887],
-                      [47.86514,8.91512],
-                      [47.59721,8.18823]
+                      [46.65928,8.40749],
+                      [46.83794,7.87998],
+                      [47.22703,7.80031],
+                      [47.07398,7.43216],
+                      [46.37789,7.20412],
+                      [46.54992,6.56672],
+                      [46.50271,6.85520],
+                      [46.79850,6.77827],
+                      [46.98043,7.06400],
+                      [47.22703,7.06518],
+                      [46.65928,8.40749]
                       ]]]},
               "message": "This is a default message"
     }})";
@@ -369,7 +390,7 @@ struct test_server::impl {
         }
         else if(s == "little") {
           on = true;
-          fleet.resize(10);
+          fleet.resize(20);
           for(auto & i : fleet) {
             i.resize(24);
             for(int j = 0; j < i.size(); j++) {
@@ -383,7 +404,7 @@ struct test_server::impl {
         }
         else if(s == "normal") {
           on = true;
-          fleet.resize(15);
+          fleet.resize(27);
           for(auto & i : fleet) {
             i.resize(24);
             for(int j = 0; j < i.size(); j++) {
@@ -397,7 +418,7 @@ struct test_server::impl {
         }
         else if(s == "big") {
           on = true;
-          fleet.resize(20);
+          fleet.resize(35);
           for(auto & i : fleet) {
             i.resize(24);
             for(int j = 0; j < i.size(); j++) {

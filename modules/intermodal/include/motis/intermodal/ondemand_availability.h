@@ -22,7 +22,7 @@ struct availability_response {
 struct availability_request {
   bool start_ = false;
   bool direct_con_ = false;
-  std::string product_id_ = "string";
+  std::string product_id_ = "0";
   int64_t duration_ = -1; // in sekunden
   geo::latlng startpoint_ = {-1.0, -1.0};
   geo::latlng endpoint_ = {-1.0, -1.0};
