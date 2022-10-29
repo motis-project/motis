@@ -34,38 +34,40 @@ int sleeping_ms = 100;
 std::string last_customer("0");
 std::vector<std::vector<int>> fleet;
 
-std::string create_resbody(net::test_server::http_req_t const& req, bool post, int zone) {
-  //std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
-  if(post) {
+std::string create_resbody(net::test_server::http_req_t const& req, bool post,
+                           int zone) {
+  // std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
+  if (post) {
     Document document;
     if (document.Parse(req.body().c_str()).HasParseError()) {
       document.GetParseError();
-      throw utl::fail("Test Server create result body: Bad JSON: {} at offset {}",
-                      GetParseError_En(document.GetParseError()),
-                      document.GetErrorOffset());
+      throw utl::fail(
+          "Test Server create result body: Bad JSON: {} at offset {}",
+          GetParseError_En(document.GetParseError()),
+          document.GetErrorOffset());
     }
     auto const& data = get_obj(document, "data");
-    auto read_json_key_double = [&](char const* key, char const* name) -> double {
+    auto read_json_key_double = [&](char const* key,
+                                    char const* name) -> double {
       auto const it = data.FindMember(key);
       if (it != data.MemberEnd() && it->value.IsDouble()) {
         return it->value.GetDouble();
-      }
-      else if(it != data.MemberEnd() && it->value.HasMember(name)) {
+      } else if (it != data.MemberEnd() && it->value.HasMember(name)) {
         auto const at = it->value.FindMember(name);
-        if(at->value.IsDouble()) {
+        if (at->value.IsDouble()) {
           return at->value.GetDouble();
         }
       }
       return -1.0;
     };
-    auto read_json_key_string = [&](char const* key, char const* name) -> std::string {
+    auto read_json_key_string = [&](char const* key,
+                                    char const* name) -> std::string {
       auto const it = data.FindMember(key);
       if (it != data.MemberEnd() && it->value.IsString()) {
         return it->value.GetString();
-      }
-      else if(it != data.MemberEnd() && it->value.HasMember(name)) {
+      } else if (it != data.MemberEnd() && it->value.HasMember(name)) {
         auto const at = it->value.FindMember(name);
-        if(at->value.IsString()) {
+        if (at->value.IsString()) {
           return at->value.GetString();
         }
       }
@@ -76,16 +78,18 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     double startlng = read_json_key_double("origin", "lng");
     double endlat = read_json_key_double("destination", "lat");
     double endlng = read_json_key_double("destination", "lng");
-    if(startlat == -1.0 || startlng == -1.0 || endlat == -1.0 || endlng == -1.0) {
+    if (startlat == -1.0 || startlng == -1.0 || endlat == -1.0 ||
+        endlng == -1.0) {
       return "";
     }
     std::string departure = read_json_key_string("origin", "time");
     std::string arrival = read_json_key_string("destination", "time");
-    if(departure.empty() || arrival.empty()) {
+    if (departure.empty() || arrival.empty()) {
       return "";
     }
 
-    auto traveltime_to_unixtime = [&](std::string const& timestring) -> date::sys_seconds {
+    auto traveltime_to_unixtime =
+        [&](std::string const& timestring) -> date::sys_seconds {
       std::istringstream in(timestring);
       date::sys_seconds tp;
       in >> date::parse("%FT%TZ", tp);
@@ -97,26 +101,34 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       return tp;
     };
 
-    time_t tests_time_dep = traveltime_to_unixtime(departure).time_since_epoch().count();
-    time_t tests_time_arr = traveltime_to_unixtime(arrival).time_since_epoch().count();
-    if(count%3==0) {
+    time_t tests_time_dep =
+        traveltime_to_unixtime(departure).time_since_epoch().count();
+    time_t tests_time_arr =
+        traveltime_to_unixtime(arrival).time_since_epoch().count();
+    if (count % 3 == 0) {
       minutes = 0;
     }
     tests_time_dep += minutes * 60;
     tests_time_arr += minutes * 60;
-    if(count%4==0) {
-      tests_time_arr += 2*minutes * 60;
+    if (count % 4 == 0) {
+      tests_time_arr += 2 * minutes * 60;
     }
     using time_point = std::chrono::system_clock::time_point;
-    time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
-    std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
+    time_point time_convertion_dep{
+        std::chrono::duration_cast<time_point::duration>(
+            std::chrono::seconds(tests_time_dep))};
+    std::string s_time_dep = date::format(
+        "%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
     time_t diff = tests_time_arr - tests_time_dep;
-    tests_time_dep += (diff - 180); // wie lange die Fahrt dauert
-    time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
-    std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
+    tests_time_dep += (diff - 180);  // wie lange die Fahrt dauert
+    time_point time_convertion_arr{
+        std::chrono::duration_cast<time_point::duration>(
+            std::chrono::seconds(tests_time_dep))};
+    std::string s_time_arr = date::format(
+        "%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
-    if(on) {
-      if(last_customer != customer_id) {
+    if (on) {
+      if (last_customer != customer_id) {
         last_customer = customer_id;
         size_t indexT_dep = s_time_dep.find('T');
         std::string hour_start = s_time_dep.substr(indexT_dep + 1, 2);
@@ -135,29 +147,29 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
           } else {
             int all_free = 0;
             int while_count = 0;
-            if(free_from == 23 && free_to == 0) {
-              if(k.at(free_from) && k.at(free_to)) {
+            if (free_from == 23 && free_to == 0) {
+              if (k.at(free_from) && k.at(free_to)) {
                 k.at(free_from) = 0;
                 k.at(free_to) = 0;
                 no_one_free = false;
                 break;
               }
             }
-            while(free_from <= free_to) {
-              if(k.at(free_from)) {
+            while (free_from <= free_to) {
+              if (k.at(free_from)) {
                 k.at(free_from) = 0;
                 all_free++;
               }
               free_from++;
               while_count++;
             }
-            if(while_count == all_free && while_count != 0 && all_free != 0) {
+            if (while_count == all_free && while_count != 0 && all_free != 0) {
               no_one_free = false;
             }
             break;
           }
         }
-        if(no_one_free) {
+        if (no_one_free) {
           return "";
         }
       }
@@ -175,15 +187,16 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
 
     walk_before += 60;
     walk_after += 60;
-    if(count%3==0) {
+    if (count % 3 == 0) {
       walk_before = 0;
     }
-    if(count%4==0) {
+    if (count % 4 == 0) {
       walk_after = 0;
     }
     std::string id = "rid_12345-abcde-1a2b3c-" + std::to_string(count);
     auto res = R"( { "data": {
-                      "id": ")" + id + "\"," +
+                      "id": ")" +
+               id + "\"," +
                R"( "created_at": "2017-09-06T15:08:43Z",
                       "updated_at": "2017-09-06T15:08:43Z",
                       "type": "ride",
@@ -193,23 +206,27 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                             "type": "calculated_point",
                             "waypoint_type": "pickup",
                             "time": "2022-08-08T15:20:00Z",
-                            "negotiation_time": ")" + s_time_dep + "\"," +
-              R"( "negotiation_time_max": "2022-08-08T15:20:00Z",
-                "lat": )" + std::to_string(startlat) + "," +
-            R"( "lng": )" + std::to_string(startlng) + "," +
-            R"( "walking_duration": )" + std::to_string(walk_before) + "," +
-            R"( "walking_track": "_iajH_oyo@_pR_pR_pR_pR_pR_pR_pR_pR"},
+                            "negotiation_time": ")" +
+               s_time_dep + "\"," +
+               R"( "negotiation_time_max": "2022-08-08T15:20:00Z",
+                "lat": )" +
+               std::to_string(startlat) + "," + R"( "lng": )" +
+               std::to_string(startlng) + "," + R"( "walking_duration": )" +
+               std::to_string(walk_before) + "," +
+               R"( "walking_track": "_iajH_oyo@_pR_pR_pR_pR_pR_pR_pR_pR"},
                 "dropoff": {
                             "id": "cap_12345-abcde-1a2b3c-d6a51d19b7a0",
                             "type": "calculated_point",
                             "time": "2022-08-06T15:42:00Z",
-                            "negotiation_time": ")" + s_time_arr + "\"," +
-            R"( "negotiation_time_max": "2022-08-08T15:40:00Z",
+                            "negotiation_time": ")" +
+               s_time_arr + "\"," +
+               R"( "negotiation_time_max": "2022-08-08T15:40:00Z",
                 "waypoint_type": "dropoff",
-                "lat": )" + std::to_string(endlat) + "," +
-            R"( "lng": )" + std::to_string(endlng) + "," +
-            R"( "walking_duration": )" + std::to_string(walk_after) + "," +
-            R"( "walking_track": "_sdpH_y|u@_pR_pR_pR_pR_pR_pR_pR_pR"},
+                "lat": )" +
+               std::to_string(endlat) + "," + R"( "lng": )" +
+               std::to_string(endlng) + "," + R"( "walking_duration": )" +
+               std::to_string(walk_after) + "," +
+               R"( "walking_track": "_sdpH_y|u@_pR_pR_pR_pR_pR_pR_pR_pR"},
                 "fare": {
                         "type": "fare",
                         "id": "far_12345-abcde-1a2b3c-2fed0f810837",
@@ -219,7 +236,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     return res;
   } else {
     auto result = "";
-    if(zone == 0) {
+    if (zone == 0) {
       // Swiss complete
       result = R"( {
             "data": {
@@ -245,8 +262,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                       ]]]},
               "message": "This is a default message"
     }})";
-    }
-    else if(zone == 1) {
+    } else if (zone == 1) {
       // around the towns: Basel, Bern, Genf, Zuerich
       result = R"( {
             "data": {
@@ -290,8 +306,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                     ]]},
               "message": "This is a default message"
     }})";
-    }
-    else if(zone == 2) {
+    } else if (zone == 2) {
       // Wallis, Zürich und Luzern.
       result = R"( {
             "data": {
@@ -325,8 +340,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                     ]]},
               "message": "This is a default message"
     }})";
-    }
-    else if(zone == 3) {
+    } else if (zone == 3) {
       // Kantone Bern und Freiburg:
       result = R"( {
             "data": {
@@ -354,149 +368,150 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
 }
 
 struct test_server::impl {
-    impl(boost::asio::io_service& ios, const std::vector<std::string>& server_arguments)
-        : ios_{ios}, serve_{ios}, server_argv_{std::move(server_arguments)} {}
+  impl(boost::asio::io_service& ios,
+       std::vector<std::string>  server_arguments)
+      : ios_{ios}, serve_{ios}, server_argv_{std::move(server_arguments)} {}
 
-    void listen_tome(std::string const& host, std::string const& port,
-                     boost::system::error_code& erco) const {
-      serve_.on_http_request([this](net::test_server::http_req_t const& req,
-                                   net::test_server::http_res_cb_t const& cb, bool)
-                            { on_http_request(req, cb); });
-      serve_.on_upgrade_ok([](net::test_server::http_req_t const& req) {
-        return req.target() == "/" ;
-      });
-      serve_.init(host, port, erco);
-      serve_.set_timeout(std::chrono::seconds(5*60));
-      serve_.set_request_body_limit(1024 * 1024);
-      serve_.set_request_queue_limit(1001);
-      for(auto const& s : server_argv_) {
-        //if(s == "medium") {
-          //sleeping = 500;
-        //}
-        //else if(s == "high") {
-          //sleeping = 1000;
-        //}
-        if(s == "1") {
-          area = 1;
-        }
-        else if(s == "2") {
-          area = 2;
-        }
-        else if(s == "3") {
-          area = 3;
-        }
-        else if(s == "little") {
-          on = true;
-          fleet.resize(20);
-          for(auto & i : fleet) {
-            i.resize(24);
-            for(int j = 0; j < i.size(); j++) {
-              if(j < 2 || j > 4) {
-                i.at(j) = 1;
-              } else {
-                i.at(j) = 0;
-              }
+  void listen_tome(std::string const& host, std::string const& port,
+                   boost::system::error_code& erco) const {
+    serve_.on_http_request([this](net::test_server::http_req_t const& req,
+                                  net::test_server::http_res_cb_t const& cb,
+                                  bool) { on_http_request(req, cb); });
+    serve_.on_upgrade_ok([](net::test_server::http_req_t const& req) {
+      return req.target() == "/";
+    });
+    serve_.init(host, port, erco);
+    serve_.set_timeout(std::chrono::seconds(5 * 60));
+    serve_.set_request_body_limit(1024 * 1024);
+    serve_.set_request_queue_limit(1001);
+    for (auto const& s : server_argv_) {
+      // if(s == "medium") {
+      // sleeping = 500;
+      //}
+      // else if(s == "high") {
+      // sleeping = 1000;
+      //}
+      if (s == "1") {
+        area = 1;
+      } else if (s == "2") {
+        area = 2;
+      } else if (s == "3") {
+        area = 3;
+      } else if (s == "little") {
+        on = true;
+        fleet.resize(20);
+        for (auto& i : fleet) {
+          i.resize(24);
+          for (int j = 0; j < i.size(); j++) {
+            if (j < 2 || j > 4) {
+              i.at(j) = 1;
+            } else {
+              i.at(j) = 0;
             }
           }
         }
-        else if(s == "normal") {
-          on = true;
-          fleet.resize(27);
-          for(auto & i : fleet) {
-            i.resize(24);
-            for(int j = 0; j < i.size(); j++) {
-              if(j < 2 || j > 4) {
-                i.at(j) = 1;
-              } else {
-                i.at(j) = 0;
-              }
+      } else if (s == "normal") {
+        on = true;
+        fleet.resize(27);
+        for (auto& i : fleet) {
+          i.resize(24);
+          for (int j = 0; j < i.size(); j++) {
+            if (j < 2 || j > 4) {
+              i.at(j) = 1;
+            } else {
+              i.at(j) = 0;
             }
           }
         }
-        else if(s == "big") {
-          on = true;
-          fleet.resize(35);
-          for(auto & i : fleet) {
-            i.resize(24);
-            for(int j = 0; j < i.size(); j++) {
-              if(j < 2 || j > 4) {
-                i.at(j) = 1;
-              } else {
-                i.at(j) = 0;
-              }
+      } else if (s == "big") {
+        on = true;
+        fleet.resize(35);
+        for (auto& i : fleet) {
+          i.resize(24);
+          for (int j = 0; j < i.size(); j++) {
+            if (j < 2 || j > 4) {
+              i.at(j) = 1;
+            } else {
+              i.at(j) = 0;
             }
           }
         }
-      }
-      if (erco) {
-        std::cout << "testserver: init error: " << erco.message() << "\n";
-      }
-      std::cout << "testserver is running on http://" + host + ":" + port + "/ \n "
-                  "info: " + erco.message() + "\n";
-      serve_.run();
-    }
-
-    void stop_it() const { serve_.stop(); std::cout << "testserver: stopped \n";}
-
-    void on_http_request(net::test_server::http_req_t const& req,
-                         net::test_server::http_res_cb_t const& cb) const {
-      switch(req.method()) {
-        case verb::options: {
-          std::string_view resbody = "allow: post, head, get";
-          status status = status::ok;
-          std::string_view contenttype = "text/html";
-          cb(string_response(req, resbody, status, contenttype));
-          break;
-        }
-        case verb::post: {
-          if(req.body().empty()) {
-            cb(server_error_response(req, "SEND REQUEST BODY"));
-            break;
-          }
-          std::string sres = create_resbody(req, true, area);
-          minutes += 5;
-          count++;
-          std::string_view resbody{sres};
-          status status = status::ok;
-          std::string_view contenttype = "application/json";
-          cb(string_response(req, resbody, status, contenttype));
-          break;
-        }
-        case verb::head: {
-          status status = status::ok;
-          std::string_view contenttype = "text/html";
-          cb(empty_response(req, status, contenttype));
-          break;
-        }
-        case verb::get: {
-          count++;
-          std::string sres = create_resbody(req, false, area);
-          std::string_view resbody{sres};
-          status status = status::ok;
-          std::string_view contenttype = "application/json";
-          cb(string_response(req, resbody, status, contenttype));
-          break;
-        }
-        default:
-          cb(server_error_response(req, "SERVER ERROR!"));
       }
     }
-    boost::asio::io_service& ios_;
-    net::test_server serve_;
-    std::vector<std::string> server_argv_;
-};
-
-  test_server::test_server(boost::asio::io_service& ios, std::vector<std::string> server_args)
-      : impl_(new impl(ios, std::move(server_args))) {}
-
-  test_server::~test_server() = default;
-
-  void test_server::listen_tome(std::string const& host, std::string const& port,
-                                boost::system::error_code& ec) {
-    impl_->listen_tome(host, port, ec);
+    if (erco) {
+      std::cout << "testserver: init error: " << erco.message() << "\n";
+    }
+    std::cout << "testserver is running on http://" + host + ":" + port +
+                     "/ \n "
+                     "info: " +
+                     erco.message() + "\n";
+    serve_.run();
   }
 
-  void test_server::stop_it() { impl_->stop_it(); }
+  void stop_it() const {
+    serve_.stop();
+    std::cout << "testserver: stopped \n";
+  }
+
+  void on_http_request(net::test_server::http_req_t const& req,
+                       net::test_server::http_res_cb_t const& cb) const {
+    switch (req.method()) {
+      case verb::options: {
+        std::string_view resbody = "allow: post, head, get";
+        status status = status::ok;
+        std::string_view contenttype = "text/html";
+        cb(string_response(req, resbody, status, contenttype));
+        break;
+      }
+      case verb::post: {
+        if (req.body().empty()) {
+          cb(server_error_response(req, "SEND REQUEST BODY"));
+          break;
+        }
+        std::string sres = create_resbody(req, true, area);
+        minutes += 5;
+        count++;
+        std::string_view resbody{sres};
+        status status = status::ok;
+        std::string_view contenttype = "application/json";
+        cb(string_response(req, resbody, status, contenttype));
+        break;
+      }
+      case verb::head: {
+        status status = status::ok;
+        std::string_view contenttype = "text/html";
+        cb(empty_response(req, status, contenttype));
+        break;
+      }
+      case verb::get: {
+        count++;
+        std::string sres = create_resbody(req, false, area);
+        std::string_view resbody{sres};
+        status status = status::ok;
+        std::string_view contenttype = "application/json";
+        cb(string_response(req, resbody, status, contenttype));
+        break;
+      }
+      default: cb(server_error_response(req, "SERVER ERROR!"));
+    }
+  }
+  boost::asio::io_service& ios_;
+  net::test_server serve_;
+  std::vector<std::string> server_argv_;
+};
+
+test_server::test_server(boost::asio::io_service& ios,
+                         std::vector<std::string>& server_args)
+    : impl_(new impl(ios, std::move(server_args))) {}
+
+test_server::~test_server() = default;
+
+void test_server::listen_tome(std::string const& host, std::string const& port,
+                              boost::system::error_code& ec) {
+  impl_->listen_tome(host, port, ec);
+}
+
+void test_server::stop_it() { impl_->stop_it(); }
 
 } // namespace motis::intermodal
 

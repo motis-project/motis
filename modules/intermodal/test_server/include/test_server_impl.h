@@ -5,7 +5,7 @@
 namespace motis::intermodal {
 
 struct test_server {
-  test_server(boost::asio::io_service&, std::vector<std::string>);
+  test_server(boost::asio::io_service&, std::vector<std::string>&);
   ~test_server();
 
   test_server(test_server&&) = default;
