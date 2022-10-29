@@ -19,7 +19,7 @@ struct ondemand_initializer {
 struct ondemand_updater {
   template <typename Label, typename LowerBounds>
   static void update(Label& l, edge_cost const& ec, LowerBounds& lb) {
-    l.is_ondemand_ = edge::get_is_ondemand(l.edge_);
+    l.is_ondemand_ = edge::get_is_ondemand(l.edge_) || l.is_ondemand_;
   }
 };
 

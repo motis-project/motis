@@ -194,6 +194,10 @@ public:
     return e->type() == MUMO_EDGE && e->m_.foot_edge_.is_ondemand_;
   }
 
+  static bool get_is_intermodal(edge const* e) {
+    return e->type() == MUMO_EDGE;
+  }
+
   edge_cost get_minimum_cost() const {
     if (m_.type_ == INVALID_EDGE) {
       return NO_EDGE;

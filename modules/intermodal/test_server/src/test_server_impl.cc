@@ -24,22 +24,18 @@ using namespace boost::beast::http;
 using namespace motis::json;
 using namespace rapidjson;
 
-//int sleeping = 2;
-//int minutes = 0;
-//int count = 0;
+int walk_before = 0;
+int walk_after = 0;
+int area = 0;
+int minutes = 0;
+int count = 0;
 bool on = false;
+int sleeping_ms = 100;
+std::string last_customer("0");
 std::vector<std::vector<int>> fleet;
 
-//error executing /intermodal: invalid vector subscript
-
-std::string create_resbody(net::test_server::http_req_t const& req, bool post, int area) {
-  //std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  // funktioniert nicht mit dem warten
-  //time_t timenow = time(nullptr);
-  //time_t timeend = timenow + sleeping;
-  //while(timenow < timeend) {
-    //timenow++;
-  //}
+std::string create_resbody(net::test_server::http_req_t const& req, bool post, int zone) {
+  //std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
   if(post) {
     Document document;
     if (document.Parse(req.body().c_str()).HasParseError()) {
@@ -75,6 +71,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
       }
       return "";
     };
+    std::string customer_id = read_json_key_string("product_id", "");
     double startlat = read_json_key_double("origin", "lat");
     double startlng = read_json_key_double("origin", "lng");
     double endlat = read_json_key_double("destination", "lat");
@@ -102,77 +99,89 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
 
     time_t tests_time_dep = traveltime_to_unixtime(departure).time_since_epoch().count();
     time_t tests_time_arr = traveltime_to_unixtime(arrival).time_since_epoch().count();
-    //if(count%4==0) {
-      //minutes = 0;
-    //}
-    //tests_time_dep += minutes * 60;
+    if(count%3==0) {
+      minutes = 0;
+    }
+    tests_time_dep += minutes * 60;
+    tests_time_arr += minutes * 60;
+    if(count%4==0) {
+      tests_time_arr += 2*minutes * 60;
+    }
     using time_point = std::chrono::system_clock::time_point;
     time_point time_convertion_dep{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_dep = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_dep));
-    time_t diff = (tests_time_arr - tests_time_dep) ; //+ minutes;
-    tests_time_dep += (diff - 120); // wie lange die Fahrt dauert
+    time_t diff = tests_time_arr - tests_time_dep;
+    tests_time_dep += (diff - 180); // wie lange die Fahrt dauert
     time_point time_convertion_arr{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(tests_time_dep))};
     std::string s_time_arr = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arr));
 
     if(on) {
-      size_t indexT_dep = s_time_dep.find('T');
-      std::string hour_start = s_time_dep.substr(indexT_dep + 1, 2);
-      size_t indexT_arr = s_time_dep.find('T');
-      std::string hour_end = s_time_dep.substr(indexT_arr + 1, 2);
-      int free_from = std::stoi(hour_start);
-      int free_to = std::stoi(hour_end);
-      bool no_one_free = true;
-      for (auto& k : fleet) {
-        if (free_from == free_to) {
-          if (k.at(free_from)) {
-            k.at(free_from) = 0;
-            no_one_free = false;
-            break;
-          }
-        } else {
-          int all_free = 0;
-          int while_count = 0;
-          if(free_from == 23 && free_to == 0) {
-            if (k.at(free_from) && k.at(free_to)) {
+      if(last_customer != customer_id) {
+        last_customer = customer_id;
+        size_t indexT_dep = s_time_dep.find('T');
+        std::string hour_start = s_time_dep.substr(indexT_dep + 1, 2);
+        size_t indexT_arr = s_time_dep.find('T');
+        std::string hour_end = s_time_dep.substr(indexT_arr + 1, 2);
+        int free_from = std::stoi(hour_start);
+        int free_to = std::stoi(hour_end);
+        bool no_one_free = true;
+        for (auto& k : fleet) {
+          if (free_from == free_to) {
+            if (k.at(free_from)) {
               k.at(free_from) = 0;
-              k.at(free_to) = 0;
               no_one_free = false;
               break;
             }
-          }
-          while(free_from <= free_to) {
-            if(k.at(free_from)) {
-              k.at(free_from) = 0;
-              all_free++;
+          } else {
+            int all_free = 0;
+            int while_count = 0;
+            if(free_from == 23 && free_to == 0) {
+              if(k.at(free_from) && k.at(free_to)) {
+                k.at(free_from) = 0;
+                k.at(free_to) = 0;
+                no_one_free = false;
+                break;
+              }
             }
-            free_from++;
-            while_count++;
+            while(free_from <= free_to) {
+              if(k.at(free_from)) {
+                k.at(free_from) = 0;
+                all_free++;
+              }
+              free_from++;
+              while_count++;
+            }
+            if(while_count == all_free && while_count != 0 && all_free != 0) {
+              no_one_free = false;
+            }
+            break;
           }
-          if((while_count == all_free) && while_count != 0 && all_free != 0) {
-            no_one_free = false;
-          }
-          break;
         }
-      }
-      if(no_one_free) {
-        return "";
+        if(no_one_free) {
+          return "";
+        }
       }
     }
 
-    int walk_before = 3;
-    int walk_after = 0;
-    /*if(count%2==0) {
-      walk_before+= 120;
-      walk_after = 0;
+    /*for(auto f : fleet)
+    {
+      for(int i = 0; i < f.size(); i++)
+      {
+        printf("%d: %d \t", i, f.at(i));
+      }
+      printf("\n");
     }
+    printf("\n");*/
+
+    walk_before += 60;
+    walk_after += 60;
     if(count%3==0) {
-      walk_after += 60;
+      walk_before = 0;
     }
     if(count%4==0) {
-      walk_before = 0;
       walk_after = 0;
-    }*/
-    std::string id = "rid_12345-abcde-1a2b3c-" ;// + std::to_string(count);
+    }
+    std::string id = "rid_12345-abcde-1a2b3c-" + std::to_string(count);
     auto res = R"( { "data": {
                       "id": ")" + id + "\"," +
                R"( "created_at": "2017-09-06T15:08:43Z",
@@ -210,7 +219,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
     return res;
   } else {
     auto result = "";
-    if(area == 0) {
+    if(zone == 0) {
       // Swiss complete
       result = R"( {
             "data": {
@@ -237,7 +246,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
               "message": "This is a default message"
     }})";
     }
-    else if(area == 1) {
+    else if(zone == 1) {
       // around the towns: Basel, Bern, Genf, Zuerich
       result = R"( {
             "data": {
@@ -251,7 +260,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                       [47.57604,7.68859],
                       [47.60196,7.53474],
                       [47.54456,7.49078]
-                    ][
+                    ],[
                       [47.60196,7.53474],
                       [47.57604,7.68859],
                       [47.47411,7.82322],
@@ -260,7 +269,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                       [47.04296,7.41119],
                       [46.96248,7.27382],
                       [47.60196,7.53474]
-                    ][
+                    ],[
                       [46.13197,5.91837],
                       [46.22889,6.31125],
                       [46.41842,6.06948],
@@ -269,7 +278,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
                       [46.49027,6.85799],
                       [46.34648,6.77282],
                       [46.13197,5.91837]
-                    ][
+                    ],[
                       [47.53034,8.52952],
                       [47.51366,8.70810],
                       [47.36701,8.73832],
@@ -282,47 +291,60 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
               "message": "This is a default message"
     }})";
     }
-    else if(area == 2) {
-      // west side of Swiss, west of Basel, to Luzern.
+    else if(zone == 2) {
+      // Wallis, Zürich und Luzern.
       result = R"( {
             "data": {
               "id": "west of Swiss",
               "area": {
                     "type": "MultiPolygon",
-                    "coordinates": [[[
-                      [47.43504,7.38199],
-                      [47.30121,7.91499],
-                      [47.30121,7.91499],
-                      [47.30121,7.91499],
-                      [46.28280,8.05785],
-                      [45.93269,7.83256],
-                      [46.17268,6.79404],
-                      [46.16508,5.97531],
-                      [46.93140,6.44787],
-                      [47.36073,6.99735],
-                      [47.43504,7.38199]
-                      ]]]},
+                    "coordinates": [[
+                    [ [46.14554,6.92314],
+                      [46.36946,7.31327],
+                      [46.42624,7.71989],
+                      [46.55851,8.42048],
+                      [46.45461,8.44520],
+                      [46.26710,8.07980],
+                      [45.97604,7.72813],
+                      [45.99321,7.01930],
+                      [46.00939,7.81109],
+                      [46.14554,6.92314]
+                    ],[
+                      [47.51569,8.36627],
+                      [47.42478,8.14373],
+                      [47.34674,7.85525],
+                      [47.22572,7.83327],
+                      [46.86290,7.84701],
+                      [46.78591,8.49265],
+                      [46.92292,8.92949],
+                      [47.21454,9.04488],
+                      [47.47648,8.88318],
+                      [47.56730,8.57821],
+                      [47.51569,8.36627]
+                    ]
+                    ]]},
               "message": "This is a default message"
     }})";
     }
-    else if(area == 3) {
-      // east of Swiss,
+    else if(zone == 3) {
+      // Kantone Bern und Freiburg:
       result = R"( {
             "data": {
               "id": "east of Swiss",
               "area": {
                     "type": "MultiPolygon",
                     "coordinates": [[[
-                      [47.59721,8.18823],
-                      [47.09138,8.67178],
-                      [46.49385,9.37512],
-                      [46.22109,10.04549],
-                      [46.53541,10.49606],
-                      [46.94543,10.44111],
-                      [47.08764,9.52348],
-                      [47.47862,9.63887],
-                      [47.86514,8.91512],
-                      [47.59721,8.18823]
+                      [46.65928,8.40749],
+                      [46.83794,7.87998],
+                      [47.22703,7.80031],
+                      [47.07398,7.43216],
+                      [46.37789,7.20412],
+                      [46.54992,6.56672],
+                      [46.50271,6.85520],
+                      [46.79850,6.77827],
+                      [46.98043,7.06400],
+                      [47.22703,7.06518],
+                      [46.65928,8.40749]
                       ]]]},
               "message": "This is a default message"
     }})";
@@ -332,7 +354,7 @@ std::string create_resbody(net::test_server::http_req_t const& req, bool post, i
 }
 
 struct test_server::impl {
-    impl(boost::asio::io_service& ios, std::vector<std::string> server_arguments)
+    impl(boost::asio::io_service& ios, const std::vector<std::string>& server_arguments)
         : ios_{ios}, serve_{ios}, server_argv_{std::move(server_arguments)} {}
 
     void listen_tome(std::string const& host, std::string const& port,
@@ -347,19 +369,6 @@ struct test_server::impl {
       serve_.set_timeout(std::chrono::seconds(5*60));
       serve_.set_request_body_limit(1024 * 1024);
       serve_.set_request_queue_limit(1001);
-      if (erco) {
-        std::cout << "testserver: init error: " << erco.message() << "\n";
-      }
-      std::cout << "testserver is running on http://" + host + ":" + port + "/ \n "
-                  "info: " + erco.message() + "\n";
-      serve_.run();
-    }
-
-    void stop_it() const { serve_.stop(); std::cout << "testserver: stopped \n";}
-
-    void on_http_request(net::test_server::http_req_t const& req,
-                         net::test_server::http_res_cb_t const& cb) const {
-      int area = 0;
       for(auto const& s : server_argv_) {
         //if(s == "medium") {
           //sleeping = 500;
@@ -378,47 +387,59 @@ struct test_server::impl {
         }
         else if(s == "little") {
           on = true;
-          fleet.resize(10);
+          fleet.resize(20);
           for(auto & i : fleet) {
             i.resize(24);
             for(int j = 0; j < i.size(); j++) {
-              if(j < 6) {
-                i.at(j) = 0;
-              } else {
+              if(j < 2 || j > 4) {
                 i.at(j) = 1;
+              } else {
+                i.at(j) = 0;
               }
             }
           }
         }
         else if(s == "normal") {
           on = true;
-          fleet.resize(15);
+          fleet.resize(27);
           for(auto & i : fleet) {
             i.resize(24);
             for(int j = 0; j < i.size(); j++) {
-              if(j < 6) {
-                i.at(j) = 0;
-              } else {
+              if(j < 2 || j > 4) {
                 i.at(j) = 1;
+              } else {
+                i.at(j) = 0;
               }
             }
           }
         }
         else if(s == "big") {
           on = true;
-          fleet.resize(20);
+          fleet.resize(35);
           for(auto & i : fleet) {
             i.resize(24);
             for(int j = 0; j < i.size(); j++) {
-              if(j < 6) {
-                i.at(j) = 0;
-              } else {
+              if(j < 2 || j > 4) {
                 i.at(j) = 1;
+              } else {
+                i.at(j) = 0;
               }
             }
           }
         }
       }
+      if (erco) {
+        std::cout << "testserver: init error: " << erco.message() << "\n";
+      }
+      std::cout << "testserver is running on http://" + host + ":" + port + "/ \n "
+                  "info: " + erco.message() + "\n";
+      serve_.run();
+    }
+
+    void stop_it() const { serve_.stop(); std::cout << "testserver: stopped \n";}
+
+    void on_http_request(net::test_server::http_req_t const& req,
+                         net::test_server::http_res_cb_t const& cb) const {
       switch(req.method()) {
         case verb::options: {
           std::string_view resbody = "allow: post, head, get";
@@ -433,8 +454,8 @@ struct test_server::impl {
             break;
           }
           std::string sres = create_resbody(req, true, area);
-          //minutes += 5;
-          //count++;
+          minutes += 5;
+          count++;
           std::string_view resbody{sres};
           status status = status::ok;
           std::string_view contenttype = "application/json";
@@ -448,7 +469,7 @@ struct test_server::impl {
           break;
         }
         case verb::get: {
-          //count++;
+          count++;
           std::string sres = create_resbody(req, false, area);
           std::string_view resbody{sres};
           status status = status::ok;
