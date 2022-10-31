@@ -207,6 +207,58 @@ inline std::optional<trip_idx_t> get_continuous_trip(
 }
 
 template <typename PrefixCompactJourney, typename SuffixCompactJourney>
+inline bool journeys_can_be_merged_without_transfer(
+    schedule const& sched, PrefixCompactJourney const& prefix,
+    SuffixCompactJourney const& suffix) {
+  auto const& last_prefix_leg = prefix.legs().back();
+  auto const& first_suffix_leg = suffix.legs().front();
+
+  if (last_prefix_leg.trip_idx_ == first_suffix_leg.trip_idx_) {
+    return true;
+  }
+
+  auto const* prefix_trp = get_trip(sched, last_prefix_leg.trip_idx_);
+  auto const* suffix_trp = get_trip(sched, first_suffix_leg.trip_idx_);
+  auto const prefix_sections = access::sections(prefix_trp);
+  auto const suffix_sections = access::sections(suffix_trp);
+
+  auto const last_prefix_section = std::find_if(
+      begin(prefix_sections), end(prefix_sections),
+      [&](access::trip_section const& sec) {
+        return sec.to_station_id() == last_prefix_leg.exit_station_id_ &&
+               get_schedule_time(sched, sec.ev_key_to()) ==
+                   last_prefix_leg.exit_time_;
+      });
+  utl::verify(last_prefix_section != end(prefix_sections),
+              "journeys_can_be_merged_without_transfer: last prefix section "
+              "not found in trip");
+  auto const first_suffix_section = std::find_if(
+      begin(suffix_sections), end(suffix_sections),
+      [&](access::trip_section const& sec) {
+        return sec.from_station_id() == first_suffix_leg.enter_station_id_ &&
+               get_schedule_time(sched, sec.ev_key_from()) ==
+                   first_suffix_leg.enter_time_;
+      });
+  utl::verify(first_suffix_section != end(suffix_sections),
+              "journeys_can_be_merged_without_transfer: first suffix section "
+              "not found in trip");
+
+  auto const& prefix_trips =
+      *sched.merged_trips_.at((*last_prefix_section).lcon().trips_);
+  auto const& suffix_trips =
+      *sched.merged_trips_.at((*first_suffix_section).lcon().trips_);
+
+  for (auto const& trp : prefix_trips) {
+    if (std::find(begin(suffix_trips), end(suffix_trips), trp) !=
+        end(suffix_trips)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template <typename PrefixCompactJourney, typename SuffixCompactJourney>
 inline compact_journey merge_journeys(schedule const& sched,
                                       PrefixCompactJourney const& prefix,
                                       SuffixCompactJourney const& suffix) {
@@ -231,11 +283,15 @@ inline compact_journey merge_journeys(schedule const& sched,
     std::copy(begin(suffix.legs_), end(suffix.legs_),
               std::back_inserter(merged.legs_));
     auto& new_first_suffix_leg = merged.legs_[prefix.legs_.size()];
-    new_first_suffix_leg.enter_transfer_ = util::get_transfer_info(
-        sched, last_prefix_leg.exit_station_id_,
-        get_arrival_track(sched, last_prefix_leg),
-        new_first_suffix_leg.enter_station_id_,
-        get_departure_track(sched, new_first_suffix_leg));
+    if (journeys_can_be_merged_without_transfer(sched, prefix, suffix)) {
+      new_first_suffix_leg.enter_transfer_ = {};
+    } else {
+      new_first_suffix_leg.enter_transfer_ = util::get_transfer_info(
+          sched, last_prefix_leg.exit_station_id_,
+          get_arrival_track(sched, last_prefix_leg),
+          new_first_suffix_leg.enter_station_id_,
+          get_departure_track(sched, new_first_suffix_leg));
+    }
   }
 
   /*
