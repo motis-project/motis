@@ -187,7 +187,7 @@ inline reroute_reason_t to_reroute_reason(monitoring_event_type const met) {
     case monitoring_event_type::MAJOR_DELAY_EXPECTED:
       return reroute_reason_t::MAJOR_DELAY_EXPECTED;
     case monitoring_event_type::NO_PROBLEM:
-      return reroute_reason_t::REVERT_FORECAST;
+      return reroute_reason_t::UPDATE_FORECAST;
   }
   throw utl::fail("to_reroute_reason: unhandled monitoring_event_type");
 }

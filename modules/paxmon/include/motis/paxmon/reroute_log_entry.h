@@ -15,7 +15,8 @@ enum class reroute_reason_t : std::uint8_t {
   BROKEN_TRANSFER,
   MAJOR_DELAY_EXPECTED,
   REVERT_FORECAST,
-  SIMULATION
+  SIMULATION,
+  UPDATE_FORECAST
 };
 
 struct reroute_log_route_info {
