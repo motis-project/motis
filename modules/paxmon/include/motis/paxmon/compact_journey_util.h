@@ -155,9 +155,61 @@ inline compact_journey get_suffix(schedule const& sched,
 }
 
 template <typename PrefixCompactJourney, typename SuffixCompactJourney>
-compact_journey merge_journeys(schedule const& sched,
-                               PrefixCompactJourney const& prefix,
-                               SuffixCompactJourney const& suffix) {
+inline std::optional<trip_idx_t> get_continuous_trip(
+    schedule const& sched, PrefixCompactJourney const& prefix,
+    SuffixCompactJourney const& suffix) {
+  auto const& last_prefix_leg = prefix.legs().back();
+  auto const& first_suffix_leg = suffix.legs().front();
+
+  if (last_prefix_leg.trip_idx_ == first_suffix_leg.trip_idx_) {
+    return {last_prefix_leg.trip_idx_};
+  }
+
+  auto const* prefix_trp = get_trip(sched, last_prefix_leg.trip_idx_);
+  auto const* suffix_trp = get_trip(sched, first_suffix_leg.trip_idx_);
+  auto const prefix_sections = access::sections(prefix_trp);
+  auto const suffix_sections = access::sections(suffix_trp);
+
+  auto const prefix_entry_section = std::find_if(
+      begin(prefix_sections), end(prefix_sections),
+      [&](access::trip_section const& sec) {
+        return sec.from_station_id() == last_prefix_leg.enter_station_id_ &&
+               get_schedule_time(sched, sec.ev_key_from()) ==
+                   last_prefix_leg.enter_time_;
+      });
+  utl::verify(prefix_entry_section != end(prefix_sections),
+              "get_continuous_trip: prefix entry section "
+              "not found in trip");
+  auto const suffix_exit_section = std::find_if(
+      begin(suffix_sections), end(suffix_sections),
+      [&](access::trip_section const& sec) {
+        return sec.to_station_id() == first_suffix_leg.exit_station_id_ &&
+               get_schedule_time(sched, sec.ev_key_to()) ==
+                   first_suffix_leg.exit_time_;
+      });
+  utl::verify(suffix_exit_section != end(suffix_sections),
+              "get_continuous_trip: suffix exit section "
+              "not found in trip");
+
+  auto const& prefix_trips =
+      *sched.merged_trips_.at((*prefix_entry_section).lcon().trips_);
+  auto const& suffix_trips =
+      *sched.merged_trips_.at((*suffix_exit_section).lcon().trips_);
+
+  for (auto const& trp : prefix_trips) {
+    if (std::find(begin(suffix_trips), end(suffix_trips), trp) !=
+        end(suffix_trips)) {
+      return {trp->trip_idx_};
+    }
+  }
+
+  return {};
+}
+
+template <typename PrefixCompactJourney, typename SuffixCompactJourney>
+inline compact_journey merge_journeys(schedule const& sched,
+                                      PrefixCompactJourney const& prefix,
+                                      SuffixCompactJourney const& suffix) {
   if (prefix.legs().empty()) {
     return suffix;
   } else if (suffix.legs().empty()) {
@@ -167,8 +219,10 @@ compact_journey merge_journeys(schedule const& sched,
   auto merged = prefix;
   auto const& last_prefix_leg = prefix.legs().back();
   auto const& first_suffix_leg = suffix.legs().front();
-  if (last_prefix_leg.trip_idx_ == first_suffix_leg.trip_idx_) {
+  auto const continuous_trip_idx = get_continuous_trip(sched, prefix, suffix);
+  if (continuous_trip_idx) {
     auto& merged_leg = merged.legs().back();
+    merged_leg.trip_idx_ = *continuous_trip_idx;
     merged_leg.exit_station_id_ = first_suffix_leg.exit_station_id_;
     merged_leg.exit_time_ = first_suffix_leg.exit_time_;
     std::copy(std::next(begin(suffix.legs_)), end(suffix.legs_),
