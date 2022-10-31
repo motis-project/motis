@@ -13,8 +13,11 @@ void update_load(passenger_group_with_route const pgwr,
                  reachability_info const& reachability,
                  passenger_localization const& localization, universe& uv,
                  schedule const& sched) {
-  auto const& gr = uv.passenger_groups_.route(pgwr);
+  auto& gr = uv.passenger_groups_.route(pgwr);
   auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+  utl::verify(route_edges.empty() == gr.disabled_,
+              "update_load: initial mismatch: route_edges={}, disabled={}",
+              route_edges.size(), gr.disabled_);
   auto disabled_edges =
       std::vector<edge_index>(route_edges.begin(), route_edges.end());
   route_edges.clear();
@@ -110,6 +113,8 @@ void update_load(passenger_group_with_route const pgwr,
                                      pci_log_reason_t::UPDATE_LOAD);
     }
   }
+
+  gr.disabled_ = route_edges.empty();
 }
 
 }  // namespace motis::paxmon
