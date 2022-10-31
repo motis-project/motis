@@ -53,11 +53,11 @@ void check_broken_interchanges(
       }
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
         auto& gr = uv.passenger_groups_.route(pgwr);
+        gr.broken_ = true;
         if (gr.probability_ == 0) {
           continue;
         }
         if (affected_group_routes.insert(pgwr).second) {
-          gr.broken_ = true;
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
       }
