@@ -209,10 +209,13 @@ std::set<passenger_group_with_route> collect_and_remove_group_routes(
     auto* te = tei.get(uv);
     auto group_routes = uv.pax_connection_info_.group_routes(te->pci_);
     for (auto const& pgwr : group_routes) {
-      auto const& route = uv.passenger_groups_.route(pgwr);
+      auto& route = uv.passenger_groups_.route(pgwr);
       auto edges = uv.passenger_groups_.route_edges(route.edges_index_);
       affected_group_routes.insert(pgwr);
       utl::erase(edges, tei);
+      if (edges.empty()) {
+        route.disabled_ = true;
+      }
     }
     if (uv.graph_log_.enabled_) {
       auto log = uv.graph_log_.pci_log_[te->pci_];
@@ -233,7 +236,7 @@ bool update_group_route(trip_data_index const tdi, trip const* trp,
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   // TODO(pablo): does not support merged trips
-  auto const& gr = uv.passenger_groups_.route(pgwr);
+  auto& gr = uv.passenger_groups_.route(pgwr);
   auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
   auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
   for (auto const& leg : cj.legs()) {
@@ -261,6 +264,9 @@ bool update_group_route(trip_data_index const tdi, trip const* trp,
           add_group_route_to_edge(uv, sched, e, pgwr, true,
                                   pci_log_reason_t::TRIP_REROUTE);
           route_edges.emplace_back(ei);
+        }
+        if (!route_edges.empty()) {
+          gr.disabled_ = false;
         }
         return true;
       }
