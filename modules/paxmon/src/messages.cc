@@ -319,6 +319,15 @@ Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
                                          to_fbs(sched, fbb, loc));
 }
 
+Offset<PaxMonReachability> reachability_to_fbs(
+    schedule const& sched, FlatBufferBuilder& fbb,
+    reachability_status const status,
+    std::optional<broken_transfer_info> const& bti) {
+  return CreatePaxMonReachability(fbb,
+                                  static_cast<PaxMonReachabilityStatus>(status),
+                                  broken_transfer_info_to_fbs(fbb, sched, bti));
+}
+
 Offset<PaxMonEvent> to_fbs(schedule const& sched,
                            passenger_group_container const& pgc,
                            FlatBufferBuilder& fbb, monitoring_event const& me) {
@@ -327,9 +336,9 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched,
       to_fbs(sched, pgc, fbb, me.pgwr_),
       fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
-      static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
-      to_fbs_time(sched, me.expected_arrival_time_),
-      broken_transfer_info_to_fbs(fbb, sched, me.broken_transfer_));
+      reachability_to_fbs(sched, fbb, me.reachability_status_,
+                          me.broken_transfer_),
+      to_fbs_time(sched, me.expected_arrival_time_));
 }
 
 Offset<Vector<PaxMonPdfEntry const*>> pdf_to_fbs(FlatBufferBuilder& fbb,

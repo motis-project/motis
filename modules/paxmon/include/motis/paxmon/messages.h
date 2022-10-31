@@ -117,6 +117,10 @@ passenger_localization from_fbs(schedule const& sched,
 passenger_localization from_fbs(schedule const& sched,
                                 PaxMonLocalizationWrapper const* loc_wrapper);
 
+flatbuffers::Offset<PaxMonReachability> reachability_to_fbs(
+    schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
+    reachability_status status, std::optional<broken_transfer_info> const& bti);
+
 flatbuffers::Offset<PaxMonEvent> to_fbs(schedule const& sched,
                                         passenger_group_container const& pgc,
                                         flatbuffers::FlatBufferBuilder& fbb,
