@@ -154,6 +154,9 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       }
       ++ti.section_count_;
       ti.max_expected_pax_ = std::max(ti.max_expected_pax_, expected_pax);
+      if (!include && include_load_threshold == 0.0F) {
+        include = true;
+      }
       if (!e->has_capacity()) {
         continue;
       }
