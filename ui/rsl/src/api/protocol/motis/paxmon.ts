@@ -626,6 +626,20 @@ export interface PaxMonLocalizationWrapper {
   localization: PaxMonLocalization;
 }
 
+// paxmon/PaxMonReachability.fbs
+export type PaxMonReachabilityStatus =
+  | "OK"
+  | "BROKEN_INITIAL_ENTRY"
+  | "BROKEN_TRANSFER_EXIT"
+  | "BROKEN_TRANSFER_ENTRY"
+  | "BROKEN_FINAL_EXIT";
+
+// paxmon/PaxMonReachability.fbs
+export interface PaxMonReachability {
+  status: PaxMonReachabilityStatus;
+  broken_transfer: PaxMonBrokenTransferInfo[];
+}
+
 // paxmon/PaxMonRemoveGroupsRequest.fbs
 export interface PaxMonRemoveGroupsRequest {
   universe: number;
@@ -690,7 +704,8 @@ export type PaxMonRerouteReason =
   | "BrokenTransfer"
   | "MajorDelayExpected"
   | "RevertForecast"
-  | "Simulation";
+  | "Simulation"
+  | "UpdateForecast";
 
 // paxmon/PaxMonStatusRequest.fbs
 export interface PaxMonStatusRequest {
@@ -781,22 +796,13 @@ export type PaxMonEventType =
   | "MAJOR_DELAY_EXPECTED";
 
 // paxmon/PaxMonUpdate.fbs
-export type PaxMonReachabilityStatus =
-  | "OK"
-  | "BROKEN_INITIAL_ENTRY"
-  | "BROKEN_TRANSFER_EXIT"
-  | "BROKEN_TRANSFER_ENTRY"
-  | "BROKEN_FINAL_EXIT";
-
-// paxmon/PaxMonUpdate.fbs
 export interface PaxMonEvent {
   type: PaxMonEventType;
   group_route: PaxMonGroupWithRoute;
   localization_type: PaxMonLocalizationType;
   localization: PaxMonLocalization;
-  reachability_status: PaxMonReachabilityStatus;
+  reachability: PaxMonReachability;
   expected_arrival_time: number;
-  broken_transfer: PaxMonBrokenTransferInfo[];
 }
 
 // paxmon/PaxMonUpdate.fbs
