@@ -329,7 +329,7 @@ function TripListOptions({
       multiple
     >
       <div className="relative">
-        <Listbox.Button className="p-2 mb-1 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
+        <Listbox.Button className="p-2 mb-0.5 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
           <AdjustmentsVerticalIcon className="w-5 h-5" aria-hidden="true" />
         </Listbox.Button>
         <Transition

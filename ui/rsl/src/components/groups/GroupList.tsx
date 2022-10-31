@@ -166,7 +166,7 @@ function GroupList(): JSX.Element {
     {
       getNextPageParam: (lastPage) =>
         lastPage.remaining_groups > 0 ? lastPage.next_skip : undefined,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: true,
       keepPreviousData: true,
       staleTime: 60000,
       enabled: selectedDate != undefined,

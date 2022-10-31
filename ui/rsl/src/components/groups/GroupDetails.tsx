@@ -1,4 +1,5 @@
 import {
+  ArrowPathIcon,
   ArrowUturnUpIcon,
   ClockIcon,
   CpuChipIcon,
@@ -181,7 +182,7 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
     <tr>
       <td className="pr-2">{index + 1}.</td>
       <td className="pr-2">
-        <TripServiceInfoView tsi={leg.trip} format={"Short"} />
+        <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} />
       </td>
       <td className="pr-2">
         {leg.enter_transfer.type !== "NONE"
@@ -212,6 +213,8 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
       return "Rücknahme einer Vorhersage";
     case "Simulation":
       return "Was-wäre-wenn-Simulation";
+    case "UpdateForecast":
+      return "Neuberechnung der Vorhersage";
   }
 }
 
@@ -331,6 +334,11 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
       return {
         icon: <CpuChipIcon className={style} />,
         bgColor: "bg-green-500",
+      };
+    case "UpdateForecast":
+      return {
+        icon: <ArrowPathIcon className={style} />,
+        bgColor: "bg-teal-500",
       };
   }
 }

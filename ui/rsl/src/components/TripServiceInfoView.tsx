@@ -4,7 +4,7 @@ import { formatDateTime } from "@/util/dateFormat";
 
 type TripServiceInfoViewProps = {
   tsi: TripServiceInfo;
-  format: "Short" | "Long";
+  format: "Short" | "ShortAll" | "Long";
 };
 
 function TripServiceInfoView({
@@ -16,6 +16,12 @@ function TripServiceInfoView({
   ];
   if (format === "Short") {
     return <span>{names[0] ?? tsi.trip.train_nr}</span>;
+  } else if (format === "ShortAll") {
+    return (
+      <span>
+        {names.length > 0 ? names.join(", ") : `${tsi.trip.train_nr}`}
+      </span>
+    );
   } else {
     return (
       <div className="w-full">
