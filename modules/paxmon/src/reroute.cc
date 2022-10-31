@@ -211,6 +211,10 @@ std::set<passenger_group_with_route> collect_and_remove_group_routes(
     for (auto const& pgwr : group_routes) {
       auto& route = uv.passenger_groups_.route(pgwr);
       auto edges = uv.passenger_groups_.route_edges(route.edges_index_);
+      utl::verify(edges.empty() == route.disabled_,
+                  "reroute[collect_and_remove_group_routes]: initial mismatch: "
+                  "route_edges={}, disabled={}",
+                  edges.size(), route.disabled_);
       affected_group_routes.insert(pgwr);
       utl::erase(edges, tei);
       if (edges.empty()) {
@@ -239,6 +243,12 @@ bool update_group_route(trip_data_index const tdi, trip const* trp,
   auto& gr = uv.passenger_groups_.route(pgwr);
   auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
   auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+
+  utl::verify(route_edges.empty() == gr.disabled_,
+              "reroute[update_group_route]: initial mismatch: route_edges={}, "
+              "disabled={}",
+              route_edges.size(), gr.disabled_);
+
   for (auto const& leg : cj.legs()) {
     if (leg.trip_idx_ == trp->trip_idx_) {
       auto const edges = uv.trip_data_.edges(tdi);

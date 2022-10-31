@@ -347,6 +347,12 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
 bool check_group_routes(universe const& uv, schedule const& sched) {
   auto const& pgc = uv.passenger_groups_;
   auto ok = true;
+  auto disabled_but_p_gt0 = 0;
+  auto disabled_but_with_edges = 0;
+  auto not_disabled_but_no_edges = 0;
+  auto broken_but_p_gt0 = 0;
+  auto broken_reachability_mismatch = 0;
+  auto prob_sum_gt1 = 0;
 
   for (auto const& pg : pgc) {
     auto p_sum = 0.0F;
@@ -357,15 +363,32 @@ bool check_group_routes(universe const& uv, schedule const& sched) {
 
       p_sum += gr.probability_;
 
+      auto const print_reachability = [&]() {
+        std::cout << ", reachability=" << reachability.status_;
+        if (reachability.first_unreachable_transfer_) {
+          auto const& bti = *reachability.first_unreachable_transfer_;
+          std::cout << " (leg=" << bti.leg_index_ << ", dir="
+                    << (bti.direction_ == transfer_direction_t::ENTER ? "enter"
+                                                                      : "exit")
+                    << ", carr=" << format_time(bti.current_arrival_time_)
+                    << ", cdep=" << format_time(bti.current_departure_time_)
+                    << ", tt=" << bti.required_transfer_time_
+                    << ", canceled={arr=" << bti.arrival_canceled_
+                    << ", dep=" << bti.departure_canceled_ << "})";
+        }
+      };
+
       if (gr.disabled_) {
         if (gr.probability_ != 0.0F) {
           ok = false;
+          ++disabled_but_p_gt0;
           std::cout << "!! group " << pg->id_ << ": route "
                     << gr.local_group_route_index_
                     << " disabled, but probability " << gr.probability_ << "\n";
         }
         if (!edges.empty()) {
           ok = false;
+          ++disabled_but_with_edges;
           std::cout << "!! group " << pg->id_ << ": route "
                     << gr.local_group_route_index_ << " disabled, but on "
                     << edges.size() << " graph edges\n";
@@ -373,6 +396,7 @@ bool check_group_routes(universe const& uv, schedule const& sched) {
       } else {
         if (edges.empty()) {
           ok = false;
+          ++not_disabled_but_no_edges;
           std::cout << "!! group " << pg->id_ << ": route "
                     << gr.local_group_route_index_
                     << " not disabled, probability = " << gr.probability_
@@ -381,17 +405,42 @@ bool check_group_routes(universe const& uv, schedule const& sched) {
       }
       if (gr.broken_ && gr.probability_ != 0.0F) {
         ok = false;
+        ++broken_but_p_gt0;
         std::cout << "!! group " << pg->id_ << ": route "
                   << gr.local_group_route_index_
-                  << " broken, but probability = " << gr.probability_ << "\n";
+                  << " broken, but probability = " << gr.probability_;
+        print_reachability();
+        std::cout << "\n";
+      }
+      if (gr.broken_ != !reachability.ok_) {
+        ok = false;
+        ++broken_reachability_mismatch;
+        std::cout << "!! group " << pg->id_ << ": route "
+                  << gr.local_group_route_index_ << " broken=" << gr.broken_;
+        print_reachability();
+        std::cout << ", probability=" << gr.probability_
+                  << ", disabled=" << gr.disabled_ << ", edges=" << edges.size()
+                  << "\n";
       }
     }
 
     if (p_sum < 0.0F || p_sum > 1.05F) {
       ok = false;
+      ++prob_sum_gt1;
       std::cout << "!! group " << pg->id_ << ": probability sum=" << p_sum
                 << "\n";
     }
+  }
+
+  if (!ok) {
+    std::cout << "!! => group route problems:\n  " << disabled_but_p_gt0
+              << "x disabled but p > 0\n  " << disabled_but_with_edges
+              << "x disabled but edges not empty\n  "
+              << not_disabled_but_no_edges
+              << "x not disabled but edges empty\n  " << broken_but_p_gt0
+              << "x broken but p > 0\n  " << broken_reachability_mismatch
+              << "x broken / reachability mismatch\n  " << prob_sum_gt1
+              << "x probability sum > 1" << std::endl;
   }
 
   return ok;
