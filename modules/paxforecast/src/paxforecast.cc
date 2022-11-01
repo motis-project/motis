@@ -380,7 +380,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         {pgwr, static_cast<monitoring_event_type>(event->type())});
     utl::verify(inserted.second,
                 "multiple monitoring updates for passenger group");
-    broken_transfer_infos[pgwr] = from_fbs(sched, event->broken_transfer());
+    broken_transfer_infos[pgwr] =
+        from_fbs(sched, event->reachability()->broken_transfer());
     auto const localization =
         from_fbs(sched, event->localization_type(), event->localization());
     auto const destination_station_id = get_destination_station_id(
