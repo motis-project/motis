@@ -10,6 +10,7 @@ import classNames from "@/util/classNames";
 import { GroupDetailsFromRoute } from "@/components/groups/GroupDetails";
 import GroupsMainSection from "@/components/groups/GroupsMainSection";
 import Header from "@/components/header/Header";
+import IndexPage from "@/components/index/IndexPage";
 import SimPanel from "@/components/sim/SimPanel";
 import GroupStatistics from "@/components/stats/GroupStatistics";
 import { TripDetailsFromRoute } from "@/components/trips/TripDetails";
@@ -52,6 +53,7 @@ const router = createHashRouter([
     path: "/",
     element: <Root />,
     children: [
+      { path: "", element: <IndexPage /> },
       {
         path: "trips",
         element: <TripsMainSection />,

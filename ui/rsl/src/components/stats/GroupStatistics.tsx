@@ -7,19 +7,11 @@ import { usePaxMonGroupStatisticsQuery } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
-
 import Histogram, {
   ResponsiveHistogramProps,
 } from "@/components/stats/Histogram";
 
-type GroupStatisticsProps = {
-  visible?: boolean;
-};
-
-function GroupStatistics({
-  visible = true,
-}: GroupStatisticsProps): JSX.Element {
+function GroupStatistics(): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const { data } = usePaxMonGroupStatisticsQuery({
     universe,
@@ -30,10 +22,8 @@ function GroupStatistics({
     return <div>Gruppenstatistiken werden geladen...</div>;
   }
 
-  const visibilityClass = visible ? "block" : "hidden";
-
   return (
-    <div className={classNames(visibilityClass, "p-3 grow overflow-y-auto")}>
+    <div className="p-3 grow overflow-y-auto">
       <h1 className="text-xl font-semibold">Gruppenstatistiken</h1>
       <p>Reisendengruppen: {formatNumber(data.group_count)} </p>
       <p>
