@@ -4,7 +4,7 @@ import { useUpdateAtom } from "jotai/utils";
 import { ReactNode, useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
-import { selectedTripAtom } from "@/data/selectedTrip";
+import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { showLegacyMeasureTypesAtom } from "@/data/settings";
 
 import RtCancelMeasureEditor from "@/components/sim/measures/RtCancelMeasureEditor";
@@ -154,7 +154,7 @@ function EmptyMeasureEditor({
   deleteMeasure,
 }: MeasureEditorProps) {
   const setMeasure = useUpdateAtom(measureAtom);
-  const [selectedTrip] = useAtom(selectedTripAtom);
+  const [selectedTrip] = useAtom(mostRecentlySelectedTripAtom);
   const [showLegacyMeasureTypes] = useAtom(showLegacyMeasureTypesAtom);
 
   const setTripLoadInfo = () => {

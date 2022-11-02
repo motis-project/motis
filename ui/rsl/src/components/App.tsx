@@ -1,15 +1,18 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useAtom } from "jotai";
+import { Outlet, RouterProvider, createHashRouter } from "react-router-dom";
 
-import { mainPageAtom, showSimPanelAtom } from "@/data/views";
+import { showSimPanelAtom } from "@/data/views";
 
 import classNames from "@/util/classNames";
 
+import { GroupDetailsFromRoute } from "@/components/groups/GroupDetails";
 import GroupsMainSection from "@/components/groups/GroupsMainSection";
 import Header from "@/components/header/Header";
 import SimPanel from "@/components/sim/SimPanel";
 import GroupStatistics from "@/components/stats/GroupStatistics";
+import { TripDetailsFromRoute } from "@/components/trips/TripDetails";
 import TripsMainSection from "@/components/trips/TripsMainSection";
 
 const queryClient = new QueryClient({
@@ -18,23 +21,11 @@ const queryClient = new QueryClient({
   },
 });
 
-function MainPage(): JSX.Element {
-  const [mainPage] = useAtom(mainPageAtom);
-
-  return (
-    <>
-      <TripsMainSection visible={mainPage === "trips"} />
-      <GroupsMainSection visible={mainPage === "groups"} />
-      <GroupStatistics visible={mainPage === "stats"} />
-    </>
-  );
-}
-
 function MainContent(): JSX.Element {
   const [showSimPanel] = useAtom(showSimPanelAtom);
   return (
     <div className="flex justify-between items-stretch overflow-y-auto grow">
-      <MainPage />
+      <Outlet />
       <div
         className={classNames(
           "bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0",
@@ -47,13 +38,39 @@ function MainContent(): JSX.Element {
   );
 }
 
+function Root(): JSX.Element {
+  return (
+    <div className="w-full h-screen flex flex-col">
+      <Header />
+      <MainContent />
+    </div>
+  );
+}
+
+const router = createHashRouter([
+  {
+    path: "/",
+    element: <Root />,
+    children: [
+      {
+        path: "trips",
+        element: <TripsMainSection />,
+        children: [{ path: ":tripId", element: <TripDetailsFromRoute /> }],
+      },
+      {
+        path: "groups",
+        element: <GroupsMainSection />,
+        children: [{ path: ":groupId", element: <GroupDetailsFromRoute /> }],
+      },
+      { path: "stats", element: <GroupStatistics /> },
+    ],
+  },
+]);
+
 function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="w-full h-screen flex flex-col">
-        <Header />
-        <MainContent />
-      </div>
+      <RouterProvider router={router} />
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

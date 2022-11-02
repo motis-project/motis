@@ -8,7 +8,9 @@ import {
   WrenchIcon,
 } from "@heroicons/react/24/outline";
 import { useAtom } from "jotai";
-import React from "react";
+import { useUpdateAtom } from "jotai/utils";
+import React, { useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 import {
   PaxMonCompactJourneyLeg,
@@ -23,6 +25,7 @@ import { usePaxMonGetGroupsRequest } from "@/api/paxmon";
 import { formatShortDuration } from "@/data/durationFormat";
 import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
+import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
 import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
@@ -43,6 +46,13 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
     sources: [],
     include_reroute_log: true,
   });
+
+  const setMostRecentlySelectedGroup = useUpdateAtom(
+    mostRecentlySelectedGroupAtom
+  );
+  useEffect(() => {
+    setMostRecentlySelectedGroup(groupId);
+  }, [groupId, setMostRecentlySelectedGroup]);
 
   if (!data) {
     if (isLoading) {
@@ -409,6 +419,16 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
       </tbody>
     </table>
   );
+}
+
+export function GroupDetailsFromRoute(): JSX.Element {
+  const params = useParams();
+  const groupId = Number.parseInt(params.groupId ?? "");
+  if (!Number.isNaN(groupId)) {
+    return <GroupDetails groupId={groupId} key={groupId} />;
+  } else {
+    return <></>;
+  }
 }
 
 export default GroupDetails;

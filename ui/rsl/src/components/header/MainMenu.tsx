@@ -1,7 +1,8 @@
 import { useAtom } from "jotai";
-import { ReactNode } from "react";
+import { ReactNode, forwardRef } from "react";
+import { NavLink } from "react-router-dom";
 
-import { MainPage, mainPageAtom, showSimPanelAtom } from "@/data/views";
+import { showSimPanelAtom } from "@/data/views";
 
 import classNames from "@/util/classNames";
 
@@ -28,27 +29,40 @@ function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
 }
 
 type MainPageLinkProps = {
-  page: MainPage;
+  to: string;
   children: ReactNode;
 };
 
-function MainPageLink({ page, children }: MainPageLinkProps): JSX.Element {
-  const [mainPage, setMainPage] = useAtom(mainPageAtom);
-  return (
-    <PageLink active={mainPage == page} onClick={() => setMainPage(page)}>
-      {children}
-    </PageLink>
-  );
-}
+const MainPageLink = forwardRef<HTMLAnchorElement, MainPageLinkProps>(
+  ({ to, children }, ref) => {
+    return (
+      <NavLink
+        ref={ref}
+        to={to}
+        className={({ isActive }) =>
+          classNames(
+            "px-3 py-2 rounded-md text-sm font-medium cursor-pointer",
+            isActive
+              ? "bg-db-cool-gray-700 text-white"
+              : "hover:bg-db-cool-gray-300 text-black"
+          )
+        }
+      >
+        {children}
+      </NavLink>
+    );
+  }
+);
+MainPageLink.displayName = "MainPageLink";
 
 function MainMenu(): JSX.Element {
   const [showSimPanel, setShowSimPanel] = useAtom(showSimPanelAtom);
 
   return (
     <nav className="flex space-x-2">
-      <MainPageLink page={"trips"}>Züge</MainPageLink>
-      <MainPageLink page={"groups"}>Reisende</MainPageLink>
-      <MainPageLink page={"stats"}>Statistiken</MainPageLink>
+      <MainPageLink to="trips">Züge</MainPageLink>
+      <MainPageLink to="groups">Reisende</MainPageLink>
+      <MainPageLink to="stats">Statistiken</MainPageLink>
       <PageLink
         active={showSimPanel}
         onClick={() => setShowSimPanel((v) => !v)}

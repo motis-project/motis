@@ -8,9 +8,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
+import { Link } from "react-router-dom";
 import { Virtuoso } from "react-virtuoso";
 
-import { TripServiceInfo } from "@/api/protocol/motis";
 import {
   PaxMonEdgeLoadInfo,
   PaxMonFilterTripsRequest,
@@ -24,7 +24,7 @@ import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
-import { selectedTripAtom } from "@/data/selectedTrip";
+import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -87,7 +87,7 @@ function getFilterTripsRequest(
 
 function TripList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const [selectedTrip, setSelectedTrip] = useAtom(selectedTripAtom);
+  const [mostRecentlySelectedTrip] = useAtom(mostRecentlySelectedTripAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -166,7 +166,7 @@ function TripList(): JSX.Element {
     : [];
   const totalNumberOfTrips = data?.pages[0]?.total_matching_trips;
 
-  const selectedTripId = JSON.stringify(selectedTrip?.trip);
+  const selectedTripId = JSON.stringify(mostRecentlySelectedTrip?.trip);
 
   return (
     <div className="h-full flex flex-col">
@@ -274,11 +274,7 @@ function TripList(): JSX.Element {
             increaseViewportBy={500}
             endReached={loadMore}
             itemContent={(index, ti) => (
-              <TripListEntry
-                ti={ti}
-                selectedTripId={selectedTripId}
-                setSelectedTrip={setSelectedTrip}
-              />
+              <TripListEntry ti={ti} selectedTripId={selectedTripId} />
             )}
           />
         ) : (
@@ -384,13 +380,11 @@ function TripListOptions({
 type TripListEntryProps = {
   ti: PaxMonFilteredTripInfo;
   selectedTripId: string | undefined;
-  setSelectedTrip: (tsi: TripServiceInfo) => void;
 };
 
 function TripListEntry({
   ti,
   selectedTripId,
-  setSelectedTrip,
 }: TripListEntryProps): JSX.Element {
   const isSelected = selectedTripId === JSON.stringify(ti.tsi.trip);
 
@@ -430,14 +424,14 @@ function TripListEntry({
 
   return (
     <div className="pr-1 pb-3">
-      <div
+      <Link
+        to={`/trips/${JSON.stringify(ti.tsi.trip)}`}
         className={classNames(
-          "cursor-pointer p-1 rounded",
+          "block p-1 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
             : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
         )}
-        onClick={() => setSelectedTrip(ti.tsi)}
       >
         <div className="flex gap-4 pb-1">
           <div className="flex flex-col">
@@ -459,7 +453,7 @@ function TripListEntry({
           <MiniTripLoadGraph edges={ti.edges} />
         </div>
         {criticalInfo}
-      </div>
+      </Link>
     </div>
   );
 }

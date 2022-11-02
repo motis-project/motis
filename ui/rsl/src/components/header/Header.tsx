@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import getQueryParameters from "@/util/queryParameters";
 
 import MainMenu from "@/components/header/MainMenu";
@@ -15,7 +17,9 @@ function Header(): JSX.Element {
             border-b-2 border-db-cool-gray-600"
     >
       <div className="flex items-center space-x-8">
-        <img src="/src/logo.svg" className="h-8 w-auto" alt="MOTIS RSL" />
+        <Link to="/">
+          <img src="/src/logo.svg" className="h-8 w-auto" alt="MOTIS RSL" />
+        </Link>
         <MainMenu />
         <TimeControl allowForwarding={allowForwarding} />
       </div>

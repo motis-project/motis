@@ -5,6 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
+import { Link } from "react-router-dom";
 import { Virtuoso } from "react-virtuoso";
 
 import { Station } from "@/api/protocol/motis";
@@ -21,7 +22,7 @@ import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber } from "@/data/numberFormat";
-import { selectedGroupAtom } from "@/data/selectedGroup";
+import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -95,7 +96,7 @@ function getFilterGroupsRequest(
 
 function GroupList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const [selectedGroup, setSelectedGroup] = useAtom(selectedGroupAtom);
+  const [mostRecentlySelectedGroup] = useAtom(mostRecentlySelectedGroupAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -347,8 +348,7 @@ function GroupList(): JSX.Element {
               <GroupListEntry
                 groupWithStats={groupWithStats}
                 idType={idType}
-                selectedGroup={selectedGroup}
-                setSelectedGroup={setSelectedGroup}
+                selectedGroup={mostRecentlySelectedGroup}
               />
             )}
           />
@@ -385,14 +385,12 @@ type GroupListEntryProps = {
   groupWithStats: PaxMonGroupWithStats;
   idType: GroupIdType;
   selectedGroup: number | undefined;
-  setSelectedGroup: (id: number) => void;
 };
 
 function GroupListEntry({
   groupWithStats,
   idType,
   selectedGroup,
-  setSelectedGroup,
 }: GroupListEntryProps): JSX.Element {
   const group = groupWithStats.group;
   const totalRouteCount = group.routes.length;
@@ -402,14 +400,14 @@ function GroupListEntry({
 
   return (
     <div className="pr-1 pb-3">
-      <div
+      <Link
+        to={`/groups/${group.id}`}
         className={classNames(
-          "cursor-pointer p-2 rounded",
+          "block p-2 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
             : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
         )}
-        onClick={() => setSelectedGroup(group.id)}
       >
         <div className="flex justify-between">
           {idType === "internal" ? (
@@ -457,7 +455,7 @@ function GroupListEntry({
             <span className="sr-only">Routen</span>
           </div>
         </div>
-      </div>
+      </Link>
     </div>
   );
 }

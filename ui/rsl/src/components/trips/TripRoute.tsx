@@ -5,7 +5,8 @@ import {
 } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom } from "jotai";
-import { useState } from "react";
+import { useUpdateAtom } from "jotai/utils";
+import { useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
@@ -18,6 +19,7 @@ import {
 
 import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
+import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
 import classNames from "@/util/classNames";
@@ -49,6 +51,15 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
       },
     }
   );
+
+  const setMostRecentlySelectedTrip = useUpdateAtom(
+    mostRecentlySelectedTripAtom
+  );
+  useEffect(() => {
+    if (data && data.load_infos.length > 0) {
+      setMostRecentlySelectedTrip(data.load_infos[0].tsi);
+    }
+  }, [data, setMostRecentlySelectedTrip]);
 
   if (!data) {
     return <div className="w-full text-center">Zugverlauf wird geladen...</div>;

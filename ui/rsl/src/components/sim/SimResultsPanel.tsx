@@ -8,14 +8,13 @@ import {
 } from "@heroicons/react/20/solid";
 import { differenceInMilliseconds } from "date-fns";
 import { PrimitiveAtom, useAtom } from "jotai";
-import { useUpdateAtom } from "jotai/utils";
 import { Fragment, useState } from "react";
+import { Link } from "react-router-dom";
 import { Virtuoso } from "react-virtuoso";
 
 import { PaxMonUpdatedTrip } from "@/api/protocol/motis/paxmon";
 
 import { formatMiliseconds, formatNumber } from "@/data/numberFormat";
-import { selectedTripAtom } from "@/data/selectedTrip";
 import {
   SimulationResult,
   selectedSimResultAtom,
@@ -224,15 +223,13 @@ type UpdatedTripProps = {
 };
 
 function UpdatedTrip({ ut }: UpdatedTripProps) {
-  const setSelectedTrip = useUpdateAtom(selectedTripAtom);
-
   const category = ut.tsi.service_infos[0]?.category ?? "";
   const trainNr = ut.tsi.service_infos[0]?.train_nr ?? ut.tsi.trip.train_nr;
 
   return (
-    <div
-      className="pb-3 pr-1 cursor-pointer"
-      onClick={() => setSelectedTrip(ut.tsi)}
+    <Link
+      to={`/trips/${JSON.stringify(ut.tsi.trip)}`}
+      className="block pb-3 pr-1"
     >
       <div className="p-1 flex flex-col gap-2 rounded bg-db-cool-gray-100">
         <div className="flex gap-4 pb-1">
@@ -289,7 +286,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
           <MiniTripLoadGraph edges={ut.after_edges} />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

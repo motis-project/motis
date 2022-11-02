@@ -1,4 +1,5 @@
 import { useAtom } from "jotai";
+import { useParams } from "react-router-dom";
 
 import { TripId } from "@/api/protocol/motis";
 
@@ -24,6 +25,19 @@ function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
       )}
     </div>
   );
+}
+
+export function TripDetailsFromRoute(): JSX.Element {
+  const params = useParams();
+  // TODO: validate
+  const tripId = params.tripId
+    ? (JSON.parse(params.tripId) as TripId)
+    : undefined;
+  if (tripId !== undefined) {
+    return <TripDetails tripId={tripId} key={JSON.stringify(tripId)} />;
+  } else {
+    return <></>;
+  }
 }
 
 export default TripDetails;
