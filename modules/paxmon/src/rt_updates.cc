@@ -65,7 +65,6 @@ void check_broken_interchanges(
       // interchange valid again
       ice->broken_ = false;
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        auto const& gr = uv.passenger_groups_.route(pgwr);
         uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
       }
       for (auto const& pgwr :
