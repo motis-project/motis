@@ -344,7 +344,7 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
   return ok;
 }
 
-bool check_group_routes(universe const& uv, schedule const& sched) {
+bool check_group_routes(universe const& uv) {
   auto const& pgc = uv.passenger_groups_;
   auto ok = true;
   auto disabled_but_p_gt0 = 0;
