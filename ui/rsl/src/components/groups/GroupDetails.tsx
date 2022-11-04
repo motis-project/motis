@@ -192,7 +192,9 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
     <tr>
       <td className="pr-2">{index + 1}.</td>
       <td className="pr-2">
-        <Link to={`/trips/${JSON.stringify(leg.trip.trip)}`}>
+        <Link
+          to={`/trips/${encodeURIComponent(JSON.stringify(leg.trip.trip))}`}
+        >
           <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} />
         </Link>
       </td>
@@ -224,7 +226,7 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
     case "RevertForecast":
       return "Rücknahme einer Vorhersage";
     case "Simulation":
-      return "Was-wäre-wenn-Simulation";
+      return "Simulation";
     case "UpdateForecast":
       return "Neuberechnung der Vorhersage";
   }

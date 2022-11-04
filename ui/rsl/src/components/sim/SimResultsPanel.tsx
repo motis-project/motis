@@ -228,7 +228,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
 
   return (
     <Link
-      to={`/trips/${JSON.stringify(ut.tsi.trip)}`}
+      to={`/trips/${encodeURIComponent(JSON.stringify(ut.tsi.trip))}`}
       className="block pb-3 pr-1"
     >
       <div className="p-1 flex flex-col gap-2 rounded bg-db-cool-gray-100">

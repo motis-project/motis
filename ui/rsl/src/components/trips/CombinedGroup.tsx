@@ -141,8 +141,14 @@ function CombinedGroup({
               <Tooltip.Provider>
                 {j.tripLegs.map((leg, legIdx) => (
                   <Tooltip.Root key={legIdx}>
-                    <Tooltip.Trigger className="cursor-default">
-                      <JourneyTripNameView jt={leg.trips[0]} />
+                    <Tooltip.Trigger asChild={true}>
+                      <Link
+                        to={`/trips/${encodeURIComponent(
+                          JSON.stringify(leg.trips[0].trip.id)
+                        )}`}
+                      >
+                        <JourneyTripNameView jt={leg.trips[0]} />
+                      </Link>
                     </Tooltip.Trigger>
                     <Tooltip.Content>
                       <TripTooltip tripId={leg.trips[0].trip.id} />

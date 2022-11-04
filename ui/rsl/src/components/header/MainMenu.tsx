@@ -67,7 +67,7 @@ function MainMenu(): JSX.Element {
         active={showSimPanel}
         onClick={() => setShowSimPanel((v) => !v)}
       >
-        Was-wäre-wenn-Simulation
+        Simulation
       </PageLink>
     </nav>
   );

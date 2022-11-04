@@ -425,7 +425,7 @@ function TripListEntry({
   return (
     <div className="pr-1 pb-3">
       <Link
-        to={`/trips/${JSON.stringify(ti.tsi.trip)}`}
+        to={`/trips/${encodeURIComponent(JSON.stringify(ti.tsi.trip))}`}
         className={classNames(
           "block p-1 rounded",
           isSelected

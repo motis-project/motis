@@ -16,7 +16,7 @@ function Header(): JSX.Element {
             bg-db-cool-gray-200 dark:bg-gray-800 text-black dark:text-neutral-300
             border-b-2 border-db-cool-gray-600"
     >
-      <div className="flex items-center space-x-8">
+      <div className="flex items-center space-x-4">
         <Link to="/">
           <img src="/src/logo.svg" className="h-8 w-auto" alt="MOTIS RSL" />
         </Link>
