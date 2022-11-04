@@ -10,7 +10,7 @@ import {
 import { useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
 import React, { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import {
   PaxMonCompactJourneyLeg,
@@ -192,7 +192,9 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
     <tr>
       <td className="pr-2">{index + 1}.</td>
       <td className="pr-2">
-        <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} />
+        <Link to={`/trips/${JSON.stringify(leg.trip.trip)}`}>
+          <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} />
+        </Link>
       </td>
       <td className="pr-2">
         {leg.enter_transfer.type !== "NONE"
