@@ -1,6 +1,7 @@
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
+import { Link } from "react-router-dom";
 
 import { Station, TripId } from "@/api/protocol/motis";
 import { GroupedPassengerGroups } from "@/api/protocol/motis/paxmon";
@@ -14,7 +15,9 @@ import {
   getDepartureTime,
 } from "@/data/journey";
 import { scheduleAtom } from "@/data/multiverse";
+import { formatPercent } from "@/data/numberFormat";
 
+import classNames from "@/util/classNames";
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
@@ -159,12 +162,50 @@ function CombinedGroup({
     <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
   );
 
+  // TODO: group by group id (gr.g)
+  const groupList =
+    combinedGroup.info.group_routes.length > 0 ? (
+      <div className="flex flex-wrap gap-1">
+        {combinedGroup.info.group_routes.map((gr, idx) => (
+          <Link
+            key={idx}
+            to={`/groups/${gr.g}`}
+            className={classNames("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
+          >
+            <div className="flex justify-between">
+              <div>{formatPercent(gr.p)}</div>
+              <div>{gr.n}</div>
+            </div>
+            <div className="flex justify-between text-xs text-db-cool-gray-500">
+              <div>{gr.g}</div>
+              <div>#{gr.r}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    ) : (
+      <></>
+    );
+
   return (
     <div className="mt-8">
       {groupInfo}
       {findAlternatives ? alternativesInfo : null}
+      {groupList}
     </div>
   );
+}
+
+function groupRouteBg(p: number): string {
+  if (p == 1) {
+    return "bg-green-400";
+  } else if (p >= 0.8) {
+    return "bg-green-200";
+  } else if (p <= 0.2) {
+    return "bg-red-200";
+  } else {
+    return "bg-gray-200";
+  }
 }
 
 export default CombinedGroup;

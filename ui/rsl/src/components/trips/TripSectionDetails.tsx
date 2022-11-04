@@ -39,7 +39,7 @@ const groupByStationOptions: Array<{
   groupBy: PaxMonGroupByStation;
   label: string;
 }> = [
-  //{ groupBy: "None", label: "Keine" },
+  { groupBy: "None", label: "Keine" },
   { groupBy: "Last", label: "Letzter Halt" },
   //{ groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
   { groupBy: "First", label: "Erster Halt" },
@@ -72,7 +72,7 @@ function TripSectionDetails({
     filter: groupFilter,
     group_by_station: groupByStation,
     group_by_other_trip: groupByOtherTrip,
-    include_group_infos: false,
+    include_group_infos: true,
   });
 
   const groupByDirection =
