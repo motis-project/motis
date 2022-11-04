@@ -44,6 +44,7 @@ struct print_log_entry {
         break;
       case reroute_reason_t::REVERT_FORECAST: out << "REVERT_FORECAST"; break;
       case reroute_reason_t::SIMULATION: out << "SIMULATION"; break;
+      case reroute_reason_t::UPDATE_FORECAST: out << "UPDATE_FORECAST"; break;
     }
     auto const new_routes = p.pgc_.log_entry_new_routes_.at(e.index_);
     out << ", new_routes=[";
