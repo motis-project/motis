@@ -329,11 +329,12 @@ int generate(int argc, char const** argv) {
   auto uv = universe{};
   auto const& sched = instance.sched();
 
+  if (generator_opt.generate_capacities_) {
+    std::cout << "Generating capacity information..." << std::endl;
+    generate_capacities(sched, caps, uv, generator_opt.capacity_path_);
+  }
+
   if (check_load) {
-    if (generator_opt.generate_capacities_) {
-      std::cout << "Generating capacity information..." << std::endl;
-      generate_capacities(sched, caps, uv, generator_opt.capacity_path_);
-    }
     if (!fs::exists(generator_opt.capacity_path_)) {
       std::cout << "Capacity file not found: " << generator_opt.capacity_path_
                 << " (try --generate_capacities 1)\n";
