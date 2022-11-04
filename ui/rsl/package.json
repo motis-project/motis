@@ -17,9 +17,9 @@
     "update-protocol": "node --trace-uncaught tools/protocol.js && eslint src/api/protocol --ext .ts --fix && prettier --write src/api/protocol"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.3",
+    "@headlessui/react": "^1.7.4",
     "@headlessui/tailwindcss": "^0.1.1",
-    "@heroicons/react": "^2.0.12",
+    "@heroicons/react": "^2.0.13",
     "@radix-ui/react-tooltip": "^1.0.2",
     "@tanstack/react-query": "^4.14.1",
     "@tanstack/react-query-devtools": "^4.14.1",
@@ -36,7 +36,7 @@
     "downshift": "^7.0.1",
     "jotai": "^1.9.1",
     "lodash-es": "^4.17.21",
-    "optics-ts": "^2.3.0",
+    "optics-ts": "^2.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.39.1",
