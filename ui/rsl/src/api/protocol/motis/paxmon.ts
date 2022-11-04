@@ -570,6 +570,7 @@ export interface PaxMonGroupStatisticsResponse {
   group_count: number;
   total_group_route_count: number;
   active_group_route_count: number;
+  total_pax_count: number;
   min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;
   expected_estimated_delay: PaxMonHistogram;

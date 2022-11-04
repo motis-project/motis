@@ -110,6 +110,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
 
   auto total_group_route_count = 0U;
   auto active_group_route_count = 0U;
+  auto total_pax_count = 0ULL;
 
   for (auto const& pg : pgc) {
     auto const pgi = pg->id_;
@@ -117,6 +118,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
     auto const reroute_log = pgc.reroute_log_entries(pgi);
     h_routes_per_group.add(routes.size());
     h_reroutes_per_group.add(reroute_log.size());
+    total_pax_count += pg->passengers_;
 
     auto min_estimated_delay = HIGHEST_ALLOWED_DELAY;
     auto max_estimated_delay = LOWEST_ALLOWED_DELAY;
@@ -165,8 +167,8 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       MsgContent_PaxMonGroupStatisticsResponse,
       CreatePaxMonGroupStatisticsResponse(
           mc, uv.passenger_groups_.size(), total_group_route_count,
-          active_group_route_count, histogram_to_fbs(h_min_est_delay),
-          histogram_to_fbs(h_max_est_delay),
+          active_group_route_count, total_pax_count,
+          histogram_to_fbs(h_min_est_delay), histogram_to_fbs(h_max_est_delay),
           histogram_to_fbs(h_expected_est_delay),
           histogram_to_fbs(h_routes_per_group),
           histogram_to_fbs(h_active_routes_per_group),

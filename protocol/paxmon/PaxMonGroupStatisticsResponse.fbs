@@ -17,6 +17,8 @@ table PaxMonGroupStatisticsResponse {
   total_group_route_count: uint;
   active_group_route_count: uint;
 
+  total_pax_count: ulong;
+
   // groups or passengers (if count_passengers set in request)
   min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;
