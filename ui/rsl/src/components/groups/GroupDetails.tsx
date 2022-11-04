@@ -31,7 +31,6 @@ import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
-import DebugGraph from "@/components/groups/DebugGraph";
 import Delay from "@/components/util/Delay";
 
 type GroupDetailsProps = {
@@ -127,9 +126,6 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
           </div>
           <RerouteLogTable group={group} />
         </div>
-      </div>
-      <div className="mt-4">
-        <DebugGraph group={group} />
       </div>
     </div>
   );
