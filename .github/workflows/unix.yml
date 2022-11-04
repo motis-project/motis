@@ -44,9 +44,9 @@ jobs:
           restore-keys: |
             pnpm-${{ runner.os }}-
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         with:
-          version: ^7.12.2
+          version: ^7.14.2
           run_install: |
             - cwd: ui/rsl
       - name: Formatting
@@ -143,9 +143,9 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         with:
-          version: ^7.12.2
+          version: ^7.14.2
           run_install: |
             - cwd: ./ui/rsl
 
@@ -263,10 +263,10 @@ jobs:
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         if: ${{ !matrix.config.skipui }}
         with:
-          version: ^7.12.2
+          version: ^7.14.2
           run_install: |
             - cwd: ./ui/rsl
 
