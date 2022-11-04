@@ -1,7 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useAtom } from "jotai";
-import { Outlet, RouterProvider, createHashRouter } from "react-router-dom";
+import {
+  Outlet,
+  RouterProvider,
+  createHashRouter,
+  redirect,
+} from "react-router-dom";
 
 import { showSimPanelAtom } from "@/data/views";
 
@@ -53,7 +58,13 @@ const router = createHashRouter([
     path: "/",
     element: <Root />,
     children: [
-      { path: "", element: <IndexPage /> },
+      {
+        path: "",
+        element: <IndexPage />,
+        loader: () => {
+          return redirect("/trips");
+        },
+      },
       {
         path: "trips",
         element: <TripsMainSection />,
