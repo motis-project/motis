@@ -17,6 +17,8 @@ struct test_server {
   void listen_tome(std::string const&, std::string const&,
                    boost::system::error_code&);
 
+  std::string create_resbody(net::test_server::http_req_t const&, bool, int);
+
   void stop_it();
 
 private:

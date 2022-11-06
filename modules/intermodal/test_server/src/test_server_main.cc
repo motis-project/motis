@@ -1,8 +1,7 @@
-#include "motis/bootstrap/motis_instance.h"
 #include <iostream>
+#include <thread>
 #include "net/stop_handler.h"
 #include "test_server_impl.h"
-
 
 int main(int argc, char** argv) {
   std::cout << "Welcome to the ondemand test server! \n";
@@ -10,7 +9,7 @@ int main(int argc, char** argv) {
   std::string load = "low";
   std::string area = "0";
   std::string fleet = "off";
-  int threads = 1;
+  int threads = 16;
   for (int i = 1; i < argc; i = i+2) {
     std::string arg = argv[i];
     if ((arg == "-h") || (arg == "--help")) {
@@ -19,6 +18,8 @@ int main(int argc, char** argv) {
                 << "\t-h,--help\tShow this help message\n"
                 << "\t-l,--load\tPossible Options: low, medium, high "
                    "To simulate the compute time for the server [low]\n"
+                << "\t-t, --threads\tPossible options: integer value. "
+                   "Best option: let it run on the same value as motis [16]\n"
                 << "\t-a,--area\tPossible Options: 0,1,2,3 "
                    "On which area configuration should the server run? [swiss complete: 0]\n"
                 << "\t-f,--fleet\tPossible Options: little (10), normal (15), big (20), off "
@@ -32,6 +33,16 @@ int main(int argc, char** argv) {
       } else {
         std::cerr << "--load option requires one argument: "
                      "'low' or 'medium' or 'high' \t"
+                  << "Or use --help to show usage information\n"
+                  << std::endl;
+        return 1;
+      }
+    } else if((arg == "-t") || (arg == "--threads")) {
+      if (i + 1 < argc) {
+        threads = std::stoi(argv[i + 1]);
+      } else {
+        std::cerr << "--threads option requires one integer argument: "
+                     "number of threads. \t"
                   << "Or use --help to show usage information\n"
                   << std::endl;
         return 1;
@@ -70,19 +81,23 @@ int main(int argc, char** argv) {
                "|-- load option: " << load << "\n"
                "|-- fleet option: " << fleet << "\n"
                "|-- area option: " << area << "\n"
-               "|-- \n"
                "|-- thread count: " << std::to_string(threads) << "\n"
                "|-------------------------|\n\n";
 
-  motis::bootstrap::motis_instance new_instance;
-  motis::intermodal::test_server servertest(new_instance.runner_.ios(), server_arguments);
+  boost::asio::io_context ioc;
+  motis::intermodal::test_server servertest(ioc, server_arguments);
   boost::system::error_code ectest;
   servertest.listen_tome("127.0.0.1", "9000", ectest);
   if (ectest) {
     std::cout << "unable to start testserver: " << ectest.message() << "\n";
     return 1;
   }
-  new_instance.runner_.run(threads, false);
+  std::vector<std::thread> v;
+  v.reserve(threads - 1);
+  for(auto i = threads - 1; i > 0; --i) {
+    v.emplace_back([&ioc] { ioc.run(); });
+  }
+  ioc.run();
   return 0;
 }
 
