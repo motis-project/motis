@@ -30,7 +30,7 @@ int area = 0;
 int minutes = 0;
 int count = 0;
 bool on = false;
-int sleeping_ms = 100;
+int sleeping_ms = 0;
 std::string last_customer("0");
 std::vector<std::vector<int>> fleet;
 
@@ -170,7 +170,7 @@ struct test_server::impl {
     std::vector<std::string> server_argv_;
 
     std::string create_resbody(net::test_server::http_req_t const& req, bool post, int zone) const {
-      printf("in create resbody funktion\n");
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
       if(post) {
         Document document;
         if (document.Parse(req.body().c_str()).HasParseError()) {
@@ -474,7 +474,6 @@ struct test_server::impl {
               "message": "This is a default message"
     }})";
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(sleeping_ms));
         return result;
       }
     }

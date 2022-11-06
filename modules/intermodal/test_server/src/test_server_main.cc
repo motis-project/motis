@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   std::string load = "low";
   std::string area = "0";
   std::string fleet = "off";
-  int threads = 32;
+  int threads = 16;
   for (int i = 1; i < argc; i = i+2) {
     std::string arg = argv[i];
     if ((arg == "-h") || (arg == "--help")) {
