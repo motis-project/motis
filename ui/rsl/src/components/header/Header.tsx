@@ -7,6 +7,8 @@ import Settings from "@/components/header/Settings";
 import TimeControl from "@/components/header/TimeControl";
 import UniverseControl from "@/components/header/UniverseControl";
 
+import logoUrl from "@/logo.svg";
+
 const allowForwarding = getQueryParameters().get("allowForwarding") === "yes";
 
 function Header(): JSX.Element {
@@ -18,7 +20,7 @@ function Header(): JSX.Element {
     >
       <div className="flex items-center space-x-4">
         <Link to="/">
-          <img src="/src/logo.svg" className="h-8 w-auto" alt="MOTIS RSL" />
+          <img src={logoUrl} className="h-8 w-auto" alt="MOTIS RSL" />
         </Link>
         <MainMenu />
         <TimeControl allowForwarding={allowForwarding} />
