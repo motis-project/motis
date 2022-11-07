@@ -63,6 +63,7 @@ struct mc_raptor_departure: public mc_raptor<mc_raptor_departure, label_departur
                   const stop_count trip_size, const stop_time* first_trip,
                   const stop_time* last_trip, raptor_route route,
                   route_id route_id);
+  void init_parents();
 };
 
 struct mc_raptor_arrival: public mc_raptor<mc_raptor_arrival, label_arrival> {
@@ -73,6 +74,7 @@ struct mc_raptor_arrival: public mc_raptor<mc_raptor_arrival, label_arrival> {
                   const stop_count trip_size, const stop_time* first_trip,
                   const stop_time* last_trip, raptor_route route,
                   route_id route_id);
+  void init_parents();
 };
 
 template class mc_raptor<mc_raptor_departure, label_departure>;
