@@ -29,8 +29,8 @@ void check_broken_interchanges(
     universe& uv, schedule const& sched,
     std::vector<edge_index> const& updated_interchange_edges,
     int arrival_delay_threshold) {
-  static std::set<edge*> broken_interchanges;
-  static std::set<passenger_group_with_route> affected_group_routes;
+  std::set<edge*> broken_interchanges;
+  std::set<passenger_group_with_route> affected_group_routes;
   for (auto& icei : updated_interchange_edges) {
     auto* ice = icei.get(uv);
     if (ice->type_ != edge_type::INTERCHANGE) {
