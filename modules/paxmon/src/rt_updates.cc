@@ -30,7 +30,6 @@ void check_broken_interchanges(
     std::vector<edge_index> const& updated_interchange_edges,
     int arrival_delay_threshold) {
   std::set<edge*> broken_interchanges;
-  std::set<passenger_group_with_route> affected_group_routes;
   for (auto& icei : updated_interchange_edges) {
     auto* ice = icei.get(uv);
     if (ice->type_ != edge_type::INTERCHANGE) {
@@ -57,9 +56,7 @@ void check_broken_interchanges(
         if (gr.probability_ == 0) {
           continue;
         }
-        if (affected_group_routes.insert(pgwr).second) {
-          uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
-        }
+        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
       }
     } else if (ice->broken_) {
       // interchange valid again
