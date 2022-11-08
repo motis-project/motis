@@ -4,24 +4,28 @@
 #include <iostream>
 #include <memory>
 #include <random>
+#include <regex>
+#include <string>
 #include <tuple>
+#include <vector>
 
 #include "boost/filesystem.hpp"
 #include "boost/math/constants/constants.hpp"
 
+#define CISTA_PRINTABLE_NO_VEC
+#include "cista/reflection/printable.h"
+
 #include "utl/erase.h"
 #include "utl/erase_if.h"
+#include "utl/parser/cstr.h"
+#include "utl/parser/file.h"
 #include "utl/to_vec.h"
 
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
 
-#include "utl/parser/file.h"
-
 #include "geo/latlng.h"
 #include "geo/webmercator.h"
-
-#include "version.h"
 
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
@@ -29,17 +33,18 @@
 #include "motis/module/message.h"
 #include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
-
 #include "motis/intermodal/eval/bounds.h"
 #include "motis/intermodal/eval/parse_bbox.h"
 #include "motis/intermodal/eval/parse_poly.h"
+
+#include "version.h"
 
 using namespace motis;
 using namespace motis::bootstrap;
 using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::ppr;
-using namespace flatbuffers;
+namespace fbs = flatbuffers;
 
 namespace motis::intermodal::eval {
 
@@ -52,10 +57,8 @@ struct generator_settings : public conf::configuration {
           "file to write generated queries to");
     param(bbox_, "bbox", "bounding box for locations");
     param(poly_file_, "poly", "bounding polygon for locations");
-    param(max_walk_duration_, "max_walk_duration",
-          "max. walk duration (minutes)");
-    param(walk_radius_, "walk_radius",
-          "radius around stations for start/destination points (meters)");
+    param(start_modes_, "start_modes", "start modes ppr-15|osrm_car-15|...");
+    param(dest_modes_, "dest_modes", "destination modes (see start modes)");
     param(large_stations_, "large_stations", "use only large stations");
   }
 
@@ -64,10 +67,72 @@ struct generator_settings : public conf::configuration {
   std::string target_file_bwd_{"queries_bwd.txt"};
   std::string bbox_;
   std::string poly_file_;
-  int max_walk_duration_{15};
-  int walk_radius_{500};
+  std::string start_modes_;
+  std::string dest_modes_;
   bool large_stations_{false};
 };
+
+struct mode {
+  CISTA_PRINTABLE(mode);
+
+  int get_param(std::size_t const index, int const default_value) const {
+    return parameters_.size() > index ? parameters_[index] : default_value;
+  }
+
+  std::string name_;
+  std::vector<int> parameters_;
+};
+
+std::vector<mode> read_modes(std::string const& in) {
+  std::regex word_regex("([_a-z]+)(-\\d+)?(-\\d+)?");
+  std::smatch match;
+  std::vector<mode> modes;
+  utl::for_each_token(utl::cstr{in}, '|', [&](auto&& s) {
+    auto const x = std::string{s.view()};
+    auto const matches = std::regex_search(x, match, word_regex);
+    if (!matches) {
+      throw utl::fail("invalid mode in \"{}\": {}", in, s.view());
+    }
+
+    auto m = mode{};
+    m.name_ = match[1].str();
+    if (match.size() > 2) {
+      for (auto i = 2; i != match.size(); ++i) {
+        auto const& group = match[i];
+        if (group.str().size() > 1) {
+          m.parameters_.emplace_back(std::stoi(group.str().substr(1)));
+        }
+      }
+    }
+    modes.emplace_back(m);
+  });
+  return modes;
+}
+
+double get_radius_in_m(std::vector<mode> const& modes) {
+  constexpr auto const max_walk_speed = 0.55;  // m/s 2km/h
+  constexpr auto const max_bike_speed = 3.5;  // m/s 12.5km/h
+  constexpr auto const max_car_speed = 13.9;  // m/s 50km/h
+
+  auto r = std::numeric_limits<double>::min();
+  for (auto const& m : modes) {
+    if (m.name_ == "ppr" || m.name_ == "osrm_foot") {
+      r = std::max(r, m.get_param(0, 15) * 60 * max_walk_speed);
+    } else if (m.name_ == "osrm_bike") {
+      r = std::max(r, m.get_param(0, 15) * 60 * max_bike_speed);
+    } else if (m.name_ == "osrm_car") {
+      r = std::max(r, m.get_param(0, 15) * 60 * max_car_speed);
+    } else if (m.name_ == "osrm_car_parking") {
+      r = std::max(r, m.get_param(0, 15) * 60 * max_car_speed);
+    } else if (m.name_ == "gbfs") {
+      r = std::max(r, m.get_param(0, 15) * 60 * max_walk_speed +
+                          m.get_param(1, 15) * 60 * max_bike_speed);
+    } else {
+      throw utl::fail("unkown mode \"{}\"", m.name_);
+    }
+  }
+  return r;
+}
 
 std::unique_ptr<bounds> parse_bounds(generator_settings const& opt) {
   if (!opt.bbox_.empty()) {
@@ -162,17 +227,52 @@ inline double scale_factor(geo::merc_xy const& mc) {
 }
 
 std::string query(int id, unixtime interval_begin, unixtime interval_end,
-                  geo::latlng start_pos, geo::latlng dest_pos,
-                  search_dir dir = search_dir::FWD,
-                  int max_walk_duration = 15 * 60) {
+                  std::vector<mode> const& start_modes,
+                  std::vector<mode> const& dest_modes, geo::latlng start_pos,
+                  geo::latlng dest_pos, search_dir dir = search_dir::FWD) {
   message_creator fbb;
   auto const start = Position(start_pos.lat_, start_pos.lng_);
   auto const interval = Interval(interval_begin, interval_end);
-  std::vector<Offset<ModeWrapper>> modes{CreateModeWrapper(
-      fbb, Mode_FootPPR,
-      CreateFootPPR(fbb, CreateSearchOptions(fbb, fbb.CreateString("default"),
-                                             max_walk_duration))
-          .Union())};
+
+  auto const create_modes = [&](std::vector<mode> const& modes) {
+    auto v = std::vector<fbs::Offset<ModeWrapper>>{};
+    for (auto const& m : modes) {
+      if (m.name_ == "ppr") {
+        v.emplace_back(CreateModeWrapper(
+            fbb, Mode_FootPPR,
+            CreateFootPPR(fbb,
+                          CreateSearchOptions(fbb, fbb.CreateString("default"),
+                                              60 * m.get_param(0, 15)))
+                .Union()));
+      } else if (m.name_ == "osrm_foot") {
+        v.emplace_back(CreateModeWrapper(
+            fbb, Mode_Foot, CreateFoot(fbb, 60 * m.get_param(0, 15)).Union()));
+      } else if (m.name_ == "osrm_bike") {
+        v.emplace_back(CreateModeWrapper(
+            fbb, Mode_Bike, CreateBike(fbb, 60 * m.get_param(0, 15)).Union()));
+      } else if (m.name_ == "osrm_car") {
+        v.emplace_back(CreateModeWrapper(
+            fbb, Mode_Car, CreateCar(fbb, 60 * m.get_param(0, 15)).Union()));
+      } else if (m.name_ == "osrm_car_parking") {
+        v.emplace_back(CreateModeWrapper(
+            fbb, Mode_CarParking,
+            CreateCarParking(
+                fbb, 60 * m.get_param(0, 15),
+                CreateSearchOptions(fbb, fbb.CreateString("default"),
+                                    60 * m.get_param(1, 10)))
+                .Union()));
+      } else if (m.name_ == "gbfs") {
+        v.emplace_back(CreateModeWrapper(
+            fbb, Mode_GBFS,
+            CreateGBFS(fbb, fbb.CreateString("default"),
+                       60 * m.get_param(0, 15), 60 * m.get_param(1, 15))
+                .Union()));
+      } else {
+        throw utl::fail("unkown mode \"{}\"", m.name_);
+      }
+    }
+    return v;
+  };
 
   fbb.create_and_finish(
       MsgContent_IntermodalRoutingRequest,
@@ -180,9 +280,10 @@ std::string query(int id, unixtime interval_begin, unixtime interval_end,
           fbb, IntermodalStart_IntermodalPretripStart,
           CreateIntermodalPretripStart(fbb, &start, &interval, 0, false, false)
               .Union(),
-          fbb.CreateVector(modes), IntermodalDestination_InputPosition,
+          fbb.CreateVector(create_modes(start_modes)),
+          IntermodalDestination_InputPosition,
           CreateInputPosition(fbb, dest_pos.lat_, dest_pos.lng_).Union(),
-          fbb.CreateVector(modes), SearchType_Default,
+          fbb.CreateVector(create_modes(dest_modes)), SearchType_Default,
           dir == search_dir::FWD ? SearchDir_Forward : SearchDir_Backward)
           .Union(),
       "/intermodal");
@@ -284,9 +385,10 @@ int generate(int argc, char const** argv) {
   using namespace motis::intermodal::eval;
   dataset_settings dataset_opt;
   generator_settings generator_opt;
+  import_settings import_opt;
 
   try {
-    conf::options_parser parser({&dataset_opt, &generator_opt});
+    conf::options_parser parser({&dataset_opt, &generator_opt, &import_opt});
     parser.read_command_line_args(argc, argv, false);
 
     if (parser.help()) {
@@ -308,17 +410,21 @@ int generate(int argc, char const** argv) {
     return 1;
   }
 
-  auto bds = parse_bounds(generator_opt);
+  auto const start_modes = read_modes(generator_opt.start_modes_);
+  auto const dest_modes = read_modes(generator_opt.dest_modes_);
 
-  auto const max_walk_duration = generator_opt.max_walk_duration_ * 60;
-  auto const radius = static_cast<double>(generator_opt.walk_radius_);
+  utl::verify(!start_modes.empty(), "no start modes given: {}",
+              generator_opt.start_modes_);
+  utl::verify(!dest_modes.empty(), "no destination modes given: {}",
+              generator_opt.dest_modes_);
+
+  auto bds = parse_bounds(generator_opt);
 
   std::ofstream out_fwd(generator_opt.target_file_fwd_);
   std::ofstream out_bwd(generator_opt.target_file_bwd_);
 
   motis_instance instance;
-  instance.import(module_settings{}, dataset_opt,
-                  import_settings({dataset_opt.dataset_}));
+  instance.import(module_settings{}, dataset_opt, import_opt);
 
   auto const& sched = instance.sched();
   search_interval_generator interval_gen(
@@ -372,9 +478,12 @@ int generate(int argc, char const** argv) {
     }
   }
 
+  auto const start_radius = get_radius_in_m(start_modes);
+  auto const dest_radius = get_radius_in_m(dest_modes);
+
   for (int i = 1; i <= generator_opt.query_count_; ++i) {
     if ((i % 100) == 0) {
-      std::cout << i << "/" << generator_opt.query_count_ << "..." << std::endl;
+      std::cout << i << "/" << generator_opt.query_count_ << std::endl;
     }
     auto const [interval_start, interval_end] =  // NOLINT
         interval_gen.random_interval();
@@ -383,15 +492,15 @@ int generate(int argc, char const** argv) {
         random_stations(sched, station_nodes, interval_start, interval_end);
 
     auto const start_pt =
-        point_gen.random_point_near({from->lat(), from->lng()}, radius);
+        point_gen.random_point_near({from->lat(), from->lng()}, start_radius);
     auto const dest_pt =
-        point_gen.random_point_near({to->lat(), to->lng()}, radius);
+        point_gen.random_point_near({to->lat(), to->lng()}, dest_radius);
 
-    out_fwd << query(i, interval_start, interval_end, start_pt, dest_pt,
-                     search_dir::FWD, max_walk_duration)
+    out_fwd << query(i, interval_start, interval_end, start_modes, dest_modes,
+                     start_pt, dest_pt, search_dir::FWD)
             << "\n";
-    out_bwd << query(i, interval_start, interval_end, start_pt, dest_pt,
-                     search_dir::BWD, max_walk_duration)
+    out_bwd << query(i, interval_start, interval_end, start_modes, dest_modes,
+                     start_pt, dest_pt, search_dir::BWD)
             << "\n";
   }
 
