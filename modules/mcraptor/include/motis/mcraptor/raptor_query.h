@@ -42,6 +42,7 @@ struct base_query {
   std::vector<raptor_edge> raptor_edges_start_;
   std::vector<raptor_edge> raptor_edges_end_;
   std::vector<stop_id> targets_;
+  std::vector<stop_id> sources_;
 };
 
 base_query get_base_query(routing::RoutingRequest const* routing_request,

@@ -117,6 +117,15 @@ base_query get_base_query(RoutingRequest const* routing_request,
     q.targets_.push_back(q.target_);
   }
 
+  if(q.source_ == 0) {
+    for(raptor_edge edge : q.raptor_edges_start_) {
+      q.sources_.push_back(edge.to_);
+    }
+  }
+  else {
+    q.sources_.push_back(q.source_);
+  }
+
   return q;
 }
 

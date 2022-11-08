@@ -13,7 +13,7 @@ template <class T, class L>
 void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
   // ??? checking for empty
   // check if this label may be dominated by other existing labels
-  for(stop_id target : query_.targets_) {
+  for(stop_id target : this->targets()) {
     if(transfer_labels_[target].dominates(new_label)) {
       return;
     }
@@ -32,7 +32,7 @@ template <class T, class L>
 void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
   // checking for empty??
   // check if this label may be dominated by other existing labels
-  for(stop_id target : query_.targets_) {
+  for(stop_id target : this->targets()) {
     if(transfer_labels_[target].dominates(new_label)) {
       return;
     }
@@ -237,6 +237,11 @@ void mc_raptor<T, L>::invoke_cpu_raptor() {
 
 }
 
+template <class T, class L>
+std::vector<stop_id> mc_raptor<T, L>::targets() {
+  return static_cast<T*>(this)->targets();
+}
+
 
 //departure mc_raptor
 
@@ -330,6 +335,10 @@ void mc_raptor_departure::init_parents(){
 
 }
 
+std::vector<stop_id> mc_raptor_departure::targets() {
+  return query_.targets_;
+}
+
 //arrival mc_raptor
 
 void mc_raptor_arrival::init_arrivals() {
@@ -343,7 +352,7 @@ void mc_raptor_arrival::init_arrivals() {
       arrival_by_route(edge.to_, new_label);
     }
   } else {
-    label_arrival new_label(0, query_.source_time_begin_, round_);
+    label_arrival new_label(0, query_.source_time_end_, round_);
     new_label.backward_parent_station = query_.target_;
     arrival_by_route(query_.target_, new_label);
   }
@@ -354,7 +363,7 @@ void mc_raptor_arrival::init_new_label(bag<label_arrival> bag,
                                        stop_id stop, time8 duration, stop_id to_stop) {
   for(size_t i = 0; i < bag.size(); ++i) {
     label_arrival new_label;
-    new_label.departure_time_ = bag[i].arrival_time_ - duration;
+    new_label.departure_time_ = bag[i].departure_time_ - duration;
     new_label.backward_parent_station = stop;
     new_label.backward_parent_label_index_ = i;
     new_label.footpath_duration_ = duration;
@@ -405,20 +414,42 @@ void mc_raptor_arrival::scan_route(stop_id stop, route_stops_index stop_offset,
   }
 }
 void mc_raptor_arrival::init_parents(){
-  bag<label_arrival> start_bag = result_[round_][query_.source_];
-  for(int l_id = 0; l_id < start_bag.labels_.size(); l_id++) {
-    const label_arrival* prev_label = &start_bag.labels_[l_id];
-    int prev_label_id = query_.source_;
-    int prev_parent_label_index = l_id;
-    for(int i = round_ - 1; i >= 0; i--) {
-      label_arrival* current_label = &result_[i][prev_label->backward_parent_station][prev_label->backward_parent_label_index_];
-      current_label->parent_station_ = prev_label_id;
-      current_label->parent_label_index_ = prev_parent_label_index;
-      prev_label_id = prev_label->backward_parent_station;
-      prev_parent_label_index = prev_label->backward_parent_label_index_;
-      prev_label = current_label;
+  std::cout << "Source: " << query_.source_ << std::endl;
+  for(int r_m = 0; r_m <= round_; r_m++) {
+    std::cout << "Round " << r_m << "; Size " << result_[r_m][query_.source_].labels_.size() << std::endl;
+    if(r_m % 2 == 1) { //TODO fix this
+      continue;
+    }
+    std::cout << "Starting parents init" << std::endl;
+    bag<label_arrival> start_bag = result_[r_m][query_.source_];
+    for (int l_id = 0; l_id < start_bag.labels_.size(); l_id++) {
+      label_arrival* prev_label = &start_bag.labels_[l_id];
+      int prev_label_id = query_.source_;
+      int prev_parent_label_index = l_id;
+      prev_label->changes_count_ = 0;
+      prev_label->parent_station_ = query_.source_;
+
+      for (int i = 1; i < r_m; i++) {
+        int r = r_m - i;
+        std::cout << "Parents for round " << r << std::endl;
+        std::cout << "BS: " << prev_label->backward_parent_station << "; BSI: " << prev_label->backward_parent_label_index_ << "; Size: " << result_[r][prev_label->backward_parent_station].size() << std::endl;
+        label_arrival* current_label = &result_[r][prev_label->backward_parent_station][prev_label->backward_parent_label_index_];
+        current_label->parent_station_ = prev_label_id;
+        current_label->parent_label_index_ = prev_parent_label_index;
+        current_label->changes_count_ = i;
+        current_label->parent_departure_time_ = prev_label->departure_time_;
+        prev_label_id = prev_label->backward_parent_station;
+        prev_parent_label_index = prev_label->backward_parent_label_index_;
+        prev_label = current_label;
+      }
     }
   }
+
+  //TODO reverse result
+}
+
+std::vector<stop_id> mc_raptor_arrival::targets() {
+  return query_.sources_;
 }
 
 }  // namespace motis::mcraptor
