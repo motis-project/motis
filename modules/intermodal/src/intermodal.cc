@@ -305,7 +305,6 @@ std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
                                   std::vector<ondemand_patch>& od_patches,
                                   std::vector<availability_response>& ares) {
   if (ares.empty() || od_patches.empty()) {
-    //printf("how often here?\n");
     return 0;
   }
   auto const all = journeys.size();
@@ -515,8 +514,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              ppr_profiles const& profiles,
                              std::vector<std::string> const& server_infos) {
   query_id++;
-  printf("----------------------------------------------------------------------COUNT: %d\n", query_id);
-
   MOTIS_START_TIMING(post_timing);
   auto const dir = req->search_dir();
   auto routing_response =
@@ -642,7 +639,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   MOTIS_STOP_TIMING(ondemand_remove);
   stats.ondemand_remove_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_remove));
-  //printf("journey end: ------- %llu\n", journeys.size());
   stats.journey_count_end_ += journeys.size();
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });

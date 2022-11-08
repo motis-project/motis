@@ -1,6 +1,4 @@
 #include "motis/intermodal/ondemand_availability.h"
-
-//#include <rpc.h> // fuer die uuid
 #include <ctime>
 
 #include "boost/geometry.hpp"
@@ -234,7 +232,6 @@ std::string create_json_body(availability_request const& areq) {
   time_point time_convertion_arrival{std::chrono::duration_cast<time_point::duration>(std::chrono::seconds(areq.arrival_time_onnext_))};
   std::string dep_time = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_departure));
   std::string arr_time = date::format("%FT%TZ", date::floor<std::chrono::seconds>(time_convertion_arrival));
-  // Creates a Ride Inquiry object with estimations and availability information - POST
   std::string json = R"( { "data": {
                       "product_id": ")" + areq.product_id_ + "\","
                 + R"( "origin": {
@@ -252,8 +249,8 @@ std::string create_json_body(availability_request const& areq) {
 bool checking(availability_request const& areq, availability_response const& ares) {
   double epsilon = 0.00001;
   unixtime delta = 900;
-  bool coord_start = false, coord_end = false, walklength = false, walktime = false, timewindow;
-  bool result = false;
+  bool coord_start, coord_end, walklength, walktime, timewindow;
+  bool result;
   unixtime timediff_dep = abs(areq.departure_time_ - ares.pickup_time_);
   unixtime timediff_arr = abs(areq.arrival_time_onnext_ - ares.dropoff_time_);
   if(timediff_dep > delta || timediff_arr > delta) {
@@ -273,7 +270,7 @@ bool checking(availability_request const& areq, availability_response const& are
     }
     else if(ares.walk_dur_.at(1) != 0 && ares.walk_dur_.at(0) == 0) {
       walktime = ares.walk_dur_.at(1) < MAX_WALK_TIME &&
-                 ares.dropoff_time_ + ares.walk_dur_.at(1) < areq.arrival_time_onnext_; // 1350 +5 = 1355 < 1400
+                 ares.dropoff_time_ + ares.walk_dur_.at(1) < areq.arrival_time_onnext_;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(1) * WALK_SPEED;
       result = walklength & walktime & timewindow;
     }
@@ -290,7 +287,7 @@ bool checking(availability_request const& areq, availability_response const& are
       result = coord_start & coord_end & timewindow;
     }
     else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
-      walktime = areq.departure_time_ + ares.walk_dur_.at(0) < ares.pickup_time_ && ares.walk_dur_.at(0) < MAX_WALK_TIME; // 1300 +5 = 1305 < 1310
+      walktime = areq.departure_time_ + ares.walk_dur_.at(0) < ares.pickup_time_ && ares.walk_dur_.at(0) < MAX_WALK_TIME;
       walklength = areq.max_walk_dist_ >= ares.walk_dur_.at(0) * WALK_SPEED;
       result = walklength & walktime & timewindow;
     }
@@ -355,11 +352,6 @@ void check_od_availability(const availability_request& areq,
   request::method m_post = request::POST;
   std::vector<geo::latlng> req_dots{};
   auto vares_mutex = std::mutex{};
-  //UUID uuid;
-  //UuidCreate(&uuid);
-  //char* random_uuid_str;
-  //UuidToStringA(&uuid, (RPC_CSTR*)&random_uuid_str);
-  //hdrs.insert(pair<string, string>("Idempotency-Key", random_uuid_str));
   std::string body = create_json_body(areq);
   request product_check_req(areq.product_check_addr_, m_post, areq.hdrs_, body);
   auto f_product_check = http_future_t{};
