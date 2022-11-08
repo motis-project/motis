@@ -1,9 +1,11 @@
+import { ArrowDownIcon } from "@heroicons/react/20/solid";
 import { useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useAtomCallback } from "jotai/utils";
 import { useCallback } from "react";
 
 import {
+  PaxMonGetUniversesResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
 } from "@/api/protocol/motis/paxmon";
@@ -12,6 +14,7 @@ import {
   queryKeys,
   sendPaxMonDestroyUniverseRequest,
   sendPaxMonForkUniverseRequest,
+  sendPaxMonGetUniversesRequest,
   sendPaxMonKeepAliveRequest,
 } from "@/api/paxmon";
 
@@ -109,8 +112,41 @@ function UniverseControl(): JSX.Element {
     }
   );
 
+  const requestFromServerHandler = useAtomCallback(
+    useCallback((get, set, data: PaxMonGetUniversesResponse) => {
+      if (data.universes.length === 0) {
+        console.log("error: server didn't return any universes");
+        return;
+      }
+      const currentUniverse = get(universeAtom);
+      const newUniverses: UniverseInfo[] = data.universes.map((uvi) => {
+        return { id: uvi.universe, schedule: uvi.schedule, ttl: uvi.ttl };
+      });
+      set(multiverseIdAtom, data.multiverse_id);
+      set(universesAtom, newUniverses);
+      if (!newUniverses.find((uvi) => uvi.id === currentUniverse)) {
+        set(universeAtom, newUniverses[0].id);
+        set(scheduleAtom, newUniverses[0].schedule);
+      }
+    }, [])
+  );
+
+  const requestFromServerMutation = useMutation(sendPaxMonGetUniversesRequest, {
+    onSettled: (data, error) => {
+      if (error) {
+        console.log(
+          "error while trying to load list of universes from server:",
+          error
+        );
+      } else if (data) {
+        requestFromServerHandler(data);
+      }
+    },
+  });
+
   const forkEnabled = !isMutating;
   const destroyEnabled = !isMutating && universe != 0;
+  const requestFromServerEnabled = !isMutating;
 
   // <PlusCircleIcon className="h-5 w-5 text-white" />
   // <XCircleIcon className="h-5 w-5 text-white" />
@@ -143,6 +179,19 @@ function UniverseControl(): JSX.Element {
         disabled={!destroyEnabled}
       >
         Löschen
+      </button>
+      <button
+        type="button"
+        className={`px-3 py-1 rounded text-sm ${
+          requestFromServerEnabled
+            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
+            : "bg-db-red-300 text-db-red-100 cursor-default"
+        }`}
+        onClick={() => requestFromServerMutation.mutate()}
+        disabled={!requestFromServerEnabled}
+        title="Liste der Paralleluniversen vom Server laden"
+      >
+        <ArrowDownIcon className="h-5 w-5" />
       </button>
       {universes.map((uv) => (
         <button

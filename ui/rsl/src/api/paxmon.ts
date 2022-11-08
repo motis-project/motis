@@ -28,6 +28,7 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonGetUniversesResponse,
   PaxMonGroupStatisticsRequest,
   PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
@@ -291,6 +292,12 @@ export async function sendPaxMonDebugGraphRequest(
   );
   verifyContentType(msg, "PaxMonDebugGraphResponse");
   return msg.content as PaxMonDebugGraphResponse;
+}
+
+export async function sendPaxMonGetUniversesRequest(): Promise<PaxMonGetUniversesResponse> {
+  const msg = await sendRequest("/paxmon/universes");
+  verifyContentType(msg, "PaxMonGetUniversesResponse");
+  return msg.content as PaxMonGetUniversesResponse;
 }
 
 export const queryKeys = {
