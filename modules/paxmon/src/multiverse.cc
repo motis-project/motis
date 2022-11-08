@@ -92,7 +92,7 @@ universe* multiverse::fork(universe const& base_uv, schedule const& base_sched,
 }
 
 bool multiverse::destroy(universe_id const id) {
-  std::lock_guard lock{mutex_};
+  std::unique_lock lock{mutex_};
   if (id == 0) {
     return false;
   }
@@ -105,6 +105,9 @@ bool multiverse::destroy(universe_id const id) {
         "paxmon::multiverse.destroy: default universe");
 
     universe_info_storage_.erase(id);
+
+    lock.unlock();
+    send_universe_destroyed_notifications();
     return true;
   } else {
     return false;
@@ -164,7 +167,7 @@ std::optional<std::chrono::seconds> multiverse::keep_alive(
 }
 
 void multiverse::destroy_expired_universes() {
-  std::lock_guard lock{mutex_};
+  std::unique_lock lock{mutex_};
   auto const now = std::chrono::steady_clock::now();
   for (auto it = begin(universe_info_map_); it != end(universe_info_map_);) {
     auto const uv_id = it->first;
@@ -182,6 +185,9 @@ void multiverse::destroy_expired_universes() {
     }
     ++it;
   }
+
+  lock.unlock();
+  send_universe_destroyed_notifications();
 }
 
 void multiverse::release_universe(universe_info& uv_info) {
@@ -201,16 +207,7 @@ void multiverse::release_universe(universe_info& uv_info) {
           motis::module::to_res_id(motis::module::global_res_id::SCHEDULE)) {
     mod_.remove_shared_data(schedule_res_id);
   }
-  lock.unlock();
-
-  if (ctx::current_op<ctx_data>() != nullptr) {
-    message_creator mc;
-    mc.create_and_finish(MsgContent_PaxMonUniverseDestroyed,
-                         CreatePaxMonUniverseDestroyed(mc, uv_id).Union(),
-                         "/paxmon/universe_destroyed");
-    auto const msg = make_msg(mc);
-    ctx::await_all(motis_publish(msg));
-  }
+  recently_destroyed_universes_.emplace_back(uv_id);
 }
 
 std::vector<current_universe_info> multiverse::get_current_universe_infos() {
@@ -230,6 +227,24 @@ std::vector<current_universe_info> multiverse::get_current_universe_infos() {
   }
 
   return infos;
+}
+
+void multiverse::send_universe_destroyed_notifications() {
+  auto lock = std::unique_lock{mutex_};
+  auto const recently_destroyed = recently_destroyed_universes_;
+  recently_destroyed_universes_.clear();
+  lock.unlock();
+
+  if (ctx::current_op<ctx_data>() != nullptr) {
+    for (auto const& uv_id : recently_destroyed) {
+      message_creator mc;
+      mc.create_and_finish(MsgContent_PaxMonUniverseDestroyed,
+                           CreatePaxMonUniverseDestroyed(mc, uv_id).Union(),
+                           "/paxmon/universe_destroyed");
+      auto const msg = make_msg(mc);
+      ctx::await_all(motis_publish(msg));
+    }
+  }
 }
 
 }  // namespace motis::paxmon

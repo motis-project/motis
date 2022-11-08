@@ -86,12 +86,15 @@ private:
 
   void release_universe(universe_info& uv_info);
 
+  void send_universe_destroyed_notifications();
+
   std::recursive_mutex mutex_;
   motis::module::module& mod_;
   std::int64_t const id_;
   std::map<universe_id, std::shared_ptr<universe_info>> universe_info_storage_;
   std::map<universe_id, std::weak_ptr<universe_info>> universe_info_map_;
   std::map<ctx::res_id_t, std::vector<universe_id>> universes_using_schedule_;
+  std::vector<universe_id> recently_destroyed_universes_;
   universe_id last_id_{};
 };
 
