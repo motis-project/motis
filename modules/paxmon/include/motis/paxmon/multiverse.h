@@ -34,6 +34,16 @@ struct keep_alive_response {
   std::vector<universe_id> not_found_;
 };
 
+struct current_universe_info {
+  universe_id const uv_id_;
+  ctx::res_id_t const universe_res_;
+  ctx::res_id_t const schedule_res_;
+  std::optional<std::chrono::seconds> ttl_{};
+  std::optional<std::chrono::time_point<std::chrono::steady_clock>>
+      keep_alive_until_{};
+  std::optional<std::chrono::seconds> expires_in_{};
+};
+
 struct multiverse : std::enable_shared_from_this<multiverse> {
   explicit multiverse(motis::module::module& mod)
       : mod_{mod},
@@ -60,6 +70,8 @@ struct multiverse : std::enable_shared_from_this<multiverse> {
   keep_alive_response keep_alive(std::vector<universe_id> const& universes);
 
   void destroy_expired_universes();
+
+  std::vector<current_universe_info> get_current_universe_infos();
 
   friend universe_info;
 

@@ -213,4 +213,23 @@ void multiverse::release_universe(universe_info& uv_info) {
   }
 }
 
+std::vector<current_universe_info> multiverse::get_current_universe_infos() {
+  auto infos = std::vector<current_universe_info>{};
+
+  std::unique_lock lock{mutex_};
+  auto const now = std::chrono::steady_clock::now();
+  for (auto const& [id, uvi] : universe_info_storage_) {
+    std::optional<std::chrono::seconds> expires_in;
+    if (uvi->keep_alive_until_) {
+      expires_in = std::chrono::duration_cast<std::chrono::seconds>(
+          *uvi->keep_alive_until_ - now);
+    }
+    infos.emplace_back(current_universe_info{
+        uvi->uv_id_, uvi->universe_res_, uvi->schedule_res_, uvi->ttl_,
+        uvi->keep_alive_until_, expires_in});
+  }
+
+  return infos;
+}
+
 }  // namespace motis::paxmon

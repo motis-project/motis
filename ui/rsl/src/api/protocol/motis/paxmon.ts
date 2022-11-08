@@ -489,6 +489,20 @@ export interface PaxMonGetTripLoadInfosResponse {
   load_infos: PaxMonTripLoadInfo[];
 }
 
+// paxmon/PaxMonGetUniversesResponse.fbs
+export interface PaxMonUniverseInfo {
+  universe: number;
+  schedule: number;
+  ttl: number;
+  expires_in: number;
+}
+
+// paxmon/PaxMonGetUniversesResponse.fbs
+export interface PaxMonGetUniversesResponse {
+  multiverse_id: number;
+  universes: PaxMonUniverseInfo[];
+}
+
 // paxmon/PaxMonGroup.fbs
 export interface PaxMonDataSource {
   primary_ref: number;

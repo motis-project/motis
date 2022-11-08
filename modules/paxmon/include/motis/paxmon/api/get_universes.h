@@ -7,7 +7,7 @@
 
 namespace motis::paxmon::api {
 
-motis::module::msg_ptr get_status(paxmon_data& data,
-                                  motis::module::msg_ptr const& msg);
+motis::module::msg_ptr get_universes(paxmon_data& data,
+                                     motis::module::msg_ptr const& msg);
 
 }  // namespace motis::paxmon::api
