@@ -498,14 +498,10 @@ int generate(int argc, char const** argv) {
     auto const dest_pt =
         point_gen.random_point_near({to->lat(), to->lng()}, radius);
 
-    // Mode_OnDemand - Mode_Foot
-    auto start_mode = Mode_OnDemand;
-    auto dest_mode = Mode_Foot;
+    auto start_mode = Mode_Foot;
+    auto dest_mode = Mode_OnDemand;
     max_walk_duration = 30 * 60;
     auto const type = SearchType_Ondemand;
-    //auto const type = SearchType_OndemandWeighted;
-    //auto const type = SearchType_OndemandWithDurationCost;
-    //auto const type = SearchType_OndemandWithDurationCostWeighted;
 
     out_fwd << query(i, interval_start, interval_end, start_pt, dest_pt,
                      search_dir::FWD, max_walk_duration, start_mode, dest_mode, type)

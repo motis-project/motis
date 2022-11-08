@@ -496,8 +496,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              ppr_profiles const& profiles,
                              std::vector<std::string> const& server_infos) {
   query_id++;
-  printf("----------------------------------------------------------------------COUNT: %d\n", query_id);
-
   MOTIS_START_TIMING(post_timing);
   auto const dir = req->search_dir();
   auto routing_response =
@@ -505,7 +503,6 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
   auto journeys = routing_response == nullptr
                       ? std::vector<journey>{}
                       : message_to_journeys(routing_response);
-  //printf("    JOURNEYS: %llu\n", journeys.size());
 
   stats.journey_count_begin_ = journeys.size();
   MOTIS_START_TIMING(direct_connection_timing);

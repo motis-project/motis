@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
                 << "\t-l, --load\tPossible options: low, medium, high. "
                    "To simulate the compute time for the server [low]\n"
                 << "\t-t, --threads\tPossible options: integer value. "
-                   "Best option: let it run on the same value as motis [32]\n"
+                   "Best option: let it run on the same value as motis [16]\n"
                 << "\t-a, --area\tPossible options: 0,1,2,3. "
                    "On which area configuration should the server run? [swiss complete: 0]\n"
                 << "\t-f, --fleet\tPossible options: little (20), normal (27), big (35), off. "
@@ -81,7 +81,6 @@ int main(int argc, char** argv) {
                "|-- load option: " << load << "\n"
                "|-- fleet option: " << fleet << "\n"
                "|-- area option: " << area << "\n"
-               "|-- \n"
                "|-- thread count: " << std::to_string(threads) << "\n"
                "|-------------------------|\n\n";
 
