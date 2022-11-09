@@ -141,13 +141,13 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
   n::routing::stats stats;
   MOTIS_START_TIMING(routing);
   if (req->search_dir() == SearchDir_Forward) {
-    auto r = n::routing::raptor<n::direction::kForward>{tt, *search_state,
-                                                        std::move(q)};
+    auto r = n::routing::raptor<n::direction::kForward, false>{
+        tt, *search_state, std::move(q)};
     r.route();
     stats = r.get_stats();
   } else {
-    auto r = n::routing::raptor<n::direction::kBackward>{tt, *search_state,
-                                                         std::move(q)};
+    auto r = n::routing::raptor<n::direction::kBackward, false>{
+        tt, *search_state, std::move(q)};
     r.route();
     stats = r.get_stats();
   }

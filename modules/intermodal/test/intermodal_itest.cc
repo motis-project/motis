@@ -25,10 +25,12 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 
 namespace motis::intermodal {
 
-struct intermodal_itest : public motis_instance_test {
+struct intermodal_itest
+    : public generic_motis_instance_test<testing::TestWithParam<const char*>> {
   intermodal_itest()
-      : motis::test::motis_instance_test(dataset_opt,
-                                         {"intermodal", "routing", "lookup"}) {
+      : motis::test::generic_motis_instance_test<
+            testing::TestWithParam<const char*>>(
+            dataset_opt, {"intermodal", "routing", "lookup"}) {
     instance_->register_op(
         "/osrm/one_to_many",
         [](msg_ptr const& msg) {
@@ -80,7 +82,8 @@ TEST_F(intermodal_itest, forward) {
           "mode_type": "Bike",
           "mode": { "max_duration": 600 }
         }],
-        "search_type": "SingleCriterion"
+        "search_type": "SingleCriterion",
+        "router": ""
       }
     }
   )";
@@ -155,7 +158,8 @@ TEST_F(intermodal_itest, backward) {
           "mode": { "max_duration": 600 }
         }],
         "search_type": "SingleCriterion",
-        "search_dir": "Backward"
+        "search_dir": "Backward",
+        "router": ""
       }
     }
   )";
@@ -208,7 +212,8 @@ TEST_F(intermodal_itest, not_so_intermodal) {
         "destination_type": "InputStation",
         "destination": { "id": "8000031", "name": "" },
         "destination_modes": [],
-        "search_type": "SingleCriterion"
+        "search_type": "SingleCriterion",
+        "router": ""
       }
     }
   )";
