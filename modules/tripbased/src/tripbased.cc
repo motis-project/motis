@@ -186,10 +186,18 @@ trip_based_query build_tb_query(RoutingRequest const* req,
       if (start_node_eva == info->from_station_id()->str()) {
         auto const st =
             get_station(sched, info->to_station_id()->str())->index_;
+        std::cerr << "start_edge: " << info->from_station_id()->str() << " --> "
+                  << info->to_station_id()->str()
+                  << ": mumo_id=" << info->mumo_id()
+                  << ", duration=" << info->duration() << "\n";
         q.start_edges_.emplace_back(st, info);
       } else if (destination_node_eva == info->to_station_id()->str()) {
         auto const st =
             get_station(sched, info->from_station_id()->str())->index_;
+        std::cerr << "destination_edge: " << info->from_station_id()->str()
+                  << " --> " << info->to_station_id()->str()
+                  << ": mumo_id=" << info->mumo_id()
+                  << ", duration=" << info->duration() << "\n";
         q.destination_edges_.emplace_back(st, info);
       }
     } else {
@@ -267,7 +275,10 @@ struct tripbased::impl {
             static_cast<uint64_t>(motis_to_unixtime(sched_, res.interval_end_)),
             fbb.CreateVector(std::vector<Offset<DirectConnection>>{}))
             .Union());
-    return make_msg(fbb);
+
+    auto const r = make_msg(fbb);
+    std::cerr << r->to_json() << "\n";
+    return r;
   }
 
   inline trip_based_result route_dispatch(trip_based_query const& q,
