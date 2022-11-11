@@ -186,18 +186,10 @@ trip_based_query build_tb_query(RoutingRequest const* req,
       if (start_node_eva == info->from_station_id()->str()) {
         auto const st =
             get_station(sched, info->to_station_id()->str())->index_;
-        std::cerr << "start_edge: " << info->from_station_id()->str() << " --> "
-                  << info->to_station_id()->str()
-                  << ": mumo_id=" << info->mumo_id()
-                  << ", duration=" << info->duration() << "\n";
         q.start_edges_.emplace_back(st, info);
       } else if (destination_node_eva == info->to_station_id()->str()) {
         auto const st =
             get_station(sched, info->from_station_id()->str())->index_;
-        std::cerr << "destination_edge: " << info->from_station_id()->str()
-                  << " --> " << info->to_station_id()->str()
-                  << ": mumo_id=" << info->mumo_id()
-                  << ", duration=" << info->duration() << "\n";
         q.destination_edges_.emplace_back(st, info);
       }
     } else {
@@ -275,10 +267,7 @@ struct tripbased::impl {
             static_cast<uint64_t>(motis_to_unixtime(sched_, res.interval_end_)),
             fbb.CreateVector(std::vector<Offset<DirectConnection>>{}))
             .Union());
-
-    auto const r = make_msg(fbb);
-    std::cerr << r->to_json() << "\n";
-    return r;
+    return make_msg(fbb);
   }
 
   inline trip_based_result route_dispatch(trip_based_query const& q,
@@ -569,6 +558,7 @@ struct tripbased::impl {
                 tb_footpath{e.station_id_, q.destination_station_, e.duration_},
                 connection_arrival, connection_arrival + e.duration_,
                 e.mumo_id_, e.price_, e.accessibility_);
+            tbj.arrival_time_ += e.duration_;
           } else {
             auto const& first_edge = tbj.edges_.front();
             auto connection_departure = tbj.edges_.front().departure_time_;
@@ -581,6 +571,7 @@ struct tripbased::impl {
                 tb_footpath{q.destination_station_, e.station_id_, e.duration_},
                 connection_departure - e.duration_, connection_departure,
                 e.mumo_id_, e.price_, e.accessibility_);
+            tbj.arrival_time_ -= e.duration_;
           }
         }
         add_starts(tbjs);

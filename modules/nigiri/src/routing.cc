@@ -2,6 +2,8 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "utl/helpers/algorithm.h"
+#include "utl/pipes.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -9,6 +11,7 @@
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/raptor.h"
 #include "nigiri/routing/search_state.h"
+#include "nigiri/special_stations.h"
 
 #include "motis/core/common/timing.h"
 #include "motis/core/journey/journeys_to_message.h"
@@ -76,6 +79,50 @@ mm::msg_ptr to_routing_response(
   return make_msg(fbb);
 }
 
+std::vector<n::routing::offset> get_offsets(
+    std::vector<std::string> const& tags, n::timetable const& tt,
+    fbs::Vector<fbs::Offset<motis::routing::AdditionalEdgeWrapper>> const*
+        edges,
+    n::direction const search_dir) {
+  return utl::all(*edges)  //
+         | utl::transform([](routing::AdditionalEdgeWrapper const* e) {
+             return reinterpret_cast<routing::MumoEdge const*>(
+                 e->additional_edge());
+           })  //
+         | utl::remove_if([&](routing::MumoEdge const* e) {
+             if (search_dir == n::direction::kForward) {
+               return e->from_station_id()->view() !=
+                      n::get_special_station_name(n::special_station::kStart);
+             } else {
+               return e->to_station_id()->view() !=
+                      n::get_special_station_name(n::special_station::kEnd);
+             }
+           })  //
+         | utl::transform([&](routing::MumoEdge const* e) {
+             return n::routing::offset{
+                 .location_ =
+                     get_location_idx(tags, tt,
+                                      search_dir == n::direction::kForward
+                                          ? e->to_station_id()->str()
+                                          : e->from_station_id()->str()),
+                 .offset_ =
+                     n::duration_t{static_cast<std::int16_t>(e->duration())},
+                 .type_ = static_cast<std::uint8_t>(e->mumo_id())};
+           })  //
+         | utl::vec();
+}
+
+template <n::direction SearchDir, bool IntermodalDest>
+n::routing::stats run_search(n::routing::search_state& state,
+                             n::timetable const& tt, n::routing::query&& q) {
+  n::routing::stats stats;
+  auto r = n::routing::raptor<n::direction::kForward, IntermodalDest>{
+      tt, state, std::move(q)};
+  r.route();
+  stats = r.get_stats();
+  return stats;
+}
+
 motis::module::msg_ptr route(std::vector<std::string> const& tags,
                              n::timetable& tt,
                              motis::module::msg_ptr const& msg) {
@@ -105,11 +152,32 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
   } else {
     throw utl::fail("OntripTrainStart not supported");
   }
-
   auto const destination_station =
       get_location_idx(tags, tt, req->destination()->id()->str());
+
+  auto const is_intermodal_start =
+      start_station == n::get_special_station(n::special_station::kStart);
+  auto const is_intermodal_dest =
+      destination_station == n::get_special_station(n::special_station::kEnd);
+
+  utl::verify(
+      utl::all_of(
+          *req->additional_edges(),
+          [&](routing::AdditionalEdgeWrapper const* e) {
+            if (e->additional_edge_type() != routing::AdditionalEdge_MumoEdge) {
+              return false;
+            }
+            auto const mumo_e =
+                static_cast<routing::MumoEdge const*>(e->additional_edge());
+            return (is_intermodal_start &&
+                    mumo_e->from_station_id()->view() == "START") ||
+                   (is_intermodal_dest &&
+                    mumo_e->to_station_id()->view() == "END");
+          }),
+      "nigiri only supports mumo edges to end or from start");
+
   utl::verify(destination_station != n::location_idx_t::invalid(),
-              "unknown station {}", req->destination()->id()->c_str());
+              "unknown station {}", req->destination()->id()->view());
 
   auto q = n::routing::query{
       .start_time_ = start_time,
@@ -120,13 +188,23 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
                               ? n::routing::location_match_mode::kEquivalent
                               : n::routing::location_match_mode::kOnlyChildren,
       .use_start_footpaths_ = req->use_start_footpaths(),
-      .start_ = {n::routing::offset{.location_ = start_station,
-                                    .offset_ = n::duration_t{0U},
-                                    .type_ = 0U}},
-      .destinations_ = {std::vector<n::routing::offset>{
-          n::routing::offset{.location_ = destination_station,
-                             .offset_ = n::duration_t{0U},
-                             .type_ = 0U}}},
+      .start_ =
+          is_intermodal_start
+              ? get_offsets(tags, tt, req->additional_edges(),
+                            n::direction::kForward)
+              : std::vector<n::routing::offset>{{.location_ = start_station,
+                                                 .offset_ = n::duration_t{0U},
+                                                 .type_ = 0U}},
+      .destinations_ =
+          std::vector{
+              {is_intermodal_start
+                   ? get_offsets(tags, tt, req->additional_edges(),
+                                 n::direction::kForward)
+                   : std::vector<n::routing::offset>{{.location_ =
+                                                          destination_station,
+                                                      .offset_ =
+                                                          n::duration_t{0U},
+                                                      .type_ = 0U}}}},
       .via_destinations_ = {},
       .allowed_classes_ = cista::bitset<n::kNumClasses>::max(),
       .max_transfers_ = n::routing::kMaxTransfers,
@@ -134,22 +212,31 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
       .extend_interval_earlier_ = false,
       .extend_interval_later_ = false};
 
+  utl::verify(!q.start_.empty(), "no start edges");
+  utl::verify(!q.destinations_[0].empty(), "no destination edges");
+
   if (search_state.get() == nullptr) {
     search_state.reset(new n::routing::search_state{});
   }
 
-  n::routing::stats stats;
   MOTIS_START_TIMING(routing);
+  n::routing::stats stats;
   if (req->search_dir() == SearchDir_Forward) {
-    auto r = n::routing::raptor<n::direction::kForward, false>{
-        tt, *search_state, std::move(q)};
-    r.route();
-    stats = r.get_stats();
+    if (is_intermodal_dest) {
+      stats = run_search<n::direction::kForward, true>(*search_state, tt,
+                                                       std::move(q));
+    } else {
+      stats = run_search<n::direction::kForward, false>(*search_state, tt,
+                                                        std::move(q));
+    }
   } else {
-    auto r = n::routing::raptor<n::direction::kBackward, false>{
-        tt, *search_state, std::move(q)};
-    r.route();
-    stats = r.get_stats();
+    if (is_intermodal_dest) {
+      stats = run_search<n::direction::kBackward, true>(*search_state, tt,
+                                                        std::move(q));
+    } else {
+      stats = run_search<n::direction::kBackward, false>(*search_state, tt,
+                                                         std::move(q));
+    }
   }
   MOTIS_STOP_TIMING(routing);
   stats.n_routing_time_ = MOTIS_TIMING_MS(routing);
