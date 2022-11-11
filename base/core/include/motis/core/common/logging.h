@@ -40,11 +40,11 @@ struct log {
 
   template <typename T>
   friend log&& operator<<(log&& l, T&& t) {
-    std::clog << std::forward<T&&>(t);
+    std::cout << std::forward<T&&>(t);
     return std::move(l);
   }
 
-  ~log() { std::clog << std::endl; }
+  ~log() { std::cout << std::endl; }
 
   std::unique_lock<std::mutex> lock_;
 

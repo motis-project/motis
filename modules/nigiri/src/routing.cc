@@ -181,10 +181,14 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
 
   auto q = n::routing::query{
       .start_time_ = start_time,
-      .start_match_mode_ = req->use_start_metas()
+      .start_match_mode_ = is_intermodal_start
+                               ? n::routing::location_match_mode::kIntermodal
+                           : req->use_start_metas()
                                ? n::routing::location_match_mode::kEquivalent
                                : n::routing::location_match_mode::kOnlyChildren,
-      .dest_match_mode_ = req->use_dest_metas()
+      .dest_match_mode_ = is_intermodal_dest
+                              ? n::routing::location_match_mode::kIntermodal
+                          : req->use_dest_metas()
                               ? n::routing::location_match_mode::kEquivalent
                               : n::routing::location_match_mode::kOnlyChildren,
       .use_start_footpaths_ = req->use_start_footpaths(),
@@ -199,7 +203,7 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
           std::vector{
               {is_intermodal_start
                    ? get_offsets(tags, tt, req->additional_edges(),
-                                 n::direction::kForward)
+                                 n::direction::kBackward)
                    : std::vector<n::routing::offset>{{.location_ =
                                                           destination_station,
                                                       .offset_ =

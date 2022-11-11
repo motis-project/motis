@@ -11,6 +11,7 @@
 
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "motis/core/journey/print_journey.h"
 #include "motis/module/message.h"
 #include "motis/test/motis_instance_test.h"
 #include "motis/test/schedule/simple_realtime.h"
@@ -99,6 +100,10 @@ TEST_F(intermodal_itest, forward) {
     auto content = motis_content(RoutingResponse, res);
 
     ASSERT_EQ(1, content->connections()->size());
+
+    std::cout << "---" << router << "---\n";
+    print_journey(message_to_journeys(content)[0], std::cout);
+
     auto const& stops = content->connections()->Get(0)->stops();
 
     ASSERT_EQ(5, stops->size());
