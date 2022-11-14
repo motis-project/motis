@@ -14,7 +14,8 @@ type PageLinkProps = {
 
 function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
   return (
-    <div
+    <button
+      type="button"
       className={classNames(
         "px-3 py-2 rounded-md text-sm font-medium cursor-pointer",
         active
@@ -24,7 +25,7 @@ function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
       onClick={onClick}
     >
       {children}
-    </div>
+    </button>
   );
 }
 
