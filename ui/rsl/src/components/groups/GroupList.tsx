@@ -5,7 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Virtuoso } from "react-virtuoso";
 
 import { Station } from "@/api/protocol/motis";
@@ -22,7 +22,6 @@ import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber } from "@/data/numberFormat";
-import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -95,8 +94,8 @@ function getFilterGroupsRequest(
 }
 
 function GroupList(): JSX.Element {
+  const params = useParams();
   const [universe] = useAtom(universeAtom);
-  const [mostRecentlySelectedGroup] = useAtom(mostRecentlySelectedGroupAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -194,6 +193,8 @@ function GroupList(): JSX.Element {
     : [];
   const totalNumberOfGroups = data?.pages[0]?.total_matching_groups;
   const totalNumberOfPassengers = data?.pages[0]?.total_matching_passengers;
+
+  const selectedGroup = Number.parseInt(params["groupId"] ?? "");
 
   return (
     <div className="h-full flex flex-col">
@@ -348,7 +349,7 @@ function GroupList(): JSX.Element {
               <GroupListEntry
                 groupWithStats={groupWithStats}
                 idType={idType}
-                selectedGroup={mostRecentlySelectedGroup}
+                selectedGroup={selectedGroup}
               />
             )}
           />

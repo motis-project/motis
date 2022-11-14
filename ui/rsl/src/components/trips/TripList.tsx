@@ -8,7 +8,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { Virtuoso } from "react-virtuoso";
 
 import {
@@ -24,7 +24,6 @@ import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
-import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -86,8 +85,8 @@ function getFilterTripsRequest(
 }
 
 function TripList(): JSX.Element {
+  const params = useParams();
   const [universe] = useAtom(universeAtom);
-  const [mostRecentlySelectedTrip] = useAtom(mostRecentlySelectedTripAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -166,7 +165,7 @@ function TripList(): JSX.Element {
     : [];
   const totalNumberOfTrips = data?.pages[0]?.total_matching_trips;
 
-  const selectedTripId = JSON.stringify(mostRecentlySelectedTrip?.trip);
+  const selectedTripId = params["tripId"];
 
   return (
     <div className="h-full flex flex-col">
