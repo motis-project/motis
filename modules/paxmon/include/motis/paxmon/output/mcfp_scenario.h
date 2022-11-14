@@ -8,7 +8,7 @@
 
 #include "motis/module/message.h"
 
-#include "motis/paxmon/capacity_maps.h"
+#include "motis/paxmon/capacity.h"
 #include "motis/paxmon/universe.h"
 
 namespace motis::paxmon::output {

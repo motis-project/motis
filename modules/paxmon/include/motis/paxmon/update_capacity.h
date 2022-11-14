@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "motis/core/schedule/schedule.h"
 
 #include "motis/paxmon/capacity.h"
@@ -9,7 +7,8 @@
 
 namespace motis::paxmon {
 
-void generate_capacities(schedule const& sched, capacity_maps const& caps,
-                         universe const& uv, std::string const& filename);
+void update_trip_capacity(universe& uv, schedule const& sched,
+                          capacity_maps const& caps, trip const* trp,
+                          bool force_downgrade);
 
 }  // namespace motis::paxmon

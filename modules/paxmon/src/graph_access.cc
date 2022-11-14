@@ -139,8 +139,8 @@ struct rule_trip_adder {
                                      event_node_index arr_node) {
     return utl::get_or_create(trip_edges_, &section.lcon(), [&]() {
       auto const encoded_capacity = encode_capacity(
-          get_capacity(sched_, section.lcon(), caps_.trip_capacity_map_,
-                       caps_.category_capacity_map_));
+          get_capacity(sched_, section.lcon(), section.ev_key_from(),
+                       section.ev_key_to(), caps_));
       auto const* e =
           add_edge(uv_, make_trip_edge(uv_, dep_node, arr_node, edge_type::TRIP,
                                        section.lcon().trips_, encoded_capacity,

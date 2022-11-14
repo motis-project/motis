@@ -537,8 +537,7 @@ void paxmon::load_capacity_files() {
       continue;
     }
     auto const entries_loaded = load_capacities(
-        sched, file, data_.capacity_maps_.trip_capacity_map_,
-        data_.capacity_maps_.category_capacity_map_, capacity_match_log_file_);
+        sched, file, data_.capacity_maps_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);

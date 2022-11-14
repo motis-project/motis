@@ -134,6 +134,7 @@ table ProviderInfo {
 
 table FullTripId {
   id:TripId;
+  uuid:string;
   start_station:StationInfo;
   target_station:StationInfo;
 }
@@ -141,6 +142,7 @@ table FullTripId {
 enum TimestampType : byte {Schedule, Is, Forecast, Unknown}
 
 table TripEvent {
+  uuid:string;
   station:StationInfo;
   schedule_time:ulong;
   current_time:ulong;
@@ -161,7 +163,6 @@ table TripSection {
 
 table FullTripMessage {
   trip_id:FullTripId;
-  external_trip_ref:string; // uuid
   sections:[TripSection];
 }
 

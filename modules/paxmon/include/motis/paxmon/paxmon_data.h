@@ -3,7 +3,7 @@
 #include <chrono>
 #include <memory>
 
-#include "motis/paxmon/capacity_maps.h"
+#include "motis/paxmon/capacity.h"
 #include "motis/paxmon/multiverse.h"
 
 namespace motis::paxmon {
