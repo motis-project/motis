@@ -31,7 +31,6 @@
     "@visx/shape": "^2.12.2",
     "@visx/stats": "^2.10.0",
     "d3-array": "^3.2.0",
-    "d3-force": "^3.0.0",
     "date-fns": "^2.29.3",
     "downshift": "^7.0.1",
     "jotai": "^1.9.2",
