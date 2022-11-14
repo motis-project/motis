@@ -23,20 +23,19 @@ Offset<Vector<Offset<MetaStation>>> create_meta_stations(
   return fbb.CreateVector(
       all(hrd_meta_stations)  //
       | remove_if([&](auto&& m) { return m.equivalent_.empty(); })  //
-      |
-      transform([&](auto&& m) -> std::optional<Offset<MetaStation>> {
-        try {
-          return std::make_optional(CreateMetaStation(
-              fbb, sb.get_or_create_station(m.eva_, fbb),
-              fbb.CreateVector(utl::to_vec(
-                  get_equivalent_stations(m, hrd_meta_stations), [&](auto&& e) {
-                    return sb.get_or_create_station(e, fbb);
-                  }))));
-        } catch (std::exception const& e) {
-          LOG(error) << "meta station error: " << e.what();
-          return std::nullopt;
-        }
-      })  //
+      | transform([&](station_meta_data::meta_station const& m)
+                      -> std::optional<Offset<MetaStation>> {
+          try {
+            return std::make_optional(CreateMetaStation(
+                fbb, sb.get_or_create_station(m.eva_, fbb),
+                fbb.CreateVector(utl::to_vec(m.equivalent_, [&](auto&& e) {
+                  return sb.get_or_create_station(e, fbb);
+                }))));
+          } catch (std::exception const& e) {
+            LOG(error) << "meta station error: " << e.what();
+            return std::nullopt;
+          }
+        })  //
       | remove_if([](auto&& opt) { return !opt.has_value(); })  //
       | transform([](auto&& opt) { return *opt; })  //
       | vec());

@@ -20,6 +20,7 @@ namespace motis::nigiri {
 
 struct transport_display_info {
   CISTA_COMPARABLE()
+  unsigned duration_;
   n::clasz clasz_;
   std::string display_name_;
   std::string direction_;
@@ -87,7 +88,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     s.lng_ = pos.lng_;
   };
 
-  auto const add_walk = [&](n::routing::journey::leg const& leg, int mumo_id,
+  auto const add_walk = [&](n::routing::journey::leg const& leg,
+                            n::duration_t const duration, int mumo_id,
                             bool const is_last) {
     auto const is_transfer =
         leg.from_ == leg.to_ ||
@@ -115,15 +117,15 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
       fill_stop_info(to_stop, leg.to_);
       to_stop.arrival_.valid_ = true;
-      to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.arr_time_);
-      to_stop.arrival_.schedule_timestamp_ = to_motis_unixtime(leg.arr_time_);
+      to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.dep_time_ + duration);
+      to_stop.arrival_.schedule_timestamp_ =
+          to_motis_unixtime(leg.dep_time_ + duration);
 
       auto t = journey::transport{};
       t.from_ = from_idx;
       t.to_ = to_idx;
       t.is_walk_ = true;
-      t.duration_ =
-          static_cast<unsigned>((leg.arr_time_ - leg.dep_time_).count());
+      t.duration_ = duration.count();
       t.mumo_id_ = mumo_id;
       mj.transports_.emplace_back(std::move(t));
     }
@@ -185,6 +187,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
       transports.add_entry(
           transport_display_info{
+              .duration_ = 0U,
               .clasz_ = clasz,
               .display_name_ =
                   std::string{tt.trip_display_names_.at(trip).view()},
@@ -194,7 +197,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
           mj.stops_.size() - 1, mj.stops_.size());
 
       // TODO(felix) maybe the day index needs to be changed according to the
-      // offset between the occurance in a rule service expanded trip vs. the
+      // offset between the occurrence in a rule service expanded trip vs. the
       // reference trip. For now, no rule services are implemented.
       extern_trips.add_entry(
           std::pair{
@@ -289,10 +292,12 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                 }
               }
             },
-            [&, i = i, leg = leg](n::footpath_idx_t const) {
-              add_walk(leg, -1, i == nj.legs_.size() - 1U);
+            [&, i = i, leg = leg](n::footpath const fp) {
+              add_walk(leg, fp.duration_, -1, i == nj.legs_.size() - 1U);
             },
-            [&, leg = leg](std::uint8_t const x) { add_walk(leg, x, false); }},
+            [&, leg = leg](n::routing::offset const x) {
+              add_walk(leg, x.duration_, x.type_, false);
+            }},
         leg.uses_);
   }
 

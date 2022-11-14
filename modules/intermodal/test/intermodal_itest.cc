@@ -101,7 +101,6 @@ TEST_F(intermodal_itest, forward) {
 
     ASSERT_EQ(1, content->connections()->size());
 
-    std::cout << "---" << router << "---\n";
     print_journey(message_to_journeys(content)[0], std::cout);
 
     auto const& stops = content->connections()->Get(0)->stops();
@@ -179,7 +178,7 @@ TEST_F(intermodal_itest, backward) {
                        router);
   };
 
-  for (auto const& router : {"/routing", "/tripbased"}) {
+  for (auto const& router : {"/routing", "/tripbased", "/nigiri"}) {
     auto res = call(make_msg(json(router)));
     auto content = motis_content(RoutingResponse, res);
 
