@@ -1,5 +1,7 @@
 #include "motis/json/json.h"
 
+#include "boost/uuid/string_generator.hpp"
+
 namespace motis::json {
 
 rapidjson::Value const& get_value(rapidjson::Value const& parent,
@@ -75,6 +77,11 @@ double get_double(rapidjson::Value const& obj, char const* key) {
   auto const& value = get_value(obj, key);
   utl::verify(value.IsDouble(), "not a double: {}", key);
   return value.GetDouble();
+}
+
+boost::uuids::uuid get_uuid(rapidjson::Value const& obj, char const* key) {
+  auto const sv = get_str(obj, key);
+  return boost::uuids::string_generator{}(sv.begin(), sv.end());
 }
 
 }  // namespace motis::json

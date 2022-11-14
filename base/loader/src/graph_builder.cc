@@ -5,6 +5,8 @@
 #include <functional>
 #include <numeric>
 
+#include "boost/uuid/nil_generator.hpp"
+
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/progress_tracker.h"
@@ -120,7 +122,8 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
                                    }),
                                s->debug()->line_from(), s->debug()->line_to()},
               s->seq_numbers() == nullptr ? mcd::vector<uint32_t>{}
-                                          : mcd::to_vec(*s->seq_numbers())))
+                                          : mcd::to_vec(*s->seq_numbers()),
+              boost::uuids::nil_uuid()))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
 
