@@ -349,7 +349,7 @@ jobs:
           ref: aachen
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: motis-${{ matrix.config.artifact }}
 
@@ -384,7 +384,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
 
       - name: Docker setup-buildx
         uses: docker/setup-buildx-action@v1
