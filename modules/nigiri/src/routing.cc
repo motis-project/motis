@@ -100,14 +100,13 @@ std::vector<n::routing::offset> get_offsets(
            })  //
          | utl::transform([&](routing::MumoEdge const* e) {
              return n::routing::offset{
-                 .location_ =
-                     get_location_idx(tags, tt,
-                                      search_dir == n::direction::kForward
-                                          ? e->to_station_id()->str()
-                                          : e->from_station_id()->str()),
-                 .offset_ =
-                     n::duration_t{static_cast<std::int16_t>(e->duration())},
-                 .type_ = static_cast<std::uint8_t>(e->mumo_id())};
+                 get_location_idx(tags, tt,
+                                  search_dir == n::direction::kForward
+                                      ? e->to_station_id()->str()
+                                      : e->from_station_id()->str()),
+
+                 n::duration_t{static_cast<std::int16_t>(e->duration())},
+                 static_cast<std::uint8_t>(e->mumo_id())};
            })  //
          | utl::vec();
 }
@@ -192,23 +191,18 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
                               ? n::routing::location_match_mode::kEquivalent
                               : n::routing::location_match_mode::kOnlyChildren,
       .use_start_footpaths_ = req->use_start_footpaths(),
-      .start_ =
-          is_intermodal_start
-              ? get_offsets(tags, tt, req->additional_edges(),
-                            n::direction::kForward)
-              : std::vector<n::routing::offset>{{.location_ = start_station,
-                                                 .offset_ = n::duration_t{0U},
-                                                 .type_ = 0U}},
+      .start_ = is_intermodal_start
+                    ? get_offsets(tags, tt, req->additional_edges(),
+                                  n::direction::kForward)
+                    : std::vector<n::routing::offset>{{start_station,
+                                                       n::duration_t{0U}, 0U}},
       .destinations_ =
           std::vector{
               {is_intermodal_start
                    ? get_offsets(tags, tt, req->additional_edges(),
                                  n::direction::kBackward)
-                   : std::vector<n::routing::offset>{{.location_ =
-                                                          destination_station,
-                                                      .offset_ =
-                                                          n::duration_t{0U},
-                                                      .type_ = 0U}}}},
+                   : std::vector<n::routing::offset>{{destination_station,
+                                                      n::duration_t{0U}, 0U}}}},
       .via_destinations_ = {},
       .allowed_classes_ = cista::bitset<n::kNumClasses>::max(),
       .max_transfers_ = n::routing::kMaxTransfers,
