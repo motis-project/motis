@@ -294,21 +294,6 @@ inline compact_journey merge_journeys(schedule const& sched,
     }
   }
 
-  /*
-  if (!check_compact_journey(sched, merged)) {
-    std::cout << "\nprefix journey:\n";
-    for (auto const& leg : prefix.legs()) {
-      print_leg(sched, leg);
-    }
-    std::cout << "\nsuffix journey:\n";
-    for (auto const& leg : suffix.legs()) {
-      print_leg(sched, leg);
-    }
-
-    throw utl::fail("merge_journeys: invalid result");
-  }
-  */
-
   return merged;
 }
 
