@@ -29,7 +29,7 @@ jobs:
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   rsl-ui-checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ui/rsl
