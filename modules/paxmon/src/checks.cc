@@ -19,21 +19,15 @@
 namespace motis::paxmon {
 
 bool check_edge_in_incoming(universe const& uv, edge const& e) {
-  for (auto const& ie : uv.graph_.incoming_edges(e.to_)) {
-    if (&ie == &e) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(begin(uv.graph_.incoming_edges(e.to_)),
+                     end(uv.graph_.incoming_edges(e.to_)),
+                     [&](auto const& ie) { return &ie == &e; });
 }
 
 bool check_edge_in_outgoing(universe const& uv, edge const& e) {
-  for (auto const& oe : uv.graph_.outgoing_edges(e.from_)) {
-    if (&oe == &e) {
-      return true;
-    }
-  }
-  return false;
+  return std::any_of(begin(uv.graph_.outgoing_edges(e.from_)),
+                     end(uv.graph_.outgoing_edges(e.from_)),
+                     [&](auto const& oe) { return &oe == &e; });
 }
 
 bool check_graph_integrity(universe const& uv, schedule const& sched) {

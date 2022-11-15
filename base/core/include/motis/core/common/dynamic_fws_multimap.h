@@ -48,8 +48,7 @@ struct dynamic_fws_multimap_base {
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     template <bool IsConst = Const, typename = std::enable_if_t<IsConst>>
-    // NOLINTNEXTLINE(google-explicit-constructor,
-    // hicpp-explicit-conversions)
+    // NOLINTNEXTLINE(google-explicit-constructor, hicpp-explicit-conversions)
     bucket(bucket<false> const& b) : multimap_{b.multimap_}, index_{b.index_} {}
 
     size_type index() const { return index_; }
