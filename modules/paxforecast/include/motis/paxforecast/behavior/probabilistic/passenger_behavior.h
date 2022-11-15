@@ -39,8 +39,7 @@ struct passenger_behavior {
         load_info_full_dist_{load_info_full_dist},
         random_dist_{random_dist} {}
 
-  std::vector<float> pick_routes(motis::paxmon::passenger_group const& /*grp*/,
-                                 std::vector<alternative> const& alternatives) {
+  std::vector<float> pick_routes(std::vector<alternative> const& alternatives) {
     if (alternatives.empty()) {
       return {};
     }

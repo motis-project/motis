@@ -1,0 +1,32 @@
+namespace motis.paxmon;
+
+table PaxMonHistogram {
+  min_value: int; // first entry in counts
+  max_value: int; // last entry in counts
+  avg_value: double;
+  median_value: double;
+
+  max_count: uint;
+  total_count: uint;
+
+  counts: [uint];
+}
+
+table PaxMonGroupStatisticsResponse {
+  group_count: uint;
+  total_group_route_count: uint;
+  active_group_route_count: uint;
+
+  total_pax_count: ulong;
+
+  // groups or passengers (if count_passengers set in request)
+  min_estimated_delay: PaxMonHistogram;
+  max_estimated_delay: PaxMonHistogram;
+  expected_estimated_delay: PaxMonHistogram;
+
+  routes_per_group: PaxMonHistogram;
+  active_routes_per_group: PaxMonHistogram;
+  reroutes_per_group: PaxMonHistogram;
+
+  group_route_probabilities: PaxMonHistogram;
+}

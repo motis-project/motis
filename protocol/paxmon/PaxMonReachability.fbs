@@ -1,0 +1,16 @@
+include "paxmon/PaxMonBrokenTransferInfo.fbs";
+
+namespace motis.paxmon;
+
+enum PaxMonReachabilityStatus : byte {
+  OK,
+  BROKEN_INITIAL_ENTRY,
+  BROKEN_TRANSFER_EXIT,
+  BROKEN_TRANSFER_ENTRY,
+  BROKEN_FINAL_EXIT
+}
+
+table PaxMonReachability {
+  status: PaxMonReachabilityStatus;
+  broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
+}

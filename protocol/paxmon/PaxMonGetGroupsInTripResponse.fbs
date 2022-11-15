@@ -9,7 +9,7 @@ table GroupedPassengerGroups {
   grouped_by_trip: [motis.TripServiceInfo];
   entry_station: [motis.Station];
   entry_time: long;
-  info: PaxMonCombinedGroups;
+  info: PaxMonCombinedGroupRoutes;
 }
 
 table GroupsInTripSection {

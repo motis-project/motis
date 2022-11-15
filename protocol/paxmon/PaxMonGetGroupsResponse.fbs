@@ -1,9 +1,7 @@
 include "paxmon/PaxMonGroup.fbs";
-include "paxmon/PaxMonLocalization.fbs";
 
 namespace motis.paxmon;
 
 table PaxMonGetGroupsResponse {
   groups: [PaxMonGroup];
-  localizations: [PaxMonLocalizationWrapper];
 }

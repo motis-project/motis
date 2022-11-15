@@ -47,7 +47,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonFilterTripsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
-  auto& uv = uv_access.uv_;
+  auto const& uv = uv_access.uv_;
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
 
@@ -135,11 +135,12 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       if (!include_edges && ignore_section) {
         continue;
       }
-      auto const groups = uv.pax_connection_info_.groups_[e->pci_];
-      auto const pdf = get_load_pdf(uv.passenger_groups_, groups);
+      auto const group_routes = uv.pax_connection_info_.group_routes(e->pci_);
+      auto const pdf = get_load_pdf(uv.passenger_groups_, group_routes);
       auto const cdf = get_cdf(pdf);
       auto const capacity = e->capacity();
-      auto const pax_limits = get_pax_limits(uv.passenger_groups_, groups);
+      auto const pax_limits =
+          get_pax_limits(uv.passenger_groups_, group_routes);
       auto const expected_pax = get_expected_load(uv, e->pci_);
       ti.max_pax_range_ = std::max(
           ti.max_pax_range_,
@@ -153,6 +154,9 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       }
       ++ti.section_count_;
       ti.max_expected_pax_ = std::max(ti.max_expected_pax_, expected_pax);
+      if (!include && include_load_threshold == 0.0F) {
+        include = true;
+      }
       if (!e->has_capacity()) {
         continue;
       }

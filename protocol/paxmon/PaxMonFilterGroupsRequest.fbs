@@ -1,17 +1,45 @@
+include "base/Interval.fbs";
+include "paxmon/PaxMonGroup.fbs";
+include "paxmon/PaxMonRerouteReason.fbs";
+
 namespace motis.paxmon;
+
+enum PaxMonFilterGroupsSortOrder : byte {
+  GroupId,
+  ScheduledDepartureTime,
+  MaxEstimatedDelay,
+  ExpectedEstimatedDelay,
+  MinEstimatedDelay,
+  RerouteLogEntries
+}
+
+enum PaxMonFilterGroupsTimeFilter : byte {
+  NoFilter, // don't filter based on time
+  DepartureTime, // scheduled departure must be in interval
+  DepartureOrArrivalTime // scheduled departure or arrival must be in interval
+}
 
 table PaxMonFilterGroupsRequest {
   universe: uint;
 
-  only_delayed: bool;
-  min_delay: short;
+  sort_by: PaxMonFilterGroupsSortOrder;
+  max_results: uint; // 0 = unlimited
+  skip_first: uint; // skip the first x results (for subsequent calls)
 
-  only_with_alternative_potential: bool;
-  preparation_time: short; // min
+  include_reroute_log: bool;
 
-  only_active: bool = true;
-  only_original: bool;
-  only_forecast: bool;
+  filter_by_start: [string]; // station ids
+  filter_by_destination: [string]; // station ids
+  filter_by_via: [string]; // station ids
 
-  include_localization: bool;
+  filter_by_group_id: [uint];
+  filter_by_data_source: [PaxMonDataSource];
+
+  filter_by_train_nr: [uint];
+
+  // filter by time
+  filter_by_time: PaxMonFilterGroupsTimeFilter;
+  filter_interval: Interval;
+
+  filter_by_reroute_reason: [PaxMonRerouteReason];
 }

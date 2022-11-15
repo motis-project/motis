@@ -3,12 +3,12 @@ include "paxmon/PaxMonDistribution.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonCombinedGroups {
-  groups: [PaxMonGroupBaseInfo];
+table PaxMonCombinedGroupRoutes {
+  group_routes: [PaxMonGroupRouteBaseInfo];
   dist: PaxMonDistribution;
 }
 
-table PaxMonCombinedGroupIds {
-  groups: [ulong];
+table PaxMonCombinedGroupRouteIds {
+  group_routes: [PaxMonGroupWithRouteId];
   dist: PaxMonDistribution;
 }

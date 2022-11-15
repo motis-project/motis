@@ -32,6 +32,7 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/paxmon/access/groups.h"
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/loader/csv/motis_row.h"
 #include "motis/paxmon/loader/csv/trek_row.h"
@@ -420,6 +421,7 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,
+                            capacity_maps const& caps,
                             std::string const& journey_file,
                             journey_input_settings const& settings) {
   auto const match_tolerance = settings.match_tolerance_;
@@ -449,7 +451,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   }
 
   auto group_gen = group_generator{settings.split_groups_size_mean_,
-                                   settings.split_groups_size_stddev_, 0, 0,
+                                   settings.split_groups_size_stddev_, 0, 1,
                                    settings.split_groups_seed_};
 
   using id_t = std::pair<std::uint64_t, std::uint64_t>;
@@ -458,7 +460,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   std::uint16_t current_passengers = 0;
 
   auto const add_journey = [&](std::size_t start_idx, std::size_t end_idx,
-                               group_source_flags source_flags) {
+                               route_source_flags source_flags) {
     if (start_idx == end_idx) {
       return;
     }
@@ -469,7 +471,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         std::next(begin(current_input_legs), end_idx),
         [](auto const& leg) { return !leg.trp_candidate_.is_perfect_match(); });
     if (inexact_time) {
-      source_flags |= group_source_flags::MATCH_INEXACT_TIME;
+      source_flags |= route_source_flags::MATCH_INEXACT_TIME;
       ++journeys_with_inexact_matches;
     }
     auto const all_trips_found =
@@ -508,23 +510,25 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         ++journeys_too_long;
         return;
       }
+      auto tpg = temp_passenger_group{
+          0,
+          source,
+          current_passengers,
+          {{0, 1.0F, current_journey, current_journey.scheduled_arrival_time(),
+            0, source_flags, true}}};
       if (split_groups) {
-        source.secondary_ref_ *= 100;
+        tpg.source_.secondary_ref_ *= 100;
         auto distributed = 0U;
         while (distributed < current_passengers) {
           auto const group_size =
               group_gen.get_group_size(current_passengers - distributed);
-          ++source.secondary_ref_;
+          ++tpg.source_.secondary_ref_;
           distributed += group_size;
-          auto cj = current_journey;
-          uv.passenger_groups_.add(make_passenger_group(
-              std::move(cj), source, group_size,
-              current_journey.scheduled_arrival_time(), source_flags));
+          tpg.passengers_ = group_size;
+          add_passenger_group(uv, sched, caps, tpg, false);
         }
       } else {
-        uv.passenger_groups_.add(make_passenger_group(
-            std::move(current_journey), source, current_passengers,
-            current_journey.scheduled_arrival_time(), source_flags));
+        add_passenger_group(uv, sched, caps, tpg, false);
       }
     } else {
       if (!all_trips_found) {
@@ -564,7 +568,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     if (!current_id || current_input_legs.empty()) {
       return;
     }
-    auto source_flags = group_source_flags::NONE;
+    auto source_flags = route_source_flags::NONE;
     auto const possible_leg_count =
         std::count_if(begin(current_input_legs), end(current_input_legs),
                       [](auto const& leg) {
@@ -575,7 +579,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       return;
     } else if (possible_leg_count < current_input_legs.size()) {
       ++journeys_with_invalid_legs;
-      source_flags |= group_source_flags::MATCH_JOURNEY_SUBSET;
+      source_flags |= route_source_flags::MATCH_JOURNEY_SUBSET;
     }
 
     auto subset_start = 0ULL;

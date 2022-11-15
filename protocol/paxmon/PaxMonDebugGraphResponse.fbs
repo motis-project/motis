@@ -1,0 +1,80 @@
+include "base/Station.fbs";
+include "base/TripServiceInfo.fbs";
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonDebugNodeLogEntry {
+  system_time: ulong;
+  node_time: ulong;
+  valid: bool;
+}
+
+table PaxMonDebugNode {
+  index: uint;
+  schedule_time: ulong;
+  current_time: ulong;
+  arrival: bool;
+  valid: bool;
+  station: motis.Station;
+
+  log: [PaxMonDebugNodeLogEntry];
+}
+
+enum PaxMonDebugEdgeType : ubyte {
+  Trip, Interchange, Wait, Through, Disabled
+}
+
+table PaxMonDebugEdgeLogEntry {
+  system_time: ulong;
+  required_transfer_time: uint;
+  available_transfer_time: int;
+  edge_type: PaxMonDebugEdgeType;
+  broken: bool;
+}
+
+enum PaxMonDebugPaxLogAction : ubyte {
+  RouteAdded,
+  RouteRemoved,
+  BrokenRouteAdded,
+  BrokenRouteRemoved
+}
+
+enum PaxMonDebugPaxLogReason : ubyte {
+  Unknown,
+  Api,
+  TripReroute,
+  UpdateLoad
+}
+
+table PaxMonDebugPaxLogEntry {
+  system_time: ulong;
+  action: PaxMonDebugPaxLogAction;
+  reason: PaxMonDebugPaxLogReason;
+  group_route: PaxMonGroupWithRouteId;
+}
+
+table PaxMonDebugEdge {
+  from_node: uint;
+  to_node: uint;
+  out_edge_index: uint;
+  type: PaxMonDebugEdgeType;
+  broken: bool;
+  valid: bool;
+  transfer_time: uint;
+
+  expected_load: uint;
+  group_routes: [PaxMonGroupRouteBaseInfo];
+
+  trip_indices: [uint]; // -> trips[]
+
+  edge_log: [PaxMonDebugEdgeLogEntry];
+  pax_log: [PaxMonDebugPaxLogEntry];
+}
+
+table PaxMonDebugGraphResponse {
+  graph_log_enabled: bool;
+  nodes: [PaxMonDebugNode];
+  edges: [PaxMonDebugEdge];
+  trips: [motis.TripServiceInfo];
+}

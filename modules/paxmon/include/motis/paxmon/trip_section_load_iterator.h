@@ -51,22 +51,25 @@ struct trip_section_with_load {
 
   std::uint16_t base_load() const {
     return edge_ != nullptr
-               ? get_base_load(uv_.passenger_groups_,
-                               uv_.pax_connection_info_.groups_[edge_->pci_])
+               ? get_base_load(
+                     uv_.passenger_groups_,
+                     uv_.pax_connection_info_.group_routes(edge_->pci_))
                : 0;
   }
 
   std::uint16_t mean_load() const {
     return edge_ != nullptr
-               ? get_mean_load(uv_.passenger_groups_,
-                               uv_.pax_connection_info_.groups_[edge_->pci_])
+               ? get_mean_load(
+                     uv_.passenger_groups_,
+                     uv_.pax_connection_info_.group_routes(edge_->pci_))
                : 0;
   }
 
   pax_pdf load_pdf() const {
     return edge_ != nullptr
-               ? get_load_pdf(uv_.passenger_groups_,
-                              uv_.pax_connection_info_.groups_[edge_->pci_])
+               ? get_load_pdf(
+                     uv_.passenger_groups_,
+                     uv_.pax_connection_info_.group_routes(edge_->pci_))
                : pax_pdf{};
   }
 

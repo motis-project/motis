@@ -110,14 +110,17 @@ void write_groups(fs::path const& dir, schedule const& sched,
       }
       auto const loc =
           from_fbs(sched, event->localization_type(), event->localization());
-      auto const pg = uv.get_passenger_group(event->group()->id());
-      utl::verify(pg != nullptr, "mcfp_scenario: invalid group");
+      auto const pgwr = passenger_group_with_route{
+          event->group_route()->group_id(),
+          static_cast<local_group_route_index>(
+              event->group_route()->route()->index())};
+      auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
+      auto const& gr = uv.passenger_groups_.route(pgwr);
+      auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
       out << id << "," << loc.at_station_->eva_nr_.view() << ","
           << loc.current_arrival_time_ << ","
-          << sched.stations_
-                 .at(pg->compact_planned_journey_.destination_station_id())
-                 ->eva_nr_.view()
-          << "," << pg->planned_arrival_time_ << "," << pg->passengers_ << ",";
+          << sched.stations_.at(cj.destination_station_id())->eva_nr_.view()
+          << "," << gr.planned_arrival_time_ << "," << pg.passengers_ << ",";
       if (loc.in_trip()) {
         out << trip_ids.at(loc.in_trip_);
       }

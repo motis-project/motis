@@ -12,4 +12,6 @@ table PaxMonGetInterchangesRequest {
 
   include_meta_stations: bool;
   include_group_infos: bool;
+  include_broken_interchanges: bool;
+  include_disabled_group_routes: bool;
 }
