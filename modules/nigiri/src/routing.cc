@@ -83,28 +83,41 @@ std::vector<n::routing::offset> get_offsets(
     std::vector<std::string> const& tags, n::timetable const& tt,
     fbs::Vector<fbs::Offset<motis::routing::AdditionalEdgeWrapper>> const*
         edges,
-    n::direction const search_dir) {
+    SearchDir const dir, bool const is_start) {
+  auto const ref_station = n::get_special_station_name(
+      is_start ? n::special_station::kStart : n::special_station::kEnd);
   return utl::all(*edges)  //
          | utl::transform([](routing::AdditionalEdgeWrapper const* e) {
              return reinterpret_cast<routing::MumoEdge const*>(
                  e->additional_edge());
            })  //
-         | utl::remove_if([&](routing::MumoEdge const* e) {
-             if (search_dir == n::direction::kForward) {
-               return e->from_station_id()->view() !=
-                      n::get_special_station_name(n::special_station::kStart);
-             } else {
-               return e->to_station_id()->view() !=
-                      n::get_special_station_name(n::special_station::kEnd);
-             }
-           })  //
+         |
+         utl::remove_if([&](routing::MumoEdge const* e) {
+           // XOR Table:
+           // is_fwd     | is_start      | use_from
+           // FWD  true  | START  true   | to_station    false
+           // FWD  true  | END    false  | from_station  true
+           // BWD  false | START  true   | from_station  true
+           // BWD  false | END    false  | to_station    false
+           auto const x = !((dir == SearchDir_Forward) ^ is_start)
+                              ? e->from_station_id()->view()
+                              : e->to_station_id()->view();
+           fmt::print("{} -> {}, search_dir={}, x={}, ref_station={}\n",
+                      e->from_station_id()->view(), e->to_station_id()->view(),
+                      EnumNameSearchDir(dir), x, ref_station);
+           return x != ref_station;
+         })  //
          | utl::transform([&](routing::MumoEdge const* e) {
+             fmt::print("{} OFFSET AT {}: {}\n", is_start ? "START" : "END",
+                        !((dir == SearchDir_Forward) ^ is_start)
+                            ? e->to_station_id()->str()
+                            : e->from_station_id()->str(),
+                        e->duration());
              return n::routing::offset{
                  get_location_idx(tags, tt,
-                                  search_dir == n::direction::kForward
+                                  !((dir == SearchDir_Forward) ^ is_start)
                                       ? e->to_station_id()->str()
                                       : e->from_station_id()->str()),
-
                  n::duration_t{static_cast<std::int16_t>(e->duration())},
                  static_cast<std::uint8_t>(e->mumo_id())};
            })  //
@@ -159,21 +172,62 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
   auto const is_intermodal_dest =
       destination_station == n::get_special_station(n::special_station::kEnd);
 
-  utl::verify(
-      utl::all_of(
-          *req->additional_edges(),
-          [&](routing::AdditionalEdgeWrapper const* e) {
-            if (e->additional_edge_type() != routing::AdditionalEdge_MumoEdge) {
-              return false;
-            }
-            auto const mumo_e =
-                static_cast<routing::MumoEdge const*>(e->additional_edge());
-            return (is_intermodal_start &&
-                    mumo_e->from_station_id()->view() == "START") ||
-                   (is_intermodal_dest &&
-                    mumo_e->to_station_id()->view() == "END");
-          }),
-      "nigiri only supports mumo edges to end or from start");
+  for (auto const& e : *req->additional_edges()) {
+    utl::verify(e->additional_edge_type() == routing::AdditionalEdge_MumoEdge,
+                "not a mumo edge: {}",
+                routing::EnumNameAdditionalEdge(e->additional_edge_type()));
+  }
+
+  for (auto const& e : *req->additional_edges()) {
+    auto const me =
+        reinterpret_cast<routing::MumoEdge const*>(e->additional_edge());
+    auto const a = req->search_dir() == SearchDir_Forward
+                       ? me->from_station_id()->view()
+                       : me->to_station_id()->view();
+    auto const b = req->search_dir() == SearchDir_Backward
+                       ? me->from_station_id()->view()
+                       : me->to_station_id()->view();
+    utl::verify(
+        (is_intermodal_dest &&
+         b == n::get_special_station_name(n::special_station::kEnd)) ||
+            (is_intermodal_start &&
+             a == n::get_special_station_name(n::special_station::kStart)) ||
+            (is_intermodal_start && is_intermodal_dest &&
+             a == n::get_special_station_name(n::special_station::kStart) &&
+             b == n::get_special_station_name(n::special_station::kEnd)),
+        "bad mumo edge: {} -> {}", me->from_station_id()->view(),
+        me->to_station_id()->view());
+  }
+
+  utl::verify(!is_intermodal_start ||
+                  utl::any_of(*req->additional_edges(),
+                              [&](routing::AdditionalEdgeWrapper const* e) {
+                                auto const me =
+                                    reinterpret_cast<routing::MumoEdge const*>(
+                                        e->additional_edge());
+                                auto const x =
+                                    req->search_dir() == SearchDir_Forward
+                                        ? me->from_station_id()->view()
+                                        : me->to_station_id()->view();
+                                return x == n::get_special_station_name(
+                                                n::special_station::kStart);
+                              }),
+              "intermodal start but no edge from START");
+
+  utl::verify(!is_intermodal_start ||
+                  utl::any_of(*req->additional_edges(),
+                              [&](routing::AdditionalEdgeWrapper const* e) {
+                                auto const me =
+                                    reinterpret_cast<routing::MumoEdge const*>(
+                                        e->additional_edge());
+                                auto const x =
+                                    req->search_dir() == SearchDir_Forward
+                                        ? me->to_station_id()->view()
+                                        : me->from_station_id()->view();
+                                return x == n::get_special_station_name(
+                                                n::special_station::kEnd);
+                              }),
+              "intermodal destination but no edge to END");
 
   utl::verify(destination_station != n::location_idx_t::invalid(),
               "unknown station {}", req->destination()->id()->view());
@@ -193,14 +247,14 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
       .use_start_footpaths_ = req->use_start_footpaths(),
       .start_ = is_intermodal_start
                     ? get_offsets(tags, tt, req->additional_edges(),
-                                  n::direction::kForward)
+                                  req->search_dir(), true)
                     : std::vector<n::routing::offset>{{start_station,
                                                        n::duration_t{0U}, 0U}},
       .destinations_ =
           std::vector{
               {is_intermodal_start
                    ? get_offsets(tags, tt, req->additional_edges(),
-                                 n::direction::kBackward)
+                                 req->search_dir(), false)
                    : std::vector<n::routing::offset>{{destination_station,
                                                       n::duration_t{0U}, 0U}}}},
       .via_destinations_ = {},

@@ -101,8 +101,6 @@ TEST_F(intermodal_itest, forward) {
 
     ASSERT_EQ(1, content->connections()->size());
 
-    print_journey(message_to_journeys(content)[0], std::cout);
-
     auto const& stops = content->connections()->Get(0)->stops();
 
     ASSERT_EQ(5, stops->size());
@@ -183,6 +181,9 @@ TEST_F(intermodal_itest, backward) {
     auto content = motis_content(RoutingResponse, res);
 
     ASSERT_EQ(1, content->connections()->size());
+
+    print_journey(message_to_journeys(content)[0], std::cout);
+
     auto const& stops = content->connections()->Get(0)->stops();
 
     ASSERT_EQ(5, stops->size());
