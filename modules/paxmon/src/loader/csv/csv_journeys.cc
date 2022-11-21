@@ -278,16 +278,32 @@ void set_transfer_info(schedule const& sched,
   }
   auto& cur_leg = partial_journey.back();
   auto const arrival_station = prev_leg.to_station_idx_.value();
-  auto const arrival_track =
-      get_arrival_track(sched, prev_leg.trp_candidate_.trp_, arrival_station,
-                        prev_leg.exit_time_);
+  auto const arrival_section =
+      get_arrival_section(sched, prev_leg.trp_candidate_.trp_, arrival_station,
+                          prev_leg.exit_time_);
   auto const departure_station = cur_leg.from_station_idx_.value();
-  auto const departure_track =
-      get_departure_track(sched, cur_leg.trp_candidate_.trp_, departure_station,
-                          cur_leg.enter_time_);
-  cur_leg.enter_transfer_ =
-      util::get_transfer_info(sched, arrival_station, arrival_track,
-                              departure_station, departure_track);
+  auto const departure_section =
+      get_departure_section(sched, cur_leg.trp_candidate_.trp_,
+                            departure_station, cur_leg.enter_time_);
+  if (arrival_section && departure_section) {
+    cur_leg.enter_transfer_ =
+        util::get_transfer_info(sched, *arrival_section, *departure_section);
+  } else {
+    if (prev_leg.trp_candidate_.trp_ != nullptr &&
+        cur_leg.trp_candidate_.trp_ != nullptr) {
+      LOG(warn) << "trip sections not found during transfer check: arrival="
+                << (arrival_section ? "found" : "not found")
+                << ", departure=" << (departure_section ? "found" : "not found")
+                << ", arrival trip=" << prev_leg.trp_candidate_.trp_
+                << " (perfect match="
+                << prev_leg.trp_candidate_.is_perfect_match()
+                << "), departure trip=" << cur_leg.trp_candidate_.trp_
+                << " (perfect match="
+                << cur_leg.trp_candidate_.is_perfect_match() << ")";
+    }
+    cur_leg.enter_transfer_ = util::get_transfer_info(
+        sched, arrival_station, {}, departure_station, {});
+  }
 }
 
 void write_match_log(
@@ -432,7 +448,6 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   auto journeys_with_no_valid_legs = 0ULL;
   auto journeys_with_inexact_matches = 0ULL;
   auto journeys_with_missing_trips = 0ULL;
-  auto journeys_with_missing_transfers = 0ULL;
   auto journeys_with_invalid_transfer_times = 0ULL;
   auto journeys_too_long = 0ULL;
 
@@ -479,25 +494,20 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                     std::next(begin(current_input_legs), end_idx),
                     [](auto const& leg) { return leg.trip_found(); });
 
-    auto const missing_transfer_infos = std::any_of(
-        std::next(begin(current_input_legs), start_idx + 1),
-        std::next(begin(current_input_legs), end_idx),
-        [](auto const& leg) { return !leg.enter_transfer_.has_value(); });
-
+    // TODO(pablo): is this the best way to handle invalid transfer times?
     auto invalid_transfer_times = false;
-    if (!missing_transfer_infos) {
-      for (auto const& [l1, l2] :
-           utl::nwise_range<2, decltype(begin(current_input_legs))>{
-               std::next(begin(current_input_legs), start_idx),
-               std::next(begin(current_input_legs), end_idx)}) {
-        if (l2.enter_time_ < l1.exit_time_ ||
-            (l2.enter_time_ - l1.exit_time_) < l2.enter_transfer_->duration_) {
-          invalid_transfer_times = true;
-        }
+    for (auto const& [l1, l2] :
+         utl::nwise_range<2, decltype(begin(current_input_legs))>{
+             std::next(begin(current_input_legs), start_idx),
+             std::next(begin(current_input_legs), end_idx)}) {
+      if (l2.enter_time_ < l1.exit_time_ ||
+          (l2.enter_transfer_.has_value() && ((l2.enter_time_ - l1.exit_time_) <
+                                              l2.enter_transfer_->duration_))) {
+        invalid_transfer_times = true;
       }
     }
 
-    if (all_trips_found && !missing_transfer_infos && !invalid_transfer_times) {
+    if (all_trips_found && !invalid_transfer_times) {
       ++result.loaded_journeys_;
       auto current_journey = compact_journey{};
       current_journey.legs_ =
@@ -533,9 +543,6 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
-      }
-      if (missing_transfer_infos) {
-        ++journeys_with_missing_transfers;
       }
       if (invalid_transfer_times) {
         ++journeys_with_invalid_transfer_times;
@@ -672,8 +679,6 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   LOG(info) << journeys_with_inexact_matches
             << " journeys with inexact matches";
   LOG(info) << journeys_with_missing_trips << " journeys with missing trips";
-  LOG(info) << journeys_with_missing_transfers
-            << " journeys with missing transfers";
   LOG(info) << journeys_with_invalid_transfer_times
             << " journeys with invalid transfer times";
   LOG(info) << journeys_too_long << " journeys that are too long (skipped)";

@@ -33,9 +33,7 @@ void print_leg(schedule const& sched, journey_leg const& leg) {
              exit_station->eva_nr_.str(), exit_station->name_.str());
   if (leg.enter_transfer_) {
     fmt::print("  enter_transfer={:2} {}\n", leg.enter_transfer_->duration_,
-               leg.enter_transfer_->type_ == transfer_info::type::SAME_STATION
-                   ? "SAME_STATION"
-                   : "FOOTPATH");
+               leg.enter_transfer_->type_);
   } else {
     fmt::print("\n");
   }
