@@ -260,7 +260,6 @@ inline compact_journey merge_journeys(schedule const& sched,
   }
 
   auto merged = prefix;
-  auto const& last_prefix_leg = prefix.legs().back();
   auto const& first_suffix_leg = suffix.legs().front();
   auto const continuous_trip_idx = get_continuous_trip(sched, prefix, suffix);
   if (continuous_trip_idx) {
