@@ -1,6 +1,7 @@
 #include "motis/paxmon/build_graph.h"
 
 #include <iostream>
+#include <optional>
 
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
@@ -22,15 +23,18 @@ void add_interchange(event_node_index const from, event_node_index const to,
                      duration const transfer_time, universe& uv,
                      schedule const& sched, bool const log,
                      pci_log_reason_t const reason) {
+  std::optional<pci_index> through_pci;
   for (auto& e : uv.graph_.outgoing_edges(from)) {
     if (e.type_ == edge_type::INTERCHANGE && e.to_ == to &&
         e.transfer_time() == transfer_time) {
       add_group_route_to_edge(uv, sched, &e, pgwr, log, reason);
       edges.emplace_back(get_edge_index(uv, &e));
       return;
+    } else if (e.type_ == edge_type::THROUGH && e.to_ == to) {
+      through_pci = e.pci_;
     }
   }
-  auto pci = uv.pax_connection_info_.insert();
+  auto pci = through_pci ? *through_pci : uv.pax_connection_info_.insert();
   uv.pax_connection_info_.group_routes_[pci].emplace_back(pgwr);
   uv.pax_connection_info_.init_expected_load(uv.passenger_groups_, pci);
   auto const* e =
