@@ -3,9 +3,12 @@
 #include "utl/enumerate.h"
 #include "utl/verify.h"
 
+#include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/track_access.h"
 #include "motis/core/access/trip_access.h"
+#include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/trip_section.h"
 
 #include "motis/paxmon/util/interchange_time.h"
 
@@ -60,12 +63,51 @@ std::vector<journey_trip_segment> get_journey_trip_segments(
   return segments;
 }
 
+struct first_and_last_trip_section {
+  std::optional<access::trip_section> first_section_;
+  std::optional<access::trip_section> last_section_;
+};
+
+first_and_last_trip_section get_first_and_last_trip_section(
+    schedule const& sched, trip const* trp, journey::stop const& first_stop,
+    journey::stop const& last_stop) {
+  auto result = first_and_last_trip_section{};
+
+  auto const from_station_id = get_station(sched, first_stop.eva_no_)->index_;
+  auto const to_station_id = get_station(sched, last_stop.eva_no_)->index_;
+  auto const enter_time = unix_to_motistime(
+      sched.schedule_begin_, first_stop.departure_.schedule_timestamp_);
+  auto const exit_time = unix_to_motistime(
+      sched.schedule_begin_, last_stop.arrival_.schedule_timestamp_);
+
+  for (auto const& sec : access::sections(trp)) {
+    if (sec.from_station_id() == from_station_id &&
+        get_schedule_time(sched, sec.ev_key_from()) == enter_time) {
+      result.first_section_ = sec;
+    }
+    if (sec.to_station_id() == to_station_id &&
+        get_schedule_time(sched, sec.ev_key_to()) == exit_time) {
+      result.last_section_ = sec;
+      if (result.first_section_) {
+        // both sections found
+        break;
+      }
+    }
+  }
+  utl::verify(result.first_section_ && result.last_section_,
+              "get_first_and_last_trip_section: found first={}, last={}",
+              result.first_section_.has_value(),
+              result.last_section_.has_value());
+  return result;
+}
+
 void for_each_trip(
     journey const& j, schedule const& sched,
     std::function<void(trip const*, journey::stop const&, journey::stop const&,
                        std::optional<transfer_info> const&)> const& cb) {
   std::optional<std::size_t> enter_stop_idx, exit_stop_idx;
   std::optional<transfer_info> enter_transfer;
+  std::optional<access::trip_section> arrival_section;
   for (auto const& [stop_idx, stop] : utl::enumerate(j.stops_)) {
     if (stop.exit_) {
       exit_stop_idx = stop_idx;
@@ -74,9 +116,20 @@ void for_each_trip(
       auto const trip_segments =
           get_journey_trip_segments(j, *enter_stop_idx, *exit_stop_idx);
       for (auto const& jts : trip_segments) {
-        cb(get_trip(sched, jts.trip_->extern_trip_), j.stops_.at(jts.from_),
-           j.stops_.at(jts.to_),
-           jts.from_ == *enter_stop_idx ? enter_transfer : std::nullopt);
+        auto const* trp = get_trip(sched, jts.trip_->extern_trip_);
+        auto const& from_stop = j.stops_.at(jts.from_);
+        auto const& to_stop = j.stops_.at(jts.to_);
+        auto const trp_sections =
+            get_first_and_last_trip_section(sched, trp, from_stop, to_stop);
+        auto const transfer =
+            jts.from_ == *enter_stop_idx
+                ? enter_transfer
+                : ((arrival_section && trp_sections.first_section_)
+                       ? util::get_transfer_info(sched, *arrival_section,
+                                                 *trp_sections.first_section_)
+                       : std::nullopt);
+        arrival_section = trp_sections.last_section_;
+        cb(trp, from_stop, to_stop, transfer);
       }
       enter_stop_idx.reset();
     }
