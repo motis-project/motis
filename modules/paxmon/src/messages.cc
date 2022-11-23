@@ -16,29 +16,39 @@ using namespace flatbuffers;
 
 namespace motis::paxmon {
 
+inline PaxMonTransferType to_fbs_transfer_type(transfer_info::type const t) {
+  switch (t) {
+    case transfer_info::type::SAME_STATION:
+      return PaxMonTransferType_SAME_STATION;
+    case transfer_info::type::FOOTPATH: return PaxMonTransferType_FOOTPATH;
+    case transfer_info::type::MERGE: return PaxMonTransferType_MERGE;
+    case transfer_info::type::THROUGH: return PaxMonTransferType_THROUGH;
+  }
+  return PaxMonTransferType_NONE;
+}
+
 Offset<PaxMonTransferInfo> to_fbs(FlatBufferBuilder& fbb,
                                   std::optional<transfer_info> const& ti) {
   if (ti) {
     auto const& val = ti.value();
-    return CreatePaxMonTransferInfo(
-        fbb,
-        val.type_ == transfer_info::type::SAME_STATION
-            ? PaxMonTransferType_SAME_STATION
-            : PaxMonTransferType_FOOTPATH,
-        val.duration_);
+    return CreatePaxMonTransferInfo(fbb, to_fbs_transfer_type(val.type_),
+                                    val.duration_);
   } else {
     return CreatePaxMonTransferInfo(fbb, PaxMonTransferType_NONE);
   }
 }
 
 std::optional<transfer_info> from_fbs(PaxMonTransferInfo const* ti) {
+  auto const dur = static_cast<duration>(ti->duration());
   switch (ti->type()) {
     case PaxMonTransferType_SAME_STATION:
-      return transfer_info{static_cast<duration>(ti->duration()),
-                           transfer_info::type::SAME_STATION};
+      return transfer_info{dur, transfer_info::type::SAME_STATION};
     case PaxMonTransferType_FOOTPATH:
-      return transfer_info{static_cast<duration>(ti->duration()),
-                           transfer_info::type::FOOTPATH};
+      return transfer_info{dur, transfer_info::type::FOOTPATH};
+    case PaxMonTransferType_MERGE:
+      return transfer_info{dur, transfer_info::type::MERGE};
+    case PaxMonTransferType_THROUGH:
+      return transfer_info{dur, transfer_info::type::THROUGH};
     default: return {};
   }
 }

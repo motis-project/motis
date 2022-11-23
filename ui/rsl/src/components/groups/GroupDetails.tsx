@@ -18,6 +18,7 @@ import {
   PaxMonGroupRoute,
   PaxMonRerouteLogEntry,
   PaxMonRerouteReason,
+  PaxMonTransferInfo,
 } from "@/api/protocol/motis/paxmon";
 
 import { usePaxMonGetGroupsRequest } from "@/api/paxmon";
@@ -194,8 +195,8 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
           <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} />
         </Link>
       </td>
-      <td className="pr-2">
-        {leg.enter_transfer.type !== "NONE"
+      <td className="pr-2" title={transferTypeText(leg.enter_transfer)}>
+        {requiresTransfer(leg.enter_transfer)
           ? formatShortDuration(leg.enter_transfer.duration)
           : "—"}
       </td>
@@ -209,6 +210,25 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
       </td>
     </tr>
   );
+}
+
+function requiresTransfer(ti: PaxMonTransferInfo) {
+  return ti.type === "SAME_STATION" || ti.type === "FOOTPATH";
+}
+
+function transferTypeText(ti: PaxMonTransferInfo) {
+  switch (ti.type) {
+    case "NONE":
+      return "Kein Umstieg";
+    case "SAME_STATION":
+      return "Umstieg an einer Station";
+    case "FOOTPATH":
+      return "Umstieg mit Fußweg zwischen zwei Stationen";
+    case "MERGE":
+      return "Vereinigung";
+    case "THROUGH":
+      return "Durchbindung";
+  }
 }
 
 function rerouteReasonText(reason: PaxMonRerouteReason): string {

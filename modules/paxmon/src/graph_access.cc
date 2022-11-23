@@ -91,11 +91,46 @@ struct rule_trip_adder {
   void add_through_services(motis::access::trip_section const& section,
                             event_node_index dep_node,
                             event_node_index arr_node) {
-    (void)section;
-    (void)dep_node;
-    (void)arr_node;
-    (void)sched_;
-    // TODO(pablo): NYI
+    auto const lcon_idx = section.trip_->lcon_idx_;
+
+    auto const handle_through_route_edge = [&](::motis::edge const* re,
+                                               bool const incoming) {
+      if (re->empty()) {
+        return;
+      }
+      auto const& lcon = re->m_.route_edge_.conns_.at(lcon_idx);
+      for (auto const& merged_trp : *sched_.merged_trips_.at(lcon.trips_)) {
+        add_trip(merged_trp);
+      }
+      if (incoming) {
+        auto const feeder_arr_node = arr_nodes_.at(rule_node_key{
+            re->to_->get_station()->id_,
+            get_schedule_time(sched_, re, lcon_idx, event_type::ARR),
+            lcon.trips_});
+        get_or_create_through_edge(feeder_arr_node, dep_node);
+      } else {
+        auto const connecting_dep_node = dep_nodes_.at(rule_node_key{
+            re->from_->get_station()->id_,
+            get_schedule_time(sched_, re, lcon_idx, event_type::DEP),
+            lcon.trips_});
+        get_or_create_through_edge(arr_node, connecting_dep_node);
+      }
+    };
+
+    for (auto const& te : section.from_node()->incoming_edges_) {
+      if (te->type() == ::motis::edge::THROUGH_EDGE) {
+        for (auto const& re : te->from_->incoming_edges_) {
+          handle_through_route_edge(re, true);
+        }
+      }
+    }
+    for (auto const& te : section.to_node()->edges_) {
+      if (te.type() == ::motis::edge::THROUGH_EDGE) {
+        for (auto const& re : te.to_->edges_) {
+          handle_through_route_edge(&re, false);
+        }
+      }
+    }
   }
 
   event_node_index get_or_create_dep_node(
@@ -163,6 +198,16 @@ struct rule_trip_adder {
         });
   }
 
+  edge_index get_or_create_through_edge(event_node_index const arr_node,
+                                        event_node_index const dep_node) {
+    return utl::get_or_create(
+        through_edges_, std::make_pair(arr_node, dep_node), [&]() {
+          auto const* e =
+              add_edge(uv_, make_through_edge(uv_, arr_node, dep_node));
+          return get_edge_index(uv_, e);
+        });
+  }
+
   schedule const& sched_;
   capacity_maps const& caps_;
   universe& uv_;
@@ -172,6 +217,8 @@ struct rule_trip_adder {
   std::map<motis::light_connection const*, edge_index> trip_edges_;
   std::map<std::pair<event_node_index, event_node_index>, edge_index>
       wait_edges_;
+  std::map<std::pair<event_node_index, event_node_index>, edge_index>
+      through_edges_;
 };
 
 trip_data_index add_trip(schedule const& sched, capacity_maps const& caps,

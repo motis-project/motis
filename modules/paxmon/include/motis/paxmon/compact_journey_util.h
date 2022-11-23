@@ -15,6 +15,7 @@
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
+#include "motis/core/access/trip_section.h"
 
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/compact_journey.h"
@@ -207,14 +208,15 @@ inline std::optional<trip_idx_t> get_continuous_trip(
 }
 
 template <typename PrefixCompactJourney, typename SuffixCompactJourney>
-inline bool journeys_can_be_merged_without_transfer(
+inline std::optional<transfer_info> get_merged_transfer_info(
     schedule const& sched, PrefixCompactJourney const& prefix,
     SuffixCompactJourney const& suffix) {
   auto const& last_prefix_leg = prefix.legs().back();
   auto const& first_suffix_leg = suffix.legs().front();
 
   if (last_prefix_leg.trip_idx_ == first_suffix_leg.trip_idx_) {
-    return true;
+    // already handled by get_continuous_trip
+    throw utl::fail("get_merged_transfer_info: same trip");
   }
 
   auto const* prefix_trp = get_trip(sched, last_prefix_leg.trip_idx_);
@@ -230,7 +232,7 @@ inline bool journeys_can_be_merged_without_transfer(
                    last_prefix_leg.exit_time_;
       });
   utl::verify(last_prefix_section != end(prefix_sections),
-              "journeys_can_be_merged_without_transfer: last prefix section "
+              "get_merged_transfer_info: last prefix section "
               "not found in trip");
   auto const first_suffix_section = std::find_if(
       begin(suffix_sections), end(suffix_sections),
@@ -240,22 +242,11 @@ inline bool journeys_can_be_merged_without_transfer(
                    first_suffix_leg.enter_time_;
       });
   utl::verify(first_suffix_section != end(suffix_sections),
-              "journeys_can_be_merged_without_transfer: first suffix section "
+              "get_merged_transfer_info: first suffix section "
               "not found in trip");
 
-  auto const& prefix_trips =
-      *sched.merged_trips_.at((*last_prefix_section).lcon().trips_);
-  auto const& suffix_trips =
-      *sched.merged_trips_.at((*first_suffix_section).lcon().trips_);
-
-  for (auto const& trp : prefix_trips) {
-    if (std::find(begin(suffix_trips), end(suffix_trips), trp) !=
-        end(suffix_trips)) {
-      return true;
-    }
-  }
-
-  return false;
+  return util::get_transfer_info(sched, *last_prefix_section,
+                                 *first_suffix_section);
 }
 
 template <typename PrefixCompactJourney, typename SuffixCompactJourney>
@@ -269,7 +260,6 @@ inline compact_journey merge_journeys(schedule const& sched,
   }
 
   auto merged = prefix;
-  auto const& last_prefix_leg = prefix.legs().back();
   auto const& first_suffix_leg = suffix.legs().front();
   auto const continuous_trip_idx = get_continuous_trip(sched, prefix, suffix);
   if (continuous_trip_idx) {
@@ -283,15 +273,8 @@ inline compact_journey merge_journeys(schedule const& sched,
     std::copy(begin(suffix.legs_), end(suffix.legs_),
               std::back_inserter(merged.legs_));
     auto& new_first_suffix_leg = merged.legs_[prefix.legs_.size()];
-    if (journeys_can_be_merged_without_transfer(sched, prefix, suffix)) {
-      new_first_suffix_leg.enter_transfer_ = {};
-    } else {
-      new_first_suffix_leg.enter_transfer_ = util::get_transfer_info(
-          sched, last_prefix_leg.exit_station_id_,
-          get_arrival_track(sched, last_prefix_leg),
-          new_first_suffix_leg.enter_station_id_,
-          get_departure_track(sched, new_first_suffix_leg));
-    }
+    new_first_suffix_leg.enter_transfer_ =
+        get_merged_transfer_info(sched, prefix, suffix);
   }
 
   return merged;
@@ -342,6 +325,13 @@ std::optional<unsigned> get_last_long_distance_station_id(
   return {};
 }
 
+std::optional<access::trip_section> get_arrival_section(
+    schedule const& sched, trip const* trp, std::uint32_t exit_station_id,
+    motis::time exit_time);
+
+std::optional<std::uint16_t> get_arrival_track(
+    std::optional<access::trip_section> const& arrival_section);
+
 std::optional<std::uint16_t> get_arrival_track(schedule const& sched,
                                                trip const* trp,
                                                std::uint32_t exit_station_id,
@@ -349,6 +339,13 @@ std::optional<std::uint16_t> get_arrival_track(schedule const& sched,
 
 std::optional<std::uint16_t> get_arrival_track(schedule const& sched,
                                                journey_leg const& leg);
+
+std::optional<access::trip_section> get_departure_section(
+    schedule const& sched, trip const* trp, std::uint32_t enter_station_id,
+    motis::time enter_time);
+
+std::optional<std::uint16_t> get_departure_track(
+    std::optional<access::trip_section> const& departure_section);
 
 std::optional<std::uint16_t> get_departure_track(schedule const& sched,
                                                  trip const* trp,

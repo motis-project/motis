@@ -44,7 +44,12 @@ export interface PaxMonCombinedGroupRouteIds {
 }
 
 // paxmon/PaxMonCompactJourney.fbs
-export type PaxMonTransferType = "NONE" | "SAME_STATION" | "FOOTPATH";
+export type PaxMonTransferType =
+  | "NONE"
+  | "SAME_STATION"
+  | "FOOTPATH"
+  | "MERGE"
+  | "THROUGH";
 
 // paxmon/PaxMonCompactJourney.fbs
 export interface PaxMonTransferInfo {

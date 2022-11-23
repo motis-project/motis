@@ -5,6 +5,7 @@
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/time.h"
+#include "motis/core/access/trip_section.h"
 
 #include "motis/paxmon/transfer_info.h"
 
@@ -52,6 +53,37 @@ inline std::optional<transfer_info> get_transfer_info(
       return {};
     }
   }
+}
+
+inline std::optional<transfer_info> get_transfer_info(
+    schedule const& sched, access::trip_section const& arrival_section,
+    access::trip_section const& departure_section) {
+  // check if shared trip in arrival + departure section
+  auto const& arrival_trips =
+      *sched.merged_trips_.at(arrival_section.lcon().trips_);
+  auto const& departure_trips =
+      *sched.merged_trips_.at(departure_section.lcon().trips_);
+
+  for (auto const& trp : arrival_trips) {
+    if (std::find(begin(departure_trips), end(departure_trips), trp) !=
+        end(departure_trips)) {
+      return transfer_info{0, transfer_info::type::MERGE};
+    }
+  }
+
+  // check if through edge from arrival to departure section
+  auto const* arr_node = arrival_section.to_node();
+  auto const* dep_node = departure_section.from_node();
+  for (auto const& e : arr_node->edges_) {
+    if (e.type() == ::motis::edge::THROUGH_EDGE && e.to_ == dep_node) {
+      return transfer_info{0, transfer_info::type::THROUGH};
+    }
+  }
+
+  return get_transfer_info(sched, arrival_section.to_station_id(),
+                           arrival_section.lcon().full_con_->a_track_,
+                           departure_section.from_station_id(),
+                           departure_section.lcon().full_con_->d_track_);
 }
 
 }  // namespace motis::paxmon::util
