@@ -20,7 +20,10 @@ export function resolveSchemaTypes(
   rootDir: string,
   rootFile: string
 ): SchemaTypes {
-  const schema: SchemaTypes = { types: new Map<string, SchemaType>() };
+  const schema: SchemaTypes = {
+    types: new Map<string, SchemaType>(),
+    rootType: undefined,
+  };
   const ctx: ResolverContext = {
     schema: schema,
     files: new Set<string>(),
@@ -176,6 +179,10 @@ function extractTypes(
       case "attribute": {
         break;
       }
+      case "root_type": {
+        ctx.schema.rootType = extractType(currentNamespace, elm.type.type);
+        break;
+      }
       default:
         break;
     }
@@ -228,5 +235,8 @@ function resolveTypes(ctx: ResolverContext) {
         }
         break;
     }
+  }
+  if (ctx.schema.rootType) {
+    resolveType(ctx, ctx.schema.rootType);
   }
 }

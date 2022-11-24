@@ -94,6 +94,7 @@ function writeFile(ctx: TSContext, file: TSFile) {
   for (const fqtn of file.types) {
     writeType(ctx, file, out, fqtn);
   }
+  out.end();
 }
 
 function getTSTypeName(

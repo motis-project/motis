@@ -61,4 +61,5 @@ export type SchemaType = EnumType | UnionType | TableType;
 
 export interface SchemaTypes {
   types: Map<string, SchemaType>;
+  rootType: TypeRef | undefined;
 }

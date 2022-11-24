@@ -4,6 +4,7 @@ import { resolveSchemaTypes } from "./schema/resolver";
 import { parse } from "yaml";
 import { parseTypeFilter } from "./filter/parse-filter";
 import { writeTypeScriptOutput } from "./output/typescript/output";
+import { writeJsonSchemaOutput } from "./output/json-schema/output";
 
 let baseDir = process.cwd();
 const argv = process.argv.slice(2);
@@ -46,6 +47,9 @@ for (const outputName in config.output) {
     switch (output.format) {
       case "typescript":
         writeTypeScriptOutput(schema, typeFilter, baseDir, output);
+        break;
+      case "json-schema":
+        writeJsonSchemaOutput(schema, typeFilter, baseDir, output);
         break;
       default:
         console.log(`unknown output format ${output.format}`);
