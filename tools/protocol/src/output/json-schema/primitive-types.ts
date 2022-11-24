@@ -1,5 +1,6 @@
 import { BasicType, IntTypeName } from "../../fbs/basic_types";
 import { JSContext } from "./context";
+import { JSONSchema } from "./types";
 
 const jsIntTypes: Record<IntTypeName, any> = {
   byte: { type: "integer", minimum: -128, maximum: 127 },
@@ -34,7 +35,7 @@ const jsIntTypes: Record<IntTypeName, any> = {
   },
 };
 
-export function basicTypeToJS(ctx: JSContext, type: BasicType): any {
+export function basicTypeToJS(ctx: JSContext, type: BasicType): JSONSchema {
   switch (type.sc) {
     case "bool":
       return { type: "boolean" };
@@ -42,7 +43,7 @@ export function basicTypeToJS(ctx: JSContext, type: BasicType): any {
       if (ctx.strictIntTypes) {
         return jsIntTypes[type.type];
       } else {
-        const js: any = { type: "integer" };
+        const js: JSONSchema = { type: "integer" };
         if (type.type.startsWith("u")) {
           js.minimum = 0;
         }

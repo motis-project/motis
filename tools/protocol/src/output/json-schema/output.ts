@@ -10,6 +10,7 @@ import path from "path";
 import { JSContext } from "./context";
 import fs from "fs";
 import { basicTypeToJS } from "./primitive-types";
+import { JSONSchema } from "./types";
 
 const JSON_SCHEMA_URL = "https://json-schema.org/draft/2020-12/schema";
 
@@ -78,7 +79,7 @@ export function writeJsonSchemaOutput(
     console.log(`writing json schema bundle to: ${bundleFile}`);
     fs.mkdirSync(path.dirname(bundleFile), { recursive: true });
     const out = fs.createWriteStream(bundleFile);
-    const js: any = {
+    const js: JSONSchema = {
       $schema: JSON_SCHEMA_URL,
       $defs: defs,
     };
@@ -97,11 +98,12 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
       ctx.jsonSchema.set(fqtn, { ...base, enum: type.values.map((v) => v.id) });
       break;
     case "union": {
-      const union: any = { ...base, anyOf: [] };
-      const unionTags: any = {
+      const union: JSONSchema = { ...base };
+      const unionTags: JSONSchema = {
         $id: ctx.baseUri.href + [...type.ns, `${type.name}Type`].join("/"),
-        enum: [],
       };
+      union.anyOf = [];
+      unionTags.enum = [];
       for (const value of type.values) {
         const fqtn = value.typeRef.resolvedFqtn;
         const fqtnStr = fqtn.join(".");
@@ -128,7 +130,7 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
   }
 }
 
-function fieldTypeToJS(ctx: JSContext, type: FieldType): any {
+function fieldTypeToJS(ctx: JSContext, type: FieldType): JSONSchema {
   switch (type.c) {
     case "basic":
       return basicTypeToJS(ctx, type.type);
@@ -140,9 +142,9 @@ function fieldTypeToJS(ctx: JSContext, type: FieldType): any {
   throw new Error(`unhandled field type: ${JSON.stringify(type)}`);
 }
 
-function addTableProperties(ctx: JSContext, type: TableType, js: any) {
-  const props: any = {};
-  const unionCases: any[] = [];
+function addTableProperties(ctx: JSContext, type: TableType, js: JSONSchema) {
+  const props: { [name: string]: JSONSchema } = {};
+  const unionCases: JSONSchema[] = [];
   const required: string[] = [];
   for (const field of type.fields) {
     if (field.type.c === "custom") {
@@ -193,7 +195,7 @@ function addTableProperties(ctx: JSContext, type: TableType, js: any) {
   return js;
 }
 
-function getBaseJSProps(ctx: JSContext, type: TypeBase) {
+function getBaseJSProps(ctx: JSContext, type: TypeBase): JSONSchema {
   return { $id: ctx.baseUri.href + [...type.ns, type.name].join("/") };
 }
 
@@ -206,7 +208,7 @@ function getUnionTagRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
 }
 
 function bundleDefs(ctx: JSContext) {
-  const defs: Record<string, any> = {};
+  const defs: Record<string, JSONSchema> = {};
   for (const [fqtn, schema] of ctx.jsonSchema) {
     defs[fqtn] = schema;
   }
