@@ -88,22 +88,25 @@ export function writeOpenAPIOutput(
     }
   }
 
-  for (const fqtn in jsonSchema) {
-    let oaSchema = oaSchemas.get(fqtn);
-    if (oaSchema == undefined) {
-      if (hasExistingSchemas) {
-        console.log(`adding new schema: ${fqtn}`);
-      }
-      oaSchema = doc.createNode({});
-      oaSchemas.set(fqtn, oaSchema);
+  const types = Object.keys(jsonSchema);
+  sortTypes(types);
+
+  for (const fqtn of types) {
+    if (hasExistingSchemas && !oaSchemas.has(fqtn)) {
+      console.log(`adding new schema: ${fqtn}`);
     }
-    if (!isMap(oaSchema)) {
-      throw new Error(
-        `invalid open api yaml file: schema is not a map: ${fqtn}`
-      );
-    }
+    const oaSchema = getOrCreateMap(doc, oaSchemas, [fqtn]);
     updateSchema(ctx, oaSchema, jsonSchema[fqtn]);
   }
+
+  oaSchemas.items.sort((a, b) =>
+    isScalar(a.key) &&
+    typeof a.key.value === "string" &&
+    isScalar(b.key) &&
+    typeof b.key.value === "string"
+      ? compareFqtns(a.key.value, b.key.value)
+      : 0
+  );
 
   console.log(`writing open api specification: ${openApiFile}`);
   fs.mkdirSync(path.dirname(openApiFile), { recursive: true });
@@ -210,4 +213,36 @@ function getOrCreateMap(
     );
   }
   return map;
+}
+
+function sortTypes(types: string[]) {
+  types.sort(compareFqtns);
+}
+
+function compareFqtns(as: string, bs: string): number {
+  const ap = as.split(".");
+  const bp = bs.split(".");
+  for (let i = 0; i < Math.min(ap.length, bp.length); ++i) {
+    const a = ap[i];
+    const b = bp[i];
+    if (a === b) {
+      continue;
+    }
+    if (isLowerCase(a) && isUpperCase(b)) {
+      return 1;
+    } else if (isUpperCase(a) && isLowerCase(b)) {
+      return -1;
+    } else {
+      return b < a ? 1 : -1;
+    }
+  }
+  return ap.length - bp.length;
+}
+
+function isLowerCase(c: string) {
+  return c >= "a" && c <= "z";
+}
+
+function isUpperCase(c: string) {
+  return c >= "A" && c <= "Z";
 }
