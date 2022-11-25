@@ -9,6 +9,11 @@ export type JSONSchemaType =
 
 export type JSONLiteral = string | number | boolean | null;
 
+export type JSONValue =
+  | JSONLiteral
+  | JSONValue[]
+  | { [name: string]: JSONValue };
+
 // just a rough subset
 export type JSONSchema = {
   $schema?: string;
@@ -39,4 +44,12 @@ export type JSONSchema = {
 
   minimum?: number;
   maximum?: number;
+
+  title?: string;
+  description?: string;
+  default?: JSONValue;
+  examples?: JSONValue[];
+  readOnly?: boolean;
+  writeOnly?: boolean;
+  deprecated?: boolean;
 };

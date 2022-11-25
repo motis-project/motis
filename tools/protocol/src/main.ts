@@ -5,6 +5,7 @@ import { parse } from "yaml";
 import { parseTypeFilter } from "./filter/parse-filter";
 import { writeTypeScriptOutput } from "./output/typescript/output";
 import { writeJsonSchemaOutput } from "./output/json-schema/output";
+import { writeOpenAPIOutput } from "./output/openapi/output";
 
 let baseDir = process.cwd();
 const argv = process.argv.slice(2);
@@ -50,6 +51,9 @@ for (const outputName in config.output) {
         break;
       case "json-schema":
         writeJsonSchemaOutput(schema, typeFilter, baseDir, output);
+        break;
+      case "openapi":
+        writeOpenAPIOutput(schema, typeFilter, baseDir, output);
         break;
       default:
         console.log(`unknown output format ${output.format}`);

@@ -37,23 +37,16 @@ export function writeJsonSchemaOutput(
     baseUri.pathname += "/";
   }
 
-  const ctx: JSContext = {
+  const ctx = createJSContext(
     schema,
     typeFilter,
     baseUri,
-    jsonSchema: new Map(),
-    strictIntTypes: !!config["strict-int-types"],
-    strictUnions: config["strict-unions"] !== false,
-  };
+    null,
+    !!config["strict-int-types"],
+    config["strict-unions"] !== false
+  );
 
-  for (const [fqtn, type] of schema.types) {
-    if (!includeType(typeFilter, fqtn)) {
-      continue;
-    }
-    convertSchemaType(ctx, fqtn, type);
-  }
-
-  const defs = bundleDefs(ctx);
+  const defs = getJSONSchemaTypes(ctx);
 
   if (outputDir) {
     console.log(`writing json schema files to: ${outputDir}`);
@@ -84,11 +77,41 @@ export function writeJsonSchemaOutput(
       $defs: defs,
     };
     if (ctx.schema.rootType) {
-      js.$ref = getRefUrl(ctx, ctx.schema.rootType.resolvedFqtn, true);
+      js.$ref = getDefaultRefUrl(ctx, ctx.schema.rootType.resolvedFqtn, true);
     }
     out.write(JSON.stringify(js, null, 2));
     out.end();
   }
+}
+
+export function createJSContext(
+  schema: SchemaTypes,
+  typeFilter: TypeFilter,
+  baseUri: URL,
+  getRefUrl: ((fqtn: string[]) => string) | null = null,
+  strictIntTypes = false,
+  strictUnions = true
+): JSContext {
+  const ctx: JSContext = {
+    schema,
+    typeFilter,
+    baseUri,
+    jsonSchema: new Map(),
+    strictIntTypes,
+    strictUnions,
+    getRefUrl: getRefUrl || ((fqtn) => getDefaultRefUrl(ctx, fqtn)),
+  };
+  return ctx;
+}
+
+export function getJSONSchemaTypes(ctx: JSContext): Record<string, JSONSchema> {
+  for (const [fqtn, type] of ctx.schema.types) {
+    if (!includeType(ctx.typeFilter, fqtn)) {
+      continue;
+    }
+    convertSchemaType(ctx, fqtn, type);
+  }
+  return bundleDefs(ctx);
 }
 
 function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
@@ -109,7 +132,7 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
         const fqtnStr = fqtn.join(".");
         if (includeType(ctx.typeFilter, fqtnStr)) {
           const fqtn = value.typeRef.resolvedFqtn;
-          union.anyOf.push({ $ref: getRefUrl(ctx, fqtn) });
+          union.anyOf.push({ $ref: ctx.getRefUrl(fqtn) });
           unionTags.enum.push(fqtn[fqtn.length - 1]);
         }
       }
@@ -137,7 +160,7 @@ function fieldTypeToJS(ctx: JSContext, type: FieldType): JSONSchema {
     case "vector":
       return { type: "array", items: fieldTypeToJS(ctx, type.type) };
     case "custom":
-      return { $ref: getRefUrl(ctx, type.type.resolvedFqtn) };
+      return { $ref: ctx.getRefUrl(type.type.resolvedFqtn) };
   }
   throw new Error(`unhandled field type: ${JSON.stringify(type)}`);
 }
@@ -167,7 +190,7 @@ function addTableProperties(ctx: JSContext, type: TableType, js: JSONSchema) {
               unionCases.push({
                 if: { properties: { [tagName]: { const: tag } } },
                 then: {
-                  properties: { [field.name]: { $ref: getRefUrl(ctx, fqtn) } },
+                  properties: { [field.name]: { $ref: ctx.getRefUrl(fqtn) } },
                 },
               });
             }
@@ -199,12 +222,12 @@ function getBaseJSProps(ctx: JSContext, type: TypeBase): JSONSchema {
   return { $id: ctx.baseUri.href + [...type.ns, type.name].join("/") };
 }
 
-function getRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
+function getDefaultRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
   return (absolute ? ctx.baseUri.href : ctx.baseUri.pathname) + fqtn.join("/");
 }
 
 function getUnionTagRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
-  return getRefUrl(ctx, fqtn, absolute) + "Type";
+  return getDefaultRefUrl(ctx, fqtn, absolute) + "Type";
 }
 
 function bundleDefs(ctx: JSContext) {
