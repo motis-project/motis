@@ -91,28 +91,30 @@ std::vector<n::routing::offset> get_offsets(
              return reinterpret_cast<routing::MumoEdge const*>(
                  e->additional_edge());
            })  //
-         |
-         utl::remove_if([&](routing::MumoEdge const* e) {
-           // XOR Table:
-           // is_fwd     | is_start      | use_from
-           // FWD  true  | START  true   | to_station    false
-           // FWD  true  | END    false  | from_station  true
-           // BWD  false | START  true   | from_station  true
-           // BWD  false | END    false  | to_station    false
-           auto const x = !((dir == SearchDir_Forward) ^ is_start)
-                              ? e->from_station_id()->view()
-                              : e->to_station_id()->view();
-           fmt::print("{} -> {}, search_dir={}, x={}, ref_station={}\n",
-                      e->from_station_id()->view(), e->to_station_id()->view(),
-                      EnumNameSearchDir(dir), x, ref_station);
-           return x != ref_station;
-         })  //
+         | utl::remove_if([&](routing::MumoEdge const* e) {
+             // XOR Table:
+             // is_fwd     | is_start      | use_from
+             // FWD  true  | START  true   | to_station    false
+             // FWD  true  | END    false  | from_station  true
+             // BWD  false | START  true   | from_station  true
+             // BWD  false | END    false  | to_station    false
+             auto const x = !((dir == SearchDir_Forward) ^ is_start)
+                                ? e->from_station_id()->view()
+                                : e->to_station_id()->view();
+             //           fmt::print("{} -> {}, search_dir={}, x={},
+             //           ref_station={}\n",
+             //                      e->from_station_id()->view(),
+             //                      e->to_station_id()->view(),
+             //                      EnumNameSearchDir(dir), x, ref_station);
+             return x != ref_station;
+           })  //
          | utl::transform([&](routing::MumoEdge const* e) {
-             fmt::print("{} OFFSET AT {}: {}\n", is_start ? "START" : "END",
-                        !((dir == SearchDir_Forward) ^ is_start)
-                            ? e->to_station_id()->str()
-                            : e->from_station_id()->str(),
-                        e->duration());
+             //             fmt::print("{} OFFSET AT {}: {}\n", is_start ?
+             //             "START" : "END",
+             //                        !((dir == SearchDir_Forward) ^ is_start)
+             //                            ? e->to_station_id()->str()
+             //                            : e->from_station_id()->str(),
+             //                        e->duration());
              return n::routing::offset{
                  get_location_idx(tags, tt,
                                   !((dir == SearchDir_Forward) ^ is_start)
@@ -128,8 +130,8 @@ template <n::direction SearchDir, bool IntermodalDest>
 n::routing::stats run_search(n::routing::search_state& state,
                              n::timetable const& tt, n::routing::query&& q) {
   n::routing::stats stats;
-  auto r = n::routing::raptor<n::direction::kForward, IntermodalDest>{
-      tt, state, std::move(q)};
+  auto r =
+      n::routing::raptor<SearchDir, IntermodalDest>{tt, state, std::move(q)};
   r.route();
   stats = r.get_stats();
   return stats;

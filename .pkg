@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=col
-  commit=01e492319f8d0c681fd82d2038671948b2af069e
+  commit=6101f281d194a7326853392760923ea16503f34e
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
