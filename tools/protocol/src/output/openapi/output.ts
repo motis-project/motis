@@ -5,7 +5,7 @@ import fs from "fs";
 import { Document, isMap, isScalar, parseDocument, YAMLMap } from "yaml";
 import { createJSContext, getJSONSchemaTypes } from "../json-schema/output";
 import { JSONSchema } from "../json-schema/types";
-import { OpenApiContext } from "./context";
+import { OPEN_API_VERSIONS, OpenApiContext } from "./context";
 
 export function writeOpenAPIOutput(
   schema: SchemaTypes,
@@ -22,8 +22,15 @@ export function writeOpenAPIOutput(
   if (typeof config.info !== "object") {
     throw new Error("missing info property in config");
   }
+  if (typeof config.version !== "string") {
+    throw new Error("missing version property in config");
+  }
 
   const openApiFile = path.resolve(baseDir, config.file);
+  const openApiVersion = config.version;
+  if (!OPEN_API_VERSIONS.includes(openApiVersion)) {
+    throw new Error(`unsupported open api version: ${openApiVersion}`);
+  }
 
   const baseUri = new URL(config["base-uri"]);
   if (!baseUri.pathname.endsWith("/")) {
@@ -40,7 +47,9 @@ export function writeOpenAPIOutput(
     schema,
     typeFilter,
     baseUri,
-    (fqtn) => `#/components/schemas/${fqtn.join(".")}`
+    (fqtn) => `#/components/schemas/${fqtn.join(".")}`,
+    false,
+    openApiVersion === "3.1.0"
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
 
@@ -48,7 +57,7 @@ export function writeOpenAPIOutput(
     schema,
     typeFilter,
     baseUri,
-    openApiVersion: "3.1.0",
+    openApiVersion,
     jsonSchema,
     doc,
     includeIds: config["ids"] !== false,
@@ -64,7 +73,9 @@ export function writeOpenAPIOutput(
   if (doc.has("openapi")) {
     const existingVersion = doc.get("openapi");
     if (existingVersion !== ctx.openApiVersion) {
-      throw new Error(`unsupported open api version: ${existingVersion}`);
+      throw new Error(
+        `existing open api file has a different version: ${existingVersion}`
+      );
     }
   } else {
     doc.set("openapi", ctx.openApiVersion);

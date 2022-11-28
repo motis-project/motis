@@ -118,7 +118,11 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
   const base = getBaseJSProps(ctx, type);
   switch (type.type) {
     case "enum":
-      ctx.jsonSchema.set(fqtn, { ...base, enum: type.values.map((v) => v.id) });
+      ctx.jsonSchema.set(fqtn, {
+        ...base,
+        type: "string",
+        enum: type.values.map((v) => v.id),
+      });
       break;
     case "union": {
       const union: JSONSchema = { ...base };
@@ -226,8 +230,10 @@ function getDefaultRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
   return (absolute ? ctx.baseUri.href : ctx.baseUri.pathname) + fqtn.join("/");
 }
 
-function getUnionTagRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
-  return getDefaultRefUrl(ctx, fqtn, absolute) + "Type";
+function getUnionTagRefUrl(ctx: JSContext, baseFqtn: string[]) {
+  const fqtn = [...baseFqtn];
+  baseFqtn[baseFqtn.length - 1] += "Type";
+  return ctx.getRefUrl(fqtn);
 }
 
 function bundleDefs(ctx: JSContext) {
