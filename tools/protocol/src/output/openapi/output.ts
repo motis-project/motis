@@ -6,6 +6,8 @@ import { Document, isMap, isScalar, parseDocument, YAMLMap } from "yaml";
 import { createJSContext, getJSONSchemaTypes } from "../json-schema/output";
 import { JSONSchema } from "../json-schema/types";
 import { OPEN_API_VERSIONS, OpenApiContext } from "./context";
+import { compareFqtns, sortTypes } from "../../util/sort";
+import { getOrCreateMap, removeUnknownKeys } from "../../util/yaml";
 
 export function writeOpenAPIOutput(
   schema: SchemaTypes,
@@ -187,75 +189,4 @@ function updateSchema(
   setKey("if");
   setKey("then");
   setKey("else");
-}
-
-function removeUnknownKeys(
-  oaMap: YAMLMap,
-  keep: (key: string) => boolean
-): string[] {
-  const unknownKeys: string[] = [];
-  for (const pair of oaMap.items) {
-    if (!isScalar(pair.key) || typeof pair.key.value !== "string") {
-      throw new Error(
-        `invalid open api yaml file: unsupported map key: ${pair.toJSON()}`
-      );
-    }
-    if (!keep(pair.key.value)) {
-      unknownKeys.push(pair.key.value);
-    }
-  }
-  for (const s of unknownKeys) {
-    oaMap.delete(s);
-  }
-  return unknownKeys;
-}
-
-function getOrCreateMap(
-  doc: Document,
-  parent: YAMLMap | Document,
-  path: string[]
-): YAMLMap {
-  let map = parent.getIn(path);
-  if (map == undefined) {
-    map = doc.createNode({});
-    parent.setIn(path, map);
-  }
-  if (!isMap(map)) {
-    throw new Error(
-      `invalid open api yaml file: ${path.join("/")} is not a map`
-    );
-  }
-  return map;
-}
-
-function sortTypes(types: string[]) {
-  types.sort(compareFqtns);
-}
-
-function compareFqtns(as: string, bs: string): number {
-  const ap = as.split(".");
-  const bp = bs.split(".");
-  for (let i = 0; i < Math.min(ap.length, bp.length); ++i) {
-    const a = ap[i];
-    const b = bp[i];
-    if (a === b) {
-      continue;
-    }
-    if (isLowerCase(a) && isUpperCase(b)) {
-      return 1;
-    } else if (isUpperCase(a) && isLowerCase(b)) {
-      return -1;
-    } else {
-      return b < a ? 1 : -1;
-    }
-  }
-  return ap.length - bp.length;
-}
-
-function isLowerCase(c: string) {
-  return c >= "a" && c <= "z";
-}
-
-function isUpperCase(c: string) {
-  return c >= "A" && c <= "Z";
 }
