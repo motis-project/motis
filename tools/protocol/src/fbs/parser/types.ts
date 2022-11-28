@@ -1,5 +1,13 @@
 import { choice, Parser, recursiveParser, str } from "arcsecond";
-import { BasicType, FLOAT_TYPES, INT_TYPES } from "../basic_types";
+import {
+  BasicType,
+  FLOAT_TYPE_PROPERTIES,
+  FLOAT_TYPES,
+  FloatTypeName,
+  INT_TYPE_PROPERTIES,
+  INT_TYPES,
+  IntTypeName,
+} from "../basic_types";
 import { AstCustomType, AstFieldType } from "../ast";
 import { betweenBrackets } from "./helpers";
 import { identWithOptionalNamespace } from "./constants";
@@ -14,13 +22,17 @@ export const stringType: Parser<BasicType> = str("string").map(() => {
 
 export const intType: Parser<BasicType> = choice(INT_TYPES.map(str)).map(
   (x) => {
-    return { sc: "int", type: x };
+    return { sc: "int", type: x, ...INT_TYPE_PROPERTIES[x as IntTypeName] };
   }
 );
 
 export const floatType: Parser<BasicType> = choice(FLOAT_TYPES.map(str)).map(
   (x) => {
-    return { sc: "float", type: x };
+    return {
+      sc: "float",
+      type: x,
+      ...FLOAT_TYPE_PROPERTIES[x as FloatTypeName],
+    };
   }
 );
 

@@ -8,6 +8,7 @@ export interface JSContext {
   baseUri: URL;
   jsonSchema: Map<string, JSONSchema>;
   strictIntTypes: boolean;
+  numberFormats: boolean;
   strictUnions: boolean;
   getRefUrl: (fqtn: string[]) => string;
 }

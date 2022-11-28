@@ -43,6 +43,7 @@ export function writeJsonSchemaOutput(
     baseUri,
     null,
     !!config["strict-int-types"],
+    !!config["number-formats"],
     config["strict-unions"] !== false
   );
 
@@ -90,6 +91,7 @@ export function createJSContext(
   baseUri: URL,
   getRefUrl: ((fqtn: string[]) => string) | null = null,
   strictIntTypes = false,
+  numberFormats = false,
   strictUnions = true
 ): JSContext {
   const ctx: JSContext = {
@@ -98,6 +100,7 @@ export function createJSContext(
     baseUri,
     jsonSchema: new Map(),
     strictIntTypes,
+    numberFormats,
     strictUnions,
     getRefUrl: getRefUrl || ((fqtn) => getDefaultRefUrl(ctx, fqtn)),
   };

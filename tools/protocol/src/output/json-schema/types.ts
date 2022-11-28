@@ -42,6 +42,7 @@ export type JSONSchema = {
 
   const?: JSONLiteral;
 
+  format?: string;
   minimum?: number;
   maximum?: number;
 

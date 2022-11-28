@@ -49,6 +49,7 @@ export function writeOpenAPIOutput(
     baseUri,
     (fqtn) => `#/components/schemas/${fqtn.join(".")}`,
     false,
+    true,
     openApiVersion === "3.1.0"
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
@@ -150,6 +151,7 @@ function updateSchema(
   setKey("required");
   setKey("enum");
   setKey("const");
+  setKey("format");
   setKey("minimum");
   setKey("maximum");
 
