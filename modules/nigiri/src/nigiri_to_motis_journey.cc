@@ -336,6 +336,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   std::sort(begin(mj.trips_), end(mj.trips_));
   std::sort(begin(mj.attributes_), end(mj.attributes_));
 
+  nj.print(std::cout, tt);
+  print_journey(mj);
+
   return mj;
 }
 

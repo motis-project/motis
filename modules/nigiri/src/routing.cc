@@ -101,20 +101,9 @@ std::vector<n::routing::offset> get_offsets(
              auto const x = !((dir == SearchDir_Forward) ^ is_start)
                                 ? e->from_station_id()->view()
                                 : e->to_station_id()->view();
-             //           fmt::print("{} -> {}, search_dir={}, x={},
-             //           ref_station={}\n",
-             //                      e->from_station_id()->view(),
-             //                      e->to_station_id()->view(),
-             //                      EnumNameSearchDir(dir), x, ref_station);
              return x != ref_station;
            })  //
          | utl::transform([&](routing::MumoEdge const* e) {
-             //             fmt::print("{} OFFSET AT {}: {}\n", is_start ?
-             //             "START" : "END",
-             //                        !((dir == SearchDir_Forward) ^ is_start)
-             //                            ? e->to_station_id()->str()
-             //                            : e->from_station_id()->str(),
-             //                        e->duration());
              return n::routing::offset{
                  get_location_idx(tags, tt,
                                   !((dir == SearchDir_Forward) ^ is_start)

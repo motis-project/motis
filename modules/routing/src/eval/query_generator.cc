@@ -201,7 +201,6 @@ std::string query_ontrip_station(std::string const& target, int id,
                                  fbb.CreateString("")),
               interval_start)
               .Union(),
-
           CreateInputStation(fbb, fbb.CreateString(to_eva),
                              fbb.CreateString("")),
           SearchType_Default, dir, fbb.CreateVector(std::vector<Offset<Via>>()),
