@@ -107,6 +107,13 @@ include "paxmon/PaxMonGetAddressableGroupsRequest.fbs";
 include "paxmon/PaxMonGetAddressableGroupsResponse.fbs";
 include "paxmon/PaxMonKeepAliveRequest.fbs";
 include "paxmon/PaxMonKeepAliveResponse.fbs";
+include "paxmon/PaxMonRerouteGroupsRequest.fbs";
+include "paxmon/PaxMonRerouteGroupsResponse.fbs";
+include "paxmon/PaxMonGroupStatisticsRequest.fbs";
+include "paxmon/PaxMonGroupStatisticsResponse.fbs";
+include "paxmon/PaxMonDebugGraphRequest.fbs";
+include "paxmon/PaxMonDebugGraphResponse.fbs";
+include "paxmon/PaxMonGetUniversesResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -288,7 +295,14 @@ union MsgContent {
   motis.osrm.OSRMManyToManyResponse                                       = 133,
   motis.gbfs.GBFSProvidersResponse                                        = 134,
   motis.paxmon.PaxMonKeepAliveRequest                                     = 135,
-  motis.paxmon.PaxMonKeepAliveResponse                                    = 136
+  motis.paxmon.PaxMonKeepAliveResponse                                    = 136,
+  motis.paxmon.PaxMonRerouteGroupsRequest                                 = 137,
+  motis.paxmon.PaxMonRerouteGroupsResponse                                = 138,
+  motis.paxmon.PaxMonGroupStatisticsRequest                               = 139,
+  motis.paxmon.PaxMonGroupStatisticsResponse                              = 140,
+  motis.paxmon.PaxMonDebugGraphRequest                                    = 141,
+  motis.paxmon.PaxMonDebugGraphResponse                                   = 142,
+  motis.paxmon.PaxMonGetUniversesResponse                                 = 143
 }
 
 // Destination Examples:

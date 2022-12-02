@@ -11,6 +11,12 @@ export function formatDateTime(ts: Date | number): string {
   });
 }
 
+export function formatShortDateTime(ts: Date | number): string {
+  return format(getDate(ts), "dd.MM. HH:mm", {
+    locale: de,
+  });
+}
+
 export function formatLongDateTime(ts: Date | number): string {
   return format(getDate(ts), "EEEE, dd.MM.yyyy, HH:mm O", {
     locale: de,

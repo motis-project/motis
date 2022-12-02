@@ -8,9 +8,9 @@
 
 namespace motis::paxmon {
 
-compact_journey to_compact_journey(journey const& j, schedule const& sched) {
-  compact_journey cj;
-
+template <typename LegFn>
+inline void journey_to_cj_legs(journey const& j, schedule const& sched,
+                               LegFn const& fn) {
   for_each_trip(
       j, sched,
       [&](trip const* trp, journey::stop const& from_stop,
@@ -25,10 +25,16 @@ compact_journey to_compact_journey(journey const& j, schedule const& sched) {
         auto const exit_time = unix_to_motistime(
             sched.schedule_begin_, to_stop.arrival_.schedule_timestamp_);
 
-        cj.legs_.emplace_back(journey_leg{trp->trip_idx_, from_station_id,
-                                          to_station_id, enter_time, exit_time,
-                                          ti});
+        fn(journey_leg{trp->trip_idx_, from_station_id, to_station_id,
+                       enter_time, exit_time, ti});
       });
+}
+
+compact_journey to_compact_journey(journey const& j, schedule const& sched) {
+  compact_journey cj;
+
+  journey_to_cj_legs(j, sched,
+                     [&](journey_leg&& leg) { cj.legs_.emplace_back(leg); });
 
   utl::verify(!cj.legs_.empty(), "to_compact_journey: empty journey");
 

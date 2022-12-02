@@ -1,8 +1,5 @@
 #include "motis/paxmon/messages.h"
 
-#include <cassert>
-#include <algorithm>
-
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -19,40 +16,39 @@ using namespace flatbuffers;
 
 namespace motis::paxmon {
 
-inline std::uint64_t to_fbs_time(schedule const& sched, time const t) {
-  return t != INVALID_TIME ? static_cast<std::uint64_t>(
-                                 motis_to_unixtime(sched.schedule_begin_, t))
-                           : 0ULL;
-}
-
-inline time from_fbs_time(schedule const& sched, std::uint64_t const ut) {
-  return ut != 0ULL ? unix_to_motistime(sched.schedule_begin_, ut)
-                    : INVALID_TIME;
+inline PaxMonTransferType to_fbs_transfer_type(transfer_info::type const t) {
+  switch (t) {
+    case transfer_info::type::SAME_STATION:
+      return PaxMonTransferType_SAME_STATION;
+    case transfer_info::type::FOOTPATH: return PaxMonTransferType_FOOTPATH;
+    case transfer_info::type::MERGE: return PaxMonTransferType_MERGE;
+    case transfer_info::type::THROUGH: return PaxMonTransferType_THROUGH;
+  }
+  return PaxMonTransferType_NONE;
 }
 
 Offset<PaxMonTransferInfo> to_fbs(FlatBufferBuilder& fbb,
                                   std::optional<transfer_info> const& ti) {
   if (ti) {
     auto const& val = ti.value();
-    return CreatePaxMonTransferInfo(
-        fbb,
-        val.type_ == transfer_info::type::SAME_STATION
-            ? PaxMonTransferType_SAME_STATION
-            : PaxMonTransferType_FOOTPATH,
-        val.duration_);
+    return CreatePaxMonTransferInfo(fbb, to_fbs_transfer_type(val.type_),
+                                    val.duration_);
   } else {
     return CreatePaxMonTransferInfo(fbb, PaxMonTransferType_NONE);
   }
 }
 
 std::optional<transfer_info> from_fbs(PaxMonTransferInfo const* ti) {
+  auto const dur = static_cast<duration>(ti->duration());
   switch (ti->type()) {
     case PaxMonTransferType_SAME_STATION:
-      return transfer_info{static_cast<duration>(ti->duration()),
-                           transfer_info::type::SAME_STATION};
+      return transfer_info{dur, transfer_info::type::SAME_STATION};
     case PaxMonTransferType_FOOTPATH:
-      return transfer_info{static_cast<duration>(ti->duration()),
-                           transfer_info::type::FOOTPATH};
+      return transfer_info{dur, transfer_info::type::FOOTPATH};
+    case PaxMonTransferType_MERGE:
+      return transfer_info{dur, transfer_info::type::MERGE};
+    case PaxMonTransferType_THROUGH:
+      return transfer_info{dur, transfer_info::type::THROUGH};
     default: return {};
   }
 }
@@ -83,15 +79,24 @@ Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
                                     FlatBufferBuilder& fbb,
                                     compact_journey const& cj) {
   return CreatePaxMonCompactJourney(
-      fbb, fbb.CreateVector(utl::to_vec(cj.legs_, [&](journey_leg const& leg) {
+      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
+        return to_fbs(sched, fbb, leg);
+      })));
+}
+
+Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
+                                    FlatBufferBuilder& fbb,
+                                    fws_compact_journey const& cj) {
+  return CreatePaxMonCompactJourney(
+      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
         return to_fbs(sched, fbb, leg);
       })));
 }
 
 compact_journey from_fbs(schedule const& sched,
                          PaxMonCompactJourney const* cj) {
-  return {utl::to_vec(*cj->legs(),
-                      [&](auto const& leg) { return from_fbs(sched, leg); })};
+  return compact_journey{utl::to_vec(
+      *cj->legs(), [&](auto const& leg) { return from_fbs(sched, leg); })};
 }
 
 Offset<PaxMonDataSource> to_fbs(FlatBufferBuilder& fbb, data_source const& ds) {
@@ -102,30 +107,161 @@ data_source from_fbs(PaxMonDataSource const* ds) {
   return {ds->primary_ref(), ds->secondary_ref()};
 }
 
-Offset<PaxMonGroup> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                           passenger_group const& pg) {
+Offset<PaxMonGroupRoute> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
+                                temp_group_route const& tgr) {
+  return CreatePaxMonGroupRoute(
+      fbb, tgr.index_.has_value() ? tgr.index_.value() : -1,
+      to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
+      to_fbs_time(sched, tgr.planned_arrival_time_), tgr.estimated_delay_,
+      static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_,
+      false /* broken */, false /* disabled */);
+}
+
+Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
+                                passenger_group_container const& pgc,
+                                FlatBufferBuilder& fbb, group_route const& gr) {
+  return CreatePaxMonGroupRoute(
+      fbb, gr.local_group_route_index_,
+      to_fbs(sched, fbb, pgc.journey(gr.compact_journey_index_)),
+      gr.probability_, to_fbs_time(sched, gr.planned_arrival_time_),
+      gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_),
+      gr.planned_, gr.broken_, gr.disabled_);
+}
+
+temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
+  return temp_group_route{
+      gr->index() >= 0 ? std::optional<local_group_route_index>{static_cast<
+                             local_group_route_index>(gr->index())}
+                       : std::nullopt,
+      gr->probability(),
+      from_fbs(sched, gr->journey()),
+      from_fbs_time(sched, gr->planned_arrival_time()),
+      gr->estimated_delay(),
+      static_cast<route_source_flags>(gr->source_flags()),
+      gr->planned()};
+}
+
+std::optional<broken_transfer_info> from_fbs(
+    schedule const& sched,
+    Vector<Offset<PaxMonBrokenTransferInfo>> const* opt) {
+  if (opt->size() == 1) {
+    auto const* bti = opt->Get(0);
+    return {broken_transfer_info{
+        bti->leg_index(), static_cast<transfer_direction_t>(bti->direction()),
+        from_fbs_time(sched, bti->current_arrival_time()),
+        from_fbs_time(sched, bti->current_departure_time()),
+        bti->required_transfer_time(), bti->arrival_canceled(),
+        bti->departure_canceled()}};
+  } else if (opt->size() == 0) {
+    return {};
+  } else {
+    throw utl::fail(
+        "invalid optional PaxMonBrokenTransferInfo: {} entries (expected 0 or "
+        "1)",
+        opt->size());
+  }
+}
+
+Offset<Vector<Offset<PaxMonBrokenTransferInfo>>> broken_transfer_info_to_fbs(
+    FlatBufferBuilder& fbb, schedule const& sched,
+    std::optional<broken_transfer_info> const& opt) {
+  if (opt.has_value()) {
+    auto const& bti = opt.value();
+    return fbb.CreateVector(std::vector<Offset<PaxMonBrokenTransferInfo>>{
+        CreatePaxMonBrokenTransferInfo(
+            fbb, bti.leg_index_,
+            static_cast<PaxMonTransferDirection>(bti.direction_),
+            to_fbs_time(sched, bti.current_arrival_time_),
+            to_fbs_time(sched, bti.current_departure_time_),
+            bti.required_transfer_time_, bti.arrival_canceled_,
+            bti.departure_canceled_)});
+  } else {
+    return fbb.CreateVector(std::vector<Offset<PaxMonBrokenTransferInfo>>{});
+  }
+}
+
+Offset<PaxMonRerouteLogRoute> to_fbs(FlatBufferBuilder& fbb,
+                                     reroute_log_route_info const& ri) {
+  return CreatePaxMonRerouteLogRoute(fbb, ri.route_, ri.previous_probability_,
+                                     ri.new_probability_);
+}
+
+Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
+                                     FlatBufferBuilder& fbb,
+                                     passenger_group_container const& pgc,
+                                     reroute_log_entry const& entry) {
+  return CreatePaxMonRerouteLogEntry(
+      fbb, entry.system_time_, entry.reroute_time_,
+      static_cast<PaxMonRerouteReason>(entry.reason_),
+      broken_transfer_info_to_fbs(fbb, sched, entry.broken_transfer_),
+      to_fbs(fbb, entry.old_route_),
+      fbb.CreateVector(utl::to_vec(
+          pgc.log_entry_new_routes_.at(entry.index_),
+          [&](auto const& new_route) { return to_fbs(fbb, new_route); })));
+}
+
+Offset<PaxMonGroup> to_fbs(schedule const& sched,
+                           passenger_group_container const& pgc,
+                           FlatBufferBuilder& fbb, passenger_group const& pg,
+                           bool const with_reroute_log) {
   return CreatePaxMonGroup(
       fbb, pg.id_, to_fbs(fbb, pg.source_), pg.passengers_,
-      to_fbs(sched, fbb, pg.compact_planned_journey_), pg.probability_,
-      to_fbs_time(sched, pg.planned_arrival_time_),
-      static_cast<std::underlying_type_t<group_source_flags>>(pg.source_flags_),
-      pg.generation_, pg.previous_version_, to_fbs_time(sched, pg.added_time_),
-      pg.estimated_delay());
+      fbb.CreateVector(utl::to_vec(
+          pgc.routes(pg.id_),
+          [&](group_route const& gr) { return to_fbs(sched, pgc, fbb, gr); })),
+      fbb.CreateVector(with_reroute_log
+                           ? utl::to_vec(pgc.reroute_log_entries(pg.id_),
+                                         [&](auto const& entry) {
+                                           return to_fbs(sched, fbb, pgc,
+                                                         entry);
+                                         })
+                           : std::vector<Offset<PaxMonRerouteLogEntry>>{}));
 }
 
-passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
-  return make_passenger_group(
-      from_fbs(sched, pg->planned_journey()), from_fbs(pg->source()),
-      static_cast<std::uint16_t>(pg->passenger_count()),
-      from_fbs_time(sched, pg->planned_arrival_time()),
-      static_cast<group_source_flags>(pg->source_flags()), pg->probability(),
-      from_fbs_time(sched, pg->added_time()), pg->previous_version(),
-      pg->generation(), pg->estimated_delay(), pg->id());
+temp_passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
+  return temp_passenger_group{
+      pg->id(), from_fbs(pg->source()), pg->passenger_count(),
+      utl::to_vec(*pg->routes(), [&](PaxMonGroupRoute const* gr) {
+        return from_fbs(sched, gr);
+      })};
 }
 
-PaxMonGroupBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
-                                     passenger_group const& pg) {
-  return PaxMonGroupBaseInfo{pg.id_, pg.passengers_, pg.probability_};
+temp_passenger_group_with_route from_fbs(schedule const& sched,
+                                         PaxMonGroupWithRoute const* pgwr) {
+  return temp_passenger_group_with_route{
+      static_cast<passenger_group_index>(pgwr->group_id()),
+      from_fbs(pgwr->source()), pgwr->passenger_count(),
+      from_fbs(sched, pgwr->route())};
+}
+
+Offset<PaxMonGroupWithRoute> to_fbs(schedule const& sched,
+                                    passenger_group_container const& pgc,
+                                    FlatBufferBuilder& fbb,
+                                    passenger_group_with_route const& pgwr) {
+  auto const& pg = pgc.group(pgwr.pg_);
+  auto const& gr = pgc.route(pgwr);
+  return CreatePaxMonGroupWithRoute(fbb, pg.id_, to_fbs(fbb, pg.source_),
+                                    pg.passengers_,
+                                    to_fbs(sched, pgc, fbb, gr));
+}
+
+Offset<PaxMonGroupWithRoute> to_fbs(
+    FlatBufferBuilder& fbb, temp_passenger_group_with_route const& tpgr) {
+  return CreatePaxMonGroupWithRoute(
+      fbb, tpgr.group_id_, to_fbs(fbb, tpgr.source_), tpgr.passengers_);
+}
+
+PaxMonGroupRouteBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
+                                          passenger_group const& pg,
+                                          group_route const& gr) {
+  return PaxMonGroupRouteBaseInfo{pg.id_, gr.local_group_route_index_,
+                                  pg.passengers_, gr.probability_};
+}
+
+PaxMonGroupRouteBaseInfo to_fbs_base_info(
+    FlatBufferBuilder& fbb, passenger_group_container const& pgc,
+    passenger_group_with_route const& pgwr) {
+  return to_fbs_base_info(fbb, pgc.group(pgwr.pg_), pgc.route(pgwr));
 }
 
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
@@ -193,13 +329,25 @@ Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
                                          to_fbs(sched, fbb, loc));
 }
 
-Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
-                           monitoring_event const& me) {
+Offset<PaxMonReachability> reachability_to_fbs(
+    schedule const& sched, FlatBufferBuilder& fbb,
+    reachability_status const status,
+    std::optional<broken_transfer_info> const& bti) {
+  return CreatePaxMonReachability(fbb,
+                                  static_cast<PaxMonReachabilityStatus>(status),
+                                  broken_transfer_info_to_fbs(fbb, sched, bti));
+}
+
+Offset<PaxMonEvent> to_fbs(schedule const& sched,
+                           passenger_group_container const& pgc,
+                           FlatBufferBuilder& fbb, monitoring_event const& me) {
   return CreatePaxMonEvent(
       fbb, static_cast<PaxMonEventType>(me.type_),
-      to_fbs(sched, fbb, me.group_), fbs_localization_type(me.localization_),
+      to_fbs(sched, pgc, fbb, me.pgwr_),
+      fbs_localization_type(me.localization_),
       to_fbs(sched, fbb, me.localization_),
-      static_cast<PaxMonReachabilityStatus>(me.reachability_status_),
+      reachability_to_fbs(sched, fbb, me.reachability_status_,
+                          me.broken_transfer_),
       to_fbs_time(sched, me.expected_arrival_time_));
 }
 

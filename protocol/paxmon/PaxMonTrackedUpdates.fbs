@@ -4,23 +4,6 @@ include "paxmon/PaxMonTripLoadInfo.fbs";
 
 namespace motis.paxmon;
 
-struct PaxMonReusedGroupBaseInfo {
-  id: ulong;
-  passenger_count: uint;
-  probability: float;
-  previous_probability: float;
-}
-
-/*
-// for later use
-table PaxMonUpdatedGroup {
-  source: PaxMonDataSource;
-  removed_groups: [PaxMonGroupBaseInfo];
-  added_groups: [PaxMonGroupBaseInfo];
-  reused_groups: [PaxMonReusedGroupBaseInfo];
-}
-*/
-
 table PaxMonCriticalTripInfo {
   critical_sections: uint;
   max_excess_pax: uint;
@@ -29,11 +12,6 @@ table PaxMonCriticalTripInfo {
 
 table PaxMonUpdatedTrip {
   tsi: motis.TripServiceInfo;
-
-  removed_max_pax: uint;
-  removed_mean_pax: float;
-  added_max_pax: uint;
-  added_mean_pax: float;
 
   rerouted: bool;
   newly_critical_sections: int;
@@ -44,19 +22,15 @@ table PaxMonUpdatedTrip {
   critical_info_before: PaxMonCriticalTripInfo;
   critical_info_after: PaxMonCriticalTripInfo;
 
-  removed_groups: [PaxMonGroupBaseInfo];
-  added_groups: [PaxMonGroupBaseInfo];
-  reused_groups: [PaxMonReusedGroupBaseInfo];
+  updated_group_routes: [PaxMonGroupWithRouteId];
 
   before_edges: [PaxMonEdgeLoadInfo]; // only if include_before_trip_load_info
   after_edges: [PaxMonEdgeLoadInfo]; // only if include_after_trip_load_info
 }
 
 table PaxMonTrackedUpdates {
-  added_group_count: ulong;
-  reused_group_count: ulong;
-  removed_group_count: ulong;
+  updated_group_route_count: ulong;
   updated_trip_count: ulong;
   updated_trips: [PaxMonUpdatedTrip];
-  // updated_groups: [PaxMonUpdatedGroup]; // for later use
+  updated_group_routes: [PaxMonGroupRouteUpdateInfo];
 }

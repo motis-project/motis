@@ -47,8 +47,9 @@ trip_load_info calc_trip_load_info(universe const& uv, trip const* trp) {
           | utl::transform([&](auto const e) { return e.get(uv); })  //
           | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
           | utl::transform([&](auto const* e) {
-              auto pdf = get_load_pdf(uv.passenger_groups_,
-                                      uv.pax_connection_info_.groups_[e->pci_]);
+              auto pdf =
+                  get_load_pdf(uv.passenger_groups_,
+                               uv.pax_connection_info_.group_routes(e->pci_));
               auto cdf = get_cdf(pdf);
               return make_edge_load_info(uv, e, std::move(pdf), std::move(cdf),
                                          false);

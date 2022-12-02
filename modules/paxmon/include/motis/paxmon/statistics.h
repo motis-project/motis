@@ -11,12 +11,8 @@ namespace motis::paxmon {
 
 struct system_statistics {
   std::uint64_t total_broken_interchanges_{};
-  std::uint64_t total_affected_passengers_{};
   std::uint64_t delay_updates_{};
   std::uint64_t reroute_updates_{};
-  std::uint64_t groups_ok_count_{};
-  std::uint64_t groups_broken_count_{};
-  std::uint64_t groups_major_delay_count_{};
 
   std::uint64_t update_event_times_trip_edges_found_{};
   std::uint64_t update_event_times_dep_updated_{};
@@ -49,22 +45,10 @@ struct tick_statistics {
   std::uint64_t rt_delay_schedule_updates_{};
 
   // affected passengers
-  std::uint64_t affected_groups_{};
-  std::uint64_t affected_passengers_{};
-  std::uint64_t ok_groups_{};
-  std::uint64_t broken_groups_{};
-  std::uint64_t broken_passengers_{};
-  std::uint64_t major_delay_groups_{};
-  std::uint64_t major_delay_passengers_{};
-
-  // totals
-  std::uint64_t total_ok_groups_{};
-  std::uint64_t total_broken_groups_{};
-  std::uint64_t total_major_delay_groups_{};
-
-  // tracking
-  std::uint64_t tracked_ok_groups_{};
-  std::uint64_t tracked_broken_groups_{};
+  std::uint64_t affected_group_routes_{};
+  std::uint64_t ok_group_routes_{};
+  std::uint64_t broken_group_routes_{};
+  std::uint64_t major_delay_group_routes_{};
 
   // timing (ms)
   std::uint64_t t_reachability_{};
@@ -92,7 +76,8 @@ struct graph_statistics {
   std::uint64_t stations_{};
   std::uint64_t edges_over_capacity_{};
   std::uint64_t trips_over_capacity_{};
-  std::uint64_t broken_passenger_groups_{};
+  std::uint64_t passenger_group_routes_{};
+  std::uint64_t broken_passenger_group_routes_{};
 };
 
 struct universe;

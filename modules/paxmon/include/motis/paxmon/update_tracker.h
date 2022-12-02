@@ -7,6 +7,7 @@
 #include "motis/core/schedule/schedule.h"
 #include "motis/module/message.h"
 
+#include "motis/paxmon/index_types.h"
 #include "motis/paxmon/passenger_group.h"
 #include "motis/paxmon/statistics.h"
 
@@ -34,10 +35,10 @@ struct update_tracker {
   bool is_tracking() const;
   std::vector<tick_statistics> get_tick_statistics() const;
 
-  void before_group_added(passenger_group const*);
-  void before_group_reused(passenger_group const*);
-  void after_group_reused(passenger_group const*);
-  void before_group_removed(passenger_group const*);
+  void after_group_route_updated(passenger_group_with_route pgwr,
+                                 float previous_probability,
+                                 float new_probability, bool new_route);
+  void before_trip_load_updated(trip_idx_t);
   void before_trip_rerouted(trip const*);
   void rt_updates_applied(tick_statistics const& tick_stats);
 

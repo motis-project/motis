@@ -1,4 +1,5 @@
 include "paxmon/PaxMonCompactJourney.fbs";
+include "paxmon/PaxMonRerouteLog.fbs";
 
 namespace motis.paxmon;
 
@@ -7,22 +8,49 @@ table PaxMonDataSource {
   secondary_ref: ulong;
 }
 
-table PaxMonGroup {
-  id: ulong;
-  source: PaxMonDataSource;
-  passenger_count: uint;
-  planned_journey: PaxMonCompactJourney;
+table PaxMonGroupRoute {
+  index: int;
+  journey: PaxMonCompactJourney;
   probability: float;
   planned_arrival_time: ulong;
-  source_flags: ubyte;
-  generation: ubyte;
-  previous_version: ulong;
-  added_time: ulong;
   estimated_delay: short;
+  source_flags: ubyte;
+  planned: bool;
+  broken: bool;
+  disabled: bool;
 }
 
-struct PaxMonGroupBaseInfo {
-  id: ulong (key);
+table PaxMonGroup {
+  id: uint;
+  source: PaxMonDataSource;
+  passenger_count: ushort;
+  routes: [PaxMonGroupRoute];
+  reroute_log: [PaxMonRerouteLogEntry];
+}
+
+table PaxMonGroupWithRoute {
+  group_id: uint;
+  source: PaxMonDataSource;
+  passenger_count: ushort;
+  route: PaxMonGroupRoute;
+}
+
+struct PaxMonGroupWithRouteId {
+  g: uint; // group id
+  r: ushort; // route index
+}
+
+struct PaxMonGroupRouteBaseInfo {
+  g: uint; // group id
+  r: ushort; // route index
   n: uint; // passengers
   p: float; // probability
+}
+
+struct PaxMonGroupRouteUpdateInfo {
+  g: uint; // group id
+  r: ushort; // route index
+  n: uint; // passengers
+  p: float; // probability
+  pp: float; // previous probability
 }

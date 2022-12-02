@@ -24,20 +24,10 @@ void stats_writer::write_header() {
        << "rt_delay_repair_updates"
        << "rt_delay_schedule_updates"
        //
-       << "affected_groups"
-       << "affected_passengers"
-       << "ok_groups"
-       << "broken_groups"
-       << "broken_passengers"
-       << "major_delay_groups"
-       << "major_delay_passengers"
-       //
-       << "total_ok_groups"
-       << "total_broken_groups"
-       << "total_major_delay_groups"
-       //
-       << "tracked_ok_groups"
-       << "tracked_broken_groups"
+       << "affected_group_routes"
+       << "ok_group_routes"
+       << "broken_group_routes"
+       << "major_delay_group_routes"
        //
        << "t_reachability"
        << "t_localization"
@@ -61,15 +51,9 @@ void stats_writer::write_tick(const tick_statistics& ts) {
        << ts.rt_delay_repair_updates_
        << ts.rt_delay_schedule_updates_
        //
-       << ts.affected_groups_ << ts.affected_passengers_ << ts.ok_groups_
-       << ts.broken_groups_ << ts.broken_passengers_ << ts.major_delay_groups_
-       << ts.major_delay_passengers_
-       //
-       << ts.total_ok_groups_ << ts.total_broken_groups_
-       << ts.total_major_delay_groups_
-       //
-       << ts.tracked_ok_groups_
-       << ts.tracked_broken_groups_
+       << ts.affected_group_routes_ << ts.ok_group_routes_
+       << ts.broken_group_routes_
+       << ts.major_delay_group_routes_
        //
        << ts.t_reachability_ << ts.t_localization_ << ts.t_update_load_
        << ts.t_fbs_events_ << ts.t_publish_

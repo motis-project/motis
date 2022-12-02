@@ -34,6 +34,16 @@ struct keep_alive_response {
   std::vector<universe_id> not_found_;
 };
 
+struct current_universe_info {
+  universe_id const uv_id_;
+  ctx::res_id_t const universe_res_;
+  ctx::res_id_t const schedule_res_;
+  std::optional<std::chrono::seconds> ttl_{};
+  std::optional<std::chrono::time_point<std::chrono::steady_clock>>
+      keep_alive_until_{};
+  std::optional<std::chrono::seconds> expires_in_{};
+};
+
 struct multiverse : std::enable_shared_from_this<multiverse> {
   explicit multiverse(motis::module::module& mod)
       : mod_{mod},
@@ -41,7 +51,7 @@ struct multiverse : std::enable_shared_from_this<multiverse> {
                 std::chrono::system_clock::now().time_since_epoch())
                 .count()} {}
 
-  void create_default_universe();
+  universe* create_default_universe();
 
   std::int64_t id() const { return id_; }
 
@@ -61,6 +71,8 @@ struct multiverse : std::enable_shared_from_this<multiverse> {
 
   void destroy_expired_universes();
 
+  std::vector<current_universe_info> get_current_universe_infos();
+
   friend universe_info;
 
 private:
@@ -74,12 +86,15 @@ private:
 
   void release_universe(universe_info& uv_info);
 
+  void send_universe_destroyed_notifications();
+
   std::recursive_mutex mutex_;
   motis::module::module& mod_;
   std::int64_t const id_;
   std::map<universe_id, std::shared_ptr<universe_info>> universe_info_storage_;
   std::map<universe_id, std::weak_ptr<universe_info>> universe_info_map_;
   std::map<ctx::res_id_t, std::vector<universe_id>> universes_using_schedule_;
+  std::vector<universe_id> recently_destroyed_universes_;
   universe_id last_id_{};
 };
 

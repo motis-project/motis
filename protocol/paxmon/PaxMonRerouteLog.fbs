@@ -1,0 +1,19 @@
+include "paxmon/PaxMonRerouteReason.fbs";
+include "paxmon/PaxMonBrokenTransferInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonRerouteLogRoute {
+  index: ushort;
+  previous_probability: float;
+  new_probability: float;
+}
+
+table PaxMonRerouteLogEntry {
+  system_time: ulong;
+  reroute_time: ulong;
+  reason: PaxMonRerouteReason;
+  broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
+  old_route: PaxMonRerouteLogRoute;
+  new_routes: [PaxMonRerouteLogRoute];
+}

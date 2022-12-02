@@ -7,7 +7,6 @@
 #include "utl/to_vec.h"
 
 #include "motis/hash_map.h"
-#include "motis/pair.h"
 
 #include "motis/core/access/trip_access.h"
 #include "motis/core/conv/station_conv.h"
@@ -30,10 +29,10 @@ struct grouped_key {
   trip const* other_trp_{};
 };
 
-std::pair<std::uint32_t /*station*/, time> get_group_entry(
-    universe const& uv, schedule const& sched, passenger_group const* pg,
+std::pair<std::uint32_t /*station*/, time> get_group_route_entry(
+    universe const& uv, schedule const& sched, group_route const& gr,
     trip_idx_t const ti) {
-  for (auto const& ei : pg->edges_) {
+  for (auto const& ei : uv.passenger_groups_.route_edges(gr.edges_index_)) {
     auto const* e = ei.get(uv);
     for (auto const& trp : e->get_trips(sched)) {
       if (trp->trip_idx_ == ti) {
@@ -46,10 +45,9 @@ std::pair<std::uint32_t /*station*/, time> get_group_entry(
 }
 
 trip const* get_trip_before_entry(schedule const& sched, edge const* e,
-                                  passenger_group const* pg) {
+                                  fws_compact_journey const& cj) {
   auto const& merged_trips = e->get_trips(sched);
-  for (auto const& leg_with_index :
-       utl::enumerate(pg->compact_planned_journey_.legs_)) {
+  for (auto const& leg_with_index : utl::enumerate(cj.legs())) {
     auto const leg_idx = std::get<0>(leg_with_index);
     auto const& leg = std::get<1>(leg_with_index);
     if (std::find_if(begin(merged_trips), end(merged_trips),
@@ -57,8 +55,7 @@ trip const* get_trip_before_entry(schedule const& sched, edge const* e,
                        return t->trip_idx_ == leg.trip_idx_;
                      }) != end(merged_trips)) {
       if (leg_idx > 0) {
-        return get_trip(
-            sched, pg->compact_planned_journey_.legs_[leg_idx - 1].trip_idx_);
+        return get_trip(sched, cj.legs().at(leg_idx - 1).trip_idx_);
       } else {
         break;
       }
@@ -79,12 +76,12 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
   auto const grp_by_other_trip = req->group_by_other_trip();
   auto const include_group_infos = req->include_group_infos();
 
-  auto const get_key = [&](passenger_group const* pg, trip const* other_trip) {
+  auto const get_key = [&](group_route const& gr, fws_compact_journey const& cj,
+                           trip const* other_trip) {
     auto key = grouped_key{};
     if (grp_by_other_trip) {
       key.other_trp_ = other_trip;
     }
-    auto const& cj = pg->compact_planned_journey_;
     switch (grp_by_station) {
       case PaxMonGroupByStation_First:
         key.group_station_ = cj.start_station_id();
@@ -104,7 +101,7 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
       case PaxMonGroupByStation_EntryAndLast: {
         key.group_station_ = cj.destination_station_id();
         auto const [entry_station, entry_time] =
-            get_group_entry(uv, sched, pg, trp->trip_idx_);
+            get_group_route_entry(uv, sched, gr, trp->trip_idx_);
         key.entry_station_ = entry_station;
         key.entry_time_ = entry_time;
         break;
@@ -114,12 +111,11 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
     return key;
   };
 
-  auto const group_enters_here =
+  auto const group_route_enters_here =
       [&](event_node const* trp_node, edge const* e,
-          passenger_group const* pg) -> std::pair<bool, trip const*> {
+          fws_compact_journey const& cj) -> std::pair<bool, trip const*> {
     auto const& merged_trips = e->get_trips(sched);
-    for (auto const& leg_with_index :
-         utl::enumerate(pg->compact_planned_journey_.legs_)) {
+    for (auto const& leg_with_index : utl::enumerate(cj.legs())) {
       auto const leg_idx = std::get<0>(leg_with_index);
       auto const& leg = std::get<1>(leg_with_index);
       if (leg.enter_station_id_ == trp_node->station_idx() &&
@@ -127,24 +123,19 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                        [&](trip const* t) {
                          return t->trip_idx_ == leg.trip_idx_;
                        }) != end(merged_trips)) {
-        return {
-            true,
-            leg_idx > 0
-                ? get_trip(
-                      sched,
-                      pg->compact_planned_journey_.legs_[leg_idx - 1].trip_idx_)
-                : nullptr};
+        return {true, leg_idx > 0
+                          ? get_trip(sched, cj.legs().at(leg_idx - 1).trip_idx_)
+                          : nullptr};
       }
     }
     return {false, nullptr};
   };
 
-  auto const group_exits_here =
+  auto const group_route_exits_here =
       [&](event_node const* trp_node, edge const* e,
-          passenger_group const* pg) -> std::pair<bool, trip const*> {
+          fws_compact_journey const& cj) -> std::pair<bool, trip const*> {
     auto const& merged_trips = e->get_trips(sched);
-    for (auto const& leg_with_index :
-         utl::enumerate(pg->compact_planned_journey_.legs_)) {
+    for (auto const& leg_with_index : utl::enumerate(cj.legs())) {
       auto const leg_idx = std::get<0>(leg_with_index);
       auto const& leg = std::get<1>(leg_with_index);
       if (leg.exit_station_id_ == trp_node->station_idx() &&
@@ -152,13 +143,9 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
                        [&](trip const* t) {
                          return t->trip_idx_ == leg.trip_idx_;
                        }) != end(merged_trips)) {
-        return {
-            true,
-            leg_idx < pg->compact_planned_journey_.legs_.size() - 1
-                ? get_trip(
-                      sched,
-                      pg->compact_planned_journey_.legs_[leg_idx + 1].trip_idx_)
-                : nullptr};
+        return {true, leg_idx < cj.legs().size() - 1
+                          ? get_trip(sched, cj.legs().at(leg_idx + 1).trip_idx_)
+                          : nullptr};
       }
     }
     return {false, nullptr};
@@ -170,8 +157,8 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
     auto const* from = e->from(uv);
     auto const* to = e->to(uv);
 
-    struct grouped_pgs_t {
-      std::vector<passenger_group_index> groups_{};
+    struct grouped_pgwrs_t {
+      std::vector<passenger_group_with_route> group_routes_{};
       std::uint32_t min_pax_{};
       std::uint32_t max_pax_{};
       float avg_pax_{};
@@ -179,25 +166,27 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
       pax_stats pax_stats_{};
     };
 
-    mcd::hash_map<grouped_key, grouped_pgs_t> grouped;
+    mcd::hash_map<grouped_key, grouped_pgwrs_t> grouped;
     std::vector<flatbuffers::Offset<GroupedPassengerGroups>> grouped_pgs_vec;
 
-    for (auto const pgi : uv.pax_connection_info_.groups_[e->pci_]) {
-      auto const* pg = uv.passenger_groups_.at(pgi);
-      if (pg->probability_ == 0.0F) {
+    for (auto const& pgwr : uv.pax_connection_info_.group_routes(e->pci_)) {
+      auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
+      auto const& gr = uv.passenger_groups_.route(pgwr);
+      if (gr.probability_ == 0.0F) {
         continue;
       }
       trip const* other_trp = nullptr;
+      auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
 
       if (grp_filter == PaxMonGroupFilter_Entering) {
-        auto const [entering, ot] = group_enters_here(from, e, pg);
+        auto const [entering, ot] = group_route_enters_here(from, e, cj);
         if (entering) {
           other_trp = ot;
         } else {
           continue;
         }
       } else if (grp_filter == PaxMonGroupFilter_Exiting) {
-        auto const [exiting, ot] = group_exits_here(to, e, pg);
+        auto const [exiting, ot] = group_route_exits_here(to, e, cj);
         if (exiting) {
           other_trp = ot;
         } else {
@@ -207,21 +196,21 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
 
       if (grp_by_other_trip &&
           grp_by_station == PaxMonGroupByStation_EntryAndLast) {
-        other_trp = get_trip_before_entry(sched, e, pg);
+        other_trp = get_trip_before_entry(sched, e, cj);
       }
 
-      auto const key = get_key(pg, other_trp);
+      auto const key = get_key(gr, cj, other_trp);
       auto& gg = grouped[key];
-      gg.groups_.emplace_back(pgi);
-      gg.max_pax_ += pg->passengers_;
-      if (pg->probability_ == 1.0F) {
-        gg.min_pax_ += pg->passengers_;
+      gg.group_routes_.emplace_back(pgwr);
+      gg.max_pax_ += pg.passengers_;
+      if (gr.probability_ == 1.0F) {
+        gg.min_pax_ += pg.passengers_;
       }
-      gg.avg_pax_ += pg->passengers_ * pg->probability_;
+      gg.avg_pax_ += pg.passengers_ * gr.probability_;
     }
 
     for (auto& [key, gbd] : grouped) {
-      gbd.pdf_ = get_load_pdf(uv.passenger_groups_, gbd.groups_);
+      gbd.pdf_ = get_load_pdf(uv.passenger_groups_, gbd.group_routes_);
       gbd.pax_stats_ = get_pax_stats(get_cdf(gbd.pdf_));
     }
 
@@ -257,21 +246,22 @@ motis::module::msg_ptr get_groups_in_trip(paxmon_data& data,
           key.entry_time_ != 0 ? motis_to_unixtime(sched, key.entry_time_) : 0;
 
       if (include_group_infos) {
-        std::sort(begin(gbd.groups_), end(gbd.groups_));
+        std::sort(begin(gbd.group_routes_), end(gbd.group_routes_));
       }
 
       grouped_pgs_vec.emplace_back(CreateGroupedPassengerGroups(
           mc, grouped_by_station, grouped_by_trip, entry_station, entry_time,
-          CreatePaxMonCombinedGroups(
+          CreatePaxMonCombinedGroupRoutes(
               mc,
               mc.CreateVectorOfStructs(
                   include_group_infos
-                      ? utl::to_vec(gbd.groups_,
-                                    [&](passenger_group_index const pgi) {
-                                      return to_fbs_base_info(
-                                          mc, *uv.passenger_groups_[pgi]);
-                                    })
-                      : std::vector<PaxMonGroupBaseInfo>{}),
+                      ? utl::to_vec(
+                            gbd.group_routes_,
+                            [&](passenger_group_with_route const& pgwr) {
+                              return to_fbs_base_info(mc, uv.passenger_groups_,
+                                                      pgwr);
+                            })
+                      : std::vector<PaxMonGroupRouteBaseInfo>{}),
               to_fbs_distribution(mc, gbd.pdf_, gbd.pax_stats_))));
     }
 

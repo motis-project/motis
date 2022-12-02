@@ -36,7 +36,7 @@ jobs:
       - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: buildcache Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
@@ -46,7 +46,7 @@ jobs:
             buildcache-wnds-${{ matrix.config.mode }}-
 
       - name: Dependencies Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
@@ -97,7 +97,7 @@ jobs:
 
       - name: pnpm Cache
         if: matrix.config.webui == 'On'
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -105,10 +105,10 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         if: matrix.config.webui == 'On'
         with:
-          version: ^7.8.0
+          version: ^7.15.0
           run_install: |
             - cwd: ./ui/rsl
 

@@ -1,0 +1,16 @@
+namespace motis.paxmon;
+
+enum PaxMonTransferDirection : byte {
+  Enter,
+  Exit
+}
+
+table PaxMonBrokenTransferInfo {
+  leg_index: ushort;
+  direction: PaxMonTransferDirection;
+  current_arrival_time: ulong;
+  current_departure_time: ulong;
+  required_transfer_time: ushort;
+  arrival_canceled: bool;
+  departure_canceled: bool;
+}

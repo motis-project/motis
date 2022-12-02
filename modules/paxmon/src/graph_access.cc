@@ -91,11 +91,46 @@ struct rule_trip_adder {
   void add_through_services(motis::access::trip_section const& section,
                             event_node_index dep_node,
                             event_node_index arr_node) {
-    (void)section;
-    (void)dep_node;
-    (void)arr_node;
-    (void)sched_;
-    // TODO(pablo): NYI
+    auto const lcon_idx = section.trip_->lcon_idx_;
+
+    auto const handle_through_route_edge = [&](::motis::edge const* re,
+                                               bool const incoming) {
+      if (re->empty()) {
+        return;
+      }
+      auto const& lcon = re->m_.route_edge_.conns_.at(lcon_idx);
+      for (auto const& merged_trp : *sched_.merged_trips_.at(lcon.trips_)) {
+        add_trip(merged_trp);
+      }
+      if (incoming) {
+        auto const feeder_arr_node = arr_nodes_.at(rule_node_key{
+            re->to_->get_station()->id_,
+            get_schedule_time(sched_, re, lcon_idx, event_type::ARR),
+            lcon.trips_});
+        get_or_create_through_edge(feeder_arr_node, dep_node);
+      } else {
+        auto const connecting_dep_node = dep_nodes_.at(rule_node_key{
+            re->from_->get_station()->id_,
+            get_schedule_time(sched_, re, lcon_idx, event_type::DEP),
+            lcon.trips_});
+        get_or_create_through_edge(arr_node, connecting_dep_node);
+      }
+    };
+
+    for (auto const& te : section.from_node()->incoming_edges_) {
+      if (te->type() == ::motis::edge::THROUGH_EDGE) {
+        for (auto const& re : te->from_->incoming_edges_) {
+          handle_through_route_edge(re, true);
+        }
+      }
+    }
+    for (auto const& te : section.to_node()->edges_) {
+      if (te.type() == ::motis::edge::THROUGH_EDGE) {
+        for (auto const& re : te.to_->edges_) {
+          handle_through_route_edge(&re, false);
+        }
+      }
+    }
   }
 
   event_node_index get_or_create_dep_node(
@@ -163,6 +198,16 @@ struct rule_trip_adder {
         });
   }
 
+  edge_index get_or_create_through_edge(event_node_index const arr_node,
+                                        event_node_index const dep_node) {
+    return utl::get_or_create(
+        through_edges_, std::make_pair(arr_node, dep_node), [&]() {
+          auto const* e =
+              add_edge(uv_, make_through_edge(uv_, arr_node, dep_node));
+          return get_edge_index(uv_, e);
+        });
+  }
+
   schedule const& sched_;
   capacity_maps const& caps_;
   universe& uv_;
@@ -172,6 +217,8 @@ struct rule_trip_adder {
   std::map<motis::light_connection const*, edge_index> trip_edges_;
   std::map<std::pair<event_node_index, event_node_index>, edge_index>
       wait_edges_;
+  std::map<std::pair<event_node_index, event_node_index>, edge_index>
+      through_edges_;
 };
 
 trip_data_index add_trip(schedule const& sched, capacity_maps const& caps,
@@ -264,6 +311,10 @@ void update_event_times(schedule const& sched, universe& uv,
           ++uv.system_stats_.update_event_times_dep_updated_;
           from->time_ = new_time;
           add_interchange_edges(from, updated_interchange_edges, uv);
+          if (uv.graph_log_.enabled_) {
+            uv.graph_log_.node_log_[from->index_].emplace_back(
+                node_log_entry{sched.system_time_, from->time_, from->valid_});
+          }
         }
         break;
       } else if (ue->base()->event_type() == EventType_ARR &&
@@ -273,6 +324,10 @@ void update_event_times(schedule const& sched, universe& uv,
           ++uv.system_stats_.update_event_times_arr_updated_;
           to->time_ = new_time;
           add_interchange_edges(to, updated_interchange_edges, uv);
+          if (uv.graph_log_.enabled_) {
+            uv.graph_log_.node_log_[to->index_].emplace_back(
+                node_log_entry{sched.system_time_, to->time_, to->valid_});
+          }
         }
         break;
       }
@@ -299,21 +354,78 @@ void update_trip_route(schedule const& sched, capacity_maps const& caps,
                 updated_interchange_edges);
 }
 
-void add_passenger_group_to_edge(universe& uv, edge* e, passenger_group* pg) {
-  auto groups = uv.pax_connection_info_.groups_[e->pci_];
-  auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
-  if (it == end(groups) || *it != pg->id_) {
-    groups.insert(it, pg->id_);
+bool add_group_route_to_edge(universe& uv, schedule const& sched, edge* e,
+                             passenger_group_with_route const& entry,
+                             bool const log, pci_log_reason_t const reason) {
+  auto group_routes = uv.pax_connection_info_.group_routes_[e->pci_];
+  auto it = std::lower_bound(begin(group_routes), end(group_routes), entry);
+  if (it == end(group_routes) || *it != entry) {
+    group_routes.insert(it, entry);
+    if (log && uv.graph_log_.enabled_) {
+      uv.graph_log_.pci_log_[e->pci_].emplace_back(pci_log_entry{
+          sched.system_time_, pci_log_action_t::ROUTE_ADDED, reason, entry});
+    }
+    return true;
   }
+  return false;
 }
 
-void remove_passenger_group_from_edge(universe& uv, edge* e,
-                                      passenger_group* pg) {
-  auto groups = uv.pax_connection_info_.groups_[e->pci_];
-  auto it = std::lower_bound(begin(groups), end(groups), pg->id_);
-  if (it != end(groups) && *it == pg->id_) {
-    groups.erase(it);
+bool remove_group_route_from_edge(universe& uv, schedule const& sched, edge* e,
+                                  passenger_group_with_route const& entry,
+                                  bool const log,
+                                  pci_log_reason_t const reason) {
+  auto group_routes = uv.pax_connection_info_.group_routes_[e->pci_];
+  auto it = std::lower_bound(begin(group_routes), end(group_routes), entry);
+  if (it != end(group_routes) && *it == entry) {
+    group_routes.erase(it);
+    if (log && uv.graph_log_.enabled_) {
+      uv.graph_log_.pci_log_[e->pci_].emplace_back(pci_log_entry{
+          sched.system_time_, pci_log_action_t::ROUTE_REMOVED, reason, entry});
+    }
+    return true;
   }
+  return false;
+}
+
+bool add_broken_group_route_to_edge(universe& uv, schedule const& sched,
+                                    edge* e,
+                                    passenger_group_with_route const& entry,
+                                    bool const log,
+                                    pci_log_reason_t const reason) {
+  auto broken_group_routes =
+      uv.pax_connection_info_.broken_group_routes_[e->pci_];
+  auto it = std::lower_bound(begin(broken_group_routes),
+                             end(broken_group_routes), entry);
+  if (it == end(broken_group_routes) || *it != entry) {
+    broken_group_routes.insert(it, entry);
+    if (log && uv.graph_log_.enabled_) {
+      uv.graph_log_.pci_log_[e->pci_].emplace_back(
+          pci_log_entry{sched.system_time_,
+                        pci_log_action_t::BROKEN_ROUTE_ADDED, reason, entry});
+    }
+    return true;
+  }
+  return false;
+}
+
+bool remove_broken_group_route_from_edge(
+    universe& uv, schedule const& sched, edge* e,
+    passenger_group_with_route const& entry, bool const log,
+    pci_log_reason_t const reason) {
+  auto broken_group_routes =
+      uv.pax_connection_info_.broken_group_routes_[e->pci_];
+  auto it = std::lower_bound(begin(broken_group_routes),
+                             end(broken_group_routes), entry);
+  if (it != end(broken_group_routes) && *it == entry) {
+    broken_group_routes.erase(it);
+    if (log && uv.graph_log_.enabled_) {
+      uv.graph_log_.pci_log_[e->pci_].emplace_back(
+          pci_log_entry{sched.system_time_,
+                        pci_log_action_t::BROKEN_ROUTE_REMOVED, reason, entry});
+    }
+    return true;
+  }
+  return false;
 }
 
 void for_each_trip(

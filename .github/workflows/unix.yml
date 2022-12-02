@@ -29,7 +29,7 @@ jobs:
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   rsl-ui-checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ui/rsl
@@ -37,16 +37,16 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: pnpm Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         with:
-          version: ^7.8.0
+          version: ^7.15.0
           run_install: |
             - cwd: ui/rsl
       - name: Formatting
@@ -85,7 +85,7 @@ jobs:
 
       # ==== CACHE ====
       - name: buildcache Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
@@ -95,7 +95,7 @@ jobs:
             buildcache-${{ matrix.config.cache }}-
 
       - name: Dependencies Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
@@ -136,7 +136,7 @@ jobs:
         run: cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
       - name: pnpm Cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.pnpm-store
           key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
@@ -144,9 +144,9 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         with:
-          version: ^7.8.0
+          version: ^7.15.0
           run_install: |
             - cwd: ./ui/rsl
 
@@ -265,10 +265,10 @@ jobs:
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2.2.0
+        uses: pnpm/action-setup@v2
         if: ${{ !matrix.config.skipui }}
         with:
-          version: ^7.8.0
+          version: ^7.15.0
           run_install: |
             - cwd: ./ui/rsl
 
@@ -351,7 +351,7 @@ jobs:
           ref: aachen
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: motis-${{ matrix.config.artifact }}
 
@@ -386,15 +386,15 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
 
       - name: Docker setup-buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
         with:
           install: true
 
       - name: Docker Login to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -402,7 +402,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
           images: |
             ghcr.io/${{ github.repository }}
@@ -415,7 +415,7 @@ jobs:
             type=edge
 
       - name: Docker build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           push: true
           context: .

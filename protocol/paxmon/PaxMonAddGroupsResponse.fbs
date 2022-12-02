@@ -1,5 +1,5 @@
 namespace motis.paxmon;
 
 table PaxMonAddGroupsResponse {
-  ids: [ulong];
+  ids: [uint];
 }

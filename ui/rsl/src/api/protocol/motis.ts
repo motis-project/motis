@@ -29,6 +29,8 @@ import {
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
+  PaxMonDebugGraphRequest,
+  PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
@@ -48,9 +50,14 @@ import {
   PaxMonGetInterchangesResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
+  PaxMonGetUniversesResponse,
+  PaxMonGroupStatisticsRequest,
+  PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
   PaxMonRemoveGroupsRequest,
+  PaxMonRerouteGroupsRequest,
+  PaxMonRerouteGroupsResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
   PaxMonTripLoadInfo,
@@ -374,7 +381,14 @@ export type MsgContent =
   | PaxMonGetAddressableGroupsRequest
   | PaxMonGetAddressableGroupsResponse
   | PaxMonKeepAliveRequest
-  | PaxMonKeepAliveResponse;
+  | PaxMonKeepAliveResponse
+  | PaxMonRerouteGroupsRequest
+  | PaxMonRerouteGroupsResponse
+  | PaxMonGroupStatisticsRequest
+  | PaxMonGroupStatisticsResponse
+  | PaxMonDebugGraphRequest
+  | PaxMonDebugGraphResponse
+  | PaxMonGetUniversesResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -438,7 +452,14 @@ export type MsgContentType =
   | "PaxMonGetAddressableGroupsRequest"
   | "PaxMonGetAddressableGroupsResponse"
   | "PaxMonKeepAliveRequest"
-  | "PaxMonKeepAliveResponse";
+  | "PaxMonKeepAliveResponse"
+  | "PaxMonRerouteGroupsRequest"
+  | "PaxMonRerouteGroupsResponse"
+  | "PaxMonGroupStatisticsRequest"
+  | "PaxMonGroupStatisticsResponse"
+  | "PaxMonDebugGraphRequest"
+  | "PaxMonDebugGraphResponse"
+  | "PaxMonGetUniversesResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";
