@@ -1,6 +1,7 @@
 #include "motis/paxmon/api/get_interchanges.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
@@ -31,6 +32,9 @@ msg_ptr get_interchanges(paxmon_data& data, msg_ptr const& msg) {
   auto const filter_times = req->start_time() != 0 || req->end_time() != 0;
   auto const max_count = req->max_count();
   auto const include_group_infos = req->include_group_infos();
+  auto const include_broken_interchanges = req->include_broken_interchanges();
+  auto const include_disabled_group_routes =
+      req->include_disabled_group_routes();
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonInterchangeInfo>> interchange_infos;
@@ -89,33 +93,42 @@ msg_ptr get_interchanges(paxmon_data& data, msg_ptr const& msg) {
     }
     for (auto const& ei : uv.interchanges_at_station_.at(station_idx)) {
       auto const* ic_edge = ei.get(uv);
-      if (!ic_edge->is_valid(uv) || (!include_event(ic_edge->from(uv)) &&
-                                     !include_event(ic_edge->to(uv)))) {
+      if ((!include_broken_interchanges && !ic_edge->is_valid(uv)) ||
+          (!include_event(ic_edge->from(uv)) &&
+           !include_event(ic_edge->to(uv)))) {
         continue;
       }
 
-      std::vector<PaxMonGroupBaseInfo> group_infos;
+      std::vector<PaxMonGroupRouteBaseInfo> group_route_infos;
       if (include_group_infos) {
-        for (auto const pgi : uv.pax_connection_info_.groups_[ic_edge->pci_]) {
-          auto const* pg = uv.passenger_groups_.at(pgi);
-          if (pg->probability_ != 0.0F) {
-            group_infos.emplace_back(to_fbs_base_info(mc, *pg));
+        for (auto const& pgwr :
+             uv.pax_connection_info_.group_routes(ic_edge->pci_)) {
+          auto const& gr = uv.passenger_groups_.route(pgwr);
+          if (include_disabled_group_routes || gr.probability_ != 0.0F) {
+            auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
+            group_route_infos.emplace_back(to_fbs_base_info(mc, pg, gr));
           }
         }
-        std::sort(begin(group_infos), end(group_infos),
-                  [](PaxMonGroupBaseInfo const& a,
-                     PaxMonGroupBaseInfo const& b) { return a.id() < b.id(); });
+        std::sort(begin(group_route_infos), end(group_route_infos),
+                  [](PaxMonGroupRouteBaseInfo const& a,
+                     PaxMonGroupRouteBaseInfo const& b) {
+                    return std::make_pair(a.g(), a.r()) <
+                           std::make_pair(b.g(), b.r());
+                  });
       }
-      auto const pdf = get_load_pdf(
-          uv.passenger_groups_, uv.pax_connection_info_.groups_[ic_edge->pci_]);
+      auto const pdf =
+          get_load_pdf(uv.passenger_groups_,
+                       uv.pax_connection_info_.group_routes(ic_edge->pci_));
       auto const cdf = get_cdf(pdf);
 
       interchange_infos.emplace_back(CreatePaxMonInterchangeInfo(
           mc, make_fbs_event(ic_edge->from(uv), true),
           make_fbs_event(ic_edge->to(uv), false),
-          CreatePaxMonCombinedGroups(mc, mc.CreateVectorOfStructs(group_infos),
-                                     to_fbs_distribution(mc, pdf, cdf)),
-          ic_edge->transfer_time()));
+          CreatePaxMonCombinedGroupRoutes(
+              mc, mc.CreateVectorOfStructs(group_route_infos),
+              to_fbs_distribution(mc, pdf, cdf)),
+          ic_edge->transfer_time(), ic_edge->is_valid(uv),
+          ic_edge->is_disabled(), ic_edge->broken_));
 
       if (max_count != 0 && interchange_infos.size() >= max_count) {
         max_count_reached = true;

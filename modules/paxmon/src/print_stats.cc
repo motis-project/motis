@@ -9,9 +9,10 @@ using namespace motis::logging;
 namespace motis::paxmon {
 
 void print_graph_stats(graph_statistics const& graph_stats) {
-  LOG(info) << fmt::format("{:L} passenger groups, {:L} passengers",
-                           graph_stats.passenger_groups_,
-                           graph_stats.passengers_);
+  LOG(info) << fmt::format(
+      "{:L} passenger groups, {:L} passengers, {:L} group routes",
+      graph_stats.passenger_groups_, graph_stats.passengers_,
+      graph_stats.passenger_group_routes_);
   LOG(info) << fmt::format("{:L} graph nodes ({:L} canceled)",
                            graph_stats.nodes_, graph_stats.canceled_nodes_);
   LOG(info) << fmt::format(
@@ -25,9 +26,9 @@ void print_graph_stats(graph_statistics const& graph_stats) {
   LOG(info) << fmt::format("over capacity: {:L} trips, {:L} edges",
                            graph_stats.trips_over_capacity_,
                            graph_stats.edges_over_capacity_);
-  LOG(info) << fmt::format("broken: {:L} interchange edges, {:L} groups",
+  LOG(info) << fmt::format("broken: {:L} interchange edges, {:L} group routes",
                            graph_stats.broken_edges_,
-                           graph_stats.broken_passenger_groups_);
+                           graph_stats.broken_passenger_group_routes_);
 }
 
 void print_allocator_stats(universe const& uv) {

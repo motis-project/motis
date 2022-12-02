@@ -58,7 +58,7 @@ msg_ptr find_trips(paxmon_data& data, msg_ptr const& msg) {
           std::any_of(begin(td_edges), end(td_edges), [&](auto const& ei) {
             auto const* e = ei.get(uv);
             return e->is_trip() &&
-                   !uv.pax_connection_info_.groups_[e->pci_].empty();
+                   !uv.pax_connection_info_.group_routes(e->pci_).empty();
           });
     }
 

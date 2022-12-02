@@ -17,20 +17,39 @@ export interface PaxMonAddGroupsResponse {
   ids: number[];
 }
 
+// paxmon/PaxMonBrokenTransferInfo.fbs
+export type PaxMonTransferDirection = "Enter" | "Exit";
+
+// paxmon/PaxMonBrokenTransferInfo.fbs
+export interface PaxMonBrokenTransferInfo {
+  leg_index: number;
+  direction: PaxMonTransferDirection;
+  current_arrival_time: number;
+  current_departure_time: number;
+  required_transfer_time: number;
+  arrival_canceled: boolean;
+  departure_canceled: boolean;
+}
+
 // paxmon/PaxMonCombinedGroups.fbs
-export interface PaxMonCombinedGroups {
-  groups: PaxMonGroupBaseInfo[];
+export interface PaxMonCombinedGroupRoutes {
+  group_routes: PaxMonGroupRouteBaseInfo[];
   dist: PaxMonDistribution;
 }
 
 // paxmon/PaxMonCombinedGroups.fbs
-export interface PaxMonCombinedGroupIds {
-  groups: number[];
+export interface PaxMonCombinedGroupRouteIds {
+  group_routes: PaxMonGroupWithRouteId[];
   dist: PaxMonDistribution;
 }
 
 // paxmon/PaxMonCompactJourney.fbs
-export type PaxMonTransferType = "NONE" | "SAME_STATION" | "FOOTPATH";
+export type PaxMonTransferType =
+  | "NONE"
+  | "SAME_STATION"
+  | "FOOTPATH"
+  | "MERGE"
+  | "THROUGH";
 
 // paxmon/PaxMonCompactJourney.fbs
 export interface PaxMonTransferInfo {
@@ -51,6 +70,98 @@ export interface PaxMonCompactJourneyLeg {
 // paxmon/PaxMonCompactJourney.fbs
 export interface PaxMonCompactJourney {
   legs: PaxMonCompactJourneyLeg[];
+}
+
+// paxmon/PaxMonDebugGraphRequest.fbs
+export interface PaxMonDebugGraphRequest {
+  universe: number;
+  node_indices: number[];
+  group_routes: PaxMonGroupWithRouteId[];
+  trip_ids: TripId[];
+  filter_groups: boolean;
+  include_full_trips_from_group_routes: boolean;
+  include_canceled_trip_nodes: boolean;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugNodeLogEntry {
+  system_time: number;
+  node_time: number;
+  valid: boolean;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugNode {
+  index: number;
+  schedule_time: number;
+  current_time: number;
+  arrival: boolean;
+  valid: boolean;
+  station: Station;
+  log: PaxMonDebugNodeLogEntry[];
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export type PaxMonDebugEdgeType =
+  | "Trip"
+  | "Interchange"
+  | "Wait"
+  | "Through"
+  | "Disabled";
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugEdgeLogEntry {
+  system_time: number;
+  required_transfer_time: number;
+  available_transfer_time: number;
+  edge_type: PaxMonDebugEdgeType;
+  broken: boolean;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export type PaxMonDebugPaxLogAction =
+  | "RouteAdded"
+  | "RouteRemoved"
+  | "BrokenRouteAdded"
+  | "BrokenRouteRemoved";
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export type PaxMonDebugPaxLogReason =
+  | "Unknown"
+  | "Api"
+  | "TripReroute"
+  | "UpdateLoad";
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugPaxLogEntry {
+  system_time: number;
+  action: PaxMonDebugPaxLogAction;
+  reason: PaxMonDebugPaxLogReason;
+  group_route: PaxMonGroupWithRouteId;
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugEdge {
+  from_node: number;
+  to_node: number;
+  out_edge_index: number;
+  type: PaxMonDebugEdgeType;
+  broken: boolean;
+  valid: boolean;
+  transfer_time: number;
+  expected_load: number;
+  group_routes: PaxMonGroupRouteBaseInfo[];
+  trip_indices: number[];
+  edge_log: PaxMonDebugEdgeLogEntry[];
+  pax_log: PaxMonDebugPaxLogEntry[];
+}
+
+// paxmon/PaxMonDebugGraphResponse.fbs
+export interface PaxMonDebugGraphResponse {
+  graph_log_enabled: boolean;
+  nodes: PaxMonDebugNode[];
+  edges: PaxMonDebugEdge[];
+  trips: TripServiceInfo[];
 }
 
 // paxmon/PaxMonDestroyUniverseRequest.fbs
@@ -81,28 +192,54 @@ export interface PaxMonDistribution {
 }
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
+export type PaxMonFilterGroupsSortOrder =
+  | "GroupId"
+  | "ScheduledDepartureTime"
+  | "MaxEstimatedDelay"
+  | "ExpectedEstimatedDelay"
+  | "MinEstimatedDelay"
+  | "RerouteLogEntries";
+
+// paxmon/PaxMonFilterGroupsRequest.fbs
+export type PaxMonFilterGroupsTimeFilter =
+  | "NoFilter"
+  | "DepartureTime"
+  | "DepartureOrArrivalTime";
+
+// paxmon/PaxMonFilterGroupsRequest.fbs
 export interface PaxMonFilterGroupsRequest {
   universe: number;
-  only_delayed: boolean;
-  min_delay: number;
-  only_with_alternative_potential: boolean;
-  preparation_time: number;
-  only_active: boolean; // default: true
-  only_original: boolean;
-  only_forecast: boolean;
-  include_localization: boolean;
+  sort_by: PaxMonFilterGroupsSortOrder;
+  max_results: number;
+  skip_first: number;
+  include_reroute_log: boolean;
+  filter_by_start: string[];
+  filter_by_destination: string[];
+  filter_by_via: string[];
+  filter_by_group_id: number[];
+  filter_by_data_source: PaxMonDataSource[];
+  filter_by_train_nr: number[];
+  filter_by_time: PaxMonFilterGroupsTimeFilter;
+  filter_interval: Interval;
+  filter_by_reroute_reason: PaxMonRerouteReason[];
+}
+
+// paxmon/PaxMonFilterGroupsResponse.fbs
+export interface PaxMonGroupWithStats {
+  group: PaxMonGroup;
+  min_estimated_delay: number;
+  max_estimated_delay: number;
+  expected_estimated_delay: number;
 }
 
 // paxmon/PaxMonFilterGroupsResponse.fbs
 export interface PaxMonFilterGroupsResponse {
-  total_tracked_groups: number;
-  total_active_groups: number;
+  total_matching_groups: number;
+  total_matching_passengers: number;
   filtered_groups: number;
-  filtered_unique_groups: number;
-  filtered_original_groups: number;
-  filtered_forecast_groups: number;
-  group_ids: number[];
-  localizations: PaxMonLocalizationWrapper[];
+  remaining_groups: number;
+  next_skip: number;
+  groups: PaxMonGroupWithStats[];
 }
 
 // paxmon/PaxMonFilterTripsRequest.fbs
@@ -211,22 +348,22 @@ export interface PaxMonAddressableGroupsByFeeder {
   arrival_station: Station;
   arrival_schedule_time: number;
   arrival_current_time: number;
-  cgs: PaxMonCombinedGroupIds;
+  cgs: PaxMonCombinedGroupRouteIds;
 }
 
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonAddressableGroupsByEntry {
   entry_station: Station;
   departure_schedule_time: number;
-  cgs: PaxMonCombinedGroupIds;
+  cgs: PaxMonCombinedGroupRouteIds;
   by_feeder: PaxMonAddressableGroupsByFeeder[];
-  starting_here: PaxMonCombinedGroupIds;
+  starting_here: PaxMonCombinedGroupRouteIds;
 }
 
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonAddressableGroupsByInterchange {
   future_interchange: Station;
-  cgs: PaxMonCombinedGroupIds;
+  cgs: PaxMonCombinedGroupRouteIds;
   by_entry: PaxMonAddressableGroupsByEntry[];
 }
 
@@ -244,7 +381,7 @@ export interface PaxMonAddressableGroupsSection {
 // paxmon/PaxMonGetAddressableGroupsResponse.fbs
 export interface PaxMonGetAddressableGroupsResponse {
   sections: PaxMonAddressableGroupsSection[];
-  groups: PaxMonGroupBaseInfo[];
+  group_routes: PaxMonGroupRouteBaseInfo[];
 }
 
 // paxmon/PaxMonGetGroupsInTripRequest.fbs
@@ -275,7 +412,7 @@ export interface GroupedPassengerGroups {
   grouped_by_trip: TripServiceInfo[];
   entry_station: Station[];
   entry_time: number;
-  info: PaxMonCombinedGroups;
+  info: PaxMonCombinedGroupRoutes;
 }
 
 // paxmon/PaxMonGetGroupsInTripResponse.fbs
@@ -299,15 +436,12 @@ export interface PaxMonGetGroupsRequest {
   universe: number;
   ids: number[];
   sources: PaxMonDataSource[];
-  all_generations: boolean;
-  include_localization: boolean;
-  preparation_time: number;
+  include_reroute_log: boolean;
 }
 
 // paxmon/PaxMonGetGroupsResponse.fbs
 export interface PaxMonGetGroupsResponse {
   groups: PaxMonGroup[];
-  localizations: PaxMonLocalizationWrapper[];
 }
 
 // paxmon/PaxMonGetInterchangesRequest.fbs
@@ -319,6 +453,8 @@ export interface PaxMonGetInterchangesRequest {
   max_count: number;
   include_meta_stations: boolean;
   include_group_infos: boolean;
+  include_broken_interchanges: boolean;
+  include_disabled_group_routes: boolean;
 }
 
 // paxmon/PaxMonGetInterchangesResponse.fbs
@@ -333,8 +469,11 @@ export interface PaxMonTripStopInfo {
 export interface PaxMonInterchangeInfo {
   arrival: PaxMonTripStopInfo[];
   departure: PaxMonTripStopInfo[];
-  groups: PaxMonCombinedGroups;
+  groups: PaxMonCombinedGroupRoutes;
   transfer_time: number;
+  valid: boolean;
+  disabled: boolean;
+  broken: boolean;
 }
 
 // paxmon/PaxMonGetInterchangesResponse.fbs
@@ -355,6 +494,20 @@ export interface PaxMonGetTripLoadInfosResponse {
   load_infos: PaxMonTripLoadInfo[];
 }
 
+// paxmon/PaxMonGetUniversesResponse.fbs
+export interface PaxMonUniverseInfo {
+  universe: number;
+  schedule: number;
+  ttl: number;
+  expires_in: number;
+}
+
+// paxmon/PaxMonGetUniversesResponse.fbs
+export interface PaxMonGetUniversesResponse {
+  multiverse_id: number;
+  universes: PaxMonUniverseInfo[];
+}
+
 // paxmon/PaxMonGroup.fbs
 export interface PaxMonDataSource {
   primary_ref: number;
@@ -362,25 +515,88 @@ export interface PaxMonDataSource {
 }
 
 // paxmon/PaxMonGroup.fbs
+export interface PaxMonGroupRoute {
+  index: number;
+  journey: PaxMonCompactJourney;
+  probability: number;
+  planned_arrival_time: number;
+  estimated_delay: number;
+  source_flags: number;
+  planned: boolean;
+  broken: boolean;
+  disabled: boolean;
+}
+
+// paxmon/PaxMonGroup.fbs
 export interface PaxMonGroup {
   id: number;
   source: PaxMonDataSource;
   passenger_count: number;
-  planned_journey: PaxMonCompactJourney;
-  probability: number;
-  planned_arrival_time: number;
-  source_flags: number;
-  generation: number;
-  previous_version: number;
-  added_time: number;
-  estimated_delay: number;
+  routes: PaxMonGroupRoute[];
+  reroute_log: PaxMonRerouteLogEntry[];
 }
 
 // paxmon/PaxMonGroup.fbs
-export interface PaxMonGroupBaseInfo {
-  id: number; // key
+export interface PaxMonGroupWithRoute {
+  group_id: number;
+  source: PaxMonDataSource;
+  passenger_count: number;
+  route: PaxMonGroupRoute;
+}
+
+// paxmon/PaxMonGroup.fbs
+export interface PaxMonGroupWithRouteId {
+  g: number;
+  r: number;
+}
+
+// paxmon/PaxMonGroup.fbs
+export interface PaxMonGroupRouteBaseInfo {
+  g: number;
+  r: number;
   n: number;
   p: number;
+}
+
+// paxmon/PaxMonGroup.fbs
+export interface PaxMonGroupRouteUpdateInfo {
+  g: number;
+  r: number;
+  n: number;
+  p: number;
+  pp: number;
+}
+
+// paxmon/PaxMonGroupStatisticsRequest.fbs
+export interface PaxMonGroupStatisticsRequest {
+  universe: number;
+  count_passengers: boolean;
+}
+
+// paxmon/PaxMonGroupStatisticsResponse.fbs
+export interface PaxMonHistogram {
+  min_value: number;
+  max_value: number;
+  avg_value: number;
+  median_value: number;
+  max_count: number;
+  total_count: number;
+  counts: number[];
+}
+
+// paxmon/PaxMonGroupStatisticsResponse.fbs
+export interface PaxMonGroupStatisticsResponse {
+  group_count: number;
+  total_group_route_count: number;
+  active_group_route_count: number;
+  total_pax_count: number;
+  min_estimated_delay: PaxMonHistogram;
+  max_estimated_delay: PaxMonHistogram;
+  expected_estimated_delay: PaxMonHistogram;
+  routes_per_group: PaxMonHistogram;
+  active_routes_per_group: PaxMonHistogram;
+  reroutes_per_group: PaxMonHistogram;
+  group_route_probabilities: PaxMonHistogram;
 }
 
 // paxmon/PaxMonKeepAliveRequest.fbs
@@ -430,11 +646,86 @@ export interface PaxMonLocalizationWrapper {
   localization: PaxMonLocalization;
 }
 
+// paxmon/PaxMonReachability.fbs
+export type PaxMonReachabilityStatus =
+  | "OK"
+  | "BROKEN_INITIAL_ENTRY"
+  | "BROKEN_TRANSFER_EXIT"
+  | "BROKEN_TRANSFER_ENTRY"
+  | "BROKEN_FINAL_EXIT";
+
+// paxmon/PaxMonReachability.fbs
+export interface PaxMonReachability {
+  status: PaxMonReachabilityStatus;
+  broken_transfer: PaxMonBrokenTransferInfo[];
+}
+
 // paxmon/PaxMonRemoveGroupsRequest.fbs
 export interface PaxMonRemoveGroupsRequest {
   universe: number;
   ids: number[];
 }
+
+// paxmon/PaxMonRerouteGroupsRequest.fbs
+export interface PaxMonRerouteGroup {
+  group: number;
+  old_route_index: number;
+  new_routes: PaxMonGroupRoute[];
+  reason: PaxMonRerouteReason;
+  broken_transfer: PaxMonBrokenTransferInfo[];
+  override_probabilities: boolean;
+}
+
+// paxmon/PaxMonRerouteGroupsRequest.fbs
+export interface PaxMonRerouteGroupsRequest {
+  universe: number;
+  reroutes: PaxMonRerouteGroup[];
+}
+
+// paxmon/PaxMonRerouteGroupsResponse.fbs
+export interface PaxMonRerouteRouteInfo {
+  i: number;
+  p: number;
+  pp: number;
+}
+
+// paxmon/PaxMonRerouteGroupsResponse.fbs
+export interface PaxMonRerouteGroupResult {
+  group: number;
+  old_route_index: number;
+  new_routes: PaxMonRerouteRouteInfo[];
+}
+
+// paxmon/PaxMonRerouteGroupsResponse.fbs
+export interface PaxMonRerouteGroupsResponse {
+  reroutes: PaxMonRerouteGroupResult[];
+}
+
+// paxmon/PaxMonRerouteLog.fbs
+export interface PaxMonRerouteLogRoute {
+  index: number;
+  previous_probability: number;
+  new_probability: number;
+}
+
+// paxmon/PaxMonRerouteLog.fbs
+export interface PaxMonRerouteLogEntry {
+  system_time: number;
+  reroute_time: number;
+  reason: PaxMonRerouteReason;
+  broken_transfer: PaxMonBrokenTransferInfo[];
+  old_route: PaxMonRerouteLogRoute;
+  new_routes: PaxMonRerouteLogRoute[];
+}
+
+// paxmon/PaxMonRerouteReason.fbs
+export type PaxMonRerouteReason =
+  | "Manual"
+  | "BrokenTransfer"
+  | "MajorDelayExpected"
+  | "RevertForecast"
+  | "Simulation"
+  | "UpdateForecast";
 
 // paxmon/PaxMonStatusRequest.fbs
 export interface PaxMonStatusRequest {
@@ -450,14 +741,6 @@ export interface PaxMonStatusResponse {
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs
-export interface PaxMonReusedGroupBaseInfo {
-  id: number;
-  passenger_count: number;
-  probability: number;
-  previous_probability: number;
-}
-
-// paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonCriticalTripInfo {
   critical_sections: number;
   max_excess_pax: number;
@@ -467,10 +750,6 @@ export interface PaxMonCriticalTripInfo {
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonUpdatedTrip {
   tsi: TripServiceInfo;
-  removed_max_pax: number;
-  removed_mean_pax: number;
-  added_max_pax: number;
-  added_mean_pax: number;
   rerouted: boolean;
   newly_critical_sections: number;
   no_longer_critical_sections: number;
@@ -478,20 +757,17 @@ export interface PaxMonUpdatedTrip {
   max_pax_decrease: number;
   critical_info_before: PaxMonCriticalTripInfo;
   critical_info_after: PaxMonCriticalTripInfo;
-  removed_groups: PaxMonGroupBaseInfo[];
-  added_groups: PaxMonGroupBaseInfo[];
-  reused_groups: PaxMonReusedGroupBaseInfo[];
+  updated_group_routes: PaxMonGroupWithRouteId[];
   before_edges: PaxMonEdgeLoadInfo[];
   after_edges: PaxMonEdgeLoadInfo[];
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonTrackedUpdates {
-  added_group_count: number;
-  reused_group_count: number;
-  removed_group_count: number;
+  updated_group_route_count: number;
   updated_trip_count: number;
   updated_trips: PaxMonUpdatedTrip[];
+  updated_group_routes: PaxMonGroupRouteUpdateInfo[];
 }
 
 // paxmon/PaxMonTripLoadInfo.fbs
@@ -536,24 +812,16 @@ export interface PaxMonUniverseForked {
 // paxmon/PaxMonUpdate.fbs
 export type PaxMonEventType =
   | "NO_PROBLEM"
-  | "TRANSFER_BROKEN"
+  | "BROKEN_TRANSFER"
   | "MAJOR_DELAY_EXPECTED";
-
-// paxmon/PaxMonUpdate.fbs
-export type PaxMonReachabilityStatus =
-  | "OK"
-  | "BROKEN_INITIAL_ENTRY"
-  | "BROKEN_TRANSFER_EXIT"
-  | "BROKEN_TRANSFER_ENTRY"
-  | "BROKEN_FINAL_EXIT";
 
 // paxmon/PaxMonUpdate.fbs
 export interface PaxMonEvent {
   type: PaxMonEventType;
-  group: PaxMonGroup;
+  group_route: PaxMonGroupWithRoute;
   localization_type: PaxMonLocalizationType;
   localization: PaxMonLocalization;
-  reachability_status: PaxMonReachabilityStatus;
+  reachability: PaxMonReachability;
   expected_arrival_time: number;
 }
 

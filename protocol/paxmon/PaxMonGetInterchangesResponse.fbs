@@ -14,8 +14,11 @@ table PaxMonTripStopInfo {
 table PaxMonInterchangeInfo {
   arrival: [PaxMonTripStopInfo];
   departure: [PaxMonTripStopInfo];
-  groups: PaxMonCombinedGroups;
+  groups: PaxMonCombinedGroupRoutes;
   transfer_time: uint; // minutes
+  valid: bool;
+  disabled: bool;
+  broken: bool;
 }
 
 table PaxMonGetInterchangesResponse {

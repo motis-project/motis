@@ -390,7 +390,7 @@ struct ris::impl {
     }
 
     if (config_.init_time_.unix_time_ != 0) {
-      forward(sched, 0U, config_.init_time_.unix_time_);
+      forward(sched, 0U, config_.init_time_.unix_time_, true);
     }
 
     init_ribasis_receiver(&d, &sched);
@@ -552,7 +552,7 @@ struct ris::impl {
   } null_pub_;
 
   void forward(schedule& sched, ctx::res_id_t schedule_res_id,
-               unixtime const to) {
+               unixtime const to, bool force_update_system_time = false) {
     auto const first_schedule_event_day =
         sched.first_event_schedule_time_ != std::numeric_limits<unixtime>::max()
             ? floor(sched.first_event_schedule_time_,
@@ -570,6 +570,11 @@ struct ris::impl {
               std::max(*min_timestamp, sched.system_time_ + 1), to);
     } else {
       LOG(info) << "ris database has no relevant data";
+      if (force_update_system_time) {
+        LOG(info) << "updating system time to " << format_unix_time(to)
+                  << " anyway";
+        sched.system_time_ = to;
+      }
     }
   }
 

@@ -13,39 +13,52 @@
 #include "motis/core/debug/trip.h"
 
 #include "motis/paxmon/debug.h"
+#include "motis/paxmon/reachability.h"
 #include "motis/paxmon/service_info.h"
 
 namespace motis::paxmon {
+
+bool check_edge_in_incoming(universe const& uv, edge const& e) {
+  return std::any_of(begin(uv.graph_.incoming_edges(e.to_)),
+                     end(uv.graph_.incoming_edges(e.to_)),
+                     [&](auto const& ie) { return &ie == &e; });
+}
+
+bool check_edge_in_outgoing(universe const& uv, edge const& e) {
+  return std::any_of(begin(uv.graph_.outgoing_edges(e.from_)),
+                     end(uv.graph_.outgoing_edges(e.from_)),
+                     [&](auto const& oe) { return &oe == &e; });
+}
 
 bool check_graph_integrity(universe const& uv, schedule const& sched) {
   auto ok = true;
 
   for (auto const& n : uv.graph_.nodes_) {
     for (auto const& e : n.outgoing_edges(uv)) {
-      for (auto const pg_id : uv.pax_connection_info_.groups_[e.pci_]) {
-        auto const* pg = uv.passenger_groups_.at(pg_id);
-        if (pg->probability_ <= 0.0 || pg->passengers_ >= 200) {
-          std::cout << "!! invalid psi @" << e.type() << ": id=" << pg->id_
-                    << "\n";
-          ok = false;
-        }
+      if (!check_edge_in_incoming(uv, e)) {
+        std::cout << "!! outdoing edge missing in target incoming edges\n";
+        ok = false;
+      }
+      for (auto const& pgwr : uv.pax_connection_info_.group_routes_[e.pci_]) {
+        auto const& gr = uv.passenger_groups_.route(pgwr);
         if (!e.is_trip()) {
           continue;
         }
-        if (std::find_if(begin(pg->edges_), end(pg->edges_),
-                         [&](auto const& ei) { return ei.get(uv) == &e; }) ==
-            end(pg->edges_)) {
-          std::cout << "!! edge missing in pg.edges @" << e.type() << "\n";
+        auto const edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+        if (std::find_if(begin(edges), end(edges), [&](auto const& ei) {
+              return ei.get(uv) == &e;
+            }) == end(edges)) {
+          std::cout << "!! edge missing in route_edges @" << e.type() << "\n";
           ok = false;
         }
         auto trip_leg_found = false;
         auto const& trips = e.get_trips(sched);
+        auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
         for (auto const& trp : trips) {
-          if (std::find_if(begin(pg->compact_planned_journey_.legs_),
-                           end(pg->compact_planned_journey_.legs_),
+          if (std::find_if(begin(cj.legs()), end(cj.legs()),
                            [&](journey_leg const& leg) {
                              return leg.trip_idx_ == trp->trip_idx_;
-                           }) != end(pg->compact_planned_journey_.legs_)) {
+                           }) != end(cj.legs())) {
             trip_leg_found = true;
             break;
           }
@@ -56,7 +69,8 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
         }
       }
       if (e.is_trip() && e.is_valid(uv)) {
-        auto grp_count = uv.pax_connection_info_.groups_[e.pci_].size();
+        auto grp_route_count =
+            uv.pax_connection_info_.group_routes_[e.pci_].size();
         auto const& trips = e.get_trips(sched);
         for (auto const& trp : trips) {
           auto const td_edges = uv.trip_data_.edges(trp);
@@ -64,10 +78,17 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
                 return ei.get(uv) == &e;
               }) == end(td_edges)) {
             std::cout << "!! edge missing in trip_data.edges @" << e.type()
-                      << ", grp_count=" << grp_count << "\n";
+                      << ", grp_route_count=" << grp_route_count << "\n";
             ok = false;
           }
         }
+      }
+    }
+
+    for (auto const& e : n.incoming_edges(uv)) {
+      if (!check_edge_in_outgoing(uv, e)) {
+        std::cout << "!! incoming edge missing in source outgoing edges\n";
+        ok = false;
       }
     }
 
@@ -159,13 +180,20 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
     if (pg == nullptr) {
       continue;
     }
-    for (auto const& ei : pg->edges_) {
-      auto const* e = ei.get(uv);
-      auto const groups = uv.pax_connection_info_.groups_[e->pci_];
-      if (std::find(begin(groups), end(groups), pg->id_) == end(groups)) {
-        std::cout << "!! passenger group not on edge: id=" << pg->id_ << " @"
-                  << e->type() << "\n";
-        ok = false;
+    for (auto const& gr : uv.passenger_groups_.routes(pg->id_)) {
+      auto const pgwr =
+          passenger_group_with_route{pg->id_, gr.local_group_route_index_};
+      auto const edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+      for (auto const& ei : edges) {
+        auto const* e = ei.get(uv);
+        auto const group_routes = uv.pax_connection_info_.group_routes(e->pci_);
+        if (std::find(begin(group_routes), end(group_routes), pgwr) ==
+            end(group_routes)) {
+          std::cout << "!! group route not on edge: pg=" << pg->id_
+                    << ", gr=" << gr.local_group_route_index_ << " @"
+                    << e->type() << "\n";
+          ok = false;
+        }
       }
     }
   }
@@ -305,6 +333,108 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
     for (auto const& leg : cj.legs_) {
       print_leg(sched, leg);
     }
+  }
+
+  return ok;
+}
+
+bool check_group_routes(universe const& uv) {
+  auto const& pgc = uv.passenger_groups_;
+  auto ok = true;
+  auto disabled_but_p_gt0 = 0;
+  auto disabled_but_with_edges = 0;
+  auto not_disabled_but_no_edges = 0;
+  auto broken_but_p_gt0 = 0;
+  auto broken_reachability_mismatch = 0;
+  auto prob_sum_gt1 = 0;
+
+  for (auto const& pg : pgc) {
+    auto p_sum = 0.0F;
+    for (auto const& gr : pgc.routes(pg->id_)) {
+      auto const edges = pgc.route_edges(gr.edges_index_);
+      auto const cj = pgc.journey(gr.compact_journey_index_);
+      auto const reachability = get_reachability(uv, cj);
+
+      p_sum += gr.probability_;
+
+      auto const print_reachability = [&]() {
+        std::cout << ", reachability=" << reachability.status_;
+        if (reachability.first_unreachable_transfer_) {
+          auto const& bti = *reachability.first_unreachable_transfer_;
+          std::cout << " (leg=" << bti.leg_index_ << ", dir="
+                    << (bti.direction_ == transfer_direction_t::ENTER ? "enter"
+                                                                      : "exit")
+                    << ", carr=" << format_time(bti.current_arrival_time_)
+                    << ", cdep=" << format_time(bti.current_departure_time_)
+                    << ", tt=" << bti.required_transfer_time_
+                    << ", canceled={arr=" << bti.arrival_canceled_
+                    << ", dep=" << bti.departure_canceled_ << "})";
+        }
+      };
+
+      if (gr.disabled_) {
+        if (gr.probability_ != 0.0F) {
+          ok = false;
+          ++disabled_but_p_gt0;
+          std::cout << "!! group " << pg->id_ << ": route "
+                    << gr.local_group_route_index_
+                    << " disabled, but probability " << gr.probability_ << "\n";
+        }
+        if (!edges.empty()) {
+          ok = false;
+          ++disabled_but_with_edges;
+          std::cout << "!! group " << pg->id_ << ": route "
+                    << gr.local_group_route_index_ << " disabled, but on "
+                    << edges.size() << " graph edges\n";
+        }
+      } else {
+        if (edges.empty()) {
+          ok = false;
+          ++not_disabled_but_no_edges;
+          std::cout << "!! group " << pg->id_ << ": route "
+                    << gr.local_group_route_index_
+                    << " not disabled, probability = " << gr.probability_
+                    << ", but on no graph edges\n";
+        }
+      }
+      if (gr.broken_ && gr.probability_ != 0.0F) {
+        ok = false;
+        ++broken_but_p_gt0;
+        std::cout << "!! group " << pg->id_ << ": route "
+                  << gr.local_group_route_index_
+                  << " broken, but probability = " << gr.probability_;
+        print_reachability();
+        std::cout << "\n";
+      }
+      if (gr.broken_ != !reachability.ok_) {
+        ok = false;
+        ++broken_reachability_mismatch;
+        std::cout << "!! group " << pg->id_ << ": route "
+                  << gr.local_group_route_index_ << " broken=" << gr.broken_;
+        print_reachability();
+        std::cout << ", probability=" << gr.probability_
+                  << ", disabled=" << gr.disabled_ << ", edges=" << edges.size()
+                  << "\n";
+      }
+    }
+
+    if (p_sum < 0.0F || p_sum > 1.05F) {
+      ok = false;
+      ++prob_sum_gt1;
+      std::cout << "!! group " << pg->id_ << ": probability sum=" << p_sum
+                << "\n";
+    }
+  }
+
+  if (!ok) {
+    std::cout << "!! => group route problems:\n  " << disabled_but_p_gt0
+              << "x disabled but p > 0\n  " << disabled_but_with_edges
+              << "x disabled but edges not empty\n  "
+              << not_disabled_but_no_edges
+              << "x not disabled but edges empty\n  " << broken_but_p_gt0
+              << "x broken but p > 0\n  " << broken_reachability_mismatch
+              << "x broken / reachability mismatch\n  " << prob_sum_gt1
+              << "x probability sum > 1" << std::endl;
   }
 
   return ok;

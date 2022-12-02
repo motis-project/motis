@@ -18,62 +18,48 @@ msg_ptr get_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetGroupsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
-  auto& uv = uv_access.uv_;
-  auto const all_generations = req->all_generations();
-  auto const include_localization = req->include_localization();
-
-  auto const current_time =
-      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-  auto const search_time =
-      static_cast<time>(current_time + req->preparation_time());
-  if (include_localization) {
-    utl::verify(current_time != INVALID_TIME, "invalid current system time");
-  }
+  auto const& uv = uv_access.uv_;
+  auto const include_reroute_log = req->include_reroute_log();
 
   message_creator mc;
   std::vector<flatbuffers::Offset<PaxMonGroup>> groups;
-  std::vector<flatbuffers::Offset<PaxMonLocalizationWrapper>> localizations;
 
-  auto const add_by_data_source = [&](data_source const& ds) {
+  auto const add_by_data_source = [&](data_source const& ds) -> bool {
     if (auto const it = uv.passenger_groups_.groups_by_source_.find(ds);
         it != end(uv.passenger_groups_.groups_by_source_)) {
       for (auto const pgid : it->second) {
         if (auto const pg = uv.passenger_groups_.at(pgid); pg != nullptr) {
-          if (!all_generations && !pg->valid()) {
-            continue;
-          }
-          groups.emplace_back(to_fbs(sched, mc, *pg));
-          if (include_localization) {
-            localizations.emplace_back(to_fbs_localization_wrapper(
-                sched, mc,
-                localize(sched,
-                         get_reachability(uv, pg->compact_planned_journey_),
-                         search_time)));
-          }
+          groups.emplace_back(to_fbs(sched, uv.passenger_groups_, mc, *pg,
+                                     include_reroute_log));
         }
       }
+      return true;
     }
+    return false;
   };
 
   for (auto const pgid : *req->ids()) {
     if (auto const pg = uv.passenger_groups_.at(pgid); pg != nullptr) {
-      if (all_generations) {
-        add_by_data_source(pg->source_);
-      } else {
-        groups.emplace_back(to_fbs(sched, mc, *pg));
+      groups.emplace_back(
+          to_fbs(sched, uv.passenger_groups_, mc, *pg, include_reroute_log));
+    }
+  }
+
+  for (auto const fbs_ds : *req->sources()) {
+    auto ds = from_fbs(fbs_ds);
+    if (ds.secondary_ref_ != 0) {
+      add_by_data_source(ds);
+    } else {
+      ds.secondary_ref_ = 1;
+      while (add_by_data_source(ds)) {
+        ++ds.secondary_ref_;
       }
     }
   }
 
-  for (auto const ds : *req->sources()) {
-    add_by_data_source(from_fbs(ds));
-  }
-
   mc.create_and_finish(
       MsgContent_PaxMonGetGroupsResponse,
-      CreatePaxMonGetGroupsResponse(mc, mc.CreateVector(groups),
-                                    mc.CreateVector(localizations))
-          .Union());
+      CreatePaxMonGetGroupsResponse(mc, mc.CreateVector(groups)).Union());
   return make_msg(mc);
 }
 

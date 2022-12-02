@@ -3,7 +3,7 @@
 ## Requirements
 
 - [Node.js](https://nodejs.org/) Version 16 or newer
-- [pnpm](https://pnpm.io/) Version 6.20 or newer
+- [pnpm](https://pnpm.io/) Version 7.12 or newer
 
 Install the required dependencies using:
 
@@ -23,13 +23,13 @@ Output files are written to the `dist` directory.
 
 ### Server
 
-Run a development server with live reload on http://127.0.0.1:3000/:
+Run a development server with live reload on http://127.0.0.1:5173/rsl/:
 
 ```shell
 pnpm run dev
 ```
 
-Run a development server with live reload on http://0.0.0.0:3000/:
+Run a development server with live reload on http://0.0.0.0:5173/rsl/:
 
 ```shell
 pnpm run dev-host
@@ -64,7 +64,7 @@ see `protocol.config.json`).
 ## Using the UI
 
 If MOTIS is running on `127.0.0.1:8080`, start the development server
-by running `pnpm run dev` and go to http://127.0.0.1:3000/?motis=8080.
+by running `pnpm run dev` and go to http://127.0.0.1:5173/rsl/?motis=8080.
 
 ### URL parameters
 

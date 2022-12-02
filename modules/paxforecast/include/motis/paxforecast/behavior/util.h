@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "utl/enumerate.h"
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/paxmon/passenger_group.h"
@@ -58,6 +59,32 @@ inline void only_keep_best_alternative(std::vector<float>& probabilities) {
     probabilities[i] = 0.0F;
   }
   probabilities[best_idx] = 1.0F;
+}
+
+inline std::vector<float> calc_new_probabilites(
+    float const base_prob, std::vector<float> const& pick_probs,
+    float const threshold) {
+  auto probs = utl::to_vec(
+      pick_probs, [&](auto const& pick_prob) { return base_prob * pick_prob; });
+  auto total_sum = 0.0F;
+  auto kept_sum = 0.0F;
+  auto rescale = false;
+  for (auto& p : probs) {
+    total_sum += p;
+    if (p != 0.0F && p < threshold) {
+      p = 0;
+      rescale = true;
+    } else {
+      kept_sum += p;
+    }
+  }
+  if (rescale && kept_sum != 0.0F) {
+    auto const scale = kept_sum / total_sum;
+    for (auto& p : probs) {
+      p /= scale;
+    }
+  }
+  return probs;
 }
 
 }  // namespace motis::paxforecast::behavior

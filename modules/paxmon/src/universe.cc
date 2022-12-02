@@ -29,9 +29,4 @@ event_node const* edge::to(universe const& u) const {
 
 event_node* edge::to(universe& u) const { return &u.graph_.nodes_[to_]; }
 
-const passenger_group* universe::get_passenger_group(
-    passenger_group_index id) const {
-  return passenger_groups_.at(id);
-}
-
 }  // namespace motis::paxmon

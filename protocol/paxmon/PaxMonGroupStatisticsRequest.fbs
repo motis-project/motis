@@ -1,0 +1,7 @@
+namespace motis.paxmon;
+
+table PaxMonGroupStatisticsRequest {
+  universe: uint;
+
+  count_passengers: bool; // count passengers instead of groups
+}

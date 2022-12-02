@@ -7,6 +7,7 @@
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/message.h"
 
+#include "motis/paxmon/access/groups.h"
 #include "motis/paxmon/loader/journeys/to_compact_journey.h"
 
 using namespace motis::module;
@@ -15,23 +16,30 @@ using namespace motis::logging;
 
 namespace motis::paxmon::loader::journeys {
 
-void load_journey(schedule const& sched, universe& uv, journey const& j,
+void load_journey(schedule const& sched, universe& uv,
+                  capacity_maps const& caps, journey const& j,
                   data_source const& source, std::uint16_t passengers,
-                  group_source_flags source_flags) {
+                  route_source_flags source_flags) {
   auto const planned_arrival_time = unix_to_motistime(
       sched.schedule_begin_, j.stops_.back().arrival_.schedule_timestamp_);
-  uv.passenger_groups_.add(
-      make_passenger_group(to_compact_journey(j, sched), source, passengers,
-                           planned_arrival_time, source_flags));
+  auto tpg =
+      temp_passenger_group{0,
+                           source,
+                           passengers,
+                           {{0, 1.0F, to_compact_journey(j, sched),
+                             planned_arrival_time, 0, source_flags, true}}};
+  add_passenger_group(uv, sched, caps, tpg, false);
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,
+                            capacity_maps const& caps,
                             std::string const& journey_file) {
   auto result = loader_result{};
 
   auto add_journey = [&](journey const& j, std::uint64_t primary_ref = 0,
                          std::uint64_t secondary_ref = 0) {
-    load_journey(sched, uv, j, data_source{primary_ref, secondary_ref}, 1);
+    load_journey(sched, uv, caps, j, data_source{primary_ref, secondary_ref},
+                 1);
     ++result.loaded_journeys_;
   };
 

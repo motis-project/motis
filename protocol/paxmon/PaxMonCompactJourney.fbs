@@ -3,7 +3,13 @@ include "base/TripServiceInfo.fbs";
 
 namespace motis.paxmon;
 
-enum PaxMonTransferType : byte { NONE, SAME_STATION, FOOTPATH }
+enum PaxMonTransferType : byte {
+  NONE,
+  SAME_STATION,
+  FOOTPATH,
+  MERGE,
+  THROUGH
+}
 
 table PaxMonTransferInfo {
   type: PaxMonTransferType;

@@ -102,28 +102,25 @@ void add_additional_group(pax_pdf& pdf, std::uint16_t passengers,
 }
 
 std::size_t get_max_new_pax(
-    std::vector<std::pair<passenger_group const*, float>> const&
-        additional_groups) {
+    std::vector<additional_group> const& additional_groups) {
   return std::accumulate(
       begin(additional_groups), end(additional_groups), 0ULL,
-      [](auto const sum, auto const& p) { return sum + p.first->passengers_; });
+      [](auto const sum, auto const& ag) { return sum + ag.passengers_; });
 }
 
 void add_additional_groups_base(
-    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
-                      additional_groups) {
+    pax_pdf& pdf, std::vector<additional_group> const& additional_groups) {
   assert(!additional_groups.empty());
   auto const max_new_pax = get_max_new_pax(additional_groups);
   pdf.data_.resize(pdf.data_.size() + max_new_pax);
-  for (auto const& [grp, grp_probability] : additional_groups) {
-    convolve_base(pdf, grp->passengers_, grp_probability);
+  for (auto const& ag : additional_groups) {
+    convolve_base(pdf, ag.passengers_, ag.probability_);
   }
 }
 
 #ifdef MOTIS_AVX2
 void add_additional_groups_avx(
-    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
-                      additional_groups) {
+    pax_pdf& pdf, std::vector<additional_group> const& additional_groups) {
   assert(!additional_groups.empty());
   auto const max_new_pax = get_max_new_pax(additional_groups);
   auto const pdf_size = pdf.data_.size() + max_new_pax;
@@ -131,21 +128,20 @@ void add_additional_groups_avx(
   auto buf = std::vector<float>(pdf.data_.size() + 8);
   auto limits = pax_limits{
       std::min_element(begin(additional_groups), end(additional_groups),
-                       [](auto const& p1, auto const& p2) {
-                         return p1.first->passengers_ < p2.first->passengers_;
+                       [](auto const& ag1, auto const& ag2) {
+                         return ag1.passengers_ < ag2.passengers_;
                        })
-          ->first->passengers_,
-      0};
-  for (auto const& [grp, grp_probability] : additional_groups) {
-    convolve_avx(pdf, grp->passengers_, grp_probability, limits, buf);
+          ->passengers_,
+      0 /* not used */};
+  for (auto const& ag : additional_groups) {
+    convolve_avx(pdf, ag.passengers_, ag.probability_, limits, buf);
   }
   pdf.data_.resize(pdf_size);
 }
 #endif
 
 void add_additional_groups(
-    pax_pdf& pdf, std::vector<std::pair<passenger_group const*, float>> const&
-                      additional_groups) {
+    pax_pdf& pdf, std::vector<additional_group> const& additional_groups) {
   if (additional_groups.empty()) {
     return;
   }

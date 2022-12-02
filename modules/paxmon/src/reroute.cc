@@ -98,45 +98,62 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
   return nullptr;
 }
 
+inline void log_edge_update(universe& uv, schedule const& sched,
+                            edge const& e) {
+  if (uv.graph_log_.enabled_) {
+    uv.graph_log_.edge_log_[e.pci_].emplace_back(edge_log_entry{
+        sched.system_time_, e.transfer_time(),
+        edge_log_entry::INVALID_TRANSFER_TIME, e.type_, e.broken_});
+  }
+}
+
 // the following functions are split because otherwise clang-tidy complains
 // that begin(from->outgoing_edges(uv)) allegedly returns nullptr
 
-void disable_outgoing_edges(universe& uv, event_node* from,
+void disable_outgoing_edges(universe& uv, schedule const& sched,
+                            event_node* from, edge const* except) {
+  for (auto& e : from->outgoing_edges(uv)) {
+    if (&e != except && (e.is_trip() || e.is_wait())) {
+      e.type_ = edge_type::DISABLED;
+      log_edge_update(uv, sched, e);
+    }
+  }
+}
+
+void disable_outgoing_edges(universe& uv, schedule const& sched,
+                            event_node* from) {
+  for (auto& e : from->outgoing_edges(uv)) {
+    if (e.is_trip() || e.is_wait()) {
+      e.type_ = edge_type::DISABLED;
+      log_edge_update(uv, sched, e);
+    }
+  }
+}
+
+void disable_incoming_edges(universe& uv, schedule const& sched, event_node* to,
                             edge const* except) {
-  for (auto& e : from->outgoing_edges(uv)) {
-    if (&e != except && (e.is_trip() || e.is_wait())) {
-      e.type_ = edge_type::DISABLED;
-    }
-  }
-}
-
-void disable_outgoing_edges(universe& uv, event_node* from) {
-  for (auto& e : from->outgoing_edges(uv)) {
-    if (e.is_trip() || e.is_wait()) {
-      e.type_ = edge_type::DISABLED;
-    }
-  }
-}
-
-void disable_incoming_edges(universe& uv, event_node* to, edge const* except) {
   for (auto& e : to->incoming_edges(uv)) {
     if (&e != except && (e.is_trip() || e.is_wait())) {
       e.type_ = edge_type::DISABLED;
+      log_edge_update(uv, sched, e);
     }
   }
 }
 
-void disable_incoming_edges(universe& uv, event_node* to) {
+void disable_incoming_edges(universe& uv, schedule const& sched,
+                            event_node* to) {
   for (auto& e : to->incoming_edges(uv)) {
     if (e.is_trip() || e.is_wait()) {
       e.type_ = edge_type::DISABLED;
+      log_edge_update(uv, sched, e);
     }
   }
 }
 
 edge* connect_nodes(event_node* from, event_node* to,
                     merged_trips_idx merged_trips,
-                    std::uint16_t encoded_capacity, universe& uv) {
+                    std::uint16_t encoded_capacity, universe& uv,
+                    schedule const& sched) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
   }
@@ -149,13 +166,14 @@ edge* connect_nodes(event_node* from, event_node* to,
   if (auto e = get_connecting_edge(from, to, uv); e != nullptr) {
     if (e->is_disabled()) {
       e->type_ = type;
+      log_edge_update(uv, sched, *e);
     }
-    disable_outgoing_edges(uv, from, e);
-    disable_incoming_edges(uv, to, e);
+    disable_outgoing_edges(uv, sched, from, e);
+    disable_incoming_edges(uv, sched, to, e);
     return e;
   }
-  disable_outgoing_edges(uv, from);
-  disable_incoming_edges(uv, to);
+  disable_outgoing_edges(uv, sched, from);
+  disable_incoming_edges(uv, sched, to);
   auto const cap = from->type_ == event_type::DEP ? encoded_capacity
                                                   : UNLIMITED_ENCODED_CAPACITY;
   return add_edge(
@@ -163,8 +181,8 @@ edge* connect_nodes(event_node* from, event_node* to,
                          service_class::OTHER));  // TODO(pablo): service class
 }
 
-event_node* get_or_insert_node(universe& uv, trip_data_index const tdi,
-                               trip_ev_key const tek,
+event_node* get_or_insert_node(universe& uv, schedule const& sched,
+                               trip_data_index const tdi, trip_ev_key const tek,
                                std::set<event_node*>& reactivated_nodes) {
   for (auto const ni : uv.trip_data_.canceled_nodes(tdi)) {
     auto const n = &uv.graph_.nodes_[ni];
@@ -172,6 +190,10 @@ event_node* get_or_insert_node(universe& uv, trip_data_index const tdi,
         n->schedule_time_ == tek.schedule_time_ && n->type_ == tek.type_) {
       n->valid_ = true;
       reactivated_nodes.insert(n);
+      if (uv.graph_log_.enabled_) {
+        uv.graph_log_.node_log_[n->index_].emplace_back(
+            node_log_entry{sched.system_time_, n->time_, n->valid_});
+      }
       return n;
     }
   }
@@ -180,28 +202,54 @@ event_node* get_or_insert_node(universe& uv, trip_data_index const tdi,
       tek.schedule_time_, tek.schedule_time_, tek.type_, true, tek.station_id_);
 }
 
-std::set<passenger_group*> collect_passenger_groups(universe& uv,
-                                                    trip_data_index const tdi) {
-  std::set<passenger_group*> affected_passenger_groups;
+std::set<passenger_group_with_route> collect_and_remove_group_routes(
+    universe& uv, schedule const& sched, trip_data_index const tdi) {
+  std::set<passenger_group_with_route> affected_group_routes;
   for (auto const& tei : uv.trip_data_.edges(tdi)) {
     auto* te = tei.get(uv);
-    auto groups = uv.pax_connection_info_.groups_[te->pci_];
-    for (auto pg_id : groups) {
-      auto* pg = uv.passenger_groups_[pg_id];
-      affected_passenger_groups.insert(pg);
-      utl::erase(pg->edges_, tei);
+    auto group_routes = uv.pax_connection_info_.group_routes(te->pci_);
+    for (auto const& pgwr : group_routes) {
+      auto& route = uv.passenger_groups_.route(pgwr);
+      auto edges = uv.passenger_groups_.route_edges(route.edges_index_);
+      utl::verify(edges.empty() == route.disabled_,
+                  "reroute[collect_and_remove_group_routes]: initial mismatch: "
+                  "route_edges={}, disabled={}",
+                  edges.size(), route.disabled_);
+      affected_group_routes.insert(pgwr);
+      utl::erase(edges, tei);
+      if (edges.empty()) {
+        route.disabled_ = true;
+      }
     }
-    groups.clear();
+    if (uv.graph_log_.enabled_) {
+      auto log = uv.graph_log_.pci_log_[te->pci_];
+      for (auto const& pgwr : group_routes) {
+        log.emplace_back(pci_log_entry{sched.system_time_,
+                                       pci_log_action_t::ROUTE_REMOVED,
+                                       pci_log_reason_t::TRIP_REROUTE, pgwr});
+      }
+    }
+    group_routes.clear();
   }
-  return affected_passenger_groups;
+  return affected_group_routes;
 }
 
-bool update_passenger_group(trip_data_index const tdi, trip const* trp,
-                            passenger_group* pg, universe& uv) {
+bool update_group_route(trip_data_index const tdi, trip const* trp,
+                        passenger_group_with_route const pgwr, universe& uv,
+                        schedule const& sched) {
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   // TODO(pablo): does not support merged trips
-  for (auto const& leg : pg->compact_planned_journey_.legs_) {
+  auto& gr = uv.passenger_groups_.route(pgwr);
+  auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
+  auto route_edges = uv.passenger_groups_.route_edges(gr.edges_index_);
+
+  utl::verify(route_edges.empty() == gr.disabled_,
+              "reroute[update_group_route]: initial mismatch: route_edges={}, "
+              "disabled={}",
+              route_edges.size(), gr.disabled_);
+
+  for (auto const& leg : cj.legs()) {
     if (leg.trip_idx_ == trp->trip_idx_) {
       auto const edges = uv.trip_data_.edges(tdi);
       auto enter_index = INVALID_INDEX;
@@ -223,8 +271,12 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
         for (auto idx = enter_index; idx <= exit_index; ++idx) {
           auto const& ei = edges[idx];
           auto* e = ei.get(uv);
-          add_passenger_group_to_edge(uv, e, pg);
-          pg->edges_.emplace_back(ei);
+          add_group_route_to_edge(uv, sched, e, pgwr, true,
+                                  pci_log_reason_t::TRIP_REROUTE);
+          route_edges.emplace_back(ei);
+        }
+        if (!route_edges.empty()) {
+          gr.disabled_ = false;
         }
         return true;
       }
@@ -249,7 +301,8 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
                    std::vector<edge_index>& updated_interchange_edges) {
   auto const unknown_capacity =
       encode_capacity({UNKNOWN_CAPACITY, capacity_source::SPECIAL});
-  auto const affected_passenger_groups = collect_passenger_groups(uv, tdi);
+  auto const affected_group_routes =
+      collect_and_remove_group_routes(uv, sched, tdi);
   auto diff = diff_route(old_route, new_route);
 
   std::vector<event_node*> new_nodes;
@@ -267,11 +320,17 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
       case diff_op::REMOVE: {
         tek.node_->valid_ = false;
         removed_nodes.insert(tek.node_);
+        if (uv.graph_log_.enabled_) {
+          uv.graph_log_.node_log_[tek.node_->index_].emplace_back(
+              node_log_entry{sched.system_time_, tek.node_->time_,
+                             tek.node_->valid_});
+        }
         break;
       }
 
       case diff_op::INSERT: {
-        auto new_node = get_or_insert_node(uv, tdi, tek, reactivated_nodes);
+        auto new_node =
+            get_or_insert_node(uv, sched, tdi, tek, reactivated_nodes);
         new_nodes.emplace_back(new_node);
         break;
       }
@@ -283,7 +342,8 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
   if (!new_nodes.empty()) {
     auto const merged_trips = get_merged_trips(trp).value();
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-      auto e = connect_nodes(from, to, merged_trips, unknown_capacity, uv);
+      auto e =
+          connect_nodes(from, to, merged_trips, unknown_capacity, uv, sched);
       if (e->is_trip()) {
         edges.emplace_back(get_edge_index(uv, e));
       }
@@ -296,8 +356,8 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
 
   update_trip_capacity(uv, sched, caps, trp, false);
 
-  for (auto pg : affected_passenger_groups) {
-    update_passenger_group(tdi, trp, pg, uv);
+  for (auto const& pgwr : affected_group_routes) {
+    update_group_route(tdi, trp, pgwr, uv, sched);
   }
 
   for (auto* n : removed_nodes) {

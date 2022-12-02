@@ -1,0 +1,16 @@
+include "base/TripId.fbs";
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonDebugGraphRequest {
+  universe: uint;
+
+  node_indices: [uint];
+  group_routes: [PaxMonGroupWithRouteId];
+  trip_ids: [motis.TripId];
+
+  filter_groups: bool;
+  include_full_trips_from_group_routes: bool;
+  include_canceled_trip_nodes: bool;
+}

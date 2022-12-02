@@ -1,16 +1,20 @@
-include "paxmon/PaxMonLocalization.fbs";
+include "paxmon/PaxMonGroup.fbs";
 
 namespace motis.paxmon;
 
+table PaxMonGroupWithStats {
+  group: PaxMonGroup;
+  min_estimated_delay: short;
+  max_estimated_delay: short;
+  expected_estimated_delay: float;
+}
+
 table PaxMonFilterGroupsResponse {
-  total_tracked_groups: ulong;
-  total_active_groups: ulong;
+  total_matching_groups: ulong; // total number of matching groups
+  total_matching_passengers: ulong; // number of passengers in total matching groups
+  filtered_groups: ulong; // number of groups included in response
+  remaining_groups: ulong; // number of remaining matching groups
+  next_skip: ulong; // skip_next parameter for next call
 
-  filtered_groups: ulong;
-  filtered_unique_groups: ulong;
-  filtered_original_groups: ulong;
-  filtered_forecast_groups: ulong;
-
-  group_ids: [ulong];
-  localizations: [PaxMonLocalizationWrapper];
+  groups: [PaxMonGroupWithStats];
 }

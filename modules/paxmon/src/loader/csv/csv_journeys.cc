@@ -32,6 +32,7 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/paxmon/access/groups.h"
 #include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/loader/csv/motis_row.h"
 #include "motis/paxmon/loader/csv/trek_row.h"
@@ -277,16 +278,32 @@ void set_transfer_info(schedule const& sched,
   }
   auto& cur_leg = partial_journey.back();
   auto const arrival_station = prev_leg.to_station_idx_.value();
-  auto const arrival_track =
-      get_arrival_track(sched, prev_leg.trp_candidate_.trp_, arrival_station,
-                        prev_leg.exit_time_);
+  auto const arrival_section =
+      get_arrival_section(sched, prev_leg.trp_candidate_.trp_, arrival_station,
+                          prev_leg.exit_time_);
   auto const departure_station = cur_leg.from_station_idx_.value();
-  auto const departure_track =
-      get_departure_track(sched, cur_leg.trp_candidate_.trp_, departure_station,
-                          cur_leg.enter_time_);
-  cur_leg.enter_transfer_ =
-      util::get_transfer_info(sched, arrival_station, arrival_track,
-                              departure_station, departure_track);
+  auto const departure_section =
+      get_departure_section(sched, cur_leg.trp_candidate_.trp_,
+                            departure_station, cur_leg.enter_time_);
+  if (arrival_section && departure_section) {
+    cur_leg.enter_transfer_ =
+        util::get_transfer_info(sched, *arrival_section, *departure_section);
+  } else {
+    if (prev_leg.trp_candidate_.trp_ != nullptr &&
+        cur_leg.trp_candidate_.trp_ != nullptr) {
+      LOG(warn) << "trip sections not found during transfer check: arrival="
+                << (arrival_section ? "found" : "not found")
+                << ", departure=" << (departure_section ? "found" : "not found")
+                << ", arrival trip=" << prev_leg.trp_candidate_.trp_
+                << " (perfect match="
+                << prev_leg.trp_candidate_.is_perfect_match()
+                << "), departure trip=" << cur_leg.trp_candidate_.trp_
+                << " (perfect match="
+                << cur_leg.trp_candidate_.is_perfect_match() << ")";
+    }
+    cur_leg.enter_transfer_ = util::get_transfer_info(
+        sched, arrival_station, {}, departure_station, {});
+  }
 }
 
 void write_match_log(
@@ -420,6 +437,7 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,
+                            capacity_maps const& caps,
                             std::string const& journey_file,
                             journey_input_settings const& settings) {
   auto const match_tolerance = settings.match_tolerance_;
@@ -430,7 +448,6 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   auto journeys_with_no_valid_legs = 0ULL;
   auto journeys_with_inexact_matches = 0ULL;
   auto journeys_with_missing_trips = 0ULL;
-  auto journeys_with_missing_transfers = 0ULL;
   auto journeys_with_invalid_transfer_times = 0ULL;
   auto journeys_too_long = 0ULL;
 
@@ -449,7 +466,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   }
 
   auto group_gen = group_generator{settings.split_groups_size_mean_,
-                                   settings.split_groups_size_stddev_, 0, 0,
+                                   settings.split_groups_size_stddev_, 0, 1,
                                    settings.split_groups_seed_};
 
   using id_t = std::pair<std::uint64_t, std::uint64_t>;
@@ -458,7 +475,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   std::uint16_t current_passengers = 0;
 
   auto const add_journey = [&](std::size_t start_idx, std::size_t end_idx,
-                               group_source_flags source_flags) {
+                               route_source_flags source_flags) {
     if (start_idx == end_idx) {
       return;
     }
@@ -469,7 +486,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         std::next(begin(current_input_legs), end_idx),
         [](auto const& leg) { return !leg.trp_candidate_.is_perfect_match(); });
     if (inexact_time) {
-      source_flags |= group_source_flags::MATCH_INEXACT_TIME;
+      source_flags |= route_source_flags::MATCH_INEXACT_TIME;
       ++journeys_with_inexact_matches;
     }
     auto const all_trips_found =
@@ -477,25 +494,20 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                     std::next(begin(current_input_legs), end_idx),
                     [](auto const& leg) { return leg.trip_found(); });
 
-    auto const missing_transfer_infos = std::any_of(
-        std::next(begin(current_input_legs), start_idx + 1),
-        std::next(begin(current_input_legs), end_idx),
-        [](auto const& leg) { return !leg.enter_transfer_.has_value(); });
-
+    // TODO(pablo): is this the best way to handle invalid transfer times?
     auto invalid_transfer_times = false;
-    if (!missing_transfer_infos) {
-      for (auto const& [l1, l2] :
-           utl::nwise_range<2, decltype(begin(current_input_legs))>{
-               std::next(begin(current_input_legs), start_idx),
-               std::next(begin(current_input_legs), end_idx)}) {
-        if (l2.enter_time_ < l1.exit_time_ ||
-            (l2.enter_time_ - l1.exit_time_) < l2.enter_transfer_->duration_) {
-          invalid_transfer_times = true;
-        }
+    for (auto const& [l1, l2] :
+         utl::nwise_range<2, decltype(begin(current_input_legs))>{
+             std::next(begin(current_input_legs), start_idx),
+             std::next(begin(current_input_legs), end_idx)}) {
+      if (l2.enter_time_ < l1.exit_time_ ||
+          (l2.enter_transfer_.has_value() && ((l2.enter_time_ - l1.exit_time_) <
+                                              l2.enter_transfer_->duration_))) {
+        invalid_transfer_times = true;
       }
     }
 
-    if (all_trips_found && !missing_transfer_infos && !invalid_transfer_times) {
+    if (all_trips_found && !invalid_transfer_times) {
       ++result.loaded_journeys_;
       auto current_journey = compact_journey{};
       current_journey.legs_ =
@@ -508,30 +520,29 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         ++journeys_too_long;
         return;
       }
+      auto tpg = temp_passenger_group{
+          0,
+          source,
+          current_passengers,
+          {{0, 1.0F, current_journey, current_journey.scheduled_arrival_time(),
+            0, source_flags, true}}};
       if (split_groups) {
-        source.secondary_ref_ *= 100;
+        tpg.source_.secondary_ref_ *= 100;
         auto distributed = 0U;
         while (distributed < current_passengers) {
           auto const group_size =
               group_gen.get_group_size(current_passengers - distributed);
-          ++source.secondary_ref_;
+          ++tpg.source_.secondary_ref_;
           distributed += group_size;
-          auto cj = current_journey;
-          uv.passenger_groups_.add(make_passenger_group(
-              std::move(cj), source, group_size,
-              current_journey.scheduled_arrival_time(), source_flags));
+          tpg.passengers_ = group_size;
+          add_passenger_group(uv, sched, caps, tpg, false);
         }
       } else {
-        uv.passenger_groups_.add(make_passenger_group(
-            std::move(current_journey), source, current_passengers,
-            current_journey.scheduled_arrival_time(), source_flags));
+        add_passenger_group(uv, sched, caps, tpg, false);
       }
     } else {
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
-      }
-      if (missing_transfer_infos) {
-        ++journeys_with_missing_transfers;
       }
       if (invalid_transfer_times) {
         ++journeys_with_invalid_transfer_times;
@@ -564,7 +575,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     if (!current_id || current_input_legs.empty()) {
       return;
     }
-    auto source_flags = group_source_flags::NONE;
+    auto source_flags = route_source_flags::NONE;
     auto const possible_leg_count =
         std::count_if(begin(current_input_legs), end(current_input_legs),
                       [](auto const& leg) {
@@ -575,7 +586,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       return;
     } else if (possible_leg_count < current_input_legs.size()) {
       ++journeys_with_invalid_legs;
-      source_flags |= group_source_flags::MATCH_JOURNEY_SUBSET;
+      source_flags |= route_source_flags::MATCH_JOURNEY_SUBSET;
     }
 
     auto subset_start = 0ULL;
@@ -668,8 +679,6 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   LOG(info) << journeys_with_inexact_matches
             << " journeys with inexact matches";
   LOG(info) << journeys_with_missing_trips << " journeys with missing trips";
-  LOG(info) << journeys_with_missing_transfers
-            << " journeys with missing transfers";
   LOG(info) << journeys_with_invalid_transfer_times
             << " journeys with invalid transfer times";
   LOG(info) << journeys_too_long << " journeys that are too long (skipped)";

@@ -4,7 +4,6 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/paxmon_data.h"
-#include "motis/paxmon/statistics.h"
 
 namespace motis::paxmon::api {
 

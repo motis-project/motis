@@ -3,12 +3,14 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/schedule/trip.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/compact_journey.h"
 #include "motis/paxmon/universe.h"
 
@@ -43,7 +45,7 @@ struct reachable_trip {
 
   trip_idx_t trip_idx_{};
   trip_data_index tdi_{};
-  journey_leg const* leg_{};
+  journey_leg const leg_{};
   time enter_schedule_time_{INVALID_TIME};
   time exit_schedule_time_{INVALID_TIME};
   time enter_real_time_{INVALID_TIME};
@@ -65,9 +67,10 @@ struct reachability_info {
   std::vector<reachable_station> reachable_interchange_stations_;
   bool ok_{true};
   reachability_status status_{reachability_status::OK};
+  std::optional<broken_transfer_info> first_unreachable_transfer_;
 };
 
 reachability_info get_reachability(universe const& uv,
-                                   compact_journey const& j);
+                                   fws_compact_journey const& j);
 
 }  // namespace motis::paxmon

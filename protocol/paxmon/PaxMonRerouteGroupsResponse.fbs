@@ -1,0 +1,19 @@
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+struct PaxMonRerouteRouteInfo {
+  i: uint; // index
+  p: float; // new probability
+  pp: float; // *previous* probability (0 == new route)
+}
+
+table PaxMonRerouteGroupResult {
+  group: uint;
+  old_route_index: uint;
+  new_routes: [PaxMonRerouteRouteInfo];
+}
+
+table PaxMonRerouteGroupsResponse {
+  reroutes: [PaxMonRerouteGroupResult];
+}

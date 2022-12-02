@@ -14,9 +14,11 @@
 
 #include "motis/hash_map.h"
 #include "motis/hash_set.h"
+#include "motis/pair.h"
 
 #include "motis/core/access/trip_access.h"
 
+#include "motis/paxmon/index_types.h"
 #include "motis/paxmon/load_info.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/universe.h"
@@ -26,11 +28,12 @@ using namespace flatbuffers;
 namespace motis::paxmon {
 
 struct update_tracker::impl {
-  struct pg_base_info {
+  struct pgr_base_info {
     data_source source_{};
     std::uint16_t pax_{};
     float probability_{};
     float previous_probability_{};
+    bool new_route_{};
   };
 
   struct edge_info {
@@ -49,9 +52,7 @@ struct update_tracker::impl {
 
   struct updated_trip_info {
     Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> before_edges_{};
-    mcd::hash_set<passenger_group_index> added_groups_;
-    mcd::hash_set<passenger_group_index> removed_groups_;
-    mcd::hash_set<passenger_group_index> reused_groups_;
+    mcd::hash_set<passenger_group_with_route> updated_group_routes_;
     critical_trip_info before_cti_;
     critical_trip_info after_cti_;
     int critical_sections_diff_{};
@@ -74,35 +75,30 @@ struct update_tracker::impl {
         include_after_trip_load_info_{include_after_trip_load_info},
         include_trips_with_unchanged_load_{include_trips_with_unchanged_load} {}
 
-  void before_group_added(passenger_group const* pg) {
-    store_group_info(pg);
-    added_groups_.emplace_back(pg->id_);
-    for (auto& leg : pg->compact_planned_journey_.legs_) {
-      auto& uti = get_or_create_updated_trip_info(leg.trip_idx_);
-      uti.added_groups_.insert(pg->id_);
+  void after_group_route_updated(passenger_group_with_route const pgwr,
+                                 float const previous_probability,
+                                 float const new_probability,
+                                 bool const new_route) {
+    auto const& pg = uv_.passenger_groups_.group(pgwr.pg_);
+    auto const pgrbi =
+        pgr_base_info{pg.source_, pg.passengers_, previous_probability,
+                      new_probability, new_route};
+    if (auto it = group_route_infos_.insert(mcd::pair{pgwr, pgrbi});
+        it.second) {
+      // new entry
+      auto const& gr = uv_.passenger_groups_.route(pgwr);
+      auto const cj = uv_.passenger_groups_.journey(gr.compact_journey_index_);
+      for (auto const& leg : cj.legs()) {
+        auto& uti = get_updated_trip_info(leg.trip_idx_);
+        uti.updated_group_routes_.insert(pgwr);
+      }
+    } else {
+      it.first->second.probability_ = new_probability;
     }
   }
 
-  void before_group_reused(passenger_group const* pg) {
-    store_group_info(pg);
-    reused_groups_.insert(pg->id_);
-    // TODO(pablo): maybe use pg->edges_ instead
-    for (auto& leg : pg->compact_planned_journey_.legs_) {
-      auto& uti = get_or_create_updated_trip_info(leg.trip_idx_);
-      uti.reused_groups_.insert(pg->id_);
-    }
-  }
-
-  void after_group_reused(passenger_group const* pg) { store_group_info(pg); }
-
-  void before_group_removed(passenger_group const* pg) {
-    store_group_info(pg);
-    removed_groups_.emplace_back(pg->id_);
-    // TODO(pablo): maybe use pg->edges_ instead
-    for (auto& leg : pg->compact_planned_journey_.legs_) {
-      auto& uti = get_or_create_updated_trip_info(leg.trip_idx_);
-      uti.removed_groups_.insert(pg->id_);
-    }
+  void before_trip_load_updated(trip_idx_t const ti) {
+    get_or_create_updated_trip_info(ti);
   }
 
   void before_trip_rerouted(trip const* trp) {
@@ -145,12 +141,33 @@ struct update_tracker::impl {
                                 r->max_excess_pax_diff_);
               });
 
+    auto sorted_pgr_infos =
+        utl::to_vec(group_route_infos_, [](auto const& entry) {
+          return std::pair{entry.first, &entry.second};
+        });
+    std::sort(begin(sorted_pgr_infos), end(sorted_pgr_infos),
+              [](auto const& lhs, auto const& rhs) {
+                auto const& lhs_key = lhs.first;
+                auto const& rhs_key = rhs.first;
+                return std::tie(lhs_key.pg_, lhs_key.route_) <
+                       std::tie(rhs_key.pg_, rhs_key.route_);
+              });
+
     auto const fb_updates = CreatePaxMonTrackedUpdates(
-        mc_, added_groups_.size(), reused_groups_.size(),
-        removed_groups_.size(), updated_trip_infos_.size(),
-        mc_.CreateVector(utl::to_vec(sorted_trips, [&](auto& entry) {
-          return get_fbs_updated_trip(entry.first, *entry.second);
-        })));
+        mc_, group_route_infos_.size(), updated_trip_infos_.size(),
+        mc_.CreateVector(utl::to_vec(sorted_trips,
+                                     [&](auto& entry) {
+                                       return get_fbs_updated_trip(
+                                           entry.first, *entry.second);
+                                     })),
+        mc_.CreateVectorOfStructs(
+            utl::to_vec(sorted_pgr_infos, [](auto const& entry) {
+              auto const& key = entry.first;
+              auto const& bi = entry.second;
+              return PaxMonGroupRouteUpdateInfo{key.pg_, key.route_, bi->pax_,
+                                                bi->probability_,
+                                                bi->previous_probability_};
+            })));
     return {mc_, fb_updates};
   }
 
@@ -171,14 +188,8 @@ private:
     });
   }
 
-  void store_group_info(passenger_group const* pg) {
-    if (auto it = group_infos_.find(pg->id_); it != end(group_infos_)) {
-      auto& pgbi = it->second;
-      pgbi.probability_ = pg->probability_;
-    } else {
-      group_infos_[pg->id_] = pg_base_info{pg->source_, pg->passengers_,
-                                           pg->probability_, pg->probability_};
-    }
+  updated_trip_info& get_updated_trip_info(trip_idx_t const ti) {
+    return updated_trip_infos_.at(ti);
   }
 
   void finish_trips() {
@@ -280,73 +291,22 @@ private:
   Offset<PaxMonUpdatedTrip> get_fbs_updated_trip(trip_idx_t const ti,
                                                  updated_trip_info const& uti) {
     auto const* trp = get_trip(sched_, ti);
-    auto removed_max_pax = 0U;
-    auto removed_mean_pax = 0.F;
-    auto added_max_pax = 0U;
-    auto added_mean_pax = 0.F;
-
-    mcd::hash_set<passenger_group_index> added_groups;
-    for (auto const& pgi : uti.added_groups_) {
-      auto const& pgbi = group_infos_.at(pgi);
-      added_max_pax += pgbi.pax_;
-      added_mean_pax += pgbi.probability_ * pgbi.pax_;
-      added_groups.insert(pgi);
-    }
-    for (auto const& pgi : uti.reused_groups_) {
-      // groups may be added first, then reused later, in that case all
-      // pax have already been added above
-      if (added_groups.find(pgi) != end(added_groups)) {
-        continue;
-      }
-      auto const& pgbi = group_infos_.at(pgi);
-      added_max_pax += pgbi.pax_;
-      added_mean_pax +=
-          (pgbi.probability_ - pgbi.previous_probability_) * pgbi.pax_;
-      added_groups.insert(pgi);
-    }
-    for (auto const& pgi : uti.removed_groups_) {
-      auto const& pgbi = group_infos_.at(pgi);
-      removed_max_pax += pgbi.pax_;
-      removed_mean_pax += pgbi.probability_ * pgbi.pax_;
-    }
 
     return CreatePaxMonUpdatedTrip(
-        mc_, to_fbs_trip_service_info(mc_, sched_, trp), removed_max_pax,
-        removed_mean_pax, added_max_pax, added_mean_pax, uti.rerouted_,
+        mc_, to_fbs_trip_service_info(mc_, sched_, trp), uti.rerouted_,
         uti.newly_critical_sections_, uti.no_longer_critical_sections_,
         uti.max_pax_increase_, uti.max_pax_decrease_,
         get_fbs_critical_trip_info(uti.before_cti_),
         get_fbs_critical_trip_info(uti.after_cti_),
         mc_.CreateVectorOfStructs(
-            utl::to_vec(uti.removed_groups_,
-                        [&](passenger_group_index const pgi) {
-                          return get_fbs_group_base_info(pgi);
+            utl::to_vec(uti.updated_group_routes_,
+                        [](passenger_group_with_route const& pgwr) {
+                          return PaxMonGroupWithRouteId{pgwr.pg_, pgwr.route_};
                         })),
-        mc_.CreateVectorOfStructs(
-            utl::to_vec(uti.added_groups_,
-                        [&](passenger_group_index const pgi) {
-                          return get_fbs_group_base_info(pgi);
-                        })),
-        mc_.CreateVectorOfStructs(
-            utl::to_vec(uti.reused_groups_,
-                        [&](passenger_group_index const pgi) {
-                          return get_fbs_reused_group_base_info(pgi);
-                        })),
+
         uti.before_edges_,
         include_after_trip_load_info_ ? get_fbs_trip_load_info(ti)
                                       : get_empty_fbs_trip_load_info());
-  }
-
-  PaxMonGroupBaseInfo get_fbs_group_base_info(passenger_group_index const pgi) {
-    auto const& pgbi = group_infos_.at(pgi);
-    return PaxMonGroupBaseInfo{pgi, pgbi.pax_, pgbi.probability_};
-  }
-
-  PaxMonReusedGroupBaseInfo get_fbs_reused_group_base_info(
-      passenger_group_index const pgi) {
-    auto const& pgbi = group_infos_.at(pgi);
-    return PaxMonReusedGroupBaseInfo{pgi, pgbi.pax_, pgbi.probability_,
-                                     pgbi.previous_probability_};
   }
 
   Offset<PaxMonCriticalTripInfo> get_fbs_critical_trip_info(
@@ -363,11 +323,7 @@ private:
   bool include_after_trip_load_info_{};
   bool include_trips_with_unchanged_load_{};
 
-  mcd::hash_map<passenger_group_index, pg_base_info> group_infos_;
-  std::vector<passenger_group_index> added_groups_;
-  mcd::hash_set<passenger_group_index> reused_groups_;
-  std::vector<passenger_group_index> removed_groups_;
-
+  mcd::hash_map<passenger_group_with_route, pgr_base_info> group_route_infos_;
   mcd::hash_map<trip_idx_t, updated_trip_info> updated_trip_infos_;
 
 public:
@@ -422,27 +378,18 @@ std::vector<tick_statistics> update_tracker::get_tick_statistics() const {
   }
 }
 
-void update_tracker::before_group_added(passenger_group const* pg) {
+void update_tracker::after_group_route_updated(
+    passenger_group_with_route const pgwr, float const previous_probability,
+    float const new_probability, bool const new_route) {
   if (impl_) {
-    impl_->before_group_added(pg);
+    impl_->after_group_route_updated(pgwr, previous_probability,
+                                     new_probability, new_route);
   }
 }
 
-void update_tracker::before_group_reused(passenger_group const* pg) {
+void update_tracker::before_trip_load_updated(trip_idx_t const ti) {
   if (impl_) {
-    impl_->before_group_reused(pg);
-  }
-}
-
-void update_tracker::after_group_reused(passenger_group const* pg) {
-  if (impl_) {
-    impl_->after_group_reused(pg);
-  }
-}
-
-void update_tracker::before_group_removed(passenger_group const* pg) {
-  if (impl_) {
-    impl_->before_group_removed(pg);
+    impl_->before_trip_load_updated(ti);
   }
 }
 
