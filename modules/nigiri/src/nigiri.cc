@@ -45,7 +45,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "nigiri", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
-             mm::event_collector::publish_fn_t const&) {
+             mm::event_collector::publish_fn_t const& publish) {
         auto const& msg = dependencies.at("SCHEDULE");
 
         impl_ = std::make_unique<impl>();
@@ -110,12 +110,23 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
         }
 
+        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
+                        impl_->tt_->get());
+        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TAGS),
+                        &impl_->tags_);
+
         LOG(logging::info) << "nigiri timetable: stations="
                            << (*impl_->tt_)->locations_.names_.size()
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
 
         import_successful_ = true;
+
+        mm::message_creator fbb;
+        fbb.create_and_finish(MsgContent_NigiriEvent,
+                              motis::import::CreateNigiriEvent(fbb).Union(),
+                              "/import", DestinationType_Topic);
+        publish(make_msg(fbb));
       })
       ->require("SCHEDULE", [](mm::msg_ptr const& msg) {
         if (msg->get()->content_type() != MsgContent_FileEvent) {

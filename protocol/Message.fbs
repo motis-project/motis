@@ -8,6 +8,7 @@ include "guesser/StationGuesserResponse.fbs";
 include "import/CoastlineEvent.fbs";
 include "import/DEMEvent.fbs";
 include "import/FileEvent.fbs";
+include "import/NigiriEvent.fbs";
 include "import/OSMEvent.fbs";
 include "import/OSRMEvent.fbs";
 include "import/PPREvent.fbs";
@@ -302,7 +303,8 @@ union MsgContent {
   motis.paxmon.PaxMonGroupStatisticsResponse                              = 140,
   motis.paxmon.PaxMonDebugGraphRequest                                    = 141,
   motis.paxmon.PaxMonDebugGraphResponse                                   = 142,
-  motis.paxmon.PaxMonGetUniversesResponse                                 = 143
+  motis.paxmon.PaxMonGetUniversesResponse                                 = 143,
+  motis.import.NigiriEvent                                                = 144
 }
 
 // Destination Examples:
