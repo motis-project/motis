@@ -242,12 +242,11 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
                     : std::vector<n::routing::offset>{{start_station,
                                                        n::duration_t{0U}, 0U}},
       .destinations_ =
-          std::vector{
-              {is_intermodal_start
-                   ? get_offsets(tags, tt, req->additional_edges(),
-                                 req->search_dir(), false)
-                   : std::vector<n::routing::offset>{{destination_station,
-                                                      n::duration_t{0U}, 0U}}}},
+          {is_intermodal_start
+               ? get_offsets(tags, tt, req->additional_edges(),
+                             req->search_dir(), false)
+               : std::vector<n::routing::offset>{{destination_station,
+                                                  n::duration_t{0U}, 0U}}},
       .via_destinations_ = {},
       .allowed_classes_ = cista::bitset<n::kNumClasses>::max(),
       .max_transfers_ = n::routing::kMaxTransfers,
