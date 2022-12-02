@@ -117,9 +117,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
       fill_stop_info(to_stop, leg.to_);
       to_stop.arrival_.valid_ = true;
-      to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.dep_time_ + duration);
-      to_stop.arrival_.schedule_timestamp_ =
-          to_motis_unixtime(leg.dep_time_ + duration);
+      to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.arr_time_);
+      to_stop.arrival_.schedule_timestamp_ = to_motis_unixtime(leg.arr_time_);
 
       auto t = journey::transport{};
       t.from_ = from_idx;
@@ -335,9 +334,6 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
             [](auto&& a, auto&& b) { return a.from_ < b.from_; });
   std::sort(begin(mj.trips_), end(mj.trips_));
   std::sort(begin(mj.attributes_), end(mj.attributes_));
-
-  nj.print(std::cout, tt);
-  print_journey(mj);
 
   return mj;
 }
