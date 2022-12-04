@@ -98,7 +98,7 @@ std::vector<n::routing::offset> get_offsets(
              // FWD  true  | END    false  | from_station  true
              // BWD  false | START  true   | from_station  true
              // BWD  false | END    false  | to_station    false
-             auto const x = !((dir == SearchDir_Forward) ^ is_start)
+             auto const x = ((dir == SearchDir_Forward) ^ is_start) == 0U
                                 ? e->from_station_id()->view()
                                 : e->to_station_id()->view();
              return x != ref_station;
@@ -106,7 +106,7 @@ std::vector<n::routing::offset> get_offsets(
          | utl::transform([&](routing::MumoEdge const* e) {
              return n::routing::offset{
                  get_location_idx(tags, tt,
-                                  !((dir == SearchDir_Forward) ^ is_start)
+                                  ((dir == SearchDir_Forward) ^ is_start) == 0U
                                       ? e->to_station_id()->str()
                                       : e->from_station_id()->str()),
                  n::duration_t{static_cast<std::int16_t>(e->duration())},

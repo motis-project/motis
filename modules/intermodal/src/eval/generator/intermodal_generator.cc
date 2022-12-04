@@ -185,9 +185,7 @@ double get_radius_in_m(std::vector<mode> const& modes) {
       r = std::max(r, m.get_param(0, 15) * 60 * max_walk_speed);
     } else if (m.name_ == "osrm_bike") {
       r = std::max(r, m.get_param(0, 15) * 60 * max_bike_speed);
-    } else if (m.name_ == "osrm_car") {
-      r = std::max(r, m.get_param(0, 15) * 60 * max_car_speed);
-    } else if (m.name_ == "osrm_car_parking") {
+    } else if (m.name_ == "osrm_car" || m.name_ == "osrm_car_parking") {
       r = std::max(r, m.get_param(0, 15) * 60 * max_car_speed);
     } else if (m.name_ == "gbfs") {
       r = std::max(r, m.get_param(0, 15) * 60 * max_walk_speed +
