@@ -223,6 +223,12 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
   utl::verify(destination_station != n::location_idx_t::invalid(),
               "unknown station {}", req->destination()->id()->view());
 
+  auto destination =
+      std::vector{{is_intermodal_start
+                       ? get_offsets(tags, tt, req->additional_edges(),
+                                     req->search_dir(), false)
+                       : std::vector<n::routing::offset>{
+                             {destination_station, n::duration_t{0U}, 0U}}}};
   auto q = n::routing::query{
       .start_time_ = start_time,
       .start_match_mode_ = is_intermodal_start
@@ -241,13 +247,7 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
                                   req->search_dir(), true)
                     : std::vector<n::routing::offset>{{start_station,
                                                        n::duration_t{0U}, 0U}},
-      .destinations_ =
-          std::vector{
-              {is_intermodal_start
-                   ? get_offsets(tags, tt, req->additional_edges(),
-                                 req->search_dir(), false)
-                   : std::vector<n::routing::offset>{{destination_station,
-                                                      n::duration_t{0U}, 0U}}}},
+      .destinations_ = std::move(destination),
       .via_destinations_ = {},
       .allowed_classes_ = cista::bitset<n::kNumClasses>::max(),
       .max_transfers_ = n::routing::kMaxTransfers,
