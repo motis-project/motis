@@ -34,7 +34,8 @@ struct intermodal_itest
       : motis::test::generic_motis_instance_test<
             testing::TestWithParam<const char*>>(
             dataset_opt,
-            {"intermodal", "routing", "tripbased", "nigiri", "lookup"}) {
+            {"intermodal", "routing", "tripbased", "nigiri", "lookup"},
+            {"--tripbased.use_data_file=false"}) {
     instance_->register_op(
         "/osrm/one_to_many",
         [](msg_ptr const& msg) {
