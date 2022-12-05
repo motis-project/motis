@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=42849f5f9f0fa22a88d2667a28173d70f1e28460
+  commit=22636700295def02cc7495929161bda471d58c8d
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -96,8 +96,8 @@
   commit=5e6efe17f52a66da36994d1c6ae28e1280e0bc4f
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=col
-  commit=6101f281d194a7326853392760923ea16503f34e
+  branch=master
+  commit=cebc43667e2b33f3572cd372fbd62a987f66d2a0
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master

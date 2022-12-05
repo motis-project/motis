@@ -291,7 +291,7 @@ int compare(int argc, char const** argv) {
       query_paths,
       [](std::string const& filename) { return std::ifstream{filename}; });
   utl::verify(
-      in_query_files.size() == 0U || in_query_files.size() == file_count,
+      in_query_files.empty() || in_query_files.size() == file_count,
       "query paths ({}) should be either empty or match the response file "
       "count ({})",
       in_query_files.size(), file_count);
