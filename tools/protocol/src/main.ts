@@ -6,6 +6,7 @@ import { parseTypeFilter } from "./filter/parse-filter";
 import { writeTypeScriptOutput } from "./output/typescript/output";
 import { writeJsonSchemaOutput } from "./output/json-schema/output";
 import { writeOpenAPIOutput } from "./output/openapi/output";
+import { readAndUpdateDoc } from "./doc/inout";
 
 let baseDir = process.cwd();
 const argv = process.argv.slice(2);
@@ -25,7 +26,11 @@ if (!fs.existsSync(configFile)) {
 }
 const config = parse(fs.readFileSync(configFile, { encoding: "utf8" }));
 
-if (typeof config.input !== "string" || typeof config.output !== "object") {
+if (
+  typeof config.input !== "string" ||
+  typeof config.output !== "object" ||
+  typeof config.doc !== "object"
+) {
   console.log(`invalid config file: ${configFile}`);
   process.exit(3);
 }
@@ -39,6 +44,8 @@ console.log(`root input dir:  ${rootInputPath}`);
 console.log(`root input file: ${rootInputFile}`);
 
 const schema = resolveSchemaTypes(rootInputPath, rootInputFile);
+
+const doc = readAndUpdateDoc(schema, baseDir, config.doc);
 
 for (const outputName in config.output) {
   const output = config.output[outputName];

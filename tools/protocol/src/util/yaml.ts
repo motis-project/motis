@@ -32,7 +32,11 @@ export function getOrCreateMap(
     parent.setIn(path, map);
   }
   if (!isMap(map)) {
-    throw new Error(`invalid yaml file: ${path.join("/")} is not a map`);
+    throw new Error(
+      `invalid yaml file: ${
+        path.length > 0 ? path.join("/") : "root"
+      } is not a map`
+    );
   }
   return map;
 }
