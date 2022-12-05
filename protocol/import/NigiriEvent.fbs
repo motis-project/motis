@@ -1,5 +1,5 @@
 namespace motis.import;
 
 table NigiriEvent {
-  // TODO
+  hash: ulong;
 }
