@@ -34,15 +34,25 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
       get_data_directory().generic_string(), "footpaths", reg,
       [this](event_collector::dependencies_map_t const& dependencies,
              event_collector::publish_fn_t const&) {
+        using import::NigiriEvent;
         using import::OSMEvent;
         using import::PPREvent;
 
         auto& tt = *get_shared_data<nigiri::timetable*>(
             to_res_id(global_res_id::NIGIRI_TIMETABLE));
+        auto const nigiri_ev =
+            motis_content(NigiriEvent, dependencies.at("NIGIRI"));
         auto const osm_ev = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_ev = motis_content(PPREvent, dependencies.at("PPR"));
 
         // log output is written to ${data}/log/${module name}.txt
+
+        // can be used to check if data has to be recomputed
+        // (see parking module for an example)
+        LOG(info) << "hashes: nigiri=" << nigiri_ev->hash()
+                  << ", osm=" << osm_ev->hash()
+                  << ", ppr graph=" << ppr_ev->graph_hash()
+                  << ", ppr profiles=" << ppr_ev->profiles_hash();
 
         auto const osm_file = osm_ev->path()->str();
         LOG(info) << "loading " << osm_file << "...";
