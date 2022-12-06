@@ -193,6 +193,13 @@ function readPaths(ctx: DocContext) {
       input: props.input,
       output: undefined,
     };
+    if (dp.input) {
+      if (!ctx.schema.types.has(dp.input)) {
+        throw new Error(
+          `unknown type referenced in docs: ${dp.input} (${path})`
+        );
+      }
+    }
     if (props.output) {
       const o = props.output;
       if (
@@ -203,6 +210,9 @@ function readPaths(ctx: DocContext) {
         throw new Error(`invalid paths file: path ${path} (output)`);
       }
       dp.output = o;
+      if (!ctx.schema.types.has(o.type)) {
+        throw new Error(`unknown type referenced in docs: ${o.type} (${path})`);
+      }
     }
     ctx.doc.paths.push(dp);
   }
