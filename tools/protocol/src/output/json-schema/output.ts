@@ -131,6 +131,7 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
       const union: JSONSchema = { ...base };
       const unionTags: JSONSchema = {
         $id: ctx.baseUri.href + [...type.ns, `${type.name}Type`].join("/"),
+        type: "string",
       };
       union.anyOf = [];
       unionTags.enum = [];
@@ -181,7 +182,11 @@ function addTableProperties(ctx: JSContext, type: TableType, js: JSONSchema) {
       const fqtn = field.type.type.resolvedFqtn.join(".");
       const resolvedType = ctx.schema.types.get(fqtn);
       if (!resolvedType) {
-        throw new Error(`unknown type ${fqtn}`);
+        throw new Error(
+          `unknown type ${fqtn} (${[...type.ns, type.name].join(".")}#${
+            field.name
+          })`
+        );
       }
       if (resolvedType.type === "union") {
         const tagName = `${field.name}_type`;
@@ -235,7 +240,7 @@ function getDefaultRefUrl(ctx: JSContext, fqtn: string[], absolute = false) {
 
 function getUnionTagRefUrl(ctx: JSContext, baseFqtn: string[]) {
   const fqtn = [...baseFqtn];
-  baseFqtn[baseFqtn.length - 1] += "Type";
+  fqtn[fqtn.length - 1] += "Type";
   return ctx.getRefUrl(fqtn);
 }
 
