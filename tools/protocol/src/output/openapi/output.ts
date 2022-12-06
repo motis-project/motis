@@ -2,16 +2,18 @@ import { SchemaTypes } from "../../schema/types";
 import { TypeFilter } from "../../filter/type-filter";
 import * as path from "path";
 import fs from "fs";
-import { Document, isMap, isScalar, parseDocument, YAMLMap } from "yaml";
+import { Document, isScalar, YAMLMap } from "yaml";
 import { createJSContext, getJSONSchemaTypes } from "../json-schema/output";
 import { JSONSchema } from "../json-schema/types";
 import { OPEN_API_VERSIONS, OpenApiContext } from "./context";
 import { compareFqtns, sortTypes } from "../../util/sort";
-import { getOrCreateMap, removeUnknownKeys } from "../../util/yaml";
+import { createMap } from "../../util/yaml";
+import { DocField, DocType, Documentation } from "../../doc/types";
 
 export function writeOpenAPIOutput(
   schema: SchemaTypes,
   typeFilter: TypeFilter,
+  doc: Documentation,
   baseDir: string,
   config: any
 ) {
@@ -39,22 +41,18 @@ export function writeOpenAPIOutput(
     baseUri.pathname += "/";
   }
 
-  let doc = new Document();
-  if (fs.existsSync(openApiFile)) {
-    console.log(`loading existing open api specification: ${openApiFile}`);
-    doc = parseDocument(fs.readFileSync(openApiFile, { encoding: "utf8" }));
-  }
-
   const jsCtx = createJSContext(
     schema,
     typeFilter,
     baseUri,
-    (fqtn) => `#/components/schemas/${fqtn.join(".")}`,
+    getRefUrl,
     false,
     true,
     openApiVersion === "3.1.0"
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
+
+  const yd = new Document();
 
   const ctx: OpenApiContext = {
     schema,
@@ -63,54 +61,29 @@ export function writeOpenAPIOutput(
     openApiVersion,
     jsonSchema,
     doc,
+    yd,
     includeIds: config["ids"] !== false,
   };
 
-  if (doc.contents === null) {
-    doc.contents = doc.createNode({});
-  }
-  if (!isMap(doc.contents)) {
-    throw new Error("invalid open api yaml file: root is not a map");
-  }
-
-  if (doc.has("openapi")) {
-    const existingVersion = doc.get("openapi");
-    if (existingVersion !== ctx.openApiVersion) {
-      throw new Error(
-        `existing open api file has a different version: ${existingVersion}`
-      );
-    }
-  } else {
-    doc.set("openapi", ctx.openApiVersion);
-  }
+  yd.contents = yd.createNode({});
+  yd.set("openapi", ctx.openApiVersion);
 
   for (const key in config.info) {
-    doc.setIn(["info", key], config.info[key]);
+    yd.setIn(["info", key], config.info[key]);
   }
 
-  const oaSchemas = getOrCreateMap(doc, doc, ["components", "schemas"]);
-  const hasExistingSchemas = oaSchemas.items.length > 0;
+  writeTags(ctx);
+  writePaths(ctx);
 
-  const removedSchemas = removeUnknownKeys(
-    oaSchemas,
-    (key) => key in jsonSchema
-  );
-  if (removedSchemas.length > 0) {
-    console.log("removed unknown schemas:");
-    for (const s of removedSchemas) {
-      console.log(`  ${s}`);
-    }
-  }
+  const oaSchemas = createMap(yd, yd, ["components", "schemas"]);
 
   const types = Object.keys(jsonSchema);
   sortTypes(types);
 
   for (const fqtn of types) {
-    if (hasExistingSchemas && !oaSchemas.has(fqtn)) {
-      console.log(`adding new schema: ${fqtn}`);
-    }
-    const oaSchema = getOrCreateMap(doc, oaSchemas, [fqtn]);
-    updateSchema(ctx, oaSchema, jsonSchema[fqtn]);
+    const oaSchema = createMap(yd, oaSchemas, [fqtn]);
+    const typeDoc = ctx.doc.types.get(fqtn);
+    writeSchema(ctx, oaSchema, jsonSchema[fqtn], typeDoc);
   }
 
   oaSchemas.items.sort((a, b) =>
@@ -125,31 +98,153 @@ export function writeOpenAPIOutput(
   console.log(`writing open api specification: ${openApiFile}`);
   fs.mkdirSync(path.dirname(openApiFile), { recursive: true });
   const out = fs.createWriteStream(openApiFile);
-  out.write(doc.toString());
+  out.write(yd.toString());
   out.end();
 }
 
-function updateSchema(
+function getRefUrl(fqtn: string[]) {
+  return `#/components/schemas/${fqtn.join(".")}`;
+}
+
+function writeTags(ctx: OpenApiContext) {
+  const tags = ctx.doc.tags;
+  if (tags.length > 0) {
+    const oaTags = ctx.yd.createNode(tags);
+    ctx.yd.set("tags", oaTags);
+  }
+}
+
+function writePaths(ctx: OpenApiContext) {
+  const oaPaths = createMap(ctx.yd, ctx.yd, ["paths"]);
+  for (const path of ctx.doc.paths) {
+    const oaPath = createMap(ctx.yd, oaPaths, [path.path]);
+    const post = !!path.input;
+    const oaOperation = createMap(ctx.yd, oaPath, [post ? "post" : "get"]);
+    if (path.summary) {
+      oaOperation.set("summary", path.summary);
+    }
+    if (path.description) {
+      oaOperation.set("description", path.description);
+    }
+    if (path.tags.length > 0) {
+      oaOperation.set("tags", path.tags);
+    }
+
+    if (path.input) {
+      const reqFqtn = path.input;
+      const reqType = reqFqtn.split(".");
+      const reqTypeName = reqType[reqType.length - 1];
+      const oaRequest = createMap(ctx.yd, oaOperation, ["requestBody"]);
+      oaRequest.set("required", true);
+      const oaRequestSchema = createMap(ctx.yd, oaRequest, [
+        "content",
+        "application/json",
+        "schema",
+      ]);
+      oaRequestSchema.set("type", "object");
+      oaRequestSchema.set("required", [
+        "destination",
+        "content_type",
+        "content",
+      ]);
+      oaRequestSchema.set("properties", {
+        destination: {
+          type: "object",
+          required: "target",
+          properties: {
+            target: { type: "string", enum: [path.path] },
+            type: { type: "string", enum: ["Module"] },
+          },
+        },
+        content_type: {
+          type: "string",
+          enum: [reqTypeName],
+        },
+        content: {
+          $ref: getRefUrl(reqType),
+        },
+        id: { type: "integer", format: "int32" },
+      });
+    }
+
+    const oaResponses = createMap(ctx.yd, oaOperation, ["responses"]);
+    const oaResponse200 = createMap(ctx.yd, oaResponses, [200]);
+    const resFqtn = path.output?.type ?? "motis.MotisNoMessage";
+    const resType = resFqtn.split(".");
+    const resTypeName = resType[resType.length - 1];
+    const resDescription = path.output?.description ?? "Empty response";
+    oaResponse200.set("description", resDescription);
+    const oaResponseSchema = createMap(ctx.yd, oaResponse200, [
+      "content",
+      "application/json",
+      "schema",
+    ]);
+    oaResponseSchema.set("type", "object");
+    oaResponseSchema.set("required", ["content_type", "content"]);
+    oaResponseSchema.set("properties", {
+      destination: {
+        type: "object",
+        required: "target",
+        properties: {
+          target: { type: "string", enum: [""] },
+          type: { type: "string", enum: ["Module"] },
+        },
+      },
+      content_type: {
+        type: "string",
+        enum: [resTypeName],
+      },
+      content: {
+        $ref: getRefUrl(resType),
+      },
+      id: { type: "integer", format: "int32" },
+    });
+  }
+}
+
+function writeSchema(
   ctx: OpenApiContext,
   oaSchema: YAMLMap,
-  jsonSchema: JSONSchema
+  jsonSchema: JSONSchema,
+  typeDoc?: DocType | undefined,
+  fieldDoc?: DocField | undefined
 ) {
   function setKey(key: keyof JSONSchema) {
     if (key in jsonSchema) {
       oaSchema.set(key, jsonSchema[key]);
-    } else {
-      oaSchema.delete(key);
     }
   }
 
   if (ctx.includeIds) {
     setKey("$id");
-  } else {
-    oaSchema.delete("$id");
   }
 
   setKey("$ref");
   setKey("type");
+
+  if (typeDoc) {
+    if (typeDoc.title) {
+      oaSchema.set("title", typeDoc.title);
+    }
+    if (typeDoc.description) {
+      oaSchema.set("description", typeDoc.description);
+    }
+    if (typeDoc.tags && typeDoc.tags.length > 0) {
+      oaSchema.set("tags", typeDoc.tags);
+    }
+    if (typeDoc.examples && typeDoc.examples.length > 0) {
+      oaSchema.set("examples", typeDoc.examples);
+    }
+  }
+  if (fieldDoc) {
+    if (fieldDoc.description) {
+      oaSchema.set("description", fieldDoc.description);
+    }
+    if (fieldDoc.examples && fieldDoc.examples.length > 0) {
+      oaSchema.set("examples", fieldDoc.examples);
+    }
+  }
+
   setKey("required");
   setKey("enum");
   setKey("const");
@@ -159,26 +254,17 @@ function updateSchema(
 
   if (jsonSchema.properties) {
     const jsProps = jsonSchema.properties;
-    const oaProps = getOrCreateMap(ctx.doc, oaSchema, ["properties"]);
-    removeUnknownKeys(oaProps, (key) => key in jsProps);
+    const oaProps = createMap(ctx.yd, oaSchema, ["properties"]);
 
     for (const key in jsProps) {
       const jsProp = jsProps[key];
-      const oaProp = getOrCreateMap(ctx.doc, oaProps, [key]);
-      updateSchema(ctx, oaProp, jsProp);
+      const oaProp = createMap(ctx.yd, oaProps, [key]);
+      writeSchema(ctx, oaProp, jsProp, undefined, typeDoc?.fields?.get(key));
     }
-  } else {
-    oaSchema.delete("properties");
   }
 
   if (jsonSchema.items) {
-    updateSchema(
-      ctx,
-      getOrCreateMap(ctx.doc, oaSchema, ["items"]),
-      jsonSchema.items
-    );
-  } else {
-    oaSchema.delete("items");
+    writeSchema(ctx, createMap(ctx.yd, oaSchema, ["items"]), jsonSchema.items);
   }
 
   // for now

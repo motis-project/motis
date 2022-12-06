@@ -2,6 +2,7 @@ import { SchemaTypes } from "../../schema/types";
 import { TypeFilter } from "../../filter/type-filter";
 import { JSONSchema } from "../json-schema/types";
 import { Document } from "yaml";
+import { Documentation } from "../../doc/types";
 
 export const OPEN_API_VERSIONS = ["3.0.3", "3.1.0"] as const;
 
@@ -13,6 +14,7 @@ export interface OpenApiContext {
   baseUri: URL;
   openApiVersion: OpenAPIVersion;
   jsonSchema: Record<string, JSONSchema>;
-  doc: Document;
+  doc: Documentation;
+  yd: Document;
   includeIds: boolean;
 }

@@ -60,7 +60,7 @@ for (const outputName in config.output) {
         writeJsonSchemaOutput(schema, typeFilter, baseDir, output);
         break;
       case "openapi":
-        writeOpenAPIOutput(schema, typeFilter, baseDir, output);
+        writeOpenAPIOutput(schema, typeFilter, doc, baseDir, output);
         break;
       default:
         console.log(`unknown output format ${output.format}`);

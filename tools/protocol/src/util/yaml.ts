@@ -24,7 +24,7 @@ export function removeUnknownKeys(
 export function getOrCreateMap(
   doc: Document,
   parent: YAMLMap | Document,
-  path: string[]
+  path: Array<string | number>
 ): YAMLMap {
   let map = parent.getIn(path);
   if (map == undefined) {
@@ -38,5 +38,15 @@ export function getOrCreateMap(
       } is not a map`
     );
   }
+  return map;
+}
+
+export function createMap(
+  doc: Document,
+  parent: YAMLMap | Document,
+  path: Array<string | number>
+): YAMLMap {
+  const map = doc.createNode({});
+  parent.setIn(path, map);
   return map;
 }

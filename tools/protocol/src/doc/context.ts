@@ -12,5 +12,6 @@ export interface DocContext {
   doc: Documentation;
   schemasDir: string;
   pathsFile: string;
+  tagsFile: string;
   schemaFiles: Map<string, DocSchemaFile>;
 }

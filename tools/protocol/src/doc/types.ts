@@ -15,10 +15,11 @@ export interface DocField {
 
 export interface DocPath {
   path: string;
-  summary?: string;
-  description?: string;
-  input?: string;
-  output?: DocResponse[];
+  summary?: string | undefined;
+  description?: string | undefined;
+  tags: string[];
+  input?: string | undefined;
+  output?: DocResponse | undefined;
 }
 
 export interface DocResponse {
@@ -26,8 +27,13 @@ export interface DocResponse {
   description: string;
 }
 
+export interface DocTagInfo {
+  name: string;
+  description: string;
+}
+
 export interface Documentation {
   types: Map<string, DocType>;
   paths: DocPath[];
-  // TODO: tags
+  tags: DocTagInfo[];
 }

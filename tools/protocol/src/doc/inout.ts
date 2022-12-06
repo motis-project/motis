@@ -26,19 +26,25 @@ export function readAndUpdateDoc(
   if (typeof config.paths !== "string") {
     throw new Error("missing doc.paths property in config");
   }
+  if (typeof config.tags !== "string") {
+    throw new Error("missing doc.tags property in config");
+  }
 
   const schemasDir = path.resolve(baseDir, config.schemas);
   const pathsFile = path.resolve(baseDir, config.paths);
+  const tagsFile = path.resolve(baseDir, config.tags);
 
-  const doc: Documentation = { types: new Map(), paths: [] };
+  const doc: Documentation = { types: new Map(), paths: [], tags: [] };
   const ctx: DocContext = {
     schema,
     doc,
     schemasDir,
     pathsFile,
+    tagsFile,
     schemaFiles: new Map(),
   };
 
+  readTags(ctx);
   readAndUpdateSchemas(ctx);
   readPaths(ctx);
 
@@ -66,7 +72,6 @@ function readAndUpdateSchemas(ctx: DocContext) {
 }
 
 function readAndUpdateSchemaFile(ctx: DocContext, file: DocSchemaFile) {
-  console.log(file.path);
   let yd = new Document();
   if (fs.existsSync(file.path)) {
     yd = parseDocument(fs.readFileSync(file.path, { encoding: "utf8" }));
@@ -120,7 +125,7 @@ function readAndUpdateType(
   };
 
   const docType: DocType = {
-    fqtn: [...schemaType.ns, ...schemaType.name].join("."),
+    fqtn: [...schemaType.ns, schemaType.name].join("."),
     title: getOptStr(yt, "title"),
     description: getOptStr(yt, "description"),
     examples: [],
@@ -184,21 +189,38 @@ function readPaths(ctx: DocContext) {
       path,
       summary: props.summary,
       description: props.description,
+      tags: props.tags ?? [],
       input: props.input,
-      output: [],
+      output: undefined,
     };
-    if (Array.isArray(props.output)) {
-      dp.output = props.output.map((o: any) => {
-        if (
-          typeof o !== "object" ||
-          typeof o.type !== "string" ||
-          typeof o.description !== "string"
-        ) {
-          throw new Error(`invalid paths file: path ${path} (output)`);
-        }
-        return { type: o.type, description: o.description };
-      });
+    if (props.output) {
+      const o = props.output;
+      if (
+        typeof o !== "object" ||
+        typeof o.type !== "string" ||
+        typeof o.description !== "string"
+      ) {
+        throw new Error(`invalid paths file: path ${path} (output)`);
+      }
+      dp.output = o;
     }
     ctx.doc.paths.push(dp);
   }
+}
+
+function readTags(ctx: DocContext) {
+  if (!fs.existsSync(ctx.tagsFile)) {
+    console.log(`warning: tags file does not exist: ${ctx.tagsFile}`);
+    return;
+  }
+  const yd = parse(fs.readFileSync(ctx.tagsFile, { encoding: "utf8" }));
+  if (!Array.isArray(yd)) {
+    throw new Error("invalid tags file");
+  }
+  for (const tag of yd) {
+    if (typeof tag.name === "string" && typeof tag.descrption === "string") {
+      ctx.doc.tags.push(tag);
+    }
+  }
+  ctx.doc.tags = yd;
 }
