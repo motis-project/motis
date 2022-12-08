@@ -1,5 +1,9 @@
 import { Listbox, Switch, Transition } from "@headlessui/react";
-import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
+import {
+  AdjustmentsVerticalIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
+} from "@heroicons/react/20/solid";
 import { MapIcon, UsersIcon } from "@heroicons/react/24/outline";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
@@ -15,6 +19,7 @@ import {
   PaxMonFilterGroupsSortOrder,
   PaxMonGroupRoute,
   PaxMonGroupWithStats,
+  PaxMonRerouteReason,
 } from "@/api/protocol/motis/paxmon";
 
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
@@ -70,7 +75,9 @@ function getFilterGroupsRequest(
   fromStationFilter: Station | undefined,
   toStationFilter: Station | undefined,
   filterTrainNrs: number[],
-  selectedDate: Date | undefined
+  selectedDate: Date | undefined,
+  filterByRerouteReason: boolean,
+  rerouteReasonFilter: PaxMonRerouteReason[]
 ): PaxMonFilterGroupsRequest {
   return {
     universe,
@@ -89,7 +96,7 @@ function getFilterGroupsRequest(
       begin: selectedDate ? getUnixTime(selectedDate) : 0,
       end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
     },
-    filter_by_reroute_reason: [],
+    filter_by_reroute_reason: filterByRerouteReason ? rerouteReasonFilter : [],
   };
 }
 
@@ -106,6 +113,17 @@ function GroupList(): JSX.Element {
   const [trainNrFilter, setTrainNrFilter] = useState("");
   const [groupIdFilter, setGroupIdFilter] = useState("");
   const [externalGroupIds, setExternalGroupIds] = useState(false);
+  const [filterByRerouteReason, setFilterByRerouteReason] = useState(false);
+  const [rerouteReasonFilter, setRerouteReasonFilter] = useState<
+    PaxMonRerouteReason[]
+  >([
+    "Manual",
+    "BrokenTransfer",
+    "MajorDelayExpected",
+    "RevertForecast",
+    "Simulation",
+    "UpdateForecast",
+  ]);
 
   const filterTrainNrs = extractNumbers(trainNrFilter);
 
@@ -147,6 +165,7 @@ function GroupList(): JSX.Element {
         toStationFilter,
         filterTrainNrs,
         selectedDate,
+        rerouteReasonFilter: filterByRerouteReason ? rerouteReasonFilter : [],
       },
     ],
     ({ pageParam = 0 }) => {
@@ -159,7 +178,9 @@ function GroupList(): JSX.Element {
         fromStationFilter,
         toStationFilter,
         filterTrainNrs,
-        selectedDate
+        selectedDate,
+        filterByRerouteReason,
+        rerouteReasonFilter
       );
       return sendPaxMonFilterGroupsRequest(req);
     },
@@ -332,6 +353,23 @@ function GroupList(): JSX.Element {
         </div>
         <div className="flex items-start"></div>
       </div>
+      <div className="flex justify-between pb-2 gap-1">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+            checked={filterByRerouteReason}
+            onChange={() => setFilterByRerouteReason((c) => !c)}
+          />
+          Nur umgeleitete Gruppen
+        </label>
+        <div className="flex flex-col justify-end">
+          <RerouteReasonOptions
+            rerouteReasonFilter={rerouteReasonFilter}
+            setRerouteReasonFilter={setRerouteReasonFilter}
+          />
+        </div>
+      </div>
       {totalNumberOfGroups !== undefined && (
         <div className="pb-2 text-lg">
           {formatNumber(totalNumberOfGroups)}{" "}
@@ -358,6 +396,90 @@ function GroupList(): JSX.Element {
         )}
       </div>
     </div>
+  );
+}
+
+type LabeledRerouteReason = {
+  reason: PaxMonRerouteReason;
+  label: string;
+};
+
+const rerouteReasonOptions: Array<LabeledRerouteReason> = [
+  { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
+  { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
+  { reason: "Simulation", label: "Simulation" },
+  { reason: "Manual", label: "Manuelle Umleitung" },
+  { reason: "RevertForecast", label: "Rücknahme einer Vorhersage" },
+  { reason: "UpdateForecast", label: "Neuberechnung einer Vorhersage" },
+];
+
+type RerouteReasonOptionsProps = {
+  rerouteReasonFilter: PaxMonRerouteReason[];
+  setRerouteReasonFilter: React.Dispatch<
+    React.SetStateAction<PaxMonRerouteReason[]>
+  >;
+};
+
+function RerouteReasonOptions({
+  rerouteReasonFilter,
+  setRerouteReasonFilter,
+}: RerouteReasonOptionsProps) {
+  return (
+    <Listbox
+      value={rerouteReasonFilter}
+      onChange={setRerouteReasonFilter}
+      multiple
+    >
+      <div className="relative">
+        <Listbox.Button className="p-2 mb-0.5 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
+          <AdjustmentsVerticalIcon className="w-5 h-5" aria-hidden="true" />
+        </Listbox.Button>
+        <Transition
+          as={Fragment}
+          leave="transition ease-in duration-100"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <Listbox.Options className="absolute right-0 z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            {rerouteReasonOptions.map((opt) => (
+              <Listbox.Option
+                key={opt.reason}
+                value={opt.reason}
+                className={({ active }) =>
+                  classNames(
+                    "cursor-default select-none relative py-2 pl-10 pr-4",
+                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                  )
+                }
+              >
+                {({ selected, active }) => (
+                  <>
+                    <span
+                      className={classNames(
+                        "block truncate",
+                        selected ? "font-medium" : "font-normal"
+                      )}
+                    >
+                      {opt.label}
+                    </span>
+                    {selected ? (
+                      <span
+                        className={classNames(
+                          "absolute inset-y-0 left-0 flex items-center pl-3",
+                          active ? "text-amber-600" : "text-amber-600"
+                        )}
+                      >
+                        <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </Listbox.Option>
+            ))}
+          </Listbox.Options>
+        </Transition>
+      </div>
+    </Listbox>
   );
 }
 
