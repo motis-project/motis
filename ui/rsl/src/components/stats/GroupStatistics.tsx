@@ -118,9 +118,10 @@ function DurationHistogram({
 }: DurationHistogramProps): JSX.Element {
   const totalRange = data.max_value - data.min_value;
   const maxTickCount = 15;
-  const minTickStep = totalRange > 10 * 60 ? 60 : totalRange > 5 * 10 ? 30 : 10;
-  const tickStep =
-    Math.floor(totalRange / maxTickCount / minTickStep) * minTickStep;
+  let tickStep = totalRange > 10 * 60 ? 60 : totalRange > 5 * 60 ? 30 : 10;
+  while (totalRange / tickStep > maxTickCount) {
+    tickStep *= 2;
+  }
   const xTickValues: number[] = [0];
   for (
     let x = Math.ceil(data.min_value / 60) * 60;
