@@ -17,7 +17,7 @@
     "update-protocol": "node --trace-uncaught tools/protocol.js && eslint src/api/protocol --ext .ts --fix && prettier --write src/api/protocol"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.4",
+    "@headlessui/react": "^1.7.5",
     "@headlessui/tailwindcss": "^0.1.2",
     "@heroicons/react": "^2.0.13",
     "@radix-ui/react-tooltip": "^1.0.2",
@@ -62,7 +62,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-react": "^7.31.11",
     "eslint-plugin-react-hooks": "^4.6.0",
-    "postcss": "^8.4.19",
+    "postcss": "^8.4.20",
     "prettier": "^2.8.1",
     "tailwindcss": "^3.2.4",
     "typescript": "^4.9.4",
