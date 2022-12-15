@@ -1,6 +1,7 @@
 import { TSContext, TSFile } from "./context";
 import { FieldType, TypeRef } from "../../schema/types";
 import { getFilename } from "./filenames";
+import { getUnionTagTypeName } from "./util";
 
 export interface TSInclude {
   filename: string;
@@ -19,12 +20,20 @@ export function collectIncludes(ctx: TSContext, file: TSFile): TSIncludes {
     if (refNamespaceStr === file.namespace || !ctx.types.has(refFqtn)) {
       return;
     }
+    const resolvedType = ctx.schema.types.get(refFqtn);
+    if (!resolvedType) {
+      throw new Error(`unknown type ${refFqtn}`);
+    }
     let include = includes.get(refNamespaceStr);
     if (!include) {
       include = { filename: getFilename(ctx, refNamespace), types: new Set() };
       includes.set(refNamespaceStr, include);
     }
-    include.types.add(ref.resolvedFqtn[ref.resolvedFqtn.length - 1]);
+    const refName = ref.resolvedFqtn[ref.resolvedFqtn.length - 1];
+    include.types.add(refName);
+    if (resolvedType.type === "union") {
+      include.types.add(getUnionTagTypeName(refName));
+    }
   }
 
   function handleFieldType(ft: FieldType) {

@@ -10,6 +10,7 @@ import fs from "fs";
 import { TSContext, TSFile } from "./context";
 import { collectIncludes, TSInclude } from "./includes";
 import { getFilename } from "./filenames";
+import { getUnionTagTypeName } from "./util";
 
 export function writeTypeScriptOutput(
   schema: SchemaTypes,
@@ -121,10 +122,6 @@ function getTSTypeName(
       return fqtn[fqtn.length - 1];
     }
   }
-}
-
-function getUnionTagTypeName(typeName: string) {
-  return `${typeName}Type`;
 }
 
 function writeType(
