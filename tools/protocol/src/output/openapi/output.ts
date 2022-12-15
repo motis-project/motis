@@ -98,7 +98,7 @@ export function writeOpenAPIOutput(
   console.log(`writing open api specification: ${openApiFile}`);
   fs.mkdirSync(path.dirname(openApiFile), { recursive: true });
   const out = fs.createWriteStream(openApiFile);
-  out.write(yd.toString());
+  out.write(yd.toString({lineWidth: 100}));
   out.end();
 }
 
