@@ -98,7 +98,7 @@ export function writeOpenAPIOutput(
   console.log(`writing open api specification: ${openApiFile}`);
   fs.mkdirSync(path.dirname(openApiFile), { recursive: true });
   const out = fs.createWriteStream(openApiFile);
-  out.write(yd.toString({lineWidth: 100}));
+  out.write(yd.toString({ lineWidth: 100 }));
   out.end();
 }
 
@@ -235,7 +235,11 @@ function writeSchema(
       oaSchema.set("tags", typeDoc.tags);
     }
     if (typeDoc.examples && typeDoc.examples.length > 0) {
-      oaSchema.set("examples", typeDoc.examples);
+      if (ctx.openApiVersion === "3.0.3") {
+        oaSchema.set("example", typeDoc.examples[0]);
+      } else {
+        oaSchema.set("examples", typeDoc.examples);
+      }
     }
   }
   if (fieldDoc) {
@@ -243,7 +247,11 @@ function writeSchema(
       oaSchema.set("description", fieldDoc.description);
     }
     if (fieldDoc.examples && fieldDoc.examples.length > 0) {
-      oaSchema.set("examples", fieldDoc.examples);
+      if (ctx.openApiVersion === "3.0.3") {
+        oaSchema.set("example", fieldDoc.examples[0]);
+      } else {
+        oaSchema.set("examples", fieldDoc.examples);
+      }
     }
   }
 
