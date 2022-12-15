@@ -8,7 +8,7 @@
     "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write src",
     "format-check": "prettier --check src",
-    "ts-check": "tsc"
+    "ts-check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
