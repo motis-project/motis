@@ -150,7 +150,7 @@ function writePaths(ctx: OpenApiContext) {
       oaRequestSchema.set("properties", {
         destination: {
           type: "object",
-          required: "target",
+          required: ["target"],
           properties: {
             target: { type: "string", enum: [path.path] },
             type: { type: "string", enum: ["Module"] },
@@ -168,7 +168,7 @@ function writePaths(ctx: OpenApiContext) {
     }
 
     const oaResponses = createMap(ctx.yd, oaOperation, ["responses"]);
-    const oaResponse200 = createMap(ctx.yd, oaResponses, [200]);
+    const oaResponse200 = createMap(ctx.yd, oaResponses, ["200"]);
     const resFqtn = path.output?.type ?? "motis.MotisNoMessage";
     const resType = resFqtn.split(".");
     const resTypeName = resType[resType.length - 1];
@@ -184,7 +184,7 @@ function writePaths(ctx: OpenApiContext) {
     oaResponseSchema.set("properties", {
       destination: {
         type: "object",
-        required: "target",
+        required: ["target"],
         properties: {
           target: { type: "string", enum: [""] },
           type: { type: "string", enum: ["Module"] },
