@@ -7,6 +7,7 @@ import { writeTypeScriptOutput } from "./output/typescript/output";
 import { writeJsonSchemaOutput } from "./output/json-schema/output";
 import { writeOpenAPIOutput } from "./output/openapi/output";
 import { readAndUpdateDoc } from "./doc/inout";
+import { writeMarkdownOutput } from "./output/markdown/output";
 
 let baseDir = process.cwd();
 const argv = process.argv.slice(2);
@@ -61,6 +62,9 @@ for (const outputName in config.output) {
         break;
       case "openapi":
         writeOpenAPIOutput(schema, typeFilter, doc, baseDir, output);
+        break;
+      case "markdown":
+        writeMarkdownOutput(schema, typeFilter, doc, baseDir, output);
         break;
       default:
         console.log(`unknown output format ${output.format}`);
