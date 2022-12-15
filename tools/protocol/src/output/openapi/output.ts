@@ -215,11 +215,16 @@ function writeSchema(
     }
   }
 
+  setKey("$ref");
+
+  if (ctx.openApiVersion === "3.0.3" && "$ref" in jsonSchema) {
+    // no $ref siblings allowed in OpenAPI 3.0
+    return;
+  }
+
   if (ctx.includeIds) {
     setKey("$id");
   }
-
-  setKey("$ref");
   setKey("type");
 
   if (typeDoc) {
