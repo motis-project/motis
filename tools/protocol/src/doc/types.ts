@@ -1,6 +1,5 @@
 export interface DocType {
   fqtn: string;
-  title: string | undefined;
   description: string | undefined;
   examples: any[];
   tags: string[];

@@ -126,7 +126,6 @@ function readAndUpdateType(
 
   const docType: DocType = {
     fqtn: [...schemaType.ns, schemaType.name].join("."),
-    title: getOptStr(yt, "title"),
     description: getOptStr(yt, "description"),
     examples: [],
     tags: [],

@@ -228,9 +228,6 @@ function writeSchema(
   setKey("type");
 
   if (typeDoc) {
-    if (typeDoc.title) {
-      oaSchema.set("title", typeDoc.title);
-    }
     if (typeDoc.description) {
       oaSchema.set("description", typeDoc.description);
     }
