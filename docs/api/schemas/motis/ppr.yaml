@@ -1,0 +1,161 @@
+SearchOptions:
+  description: TODO
+  fields:
+    profile:
+      description: TODO
+    duration_limit:
+      description: TODO
+EdgeType:
+  description: TODO
+CrossingType:
+  description: TODO
+StreetType:
+  description: TODO
+TriState:
+  description: TODO
+Edge:
+  description: TODO
+  fields:
+    distance:
+      description: TODO
+    duration:
+      description: TODO
+    accessibility:
+      description: TODO
+    path:
+      description: TODO
+    name:
+      description: TODO
+    osm_way_id:
+      description: TODO
+    edge_type:
+      description: TODO
+    street_type:
+      description: TODO
+    crossing_type:
+      description: TODO
+    elevation_up:
+      description: TODO
+    elevation_down:
+      description: TODO
+    incline_up:
+      description: TODO
+    handrail:
+      description: TODO
+RouteStepType:
+  description: TODO
+RouteStep:
+  description: TODO
+  fields:
+    step_type:
+      description: TODO
+    street_name:
+      description: TODO
+    street_type:
+      description: TODO
+    crossing_type:
+      description: TODO
+    distance:
+      description: TODO
+    duration:
+      description: TODO
+    accessibility:
+      description: TODO
+    path:
+      description: TODO
+    elevation_up:
+      description: TODO
+    elevation_down:
+      description: TODO
+    incline_up:
+      description: TODO
+    handrail:
+      description: TODO
+Route:
+  description: TODO
+  fields:
+    distance:
+      description: TODO
+    duration:
+      description: TODO
+    duration_exact:
+      description: TODO
+    duration_division:
+      description: TODO
+    accessibility:
+      description: TODO
+    accessibility_exact:
+      description: TODO
+    accessibility_division:
+      description: TODO
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    steps:
+      description: TODO
+    edges:
+      description: TODO
+    path:
+      description: TODO
+    elevation_up:
+      description: TODO
+    elevation_down:
+      description: TODO
+FootRoutingProfileInfo:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    walking_speed:
+      description: TODO
+FootRoutingProfilesResponse:
+  description: TODO
+  fields:
+    profiles:
+      description: TODO
+FootRoutingRequest:
+  description: TODO
+  fields:
+    start:
+      description: TODO
+    destinations:
+      description: TODO
+    search_options:
+      description: TODO
+    search_direction:
+      description: TODO
+    include_steps:
+      description: TODO
+    include_edges:
+      description: TODO
+    include_path:
+      description: TODO
+Routes:
+  description: TODO
+  fields:
+    routes:
+      description: TODO
+FootRoutingResponse:
+  description: TODO
+  fields:
+    routes:
+      description: TODO
+FootRoutingSimpleRequest:
+  description: TODO
+  fields:
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    include_steps:
+      description: TODO
+    include_path:
+      description: TODO
+    max_duration:
+      description: TODO
+FootRoutingSimpleResponse:
+  description: TODO
+  fields:
+    routes:
+      description: TODO

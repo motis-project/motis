@@ -1,0 +1,194 @@
+PaxForecastAlternative:
+  description: TODO
+  fields:
+    journey:
+      description: TODO
+    probability:
+      description: TODO
+PaxForecastGroupRoute:
+  description: TODO
+  fields:
+    group_route:
+      description: TODO
+    localization:
+      description: TODO
+    forecast_alternatives:
+      description: TODO
+PaxForecastUpdate:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    system_time:
+      description: TODO
+    groups:
+      description: TODO
+    trips:
+      description: TODO
+MeasureRecipients:
+  description: >
+    Select a subset of passengers that is made aware of the measure
+    (e.g. using an announcement)
+  fields:
+    trips:
+      description: >
+        Select passengers that are in one of the listed trip (at the
+        measure `time`).
+    stations:
+      description: >
+        Select passengers that are at one of the listed stations (at the
+        measure `time`). Does not include passengers in a trip that is currently
+        waiting at the station.
+LoadLevel:
+  description: TODO
+TripLoadInfoMeasure:
+  description: TODO
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: TODO
+    trip:
+      description: TODO
+    level:
+      description: TODO
+TripRecommendationMeasure:
+  description: TODO
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: TODO
+    planned_trips:
+      description: TODO
+    planned_destinations:
+      description: TODO
+    recommended_trip:
+      description: TODO
+TripWithLoadLevel:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    level:
+      description: TODO
+TripLoadRecommendationMeasure:
+  description: TODO
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: TODO
+    planned_destinations:
+      description: TODO
+    full_trips:
+      description: TODO
+    recommended_trips:
+      description: TODO
+RtUpdateMeasure:
+  description: TODO
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: TODO
+    type:
+      description: TODO
+    content:
+      description: TODO
+Measure:
+  description: TODO
+MeasureWrapper:
+  description: TODO
+  fields:
+    measure:
+      description: TODO
+PaxForecastApplyMeasuresRequest:
+  description: TODO
+  fields:
+    universe:
+      description: Paxmon universe ID
+    measures:
+      description: A list of measures to simulate
+    replace_existing:
+      description: |
+        If set to true, only simulate the measures given in this API call.
+        If set to false, measures from previous calls are kept and merged with
+        the new measures for this simulation.
+
+        **Should always be set to true for now.**
+      examples:
+        - true
+    preparation_time:
+      description: |
+        Preparation time for passengers in minutes. Passengers can only
+        change trains after the preparation time.
+
+        Should usually be set to 0.
+    include_before_trip_load_info:
+      description: |
+        If set to true, `before_edges` in the response (in `PaxMonUpdatedTrip`)
+        is set, otherwise it will be empty. It contains load information for
+        all trip edges before any changes were made.
+
+        Note that if the trip route is modified using real-time updates, this
+        contains the state of the trip *before* any of those changes were
+        applied.
+    include_after_trip_load_info:
+      description: |
+        If set to true, `after_edges` in the response (in `PaxMonUpdatedTrip`)
+        is set, otherwise it will be empty. It contains load information for
+        all trip edges after all changes were made.
+
+        Note that if the trip route is modified using real-time updates, this
+        contains the state of the trip *after* any of those changes were
+        applied.
+    include_trips_with_unchanged_load:
+      description: |
+        If set to true, all trips that are modified are included in the
+        response, even if there is no major change in the predicted number
+        of passengers on any section.
+
+        If set to false, trips with only minor changes are not included
+        the response.
+
+        Currently used criteria are changes in the number of critical sections
+        or the maximum number of passengers.
+PaxForecastApplyMeasuresStatistics:
+  description: TODO
+  fields:
+    measure_time_points:
+      description: TODO
+    total_measures_applied:
+      description: TODO
+    total_affected_groups:
+      description: TODO
+    total_alternative_routings:
+      description: TODO
+    total_alternatives_found:
+      description: TODO
+    group_routes_broken:
+      description: TODO
+    group_routes_with_major_delay:
+      description: TODO
+    t_rt_updates:
+      description: TODO
+    t_get_affected_groups:
+      description: TODO
+    t_find_alternatives:
+      description: TODO
+    t_add_alternatives_to_graph:
+      description: TODO
+    t_behavior_simulation:
+      description: TODO
+    t_update_groups:
+      description: TODO
+    t_update_tracker:
+      description: TODO
+PaxForecastApplyMeasuresResponse:
+  description: TODO
+  fields:
+    stats:
+      description: TODO
+    updates:
+      description: TODO

@@ -1,0 +1,79 @@
+CoastlineEvent:
+  description: TODO
+  fields:
+    path:
+      description: TODO
+    hash:
+      description: TODO
+    size:
+      description: TODO
+DEMEvent:
+  description: TODO
+  fields:
+    path:
+      description: TODO
+    hash:
+      description: TODO
+ImportPath:
+  description: TODO
+  fields:
+    tag:
+      description: TODO
+    options:
+      description: TODO
+    path:
+      description: TODO
+FileEvent:
+  description: TODO
+  fields:
+    paths:
+      description: TODO
+OSMEvent:
+  description: TODO
+  fields:
+    path:
+      description: TODO
+    hash:
+      description: TODO
+    size:
+      description: TODO
+OSRMEvent:
+  description: TODO
+  fields:
+    path:
+      description: TODO
+    profile:
+      description: TODO
+PPRProfile:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    path:
+      description: TODO
+    hash:
+      description: TODO
+    size:
+      description: TODO
+PPREvent:
+  description: TODO
+  fields:
+    graph_path:
+      description: TODO
+    graph_hash:
+      description: TODO
+    graph_size:
+      description: TODO
+    profiles:
+      description: TODO
+    profiles_hash:
+      description: TODO
+ScheduleEvent:
+  description: TODO
+  fields:
+    raw_files:
+      description: TODO
+    prefixes:
+      description: TODO
+    hash:
+      description: TODO

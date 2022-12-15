@@ -1,0 +1,314 @@
+Position:
+  description: TODO
+  fields:
+    lat:
+      description: TODO
+    lng:
+      description: TODO
+SearchDir:
+  description: TODO
+Station:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    name:
+      description: TODO
+    pos:
+      description: TODO
+Interval:
+  description: TODO
+  fields:
+    begin:
+      description: TODO
+    end:
+      description: TODO
+EventType:
+  description: TODO
+TripId:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    train_nr:
+      description: TODO
+    time:
+      description: TODO
+    target_station_id:
+      description: TODO
+    target_time:
+      description: TODO
+    line_id:
+      description: TODO
+TimestampReason:
+  description: TODO
+ConnectionStatus:
+  description: TODO
+ProblemType:
+  description: TODO
+EventInfo:
+  description: TODO
+  fields:
+    time:
+      description: TODO
+    schedule_time:
+      description: TODO
+    track:
+      description: TODO
+    schedule_track:
+      description: TODO
+    valid:
+      description: TODO
+    reason:
+      description: TODO
+Stop:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    arrival:
+      description: TODO
+    departure:
+      description: TODO
+    exit:
+      description: TODO
+    enter:
+      description: TODO
+Range:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+Transport:
+  description: TODO
+  fields:
+    range:
+      description: TODO
+    category_name:
+      description: TODO
+    category_id:
+      description: TODO
+    clasz:
+      description: TODO
+    train_nr:
+      description: TODO
+    line_id:
+      description: TODO
+    name:
+      description: TODO
+    provider:
+      description: TODO
+    direction:
+      description: TODO
+Walk:
+  description: TODO
+  fields:
+    range:
+      description: TODO
+    mumo_id:
+      description: TODO
+    price:
+      description: TODO
+    accessibility:
+      description: TODO
+    mumo_type:
+      description: TODO
+Move:
+  description: TODO
+MoveWrapper:
+  description: TODO
+  fields:
+    move:
+      description: TODO
+Attribute:
+  description: TODO
+  fields:
+    range:
+      description: TODO
+    code:
+      description: TODO
+    text:
+      description: TODO
+Trip:
+  description: TODO
+  fields:
+    range:
+      description: TODO
+    id:
+      description: TODO
+    debug:
+      description: TODO
+FreeText:
+  description: TODO
+  fields:
+    range:
+      description: TODO
+    code:
+      description: TODO
+    text:
+      description: TODO
+    type:
+      description: TODO
+Problem:
+  description: TODO
+  fields:
+    range:
+      description: TODO
+    type:
+      description: TODO
+Connection:
+  description: TODO
+  fields:
+    stops:
+      description: TODO
+    transports:
+      description: TODO
+    trips:
+      description: TODO
+    attributes:
+      description: TODO
+    free_texts:
+      description: TODO
+    problems:
+      description: TODO
+    night_penalty:
+      description: TODO
+    db_costs:
+      description: TODO
+    status:
+      description: TODO
+Polyline:
+  description: TODO
+  fields:
+    coordinates:
+      description: TODO
+Statistics:
+  description: TODO
+  fields:
+    category:
+      description: TODO
+    entries:
+      description: TODO
+StatisticsEntry:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    value:
+      description: TODO
+TripInfo:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    transport:
+      description: TODO
+DirectConnection:
+  description: TODO
+  fields:
+    duration:
+      description: TODO
+    accessibility:
+      description: TODO
+    mumo_type:
+      description: TODO
+ServiceInfo:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    category:
+      description: TODO
+    train_nr:
+      description: TODO
+    line:
+      description: TODO
+    provider:
+      description: TODO
+    clasz:
+      description: TODO
+TripServiceInfo:
+  description: Trip ID with some additional information about the trip
+  fields:
+    trip:
+      description: The trip ID
+    primary_station:
+      description: The primary trip station (usually the first scheduled stop)
+    secondary_station:
+      description: The secondary trip station (usually the last scheduled stop)
+    service_infos:
+      description: >
+        Information about train numbers, categories and lines used by this trip
+HTTPHeader:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    value:
+      description: TODO
+HTTPMethod:
+  description: TODO
+HTTPStatus:
+  description: TODO
+HTTPRequest:
+  description: TODO
+  fields:
+    method:
+      description: TODO
+    path:
+      description: TODO
+    headers:
+      description: TODO
+    content:
+      description: TODO
+HTTPResponse:
+  description: TODO
+  fields:
+    status:
+      description: TODO
+    headers:
+      description: TODO
+    content:
+      description: TODO
+MotisError:
+  description: TODO
+  fields:
+    error_code:
+      description: TODO
+    category:
+      description: TODO
+    reason:
+      description: TODO
+MotisSuccess:
+  description: TODO
+  fields: {}
+MotisNoMessage:
+  description: TODO
+  fields: {}
+ApiDescription:
+  description: TODO
+  fields:
+    methods:
+      description: TODO
+MsgContent:
+  description: TODO
+DestinationType:
+  description: TODO
+Destination:
+  description: TODO
+  fields:
+    type:
+      description: TODO
+    target:
+      description: TODO
+Message:
+  description: TODO
+  fields:
+    destination:
+      description: TODO
+    content:
+      description: TODO
+    id:
+      description: TODO

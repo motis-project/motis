@@ -1,0 +1,1207 @@
+PaxMonTransferType:
+  description: |
+    The type of transfer.
+
+    Possible values:
+
+    - `NONE`: No transfer
+    - `SAME_STATION`: Transfer at the same station (i.e. both trips stop at
+      the same station)
+    - `FOOTPATH`: Transfer using a footpath between two stations
+    - `MERGE`: The trips are merged. It may be required to switch vehicles,
+      but the transfer is always possible.
+    - `THROUGH`: The vehicles continue as another trip, no transfer required.
+PaxMonTransferInfo:
+  description: Information about the transfer between two trips
+  fields:
+    type:
+      description: The type of transfer (if any)
+    duration:
+      description: The required time for the transfer in minutes
+PaxMonCompactJourneyLeg:
+  description: A journey leg is a part of the journey using a single trip.
+  fields:
+    trip:
+      description: The trip used in this journey leg
+    enter_station:
+      description: The station where the passenger group boards the train
+    exit_station:
+      description: The station where the passenger group gets off the train
+    enter_time:
+      description: Scheduled departure time of the trip at the enter station
+    exit_time:
+      description: Scheduled arrival time of the trip at the exit station
+    enter_transfer:
+      description: Information about the transfer from the previous trip to this trip
+PaxMonCompactJourney:
+  description: >
+    A compact journey consists of a list of journey legs, where each
+    leg represents the usage of a trip. Information about the transfers between
+    the trips is also included, but no further information such as current
+    timestamps or intermediate stops.
+  fields:
+    legs:
+      description: An ordered list of journey legs
+PaxMonRerouteReason:
+  description: |
+    The reason for the passenger group reroute.
+
+    Possible values:
+
+    - `Manual`: The route assignment was changed manually using the API.
+    - `BrokenTransfer`: A transfer in the old route was no longer possible
+      because of delays or cancellations.
+    - `MajorDelayExpected`: A new delay forecast resulted in a high expected
+      delay at the destination.
+    - `RevertForecast`: A previous forecast was reverted.
+    - `Simulation`: Caused by a simulation of measures.
+    - `UpdateForecast`: A previous forecast was revised based on new data.
+PaxMonTransferDirection:
+  description: |
+    Boarding or getting off a train.
+
+    Possible values:
+
+    - `Enter`: Boarding the train
+    - `Exit`: Getting off the train
+PaxMonBrokenTransferInfo:
+  description: |
+    Contains information about a broken transfer. Information about the planned
+    transfer can be found in the corresponding compact journey.
+    This object contains additional information such as the current event times
+    at the time the problem was detected and more details about why the
+    transfer was not possible.
+  fields:
+    leg_index:
+      description: The affected compact journey leg index (index 0 is the first leg)
+    direction:
+      description: |
+        Possible values:
+
+        - `Enter`: Boarding the train not possible (because of delays or
+          a cancellation of the departure event)
+        - `Exit`: Getting of the train not possible (because of a cancellation
+          of the arrival event)
+    current_arrival_time:
+      description: The current timestamp of the arrival event (at the time this log
+        entry was created)
+    current_departure_time:
+      description: The current timestamp of the departure event (at the time this log
+        entry was created)
+    required_transfer_time:
+      description: The required transfer time in minutes
+    arrival_canceled:
+      description: Whether the arrival event was cancelled
+    departure_canceled:
+      description: Whether the departure event was cancelled
+PaxMonRerouteLogRoute:
+  description: Information about the probability change of a route
+  fields:
+    index:
+      description: Route index
+    previous_probability:
+      description: Probability before the reroute
+    new_probability:
+      description: Probability after the reroute
+PaxMonRerouteLogEntry:
+  description: Information about a reroute event
+  fields:
+    system_time:
+      description: >
+        The schedule system time at the time of the reroute (i.e. the
+        timestamp of the last real-time update)
+    reroute_time:
+      description: The current time reported by the operating system at the time of
+        the reroute.
+    reason:
+      description: The reason for the reroute
+    broken_transfer:
+      description: Information about the affected transfer - Optional (contains either
+        0 or 1 element)
+    old_route:
+      description: Index and probabilities of the old route
+    new_routes:
+      description: Indices and probabilities of the new routes
+PaxMonDataSource:
+  description: |
+    Passenger group ID based on the input data.
+
+    There may be exactly one group per external ID. Typically, `primary_ref`
+    is set to the ID used in the external source and `secondary_ref` is used
+    as a counter if more than one paxmon passenger group is created for the
+    external group (e.g. because the external group is split into multiple
+    smaller groups).
+  fields:
+    primary_ref:
+      description: ID used in the input data
+    secondary_ref:
+      description: Used to differentiate groups split from larger input groups
+PaxMonGroupRoute:
+  description: TODO
+  fields:
+    index:
+      description: TODO
+    journey:
+      description: TODO
+    probability:
+      description: TODO
+    planned_arrival_time:
+      description: TODO
+    estimated_delay:
+      description: TODO
+    source_flags:
+      description: TODO
+    planned:
+      description: TODO
+    broken:
+      description: TODO
+    disabled:
+      description: TODO
+PaxMonGroup:
+  description: TODO
+  fields:
+    id:
+      description: Internal ID of the group, automatically generated by MOTIS
+    source:
+      description: External ID of the group
+    passenger_count:
+      description: The number of passengers in the group
+    routes:
+      description: >
+        Each group has a list of possible group routes. At least one route
+        is always present (the originally planned route). Each route has a
+        probability, and the sum of probabilities over all the routes should be
+        ~100%.
+    reroute_log:
+      description: Records information about all changes to the group routes.
+PaxMonGroupWithRoute:
+  description: TODO
+  fields:
+    group_id:
+      description: The internal passenger group ID
+    source:
+      description: The external passenger group ID
+    passenger_count:
+      description: The number of passengers in the group
+    route:
+      description: The route
+PaxMonGroupWithRouteId:
+  description: TODO
+  fields:
+    g:
+      description: The internal passenger group ID
+    r:
+      description: The route index
+PaxMonGroupRouteBaseInfo:
+  description: TODO
+  fields:
+    g:
+      description: The internal passenger group ID
+    r:
+      description: The route index
+    n:
+      description: The number of passengers in the group
+    p:
+      description: The probability of the route
+PaxMonGroupRouteUpdateInfo:
+  description: TODO
+  fields:
+    g:
+      description: The internal passenger group ID
+    r:
+      description: The route index
+    n:
+      description: The number of passengers in the group
+    p:
+      description: The new probability of the route
+    pp:
+      description: The previous probability of the route
+PaxMonAtStation:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    schedule_arrival_time:
+      description: TODO
+    current_arrival_time:
+      description: TODO
+    first_station:
+      description: TODO
+PaxMonInTrip:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    next_station:
+      description: TODO
+    schedule_arrival_time:
+      description: TODO
+    current_arrival_time:
+      description: TODO
+PaxMonLocalization:
+  description: TODO
+PaxMonLocalizationWrapper:
+  description: TODO
+  fields:
+    localization:
+      description: TODO
+PaxMonReachabilityStatus:
+  description: TODO
+PaxMonReachability:
+  description: TODO
+  fields:
+    status:
+      description: TODO
+    broken_transfer:
+      description: TODO
+PaxMonEventType:
+  description: TODO
+PaxMonEvent:
+  description: TODO
+  fields:
+    type:
+      description: TODO
+    group_route:
+      description: TODO
+    localization:
+      description: TODO
+    reachability:
+      description: TODO
+    expected_arrival_time:
+      description: TODO
+PaxMonUpdate:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    events:
+      description: TODO
+PaxMonAddGroupsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    groups:
+      description: TODO
+PaxMonAddGroupsResponse:
+  description: TODO
+  fields:
+    ids:
+      description: TODO
+PaxMonRemoveGroupsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    ids:
+      description: TODO
+PaxMonFindTripsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    train_nr:
+      description: TODO
+    only_trips_with_paxmon_data:
+      description: TODO
+    filter_class:
+      description: TODO
+    max_class:
+      description: TODO
+PaxMonTripInfo:
+  description: TODO
+  fields:
+    tsi:
+      description: TODO
+    has_paxmon_data:
+      description: TODO
+    all_edges_have_capacity_info:
+      description: TODO
+    has_passengers:
+      description: TODO
+PaxMonFindTripsResponse:
+  description: TODO
+  fields:
+    trips:
+      description: TODO
+PaxMonGetGroupsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    ids:
+      description: TODO
+    sources:
+      description: TODO
+    include_reroute_log:
+      description: TODO
+PaxMonGetGroupsResponse:
+  description: TODO
+  fields:
+    groups:
+      description: TODO
+PaxMonStatusRequest:
+  description: TODO
+  fields:
+    universe:
+      description: The ID of the universe.
+PaxMonStatusResponse:
+  description: TODO
+  fields:
+    system_time:
+      description: >
+        The current system time as a unix timestamp. This is the current
+        time in the universe and is usually the timestamp of the last real-time
+        update that was applied to the universe schedule. It is also used as the
+        current time for forecasting.
+    multiverse_id:
+      description: >
+        A number identifying the collection of universes. This is set to a
+        new value each time MOTIS is restarted and can be used to detect server
+        restarts.
+    active_groups:
+      description: >
+        The number of passenger groups currently being tracked in this universe.
+    trip_count:
+      description: The number of trips currently being tracked in this universe.
+PaxMonPdfEntry:
+  description: TODO
+  fields:
+    n:
+      description: The value (usually number of passengers)
+    p:
+      description: The probability of this value (between 0.0 and 1.0)
+PaxMonCdfEntry:
+  description: TODO
+  fields:
+    n:
+      description: TODO
+    p:
+      description: TODO
+PaxMonDistribution:
+  description: Probability distribution
+  fields:
+    min:
+      description: Minimum value
+    max:
+      description: Maximum value
+    q5:
+      description: 5% quantile
+    q50:
+      description: 50% quantile (median)
+    q95:
+      description: 95% quantile
+    pdf:
+      description: |
+        Values of the probability density function.
+
+        This list is sorted in ascending order by `n` (usually the number
+        of passengers).
+PaxMonCapacityType:
+  description: TODO
+PaxMonEdgeLoadInfo:
+  description: >
+    Contains load information for each trip section. Trip sections are
+    also called edges in the API.
+  fields:
+    from:
+      description: Departure station of this section
+    to:
+      description: Arrival station of this section
+    departure_schedule_time:
+      description: Scheduled departure time (unix timestamp)
+    departure_current_time:
+      description: Current (real-time) departure time (unix timestamp)
+    arrival_schedule_time:
+      description: Scheduled arrival time (unix timestamp)
+    arrival_current_time:
+      description: Current (real-time) arrival time (unix timestamp)
+    capacity_type:
+      description: Type of capacity information for this section
+    capacity:
+      description: >
+        Capacity (max. number of passengers) (can only be used if
+        `capacity_type` is `Known`)
+    dist:
+      description: Information about the predicted number of passengers for this section
+    updated:
+      description: For internal use
+    possibly_over_capacity:
+      description: >
+        True if this section may be over capacity, false if the maximum
+        number of passengers predicted is within the capacity limits
+    prob_over_capacity:
+      description: Probability of the number of passengers being over capacity
+    expected_passengers:
+      description: Number of passengers according to planned journeys
+PaxMonTripLoadInfo:
+  description: TODO
+  fields:
+    tsi:
+      description: TODO
+    edges:
+      description: TODO
+PaxMonFilterGroupsSortOrder:
+  description: TODO
+PaxMonFilterGroupsTimeFilter:
+  description: TODO
+PaxMonFilterGroupsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    sort_by:
+      description: TODO
+    max_results:
+      description: TODO
+    skip_first:
+      description: TODO
+    include_reroute_log:
+      description: TODO
+    filter_by_start:
+      description: TODO
+    filter_by_destination:
+      description: TODO
+    filter_by_via:
+      description: TODO
+    filter_by_group_id:
+      description: TODO
+    filter_by_data_source:
+      description: TODO
+    filter_by_train_nr:
+      description: TODO
+    filter_by_time:
+      description: TODO
+    filter_interval:
+      description: TODO
+    filter_by_reroute_reason:
+      description: TODO
+PaxMonGroupWithStats:
+  description: TODO
+  fields:
+    group:
+      description: TODO
+    min_estimated_delay:
+      description: TODO
+    max_estimated_delay:
+      description: TODO
+    expected_estimated_delay:
+      description: TODO
+PaxMonFilterGroupsResponse:
+  description: TODO
+  fields:
+    total_matching_groups:
+      description: TODO
+    total_matching_passengers:
+      description: TODO
+    filtered_groups:
+      description: TODO
+    remaining_groups:
+      description: TODO
+    next_skip:
+      description: TODO
+    groups:
+      description: TODO
+PaxMonFilterTripsSortOrder:
+  description: |
+    How to sort the trips.
+
+    The following options are available:
+
+    - `MostCritical`: Sort by number of passengers and sections over capacity (most critical trip first)
+    - `FirstDeparture`: Sort by scheduled departure time at the first stop (earliest trip first)
+    - `ExpectedPax`: Sort by number of expected passengers (trip with most expected passengers first)
+    - `TrainNr`: Sort by train number (lowest train number first)
+    - `MaxLoad`: Sort by percentage load (trip with highest load first)
+    - `EarliestCritical`: Sort by current time of the first critical section (earliest first)
+    - `MaxPaxRange`: Sort by largest passenger range (trip with largest range first)
+PaxMonFilterTripsTimeFilter:
+  description: |
+    Specifies which timestamps must be in the filter interval.
+
+    The following options are available:
+
+    - `NoFilter`: Ignore the filter interval
+    - `DepartureTime`: The trip id departure (scheduled departure time at the first stop) must be
+      in the filter interval
+    - `DepartureOrArrivalTime`: The trip id departure or arrival (scheduled departure time at the
+      first stop or scheduled arrival time at the last stop) must be in the filter interval
+PaxMonFilterTripsRequest:
+  description: Request a list of trips tracked by paxmon
+  fields:
+    universe:
+      description: Universe ID
+    ignore_past_sections:
+      description: |
+        If set to true, sections in the past (i.e. before the current system
+        time) are ignored by the filters. If all trip sections are in the past,
+        the trip is excluded.
+
+        Note that if `include_edges` is set to true and the trip is included,
+        all sections (even those in the past) are included in the result in any
+        case.
+    include_load_threshold:
+      description: >
+        Only include trips that have at least one section with a load >=
+        this value. Set to 0 to disable the filter. Setting this value to 0.5
+        would only include trips where at least one section has 50% or higher
+        load.
+    critical_load_threshold:
+      description: >
+        Sections with load >= this value are counted as critical sections
+        in the result. Setting this value to 1.0 would count all sections with a
+        load of 100% or higher as critical.
+    crowded_load_threshold:
+      description: >
+        Sections with load >= this value are counted as crowded sections in
+        the result. Setting this value to 0.8 would count all sections with a
+        load of 80% or higher as crowded.
+    include_edges:
+      description: TODO
+    sort_by:
+      description: TODO
+    max_results:
+      description: TODO
+    skip_first:
+      description: TODO
+    filter_by_time:
+      description: TODO
+    filter_interval:
+      description: TODO
+    filter_by_train_nr:
+      description: TODO
+    filter_train_nrs:
+      description: TODO
+    filter_by_service_class:
+      description: TODO
+    filter_service_classes:
+      description: TODO
+PaxMonFilteredTripInfo:
+  description: TODO
+  fields:
+    tsi:
+      description: TODO
+    section_count:
+      description: TODO
+    critical_sections:
+      description: TODO
+    crowded_sections:
+      description: TODO
+    max_excess_pax:
+      description: TODO
+    cumulative_excess_pax:
+      description: TODO
+    max_load:
+      description: TODO
+    max_expected_pax:
+      description: TODO
+    edges:
+      description: TODO
+PaxMonFilterTripsResponse:
+  description: TODO
+  fields:
+    total_matching_trips:
+      description: TODO
+    filtered_trips:
+      description: TODO
+    remaining_trips:
+      description: TODO
+    next_skip:
+      description: TODO
+    total_critical_sections:
+      description: TODO
+    trips:
+      description: TODO
+PaxMonGetTripLoadInfosRequest:
+  description: TODO
+  fields:
+    universe:
+      description: Paxmon universe ID
+    trips:
+      description: List of trips for which load information should be returned
+PaxMonGetTripLoadInfosResponse:
+  description: TODO
+  fields:
+    load_infos:
+      description: >
+        Load information for each requested trip, in the same order as in
+        the request (i.e. thefirst entry in this array is the load information
+        for the first trip in the request and so on).
+PaxMonForkUniverseRequest:
+  description: TODO
+  fields:
+    universe:
+      description: >
+        ID of the base universe. This is the universe that is copied.
+        Specify 0 to copy the main universe or a forked universe to create a
+        fork of that universe. The base universe can be destroyed before
+        universes forked from it are destroyed, i.e. forked universes don't
+        depend on their base universe once forked (note that the main universe
+        can't be destroyed).
+    fork_schedule:
+      description: |
+        If set to true, the schedule is frozen and copied as well.
+
+        This is required for the simulation of real-time updates or if MOTIS
+        is run in live mode where real-time updates may be applied before the
+        universe is destroyed.
+        If set to false, reuse the schedule of the base universe.
+
+        Normally, this should always be set to true.
+    ttl:
+      description: |
+        Time to live of the new universe, in seconds.
+
+        The universe is automatically destroyed when it is not accessed for at
+        least ttl seconds. Each universe access (including keep alive requests)
+        resets the remaining time to live.
+
+        If set to 0 the universe never expires and must be destroyed manually.
+
+        The server limits the allowed range of the ttl value based on its
+        configuration. There is an upper limit and unlimited universes
+        (ttl = 0) may be disabled. The actual time to live for the newly
+        created universe is returned in the API response.
+  examples:
+    - universe: 0
+      fork_schedule: true
+      ttl: 120
+PaxMonForkUniverseResponse:
+  description: TODO
+  fields:
+    universe:
+      description: >
+        ID of the new universe. Use this for further paxmon and paxforecast
+        API calls. Remember to destroy the universe once it is no longer needed.
+    schedule:
+      description: >
+        Schedule ID of the new universe. Use this for API calls to other
+        modules such as `/routing`. Note that only some API calls accept a
+        schedule parameter (most API calls only support the main
+        universe/schedule).
+    ttl:
+      description: >
+        The time to live assigned by the server, in seconds. Can be 0 if
+        the universe never expires.
+  examples:
+    - universe: 1
+      schedule: 5
+      ttl: 120
+PaxMonDestroyUniverseRequest:
+  description: TODO
+  fields:
+    universe:
+      description: >
+        ID of the universe to destroy. Note that the main universe (ID 0)
+        can't be deleted.
+  examples:
+    - universe: 1
+PaxMonGroupFilter:
+  description: TODO
+PaxMonGroupByStation:
+  description: TODO
+PaxMonGetGroupsInTripRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    trip:
+      description: TODO
+    filter:
+      description: TODO
+    group_by_station:
+      description: TODO
+    group_by_other_trip:
+      description: TODO
+    include_group_infos:
+      description: TODO
+PaxMonCombinedGroupRoutes:
+  description: TODO
+  fields:
+    group_routes:
+      description: TODO
+    dist:
+      description: TODO
+PaxMonCombinedGroupRouteIds:
+  description: TODO
+  fields:
+    group_routes:
+      description: TODO
+    dist:
+      description: TODO
+GroupedPassengerGroups:
+  description: TODO
+  fields:
+    grouped_by_station:
+      description: TODO
+    grouped_by_trip:
+      description: TODO
+    entry_station:
+      description: TODO
+    entry_time:
+      description: TODO
+    info:
+      description: TODO
+GroupsInTripSection:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    departure_schedule_time:
+      description: TODO
+    departure_current_time:
+      description: TODO
+    arrival_schedule_time:
+      description: TODO
+    arrival_current_time:
+      description: TODO
+    groups:
+      description: TODO
+PaxMonGetGroupsInTripResponse:
+  description: TODO
+  fields:
+    sections:
+      description: TODO
+PaxMonUniverseForked:
+  description: TODO
+  fields:
+    base_universe:
+      description: TODO
+    new_universe:
+      description: TODO
+    new_schedule:
+      description: TODO
+    schedule_forked:
+      description: TODO
+PaxMonUniverseDestroyed:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+PaxMonGetInterchangesRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    station:
+      description: TODO
+    start_time:
+      description: TODO
+    end_time:
+      description: TODO
+    max_count:
+      description: TODO
+    include_meta_stations:
+      description: TODO
+    include_group_infos:
+      description: TODO
+    include_broken_interchanges:
+      description: TODO
+    include_disabled_group_routes:
+      description: TODO
+PaxMonTripStopInfo:
+  description: TODO
+  fields:
+    schedule_time:
+      description: TODO
+    current_time:
+      description: TODO
+    trips:
+      description: TODO
+    station:
+      description: TODO
+PaxMonInterchangeInfo:
+  description: TODO
+  fields:
+    arrival:
+      description: TODO
+    departure:
+      description: TODO
+    groups:
+      description: TODO
+    transfer_time:
+      description: TODO
+    valid:
+      description: TODO
+    disabled:
+      description: TODO
+    broken:
+      description: TODO
+PaxMonGetInterchangesResponse:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    interchanges:
+      description: TODO
+    max_count_reached:
+      description: TODO
+PaxMonGetAddressableGroupsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    trip:
+      description: TODO
+PaxMonAddressableGroupsByFeeder:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    arrival_station:
+      description: TODO
+    arrival_schedule_time:
+      description: TODO
+    arrival_current_time:
+      description: TODO
+    cgs:
+      description: TODO
+PaxMonAddressableGroupsByEntry:
+  description: TODO
+  fields:
+    entry_station:
+      description: TODO
+    departure_schedule_time:
+      description: TODO
+    cgs:
+      description: TODO
+    by_feeder:
+      description: TODO
+    starting_here:
+      description: TODO
+PaxMonAddressableGroupsByInterchange:
+  description: TODO
+  fields:
+    future_interchange:
+      description: TODO
+    cgs:
+      description: TODO
+    by_entry:
+      description: TODO
+PaxMonAddressableGroupsSection:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    departure_schedule_time:
+      description: TODO
+    departure_current_time:
+      description: TODO
+    arrival_schedule_time:
+      description: TODO
+    arrival_current_time:
+      description: TODO
+    by_future_interchange:
+      description: TODO
+PaxMonGetAddressableGroupsResponse:
+  description: TODO
+  fields:
+    sections:
+      description: TODO
+    group_routes:
+      description: TODO
+PaxMonKeepAliveRequest:
+  description: TODO
+  fields:
+    multiverse_id:
+      description: TODO
+    universes:
+      description: TODO
+PaxMonUniverseKeepAliveInfo:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    schedule:
+      description: TODO
+    expires_in:
+      description: TODO
+PaxMonKeepAliveResponse:
+  description: TODO
+  fields:
+    multiverse_id:
+      description: TODO
+    alive:
+      description: TODO
+    expired:
+      description: TODO
+PaxMonRerouteGroup:
+  description: TODO
+  fields:
+    group:
+      description: TODO
+    old_route_index:
+      description: TODO
+    new_routes:
+      description: TODO
+    reason:
+      description: TODO
+    broken_transfer:
+      description: TODO
+    override_probabilities:
+      description: TODO
+PaxMonRerouteGroupsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    reroutes:
+      description: TODO
+PaxMonRerouteRouteInfo:
+  description: TODO
+  fields:
+    i:
+      description: TODO
+    p:
+      description: TODO
+    pp:
+      description: TODO
+PaxMonRerouteGroupResult:
+  description: TODO
+  fields:
+    group:
+      description: TODO
+    old_route_index:
+      description: TODO
+    new_routes:
+      description: TODO
+PaxMonRerouteGroupsResponse:
+  description: TODO
+  fields:
+    reroutes:
+      description: TODO
+PaxMonGroupStatisticsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    count_passengers:
+      description: TODO
+PaxMonHistogram:
+  description: TODO
+  fields:
+    min_value:
+      description: TODO
+    max_value:
+      description: TODO
+    avg_value:
+      description: TODO
+    median_value:
+      description: TODO
+    max_count:
+      description: TODO
+    total_count:
+      description: TODO
+    counts:
+      description: TODO
+PaxMonGroupStatisticsResponse:
+  description: TODO
+  fields:
+    group_count:
+      description: TODO
+    total_group_route_count:
+      description: TODO
+    active_group_route_count:
+      description: TODO
+    total_pax_count:
+      description: TODO
+    min_estimated_delay:
+      description: TODO
+    max_estimated_delay:
+      description: TODO
+    expected_estimated_delay:
+      description: TODO
+    routes_per_group:
+      description: TODO
+    active_routes_per_group:
+      description: TODO
+    reroutes_per_group:
+      description: TODO
+    group_route_probabilities:
+      description: TODO
+PaxMonDebugGraphRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    node_indices:
+      description: TODO
+    group_routes:
+      description: TODO
+    trip_ids:
+      description: TODO
+    filter_groups:
+      description: TODO
+    include_full_trips_from_group_routes:
+      description: TODO
+    include_canceled_trip_nodes:
+      description: TODO
+PaxMonDebugNodeLogEntry:
+  description: TODO
+  fields:
+    system_time:
+      description: TODO
+    node_time:
+      description: TODO
+    valid:
+      description: TODO
+PaxMonDebugNode:
+  description: TODO
+  fields:
+    index:
+      description: TODO
+    schedule_time:
+      description: TODO
+    current_time:
+      description: TODO
+    arrival:
+      description: TODO
+    valid:
+      description: TODO
+    station:
+      description: TODO
+    log:
+      description: TODO
+PaxMonDebugEdgeType:
+  description: TODO
+PaxMonDebugEdgeLogEntry:
+  description: TODO
+  fields:
+    system_time:
+      description: TODO
+    required_transfer_time:
+      description: TODO
+    available_transfer_time:
+      description: TODO
+    edge_type:
+      description: TODO
+    broken:
+      description: TODO
+PaxMonDebugPaxLogAction:
+  description: TODO
+PaxMonDebugPaxLogReason:
+  description: TODO
+PaxMonDebugPaxLogEntry:
+  description: TODO
+  fields:
+    system_time:
+      description: TODO
+    action:
+      description: TODO
+    reason:
+      description: TODO
+    group_route:
+      description: TODO
+PaxMonDebugEdge:
+  description: TODO
+  fields:
+    from_node:
+      description: TODO
+    to_node:
+      description: TODO
+    out_edge_index:
+      description: TODO
+    type:
+      description: TODO
+    broken:
+      description: TODO
+    valid:
+      description: TODO
+    transfer_time:
+      description: TODO
+    expected_load:
+      description: TODO
+    group_routes:
+      description: TODO
+    trip_indices:
+      description: TODO
+    edge_log:
+      description: TODO
+    pax_log:
+      description: TODO
+PaxMonDebugGraphResponse:
+  description: TODO
+  fields:
+    graph_log_enabled:
+      description: TODO
+    nodes:
+      description: TODO
+    edges:
+      description: TODO
+    trips:
+      description: TODO
+PaxMonUniverseInfo:
+  description: TODO
+  fields:
+    universe:
+      description: The universe ID.
+    schedule:
+      description: The ID of the schedule used by the universe.
+    ttl:
+      description: >
+        The time to live of the universe in seconds. If 0, the universe is
+        never destroyed automatically. Otherwise, the universe is destroyed
+        automatically some time after it is not used for at least ttl seconds.
+    expires_in:
+      description: >
+        The remaining time to live of this universe in seconds. Can be
+        negative if the universe is already expired but has not yet been cleaned
+        up. Set to 0 if the universe doesn't expire (ttl = 0).
+PaxMonGetUniversesResponse:
+  description: TODO
+  fields:
+    multiverse_id:
+      description: >
+        The multiverse ID. This is set to a new value every time MOTIS is
+        restarted.
+    universes:
+      description: A list of all currently existing paxmon universes.
+PaxMonCriticalTripInfo:
+  description: TODO
+  fields:
+    critical_sections:
+      description: TODO
+    max_excess_pax:
+      description: TODO
+    cumulative_excess_pax:
+      description: TODO
+PaxMonUpdatedTrip:
+  description: TODO
+  fields:
+    tsi:
+      description: TODO
+    rerouted:
+      description: TODO
+    newly_critical_sections:
+      description: TODO
+    no_longer_critical_sections:
+      description: TODO
+    max_pax_increase:
+      description: TODO
+    max_pax_decrease:
+      description: TODO
+    critical_info_before:
+      description: TODO
+    critical_info_after:
+      description: TODO
+    updated_group_routes:
+      description: TODO
+    before_edges:
+      description: TODO
+    after_edges:
+      description: TODO
+PaxMonTrackedUpdates:
+  description: TODO
+  fields:
+    updated_group_route_count:
+      description: TODO
+    updated_trip_count:
+      description: TODO
+    updated_trips:
+      description: TODO
+    updated_group_routes:
+      description: TODO

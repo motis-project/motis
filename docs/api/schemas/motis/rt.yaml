@@ -1,0 +1,105 @@
+RtGraphUpdated:
+  description: TODO
+  fields:
+    schedule:
+      description: TODO
+RtEventInfo:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    schedule_time:
+      description: TODO
+    event_type:
+      description: TODO
+UpdatedRtEventInfo:
+  description: TODO
+  fields:
+    base:
+      description: TODO
+    updated_time:
+      description: TODO
+    reason:
+      description: TODO
+RtDelayUpdate:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    events:
+      description: TODO
+    trip_separated:
+      description: TODO
+RtRerouteUpdate:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    old_route:
+      description: TODO
+    new_route:
+      description: TODO
+RtTrackUpdate:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    event:
+      description: TODO
+    updated_track:
+      description: TODO
+RtFreeTextUpdate:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    event:
+      description: TODO
+    free_text:
+      description: TODO
+RtStationAdded:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    name:
+      description: TODO
+RtExpandedTripUpdateType:
+  description: TODO
+RtExpandedTripIndex:
+  description: TODO
+  fields:
+    route_index:
+      description: TODO
+    index_in_route:
+      description: TODO
+RtExpandedTripUpdate:
+  description: TODO
+  fields:
+    trip_index:
+      description: TODO
+    update_type:
+      description: TODO
+    old_expanded_route:
+      description: TODO
+    new_expanded_route:
+      description: TODO
+Content:
+  description: TODO
+RtUpdate:
+  description: TODO
+  fields:
+    content:
+      description: TODO
+RtUpdates:
+  description: TODO
+  fields:
+    updates:
+      description: TODO
+    schedule:
+      description: TODO
+RtWriteGraphRequest:
+  description: TODO
+  fields:
+    path:
+      description: TODO

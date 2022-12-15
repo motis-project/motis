@@ -1,0 +1,99 @@
+GBFSRoutingRequest:
+  description: TODO
+  fields:
+    dir:
+      description: TODO
+    x:
+      description: TODO
+    direct:
+      description: TODO
+    provider:
+      description: TODO
+    max_foot_duration:
+      description: TODO
+    max_bike_duration:
+      description: TODO
+FreeBikeRoute:
+  description: TODO
+  fields:
+    bike_id:
+      description: TODO
+    b:
+      description: TODO
+    walk_duration:
+      description: TODO
+    bike_duration:
+      description: TODO
+GBFSStation:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    name:
+      description: TODO
+    pos:
+      description: TODO
+StationBikeRoute:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    first_walk_duration:
+      description: TODO
+    bike_duration:
+      description: TODO
+    second_walk_duration:
+      description: TODO
+BikeRoute:
+  description: TODO
+Direct:
+  description: TODO
+  fields:
+    pos:
+      description: TODO
+P:
+  description: TODO
+RouteInfo:
+  description: TODO
+  fields:
+    vehicle_type:
+      description: TODO
+    p:
+      description: TODO
+    route:
+      description: TODO
+    total_duration:
+      description: TODO
+GBFSRoutingResponse:
+  description: TODO
+  fields:
+    dir:
+      description: TODO
+    routes:
+      description: TODO
+GBFSProvider:
+  description: TODO
+  fields:
+    tag:
+      description: TODO
+    name:
+      description: TODO
+    name_short:
+      description: TODO
+    op:
+      description: TODO
+    url:
+      description: TODO
+    purchase_url:
+      description: TODO
+    mail:
+      description: TODO
+    vehicle_type:
+      description: TODO
+GBFSProvidersResponse:
+  description: TODO
+  fields:
+    providers:
+      description: TODO

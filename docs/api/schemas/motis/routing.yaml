@@ -1,0 +1,128 @@
+InputStation:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    name:
+      description: TODO
+MumoEdge:
+  description: TODO
+  fields:
+    from_station_id:
+      description: TODO
+    to_station_id:
+      description: TODO
+    duration:
+      description: TODO
+    price:
+      description: TODO
+    accessibility:
+      description: TODO
+    mumo_id:
+      description: TODO
+PeriodicMumoEdge:
+  description: TODO
+  fields:
+    edge:
+      description: TODO
+    interval:
+      description: TODO
+TimeDependentMumoEdge:
+  description: TODO
+  fields:
+    edge:
+      description: TODO
+    interval:
+      description: TODO
+HotelEdge:
+  description: TODO
+  fields:
+    edge:
+      description: TODO
+    earliest_checkout_time:
+      description: TODO
+    min_stay_duration:
+      description: TODO
+AdditionalEdge:
+  description: TODO
+AdditionalEdgeWrapper:
+  description: TODO
+  fields:
+    additional_edge:
+      description: TODO
+OntripTrainStart:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    station:
+      description: TODO
+    arrival_time:
+      description: TODO
+OntripStationStart:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    departure_time:
+      description: TODO
+PretripStart:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    interval:
+      description: TODO
+    min_connection_count:
+      description: TODO
+    extend_interval_earlier:
+      description: TODO
+    extend_interval_later:
+      description: TODO
+Start:
+  description: TODO
+Via:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    stay_duration:
+      description: TODO
+SearchType:
+  description: TODO
+RoutingRequest:
+  description: TODO
+  fields:
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    search_type:
+      description: TODO
+    search_dir:
+      description: TODO
+    via:
+      description: TODO
+    additional_edges:
+      description: TODO
+    use_start_metas:
+      description: TODO
+    use_dest_metas:
+      description: TODO
+    use_start_footpaths:
+      description: TODO
+    schedule:
+      description: TODO
+RoutingResponse:
+  description: TODO
+  fields:
+    statistics:
+      description: TODO
+    connections:
+      description: TODO
+    interval_begin:
+      description: TODO
+    interval_end:
+      description: TODO
+    direct_connections:
+      description: TODO

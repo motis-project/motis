@@ -1,0 +1,89 @@
+InputPosition:
+  description: TODO
+  fields:
+    lat:
+      description: TODO
+    lng:
+      description: TODO
+IntermodalOntripStart:
+  description: TODO
+  fields:
+    position:
+      description: TODO
+    departure_time:
+      description: TODO
+IntermodalPretripStart:
+  description: TODO
+  fields:
+    position:
+      description: TODO
+    interval:
+      description: TODO
+    min_connection_count:
+      description: TODO
+    extend_interval_earlier:
+      description: TODO
+    extend_interval_later:
+      description: TODO
+IntermodalStart:
+  description: TODO
+IntermodalDestination:
+  description: TODO
+Foot:
+  description: TODO
+  fields:
+    max_duration:
+      description: TODO
+Bike:
+  description: TODO
+  fields:
+    max_duration:
+      description: TODO
+Car:
+  description: TODO
+  fields:
+    max_duration:
+      description: TODO
+FootPPR:
+  description: TODO
+  fields:
+    search_options:
+      description: TODO
+CarParking:
+  description: TODO
+  fields:
+    max_car_duration:
+      description: TODO
+    ppr_search_options:
+      description: TODO
+GBFS:
+  description: TODO
+  fields:
+    provider:
+      description: TODO
+    max_walk_duration:
+      description: TODO
+    max_vehicle_duration:
+      description: TODO
+Mode:
+  description: TODO
+ModeWrapper:
+  description: TODO
+  fields:
+    mode:
+      description: TODO
+IntermodalRoutingRequest:
+  description: TODO
+  fields:
+    start:
+      description: TODO
+    start_modes:
+      description: TODO
+    destination:
+      description: TODO
+    destination_modes:
+      description: TODO
+    search_type:
+      description: TODO
+    search_dir:
+      description: TODO
