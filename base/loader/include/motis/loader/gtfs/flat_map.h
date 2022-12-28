@@ -14,6 +14,9 @@ struct flat_map {
   using entry_t = std::pair<index_t, T>;
   using iterator = typename std::vector<entry_t>::iterator;
   using const_iterator = typename std::vector<entry_t>::const_iterator;
+  using reverse_iterator = typename std::vector<entry_t>::reverse_iterator;
+  using const_reverse_iterator =
+      typename std::vector<entry_t>::const_reverse_iterator;
 
   struct cmp {
     bool operator()(entry_t const& lhs, entry_t const& rhs) {
@@ -57,6 +60,10 @@ struct flat_map {
   iterator end() { return elements_.end(); }
   const_iterator begin() const { return elements_.begin(); }
   const_iterator end() const { return elements_.end(); }
+  const_reverse_iterator rbegin() const { return elements_.rcbegin(); }
+  const_reverse_iterator rend() const { return elements_.rcend(); }
+  reverse_iterator rbegin() { return elements_.rbegin(); }
+  reverse_iterator rend() { return elements_.rend(); }
   friend const_iterator begin(flat_map const& m) { return m.begin(); }
   friend const_iterator end(flat_map const& m) { return m.end(); }
   friend iterator begin(flat_map& m) { return m.begin(); }
