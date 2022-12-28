@@ -189,6 +189,9 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, traffic_days);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_flixtrain_transfers(trips, transfers);
+  for (auto& [_, trip] : trips) {
+    trip->interpolate();
+  }
 
   std::map<category, fbs64::Offset<Category>> fbs_categories;
   std::map<agency const*, fbs64::Offset<Provider>> fbs_providers;

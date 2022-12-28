@@ -16,6 +16,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/event_type.h"
 #include "motis/core/schedule/time.h"
 #include "motis/loader/util.h"
 
@@ -112,6 +113,64 @@ trip::trip(route const* route, bitfield const* service, block* blk,
       headsign_(std::move(headsign)),
       short_name_(std::move(short_name)),
       line_(line) {}
+
+void trip::interpolate() {
+  struct bound {
+    bound(int t) : min_{t}, max_{t} {}
+    int interpolate(unsigned const idx) const {
+      auto const p =
+          static_cast<double>(idx - min_idx_) / (max_idx_ - min_idx_);
+      return static_cast<int>(min_ + std::round((max_ - min_) * p));
+    }
+    int min_, max_;
+    int min_idx_, max_idx_;
+  };
+  auto bounds = std::vector<bound>{};
+  bounds.reserve(stop_times_.size());
+  for (auto const& [i, x] : utl::enumerate(stop_times_)) {
+    bounds.emplace_back(bound{x.second.arr_.time_});
+    bounds.emplace_back(bound{x.second.dep_.time_});
+  }
+
+  auto max = 0;
+  auto max_idx = 0U;
+  utl::verify(max != kInterpolate, "last arrival cannot be interpolated");
+  for (auto it = bounds.rbegin(); it != bounds.rend(); ++it) {
+    if (it->max_ == kInterpolate) {
+      it->max_ = max;
+      it->max_idx_ = max_idx;
+    } else {
+      max = it->max_;
+      max_idx = static_cast<unsigned>(&(*it) - &bounds.front()) / 2U;
+    }
+  }
+
+  auto min = 0;
+  auto min_idx = 0U;
+  utl::verify(min != kInterpolate, "first arrival cannot be interpolated");
+  for (auto it = bounds.begin(); it != bounds.end(); ++it) {
+    if (it->min_ == kInterpolate) {
+      it->min_ = min;
+      it->min_idx_ = min_idx;
+    } else {
+      min = it->max_;
+      min_idx = static_cast<unsigned>(&(*it) - &bounds.front()) / 2U;
+    }
+  }
+
+  for (auto const& [idx, entry] : utl::enumerate(stop_times_)) {
+    auto& [_, stop_time] = entry;
+    auto const& arr = bounds[2 * idx];
+    auto const& dep = bounds[2 * idx + 1];
+
+    if (stop_time.arr_.time_ == kInterpolate) {
+      stop_time.arr_.time_ = arr.interpolate(idx);
+    }
+    if (stop_time.dep_.time_ == kInterpolate) {
+      stop_time.dep_.time_ = dep.interpolate(idx);
+    }
+  }
+}
 
 trip::stop_seq trip::stops() const {
   return utl::to_vec(

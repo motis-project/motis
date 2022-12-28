@@ -24,13 +24,15 @@ struct block {
 
 using block_map = std::map<std::string, std::unique_ptr<block>>;
 
+constexpr auto const kInterpolate = -1;
+
 struct stop_time {
   stop_time();
   stop_time(stop*, std::string headsign, int arr_time, bool out_allowed,
             int dep_time, bool in_allowed);
 
   struct ev {
-    int time_{0};
+    int time_{kInterpolate};
     bool in_out_allowed_{false};
   };
 
@@ -51,6 +53,8 @@ struct trip {
 
   trip(route const*, bitfield const*, block*, std::string id,
        std::string headsign, std::string short_name, unsigned line);
+
+  void interpolate();
 
   stop_seq stops() const;
   stop_seq_numbers seq_numbers() const;
