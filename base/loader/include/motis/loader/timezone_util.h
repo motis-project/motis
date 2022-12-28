@@ -50,7 +50,7 @@ time get_adjusted_event_time(tz_cache&, std::time_t schedule_begin, int day_idx,
                              char const* stop_tz = nullptr,
                              char const* provider_tz = nullptr);
 
-std::pair<time, time> get_event_times(
+std::tuple<time, time, std::optional<std::string>> get_event_times(
     tz_cache&, std::time_t schedule_begin, int day_idx,  //
     motis::time prev_arr_motis_time, int curr_dep_local_time,
     int curr_arr_local_time, timezone const* tz_dep, char const* dep_stop_tz,
