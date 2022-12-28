@@ -127,7 +127,7 @@ time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
 std::pair<time, time> get_event_times(tz_cache& cache,
                                       std::time_t const schedule_begin,
                                       int day_idx,  //
-                                      int prev_arr_motis_time,
+                                      motis::time prev_arr_motis_time,
                                       int curr_dep_local_time,
                                       int curr_arr_local_time,
                                       timezone const* tz_dep,  //
@@ -156,7 +156,10 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 1]");
+    if (prev_adjusted) {
+      LOG(warn) << "double adjustment of time offset: previous arrival time > "
+                   "departure time or departure time invalid";
+    }
   }
 
   if (arr_motis_time == INVALID_TIME) {
@@ -164,7 +167,9 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 2]");
+    if (prev_adjusted) {
+      LOG(warn) << "double adjustment of time offset: arrival time invalid";
+    }
   }
 
   if (dep_motis_time == INVALID_TIME) {
@@ -172,7 +177,9 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_dep_local_time + total_offset, tz_dep,
                                     dep_stop_tz, dep_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 3]");
+    if (prev_adjusted) {
+      LOG(warn) << "double adjustment of time offset: departure time invalid";
+    }
   }
 
   if (arr_motis_time < dep_motis_time) {
@@ -180,8 +187,14 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 4]");
+    if (prev_adjusted) {
+      LOG(warn)
+          << "double adjustment of time offset: arrival time < departure time";
+    }
   }
+
+  dep_motis_time = std::max(dep_motis_time, prev_arr_motis_time);
+  arr_motis_time = std::max(arr_motis_time, dep_motis_time);
 
   return std::make_pair(dep_motis_time, arr_motis_time);
 }
