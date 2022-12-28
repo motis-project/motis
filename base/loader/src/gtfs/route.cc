@@ -7,6 +7,7 @@
 #include "utl/parser/csv.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/loader/classes.h"
 #include "motis/loader/util.h"
 
 using namespace utl;
@@ -17,7 +18,8 @@ namespace motis::loader::gtfs {
 // Source: https://groups.google.com/d/msg/gtfs-changes/keT5rTPS7Y0/71uMz2l6ke0J
 std::map<unsigned, category> const route::s_types =
     std::map<unsigned, category>{
-        {0, category{"Str", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
+        {0, category{"Tram", category::output::PRINT_CATEGORY_AND_ID |
+                                 category::BASIC_ROUTE_TYPE}},
         {1, category{"U", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
         {2, category{"DPN", category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
         {3, category{"Bus", category::output::PRINT_CATEGORY_AND_ID |
@@ -30,6 +32,8 @@ std::map<unsigned, category> const route::s_types =
                      category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
         {7, category{"Funicular",
                      category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
+        {11, category{"Trolleybus",
+                      category::PRINT_ID | category::BASIC_ROUTE_TYPE}},
         {100, category{"Railway Service"}},
         {101, category{/* "Long Distance Trains" hack for DELFI */ "ICE",
                        category::ROUTE_NAME_SHORT_INSTEAD_OF_CATEGORY |
@@ -165,6 +169,16 @@ std::map<unsigned, category> const route::s_types =
         {1605, category{"All Self-Drive Vehicles"}},
         {1700, category{"Car train"}}};
 
+std::map<service_class, int> const route::s_clasz =
+    std::map<service_class, int>{
+        {service_class::AIR, 1100}, {service_class::ICE, 101},
+        {service_class::IC, 102},   {service_class::COACH, 200},
+        {service_class::N, 105},    {service_class::RE, 103},
+        {service_class::RB, 106},   {service_class::S, 500},
+        {service_class::U, 600},    {service_class::STR, 5},
+        {service_class::BUS, 3},    {service_class::SHIP, 1200},
+        {service_class::OTHER, 7}};
+
 std::optional<category> route::get_category() const {
   if (auto const it = s_types.find(type_); it != end(s_types)) {
     return it->second;
@@ -173,7 +187,7 @@ std::optional<category> route::get_category() const {
   }
 }
 
-using gtfs_route = std::tuple<cstr, cstr, cstr, cstr, cstr, int>;
+using gtfs_route = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
 enum {
   route_id,
   agency_id,
@@ -188,6 +202,19 @@ static const column_mapping<gtfs_route> columns = {
 
 route_map read_routes(loaded_file file, agency_map const& agencies) {
   motis::logging::scoped_timer timer{"read routes"};
+
+  auto const get_type = [](cstr s) {
+    if (!s.empty() && std::isdigit(s[0]) != 0) {
+      return utl::parse<int>(s);
+    } else {
+      auto const& classes = class_mapping();
+      if (auto it = classes.find(s.view()); it != end(classes)) {
+        return route::s_clasz.at(it->second);
+      } else {
+        return route::s_clasz.at(service_class::OTHER);
+      }
+    }
+  };
 
   route_map routes;
   auto const entries = read<gtfs_route>(file.content(), columns);
@@ -204,7 +231,7 @@ route_map read_routes(loaded_file file, agency_map const& agencies) {
         std::make_unique<route>(
             agency_ptr, get<route_id>(r).to_str(),
             get<route_short_name>(r).to_str(), get<route_long_name>(r).to_str(),
-            get<route_desc>(r).to_str(), get<route_type>(r)));
+            get<route_desc>(r).to_str(), get_type(get<route_type>(r))));
   }
   return routes;
 }
