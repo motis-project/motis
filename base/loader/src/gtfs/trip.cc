@@ -116,14 +116,15 @@ trip::trip(route const* route, bitfield const* service, block* blk,
 
 void trip::interpolate() {
   struct bound {
-    bound(int t) : min_{t}, max_{t} {}
+    explicit bound(int t) : min_{t}, max_{t} {}
     int interpolate(unsigned const idx) const {
       auto const p =
           static_cast<double>(idx - min_idx_) / (max_idx_ - min_idx_);
       return static_cast<int>(min_ + std::round((max_ - min_) * p));
     }
     int min_, max_;
-    int min_idx_, max_idx_;
+    int min_idx_{-1};
+    int max_idx_{-1};
   };
   auto bounds = std::vector<bound>{};
   bounds.reserve(stop_times_.size());
