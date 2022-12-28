@@ -1,4 +1,4 @@
-FROM alpine:3.14
+FROM alpine:3.17
 ARG TARGETARCH
 ADD motis-linux-$TARGETARCH/motis-linux-$TARGETARCH.tar.bz2 /
 RUN addgroup -S motis && adduser -S motis -G motis && \
