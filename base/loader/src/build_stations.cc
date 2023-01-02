@@ -165,6 +165,11 @@ struct stations_builder {
         continue;  // no dummy stations
       }
 
+      if (std::abs(from_station->lat()) < 2.0 &&
+          std::abs(from_station->lng()) < 2.0) {
+        continue;  // don't connect data errors (creates loopholes)
+      }
+
       for (auto const& to_idx : station_rtree.in_radius(
                geo::latlng{from_station->lat(), from_station->lng()},
                kLinkNearbyMaxDistance)) {
