@@ -159,7 +159,15 @@ RailViz.Model = (function () {
   function preprocess(data) {
     data.stations.forEach((s) => preprocessStation(s));
     data.polylines = data.polylines.map(preprocessPolyline);
-    data.trains = data.trains.map((t) => new Train(t, data));
+    data.trains = data.trains
+      .map((t) => new Train(t, data))
+      .filter((t) => {
+        if (t.polylines.length === 0) {
+          console.log("RailViz: Ignoring train without polylines:", t);
+          return false;
+        }
+        return true;
+      });
 
     data.trains.sort((lhs, rhs) =>
       rhs.clasz != lhs.clasz
