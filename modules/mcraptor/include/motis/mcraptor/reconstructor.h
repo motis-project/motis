@@ -31,11 +31,10 @@ struct intermediate_journey {
   void add_footpath(stop_id const to, time const a_time, time const d_time, uint16_t const d_track,
                     time const duration, raptor_meta_info const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
-    stops_.emplace_back(stops_.size(), motis_index, 0, d_track, 0, d_track, a_time, d_time,
-                        a_time, d_time, timestamp_reason::SCHEDULE,
-                        timestamp_reason::SCHEDULE, false, true);
-    transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, -1, 0,
-                             0);
+    stops_.emplace_back(stops_.size(), motis_index, 0, d_track, 0, d_track,
+                        a_time, d_time, a_time, d_time,
+                        timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE, false, true);
+    transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, -1, 0, 0);
   }
 
   void add_start_footpath(stop_id to, time to_d_time, time const duration, raptor_meta_info const& raptor_sched) {
@@ -120,11 +119,24 @@ struct intermediate_journey {
                             !transports_.back().is_walk();
       auto const is_exit = s_offset == exit_offset;
 
-      stops_.emplace_back(stops_.size(), motis_index, a_track, d_track, a_track,
-                          d_track, a_time, d_time, a_time, d_time,
-                          timestamp_reason::SCHEDULE,
-                          timestamp_reason::SCHEDULE, is_exit, is_enter);
-
+      if(is_exit && !is_enter
+          && !transports_.empty() && transports_.back().is_walk() && transports_.back().mumo_id_ == -1
+          && !stops_.empty() && stops_.back().enter_ && stops_.back().station_id_ == motis_index) {
+        auto& same_stop = stops_.back();
+        same_stop.a_time_ = a_time;
+        same_stop.a_sched_time_ = a_time;
+        same_stop.a_track_ = a_track;
+        same_stop.a_sched_track_ = a_track;
+        same_stop.a_reason_ = timestamp_reason::SCHEDULE;
+        same_stop.exit_ = true;
+        transports_.pop_back();
+      }
+      else {
+        stops_.emplace_back(stops_.size(), motis_index,
+                            a_track, d_track, a_track, d_track,
+                            a_time, d_time, a_time, d_time,
+                            timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE, is_exit, is_enter);
+      }
       transports_.emplace_back(stops_.size() - 1, stops_.size(), lcon);
     }
 
