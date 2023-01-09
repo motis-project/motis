@@ -320,6 +320,7 @@ jobs:
         working-directory: ./ui/rsl
 
       - name: Download Docs
+        if: matrix.config.artifact
         uses: actions/download-artifact@v3
         with:
           name: docs
