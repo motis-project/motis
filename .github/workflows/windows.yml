@@ -10,38 +10,6 @@ on:
       - published
 
 jobs:
-  docs:
-    runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: tools/protocol
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: pnpm Cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('tools/protocol/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Install Protocol Tool Dependencies
-        uses: pnpm/action-setup@v2
-        with:
-          version: ^7.15.0
-          run_install: |
-            - cwd: tools/protocol
-
-      - name: Run Protocol Tool
-        run: pnpm start
-
-      - name: Upload Docs
-        uses: actions/upload-artifact@v3
-        with:
-          name: docs
-          path: docs/generated/
-
   build:
     runs-on: windows-latest
     needs: docs
@@ -149,12 +117,19 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
-      - name: Download Docs
+      # ==== DOCS ====
+      - name: Install Protocol Tool Dependencies
         if: matrix.config.mode == 'Release'
-        uses: actions/download-artifact@v3
+        uses: pnpm/action-setup@v2
         with:
-          name: docs
-          path: docs/generated
+          version: ^7.15.0
+          run_install: |
+            - cwd: tools/protocol
+
+      - name: Run Protocol Tool
+        if: matrix.config.mode == 'Release'
+        run: pnpm start
+        working-directory: tools/protocol
 
       # ==== DISTRIBUTION ====
       - name: Move Profiles
