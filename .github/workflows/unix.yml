@@ -194,10 +194,6 @@ jobs:
           name: docs
           path: docs/generated
 
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: docs/generated
-
       # ==== DISTRIBUTION ====
       - name: Create Distribution
         run: |
@@ -328,10 +324,6 @@ jobs:
         with:
           name: docs
           path: docs/generated
-
-      - name: Display structure of downloaded files
-        run: ls -R
-        working-directory: docs/generated
 
       # ==== DISTRIBUTION ====
       - name: Create Distribution
