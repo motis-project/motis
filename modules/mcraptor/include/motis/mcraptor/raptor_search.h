@@ -47,17 +47,15 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
       q.source_time_begin_, q.source_time_end_, dep_events[q.source_]);
 
   stats.raptor_queries_ += 1;
-  /*q.source_time_begin_ = q.source_time_end_ + 1;*/
   MOTIS_START_TIMING(plus_one_time);
-  raptor.set_query_source_time(q.source_time_end_ + 1);
+  raptor.set_query_source_time(q.source_time_begin_);
   raptor.invoke_cpu_raptor();
   stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
 
   MOTIS_START_TIMING(plus_one_rec_time);
-  reconstructor.add(q);
   stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
 
-  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
+  for (auto dep_idx = lower; dep_idx != upper; ++dep_idx) {
     raptor.reset();
     stats.raptor_queries_ += 1;
     time new_query_time = dep_events[q.source_][dep_idx];
@@ -69,16 +67,11 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
     stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
 
     MOTIS_START_TIMING(rec_timing);
-    reconstructor.add(q);
     stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
   }
 
-  /*std::cout << "Lower" << lower * 60 + sched.schedule_begin_;
-  std::cout << "\nUpper" << upper * 60 + sched.schedule_begin_ << "\n";
-  std::cout << stats.raptor_queries_ << "\n";*/
-
-  //return reconstructor.get_journeys(q.source_time_end_);
-  return reconstructor.get_journeys();
+  reconstructor.add(q);
+  return reconstructor.get_journeys(q.source_time_end_);
 }
 
 inline std::vector<journey> cpu_raptor(base_query& bq,

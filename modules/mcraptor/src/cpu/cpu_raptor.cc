@@ -203,14 +203,9 @@ void mc_raptor<T, L>::set_query_source_time(time other_time) {
 template <class T, class L>
 void mc_raptor<T, L>::reset() {
   round_ = -1;
-  //route_labels_.resize(0);
-  //route_labels_.resize(query_.tt_.stop_count());
-  //transfer_labels_.resize(0);
-  //transfer_labels_.resize(query_.tt_.stop_count());
-  //routes_serving_updated_stops_.clear();
+  routes_serving_updated_stops_.clear();
   stops_for_routes_.reset();
   stops_for_transfers_.reset();
-  result_.reset();
 }
 
 template <class T, class L>

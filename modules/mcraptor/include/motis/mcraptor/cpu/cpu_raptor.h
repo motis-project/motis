@@ -16,8 +16,8 @@ struct mc_raptor {
                                     result_(q.result()),
                                     route_labels_(q.tt_.stop_count()),
                                     transfer_labels_(q.tt_.stop_count()),
-                                    stops_for_transfers_(* new cpu_mark_store(q.tt_.stop_count())),
-                                    stops_for_routes_(* new cpu_mark_store(q.tt_.stop_count())),
+                                    stops_for_transfers_(q.tt_.stop_count()),
+                                    stops_for_routes_(q.tt_.stop_count()),
                                     round_(-1) {};
 
   void set_query_source_time(time other_time);
@@ -51,8 +51,8 @@ struct mc_raptor {
   std::vector<bag<L>> route_labels_;
   std::vector<bag<L>> transfer_labels_;
   std::map<route_id, route_stops_index> routes_serving_updated_stops_;
-  cpu_mark_store& stops_for_transfers_;
-  cpu_mark_store& stops_for_routes_;
+  cpu_mark_store stops_for_transfers_;
+  cpu_mark_store stops_for_routes_;
 
 };
 
