@@ -38,6 +38,7 @@ jobs:
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
         uses: actions/cache/restore@v3
+        id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
@@ -48,6 +49,7 @@ jobs:
 
       - name: Restore Dependencies Cache
         uses: actions/cache/restore@v3
+        id: restore-deps-cache
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
@@ -169,11 +171,11 @@ jobs:
         uses: actions/cache/save@v3
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
 
       - name: Save Dependencies Cache
         if: always()
         uses: actions/cache/save@v3
         with:
           path: ${{ github.workspace }}/deps
-          key: deps-${{ hashFiles('.pkg') }}
+          key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
