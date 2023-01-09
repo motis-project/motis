@@ -8,19 +8,19 @@ namespace motis::mcraptor {
 template <class T>
 struct label {
 
-  inline bool arrival_time_rule(label& other) {
+  inline int arrival_time_rule(label& other) {
     return static_cast<T*>(this)->arrival_time_rule(other);
   }
 
-  inline bool departure_time_rule(label& other) {
+  inline int departure_time_rule(label& other) {
     return static_cast<T*>(this)->departure_time_rule(other);
   }
 
-  inline bool changes_count_rule(label& other) {
+  inline int changes_count_rule(label& other) {
     return static_cast<T*>(this)->changes_count_rule(other);
   }
 
-  inline bool travel_duration_rule(label& other) {
+  inline int travel_duration_rule(label& other) {
     return static_cast<T*>(this)->travel_duration_rule(other);
   }
 
@@ -56,9 +56,16 @@ struct label {
                                                                             parent_departure_time_(parent_label.arrival_time_) { }
 
   bool dominates(label& other) {
-    return arrival_time_rule(other);
-  }
+    int domination_arrival_time = arrival_time_rule(other);
+    if (domination_arrival_time == 1) {
+      return true;
+    }
+    else if (domination_arrival_time == 0) {
+      return departure_time_rule(other) == 1;
+    }
 
+    return false;
+  }
 
   bool dominates_all(std::vector<label> labels) {
     for (label& l : labels) {
@@ -67,6 +74,11 @@ struct label {
       }
     }
     return true;
+  }
+
+protected:
+  inline int compare_to(int a, int b) {
+    return (a > b) ? 1 : ((a == b) ? 0 : -1);
   }
 };
 
@@ -99,19 +111,19 @@ struct label_departure : public label<label_departure> {
   label_departure(label_departure& parent_label, stop_id parent_station, size_t parent_index)
       : label(parent_label, parent_station, parent_index) { }
 
-  inline bool arrival_time_rule(label& other) {
-    return arrival_time_ <= other.arrival_time_;
+  inline int arrival_time_rule(label& other) {
+    return compare_to(other.arrival_time_, arrival_time_);
   }
-  inline bool departure_time_rule(label& other) {
-    return departure_time_ >= other.departure_time_;
-  }
-
-  inline bool changes_count_rule(label& other) {
-    return changes_count_ <= other.changes_count_;
+  inline int departure_time_rule(label& other) {
+    return compare_to(departure_time_, other.departure_time_);
   }
 
-  inline bool travel_duration_rule(label& other) {
-    return (arrival_time_ - departure_time_) <= (other.arrival_time_ - other.departure_time_);
+  inline int changes_count_rule(label& other) {
+    return compare_to(other.changes_count_, changes_count_);
+  }
+
+  inline int travel_duration_rule(label& other) {
+    return compare_to(other.arrival_time_ - other.departure_time_, arrival_time_ - departure_time_);
   }
 
 };
@@ -132,19 +144,19 @@ struct label_arrival : public label<label_arrival> {
   label_arrival(label_arrival& parent_label, stop_id parent_station, size_t parent_index)
       : label(parent_label, parent_station, parent_index) { }
 
-  inline bool arrival_time_rule(label& other) {
-    return arrival_time_ >= other.arrival_time_;
+  inline int arrival_time_rule(label& other) {
+    return compare_to(arrival_time_, other.arrival_time_);
   }
-  inline bool departure_time_rule(label& other) {
-    return departure_time_ >= other.departure_time_;
-  }
-
-  inline bool changes_count_rule(label& other) {
-    return changes_count_ <= other.changes_count_;
+  inline int departure_time_rule(label& other) {
+    return compare_to(departure_time_, other.departure_time_);
   }
 
-  inline bool travel_duration_rule(label& other) {
-    return (arrival_time_ - departure_time_) <= (other.arrival_time_ - other.departure_time_);
+  inline int changes_count_rule(label& other) {
+    return compare_to(other.changes_count_, changes_count_);
+  }
+
+  inline int travel_duration_rule(label& other) {
+    return compare_to(other.arrival_time_ - other.departure_time_, arrival_time_ - departure_time_);
   }
 };
 
