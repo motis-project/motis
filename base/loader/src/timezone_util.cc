@@ -124,22 +124,21 @@ time get_adjusted_event_time(tz_cache& cache, std::time_t const schedule_begin,
   return adjusted;
 }
 
-std::pair<time, time> get_event_times(tz_cache& cache,
-                                      std::time_t const schedule_begin,
-                                      int day_idx,  //
-                                      int prev_arr_motis_time,
-                                      int curr_dep_local_time,
-                                      int curr_arr_local_time,
-                                      timezone const* tz_dep,  //
-                                      char const* dep_stop_tz,
-                                      char const* dep_provider_tz,  //
-                                      timezone const* tz_arr,  //
-                                      char const* arr_stop_tz,
-                                      char const* arr_provider_tz,  //
-                                      bool& adjusted) {
+std::tuple<time, time, std::optional<std::string>> get_event_times(
+    tz_cache& cache, std::time_t const schedule_begin,
+    int day_idx,  //
+    motis::time prev_arr_motis_time, int curr_dep_local_time,
+    int curr_arr_local_time,
+    timezone const* tz_dep,  //
+    char const* dep_stop_tz,
+    char const* dep_provider_tz,  //
+    timezone const* tz_arr,  //
+    char const* arr_stop_tz,
+    char const* arr_provider_tz,  //
+    bool& adjusted) {
+  auto error = std::optional<std::string>{};
   auto const offset = adjusted ? kAdjust : 0;
   auto const total_offset = offset + kAdjust;
-  auto const prev_adjusted = adjusted;
 
   auto dep_motis_time = get_event_time(cache, schedule_begin, day_idx,
                                        curr_dep_local_time + offset, tz_dep,
@@ -156,7 +155,11 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 1]");
+    error = fmt::format(
+        "invalid departure time: prev_arr_motis_time={}, dep_motis_time={}, "
+        "arr_motis_time{}",
+        format_time(prev_arr_motis_time), format_time(dep_motis_time),
+        format_time(arr_motis_time));
   }
 
   if (arr_motis_time == INVALID_TIME) {
@@ -164,7 +167,11 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 2]");
+    error = fmt::format(
+        "invalid departure time: prev_arr_motis_time={}, dep_motis_time={}, "
+        "arr_motis_time{}",
+        format_time(prev_arr_motis_time), format_time(dep_motis_time),
+        format_time(arr_motis_time));
   }
 
   if (dep_motis_time == INVALID_TIME) {
@@ -172,7 +179,11 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_dep_local_time + total_offset, tz_dep,
                                     dep_stop_tz, dep_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 3]");
+    error = fmt::format(
+        "invalid departure time: prev_arr_motis_time={}, dep_motis_time={}, "
+        "arr_motis_time{}",
+        format_time(prev_arr_motis_time), format_time(dep_motis_time),
+        format_time(arr_motis_time));
   }
 
   if (arr_motis_time < dep_motis_time) {
@@ -180,10 +191,14 @@ std::pair<time, time> get_event_times(tz_cache& cache,
                                     curr_arr_local_time + total_offset, tz_arr,
                                     arr_stop_tz, arr_provider_tz);
     adjusted = true;
-    utl::verify(!prev_adjusted, "double adjustment of time offset [case 4]");
+    error = fmt::format(
+        "invalid arrival time: prev_arr_motis_time={}, dep_motis_time={}, "
+        "arr_motis_time{}",
+        format_time(prev_arr_motis_time), format_time(dep_motis_time),
+        format_time(arr_motis_time));
   }
 
-  return std::make_pair(dep_motis_time, arr_motis_time);
+  return std::make_tuple(dep_motis_time, arr_motis_time, error);
 }
 
 }  // namespace motis::loader

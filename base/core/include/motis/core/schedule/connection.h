@@ -38,6 +38,23 @@ enum class service_class : service_class_t {
   NUM_CLASSES
 };
 
+inline std::string_view to_str(service_class const clasz) {
+  constexpr std::string_view const names[] = {"Air",
+                                              "High Speed Rail",
+                                              "Long Distance Trains",
+                                              "Coach",
+                                              "Sleeper Rail",
+                                              "Cross-Country Rail",
+                                              "Regional Rail",
+                                              "Metro",
+                                              "Subway",
+                                              "Tram",
+                                              "Bus",
+                                              "Ferry",
+                                              "Other"};
+  return names[static_cast<std::underlying_type_t<service_class>>(clasz)];
+}
+
 inline service_class& operator++(service_class& c) {
   return c = static_cast<service_class>(static_cast<service_class_t>(c) + 1);
 }

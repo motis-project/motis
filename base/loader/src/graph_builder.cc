@@ -552,11 +552,18 @@ light_connection graph_builder::section_to_connection(
   auto const section_timezone = section->provider() == nullptr
                                     ? nullptr
                                     : section->provider()->timezone_name();
-  std::tie(dep_motis_time, arr_motis_time) = get_event_times(
+  std::optional<std::string> error;
+  std::tie(dep_motis_time, arr_motis_time, error) = get_event_times(
       tz_cache_, sched_.schedule_begin_, day - first_day_, prev_arr, dep_time,
       arr_time, from.timez_, c_str(from_station->timezone_name()),
       c_str(section_timezone), to.timez_, c_str(to_station->timezone_name()),
       c_str(section_timezone), adjusted);
+  if (error.has_value()) {
+    LOG(logging::error) << "invalid times: " << *error
+                        << ", section_idx=" << section_idx << ", trip="
+                        << (ref->trip_id() != nullptr ? ref->trip_id()->str()
+                                                      : "unkown");
+  }
 
   // Count events.
   ++from.dep_class_events_.at(static_cast<service_class_t>(con_.clasz_));
