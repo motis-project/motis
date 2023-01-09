@@ -94,6 +94,7 @@ jobs:
 
   macos:
     runs-on: macos-latest
+    needs: docs
     strategy:
       fail-fast: false
       matrix:
@@ -233,6 +234,7 @@ jobs:
 
   linux:
     runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
+    needs: docs
     container:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:
