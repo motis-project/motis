@@ -120,7 +120,7 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
-      # ==== DOCS ====
+      # ==== API DOCS ====
       - name: Install Protocol Tool Dependencies
         if: matrix.config.mode == 'Release'
         uses: pnpm/action-setup@v2
@@ -150,7 +150,7 @@ jobs:
           Copy-Item .\ui\web\*.html,.\ui\web\*.js,.\ui\web\*.ico .\web\
           Copy-Item .\ui\rsl\dist .\web\rsl -Recurse
 
-      - name: Move Docs
+      - name: Move API Docs
         if: matrix.config.mode == 'Release'
         run: |
           Copy-Item .\docs\generated\openapi-3.0\openapi.yaml .\web\openapi.yaml

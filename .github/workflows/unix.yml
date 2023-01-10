@@ -60,7 +60,7 @@ jobs:
       - name: TypeScript
         run: pnpm run ts-check
 
-  docs:
+  api-docs:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -86,15 +86,15 @@ jobs:
       - name: Run Protocol Tool
         run: pnpm start
 
-      - name: Upload Docs
+      - name: Upload API Docs
         uses: actions/upload-artifact@v3
         with:
-          name: docs
+          name: api-docs
           path: docs/generated/
 
   macos:
     runs-on: macos-latest
-    needs: docs
+    needs: api-docs
     strategy:
       fail-fast: false
       matrix:
@@ -190,10 +190,10 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
-      - name: Download Docs
+      - name: Download API Docs
         uses: actions/download-artifact@v3
         with:
-          name: docs
+          name: api-docs
           path: docs/generated
 
       # ==== DISTRIBUTION ====
@@ -247,7 +247,7 @@ jobs:
 
   linux:
     runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
-    needs: docs
+    needs: api-docs
     container:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:
@@ -336,11 +336,11 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
-      - name: Download Docs
+      - name: Download API Docs
         if: matrix.config.artifact
         uses: actions/download-artifact@v3
         with:
-          name: docs
+          name: api-docs
           path: docs/generated
 
       # ==== DISTRIBUTION ====
