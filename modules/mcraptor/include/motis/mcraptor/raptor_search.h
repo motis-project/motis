@@ -48,18 +48,17 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
 
   stats.raptor_queries_ += 1;
   MOTIS_START_TIMING(plus_one_time);
-  raptor.set_query_source_time(q.source_time_begin_);
+  raptor.set_query_source_time(q.source_time_end_ + 1);
   raptor.invoke_cpu_raptor();
   stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
 
   MOTIS_START_TIMING(plus_one_rec_time);
   stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
 
-  for (auto dep_idx = lower; dep_idx != upper; ++dep_idx) {
+  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
     raptor.reset();
     stats.raptor_queries_ += 1;
     time new_query_time = dep_events[q.source_][dep_idx];
-    q.source_time_begin_ = new_query_time;
 
     MOTIS_START_TIMING(raptor_time);
     raptor.set_query_source_time(new_query_time);
