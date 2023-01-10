@@ -49,8 +49,6 @@ export async function writeTypeScriptOutput(
       ctx.prettierOptions = resolvedOptions;
     }
     ctx.prettierOptions.parser = "typescript";
-    console.log("using prettier with options:");
-    console.dir(ctx.prettierOptions, { depth: null });
   }
 
   for (const [fqtn, type] of schema.types) {
