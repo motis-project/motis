@@ -35,30 +35,3 @@ output:
     format: markdown
     dir: ../../docs/generated/markdown
     exclude: *public-exclude
-#  rsl-ui:
-#    format: typescript
-#    dir: ../../ui/rsl/src/api/protocol
-#    header: |
-#      // GENERATED FILE - DO NOT MODIFY
-#      // -> see /tools/protocol for information on how to update this file
-#    include: &rsl-include
-#      - motis.*
-#      - motis.ris.RISForwardTimeRequest
-#      - motis.ris.RISContentType
-#      - motis.paxmon.*
-#      - motis.paxforecast.*
-#      - motis.routing.*
-#      - motis.guesser.*
-#      - motis.lookup.*
-#      - motis.ribasis.*
-#    exclude: &rsl-exclude
-#      - motis.HTTP*
-#  rsl-json-schema:
-#    format: json-schema
-#    dir: ../../docs/generated/rsl-json-schema
-#    bundle: ../../docs/generated/rsl-json-schema/bundle.json
-#    base-uri: *base-uri
-#    strict-int-types: false
-#    strict-unions: true
-#    include: *rsl-include
-#    exclude: *rsl-exclude
