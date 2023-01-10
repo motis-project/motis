@@ -6,7 +6,7 @@ import { Documentation } from "../../doc/types";
 
 export const OPEN_API_VERSIONS = ["3.0.3", "3.1.0"] as const;
 
-export type OpenAPIVersion = typeof OPEN_API_VERSIONS[number];
+export type OpenAPIVersion = (typeof OPEN_API_VERSIONS)[number];
 
 export interface OpenApiContext {
   schema: SchemaTypes;

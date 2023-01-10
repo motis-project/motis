@@ -190,18 +190,11 @@ function writePathsFile(ctx: MarkdownContext) {
     if (path.output) {
       const outputFqtn = path.output.type.split(".");
       const outputNamespace = outputFqtn.slice(0, -1).join(".");
-      out.write(
-        `Type: ${getTypeLink(ctx, outputFqtn, outputNamespace)}\n\n`
-      );
+      out.write(`Type: ${getTypeLink(ctx, outputFqtn, outputNamespace)}\n\n`);
       out.write(path.output.description.trim());
       out.write("\n\n");
     } else {
-      out.write(
-        `Type: ${getTypeLink(ctx, [
-          "motis",
-          "MotisNoMessage",
-        ])}\n\n`
-      );
+      out.write(`Type: ${getTypeLink(ctx, ["motis", "MotisNoMessage"])}\n\n`);
     }
   }
 
