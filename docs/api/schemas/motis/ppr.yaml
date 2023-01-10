@@ -2,9 +2,12 @@ SearchOptions:
   description: TODO
   fields:
     profile:
-      description: TODO
+      description: Name of the profile
     duration_limit:
-      description: TODO
+      description: Upper limit for walking duration in seconds
+  examples:
+    - profile: default
+      duration: 1800
 EdgeType:
   description: TODO
 CrossingType:
@@ -103,34 +106,42 @@ Route:
     elevation_down:
       description: TODO
 FootRoutingProfileInfo:
-  description: TODO
+  description: Information about a PPR profile
   fields:
     name:
-      description: TODO
+      description: Name of the profile
     walking_speed:
-      description: TODO
+      description: Walking speed in meters per second
 FootRoutingProfilesResponse:
-  description: TODO
+  description: A list of loaded PPR profiles
   fields:
     profiles:
-      description: TODO
+      description: Available profiles
 FootRoutingRequest:
   description: TODO
   fields:
     start:
-      description: TODO
+      description: Start location
     destinations:
-      description: TODO
+      description: Destination locations (at least one)
     search_options:
-      description: TODO
+      description: Search profile and maximum walking duration
     search_direction:
-      description: TODO
+      description: |
+        The search direction:
+
+        - `Forward`: Calculate routes from the start to the destinations
+        - `Backward`: Calculate routes from the destinations to the start
     include_steps:
-      description: TODO
+      description: Whether to include a travel itinerary in the response
+      examples: [ true ]
     include_edges:
-      description: TODO
+      description: Whether to include a list of all used edges in the response (useful
+        for debugging purposes)
+      examples: [ false ]
     include_path:
-      description: TODO
+      description: Whether to include the complete path as a single polyline in the response
+      examples: [ true ]
 Routes:
   description: TODO
   fields:

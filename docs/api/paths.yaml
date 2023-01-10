@@ -214,7 +214,14 @@
     type: motis.paxmon.PaxMonGetGroupsResponse
     description: Information about the requested passenger groups
 
-#/paxmon/get_interchanges:
+/paxmon/get_interchanges:
+  summary: Get a list of monitored interchanges at a station
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGetInterchangesRequest
+  output:
+    type: motis.paxmon.PaxMonGetInterchangesResponse
+    description: Information about the requested interchanges
 
 /paxmon/group_statistics:
   summary: Get various passenger group statistics
@@ -259,7 +266,18 @@
     type: motis.paxmon.PaxMonKeepAliveResponse
     description: Updated information about the requested universes
 
-#/paxmon/reroute_groups:
+/paxmon/reroute_groups:
+  summary: Manually reroute passenger groups
+  description: |
+    Can be used to manually reroute passenger groups.
+
+    The reroute `reason` **must** be set to `Manual`.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonRerouteGroupsRequest
+  output:
+    type: motis.paxmon.PaxMonRerouteGroupsResponse
+    description: Information about the changes
 
 /paxmon/status:
   summary: Request basic information about a paxmon universe
@@ -325,7 +343,14 @@
     type: motis.routing.RoutingResponse
     description: Routing response
 
-#/revise:
+/revise:
+  summary: Update a connection with current real-time information
+  tags:
+    - lookup
+  input: motis.Connection
+  output:
+    type: motis.Connection
+    description: The updated connection
 
 /routing:
   summary: Public transport routing (Multi Criteria Pareto Dijkstra)

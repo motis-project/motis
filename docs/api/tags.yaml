@@ -5,7 +5,7 @@
 - name: parking
   description: Parking lot information
 - name: ppr
-  description: Pedestrian routing
+  description: Pedestrian routing (Per Pedes Routing)
 - name: routing
   description: Routing
 - name: rsl
