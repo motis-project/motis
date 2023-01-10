@@ -1,4 +1,5 @@
-// generated file - do not modify - run update-protocol to update
+// GENERATED FILE - DO NOT MODIFY
+// -> see /tools/protocol for information on how to update this file
 import {
   StationGuesserRequest,
   StationGuesserResponse,
@@ -67,6 +68,62 @@ import {
 } from "@/api/protocol/motis/paxmon";
 import { RISForwardTimeRequest } from "@/api/protocol/motis/ris";
 import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
+
+// base/Position.fbs
+export interface Position {
+  lat: number;
+  lng: number;
+}
+
+// base/SearchDir.fbs
+export type SearchDir = "Forward" | "Backward";
+
+// base/Station.fbs
+export interface Station {
+  id: string;
+  name: string;
+  pos: Position;
+}
+
+// base/Interval.fbs
+export interface Interval {
+  begin: number;
+  end: number;
+}
+
+// base/EventType.fbs
+export type EventType = "DEP" | "ARR";
+
+// base/TripId.fbs
+export interface TripId {
+  station_id: string;
+  train_nr: number;
+  time: number;
+  target_station_id: string;
+  target_time: number;
+  line_id: string;
+}
+
+// base/TimestampReason.fbs
+export type TimestampReason =
+  | "SCHEDULE"
+  | "REPAIR"
+  | "IS"
+  | "PROPAGATION"
+  | "FORECAST";
+
+// base/ConnectionStatus.fbs
+export type ConnectionStatus =
+  | "OK"
+  | "INTERCHANGE_INVALID"
+  | "TRAIN_HAS_BEEN_CANCELED"
+  | "INVALID";
+
+// base/ProblemType.fbs
+export type ProblemType =
+  | "NO_PROBLEM"
+  | "INTERCHANGE_TIME_VIOLATED"
+  | "CANCELED_TRAIN";
 
 // base/Connection.fbs
 export interface EventInfo {
@@ -167,64 +224,9 @@ export interface Connection {
   status: ConnectionStatus;
 }
 
-// base/ConnectionStatus.fbs
-export type ConnectionStatus =
-  | "OK"
-  | "INTERCHANGE_INVALID"
-  | "TRAIN_HAS_BEEN_CANCELED"
-  | "INVALID";
-
-// base/DirectConnection.fbs
-export interface DirectConnection {
-  duration: number;
-  accessibility: number;
-  mumo_type: string;
-}
-
-// base/EventType.fbs
-export type EventType = "DEP" | "ARR";
-
-// base/Interval.fbs
-export interface Interval {
-  begin: number;
-  end: number;
-}
-
 // base/Polyline.fbs
 export interface Polyline {
   coordinates: number[];
-}
-
-// base/Position.fbs
-export interface Position {
-  lat: number;
-  lng: number;
-}
-
-// base/ProblemType.fbs
-export type ProblemType =
-  | "NO_PROBLEM"
-  | "INTERCHANGE_TIME_VIOLATED"
-  | "CANCELED_TRAIN";
-
-// base/SearchDir.fbs
-export type SearchDir = "Forward" | "Backward";
-
-// base/ServiceInfo.fbs
-export interface ServiceInfo {
-  name: string;
-  category: string;
-  train_nr: number;
-  line: string;
-  provider: string;
-  clasz: number;
-}
-
-// base/Station.fbs
-export interface Station {
-  id: string;
-  name: string;
-  pos: Position;
 }
 
 // base/Statistics.fbs
@@ -239,28 +241,27 @@ export interface StatisticsEntry {
   value: number;
 }
 
-// base/TimestampReason.fbs
-export type TimestampReason =
-  | "SCHEDULE"
-  | "REPAIR"
-  | "IS"
-  | "PROPAGATION"
-  | "FORECAST";
-
-// base/TripId.fbs
-export interface TripId {
-  station_id: string;
-  train_nr: number;
-  time: number;
-  target_station_id: string;
-  target_time: number;
-  line_id: string;
-}
-
 // base/TripInfo.fbs
 export interface TripInfo {
   id: TripId;
   transport: Transport;
+}
+
+// base/DirectConnection.fbs
+export interface DirectConnection {
+  duration: number;
+  accessibility: number;
+  mumo_type: string;
+}
+
+// base/ServiceInfo.fbs
+export interface ServiceInfo {
+  name: string;
+  category: string;
+  train_nr: number;
+  line: string;
+  provider: string;
+  clasz: number;
 }
 
 // base/TripServiceInfo.fbs
@@ -269,33 +270,6 @@ export interface TripServiceInfo {
   primary_station: Station;
   secondary_station: Station;
   service_infos: ServiceInfo[];
-}
-
-// HTTPMessage.fbs
-export interface HTTPHeader {
-  name: string;
-  value: string;
-}
-
-// HTTPMessage.fbs
-export type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "OPTIONS";
-
-// HTTPMessage.fbs
-export type HTTPStatus = "OK" | "INTERNAL_SERVER_ERROR";
-
-// HTTPMessage.fbs
-export interface HTTPRequest {
-  method: HTTPMethod;
-  path: string;
-  headers: HTTPHeader[];
-  content: string;
-}
-
-// HTTPMessage.fbs
-export interface HTTPResponse {
-  status: HTTPStatus;
-  headers: HTTPHeader[];
-  content: string;
 }
 
 // Message.fbs
@@ -323,8 +297,6 @@ export type MsgContent =
   | MotisNoMessage
   | MotisError
   | MotisSuccess
-  | HTTPRequest
-  | HTTPResponse
   | ApiDescription
   | Connection
   | TripId
@@ -394,8 +366,6 @@ export type MsgContentType =
   | "MotisNoMessage"
   | "MotisError"
   | "MotisSuccess"
-  | "HTTPRequest"
-  | "HTTPResponse"
   | "ApiDescription"
   | "Connection"
   | "TripId"
