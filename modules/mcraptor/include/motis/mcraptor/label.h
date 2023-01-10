@@ -57,11 +57,18 @@ struct label {
 
   bool dominates(label& other) {
     int domination_arrival_time = arrival_time_rule(other);
-    if (domination_arrival_time == 1) {
+    int domination_departure_time = departure_time_rule(other);
+    int domination_changes_count = changes_count_rule(other);
+
+    if(domination_arrival_time == 0 && domination_departure_time == 0 && domination_changes_count == 0) {
       return true;
     }
+
+    if (domination_arrival_time == 1) {
+      return domination_changes_count != -1;
+    }
     else if (domination_arrival_time == 0) {
-      return departure_time_rule(other) == 1;
+      return domination_departure_time == 1;
     }
 
     return false;

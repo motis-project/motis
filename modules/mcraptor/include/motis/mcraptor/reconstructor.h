@@ -239,11 +239,15 @@ struct reconstructor {
 
   template <class L>
   void add(raptor_query<L> const& q) {
-
-//TODO reproduce another ij assignments from reconstruct_journey, fix bugs
     rounds<L>& result = q.result();
     for(stop_id target : q.targets_) {
-      for (L& l : result.getAllLabelsForStop(target, max_raptor_round * 2)) {
+      auto labels = result.getAllLabelsForStop(target, max_raptor_round * 2);
+      bag<L> filter_bag;
+      for(L& label : labels) {
+        filter_bag.merge(label);
+      }
+
+      for (L& l : filter_bag.labels_) {
         intermediate_journey ij = intermediate_journey(
             l.changes_count_, q.ontrip_, q.source_time_begin_);
 
@@ -299,7 +303,6 @@ struct reconstructor {
         }
 
         journeys_.push_back(ij);
-
       }
     }
   }
