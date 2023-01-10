@@ -1,6 +1,5 @@
-import { MarkdownContext, MarkdownFile } from "./context";
+import { MarkdownContext } from "./context";
 import path from "path";
-import { TypeRef } from "../../schema/types";
 
 export function getFilename(ctx: MarkdownContext, namespace: string[]) {
   return path.resolve(ctx.outputDir, ...namespace) + ".md";

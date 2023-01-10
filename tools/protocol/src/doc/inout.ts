@@ -52,7 +52,7 @@ export function readAndUpdateDoc(
 }
 
 function readAndUpdateSchemas(ctx: DocContext) {
-  for (const [fqtn, type] of ctx.schema.types) {
+  for (const [_fqtn, type] of ctx.schema.types) {
     const ns = type.ns.join(".");
     let file = ctx.schemaFiles.get(ns);
     if (file === undefined) {
@@ -66,7 +66,7 @@ function readAndUpdateSchemas(ctx: DocContext) {
     file.types.push(type.name);
   }
 
-  for (const [ns, file] of ctx.schemaFiles) {
+  for (const [_ns, file] of ctx.schemaFiles) {
     readAndUpdateSchemaFile(ctx, file);
   }
 }
