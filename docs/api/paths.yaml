@@ -1,3 +1,49 @@
+/address:
+  summary: Address autocompletion
+  tags:
+    - intermodal
+  input: motis.address.AddressRequest
+  output:
+    type: motis.address.AddressResponse
+    description: A list of guesses
+
+#/cc:
+
+/csa:
+  summary: Public transport routing (CSA)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+/guesser:
+  summary: Station autocompletion
+  tags:
+    - intermodal
+  input: motis.guesser.StationGuesserRequest
+  output:
+    type: motis.guesser.StationGuesserResponse
+    description: A list of guesses
+
+/intermodal:
+  summary: Intermodal routing
+  tags:
+    - routing
+    - intermodal
+  input: motis.intermodal.IntermodalRoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+#/lookup/geo_station:
+#/lookup/geo_station_batch:
+#/lookup/geo_station_id:
+#/lookup/id_train:
+#/lookup/meta_station:
+#/lookup/meta_station_batch:
+
 /lookup/ribasis:
   summary: Returns a trip in RI Basis format
   description: |
@@ -23,6 +69,35 @@
   output:
     type: motis.lookup.LookupScheduleInfoResponse
     description: Information about the currently loaded schedule
+
+#/lookup/station_events:
+
+#/osrm/one_to_many:
+#/osrm/smooth_via:
+#/osrm/table:
+#/osrm/via:
+
+#/parking/edge:
+#/parking/edges:
+
+/parking/geo:
+  summary: Request parking lots in an area
+  tags:
+    - parking
+  input: motis.parking.ParkingGeoRequest
+  output:
+    type: motis.parking.ParkingGeoResponse
+    description: A list of parking lots
+
+
+/parking/lookup:
+  summary: Request information about a parking lot by ID
+  tags:
+    - parking
+  input: motis.parking.ParkingLookupRequest
+  output:
+    type: motis.parking.ParkingLookupResponse
+    description: Information about the requested parking lot
 
 /paxforecast/apply_measures:
   summary: Simulate measures in a paxmon universe
@@ -215,6 +290,23 @@
     type: motis.paxmon.PaxMonGetUniversesResponse
     description: A list of paxmon universes
 
+/ppr/profiles:
+  summary: Get list of available pedestrian routing profiles
+  tags:
+    - ppr
+  output:
+    type: motis.ppr.FootRoutingProfilesResponse
+    description: A list of available profiles
+
+/ppr/route:
+  summary: Pedestrian routing
+  tags:
+    - ppr
+  input: motis.ppr.FootRoutingRequest
+  output:
+    type: motis.ppr.FootRoutingResponse
+    description: Pedestrian routes
+
 /railviz/get_station:
   summary: Request a list of trips arriving and departing at a station
   tags:
@@ -224,3 +316,40 @@
     type: motis.railviz.RailVizStationResponse
     description: A list of trips arring and departing at the station
 
+/raptor:
+  summary: Public transport routing (RAPTOR)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+#/revise:
+
+/routing:
+  summary: Public transport routing (Multi Criteria Pareto Dijkstra)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+/trip_to_connection:
+  summary: Get information about the stops of a trip
+  tags:
+    - lookup
+  input: motis.TripId
+  output:
+    type: motis.Connection
+    description: All stops of the requested trip
+
+/tripbased:
+  summary: Public transport routing (TripBased Routing)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
