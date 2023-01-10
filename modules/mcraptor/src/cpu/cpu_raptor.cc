@@ -11,6 +11,9 @@ void mc_raptor<T, L>::init_arrivals() {
 
 template <class T, class L>
 void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
+  if(new_label.arrival_time_ < source_time_begin_ || new_label.departure_time_ < source_time_begin_) {
+    return;
+  }
   // ??? checking for empty
   // check if this label may be dominated by other existing labels
   for(stop_id target : this->targets()) {
@@ -30,6 +33,9 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
 
 template <class T, class L>
 void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
+  if(new_label.arrival_time_ < source_time_begin_ || new_label.departure_time_ < source_time_begin_) {
+    return;
+  }
   // checking for empty??
   // check if this label may be dominated by other existing labels
   for(stop_id target : this->targets()) {
@@ -247,18 +253,18 @@ void mc_raptor_departure::init_arrivals() {
     for (raptor_edge edge : query_.raptor_edges_start_) {
       // std::cout << "EDGE from: " << edge.from_ << "; to: " << edge.to_ << "; time: " << edge.time_ << std::endl;
       time edge_to_time = source_time_begin_ + edge.duration_;
-      label_departure new_label(0, edge_to_time, round_);
+      label_departure new_label(invalid<time>, edge_to_time, round_);
       new_label.parent_station_ = edge.to_;
       arrival_by_route(edge.to_, new_label);
     }
   } else {
-    label_departure new_label(0, source_time_begin_, round_);
+    label_departure new_label(invalid<time>, source_time_begin_, round_);
     new_label.parent_station_ = query_.source_;
     arrival_by_route(query_.source_, new_label);
 
     for (auto const& add_start : query_.add_starts_) {
       time add_start_time = source_time_begin_ + add_start.offset_;
-      new_label = label_departure(0, add_start_time, round_);
+      new_label = label_departure(invalid<time>, add_start_time, round_);
       new_label.parent_station_ = add_start.s_id_;
       // std::cout << "Add start: " << add_start.s_id_ << std::endl;
       arrival_by_route(add_start.s_id_, new_label);
@@ -342,12 +348,12 @@ void mc_raptor_arrival::init_arrivals() {
   if (query_.target_ == 1) {
     for (raptor_edge edge : query_.raptor_edges_end_) {
       time edge_to_time = query_.source_time_begin_ - edge.duration_;
-      label_arrival new_label(0, edge_to_time, round_);
+      label_arrival new_label(invalid<time>, edge_to_time, round_);
       new_label.backward_parent_station = edge.to_;
       arrival_by_route(edge.to_, new_label);
     }
   } else {
-    label_arrival new_label(0, query_.source_time_end_, round_);
+    label_arrival new_label(invalid<time>, query_.source_time_end_, round_);
     new_label.backward_parent_station = query_.target_;
     arrival_by_route(query_.target_, new_label);
   }

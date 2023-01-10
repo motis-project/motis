@@ -8,6 +8,8 @@ namespace motis::mcraptor {
 template <class T>
 struct label {
 
+  static const time MAX_DIFF_FOR_LESS_TRANSFERS = 120;
+
   inline int arrival_time_rule(label& other) {
     return static_cast<T*>(this)->arrival_time_rule(other);
   }
@@ -60,14 +62,22 @@ struct label {
     int domination_departure_time = departure_time_rule(other);
     int domination_changes_count = changes_count_rule(other);
 
-    if(domination_arrival_time == 0 && domination_departure_time == 0 && domination_changes_count == 0) {
-      return true;
-    }
-
-    if (domination_arrival_time == 1) {
+    // If equal and changes more or equal => dominate
+    if(domination_arrival_time == 0 && domination_departure_time == 0) {
       return domination_changes_count != -1;
     }
+
+    // If arrival time is earlier
+    if (domination_arrival_time == 1) {
+      // If more changes but duration is much less (see MAX_DIFF_FOR_LESS_TRANSFERS) => dominate
+      if(domination_changes_count == -1 && travel_duration_rule(other) == 1) {
+        time diff = (other.arrival_time_ - other.departure_time_) - (arrival_time_ - departure_time_);
+        return diff > MAX_DIFF_FOR_LESS_TRANSFERS;
+      }
+      return true;
+    }
     else if (domination_arrival_time == 0) {
+      // If arrival time is equal and departure time is later => dominate
       return domination_departure_time == 1;
     }
 
