@@ -15,6 +15,7 @@ export function writeOpenAPIOutput(
   typeFilter: TypeFilter,
   doc: Documentation,
   baseDir: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any
 ) {
   if (typeof config.file !== "string") {

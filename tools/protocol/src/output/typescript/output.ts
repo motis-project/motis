@@ -16,9 +16,9 @@ export function writeTypeScriptOutput(
   schema: SchemaTypes,
   typeFilter: TypeFilter,
   baseDir: string,
-  config: any
+  config: object
 ) {
-  if (typeof config.dir !== "string") {
+  if (!("dir" in config) || typeof config.dir !== "string") {
     throw new Error("missing dir property in config");
   }
   const outputDir = path.resolve(baseDir, config.dir);
@@ -34,7 +34,7 @@ export function writeTypeScriptOutput(
     outputDir,
   };
 
-  if (typeof config.header === "string") {
+  if ("header" in config && typeof config.header === "string") {
     ctx.header = `${config.header.trim()}\n\n`;
   }
 

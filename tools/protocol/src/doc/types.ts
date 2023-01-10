@@ -1,6 +1,7 @@
 export interface DocType {
   fqtn: string;
   description: string | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   examples: any[];
   tags: string[];
   fields?: Map<string, DocField>;
@@ -9,6 +10,7 @@ export interface DocType {
 export interface DocField {
   name: string;
   description?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   examples?: any[];
 }
 

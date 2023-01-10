@@ -22,6 +22,7 @@ function parseTypePattern(pattern: string): RegExp {
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseTypePatterns(patterns: any): RegExp[] {
   const res: RegExp[] = [];
   if (typeof patterns === "object") {
@@ -34,14 +35,22 @@ function parseTypePatterns(patterns: any): RegExp[] {
   return res;
 }
 
-export function parseTypeFilter(config: any): TypeFilter {
+export function parseTypeFilter(config: object): TypeFilter {
   const filter: TypeFilter = { includes: [], excludes: [] };
 
   if (typeof config === "object") {
-    if (typeof config.include === "object") {
+    if (
+      "include" in config &&
+      typeof config.include === "object" &&
+      config.include !== null
+    ) {
       filter.includes = parseTypePatterns(config.include);
     }
-    if (typeof config.exclude === "object") {
+    if (
+      "exclude" in config &&
+      typeof config.exclude === "object" &&
+      config.exclude !== null
+    ) {
       filter.excludes = parseTypePatterns(config.exclude);
     }
   }

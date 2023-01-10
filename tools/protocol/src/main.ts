@@ -28,6 +28,9 @@ if (!fs.existsSync(configFile)) {
 const config = parse(fs.readFileSync(configFile, { encoding: "utf8" }));
 
 if (
+  !("input" in config) ||
+  !("output" in config) ||
+  !("doc" in config) ||
   typeof config.input !== "string" ||
   typeof config.output !== "object" ||
   typeof config.doc !== "object"

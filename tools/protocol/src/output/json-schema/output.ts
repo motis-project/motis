@@ -18,6 +18,7 @@ export function writeJsonSchemaOutput(
   schema: SchemaTypes,
   typeFilter: TypeFilter,
   baseDir: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   config: any
 ) {
   if (typeof config["base-uri"] !== "string") {

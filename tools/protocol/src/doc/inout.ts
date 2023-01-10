@@ -18,15 +18,15 @@ import { getOrCreateMap, removeUnknownKeys } from "../util/yaml";
 export function readAndUpdateDoc(
   schema: SchemaTypes,
   baseDir: string,
-  config: any
+  config: object
 ): Documentation {
-  if (typeof config.schemas !== "string") {
+  if (!("schemas" in config) || typeof config.schemas !== "string") {
     throw new Error("missing doc.schemas property in config");
   }
-  if (typeof config.paths !== "string") {
+  if (!("paths" in config) || typeof config.paths !== "string") {
     throw new Error("missing doc.paths property in config");
   }
-  if (typeof config.tags !== "string") {
+  if (!("tags" in config) || typeof config.tags !== "string") {
     throw new Error("missing doc.tags property in config");
   }
 

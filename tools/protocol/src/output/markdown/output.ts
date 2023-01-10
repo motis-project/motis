@@ -11,9 +11,9 @@ export function writeMarkdownOutput(
   typeFilter: TypeFilter,
   doc: Documentation,
   baseDir: string,
-  config: any
+  config: object
 ) {
-  if (typeof config.dir !== "string") {
+  if (!("dir" in config) || typeof config.dir !== "string") {
     throw new Error("missing dir property in config");
   }
 
