@@ -14,8 +14,8 @@ struct label {
     return static_cast<T*>(this)->arrival_time_rule(other);
   }
 
-  inline int departure_time_rule(label& other) {
-    return static_cast<T*>(this)->departure_time_rule(other);
+  inline int journey_departure_time_rule(label& other) {
+    return static_cast<T*>(this)->journey_departure_time_rule(other);
   }
 
   inline int changes_count_rule(label& other) {
@@ -27,13 +27,12 @@ struct label {
   }
 
   // Parameters
-  time departure_time_ = invalid<time>;
+  time journey_departure_time_ = invalid<time>;
   size_t changes_count_ = invalid<size_t>;
   time arrival_time_ = invalid<time>;
 
   // Parent info
   stop_id parent_station_ = invalid<stop_id>;
-  time parent_departure_time_ = invalid<time>;
   size_t parent_label_index_ = invalid<size_t>;
 
   // Current trip info
@@ -45,40 +44,44 @@ struct label {
   label() {
   }
 
-  label(time departure_time, time arrival_time, size_t changes_count) : departure_time_(departure_time),
+  label(time journey_departure_time, time arrival_time, size_t changes_count) : journey_departure_time_(journey_departure_time),
                                                                      arrival_time_(arrival_time),
                                                                      changes_count_(changes_count) { }
 
   // to create labels for current round from labels from previous round for certain station
   label(label& parent_label, stop_id parent_station, size_t parent_index) : arrival_time_(parent_label.arrival_time_),
                                                                             changes_count_(parent_label.changes_count_ + 1),
-                                                                            departure_time_(parent_label.departure_time_),
+                                                                            journey_departure_time_(parent_label.journey_departure_time_),
                                                                             parent_station_(parent_station),
-                                                                            parent_label_index_(parent_index),
-                                                                            parent_departure_time_(parent_label.arrival_time_) { }
+                                                                            parent_label_index_(parent_index){ }
 
   bool dominates(label& other) {
     int domination_arrival_time = arrival_time_rule(other);
-    int domination_departure_time = departure_time_rule(other);
+    int domination_journey_departure_time = journey_departure_time_rule(other);
     int domination_changes_count = changes_count_rule(other);
+    int domination_travel_duration = travel_duration_rule(other);
 
     // If equal and changes more or equal => dominate
-    if(domination_arrival_time == 0 && domination_departure_time == 0) {
+    if(domination_arrival_time == 0 && domination_journey_departure_time == 0) {
       return domination_changes_count != -1;
     }
 
     // If arrival time is earlier
     if (domination_arrival_time == 1) {
       // If more changes but duration is much less (see MAX_DIFF_FOR_LESS_TRANSFERS) => dominate
-      if(domination_changes_count == -1 && travel_duration_rule(other) == 1) {
-        time diff = (other.arrival_time_ - other.departure_time_) - (arrival_time_ - departure_time_);
+      if(domination_changes_count == -1 && domination_travel_duration == 1) {
+        time diff = (other.arrival_time_ - other.journey_departure_time_) - (arrival_time_ - journey_departure_time_);
         return diff > MAX_DIFF_FOR_LESS_TRANSFERS;
+      }
+      // If arrival time is earlier AND journey departure time is earlier => do not dominate
+      if(domination_journey_departure_time == -1 && domination_changes_count == 0) {
+        return false;
       }
       return true;
     }
     else if (domination_arrival_time == 0) {
       // If arrival time is equal and departure time is later => dominate
-      return domination_departure_time == 1;
+      return domination_journey_departure_time == 1;
     }
 
     return false;
@@ -131,8 +134,8 @@ struct label_departure : public label<label_departure> {
   inline int arrival_time_rule(label& other) {
     return compare_to(other.arrival_time_, arrival_time_);
   }
-  inline int departure_time_rule(label& other) {
-    return compare_to(departure_time_, other.departure_time_);
+  inline int journey_departure_time_rule(label& other) {
+    return compare_to(journey_departure_time_, other.journey_departure_time_);
   }
 
   inline int changes_count_rule(label& other) {
@@ -140,7 +143,7 @@ struct label_departure : public label<label_departure> {
   }
 
   inline int travel_duration_rule(label& other) {
-    return compare_to(other.arrival_time_ - other.departure_time_, arrival_time_ - departure_time_);
+    return compare_to(other.arrival_time_ - other.journey_departure_time_, arrival_time_ - journey_departure_time_);
   }
 
 };
@@ -149,6 +152,7 @@ struct label_arrival : public label<label_arrival> {
 
   stop_id backward_parent_station = invalid<stop_id>;
   size_t backward_parent_label_index_ = invalid<size_t>;
+  time departure_time_ = invalid<time>;
 
 
   label_arrival() {
@@ -164,8 +168,8 @@ struct label_arrival : public label<label_arrival> {
   inline int arrival_time_rule(label& other) {
     return compare_to(arrival_time_, other.arrival_time_);
   }
-  inline int departure_time_rule(label& other) {
-    return compare_to(departure_time_, other.departure_time_);
+  inline int journey_departure_time_rule(label& other) {
+    return compare_to(journey_departure_time_, other.journey_departure_time_);
   }
 
   inline int changes_count_rule(label& other) {
@@ -173,7 +177,7 @@ struct label_arrival : public label<label_arrival> {
   }
 
   inline int travel_duration_rule(label& other) {
-    return compare_to(other.arrival_time_ - other.departure_time_, arrival_time_ - departure_time_);
+    return compare_to(other.arrival_time_ - other.journey_departure_time_, arrival_time_ - journey_departure_time_);
   }
 };
 
