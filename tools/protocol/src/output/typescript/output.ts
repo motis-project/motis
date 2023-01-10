@@ -33,10 +33,15 @@ export function writeTypeScriptOutput(
     types: new Set(),
     header: "",
     outputDir,
+    importBase: null,
   };
 
   if ("header" in config && typeof config.header === "string") {
     ctx.header = `${config.header.trim()}\n\n`;
+  }
+
+  if ("import-base" in config && typeof config["import-base"] === "string") {
+    ctx.importBase = config["import-base"];
   }
 
   for (const [fqtn, type] of schema.types) {
@@ -63,14 +68,24 @@ export function writeTypeScriptOutput(
 }
 
 function getImportPath(ctx: TSContext, file: TSFile, include: TSInclude) {
-  let p = path
-    .relative(path.dirname(file.path), include.filename)
-    .replace("\\", "/")
-    .replace(".ts", "");
-  if (!p.startsWith("../")) {
-    p = "./" + p;
+  if (ctx.importBase) {
+    return (
+      ctx.importBase +
+      path
+        .relative(ctx.outputDir, include.filename)
+        .replace("\\", "/")
+        .replace(/\.ts$/, "")
+    );
+  } else {
+    let p = path
+      .relative(path.dirname(file.path), include.filename)
+      .replace("\\", "/")
+      .replace(/\.ts$/, "");
+    if (!p.startsWith("../")) {
+      p = "./" + p;
+    }
+    return p;
   }
-  return p;
 }
 
 function writeFile(ctx: TSContext, file: TSFile) {

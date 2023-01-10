@@ -14,4 +14,5 @@ export interface TSContext {
   types: Set<string>;
   header: string;
   outputDir: string;
+  importBase: string | null;
 }
