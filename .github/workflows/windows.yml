@@ -12,7 +12,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    needs: docs
 
     strategy:
       fail-fast: false
