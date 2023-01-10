@@ -1,5 +1,6 @@
 import fs from "fs";
 import * as path from "path";
+import * as prettier from "prettier";
 
 import { TypeFilter, includeType } from "@/filter/type-filter";
 import { TSContext, TSFile } from "@/output/typescript/context";
@@ -8,7 +9,7 @@ import { TSInclude, collectIncludes } from "@/output/typescript/includes";
 import { getUnionTagTypeName } from "@/output/typescript/util";
 import { FieldType, SchemaTypes, TableType, UnionValue } from "@/schema/types";
 
-export function writeTypeScriptOutput(
+export async function writeTypeScriptOutput(
   schema: SchemaTypes,
   typeFilter: TypeFilter,
   baseDir: string,
@@ -29,6 +30,8 @@ export function writeTypeScriptOutput(
     header: "",
     outputDir,
     importBase: null,
+    usePrettier: false,
+    prettierOptions: {},
   };
 
   if ("header" in config && typeof config.header === "string") {
@@ -37,6 +40,17 @@ export function writeTypeScriptOutput(
 
   if ("import-base" in config && typeof config["import-base"] === "string") {
     ctx.importBase = config["import-base"];
+  }
+
+  if ("prettier" in config && config["prettier"] === true) {
+    ctx.usePrettier = true;
+    const resolvedOptions = await prettier.resolveConfig(ctx.outputDir);
+    if (resolvedOptions != null) {
+      ctx.prettierOptions = resolvedOptions;
+    }
+    ctx.prettierOptions.parser = "typescript";
+    console.log("using prettier with options:");
+    console.dir(ctx.prettierOptions, { depth: null });
   }
 
   for (const [fqtn, type] of schema.types) {
@@ -86,27 +100,31 @@ function getImportPath(ctx: TSContext, file: TSFile, include: TSInclude) {
 function writeFile(ctx: TSContext, file: TSFile) {
   console.log(`writing ${file.path}: ${file.types.length} types`);
   fs.mkdirSync(path.dirname(file.path), { recursive: true });
-  const out = fs.createWriteStream(file.path);
-  out.write(ctx.header);
+  let out = ctx.header;
 
   const includes = collectIncludes(ctx, file);
   for (const include of includes.values()) {
     const importPath = getImportPath(ctx, file, include);
-    out.write(
-      `import {\n  ${[...include.types.values()].join(
-        ",\n  "
-      )}\n} from "${importPath}";\n`
-    );
+    out += `import {\n  ${[...include.types.values()].join(
+      ",\n  "
+    )}\n} from "${importPath}";\n`;
   }
 
   if (includes.size > 0) {
-    out.write("\n");
+    out += "\n";
   }
 
   for (const fqtn of file.types) {
-    writeType(ctx, file, out, fqtn);
+    out += writeType(ctx, file, fqtn);
   }
-  out.end();
+
+  if (ctx.usePrettier) {
+    out = prettier.format(out, ctx.prettierOptions);
+  }
+
+  const stream = fs.createWriteStream(file.path);
+  stream.write(out);
+  stream.end();
 }
 
 function getTSTypeName(
@@ -135,17 +153,12 @@ function getTSTypeName(
   }
 }
 
-function writeType(
-  ctx: TSContext,
-  file: TSFile,
-  out: fs.WriteStream,
-  fqtn: string
-) {
+function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
   const type = ctx.schema.types.get(fqtn);
   if (!type) {
     throw new Error(`undefined type ${fqtn}`);
   }
-  out.write(`// ${type.relativeFbsFile}\n`);
+  let out = `// ${type.relativeFbsFile}\n`;
 
   function writeEnum<T>(
     name: string,
@@ -156,11 +169,11 @@ function writeType(
     if (formattedValues.length === 0) {
       return;
     }
-    out.write(`export type ${name} =`);
+    out += `export type ${name} =`;
     for (const value of formattedValues) {
-      out.write(`\n  | ${value}`);
+      out += `\n  | ${value}`;
     }
-    out.write(";\n\n");
+    out += ";\n\n";
   }
 
   function unionValueFormatter(value: UnionValue) {
@@ -180,11 +193,10 @@ function writeType(
 
   function writeTable(type: TableType) {
     if (type.fields.length === 0) {
-      out.write(
-        "// eslint-disable-next-line @typescript-eslint/no-empty-interface\n"
-      );
+      out +=
+        "// eslint-disable-next-line @typescript-eslint/no-empty-interface\n";
     }
-    out.write(`export interface ${type.name} {`);
+    out += `export interface ${type.name} {`;
     for (const f of type.fields) {
       const typeName = getTSTypeName(ctx, file, f.type);
       if (f.type.c === "custom") {
@@ -194,12 +206,12 @@ function writeType(
           throw new Error(`unknown type ${fqtn}`);
         }
         if (resolvedType.type === "union") {
-          out.write(
-            `\n  ${f.name}_type: ${getUnionTagTypeName(resolvedType.name)};`
-          );
+          out += `\n  ${f.name}_type: ${getUnionTagTypeName(
+            resolvedType.name
+          )};`;
         }
       }
-      out.write(`\n  ${f.name}: ${typeName};`);
+      out += `\n  ${f.name}: ${typeName};`;
 
       const comments: string[] = [];
       if (f.defaultValue !== null) {
@@ -215,10 +227,10 @@ function writeType(
         }
       }
       if (comments.length > 0) {
-        out.write(` // ${comments.join(", ")}`);
+        out += ` // ${comments.join(", ")}`;
       }
     }
-    out.write("\n}\n\n");
+    out += "\n}\n\n";
   }
 
   switch (type.type) {
@@ -237,4 +249,6 @@ function writeType(
       writeTable(type);
       break;
   }
+
+  return out;
 }

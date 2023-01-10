@@ -22,13 +22,13 @@
     "@typescript-eslint/eslint-plugin": "^5.48.0",
     "@typescript-eslint/parser": "^5.48.0",
     "eslint": "^8.31.0",
-    "prettier": "^2.8.2",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.1.2",
     "typescript": "^4.9.4"
   },
   "dependencies": {
     "arcsecond": "^5.0.0",
+    "prettier": "^2.8.2",
     "yaml": "^2.2.1"
   }
 }

@@ -1,3 +1,5 @@
+import { Options as PrettierOptions } from "prettier";
+
 import { TypeFilter } from "@/filter/type-filter";
 import { SchemaTypes } from "@/schema/types";
 
@@ -15,4 +17,6 @@ export interface TSContext {
   header: string;
   outputDir: string;
   importBase: string | null;
+  usePrettier: boolean;
+  prettierOptions: PrettierOptions;
 }
