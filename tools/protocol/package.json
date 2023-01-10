@@ -9,19 +9,22 @@
     "format": "prettier --write src",
     "format-check": "prettier --check src",
     "ts-check": "tsc --noEmit",
-    "start": "ts-node src/main.ts"
+    "start": "ts-node -r tsconfig-paths/register src/main.ts"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@limegrass/eslint-plugin-import-alias": "^1.0.6",
     "@trivago/prettier-plugin-sort-imports": "^4.0.0",
     "@types/node": "^18.11.18",
+    "@types/prettier": "^2.7.2",
     "@typescript-eslint/eslint-plugin": "^5.48.0",
     "@typescript-eslint/parser": "^5.48.0",
     "eslint": "^8.31.0",
     "prettier": "^2.8.2",
     "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.1.2",
     "typescript": "^4.9.4"
   },
   "dependencies": {

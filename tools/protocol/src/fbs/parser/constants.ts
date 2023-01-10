@@ -16,7 +16,7 @@ import {
   AstRefLiteral,
   AstScalarLiteral,
   AstStringLiteral,
-} from "../ast";
+} from "@/fbs/ast";
 
 export const ident: Parser<string> = regex(/^[a-zA-Z_][a-zA-Z0-9_]*/);
 

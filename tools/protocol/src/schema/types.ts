@@ -4,8 +4,8 @@ import {
   AstNumericLiteral,
   AstRefLiteral,
   AstScalarLiteral,
-} from "../fbs/ast";
-import { BasicType } from "../fbs/basic_types";
+} from "@/fbs/ast";
+import { BasicType } from "@/fbs/basic_types";
 
 export type Namespace = string[];
 

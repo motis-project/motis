@@ -10,7 +10,7 @@ import {
   whitespace,
 } from "arcsecond";
 
-import { blockComment, lineComment } from "./comments";
+import { blockComment, lineComment } from "@/fbs/parser/comments";
 
 export const whitespaceOrComments = many1(
   choice([whitespace, lineComment, blockComment])

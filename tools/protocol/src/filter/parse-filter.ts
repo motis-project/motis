@@ -1,4 +1,4 @@
-import { TypeFilter } from "./type-filter";
+import { TypeFilter } from "@/filter/type-filter";
 
 const allowedPartCharacters = /^[-_*a-zA-Z0-9]+$/;
 

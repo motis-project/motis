@@ -1,6 +1,6 @@
-import { TypeFilter } from "../../filter/type-filter";
-import { SchemaTypes } from "../../schema/types";
-import { JSONSchema } from "./types";
+import { TypeFilter } from "@/filter/type-filter";
+import { JSONSchema } from "@/output/json-schema/types";
+import { SchemaTypes } from "@/schema/types";
 
 export interface JSContext {
   schema: SchemaTypes;

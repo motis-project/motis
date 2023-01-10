@@ -1,6 +1,6 @@
-import { BasicType } from "../../fbs/basic_types";
-import { JSContext } from "./context";
-import { JSONSchema } from "./types";
+import { BasicType } from "@/fbs/basic_types";
+import { JSContext } from "@/output/json-schema/context";
+import { JSONSchema } from "@/output/json-schema/types";
 
 export function basicTypeToJS(ctx: JSContext, type: BasicType): JSONSchema {
   switch (type.sc) {

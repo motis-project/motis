@@ -1,9 +1,9 @@
 import fs from "fs";
 import * as path from "path";
 
-import { AstFieldType, AstTopLevel } from "../fbs/ast";
-import { schema } from "../fbs/parser/schema";
-import { FieldType, SchemaType, SchemaTypes, TypeRef } from "./types";
+import { AstFieldType, AstTopLevel } from "@/fbs/ast";
+import { schema } from "@/fbs/parser/schema";
+import { FieldType, SchemaType, SchemaTypes, TypeRef } from "@/schema/types";
 
 interface ResolverContext {
   schema: SchemaTypes;

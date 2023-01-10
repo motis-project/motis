@@ -11,10 +11,10 @@ import {
   parseDocument,
 } from "yaml";
 
-import { SchemaType, SchemaTypes } from "../schema/types";
-import { getOrCreateMap, removeUnknownKeys } from "../util/yaml";
-import { DocContext, DocSchemaFile } from "./context";
-import { DocField, DocPath, DocType, Documentation } from "./types";
+import { DocContext, DocSchemaFile } from "@/doc/context";
+import { DocField, DocPath, DocType, Documentation } from "@/doc/types";
+import { SchemaType, SchemaTypes } from "@/schema/types";
+import { getOrCreateMap, removeUnknownKeys } from "@/util/yaml";
 
 export function readAndUpdateDoc(
   schema: SchemaTypes,

@@ -1,17 +1,12 @@
 import fs from "fs";
 import * as path from "path";
 
-import { TypeFilter, includeType } from "../../filter/type-filter";
-import {
-  FieldType,
-  SchemaTypes,
-  TableType,
-  UnionValue,
-} from "../../schema/types";
-import { TSContext, TSFile } from "./context";
-import { getFilename } from "./filenames";
-import { TSInclude, collectIncludes } from "./includes";
-import { getUnionTagTypeName } from "./util";
+import { TypeFilter, includeType } from "@/filter/type-filter";
+import { TSContext, TSFile } from "@/output/typescript/context";
+import { getFilename } from "@/output/typescript/filenames";
+import { TSInclude, collectIncludes } from "@/output/typescript/includes";
+import { getUnionTagTypeName } from "@/output/typescript/util";
+import { FieldType, SchemaTypes, TableType, UnionValue } from "@/schema/types";
 
 export function writeTypeScriptOutput(
   schema: SchemaTypes,

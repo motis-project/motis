@@ -1,7 +1,7 @@
-import { FieldType, TypeRef } from "../../schema/types";
-import { TSContext, TSFile } from "./context";
-import { getFilename } from "./filenames";
-import { getUnionTagTypeName } from "./util";
+import { TSContext, TSFile } from "@/output/typescript/context";
+import { getFilename } from "@/output/typescript/filenames";
+import { getUnionTagTypeName } from "@/output/typescript/util";
+import { FieldType, TypeRef } from "@/schema/types";
 
 export interface TSInclude {
   filename: string;

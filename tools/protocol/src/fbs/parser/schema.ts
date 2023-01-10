@@ -23,7 +23,7 @@ import {
   AstTopLevel,
   AstUnion,
   AstUnionVal,
-} from "../ast";
+} from "@/fbs/ast";
 import {
   ident,
   identWithOptionalNamespace,
@@ -31,7 +31,7 @@ import {
   numericLiteral,
   scalarOrRefLiteral,
   stringConstant,
-} from "./constants";
+} from "@/fbs/parser/constants";
 import {
   betweenBraces,
   betweenParens,
@@ -39,8 +39,8 @@ import {
   optionalWhitespaceOrComments,
   whitespaceOrComments,
   whitespaceSurrounded,
-} from "./helpers";
-import { customType, type } from "./types";
+} from "@/fbs/parser/helpers";
+import { customType, type } from "@/fbs/parser/types";
 
 export const metadata: Parser<AstMetadata> = possibly(
   sequenceOf([

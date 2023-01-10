@@ -9,7 +9,7 @@ module.exports = {
     ecmaVersion: "latest",
     sourceType: "module",
   },
-  plugins: ["@typescript-eslint"],
+  plugins: ["@typescript-eslint", "@limegrass/import-alias"],
   rules: {
     "@typescript-eslint/no-unused-vars": [
       "warn",
@@ -19,5 +19,6 @@ module.exports = {
         destructuredArrayIgnorePattern: "^_",
       },
     ],
+    "@limegrass/import-alias/import-alias": "error",
   },
 };

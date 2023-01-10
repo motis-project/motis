@@ -1,6 +1,6 @@
 import { Parser, choice, recursiveParser, str } from "arcsecond";
 
-import { AstCustomType, AstFieldType } from "../ast";
+import { AstCustomType, AstFieldType } from "@/fbs/ast";
 import {
   BasicType,
   FLOAT_TYPES,
@@ -9,9 +9,9 @@ import {
   INT_TYPES,
   INT_TYPE_PROPERTIES,
   IntTypeName,
-} from "../basic_types";
-import { identWithOptionalNamespace } from "./constants";
-import { betweenBrackets } from "./helpers";
+} from "@/fbs/basic_types";
+import { identWithOptionalNamespace } from "@/fbs/parser/constants";
+import { betweenBrackets } from "@/fbs/parser/helpers";
 
 export const boolType: Parser<BasicType> = str("bool").map(() => {
   return { sc: "bool", type: "bool" };

@@ -1,11 +1,11 @@
 import fs from "fs";
 import path from "path";
 
-import { Documentation } from "../../doc/types";
-import { TypeFilter, includeType } from "../../filter/type-filter";
-import { FieldType, SchemaTypes } from "../../schema/types";
-import { MarkdownContext, MarkdownFile } from "./context";
-import { getFilename, getTypeLink, toSingleLine } from "./util";
+import { Documentation } from "@/doc/types";
+import { TypeFilter, includeType } from "@/filter/type-filter";
+import { MarkdownContext, MarkdownFile } from "@/output/markdown/context";
+import { getFilename, getTypeLink, toSingleLine } from "@/output/markdown/util";
+import { FieldType, SchemaTypes } from "@/schema/types";
 
 export function writeMarkdownOutput(
   schema: SchemaTypes,

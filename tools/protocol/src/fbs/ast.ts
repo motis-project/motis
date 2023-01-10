@@ -1,4 +1,4 @@
-import { BasicType } from "./basic_types";
+import { BasicType } from "@/fbs/basic_types";
 
 export type AstCustomType = { c: "custom"; type: string };
 export type AstFieldType =

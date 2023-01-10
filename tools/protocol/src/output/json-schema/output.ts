@@ -1,17 +1,17 @@
 import fs from "fs";
 import path from "path";
 
-import { TypeFilter, includeType } from "../../filter/type-filter";
+import { TypeFilter, includeType } from "@/filter/type-filter";
+import { JSContext } from "@/output/json-schema/context";
+import { basicTypeToJS } from "@/output/json-schema/primitive-types";
+import { JSONSchema } from "@/output/json-schema/types";
 import {
   FieldType,
   SchemaType,
   SchemaTypes,
   TableType,
   TypeBase,
-} from "../../schema/types";
-import { JSContext } from "./context";
-import { basicTypeToJS } from "./primitive-types";
-import { JSONSchema } from "./types";
+} from "@/schema/types";
 
 const JSON_SCHEMA_URL = "https://json-schema.org/draft/2020-12/schema";
 

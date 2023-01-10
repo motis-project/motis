@@ -2,14 +2,17 @@ import fs from "fs";
 import * as path from "path";
 import { Document, YAMLMap, isScalar } from "yaml";
 
-import { DocField, DocType, Documentation } from "../../doc/types";
-import { TypeFilter } from "../../filter/type-filter";
-import { SchemaTypes } from "../../schema/types";
-import { compareFqtns, sortTypes } from "../../util/sort";
-import { createMap } from "../../util/yaml";
-import { createJSContext, getJSONSchemaTypes } from "../json-schema/output";
-import { JSONSchema } from "../json-schema/types";
-import { OPEN_API_VERSIONS, OpenApiContext } from "./context";
+import { DocField, DocType, Documentation } from "@/doc/types";
+import { TypeFilter } from "@/filter/type-filter";
+import {
+  createJSContext,
+  getJSONSchemaTypes,
+} from "@/output/json-schema/output";
+import { JSONSchema } from "@/output/json-schema/types";
+import { OPEN_API_VERSIONS, OpenApiContext } from "@/output/openapi/context";
+import { SchemaTypes } from "@/schema/types";
+import { compareFqtns, sortTypes } from "@/util/sort";
+import { createMap } from "@/util/yaml";
 
 export function writeOpenAPIOutput(
   schema: SchemaTypes,
