@@ -1,13 +1,14 @@
 import {
+  Parser,
   char,
   choice,
   everyCharUntil,
-  Parser,
   regex,
   sepBy1,
   sequenceOf,
   str,
 } from "arcsecond";
+
 import {
   AstBooleanLiteral,
   AstLiteral,

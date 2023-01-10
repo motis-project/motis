@@ -1,8 +1,9 @@
-import { FieldType, SchemaTypes } from "../../schema/types";
-import { includeType, TypeFilter } from "../../filter/type-filter";
-import { Documentation } from "../../doc/types";
-import path from "path";
 import fs from "fs";
+import path from "path";
+
+import { Documentation } from "../../doc/types";
+import { TypeFilter, includeType } from "../../filter/type-filter";
+import { FieldType, SchemaTypes } from "../../schema/types";
 import { MarkdownContext, MarkdownFile } from "./context";
 import { getFilename, getTypeLink, toSingleLine } from "./util";
 

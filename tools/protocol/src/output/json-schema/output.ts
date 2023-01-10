@@ -1,3 +1,7 @@
+import fs from "fs";
+import path from "path";
+
+import { TypeFilter, includeType } from "../../filter/type-filter";
 import {
   FieldType,
   SchemaType,
@@ -5,10 +9,7 @@ import {
   TableType,
   TypeBase,
 } from "../../schema/types";
-import { includeType, TypeFilter } from "../../filter/type-filter";
-import path from "path";
 import { JSContext } from "./context";
-import fs from "fs";
 import { basicTypeToJS } from "./primitive-types";
 import { JSONSchema } from "./types";
 

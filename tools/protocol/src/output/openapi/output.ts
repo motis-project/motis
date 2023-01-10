@@ -1,14 +1,15 @@
-import { SchemaTypes } from "../../schema/types";
-import { TypeFilter } from "../../filter/type-filter";
-import * as path from "path";
 import fs from "fs";
-import { Document, isScalar, YAMLMap } from "yaml";
+import * as path from "path";
+import { Document, YAMLMap, isScalar } from "yaml";
+
+import { DocField, DocType, Documentation } from "../../doc/types";
+import { TypeFilter } from "../../filter/type-filter";
+import { SchemaTypes } from "../../schema/types";
+import { compareFqtns, sortTypes } from "../../util/sort";
+import { createMap } from "../../util/yaml";
 import { createJSContext, getJSONSchemaTypes } from "../json-schema/output";
 import { JSONSchema } from "../json-schema/types";
 import { OPEN_API_VERSIONS, OpenApiContext } from "./context";
-import { compareFqtns, sortTypes } from "../../util/sort";
-import { createMap } from "../../util/yaml";
-import { DocField, DocType, Documentation } from "../../doc/types";
 
 export function writeOpenAPIOutput(
   schema: SchemaTypes,

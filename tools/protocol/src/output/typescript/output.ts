@@ -1,15 +1,16 @@
+import fs from "fs";
+import * as path from "path";
+
+import { TypeFilter, includeType } from "../../filter/type-filter";
 import {
   FieldType,
   SchemaTypes,
   TableType,
   UnionValue,
 } from "../../schema/types";
-import { includeType, TypeFilter } from "../../filter/type-filter";
-import * as path from "path";
-import fs from "fs";
 import { TSContext, TSFile } from "./context";
-import { collectIncludes, TSInclude } from "./includes";
 import { getFilename } from "./filenames";
+import { TSInclude, collectIncludes } from "./includes";
 import { getUnionTagTypeName } from "./util";
 
 export function writeTypeScriptOutput(

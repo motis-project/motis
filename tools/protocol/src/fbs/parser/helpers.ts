@@ -1,14 +1,15 @@
 import {
+  Parser,
   between,
   char,
   choice,
   many,
   many1,
-  Parser,
   possibly,
   sequenceOf,
   whitespace,
 } from "arcsecond";
+
 import { blockComment, lineComment } from "./comments";
 
 export const whitespaceOrComments = many1(

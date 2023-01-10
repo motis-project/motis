@@ -1,13 +1,14 @@
-import path from "path";
 import fs from "fs";
-import { resolveSchemaTypes } from "./schema/resolver";
+import path from "path";
 import { parse } from "yaml";
-import { parseTypeFilter } from "./filter/parse-filter";
-import { writeTypeScriptOutput } from "./output/typescript/output";
-import { writeJsonSchemaOutput } from "./output/json-schema/output";
-import { writeOpenAPIOutput } from "./output/openapi/output";
+
 import { readAndUpdateDoc } from "./doc/inout";
+import { parseTypeFilter } from "./filter/parse-filter";
+import { writeJsonSchemaOutput } from "./output/json-schema/output";
 import { writeMarkdownOutput } from "./output/markdown/output";
+import { writeOpenAPIOutput } from "./output/openapi/output";
+import { writeTypeScriptOutput } from "./output/typescript/output";
+import { resolveSchemaTypes } from "./schema/resolver";
 
 let baseDir = process.cwd();
 const argv = process.argv.slice(2);

@@ -1,5 +1,5 @@
-import { TSContext, TSFile } from "./context";
 import { FieldType, TypeRef } from "../../schema/types";
+import { TSContext, TSFile } from "./context";
 import { getFilename } from "./filenames";
 import { getUnionTagTypeName } from "./util";
 

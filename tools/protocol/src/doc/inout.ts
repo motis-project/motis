@@ -1,19 +1,20 @@
-import { SchemaType, SchemaTypes } from "../schema/types";
-import path from "path";
-import { DocField, DocPath, DocType, Documentation } from "./types";
-import { DocContext, DocSchemaFile } from "./context";
 import fs from "fs";
+import path from "path";
 import {
   Document,
+  Scalar,
+  YAMLMap,
   isCollection,
   isScalar,
   isSeq,
   parse,
   parseDocument,
-  Scalar,
-  YAMLMap,
 } from "yaml";
+
+import { SchemaType, SchemaTypes } from "../schema/types";
 import { getOrCreateMap, removeUnknownKeys } from "../util/yaml";
+import { DocContext, DocSchemaFile } from "./context";
+import { DocField, DocPath, DocType, Documentation } from "./types";
 
 export function readAndUpdateDoc(
   schema: SchemaTypes,

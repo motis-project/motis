@@ -1,5 +1,5 @@
-import { SchemaTypes } from "../../schema/types";
 import { TypeFilter } from "../../filter/type-filter";
+import { SchemaTypes } from "../../schema/types";
 
 export interface TSFile {
   path: string;

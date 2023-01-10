@@ -1,16 +1,17 @@
-import { choice, Parser, recursiveParser, str } from "arcsecond";
+import { Parser, choice, recursiveParser, str } from "arcsecond";
+
+import { AstCustomType, AstFieldType } from "../ast";
 import {
   BasicType,
-  FLOAT_TYPE_PROPERTIES,
   FLOAT_TYPES,
+  FLOAT_TYPE_PROPERTIES,
   FloatTypeName,
-  INT_TYPE_PROPERTIES,
   INT_TYPES,
+  INT_TYPE_PROPERTIES,
   IntTypeName,
 } from "../basic_types";
-import { AstCustomType, AstFieldType } from "../ast";
-import { betweenBrackets } from "./helpers";
 import { identWithOptionalNamespace } from "./constants";
+import { betweenBrackets } from "./helpers";
 
 export const boolType: Parser<BasicType> = str("bool").map(() => {
   return { sc: "bool", type: "bool" };

@@ -1,5 +1,6 @@
-import { MarkdownContext } from "./context";
 import path from "path";
+
+import { MarkdownContext } from "./context";
 
 export function getFilename(ctx: MarkdownContext, namespace: string[]) {
   return path.resolve(ctx.outputDir, ...namespace) + ".md";

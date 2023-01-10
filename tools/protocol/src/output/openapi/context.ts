@@ -1,8 +1,9 @@
-import { SchemaTypes } from "../../schema/types";
-import { TypeFilter } from "../../filter/type-filter";
-import { JSONSchema } from "../json-schema/types";
 import { Document } from "yaml";
+
 import { Documentation } from "../../doc/types";
+import { TypeFilter } from "../../filter/type-filter";
+import { SchemaTypes } from "../../schema/types";
+import { JSONSchema } from "../json-schema/types";
 
 export const OPEN_API_VERSIONS = ["3.0.3", "3.1.0"] as const;
 

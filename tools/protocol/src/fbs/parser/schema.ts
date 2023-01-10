@@ -1,30 +1,14 @@
 import {
+  Parser,
   char,
   choice,
   endOfInput,
   many,
-  Parser,
   possibly,
   sequenceOf,
   str,
 } from "arcsecond";
-import {
-  betweenBraces,
-  betweenParens,
-  commaSeparated,
-  optionalWhitespaceOrComments,
-  whitespaceOrComments,
-  whitespaceSurrounded,
-} from "./helpers";
-import {
-  ident,
-  identWithOptionalNamespace,
-  literal,
-  numericLiteral,
-  scalarOrRefLiteral,
-  stringConstant,
-} from "./constants";
-import { customType, type } from "./types";
+
 import {
   AstAttribute,
   AstAttributeDecl,
@@ -40,6 +24,23 @@ import {
   AstUnion,
   AstUnionVal,
 } from "../ast";
+import {
+  ident,
+  identWithOptionalNamespace,
+  literal,
+  numericLiteral,
+  scalarOrRefLiteral,
+  stringConstant,
+} from "./constants";
+import {
+  betweenBraces,
+  betweenParens,
+  commaSeparated,
+  optionalWhitespaceOrComments,
+  whitespaceOrComments,
+  whitespaceSurrounded,
+} from "./helpers";
+import { customType, type } from "./types";
 
 export const metadata: Parser<AstMetadata> = possibly(
   sequenceOf([

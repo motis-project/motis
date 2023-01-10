@@ -1,4 +1,4 @@
-import { Document, isMap, isScalar, YAMLMap } from "yaml";
+import { Document, YAMLMap, isMap, isScalar } from "yaml";
 
 export function removeUnknownKeys(
   oaMap: YAMLMap,
