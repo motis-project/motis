@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "arcsecond": "^5.0.0",
+    "commander": "^9.5.0",
     "prettier": "^2.8.2",
     "yaml": "^2.2.1"
   }

@@ -8,6 +8,7 @@ specifiers:
   '@typescript-eslint/eslint-plugin': ^5.48.0
   '@typescript-eslint/parser': ^5.48.0
   arcsecond: ^5.0.0
+  commander: ^9.5.0
   eslint: ^8.31.0
   prettier: ^2.8.2
   ts-node: ^10.9.1
@@ -17,6 +18,7 @@ specifiers:
 
 dependencies:
   arcsecond: 5.0.0
+  commander: 9.5.0
   prettier: 2.8.2
   yaml: 2.2.1
 
@@ -717,6 +719,11 @@ packages:
   /color-name/1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
     dev: true
+
+  /commander/9.5.0:
+    resolution: {integrity: sha512-KRs7WVDKg86PWiuAqhDrAQnTXZKraVcCc6vFdL14qrZ/DcWwuRo7VoiYXalXO7S5GKpqYiVEwCbgFDfxNHKJBQ==}
+    engines: {node: ^12.20.0 || >=14}
+    dev: false
 
   /concat-map/0.0.1:
     resolution: {integrity: sha1-2Klr13/Wjfd5OnMDajug1UBdR3s=}

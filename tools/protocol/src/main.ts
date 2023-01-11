@@ -1,3 +1,4 @@
+import { Command } from "commander";
 import fs from "fs";
 import path from "path";
 import { parse } from "yaml";
@@ -10,19 +11,21 @@ import { writeOpenAPIOutput } from "@/output/openapi/output";
 import { writeTypeScriptOutput } from "@/output/typescript/output";
 import { resolveSchemaTypes } from "@/schema/resolver";
 
-async function main() {
+const program = new Command();
+program
+  .name("pnpm start")
+  .argument("[config]", "path to config file", "protocol.config.yaml")
+  .option("-o, --output <name...>", "outputs to generate")
+  .option("-s, --skip <name...>", "outputs to skip")
+  .action(main);
+
+async function main(configName: string) {
+  const opts = program.opts();
+  const includeOutputs: string[] | undefined = opts.output;
+  const skipOutputs: string[] | undefined = opts.skip;
+
   let baseDir = process.cwd();
-  const argv = process.argv.slice(2);
-  if (argv.length > 1) {
-    console.log(
-      `usage: ${process.argv.slice(0, 2).join(" ")} [protocol.config.yaml]`
-    );
-    process.exit(1);
-  }
-  const configFile = path.resolve(
-    baseDir,
-    argv.length === 1 ? argv[0] : "protocol.config.yaml"
-  );
+  const configFile = path.resolve(baseDir, configName);
   if (!fs.existsSync(configFile)) {
     console.log(`config file not found: ${configFile}`);
     process.exit(2);
@@ -54,6 +57,12 @@ async function main() {
   const doc = readAndUpdateDoc(schema, baseDir, config.doc);
 
   for (const outputName in config.output) {
+    if (
+      (includeOutputs && !includeOutputs.includes(outputName)) ||
+      (skipOutputs && skipOutputs.includes(outputName))
+    ) {
+      continue;
+    }
     const output = config.output[outputName];
     console.log(`\n[${outputName}]`);
     try {
@@ -81,4 +90,4 @@ async function main() {
   }
 }
 
-main();
+program.parse();

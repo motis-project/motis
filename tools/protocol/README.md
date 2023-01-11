@@ -25,6 +25,9 @@ is read from the YAML files in `docs/api`.
 
 To use another config file run `pnpm start file.yaml`.
 
+To only generate some outputs use `pnpm start --output openapi-3.0 openapi-3.1`
+or `pnpm start --skip json-schema` to ignore some outputs.
+
 Running the protocol tool also updates the input `doc` YAML files by adding any new
 types and fields with `TODO` placeholders and removing types that no longer exist
 in the FlatBuffers schemas.
