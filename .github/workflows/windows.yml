@@ -131,7 +131,7 @@ jobs:
 
       - name: Run Protocol Tool
         if: matrix.config.mode == 'Release'
-        run: pnpm start
+        run: pnpm start --skip rsl-ui
         working-directory: tools/protocol
 
       # ==== DISTRIBUTION ====

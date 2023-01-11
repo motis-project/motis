@@ -84,7 +84,7 @@ jobs:
             - cwd: tools/protocol
 
       - name: Run Protocol Tool
-        run: pnpm start
+        run: pnpm start --skip rsl-ui
 
       - name: Upload API Docs
         uses: actions/upload-artifact@v3
