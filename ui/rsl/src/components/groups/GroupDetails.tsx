@@ -16,9 +16,11 @@ import React, { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import {
+  PaxMonAtStation,
   PaxMonCompactJourneyLeg,
   PaxMonGroup,
   PaxMonGroupRoute,
+  PaxMonInTrip,
   PaxMonRerouteLogEntry,
   PaxMonRerouteReason,
   PaxMonTransferInfo,
@@ -32,7 +34,7 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
 import classNames from "@/util/classNames";
-import { formatDateTime } from "@/util/dateFormat";
+import { formatDateTime, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import Delay from "@/components/util/Delay";
@@ -306,6 +308,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
             {formatDateTime(log.system_time)}
           </span>
         </div>
+        <RerouteLogEntryLocalization log={log} />
         {show_reroutes ? (
           <>
             <div>
@@ -368,6 +371,36 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
       </div>
     </div>
   );
+}
+
+type RerouteLogEntryLocalizationProps = {
+  log: PaxMonRerouteLogEntry;
+};
+
+function RerouteLogEntryLocalization({
+  log,
+}: RerouteLogEntryLocalizationProps): JSX.Element {
+  switch (log.localization_type) {
+    case "PaxMonAtStation": {
+      const loc = log.localization as PaxMonAtStation;
+      return (
+        <div>
+          Reisende an Station {loc.station.name} um{" "}
+          {formatTime(loc.current_arrival_time)}
+          {loc.first_station ? " (Reisebeginn)" : ""}
+        </div>
+      );
+    }
+    case "PaxMonInTrip": {
+      const loc = log.localization as PaxMonInTrip;
+      return (
+        <div>
+          Reisende in Zug {loc.trip.train_nr}, nächster Halt:{" "}
+          {loc.next_station.name} um {formatTime(loc.current_arrival_time)}
+        </div>
+      );
+    }
+  }
 }
 
 type RerouteReasonIcon = {
