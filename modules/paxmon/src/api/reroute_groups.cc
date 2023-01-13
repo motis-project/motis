@@ -12,6 +12,10 @@
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 
+#include "motis/paxmon/localization.h"
+#include "motis/paxmon/localization_conv.h"
+#include "motis/paxmon/reachability.h"
+
 using namespace motis::module;
 using namespace motis::paxmon;
 
@@ -27,6 +31,25 @@ inline void before_journey_load_updated(universe& uv,
   }
 }
 
+passenger_localization get_localization(universe const& uv,
+                                        schedule const& sched,
+                                        PaxMonRerouteGroup const* rr,
+                                        time const current_time) {
+  if (rr->localization()->size() != 0) {
+    return from_fbs(sched, rr->localization()->Get(0));
+  } else {
+    auto const reachability = get_reachability(
+        uv, uv.passenger_groups_.journey(
+                uv.passenger_groups_
+                    .route(passenger_group_with_route{
+                        static_cast<passenger_group_index>(rr->group()),
+                        static_cast<local_group_route_index>(
+                            rr->old_route_index())})
+                    .compact_journey_index_));
+    return localize(sched, reachability, current_time);
+  }
+}
+
 struct log_entry_info {
   reroute_log_entry& entry_;
   typename dynamic_fws_multimap<reroute_log_route_info>::mutable_bucket
@@ -38,7 +61,8 @@ inline log_entry_info append_or_extend_log_entry(
     universe& uv, schedule const& sched, passenger_group_index const pgi,
     local_group_route_index const old_route_idx,
     float const old_route_probability, reroute_reason_t const reason,
-    std::optional<broken_transfer_info> const& bti, bool const has_new_routes) {
+    std::optional<broken_transfer_info> const& bti, bool const has_new_routes,
+    passenger_localization const& loc) {
   auto& pgc = uv.passenger_groups_;
   auto const system_time = sched.system_time_;
   auto log_entries = pgc.reroute_log_entries(pgi);
@@ -59,7 +83,7 @@ inline log_entry_info append_or_extend_log_entry(
   log_entries.emplace_back(reroute_log_entry{
       static_cast<reroute_log_entry_index>(log_new_routes.index()),
       reroute_log_route_info{old_route_idx, old_route_probability, 0},
-      system_time, now(), reason, bti});
+      system_time, now(), reason, bti, to_log_localization(loc)});
   return {log_entries.back(), log_new_routes, false};
 }
 
@@ -72,6 +96,8 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
   auto const& sched = uv_access.sched_;
   auto& uv = uv_access.uv_;
   auto const tracking_updates = uv.update_tracker_.is_tracking();
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
 
   message_creator mc;
 
@@ -82,6 +108,7 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
     auto const reason = static_cast<reroute_reason_t>(rr->reason());
     auto const bti = from_fbs(sched, rr->broken_transfer());
     auto const override_probabilities = rr->override_probabilities();
+    auto const localization = get_localization(uv, sched, rr, current_time);
     auto routes = uv.passenger_groups_.routes(pgi);
 
     auto routes_backup = utl::to_vec(
@@ -89,9 +116,9 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
 
     auto& old_route = routes.at(old_route_idx);
     auto const old_route_probability = old_route.probability_;
-    auto lei = append_or_extend_log_entry(uv, sched, pgi, old_route_idx,
-                                          old_route_probability, reason, bti,
-                                          rr->new_routes()->size() != 0);
+    auto lei = append_or_extend_log_entry(
+        uv, sched, pgi, old_route_idx, old_route_probability, reason, bti,
+        rr->new_routes()->size() != 0, localization);
 
     if (reason != reroute_reason_t::DESTINATION_UNREACHABLE &&
         reason != reroute_reason_t::DESTINATION_REACHABLE) {

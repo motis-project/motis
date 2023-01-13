@@ -61,6 +61,33 @@ export interface PaxMonBrokenTransferInfo {
   departure_canceled: boolean;
 }
 
+// paxmon/PaxMonLocalization.fbs
+export interface PaxMonAtStation {
+  station: Station;
+  schedule_arrival_time: number;
+  current_arrival_time: number;
+  first_station: boolean;
+}
+
+// paxmon/PaxMonLocalization.fbs
+export interface PaxMonInTrip {
+  trip: TripId;
+  next_station: Station;
+  schedule_arrival_time: number;
+  current_arrival_time: number;
+}
+
+// paxmon/PaxMonLocalization.fbs
+export type PaxMonLocalization = PaxMonAtStation | PaxMonInTrip;
+
+export type PaxMonLocalizationType = "PaxMonAtStation" | "PaxMonInTrip";
+
+// paxmon/PaxMonLocalization.fbs
+export interface PaxMonLocalizationWrapper {
+  localization_type: PaxMonLocalizationType;
+  localization: PaxMonLocalization;
+}
+
 // paxmon/PaxMonRerouteLog.fbs
 export interface PaxMonRerouteLogRoute {
   index: number;
@@ -76,6 +103,8 @@ export interface PaxMonRerouteLogEntry {
   broken_transfer: PaxMonBrokenTransferInfo[];
   old_route: PaxMonRerouteLogRoute;
   new_routes: PaxMonRerouteLogRoute[];
+  localization_type: PaxMonLocalizationType;
+  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonGroup.fbs
@@ -135,33 +164,6 @@ export interface PaxMonGroupRouteUpdateInfo {
   n: number;
   p: number;
   pp: number;
-}
-
-// paxmon/PaxMonLocalization.fbs
-export interface PaxMonAtStation {
-  station: Station;
-  schedule_arrival_time: number;
-  current_arrival_time: number;
-  first_station: boolean;
-}
-
-// paxmon/PaxMonLocalization.fbs
-export interface PaxMonInTrip {
-  trip: TripId;
-  next_station: Station;
-  schedule_arrival_time: number;
-  current_arrival_time: number;
-}
-
-// paxmon/PaxMonLocalization.fbs
-export type PaxMonLocalization = PaxMonAtStation | PaxMonInTrip;
-
-export type PaxMonLocalizationType = "PaxMonAtStation" | "PaxMonInTrip";
-
-// paxmon/PaxMonLocalization.fbs
-export interface PaxMonLocalizationWrapper {
-  localization_type: PaxMonLocalizationType;
-  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonReachability.fbs
@@ -639,6 +641,7 @@ export interface PaxMonRerouteGroup {
   reason: PaxMonRerouteReason;
   broken_transfer: PaxMonBrokenTransferInfo[];
   override_probabilities: boolean;
+  localization: PaxMonLocalizationWrapper[];
 }
 
 // paxmon/PaxMonRerouteGroupsRequest.fbs

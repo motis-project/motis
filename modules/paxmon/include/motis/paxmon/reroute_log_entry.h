@@ -5,6 +5,7 @@
 
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
+#include "motis/core/schedule/trip.h"
 
 #include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/index_types.h"
@@ -28,6 +29,15 @@ struct reroute_log_route_info {
   float new_probability_{};
 };
 
+struct reroute_log_localization {
+  trip_idx_t trip_idx_{};
+  std::uint32_t station_id_{};
+  time schedule_arrival_time_{INVALID_TIME};
+  time current_arrival_time_{INVALID_TIME};
+  bool first_station_{};
+  bool in_trip_{};
+};
+
 struct reroute_log_entry {
   reroute_log_entry_index index_{};  // for new routes lookup
   reroute_log_route_info old_route_{};
@@ -35,6 +45,7 @@ struct reroute_log_entry {
   motis::unixtime reroute_time_{};  // current time
   reroute_reason_t reason_{reroute_reason_t::MANUAL};
   std::optional<broken_transfer_info> broken_transfer_;
+  reroute_log_localization localization_{};
 };
 
 inline std::ostream& operator<<(std::ostream& out,
