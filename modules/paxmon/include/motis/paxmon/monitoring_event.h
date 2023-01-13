@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <iosfwd>
 #include <optional>
 
 #include "motis/core/schedule/time.h"
@@ -17,6 +18,18 @@ enum class monitoring_event_type : std::uint8_t {
   BROKEN_TRANSFER,
   MAJOR_DELAY_EXPECTED
 };
+
+inline std::ostream& operator<<(std::ostream& out,
+                                monitoring_event_type const met) {
+  switch (met) {
+    case monitoring_event_type::NO_PROBLEM: return out << "NO_PROBLEM";
+    case monitoring_event_type::BROKEN_TRANSFER:
+      return out << "BROKEN_TRANSFER";
+    case monitoring_event_type::MAJOR_DELAY_EXPECTED:
+      return out << "MAJOR_DELAY_EXPECTED";
+  }
+  return out;
+}
 
 struct monitoring_event {
   monitoring_event_type type_{monitoring_event_type::NO_PROBLEM};

@@ -1,12 +1,14 @@
 import {
   ArrowPathIcon,
   ArrowUturnUpIcon,
+  CheckCircleIcon,
   ClockIcon,
   CpuChipIcon,
   ExclamationTriangleIcon,
   TicketIcon,
   UsersIcon,
   WrenchIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
@@ -266,6 +268,10 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
       return "Simulation";
     case "UpdateForecast":
       return "Neuberechnung der Vorhersage";
+    case "DestinationUnreachable":
+      return "Ziel nicht mehr erreichbar";
+    case "DestinationReachable":
+      return "Ziel wieder erreichbar";
   }
 }
 
@@ -278,6 +284,7 @@ type RerouteLogEntryProps = {
 function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   const broken_transfer =
     log.broken_transfer.length === 1 ? log.broken_transfer[0] : undefined;
+  const show_reroutes = log.new_routes.length > 0;
   const { icon, bgColor } = getRerouteReasonIcon(log.reason);
 
   return (
@@ -299,19 +306,29 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
             {formatDateTime(log.system_time)}
           </span>
         </div>
-        <div>
-          Umleitung von Route #{log.old_route.index} (
-          {formatPercent(log.old_route.previous_probability)} &rarr;{" "}
-          {formatPercent(log.old_route.new_probability)}) auf:
-        </div>
-        <div className="pl-4">
-          {log.new_routes.map((route) => (
-            <div key={route.index}>
-              Route #{route.index}: {formatPercent(route.previous_probability)}{" "}
-              &rarr; {formatPercent(route.new_probability)}
+        {show_reroutes ? (
+          <>
+            <div>
+              Umleitung von Route #{log.old_route.index} (
+              {formatPercent(log.old_route.previous_probability)} &rarr;{" "}
+              {formatPercent(log.old_route.new_probability)}) auf:
             </div>
-          ))}
-        </div>
+            <div className="pl-4">
+              {log.new_routes.map((route) => (
+                <div key={route.index}>
+                  Route #{route.index}:{" "}
+                  {formatPercent(route.previous_probability)} &rarr;{" "}
+                  {formatPercent(route.new_probability)}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div>
+            Route #{log.old_route.index} (
+            {formatPercent(log.old_route.previous_probability)})
+          </div>
+        )}
         {broken_transfer && (
           <div>
             <div className="space-x-1">
@@ -384,12 +401,22 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "Simulation":
       return {
         icon: <CpuChipIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-teal-500",
       };
     case "UpdateForecast":
       return {
         icon: <ArrowPathIcon className={style} />,
         bgColor: "bg-teal-500",
+      };
+    case "DestinationUnreachable":
+      return {
+        icon: <XCircleIcon className={style} />,
+        bgColor: "bg-fuchsia-500",
+      };
+    case "DestinationReachable":
+      return {
+        icon: <CheckCircleIcon className={style} />,
+        bgColor: "bg-green-500",
       };
   }
 }

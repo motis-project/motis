@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/core/common/date_time_util.h"
 
@@ -87,19 +88,26 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         routes, [](group_route const& gr) -> group_route { return gr; });
 
     auto& old_route = routes.at(old_route_idx);
-    if (tracking_updates) {
-      before_journey_load_updated(
-          uv, uv.passenger_groups_.journey(old_route.compact_journey_index_));
-    }
     auto const old_route_probability = old_route.probability_;
-    old_route.probability_ = 0;
-    uv.update_tracker_.after_group_route_updated(
-        passenger_group_with_route{pgi, old_route_idx}, old_route_probability,
-        0, false);
-
     auto lei = append_or_extend_log_entry(uv, sched, pgi, old_route_idx,
                                           old_route_probability, reason, bti,
                                           rr->new_routes()->size() != 0);
+
+    if (reason != reroute_reason_t::DESTINATION_UNREACHABLE &&
+        reason != reroute_reason_t::DESTINATION_REACHABLE) {
+      if (tracking_updates) {
+        before_journey_load_updated(
+            uv, uv.passenger_groups_.journey(old_route.compact_journey_index_));
+      }
+      old_route.probability_ = 0;
+      uv.update_tracker_.after_group_route_updated(
+          passenger_group_with_route{pgi, old_route_idx}, old_route_probability,
+          0, false);
+    } else {
+      utl::verify(
+          rr->new_routes()->size() == 0,
+          "reroute_groups: destination (un)reachable, but new groups provided");
+    }
 
     auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
       auto const tgr = from_fbs(sched, nr);

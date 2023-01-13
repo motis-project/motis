@@ -66,6 +66,22 @@ const sortOptions: Array<LabeledSortOrder> = [
 
 type GroupIdType = "internal" | "source";
 
+type LabeledRerouteReason = {
+  reason: PaxMonRerouteReason;
+  label: string;
+};
+
+const rerouteReasonOptions: Array<LabeledRerouteReason> = [
+  { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
+  { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
+  { reason: "Simulation", label: "Simulation" },
+  { reason: "Manual", label: "Manuelle Umleitung" },
+  { reason: "RevertForecast", label: "Rücknahme einer Vorhersage" },
+  { reason: "UpdateForecast", label: "Neuberechnung einer Vorhersage" },
+  { reason: "DestinationUnreachable", label: "Ziel nicht mehr erreichbar" },
+  { reason: "DestinationReachable", label: "Ziel wieder erreichbar" },
+];
+
 function getFilterGroupsRequest(
   pageParam: number,
   universe: number,
@@ -116,14 +132,7 @@ function GroupList(): JSX.Element {
   const [filterByRerouteReason, setFilterByRerouteReason] = useState(false);
   const [rerouteReasonFilter, setRerouteReasonFilter] = useState<
     PaxMonRerouteReason[]
-  >([
-    "Manual",
-    "BrokenTransfer",
-    "MajorDelayExpected",
-    "RevertForecast",
-    "Simulation",
-    "UpdateForecast",
-  ]);
+  >(rerouteReasonOptions.map((r) => r.reason));
 
   const filterTrainNrs = extractNumbers(trainNrFilter);
 
@@ -398,20 +407,6 @@ function GroupList(): JSX.Element {
     </div>
   );
 }
-
-type LabeledRerouteReason = {
-  reason: PaxMonRerouteReason;
-  label: string;
-};
-
-const rerouteReasonOptions: Array<LabeledRerouteReason> = [
-  { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
-  { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
-  { reason: "Simulation", label: "Simulation" },
-  { reason: "Manual", label: "Manuelle Umleitung" },
-  { reason: "RevertForecast", label: "Rücknahme einer Vorhersage" },
-  { reason: "UpdateForecast", label: "Neuberechnung einer Vorhersage" },
-];
 
 type RerouteReasonOptionsProps = {
   rerouteReasonFilter: PaxMonRerouteReason[];

@@ -223,15 +223,20 @@ void update_tracked_groups(
   };
 
   for (auto const& [pgwr, result] : sim_result.group_route_results_) {
-    if (result.alternative_probabilities_.empty()) {
-      // keep existing group (only reachable part)
-      continue;
-    }
 
     auto reroute_reason = default_reroute_reason;
     if (auto const it = pgwr_event_types.find(pgwr);
         it != end(pgwr_event_types)) {
       reroute_reason = to_reroute_reason(it->second);
+      if (reroute_reason == reroute_reason_t::UPDATE_FORECAST) {
+        std::cout << "update_tracked_groups: UPDATE_FORECAST NYI\n";
+        continue;
+      }
+    }
+
+    if (result.alternative_probabilities_.empty()) {
+      // keep existing group (only reachable part)
+      reroute_reason = reroute_reason_t::DESTINATION_UNREACHABLE;
     }
 
     auto const& gr = uv.passenger_groups_.route(pgwr);
@@ -307,6 +312,35 @@ void update_tracked_groups(
   tick_stats.rerouted_group_routes_ += reroute_count;
 }
 
+void log_destination_reachable(
+    universe& uv, schedule const& sched,
+    passenger_group_with_route_and_probability const& pgwrap) {
+  if (pgwrap.probability_ == 0.0F) {
+    return;
+  }
+  auto log_entries = uv.passenger_groups_.reroute_log_entries(pgwrap.pgwr_.pg_);
+  if (auto it = std::find_if(log_entries.rbegin(), log_entries.rend(),
+                             [&](reroute_log_entry const& entry) {
+                               return entry.old_route_.route_ ==
+                                      pgwrap.pgwr_.route_;
+                             });
+      it != log_entries.rend()) {
+    if (it->reason_ != reroute_reason_t::DESTINATION_UNREACHABLE) {
+      return;
+    }
+    auto const log_new_routes =
+        uv.passenger_groups_.log_entry_new_routes_.emplace_back();
+    log_entries.emplace_back(reroute_log_entry{
+        static_cast<reroute_log_entry_index>(log_new_routes.index()),
+        reroute_log_route_info{pgwrap.pgwr_.route_, pgwrap.probability_,
+                               pgwrap.probability_},
+        sched.system_time_,
+        now(),
+        reroute_reason_t::DESTINATION_REACHABLE,
+        {}});
+  }
+}
+
 bool has_better_alternative(std::vector<alternative> const& alts,
                             time expected_arrival_time,
                             duration min_improvement) {
@@ -359,10 +393,14 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
 
     if (event->type() == PaxMonEventType_NO_PROBLEM) {
       unbroken_transfers.push_back(pgwr);
+      log_destination_reachable(uv, sched, pgwrap);
+      // TODO(pablo): if current p=0, behavior simulation won't work
+      // check if we need it anyway
       continue;
-    }
-
-    if (pgwrap.probability_ == 0.0F) {
+      // if (event->group_route()->route()->planned()) {
+      //   continue;
+      // }
+    } else if (pgwrap.probability_ == 0.0F) {
       continue;
     }
 

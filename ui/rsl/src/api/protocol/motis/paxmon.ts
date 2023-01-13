@@ -43,7 +43,9 @@ export type PaxMonRerouteReason =
   | "MajorDelayExpected"
   | "RevertForecast"
   | "Simulation"
-  | "UpdateForecast";
+  | "UpdateForecast"
+  | "DestinationUnreachable"
+  | "DestinationReachable";
 
 // paxmon/PaxMonBrokenTransferInfo.fbs
 export type PaxMonTransferDirection = "Enter" | "Exit";
