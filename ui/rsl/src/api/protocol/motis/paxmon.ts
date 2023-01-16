@@ -124,6 +124,7 @@ export interface PaxMonGroupRoute {
   planned: boolean;
   broken: boolean;
   disabled: boolean;
+  destination_unreachable: boolean;
 }
 
 // paxmon/PaxMonGroup.fbs
@@ -354,6 +355,7 @@ export interface PaxMonGroupWithStats {
   min_estimated_delay: number;
   max_estimated_delay: number;
   expected_estimated_delay: number;
+  prob_destination_unreachable: number;
 }
 
 // paxmon/PaxMonFilterGroupsResponse.fbs
@@ -691,6 +693,7 @@ export interface PaxMonGroupStatisticsResponse {
   group_count: number;
   total_group_route_count: number;
   active_group_route_count: number;
+  groups_with_unreachable_destination: number;
   total_pax_count: number;
   min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;

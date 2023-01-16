@@ -4,7 +4,7 @@ import {
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
-import { MapIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { MapIcon, UsersIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
@@ -26,7 +26,7 @@ import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
-import { formatNumber } from "@/data/numberFormat";
+import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -553,17 +553,25 @@ function GroupListEntry({
         </div>
         {firstRoute && <GroupRouteInfo route={firstRoute} />}
         <div className="flex justify-between">
-          <div className="flex gap-1">
-            Verspätung:
-            <Delay minutes={groupWithStats.expected_estimated_delay} />
-            {groupWithStats.min_estimated_delay !=
-            groupWithStats.max_estimated_delay ? (
-              <div>
-                (<Delay minutes={groupWithStats.min_estimated_delay} /> –{" "}
-                <Delay minutes={groupWithStats.max_estimated_delay} />)
-              </div>
-            ) : null}
-          </div>
+          {groupWithStats.prob_destination_unreachable == 0 ? (
+            <div className="flex gap-1">
+              Verspätung:
+              <Delay minutes={groupWithStats.expected_estimated_delay} />
+              {groupWithStats.min_estimated_delay !=
+              groupWithStats.max_estimated_delay ? (
+                <div>
+                  (<Delay minutes={groupWithStats.min_estimated_delay} /> –{" "}
+                  <Delay minutes={groupWithStats.max_estimated_delay} />)
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex items-center gap-x-1 text-fuchsia-600">
+              <XCircleIcon className="w-5 h-5" aria-hidden="true" />
+              Ziel nicht erreichbar (
+              {formatPercent(groupWithStats.prob_destination_unreachable)})
+            </div>
+          )}
           <div className="flex items-center gap-x-1">
             <MapIcon
               className="w-5 h-5 text-db-cool-gray-500"

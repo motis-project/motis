@@ -27,7 +27,9 @@ function GroupStatistics(): JSX.Element {
       <h1 className="text-xl font-semibold">Gruppenstatistiken</h1>
       <p>
         Reisendengruppen: {formatNumber(data.group_count)}, Reisende:{" "}
-        {formatNumber(data.total_pax_count)}
+        {formatNumber(data.total_pax_count)}, Möglicherweise gestrandete
+        Reisendengruppen:{" "}
+        {formatNumber(data.groups_with_unreachable_destination)}
       </p>
       <p>
         Reiseketten: {formatNumber(data.total_group_route_count)} gesamt,{" "}
