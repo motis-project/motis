@@ -16,6 +16,7 @@ table PaxMonGroupStatisticsResponse {
   group_count: uint;
   total_group_route_count: uint;
   active_group_route_count: uint;
+  groups_with_unreachable_destination: uint;
 
   total_pax_count: ulong;
 

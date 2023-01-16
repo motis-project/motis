@@ -34,6 +34,7 @@ struct group_info {
   std::int16_t min_estimated_delay_{std::numeric_limits<std::int16_t>::max()};
   std::int16_t max_estimated_delay_{std::numeric_limits<std::int16_t>::min()};
   float expected_estimated_delay_{};
+  float p_destination_unreachable_{};
   std::uint32_t log_entries_{};
 };
 
@@ -171,6 +172,9 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
         gi.max_estimated_delay_ =
             std::max(gi.max_estimated_delay_, gr.estimated_delay_);
         gi.expected_estimated_delay_ += gr.probability_ * gr.estimated_delay_;
+        if (gr.destination_unreachable_) {
+          gi.p_destination_unreachable_ += gr.probability_;
+        }
       }
       if (gr.planned_ && gi.scheduled_departure_ == INVALID_TIME) {
         auto const cj = pgc.journey(gr.compact_journey_index_);
@@ -343,7 +347,8 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
                                             include_reroute_log),
                                      gi.min_estimated_delay_,
                                      gi.max_estimated_delay_,
-                                     gi.expected_estimated_delay_);
+                                     gi.expected_estimated_delay_,
+                                     gi.p_destination_unreachable_);
                                })))
                            .Union());
   return make_msg(mc);

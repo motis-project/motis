@@ -203,8 +203,7 @@ inline reroute_reason_t to_reroute_reason(monitoring_event_type const met) {
 }
 
 void update_tracked_groups(
-    schedule const& sched, universe const& uv,
-    simulation_result const& sim_result,
+    schedule const& sched, universe& uv, simulation_result const& sim_result,
     std::map<passenger_group_with_route, monitoring_event_type> const&
         pgwr_event_types,
     std::map<passenger_group_with_route,
@@ -246,12 +245,14 @@ void update_tracked_groups(
       }
     }
 
+    auto& gr = uv.passenger_groups_.route(pgwr);
+
     if (result.alternative_probabilities_.empty()) {
       // keep existing group (only reachable part)
       reroute_reason = reroute_reason_t::DESTINATION_UNREACHABLE;
+      gr.destination_unreachable_ = true;
     }
 
-    auto const& gr = uv.passenger_groups_.route(pgwr);
     auto const old_journey =
         uv.passenger_groups_.journey(gr.compact_journey_index_);
     auto const journey_prefix =
@@ -335,6 +336,8 @@ void log_destination_reachable(
     universe& uv, schedule const& sched,
     passenger_group_with_route_and_probability const& pgwrap,
     passenger_localization const& loc) {
+  auto& route = uv.passenger_groups_.route(pgwrap.pgwr_);
+  route.destination_unreachable_ = false;
   if (pgwrap.probability_ == 0.0F) {
     return;
   }

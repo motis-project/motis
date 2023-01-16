@@ -59,6 +59,7 @@ struct group_route {
   bool broken_{};
   bool disabled_{};  // if true, route is not in the graph
   bool planned_{};
+  bool destination_unreachable_{};
   route_source_flags source_flags_{route_source_flags::NONE};
 };
 
@@ -70,10 +71,18 @@ inline group_route make_group_route(
     route_source_flags const source_flags = route_source_flags::NONE,
     motis::time const planned_arrival_time = INVALID_TIME,
     std::int16_t const estimated_delay = 0, bool const broken = false,
-    bool const disabled = false) {
-  return group_route{
-      gre_index,       probability, cj_index, lgr_index, planned_arrival_time,
-      estimated_delay, broken,      disabled, planned,   source_flags};
+    bool const disabled = false, bool const destination_unreachable = false) {
+  return group_route{gre_index,
+                     probability,
+                     cj_index,
+                     lgr_index,
+                     planned_arrival_time,
+                     estimated_delay,
+                     broken,
+                     disabled,
+                     planned,
+                     destination_unreachable,
+                     source_flags};
 }
 
 }  // namespace motis::paxmon

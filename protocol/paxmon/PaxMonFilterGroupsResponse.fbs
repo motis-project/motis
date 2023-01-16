@@ -7,6 +7,7 @@ table PaxMonGroupWithStats {
   min_estimated_delay: short;
   max_estimated_delay: short;
   expected_estimated_delay: float;
+  prob_destination_unreachable: float;
 }
 
 table PaxMonFilterGroupsResponse {

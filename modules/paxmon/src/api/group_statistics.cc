@@ -110,6 +110,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
 
   auto total_group_route_count = 0U;
   auto active_group_route_count = 0U;
+  auto unreachable_dest_group_count = 0U;
   auto total_pax_count = 0ULL;
 
   for (auto const& pg : pgc) {
@@ -124,6 +125,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
     auto max_estimated_delay = LOWEST_ALLOWED_DELAY;
     auto expected_estimated_delay = 0.F;
     auto active_routes = 0U;
+    auto has_unreachable_dest_routes = false;
     for (auto const& gr : routes) {
       if (gr.probability_ == 0) {
         continue;
@@ -138,10 +140,16 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       expected_estimated_delay += gr.probability_ * gr.estimated_delay_;
       h_group_route_probabilities.add(
           static_cast<int>(std::round(gr.probability_ * 100)));
+      if (gr.destination_unreachable_) {
+        has_unreachable_dest_routes = true;
+      }
     }
     h_active_routes_per_group.add(active_routes);
     total_group_route_count += routes.size();
     active_group_route_count += active_routes;
+    if (has_unreachable_dest_routes) {
+      ++unreachable_dest_group_count;
+    }
     if (active_routes == 0) {
       continue;
     }
@@ -167,8 +175,9 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       MsgContent_PaxMonGroupStatisticsResponse,
       CreatePaxMonGroupStatisticsResponse(
           mc, uv.passenger_groups_.size(), total_group_route_count,
-          active_group_route_count, total_pax_count,
-          histogram_to_fbs(h_min_est_delay), histogram_to_fbs(h_max_est_delay),
+          active_group_route_count, unreachable_dest_group_count,
+          total_pax_count, histogram_to_fbs(h_min_est_delay),
+          histogram_to_fbs(h_max_est_delay),
           histogram_to_fbs(h_expected_est_delay),
           histogram_to_fbs(h_routes_per_group),
           histogram_to_fbs(h_active_routes_per_group),
