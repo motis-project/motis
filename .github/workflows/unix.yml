@@ -83,9 +83,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: seanmiddleditch/gha-setup-ninja@master
 
-      # ==== CACHE ====
-      - name: buildcache Cache
-        uses: actions/cache@v3
+      # ==== RESTORE CACHE ====
+      - name: Restore buildcache Cache
+        uses: actions/cache/restore@v3
+        id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
@@ -94,8 +95,9 @@ jobs:
             buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-
             buildcache-${{ matrix.config.cache }}-
 
-      - name: Dependencies Cache
-        uses: actions/cache@v3
+      - name: Restore Dependencies Cache
+        uses: actions/cache/restore@v3
+        id: restore-deps-cache
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
@@ -185,6 +187,21 @@ jobs:
           asset_path: ./motis-${{ matrix.config.preset }}.tar.bz2
           asset_name: motis-${{ matrix.config.preset }}.tar.bz2
           asset_content_type: application/x-tar
+
+      # ==== SAVE CACHE ====
+      - name: Save buildcache Cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
+
+      - name: Save Dependencies Cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/deps
+          key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
 
   linux:
     runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]

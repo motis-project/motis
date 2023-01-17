@@ -23,6 +23,9 @@ static const column_mapping<gtfs_stop> columns = {
      "stop_lon"}};
 
 void stop::compute_close_stations(geo::point_rtree const& stop_rtree) {
+  if (std::abs(coord_.lat_) < 2.0 && std::abs(coord_.lng_) < 2.0) {
+    return;
+  }
   close_ = utl::to_vec(stop_rtree.in_radius(coord_, 100), [](size_t const idx) {
     return static_cast<unsigned>(idx);
   });

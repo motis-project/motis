@@ -35,8 +35,10 @@ jobs:
       - uses: actions/checkout@v3
       - uses: seanmiddleditch/gha-setup-ninja@master
 
-      - name: buildcache Cache
-        uses: actions/cache@v3
+      # ==== RESTORE CACHE ====
+      - name: Restore buildcache Cache
+        uses: actions/cache/restore@v3
+        id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
@@ -45,13 +47,15 @@ jobs:
             buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-
             buildcache-wnds-${{ matrix.config.mode }}-
 
-      - name: Dependencies Cache
-        uses: actions/cache@v3
+      - name: Restore Dependencies Cache
+        uses: actions/cache/restore@v3
+        id: restore-deps-cache
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
           restore-keys: deps-
 
+      # ==== BUILD ====
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build
@@ -161,3 +165,18 @@ jobs:
           asset_path: ./motis-windows.zip
           asset_name: motis-windows.zip
           asset_content_type: application/zip
+
+      # ==== SAVE CACHE ====
+      - name: Save buildcache Cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
+
+      - name: Save Dependencies Cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/deps
+          key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}

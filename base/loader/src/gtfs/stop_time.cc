@@ -33,8 +33,8 @@ static const column_mapping<gtfs_stop_time> stop_time_columns = {
      "stop_headsign", "pickup_type", "drop_off_type"}};
 
 int hhmm_to_min(cstr s) {
-  if (s.len == 0) {
-    return -1;
+  if (s.empty()) {
+    return kInterpolate;
   } else {
     int hours = 0;
     parse_arg(s, hours, 0);

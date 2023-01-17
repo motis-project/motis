@@ -4,6 +4,7 @@ import {
   ClockIcon,
   CpuChipIcon,
   ExclamationTriangleIcon,
+  TicketIcon,
   UsersIcon,
   WrenchIcon,
 } from "@heroicons/react/24/outline";
@@ -106,7 +107,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
               ? "1 Route"
               : `${group.routes.length} Routen`}
           </div>
-          <div className="inline-flex flex-col gap-y-2">
+          <div className="inline-flex flex-col gap-y-3">
             {group.routes.map((route) => (
               <GroupRoute route={route} key={route.index} />
             ))}
@@ -138,43 +139,63 @@ type GroupRouteProps = {
 
 function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   return (
-    <div className="bg-db-cool-gray-200 rounded px-4 py-2">
-      <div className="flex gap-4 items-baseline">
-        <div className="text-lg">Route #{route.index}</div>
-        <div className="text-lg">
-          {formatPercent(route.probability)} Wahrscheinlichkeit
+    <div className="flex flex-col bg-db-cool-gray-200 rounded drop-shadow-md">
+      <div
+        className={classNames(
+          "grid grid-cols-3 gap-1 rounded-t p-2 bg-db-cool-gray-200 border-b-4",
+          route.broken ? "border-red-300" : "border-green-300"
+        )}
+      >
+        <div className="text-lg flex items-center gap-4">
+          #{route.index}
+          {route.planned && (
+            <TicketIcon className="w-5 h-5" title="Planmäßge Route" />
+          )}
         </div>
-        {route.planned && <div>(planmäßige Route)</div>}
-        {route.broken && <div className="text-red-600">(gebrochen)</div>}
-        {route.disabled && <div className="text-pink-600">(deaktiviert)</div>}
-      </div>
-      <div className="flex gap-4">
-        <div>
-          Erwartete Zielverspätung: <Delay minutes={route.estimated_delay} />
+        <div className="text-lg text-center">
+          {formatPercent(route.probability)}
+        </div>
+        <div
+          className="flex justify-end items-center gap-1"
+          title="Erwartete Zielverspätung"
+        >
+          <ClockIcon className="w-5 h-5" />
+          <Delay minutes={route.estimated_delay} forceSign={true} />
         </div>
       </div>
-      <table className="mt-1">
-        <thead>
-          <tr className="font-semibold">
-            <td className="pr-2 sr-only">Abschnitt</td>
-            <td className="pr-2">Zug</td>
-            <td className="pr-2" title="Benötigte Umstiegszeit">
-              Umstieg
-            </td>
-            <td className="pr-2" colSpan={2}>
-              Planmäßige Abfahrt
-            </td>
-            <td className="pr-2" colSpan={2}>
-              Planmäßige Ankunft
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          {route.journey.legs.map((leg, idx) => (
-            <JourneyLeg key={idx} leg={leg} index={idx} />
-          ))}
-        </tbody>
-      </table>
+      <div
+        className={classNames(
+          "rounded-b p-2",
+          route.broken
+            ? "bg-red-50"
+            : route.probability > 0
+            ? "bg-green-50"
+            : "bg-amber-50"
+        )}
+      >
+        <table>
+          <thead>
+            <tr className="font-semibold">
+              <td className="pr-2 sr-only">Abschnitt</td>
+              <td className="pr-2">Zug</td>
+              <td className="pr-2" title="Benötigte Umstiegszeit">
+                Umstieg
+              </td>
+              <td className="pr-2" colSpan={2}>
+                Planmäßige Abfahrt
+              </td>
+              <td className="pr-2" colSpan={2}>
+                Planmäßige Ankunft
+              </td>
+            </tr>
+          </thead>
+          <tbody>
+            {route.journey.legs.map((leg, idx) => (
+              <JourneyLeg key={idx} leg={leg} index={idx} />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -403,7 +424,7 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
           <td className="pr-4 sr-only">V</td>
           {group.routes.map((r) => (
             <td key={r.index} className="pr-4 text-center">
-              {r.index}
+              R #{r.index}
             </td>
           ))}
         </tr>

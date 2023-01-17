@@ -2,6 +2,8 @@ import { formatShortDuration } from "@/data/durationFormat";
 
 type DelayProps = {
   minutes: number;
+  colored?: boolean;
+  forceSign?: boolean;
 };
 
 function getDelayColor(mins: number): string {
@@ -18,10 +20,14 @@ function getDelayColor(mins: number): string {
   }
 }
 
-function Delay({ minutes }: DelayProps): JSX.Element {
+function Delay({
+  minutes,
+  colored = true,
+  forceSign = false,
+}: DelayProps): JSX.Element {
   return (
-    <span className={getDelayColor(Math.round(minutes))}>
-      {formatShortDuration(minutes)}
+    <span className={colored ? getDelayColor(Math.round(minutes)) : ""}>
+      {formatShortDuration(minutes, forceSign)}
     </span>
   );
 }
