@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=nigiri
-  commit=9fa09eaa3631aa1f6c2c3c038ce063397e3b6871
+  commit=be0182aa65624328e30db39752d3bbfddf31bd46
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -89,7 +89,7 @@
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
-  commit=076f815cece59e0a0ee08237c8fbba75465452b6
+  commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master

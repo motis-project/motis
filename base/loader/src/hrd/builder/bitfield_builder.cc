@@ -1,5 +1,6 @@
 #include "motis/loader/hrd/builder/bitfield_builder.h"
 
+#include "utl/get_or_create.h"
 #include "utl/verify.h"
 
 #include "motis/loader/util.h"
@@ -33,17 +34,13 @@ Offset<String> bitfield_builder::get_or_create_bitfield(
 Offset<String> bitfield_builder::get_or_create_bitfield(
     bitfield const& b, flatbuffers64::FlatBufferBuilder& fbb,
     int bitfield_num) {
-  auto fbs_bitfields_it = fbs_bitfields_.find(b);
-  if (fbs_bitfields_it == end(fbs_bitfields_)) {
-    auto serialized = fbb.CreateString(serialize_bitset<BIT_COUNT>(b));
-    std::tie(fbs_bitfields_it, std::ignore) =
-        fbs_bitfields_.emplace(b, serialized);
-
-    if (bitfield_num != no_bitfield_num) {
-      fbs_bf_lookup_.insert(std::make_pair(bitfield_num, serialized));
+  return utl::get_or_create(fbs_bitfields_, b, [&]() {
+    auto const serialized = fbb.CreateString(serialize_bitset<BIT_COUNT>(b));
+    if (bitfield_num != kNoBitfield) {
+      fbs_bf_lookup_.emplace(bitfield_num, serialized);
     }
-  }
-  return fbs_bitfields_it->second;
+    return serialized;
+  });
 }
 
 }  // namespace motis::loader::hrd
