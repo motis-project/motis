@@ -167,6 +167,7 @@ void revert_forecasts(
   auto last_group = std::numeric_limits<passenger_group_index>::max();
   for (auto const& pgwr : pgwrs) {
 
+    (void)sim_result;
     // TODO(pablo): won't work if current p=0
     /*
     if (auto it = sim_result.group_route_results_.find(pgwr);
