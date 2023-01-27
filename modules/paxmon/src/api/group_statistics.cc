@@ -112,6 +112,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
   auto active_group_route_count = 0U;
   auto unreachable_dest_group_count = 0U;
   auto total_pax_count = 0ULL;
+  auto unreachable_dest_pax_count = 0ULL;
 
   for (auto const& pg : pgc) {
     auto const pgi = pg->id_;
@@ -149,6 +150,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
     active_group_route_count += active_routes;
     if (has_unreachable_dest_routes) {
       ++unreachable_dest_group_count;
+      unreachable_dest_pax_count += pg->passengers_;
     }
     if (active_routes == 0) {
       continue;
@@ -176,8 +178,8 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       CreatePaxMonGroupStatisticsResponse(
           mc, uv.passenger_groups_.size(), total_group_route_count,
           active_group_route_count, unreachable_dest_group_count,
-          total_pax_count, histogram_to_fbs(h_min_est_delay),
-          histogram_to_fbs(h_max_est_delay),
+          total_pax_count, unreachable_dest_pax_count,
+          histogram_to_fbs(h_min_est_delay), histogram_to_fbs(h_max_est_delay),
           histogram_to_fbs(h_expected_est_delay),
           histogram_to_fbs(h_routes_per_group),
           histogram_to_fbs(h_active_routes_per_group),
