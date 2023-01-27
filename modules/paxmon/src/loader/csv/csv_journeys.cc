@@ -62,7 +62,7 @@ struct fmt::formatter<std::optional<std::pair<std::uint64_t, std::uint64_t>>>
 
 namespace motis::paxmon::loader::csv {
 
-enum class csv_format { MOTIS, TREK };
+enum class csv_format { MOTIS, TREK1, TREK2 };
 
 struct trip_candidate {
   explicit operator bool() const { return trp_ != nullptr; }
@@ -306,7 +306,7 @@ void set_transfer_info(schedule const& sched,
   }
 }
 
-void write_match_log(
+void write_motis_match_log(
     std::ofstream& match_log, schedule const& sched,
     input_journey_leg const& leg,
     std::optional<std::pair<std::uint64_t, std::uint64_t>> const& current_id,
@@ -353,11 +353,12 @@ void write_match_log(
   }
 }
 
-void write_match_log(
+template <typename TrekRow>
+void write_trek_match_log(
     std::ofstream& match_log, schedule const& sched,
     input_journey_leg const& leg,
     std::optional<std::pair<std::uint64_t, std::uint64_t>> const& current_id,
-    trek_row const& row,
+    TrekRow const& row,
     std::vector<input_journey_leg> const& current_input_legs,
     duration const debug_match_tolerance) {
   if (!match_log) {
@@ -404,14 +405,21 @@ csv_format get_csv_format(std::string_view const file_content) {
   if (auto const nl = file_content.find('\n'); nl != std::string_view::npos) {
     auto const header = file_content.substr(0, nl);
     if (header.find("leg_type") != std::string_view::npos) {
+      LOG(info) << "detected csv input format: motis";
       utl::verify(
           header.find(',') != std::string_view::npos,
           "paxmon: only ',' separator supported for motis csv journey files");
       return csv_format::MOTIS;
     } else if (header.find("EinZeitpunkt") != std::string_view::npos) {
+      LOG(info) << "detected csv input format: trek variant 1";
       utl::verify(header.find(';') != std::string_view::npos,
                   "paxmon: only ';' separator supported for daily trek files");
-      return csv_format::TREK;
+      return csv_format::TREK1;
+    } else if (header.find("EINSTIEG_SOLL_ZEIT") != std::string_view::npos) {
+      LOG(info) << "detected csv input format: trek variant 2";
+      utl::verify(header.find(';') != std::string_view::npos,
+                  "paxmon: only ';' separator supported for daily trek files");
+      return csv_format::TREK2;
     } else {
       throw utl::fail("paxmon: unsupported csv journey input format");
     }
@@ -420,11 +428,11 @@ csv_format get_csv_format(std::string_view const file_content) {
 }
 
 time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
-                          schedule const& sched) {
+                          schedule const& sched, char const* ts_format) {
   auto ss = std::stringstream{};
   auto ls = date::local_seconds{};
   ss << val;
-  ss >> date::parse("%d.%m.%Y %H:%M:%S", ls);
+  ss >> date::parse(ts_format, ls);
   if (ss.fail()) {
     return INVALID_TIME;
   }
@@ -630,45 +638,57 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                   row.train_nr_.val(), match_tolerance);
               set_transfer_info(sched, current_input_legs);
             }
-            write_match_log(match_log, sched, leg, current_id, row,
-                            current_input_legs, debug_match_tolerance);
+            write_motis_match_log(match_log, sched, leg, current_id, row,
+                                  current_input_legs, debug_match_tolerance);
           });
-  } else if (format == csv_format::TREK) {
+  } else if (format == csv_format::TREK1 || format == csv_format::TREK2) {
     auto const tz = settings.journey_timezone_.empty()
                         ? date::current_zone()
                         : date::locate_zone(settings.journey_timezone_);
-    utl::line_range<utl::buf_reader>{file_content}  //
-        | utl::csv<trek_row, ';'>()  //
-        | utl::for_each([&](trek_row const& row) {
-            auto const base_id = id_t{row.id_.val(), 0U};
-            if (base_id != current_id) {
-              finish_journey();
-              current_id = base_id;
-              current_passengers = row.passengers_.val();
-              current_input_legs.clear();
-            }
-            if (row.category_.val() == "Fussweg") {
-              return;
-            }
-            auto& leg = current_input_legs.emplace_back();
-            leg.from_station_idx_ =
-                get_station_idx(sched, row.from_.val().view());
-            leg.to_station_idx_ = get_station_idx(sched, row.to_.val().view());
-            leg.enter_time_ =
-                parse_trek_timestamp(row.enter_.val().view(), tz, sched);
-            leg.exit_time_ =
-                parse_trek_timestamp(row.exit_.val().view(), tz, sched);
 
-            if (leg.stations_found() && leg.valid_times()) {
-              leg.trp_candidate_ = get_best_trip_candidate(
-                  sched, leg.from_station_idx_.value(),
-                  leg.to_station_idx_.value(), leg.enter_time_, leg.exit_time_,
-                  row.train_nr_.val(), match_tolerance);
-              set_transfer_info(sched, current_input_legs);
-            }
-            write_match_log(match_log, sched, leg, current_id, row,
-                            current_input_legs, debug_match_tolerance);
-          });
+    auto const process_trek_row = [&](auto const& row, char const* ts_format) {
+      auto const base_id = id_t{row.id_.val(), 0U};
+      if (base_id != current_id) {
+        finish_journey();
+        current_id = base_id;
+        current_passengers = row.passengers_.val();
+        current_input_legs.clear();
+      }
+      if (row.category_.val() == "Fussweg") {
+        return;
+      }
+      auto& leg = current_input_legs.emplace_back();
+      leg.from_station_idx_ = get_station_idx(sched, row.from_.val().view());
+      leg.to_station_idx_ = get_station_idx(sched, row.to_.val().view());
+      leg.enter_time_ =
+          parse_trek_timestamp(row.enter_.val().view(), tz, sched, ts_format);
+      leg.exit_time_ =
+          parse_trek_timestamp(row.exit_.val().view(), tz, sched, ts_format);
+
+      if (leg.stations_found() && leg.valid_times()) {
+        leg.trp_candidate_ = get_best_trip_candidate(
+            sched, leg.from_station_idx_.value(), leg.to_station_idx_.value(),
+            leg.enter_time_, leg.exit_time_, row.train_nr_.val(),
+            match_tolerance);
+        set_transfer_info(sched, current_input_legs);
+      }
+      write_trek_match_log(match_log, sched, leg, current_id, row,
+                           current_input_legs, debug_match_tolerance);
+    };
+
+    if (format == csv_format::TREK1) {
+      utl::line_range<utl::buf_reader>{file_content}  //
+          | utl::csv<trek1_row, ';'>()  //
+          | utl::for_each([&](trek1_row const& row) {
+              process_trek_row(row, "%d.%m.%Y %H:%M:%S");
+            });
+    } else /* if (format == csv_format::TREK2) */ {
+      utl::line_range<utl::buf_reader>{file_content}  //
+          | utl::csv<trek2_row, ';'>()  //
+          | utl::for_each([&](trek2_row const& row) {
+              process_trek_row(row, "%Y-%m-%d %H:%M:%S");
+            });
+    }
   }
 
   finish_journey();
