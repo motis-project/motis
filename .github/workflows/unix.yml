@@ -208,8 +208,8 @@ jobs:
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles
-          cp docs/generated/openapi-3.0/openapi.yaml motis/web/openapi.yaml
-          cp docs/generated/openapi-3.1/openapi.yaml motis/web/openapi-3.1.yaml
+          cp docs/generated/openapi-3.1/openapi.yaml motis/web/openapi.yaml
+          cp docs/generated/openapi-3.0/openapi.yaml motis/web/openapi-3.0.yaml
           tar cjf motis-${{ matrix.config.preset }}.tar.bz2 motis
 
       - name: Upload Distribution
