@@ -38,6 +38,17 @@ struct histogram {
   }
 
   void finish() {
+    avg_value_ = 0;
+    median_value_ = 0;
+    max_count_ = 0;
+
+    if (total_count_ == 0) {
+      min_value_ = 0;
+      max_value_ = 0;
+      counts_.resize(1);
+      return;
+    }
+
     if (min_value_ > -offset_) {
       auto const empty_beginning = min_value_ + offset_;
       counts_.erase(counts_.begin(),
@@ -50,9 +61,6 @@ struct histogram {
       counts_.resize(counts_.size() - empty_end);
     }
 
-    avg_value_ = 0;
-    median_value_ = 0;
-    max_count_ = 0;
     auto count_sum = 0.;
     auto const half_total_count = static_cast<double>(total_count_) / 2.0;
     auto calc_median = true;
