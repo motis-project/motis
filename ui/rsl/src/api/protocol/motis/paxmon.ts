@@ -693,8 +693,9 @@ export interface PaxMonGroupStatisticsResponse {
   group_count: number;
   total_group_route_count: number;
   active_group_route_count: number;
-  groups_with_unreachable_destination: number;
+  unreachable_destination_group_count: number;
   total_pax_count: number;
+  unreachable_destination_pax_count: number;
   min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;
   expected_estimated_delay: PaxMonHistogram;
