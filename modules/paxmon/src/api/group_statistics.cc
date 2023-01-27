@@ -127,11 +127,20 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
     auto expected_estimated_delay = 0.F;
     auto active_routes = 0U;
     auto has_unreachable_dest_routes = false;
+    auto has_reachable_dest_routes = false;
     for (auto const& gr : routes) {
       if (gr.probability_ == 0) {
         continue;
       }
       ++active_routes;
+      h_group_route_probabilities.add(
+          static_cast<int>(std::round(gr.probability_ * 100)));
+      if (gr.destination_unreachable_) {
+        has_unreachable_dest_routes = true;
+        continue;
+      } else {
+        has_reachable_dest_routes = true;
+      }
       if (gr.estimated_delay_ < min_estimated_delay) {
         min_estimated_delay = gr.estimated_delay_;
       }
@@ -139,11 +148,6 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
         max_estimated_delay = gr.estimated_delay_;
       }
       expected_estimated_delay += gr.probability_ * gr.estimated_delay_;
-      h_group_route_probabilities.add(
-          static_cast<int>(std::round(gr.probability_ * 100)));
-      if (gr.destination_unreachable_) {
-        has_unreachable_dest_routes = true;
-      }
     }
     h_active_routes_per_group.add(active_routes);
     total_group_route_count += routes.size();
@@ -152,7 +156,7 @@ msg_ptr group_statistics(paxmon_data& data, motis::module::msg_ptr const& msg) {
       ++unreachable_dest_group_count;
       unreachable_dest_pax_count += pg->passengers_;
     }
-    if (active_routes == 0) {
+    if (active_routes == 0 || !has_reachable_dest_routes) {
       continue;
     }
 
