@@ -69,7 +69,7 @@ struct label {
     // If arrival time is earlier
     if (domination_arrival_time == 1) {
       // If more changes but duration is much less (see MAX_DIFF_FOR_LESS_TRANSFERS) => dominate
-      if(domination_changes_count == -1 && domination_travel_duration == 1) {
+      if(domination_changes_count == -1 && domination_travel_duration >= 0) {
         time diff = (other.arrival_time_ - other.journey_departure_time_) - (arrival_time_ - journey_departure_time_);
         size_t diff_changes_count = this->changes_count_ - other.changes_count_;
         return diff > MAX_DIFF_FOR_LESS_TRANSFERS || diff_changes_count == 1;
