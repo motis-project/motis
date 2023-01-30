@@ -1,0 +1,123 @@
+RailVizMapConfigResponse:
+  description: TODO
+  fields:
+    initial_permalink:
+      description: TODO
+    tiles_redirect:
+      description: TODO
+Direction:
+  description: TODO
+RailVizStationRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    time:
+      description: TODO
+    event_count:
+      description: TODO
+    direction:
+      description: TODO
+    by_schedule_time:
+      description: TODO
+Event:
+  description: TODO
+  fields:
+    trips:
+      description: TODO
+    type:
+      description: TODO
+    event:
+      description: TODO
+RailVizStationResponse:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    events:
+      description: TODO
+RailVizTrainsRequest:
+  description: TODO
+  fields:
+    zoom_bounds:
+      description: TODO
+    zoom_geo:
+      description: TODO
+    corner1:
+      description: TODO
+    corner2:
+      description: TODO
+    start_time:
+      description: TODO
+    end_time:
+      description: TODO
+    max_trains:
+      description: TODO
+    last_trains:
+      description: TODO
+Train:
+  description: TODO
+  fields:
+    names:
+      description: TODO
+    clasz:
+      description: TODO
+    route_distance:
+      description: TODO
+    d_station_id:
+      description: TODO
+    a_station_id:
+      description: TODO
+    d_time:
+      description: TODO
+    a_time:
+      description: TODO
+    sched_d_time:
+      description: TODO
+    sched_a_time:
+      description: TODO
+    d_time_reason:
+      description: TODO
+    a_time_reason:
+      description: TODO
+    trip:
+      description: TODO
+    indices:
+      description: TODO
+RailVizTrainsResponse:
+  description: TODO
+  fields:
+    stations:
+      description: TODO
+    trains:
+      description: TODO
+    polylines:
+      description: TODO
+    extras:
+      description: TODO
+RailVizTripGuessRequest:
+  description: TODO
+  fields:
+    train_num:
+      description: TODO
+    time:
+      description: TODO
+    guess_count:
+      description: TODO
+Trip:
+  description: TODO
+  fields:
+    first_station:
+      description: TODO
+    trip_info:
+      description: TODO
+RailVizTripGuessResponse:
+  description: TODO
+  fields:
+    trips:
+      description: TODO
+RailVizTripsRequest:
+  description: TODO
+  fields:
+    trips:
+      description: TODO

@@ -1,4 +1,5 @@
-// generated file - do not modify - run update-protocol to update
+// GENERATED FILE - DO NOT MODIFY
+// -> see /tools/protocol for information on how to update this file
 import { TripId } from "@/api/protocol/motis";
 import {
   PaxMonCompactJourney,
@@ -9,6 +10,28 @@ import {
   PaxMonTripLoadInfo,
 } from "@/api/protocol/motis/paxmon";
 import { RISContentType } from "@/api/protocol/motis/ris";
+
+// paxforecast/PaxForecastUpdate.fbs
+export interface PaxForecastAlternative {
+  journey: PaxMonCompactJourney;
+  probability: number;
+}
+
+// paxforecast/PaxForecastUpdate.fbs
+export interface PaxForecastGroupRoute {
+  group_route: PaxMonGroupWithRoute;
+  localization_type: PaxMonLocalizationType;
+  localization: PaxMonLocalization;
+  forecast_alternatives: PaxForecastAlternative[];
+}
+
+// paxforecast/PaxForecastUpdate.fbs
+export interface PaxForecastUpdate {
+  universe: number;
+  system_time: number;
+  groups: PaxForecastGroupRoute[];
+  trips: PaxMonTripLoadInfo[];
+}
 
 // paxforecast/Measures.fbs
 export interface MeasureRecipients {
@@ -111,26 +134,4 @@ export interface PaxForecastApplyMeasuresStatistics {
 export interface PaxForecastApplyMeasuresResponse {
   stats: PaxForecastApplyMeasuresStatistics;
   updates: PaxMonTrackedUpdates;
-}
-
-// paxforecast/PaxForecastUpdate.fbs
-export interface PaxForecastAlternative {
-  journey: PaxMonCompactJourney;
-  probability: number;
-}
-
-// paxforecast/PaxForecastUpdate.fbs
-export interface PaxForecastGroupRoute {
-  group_route: PaxMonGroupWithRoute;
-  localization_type: PaxMonLocalizationType;
-  localization: PaxMonLocalization;
-  forecast_alternatives: PaxForecastAlternative[];
-}
-
-// paxforecast/PaxForecastUpdate.fbs
-export interface PaxForecastUpdate {
-  universe: number;
-  system_time: number;
-  groups: PaxForecastGroupRoute[];
-  trips: PaxMonTripLoadInfo[];
 }

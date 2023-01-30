@@ -1,4 +1,5 @@
-// generated file - do not modify - run update-protocol to update
+// GENERATED FILE - DO NOT MODIFY
+// -> see /tools/protocol for information on how to update this file
 
 // ris/RISContentType.fbs
 export type RISContentType = "RIBasis" | "RISML";

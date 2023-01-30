@@ -1,0 +1,174 @@
+ExpandedTripId:
+  description: TODO
+  fields:
+    index:
+      description: TODO
+TripSelector:
+  description: TODO
+TripSelectorWrapper:
+  description: TODO
+  fields:
+    selector:
+      description: TODO
+TripBasedTripDebugRequest:
+  description: TODO
+  fields:
+    trips:
+      description: TODO
+    stations:
+      description: TODO
+TripBasedTripId:
+  description: TODO
+  fields:
+    expanded_trip_id:
+      description: TODO
+    motis_trip_id:
+      description: TODO
+LineDebugInfo:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    first_trip:
+      description: TODO
+    last_trip:
+      description: TODO
+    stop_count:
+      description: TODO
+TransportDebugInfo:
+  description: TODO
+  fields:
+    category_name:
+      description: TODO
+    category_id:
+      description: TODO
+    clasz:
+      description: TODO
+    train_nr:
+      description: TODO
+    original_train_nr:
+      description: TODO
+    line_id:
+      description: TODO
+    name:
+      description: TODO
+    provider:
+      description: TODO
+    direction:
+      description: TODO
+TransferDebugInfo:
+  description: TODO
+  fields:
+    from_trip:
+      description: TODO
+    to_trip:
+      description: TODO
+    from_stop_index:
+      description: TODO
+    to_stop_index:
+      description: TODO
+    arrival_time:
+      description: TODO
+    departure_time:
+      description: TODO
+    from_station:
+      description: TODO
+    to_station:
+      description: TODO
+LineAtStopDebugInfo:
+  description: TODO
+  fields:
+    line:
+      description: TODO
+    stop_index:
+      description: TODO
+FootpathDebugInfo:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    duration:
+      description: TODO
+StopDebugInfo:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    arrival_time:
+      description: TODO
+    departure_time:
+      description: TODO
+    in_allowed:
+      description: TODO
+    out_allowed:
+      description: TODO
+    transfers:
+      description: TODO
+    reverse_transfers:
+      description: TODO
+    lines_at_stop:
+      description: TODO
+    footpaths:
+      description: TODO
+    reverse_footpaths:
+      description: TODO
+    station_transfer_time:
+      description: TODO
+    arrival_transports:
+      description: TODO
+    departure_transports:
+      description: TODO
+    platform_transfer_time:
+      description: TODO
+TripDebugInfo:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    line:
+      description: TODO
+    stops:
+      description: TODO
+TripAtStopDebugInfo:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    stop_index:
+      description: TODO
+    arrival_time:
+      description: TODO
+    departure_time:
+      description: TODO
+    in_allowed:
+      description: TODO
+    out_allowed:
+      description: TODO
+    arrival_transports:
+      description: TODO
+    departure_transports:
+      description: TODO
+StationDebugInfo:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    lines_at_stop:
+      description: TODO
+    footpaths:
+      description: TODO
+    reverse_footpaths:
+      description: TODO
+    station_transfer_time:
+      description: TODO
+    trips_at_stop:
+      description: TODO
+TripBasedTripDebugResponse:
+  description: TODO
+  fields:
+    trips:
+      description: TODO
+    stations:
+      description: TODO

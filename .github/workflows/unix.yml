@@ -43,12 +43,14 @@ jobs:
           key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
+
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2
         with:
           version: ^7.15.0
           run_install: |
             - cwd: ui/rsl
+
       - name: Formatting
         run: pnpm run format-check
 
@@ -58,8 +60,41 @@ jobs:
       - name: TypeScript
         run: pnpm run ts-check
 
+  api-docs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/protocol
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: pnpm Cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('tools/protocol/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install Protocol Tool Dependencies
+        uses: pnpm/action-setup@v2
+        with:
+          version: ^7.15.0
+          run_install: |
+            - cwd: tools/protocol
+
+      - name: Run Protocol Tool
+        run: pnpm start --skip rsl-ui
+
+      - name: Upload API Docs
+        uses: actions/upload-artifact@v3
+        with:
+          name: api-docs
+          path: docs/generated/
+
   macos:
     runs-on: macos-latest
+    needs: api-docs
     strategy:
       fail-fast: false
       matrix:
@@ -155,6 +190,12 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
+      - name: Download API Docs
+        uses: actions/download-artifact@v3
+        with:
+          name: api-docs
+          path: docs/generated
+
       # ==== DISTRIBUTION ====
       - name: Create Distribution
         run: |
@@ -167,6 +208,8 @@ jobs:
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles
+          cp docs/generated/openapi-3.1/openapi.yaml motis/web/openapi.yaml
+          cp docs/generated/openapi-3.0/openapi.yaml motis/web/openapi-3.0.yaml
           tar cjf motis-${{ matrix.config.preset }}.tar.bz2 motis
 
       - name: Upload Distribution
@@ -204,6 +247,7 @@ jobs:
 
   linux:
     runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
+    needs: api-docs
     container:
       image: ghcr.io/motis-project/docker-cpp-build
       volumes:
@@ -292,6 +336,13 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
+      - name: Download API Docs
+        if: matrix.config.artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: api-docs
+          path: docs/generated
+
       # ==== DISTRIBUTION ====
       - name: Create Distribution
         if: matrix.config.artifact
@@ -309,6 +360,8 @@ jobs:
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles
+          cp docs/generated/openapi-3.0/openapi.yaml motis/web/openapi.yaml
+          cp docs/generated/openapi-3.1/openapi.yaml motis/web/openapi-3.1.yaml
           tar cjf motis-${{ matrix.config.artifact }}.tar.bz2 motis
 
       - name: Upload Distribution

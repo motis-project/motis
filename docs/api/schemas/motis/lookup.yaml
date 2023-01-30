@@ -1,0 +1,128 @@
+LookupGeoStationIdRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    min_radius:
+      description: TODO
+    max_radius:
+      description: TODO
+LookupGeoStationRequest:
+  description: TODO
+  fields:
+    pos:
+      description: TODO
+    min_radius:
+      description: TODO
+    max_radius:
+      description: TODO
+LookupBatchGeoStationRequest:
+  description: TODO
+  fields:
+    requests:
+      description: TODO
+LookupGeoStationResponse:
+  description: TODO
+  fields:
+    stations:
+      description: TODO
+LookupBatchGeoStationResponse:
+  description: TODO
+  fields:
+    responses:
+      description: TODO
+LookupIdTrainRequest:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+LookupIdTrainResponse:
+  description: TODO
+  fields:
+    train:
+      description: TODO
+LookupMetaStationRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+LookupBatchMetaStationRequest:
+  description: TODO
+  fields:
+    requests:
+      description: TODO
+LookupMetaStationResponse:
+  description: TODO
+  fields:
+    equivalent:
+      description: TODO
+LookupBatchMetaStationResponse:
+  description: TODO
+  fields:
+    responses:
+      description: TODO
+LookupRiBasisRequest:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    schedule:
+      description: TODO
+RiBasisTrip:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    fahrt:
+      description: TODO
+LookupRiBasisResponse:
+  description: TODO
+  fields:
+    trips:
+      description: TODO
+LookupScheduleInfoResponse:
+  description: Information about the loaded schedule
+  fields:
+    name:
+      description: Name of the loaded schedule
+    begin:
+      description: First loaded day (unix timestamp)
+    end:
+      description: Last loaded day (unix timestamp)
+TableType:
+  description: TODO
+LookupStationEventsRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    interval:
+      description: TODO
+    type:
+      description: TODO
+StationEvent:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    type:
+      description: TODO
+    train_nr:
+      description: TODO
+    line_id:
+      description: TODO
+    time:
+      description: TODO
+    schedule_time:
+      description: TODO
+    direction:
+      description: TODO
+    service_name:
+      description: TODO
+    track:
+      description: TODO
+LookupStationEventsResponse:
+  description: TODO
+  fields:
+    events:
+      description: TODO

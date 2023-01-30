@@ -1,0 +1,12 @@
+StationGuesserRequest:
+  description: TODO
+  fields:
+    guess_count:
+      description: TODO
+    input:
+      description: TODO
+StationGuesserResponse:
+  description: TODO
+  fields:
+    guesses:
+      description: TODO

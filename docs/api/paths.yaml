@@ -1,0 +1,380 @@
+/address:
+  summary: Address autocompletion
+  tags:
+    - intermodal
+  input: motis.address.AddressRequest
+  output:
+    type: motis.address.AddressResponse
+    description: A list of guesses
+
+#/cc:
+
+/csa:
+  summary: Public transport routing (CSA)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+/guesser:
+  summary: Station autocompletion
+  tags:
+    - intermodal
+  input: motis.guesser.StationGuesserRequest
+  output:
+    type: motis.guesser.StationGuesserResponse
+    description: A list of guesses
+
+/intermodal:
+  summary: Intermodal routing
+  tags:
+    - routing
+    - intermodal
+  input: motis.intermodal.IntermodalRoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+#/lookup/geo_station:
+#/lookup/geo_station_batch:
+#/lookup/geo_station_id:
+#/lookup/id_train:
+#/lookup/meta_station:
+#/lookup/meta_station_batch:
+
+/lookup/ribasis:
+  summary: Returns a trip in RI Basis format
+  description: |
+    Returns the current state of a trip in RI Basis format. Also included
+    in the response are all associated trips (merged and through services).
+
+    The response contains trip ids and the full trip in RiBasisFahrt format
+    for each trip.
+
+    The `schedule` input parameter can be used to lookup trips in
+    paxmon parallel universes.
+  tags:
+    - lookup
+  input: motis.lookup.LookupRiBasisRequest
+  output:
+    type: motis.lookup.LookupRiBasisResponse
+    description: Information about the requested trip and associated trips
+
+/lookup/schedule_info:
+  summary: Returns information about the currently loaded schedule
+  tags:
+    - lookup
+  output:
+    type: motis.lookup.LookupScheduleInfoResponse
+    description: Information about the currently loaded schedule
+
+#/lookup/station_events:
+
+#/osrm/one_to_many:
+#/osrm/smooth_via:
+#/osrm/table:
+#/osrm/via:
+
+#/parking/edge:
+#/parking/edges:
+
+/parking/geo:
+  summary: Request parking lots in an area
+  tags:
+    - parking
+  input: motis.parking.ParkingGeoRequest
+  output:
+    type: motis.parking.ParkingGeoResponse
+    description: A list of parking lots
+
+
+/parking/lookup:
+  summary: Request information about a parking lot by ID
+  tags:
+    - parking
+  input: motis.parking.ParkingLookupRequest
+  output:
+    type: motis.parking.ParkingLookupResponse
+    description: Information about the requested parking lot
+
+/paxforecast/apply_measures:
+  summary: Simulate measures in a paxmon universe
+  description: |
+    This API can be used to simulate a list of measures (both real-time updates
+    and announcements).
+
+    Simulations must be run in a separate paxmon universe.
+    It is not possible to undo simulations - create (and destroy!) multiple
+    universes if necessary (see `/paxmon/fork_universe`).
+  tags:
+    - rsl
+  input: motis.paxforecast.PaxForecastApplyMeasuresRequest
+  output:
+    type: motis.paxforecast.PaxForecastApplyMeasuresResponse
+    description: Information about the simulation result
+
+#/paxmon/add_groups:
+
+/paxmon/destroy_universe:
+  summary: Destroy a paxmon universe
+  description: |
+    If the given universe is not currently in use by another API call,
+    it is destroyed immediately. Otherwise, it will be destroyed as soon as
+    the last API call using it finishes (this API call will return
+    immediately).
+    The universe is destroyed regardless of any remaining time to live.
+    The default universe (0) can't be destroyed.
+    An error is returned if the universe is not found or if the destruction
+    of the default universe is requested.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonDestroyUniverseRequest
+  output:
+    type: motis.MotisSuccess
+    description: Universe was destroyed (or marked for destruction if still in use).
+
+/paxmon/filter/groups:
+  summary: Request a list of passenger groups with filter and sort options
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonFilterGroupsRequest
+  output:
+    type: motis.paxmon.PaxMonFilterGroupsResponse
+    description: A list of passenger groups matching the request
+
+/paxmon/filter_trips:
+  summary: Request a list of trips with filter and sort options
+  description: |
+    Returns a list of trips tracked by paxmon (i.e. at least one passenger
+    group uses or used the trip). This API offers various filter and sort
+    options as well as pagination.
+
+    Only trips that satisfy all the filter criteria are included. All
+    filter options have a value to ignore that filter - see the
+    description of the individual request fields for more information.
+
+    Depending on the flags set in the request, the response can also include
+    load information for the trip sections.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonFilterTripsRequest
+  output:
+    type: motis.paxmon.PaxMonFilterTripsResponse
+    description: A list of trips matching the request
+
+/paxmon/find_trips:
+  summary: Find trips by train number
+  description: >
+    Find trips by a given train number. Only trips that are tracked by paxmon
+    (i.e. at least one passenger group uses or used the trip) are returned.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonFindTripsRequest
+  output:
+    type: motis.paxmon.PaxMonFindTripsResponse
+    description: A list of trips matching the request
+
+/paxmon/fork_universe:
+  summary: Create a new paxmon universe based on an existing universe
+  description: |
+    Create a copy of the given existing universe.
+
+    Optionally, a copy of the schedule used by the given existing universe
+    can be created as well. Otherwise, the new universe shares the schedule
+    with the given existing universe.
+    If real-time updates are applied or simulated using measures,
+    a copy of the schedule must be created.
+
+    Universes can be created with a time to live (`ttl`), in which case they
+    are automatically destroyed once the time to live expires. The time
+    to live can be reset by accessing the universe using any API or by
+    explicitly using the `/paxmon/keep_alive` API.
+    Depending on server configuration, it may also be possible to create
+    universes that don't expire by setting the time to live in the request
+    to 0. Universes without a time to live **must** be destroyed
+    manually using the `/paxmon/destroy_universe` API once they are no longer
+    needed.
+    The response contains the actual time to live assigned by the server,
+    which may be different than the requested value.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonForkUniverseRequest
+  output:
+    type: motis.paxmon.PaxMonForkUniverseResponse
+    description: Information about the newly created paxmon universe
+
+/paxmon/get_groups:
+  summary: Get information about passenger groups
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGetGroupsRequest
+  output:
+    type: motis.paxmon.PaxMonGetGroupsResponse
+    description: Information about the requested passenger groups
+
+/paxmon/get_interchanges:
+  summary: Get a list of monitored interchanges at a station
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGetInterchangesRequest
+  output:
+    type: motis.paxmon.PaxMonGetInterchangesResponse
+    description: Information about the requested interchanges
+
+/paxmon/group_statistics:
+  summary: Get various passenger group statistics
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGroupStatisticsRequest
+  output:
+    type: motis.paxmon.PaxMonGroupStatisticsResponse
+    description: Statistics for the requested universe
+
+/paxmon/groups_in_trip:
+  summary: Get a list of passenger groups in a trip
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGetGroupsInTripRequest
+  output:
+    type: motis.paxmon.PaxMonGetGroupsInTripResponse
+    description: Information about passenger groups in the requested trip
+
+/paxmon/keep_alive:
+  summary: Prevent the destruction of paxmon universes
+  description: |
+    Reset the time to live of the given universes. If universes that expire
+    (ttl != 0) are used, this API should be called on a timer before the ttl
+    expires. The remaining time to live for the given universes is reset
+    to their initial time to live values.
+
+    The API returns information about all universes that were found and
+    a list of universes included in the request that were already expired.
+
+    The request should include the multiverse ID in order to detect server
+    restarts. If the given multiverse ID is different from the current
+    multiverse ID used by the server, all the requested universes are listed
+    as expired in the response. If the given multiverse ID is 0, no check
+    is performed. The current multiverse ID is always included in the reponse
+    and can also be obtained using other API calls (e.g. `/paxmon/universes`
+    and `/paxmon/status`).
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonKeepAliveRequest
+  output:
+    type: motis.paxmon.PaxMonKeepAliveResponse
+    description: Updated information about the requested universes
+
+/paxmon/reroute_groups:
+  summary: Manually reroute passenger groups
+  description: |
+    Can be used to manually reroute passenger groups.
+
+    The reroute `reason` **must** be set to `Manual`.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonRerouteGroupsRequest
+  output:
+    type: motis.paxmon.PaxMonRerouteGroupsResponse
+    description: Information about the changes
+
+/paxmon/status:
+  summary: Request basic information about a paxmon universe
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonStatusRequest
+  output:
+    type: motis.paxmon.PaxMonStatusResponse
+    description: Information about the requested paxmon universe
+
+/paxmon/trip_load_info:
+  summary: Get load information for a trip
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGetTripLoadInfosRequest
+  output:
+    type: motis.paxmon.PaxMonGetTripLoadInfosResponse
+    description: Load information for the requested trip
+
+/paxmon/universes:
+  summary: Request a list of paxmon universes
+  description: >
+    Returns a list of all universes that currently exist on the server,
+    as well as the current multiverse ID.
+  tags:
+    - rsl
+  output:
+    type: motis.paxmon.PaxMonGetUniversesResponse
+    description: A list of paxmon universes
+
+/ppr/profiles:
+  summary: Get list of available pedestrian routing profiles
+  tags:
+    - ppr
+  output:
+    type: motis.ppr.FootRoutingProfilesResponse
+    description: A list of available profiles
+
+/ppr/route:
+  summary: Pedestrian routing
+  tags:
+    - ppr
+  input: motis.ppr.FootRoutingRequest
+  output:
+    type: motis.ppr.FootRoutingResponse
+    description: Pedestrian routes
+
+/railviz/get_station:
+  summary: Request a list of trips arriving and departing at a station
+  tags:
+    - lookup
+  input: motis.railviz.RailVizStationRequest
+  output:
+    type: motis.railviz.RailVizStationResponse
+    description: A list of trips arring and departing at the station
+
+/raptor:
+  summary: Public transport routing (RAPTOR)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+/revise:
+  summary: Update a connection with current real-time information
+  tags:
+    - lookup
+  input: motis.Connection
+  output:
+    type: motis.Connection
+    description: The updated connection
+
+/routing:
+  summary: Public transport routing (Multi Criteria Pareto Dijkstra)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response
+
+/trip_to_connection:
+  summary: Get information about the stops of a trip
+  tags:
+    - lookup
+  input: motis.TripId
+  output:
+    type: motis.Connection
+    description: All stops of the requested trip
+
+/tripbased:
+  summary: Public transport routing (TripBased Routing)
+  tags:
+    - routing
+  input: motis.routing.RoutingRequest
+  output:
+    type: motis.routing.RoutingResponse
+    description: Routing response

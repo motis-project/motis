@@ -120,6 +120,20 @@ jobs:
         run: pnpm run build
         working-directory: ./ui/rsl
 
+      # ==== API DOCS ====
+      - name: Install Protocol Tool Dependencies
+        if: matrix.config.mode == 'Release'
+        uses: pnpm/action-setup@v2
+        with:
+          version: ^7.15.0
+          run_install: |
+            - cwd: tools/protocol
+
+      - name: Run Protocol Tool
+        if: matrix.config.mode == 'Release'
+        run: pnpm start --skip rsl-ui
+        working-directory: tools/protocol
+
       # ==== DISTRIBUTION ====
       - name: Move Profiles
         if: matrix.config.mode == 'Release'
@@ -135,6 +149,12 @@ jobs:
           Copy-Item .\ui\web\external_lib,.\ui\web\img,.\ui\web\js,.\ui\web\style .\web\ -Recurse
           Copy-Item .\ui\web\*.html,.\ui\web\*.js,.\ui\web\*.ico .\web\
           Copy-Item .\ui\rsl\dist .\web\rsl -Recurse
+
+      - name: Move API Docs
+        if: matrix.config.mode == 'Release'
+        run: |
+          Copy-Item .\docs\generated\openapi-3.1\openapi.yaml .\web\openapi.yaml
+          Copy-Item .\docs\generated\openapi-3.0\openapi.yaml .\web\openapi-3.0.yaml
 
       - name: Create Distribution
         if: matrix.config.mode == 'Release'

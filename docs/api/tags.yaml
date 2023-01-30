@@ -1,0 +1,12 @@
+- name: intermodal
+  description: Intermodal routing
+- name: lookup
+  description: Timetable information
+- name: parking
+  description: Parking lot information
+- name: ppr
+  description: Pedestrian routing (Per Pedes Routing)
+- name: routing
+  description: Routing
+- name: rsl
+  description: Passenger flow monitoring and forecasting

@@ -13,8 +13,7 @@
     "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write src",
     "format-check": "prettier --check src",
-    "ts-check": "tsc",
-    "update-protocol": "node --trace-uncaught tools/protocol.js && eslint src/api/protocol --ext .ts --fix && prettier --write src/api/protocol"
+    "ts-check": "tsc"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.5",

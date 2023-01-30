@@ -1,0 +1,131 @@
+ParkingEdgeDirection:
+  description: TODO
+ParkingEdgeRequest:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    direction:
+      description: TODO
+    ppr_search_options:
+      description: TODO
+    duration:
+      description: TODO
+    accessibility:
+      description: TODO
+    include_steps:
+      description: TODO
+    include_edges:
+      description: TODO
+    include_path:
+      description: TODO
+ParkingFee:
+  description: TODO
+ParkingSource:
+  description: TODO
+Parking:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    pos:
+      description: TODO
+    fee:
+      description: TODO
+    source:
+      description: TODO
+    name:
+      description: TODO
+    lot_type:
+      description: TODO
+    address:
+      description: TODO
+ParkingEdgeResponse:
+  description: TODO
+  fields:
+    parking:
+      description: TODO
+    car:
+      description: TODO
+    walk:
+      description: TODO
+    uses_car:
+      description: TODO
+ParkingEdgesRequest:
+  description: TODO
+  fields:
+    pos:
+      description: TODO
+    max_car_duration:
+      description: TODO
+    ppr_search_options:
+      description: TODO
+    filtered_stations:
+      description: TODO
+    include_outward:
+      description: TODO
+    include_return:
+      description: TODO
+    include_without_car:
+      description: TODO
+ParkingEdgeCosts:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    car_duration:
+      description: TODO
+    car_distance:
+      description: TODO
+    foot_duration:
+      description: TODO
+    foot_distance:
+      description: TODO
+    foot_accessibility:
+      description: TODO
+    total_duration:
+      description: TODO
+ParkingEdge:
+  description: TODO
+  fields:
+    parking:
+      description: TODO
+    uses_car:
+      description: TODO
+    outward_costs:
+      description: TODO
+    return_costs:
+      description: TODO
+ParkingEdgesResponse:
+  description: TODO
+  fields:
+    edges:
+      description: TODO
+    stats:
+      description: TODO
+ParkingGeoRequest:
+  description: TODO
+  fields:
+    pos:
+      description: TODO
+    radius:
+      description: TODO
+ParkingGeoResponse:
+  description: TODO
+  fields:
+    parkings:
+      description: TODO
+ParkingLookupRequest:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+ParkingLookupResponse:
+  description: TODO
+  fields:
+    parking:
+      description: TODO

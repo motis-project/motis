@@ -1,0 +1,28 @@
+AddressRequest:
+  description: TODO
+  fields:
+    input:
+      description: TODO
+Region:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    admin_level:
+      description: TODO
+Address:
+  description: TODO
+  fields:
+    pos:
+      description: TODO
+    name:
+      description: TODO
+    type:
+      description: TODO
+    regions:
+      description: TODO
+AddressResponse:
+  description: TODO
+  fields:
+    guesses:
+      description: TODO
