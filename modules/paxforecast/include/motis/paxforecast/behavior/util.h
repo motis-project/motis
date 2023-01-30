@@ -47,7 +47,11 @@ std::vector<std::size_t> max_indices(std::vector<T> const& v) {
   return selected;
 }
 
-inline void only_keep_best_alternative(std::vector<float>& probabilities) {
+inline void only_keep_best_alternative(std::vector<float>& probabilities,
+                                       float const best_probability = 1.0F) {
+  if (probabilities.empty()) {
+    return;
+  }
   auto best_idx = 0ULL;
   auto best_prob = 0.0F;
   for (auto i = 0ULL; i < probabilities.size(); ++i) {
@@ -58,12 +62,15 @@ inline void only_keep_best_alternative(std::vector<float>& probabilities) {
     }
     probabilities[i] = 0.0F;
   }
-  probabilities[best_idx] = 1.0F;
+  probabilities[best_idx] = best_probability;
 }
 
 inline std::vector<float> calc_new_probabilites(
     float const base_prob, std::vector<float> const& pick_probs,
     float const threshold) {
+  if (pick_probs.empty()) {
+    return {};
+  }
   auto probs = utl::to_vec(
       pick_probs, [&](auto const& pick_prob) { return base_prob * pick_prob; });
   auto total_sum = 0.0F;
@@ -83,6 +90,9 @@ inline std::vector<float> calc_new_probabilites(
     for (auto& p : probs) {
       p /= scale;
     }
+  } else if (kept_sum == 0.0F) {
+    probs = pick_probs;
+    only_keep_best_alternative(probs, base_prob);
   }
   return probs;
 }

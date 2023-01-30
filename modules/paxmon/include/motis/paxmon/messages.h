@@ -102,6 +102,8 @@ broken_transfer_info_to_fbs(flatbuffers::FlatBufferBuilder& fbb,
 
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 
+PaxMonLocalization fbs_localization_type(reroute_log_localization const& loc);
+
 flatbuffers::Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
     schedule const& sched, flatbuffers::FlatBufferBuilder& fbb,
     passenger_localization const& loc);
@@ -109,6 +111,10 @@ flatbuffers::Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
 flatbuffers::Offset<void> to_fbs(schedule const& sched,
                                  flatbuffers::FlatBufferBuilder& fbb,
                                  passenger_localization const& loc);
+
+flatbuffers::Offset<void> to_fbs(schedule const& sched,
+                                 flatbuffers::FlatBufferBuilder& fbb,
+                                 reroute_log_localization const& loc);
 
 passenger_localization from_fbs(schedule const& sched,
                                 PaxMonLocalization loc_type,

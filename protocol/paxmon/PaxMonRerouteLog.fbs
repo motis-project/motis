@@ -1,5 +1,6 @@
 include "paxmon/PaxMonRerouteReason.fbs";
 include "paxmon/PaxMonBrokenTransferInfo.fbs";
+include "paxmon/PaxMonLocalization.fbs";
 
 namespace motis.paxmon;
 
@@ -16,4 +17,5 @@ table PaxMonRerouteLogEntry {
   broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
   old_route: PaxMonRerouteLogRoute;
   new_routes: [PaxMonRerouteLogRoute];
+  localization: PaxMonLocalization;
 }

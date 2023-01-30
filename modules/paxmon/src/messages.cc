@@ -114,7 +114,8 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
       to_fbs_time(sched, tgr.planned_arrival_time_), tgr.estimated_delay_,
       static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_,
-      false /* broken */, false /* disabled */);
+      false /* broken */, false /* disabled */,
+      false /* destination_unreachable */);
 }
 
 Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
@@ -125,7 +126,7 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
       to_fbs(sched, fbb, pgc.journey(gr.compact_journey_index_)),
       gr.probability_, to_fbs_time(sched, gr.planned_arrival_time_),
       gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_),
-      gr.planned_, gr.broken_, gr.disabled_);
+      gr.planned_, gr.broken_, gr.disabled_, gr.destination_unreachable_);
 }
 
 temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
@@ -197,7 +198,9 @@ Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
       to_fbs(fbb, entry.old_route_),
       fbb.CreateVector(utl::to_vec(
           pgc.log_entry_new_routes_.at(entry.index_),
-          [&](auto const& new_route) { return to_fbs(fbb, new_route); })));
+          [&](auto const& new_route) { return to_fbs(fbb, new_route); })),
+      fbs_localization_type(entry.localization_),
+      to_fbs(sched, fbb, entry.localization_));
 }
 
 Offset<PaxMonGroup> to_fbs(schedule const& sched,
@@ -322,11 +325,35 @@ PaxMonLocalization fbs_localization_type(passenger_localization const& loc) {
                        : PaxMonLocalization_PaxMonAtStation;
 }
 
+PaxMonLocalization fbs_localization_type(reroute_log_localization const& loc) {
+  return loc.in_trip_ ? PaxMonLocalization_PaxMonInTrip
+                      : PaxMonLocalization_PaxMonAtStation;
+}
+
 Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
     schedule const& sched, FlatBufferBuilder& fbb,
     passenger_localization const& loc) {
   return CreatePaxMonLocalizationWrapper(fbb, fbs_localization_type(loc),
                                          to_fbs(sched, fbb, loc));
+}
+
+Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
+                    reroute_log_localization const& loc) {
+  if (loc.in_trip_) {
+    return CreatePaxMonInTrip(
+               fbb, to_fbs(sched, fbb, get_trip(sched, loc.trip_idx_)),
+               to_fbs(fbb, *sched.stations_.at(loc.station_id_)),
+               motis_to_unixtime(sched, loc.schedule_arrival_time_),
+               motis_to_unixtime(sched, loc.current_arrival_time_))
+        .Union();
+  } else {
+    return CreatePaxMonAtStation(
+               fbb, to_fbs(fbb, *sched.stations_.at(loc.station_id_)),
+               motis_to_unixtime(sched, loc.schedule_arrival_time_),
+               motis_to_unixtime(sched, loc.current_arrival_time_),
+               loc.first_station_)
+        .Union();
+  }
 }
 
 Offset<PaxMonReachability> reachability_to_fbs(

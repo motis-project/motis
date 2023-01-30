@@ -1,12 +1,14 @@
 import {
   ArrowPathIcon,
   ArrowUturnUpIcon,
+  CheckCircleIcon,
   ClockIcon,
   CpuChipIcon,
   ExclamationTriangleIcon,
   TicketIcon,
   UsersIcon,
   WrenchIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAtom } from "jotai";
 import { useUpdateAtom } from "jotai/utils";
@@ -14,9 +16,11 @@ import React, { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import {
+  PaxMonAtStation,
   PaxMonCompactJourneyLeg,
   PaxMonGroup,
   PaxMonGroupRoute,
+  PaxMonInTrip,
   PaxMonRerouteLogEntry,
   PaxMonRerouteReason,
   PaxMonTransferInfo,
@@ -30,7 +34,7 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
 import classNames from "@/util/classNames";
-import { formatDateTime } from "@/util/dateFormat";
+import { formatDateTime, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import Delay from "@/components/util/Delay";
@@ -266,6 +270,10 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
       return "Simulation";
     case "UpdateForecast":
       return "Neuberechnung der Vorhersage";
+    case "DestinationUnreachable":
+      return "Ziel nicht mehr erreichbar";
+    case "DestinationReachable":
+      return "Ziel wieder erreichbar";
   }
 }
 
@@ -278,6 +286,7 @@ type RerouteLogEntryProps = {
 function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   const broken_transfer =
     log.broken_transfer.length === 1 ? log.broken_transfer[0] : undefined;
+  const show_reroutes = log.new_routes.length > 0;
   const { icon, bgColor } = getRerouteReasonIcon(log.reason);
 
   return (
@@ -299,19 +308,30 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
             {formatDateTime(log.system_time)}
           </span>
         </div>
-        <div>
-          Umleitung von Route #{log.old_route.index} (
-          {formatPercent(log.old_route.previous_probability)} &rarr;{" "}
-          {formatPercent(log.old_route.new_probability)}) auf:
-        </div>
-        <div className="pl-4">
-          {log.new_routes.map((route) => (
-            <div key={route.index}>
-              Route #{route.index}: {formatPercent(route.previous_probability)}{" "}
-              &rarr; {formatPercent(route.new_probability)}
+        <RerouteLogEntryLocalization log={log} />
+        {show_reroutes ? (
+          <>
+            <div>
+              Umleitung von Route #{log.old_route.index} (
+              {formatPercent(log.old_route.previous_probability)} &rarr;{" "}
+              {formatPercent(log.old_route.new_probability)}) auf:
             </div>
-          ))}
-        </div>
+            <div className="pl-4">
+              {log.new_routes.map((route) => (
+                <div key={route.index}>
+                  Route #{route.index}:{" "}
+                  {formatPercent(route.previous_probability)} &rarr;{" "}
+                  {formatPercent(route.new_probability)}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div>
+            Route #{log.old_route.index} (
+            {formatPercent(log.old_route.previous_probability)})
+          </div>
+        )}
         {broken_transfer && (
           <div>
             <div className="space-x-1">
@@ -353,6 +373,36 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   );
 }
 
+type RerouteLogEntryLocalizationProps = {
+  log: PaxMonRerouteLogEntry;
+};
+
+function RerouteLogEntryLocalization({
+  log,
+}: RerouteLogEntryLocalizationProps): JSX.Element {
+  switch (log.localization_type) {
+    case "PaxMonAtStation": {
+      const loc = log.localization as PaxMonAtStation;
+      return (
+        <div>
+          Reisende an Station {loc.station.name} um{" "}
+          {formatTime(loc.current_arrival_time)}
+          {loc.first_station ? " (Reisebeginn)" : ""}
+        </div>
+      );
+    }
+    case "PaxMonInTrip": {
+      const loc = log.localization as PaxMonInTrip;
+      return (
+        <div>
+          Reisende in Zug {loc.trip.train_nr}, nächster Halt:{" "}
+          {loc.next_station.name} um {formatTime(loc.current_arrival_time)}
+        </div>
+      );
+    }
+  }
+}
+
 type RerouteReasonIcon = {
   icon: JSX.Element;
   bgColor: string;
@@ -384,12 +434,22 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "Simulation":
       return {
         icon: <CpuChipIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-teal-500",
       };
     case "UpdateForecast":
       return {
         icon: <ArrowPathIcon className={style} />,
         bgColor: "bg-teal-500",
+      };
+    case "DestinationUnreachable":
+      return {
+        icon: <XCircleIcon className={style} />,
+        bgColor: "bg-fuchsia-500",
+      };
+    case "DestinationReachable":
+      return {
+        icon: <CheckCircleIcon className={style} />,
+        bgColor: "bg-green-500",
       };
   }
 }

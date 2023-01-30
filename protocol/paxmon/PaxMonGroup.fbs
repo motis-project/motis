@@ -18,6 +18,7 @@ table PaxMonGroupRoute {
   planned: bool;
   broken: bool;
   disabled: bool;
+  destination_unreachable: bool;
 }
 
 table PaxMonGroup {

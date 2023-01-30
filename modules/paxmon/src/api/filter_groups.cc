@@ -26,14 +26,17 @@ namespace motis::paxmon::api {
 
 namespace {
 
+constexpr auto const MAX_DELAY = std::numeric_limits<std::int16_t>::max();
+
 struct group_info {
   passenger_group_index pgi_{};
 
   time scheduled_departure_{INVALID_TIME};
 
-  std::int16_t min_estimated_delay_{std::numeric_limits<std::int16_t>::max()};
+  std::int16_t min_estimated_delay_{MAX_DELAY};
   std::int16_t max_estimated_delay_{std::numeric_limits<std::int16_t>::min()};
   float expected_estimated_delay_{};
+  float p_destination_unreachable_{};
   std::uint32_t log_entries_{};
 };
 
@@ -166,11 +169,14 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
 
     for (auto const& gr : pgc.routes(pgi)) {
       if (gr.probability_ != 0) {
-        gi.min_estimated_delay_ =
-            std::min(gi.min_estimated_delay_, gr.estimated_delay_);
-        gi.max_estimated_delay_ =
-            std::max(gi.max_estimated_delay_, gr.estimated_delay_);
-        gi.expected_estimated_delay_ += gr.probability_ * gr.estimated_delay_;
+        auto const est_delay =
+            gr.destination_unreachable_ ? MAX_DELAY : gr.estimated_delay_;
+        gi.min_estimated_delay_ = std::min(gi.min_estimated_delay_, est_delay);
+        gi.max_estimated_delay_ = std::max(gi.max_estimated_delay_, est_delay);
+        gi.expected_estimated_delay_ += gr.probability_ * est_delay;
+        if (gr.destination_unreachable_) {
+          gi.p_destination_unreachable_ += gr.probability_;
+        }
       }
       if (gr.planned_ && gi.scheduled_departure_ == INVALID_TIME) {
         auto const cj = pgc.journey(gr.compact_journey_index_);
@@ -343,7 +349,8 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
                                             include_reroute_log),
                                      gi.min_estimated_delay_,
                                      gi.max_estimated_delay_,
-                                     gi.expected_estimated_delay_);
+                                     gi.expected_estimated_delay_,
+                                     gi.p_destination_unreachable_);
                                })))
                            .Union());
   return make_msg(mc);

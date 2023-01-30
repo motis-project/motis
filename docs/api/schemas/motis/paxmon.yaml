@@ -122,6 +122,11 @@ PaxMonRerouteLogEntry:
       description: Index and probabilities of the old route
     new_routes:
       description: Indices and probabilities of the new routes
+    localization:
+      description: |
+        Location of the passenger group at the system time of the reroute.
+
+        Alternative routes are searched from this location.
 PaxMonDataSource:
   description: |
     Passenger group ID based on the input data.
@@ -166,6 +171,11 @@ PaxMonGroupRoute:
         final destination based on real-time information.
     disabled:
       description: For internal use.
+    destination_unreachable:
+      description: |
+        Whether the planned destination is unreachable using this routes.
+
+        If true, this journey ends before reaching the planned destination.
 PaxMonGroup:
   description: >
     Represents a passenger group. A passenger group is a number of
@@ -516,6 +526,8 @@ PaxMonGroupWithStats:
     max_estimated_delay:
       description: TODO
     expected_estimated_delay:
+      description: TODO
+    prob_destination_unreachable:
       description: TODO
 PaxMonFilterGroupsResponse:
   description: TODO
@@ -974,6 +986,8 @@ PaxMonRerouteGroup:
       description: TODO
     override_probabilities:
       description: TODO
+    localization:
+      description: TODO
 PaxMonRerouteGroupsRequest:
   description: TODO
   fields:
@@ -1005,54 +1019,118 @@ PaxMonRerouteGroupsResponse:
     reroutes:
       description: TODO
 PaxMonGroupStatisticsRequest:
-  description: TODO
+  description: Request various statistics about passengers and passenger groups.
   fields:
     universe:
-      description: TODO
+      description: The ID of the universe
     count_passengers:
-      description: TODO
+      description: |
+        Whether to count passengers or passenger groups in the result.
+
+        See the documentation for the response for more information about
+        fields affected by this setting.
+
+        If set to true, passengers are counted (e.g. a passenger group with
+        3 passengers counts as 3), otherwise groups are counted (e.g. a
+        passenger group with 3 passengers counts as 1).
 PaxMonHistogram:
-  description: TODO
+  description: |
+    A histogram plus some additional metrics such as average and median value.
+
+    The histogram data is contained in the `counts` field. The first entry
+    gives the count of `min_value`, the second entry gives the count of
+    `min_value + 1` and so on until the last entry, which gives the count
+    of `max_value`. The bin size is always 1.
+
+    Note that both `min_value` and `max_value` can be < 0 depending on the
+    underlying data (e.g. for delays).
   fields:
     min_value:
-      description: TODO
+      description: Value of the first entry in `counts`.
     max_value:
-      description: TODO
+      description: Value of the last entry in `counts`.
     avg_value:
-      description: TODO
+      description: The average value of the distribution.
     median_value:
-      description: TODO
+      description: The median value of the distribution.
     max_count:
-      description: TODO
+      description: The largest entry in `counts`.
     total_count:
-      description: TODO
+      description: The sum of all entries in `counts`.
     counts:
-      description: TODO
+      description: >
+        The histogram data. Entries give the count for each value. The
+        value for an index `i` is `i + min_value`.
 PaxMonGroupStatisticsResponse:
-  description: TODO
+  description: Contains various statistics about passengers and passenger groups.
   fields:
     group_count:
-      description: TODO
+      description: Number of passengers groups in the universe.
     total_group_route_count:
-      description: TODO
+      description: Number of passenger group routes in the universe.
     active_group_route_count:
-      description: TODO
+      description: >
+        Number of active passenger group routes in the universe. An active
+        route is a route with a probability greater than 0%.
+    unreachable_destination_group_count:
+      description: >
+        Number of passenger groups that have at least one active (i.e.
+        probability greater than 0%) route that does not reach the planned
+        destination.
     total_pax_count:
-      description: TODO
+      description: Number of passengers in the universe.
+    unreachable_destination_pax_count:
+      description: >
+        Number of passengers that have at least one active (i.e.
+        probability greater than 0%) route that does not reach the planned
+        destination.
     min_estimated_delay:
-      description: TODO
+      description: |
+        The lowest possible estimated delays for all passenger groups or
+        passengers in the universe, i.e. the delay of the route with the
+        earliest arrival time for each passenger group.
+
+        Delays are in minutes.
+
+        Routes that don't reach the planned destination are ignored.
+
+        Depending on the value of the `count_passengers` flag in the
+        request, the histogram contains either passengers or passenger groups.
     max_estimated_delay:
-      description: TODO
+      description: |
+        The highest possible estimated delays for all passenger groups or
+        passengers in the universe, i.e. the delay of the route with the
+        latest arrival time for each passenger group.
+
+        Delays are in minutes.
+
+        Routes that don't reach the planned destination are ignored.
+
+        Depending on the value of the `count_passengers` flag in the
+        request, the histogram contains either passengers or passenger groups.
     expected_estimated_delay:
-      description: TODO
+      description: |
+        The expected delays for all passenger groups or
+        passengers in the universe, i.e. the weighted (by route probability)
+        average of the delays of all routes for each passenger group.
+
+        Delays are in minutes.
+
+        Routes that don't reach the planned destination are ignored.
+
+        Depending on the value of the `count_passengers` flag in the
+        request, the histogram contains either passengers or passenger groups.
     routes_per_group:
-      description: TODO
+      description: The total number of group routes per passenger group.
     active_routes_per_group:
-      description: TODO
+      description: >
+        The number of active group routes (i.e. routes with a probability
+        greater than 0%) per passenger group.
     reroutes_per_group:
-      description: TODO
+      description: >
+        The number of reroute log entries per passenger group.
     group_route_probabilities:
-      description: TODO
+      description: The probabilities of all passenger group routes.
 PaxMonDebugGraphRequest:
   description: TODO
   fields:

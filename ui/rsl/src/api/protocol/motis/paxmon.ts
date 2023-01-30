@@ -43,7 +43,9 @@ export type PaxMonRerouteReason =
   | "MajorDelayExpected"
   | "RevertForecast"
   | "Simulation"
-  | "UpdateForecast";
+  | "UpdateForecast"
+  | "DestinationUnreachable"
+  | "DestinationReachable";
 
 // paxmon/PaxMonBrokenTransferInfo.fbs
 export type PaxMonTransferDirection = "Enter" | "Exit";
@@ -57,6 +59,33 @@ export interface PaxMonBrokenTransferInfo {
   required_transfer_time: number;
   arrival_canceled: boolean;
   departure_canceled: boolean;
+}
+
+// paxmon/PaxMonLocalization.fbs
+export interface PaxMonAtStation {
+  station: Station;
+  schedule_arrival_time: number;
+  current_arrival_time: number;
+  first_station: boolean;
+}
+
+// paxmon/PaxMonLocalization.fbs
+export interface PaxMonInTrip {
+  trip: TripId;
+  next_station: Station;
+  schedule_arrival_time: number;
+  current_arrival_time: number;
+}
+
+// paxmon/PaxMonLocalization.fbs
+export type PaxMonLocalization = PaxMonAtStation | PaxMonInTrip;
+
+export type PaxMonLocalizationType = "PaxMonAtStation" | "PaxMonInTrip";
+
+// paxmon/PaxMonLocalization.fbs
+export interface PaxMonLocalizationWrapper {
+  localization_type: PaxMonLocalizationType;
+  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonRerouteLog.fbs
@@ -74,6 +103,8 @@ export interface PaxMonRerouteLogEntry {
   broken_transfer: PaxMonBrokenTransferInfo[];
   old_route: PaxMonRerouteLogRoute;
   new_routes: PaxMonRerouteLogRoute[];
+  localization_type: PaxMonLocalizationType;
+  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonGroup.fbs
@@ -93,6 +124,7 @@ export interface PaxMonGroupRoute {
   planned: boolean;
   broken: boolean;
   disabled: boolean;
+  destination_unreachable: boolean;
 }
 
 // paxmon/PaxMonGroup.fbs
@@ -133,33 +165,6 @@ export interface PaxMonGroupRouteUpdateInfo {
   n: number;
   p: number;
   pp: number;
-}
-
-// paxmon/PaxMonLocalization.fbs
-export interface PaxMonAtStation {
-  station: Station;
-  schedule_arrival_time: number;
-  current_arrival_time: number;
-  first_station: boolean;
-}
-
-// paxmon/PaxMonLocalization.fbs
-export interface PaxMonInTrip {
-  trip: TripId;
-  next_station: Station;
-  schedule_arrival_time: number;
-  current_arrival_time: number;
-}
-
-// paxmon/PaxMonLocalization.fbs
-export type PaxMonLocalization = PaxMonAtStation | PaxMonInTrip;
-
-export type PaxMonLocalizationType = "PaxMonAtStation" | "PaxMonInTrip";
-
-// paxmon/PaxMonLocalization.fbs
-export interface PaxMonLocalizationWrapper {
-  localization_type: PaxMonLocalizationType;
-  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonReachability.fbs
@@ -350,6 +355,7 @@ export interface PaxMonGroupWithStats {
   min_estimated_delay: number;
   max_estimated_delay: number;
   expected_estimated_delay: number;
+  prob_destination_unreachable: number;
 }
 
 // paxmon/PaxMonFilterGroupsResponse.fbs
@@ -637,6 +643,7 @@ export interface PaxMonRerouteGroup {
   reason: PaxMonRerouteReason;
   broken_transfer: PaxMonBrokenTransferInfo[];
   override_probabilities: boolean;
+  localization: PaxMonLocalizationWrapper[];
 }
 
 // paxmon/PaxMonRerouteGroupsRequest.fbs
@@ -686,7 +693,9 @@ export interface PaxMonGroupStatisticsResponse {
   group_count: number;
   total_group_route_count: number;
   active_group_route_count: number;
+  unreachable_destination_group_count: number;
   total_pax_count: number;
+  unreachable_destination_pax_count: number;
   min_estimated_delay: PaxMonHistogram;
   max_estimated_delay: PaxMonHistogram;
   expected_estimated_delay: PaxMonHistogram;

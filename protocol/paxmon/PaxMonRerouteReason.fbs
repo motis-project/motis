@@ -6,5 +6,7 @@ enum PaxMonRerouteReason : byte {
   MajorDelayExpected,
   RevertForecast,
   Simulation,
-  UpdateForecast
+  UpdateForecast,
+  DestinationUnreachable,
+  DestinationReachable
 }
