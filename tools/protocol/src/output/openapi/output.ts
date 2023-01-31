@@ -125,6 +125,44 @@ function writeTags(ctx: OpenApiContext) {
   }
 }
 
+function writeResponse(
+  ctx: OpenApiContext,
+  oaResponses: YAMLMap,
+  code: string,
+  fqtn: string,
+  description: string
+) {
+  const resType = fqtn.split(".");
+  const resTypeName = resType[resType.length - 1];
+  const oaResponse = createMap(ctx.yd, oaResponses, [code]);
+  oaResponse.set("description", description);
+  const oaResponseSchema = createMap(ctx.yd, oaResponse, [
+    "content",
+    "application/json",
+    "schema",
+  ]);
+  oaResponseSchema.set("type", "object");
+  oaResponseSchema.set("required", ["content_type", "content"]);
+  oaResponseSchema.set("properties", {
+    destination: {
+      type: "object",
+      required: ["target"],
+      properties: {
+        target: { type: "string", enum: [""] },
+        type: { type: "string", enum: ["Module"] },
+      },
+    },
+    content_type: {
+      type: "string",
+      enum: [resTypeName],
+    },
+    content: {
+      $ref: getRefUrl(resType),
+    },
+    id: { type: "integer", format: "int32" },
+  });
+}
+
 function writePaths(ctx: OpenApiContext) {
   const oaPaths = createMap(ctx.yd, ctx.yd, ["paths"]);
   for (const path of ctx.doc.paths) {
@@ -179,37 +217,16 @@ function writePaths(ctx: OpenApiContext) {
     }
 
     const oaResponses = createMap(ctx.yd, oaOperation, ["responses"]);
-    const oaResponse200 = createMap(ctx.yd, oaResponses, ["200"]);
-    const resFqtn = path.output?.type ?? "motis.MotisNoMessage";
-    const resType = resFqtn.split(".");
-    const resTypeName = resType[resType.length - 1];
-    const resDescription = path.output?.description ?? "Empty response";
-    oaResponse200.set("description", resDescription);
-    const oaResponseSchema = createMap(ctx.yd, oaResponse200, [
-      "content",
-      "application/json",
-      "schema",
-    ]);
-    oaResponseSchema.set("type", "object");
-    oaResponseSchema.set("required", ["content_type", "content"]);
-    oaResponseSchema.set("properties", {
-      destination: {
-        type: "object",
-        required: ["target"],
-        properties: {
-          target: { type: "string", enum: [""] },
-          type: { type: "string", enum: ["Module"] },
-        },
-      },
-      content_type: {
-        type: "string",
-        enum: [resTypeName],
-      },
-      content: {
-        $ref: getRefUrl(resType),
-      },
-      id: { type: "integer", format: "int32" },
-    });
+
+    writeResponse(
+      ctx,
+      oaResponses,
+      "200",
+      path.output?.type ?? "motis.MotisNoMessage",
+      path.output?.description ?? "Empty response"
+    );
+
+    writeResponse(ctx, oaResponses, "500", "motis.MotisError", "Error");
   }
 }
 
@@ -280,7 +297,14 @@ function writeSchema(
     for (const key in jsProps) {
       const jsProp = jsProps[key];
       const oaProp = createMap(ctx.yd, oaProps, [key]);
-      writeSchema(ctx, oaProp, jsProp, undefined, typeDoc?.fields?.get(key));
+      let fieldDoc = typeDoc?.fields?.get(key);
+      if (!fieldDoc && key.endsWith("_type")) {
+        fieldDoc = {
+          name: key,
+          description: `Type of the \`${key.replace(/_type$/, "")}\` field`,
+        };
+      }
+      writeSchema(ctx, oaProp, jsProp, undefined, fieldDoc);
     }
   }
 

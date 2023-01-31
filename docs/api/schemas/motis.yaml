@@ -281,6 +281,10 @@ MotisError:
       description: TODO
     reason:
       description: TODO
+  examples:
+    - error_code: 3
+      category: motis::module
+      reason: "module: target not found"
 MotisSuccess:
   description: TODO
   fields: {}
