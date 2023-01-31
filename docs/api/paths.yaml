@@ -45,7 +45,7 @@
 #/lookup/meta_station_batch:
 
 /lookup/ribasis:
-  summary: Returns a trip in RI Basis format
+  summary: Retrieve a trip in RI Basis format
   description: |
     Returns the current state of a trip in RI Basis format. Also included
     in the response are all associated trips (merged and through services).
@@ -63,7 +63,7 @@
     description: Information about the requested trip and associated trips
 
 /lookup/schedule_info:
-  summary: Returns information about the currently loaded schedule
+  summary: Currently loaded schedule
   tags:
     - lookup
   output:
@@ -81,7 +81,7 @@
 #/parking/edges:
 
 /parking/geo:
-  summary: Request parking lots in an area
+  summary: Parking lots in an area
   tags:
     - parking
   input: motis.parking.ParkingGeoRequest
@@ -91,7 +91,7 @@
 
 
 /parking/lookup:
-  summary: Request information about a parking lot by ID
+  summary: Lookup a parking lot by ID
   tags:
     - parking
   input: motis.parking.ParkingLookupRequest
@@ -136,7 +136,7 @@
     description: Universe was destroyed (or marked for destruction if still in use).
 
 /paxmon/filter/groups:
-  summary: Request a list of passenger groups with filter and sort options
+  summary: List passenger groups with filter and sort options
   tags:
     - rsl
   input: motis.paxmon.PaxMonFilterGroupsRequest
@@ -145,7 +145,7 @@
     description: A list of passenger groups matching the request
 
 /paxmon/filter_trips:
-  summary: Request a list of trips with filter and sort options
+  summary: List trips with filter and sort options
   description: |
     Returns a list of trips tracked by paxmon (i.e. at least one passenger
     group uses or used the trip). This API offers various filter and sort
@@ -206,7 +206,7 @@
     description: Information about the newly created paxmon universe
 
 /paxmon/get_groups:
-  summary: Get information about passenger groups
+  summary: Information about passenger groups
   tags:
     - rsl
   input: motis.paxmon.PaxMonGetGroupsRequest
@@ -215,7 +215,7 @@
     description: Information about the requested passenger groups
 
 /paxmon/get_interchanges:
-  summary: Get a list of monitored interchanges at a station
+  summary: List monitored interchanges at a station
   tags:
     - rsl
   input: motis.paxmon.PaxMonGetInterchangesRequest
@@ -224,7 +224,7 @@
     description: Information about the requested interchanges
 
 /paxmon/group_statistics:
-  summary: Get various passenger group statistics
+  summary: Passenger group statistics
   tags:
     - rsl
   input: motis.paxmon.PaxMonGroupStatisticsRequest
@@ -233,7 +233,7 @@
     description: Statistics for the requested universe
 
 /paxmon/groups_in_trip:
-  summary: Get a list of passenger groups in a trip
+  summary: List passenger groups in a trip
   tags:
     - rsl
   input: motis.paxmon.PaxMonGetGroupsInTripRequest
@@ -280,7 +280,7 @@
     description: Information about the changes
 
 /paxmon/status:
-  summary: Request basic information about a paxmon universe
+  summary: Information about a paxmon universe
   tags:
     - rsl
   input: motis.paxmon.PaxMonStatusRequest
@@ -289,7 +289,7 @@
     description: Information about the requested paxmon universe
 
 /paxmon/trip_load_info:
-  summary: Get load information for a trip
+  summary: Load information for a trip
   tags:
     - rsl
   input: motis.paxmon.PaxMonGetTripLoadInfosRequest
@@ -298,7 +298,7 @@
     description: Load information for the requested trip
 
 /paxmon/universes:
-  summary: Request a list of paxmon universes
+  summary: List paxmon universes
   description: >
     Returns a list of all universes that currently exist on the server,
     as well as the current multiverse ID.
@@ -309,7 +309,7 @@
     description: A list of paxmon universes
 
 /ppr/profiles:
-  summary: Get list of available pedestrian routing profiles
+  summary: List available pedestrian routing profiles
   tags:
     - ppr
   output:
@@ -326,7 +326,7 @@
     description: Pedestrian routes
 
 /railviz/get_station:
-  summary: Request a list of trips arriving and departing at a station
+  summary: List trips arriving and departing at a station
   tags:
     - lookup
   input: motis.railviz.RailVizStationRequest
@@ -362,7 +362,7 @@
     description: Routing response
 
 /trip_to_connection:
-  summary: Get information about the stops of a trip
+  summary: Retrieve the stops of a trip
   tags:
     - lookup
   input: motis.TripId
