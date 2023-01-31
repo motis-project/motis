@@ -53,7 +53,7 @@ export function writeOpenAPIOutput(
     getRefUrl,
     false,
     true,
-    openApiVersion === "3.1.0"
+    false
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
 
