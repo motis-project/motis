@@ -22,6 +22,15 @@ output:
     info: &openapi-info
       title: MOTIS API
       version: 0.0.0
+      license:
+        name: MIT License
+        url: https://raw.githubusercontent.com/motis-project/motis/master/LICENSE
+    externalDocs: &openapi-externalDocs
+      description: MOTIS Project
+      url: https://motis-project.de/
+    servers: &openapi-servers
+      - url: /
+        description: Local MOTIS server
     exclude: *public-exclude
   openapi-3.0:
     format: openapi
@@ -30,6 +39,8 @@ output:
     base-uri: *base-uri
     ids: false
     info: *openapi-info
+    externalDocs: *openapi-externalDocs
+    servers: *openapi-servers
     exclude: *public-exclude
   markdown:
     format: markdown

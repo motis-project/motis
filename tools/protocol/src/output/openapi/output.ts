@@ -73,9 +73,15 @@ export function writeOpenAPIOutput(
   yd.contents = yd.createNode({});
   yd.set("openapi", ctx.openApiVersion);
 
-  for (const key in config.info) {
-    yd.setIn(["info", key], config.info[key]);
+  function copyBlock(key: string) {
+    if (config[key]) {
+      yd.set(key, config[key]);
+    }
   }
+
+  copyBlock("info");
+  copyBlock("externalDocs");
+  copyBlock("servers");
 
   writeTags(ctx);
   writePaths(ctx);
