@@ -22,8 +22,11 @@ output:
     info: &openapi-info
       title: MOTIS API
       version: 0.0.0
+      contact:
+        name: MOTIS Project
+        url: https://github.com/motis-project
       license:
-        name: MIT License
+        name: MIT
         url: https://raw.githubusercontent.com/motis-project/motis/master/LICENSE
     externalDocs: &openapi-externalDocs
       description: MOTIS Project

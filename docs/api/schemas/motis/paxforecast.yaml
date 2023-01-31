@@ -86,7 +86,12 @@ TripLoadRecommendationMeasure:
     recommended_trips:
       description: TODO
 RtUpdateMeasure:
-  description: TODO
+  description: |
+    Simulate a real-time update.
+
+    Real-time updates can be provided in RIBasis or RISML formats.
+    Set `type` to the format and supply the complete real-time update
+    in the corresponding format as a string in the `content` field.
   fields:
     recipients:
       description: TODO
