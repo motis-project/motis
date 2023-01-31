@@ -169,6 +169,12 @@ function writePaths(ctx: OpenApiContext) {
     const oaPath = createMap(ctx.yd, oaPaths, [path.path]);
     const post = !!path.input;
     const oaOperation = createMap(ctx.yd, oaPath, [post ? "post" : "get"]);
+    const operationId =
+      path.operationId ??
+      path.path
+        .substring(1)
+        .replaceAll(/[/_]+(.)/g, (_, p1) => p1.toUpperCase());
+    oaOperation.set("operationId", operationId);
     if (path.summary) {
       oaOperation.set("summary", path.summary);
     }

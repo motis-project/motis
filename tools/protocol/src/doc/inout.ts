@@ -192,6 +192,7 @@ function readPaths(ctx: DocContext) {
       tags: props.tags ?? [],
       input: props.input,
       output: undefined,
+      operationId: props.operationId,
     };
     if (dp.input) {
       if (!ctx.schema.types.has(dp.input)) {
