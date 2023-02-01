@@ -1351,3 +1351,7 @@ PaxMonTrackedUpdates:
       description: Information about the updated trips
     updated_group_routes:
       description: Information about the updated group routes
+    updated_group_count:
+      description: The number of passenger groups that were updated.
+    updated_pax_count:
+      description: The number of passengers that were updated.

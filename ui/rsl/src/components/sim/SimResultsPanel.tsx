@@ -167,6 +167,13 @@ function SimResultDetails({
         <div title={runtimeStats}>
           Simulationsdauer insgesamt: {formatMiliseconds(duration)}
         </div>
+        <div
+          title={`Betroffene Reisendengruppen: ${formatNumber(
+            r.updates.updated_group_count
+          )} (${formatNumber(r.updates.updated_group_route_count)} Routen)`}
+        >
+          Betroffende Reisende: {formatNumber(r.updates.updated_pax_count)}
+        </div>
         <div className="mt-1 font-semibold">
           Nachfragebeeinflussende Maßnahmen
         </div>
