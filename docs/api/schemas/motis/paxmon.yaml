@@ -1272,44 +1272,82 @@ PaxMonCriticalTripInfo:
   description: TODO
   fields:
     critical_sections:
-      description: TODO
+      description: >
+        The number of critical sections (number of passengers > capacity).
     max_excess_pax:
-      description: TODO
+      description: >
+        The number of passengers over capacity for the most overcrowded
+        section of the trip.
     cumulative_excess_pax:
-      description: TODO
+      description: >
+        The sum of passengers over capacity over all sections of the trip.
+        If passengers use multiple sections of the trip, they are counted
+        multiple times (once for each section they use).
 PaxMonUpdatedTrip:
   description: TODO
   fields:
     tsi:
       description: TODO
     rerouted:
-      description: TODO
+      description: |
+        Whether the stops of the trip have changed.
+
+        If `false`, `before_edges` and `after_edges` have the same number of
+        entries and can be compared.
+
+        If `true`, no attempt is made to match sections and some of the other
+        values are either unavailable or guesses.
     newly_critical_sections:
-      description: TODO
+      description: |
+        The number of critical sections that weren't critical before.
+
+        If the trip was rerouted, this value is a guess based on the
+        total number of critical sections before and after the changes.
     no_longer_critical_sections:
-      description: TODO
+      description: |
+        The number of sections that were critical before but are no longer
+        critical.
+
+        If the trip was rerouted, this value is a guess based on the
+        total number of critical sections before and after the changes.
     max_pax_increase:
-      description: TODO
+      description: |
+        The largest increase in the number of passengers among the trip
+        sections.
+
+        Not available if the trip was rerouted.
     max_pax_decrease:
-      description: TODO
+      description: |
+        The largest decrease in the number of passengers among the trip
+        sections.
+
+        Not available if the trip was rerouted.
     critical_info_before:
-      description: TODO
+      description: Information about critical sections before the changes.
     critical_info_after:
-      description: TODO
+      description: Information about critical sections after the changes.
     updated_group_routes:
-      description: TODO
+      description: Passenger group routes using this trip that were updated.
     before_edges:
-      description: TODO
+      description: |
+        Load information for all trip sections before the changes.
+
+        Only set if `include_before_trip_load_info` is set to `true`
+        in the request, otherwise an empty array.
     after_edges:
-      description: TODO
+      description: |
+        Load information for all trip sections after the changes.
+
+        Only set if `include_after_trip_load_info` is set to `true`
+        in the request, otherwise an empty array.
 PaxMonTrackedUpdates:
   description: TODO
   fields:
     updated_group_route_count:
-      description: TODO
+      description: The number of passenger group routes that were updated.
     updated_trip_count:
-      description: TODO
+      description: The number of trips that were updated.
     updated_trips:
-      description: TODO
+      description: Information about the updated trips
     updated_group_routes:
-      description: TODO
+      description: Information about the updated group routes

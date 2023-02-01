@@ -65,21 +65,26 @@ LookupRiBasisRequest:
   description: TODO
   fields:
     trip_id:
-      description: TODO
+      description: Trip ID of the trip to retrieve.
     schedule:
-      description: TODO
+      description: |
+        The ID of the schedule to use.
+
+        Use `0` for the default schedule.
 RiBasisTrip:
   description: TODO
   fields:
     trip_id:
-      description: TODO
+      description: The trip ID.
     fahrt:
-      description: TODO
+      description: The full trip in RiBasisFahrt format.
 LookupRiBasisResponse:
   description: TODO
   fields:
     trips:
-      description: TODO
+      description: >
+        The requested trip and all associated trips (merged and through
+        services).
 LookupScheduleInfoResponse:
   description: Information about the loaded schedule
   fields:

@@ -42,7 +42,8 @@ MeasureRecipients:
 LoadLevel:
   description: TODO
 TripLoadInfoMeasure:
-  description: TODO
+  description: >
+    This measure type is deprecated. Use `TripLoadRecommendationMeasure` instead.
   fields:
     recipients:
       description: TODO
@@ -53,7 +54,8 @@ TripLoadInfoMeasure:
     level:
       description: TODO
 TripRecommendationMeasure:
-  description: TODO
+  description: >
+    This measure type is deprecated. Use `TripLoadRecommendationMeasure` instead.
   fields:
     recipients:
       description: TODO
@@ -73,12 +75,23 @@ TripWithLoadLevel:
     level:
       description: TODO
 TripLoadRecommendationMeasure:
-  description: TODO
+  description: |
+    Simulate an announcement that a trip is overcrowded and recommend
+    alternative trips with load information.
+
+    This simulates an announcement of the form:
+    - Passengers travelling to `planned_destinations`
+    - Trip(s) `full_trips` are overcrowded (can't be used)
+    - Recommended alternatives: `recommended_trips`
+
+    The announcement is made at `time` in the trips/at the stations
+    specified in `recipients`.
   fields:
     recipients:
       description: TODO
     time:
-      description: TODO
+      description: >
+        Time at which the announcement is made (unix timestamp).
     planned_destinations:
       description: TODO
     full_trips:
@@ -92,15 +105,26 @@ RtUpdateMeasure:
     Real-time updates can be provided in RIBasis or RISML formats.
     Set `type` to the format and supply the complete real-time update
     in the corresponding format as a string in the `content` field.
+
+    Passengers whose journey breaks because of the real-time update
+    are automatically rerouted and do not need to be specified via
+    `recipients`. If additional passengers should be made aware of the
+    update and be allowed to change their route (e.g. because an
+    additional train was added), they can be listed in `recipients`,
+    otherwise `recipients` can be empty for this measure type.
   fields:
     recipients:
       description: TODO
     time:
-      description: TODO
+      description: |
+        Time at which the measure takes effect (unix timestamp).
+
+        This must match the creation/release time of the given real-time update
+        (e.g. `meta.created` for RI Basis messages).
     type:
-      description: TODO
+      description: The format of the real-time message given in `content`.
     content:
-      description: TODO
+      description: A real-time message in the format specified by `type`.
 Measure:
   description: TODO
 MeasureWrapper:
@@ -114,7 +138,23 @@ PaxForecastApplyMeasuresRequest:
     universe:
       description: Paxmon universe ID
     measures:
-      description: A list of measures to simulate
+      description: |
+        A list of measures to simulate
+
+        All measures have the following shared properties:
+
+        - `time`: Time at which the measure takes effect and passengers are made
+          aware of it. Note that the time is not forwarded to this point during the
+          simulation, i.e. no real-time updates (other than those specified as rt
+          update measures) are applied during the simulation. If a call to
+          `/paxforecast/apply_measures` contains measures with different timestamps,
+          a simulation is run for each unique timestamp. All measures with the same
+          timestamp are applied in one step.
+        - `recipients`: Select a subset of passengers that is made aware of the
+          measure (e.g. using an announcement)
+          - `trips`: Select passengers that are in one of the listed trips at `time`
+          - `stations`: Select passengers that are at one of the listed stations at
+            `time` (not in a trip)
     replace_existing:
       description: |
         If set to true, only simulate the measures given in this API call.
@@ -163,37 +203,45 @@ PaxForecastApplyMeasuresStatistics:
   description: TODO
   fields:
     measure_time_points:
-      description: TODO
+      description: The number of different timestamps in the given measures.
     total_measures_applied:
-      description: TODO
+      description: The number of measures applied.
     total_affected_groups:
-      description: TODO
+      description: |
+        Number of passenger groups reached via the `recipients` in the
+        given measures.
+
+        Note: This does not include passenger groups affected by real-time
+        updates (e.g. because an rt update broke their journey).
     total_alternative_routings:
-      description: TODO
+      description: The number of alternative routing requests performed.
     total_alternatives_found:
-      description: TODO
+      description: The total number of alternative routes found.
     group_routes_broken:
-      description: TODO
+      description: >
+        The total number of passenger group routes broken by the measures.
     group_routes_with_major_delay:
-      description: TODO
+      description: >
+        The total number of passenger groups with a major delay that were
+        affected by the measures.
     t_rt_updates:
-      description: TODO
+      description: Time used to apply real-time updates (ms).
     t_get_affected_groups:
-      description: TODO
+      description: Time used to determine affected groups (ms).
     t_find_alternatives:
-      description: TODO
+      description: Time used to find alternative routes (ms).
     t_add_alternatives_to_graph:
-      description: TODO
+      description: Time used to add alternatives to paxmon (ms).
     t_behavior_simulation:
-      description: TODO
+      description: Time used for passenger behavior simulation (ms).
     t_update_groups:
-      description: TODO
+      description: Time used to update passenger groups (ms).
     t_update_tracker:
-      description: TODO
+      description: Time used for tracking changes (ms).
 PaxForecastApplyMeasuresResponse:
   description: TODO
   fields:
     stats:
-      description: TODO
+      description: Various statistics
     updates:
-      description: TODO
+      description: Changes made to trips and passenger groups

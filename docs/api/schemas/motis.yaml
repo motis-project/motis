@@ -29,17 +29,17 @@ TripId:
   description: TODO
   fields:
     station_id:
-      description: TODO
+      description: The station ID of the first scheduled departure.
     train_nr:
-      description: TODO
+      description: The unique train number at the first scheduled departure.
     time:
-      description: TODO
+      description: The scheduled first departure time (unix timestamp).
     target_station_id:
-      description: TODO
+      description: The scheduled final destination of the trip.
     target_time:
-      description: TODO
+      description: The scheduled arrival time at the destination (unix timestamp).
     line_id:
-      description: TODO
+      description: The line name.
 TimestampReason:
   description: TODO
 ConnectionStatus:
