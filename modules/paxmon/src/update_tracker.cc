@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdint>
 #include <algorithm>
+#include <limits>
 #include <tuple>
 #include <vector>
 
@@ -153,8 +154,21 @@ struct update_tracker::impl {
                        std::tie(rhs_key.pg_, rhs_key.route_);
               });
 
+    auto updated_group_count = 0ULL;
+    auto updated_pax_count = 0ULL;
+    auto last_group = std::numeric_limits<passenger_group_index>::max();
+    for (auto const& pgri : sorted_pgr_infos) {
+      auto const& pgwr = pgri.first;
+      if (pgwr.pg_ != last_group) {
+        ++updated_group_count;
+        updated_pax_count += pgri.second->pax_;
+        last_group = pgwr.pg_;
+      }
+    }
+
     auto const fb_updates = CreatePaxMonTrackedUpdates(
-        mc_, group_route_infos_.size(), updated_trip_infos_.size(),
+        mc_, group_route_infos_.size(), updated_group_count, updated_pax_count,
+        updated_trip_infos_.size(),
         mc_.CreateVector(utl::to_vec(sorted_trips,
                                      [&](auto& entry) {
                                        return get_fbs_updated_trip(

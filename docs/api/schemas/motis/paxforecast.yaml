@@ -211,12 +211,20 @@ PaxForecastApplyMeasuresStatistics:
         Number of passenger groups reached via the `recipients` in the
         given measures.
 
-        Note: This does not include passenger groups affected by real-time
+        Does not include passenger groups affected by real-time
         updates (e.g. because an rt update broke their journey).
     total_alternative_routings:
-      description: The number of alternative routing requests performed.
+      description: |
+        The number of alternative routing requests performed.
+
+        Does not include alternative routings performed as part of the handling
+        of real-time updates.
     total_alternatives_found:
-      description: The total number of alternative routes found.
+      description: |
+        The total number of alternative routes found.
+
+        Does not include alternative routes found as part of the handling
+        of real-time updates.
     group_routes_broken:
       description: >
         The total number of passenger group routes broken by the measures.
@@ -225,17 +233,37 @@ PaxForecastApplyMeasuresStatistics:
         The total number of passenger groups with a major delay that were
         affected by the measures.
     t_rt_updates:
-      description: Time used to apply real-time updates (ms).
+      description: |
+        Time used to apply real-time updates (ms).
+
+        Includes time for broken journey detection, alternative routing,
+        passenger behavior simulation and updates.
     t_get_affected_groups:
       description: Time used to determine affected groups (ms).
     t_find_alternatives:
-      description: Time used to find alternative routes (ms).
+      description: |
+        Time used to find alternative routes (ms).
+
+        Does not include time used to find alternatives for passenger groups
+        affected by real-time updates.
     t_add_alternatives_to_graph:
-      description: Time used to add alternatives to paxmon (ms).
+      description: |
+        Time used to add alternatives to paxmon (ms).
+
+        Does not include alternatives for passenger groups affected by
+        real-time updates.
     t_behavior_simulation:
-      description: Time used for passenger behavior simulation (ms).
+      description: |
+        Time used for passenger behavior simulation (ms).
+
+        Does not include time used for behavior simulation of passenger groups
+        affected by real-time updates.
     t_update_groups:
-      description: Time used to update passenger groups (ms).
+      description: |
+        Time used to update passenger groups (ms).
+
+        Does not include time used for updating passenger groups affected
+        by real-time updates.
     t_update_tracker:
       description: Time used for tracking changes (ms).
 PaxForecastApplyMeasuresResponse:

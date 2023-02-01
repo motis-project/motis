@@ -836,6 +836,8 @@ export interface PaxMonUpdatedTrip {
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonTrackedUpdates {
   updated_group_route_count: number;
+  updated_group_count: number;
+  updated_pax_count: number;
   updated_trip_count: number;
   updated_trips: PaxMonUpdatedTrip[];
   updated_group_routes: PaxMonGroupRouteUpdateInfo[];
