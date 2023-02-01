@@ -148,13 +148,14 @@ jobs:
           mkdir web
           Copy-Item .\ui\web\external_lib,.\ui\web\img,.\ui\web\js,.\ui\web\style .\web\ -Recurse
           Copy-Item .\ui\web\*.html,.\ui\web\*.js,.\ui\web\*.ico .\web\
+          Copy-Item .\ui\web\openapi .\web\ -Recurse
           Copy-Item .\ui\rsl\dist .\web\rsl -Recurse
 
       - name: Move API Docs
         if: matrix.config.mode == 'Release'
         run: |
-          Copy-Item .\docs\generated\openapi-3.1\openapi.yaml .\web\openapi.yaml
-          Copy-Item .\docs\generated\openapi-3.0\openapi.yaml .\web\openapi-3.0.yaml
+          Copy-Item .\docs\generated\openapi-3.1\openapi.yaml .\web\openapi\openapi.yaml
+          Copy-Item .\docs\generated\openapi-3.0\openapi.yaml .\web\openapi\openapi-3.0.yaml
 
       - name: Create Distribution
         if: matrix.config.mode == 'Release'

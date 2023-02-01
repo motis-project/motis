@@ -90,6 +90,8 @@ Configuration:
 - `base-uri`: The JSON Schema Base URI
 - `ids` (boolean): Include `$id` for schema types
 - `info`: The info block for the OpenAPI file (must include at least `title` and `version`)
+- `externalDocs` (optional): The externalDocs block for the OpenAPI file
+- `servers` (optional): The servers block for the OpenAPI file
 
 #### OpenAPI 3.0 Limitations
 

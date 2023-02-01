@@ -202,9 +202,13 @@ function addTableProperties(ctx: JSContext, type: TableType, js: JSONSchema) {
               const fqtn = value.typeRef.resolvedFqtn;
               const tag = fqtn[fqtn.length - 1];
               unionCases.push({
-                if: { properties: { [tagName]: { const: tag } } },
+                if: {
+                  properties: { [tagName]: { type: "string", const: tag } },
+                },
                 then: {
-                  properties: { [field.name]: { $ref: ctx.getRefUrl(fqtn) } },
+                  properties: {
+                    [field.name]: { $ref: ctx.getRefUrl(fqtn) },
+                  },
                 },
               });
             }

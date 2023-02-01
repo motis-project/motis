@@ -21,6 +21,7 @@ export interface DocPath {
   tags: string[];
   input?: string | undefined;
   output?: DocResponse | undefined;
+  operationId?: string | undefined;
 }
 
 export interface DocResponse {
