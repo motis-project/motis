@@ -61,6 +61,7 @@ struct raptor_query : public base_query {
                raptor_timetable const& tt)
       : base_query{bq},
         tt_{tt},
+        meta_info_{meta_info},
         add_starts_{get_add_starts(meta_info, source_, use_start_footpaths_,
                                    use_start_metas_)},
         result_{std::make_unique<rounds<L>>(tt_.stop_count())} {}
@@ -72,6 +73,7 @@ struct raptor_query : public base_query {
   raptor_timetable const& tt_;
   std::vector<additional_start> add_starts_;
   std::unique_ptr<rounds<L>> result_;
+  raptor_meta_info const& meta_info_;
 };
 
 #if defined(MOTIS_CUDA)

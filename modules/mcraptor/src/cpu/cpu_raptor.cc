@@ -15,14 +15,16 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
     return;
   }
   // ??? checking for empty
-  // check if this label may be dominated by other existing labels
+  // check if this label may be dominated by labels on the last stations
   for(stop_id target : this->targets()) {
     if(transfer_labels_[target].dominates(new_label)) {
       return;
     }
   }
-  if(!route_labels_[stop].merge(new_label)) {
-    return;
+  for(stop_id meta_stop: query_.meta_info_.equivalent_stations_[stop]) {
+    if(!route_labels_[meta_stop].merge(new_label)) {
+      return;
+    }
   }
   // add indominated label to the bags
   transfer_labels_[stop].merge(new_label);

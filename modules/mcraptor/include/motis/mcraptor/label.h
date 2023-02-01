@@ -67,7 +67,7 @@ struct label {
     }
 
     // If arrival time is earlier
-    if (domination_arrival_time == 1) {
+    /*if (domination_arrival_time == 1) {
       // If more changes but duration is much less (see MAX_DIFF_FOR_LESS_TRANSFERS) => dominate
       if(domination_changes_count == -1 && domination_travel_duration >= 0) {
         time diff = (other.arrival_time_ - other.journey_departure_time_) - (arrival_time_ - journey_departure_time_);
@@ -82,10 +82,17 @@ struct label {
     }
     else if (domination_arrival_time == 0) {
       // If arrival time is equal and departure time is later => dominate
+      // return domination_journey_departure_time == 1;
+      if(domination_changes_count == 1) {
+        return true;
+      }
       return domination_journey_departure_time == 1;
     }
 
-    return false;
+    return false;*/
+
+    return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
+           (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
   }
 
   bool dominates_all(std::vector<label> labels) {
