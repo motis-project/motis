@@ -262,7 +262,7 @@ struct reconstructor {
 
         L& current_station_label = l;
         L& target_station_label = l;
-        raptor_round r_k = current_station_label.changes_count_;
+        raptor_round r_k = current_station_label.round_;
         stop_id current_station = target;
         size_t parent_label_index = current_station_label.parent_label_index_;
         stop_id parent_station = current_station_label.parent_station_;
@@ -275,7 +275,7 @@ struct reconstructor {
                                current_station_label.current_trip_id_,
                                current_station_label.stop_offset_,
                                raptor_sched_, timetable_);
-            } else if(r_k % 2 == 1 && r_k != target_station_label.changes_count_) {
+            } else if(r_k % 2 == 1 && r_k != target_station_label.round_) {
               ij.add_footpath(
                   current_station, current_station_label.arrival_time_,
                   last_departure_info.first, last_departure_info.second,

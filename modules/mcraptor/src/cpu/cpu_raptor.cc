@@ -288,7 +288,8 @@ void mc_raptor_departure::init_new_label(bag<label_departure> bag,
     new_label.arrival_time_ = bag[i].arrival_time_ + duration;
     new_label.parent_station_ = stop;
     new_label.parent_label_index_ = i;
-    new_label.changes_count_ = round_;
+    new_label.changes_count_ = bag[i].changes_count_;
+    new_label.round_ = round_;
     new_label.footpath_duration_ = duration;
     new_label.journey_departure_time_ = bag[i].journey_departure_time_;
     arrival_by_transfer(to_stop, new_label);
@@ -333,7 +334,8 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
       new_label.route_id_ = route_id;
       new_label.stop_offset_ = stop_offset;
       new_label.current_trip_id_ = r_label.current_trip_id_;
-      new_label.changes_count_ = round_;
+      new_label.changes_count_ = round_ / 2;
+      new_label.round_ = round_;
       new_label.journey_departure_time_ = previous_round()[r_label.parent_stop_][r_label.parent_label_index_].journey_departure_time_;
       arrival_by_route(stop, new_label);
     }
