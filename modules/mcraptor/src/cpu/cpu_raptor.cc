@@ -85,6 +85,9 @@ void mc_raptor<T, L>::relax_transfers() {
       auto const& to_stop = query_.tt_.footpaths_[current_index].to_;
       auto const& duration = query_.tt_.footpaths_[current_index].duration_;
       static_cast<T*>(this)->init_new_label(bag, stop, duration, to_stop);
+      for(stop_id meta_station: query_.meta_info_.equivalent_stations_[to_stop]) {
+        static_cast<T*>(this)->init_new_label(bag, stop, duration, meta_station);
+      }
     }
   }
 }
