@@ -28,7 +28,7 @@ struct label {
 
   // Parameters
   time journey_departure_time_ = invalid<time>;
-  uint8_t changes_count_ = invalid<uint8_t>;
+  size_t changes_count_ = invalid<size_t>;
   time arrival_time_ = invalid<time>;
 
   // Parent info
@@ -40,8 +40,6 @@ struct label {
   trip_id current_trip_id_ = invalid<trip_id>;
   route_stops_index stop_offset_ = invalid<route_stops_index>;
   time footpath_duration_ = invalid<time>;
-
-  raptor_round round_ = invalid<raptor_round>;
 
   label() {
   }
@@ -64,9 +62,9 @@ struct label {
     int domination_travel_duration = travel_duration_rule(other);
 
     // If equal and changes more or equal => dominate
-//    if(domination_arrival_time == 0 && domination_journey_departure_time == 0) {
-//      return domination_changes_count != -1;
-//    }
+    if(domination_arrival_time == 0 && domination_journey_departure_time == 0) {
+      return domination_changes_count != -1;
+    }
 
     // If arrival time is earlier
     /*if (domination_arrival_time == 1) {
