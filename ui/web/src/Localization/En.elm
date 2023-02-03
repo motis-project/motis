@@ -99,6 +99,7 @@ enTranslations =
         , walk = "Walk"
         , bike = "Bike"
         , car = "Car"
+        , ondemand = "On Demand"
         , trainNr = "Train number"
         , lineId = "Line"
         , parking = "Parking"

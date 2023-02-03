@@ -27,6 +27,7 @@ private:
   std::string router_{"routing"};
   bool revise_{false};
   ppr_profiles ppr_profiles_;
+  std::vector<std::string> ondemand_infos_;
 };
 
 }  // namespace motis::intermodal

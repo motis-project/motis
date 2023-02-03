@@ -1,6 +1,7 @@
 module Data.Intermodal.Types exposing
     ( BikeModeInfo
     , CarModeInfo
+    , OnDemandModeInfo
     , FootModeInfo
     , FootPPRInfo
     , IntermodalDestination(..)
@@ -59,6 +60,7 @@ type Mode
     | Bike BikeModeInfo
     | GBFS GBFSModeInfo
     | Car CarModeInfo
+    | OnDemand OnDemandModeInfo
     | FootPPR FootPPRInfo
     | CarParking CarParkingModeInfo
 
@@ -79,6 +81,10 @@ type alias GBFSModeInfo =
 
 
 type alias CarModeInfo =
+    { maxDuration : Int }
+
+
+type alias OnDemandModeInfo =
     { maxDuration : Int }
 
 

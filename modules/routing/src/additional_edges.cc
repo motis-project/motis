@@ -23,7 +23,7 @@ std::vector<edge> create_additional_edges(
             get_station_node(sched, info->from_station_id()->str()),
             get_station_node(sched, info->to_station_id()->str()),
             info->duration(), info->price(), info->accessibility(),
-            info->mumo_id()));
+            info->mumo_id(), info->is_od()));
         break;
       }
 

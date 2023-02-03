@@ -99,6 +99,7 @@ frTranslations =
         , walk = "Marche"
         , bike = "Vélo"
         , car = "Voiture"
+        , ondemand = "On Demand"
         , trainNr = "Numéro de train"
         , lineId = "Ligne"
         , parking = "Parking"

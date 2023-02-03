@@ -100,6 +100,7 @@ deTranslations =
         , walk = "Fußweg"
         , bike = "Fahrrad"
         , car = "Auto"
+        , ondemand = "On-Demand"
         , trainNr = "Zugnummer"
         , lineId = "Linie"
         , parking = "Parkplatz"

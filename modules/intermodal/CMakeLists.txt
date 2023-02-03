@@ -16,3 +16,4 @@ target_link_libraries(motis-intermodal
   ppr-routing
 )
 target_compile_options(motis-intermodal PRIVATE ${MOTIS_CXX_FLAGS})
+add_subdirectory(test_server)
