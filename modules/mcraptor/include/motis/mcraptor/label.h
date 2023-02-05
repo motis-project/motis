@@ -61,36 +61,6 @@ struct label {
     int domination_changes_count = changes_count_rule(other);
     int domination_travel_duration = travel_duration_rule(other);
 
-    // If equal and changes more or equal => dominate
-    if(domination_arrival_time == 0 && domination_journey_departure_time == 0) {
-      return domination_changes_count != -1;
-    }
-
-    // If arrival time is earlier
-    /*if (domination_arrival_time == 1) {
-      // If more changes but duration is much less (see MAX_DIFF_FOR_LESS_TRANSFERS) => dominate
-      if(domination_changes_count == -1 && domination_travel_duration >= 0) {
-        time diff = (other.arrival_time_ - other.journey_departure_time_) - (arrival_time_ - journey_departure_time_);
-        size_t diff_changes_count = this->changes_count_ - other.changes_count_;
-        return diff > MAX_DIFF_FOR_LESS_TRANSFERS || diff_changes_count == 1;
-      }
-      // If arrival time is earlier AND journey departure time is earlier => do not dominate
-      if(domination_changes_count == 0 && domination_journey_departure_time == -1) {
-        return false;
-      }
-      return true;
-    }
-    else if (domination_arrival_time == 0) {
-      // If arrival time is equal and departure time is later => dominate
-      // return domination_journey_departure_time == 1;
-      if(domination_changes_count == 1) {
-        return true;
-      }
-      return domination_journey_departure_time == 1;
-    }
-
-    return false;*/
-
     return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
            (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
   }
