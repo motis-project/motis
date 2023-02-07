@@ -145,6 +145,10 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
         ++uv.tick_stats_.rt_free_text_updates_;
         break;
       }
+      case Content_TripFormationMessage: {
+        ++uv.tick_stats_.rt_trip_formation_updates_;
+        break;
+      }
       default: break;
     }
   }

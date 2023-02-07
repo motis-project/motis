@@ -250,6 +250,12 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
+    case ris::MessageUnion_TripFormationMessage: {
+      update_builder_.trip_formation_message(
+          reinterpret_cast<ris::TripFormationMessage const*>(c));
+      break;
+    }
+
     default: break;
   }
 }

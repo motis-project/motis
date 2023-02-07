@@ -46,6 +46,8 @@ struct update_msg_builder {
                            std::optional<expanded_trip_index> old_eti,
                            std::optional<expanded_trip_index> new_eti);
 
+  void trip_formation_message(motis::ris::TripFormationMessage const* msg);
+
   motis::module::msg_ptr finish();
 
   std::size_t delay_count() const { return delay_count_; }
