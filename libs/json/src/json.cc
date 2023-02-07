@@ -4,6 +4,10 @@
 
 namespace motis::json {
 
+bool has_key(rapidjson::Value const& parent, char const* key) {
+  return parent.FindMember(key) != parent.MemberEnd();
+}
+
 rapidjson::Value const& get_value(rapidjson::Value const& parent,
                                   char const* key) {
   auto const member = parent.FindMember(key);

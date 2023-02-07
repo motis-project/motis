@@ -12,6 +12,8 @@
 
 namespace motis::json {
 
+bool has_key(rapidjson::Value const& parent, char const* key);
+
 rapidjson::Value const& get_value(rapidjson::Value const& parent,
                                   char const* key);
 
