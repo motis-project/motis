@@ -445,7 +445,6 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,
-                            capacity_maps const& caps,
                             std::string const& journey_file,
                             journey_input_settings const& settings) {
   auto const match_tolerance = settings.match_tolerance_;
@@ -543,10 +542,10 @@ loader_result load_journeys(schedule const& sched, universe& uv,
           ++tpg.source_.secondary_ref_;
           distributed += group_size;
           tpg.passengers_ = group_size;
-          add_passenger_group(uv, sched, caps, tpg, false);
+          add_passenger_group(uv, sched, tpg, false);
         }
       } else {
-        add_passenger_group(uv, sched, caps, tpg, false);
+        add_passenger_group(uv, sched, tpg, false);
       }
     } else {
       if (!all_trips_found) {

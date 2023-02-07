@@ -18,9 +18,9 @@
 namespace motis::paxmon {
 
 struct trip_section_with_load {
-  trip_section_with_load(schedule const& sched, capacity_maps const& caps,
-                         universe const& uv, trip const* trp,
-                         trip_data_index const tdi, int const idx)
+  trip_section_with_load(schedule const& sched, universe const& uv,
+                         trip const* trp, trip_data_index const tdi,
+                         int const idx)
       : uv_{uv},
         section_{trp, idx},
         edge_{tdi == INVALID_TRIP_DATA_INDEX
@@ -32,7 +32,7 @@ struct trip_section_with_load {
     } else {
       auto const cap =
           get_capacity(sched, section_.lcon(), section_.ev_key_from(),
-                       section_.ev_key_to(), caps);
+                       section_.ev_key_to(), uv.capacity_maps_);
       capacity_ = cap.first;
       capacity_source_ = cap.second;
     }
@@ -100,24 +100,19 @@ struct trip_section_load_iterator {
   using pointer = value_type;
   using reference = value_type;
 
-  trip_section_load_iterator(schedule const& sched, capacity_maps const& caps,
-                             universe const& uv, trip const* trp,
-                             trip_data_index const tdi, int const idx)
-      : sched_{sched},
-        caps_{caps},
-        uv_{uv},
-        trip_{trp},
-        tdi_{tdi},
-        index_{idx} {}
+  trip_section_load_iterator(schedule const& sched, universe const& uv,
+                             trip const* trp, trip_data_index const tdi,
+                             int const idx)
+      : sched_{sched}, uv_{uv}, trip_{trp}, tdi_{tdi}, index_{idx} {}
 
   trip_section_with_load operator*() {
-    return {sched_, caps_, uv_, trip_, tdi_, index_};
+    return {sched_, uv_, trip_, tdi_, index_};
   }
   trip_section_with_load operator->() {
-    return {sched_, caps_, uv_, trip_, tdi_, index_};
+    return {sched_, uv_, trip_, tdi_, index_};
   }
   trip_section_with_load operator[](int rhs) {
-    return {sched_, caps_, uv_, trip_, tdi_, index_ + rhs};
+    return {sched_, uv_, trip_, tdi_, index_ + rhs};
   }
 
   trip_section_load_iterator& operator+=(int rhs) {
@@ -153,23 +148,21 @@ struct trip_section_load_iterator {
   }
 
   trip_section_load_iterator operator+(difference_type rhs) const {
-    return {sched_, caps_, uv_, trip_, tdi_, index_ + rhs};
+    return {sched_, uv_, trip_, tdi_, index_ + rhs};
   }
 
   trip_section_load_iterator operator-(difference_type rhs) const {
-    return {sched_, caps_, uv_, trip_, tdi_, index_ + rhs};
+    return {sched_, uv_, trip_, tdi_, index_ + rhs};
   }
 
   friend trip_section_load_iterator operator+(
       difference_type lhs, trip_section_load_iterator const& rhs) {
-    return {rhs.sched_, rhs.caps_, rhs.uv_,
-            rhs.trip_,  rhs.tdi_,  rhs.index_ + lhs};
+    return {rhs.sched_, rhs.uv_, rhs.trip_, rhs.tdi_, rhs.index_ + lhs};
   }
 
   friend trip_section_load_iterator operator-(
       difference_type lhs, trip_section_load_iterator const& rhs) {
-    return {rhs.sched_, rhs.caps_, rhs.uv_,
-            rhs.trip_,  rhs.tdi_,  rhs.index_ - lhs};
+    return {rhs.sched_, rhs.uv_, rhs.trip_, rhs.tdi_, rhs.index_ - lhs};
   }
 
   difference_type operator-(trip_section_load_iterator const& rhs) const {
@@ -208,7 +201,6 @@ struct trip_section_load_iterator {
 
 protected:
   schedule const& sched_;
-  capacity_maps const& caps_;
   universe const& uv_;
   trip const* trip_{};
   trip_data_index tdi_{};
@@ -218,10 +210,8 @@ protected:
 struct sections_with_load {
   using iterator = trip_section_load_iterator;
 
-  sections_with_load(schedule const& sched, capacity_maps const& caps,
-                     universe const& uv, trip const* trp)
+  sections_with_load(schedule const& sched, universe const& uv, trip const* trp)
       : sched_{sched},
-        caps_{caps},
         uv_{uv},
         trip_{trp},
         tdi_{uv.trip_data_.find_index(trp->trip_idx_)} {
@@ -242,10 +232,9 @@ struct sections_with_load {
 
   inline bool has_load_info() const { return has_paxmon_data(); }
 
-  iterator begin() const { return {sched_, caps_, uv_, trip_, tdi_, 0}; }
+  iterator begin() const { return {sched_, uv_, trip_, tdi_, 0}; }
   iterator end() const {
-    return {sched_, caps_, uv_,
-            trip_,  tdi_,  static_cast<int>(trip_->edges_->size())};
+    return {sched_, uv_, trip_, tdi_, static_cast<int>(trip_->edges_->size())};
   }
 
   friend iterator begin(sections_with_load const& s) { return s.begin(); }
@@ -267,7 +256,6 @@ struct sections_with_load {
   trip_section_with_load back() const { return at(size() - 1); }
 
   schedule const& sched_;
-  capacity_maps const& caps_;
   universe const& uv_;
   trip const* trip_{};
   trip_data_index tdi_{};

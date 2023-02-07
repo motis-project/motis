@@ -93,9 +93,8 @@ void check_broken_interchanges(
   }
 }
 
-void handle_rt_update(universe& uv, capacity_maps const& caps,
-                      schedule const& sched, RtUpdates const* update,
-                      int arrival_delay_threshold) {
+void handle_rt_update(universe& uv, schedule const& sched,
+                      RtUpdates const* update, int arrival_delay_threshold) {
   uv.tick_stats_.rt_updates_ += update->updates()->size();
 
   std::vector<edge_index> updated_interchange_edges;
@@ -132,7 +131,7 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
         ++uv.system_stats_.reroute_updates_;
         ++uv.tick_stats_.rt_reroute_updates_;
         auto const ru = reinterpret_cast<RtRerouteUpdate const*>(u->content());
-        update_trip_route(sched, caps, uv, ru, updated_interchange_edges);
+        update_trip_route(sched, uv, ru, updated_interchange_edges);
         break;
       }
       case Content_RtTrackUpdate: {

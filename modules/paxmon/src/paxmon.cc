@@ -176,11 +176,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.subscribe(
       "/init",
       [&]() {
-        if (data_.capacity_maps_.trip_capacity_map_.empty() &&
-            data_.capacity_maps_.category_capacity_map_.empty()) {
+        auto const& primary_uv = primary_universe();
+        if (primary_uv.capacity_maps_.trip_capacity_map_.empty() &&
+            primary_uv.capacity_maps_.category_capacity_map_.empty()) {
           LOG(warn) << "no capacity information available";
         }
-        LOG(info) << "tracking " << primary_universe().passenger_groups_.size()
+        LOG(info) << "tracking " << primary_uv.passenger_groups_.size()
                   << " passenger groups";
 
         shared_data_->register_timer("PaxMon Universe GC",
@@ -261,8 +262,8 @@ void paxmon::init(motis::module::registry& reg) {
               << "generate_capacities: no output file specified";
           return {};
         }
-        generate_capacities(get_sched(), data_.capacity_maps_,
-                            primary_universe(), generated_capacity_file_);
+        generate_capacities(get_sched(), primary_universe(),
+                            generated_capacity_file_);
         return {};
       },
       {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
@@ -420,12 +421,11 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
   auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
     scoped_timer journey_timer{"load motis journeys"};
-    result =
-        loader::journeys::load_journeys(sched, uv, data_.capacity_maps_, file);
+    result = loader::journeys::load_journeys(sched, uv, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    result = loader::csv::load_journeys(sched, uv, data_.capacity_maps_, file,
-                                        journey_input_settings_);
+    result =
+        loader::csv::load_journeys(sched, uv, file, journey_input_settings_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
@@ -513,9 +513,9 @@ void paxmon::load_journeys() {
             converter->write_journey(journeys.front(), uj.source_.primary_ref_,
                                      uj.source_.secondary_ref_, uj.passengers_);
           }
-          loader::journeys::load_journey(
-              sched, uv, data_.capacity_maps_, journeys.front(), uj.source_,
-              uj.passengers_, route_source_flags::MATCH_REROUTED);
+          loader::journeys::load_journey(sched, uv, journeys.front(),
+                                         uj.source_, uj.passengers_,
+                                         route_source_flags::MATCH_REROUTED);
         }
       }
       progress_tracker->increment();
@@ -555,6 +555,7 @@ void paxmon::load_capacity_files() {
       .out_bounds(0.F, 10.F)
       .in_high(capacity_files_.size());
   auto total_entries = 0ULL;
+  auto& primary_uv = primary_universe();
   for (auto const& file : capacity_files_) {
     auto const capacity_path = fs::path{file};
     if (!fs::exists(capacity_path)) {
@@ -563,7 +564,7 @@ void paxmon::load_capacity_files() {
       continue;
     }
     auto const entries_loaded = load_capacities(
-        sched, file, data_.capacity_maps_, capacity_match_log_file_);
+        sched, file, primary_uv.capacity_maps_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              entries_loaded, file);
@@ -584,8 +585,8 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   for (auto const uv_id : uv_ids) {
     auto const uv_access =
         get_universe_and_schedule(data_, uv_id, ctx::access_t::WRITE);
-    handle_rt_update(uv_access.uv_, data_.capacity_maps_, uv_access.sched_,
-                     update, arrival_delay_threshold_);
+    handle_rt_update(uv_access.uv_, uv_access.sched_, update,
+                     arrival_delay_threshold_);
   }
   return {};
 }
@@ -639,7 +640,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
               << uv.tick_stats_.broken_group_routes_
               << " broken group routes to " << dir.string();
     fs::create_directories(dir);
-    output::write_scenario(dir, sched, data_.capacity_maps_, uv, messages,
+    output::write_scenario(dir, sched, uv, messages,
                            mcfp_scenario_include_trip_info_);
   }
 

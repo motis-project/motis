@@ -58,9 +58,8 @@ void add_interchange(event_node_index const from, event_node_index const to,
 };  // namespace
 
 add_group_route_to_graph_result add_group_route_to_graph(
-    schedule const& sched, capacity_maps const& caps, universe& uv,
-    passenger_group const& grp, group_route const& gr, bool const log,
-    pci_log_reason_t const reason) {
+    schedule const& sched, universe& uv, passenger_group const& grp,
+    group_route const& gr, bool const log, pci_log_reason_t const reason) {
   auto result = add_group_route_to_graph_result{};
   auto edges = uv.passenger_groups_.route_edges(gr.edges_index_);
   auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
@@ -77,7 +76,7 @@ add_group_route_to_graph_result add_group_route_to_graph(
 
     auto tdi = INVALID_TRIP_DATA_INDEX;
     try {
-      tdi = get_or_add_trip(sched, caps, uv, leg.trip_idx_);
+      tdi = get_or_add_trip(sched, uv, leg.trip_idx_);
     } catch (std::system_error const& e) {
       std::cerr << "could not add trip for passenger group " << grp.id_
                 << " (source=" << grp.source_.primary_ref_ << "."

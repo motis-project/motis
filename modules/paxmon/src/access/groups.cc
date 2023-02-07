@@ -21,7 +21,6 @@ void update_estimated_delay(
 }
 
 passenger_group* add_passenger_group(universe& uv, schedule const& sched,
-                                     capacity_maps const& caps,
                                      temp_passenger_group const& tpg,
                                      bool const log,
                                      pci_log_reason_t const reason) {
@@ -29,14 +28,13 @@ passenger_group* add_passenger_group(universe& uv, schedule const& sched,
       make_passenger_group(tpg.source_, tpg.passengers_));
 
   for (auto const& tgr : tpg.routes_) {
-    add_group_route(uv, sched, caps, pg->id_, tgr, false, log, reason);
+    add_group_route(uv, sched, pg->id_, tgr, false, log, reason);
   }
 
   return pg;
 }
 
 add_group_route_result add_group_route(universe& uv, schedule const& sched,
-                                       capacity_maps const& caps,
                                        passenger_group_index const pgi,
                                        temp_group_route const& tgr,
                                        bool const override_probabilities,
@@ -58,7 +56,7 @@ add_group_route_result add_group_route(universe& uv, schedule const& sched,
     gr.probability_ = std::clamp(new_probability, 0.F, 1.F);
     if (gr.disabled_) {
       auto const add_to_graph_result = add_group_route_to_graph(
-          sched, caps, uv, uv.passenger_groups_.group(pgi), gr, log, reason);
+          sched, uv, uv.passenger_groups_.group(pgi), gr, log, reason);
       gr.disabled_ = false;
       update_estimated_delay(gr, add_to_graph_result);
     }
@@ -103,7 +101,7 @@ add_group_route_result add_group_route(universe& uv, schedule const& sched,
   auto const pgwr = passenger_group_with_route{pgi, lgr_index};
   auto& gr = uv.passenger_groups_.route(pgwr);
   auto const add_to_graph_result = add_group_route_to_graph(
-      sched, caps, uv, uv.passenger_groups_.group(pgi), gr, log, reason);
+      sched, uv, uv.passenger_groups_.group(pgi), gr, log, reason);
   update_estimated_delay(gr, add_to_graph_result);
   return {pgwr, true, 0, probability};
 }

@@ -384,7 +384,6 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
                                                    ctx::access_t::WRITE);
   auto const& sched = uv_access.sched_;
   auto& uv = uv_access.uv_;
-  auto& caps = data.capacity_maps_;
 
   tick_statistics tick_stats;
   tick_stats.system_time_ = sched.system_time_;
@@ -533,7 +532,7 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
         alternatives_found += cpg.alternatives_.size();
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, caps, uv, leg.trip_idx_);
+            get_or_add_trip(sched, uv, leg.trip_idx_);
           }
         }
       }
@@ -608,8 +607,8 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   MOTIS_START_TIMING(passenger_behavior);
   manual_timer sim_timer{"passenger behavior simulation"};
   auto pb = behavior::default_behavior{deterministic_mode_};
-  auto const sim_result = simulate_behavior(sched, caps, uv, combined_groups,
-                                            pb.pb_, probability_threshold_);
+  auto const sim_result = simulate_behavior(sched, uv, combined_groups, pb.pb_,
+                                            probability_threshold_);
   sim_timer.stop_and_print();
   MOTIS_STOP_TIMING(passenger_behavior);
   tick_stats.t_passenger_behavior_ = MOTIS_TIMING_MS(passenger_behavior);
@@ -719,7 +718,6 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
       get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
   auto const& sched = uv_access.sched_;
   auto& uv = uv_access.uv_;
-  auto& caps = data.capacity_maps_;
 
   // update measures
   LOG(info) << "parse measures";
@@ -866,7 +864,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
         total_alternatives_found += cpg.alternatives_.size();
         for (auto const& alt : cpg.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
-            get_or_add_trip(sched, caps, uv, leg.trip_idx_);
+            get_or_add_trip(sched, uv, leg.trip_idx_);
           }
         }
       }
@@ -876,8 +874,8 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
 
     manual_timer sim_timer{"passenger behavior simulation"};
     auto pb = behavior::default_behavior{deterministic_mode_};
-    auto const sim_result = simulate_behavior(sched, caps, uv, combined, pb.pb_,
-                                              probability_threshold_);
+    auto const sim_result =
+        simulate_behavior(sched, uv, combined, pb.pb_, probability_threshold_);
     sim_timer.stop_and_print();
     t_behavior_simulation += sim_timer.duration_ms();
 
