@@ -48,7 +48,7 @@ void to_ris_message(std::string_view s,
     if (has_key(data, "fahrtid")) {
       fahrt::parse_ribasis_fahrt(ctx, data);
     } else if (has_key(data, "fahrt")) {
-      // TODO(pablo): RiBasisFormation - NYI
+      formation::parse_ribasis_formation(ctx, data);
     } else {
       LOG(error) << "invalid/unsupported RI Basis message";
       return;

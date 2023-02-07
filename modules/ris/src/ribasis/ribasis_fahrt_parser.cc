@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
