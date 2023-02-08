@@ -115,12 +115,6 @@ def reproduce(filepath, verbose=False):
     return 0
 
 
-# files = glob.iglob('fail/*_intermodal_queries_nigiri_fail.json')
-# for filepath in files:
-#     print(f"trying to reproduce {filepath}")
-#     reproduce(filepath, True)
-# exit(0)
-
 if len(sys.argv) < 2:
     with Pool(processes=6) as pool:
         files = glob.iglob('fail/*_intermodal_queries_nigiri_fail.json')
