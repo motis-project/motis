@@ -256,10 +256,6 @@ int compare(int argc, char const** argv) {
           "query type: pretrip|ontrip_fwd|ontrip_bwd");
   // clang-format on
 
-  for (int i = 0; i != argc; ++i) {
-    fmt::print("{}: {}\n", i, argv[i]);
-  }
-
   po::variables_map vm;
   po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
   po::notify(vm);

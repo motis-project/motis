@@ -15,6 +15,15 @@
 
 namespace motis::routing {
 
+constexpr auto const kTracing = true;
+
+template <typename... T>
+void trace(T&&... t) {
+  if (kTracing) {
+    fmt::print(std::forward<T>(t)...);
+  }
+}
+
 const bool FORWARDING = true;
 
 template <search_dir Dir, typename Label, typename LowerBounds>
@@ -45,9 +54,11 @@ struct pareto_dijkstra {
 
   void add_start_labels(std::vector<Label*> const& start_labels) {
     for (auto const& l : start_labels) {
-      //      std::cout << "START: ";
-      //      l->print(sched_, std::cout);
-      //      std::cout << "\n";
+      trace("START: ");
+      if (kTracing) {
+        l->print(sched_, std::cout);
+      }
+      trace("\n");
 
       if (!l->is_filtered()) {
         node_labels_[l->get_node()->id_].emplace_back(l);
@@ -130,7 +141,7 @@ private:
   void create_new_label(Label* l, edge const& edge) {
     Label blank{};
     bool created = l->create_label(
-        blank, edge, lower_bounds_,
+        blank, edge, lower_bounds_, false, label_type::kSearchLabel,
         (Dir == search_dir::FWD && edge.type() == edge::EXIT_EDGE &&
          is_goal_[edge.get_source<Dir>()->get_station()->id_]) ||
             (Dir == search_dir::BWD && edge.type() == edge::ENTER_EDGE &&
