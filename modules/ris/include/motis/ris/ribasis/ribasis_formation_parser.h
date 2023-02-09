@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <string_view>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -19,6 +21,9 @@ struct context {
 
   mcd::hash_map<std::string, flatbuffers::Offset<StationInfo>> stations_;
   flatbuffers::Offset<HalfTripId> half_trip_id_{};
+
+  std::uint32_t fahrtnummer_{};
+  std::string_view gattung_;
 };
 
 void parse_ribasis_formation(ris_msg_context& ris_ctx,
