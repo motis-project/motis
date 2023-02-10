@@ -55,7 +55,7 @@ void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
 template <class T, class L>
 void mc_raptor<T, L>::relax_transfers() {
   stops_for_transfers_.reset();
-  routes_serving_updated_stops_.clear();
+  std::fill(routes_serving_updated_stops_.begin(), routes_serving_updated_stops_.end(), invalid<route_stops_index>);
   // iterate through all station and find marked
   for(stop_id stop = 0; stop < query_.tt_.stop_count(); ++stop) {
     if(!stops_for_routes_.marked(stop)) {
@@ -106,14 +106,8 @@ void mc_raptor<T, L>::collect_routes_serving_updated_stops() {
       if(stop_offset == route.stop_count_ - 1) {
         continue;
       }
-      // if route with this id is already in map
       // write to this route the earliest stop from both
-      if(routes_serving_updated_stops_.count(route_id)) {
-        routes_serving_updated_stops_[route_id] = std::min(routes_serving_updated_stops_[route_id], stop_offset);
-      } else {
-        // else just add it into map
-        routes_serving_updated_stops_.insert(std::make_pair(route_id, stop_offset));
-      }
+      routes_serving_updated_stops_[route_id] = std::min(routes_serving_updated_stops_[route_id], stop_offset);
     }
   }
 }
@@ -121,9 +115,12 @@ void mc_raptor<T, L>::collect_routes_serving_updated_stops() {
 template <class T, class L>
 void mc_raptor<T, L>::scan_routes() {
   stops_for_routes_.reset();
-  for(auto i = routes_serving_updated_stops_.begin(); i != routes_serving_updated_stops_.end(); ++i) {
-    route_id route_id = i->first;
-    route_stops_index stop_offset = i->second;
+  for(auto i = 0; i < routes_serving_updated_stops_.size(); ++i) {
+    route_id route_id = i;
+    route_stops_index stop_offset = routes_serving_updated_stops_[i];
+    if(!valid(stop_offset)) {
+      continue;
+    }
     raptor_route route = query_.tt_.routes_[route_id];
     stop_id stop = query_.tt_.route_stops_[route.index_to_route_stops_ + stop_offset];
     const stop_count trip_size = route.stop_count_;
@@ -209,7 +206,7 @@ void mc_raptor<T, L>::set_query_source_time(time other_time) {
 template <class T, class L>
 void mc_raptor<T, L>::reset() {
   round_ = -1;
-  routes_serving_updated_stops_.clear();
+  std::fill(routes_serving_updated_stops_.begin(), routes_serving_updated_stops_.end(), invalid<route_stops_index>);
   stops_for_routes_.reset();
   stops_for_transfers_.reset();
 }
