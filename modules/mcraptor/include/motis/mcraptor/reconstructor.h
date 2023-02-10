@@ -244,7 +244,9 @@ struct reconstructor {
       auto labels = result.getAllLabelsForStop(target, max_raptor_round * 2, false);
       bag<L> filter_bag;
       for(L& label : labels) {
-        filter_bag.merge(label);
+        if(label.journey_departure_time_ >= q.source_time_begin_ && label.journey_departure_time_ <= q.source_time_end_) {
+          filter_bag.merge(label);
+        }
       }
 
       for (L& l : filter_bag.labels_) {
