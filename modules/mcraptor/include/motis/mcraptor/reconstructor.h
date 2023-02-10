@@ -260,26 +260,27 @@ struct reconstructor {
           }
         }
 
-        L& current_station_label = l;
-        L& target_station_label = l;
+        L current_station_label = l;
+        L target_station_label = l;
         raptor_round r_k = current_station_label.changes_count_;
         stop_id current_station = target;
         size_t parent_label_index = current_station_label.parent_label_index_;
         stop_id parent_station = current_station_label.parent_station_;
         std::pair<time, uint16_t> last_departure_info = std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
         while (r_k > 0) {
-          if (r_k > 1) {
-            if (r_k % 2 == 0 && current_station_label.route_id_) {
-              last_departure_info =
-                  ij.add_route(parent_station, current_station_label.route_id_,
-                               current_station_label.current_trip_id_,
-                               current_station_label.stop_offset_,
-                               raptor_sched_, timetable_);
-            } else if(r_k % 2 == 1 && r_k != target_station_label.changes_count_) {
-              ij.add_footpath(
-                  current_station, current_station_label.arrival_time_,
-                  last_departure_info.first, last_departure_info.second,
-                  current_station_label.footpath_duration_, raptor_sched_);
+          if (r_k % 2 == 0 && current_station_label.route_id_) {
+            last_departure_info =
+                ij.add_route(parent_station, current_station_label.route_id_,
+                             current_station_label.current_trip_id_,
+                             current_station_label.stop_offset_,
+                             raptor_sched_, timetable_);
+          } else if(r_k % 2 == 1 && r_k != target_station_label.changes_count_ && valid(current_station_label.footpath_duration_)) {
+            ij.add_footpath(
+                current_station, current_station_label.arrival_time_,
+                last_departure_info.first, last_departure_info.second,
+                current_station_label.footpath_duration_, raptor_sched_);
+            if(r_k == 1) {
+              last_departure_info = std::pair<time, uint16_t>(last_departure_info.first - current_station_label.footpath_duration_, invalid<uint16_t>);
             }
           }
 
