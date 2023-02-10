@@ -178,8 +178,8 @@ void mc_raptor<T, L>::start_new_round() {
 //
 // returns vector of pairs with route itself and index to the given station
 template <class T, class L>
-inline std::vector<std::pair<route_id, route_stops_index>> mc_raptor<T, L>::get_routes_times_for_stop(stop_id stop_id) {
-  std::vector<std::pair<route_id, route_stops_index>> result = std::vector<std::pair<route_id, route_stops_index>>();
+inline std::vector<std::pair<route_id, route_stops_index>>& mc_raptor<T, L>::get_routes_times_for_stop(stop_id stop_id) {
+  routes_times_for_stop_.clear();
   // go through all routes for the given station using the first route as base
   // and adding offset to this base until the base + offset = count of routes in current station
   raptor_stop stop = query_.tt_.stops_[stop_id];
@@ -192,12 +192,11 @@ inline std::vector<std::pair<route_id, route_stops_index>> mc_raptor<T, L>::get_
          stop_offset++) {
       // add the station and the founded station to the result
       if(query_.tt_.route_stops_[stop_offset + route.index_to_route_stops_] == stop_id) {
-        // TODO: check preformance
-        result.emplace_back(std::make_pair(route_id, stop_offset));
+        routes_times_for_stop_.emplace_back(std::make_pair(route_id, stop_offset));
       }
     }
   }
-  return result;
+  return routes_times_for_stop_;
 }
 
 template <class T, class L>
