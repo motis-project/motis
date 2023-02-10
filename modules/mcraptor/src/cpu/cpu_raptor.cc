@@ -21,10 +21,8 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
       return;
     }
   }
-  for(stop_id meta_stop: query_.meta_info_.equivalent_stations_[stop]) {
-    if(!route_labels_[meta_stop].merge(new_label)) {
-      return;
-    }
+  if(!route_labels_[stop].merge(new_label)) {
+    return;
   }
   // add indominated label to the bags
   transfer_labels_[stop].merge(new_label);
@@ -85,9 +83,6 @@ void mc_raptor<T, L>::relax_transfers() {
       auto const& to_stop = query_.tt_.footpaths_[current_index].to_;
       auto const& duration = query_.tt_.footpaths_[current_index].duration_;
       static_cast<T*>(this)->init_new_label(bag, stop, duration, to_stop);
-      for(stop_id meta_station: query_.meta_info_.equivalent_stations_[to_stop]) {
-        static_cast<T*>(this)->init_new_label(bag, stop, duration, meta_station);
-      }
     }
   }
 }
