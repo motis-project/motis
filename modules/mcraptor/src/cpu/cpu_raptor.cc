@@ -16,7 +16,8 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
   }
   // ??? checking for empty
   // check if this label may be dominated by labels on the last stations
-  for(stop_id target : this->targets()) {
+  const auto& t = static_cast<T*>(this)->targets_;
+  for(stop_id target : t) {
     if(transfer_labels_[target].dominates(new_label)) {
       return;
     }
@@ -38,7 +39,8 @@ void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
   }
   // checking for empty??
   // check if this label may be dominated by other existing labels
-  for(stop_id target : this->targets()) {
+  const auto& t = static_cast<T*>(this)->targets_;
+  for(stop_id target : t) {
     if(transfer_labels_[target].dominates(new_label)) {
       return;
     }
@@ -235,11 +237,6 @@ void mc_raptor<T, L>::invoke_cpu_raptor() {
 
 }
 
-template <class T, class L>
-std::vector<stop_id> mc_raptor<T, L>::targets() {
-  return static_cast<T*>(this)->targets();
-}
-
 
 //departure mc_raptor
 
@@ -334,10 +331,6 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
 
 void mc_raptor_departure::init_parents(){
 
-}
-
-std::vector<stop_id> mc_raptor_departure::targets() {
-  return query_.targets_;
 }
 
 //arrival mc_raptor
@@ -446,10 +439,6 @@ void mc_raptor_arrival::init_parents(){
   }
 
   //TODO reverse result
-}
-
-std::vector<stop_id> mc_raptor_arrival::targets() {
-  return query_.sources_;
 }
 
 }  // namespace motis::mcraptor

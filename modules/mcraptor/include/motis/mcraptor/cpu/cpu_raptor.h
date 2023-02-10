@@ -40,9 +40,6 @@ struct mc_raptor {
 
   void reset();
 
-  //static derived methods
-  std::vector<stop_id> targets();
-
   //fields
   raptor_query<L> const& query_;
   time source_time_begin_;
@@ -58,7 +55,10 @@ struct mc_raptor {
 };
 
 struct mc_raptor_departure: public mc_raptor<mc_raptor_departure, label_departure> {
-  mc_raptor_departure(raptor_query<label_departure> const& q) : mc_raptor(q) { }
+  std::vector<stop_id> targets_;
+  mc_raptor_departure(raptor_query<label_departure> const& q)
+      : mc_raptor(q),
+        targets_(q.targets_) { }
   void init_arrivals();
   void init_new_label(bag<label_departure> bag, stop_id stop, time8 duration, stop_id to_stop);
   void scan_route(stop_id stop, route_stops_index stop_offset,
@@ -66,10 +66,10 @@ struct mc_raptor_departure: public mc_raptor<mc_raptor_departure, label_departur
                   const stop_time* last_trip, raptor_route route,
                   route_id route_id);
   void init_parents();
-  std::vector<stop_id> targets();
 };
 
 struct mc_raptor_arrival: public mc_raptor<mc_raptor_arrival, label_arrival> {
+  std::vector<stop_id> targets_;
   mc_raptor_arrival(raptor_query<label_arrival> const& q) : mc_raptor(q) { }
   void init_arrivals();
   void init_new_label(bag<label_arrival> bag, stop_id stop, time8 duration, stop_id to_stop);
@@ -78,7 +78,6 @@ struct mc_raptor_arrival: public mc_raptor<mc_raptor_arrival, label_arrival> {
                   const stop_time* last_trip, raptor_route route,
                   route_id route_id);
   void init_parents();
-  std::vector<stop_id> targets();
 };
 
 template class mc_raptor<mc_raptor_departure, label_departure>;
