@@ -32,7 +32,7 @@ struct mc_raptor {
   void start_new_round();
 
   void init_arrivals();
-  void arrival_by_route(stop_id stop, L& new_label);
+  void arrival_by_route(stop_id stop, L& new_label, bool from_equal_station = false);
   void arrival_by_transfer(stop_id stop, L& label);
   void relax_transfers();
   void collect_routes_serving_updated_stops();

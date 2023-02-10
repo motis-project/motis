@@ -10,13 +10,13 @@ void mc_raptor<T, L>::init_arrivals() {
 }
 
 template <class T, class L>
-void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
+void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equal_station) {
   if(new_label.arrival_time_ < source_time_begin_) {
     return;
   }
   // ??? checking for empty
   // check if this label may be dominated by labels on the last stations
-  const auto& t = static_cast<T*>(this)->targets_;
+  const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
   for(stop_id target : t) {
     if(transfer_labels_[target].dominates(new_label)) {
       return;
@@ -30,6 +30,20 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label) {
   current_round()[stop].merge_undominated(new_label);
   // mark the station
   stops_for_routes_.mark(stop);
+
+  // Check equal stations if there is target among them
+  if(!from_equal_station) {
+    for (stop_id s : query_.meta_info_.equivalent_stations_[stop]) {
+      if (s == stop) {
+        continue;
+      }
+      auto sf = std::find(t.begin(), t.end(), s);
+      if (sf != t.end()) {
+        arrival_by_route(s, new_label, true);
+      }
+    }
+  }
+
 }
 
 template <class T, class L>
