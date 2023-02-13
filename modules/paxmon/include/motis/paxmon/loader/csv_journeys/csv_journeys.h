@@ -10,10 +10,10 @@
 #include "motis/paxmon/settings/journey_input_settings.h"
 #include "motis/paxmon/universe.h"
 
-namespace motis::paxmon::loader::csv {
+namespace motis::paxmon::loader::csv_journeys {
 
 loader_result load_journeys(
     schedule const& sched, universe& uv, std::string const& journey_file,
     motis::paxmon::settings::journey_input_settings const& settings);
 
-}  // namespace motis::paxmon::loader::csv
+}  // namespace motis::paxmon::loader::csv_journeys

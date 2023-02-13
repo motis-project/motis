@@ -46,8 +46,9 @@
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/load_info.h"
-#include "motis/paxmon/loader/csv/csv_journeys.h"
-#include "motis/paxmon/loader/journeys/motis_journeys.h"
+#include "motis/paxmon/loader/capacities/load_capacities.h"
+#include "motis/paxmon/loader/csv_journeys/csv_journeys.h"
+#include "motis/paxmon/loader/motis_journeys/motis_journeys.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/output/journey_converter.h"
 #include "motis/paxmon/output/mcfp_scenario.h"
@@ -421,11 +422,11 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
   auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
     scoped_timer journey_timer{"load motis journeys"};
-    result = loader::journeys::load_journeys(sched, uv, file);
+    result = loader::motis_journeys::load_journeys(sched, uv, file);
   } else if (journey_path.extension() == ".csv") {
     scoped_timer journey_timer{"load csv journeys"};
-    result =
-        loader::csv::load_journeys(sched, uv, file, journey_input_settings_);
+    result = loader::csv_journeys::load_journeys(sched, uv, file,
+                                                 journey_input_settings_);
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
@@ -513,9 +514,9 @@ void paxmon::load_journeys() {
             converter->write_journey(journeys.front(), uj.source_.primary_ref_,
                                      uj.source_.secondary_ref_, uj.passengers_);
           }
-          loader::journeys::load_journey(sched, uv, journeys.front(),
-                                         uj.source_, uj.passengers_,
-                                         route_source_flags::MATCH_REROUTED);
+          loader::motis_journeys::load_journey(
+              sched, uv, journeys.front(), uj.source_, uj.passengers_,
+              route_source_flags::MATCH_REROUTED);
         }
       }
       progress_tracker->increment();
@@ -563,7 +564,7 @@ void paxmon::load_capacity_files() {
       import_successful_ = false;
       continue;
     }
-    auto const entries_loaded = load_capacities(
+    auto const entries_loaded = loader::capacities::load_capacities(
         sched, file, primary_uv.capacity_maps_, capacity_match_log_file_);
     total_entries += entries_loaded;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",

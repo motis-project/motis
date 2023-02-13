@@ -9,7 +9,7 @@
 #include "motis/paxmon/loader/loader_result.h"
 #include "motis/paxmon/universe.h"
 
-namespace motis::paxmon::loader::journeys {
+namespace motis::paxmon::loader::motis_journeys {
 
 void load_journey(schedule const& sched, universe& uv, journey const& j,
                   data_source const& source, std::uint16_t passengers,
@@ -18,4 +18,4 @@ void load_journey(schedule const& sched, universe& uv, journey const& j,
 loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file);
 
-}  // namespace motis::paxmon::loader::journeys
+}  // namespace motis::paxmon::loader::motis_journeys

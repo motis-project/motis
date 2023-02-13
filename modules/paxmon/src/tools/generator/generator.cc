@@ -25,7 +25,8 @@
 #include "motis/paxmon/capacity.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_load.h"
-#include "motis/paxmon/loader/journeys/to_compact_journey.h"
+#include "motis/paxmon/loader/capacities/load_capacities.h"
+#include "motis/paxmon/loader/motis_journeys/to_compact_journey.h"
 #include "motis/paxmon/output/journey_converter.h"
 #include "motis/paxmon/tools/generator/query_generator.h"
 #include "motis/paxmon/tools/groups/group_generator.h"
@@ -337,8 +338,8 @@ int generate(int argc, char const** argv) {
                 << " (try --generate_capacities 1)\n";
       return 1;
     }
-    auto const entries_loaded =
-        load_capacities(sched, generator_opt.capacity_path_, uv.capacity_maps_);
+    auto const entries_loaded = loader::capacities::load_capacities(
+        sched, generator_opt.capacity_path_, uv.capacity_maps_);
     std::cout << "Loaded " << entries_loaded << " capacity entries"
               << std::endl;
     if (entries_loaded == 0) {

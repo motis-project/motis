@@ -1,4 +1,4 @@
-#include "motis/paxmon/loader/journeys/motis_journeys.h"
+#include "motis/paxmon/loader/motis_journeys/motis_journeys.h"
 
 #include "utl/enumerate.h"
 #include "utl/for_each_line_in_file.h"
@@ -8,13 +8,13 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/access/groups.h"
-#include "motis/paxmon/loader/journeys/to_compact_journey.h"
+#include "motis/paxmon/loader/motis_journeys/to_compact_journey.h"
 
 using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::logging;
 
-namespace motis::paxmon::loader::journeys {
+namespace motis::paxmon::loader::motis_journeys {
 
 void load_journey(schedule const& sched, universe& uv, journey const& j,
                   data_source const& source, std::uint16_t passengers,
@@ -72,4 +72,4 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   return result;
 }
 
-}  // namespace motis::paxmon::loader::journeys
+}  // namespace motis::paxmon::loader::motis_journeys

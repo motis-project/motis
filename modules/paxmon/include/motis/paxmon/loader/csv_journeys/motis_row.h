@@ -5,7 +5,7 @@
 #include "utl/parser/cstr.h"
 #include "utl/parser/csv_range.h"
 
-namespace motis::paxmon::loader::csv {
+namespace motis::paxmon::loader::csv_journeys {
 
 struct motis_row {
   utl::csv_col<std::uint64_t, UTL_NAME("id")> id_;
@@ -21,4 +21,4 @@ struct motis_row {
   utl::csv_col<std::uint16_t, UTL_NAME("passengers")> passengers_;
 };
 
-}  // namespace motis::paxmon::loader::csv
+}  // namespace motis::paxmon::loader::csv_journeys
