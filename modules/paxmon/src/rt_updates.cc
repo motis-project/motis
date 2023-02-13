@@ -17,9 +17,11 @@
 #include "motis/paxmon/print_stats.h"
 #include "motis/paxmon/reachability.h"
 #include "motis/paxmon/track_update.h"
+#include "motis/paxmon/trip_formation_update.h"
 #include "motis/paxmon/update_load.h"
 
 using namespace motis::rt;
+using namespace motis::ris;
 using namespace motis::logging;
 using namespace motis::module;
 
@@ -146,6 +148,9 @@ void handle_rt_update(universe& uv, schedule const& sched,
       }
       case Content_TripFormationMessage: {
         ++uv.tick_stats_.rt_trip_formation_updates_;
+        auto const tfm =
+            reinterpret_cast<TripFormationMessage const*>(u->content());
+        update_trip_formation(sched, uv, tfm);
         break;
       }
       default: break;

@@ -1,25 +1,8 @@
 #include "motis/rt/trip_formation_handler.h"
 
-#include "motis/core/schedule/time.h"
-#include "motis/core/access/station_access.h"
-
 #include "motis/rt/util.h"
 
 namespace motis::rt {
-
-bool get_primary_trip_id(schedule const& sched, ris::HalfTripId const* hti,
-                         primary_trip_id& ptid) {
-  auto const tid = hti->id();
-  auto const* st = find_station(sched, view(tid->station_id()));
-  if (st == nullptr) {
-    return false;
-  }
-  ptid.station_id_ = st->index_;
-  ptid.time_ = unix_to_motistime(sched.schedule_begin_, tid->time());
-  ptid.train_nr_ = tid->train_nr();
-
-  return ptid.time_ != INVALID_TIME;
-}
 
 trip* find_trip_by_primary_trip_id(schedule const& sched,
                                    primary_trip_id const& ptid) {
