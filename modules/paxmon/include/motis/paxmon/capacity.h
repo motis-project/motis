@@ -36,6 +36,13 @@ struct vehicle_capacity {
   std::uint16_t standing_{};
   std::uint16_t total_limit_{};
 
+  vehicle_capacity& operator+=(vehicle_capacity const& o) {
+    seats_ += o.seats_;
+    standing_ += o.standing_;
+    total_limit_ += o.total_limit_;
+    return *this;
+  }
+
   inline std::uint16_t limit() const {
     return total_limit_ != 0U ? total_limit_ : seats_ + standing_;
   }

@@ -13,8 +13,8 @@
 #include <utility>
 
 #include "motis/core/common/logging.h"
+#include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
-#include "motis/core/access/uuids.h"
 
 #include "motis/paxmon/util/get_station_idx.h"
 
@@ -106,6 +106,70 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
   return {};
 }
 
+trip_formation const* get_trip_formation(capacity_maps const& caps,
+                                         trip const* trp) {
+  auto trip_uuid = trp->uuid_;
+  if (trip_uuid.is_nil()) {
+    if (auto const it = caps.trip_uuid_map_.find(trp->id_.primary_);
+        it != end(caps.trip_uuid_map_)) {
+      trip_uuid = it->second;
+    } else {
+      return nullptr;
+    }
+  }
+  if (auto const it = caps.trip_formation_map_.find(trip_uuid);
+      it != end(caps.trip_formation_map_)) {
+    return &it->second;
+  } else {
+    return nullptr;
+  }
+}
+
+trip_formation_section const* get_trip_formation_section(
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
+    ev_key const& ev_key_from) {
+  auto const* formation = get_trip_formation(caps, trp);
+  if (formation == nullptr || formation->sections_.empty()) {
+    return nullptr;
+  }
+  auto const schedule_departure = get_schedule_time(sched, ev_key_from);
+  auto const& station_eva =
+      sched.stations_[ev_key_from.get_station_idx()]->eva_nr_;
+  auto const* best_section_match = &formation->sections_.front();
+  auto station_found = false;
+  for (auto const& sec : formation->sections_) {
+    auto const station_match = sec.departure_eva_ == station_eva;
+    if (station_match && sec.schedule_departure_time_ == schedule_departure) {
+      return &sec;
+    }
+    if (!station_found) {
+      station_found = station_match;
+      if (station_found || sec.schedule_departure_time_ < schedule_departure) {
+        best_section_match = &sec;
+      }
+    }
+  }
+  return best_section_match;
+}
+
+std::optional<vehicle_capacity> get_section_capacity(
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
+    ev_key const& ev_key_from) {
+  auto const* tf_sec =
+      get_trip_formation_section(sched, caps, trp, ev_key_from);
+  if (tf_sec == nullptr) {
+    return {};
+  }
+  auto cap = vehicle_capacity{};
+  for (auto const& uic : tf_sec->uics_) {
+    if (auto const it = caps.vehicle_capacity_map_.find(uic);
+        it != end(caps.vehicle_capacity_map_)) {
+      cap += it->second;
+    }
+  }
+  return cap;
+}
+
 inline capacity_source get_worst_source(capacity_source const a,
                                         capacity_source const b) {
   return static_cast<capacity_source>(
@@ -115,14 +179,22 @@ inline capacity_source get_worst_source(capacity_source const a,
 
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
-    ev_key const& /*ev_key_from*/, ev_key const& /*ev_key_to*/,
+    ev_key const& ev_key_from, ev_key const& /*ev_key_to*/,
     capacity_maps const& caps) {
   std::uint16_t capacity = 0;
   auto worst_source = capacity_source::TRIP_EXACT;
+  auto some_unknown = false;
 
   auto ci = lc.full_con_->con_info_;
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
     utl::verify(ci != nullptr, "get_capacity: missing connection_info");
+
+    auto const section_capacity =
+        get_section_capacity(sched, caps, trp, ev_key_from);
+    if (section_capacity.has_value()) {
+      // section specific capacities include merged trips
+      return {section_capacity->limit(), capacity_source::TRIP_EXACT};
+    }
 
     auto const trip_capacity = get_trip_capacity(sched, caps.trip_capacity_map_,
                                                  caps.category_capacity_map_,
@@ -131,13 +203,17 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
       capacity += trip_capacity->first;
       worst_source = get_worst_source(worst_source, trip_capacity->second);
     } else {
-      return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
+      some_unknown = true;
     }
 
     ci = ci->merged_with_;
   }
 
-  return {capacity, worst_source};
+  if (some_unknown) {
+    return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
+  } else {
+    return {capacity, worst_source};
+  }
 }
 
 }  // namespace motis::paxmon
