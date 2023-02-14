@@ -20,7 +20,7 @@
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
-#include "motis/paxmon/loader/journeys/to_compact_journey.h"
+#include "motis/paxmon/loader/motis_journeys/to_compact_journey.h"
 #include "motis/paxmon/localization.h"
 
 using namespace flatbuffers;

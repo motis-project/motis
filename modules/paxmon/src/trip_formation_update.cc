@@ -45,7 +45,7 @@ void update_trip_formation(schedule const& sched, universe& uv,
 
   if (auto const it = sched.uuid_to_trip_.find(trip_uuid);
       it != end(sched.uuid_to_trip_)) {
-    update_trip_capacity(uv, sched, it->second, false);
+    update_trip_capacity(uv, sched, it->second);
   }
 }
 

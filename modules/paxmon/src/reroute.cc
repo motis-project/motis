@@ -353,7 +353,7 @@ void apply_reroute(universe& uv, schedule const& sched, trip const* trp,
     canceled_nodes.emplace_back(n->index(uv));
   }
 
-  update_trip_capacity(uv, sched, trp, false);
+  update_trip_capacity(uv, sched, trp);
 
   for (auto const& pgwr : affected_group_routes) {
     update_group_route(tdi, trp, pgwr, uv, sched);

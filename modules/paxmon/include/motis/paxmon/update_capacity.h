@@ -6,7 +6,6 @@
 
 namespace motis::paxmon {
 
-void update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
-                          bool force_downgrade);
+void update_trip_capacity(universe& uv, schedule const& sched, trip const* trp);
 
 }  // namespace motis::paxmon
