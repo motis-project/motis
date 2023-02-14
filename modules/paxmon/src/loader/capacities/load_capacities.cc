@@ -139,7 +139,7 @@ load_capacities_result load_capacities_from_file(
     schedule const& sched, capacity_maps& caps,
     std::string const& capacity_file, std::string const& match_log_file) {
   auto buf = utl::file(capacity_file.data(), "r").content();
-  auto const res = load_capacities(
+  auto res = load_capacities(
       sched, caps,
       std::string_view{reinterpret_cast<char const*>(buf.data()), buf.size()});
 
