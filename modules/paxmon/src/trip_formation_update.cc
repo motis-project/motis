@@ -17,7 +17,7 @@ mcd::vector<std::uint64_t> get_section_uics(TripFormationSection const* sec) {
   for (auto const& vg : *sec->vehicle_groups()) {
     for (auto const& vi : *vg->vehicles()) {
       auto const uic = vi->uic();
-      if (!std::find(uics.begin(), uics.end(), uic)) {
+      if (std::find(begin(uics), end(uics), uic) == end(uics)) {
         uics.emplace_back(uic);
       }
     }
