@@ -1,5 +1,3 @@
-#pragma once
-
 #include <cstdint>
 
 #include "utl/get_or_create.h"
