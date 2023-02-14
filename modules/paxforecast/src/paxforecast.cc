@@ -34,10 +34,12 @@
 #include "motis/paxmon/fbs_compact_journey_util.h"
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/index_types.h"
+#include "motis/paxmon/loader/capacities/load_capacities.h"
 #include "motis/paxmon/localization_conv.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/monitoring_event.h"
 #include "motis/paxmon/paxmon_data.h"
+#include "motis/paxmon/update_capacity.h"
 
 #include "motis/paxforecast/alternatives.h"
 #include "motis/paxforecast/combined_passenger_group.h"
@@ -709,6 +711,34 @@ void paxforecast::on_monitoring_event(msg_ptr const& msg) {
   }
 }
 
+void apply_update_capacities_measure(universe& uv, schedule const& sched,
+                                     measures::update_capacities const& m) {
+  auto& caps = uv.capacity_maps_;
+
+  // reset existing capacity data
+  if (m.remove_existing_trip_capacities_) {
+    caps.trip_capacity_map_.clear();
+  }
+  if (m.remove_existing_category_capacities_) {
+    caps.category_capacity_map_.clear();
+  }
+  if (m.remove_existing_vehicle_capacities_) {
+    caps.vehicle_capacity_map_.clear();
+  }
+  if (m.remove_existing_trip_formations_) {
+    caps.trip_formation_map_.clear();
+    caps.trip_uuid_map_.clear();
+  }
+
+  // load new capacity data
+  for (auto const& file_content : m.file_contents) {
+    paxmon::loader::capacities::load_capacities(sched, caps, file_content);
+  }
+
+  // update all trip capacities
+  update_all_trip_capacities(uv, sched);
+}
+
 msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   scoped_timer all_timer{"apply_measures"};
   auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
@@ -757,6 +787,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
   auto t_behavior_simulation = 0.;
   auto t_update_groups = 0.;
   auto t_update_tracker = 0.;
+  auto t_update_capacities = 0.;
 
   // simulate passenger behavior with measures
   for (auto const& [t, ms] : measures) {
@@ -797,8 +828,18 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
       t_rt_updates += rt_timer.duration_ms();
     }
 
+    manual_timer update_capacities_timer{"update capacities"};
+    for (auto const& m : ms) {
+      if (std::holds_alternative<measures::update_capacities>(m)) {
+        auto const ucm = std::get<measures::update_capacities>(m);
+        apply_update_capacities_measure(uv, sched, ucm);
+      }
+    }
+    update_capacities_timer.stop_and_print();
+    t_update_capacities += update_capacities_timer.duration_ms();
+
     auto const loc_time = t + req->preparation_time();
-    manual_timer get_affected_groups_timer{"get_affected_grous"};
+    manual_timer get_affected_groups_timer{"get_affected_groups"};
     auto const affected_groups =
         measures::get_affected_groups(sched, uv, loc_time, ms);
     get_affected_groups_timer.stop_and_print();
@@ -911,7 +952,7 @@ msg_ptr paxforecast::apply_measures(msg_ptr const& msg) {
               group_routes_with_major_delay, t_rt_updates,
               t_get_affected_groups, t_find_alternatives,
               t_add_alternatives_to_graph, t_behavior_simulation,
-              t_update_groups, t_update_tracker),
+              t_update_groups, t_update_tracker, t_update_capacities),
           fb_updates)
           .Union());
   return make_msg(mc);

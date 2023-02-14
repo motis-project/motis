@@ -20,6 +20,7 @@ table PaxForecastApplyMeasuresStatistics {
   t_behavior_simulation: double;
   t_update_groups: double;
   t_update_tracker: double;
+  t_update_capacities: double;
 }
 
 table PaxForecastApplyMeasuresResponse {

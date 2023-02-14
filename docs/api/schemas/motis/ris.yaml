@@ -295,3 +295,54 @@ RISSystemTimeChanged:
   fields:
     schedule:
       description: TODO
+HalfTripId:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    uuid:
+      description: TODO
+VehicleInfo:
+  description: TODO
+  fields:
+    uic:
+      description: TODO
+    baureihe:
+      description: TODO
+    type_code:
+      description: TODO
+    order:
+      description: TODO
+VehicleGroup:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    start_station:
+      description: TODO
+    destination_station:
+      description: TODO
+    trip_id:
+      description: TODO
+    departure_uuid:
+      description: TODO
+    vehicles:
+      description: TODO
+TripFormationSection:
+  description: TODO
+  fields:
+    departure_uuid:
+      description: TODO
+    departure_station:
+      description: TODO
+    schedule_departure_time:
+      description: TODO
+    vehicle_groups:
+      description: TODO
+TripFormationMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    sections:
+      description: TODO

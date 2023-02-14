@@ -338,11 +338,11 @@ int generate(int argc, char const** argv) {
                 << " (try --generate_capacities 1)\n";
       return 1;
     }
-    auto const entries_loaded = loader::capacities::load_capacities(
-        sched, generator_opt.capacity_path_, uv.capacity_maps_);
-    std::cout << "Loaded " << entries_loaded << " capacity entries"
+    auto const lc_res = loader::capacities::load_capacities_from_file(
+        sched, uv.capacity_maps_, generator_opt.capacity_path_);
+    std::cout << "Loaded " << lc_res.loaded_entry_count_ << " capacity entries"
               << std::endl;
-    if (entries_loaded == 0) {
+    if (lc_res.loaded_entry_count_ == 0) {
       std::cout
           << "No capacity information found! (try --generate_capacities 1)"
           << std::endl;

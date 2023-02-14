@@ -42,6 +42,7 @@ const measureTypeTexts: Record<UiMeasureType, string> = {
   TripLoadRecommendationMeasure: "Alternativenempfehlung",
   RtUpdateMeasure: "Echtzeitmeldung",
   RtCancelMeasure: "(Teil-)Ausfall",
+  UpdateCapacitiesMeasure: "Kapazitätsänderung",
   Empty: "Neue Maßnahme",
 };
 

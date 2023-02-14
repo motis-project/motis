@@ -141,7 +141,7 @@ PaxForecastApplyMeasuresRequest:
       description: |
         A list of measures to simulate
 
-        All measures have the following shared properties:
+        Measures have the following shared properties:
 
         - `time`: Time at which the measure takes effect and passengers are made
           aware of it. Note that the time is not forwarded to this point during the
@@ -266,6 +266,8 @@ PaxForecastApplyMeasuresStatistics:
         by real-time updates.
     t_update_tracker:
       description: Time used for tracking changes (ms).
+    t_update_capacities:
+      description: Time used for updating capacities (ms).
 PaxForecastApplyMeasuresResponse:
   description: TODO
   fields:
@@ -273,3 +275,47 @@ PaxForecastApplyMeasuresResponse:
       description: Various statistics
     updates:
       description: Changes made to trips and passenger groups
+UpdateCapacitiesMeasure:
+  description: |
+    Load new capacity information.
+
+    Capacity data can be supplied in the same file formats supported
+    for capacity files (CSV). Multiple capacity files can be loaded
+    at once.
+
+    If the `remove_` fields are set to true, existing capacity information
+    is reset before loading the supplied capacity data. Otherwise, existing
+    capacity information is kept and updated using the supplied data.
+
+    After loading the new capacity data, the capacity information for all
+    tracked trips is recomputed.
+  fields:
+    time:
+      description: Time at which the measure takes effect (unix timestamp).
+    file_contents:
+      description: |
+        An array of file contents of capacity files (in CSV format) to load.
+    remove_existing_trip_capacities:
+      description: |
+        If set to true, existing trip capacity information (i.e. capacity
+        information loaded from CSV files mapping trips to capacities)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    remove_existing_category_capacities:
+      description: |
+        If set to true, existing category capacity information (i.e. capacity
+        information loaded from CSV files mapping train categories to capacities)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    remove_existing_vehicle_capacities:
+      description: |
+        If set to true, existing vehicle capacity information (i.e. capacity
+        information loaded from CSV files mapping vehicle UICs to capacities)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    remove_existing_trip_formations:
+      description: |
+        If set to true, existing trip formation information (i.e. formation
+        information received via RiBasisFormation messages)
+        is reset before loading the new capacity data supplied in this
+        measure.

@@ -564,11 +564,11 @@ void paxmon::load_capacity_files() {
       import_successful_ = false;
       continue;
     }
-    auto const entries_loaded = loader::capacities::load_capacities(
-        sched, file, primary_uv.capacity_maps_, capacity_match_log_file_);
-    total_entries += entries_loaded;
+    auto const res = loader::capacities::load_capacities_from_file(
+        sched, primary_uv.capacity_maps_, file, capacity_match_log_file_);
+    total_entries += res.loaded_entry_count_;
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
-                             entries_loaded, file);
+                             res.loaded_entry_count_, file);
     progress_tracker->increment();
   }
   if (total_entries == 0) {
