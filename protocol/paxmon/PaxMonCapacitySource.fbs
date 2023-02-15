@@ -1,0 +1,9 @@
+namespace motis.paxmon;
+
+enum PaxMonCapacitySource : byte {
+  TripExactMatch,
+  TrainNr,
+  Category,
+  Class,
+  Unknown
+}

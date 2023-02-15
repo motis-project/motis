@@ -290,6 +290,14 @@ export interface PaxMonDistribution {
   pdf: PaxMonPdfEntry[];
 }
 
+// paxmon/PaxMonCapacitySource.fbs
+export type PaxMonCapacitySource =
+  | "TripExactMatch"
+  | "TrainNr"
+  | "Category"
+  | "Class"
+  | "Unknown";
+
 // paxmon/PaxMonTripLoadInfo.fbs
 export type PaxMonCapacityType = "Known" | "Unknown" | "Unlimited";
 
@@ -303,6 +311,7 @@ export interface PaxMonEdgeLoadInfo {
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
   capacity: number;
+  capacity_source: PaxMonCapacitySource;
   dist: PaxMonDistribution;
   updated: boolean;
   possibly_over_capacity: boolean;

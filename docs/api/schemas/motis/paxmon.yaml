@@ -462,6 +462,8 @@ PaxMonEdgeLoadInfo:
       description: >
         Capacity (max. number of passengers) (can only be used if
         `capacity_type` is `Known`)
+    capacity_source:
+      description: TODO
     dist:
       description: Information about the predicted number of passengers for this section
     updated:
@@ -1361,3 +1363,18 @@ PaxMonTrackedUpdates:
       description: The number of passenger groups that were updated.
     updated_pax_count:
       description: The number of passengers that were updated.
+PaxMonCapacitySource:
+  description: |
+    The source of the capacity information for the trip section.
+
+    Possible values:
+    - `TripExactMatch`: Capacity information for this trip was found
+      (trip id match).
+    - `TrainNr`: No capacity information for this exact trip was found,
+      but capacity data for a trip with the same train number was found and
+      used.
+    - `Category`: No capacity information for this exact trip was found,
+      so a default capacity for the category was used.
+    - `Class`: No capacity information for this exact trip was found,
+      so a default capacity for the class was used.
+    - `Unknown`: No capacity information was found.
