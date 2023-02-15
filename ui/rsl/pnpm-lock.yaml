@@ -18,13 +18,13 @@ specifiers:
   '@types/uuid': ^9.0.0
   '@typescript-eslint/eslint-plugin': ^5.52.0
   '@typescript-eslint/parser': ^5.52.0
-  '@visx/axis': ^2.18.0
-  '@visx/grid': ^2.18.0
-  '@visx/group': ^2.17.0
-  '@visx/responsive': ^2.17.0
-  '@visx/scale': ^2.18.0
-  '@visx/shape': ^2.18.0
-  '@visx/stats': ^2.18.0
+  '@visx/axis': ^3.0.1
+  '@visx/grid': ^3.0.1
+  '@visx/group': ^3.0.0
+  '@visx/responsive': ^3.0.0
+  '@visx/scale': ^3.0.0
+  '@visx/shape': ^3.0.0
+  '@visx/stats': ^3.0.0
   '@vitejs/plugin-react': ^3.1.0
   autoprefixer: ^10.4.13
   d3-array: ^3.2.2
@@ -57,13 +57,13 @@ dependencies:
   '@radix-ui/react-tooltip': 1.0.3_zula6vjvt3wdocc4mwcxqa6nzi
   '@tanstack/react-query': 4.24.6_biqbaboplfbrettd7655fr4n2y
   '@tanstack/react-query-devtools': 4.24.6_r32zdxeb7iubg3qfkymfterewe
-  '@visx/axis': 2.18.0_react@18.2.0
-  '@visx/grid': 2.18.0_react@18.2.0
-  '@visx/group': 2.17.0_react@18.2.0
-  '@visx/responsive': 2.17.0_react@18.2.0
-  '@visx/scale': 2.18.0
-  '@visx/shape': 2.18.0_react@18.2.0
-  '@visx/stats': 2.18.0_react@18.2.0
+  '@visx/axis': 3.0.1_react@18.2.0
+  '@visx/grid': 3.0.1_react@18.2.0
+  '@visx/group': 3.0.0_react@18.2.0
+  '@visx/responsive': 3.0.0_react@18.2.0
+  '@visx/scale': 3.0.0
+  '@visx/shape': 3.0.0_react@18.2.0
+  '@visx/stats': 3.0.0_react@18.2.0
   d3-array: 3.2.2
   date-fns: 2.29.3
   downshift: 7.2.0_react@18.2.0
@@ -744,10 +744,6 @@ packages:
       '@jridgewell/sourcemap-codec': 1.4.14
     dev: true
 
-  /@juggle/resize-observer/3.4.0:
-    resolution: {integrity: sha512-dfLbk+PwWvFzSxwk3n5ySL0hfBog779o8h68wK/7/APo/7cgyWp5jcXockbxdk5kFRkbeXWm4Fbi9FrdN381sA==}
-    dev: false
-
   /@limegrass/eslint-plugin-import-alias/1.0.6_eslint@8.34.0:
     resolution: {integrity: sha512-BtPmdHbL4NmkVh2wMnOboyOCrdLOpBqwwtBIsB0/giTiALw/UTHD9TyH4vVnbDOuWPZQgE6kKloJ9G77FApt7w==}
     peerDependencies:
@@ -1092,26 +1088,26 @@ packages:
     resolution: {integrity: sha512-nwvEkG9vYOc0Ic7G7kwgviY4AQlTfYGIZ0fqB7CQHXGyYM6nO7kJh5EguSNA3jfh4rq7Sb7eMVq8isuvg2/miQ==}
     dev: true
 
-  /@types/d3-color/1.4.2:
-    resolution: {integrity: sha512-fYtiVLBYy7VQX+Kx7wU/uOIkGQn8aAEY8oWMoyja3N4dLd8Yf6XgSIR/4yWvMuveNOH5VShnqCgRqqh/UNanBA==}
+  /@types/d3-color/3.1.0:
+    resolution: {integrity: sha512-HKuicPHJuvPgCD+np6Se9MQvS6OCbJmOjGvylzMJRlDwUXjKTTXs6Pwgk79O09Vj/ho3u1ofXnhFOaEWWPrlwA==}
     dev: false
 
   /@types/d3-force/3.0.4:
     resolution: {integrity: sha512-q7xbVLrWcXvSBBEoadowIUJ7sRpS1yvgMWnzHJggFy5cUZBq2HZL5k/pBSm0GdYWS1vs5/EDwMjSKF55PDY4Aw==}
     dev: true
 
-  /@types/d3-interpolate/1.4.2:
-    resolution: {integrity: sha512-ylycts6llFf8yAEs1tXzx2loxxzDZHseuhPokrqKprTQSTcD3JbJI1omZP1rphsELZO3Q+of3ff0ZS7+O6yVzg==}
+  /@types/d3-interpolate/3.0.1:
+    resolution: {integrity: sha512-jx5leotSeac3jr0RePOH1KdR9rISG91QIE4Q2PYTu4OymLTZfA3SrnURSLzKH48HmXVUru50b8nje4E79oQSQw==}
     dependencies:
-      '@types/d3-color': 1.4.2
+      '@types/d3-color': 3.1.0
     dev: false
 
   /@types/d3-path/1.0.9:
     resolution: {integrity: sha512-NaIeSIBiFgSC6IGUBjZWcscUJEq7vpVu7KthHN8eieTV9d9MqkSOZLH4chq1PmcKy06PNe3axLeKmRIyxJ+PZQ==}
     dev: false
 
-  /@types/d3-scale/3.3.2:
-    resolution: {integrity: sha512-gGqr7x1ost9px3FvIfUMi5XA/F/yAf4UkUDtdQhpH92XCT0Oa7zkkRzY61gPVJq+DxpHn/btouw5ohWkbBsCzQ==}
+  /@types/d3-scale/4.0.3:
+    resolution: {integrity: sha512-PATBiMCpvHJSMtZAMEhc2WyL+hnzarKzI6wAHYjhsonjWJYGq5BXTzQjv4l8m2jO183/4wZ90rKvSeT7o72xNQ==}
     dependencies:
       '@types/d3-time': 2.1.1
     dev: false
@@ -1300,47 +1296,47 @@ packages:
       eslint-visitor-keys: 3.3.0
     dev: true
 
-  /@visx/axis/2.18.0_react@18.2.0:
-    resolution: {integrity: sha512-iBMObSKHOHDZbuVXsdVLmAjLE5jCN1Ls3XI57v3yuf+qZ327mdPSliSOyOxhvRdaNDYPLSQj+P1nKan+04wJiQ==}
+  /@visx/axis/3.0.1_react@18.2.0:
+    resolution: {integrity: sha512-ozi7DaEe4afsMHTQsG8jKt4ag0t9Z4wQJhHMYbmrYF4iP6BsQUpFUCf2rgnLo5fM0CEEoZXN0vc6ZhvYzp1ZYg==}
     peerDependencies:
       react: ^16.3.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
       '@types/react': 18.0.28
-      '@visx/group': 2.17.0_react@18.2.0
-      '@visx/point': 2.17.0
-      '@visx/scale': 2.18.0
-      '@visx/shape': 2.18.0_react@18.2.0
-      '@visx/text': 2.17.0_react@18.2.0
+      '@visx/group': 3.0.0_react@18.2.0
+      '@visx/point': 3.0.1
+      '@visx/scale': 3.0.0
+      '@visx/shape': 3.0.0_react@18.2.0
+      '@visx/text': 3.0.0_react@18.2.0
       classnames: 2.3.2
       prop-types: 15.8.1
       react: 18.2.0
     dev: false
 
-  /@visx/curve/2.17.0:
-    resolution: {integrity: sha512-8Fw2ZalgYbpeoelLqTOmMs/wD8maSKsKS9rRIwmHZ0O0XxY8iG9oVYbD4CLWzf/uFWCY6+qofk4J1g9BWQSXJQ==}
+  /@visx/curve/3.0.0:
+    resolution: {integrity: sha512-kvHJDLBeczTQ87ZExSTfRxej06l6o6UiQ0NHf9+xpAin06y6Qk1ThOHHWJTGM6KGzwlu7jEauJGHwZs6nMhDvA==}
     dependencies:
       '@types/d3-shape': 1.3.8
       d3-shape: 1.3.7
     dev: false
 
-  /@visx/grid/2.18.0_react@18.2.0:
-    resolution: {integrity: sha512-bmOowI5QA0R1KgNKxj5y+Belj5MbUz+RRW2BxTsXa7NbDV6IsA7H4l+kj3DDldRi7Q5SVm9zpfwWXNIBAhiFdA==}
+  /@visx/grid/3.0.1_react@18.2.0:
+    resolution: {integrity: sha512-cln5CVvFG58C5Uz1Uf0KRBFmGmgD1NALOQdYDu5yPsTuY2yLzVYPvCIlYBMdUtE0uzfNq972SmkZHfZYs03jxQ==}
     peerDependencies:
       react: ^16.0.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
       '@types/react': 18.0.28
-      '@visx/curve': 2.17.0
-      '@visx/group': 2.17.0_react@18.2.0
-      '@visx/point': 2.17.0
-      '@visx/scale': 2.18.0
-      '@visx/shape': 2.18.0_react@18.2.0
+      '@visx/curve': 3.0.0
+      '@visx/group': 3.0.0_react@18.2.0
+      '@visx/point': 3.0.1
+      '@visx/scale': 3.0.0
+      '@visx/shape': 3.0.0_react@18.2.0
       classnames: 2.3.2
       prop-types: 15.8.1
       react: 18.2.0
     dev: false
 
-  /@visx/group/2.17.0_react@18.2.0:
-    resolution: {integrity: sha512-60Y2dIKRh3cp/Drpq//wM067ZNrnCcvFCXufPgIihv0Ix8O7oMsYxu3ch4XUMjks+U2IAZQr5Dnc+C9sTQFkhw==}
+  /@visx/group/3.0.0_react@18.2.0:
+    resolution: {integrity: sha512-SFjXhTMcsaVAb1/TVL1KM5vn8gQTIVgSx0ATdDl4BJSFp2ym1lO8LY4jpV4SFweaHnWxVwrrfGLTn5QsYnvmjQ==}
     peerDependencies:
       react: ^16.0.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
@@ -1350,16 +1346,15 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@visx/point/2.17.0:
-    resolution: {integrity: sha512-fUdGQBLGaSVbFTbQ6k+1nPisbqYjTjAdo9FhlwLd3W3uyXN/39Sx2z3N2579sVNBDzmCKdYNQIU0HC+/3Vqo6w==}
+  /@visx/point/3.0.1:
+    resolution: {integrity: sha512-S5WOBMgEP2xHcgs3A2BFB2vwzrk0tMmn3PGZAbQJ+lu4HlnalDP72klUnxLTH8xclNNvpUHtHM5eLIJXyHx6Pw==}
     dev: false
 
-  /@visx/responsive/2.17.0_react@18.2.0:
-    resolution: {integrity: sha512-3dY2shGbQnoknIRv3Vfnwsy3ZA8Q5Q/rYnTLiokWChYRfNC8NMPoX9mprEeb/gMAxtKjaLn3zcCgd8R+eetxIQ==}
+  /@visx/responsive/3.0.0_react@18.2.0:
+    resolution: {integrity: sha512-immnxQwOWlrxbnlCIqJWuDpPfrM6tglgMTN1WsyXyGluLMJqhuuxqxllfXaRPkQFS4fcvs66KCEELdazh96U2w==}
     peerDependencies:
       react: ^16.0.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
-      '@juggle/resize-observer': 3.4.0
       '@types/lodash': 4.14.191
       '@types/react': 18.0.28
       lodash: 4.17.21
@@ -1367,19 +1362,19 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@visx/scale/2.18.0:
-    resolution: {integrity: sha512-clH8HFblMlCuHvUjGRwenvbY1w9YXHU9fPl91Vbtd5bdM9xAN0Lo2+cgV46cvaX3YpnyVb4oNhlbPCBu3h6Rhw==}
+  /@visx/scale/3.0.0:
+    resolution: {integrity: sha512-WSf+wrxZEvu5TPGfGTafzzX1MbogbIxfD9ZKM9p7xfw65v23G0dNMy4bqVBUbOJigONoQkIZyqQ+gz5AJ/ioIg==}
     dependencies:
-      '@types/d3-interpolate': 1.4.2
-      '@types/d3-scale': 3.3.2
+      '@types/d3-interpolate': 3.0.1
+      '@types/d3-scale': 4.0.3
       '@types/d3-time': 2.1.1
-      d3-interpolate: 1.4.0
-      d3-scale: 3.3.0
+      d3-interpolate: 3.0.1
+      d3-scale: 4.0.2
       d3-time: 2.1.1
     dev: false
 
-  /@visx/shape/2.18.0_react@18.2.0:
-    resolution: {integrity: sha512-kVSEjnzswQMyFDa/IXE7K+WsAkl91xK6A4W6MbGfcUhfQn+AP0GorvotW7HZGjkIlbmuLl14+vRktDo5jqS/og==}
+  /@visx/shape/3.0.0_react@18.2.0:
+    resolution: {integrity: sha512-t6lpP9bIA1vwChDwiOUWl92ro29XF/M8IVNWRA0pm4LGxGGTACvxG3Agfcdi3JprahUVqPpnRCwuR36PDanq3Q==}
     peerDependencies:
       react: ^16.3.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
@@ -1387,9 +1382,9 @@ packages:
       '@types/d3-shape': 1.3.8
       '@types/lodash': 4.14.191
       '@types/react': 18.0.28
-      '@visx/curve': 2.17.0
-      '@visx/group': 2.17.0_react@18.2.0
-      '@visx/scale': 2.18.0
+      '@visx/curve': 3.0.0
+      '@visx/group': 3.0.0_react@18.2.0
+      '@visx/scale': 3.0.0
       classnames: 2.3.2
       d3-path: 1.0.9
       d3-shape: 1.3.7
@@ -1398,23 +1393,23 @@ packages:
       react: 18.2.0
     dev: false
 
-  /@visx/stats/2.18.0_react@18.2.0:
-    resolution: {integrity: sha512-DrcGt3T8Eb/TT4ezJiqd0yBxAIWaBPgWkCc/5yBDk8ELftaHG5u2cbFk678X+xn3hAB51FeVbuyK1sJxEZZM0A==}
+  /@visx/stats/3.0.0_react@18.2.0:
+    resolution: {integrity: sha512-NtzAzzP4QMTLGPrBXzn8NU7VbvWPUShtLwbVzwIivIht3FWa9vnhu64mOYWEPc32u+JgnvuymAMZoifPF8ilTw==}
     peerDependencies:
       react: ^16.3.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
       '@types/d3-shape': 1.3.8
       '@types/react': 18.0.28
-      '@visx/group': 2.17.0_react@18.2.0
-      '@visx/scale': 2.18.0
+      '@visx/group': 3.0.0_react@18.2.0
+      '@visx/scale': 3.0.0
       classnames: 2.3.2
       d3-shape: 1.3.7
       prop-types: 15.8.1
       react: 18.2.0
     dev: false
 
-  /@visx/text/2.17.0_react@18.2.0:
-    resolution: {integrity: sha512-Eu6b8SMI+LU4O6H4l/QhCa7c4GtDTQO6jhSYuU70pdTST1Bm74nImPGekG2xDW3uxaLlkb8fDpvXag0Z7v+vlQ==}
+  /@visx/text/3.0.0_react@18.2.0:
+    resolution: {integrity: sha512-LW6v5T/gpd9RGw83/ScXncYc6IlcfzXTpaN8WbbxLRI65gdvSqrykwAMR0cbpQmzoVFuZXljqOf0QslHGnBg1w==}
     peerDependencies:
       react: ^16.3.0-0 || ^17.0.0-0 || ^18.0.0-0
     dependencies:
@@ -1735,32 +1730,36 @@ packages:
       internmap: 2.0.3
     dev: false
 
-  /d3-color/1.4.1:
-    resolution: {integrity: sha512-p2sTHSLCJI2QKunbGb7ocOh7DgTAn8IrLx21QRc/BSnodXM4sv6aLQlnfpvehFMLZEfBc6g9pH9SWQccFYfJ9Q==}
+  /d3-color/3.1.0:
+    resolution: {integrity: sha512-zg/chbXyeBtMQ1LbD/WSoW2DpC3I0mpmPdW+ynRTj/x2DAWYrIY7qeZIHidozwV24m4iavr15lNwIwLxRmOxhA==}
+    engines: {node: '>=12'}
     dev: false
 
-  /d3-format/2.0.0:
-    resolution: {integrity: sha512-Ab3S6XuE/Q+flY96HXT0jOXcM4EAClYFnRGY5zsjRGNy6qCYrQsMffs7cV5Q9xejb35zxW5hf/guKw34kvIKsA==}
+  /d3-format/3.1.0:
+    resolution: {integrity: sha512-YyUI6AEuY/Wpt8KWLgZHsIU86atmikuoOmCfommt0LYHiQSPjvX2AcFc38PX0CBpr2RCyZhjex+NS/LPOv6YqA==}
+    engines: {node: '>=12'}
     dev: false
 
-  /d3-interpolate/1.4.0:
-    resolution: {integrity: sha512-V9znK0zc3jOPV4VD2zZn0sDhZU3WAE2bmlxdIwwQPPzPjvyLkd8B3JUVdS1IDUFDkWZ72c9qnv1GK2ZagTZ8EA==}
+  /d3-interpolate/3.0.1:
+    resolution: {integrity: sha512-3bYs1rOD33uo8aqJfKP3JWPAibgw8Zm2+L9vBKEHJ2Rg+viTR7o5Mmv5mZcieN+FRYaAOWX5SJATX6k1PWz72g==}
+    engines: {node: '>=12'}
     dependencies:
-      d3-color: 1.4.1
+      d3-color: 3.1.0
     dev: false
 
   /d3-path/1.0.9:
     resolution: {integrity: sha512-VLaYcn81dtHVTjEHd8B+pbe9yHWpXKZUC87PzoFmsFrJqgFwDe/qxfp5MlfsfM1V5E/iVt0MmEbWQ7FVIXh/bg==}
     dev: false
 
-  /d3-scale/3.3.0:
-    resolution: {integrity: sha512-1JGp44NQCt5d1g+Yy+GeOnZP7xHo0ii8zsQp6PGzd+C1/dl0KGsp9A7Mxwp+1D1o4unbTTxVdU/ZOIEBoeZPbQ==}
+  /d3-scale/4.0.2:
+    resolution: {integrity: sha512-GZW464g1SH7ag3Y7hXjf8RoUuAFIqklOAq3MRl4OaWabTFJY9PN/E1YklhXLh+OQ3fM9yS2nOkCoS+WLZ6kvxQ==}
+    engines: {node: '>=12'}
     dependencies:
-      d3-array: 2.12.1
-      d3-format: 2.0.0
-      d3-interpolate: 1.4.0
+      d3-array: 3.2.2
+      d3-format: 3.1.0
+      d3-interpolate: 3.0.1
       d3-time: 2.1.1
-      d3-time-format: 3.0.0
+      d3-time-format: 4.1.0
     dev: false
 
   /d3-shape/1.3.7:
@@ -1769,8 +1768,9 @@ packages:
       d3-path: 1.0.9
     dev: false
 
-  /d3-time-format/3.0.0:
-    resolution: {integrity: sha512-UXJh6EKsHBTjopVqZBhFysQcoXSv/5yLONZvkQ5Kk3qbwiUYkdX17Xa1PT6U1ZWXGGfB1ey5L8dKMlFq2DO0Ag==}
+  /d3-time-format/4.1.0:
+    resolution: {integrity: sha512-dJxPBlzC7NugB2PDLwo9Q8JiTR3M3e4/XANkreKSUxF8vvXKqm1Yfq4Q5dl8budlunRVlUUaDUgFt7eA8D6NLg==}
+    engines: {node: '>=12'}
     dependencies:
       d3-time: 2.1.1
     dev: false
