@@ -187,6 +187,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   auto const traffic_days = merge_traffic_days(calendar, dates);
   auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
   auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, traffic_days);
+  read_frequencies(load(FREQUENCIES_FILE), trips);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_flixtrain_transfers(trips, transfers);
   for (auto& [_, trip] : trips) {
@@ -373,6 +374,10 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
           // Rule services are written separately.
           return entry.second->block_ != nullptr;
         })  //
+      | utl::remove_if([&](auto const& entry) {
+          // Frequency services are written separately.
+          return entry.second->frequency_.has_value();
+        })  //
       | utl::transform([&](auto const& entry) {
           auto const t = entry.second.get();
           return create_service(
@@ -380,6 +385,14 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
               t->block_ != nullptr && t->block_->trips_.size() > 2);  //
         })  //
       | utl::vec();
+
+  for (auto const& [id, t] : trips) {
+    if (t->frequency_.has_value()) {
+      t->expand_frequencies([&](trip const& x) {
+        output_services.emplace_back(create_service(&x, *x.service_, false));
+      });
+    }
+  }
 
   std::vector<fbs64::Offset<RuleService>> rule_services;
   for (auto const& blk : blocks) {

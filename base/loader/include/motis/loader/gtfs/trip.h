@@ -1,6 +1,8 @@
 #pragma once
 
+#include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -8,6 +10,7 @@
 #include "cista/reflection/comparable.h"
 
 #include "motis/loader/gtfs/flat_map.h"
+#include "motis/loader/gtfs/parse_time.h"
 #include "motis/loader/gtfs/route.h"
 #include "motis/loader/gtfs/services.h"
 #include "motis/loader/gtfs/stop.h"
@@ -24,8 +27,6 @@ struct block {
 
 using block_map = std::map<std::string, std::unique_ptr<block>>;
 
-constexpr auto const kInterpolate = -1;
-
 struct stop_time {
   stop_time();
   stop_time(stop*, std::string headsign, int arr_time, bool out_allowed,
@@ -39,6 +40,12 @@ struct stop_time {
   stop* stop_{nullptr};
   std::string headsign_;
   ev arr_, dep_;
+};
+
+struct frequency {
+  int start_time_;  // minutes since midnight
+  int end_time_;  // minutes since midnight on start day
+  int headway_;  // minutes between trip starts
 };
 
 struct trip {
@@ -62,6 +69,10 @@ struct trip {
   int avg_speed() const;
   int distance() const;
 
+  void expand_frequencies(std::function<void(trip const&)> const&) const;
+
+  void print_stop_times(std::ostream&) const;
+
   route const* route_;
   bitfield const* service_;
   block* block_;
@@ -70,11 +81,14 @@ struct trip {
   std::string short_name_;
   flat_map<stop_time> stop_times_;
   unsigned line_;
+  std::optional<std::vector<frequency>> frequency_;
 };
 
 using trip_map = std::map<std::string, std::unique_ptr<trip>>;
 
 std::pair<trip_map, block_map> read_trips(loaded_file, route_map const&,
                                           traffic_days const&);
+
+void read_frequencies(loaded_file, trip_map&);
 
 }  // namespace motis::loader::gtfs

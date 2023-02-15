@@ -11,5 +11,6 @@ constexpr char const* CALENDAR_FILE = "calendar.txt";
 constexpr char const* CALENDAR_DATES_FILE = "calendar_dates.txt";
 constexpr char const* TRANSFERS_FILE = "transfers.txt";
 constexpr char const* FEED_INFO_FILE = "feed_info.txt";
+constexpr char const* FREQUENCIES_FILE = "frequencies.txt";
 
 }  // namespace motis::loader::gtfs
