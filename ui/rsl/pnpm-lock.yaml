@@ -44,7 +44,7 @@ specifiers:
   react-dom: ^18.2.0
   react-hook-form: ^7.43.1
   react-router-dom: ^6.8.1
-  react-virtuoso: ^3.1.5
+  react-virtuoso: ^4.1.0
   tailwindcss: ^3.2.6
   typescript: ^4.9.5
   uuid: ^9.0.0
@@ -75,7 +75,7 @@ dependencies:
   react-dom: 18.2.0_react@18.2.0
   react-hook-form: 7.43.1_react@18.2.0
   react-router-dom: 6.8.1_biqbaboplfbrettd7655fr4n2y
-  react-virtuoso: 3.1.5_biqbaboplfbrettd7655fr4n2y
+  react-virtuoso: 4.1.0_biqbaboplfbrettd7655fr4n2y
   uuid: 9.0.0
 
 devDependencies:
@@ -1299,20 +1299,6 @@ packages:
       '@typescript-eslint/types': 5.52.0
       eslint-visitor-keys: 3.3.0
     dev: true
-
-  /@virtuoso.dev/react-urx/0.2.13_react@18.2.0:
-    resolution: {integrity: sha512-MY0ugBDjFb5Xt8v2HY7MKcRGqw/3gTpMlLXId2EwQvYJoC8sP7nnXjAxcBtTB50KTZhO0SbzsFimaZ7pSdApwA==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      react: '>=16'
-    dependencies:
-      '@virtuoso.dev/urx': 0.2.13
-      react: 18.2.0
-    dev: false
-
-  /@virtuoso.dev/urx/0.2.13:
-    resolution: {integrity: sha512-iirJNv92A1ZWxoOHHDYW/1KPoi83939o83iUBQHIim0i3tMeSKEh+bxhJdTHQ86Mr4uXx9xGUTq69cp52ZP8Xw==}
-    dev: false
 
   /@visx/axis/2.18.0_react@18.2.0:
     resolution: {integrity: sha512-iBMObSKHOHDZbuVXsdVLmAjLE5jCN1Ls3XI57v3yuf+qZ327mdPSliSOyOxhvRdaNDYPLSQj+P1nKan+04wJiQ==}
@@ -3051,15 +3037,13 @@ packages:
       react: 18.2.0
     dev: false
 
-  /react-virtuoso/3.1.5_biqbaboplfbrettd7655fr4n2y:
-    resolution: {integrity: sha512-Dwf7SGr73UAahfcQNIND+c+MtCb0PeHu+QTZ5ptR7oXxQkupfHXEKGwEDF5lDkLqdGxm+yH4uh/IFCqMKxudJw==}
+  /react-virtuoso/4.1.0_biqbaboplfbrettd7655fr4n2y:
+    resolution: {integrity: sha512-Vcq5WXn18PvPT55kdeGQ8BN3K95XyPe7hum8zG6Tx7g1CtUYVsQKN7fouMxBSy+XymEDB5ynGy8JWhuqyLLtPw==}
     engines: {node: '>=10'}
     peerDependencies:
       react: '>=16 || >=17 || >= 18'
       react-dom: '>=16 || >=17 || >= 18'
     dependencies:
-      '@virtuoso.dev/react-urx': 0.2.13_react@18.2.0
-      '@virtuoso.dev/urx': 0.2.13
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
     dev: false
