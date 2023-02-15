@@ -12,6 +12,7 @@ import SharedDataEditor from "@/components/sim/measures/SharedDataEditor";
 import TripLoadInfoMeasureEditor from "@/components/sim/measures/TripLoadInfoMeasureEditor";
 import TripLoadRecommendationMeasureEditor from "@/components/sim/measures/TripLoadRecommendationMeasureEditor";
 import TripRecommendationMeasureEditor from "@/components/sim/measures/TripRecommendationMeasureEditor";
+import UpdateCapacityMeasureEditor from "@/components/sim/measures/UpdateCapacityMeasureEditor";
 import ModalDialog from "@/components/util/ModalDialog";
 
 export type MeasureEditorProps = {
@@ -119,6 +120,15 @@ function MeasureEditor({
           key={measureAtom.toString()}
         />
       );
+    case "UpdateCapacitiesMeasure":
+      return measureEditor(
+        <UpdateCapacityMeasureEditor
+          measureAtom={measureAtom}
+          closeEditor={closeEditor}
+          deleteMeasure={deleteMeasure}
+          key={measureAtom.toString()}
+        />
+      );
   }
 }
 
@@ -219,6 +229,19 @@ function EmptyMeasureEditor({
     });
   };
 
+  const setUpdateCapacity = () => {
+    setMeasure((m) => {
+      return {
+        type: "UpdateCapacitiesMeasure",
+        shared: m.shared,
+        data: {
+          trip: selectedTrip,
+          seats: 0,
+        },
+      };
+    });
+  };
+
   return (
     <div>
       <div className="text-xl">Neue Maßnahme hinzufügen</div>
@@ -255,6 +278,12 @@ function EmptyMeasureEditor({
         <MeasureTypeOption title="Echtzeitupdate" onClick={setRtUpdate}>
           Beliebige Änderungen am Zugverlauf (Verspätungen, Umleitungen,
           Gleisänderungen, Ausfälle) simulieren
+        </MeasureTypeOption>
+        <MeasureTypeOption
+          title="Kapazitätsänderung"
+          onClick={setUpdateCapacity}
+        >
+          Änderung der Kapazität eines Zuges simulieren
         </MeasureTypeOption>
         <button
           onClick={() => deleteMeasure(measureAtom)}

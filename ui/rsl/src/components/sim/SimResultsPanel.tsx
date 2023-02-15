@@ -157,6 +157,10 @@ function SimResultDetails({
       label: "Aktualisierung der Reisendengruppen",
     },
     { duration: r.stats.t_update_tracker, label: "Statistiken zu Änderungen" },
+    {
+      duration: r.stats.t_update_capacities,
+      label: "Aktualisierung der Kapazitäten",
+    },
   ]
     .map(({ duration, label }) => `${formatMiliseconds(duration)} ${label}`)
     .join("\n");

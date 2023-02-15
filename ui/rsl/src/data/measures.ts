@@ -54,6 +54,11 @@ export interface RtCancelMeasureData {
   allow_reroute: boolean;
 }
 
+export interface UpdateCapacityMeasureData {
+  trip: TripServiceInfo | undefined;
+  seats: number;
+}
+
 export type UiMeasureType = MeasureType | "Empty" | "RtCancelMeasure";
 
 export type EmptyMeasureU = { type: "Empty"; shared: SharedMeasureData };
@@ -88,13 +93,20 @@ export type RtCancelMeasureU = {
   data: RtCancelMeasureData;
 };
 
+export type UpdateCapacitiesMeasureU = {
+  type: "UpdateCapacitiesMeasure";
+  shared: SharedMeasureData;
+  data: UpdateCapacityMeasureData;
+};
+
 export type MeasureUnion =
   | EmptyMeasureU
   | TripLoadInfoMeasureU
   | TripRecommendationMeasureU
   | TripLoadRecommendationMeasureU
   | RtUpdateMeasureU
-  | RtCancelMeasureU;
+  | RtCancelMeasureU
+  | UpdateCapacitiesMeasureU;
 
 export function isEmptyMeasureU(mu: MeasureUnion): mu is EmptyMeasureU {
   return mu.type === "Empty";
@@ -124,6 +136,30 @@ export function isRtUpdateMeasureU(mu: MeasureUnion): mu is RtUpdateMeasureU {
 
 export function isRtCancelMeasureU(mu: MeasureUnion): mu is RtCancelMeasureU {
   return mu.type === "RtCancelMeasure";
+}
+
+export function measureSupportsRecipients(mu: MeasureUnion): boolean {
+  return mu.type !== "UpdateCapacitiesMeasure";
+}
+
+export function measureNeedsRecipients(mu: MeasureUnion): boolean {
+  return measureTypeNeedsRecipients(mu.type);
+}
+
+export function measureTypeNeedsRecipients(
+  type: MeasureUnion["type"]
+): boolean {
+  return (
+    type !== "RtUpdateMeasure" &&
+    type !== "RtCancelMeasure" &&
+    type !== "UpdateCapacitiesMeasure"
+  );
+}
+
+export function isUpdateCapacitiesMeasureU(
+  mu: MeasureUnion
+): mu is UpdateCapacitiesMeasureU {
+  return mu.type === "UpdateCapacitiesMeasure";
 }
 
 export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
@@ -208,6 +244,34 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
       const updated = cancelStops(d.original_ribasis, d.canceled_stops);
       const ribf = makeRiBasisFahrt(updated, mu.shared.time);
       return makeRtUpdateMeasure(shared, ribf);
+    }
+    case "UpdateCapacitiesMeasure": {
+      const d = mu.data;
+      if (!d.trip) {
+        return null;
+      }
+      const t = d.trip.trip;
+      return {
+        measure_type: "UpdateCapacitiesMeasure",
+        measure: {
+          time: shared.time,
+          file_contents: [
+            "train_nr,from,to,departure,arrival,seats\n" +
+              [
+                t.train_nr,
+                t.station_id,
+                t.target_station_id,
+                t.time,
+                t.target_time,
+                d.seats,
+              ].join(","),
+          ],
+          remove_existing_trip_capacities: false,
+          remove_existing_category_capacities: false,
+          remove_existing_vehicle_capacities: false,
+          remove_existing_trip_formations: false,
+        },
+      };
     }
   }
 }
