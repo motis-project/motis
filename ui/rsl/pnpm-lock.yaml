@@ -34,8 +34,8 @@ specifiers:
   eslint-config-prettier: ^8.6.0
   eslint-plugin-react: ^7.32.2
   eslint-plugin-react-hooks: ^4.6.0
-  jotai: ^1.13.1
-  jotai-optics: ^0.2.1
+  jotai: ^2.0.1
+  jotai-optics: ^0.3.0
   lodash-es: ^4.17.21
   optics-ts: ^2.4.0
   postcss: ^8.4.21
@@ -67,8 +67,8 @@ dependencies:
   d3-array: 3.2.2
   date-fns: 2.29.3
   downshift: 7.2.0_react@18.2.0
-  jotai: 1.13.1_ipbnrkdizzq22cfjooeuaxtcue
-  jotai-optics: 0.2.1_4wrfzdtmon4kqzb6xjybgzcniy
+  jotai: 2.0.1_react@18.2.0
+  jotai-optics: 0.3.0_fucnzc6vesl7h4fx7gkwbd2pza
   lodash-es: 4.17.21
   optics-ts: 2.4.0
   react: 18.2.0
@@ -2615,57 +2615,25 @@ packages:
     resolution: {integrity: sha1-+eIwPUUH9tdDVac2ZNFED7Wg71k=}
     dev: true
 
-  /jotai-optics/0.2.1_4wrfzdtmon4kqzb6xjybgzcniy:
-    resolution: {integrity: sha512-ua2YjAH+CLtvpfhlT9gT6nZyrcmXBMA4wsBficJxkAuxeIMwBXW22bN2xzT/8ewUIhB+tMiBiBqcl0hrET5VHA==}
+  /jotai-optics/0.3.0_fucnzc6vesl7h4fx7gkwbd2pza:
+    resolution: {integrity: sha512-5ttpCRREIBu6DJix0wlyBP6y1QDPlePnoMZSXNDi/FOkXZrhk9uIXKjwvw34/yBCHT5mYpFUD4sFDvRUU2vkvQ==}
     peerDependencies:
-      jotai: '*'
+      jotai: '>=1.11.0'
       optics-ts: '*'
     dependencies:
-      jotai: 1.13.1_ipbnrkdizzq22cfjooeuaxtcue
+      jotai: 2.0.1_react@18.2.0
       optics-ts: 2.4.0
     dev: false
 
-  /jotai/1.13.1_ipbnrkdizzq22cfjooeuaxtcue:
-    resolution: {integrity: sha512-RUmH1S4vLsG3V6fbGlKzGJnLrDcC/HNb5gH2AeA9DzuJknoVxSGvvg8OBB7lke+gDc4oXmdVsaKn/xDUhWZ0vw==}
+  /jotai/2.0.1_react@18.2.0:
+    resolution: {integrity: sha512-b/BpBFkv3nq8HgT6YX5h5/y9VfKIn9OL1dO6gd9bWTgKt6LLe24VIMURTDwSYS888XfubuRQlbepb5IQGAtmcQ==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
-      '@babel/core': '*'
-      '@babel/template': '*'
-      jotai-devtools: '*'
-      jotai-immer: '*'
-      jotai-optics: '*'
-      jotai-redux: '*'
-      jotai-tanstack-query: '*'
-      jotai-urql: '*'
-      jotai-valtio: '*'
-      jotai-xstate: '*'
-      jotai-zustand: '*'
-      react: '>=16.8'
+      react: '>=17.0.0'
     peerDependenciesMeta:
-      '@babel/core':
-        optional: true
-      '@babel/template':
-        optional: true
-      jotai-devtools:
-        optional: true
-      jotai-immer:
-        optional: true
-      jotai-optics:
-        optional: true
-      jotai-redux:
-        optional: true
-      jotai-tanstack-query:
-        optional: true
-      jotai-urql:
-        optional: true
-      jotai-valtio:
-        optional: true
-      jotai-xstate:
-        optional: true
-      jotai-zustand:
+      react:
         optional: true
     dependencies:
-      jotai-optics: 0.2.1_4wrfzdtmon4kqzb6xjybgzcniy
       react: 18.2.0
     dev: false
 

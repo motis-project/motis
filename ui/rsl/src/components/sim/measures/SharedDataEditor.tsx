@@ -1,5 +1,5 @@
 import { PrimitiveAtom, useAtom } from "jotai";
-import { focusAtom } from "jotai/optics";
+import { focusAtom } from "jotai-optics";
 import { useMemo } from "react";
 
 import { Station, TripServiceInfo } from "@/api/protocol/motis";

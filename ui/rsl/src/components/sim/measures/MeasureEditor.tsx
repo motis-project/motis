@@ -1,5 +1,5 @@
 import { PrimitiveAtom, useAtom, useSetAtom } from "jotai";
-import { focusAtom } from "jotai/optics";
+import { focusAtom } from "jotai-optics";
 import { ReactNode, useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
