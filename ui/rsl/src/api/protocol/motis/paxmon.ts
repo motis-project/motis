@@ -822,6 +822,7 @@ export interface PaxMonCriticalTripInfo {
 export interface PaxMonUpdatedTrip {
   tsi: TripServiceInfo;
   rerouted: boolean;
+  capacity_changed: boolean;
   newly_critical_sections: number;
   no_longer_critical_sections: number;
   max_pax_increase: number;

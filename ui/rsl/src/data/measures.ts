@@ -270,6 +270,7 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
           remove_existing_category_capacities: false,
           remove_existing_vehicle_capacities: false,
           remove_existing_trip_formations: false,
+          track_trip_updates: true,
         },
       };
     }

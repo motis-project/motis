@@ -14,6 +14,7 @@ table PaxMonUpdatedTrip {
   tsi: motis.TripServiceInfo;
 
   rerouted: bool;
+  capacity_changed: bool;
   newly_critical_sections: int;
   no_longer_critical_sections: int;
   max_pax_increase: int;

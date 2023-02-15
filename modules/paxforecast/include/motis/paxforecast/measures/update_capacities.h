@@ -14,6 +14,7 @@ struct update_capacities {
   bool remove_existing_category_capacities_{};
   bool remove_existing_vehicle_capacities_{};
   bool remove_existing_trip_formations_{};
+  bool track_trip_updates_{};
 };
 
 }  // namespace motis::paxforecast::measures

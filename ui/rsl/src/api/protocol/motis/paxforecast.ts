@@ -90,6 +90,7 @@ export interface UpdateCapacitiesMeasure {
   remove_existing_category_capacities: boolean;
   remove_existing_vehicle_capacities: boolean;
   remove_existing_trip_formations: boolean;
+  track_trip_updates: boolean;
 }
 
 // paxforecast/Measures.fbs

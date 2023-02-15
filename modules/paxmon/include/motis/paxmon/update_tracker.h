@@ -39,6 +39,7 @@ struct update_tracker {
                                  float previous_probability,
                                  float new_probability, bool new_route);
   void before_trip_load_updated(trip_idx_t);
+  void before_trip_capacity_changed(trip_idx_t);
   void before_trip_rerouted(trip const*);
   void rt_updates_applied(tick_statistics const& tick_stats);
 

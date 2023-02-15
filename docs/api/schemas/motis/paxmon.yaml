@@ -1340,6 +1340,12 @@ PaxMonUpdatedTrip:
 
         Only set if `include_after_trip_load_info` is set to `true`
         in the request, otherwise an empty array.
+    capacity_changed:
+      description: |
+        Whether the capacity of the trip has changed.
+
+        Unless `track_trip_updates` is set to `true` in the request,
+        this value is always `false`.
 PaxMonTrackedUpdates:
   description: TODO
   fields:

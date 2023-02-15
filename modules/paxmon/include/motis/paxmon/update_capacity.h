@@ -6,8 +6,10 @@
 
 namespace motis::paxmon {
 
-void update_trip_capacity(universe& uv, schedule const& sched, trip const* trp);
+bool update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
+                          bool track_updates = false);
 
-void update_all_trip_capacities(universe& uv, schedule const& sched);
+void update_all_trip_capacities(universe& uv, schedule const& sched,
+                                bool track_updates);
 
 }  // namespace motis::paxmon

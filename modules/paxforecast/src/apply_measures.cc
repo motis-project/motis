@@ -56,7 +56,7 @@ void apply_update_capacities_measure(universe& uv, schedule const& sched,
   }
 
   // update all trip capacities
-  update_all_trip_capacities(uv, sched);
+  update_all_trip_capacities(uv, sched, m.track_trip_updates_);
 }
 
 msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,

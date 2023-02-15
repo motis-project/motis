@@ -319,3 +319,10 @@ UpdateCapacitiesMeasure:
         information received via RiBasisFormation messages)
         is reset before loading the new capacity data supplied in this
         measure.
+    track_trip_updates:
+      description: |
+        If set to true, changing the capacity of a trip causes it to be
+        included in the list of updated trips in the response.
+
+        This should only be set to true if changing the capacity of a
+        small number of trips.
