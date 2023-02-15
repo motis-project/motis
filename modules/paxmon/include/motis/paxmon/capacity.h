@@ -62,6 +62,8 @@ struct capacity_maps {
   vehicle_capacity_map_t vehicle_capacity_map_;
   trip_formation_map_t trip_formation_map_;
   trip_uuid_map_t trip_uuid_map_;
+
+  bool allow_train_nr_match_{};
 };
 
 std::pair<std::uint16_t, capacity_source> get_capacity(

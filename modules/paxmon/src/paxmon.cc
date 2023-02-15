@@ -117,6 +117,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(mcfp_scenario_include_trip_info_, "mcfp_scenario_include_trip_info",
         "include trip info (category + train_nr) in mcfp scenarios");
   param(graph_log_enabled_, "graph_log", "enable graph log");
+  param(allow_capacity_by_train_nr_only_, "allow_capacity_by_train_nr_only",
+        "if no capacity data for the exact trip id is found, use capacity data "
+        "matching only the train number");
 }
 
 paxmon::~paxmon() = default;
@@ -131,6 +134,7 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
   add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
   auto* uv = data_.multiverse_->create_default_universe();
   uv->graph_log_.enabled_ = graph_log_enabled_;
+  uv->capacity_maps_.allow_train_nr_match_ = allow_capacity_by_train_nr_only_;
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
