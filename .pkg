@@ -50,7 +50,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=31075696a34eb7d531046d959bb2d7a4f368f3ae
+  commit=c4174ff47ea04eee883b5d00b9937fb0fa39a831
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master

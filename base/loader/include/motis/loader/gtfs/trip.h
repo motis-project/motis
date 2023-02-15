@@ -59,7 +59,7 @@ struct trip {
   using stop_seq_numbers = std::vector<unsigned>;
 
   trip(route const*, bitfield const*, block*, std::string id,
-       std::string headsign, std::string short_name, unsigned line);
+       std::string headsign, std::string short_name, std::size_t line);
 
   void interpolate();
 
@@ -80,7 +80,7 @@ struct trip {
   std::string headsign_;
   std::string short_name_;
   flat_map<stop_time> stop_times_;
-  unsigned line_;
+  std::size_t line_;
   std::optional<std::vector<frequency>> frequency_;
 };
 

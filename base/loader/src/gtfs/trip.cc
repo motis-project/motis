@@ -105,7 +105,7 @@ stop_time::stop_time(stop* s, std::string headsign, int arr_time,
 
 trip::trip(route const* route, bitfield const* service, block* blk,
            std::string id, std::string headsign, std::string short_name,
-           unsigned line)
+           std::size_t line)
     : route_(route),
       service_(service),
       block_{blk},
@@ -327,10 +327,9 @@ void read_frequencies(loaded_file file, trip_map& trips) {
     if (!frequencies.has_value()) {
       frequencies = std::vector<frequency>{};
     }
-    frequencies->emplace_back(
-        frequency{.start_time_ = hhmm_to_min(std::get<start_time>(freq)),
-                  .end_time_ = hhmm_to_min(std::get<end_time>(freq)),
-                  .headway_ = (headway_secs / 60)});
+    frequencies->emplace_back(frequency{hhmm_to_min(std::get<start_time>(freq)),
+                                        hhmm_to_min(std::get<end_time>(freq)),
+                                        (headway_secs / 60)});
   }
 }
 
