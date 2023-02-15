@@ -50,7 +50,7 @@ namespace fbs = flatbuffers;
 
 namespace motis::intermodal::eval {
 
-constexpr auto const kTargetEscape = std::string_view{"${target}"};
+constexpr auto const kTargetEscape = std::string_view{"TARGET"};
 
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Options", "") {
@@ -106,7 +106,7 @@ struct generator_settings : public conf::configuration {
   }
 
   int query_count_{1000};
-  std::string target_file_fwd_{"intermodal-queries-${target}.txt"};
+  std::string target_file_fwd_{"intermodal-queries-TARGET.txt"};
   std::string bbox_;
   std::string poly_file_;
   std::string start_modes_;
@@ -121,9 +121,8 @@ struct generator_settings : public conf::configuration {
 std::string replace_target_escape(std::string const& str,
                                   std::string const& target) {
   auto const esc_pos = str.find(kTargetEscape);
-  if (esc_pos == std::string::npos) {
-    return str;
-  }
+  utl::verify(esc_pos != std::string::npos, "target escape {} not found in {}",
+              kTargetEscape, str);
 
   auto clean_target = target;
   if (clean_target[0] == '/') {

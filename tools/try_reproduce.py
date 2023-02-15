@@ -9,6 +9,16 @@ import sys
 
 dir = os.getcwd()
 
+routers = ["routing", "nigiri"]
+
+
+def query_f(id, router):
+    return f"fail/{id}_i2000-{router}.json"
+
+
+def result_f(id, router):
+    return f"fail/{id}_i2000-res-{router}.json"
+
 
 def reproduce(filepath, verbose=False):
     m = re.search(r'fail/([0-9]*).*', filepath)
@@ -22,8 +32,8 @@ def reproduce(filepath, verbose=False):
         "xtract",
         "input/hrd",
         "input/{}".format(id),
-        "fail/{}_intermodal_responses_routing_fail.json".format(id),
-        "fail/{}_intermodal_responses_nigiri_fail.json".format(id)
+        f"fail/{result_f(id, routers[0])}",
+        f"fail/{result_f(id, routers[1])}"
     ]
     subprocess.check_call(run_xtract, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if verbose:
@@ -48,8 +58,8 @@ def reproduce(filepath, verbose=False):
         "--dataset.read_graph=false",
         "--import.paths", "schedule:input/{}".format(id), "osm:input/osm.pbf".format(id),
         "--import.data_dir=data_{}".format(id),
-        "--batch_input_file=fail/{}_intermodal_queries_routing_fail.json".format(id),
-        "--batch_output_file={}_intermodal_responses_routing_fail.json".format(id),
+        f"--batch_input_file=fail/{query_f(id, routers[0])}",
+        f"--batch_output_file={result_f(id, routers[1])}",
         "--num_threads", "1"
     ]
     if verbose:
@@ -68,8 +78,8 @@ def reproduce(filepath, verbose=False):
         "--nigiri.no_cache=true",
         "--import.paths", "schedule:input/{}".format(id), "osm:input/osm.pbf",
         "--import.data_dir=data_{}".format(id),
-        "--batch_input_file=fail/{}_intermodal_queries_nigiri_fail.json".format(id),
-        "--batch_output_file={}_intermodal_responses_nigiri_fail.json".format(id),
+        f"--batch_input_file=fail/{query_f(id, routers[1])}",
+        f"--batch_output_file={result_f(id, routers[1])}",
         "--num_threads", "1"
     ]
     if verbose:
@@ -84,11 +94,11 @@ def reproduce(filepath, verbose=False):
             "intermodal_compare",
             "--fail", "",
             "--queries",
-            "fail/{}_intermodal_queries_routing_fail.json".format(id),
-            "fail/{}_intermodal_queries_nigiri_fail.json".format(id),
+            f"fail/{query_f(id, routers[0])}",
+            f"fail/{query_f(id, routers[1])}",
             "--input",
-            "{}_intermodal_responses_routing_fail.json".format(id),
-            "{}_intermodal_responses_nigiri_fail.json".format(id)
+            result_f(id, routers[0]),
+            result_f(id, routers[1])
         ]
         if verbose:
             print("###", " ".join(run_compare))
@@ -101,8 +111,8 @@ def reproduce(filepath, verbose=False):
         print("CONNECTIONS:", " ".join([
             "./motis",
             "print",
-            "{}_intermodal_responses_routing_fail.json".format(id),
-            "{}_intermodal_responses_nigiri_fail.json".format(id)
+            result_f(id, routers[0]),
+            result_f(id, routers[1])
         ]))
         print("COMPARE_CMD:", " ".join(e.cmd))
         subprocess.run(e.cmd)
@@ -114,12 +124,6 @@ def reproduce(filepath, verbose=False):
 
     return 0
 
-
-# files = glob.iglob('fail/*_intermodal_queries_nigiri_fail.json')
-# for filepath in files:
-#     print(f"trying to reproduce {filepath}")
-#     reproduce(filepath, True)
-# exit(0)
 
 if len(sys.argv) < 2:
     with Pool(processes=6) as pool:
