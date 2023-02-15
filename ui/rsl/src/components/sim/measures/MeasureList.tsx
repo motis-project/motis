@@ -1,7 +1,7 @@
 import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PrimitiveAtom, atom, useAtom } from "jotai";
-import { useAtomCallback, useUpdateAtom } from "jotai/utils";
+import { PrimitiveAtom, atom, useAtom, useSetAtom } from "jotai";
+import { useAtomCallback } from "jotai/utils";
 import { useCallback } from "react";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
@@ -243,8 +243,8 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const [selectedMeasure, setSelectedMeasure] = useAtom(
     currentEditorMeasureAtom
   );
-  const setSimResults = useUpdateAtom(simResultsAtom);
-  const setSelectedSimResult = useUpdateAtom(selectedSimResultAtom);
+  const setSimResults = useSetAtom(simResultsAtom);
+  const setSelectedSimResult = useSetAtom(selectedSimResultAtom);
 
   const applyMeasuresMutation = useMutation(
     (measures: MeasureWrapper[]) =>

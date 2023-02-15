@@ -1,6 +1,5 @@
 import { SparklesIcon } from "@heroicons/react/20/solid";
-import { atom, useAtom } from "jotai";
-import { useUpdateAtom } from "jotai/utils";
+import { atom, useAtom, useSetAtom } from "jotai";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
@@ -33,7 +32,7 @@ function TripOptimization({
 
   const [universe] = useAtom(universeAtom);
   const [schedule] = useAtom(scheduleAtom);
-  const setMeasureAtoms = useUpdateAtom(measuresAtom);
+  const setMeasureAtoms = useSetAtom(measuresAtom);
   const [showOptimizationDebugLog] = useAtom(showOptimizationDebugLogAtom);
 
   const startOptimization = useCallback(() => {

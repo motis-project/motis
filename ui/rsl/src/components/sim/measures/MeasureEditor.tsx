@@ -1,6 +1,5 @@
-import { PrimitiveAtom, useAtom } from "jotai";
+import { PrimitiveAtom, useAtom, useSetAtom } from "jotai";
 import { focusAtom } from "jotai/optics";
-import { useUpdateAtom } from "jotai/utils";
 import { ReactNode, useMemo, useState } from "react";
 
 import { MeasureUnion } from "@/data/measures";
@@ -31,7 +30,7 @@ function MeasureEditor({
     [measureAtom]
   );
   const [measureType] = useAtom(typeAtom);
-  const setMeasure = useUpdateAtom(measureAtom);
+  const setMeasure = useSetAtom(measureAtom);
   const [changeTypeDialogOpen, setChangeTypeDialogOpen] = useState(false);
 
   const onChangeTypeDialogClose = (cancel: boolean) => {
@@ -153,7 +152,7 @@ function EmptyMeasureEditor({
   measureAtom,
   deleteMeasure,
 }: MeasureEditorProps) {
-  const setMeasure = useUpdateAtom(measureAtom);
+  const setMeasure = useSetAtom(measureAtom);
   const [selectedTrip] = useAtom(mostRecentlySelectedTripAtom);
   const [showLegacyMeasureTypes] = useAtom(showLegacyMeasureTypesAtom);
 

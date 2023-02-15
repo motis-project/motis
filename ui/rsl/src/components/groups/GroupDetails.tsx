@@ -10,8 +10,7 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useAtom } from "jotai";
-import { useUpdateAtom } from "jotai/utils";
+import { useAtom, useSetAtom } from "jotai";
 import React, { useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -52,7 +51,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
     include_reroute_log: true,
   });
 
-  const setMostRecentlySelectedGroup = useUpdateAtom(
+  const setMostRecentlySelectedGroup = useSetAtom(
     mostRecentlySelectedGroupAtom
   );
   useEffect(() => {

@@ -4,8 +4,7 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAtom } from "jotai";
-import { useUpdateAtom } from "jotai/utils";
+import { useAtom, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
@@ -52,9 +51,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
     }
   );
 
-  const setMostRecentlySelectedTrip = useUpdateAtom(
-    mostRecentlySelectedTripAtom
-  );
+  const setMostRecentlySelectedTrip = useSetAtom(mostRecentlySelectedTripAtom);
   useEffect(() => {
     if (data && data.load_infos.length > 0) {
       setMostRecentlySelectedTrip(data.load_infos[0].tsi);
