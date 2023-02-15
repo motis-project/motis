@@ -9,6 +9,7 @@
 
 #include "utl/erase.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/module/message.h"
 
 using namespace motis::module;
@@ -26,8 +27,21 @@ public:
         in_(input_file_path),
         out_(output_file_path),
         num_threads_(num_threads) {
-    in_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    out_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    try {
+      in_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    } catch (std::exception const& e) {
+      LOG(logging::error) << "unable to open file " << input_file_path << ": "
+                          << e.what();
+      throw;
+    }
+
+    try {
+      out_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    } catch (std::exception const& e) {
+      LOG(logging::error) << "unable to open file " << input_file_path << ": "
+                          << e.what();
+      throw;
+    }
   }
 
   query_injector(query_injector const&) = delete;
