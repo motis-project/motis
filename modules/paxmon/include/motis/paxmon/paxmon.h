@@ -68,7 +68,7 @@ private:
   int mcfp_scenario_min_broken_groups_{500};
   bool mcfp_scenario_include_trip_info_{false};
   bool graph_log_enabled_{false};
-  bool allow_capacity_by_train_nr_only_{true};
+  int capacity_fuzzy_match_max_time_diff_{60};  // minutes
 
   paxmon_data data_;
   std::unique_ptr<stats_writer> stats_writer_;

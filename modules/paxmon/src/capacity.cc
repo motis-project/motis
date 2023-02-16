@@ -1,27 +1,45 @@
 #include "motis/paxmon/capacity.h"
 
 #include <charconv>
+#include <cmath>
 #include <cstdint>
 #include <ctime>
 #include <algorithm>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <set>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "motis/core/common/logging.h"
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
 
+#include "motis/core/debug/trip.h"
+
 #include "motis/paxmon/util/get_station_idx.h"
 
-using namespace motis::logging;
 using namespace motis::paxmon::util;
 
 namespace motis::paxmon {
+
+struct debug_cap_trip_id {
+  friend std::ostream& operator<<(std::ostream& out,
+                                  debug_cap_trip_id const& t) {
+    auto const& sched = t.sched_;
+    auto const& id = t.id_;
+    return out << "{train_nr=" << id.train_nr_ << ", from_station="
+               << debug::station{sched, id.from_station_idx_}
+               << ", to_station=" << debug::station{sched, id.to_station_idx_}
+               << ", departure=" << format_time(id.departure_)
+               << ", arrival=" << format_time(id.arrival_) << "}";
+  }
+
+  schedule const& sched_;
+  cap_trip_id id_;
+};
 
 bool primary_trip_id_matches(cap_trip_id const& a, cap_trip_id const& b) {
   return a.train_nr_ == b.train_nr_ &&
@@ -35,11 +53,13 @@ bool stations_match(cap_trip_id const& a, cap_trip_id const& b) {
 }
 
 std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    capacity_maps const& caps, trip const* trp, std::uint32_t train_nr) {
+    schedule const& /*sched*/, capacity_maps const& caps, trip const* trp,
+    std::uint32_t train_nr) {
   auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
-                               trp->id_.secondary_.target_station_id_,
                                trp->id_.primary_.get_time(),
+                               trp->id_.secondary_.target_station_id_,
                                trp->id_.secondary_.target_time_};
+  // try to match full trip id or primary trip id
   if (auto const lb = caps.trip_capacity_map_.lower_bound(tid);
       lb != end(caps.trip_capacity_map_)) {
     if (lb->first == tid) {
@@ -47,29 +67,59 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     }
     if (primary_trip_id_matches(lb->first, tid)) {
       return {{lb->second, capacity_source::TRIP_PRIMARY}};
-    }
-    if (caps.allow_train_nr_match_) {
-      if (lb->first.train_nr_ == train_nr) {
-        for (auto it = lb; it != end(caps.trip_capacity_map_) &&
-                           it->first.train_nr_ == train_nr;
-             it = std::next(it)) {
-          if (stations_match(it->first, tid)) {
-            return {{it->second, capacity_source::TRAIN_NR_AND_STATIONS}};
-          }
-        }
-        return {{lb->second, capacity_source::TRAIN_NR}};
-      } else if (lb != begin(caps.trip_capacity_map_)) {
-        if (auto const prev = std::prev(lb);
-            prev != end(caps.trip_capacity_map_) &&
-            prev->first.train_nr_ == train_nr) {
-          return {{prev->second, stations_match(prev->first, tid)
-                                     ? capacity_source::TRAIN_NR_AND_STATIONS
-                                     : capacity_source::TRAIN_NR}};
-        }
+    } else if (lb != begin(caps.trip_capacity_map_)) {
+      if (auto const prev = std::prev(lb);
+          primary_trip_id_matches(prev->first, tid)) {
+        return {{prev->second, capacity_source::TRIP_PRIMARY}};
       }
     }
   }
-  return {};
+
+  if (caps.fuzzy_match_max_time_diff_ == 0) {
+    return {};
+  }
+
+  // find the best possible match where train number matches
+  auto const tid_train_nr_only = cap_trip_id{train_nr};
+  auto best_result = std::optional<std::pair<std::uint16_t, capacity_source>>{};
+  auto best_station_matches = 0;
+  auto best_diff = std::numeric_limits<int>::max();
+  for (auto it = caps.trip_capacity_map_.lower_bound(tid_train_nr_only);
+       it != end(caps.trip_capacity_map_) && it->first.train_nr_ == train_nr;
+       it = std::next(it)) {
+    auto const& cid = it->first;
+    auto const cur_dep_diff = std::abs(static_cast<int>(cid.departure_) -
+                                       static_cast<int>(tid.departure_));
+    auto const cur_arr_diff = std::abs(static_cast<int>(cid.arrival_) -
+                                       static_cast<int>(tid.arrival_));
+
+    if (cur_dep_diff > caps.fuzzy_match_max_time_diff_ ||
+        cur_arr_diff > caps.fuzzy_match_max_time_diff_) {
+      continue;
+    }
+
+    auto const cur_from_station_match =
+        cid.from_station_idx_ == tid.from_station_idx_;
+    auto const cur_to_station_match =
+        cid.to_station_idx_ == tid.to_station_idx_;
+    auto const cur_station_matches =
+        (cur_from_station_match ? 1 : 0) + (cur_to_station_match ? 1 : 0);
+    auto const cur_diff = cur_dep_diff + cur_arr_diff;
+
+    auto const better =
+        (cur_station_matches > best_station_matches) ||
+        (cur_station_matches == best_station_matches && cur_diff < best_diff);
+
+    if (better) {
+      best_result = {{it->second, stations_match(tid, cid)
+                                      ? capacity_source::TRAIN_NR_AND_STATIONS
+                                      : capacity_source::TRAIN_NR}};
+      best_station_matches = cur_station_matches;
+      best_diff = cur_diff;
+    }
+  }
+
+  return best_result;
 }
 
 std::optional<std::uint32_t> get_line_nr(mcd::string const& line_id) {
@@ -89,13 +139,15 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     connection_info const* ci, service_class const clasz) {
 
   auto const trp_train_nr = trp->id_.primary_.get_train_nr();
-  if (auto const trip_capacity = get_trip_capacity(caps, trp, trp_train_nr);
+  if (auto const trip_capacity =
+          get_trip_capacity(sched, caps, trp, trp_train_nr);
       trip_capacity) {
     return trip_capacity;
   }
 
   if (ci->train_nr_ != trp_train_nr) {
-    if (auto const trip_capacity = get_trip_capacity(caps, trp, ci->train_nr_);
+    if (auto const trip_capacity =
+            get_trip_capacity(sched, caps, trp, ci->train_nr_);
         trip_capacity) {
       return trip_capacity;
     }
@@ -103,7 +155,8 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
 
   auto const trp_line_nr = get_line_nr(trp->id_.secondary_.line_id_);
   if (trp_line_nr && *trp_line_nr != trp_train_nr) {
-    if (auto const trip_capacity = get_trip_capacity(caps, trp, *trp_line_nr);
+    if (auto const trip_capacity =
+            get_trip_capacity(sched, caps, trp, *trp_line_nr);
         trip_capacity) {
       return trip_capacity;
     }
@@ -111,7 +164,8 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
 
   auto const ci_line_nr = get_line_nr(ci->line_identifier_);
   if (ci_line_nr && ci_line_nr != trp_line_nr && *ci_line_nr != trp_train_nr) {
-    if (auto const trip_capacity = get_trip_capacity(caps, trp, *ci_line_nr);
+    if (auto const trip_capacity =
+            get_trip_capacity(sched, caps, trp, *ci_line_nr);
         trip_capacity) {
       return trip_capacity;
     }

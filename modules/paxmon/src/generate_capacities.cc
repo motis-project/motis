@@ -115,8 +115,8 @@ void generate_capacities(schedule const& sched, universe const& uv,
         sections.front().section_.lcon().full_con_->con_info_->family_;
     auto const cap_tid = cap_trip_id{
         static_cast<std::uint32_t>(trp->id_.primary_.train_nr_),
-        trp->id_.primary_.get_station_id(),
-        trp->id_.secondary_.target_station_id_, trp->id_.primary_.get_time(),
+        trp->id_.primary_.get_station_id(), trp->id_.primary_.get_time(),
+        trp->id_.secondary_.target_station_id_,
         trp->id_.secondary_.target_time_};
     out << cap_tid.train_nr_ << ","
         << sched.categories_.at(family)->name_.view() << ","

@@ -26,8 +26,8 @@ struct cap_trip_id {
 
   std::uint32_t train_nr_{};
   std::uint32_t from_station_idx_{};
-  std::uint32_t to_station_idx_{};
   time departure_{};
+  std::uint32_t to_station_idx_{};
   time arrival_{};
 };
 
@@ -63,7 +63,7 @@ struct capacity_maps {
   trip_formation_map_t trip_formation_map_;
   trip_uuid_map_t trip_uuid_map_;
 
-  bool allow_train_nr_match_{};
+  int fuzzy_match_max_time_diff_{};  // minutes
 };
 
 std::pair<std::uint16_t, capacity_source> get_capacity(

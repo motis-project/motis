@@ -105,7 +105,7 @@ load_capacities_result load_capacities(schedule const& sched,
             }
 
             auto const tid = cap_trip_id{row.train_nr_.val(), from_station_idx,
-                                         to_station_idx, departure, arrival};
+                                         departure, to_station_idx, arrival};
             caps.trip_capacity_map_[tid] = row.seats_.val();
             ++res.loaded_entry_count_;
           } else if (row.category_.val()) {
