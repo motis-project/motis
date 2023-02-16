@@ -69,6 +69,10 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
     stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
   }
 
+  raptor.reset();
+  raptor.set_query_source_time(q.source_time_begin_);
+  raptor.invoke_cpu_raptor();
+
   reconstructor.add(q);
   return reconstructor.get_journeys(q.source_time_end_);
 }
