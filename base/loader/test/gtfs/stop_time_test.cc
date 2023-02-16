@@ -67,13 +67,17 @@ TEST(loader_gtfs_route, read_stop_times_example_data) {
   EXPECT_TRUE(stop.arr_.in_out_allowed_);
   EXPECT_TRUE(stop.dep_.in_out_allowed_);
 
-  EXPECT_THROW(awe1_it->second->expand_frequencies([](trip const&) {}),
+  EXPECT_THROW(awe1_it->second->expand_frequencies(
+                   [](trip const&, ScheduleRelationship) {}),
                std::runtime_error);
 
   read_frequencies(loaded_file{SCHEDULES / "example" / FREQUENCIES_FILE},
                    trips);
   auto i = 0U;
-  awe1_it->second->expand_frequencies([&](trip const&) { ++i; });
+  awe1_it->second->expand_frequencies([&](trip const&, ScheduleRelationship s) {
+    EXPECT_EQ(ScheduleRelationship_UNSCHEDULED, s);
+    ++i;
+  });
   EXPECT_EQ(357U, i);
 }
 

@@ -15,6 +15,7 @@
 #include "motis/loader/gtfs/services.h"
 #include "motis/loader/gtfs/stop.h"
 #include "motis/loader/loaded_file.h"
+#include "motis/schedule-format/Service_generated.h"
 
 namespace motis::loader::gtfs {
 
@@ -46,6 +47,7 @@ struct frequency {
   int start_time_;  // minutes since midnight
   int end_time_;  // minutes since midnight on start day
   int headway_;  // minutes between trip starts
+  ScheduleRelationship schedule_relationship_;
 };
 
 struct trip {
@@ -69,9 +71,10 @@ struct trip {
   int avg_speed() const;
   int distance() const;
 
-  void expand_frequencies(std::function<void(trip const&)> const&) const;
+  void expand_frequencies(
+      std::function<void(trip const&, ScheduleRelationship)> const&) const;
 
-  void print_stop_times(std::ostream&) const;
+  void print_stop_times(std::ostream&, unsigned indent = 0) const;
 
   route const* route_;
   bitfield const* service_;

@@ -10,6 +10,12 @@ table ServiceDebugInfo {
   line_to : int;
 }
 
+// for GTFS frequencies.txt
+enum ScheduleRelationship : byte {
+  SCHEDULED,  // scheduled trip or frequency.txt with exact_times=true
+  UNSCHEDULED  // frequency based trip with exact_times=false
+}
+
 table Service {
   route : Route;
   traffic_days : string;
@@ -20,6 +26,7 @@ table Service {
   debug : ServiceDebugInfo;
   rule_participant : bool = false;
   initial_train_nr : int;
-  trip_id : string; // optional
-  seq_numbers : [uint]; // optional
+  trip_id : string;  // optional, GTFS trip ID (GTFS-RT matching)
+  seq_numbers : [uint];  // optional, GTFS sequence numbers (GTFS-RT matching)
+  schedule_relationship: ScheduleRelationship;  // optional (GTFS-RT UNSCHEDULED matching)
 }

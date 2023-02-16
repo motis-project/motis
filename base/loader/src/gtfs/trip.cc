@@ -217,15 +217,20 @@ int trip::distance() const {
   return geo::distance(box.min_, box.max_) / 1000;
 }
 
-void trip::print_stop_times(std::ostream& out) const {
+void trip::print_stop_times(std::ostream& out, unsigned const indent) const {
   for (auto const& t : stop_times_) {
-    out << "arr: " << format_time(t.second.arr_.time_)
+    for (auto i = 0U; i != indent; ++i) {
+      out << "  ";
+    }
+    out << std::setw(60) << t.second.stop_->name_ << " [" << std::setw(5)
+        << t.second.stop_->id_ << "]: arr: " << format_time(t.second.arr_.time_)
         << ", dep: " << format_time(t.second.dep_.time_) << "\n";
   }
 }
 
 void trip::expand_frequencies(
-    std::function<void(trip const&)> const& consumer) const {
+    std::function<void(trip const&, ScheduleRelationship)> const& consumer)
+    const {
   utl::verify(frequency_.has_value(), "bad call to trip::expand_frequencies");
 
   for (auto const& f : frequency_.value()) {
@@ -237,7 +242,7 @@ void trip::expand_frequencies(
         stop_time.second.dep_.time_ -= delta;
         stop_time.second.arr_.time_ -= delta;
       }
-      consumer(t);
+      consumer(t, f.schedule_relationship_);
     }
   }
 }
@@ -323,13 +328,19 @@ void read_frequencies(loaded_file file, trip_map& trips) {
       continue;
     }
 
+    auto const exact = std::get<exact_times>(freq);
+    auto const schedule_relationship = exact.view() == "1"
+                                           ? ScheduleRelationship_SCHEDULED
+                                           : ScheduleRelationship_UNSCHEDULED;
+
     auto& frequencies = trip_it->second->frequency_;
     if (!frequencies.has_value()) {
       frequencies = std::vector<frequency>{};
     }
     frequencies->emplace_back(frequency{hhmm_to_min(std::get<start_time>(freq)),
                                         hhmm_to_min(std::get<end_time>(freq)),
-                                        (headway_secs / 60)});
+                                        (headway_secs / 60),
+                                        schedule_relationship});
   }
 }
 
