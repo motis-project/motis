@@ -23,6 +23,17 @@ using namespace motis::paxmon::util;
 
 namespace motis::paxmon {
 
+bool primary_trip_id_matches(cap_trip_id const& a, cap_trip_id const& b) {
+  return a.train_nr_ == b.train_nr_ &&
+         a.from_station_idx_ == b.from_station_idx_ &&
+         a.departure_ == b.departure_;
+}
+
+bool stations_match(cap_trip_id const& a, cap_trip_id const& b) {
+  return a.from_station_idx_ == b.from_station_idx_ &&
+         a.to_station_idx_ == b.to_station_idx_;
+}
+
 std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     capacity_maps const& caps, trip const* trp, std::uint32_t train_nr) {
   auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
@@ -34,14 +45,26 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     if (lb->first == tid) {
       return {{lb->second, capacity_source::TRIP_EXACT}};
     }
+    if (primary_trip_id_matches(lb->first, tid)) {
+      return {{lb->second, capacity_source::TRIP_PRIMARY}};
+    }
     if (caps.allow_train_nr_match_) {
       if (lb->first.train_nr_ == train_nr) {
+        for (auto it = lb; it != end(caps.trip_capacity_map_) &&
+                           it->first.train_nr_ == train_nr;
+             it = std::next(it)) {
+          if (stations_match(it->first, tid)) {
+            return {{it->second, capacity_source::TRAIN_NR_AND_STATIONS}};
+          }
+        }
         return {{lb->second, capacity_source::TRAIN_NR}};
       } else if (lb != begin(caps.trip_capacity_map_)) {
         if (auto const prev = std::prev(lb);
             prev != end(caps.trip_capacity_map_) &&
             prev->first.train_nr_ == train_nr) {
-          return {{prev->second, capacity_source::TRAIN_NR}};
+          return {{prev->second, stations_match(prev->first, tid)
+                                     ? capacity_source::TRAIN_NR_AND_STATIONS
+                                     : capacity_source::TRAIN_NR}};
         }
       }
     }

@@ -256,6 +256,10 @@ function getCapacitySourceTooltip(cs: PaxMonCapacitySource) {
   switch (cs) {
     case "TripExactMatch":
       return "Kapazitätsinformationen für den Zug gefunden";
+    case "TripPrimaryIdMatch":
+      return "Kapazitätsinformationen für den Zug gefunden (nur Übereinstimmung der primären Trip Id)";
+    case "TrainNrAndStations":
+      return "Kapazitätsinformationen möglicherweise falsch - nur Übereinstimmung der Zugnummer und Start-/Zielstationen";
     case "TrainNr":
       return "Kapazitätsinformationen möglicherweise falsch - nur Übereinstimmung der Zugnummer";
     case "Category":

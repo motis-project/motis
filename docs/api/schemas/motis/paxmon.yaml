@@ -1369,7 +1369,13 @@ PaxMonCapacitySource:
 
     Possible values:
     - `TripExactMatch`: Capacity information for this trip was found
-      (trip id match).
+      (full trip id match).
+    - `TripPrimaryIdMatch`: Capacity information for this trip was found,
+      but only the primary trip id matched (train number, departure station
+      and departure time).
+    - `TrainNrAndStations`: No capacity information for this exact trip was
+      found, but capacity data for a trip with the same train number and
+      departure and arrival stations was found and used.
     - `TrainNr`: No capacity information for this exact trip was found,
       but capacity data for a trip with the same train number was found and
       used.

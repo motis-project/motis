@@ -293,6 +293,8 @@ export interface PaxMonDistribution {
 // paxmon/PaxMonCapacitySource.fbs
 export type PaxMonCapacitySource =
   | "TripExactMatch"
+  | "TripPrimaryIdMatch"
+  | "TrainNrAndStations"
   | "TrainNr"
   | "Category"
   | "Class"

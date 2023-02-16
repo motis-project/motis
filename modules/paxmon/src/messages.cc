@@ -420,6 +420,10 @@ PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
   switch (cs) {
     case capacity_source::TRIP_EXACT:
       return PaxMonCapacitySource_TripExactMatch;
+    case capacity_source::TRIP_PRIMARY:
+      return PaxMonCapacitySource_TripPrimaryIdMatch;
+    case capacity_source::TRAIN_NR_AND_STATIONS:
+      return PaxMonCapacitySource_TrainNrAndStations;
     case capacity_source::TRAIN_NR: return PaxMonCapacitySource_TrainNr;
     case capacity_source::CATEGORY: return PaxMonCapacitySource_Category;
     case capacity_source::CLASZ: return PaxMonCapacitySource_Class;
