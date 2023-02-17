@@ -1,0 +1,4 @@
+trip_id,start_time,end_time,headway_secs
+AWE1,05:30:00,06:30:00,300
+AWE1,06:30:00,20:30:00,180
+AWE1,20:30:00,28:00:00,420

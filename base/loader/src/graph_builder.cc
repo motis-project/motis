@@ -123,7 +123,8 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
                                s->debug()->line_from(), s->debug()->line_to()},
               s->seq_numbers() == nullptr ? mcd::vector<uint32_t>{}
                                           : mcd::to_vec(*s->seq_numbers()),
-              boost::uuids::nil_uuid()))
+              boost::uuids::nil_uuid(),
+              s->schedule_relationship() == ScheduleRelationship_UNSCHEDULED))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
 

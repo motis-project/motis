@@ -105,7 +105,7 @@ stop_time::stop_time(stop* s, std::string headsign, int arr_time,
 
 trip::trip(route const* route, bitfield const* service, block* blk,
            std::string id, std::string headsign, std::string short_name,
-           unsigned line)
+           std::size_t line)
     : route_(route),
       service_(service),
       block_{blk},
@@ -129,8 +129,8 @@ void trip::interpolate() {
   auto bounds = std::vector<bound>{};
   bounds.reserve(stop_times_.size());
   for (auto const& [i, x] : utl::enumerate(stop_times_)) {
-    bounds.emplace_back(bound{x.second.arr_.time_});
-    bounds.emplace_back(bound{x.second.dep_.time_});
+    bounds.emplace_back(x.second.arr_.time_);
+    bounds.emplace_back(x.second.dep_.time_);
   }
 
   auto max = 0;
@@ -217,22 +217,52 @@ int trip::distance() const {
   return geo::distance(box.min_, box.max_) / 1000;
 }
 
-enum {
-  route_id,
-  service_id,
-  trip_id,
-  trip_headsign,
-  trip_short_name,
-  block_id
-};
-using gtfs_trip = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
-static const column_mapping<gtfs_trip> columns = {
-    {"route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name",
-     "block_id"}};
+void trip::print_stop_times(std::ostream& out, unsigned const indent) const {
+  for (auto const& t : stop_times_) {
+    for (auto i = 0U; i != indent; ++i) {
+      out << "  ";
+    }
+    out << std::setw(60) << t.second.stop_->name_ << " [" << std::setw(5)
+        << t.second.stop_->id_ << "]: arr: " << format_time(t.second.arr_.time_)
+        << ", dep: " << format_time(t.second.dep_.time_) << "\n";
+  }
+}
+
+void trip::expand_frequencies(
+    std::function<void(trip const&, ScheduleRelationship)> const& consumer)
+    const {
+  utl::verify(frequency_.has_value(), "bad call to trip::expand_frequencies");
+
+  for (auto const& f : frequency_.value()) {
+    for (auto start = f.start_time_; start < f.end_time_; start += f.headway_) {
+      trip t{*this};
+
+      auto const delta = t.stop_times_.front().dep_.time_ - start;
+      for (auto& stop_time : t.stop_times_) {
+        stop_time.second.dep_.time_ -= delta;
+        stop_time.second.arr_.time_ -= delta;
+      }
+      consumer(t, f.schedule_relationship_);
+    }
+  }
+}
 
 std::pair<trip_map, block_map> read_trips(loaded_file file,
                                           route_map const& routes,
                                           traffic_days const& services) {
+  enum {
+    route_id,
+    service_id,
+    trip_id,
+    trip_headsign,
+    trip_short_name,
+    block_id
+  };
+  using gtfs_trip = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
+  static const column_mapping<gtfs_trip> columns = {
+      {"route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name",
+       "block_id"}};
+
   motis::logging::scoped_timer timer{"read trips"};
 
   std::pair<trip_map, block_map> ret;
@@ -266,6 +296,52 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
     }
   }
   return ret;
+}
+
+void read_frequencies(loaded_file file, trip_map& trips) {
+  if (file.empty()) {
+    return;
+  }
+
+  enum { trip_id, start_time, end_time, headway_secs, exact_times };
+  using gtfs_frequency = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
+  static const column_mapping<gtfs_frequency> columns = {
+      {"trip_id", "start_time", "end_time", "headway_secs", "exact_times"}};
+
+  auto const entries = read<gtfs_frequency>(file.content(), columns);
+  for (auto const& [i, freq] : utl::enumerate(entries)) {
+    auto const t = std::get<trip_id>(freq).trim();
+    auto const trip_it = trips.find(t.to_str());
+    if (trip_it == end(trips)) {
+      LOG(logging::error) << "frequencies.txt:" << (i + 1)
+                          << ": skipping frequency for non-existing trip \""
+                          << t.view() << "\"";
+      continue;
+    }
+
+    auto const headway_secs_str = std::get<headway_secs>(freq);
+    auto const headway_secs = parse<int>(headway_secs_str, -1);
+    if (headway_secs == -1) {
+      LOG(logging::error) << "frequencies.txt:" << (i + 1)
+                          << ": skipping frequency with invalid headway_sec=\""
+                          << headway_secs_str.view() << "\"";
+      continue;
+    }
+
+    auto const exact = std::get<exact_times>(freq);
+    auto const schedule_relationship = exact.view() == "1"
+                                           ? ScheduleRelationship_SCHEDULED
+                                           : ScheduleRelationship_UNSCHEDULED;
+
+    auto& frequencies = trip_it->second->frequency_;
+    if (!frequencies.has_value()) {
+      frequencies = std::vector<frequency>{};
+    }
+    frequencies->emplace_back(frequency{hhmm_to_min(std::get<start_time>(freq)),
+                                        hhmm_to_min(std::get<end_time>(freq)),
+                                        (headway_secs / 60),
+                                        schedule_relationship});
+  }
 }
 
 }  // namespace motis::loader::gtfs

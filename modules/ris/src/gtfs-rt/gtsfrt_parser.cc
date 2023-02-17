@@ -38,6 +38,7 @@ void parse_trip_updates(knowledge_context& knowledge,
   switch (descriptor.schedule_relationship()) {
     case TripDescriptor_ScheduleRelationship_SCHEDULED:
     case TripDescriptor_ScheduleRelationship_ADDED:
+    case TripDescriptor_ScheduleRelationship_UNSCHEDULED:
     case TripDescriptor_ScheduleRelationship_CANCELED: {
       trip_update_context update_ctx{knowledge.sched_, trip_update,
                                      is_additional_skip_allowed};
@@ -51,8 +52,10 @@ void parse_trip_updates(knowledge_context& knowledge,
     }
 
     case TripDescriptor_ScheduleRelationship_DUPLICATED:
-    case TripDescriptor_ScheduleRelationship_UNSCHEDULED:
-    default: throw utl::fail("unhandled schedule relationship");
+    default:
+      throw utl::fail("unhandled schedule relationship {}",
+                      TripDescriptor_ScheduleRelationship_Name(
+                          descriptor.schedule_relationship()));
   }
 }
 
