@@ -393,7 +393,6 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
 
   for (auto const& [id, t] : trips) {
     if (t->frequency_.has_value()) {
-      auto i = 0U;
       t->expand_frequencies(
           [&](trip const& x, ScheduleRelationship const schedule_relationship) {
             output_services.emplace_back(
