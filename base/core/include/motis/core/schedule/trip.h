@@ -171,6 +171,7 @@ struct trip {
   trip_debug dbg_;
   mcd::vector<uint32_t> stop_seq_numbers_;
   boost::uuids::uuid uuid_{};
+  bool unscheduled_{false};
 };
 
 }  // namespace motis
