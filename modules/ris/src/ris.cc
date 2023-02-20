@@ -1048,6 +1048,11 @@ ris::ris() : module("RIS", "ris") {
   param(config_.rabbitmq_log_, "rabbitmq.log",
         "Path to log file for RabbitMQ messages (set to empty string to "
         "disable logging)");
+  param(config_.rabbitmq_.prefetch_count_, "rabbitmq.prefetch_count",
+        "Number of RabbitMQ messages to prefetch (must be > 0 if using "
+        "RabbitMQ streams)");
+  param(config_.rabbitmq_.stream_offset_, "rabbitmq.stream_offset",
+        "Stream offset if using RabbitMQ streams (e.g. next, 2h, 1D...)");
 }
 
 ris::~ris() = default;
