@@ -18,10 +18,10 @@
   "dependencies": {
     "@headlessui/react": "^1.7.11",
     "@headlessui/tailwindcss": "^0.1.2",
-    "@heroicons/react": "^2.0.15",
+    "@heroicons/react": "^2.0.16",
     "@radix-ui/react-tooltip": "^1.0.3",
-    "@tanstack/react-query": "^4.24.6",
-    "@tanstack/react-query-devtools": "^4.24.6",
+    "@tanstack/react-query": "^4.24.9",
+    "@tanstack/react-query-devtools": "^4.24.9",
     "@visx/axis": "^3.0.1",
     "@visx/grid": "^3.0.1",
     "@visx/group": "^3.0.0",
@@ -65,6 +65,6 @@
     "prettier": "^2.8.4",
     "tailwindcss": "^3.2.7",
     "typescript": "^4.9.5",
-    "vite": "^4.1.2"
+    "vite": "^4.1.3"
   }
 }
