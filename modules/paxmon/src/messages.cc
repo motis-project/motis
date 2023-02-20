@@ -416,6 +416,22 @@ PaxMonCapacityType get_capacity_type(motis::paxmon::edge const* e) {
   }
 }
 
+PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
+  switch (cs) {
+    case capacity_source::TRIP_EXACT:
+      return PaxMonCapacitySource_TripExactMatch;
+    case capacity_source::TRIP_PRIMARY:
+      return PaxMonCapacitySource_TripPrimaryIdMatch;
+    case capacity_source::TRAIN_NR_AND_STATIONS:
+      return PaxMonCapacitySource_TrainNrAndStations;
+    case capacity_source::TRAIN_NR: return PaxMonCapacitySource_TrainNr;
+    case capacity_source::CATEGORY: return PaxMonCapacitySource_Category;
+    case capacity_source::CLASZ: return PaxMonCapacitySource_Class;
+    case capacity_source::SPECIAL:
+    default: return PaxMonCapacitySource_Unknown;
+  }
+}
+
 Offset<ServiceInfo> to_fbs(FlatBufferBuilder& fbb, service_info const& si) {
   return CreateServiceInfo(
       fbb, fbb.CreateString(si.name_), fbb.CreateString(si.category_),
@@ -476,6 +492,7 @@ Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       motis_to_unixtime(sched, to->schedule_time()),
       motis_to_unixtime(sched, to->current_time()),
       get_capacity_type(eli.edge_), eli.edge_->capacity(),
+      to_fbs_capacity_source(eli.edge_->get_capacity_source()),
       to_fbs_distribution(fbb, eli.forecast_pdf_, eli.forecast_cdf_),
       eli.updated_, eli.possibly_over_capacity_, eli.probability_over_capacity_,
       eli.expected_passengers_);

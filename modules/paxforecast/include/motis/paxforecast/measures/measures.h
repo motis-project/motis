@@ -10,11 +10,13 @@
 #include "motis/paxforecast/measures/trip_load_information.h"
 #include "motis/paxforecast/measures/trip_load_recommendation.h"
 #include "motis/paxforecast/measures/trip_recommendation.h"
+#include "motis/paxforecast/measures/update_capacities.h"
 
 namespace motis::paxforecast::measures {
 
-using measure_variant = std::variant<trip_load_information, trip_recommendation,
-                                     trip_load_recommendation, rt_update>;
+using measure_variant =
+    std::variant<trip_load_information, trip_recommendation,
+                 trip_load_recommendation, rt_update, update_capacities>;
 
 using measure_set = mcd::vector<measure_variant>;
 using measure_collection = std::map<time, measure_set>;

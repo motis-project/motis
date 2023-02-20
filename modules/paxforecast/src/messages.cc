@@ -120,6 +120,18 @@ measures::rt_update from_fbs(schedule const& sched, RtUpdateMeasure const* m) {
           m->content()->str()};
 }
 
+measures::update_capacities from_fbs(schedule const& sched,
+                                     UpdateCapacitiesMeasure const* m) {
+  return {
+      unix_to_motistime(sched.schedule_begin_, m->time()),
+      utl::to_vec(*m->file_contents(), [](auto const& s) { return s->str(); }),
+      m->remove_existing_trip_capacities(),
+      m->remove_existing_category_capacities(),
+      m->remove_existing_vehicle_capacities(),
+      m->remove_existing_trip_formations(),
+      m->track_trip_updates()};
+}
+
 measures::measure_collection from_fbs(
     schedule const& sched, Vector<Offset<MeasureWrapper>> const* ms) {
   measures::measure_collection res;
@@ -148,6 +160,13 @@ measures::measure_collection from_fbs(
       case Measure_RtUpdateMeasure: {
         auto const m = from_fbs(
             sched, reinterpret_cast<RtUpdateMeasure const*>(fm->measure()));
+        res[m.time_].emplace_back(m);
+        break;
+      }
+      case Measure_UpdateCapacitiesMeasure: {
+        auto const m = from_fbs(
+            sched,
+            reinterpret_cast<UpdateCapacitiesMeasure const*>(fm->measure()));
         res[m.time_].emplace_back(m);
         break;
       }

@@ -290,6 +290,16 @@ export interface PaxMonDistribution {
   pdf: PaxMonPdfEntry[];
 }
 
+// paxmon/PaxMonCapacitySource.fbs
+export type PaxMonCapacitySource =
+  | "TripExactMatch"
+  | "TripPrimaryIdMatch"
+  | "TrainNrAndStations"
+  | "TrainNr"
+  | "Category"
+  | "Class"
+  | "Unknown";
+
 // paxmon/PaxMonTripLoadInfo.fbs
 export type PaxMonCapacityType = "Known" | "Unknown" | "Unlimited";
 
@@ -303,6 +313,7 @@ export interface PaxMonEdgeLoadInfo {
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
   capacity: number;
+  capacity_source: PaxMonCapacitySource;
   dist: PaxMonDistribution;
   updated: boolean;
   possibly_over_capacity: boolean;
@@ -822,6 +833,7 @@ export interface PaxMonCriticalTripInfo {
 export interface PaxMonUpdatedTrip {
   tsi: TripServiceInfo;
   rerouted: boolean;
+  capacity_changed: boolean;
   newly_critical_sections: number;
   no_longer_critical_sections: number;
   max_pax_increase: number;

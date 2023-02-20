@@ -1,4 +1,4 @@
-#include "motis/paxmon/loader/csv/csv_journeys.h"
+#include "motis/paxmon/loader/csv_journeys/csv_journeys.h"
 
 #include <cstdlib>
 #include <algorithm>
@@ -34,8 +34,8 @@
 
 #include "motis/paxmon/access/groups.h"
 #include "motis/paxmon/compact_journey_util.h"
-#include "motis/paxmon/loader/csv/motis_row.h"
-#include "motis/paxmon/loader/csv/trek_row.h"
+#include "motis/paxmon/loader/csv_journeys/motis_row.h"
+#include "motis/paxmon/loader/csv_journeys/trek_row.h"
 #include "motis/paxmon/tools/groups/group_generator.h"
 #include "motis/paxmon/util/get_station_idx.h"
 #include "motis/paxmon/util/interchange_time.h"
@@ -60,7 +60,7 @@ struct fmt::formatter<std::optional<std::pair<std::uint64_t, std::uint64_t>>>
   }
 };
 
-namespace motis::paxmon::loader::csv {
+namespace motis::paxmon::loader::csv_journeys {
 
 enum class csv_format { MOTIS, TREK1, TREK2 };
 
@@ -445,7 +445,6 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,
-                            capacity_maps const& caps,
                             std::string const& journey_file,
                             journey_input_settings const& settings) {
   auto const match_tolerance = settings.match_tolerance_;
@@ -543,10 +542,10 @@ loader_result load_journeys(schedule const& sched, universe& uv,
           ++tpg.source_.secondary_ref_;
           distributed += group_size;
           tpg.passengers_ = group_size;
-          add_passenger_group(uv, sched, caps, tpg, false);
+          add_passenger_group(uv, sched, tpg, false);
         }
       } else {
-        add_passenger_group(uv, sched, caps, tpg, false);
+        add_passenger_group(uv, sched, tpg, false);
       }
     } else {
       if (!all_trips_found) {
@@ -707,4 +706,4 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   return result;
 }
 
-}  // namespace motis::paxmon::loader::csv
+}  // namespace motis::paxmon::loader::csv_journeys

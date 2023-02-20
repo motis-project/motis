@@ -9,9 +9,8 @@
 namespace motis::paxmon {
 
 passenger_group* add_passenger_group(
-    universe& uv, schedule const& sched, capacity_maps const& caps,
-    temp_passenger_group const& tpg, bool log,
-    pci_log_reason_t reason = pci_log_reason_t::UNKNOWN);
+    universe& uv, schedule const& sched, temp_passenger_group const& tpg,
+    bool log, pci_log_reason_t reason = pci_log_reason_t::UNKNOWN);
 
 struct add_group_route_result {
   passenger_group_with_route pgwr_{};
@@ -21,7 +20,6 @@ struct add_group_route_result {
 };
 
 add_group_route_result add_group_route(universe& uv, schedule const& sched,
-                                       capacity_maps const& caps,
                                        passenger_group_index pgi,
                                        temp_group_route const& tgr,
                                        bool override_probabilities, bool log,

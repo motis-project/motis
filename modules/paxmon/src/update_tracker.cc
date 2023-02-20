@@ -64,6 +64,7 @@ struct update_tracker::impl {
     int max_pax_increase_{};
     int max_pax_decrease_{};
     bool rerouted_{};
+    bool capacity_changed_{};
   };
 
   impl(universe const& uv, schedule const& sched,
@@ -105,6 +106,11 @@ struct update_tracker::impl {
   void before_trip_rerouted(trip const* trp) {
     auto& uti = get_or_create_updated_trip_info(trp->trip_idx_);
     uti.rerouted_ = true;
+  }
+
+  void before_trip_capacity_changed(trip_idx_t const ti) {
+    auto& uti = get_or_create_updated_trip_info(ti);
+    uti.capacity_changed_ = true;
   }
 
   std::pair<motis::module::message_creator&, Offset<PaxMonTrackedUpdates>>
@@ -308,9 +314,9 @@ private:
 
     return CreatePaxMonUpdatedTrip(
         mc_, to_fbs_trip_service_info(mc_, sched_, trp), uti.rerouted_,
-        uti.newly_critical_sections_, uti.no_longer_critical_sections_,
-        uti.max_pax_increase_, uti.max_pax_decrease_,
-        get_fbs_critical_trip_info(uti.before_cti_),
+        uti.capacity_changed_, uti.newly_critical_sections_,
+        uti.no_longer_critical_sections_, uti.max_pax_increase_,
+        uti.max_pax_decrease_, get_fbs_critical_trip_info(uti.before_cti_),
         get_fbs_critical_trip_info(uti.after_cti_),
         mc_.CreateVectorOfStructs(
             utl::to_vec(uti.updated_group_routes_,
@@ -404,6 +410,12 @@ void update_tracker::after_group_route_updated(
 void update_tracker::before_trip_load_updated(trip_idx_t const ti) {
   if (impl_) {
     impl_->before_trip_load_updated(ti);
+  }
+}
+
+void update_tracker::before_trip_capacity_changed(trip_idx_t const ti) {
+  if (impl_) {
+    impl_->before_trip_capacity_changed(ti);
   }
 }
 

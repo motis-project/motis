@@ -83,17 +83,30 @@ export interface RtUpdateMeasure {
 }
 
 // paxforecast/Measures.fbs
+export interface UpdateCapacitiesMeasure {
+  time: number;
+  file_contents: string[];
+  remove_existing_trip_capacities: boolean;
+  remove_existing_category_capacities: boolean;
+  remove_existing_vehicle_capacities: boolean;
+  remove_existing_trip_formations: boolean;
+  track_trip_updates: boolean;
+}
+
+// paxforecast/Measures.fbs
 export type Measure =
   | TripLoadInfoMeasure
   | TripRecommendationMeasure
   | TripLoadRecommendationMeasure
-  | RtUpdateMeasure;
+  | RtUpdateMeasure
+  | UpdateCapacitiesMeasure;
 
 export type MeasureType =
   | "TripLoadInfoMeasure"
   | "TripRecommendationMeasure"
   | "TripLoadRecommendationMeasure"
-  | "RtUpdateMeasure";
+  | "RtUpdateMeasure"
+  | "UpdateCapacitiesMeasure";
 
 // paxforecast/Measures.fbs
 export interface MeasureWrapper {
@@ -128,6 +141,7 @@ export interface PaxForecastApplyMeasuresStatistics {
   t_behavior_simulation: number;
   t_update_groups: number;
   t_update_tracker: number;
+  t_update_capacities: number;
 }
 
 // paxforecast/PaxForecastApplyMeasuresResponse.fbs

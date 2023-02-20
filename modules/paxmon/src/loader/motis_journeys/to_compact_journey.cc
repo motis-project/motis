@@ -1,10 +1,10 @@
-#include "motis/paxmon/loader/journeys/to_compact_journey.h"
+#include "motis/paxmon/loader/motis_journeys/to_compact_journey.h"
 
 #include "utl/verify.h"
 
 #include "motis/core/access/station_access.h"
 
-#include "motis/paxmon/loader/journeys/journey_access.h"
+#include "motis/paxmon/loader/motis_journeys/journey_access.h"
 
 namespace motis::paxmon {
 

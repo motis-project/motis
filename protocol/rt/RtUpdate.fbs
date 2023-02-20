@@ -2,6 +2,7 @@ include "base/TripId.fbs";
 include "base/TimestampReason.fbs";
 include "base/EventType.fbs";
 include "base/Connection.fbs";
+include "ris/TripFormationMessage.fbs";
 
 namespace motis.rt;
 
@@ -70,7 +71,8 @@ union Content {
   RtTrackUpdate,
   RtFreeTextUpdate,
   RtStationAdded,
-  RtExpandedTripUpdate
+  RtExpandedTripUpdate,
+  motis.ris.TripFormationMessage
 }
 
 table RtUpdate {

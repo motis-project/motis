@@ -142,8 +142,8 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         before_journey_load_updated(uv, tgr.journey_);
       }
       auto const result =
-          add_group_route(uv, sched, data.capacity_maps_, pgi, tgr,
-                          override_probabilities, true, pci_log_reason_t::API);
+          add_group_route(uv, sched, pgi, tgr, override_probabilities, true,
+                          pci_log_reason_t::API);
       auto const previous_probability =
           lei.extended_entry_ && result.pgwr_.route_ == old_route_idx &&
                   result.previous_probability_ == 0.0F

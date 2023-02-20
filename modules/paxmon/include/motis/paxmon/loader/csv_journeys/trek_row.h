@@ -5,7 +5,7 @@
 #include "utl/parser/cstr.h"
 #include "utl/parser/csv_range.h"
 
-namespace motis::paxmon::loader::csv {
+namespace motis::paxmon::loader::csv_journeys {
 
 struct trek1_row {
   utl::csv_col<std::uint64_t, UTL_NAME("Id")> id_;
@@ -33,4 +33,4 @@ struct trek2_row {
   utl::csv_col<utl::cstr, UTL_NAME("AUSSTIEG_BHF_EVA_NUMMER")> to_;
 };
 
-}  // namespace motis::paxmon::loader::csv
+}  // namespace motis::paxmon::loader::csv_journeys

@@ -23,6 +23,7 @@
 #include "motis/core/journey/extern_trip.h"
 #include "motis/module/global_res_ids.h"
 
+#include "motis/paxmon/capacity.h"
 #include "motis/paxmon/capacity_data.h"
 #include "motis/paxmon/edge_type.h"
 #include "motis/paxmon/graph_index.h"
@@ -164,6 +165,7 @@ struct universe {
   pci_container pax_connection_info_;
   dynamic_fws_multimap<edge_index> interchanges_at_station_;
   graph_log graph_log_;
+  capacity_maps capacity_maps_;
 
   rt_update_context rt_update_ctx_;
   system_statistics system_stats_;

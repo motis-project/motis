@@ -2,14 +2,17 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   ExclamationTriangleIcon,
+  QuestionMarkCircleIcon,
 } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAtom } from "jotai";
-import { useUpdateAtom } from "jotai/utils";
+import { useAtom, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
-import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
+import {
+  PaxMonCapacitySource,
+  PaxMonEdgeLoadInfo,
+} from "@/api/protocol/motis/paxmon";
 
 import {
   queryKeys,
@@ -52,9 +55,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
     }
   );
 
-  const setMostRecentlySelectedTrip = useUpdateAtom(
-    mostRecentlySelectedTripAtom
-  );
+  const setMostRecentlySelectedTrip = useSetAtom(mostRecentlySelectedTripAtom);
   useEffect(() => {
     if (data && data.load_infos.length > 0) {
       setMostRecentlySelectedTrip(data.load_infos[0].tsi);
@@ -79,6 +80,9 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
     0
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
+  const missingExactCapacityInfo = edges.some(
+    (eli) => eli.capacity_source !== "TripExactMatch"
+  );
 
   const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
 
@@ -123,6 +127,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
             index={idx}
             sectionCount={sectionCount}
             maxVal={maxVal}
+            showCapacitySource={missingExactCapacityInfo}
           />
         ))}
         <Legend />
@@ -137,9 +142,15 @@ type TripSectionProps = {
   index: number;
   sectionCount: number;
   maxVal: number;
+  showCapacitySource: boolean;
 };
 
-function TripSection({ tripId, section, maxVal }: TripSectionProps) {
+function TripSection({
+  tripId,
+  section,
+  maxVal,
+  showCapacitySource,
+}: TripSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const [sectionGraphPlotType] = useAtom(sectionGraphPlotTypeAtom);
 
@@ -223,12 +234,41 @@ function TripSection({ tripId, section, maxVal }: TripSectionProps) {
             />
           </div>
         </div>
+        {showCapacitySource && (
+          <div
+            className="w-7 pt-3 flex justify-center"
+            title={getCapacitySourceTooltip(section.capacity_source)}
+          >
+            {section.capacity_source !== "TripExactMatch" ? (
+              <QuestionMarkCircleIcon className="w-5 h-5 fill-db-cool-gray-500" />
+            ) : null}
+          </div>
+        )}
       </div>
       {expanded ? (
         <TripSectionDetails tripId={tripId} selectedSection={section} />
       ) : null}
     </>
   );
+}
+
+function getCapacitySourceTooltip(cs: PaxMonCapacitySource) {
+  switch (cs) {
+    case "TripExactMatch":
+      return "Kapazitätsinformationen für den Zug gefunden";
+    case "TripPrimaryIdMatch":
+      return "Kapazitätsinformationen für den Zug gefunden (nur Übereinstimmung der primären Trip Id)";
+    case "TrainNrAndStations":
+      return "Kapazitätsinformationen möglicherweise falsch - nur Übereinstimmung der Zugnummer und Start-/Zielstationen";
+    case "TrainNr":
+      return "Kapazitätsinformationen möglicherweise falsch - nur Übereinstimmung der Zugnummer";
+    case "Category":
+      return "Keine zugspezifischen Kapazitätsinformationen vorhanden, Standardwert für Zugkategorie";
+    case "Class":
+      return "Keine zugspezifischen Kapazitätsinformationen vorhanden, Standardwert für Zugklasse";
+    case "Unknown":
+      return "Keine Kapazitätsinformationen vorhanden";
+  }
 }
 
 function Legend() {

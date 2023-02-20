@@ -1,6 +1,6 @@
 import { TrashIcon } from "@heroicons/react/20/solid";
 import { PrimitiveAtom, useAtom } from "jotai";
-import { focusAtom } from "jotai/optics";
+import { focusAtom } from "jotai-optics";
 import React, { useCallback, useMemo } from "react";
 
 import { Station, TripServiceInfo } from "@/api/protocol/motis";

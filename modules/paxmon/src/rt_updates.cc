@@ -17,9 +17,11 @@
 #include "motis/paxmon/print_stats.h"
 #include "motis/paxmon/reachability.h"
 #include "motis/paxmon/track_update.h"
+#include "motis/paxmon/trip_formation_update.h"
 #include "motis/paxmon/update_load.h"
 
 using namespace motis::rt;
+using namespace motis::ris;
 using namespace motis::logging;
 using namespace motis::module;
 
@@ -93,9 +95,8 @@ void check_broken_interchanges(
   }
 }
 
-void handle_rt_update(universe& uv, capacity_maps const& caps,
-                      schedule const& sched, RtUpdates const* update,
-                      int arrival_delay_threshold) {
+void handle_rt_update(universe& uv, schedule const& sched,
+                      RtUpdates const* update, int arrival_delay_threshold) {
   uv.tick_stats_.rt_updates_ += update->updates()->size();
 
   std::vector<edge_index> updated_interchange_edges;
@@ -132,7 +133,7 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
         ++uv.system_stats_.reroute_updates_;
         ++uv.tick_stats_.rt_reroute_updates_;
         auto const ru = reinterpret_cast<RtRerouteUpdate const*>(u->content());
-        update_trip_route(sched, caps, uv, ru, updated_interchange_edges);
+        update_trip_route(sched, uv, ru, updated_interchange_edges);
         break;
       }
       case Content_RtTrackUpdate: {
@@ -143,6 +144,13 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
       }
       case Content_RtFreeTextUpdate: {
         ++uv.tick_stats_.rt_free_text_updates_;
+        break;
+      }
+      case Content_TripFormationMessage: {
+        ++uv.tick_stats_.rt_trip_formation_updates_;
+        auto const tfm =
+            reinterpret_cast<TripFormationMessage const*>(u->content());
+        update_trip_formation(sched, uv, tfm);
         break;
       }
       default: break;

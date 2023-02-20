@@ -1,4 +1,4 @@
-#include "motis/paxmon/loader/journeys/motis_journeys.h"
+#include "motis/paxmon/loader/motis_journeys/motis_journeys.h"
 
 #include "utl/enumerate.h"
 #include "utl/for_each_line_in_file.h"
@@ -8,16 +8,15 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/access/groups.h"
-#include "motis/paxmon/loader/journeys/to_compact_journey.h"
+#include "motis/paxmon/loader/motis_journeys/to_compact_journey.h"
 
 using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::logging;
 
-namespace motis::paxmon::loader::journeys {
+namespace motis::paxmon::loader::motis_journeys {
 
-void load_journey(schedule const& sched, universe& uv,
-                  capacity_maps const& caps, journey const& j,
+void load_journey(schedule const& sched, universe& uv, journey const& j,
                   data_source const& source, std::uint16_t passengers,
                   route_source_flags source_flags) {
   auto const planned_arrival_time = unix_to_motistime(
@@ -28,18 +27,16 @@ void load_journey(schedule const& sched, universe& uv,
                            passengers,
                            {{0, 1.0F, to_compact_journey(j, sched),
                              planned_arrival_time, 0, source_flags, true}}};
-  add_passenger_group(uv, sched, caps, tpg, false);
+  add_passenger_group(uv, sched, tpg, false);
 }
 
 loader_result load_journeys(schedule const& sched, universe& uv,
-                            capacity_maps const& caps,
                             std::string const& journey_file) {
   auto result = loader_result{};
 
   auto add_journey = [&](journey const& j, std::uint64_t primary_ref = 0,
                          std::uint64_t secondary_ref = 0) {
-    load_journey(sched, uv, caps, j, data_source{primary_ref, secondary_ref},
-                 1);
+    load_journey(sched, uv, j, data_source{primary_ref, secondary_ref}, 1);
     ++result.loaded_journeys_;
   };
 
@@ -75,4 +72,4 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   return result;
 }
 
-}  // namespace motis::paxmon::loader::journeys
+}  // namespace motis::paxmon::loader::motis_journeys

@@ -1,0 +1,7 @@
+namespace motis.ris;
+
+table StationInfo {
+  eva:string;
+  ds100:string;
+  name:string;
+}

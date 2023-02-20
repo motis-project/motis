@@ -16,6 +16,7 @@ void stats_writer::write_header() {
        << "rt_reroute_updates"
        << "rt_track_updates"
        << "rt_free_text_updates"
+       << "rt_trip_formation_updates"
        //
        << "rt_delay_event_updates"
        << "rt_delay_is_updates"
@@ -43,8 +44,8 @@ void stats_writer::write_tick(const tick_statistics& ts) {
   csv_ << ts.system_time_
        //
        << ts.rt_updates_ << ts.rt_delay_updates_ << ts.rt_reroute_updates_
-       << ts.rt_track_updates_
-       << ts.rt_free_text_updates_
+       << ts.rt_track_updates_ << ts.rt_free_text_updates_
+       << ts.rt_trip_formation_updates_
        //
        << ts.rt_delay_event_updates_ << ts.rt_delay_is_updates_
        << ts.rt_delay_propagation_updates_ << ts.rt_delay_forecast_updates_
