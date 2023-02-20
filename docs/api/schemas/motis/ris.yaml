@@ -346,3 +346,12 @@ TripFormationMessage:
       description: TODO
     sections:
       description: TODO
+RISApplyResponse:
+  description: TODO
+  fields:
+    new_system_time:
+      description: TODO
+    successful:
+      description: TODO
+    failed:
+      description: TODO

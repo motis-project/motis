@@ -34,9 +34,11 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
+
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
+
 #include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
 #include "motis/ris/gtfs-rt/util.h"
@@ -481,15 +483,27 @@ struct ris::impl {
     auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
 
     publisher pub{schedule_res_id};
+    auto successful = 0ULL;
+    auto failed = 0ULL;
     for (auto const& rim : *req->input_messages()) {
-      parse_and_publish_message(rim, pub);
+      if (parse_and_publish_message(rim, pub)) {
+        ++successful;
+      } else {
+        ++failed;
+      }
     }
 
     pub.flush();
     update_system_time(sched, pub);
 
     publish_system_time_changed(schedule_res_id);
-    return {};
+
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_RISApplyResponse,
+        CreateRISApplyResponse(mc, sched.system_time_, successful, failed)
+            .Union());
+    return make_msg(mc);
   }
 
   struct publisher {
@@ -976,7 +990,7 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_and_publish_message(RISInputMessage const* rim, Publisher& pub) {
+  bool parse_and_publish_message(RISInputMessage const* rim, Publisher& pub) {
     auto content_sv =
         std::string_view{rim->content()->c_str(), rim->content()->size()};
 
@@ -986,12 +1000,10 @@ struct ris::impl {
 
     switch (rim->type()) {
       case RISContentType_RIBasis: {
-        ribasis::to_ris_message(content_sv, handle_message);
-        break;
+        return ribasis::to_ris_message(content_sv, handle_message);
       }
       case RISContentType_RISML: {
-        risml::to_ris_message(content_sv, handle_message);
-        break;
+        return risml::to_ris_message(content_sv, handle_message);
       }
       default: throw utl::fail("ris: unsupported message type");
     }

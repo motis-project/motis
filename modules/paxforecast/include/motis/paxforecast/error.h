@@ -6,7 +6,12 @@
 namespace motis::paxforecast {
 
 namespace error {
-enum error_code_t { ok = 0, unsupported_measure = 1, universe_not_found = 2 };
+enum error_code_t {
+  ok = 0,
+  unsupported_measure = 1,
+  universe_not_found = 2,
+  invalid_rt_update_message = 3
+};
 }  // namespace error
 
 class error_category_impl : public std::error_category {
@@ -19,6 +24,8 @@ public:
       case error::unsupported_measure:
         return "paxforecast: unsupported measure";
       case error::universe_not_found: return "paxforecast: universe not found";
+      case error::invalid_rt_update_message:
+        return "paxforecast: invalid rt update message";
       default: return "paxforecast: unkown error";
     }
   }

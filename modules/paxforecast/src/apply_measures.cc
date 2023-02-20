@@ -14,6 +14,7 @@
 #include "motis/paxmon/loader/capacities/load_capacities.h"
 
 #include "motis/paxforecast/combined_passenger_group.h"
+#include "motis/paxforecast/error.h"
 #include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/paxforecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
@@ -124,11 +125,12 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
               << ", schedule_begin=" << sched.schedule_begin_;
 
     if (contains_rt_updates) {
+      using namespace motis::ris;
       manual_timer rt_timer{"applying rt updates"};
       auto rt_lock =
           mod.lock_resources({{uv.schedule_res_id_, ctx::access_t::WRITE}});
       message_creator mc;
-      std::vector<flatbuffers::Offset<motis::ris::RISInputMessage>> rims;
+      std::vector<flatbuffers::Offset<RISInputMessage>> rims;
       for (auto const& m : ms) {
         if (std::holds_alternative<measures::rt_update>(m)) {
           auto const rtum = std::get<measures::rt_update>(m);
@@ -136,15 +138,21 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
               mc, rtum.type_, mc.CreateString(rtum.content_)));
         }
       }
-      // TODO(pablo): check for errors? -> ri basis parser should throw errors
       mc.create_and_finish(
           MsgContent_RISApplyRequest,
           CreateRISApplyRequest(mc, uv.schedule_res_id_, mc.CreateVector(rims))
               .Union(),
           "/ris/apply");
-      motis_call(make_msg(mc))->val();
+      auto const msg = motis_call(make_msg(mc))->val();
+      auto const result = motis_content(RISApplyResponse, msg);
       rt_timer.stop_and_print();
       t_rt_updates += rt_timer.duration_ms();
+      if (result->failed() != 0) {
+        LOG(warn) << "apply_measures: applying rt updates failed: "
+                  << result->successful() << " successful, " << result->failed()
+                  << " failed";
+        throw std::system_error{error::invalid_rt_update_message};
+      }
     }
 
     manual_timer update_capacities_timer{"update capacities"};

@@ -64,6 +64,7 @@ include "railviz/RailVizTripsRequest.fbs";
 include "revise/ReviseRequest.fbs";
 include "revise/ReviseResponse.fbs";
 include "ris/RISApplyRequest.fbs";
+include "ris/RISApplyResponse.fbs";
 include "ris/RISBatch.fbs";
 include "ris/RISForwardTimeRequest.fbs";
 include "ris/RISGTFSRTMapping.fbs";
@@ -302,7 +303,8 @@ union MsgContent {
   motis.paxmon.PaxMonGroupStatisticsResponse                              = 140,
   motis.paxmon.PaxMonDebugGraphRequest                                    = 141,
   motis.paxmon.PaxMonDebugGraphResponse                                   = 142,
-  motis.paxmon.PaxMonGetUniversesResponse                                 = 143
+  motis.paxmon.PaxMonGetUniversesResponse                                 = 143,
+  motis.ris.RISApplyResponse                                              = 144
 }
 
 // Destination Examples:
