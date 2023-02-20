@@ -83,6 +83,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
         "split_groups_stddev", "standard deviation for split groups size");
   param(journey_input_settings_.split_groups_seed_, "split_groups_seed",
         "rng seed for splitting groups");
+  param(journey_input_settings_.max_station_wait_time_, "max_station_wait_time",
+        "maximum wait time at a station, if exceeded the journey is split into "
+        "separate journeys (minutes, set to 0 to disable)");
 
   param(generated_capacity_file_, "generated_capacity_file",
         "output for generated capacities");
@@ -358,6 +361,7 @@ void paxmon::init(motis::module::registry& reg) {
                     return api::get_universes(data_, msg);
                   },
                   {});
+
   reg.register_op("/paxmon/get_groups",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::get_groups(data_, msg);
