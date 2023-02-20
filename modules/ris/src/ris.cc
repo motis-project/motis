@@ -121,6 +121,12 @@ std::string_view from_unixtime(unixtime const& t) {
   return {reinterpret_cast<char const*>(&t), sizeof(t)};
 }
 
+template <typename Publisher>
+inline void update_system_time(schedule& sched, Publisher const& pub) {
+  sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
+  sched.last_update_timestamp_ = std::time(nullptr);
+}
+
 struct ris::impl {
   /**
    * Extracts the station prefix + directory path from a string formed
@@ -278,8 +284,7 @@ struct ris::impl {
                     file_type::JSON, pub);
               }
 
-              sched->system_time_ = pub.max_timestamp_;
-              sched->last_update_timestamp_ = std::time(nullptr);
+              update_system_time(*sched, pub);
 
               if (rabbitmq_log_enabled_) {
                 rabbitmq_log_file_
@@ -322,8 +327,7 @@ struct ris::impl {
       }
     }
 
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
   }
 
@@ -417,8 +421,7 @@ struct ris::impl {
     parse_str_and_write_to_db(*file_upload_,
                               {content->c_str(), content->size()}, ft, pub);
 
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
@@ -430,8 +433,7 @@ struct ris::impl {
         parse_sequential(sched, in, pub);
       }
     }
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
@@ -484,8 +486,7 @@ struct ris::impl {
     }
 
     pub.flush();
-    sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
 
     publish_system_time_changed(schedule_res_id);
     return {};
@@ -748,8 +749,7 @@ struct ris::impl {
       try {
         parse_file_and_write_to_db(in, path, type, pub);
         if (config_.instant_forward_) {
-          sched.system_time_ = pub.max_timestamp_;
-          sched.last_update_timestamp_ = std::time(nullptr);
+          update_system_time(sched, pub);
           try {
             publish_system_time_changed(pub.schedule_res_id_);
           } catch (std::system_error& e) {
