@@ -107,7 +107,7 @@ function getFilterGroupsRequest(
     filter_by_group_id: filterGroupIds,
     filter_by_data_source: filterDataSources,
     filter_by_train_nr: filterTrainNrs,
-    filter_by_time: selectedDate ? "DepartureOrArrivalTime" : "NoFilter",
+    filter_by_time: selectedDate ? "ActiveTime" : "NoFilter",
     filter_interval: {
       begin: selectedDate ? getUnixTime(selectedDate) : 0,
       end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,

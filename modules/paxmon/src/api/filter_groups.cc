@@ -136,14 +136,15 @@ msg_ptr filter_groups(paxmon_data& data, msg_ptr const& msg) {
   auto check_time_filter = [&](fws_compact_journey const cj) {
     auto const dep = cj.legs().front().enter_time_;
     auto const arr = cj.legs().back().exit_time_;
-    if (time_filter_type == PaxMonFilterGroupsTimeFilter_DepartureTime) {
-      return dep >= filter_interval_begin && dep < filter_interval_end;
-    } else if (time_filter_type ==
-               PaxMonFilterGroupsTimeFilter_DepartureOrArrivalTime) {
-      return (dep >= filter_interval_begin && dep < filter_interval_end) ||
-             (arr >= filter_interval_begin && arr < filter_interval_end);
-    } else {
-      return true;
+    switch (time_filter_type) {
+      case PaxMonFilterGroupsTimeFilter_DepartureTime:
+        return dep >= filter_interval_begin && dep < filter_interval_end;
+      case PaxMonFilterGroupsTimeFilter_DepartureOrArrivalTime:
+        return (dep >= filter_interval_begin && dep < filter_interval_end) ||
+               (arr >= filter_interval_begin && arr < filter_interval_end);
+      case PaxMonFilterGroupsTimeFilter_ActiveTime:
+        return dep <= filter_interval_end && arr >= filter_interval_begin;
+      default: return true;
     }
   };
 

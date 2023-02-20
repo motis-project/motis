@@ -340,7 +340,8 @@ export type PaxMonFilterGroupsSortOrder =
 export type PaxMonFilterGroupsTimeFilter =
   | "NoFilter"
   | "DepartureTime"
-  | "DepartureOrArrivalTime";
+  | "DepartureOrArrivalTime"
+  | "ActiveTime";
 
 // paxmon/PaxMonFilterGroupsRequest.fbs
 export interface PaxMonFilterGroupsRequest {
@@ -393,7 +394,8 @@ export type PaxMonFilterTripsSortOrder =
 export type PaxMonFilterTripsTimeFilter =
   | "NoFilter"
   | "DepartureTime"
-  | "DepartureOrArrivalTime";
+  | "DepartureOrArrivalTime"
+  | "ActiveTime";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {

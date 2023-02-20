@@ -570,6 +570,9 @@ PaxMonFilterTripsTimeFilter:
       in the filter interval
     - `DepartureOrArrivalTime`: The trip id departure or arrival (scheduled departure time at the
       first stop or scheduled arrival time at the last stop) must be in the filter interval
+    - `ActiveTime`: The trip must be active in the filter interval according to the trip id
+      (i.e. the scheduled departure time must be before the interval end and the scheduled
+      arrival time at the last stop must be after the interval begin)
 PaxMonFilterTripsRequest:
   description: Request a list of trips tracked by paxmon
   fields:
