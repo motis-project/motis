@@ -199,13 +199,9 @@ function GroupList(): JSX.Element {
       refetchOnWindowFocus: true,
       keepPreviousData: true,
       staleTime: 60000,
-      enabled: selectedDate != undefined,
     }
   );
 
-  if (selectedDate == undefined && scheduleInfo) {
-    setSelectedDate(fromUnixTime(scheduleInfo.begin));
-  }
   const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
   const maxDate =
     scheduleInfo && minDate
