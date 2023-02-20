@@ -255,6 +255,11 @@ inline capacity_source get_worst_source(capacity_source const a,
                static_cast<std::underlying_type_t<capacity_source>>(b)));
 }
 
+inline std::uint16_t clamp_capacity(capacity_maps const& caps,
+                                    std::uint16_t const capacity) {
+  return std::max(caps.min_capacity_, capacity);
+}
+
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
     ev_key const& ev_key_from, ev_key const& /*ev_key_to*/,
@@ -271,7 +276,8 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
         get_section_capacity(sched, caps, trp, ev_key_from);
     if (section_capacity.has_value()) {
       // section specific capacities include merged trips
-      return {section_capacity->limit(), capacity_source::TRIP_EXACT};
+      return {clamp_capacity(caps, section_capacity->limit()),
+              capacity_source::TRIP_EXACT};
     }
 
     auto const trip_capacity =
@@ -289,7 +295,7 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
   if (some_unknown) {
     return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
   } else {
-    return {capacity, worst_source};
+    return {clamp_capacity(caps, capacity), worst_source};
   }
 }
 

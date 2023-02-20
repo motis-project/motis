@@ -64,6 +64,7 @@ struct capacity_maps {
   trip_uuid_map_t trip_uuid_map_;
 
   int fuzzy_match_max_time_diff_{};  // minutes
+  std::uint16_t min_capacity_{};
 };
 
 std::pair<std::uint16_t, capacity_source> get_capacity(

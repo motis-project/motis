@@ -121,6 +121,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
         "capacity_fuzzy_match_max_time_diff",
         "max allowed departure/arrival time difference in minutes for fuzzy "
         "matching trip capacity data (0 to disable fuzzy matching)");
+  param(min_capacity_, "min_capacity",
+        "minimum capacity override (if capacity data is available but lower "
+        "than this value, the minimum is used)");
 }
 
 paxmon::~paxmon() = default;
@@ -137,6 +140,7 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
   uv->graph_log_.enabled_ = graph_log_enabled_;
   uv->capacity_maps_.fuzzy_match_max_time_diff_ =
       capacity_fuzzy_match_max_time_diff_;
+  uv->capacity_maps_.min_capacity_ = min_capacity_;
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
