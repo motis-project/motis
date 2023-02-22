@@ -78,8 +78,12 @@ void check_broken_interchanges(
         if (gr.probability_ == 0) {
           continue;
         }
-        auto const estimated_delay =
-            estimated_arrival - static_cast<int>(gr.planned_arrival_time_);
+        auto const& final_footpath =
+            uv.passenger_groups_.journey(gr.compact_journey_index_)
+                .final_footpath();
+        auto const estimated_delay = estimated_arrival +
+                                     final_footpath.duration_ -
+                                     static_cast<int>(gr.planned_arrival_time_);
         if (gr.planned_arrival_time_ != INVALID_TIME &&
             estimated_delay >= arrival_delay_threshold) {
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
@@ -240,7 +244,8 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
     if (reachability.ok_) {
       gr.estimated_delay_ = static_cast<std::int16_t>(
           static_cast<int>(
-              reachability.reachable_trips_.back().exit_real_time_) -
+              reachability.reachable_trips_.back().exit_real_time_) +
+          static_cast<int>(cj.final_footpath().duration_) -
           static_cast<int>(gr.planned_arrival_time_));
     }
     MOTIS_STOP_TIMING(reachability);

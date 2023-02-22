@@ -17,8 +17,16 @@ struct journey_trip_segment {
   std::size_t to_{};
 };
 
+struct journey_footpath {
+  unsigned duration_{};
+  journey::stop const& from_;
+  journey::stop const& to_;
+};
+
 std::vector<journey_trip_segment> get_journey_trip_segments(
     journey const& j, std::size_t enter_stop_idx, std::size_t exit_stop_idx);
+
+std::optional<journey_footpath> get_final_journey_footpath(journey const& j);
 
 void for_each_trip(
     journey const& j, schedule const& sched,

@@ -7,7 +7,10 @@
 
 #include "cista/hashing.h"
 
+#include "utl/verify.h"
 #include "utl/zip.h"
+
+#include "motis/vector.h"
 
 #include "motis/core/common/dynamic_fws_multimap.h"
 
@@ -32,6 +35,18 @@ struct journey_leg {
   motis::time enter_time_{0};
   motis::time exit_time_{0};
   std::optional<transfer_info> enter_transfer_;
+};
+
+struct final_footpath {
+  CISTA_COMPARABLE()
+
+  inline bool is_footpath() const {
+    return from_station_id_ != 0 && to_station_id_ != 0;
+  }
+
+  duration duration_{0};
+  unsigned from_station_id_{0};
+  unsigned to_station_id_{0};
 };
 
 template <typename Derived>
@@ -66,8 +81,10 @@ struct compact_journey_base {
 
   inline duration scheduled_duration() const {
     auto const& legs = static_cast<Derived const&>(*this).legs();
-    return !legs.empty() ? legs.back().exit_time_ - legs.front().enter_time_
-                         : 0;
+    auto const& ffp = static_cast<Derived const&>(*this).final_footpath();
+    return (!legs.empty() ? legs.back().exit_time_ - legs.front().enter_time_
+                          : 0) +
+           ffp.duration_;
   }
 
   inline time scheduled_departure_time() const {
@@ -77,7 +94,9 @@ struct compact_journey_base {
 
   inline time scheduled_arrival_time() const {
     auto const& legs = static_cast<Derived const&>(*this).legs();
-    return !legs.empty() ? legs.back().exit_time_ : INVALID_TIME;
+    auto const& ffp = static_cast<Derived const&>(*this).final_footpath();
+    return !legs.empty() ? legs.back().exit_time_ + ffp.duration_
+                         : INVALID_TIME;
   }
 
   cista::hash_t hash() const {
@@ -91,15 +110,21 @@ struct compact_journey_base {
 
 struct compact_journey : public compact_journey_base<compact_journey> {
   compact_journey() = default;
-  explicit compact_journey(std::vector<journey_leg>&& legs)
-      : legs_{std::move(legs)} {}
+  compact_journey(std::vector<journey_leg>&& legs, final_footpath const& ffp)
+      : legs_{std::move(legs)}, final_footpath_{ffp} {}
 
   inline std::vector<journey_leg>& legs() { return legs_; }
   inline std::vector<journey_leg> const& legs() const { return legs_; }
 
-  auto cista_members() noexcept { return std::tie(legs_); }
+  inline struct final_footpath& final_footpath() { return final_footpath_; }
+  inline struct final_footpath const& final_footpath() const {
+    return final_footpath_;
+  }
+
+  auto cista_members() noexcept { return std::tie(legs_, final_footpath_); }
 
   std::vector<journey_leg> legs_;
+  struct final_footpath final_footpath_ {};
 };
 
 struct fws_compact_journey : public compact_journey_base<fws_compact_journey> {
@@ -107,14 +132,20 @@ struct fws_compact_journey : public compact_journey_base<fws_compact_journey> {
   using bucket_type = typename fws_type::const_bucket;
   using index_type = typename fws_type::size_type;
 
-  explicit fws_compact_journey(bucket_type const& bucket) : bucket_{bucket} {}
+  fws_compact_journey(bucket_type const& bucket,
+                      mcd::vector<final_footpath> const& ffp_vector)
+      : bucket_{bucket}, ffp_vector_{ffp_vector} {}
 
   inline bucket_type const& legs() const { return bucket_; }
   inline index_type index() const { return bucket_.index(); }
+  inline struct final_footpath const& final_footpath() const {
+    return ffp_vector_.at(index());
+  }
 
-  auto cista_members() noexcept { return std::tie(bucket_); }
+  auto cista_members() noexcept { return std::tie(bucket_, ffp_vector_); }
 
   bucket_type const bucket_;
+  mcd::vector<struct final_footpath> const& ffp_vector_;
 };
 
 inline compact_journey to_compact_journey(compact_journey const& cj) {
@@ -123,17 +154,23 @@ inline compact_journey to_compact_journey(compact_journey const& cj) {
 
 inline compact_journey to_compact_journey(fws_compact_journey const& cj) {
   return compact_journey{
-      std::vector<journey_leg>(cj.legs().begin(), cj.legs().end())};
+      std::vector<journey_leg>(cj.legs().begin(), cj.legs().end()),
+      cj.final_footpath()};
 }
 
 inline fws_compact_journey to_fws_compact_journey(
-    typename fws_compact_journey::fws_type& fws, compact_journey const& cj) {
+    typename fws_compact_journey::fws_type& fws,
+    mcd::vector<final_footpath>& ffp_vector, compact_journey const& cj) {
   auto bucket = fws.emplace_back();
   bucket.reserve(cj.legs().size());
   for (auto const& leg : cj.legs()) {
     bucket.push_back(leg);
   }
-  return fws_compact_journey{bucket};
+  auto const index = bucket.index();
+  ffp_vector.emplace_back(cj.final_footpath());
+  utl::verify(ffp_vector.size() == index + 1,
+              "to_fws_compact_journey: vector size mismatch");
+  return fws_compact_journey{bucket, ffp_vector};
 }
 
 }  // namespace motis::paxmon

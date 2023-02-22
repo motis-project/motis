@@ -75,28 +75,65 @@ journey_leg from_fbs(schedule const& sched,
           from_fbs(leg->enter_transfer())};
 }
 
+Offset<Vector<Offset<PaxMonFootpath>>> final_footpath_to_fbs(
+    schedule const& sched, FlatBufferBuilder& fbb, final_footpath const& fp) {
+  if (fp.is_footpath()) {
+    return fbb.CreateVector(
+        std::vector<Offset<PaxMonFootpath>>{CreatePaxMonFootpath(
+            fbb, fp.duration_,
+            to_fbs(fbb, *sched.stations_[fp.from_station_id_]),
+            to_fbs(fbb, *sched.stations_[fp.to_station_id_]))});
+  } else {
+    return fbb.CreateVector(std::vector<Offset<PaxMonFootpath>>{});
+  }
+}
+
+final_footpath final_footpath_from_fbs(
+    schedule const& sched, Vector<Offset<PaxMonFootpath>> const* opt) {
+  auto fp = final_footpath{};
+  if (opt->size() == 1) {
+    auto const* fbs_fp = opt->Get(0);
+    fp.duration_ = fbs_fp->duration();
+    fp.from_station_id_ =
+        get_station(sched, fbs_fp->from_station()->id()->str())->index_;
+    fp.to_station_id_ =
+        get_station(sched, fbs_fp->to_station()->id()->str())->index_;
+  } else {
+    utl::verify(opt->size() == 0,
+                "invalid optional PaxMonFootpath: {} entries (expected 0 or 1)",
+                opt->size());
+  }
+  return fp;
+}
+
 Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
                                     FlatBufferBuilder& fbb,
                                     compact_journey const& cj) {
   return CreatePaxMonCompactJourney(
-      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
-        return to_fbs(sched, fbb, leg);
-      })));
+      fbb,
+      fbb.CreateVector(utl::to_vec(
+          cj.legs(),
+          [&](journey_leg const& leg) { return to_fbs(sched, fbb, leg); })),
+      final_footpath_to_fbs(sched, fbb, cj.final_footpath()));
 }
 
 Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
                                     FlatBufferBuilder& fbb,
                                     fws_compact_journey const& cj) {
   return CreatePaxMonCompactJourney(
-      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
-        return to_fbs(sched, fbb, leg);
-      })));
+      fbb,
+      fbb.CreateVector(utl::to_vec(
+          cj.legs(),
+          [&](journey_leg const& leg) { return to_fbs(sched, fbb, leg); })),
+      final_footpath_to_fbs(sched, fbb, cj.final_footpath()));
 }
 
 compact_journey from_fbs(schedule const& sched,
                          PaxMonCompactJourney const* cj) {
-  return compact_journey{utl::to_vec(
-      *cj->legs(), [&](auto const& leg) { return from_fbs(sched, leg); })};
+  return compact_journey{
+      utl::to_vec(*cj->legs(),
+                  [&](auto const& leg) { return from_fbs(sched, leg); }),
+      final_footpath_from_fbs(sched, cj->final_footpath())};
 }
 
 Offset<PaxMonDataSource> to_fbs(FlatBufferBuilder& fbb, data_source const& ds) {

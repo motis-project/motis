@@ -36,7 +36,17 @@ compact_journey to_compact_journey(journey const& j, schedule const& sched) {
   journey_to_cj_legs(j, sched,
                      [&](journey_leg&& leg) { cj.legs_.emplace_back(leg); });
 
-  utl::verify(!cj.legs_.empty(), "to_compact_journey: empty journey");
+  auto const ffp = get_final_journey_footpath(j);
+  if (ffp) {
+    cj.final_footpath_.duration_ = ffp->duration_;
+    cj.final_footpath_.from_station_id_ =
+        get_station(sched, ffp->from_.eva_no_)->index_;
+    cj.final_footpath_.to_station_id_ =
+        get_station(sched, ffp->to_.eva_no_)->index_;
+  }
+
+  utl::verify(!cj.legs().empty() || cj.final_footpath().is_footpath(),
+              "to_compact_journey: empty journey");
 
   return cj;
 }

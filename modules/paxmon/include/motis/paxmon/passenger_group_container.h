@@ -174,7 +174,7 @@ struct passenger_group_container {
 
       for (auto const& gr : group_routes_.at(pgi)) {
         route_edges_.at(gr.edges_index_).clear();
-        compact_journeys_.at(gr.compact_journey_index_).clear();
+        compact_journey_legs_.at(gr.compact_journey_index_).clear();
       }
       group_routes_.at(pgi).clear();
 
@@ -239,7 +239,7 @@ struct passenger_group_container {
   }
 
   fws_compact_journey journey(compact_journey_index const cji) const {
-    return fws_compact_journey{compact_journeys_.at(cji)};
+    return fws_compact_journey{compact_journey_legs_.at(cji), final_footpaths_};
   }
 
   auto routes(passenger_group_index const pgi) const {
@@ -283,7 +283,8 @@ struct passenger_group_container {
   dynamic_fws_multimap<group_route> group_routes_;
 
   // index: compact_journey_index
-  dynamic_fws_multimap<journey_leg> compact_journeys_;
+  dynamic_fws_multimap<journey_leg> compact_journey_legs_;
+  mcd::vector<final_footpath> final_footpaths_;
 
   // index: group_route_edges_index
   dynamic_fws_multimap<edge_index> route_edges_;

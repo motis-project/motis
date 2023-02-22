@@ -34,14 +34,20 @@ PaxMonCompactJourneyLeg:
     enter_transfer:
       description: Information about the transfer from the previous trip to this trip
 PaxMonCompactJourney:
-  description: >
+  description: |
     A compact journey consists of a list of journey legs, where each
     leg represents the usage of a trip. Information about the transfers between
     the trips is also included, but no further information such as current
     timestamps or intermediate stops.
+
+    The journey may include a footpath at the end.
   fields:
     legs:
       description: An ordered list of journey legs
+    final_footpath:
+      description: |
+        A footpath used at the end of the journey - Optional (contains either
+        0 or 1 element)
 PaxMonRerouteReason:
   description: |
     The reason for the passenger group reroute.
@@ -1387,3 +1393,12 @@ PaxMonCapacitySource:
     - `Class`: No capacity information for this exact trip was found,
       so a default capacity for the class was used.
     - `Unknown`: No capacity information was found.
+PaxMonFootpath:
+  description: TODO
+  fields:
+    duration:
+      description: Duration of the footpath in minutes.
+    from_station:
+      description: TODO
+    to_station:
+      description: TODO

@@ -114,8 +114,10 @@ add_group_route_to_graph_result add_group_route_to_graph(
           exit_node = to->index_;
           last_trip = tdi;
           exit_found = true;
-          result.scheduled_arrival_time_ = to->schedule_time_;
-          result.current_arrival_time_ = to->time_;
+          auto const& final_footpath = cj.final_footpath();
+          result.scheduled_arrival_time_ =
+              to->schedule_time_ + final_footpath.duration_;
+          result.current_arrival_time_ = to->time_ + final_footpath.duration_;
           break;
         }
       }

@@ -16,6 +16,7 @@ import { Link, useParams } from "react-router-dom";
 
 import {
   PaxMonAtStation,
+  PaxMonCompactJourney,
   PaxMonCompactJourneyLeg,
   PaxMonGroup,
   PaxMonGroupRoute,
@@ -196,6 +197,7 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
             {route.journey.legs.map((leg, idx) => (
               <JourneyLeg key={idx} leg={leg} index={idx} />
             ))}
+            <FinalFootpath journey={route.journey} />
           </tbody>
         </table>
       </div>
@@ -234,6 +236,36 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
       </td>
     </tr>
   );
+}
+
+type FinalFootpathProps = {
+  journey: PaxMonCompactJourney;
+};
+
+function FinalFootpath({ journey }: FinalFootpathProps) {
+  if (journey.final_footpath.length === 1 && journey.legs.length > 0) {
+    const fp = journey.final_footpath[0];
+    const lastLeg = journey.legs[journey.legs.length - 1];
+    return (
+      <tr>
+        <td className="pr-2">{journey.legs.length + 1}.</td>
+        <td className="pr-2">Fußweg</td>
+        <td className="pr-2">{formatShortDuration(fp.duration)}</td>
+        <td className="pr-2">{formatDateTime(lastLeg.exit_time)}</td>
+        <td className="pr-2" title={fp.from_station.id}>
+          {fp.from_station.name}
+        </td>
+        <td className="pr-2">
+          {formatDateTime(lastLeg.exit_time + 60 * fp.duration)}
+        </td>
+        <td className="" title={fp.to_station.id}>
+          {fp.to_station.name}
+        </td>
+      </tr>
+    );
+  } else {
+    return null;
+  }
 }
 
 function requiresTransfer(ti: PaxMonTransferInfo) {

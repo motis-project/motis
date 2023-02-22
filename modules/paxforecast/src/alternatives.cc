@@ -242,7 +242,7 @@ std::vector<journey> find_alternative_journeys(
   auto alternatives = message_to_journeys(response);
   // TODO(pablo): alternatives without trips?
   utl::erase_if(alternatives, [](journey const& j) {
-    return j.stops_.empty() || j.trips_.empty();
+    return j.stops_.size() < 2;
   });
   std::sort(
       begin(alternatives), end(alternatives),

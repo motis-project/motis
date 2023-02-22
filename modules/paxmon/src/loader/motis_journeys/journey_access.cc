@@ -161,4 +161,15 @@ void for_each_trip(
   }
 }
 
+std::optional<journey_footpath> get_final_journey_footpath(journey const& j) {
+  if (!j.transports_.empty()) {
+    auto const& last_transport = j.transports_.back();
+    if (last_transport.is_walk_) {
+      return {{last_transport.duration_, j.stops_.at(last_transport.from_),
+               j.stops_.at(last_transport.to_)}};
+    }
+  }
+  return {};
+}
+
 }  // namespace motis::paxmon
