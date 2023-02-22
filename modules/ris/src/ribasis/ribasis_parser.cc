@@ -24,7 +24,7 @@ using namespace motis::json;
 
 namespace motis::ris::ribasis {
 
-void to_ris_message(std::string_view s,
+bool to_ris_message(std::string_view s,
                     const std::function<void(ris_message&&)>& cb,
                     std::string const& tag) {
   utl::verify(tag.empty(), "RI Basis does not support multi-schedule");
@@ -35,7 +35,7 @@ void to_ris_message(std::string_view s,
     LOG(error) << "RI Basis: Bad JSON: "
                << rapidjson::GetParseError_En(doc.GetParseError())
                << " at offset " << doc.GetErrorOffset();
-    return;
+    return false;
   }
 
   try {
@@ -51,7 +51,7 @@ void to_ris_message(std::string_view s,
       formation::parse_ribasis_formation(ctx, data);
     } else {
       LOG(error) << "invalid/unsupported RI Basis message";
-      return;
+      return false;
     }
 
     utl::verify(ctx.earliest_ != std::numeric_limits<unixtime>::max(),
@@ -62,7 +62,9 @@ void to_ris_message(std::string_view s,
                    std::move(ctx.b_)});
   } catch (std::runtime_error const& e) {
     LOG(error) << "unable to parse RI Basis message: " << e.what();
+    return false;
   }
+  return true;
 }
 
 std::vector<ris_message> parse(std::string_view s, std::string const& tag) {

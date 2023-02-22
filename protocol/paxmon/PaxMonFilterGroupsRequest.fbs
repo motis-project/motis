@@ -16,7 +16,8 @@ enum PaxMonFilterGroupsSortOrder : byte {
 enum PaxMonFilterGroupsTimeFilter : byte {
   NoFilter, // don't filter based on time
   DepartureTime, // scheduled departure must be in interval
-  DepartureOrArrivalTime // scheduled departure or arrival must be in interval
+  DepartureOrArrivalTime, // scheduled departure or arrival must be in interval
+  ActiveTime // group must be active in interval according to scheduled times
 }
 
 table PaxMonFilterGroupsRequest {

@@ -480,6 +480,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   auto current_id = std::optional<id_t>{};
   auto current_input_legs = std::vector<input_journey_leg>{};
   std::uint16_t current_passengers = 0;
+  auto const check_station_wait_time = settings.max_station_wait_time_ != 0;
 
   auto const add_journey = [&](std::size_t start_idx, std::size_t end_idx,
                                route_source_flags source_flags) {
@@ -602,6 +603,16 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       if (!leg.stations_found() || !leg.valid_times()) {
         add_journey(subset_start, i, source_flags);
         subset_start = i + 1;
+      } else if (check_station_wait_time && i > subset_start) {
+        auto const& prev_leg = current_input_legs[i - 1];
+        if (prev_leg.stations_found() && prev_leg.valid_times()) {
+          auto const wait_time = leg.enter_time_ - prev_leg.exit_time_;
+          if (wait_time > settings.max_station_wait_time_) {
+            source_flags |= route_source_flags::MATCH_JOURNEY_SUBSET;
+            add_journey(subset_start, i - 1, source_flags);
+            subset_start = i;
+          }
+        }
       }
     }
     add_journey(subset_start, current_input_legs.size(), source_flags);
