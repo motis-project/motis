@@ -44,6 +44,10 @@ struct final_footpath {
     return from_station_id_ != 0 && to_station_id_ != 0;
   }
 
+  cista::hash_t hash() const {
+    return cista::build_hash(duration_, from_station_id_, to_station_id_);
+  }
+
   duration duration_{0};
   unsigned from_station_id_{0};
   unsigned to_station_id_{0};
@@ -63,7 +67,10 @@ struct compact_journey_base {
         return false;
       }
     }
-    return true;
+    auto const& this_ffp = static_cast<Derived const&>(*this).final_footpath();
+    auto const& other_ffp =
+        static_cast<OtherDerived const&>(o).final_footpath();
+    return this_ffp == other_ffp;
   }
 
   template <typename OtherDerived>
@@ -76,7 +83,12 @@ struct compact_journey_base {
   }
 
   inline unsigned destination_station_id() const {
-    return static_cast<Derived const&>(*this).legs().back().exit_station_id_;
+    auto const& ffp = static_cast<Derived const&>(*this).final_footpath();
+    if (ffp.is_footpath()) {
+      return ffp.to_station_id_;
+    } else {
+      return static_cast<Derived const&>(*this).legs().back().exit_station_id_;
+    }
   }
 
   inline duration scheduled_duration() const {
@@ -104,6 +116,8 @@ struct compact_journey_base {
     for (auto const& leg : static_cast<Derived const&>(*this).legs()) {
       h = cista::hash_combine(h, leg.hash());
     }
+    h = cista::hash_combine(
+        h, static_cast<Derived const&>(*this).final_footpath().hash());
     return h;
   }
 };

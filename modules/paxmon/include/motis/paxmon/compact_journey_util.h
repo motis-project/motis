@@ -152,6 +152,7 @@ inline compact_journey get_suffix(schedule const& sched,
     }
   }
 
+  suffix.final_footpath_ = cj.final_footpath();
   return suffix;
 }
 
