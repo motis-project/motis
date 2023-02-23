@@ -60,35 +60,43 @@ void check_broken_interchanges(
         }
         uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
       }
-    } else if (ice->broken_) {
-      // interchange valid again
-      ice->broken_ = false;
-      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
-      }
-      for (auto const& pgwr :
-           uv.pax_connection_info_.broken_group_routes(ice->pci_)) {
-        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
-      }
-    } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
-      // check for delayed arrival at destination
-      auto const estimated_arrival = static_cast<int>(from->schedule_time());
-      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        auto const& gr = uv.passenger_groups_.route(pgwr);
-        if (gr.probability_ == 0) {
-          continue;
-        }
-        auto const& final_footpath =
-            uv.passenger_groups_.journey(gr.compact_journey_index_)
-                .final_footpath();
-        auto const estimated_delay = estimated_arrival +
-                                     final_footpath.duration_ -
-                                     static_cast<int>(gr.planned_arrival_time_);
-        if (gr.planned_arrival_time_ != INVALID_TIME &&
-            estimated_delay >= arrival_delay_threshold) {
+    } else {
+      if (ice->broken_) {
+        // interchange valid again
+        ice->broken_ = false;
+        for (auto const& pgwr :
+             uv.pax_connection_info_.group_routes(ice->pci_)) {
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
-        // TODO(pablo): check broken groups
+        for (auto const& pgwr :
+             uv.pax_connection_info_.broken_group_routes(ice->pci_)) {
+          uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
+        }
+      }
+      if (to->station_ == 0) {
+        // update delay + check for delayed arrival at destination
+        auto const check_threshold = arrival_delay_threshold >= 0;
+        auto const estimated_arrival = static_cast<int>(from->current_time());
+        for (auto const& pgwr :
+             uv.pax_connection_info_.group_routes(ice->pci_)) {
+          auto& gr = uv.passenger_groups_.route(pgwr);
+          if (gr.planned_arrival_time_ == INVALID_TIME) {
+            continue;
+          }
+          auto const& final_footpath =
+              uv.passenger_groups_.journey(gr.compact_journey_index_)
+                  .final_footpath();
+          auto const estimated_delay = static_cast<std::int16_t>(
+              estimated_arrival + static_cast<int>(final_footpath.duration_) -
+              static_cast<int>(gr.planned_arrival_time_));
+          gr.estimated_delay_ = estimated_delay;
+          if (check_threshold && gr.probability_ != 0 &&
+              estimated_delay >= arrival_delay_threshold) {
+            uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(
+                pgwr);
+          }
+          // TODO(pablo): check broken groups
+        }
       }
     }
     if (uv.graph_log_.enabled_) {
