@@ -3,6 +3,12 @@
 import sys
 import subprocess
 
+def query_f(id, router):
+    return f"{id}_queries_{router}.json"
+
+def result_f(id, router):
+    return f"{id}_responses_{router}.json"
+
 if len(sys.argv) < 3:
     print(f"usage: {sys.argv[0]} ID START_TIME")
 else:
@@ -12,16 +18,15 @@ else:
 
     run_nigiri = [
         "./motis",
-        "-c", "config-intermodal.ini",
         "--modules", "nigiri", "intermodal", "lookup", "osrm",
         "--dataset.write_serialized=false",
         "--dataset.cache_graph=false",
         "--dataset.read_graph=false",
         "--nigiri.no_cache=true",
-        "--import.paths", "schedule:input/{}".format(id), "osm:input/osm.pbf",
+        "--import.paths", "schedule:input-{}".format(id), "osm:input/osm.pbf",
         "--import.data_dir=data_{}".format(id),
-        "--batch_input_file=fail/{}_intermodal_queries_nigiri_fail.json".format(id),
-        "--batch_output_file={}_intermodal_responses_nigiri_fail.json".format(id),
+        f"--batch_input_file=fail/{query_f(id, routers[1])}",
+        f"--batch_output_file={result_f(id, routers[1])}",
         "--num_threads", "1"
     ]
     print("NIGIRI_CMD:", " ".join(run_nigiri))
