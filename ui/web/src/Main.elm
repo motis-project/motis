@@ -1412,6 +1412,9 @@ sendOSRMViaRouteRequest remoteAddress walk journeyIdx =
                 "car" ->
                     "car"
 
+                "ondemand" ->
+                    "car"
+
                 _ ->
                     "foot"
     in

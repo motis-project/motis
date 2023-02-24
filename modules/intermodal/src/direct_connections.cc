@@ -126,6 +126,12 @@ osrm_settings get_osrm_settings(Vector<Offset<ModeWrapper>> const* modes) {
           settings.max_distance_ = settings.max_duration_ * CAR_SPEED;
           break;
         }
+        case Mode_OnDemand: {
+          settings.max_duration_ =
+              reinterpret_cast<OnDemand const*>(m->mode())->max_duration();
+          settings.max_distance_ = settings.max_duration_ * CAR_SPEED;
+          break;
+        }
         case Mode_Foot: {
           settings.max_duration_ =
               reinterpret_cast<Foot const*>(m->mode())->max_duration();
@@ -248,6 +254,27 @@ std::vector<direct_connection> get_direct_connections(
     }));
   }
 
+  auto const osrm_ondemand_settings = get_direct_osrm_settings<Mode_OnDemand>(req);
+  if (osrm_ondemand_settings.max_duration_ > 0 &&
+      beeline <= osrm_ondemand_settings.max_distance_) {
+    futures.emplace_back(spawn_job_void([&]() {
+      auto const osrm_msg =
+          motis_call(make_direct_osrm_request(q_start.pos_, q_dest.pos_,
+                                              to_string(mumo_type::CAR),
+                                              req->search_dir()))
+              ->val();
+      auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
+      utl::verify(osrm_resp->costs()->size() == 1,
+                  "direct connetions: invalid osrm response");
+      auto const duration =
+          static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
+      if (duration <= osrm_ondemand_settings.max_duration_) {
+        std::lock_guard guard{direct_mutex};
+        direct.emplace_back(mumo_type::ON_DEMAND, static_cast<int>(std::round(duration * 1.5) / 60), 0);
+      }
+    }));
+  }
+
   ctx::await_all(futures);
 
   for (auto const& [i, e] : utl::enumerate(edge_mapping)) {
@@ -312,7 +339,11 @@ void add_direct_connections(std::vector<journey>& journeys,
     transport.duration_ = d.duration_;
     transport.mumo_accessibility_ = d.accessibility_;
     transport.mumo_type_ = to_string(d.type_);
-    transport.mumo_id_ = d.mumo_id_;
+    if(transport.mumo_type_ == to_string(mumo_type::ON_DEMAND)) {
+      transport.mumo_id_ = 1;
+    } else {
+      transport.mumo_id_ = d.mumo_id_;
+    }
   }
 }
 

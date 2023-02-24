@@ -1,0 +1,30 @@
+#pragma once
+
+#include "boost/asio/io_service.hpp"
+#include "test_server.h"
+namespace motis::intermodal {
+
+struct test_server {
+  test_server(boost::asio::io_service&, std::vector<std::string>&);
+  ~test_server();
+
+  test_server(test_server&&) = default;
+  test_server& operator = (test_server&&) = default;
+
+  test_server(test_server const&) = delete;
+  test_server& operator = (test_server const&) = delete;
+
+  void listen_tome(std::string const&, std::string const&,
+                   boost::system::error_code&);
+
+  std::string create_resbody(net::test_server::http_req_t const&, bool, int);
+
+  void stop_it();
+
+private:
+  struct impl;
+  std::unique_ptr<impl> impl_;
+};
+
+
+} // namespace motis::intermodal

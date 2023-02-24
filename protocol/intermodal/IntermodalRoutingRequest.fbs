@@ -71,6 +71,10 @@ table CarParking {
   ppr_search_options: ppr.SearchOptions;
 }
 
+table OnDemand {
+  max_duration: int;
+}
+
 table GBFS {
   provider: string;
   max_walk_duration: int;
@@ -83,6 +87,7 @@ union Mode {
   Car,
   FootPPR,
   CarParking,
+  OnDemand,
   GBFS
 }
 

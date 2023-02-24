@@ -5,6 +5,8 @@
 #include "motis/routing/label/criteria/accessibility.h"
 #include "motis/routing/label/criteria/late_connections.h"
 #include "motis/routing/label/criteria/no_intercity.h"
+#include "motis/routing/label/criteria/ondemand.h"
+#include "motis/routing/label/criteria/ondemand_with_duration_cost.h"
 #include "motis/routing/label/criteria/transfers.h"
 #include "motis/routing/label/criteria/travel_time.h"
 #include "motis/routing/label/criteria/weighted.h"
@@ -99,5 +101,52 @@ using accessibility_label =
           dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
                     transfers_dominance, accessibility_dominance>,
           comparator<transfers_dominance, accessibility_dominance>>;
+
+template <search_dir Dir>
+using ondemand_weighted_label =
+    label<Dir, MAX_WEIGHTED, false, get_weighted_lb, label_data<weighted, ondemand>,
+          initializer<weighted_initializer, ondemand_initializer>,
+          updater<weighted_updater, ondemand_updater>, filter<weighted_filter>,
+          dominance<default_tb, weighted_dominance, ondemand_dominance>,
+          dominance<post_search_tb>, comparator<weighted_dominance>>;
+
+template <search_dir Dir>
+using ondemand_label = label<
+    Dir, MAX_TRAVEL_TIME, false, get_travel_time_lb,
+    label_data<travel_time, transfers, ondemand, absurdity>,
+    initializer<travel_time_initializer, transfers_initializer,
+                ondemand_initializer, absurdity_initializer>,
+    updater<travel_time_updater, transfers_updater, ondemand_updater,
+            absurdity_updater>,
+    filter<travel_time_filter, transfers_filter>,
+    dominance<absurdity_tb, travel_time_dominance, transfers_dominance,
+              ondemand_dominance>,
+    dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
+              transfers_dominance>,
+    comparator<transfers_dominance>>;
+
+template <search_dir Dir>
+using ondemand_with_duration_cost_label = label<
+    Dir, MAX_TRAVEL_TIME, false, get_travel_time_lb,
+    label_data<travel_time, transfers, ondemand_with_duration_cost, absurdity>,
+    initializer<travel_time_initializer, transfers_initializer,
+                ondemand_with_duration_cost_initializer, absurdity_initializer>,
+    updater<travel_time_updater, transfers_updater,
+            ondemand_with_duration_cost_updater, absurdity_updater>,
+    filter<travel_time_filter, transfers_filter>,
+    dominance<absurdity_tb, travel_time_dominance, transfers_dominance,
+              ondemand_with_duration_cost_dominance>,
+    dominance<absurdity_post_search_tb, travel_time_alpha_dominance,
+              transfers_dominance>,
+    comparator<transfers_dominance>>;
+
+template <search_dir Dir>
+using ondemand_with_duration_cost_weighted_label =
+    label<Dir, MAX_WEIGHTED, false, get_weighted_lb, label_data<weighted, ondemand_with_duration_cost>,
+          initializer<weighted_initializer, ondemand_with_duration_cost_initializer>,
+          updater<weighted_updater, ondemand_with_duration_cost_updater>,
+          filter<weighted_filter>,
+          dominance<default_tb, weighted_dominance, ondemand_with_duration_cost_dominance>,
+          dominance<post_search_tb>, comparator<weighted_dominance>>;
 
 }  // namespace motis::routing

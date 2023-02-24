@@ -4,6 +4,7 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 #include "utl/erase_if.h"
 #include "utl/to_vec.h"
@@ -15,6 +16,7 @@
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/motis_call.h"
+#include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/context/motis_spawn.h"
 
 #include "motis/intermodal/direct_connections.h"
@@ -23,6 +25,7 @@
 #include "motis/intermodal/mumo_edge.h"
 #include "motis/intermodal/query_bounds.h"
 #include "motis/intermodal/statistics.h"
+#include "motis/intermodal/ondemand_availability.h"
 
 #include "motis/protocol/Message_generated.h"
 
@@ -38,6 +41,7 @@ namespace motis::intermodal {
 intermodal::intermodal() : module("Intermodal Options", "intermodal") {
   param(router_, "router", "routing module");
   param(revise_, "revise", "revise connections");
+  param(ondemand_infos_, "ondemand", "ondemand server infos");
 }
 
 intermodal::~intermodal() = default;
@@ -59,6 +63,8 @@ void intermodal::init(motis::module::registry& r) {
   }
   r.subscribe("/init", [this]() { ppr_profiles_.update(); }, {});
 }
+
+int query_id = 0;
 
 std::vector<Offset<Connection>> revise_connections(
     std::vector<journey> const& journeys, statistics& stats,
@@ -92,6 +98,19 @@ struct parking_patch {
   mumo_edge const* e_{};
   unsigned from_{};
   unsigned to_{};
+};
+
+struct ondemand_patch {
+  ondemand_patch(mumo_edge const* e, unsigned transport_from,
+           unsigned transport_to, journey j_todelete, int j_id)
+      : e_(e), from_(transport_from), to_(transport_to), j_(std::move(j_todelete)),
+        j_id_(j_id) {}
+
+  mumo_edge const* e_{};
+  unsigned from_{};
+  unsigned to_{};
+  journey j_{};
+  int j_id_{};
 };
 
 struct split_transport_result {
@@ -282,6 +301,209 @@ void apply_gbfs_patches(journey& j, std::vector<parking_patch>& patches) {
   }
 }
 
+std::size_t remove_not_available_od_journeys(std::vector<journey>& journeys,
+                                  std::vector<ondemand_patch>& od_patches,
+                                  std::vector<availability_response>& ares) {
+  if (ares.empty() || od_patches.empty()) {
+    return 0;
+  }
+  auto const all = journeys.size();
+  int journey_id = 0;
+  utl::erase_if(journeys, [&](motis::journey j) {
+    bool found_journey = false, too_short = false, not_available = false;
+    int idx_count = 0;
+    if (!std::any_of(begin(j.transports_), end(j.transports_),
+                     [&](journey::transport const& t) {
+                       return t.mumo_type_ == to_string(mumo_type::ON_DEMAND);
+                     })) {
+      journey_id++;
+      return false;
+    } else {
+      for (auto const& p : od_patches) {
+        if (journey_id == p.j_id_) {
+          found_journey = true;
+          if (p.e_->duration_ <= 5.0) {
+            too_short = true;
+          }
+          if (!ares.at(idx_count).available_) {
+            not_available = true;
+            break;
+          }
+        }
+        idx_count++;
+      }
+      journey_id++;
+    }
+    return found_journey && (too_short || not_available);
+  });
+  return all - journeys.size();
+}
+
+void apply_ondemand_patches(journey& j, std::vector<parking_patch>& patches,
+                            std::vector<availability_response> v_ares) {
+  int i = 0;
+  for(auto const& patch : patches) {
+    availability_response ares = v_ares.at(i);
+    if(ares.walk_dur_.empty() || !ares.available_
+        || (ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) == 0)) {
+      i++;
+      continue;
+    }
+    /*
+     *  replace: S --od--> T
+     *  with:    S --walk--> PU --od--> T
+     *  replace: T --od--> S
+     *  with:    T --walk--> PU --od--> S
+    */
+    if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) == 0) {
+      auto& t1 = get_transport(j, patch.from_, patch.to_);
+      auto splitted_one = split_transport(j, patches, t1);
+
+      splitted_one.parking_stop_.eva_no_ = ares.codenumber_id_;
+      splitted_one.parking_stop_.name_ = ares.codenumber_id_;
+      splitted_one.parking_stop_.lat_ = ares.startpoint_.lat_;
+      splitted_one.parking_stop_.lng_ = ares.startpoint_.lng_;
+      splitted_one.parking_stop_.arrival_.valid_ = true;
+      splitted_one.parking_stop_.arrival_.timestamp_ =
+          j.stops_[patch.from_].departure_.timestamp_ +
+          ares.walk_dur_.at(0);
+      splitted_one.parking_stop_.arrival_.schedule_timestamp_ =
+          splitted_one.parking_stop_.arrival_.timestamp_;
+      splitted_one.parking_stop_.arrival_.timestamp_reason_ =
+          j.stops_[patch.from_].departure_.timestamp_reason_;
+      splitted_one.parking_stop_.departure_ = splitted_one.parking_stop_.arrival_;
+
+      splitted_one.first_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+      splitted_one.second_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
+    }
+    /*
+     *  replace: S --od--> T
+     *  with:    S --od--> DO --walk--> T
+     *  replace: T --od--> S
+     *  with:    T --od--> DO --walk--> S
+    */
+    else if(ares.walk_dur_.at(0) == 0 && ares.walk_dur_.at(1) != 0) {
+      auto& t2 = get_transport(j, patch.from_, patch.to_);
+      auto splitted_two = split_transport(j, patches, t2);
+
+      splitted_two.parking_stop_.eva_no_ = ares.codenumber_id_;
+      splitted_two.parking_stop_.name_ = ares.codenumber_id_;
+      splitted_two.parking_stop_.lat_ = ares.startpoint_.lat_;
+      splitted_two.parking_stop_.lng_ = ares.startpoint_.lng_;
+      splitted_two.parking_stop_.arrival_.valid_ = true;
+      splitted_two.parking_stop_.arrival_.timestamp_ =
+          j.stops_[patch.from_].departure_.timestamp_ +
+          ares.walk_dur_.at(1);
+      splitted_two.parking_stop_.arrival_.schedule_timestamp_ =
+          splitted_two.parking_stop_.arrival_.timestamp_;
+      splitted_two.parking_stop_.arrival_.timestamp_reason_ =
+          j.stops_[patch.from_].departure_.timestamp_reason_;
+      splitted_two.parking_stop_.departure_ = splitted_two.parking_stop_.arrival_;
+
+      splitted_two.first_transport_.mumo_type_ = to_string(mumo_type::ON_DEMAND);
+      splitted_two.second_transport_.mumo_type_ = to_string(mumo_type::FOOT);
+    }
+    /*
+     *  replace: S --od--> T
+     *  with:    S --walk--> PU --od--> DO --walk--> T
+     *  replace: T --od--> S
+     *  with:    T --walk--> PU --od--> DO --walk--> S
+    */
+    else if(ares.walk_dur_.at(0) != 0 && ares.walk_dur_.at(1) != 0) {
+      auto& t3 = get_transport(j, patch.from_, patch.to_);
+      auto splitted_three = split_transport(j, patches, t3);
+      split_transport(j, patches, splitted_three.second_transport_);
+
+      auto& split3 = j.stops_.at(patch.from_ + 1);
+      split3.eva_no_ = ares.codenumber_id_;
+      split3.name_ = ares.codenumber_id_;
+      split3.lat_ = ares.startpoint_.lat_;
+      split3.lng_ = ares.startpoint_.lng_;
+      split3.arrival_.valid_ = true;
+      split3.arrival_.timestamp_ = j.stops_[patch.from_].departure_.timestamp_
+          + ares.walk_dur_.at(0);
+      split3.arrival_.schedule_timestamp_ = split3.arrival_.timestamp_;
+      split3.arrival_.timestamp_reason_ =
+          j.stops_[patch.from_].departure_.timestamp_reason_;
+      split3.departure_ = split3.arrival_;
+
+      auto& split4 = j.stops_.at(patch.from_ + 2);
+      split4.eva_no_ = ares.codenumber_id_;
+      split4.name_ = ares.codenumber_id_;
+      split4.lat_ = ares.endpoint_.lat_;
+      split4.lng_ = ares.endpoint_.lng_;
+      split4.arrival_.valid_ = true;
+      split4.arrival_.timestamp_ =
+          split3.departure_.timestamp_ + (ares.dropoff_time_ - ares.pickup_time_);
+      split4.arrival_.schedule_timestamp_ = split4.arrival_.timestamp_;
+      split4.arrival_.timestamp_reason_ =
+          j.stops_[patch.from_ + 1].departure_.timestamp_reason_;
+      split4.departure_ = split4.arrival_;
+
+      get_transport(j, patch.from_, patch.from_ + 1).mumo_type_ =
+          to_string(mumo_type::FOOT);
+      get_transport(j, patch.from_ + 1, patch.from_ + 2).mumo_type_ =
+          to_string(mumo_type::ON_DEMAND);
+      get_transport(j, patch.from_ + 2, patch.from_ + 3).mumo_type_ =
+          to_string(mumo_type::FOOT);
+    }
+    i++;
+  }
+}
+
+availability_request ondemand_availability(journey j, bool start, mumo_edge const& e,
+                                             statistics& stats, std::vector<std::string> const& server_infos) {
+  availability_request areq;
+  areq.product_id_ = std::to_string(query_id);
+  areq.startpoint_.lat_ = e.from_pos_.lat_;
+  areq.startpoint_.lng_ = e.from_pos_.lng_;
+  areq.endpoint_.lat_ = e.to_pos_.lat_;
+  areq.endpoint_.lng_ = e.to_pos_.lng_;
+  if(start) {
+    areq.start_ = true;
+    areq.departure_time_ = j.stops_.front().departure_.timestamp_;
+    areq.arrival_time_onnext_ = j.stops_.at(1).arrival_.timestamp_;
+  } else {
+    areq.start_ = false;
+    int lastindex = static_cast<int>(j.stops_.size()) - 1;
+    areq.departure_time_ = j.stops_.at(lastindex - 1).departure_.timestamp_;
+    areq.arrival_time_ = j.stops_.at(lastindex - 1).arrival_.timestamp_;
+    areq.arrival_time_onnext_ = j.stops_.back().arrival_.timestamp_;
+  }
+  if(j.transports_.size() == 1) {
+    areq.direct_con_ = true;
+    areq.duration_ = static_cast<int>(round(j.transports_.at(0).duration_ * 60));
+  } else {
+    areq.direct_con_ = false;
+    areq.duration_ = areq.arrival_time_onnext_ - areq.departure_time_;
+  }
+
+  areq.hdrs_.insert(std::pair<std::string, std::string>("Accept","application/json"));
+  areq.hdrs_.insert(std::pair<std::string, std::string>("Accept-Language","de"));
+  for(auto const& info : server_infos) {
+    size_t index = info.find(':');
+    if(index == -1) {
+      size_t idx = info.find(',');
+      areq.hdrs_.insert(std::pair<std::string, std::string>(info.substr(0, idx), info.substr(idx+1)));
+    }
+    std::string name = info.substr(0, index);
+    if(name == "product_check_address") {
+      areq.product_check_addr_ = info.substr(index+1);
+    }
+    else if(name == "product_id") {
+      areq.product_id_ = info.substr(index+1);
+    }
+  }
+  if(areq.product_check_addr_ != "http://127.0.0.1:9000/") {
+    areq.hdrs_.insert(std::pair<std::string, std::string>("Content-Type","application/json"));
+    areq.hdrs_.insert(std::pair<std::string, std::string>("X-Client-Version","0.0.1"));
+    areq.hdrs_.insert(std::pair<std::string, std::string>("X-Api-Version","20210101"));
+    areq.hdrs_.insert(std::pair<std::string, std::string>("X-Client-Identifier","demo.motis.rmv.platform"));
+  }
+  return areq;
+}
+
+
 msg_ptr postprocess_response(msg_ptr const& response_msg,
                              query_start const& q_start,
                              query_dest const& q_dest,
@@ -289,23 +511,35 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                              std::vector<mumo_edge const*> const& edge_mapping,
                              statistics& stats, bool const revise,
                              std::vector<stats_category> const& mumo_stats,
-                             ppr_profiles const& profiles) {
+                             ppr_profiles const& profiles,
+                             std::vector<std::string> const& server_infos) {
+  query_id++;
+  MOTIS_START_TIMING(post_timing);
   auto const dir = req->search_dir();
   auto routing_response =
       response_msg ? motis_content(RoutingResponse, response_msg) : nullptr;
   auto journeys = routing_response == nullptr
                       ? std::vector<journey>{}
                       : message_to_journeys(routing_response);
-
+  stats.journey_count_begin_ = journeys.size();
   MOTIS_START_TIMING(direct_connection_timing);
   auto const direct =
       get_direct_connections(q_start, q_dest, req, profiles, edge_mapping);
   stats.dominated_by_direct_connection_ =
       remove_dominated_journeys(journeys, direct);
+  stats.direct_connection_count_ = direct.size();
   add_direct_connections(journeys, direct, q_start, q_dest, req);
   MOTIS_STOP_TIMING(direct_connection_timing);
   stats.direct_connection_duration_ =
       static_cast<uint64_t>(MOTIS_TIMING_MS(direct_connection_timing));
+
+  auto ondemand_patches = std::vector<ondemand_patch>{};
+  std::vector<std::vector<parking_patch>> all_od_parking_patches{};
+  std::vector<availability_request> vareq;
+  int journey_id = 0;
+  auto checked_to = std::vector<geo::latlng>{};
+  auto checked_from = std::vector<geo::latlng>{};
+  bool area = false;
 
   message_creator mc;
   for (auto& journey : journeys) {
@@ -326,13 +560,15 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
       dest.lng_ = q_dest.pos_.lng_;
     }
 
+    bool ondemand_journey = false;
     auto gbfs_patches = std::vector<parking_patch>{};
     auto parking_patches = std::vector<parking_patch>{};
+    auto ondemand_parking_patches = std::vector<parking_patch>{};
+    availability_request areq;
     for (auto& t : journey.transports_) {
       if (!t.is_walk_ || t.mumo_id_ < 0) {
         continue;
       }
-
       auto const e = edge_mapping.at(static_cast<std::size_t>(t.mumo_id_));
       t.mumo_type_ = to_string(e->type_);
       t.mumo_id_ = e->id_;
@@ -345,11 +581,65 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
         parking_patches.emplace_back(e, t.from_, t.to_);
       } else if (e->type_ == mumo_type::GBFS) {
         gbfs_patches.emplace_back(e, t.from_, t.to_);
+      } else if(e->type_ == mumo_type::ON_DEMAND) {
+        ondemand_journey = true;
+        if(!std::any_of(std::begin(checked_to), std::end(checked_to),
+                        [&](geo::latlng pos){
+                          return pos == e->to_pos_;})
+            && !std::any_of(std::begin(checked_from), std::end(checked_from),
+                        [&](geo::latlng pos){
+                          return pos == e->from_pos_;})) {
+          area = check_od_area(e->from_pos_, e->to_pos_, server_infos, stats);
+          checked_from.emplace_back(e->from_pos_);
+          checked_to.emplace_back(e->to_pos_);
+        }
+        if(q_start.is_intermodal_ && q_start.pos_.lat_ == e->from_pos_.lat_
+            && q_start.pos_.lng_ == e->from_pos_.lng_ && area) {
+          areq = ondemand_availability(journey, true, *e, stats, server_infos);
+        }
+        if(q_dest.is_intermodal_ && q_dest.pos_.lat_ == e->to_pos_.lat_
+            && q_dest.pos_.lng_ == e->to_pos_.lng_ && area) {
+          areq = ondemand_availability(journey, false, *e, stats, server_infos);
+        }
+        areq.journey_id_ = journey_id;
+        vareq.emplace_back(areq);
+        ondemand_patches.emplace_back(e, t.from_, t.to_, journey, journey_id);
+        ondemand_parking_patches.emplace_back(e, t.from_, t.to_);
       }
     }
     apply_parking_patches(journey, parking_patches);
     apply_gbfs_patches(journey, gbfs_patches);
+    all_od_parking_patches.emplace_back(ondemand_parking_patches);
+    journey_id++;
+    if(ondemand_journey) {
+      stats.ondemand_journey_count_++;
+    }
   }
+
+  MOTIS_START_TIMING(ondemand_server_product);
+  std::vector<availability_response> vares{};
+  motis_parallel_for(vareq, [&](auto&& areq) { check_od_availability(areq, stats, vares); });
+  MOTIS_STOP_TIMING(ondemand_server_product);
+  stats.ondemand_server_product_inquery_ =
+      static_cast<uint64_t>(MOTIS_TIMING_MS(ondemand_server_product));
+
+  for(int i = 0; i < journeys.size(); i++) {
+    std::vector<availability_response> v_ares{};
+    for(auto & v : vares) {
+      if(v.journey_id_ == i) {
+        v_ares.emplace_back(v);
+      }
+    }
+    apply_ondemand_patches(journeys.at(i), all_od_parking_patches.at(i), v_ares);
+  }
+
+  MOTIS_START_TIMING(ondemand_remove);
+  stats.ondemand_removed_journeys_ =
+   remove_not_available_od_journeys(journeys, ondemand_patches, vares);
+  MOTIS_STOP_TIMING(ondemand_remove);
+  stats.ondemand_remove_duration_ =
+      static_cast<uint64_t>(MOTIS_TIMING_US(ondemand_remove));
+  stats.journey_count_end_ += journeys.size();
 
   utl::erase_if(journeys, [](journey const& j) { return j.stops_.empty(); });
   std::sort(
@@ -365,6 +655,10 @@ msg_ptr postprocess_response(msg_ptr const& response_msg,
                                : utl::to_vec(journeys, [&mc](journey const& j) {
                                    return to_connection(mc, j);
                                  });
+  MOTIS_STOP_TIMING(post_timing);
+  stats.postprocess_timing_ =
+      static_cast<uint64_t>(MOTIS_TIMING_MS(post_timing));
+
   auto all_stats =
       routing_response == nullptr
           ? std::vector<Offset<Statistics>>{}
@@ -512,7 +806,6 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
 
   ctx::await_all(futures);
   MOTIS_STOP_TIMING(mumo_edge_timing);
-
   stats.start_edges_ = deps.size();
   stats.destination_edges_ = arrs.size();
   stats.mumo_edge_duration_ =
@@ -546,9 +839,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
     stats.routing_duration_ =
         static_cast<uint64_t>(MOTIS_TIMING_MS(routing_timing));
   }
-
   return postprocess_response(routing_resp, start, dest, req, edge_mapping,
-                              stats, revise_, mumo_stats, ppr_profiles_);
+                              stats, revise_, mumo_stats, ppr_profiles_, ondemand_infos_);
 }
 
 }  // namespace motis::intermodal
