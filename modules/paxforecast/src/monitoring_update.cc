@@ -168,6 +168,11 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
         event->group_route()->passenger_count()};
     auto const localization =
         from_fbs(sched, event->localization_type(), event->localization());
+    auto const destination_station_id = get_destination_station_id(
+        sched, event->group_route()->route()->journey());
+
+    auto const next_stop_is_destination =
+        localization.at_station_->index_ == destination_station_id;
 
     if (event->type() == PaxMonEventType_NO_PROBLEM) {
       unbroken_transfers.push_back(pgwr);
@@ -178,7 +183,9 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
       // if (event->group_route()->route()->planned()) {
       //   continue;
       // }
-    } else if (pgwrap.probability_ == 0.0F) {
+    } else if ((next_stop_is_destination &&
+                event->type() != PaxMonEventType_BROKEN_TRANSFER) ||
+               pgwrap.probability_ == 0.0F) {
       continue;
     }
 
@@ -198,8 +205,6 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
                 "multiple monitoring updates for passenger group");
     broken_transfer_infos[pgwr] =
         from_fbs(sched, event->reachability()->broken_transfer());
-    auto const destination_station_id = get_destination_station_id(
-        sched, event->group_route()->route()->journey());
 
     auto& destination_groups = combined_groups[destination_station_id];
     auto cpg = std::find_if(

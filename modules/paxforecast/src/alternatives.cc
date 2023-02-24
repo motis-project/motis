@@ -240,7 +240,6 @@ std::vector<journey> find_alternative_journeys(
                            localization, use_cache, pretrip_interval_length);
   auto const response = motis_content(RoutingResponse, response_msg);
   auto alternatives = message_to_journeys(response);
-  // TODO(pablo): alternatives without trips?
   utl::erase_if(alternatives, [](journey const& j) {
     return j.stops_.size() < 2;
   });
