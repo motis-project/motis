@@ -13,25 +13,25 @@ routers = ["routing", "nigiri"]
 
 
 def query_f(id, router):
-    return f"fail/{id}_i2000-{router}.json"
+    return f"{id}_queries_{router}.json"
 
 
 def result_f(id, router):
-    return f"fail/{id}_i2000-res-{router}.json"
+    return f"{id}_responses_{router}.json"
 
 
 def reproduce(filepath, verbose=False):
     m = re.search(r'fail/([0-9]*).*', filepath)
     id = m.group(1)
 
-    subprocess.run(["rm", "-rf", "{}/input/{}".format(dir, id)], check=True)
+    subprocess.run(["rm", "-rf", "{}/input-{}".format(dir, id)], check=True)
     subprocess.run(["rm", "-rf", "{}/data_{}".format(dir, id)], check=True)
 
     run_xtract = [
         "./motis",
         "xtract",
         "input/hrd",
-        "input/{}".format(id),
+        "input-{}".format(id),
         f"fail/{result_f(id, routers[0])}",
         f"fail/{result_f(id, routers[1])}"
     ]
@@ -43,23 +43,22 @@ def reproduce(filepath, verbose=False):
         subprocess.check_call(run_xtract, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     subprocess.check_call(["mkdir", "{}/data_{}".format(dir, id)])
-    subprocess.check_call(["rm", "-rf", "{}/input/{}/stamm".format(dir, id)])
+    subprocess.check_call(["rm", "-rf", "{}/input-{}/stamm".format(dir, id)])
     subprocess.check_call(["rm", "-rf", "{}/data_{}/osrm".format(dir, id)])
-    subprocess.check_call(["ln", "-s", "{}/input/hrd/stamm".format(dir), "input/{}/stamm".format(id)])
-    subprocess.check_call(["ln", "-s", "{}/input/osm.pbf".format(dir), "input/{}/osm.pbf".format(id)])
+    subprocess.check_call(["ln", "-s", "{}/input/hrd/stamm".format(dir), "input-{}/stamm".format(id)])
+    subprocess.check_call(["ln", "-s", "{}/input/osm.pbf".format(dir), "input-{}/osm.pbf".format(id)])
     subprocess.check_call(["ln", "-s", "{}/data-full/osrm".format(dir), "data_{}/osrm".format(id)])
 
     run_routing = [
         "./motis",
-        "-c", "config-intermodal.ini",
         "--modules", "routing", "intermodal", "lookup", "osrm",
         "--dataset.write_serialized=false",
         "--dataset.cache_graph=false",
         "--dataset.read_graph=false",
-        "--import.paths", "schedule:input/{}".format(id), "osm:input/osm.pbf".format(id),
+        "--import.paths", "schedule:input-{}".format(id), "osm:input/osm.pbf".format(id),
         "--import.data_dir=data_{}".format(id),
         f"--batch_input_file=fail/{query_f(id, routers[0])}",
-        f"--batch_output_file={result_f(id, routers[1])}",
+        f"--batch_output_file={result_f(id, routers[0])}",
         "--num_threads", "1"
     ]
     if verbose:
@@ -70,13 +69,12 @@ def reproduce(filepath, verbose=False):
 
     run_nigiri = [
         "./motis",
-        "-c", "config-intermodal.ini",
         "--modules", "nigiri", "intermodal", "lookup", "osrm",
         "--dataset.write_serialized=false",
         "--dataset.cache_graph=false",
         "--dataset.read_graph=false",
         "--nigiri.no_cache=true",
-        "--import.paths", "schedule:input/{}".format(id), "osm:input/osm.pbf",
+        "--import.paths", "schedule:input-{}".format(id), "osm:input/osm.pbf",
         "--import.data_dir=data_{}".format(id),
         f"--batch_input_file=fail/{query_f(id, routers[1])}",
         f"--batch_output_file={result_f(id, routers[1])}",
@@ -127,7 +125,9 @@ def reproduce(filepath, verbose=False):
 
 if len(sys.argv) < 2:
     with Pool(processes=6) as pool:
-        files = glob.iglob('fail/*_intermodal_queries_nigiri_fail.json')
+        glob_str = f"fail/{query_f('*', routers[0])}"
+        files = glob.iglob(glob_str)
+        print(f"files {glob_str}: {files}")
         reproducable = pool.map(reproduce, files)
 
         print("reproducable:")
@@ -135,4 +135,4 @@ if len(sys.argv) < 2:
             if r:
                 print("  {}".format(f))
 else:
-    reproduce("fail/{}_intermodal_queries_nigiri_fail.json".format(sys.argv[1]), True)
+    reproduce(f"fail/{query_f(sys.argv[1], routers[0])}", True)

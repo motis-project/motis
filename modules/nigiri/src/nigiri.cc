@@ -90,11 +90,19 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
         if (!no_cache_ && std::filesystem::is_regular_file(dump_file_path)) {
-          impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
-              n::timetable::read(cista::memory_holder{
-                  cista::file{dump_file_path.string().c_str(), "r"}
-                      .content()}));
+          try {
+            impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
+                n::timetable::read(cista::memory_holder{
+                    cista::file{dump_file_path.string().c_str(), "r"}
+                        .content()}));
+          } catch (std::exception const& e) {
+            LOG(logging::error)
+                << "cannot read cached timetable image: " << e.what()
+                << ", retry loading from scratch";
+            goto read_datasets;
+          }
         } else {
+        read_datasets:
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               cista::raw::make_unique<n::timetable>());
           for (auto const& [src, config, dir] : datasets) {
