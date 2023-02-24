@@ -32,8 +32,16 @@ export interface PaxMonCompactJourneyLeg {
 }
 
 // paxmon/PaxMonCompactJourney.fbs
+export interface PaxMonFootpath {
+  duration: number;
+  from_station: Station;
+  to_station: Station;
+}
+
+// paxmon/PaxMonCompactJourney.fbs
 export interface PaxMonCompactJourney {
   legs: PaxMonCompactJourneyLeg[];
+  final_footpath: PaxMonFootpath[];
 }
 
 // paxmon/PaxMonRerouteReason.fbs
