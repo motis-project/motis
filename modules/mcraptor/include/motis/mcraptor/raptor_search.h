@@ -88,9 +88,9 @@ inline std::vector<journey> cpu_raptor(base_query& bq,
     return raptor_gen<label_departure, mc_raptor_departure>( q, stats, sched, raptor_sched, tt,mc_raptor_departure(q));
   }
   else {
-    raptor_query<label_arrival> q =
-        raptor_query<label_arrival>{bq, raptor_sched, tt};
-    return raptor_gen<label_arrival, mc_raptor_arrival>(q, stats, sched, raptor_sched, tt, mc_raptor_arrival(q));
+//    raptor_query<label_arrival> q =
+//        raptor_query<label_arrival>{bq, raptor_sched, tt};
+//    return raptor_gen<label_arrival, mc_raptor_arrival>(q, stats, sched, raptor_sched, tt, mc_raptor_arrival(q));
   }
 
 

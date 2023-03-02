@@ -33,7 +33,6 @@ struct label {
 
   // Parent info
   stop_id parent_station_ = invalid<stop_id>;
-  size_t parent_label_index_ = invalid<size_t>;
 
   // Current trip info
   route_id route_id_ = invalid<route_id>;
@@ -49,29 +48,24 @@ struct label {
                                                                      changes_count_(changes_count) { }
 
   // to create labels for current round from labels from previous round for certain station
-  label(label& parent_label, stop_id parent_station, size_t parent_index) : arrival_time_(parent_label.arrival_time_),
+  label(label& parent_label, stop_id parent_station) : arrival_time_(parent_label.arrival_time_),
                                                                             changes_count_(parent_label.changes_count_ + 1),
                                                                             journey_departure_time_(parent_label.journey_departure_time_),
-                                                                            parent_station_(parent_station),
-                                                                            parent_label_index_(parent_index){ }
+                                                                            parent_station_(parent_station){ }
 
   bool dominates(label& other) {
     int domination_arrival_time = arrival_time_rule(other);
     int domination_journey_departure_time = journey_departure_time_rule(other);
     int domination_changes_count = changes_count_rule(other);
     int domination_travel_duration = travel_duration_rule(other);
+    if(domination_arrival_time == 0 && domination_journey_departure_time == 0 && domination_changes_count == 0
+        && parent_station_ == other.parent_station_ && route_id_ == other.route_id_ && current_trip_id_ == other.current_trip_id_
+        && footpath_duration_ == other.footpath_duration_) {
+      return true;
+    }
 
     return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
            (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
-  }
-
-  bool dominates_all(std::vector<label> labels) {
-    for (label& l : labels) {
-      if(!dominates(l)) {
-        return false;
-      }
-    }
-    return true;
   }
 
 protected:
@@ -81,19 +75,19 @@ protected:
 };
 
 struct route_label {
-
-  route_label() = default;
-
   // TODO: check
   const stop_time* trip_ = nullptr;
   trip_id current_trip_id_ = invalid<trip_id>;
   route_stops_index stop_offset_ = invalid<route_stops_index>;
 
   route_stops_index parent_stop_ = invalid<route_stops_index>;
-  size_t parent_label_index_ = invalid<size_t>;
+  time parent_journey_departure_time_ = invalid<time>;
 
-  bool dominates(route_label& other_label) {
-    return trip_ <= other_label.trip_;
+  route_label() {
+  }
+
+  bool dominates(route_label& other) {
+    return trip_ <= other.trip_;
   }
 };
 
@@ -106,8 +100,8 @@ struct label_departure : public label<label_departure> {
       : label(departure_time, arrival_time, changes_count){ }
 
   // to create labels for current round from labels from previous round for certain station
-  label_departure(label_departure& parent_label, stop_id parent_station, size_t parent_index)
-      : label(parent_label, parent_station, parent_index) { }
+  label_departure(label_departure& parent_label, stop_id parent_station)
+      : label(parent_label, parent_station) { }
 
   inline int arrival_time_rule(label& other) {
     return compare_to(other.arrival_time_, arrival_time_);
@@ -124,39 +118,6 @@ struct label_departure : public label<label_departure> {
     return compare_to(other.arrival_time_ - other.journey_departure_time_, arrival_time_ - journey_departure_time_);
   }
 
-};
-
-struct label_arrival : public label<label_arrival> {
-
-  stop_id backward_parent_station = invalid<stop_id>;
-  size_t backward_parent_label_index_ = invalid<size_t>;
-  time departure_time_ = invalid<time>;
-
-
-  label_arrival() {
-  }
-
-  label_arrival(time departure_time, time arrival_time, size_t changes_count)
-      : label(departure_time, arrival_time, changes_count){ }
-
-  // to create labels for current round from labels from previous round for certain station
-  label_arrival(label_arrival& parent_label, stop_id parent_station, size_t parent_index)
-      : label(parent_label, parent_station, parent_index) { }
-
-  inline int arrival_time_rule(label& other) {
-    return compare_to(arrival_time_, other.arrival_time_);
-  }
-  inline int journey_departure_time_rule(label& other) {
-    return compare_to(journey_departure_time_, other.journey_departure_time_);
-  }
-
-  inline int changes_count_rule(label& other) {
-    return compare_to(other.changes_count_, changes_count_);
-  }
-
-  inline int travel_duration_rule(label& other) {
-    return compare_to(other.arrival_time_ - other.journey_departure_time_, arrival_time_ - journey_departure_time_);
-  }
 };
 
 } // namespace motis::mcraptor

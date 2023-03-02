@@ -78,10 +78,12 @@ void mc_raptor<T, L>::relax_transfers() {
       continue;
     }
     stops_for_transfers_.mark(stop);
-    bag<L>& bag = previous_round()[stop];
-    current_round()[stop].labels_.resize(bag.size());
-    for(size_t i = 0; i < bag.size(); ++i) {
-      current_round()[stop][i] = L(bag[i], stop, i);
+    bag<L>& prev_bag = previous_round()[stop];
+    bag<L>& current_bag = current_round()[stop];
+    size_t prev_size = prev_bag.labels_.size();
+    current_bag.labels_.resize(prev_size);
+    for(size_t i = 0; i < prev_size; ++i) {
+      current_bag.labels_[i] = L(prev_bag.labels_[i], stop);
     }
   }
 
@@ -285,14 +287,13 @@ void mc_raptor_departure::init_arrivals() {
 
 void mc_raptor_departure::init_new_label(bag<label_departure> bag,
                                          stop_id stop, time8 duration, stop_id to_stop) {
-  for(size_t i = 0; i < bag.size(); ++i) {
+  for(auto& l : bag.labels_) {
     label_departure new_label;
-    new_label.arrival_time_ = bag[i].arrival_time_ + duration;
+    new_label.arrival_time_ = l.arrival_time_ + duration;
     new_label.parent_station_ = stop;
-    new_label.parent_label_index_ = i;
     new_label.changes_count_ = round_;
     new_label.footpath_duration_ = duration;
-    new_label.journey_departure_time_ = bag[i].journey_departure_time_;
+    new_label.journey_departure_time_ = l.journey_departure_time_;
     arrival_by_transfer(to_stop, new_label);
   }
 }
@@ -301,11 +302,10 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
                                      const stop_count trip_size, const stop_time* first_trip,
                                      const stop_time* last_trip, raptor_route route,
                                      route_id route_id) {
-  route_bag new_route_bag;
+  bag<route_label> new_route_bag;
 
   while(stop_offset < trip_size - 1) {
-    for (size_t j = 0; j < previous_round()[stop].size(); ++j) {
-      const label_departure& label = previous_round()[stop][j];
+    for (auto& label : previous_round()[stop].labels_) {
       const stop_time* trip = first_trip;
       trip_id current_trip_id = 0;
       while ((trip < last_trip) && (trip[stop_offset].departure_ < label.arrival_time_)) {
@@ -320,23 +320,22 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
 
       route_label new_label;
       new_label.trip_ = trip;
-      new_label.parent_label_index_ = j;
+      new_label.parent_journey_departure_time_ = label.journey_departure_time_;
       new_label.parent_stop_ = stop;
       new_label.current_trip_id_ = current_trip_id;  // = tripId;
       new_route_bag.merge(new_label);
     }
     stop_offset++;
     stop = query_.tt_.route_stops_[route.index_to_route_stops_ + stop_offset];
-    for (route_label& r_label : new_route_bag.labels_) {
+    for (auto& r_label : new_route_bag.labels_) {
       label_departure new_label;
       new_label.arrival_time_ = r_label.trip_[stop_offset].arrival_;
       new_label.parent_station_ = r_label.parent_stop_;
-      new_label.parent_label_index_ = r_label.parent_label_index_;
       new_label.route_id_ = route_id;
       new_label.stop_offset_ = stop_offset;
       new_label.current_trip_id_ = r_label.current_trip_id_;
       new_label.changes_count_ = round_;
-      new_label.journey_departure_time_ = previous_round()[r_label.parent_stop_][r_label.parent_label_index_].journey_departure_time_;
+      new_label.journey_departure_time_ = r_label.parent_journey_departure_time_;
       arrival_by_route(stop, new_label);
     }
   }
@@ -347,112 +346,6 @@ void mc_raptor_departure::init_parents(){
 }
 
 //arrival mc_raptor
-
-void mc_raptor_arrival::init_arrivals() {
-  start_new_round();
-
-  if (query_.target_ == 1) {
-    for (raptor_edge edge : query_.raptor_edges_end_) {
-      time edge_to_time = source_time_begin_ - edge.duration_;
-      label_arrival new_label(invalid<time>, edge_to_time, round_);
-      new_label.backward_parent_station = edge.to_;
-      arrival_by_route(edge.to_, new_label);
-    }
-  } else {
-    label_arrival new_label(invalid<time>, query_.source_time_end_, round_);
-    new_label.backward_parent_station = query_.target_;
-    arrival_by_route(query_.target_, new_label);
-  }
-  start_new_round();
-}
-
-void mc_raptor_arrival::init_new_label(bag<label_arrival> bag,
-                                       stop_id stop, time8 duration, stop_id to_stop) {
-  for(size_t i = 0; i < bag.size(); ++i) {
-    label_arrival new_label;
-    new_label.departure_time_ = bag[i].departure_time_ - duration;
-    new_label.backward_parent_station = stop;
-    new_label.backward_parent_label_index_ = i;
-    new_label.footpath_duration_ = duration;
-    arrival_by_transfer(to_stop, new_label);
-  }
-}
-
-void mc_raptor_arrival::scan_route(stop_id stop, route_stops_index stop_offset,
-                const stop_count trip_size, const stop_time* first_trip,
-                const stop_time* last_trip, raptor_route route,
-                route_id route_id) {
-  route_bag new_route_bag;
-
-  while(stop_offset > 0) {
-    for(size_t j = 0; j < previous_round()[stop].size(); ++j) {
-      const label_arrival& label = previous_round()[stop][j];
-      const stop_time* trip = last_trip;
-      trip_id current_trip_id = route.trip_count_;
-      while((trip > first_trip) && (trip[stop_offset].arrival_ > label.departure_time_)) {
-        trip -= trip_size;
-        current_trip_id--;
-      }
-
-      time trip_arrival = trip[stop_offset].arrival_;
-      if(!valid(trip_arrival) || trip_arrival < label.departure_time_) {
-        continue;
-      }
-
-      route_label new_label;
-      new_label.trip_ = trip;
-      new_label.parent_label_index_ = j;
-      new_label.parent_stop_ = stop;
-      new_label.current_trip_id_ = current_trip_id ; // = tripId;
-      new_route_bag.merge(new_label);
-    }
-    stop_offset--;
-    stop = query_.tt_.route_stops_[route.index_to_route_stops_ + stop_offset];
-    for(route_label& r_label : new_route_bag.labels_) {
-      label_arrival new_label;
-      new_label.departure_time_ = r_label.trip_[stop_offset].departure_;
-      new_label.backward_parent_station = r_label.parent_stop_;
-      new_label.backward_parent_label_index_ = r_label.parent_label_index_;
-      new_label.route_id_ = route_id;
-      new_label.stop_offset_ = stop_offset;
-      new_label.current_trip_id_ = r_label.current_trip_id_;
-      arrival_by_route(stop, new_label);
-    }
-  }
-}
-void mc_raptor_arrival::init_parents(){
-  std::cout << "Source: " << query_.source_ << std::endl;
-  for(int r_m = 0; r_m <= round_; r_m++) {
-    std::cout << "Round " << r_m << "; Size " << result_[r_m][query_.source_].labels_.size() << std::endl;
-    if(r_m % 2 == 1) { //TODO fix this
-      continue;
-    }
-    std::cout << "Starting parents init" << std::endl;
-    bag<label_arrival> start_bag = result_[r_m][query_.source_];
-    for (int l_id = 0; l_id < start_bag.labels_.size(); l_id++) {
-      label_arrival* prev_label = &start_bag.labels_[l_id];
-      int prev_label_id = query_.source_;
-      int prev_parent_label_index = l_id;
-      prev_label->changes_count_ = 0;
-      prev_label->parent_station_ = query_.source_;
-
-      for (int i = 1; i < r_m; i++) {
-        int r = r_m - i;
-        std::cout << "Parents for round " << r << std::endl;
-        std::cout << "BS: " << prev_label->backward_parent_station << "; BSI: " << prev_label->backward_parent_label_index_ << "; Size: " << result_[r][prev_label->backward_parent_station].size() << std::endl;
-        label_arrival* current_label = &result_[r][prev_label->backward_parent_station][prev_label->backward_parent_label_index_];
-        current_label->parent_station_ = prev_label_id;
-        current_label->parent_label_index_ = prev_parent_label_index;
-        current_label->changes_count_ = i;
-        prev_label_id = prev_label->backward_parent_station;
-        prev_parent_label_index = prev_label->backward_parent_label_index_;
-        prev_label = current_label;
-      }
-    }
-  }
-
-  //TODO reverse result
-}
 
 }  // namespace motis::mcraptor
 

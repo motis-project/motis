@@ -266,7 +266,6 @@ struct reconstructor {
         L target_station_label = l;
         raptor_round r_k = current_station_label.changes_count_;
         stop_id current_station = target;
-        size_t parent_label_index = current_station_label.parent_label_index_;
         stop_id parent_station = current_station_label.parent_station_;
         std::pair<time, uint16_t> last_departure_info = std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
         while (r_k > 0) {
@@ -281,16 +280,12 @@ struct reconstructor {
                 current_station, current_station_label.arrival_time_,
                 last_departure_info.first, last_departure_info.second,
                 current_station_label.footpath_duration_, raptor_sched_);
-            if(r_k == 1) {
               last_departure_info = std::pair<time, uint16_t>(last_departure_info.first - current_station_label.footpath_duration_, invalid<uint16_t>);
-            }
           }
 
           r_k--;
-          current_station_label =
-              result[r_k][parent_station][parent_label_index];
+          current_station_label = result[r_k][parent_station].get_closest_label(last_departure_info.first);
           current_station = parent_station;
-          parent_label_index = current_station_label.parent_label_index_;
           parent_station = current_station_label.parent_station_;
         }
 
