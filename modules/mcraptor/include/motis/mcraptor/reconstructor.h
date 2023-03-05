@@ -240,6 +240,7 @@ struct reconstructor {
   template <class L>
   void add(raptor_query<L> const& q) {
     rounds<L>& result = q.result();
+    L empty_label;
     for(stop_id target : q.targets_) {
       auto labels = result.getAllLabelsForStop(target, max_raptor_round * 2, false);
       bag<L> filter_bag;
@@ -268,6 +269,7 @@ struct reconstructor {
         stop_id current_station = target;
         stop_id parent_station = current_station_label.parent_station_;
         std::pair<time, uint16_t> last_departure_info = std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
+        bool invalid_path = false;
         while (r_k > 0) {
           if (r_k % 2 == 0 && current_station_label.route_id_) {
             last_departure_info =
@@ -284,9 +286,17 @@ struct reconstructor {
           }
 
           r_k--;
-          current_station_label = result[r_k][parent_station].get_closest_label(last_departure_info.first);
+          current_station_label = result[r_k][parent_station].get_fastest_label(last_departure_info.first, empty_label);
+          if(!valid(current_station_label.journey_departure_time_)) {
+            invalid_path = true;
+            break;
+          }
           current_station = parent_station;
           parent_station = current_station_label.parent_station_;
+        }
+
+        if(invalid_path) {
+          continue;
         }
 
         if (q.source_ == 0) {

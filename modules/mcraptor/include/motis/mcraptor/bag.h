@@ -12,24 +12,24 @@ struct bag {
     labels_ = std::vector<L>();
   }
 
-  L& get_closest_label(motis::time next_departure_time) {
-    if(labels_.empty()) {
-      return L();
+  L& get_fastest_label(motis::time next_departure_time, L& def) {
+    if (labels_.empty()) {
+      return def;
     }
 
     motis::time min_diff = invalid<motis::time>;
     L* closest_label = nullptr;
-    for(L& label : labels_) {
-      if(label.arrival_time_ <= next_departure_time) {
-        motis::time current_diff = next_departure_time - label.arrival_time_;
-        if(current_diff < min_diff) {
+    for (L& label : labels_) {
+      if (label.arrival_time_ <= next_departure_time) {
+        motis::time current_diff = next_departure_time - label.journey_departure_time_;
+        if (current_diff < min_diff) {
           closest_label = &label;
           min_diff = current_diff;
         }
       }
     }
 
-    return closest_label == nullptr ? L() : *closest_label;
+    return closest_label == nullptr ? def : *closest_label;
   }
 
   bool merge(L& other_label) noexcept {

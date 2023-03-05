@@ -59,8 +59,7 @@ struct label {
     int domination_changes_count = changes_count_rule(other);
     int domination_travel_duration = travel_duration_rule(other);
     if(domination_arrival_time == 0 && domination_journey_departure_time == 0 && domination_changes_count == 0
-        && parent_station_ == other.parent_station_ && route_id_ == other.route_id_ && current_trip_id_ == other.current_trip_id_
-        && footpath_duration_ == other.footpath_duration_) {
+        && parent_station_ == other.parent_station_ && route_id_ == other.route_id_) {
       return true;
     }
 
