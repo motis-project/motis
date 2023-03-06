@@ -42,6 +42,12 @@ paxforecast::paxforecast()
   param(probability_threshold_, "probability_threshold",
         "minimum allowed route probability (routes with lower probability are "
         "dropped)");
+  param(
+      allow_start_metas_, "allow_start_metas",
+      "allow using equivalent stations as start station in alternative routes");
+  param(allow_dest_metas_, "allow_destination_metas",
+        "allow using equivalent stations as destination station in alternative "
+        "routes");
 }
 
 paxforecast::~paxforecast() = default;
