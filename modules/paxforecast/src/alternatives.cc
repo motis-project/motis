@@ -272,10 +272,17 @@ std::vector<journey> find_alternative_journeys(
 
   if (debug) {
     std::cout << "find_alternative_journeys debug:" << std::endl;
+    std::cout << "destination: "
+              << sched.stations_.at(destination_station_id)->name_
+              << "\nlocalization: next station: "
+              << localization.at_station_->name_
+              << (localization.in_trip() ? " (in trip)" : "") << " at "
+              << format_time(localization.current_arrival_time_) << std::endl;
     for (auto const& j : alternatives) {
       print_journey(j);
       std::cout << std::endl;
     }
+    std::cout << response_msg->to_json() << std::endl;
   }
 
   utl::erase_if(alternatives,
@@ -344,11 +351,15 @@ std::vector<alternative> find_alternatives(
     unsigned const destination_station_id,
     passenger_localization const& localization,
     compact_journey const* remaining_journey, bool use_cache,
-    duration const pretrip_interval_length, bool const allow_start_metas,
+    duration const pretrip_interval_length, bool allow_start_metas,
     bool const allow_dest_metas) {
   // never use cache for schedule forks
   if (!uv.uses_default_schedule()) {
     use_cache = false;
+  }
+
+  if (!localization.first_station_) {
+    allow_start_metas = false;
   }
 
   auto const debug = false;
@@ -365,6 +376,19 @@ std::vector<alternative> find_alternatives(
     return alternative{
         j, to_compact_journey(j, sched), arrival_time, dur, j.transfers_, true};
   });
+
+  if (alternatives.empty() && (allow_start_metas || allow_dest_metas)) {
+    if (std::any_of(begin(localization.at_station_->equivalent_),
+                    end(localization.at_station_->equivalent_),
+                    [&](auto const& eq) {
+                      return eq->index_ == destination_station_id;
+                    })) {
+      // reached destination meta station
+      auto alt = alternative{};
+      alt.arrival_time_ = localization.current_arrival_time_;
+      alternatives.emplace_back(alt);
+    }
+  }
 
   // TODO(pablo): add additional alternatives for recommended trips (if not
   // already found)
