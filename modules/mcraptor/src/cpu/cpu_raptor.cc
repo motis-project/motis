@@ -80,7 +80,7 @@ void mc_raptor<T, L>::relax_transfers() {
   stops_for_transfers_.reset();
   std::fill(routes_serving_updated_stops_.begin(), routes_serving_updated_stops_.end(), invalid<route_stops_index>);
   // iterate through all station and find marked
-  for(stop_id stop = 0; stop < query_.tt_.stop_count(); ++stop) {
+  for(stop_id stop = 0; stop < stop_count_; ++stop) {
     if(!stops_for_routes_.marked(stop)) {
       continue;
     }
@@ -94,7 +94,7 @@ void mc_raptor<T, L>::relax_transfers() {
     }
   }
 
-  for(stop_id stop = 0; stop < query_.tt_.stop_count(); ++stop) {
+  for(stop_id stop = 0; stop < stop_count_; ++stop) {
     if (!stops_for_routes_.marked(stop)) {
       continue;
     }
@@ -115,7 +115,7 @@ void mc_raptor<T, L>::relax_transfers() {
 template <class T, class L>
 void mc_raptor<T, L>::collect_routes_serving_updated_stops() {
   // find marked stations
-  for(stop_id stop = 0; stop < query_.tt_.stop_count(); stop++) {
+  for(stop_id stop = 0; stop < stop_count_; stop++) {
     if (!stops_for_transfers_.marked(stop)) {
       continue;
     }
@@ -195,31 +195,6 @@ void mc_raptor<T, L>::start_new_round() {
       }
     }
   }*/
-}
-
-// searches through all routes in station
-//
-// returns vector of pairs with route itself and index to the given station
-template <class T, class L>
-inline std::vector<std::pair<route_id, route_stops_index>>& mc_raptor<T, L>::get_routes_times_for_stop(stop_id stop_id) {
-  routes_times_for_stop_.clear();
-  // go through all routes for the given station using the first route as base
-  // and adding offset to this base until the base + offset = count of routes in current station
-  raptor_stop stop = query_.tt_.stops_[stop_id];
-  for(stop_routes_index stop_route_id = stop.index_to_stop_routes_; stop_route_id < stop.index_to_stop_routes_ + stop.route_count_; ++stop_route_id) {
-    // extract this route form timetable using its id
-    route_id route_id = query_.tt_.stop_routes_[stop_route_id];
-    raptor_route route = query_.tt_.routes_[route_id];
-    // go through stops of this route
-    for (route_stops_index stop_offset = 0; stop_offset < route.stop_count_;
-         stop_offset++) {
-      // add the station and the founded station to the result
-      if(query_.tt_.route_stops_[stop_offset + route.index_to_route_stops_] == stop_id) {
-        routes_times_for_stop_.emplace_back(std::make_pair(route_id, stop_offset));
-      }
-    }
-  }
-  return routes_times_for_stop_;
 }
 
 template <class T, class L>

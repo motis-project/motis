@@ -13,16 +13,13 @@ struct mc_raptor {
 
   mc_raptor(raptor_query<L> const& q) : query_(q),
                                         source_time_begin_(q.source_time_begin_),
-                                    result_(q.result()),
-//                                    route_labels_(q.tt_.stop_count()),
-//                                    transfer_labels_(q.tt_.stop_count()),
+                                        result_(q.result()),
                                         target_labels_(q.tt_.stop_count()),
-                                    stops_for_transfers_(q.tt_.stop_count()),
-                                    stops_for_routes_(q.tt_.stop_count()),
-                                    routes_serving_updated_stops_(q.tt_.route_count(), invalid<route_stops_index>),
-                                    round_(-1) {
-                                            routes_times_for_stop_.reserve(50);
-                                        };
+                                        stops_for_transfers_(q.tt_.stop_count()),
+                                        stops_for_routes_(q.tt_.stop_count()),
+                                        routes_serving_updated_stops_(q.tt_.route_count(), invalid<route_stops_index>),
+                                        round_(-1),
+                                        stop_count_(q.tt_.stop_count()) { };
 
   void set_query_source_time(time other_time);
 
@@ -40,8 +37,6 @@ struct mc_raptor {
   void scan_routes();
   inline bool is_label_pruned(stop_id stop, L& new_label);
 
-  inline std::vector<std::pair<route_id, route_stops_index>>& get_routes_times_for_stop(stop_id stop);
-
   void reset();
 
   //fields
@@ -49,6 +44,8 @@ struct mc_raptor {
   time source_time_begin_;
   rounds<L>& result_;
   int round_;
+  stop_id stop_count_;
+
 
 //  std::vector<bag<L>> route_labels_;
 //  std::vector<bag<L>> transfer_labels_;
@@ -56,8 +53,6 @@ struct mc_raptor {
   std::vector<route_stops_index> routes_serving_updated_stops_;
   cpu_mark_store stops_for_transfers_;
   cpu_mark_store stops_for_routes_;
-  std::vector<std::pair<route_id, route_stops_index>> routes_times_for_stop_;
-
 };
 
 struct mc_raptor_departure: public mc_raptor<mc_raptor_departure, label_departure> {

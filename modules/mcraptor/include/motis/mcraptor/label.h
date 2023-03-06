@@ -58,11 +58,6 @@ struct label {
     int domination_journey_departure_time = journey_departure_time_rule(other);
     int domination_changes_count = changes_count_rule(other);
     int domination_travel_duration = travel_duration_rule(other);
-//    if(domination_arrival_time == 0 && domination_journey_departure_time == 0 && domination_changes_count == 0
-//        && parent_station_ == other.parent_station_ && route_id_ == other.route_id_ && current_trip_id_ == other.current_trip_id_
-//        && stop_offset_ == other.stop_offset_ && footpath_duration_ == other.footpath_duration_) {
-//      return true;
-//    }
 
     return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
            (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
@@ -70,8 +65,7 @@ struct label {
 
   bool is_equal(label& other) {
     if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_
-        && parent_station_ == other.parent_station_ && route_id_ == other.route_id_ && current_trip_id_ == other.current_trip_id_
-        && stop_offset_ == other.stop_offset_ && footpath_duration_ == other.footpath_duration_) {
+        && parent_station_ == other.parent_station_) {
       return true;
     }
     return false;
