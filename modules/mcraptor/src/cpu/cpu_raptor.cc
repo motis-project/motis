@@ -8,31 +8,48 @@ template <class T, class L>
 void mc_raptor<T, L>::init_arrivals() {
   static_cast<T*>(this)->init_arrivals();
 }
+template <class T, class L>
+inline bool mc_raptor<T, L>::is_label_pruned(stop_id stop, L& new_label) {
+  if(new_label.arrival_time_ < source_time_begin_) {
+    return true;
+  }
+
+  const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
+  bool merged_target = false;
+  for(stop_id target : t) {
+    if(stop == target) {
+      if(!target_labels_[stop].merge(new_label)) {
+        return true;
+      }
+      else {
+        merged_target = true;
+      }
+    }
+    else if(target_labels_[target].dominates(new_label)) {
+      return true;
+    }
+  }
+  if(!merged_target && !target_labels_[stop].merge(new_label)) {
+    return true;
+  }
+
+  return false;
+}
 
 template <class T, class L>
 void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equal_station) {
-  if(new_label.arrival_time_ < source_time_begin_) {
+  if(is_label_pruned(stop, new_label)) {
     return;
   }
-  // ??? checking for empty
-  // check if this label may be dominated by labels on the last stations
-  const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
-  for(stop_id target : t) {
-    if(transfer_labels_[target].dominates(new_label)) {
-      return;
-    }
-  }
-  if(!route_labels_[stop].merge(new_label)) {
-    return;
-  }
-  // add indominated label to the bags
-  transfer_labels_[stop].merge(new_label);
+
+  // add indominated label to the bag
   current_round()[stop].merge_undominated(new_label);
   // mark the station
   stops_for_routes_.mark(stop);
 
   // Check equal stations if there is target among them
   if(!from_equal_station) {
+    const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
     for (stop_id s : query_.meta_info_.equivalent_stations_[stop]) {
       if (s == stop) {
         continue;
@@ -48,20 +65,10 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equ
 
 template <class T, class L>
 void mc_raptor<T, L>::arrival_by_transfer(stop_id stop, L& new_label) {
-  if(new_label.arrival_time_ < source_time_begin_) {
+  if(is_label_pruned(stop, new_label)) {
     return;
   }
-  // checking for empty??
-  // check if this label may be dominated by other existing labels
-  const auto& t = static_cast<T*>(this)->targets_;
-  for(stop_id target : t) {
-    if(transfer_labels_[target].dominates(new_label)) {
-      return;
-    }
-  }
-  if(!transfer_labels_[stop].merge(new_label)) {
-    return;
-  }
+
   // add indominated label to the bag
   current_round()[stop].merge_undominated(new_label);
   // mark current station

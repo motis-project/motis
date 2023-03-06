@@ -14,8 +14,9 @@ struct mc_raptor {
   mc_raptor(raptor_query<L> const& q) : query_(q),
                                         source_time_begin_(q.source_time_begin_),
                                     result_(q.result()),
-                                    route_labels_(q.tt_.stop_count()),
-                                    transfer_labels_(q.tt_.stop_count()),
+//                                    route_labels_(q.tt_.stop_count()),
+//                                    transfer_labels_(q.tt_.stop_count()),
+                                        target_labels_(q.tt_.stop_count()),
                                     stops_for_transfers_(q.tt_.stop_count()),
                                     stops_for_routes_(q.tt_.stop_count()),
                                     routes_serving_updated_stops_(q.tt_.route_count(), invalid<route_stops_index>),
@@ -37,6 +38,7 @@ struct mc_raptor {
   void relax_transfers();
   void collect_routes_serving_updated_stops();
   void scan_routes();
+  inline bool is_label_pruned(stop_id stop, L& new_label);
 
   inline std::vector<std::pair<route_id, route_stops_index>>& get_routes_times_for_stop(stop_id stop);
 
@@ -48,8 +50,9 @@ struct mc_raptor {
   rounds<L>& result_;
   int round_;
 
-  std::vector<bag<L>> route_labels_;
-  std::vector<bag<L>> transfer_labels_;
+//  std::vector<bag<L>> route_labels_;
+//  std::vector<bag<L>> transfer_labels_;
+  std::vector<bag<L>> target_labels_;
   std::vector<route_stops_index> routes_serving_updated_stops_;
   cpu_mark_store stops_for_transfers_;
   cpu_mark_store stops_for_routes_;

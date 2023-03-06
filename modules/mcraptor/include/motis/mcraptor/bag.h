@@ -33,6 +33,10 @@ struct bag {
   }
 
   bool merge(L& other_label) noexcept {
+    if(contains_equal(other_label)) {
+      return true;
+    }
+
     size_t removed_labels = 0;
     size_t labels_size = labels_.size();
     for (size_t i = 0; i < labels_size; i++) {
@@ -49,10 +53,14 @@ struct bag {
   }
 
   void merge_undominated(L& other_label) noexcept {
-    if(dominates(other_label)){ //TODO why is it asserted in original?
-//      std::cout << "mergeUndominated returns" << std::endl;
+//    if(dominates(other_label)){ //TODO why is it asserted in original?
+////      std::cout << "mergeUndominated returns" << std::endl;
+//      return;
+//    }
+    if(contains_equal(other_label)) {
       return;
     }
+
     size_t removed_labels = 0;
     size_t labels_size = labels_.size();
     for (size_t i = 0; i < labels_size; i++) {
@@ -69,6 +77,15 @@ struct bag {
   bool dominates(L& other_label) {
     for(L& label : labels_) {
       if(label.dominates(other_label)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  bool contains_equal(L& other_label) {
+    for(L& label : labels_) {
+      if(label.is_equal(other_label)) {
         return true;
       }
     }
