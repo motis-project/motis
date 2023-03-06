@@ -30,6 +30,7 @@ private:
   motis::module::msg_ptr lookup_meta_station(motis::module::msg_ptr const&);
   motis::module::msg_ptr lookup_meta_stations(motis::module::msg_ptr const&);
   motis::module::msg_ptr lookup_schedule_info();
+  motis::module::msg_ptr lookup_station_info(motis::module::msg_ptr const&);
 
   motis::module::msg_ptr lookup_ribasis(motis::module::msg_ptr const&);
 

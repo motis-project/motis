@@ -131,3 +131,51 @@ LookupStationEventsResponse:
   fields:
     events:
       description: TODO
+LookupStationInfoRequest:
+  description: TODO
+  fields:
+    schedule:
+      description: |
+        The ID of the schedule to use.
+
+        Use `0` for the default schedule.
+    station_ids:
+      description: Station IDs to look up.
+    include_meta_stations:
+      description: >
+        Whether stations that are marked as equivalent should be included
+        in the response as well (recursively).
+    include_stations_reachable_via_footpaths:
+      description: >
+        Whether stations that are reachable via footpaths should be
+        included in the response as well (recursively).
+LookupFootpathInfo:
+  description: TODO
+  fields:
+    other_station:
+      description: The other station reachable via this footpath.
+    duration:
+      description: Duration of the footpath in minutes.
+LookupStationInfo:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    external_ids:
+      description: External IDs for the station (e.g. DS100).
+    transfer_time:
+      description: Transfer time at the station in minutes.
+    equivalent:
+      description: Equivalent stations (meta stations).
+    footpaths:
+      description: Stations reachable via footpath from this station.
+LookupStationInfoResponse:
+  description: TODO
+  fields:
+    station_infos:
+      description: |
+        Information about the requested stations and, depending on the
+        options specified in the request, equivalent stations and stations
+        reachable via footpaths.
+
+        The order of the stations is unspecified.

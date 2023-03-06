@@ -25,6 +25,8 @@ include "lookup/LookupRiBasisResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
+include "lookup/LookupStationInfoRequest.fbs";
+include "lookup/LookupStationInfoResponse.fbs";
 include "osrm/OSRMManyToManyRequest.fbs";
 include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
@@ -304,7 +306,9 @@ union MsgContent {
   motis.paxmon.PaxMonDebugGraphRequest                                    = 141,
   motis.paxmon.PaxMonDebugGraphResponse                                   = 142,
   motis.paxmon.PaxMonGetUniversesResponse                                 = 143,
-  motis.ris.RISApplyResponse                                              = 144
+  motis.ris.RISApplyResponse                                              = 144,
+  motis.lookup.LookupStationInfoRequest                                   = 145,
+  motis.lookup.LookupStationInfoResponse                                  = 146
 }
 
 // Destination Examples:
