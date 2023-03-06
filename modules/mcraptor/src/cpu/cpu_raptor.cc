@@ -120,13 +120,13 @@ void mc_raptor<T, L>::collect_routes_serving_updated_stops() {
       continue;
     }
     // find the offset in form of stop_id where the route stops by current station (getRoutesTimeForStops method)
-    for(std::pair<route_id , route_stops_index> s : get_routes_times_for_stop(stop)) {
+    for(route_with_stop_offset s : query_.meta_info_.routes_times_for_stop[stop]) {
       // id of this route
-      const route_id route_id = s.first;
+      const route_id route_id = s.route_id;
       // route object itself
       const raptor_route route = query_.tt_.routes_[route_id];
       // this offset where the route stops on this station
-      const route_stops_index stop_offset = s.second;
+      const route_stops_index stop_offset = s.stop_offset;
       // if it is the last station
       if(stop_offset == route.stop_count_ - 1) {
         continue;

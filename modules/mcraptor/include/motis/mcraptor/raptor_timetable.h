@@ -153,6 +153,11 @@ struct raptor_timetable {
   }
 };
 
+struct route_with_stop_offset {
+  route_id route_id;
+  route_stops_index stop_offset;
+};
+
 struct raptor_meta_info {
   raptor_meta_info() = default;
   raptor_meta_info(raptor_meta_info const&) = delete;
@@ -186,6 +191,8 @@ struct raptor_meta_info {
   // duration of the footpaths INCLUDE transfer time from the departure
   // station
   std::vector<std::vector<raptor_footpath>> initialization_footpaths_;
+
+  std::vector<std::vector<route_with_stop_offset>> routes_times_for_stop;
 };
 
 }  // namespace motis::mcraptor

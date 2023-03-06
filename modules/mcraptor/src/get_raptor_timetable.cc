@@ -391,6 +391,34 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
   return meta_info;
 }
 
+std::vector<std::vector<route_with_stop_offset>> get_routes_times_for_all_stops(std::unique_ptr<raptor_timetable>& tt) {
+  std::vector<std::vector<route_with_stop_offset>> res;
+  res.reserve(tt->stop_count());
+  for(stop_id stop_id = 0; stop_id < tt->stop_count(); stop_id++) {
+    std::vector<route_with_stop_offset> routes_times_for_stop;
+    // go through all routes for the given station using the first route as base
+    // and adding offset to this base until the base + offset = count of routes in current station
+    raptor_stop stop = tt->stops_[stop_id];
+    routes_times_for_stop.reserve(stop.route_count_);
+
+    for(stop_routes_index stop_route_id = stop.index_to_stop_routes_; stop_route_id < stop.index_to_stop_routes_ + stop.route_count_; ++stop_route_id) {
+      // extract this route form timetable using its id
+      route_id route_id = tt->stop_routes_[stop_route_id];
+      raptor_route route = tt->routes_[route_id];
+      // go through stops of this route
+      for (route_stops_index stop_offset = 0; stop_offset < route.stop_count_;
+           stop_offset++) {
+        // add the station and the founded station to the result
+        if(tt->route_stops_[stop_offset + route.index_to_route_stops_] == stop_id) {
+          routes_times_for_stop.push_back({route_id, stop_offset});
+        }
+      }
+    }
+    res.push_back(routes_times_for_stop);
+  }
+  return res;
+}
+
 std::pair<std::unique_ptr<raptor_meta_info>, std::unique_ptr<raptor_timetable>>
 get_raptor_timetable(schedule const& sched) {
   log::scoped_timer timer("building MCRAPTOR timetable");
@@ -415,6 +443,7 @@ get_raptor_timetable(schedule const& sched) {
 
   auto meta_info = transformable_to_meta_info(ttt);
   auto tt = create_raptor_timetable(ttt);
+  meta_info->routes_times_for_stop = get_routes_times_for_all_stops( tt);
 
   return {std::move(meta_info), std::move(tt)};
 }
