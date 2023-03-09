@@ -9,6 +9,30 @@ struct additional_start {
 
   stop_id s_id_;
   time offset_;
+
+  inline bool operator==(const additional_start& asa) {
+    return this->s_id_ == asa.s_id_;
+  }
+
+  inline bool operator<(const additional_start& asa) {
+    return this->s_id_ < asa.s_id_;
+  }
+
+  inline bool operator>(const additional_start& asa) {
+    return this->s_id_ > asa.s_id_;
+  }
+
+  inline bool operator<=(const additional_start& asa) {
+    return this->s_id_ <= asa.s_id_;
+  }
+
+  inline bool operator>=(const additional_start& asa) {
+    return this->s_id_ >= asa.s_id_;
+  }
+
+  inline bool operator!=(const additional_start& asa) {
+    return this->s_id_ != asa.s_id_;
+  }
 };
 
 std::vector<additional_start> get_add_starts(raptor_meta_info const& meta_info,

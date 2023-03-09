@@ -250,10 +250,7 @@ void mc_raptor_departure::init_arrivals() {
       arrival_by_route(edge.to_, new_label);
     }
   } else {
-    label_departure new_label(invalid<time>, source_time_begin_, round_);
-    new_label.parent_station_ = query_.source_;
-    new_label.journey_departure_time_ = source_time_begin_;
-    arrival_by_route(query_.source_, new_label);
+    label_departure new_label;
 
     for (auto const& add_start : query_.add_starts_) {
       time add_start_time = source_time_begin_ + add_start.offset_;

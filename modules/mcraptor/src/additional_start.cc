@@ -35,6 +35,9 @@ std::vector<additional_start> get_add_starts(raptor_meta_info const& meta_info,
     }
   }
 
+  std::sort(add_starts.begin(), add_starts.end());
+  add_starts.erase(std::unique(add_starts.begin(), add_starts.end()), add_starts.end());
+
   return add_starts;
 }
 
