@@ -253,9 +253,8 @@ struct ris::impl {
         &config_.rabbitmq_, [](std::string const& log_msg) {
           LOG(info) << "rabbitmq: " << log_msg;
         });
-    ribasis_receiver_->run([this, d, sched, buffer = std::vector<amqp::msg>{}](
-                               amqp::msg const& m) mutable {
-      buffer.emplace_back(m);
+    ribasis_receiver_->run([this, d, sched](amqp::msg const& m) mutable {
+      ribasis_buffer_.emplace_back(m);
 
       if (auto const n = now();
           (n - ribasis_receiver_last_update_) < config_.update_interval_) {
@@ -263,8 +262,8 @@ struct ris::impl {
       } else {
         ribasis_receiver_last_update_ = n;
 
-        auto msgs_copy = buffer;
-        buffer.clear();
+        auto msgs_copy = ribasis_buffer_;
+        ribasis_buffer_.clear();
 
         d->enqueue(
             ctx_data{d},
@@ -1029,6 +1028,8 @@ struct ris::impl {
 
   bool rabbitmq_log_enabled_{false};
   std::ofstream rabbitmq_log_file_;
+
+  std::vector<amqp::msg> ribasis_buffer_;
 };
 
 ris::ris() : module("RIS", "ris") {
