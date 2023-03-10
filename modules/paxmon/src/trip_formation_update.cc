@@ -1,6 +1,7 @@
 #include "motis/paxmon/trip_formation_update.h"
 
 #include <algorithm>
+#include <string_view>
 
 #include "motis/rt/util.h"
 #include "motis/vector.h"
@@ -12,17 +13,26 @@ using namespace motis::ris;
 
 namespace motis::paxmon {
 
-mcd::vector<std::uint64_t> get_section_uics(TripFormationSection const* sec) {
-  auto uics = mcd::vector<std::uint64_t>{};
+inline mcd::string fbs_to_mcd_str(flatbuffers::String const* s) {
+  return mcd::string{std::string_view{s->c_str(), s->size()}};
+}
+
+mcd::vector<vehicle_info> get_section_vehicles(
+    TripFormationSection const* sec) {
+  auto vehicles = mcd::vector<vehicle_info>{};
   for (auto const& vg : *sec->vehicle_groups()) {
     for (auto const& vi : *vg->vehicles()) {
       auto const uic = vi->uic();
-      if (std::find(begin(uics), end(uics), uic) == end(uics)) {
-        uics.emplace_back(uic);
+      if (std::find_if(begin(vehicles), end(vehicles), [&](auto const& v) {
+            return v.uic_ == uic;
+          }) == end(vehicles)) {
+        vehicles.emplace_back(vehicle_info{uic, fbs_to_mcd_str(vi->baureihe()),
+                                           fbs_to_mcd_str(vi->type_code()),
+                                           fbs_to_mcd_str(vi->order())});
       }
     }
   }
-  return uics;
+  return vehicles;
 }
 
 void update_trip_formation(schedule const& sched, universe& uv,
@@ -40,7 +50,7 @@ void update_trip_formation(schedule const& sched, universe& uv,
             view(sec->departure_station()->eva()),
             unix_to_motistime(sched.schedule_begin_,
                               sec->schedule_departure_time()),
-            get_section_uics(sec)};
+            get_section_vehicles(sec)};
       });
 
   if (auto const it = sched.uuid_to_trip_.find(trip_uuid);

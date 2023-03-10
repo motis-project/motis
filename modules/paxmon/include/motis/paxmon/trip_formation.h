@@ -11,10 +11,17 @@
 
 namespace motis::paxmon {
 
+struct vehicle_info {
+  std::uint64_t uic_{};
+  mcd::string baureihe_;
+  mcd::string type_code_;
+  mcd::string order_;
+};
+
 struct trip_formation_section {
   mcd::string departure_eva_;
   time schedule_departure_time_{INVALID_TIME};
-  mcd::vector<std::uint64_t> uics_;
+  mcd::vector<vehicle_info> vehicles_;
 };
 
 struct trip_formation {

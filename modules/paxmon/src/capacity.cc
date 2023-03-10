@@ -19,6 +19,7 @@
 
 #include "motis/core/debug/trip.h"
 
+#include "motis/paxmon/capacity_internal.h"
 #include "motis/paxmon/util/get_station_idx.h"
 
 using namespace motis::paxmon::util;
@@ -239,25 +240,13 @@ std::optional<vehicle_capacity> get_section_capacity(
     return {};
   }
   auto cap = vehicle_capacity{};
-  for (auto const& uic : tf_sec->uics_) {
-    if (auto const it = caps.vehicle_capacity_map_.find(uic);
+  for (auto const& vi : tf_sec->vehicles_) {
+    if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
         it != end(caps.vehicle_capacity_map_)) {
       cap += it->second;
     }
   }
   return cap;
-}
-
-inline capacity_source get_worst_source(capacity_source const a,
-                                        capacity_source const b) {
-  return static_cast<capacity_source>(
-      std::max(static_cast<std::underlying_type_t<capacity_source>>(a),
-               static_cast<std::underlying_type_t<capacity_source>>(b)));
-}
-
-inline std::uint16_t clamp_capacity(capacity_maps const& caps,
-                                    std::uint16_t const capacity) {
-  return std::max(caps.min_capacity_, capacity);
 }
 
 std::pair<std::uint16_t, capacity_source> get_capacity(

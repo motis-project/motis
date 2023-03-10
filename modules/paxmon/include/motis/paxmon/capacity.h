@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <algorithm>
 #include <map>
 #include <string>
 
@@ -33,18 +34,27 @@ struct cap_trip_id {
 
 struct vehicle_capacity {
   std::uint16_t seats_{};
+  std::uint16_t seats_1st_{};
+  std::uint16_t seats_2nd_{};
   std::uint16_t standing_{};
   std::uint16_t total_limit_{};
 
   vehicle_capacity& operator+=(vehicle_capacity const& o) {
     seats_ += o.seats_;
+    seats_1st_ += o.seats_1st_;
+    seats_2nd_ += o.seats_2nd_;
     standing_ += o.standing_;
     total_limit_ += o.total_limit_;
     return *this;
   }
 
   inline std::uint16_t limit() const {
-    return total_limit_ != 0U ? total_limit_ : seats_ + standing_;
+    return total_limit_ != 0U ? total_limit_ : seats_;
+  }
+
+  inline void update_seats() {
+    seats_ =
+        std::max(seats_, static_cast<std::uint16_t>(seats_1st_ + seats_2nd_));
   }
 };
 

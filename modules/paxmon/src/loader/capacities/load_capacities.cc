@@ -127,6 +127,12 @@ load_capacities_result load_capacities(schedule const& sched,
               cap.standing_ = val;
             } else if (attr == "PERS_ZUGELASSEN") {
               cap.total_limit_ = val;
+            } else if (attr.starts_with("ANZ_SITZ_1KL")) {
+              cap.seats_1st_ += val;
+              cap.update_seats();
+            } else if (attr.starts_with("ANZ_SITZ_2KL")) {
+              cap.seats_2nd_ += val;
+              cap.update_seats();
             }
             ++res.loaded_entry_count_;
           });

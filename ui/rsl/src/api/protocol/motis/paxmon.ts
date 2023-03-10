@@ -2,6 +2,7 @@
 // -> see /tools/protocol for information on how to update this file
 import {
   Interval,
+  ServiceInfo,
   Station,
   TripId,
   TripServiceInfo,
@@ -308,7 +309,7 @@ export type PaxMonCapacitySource =
   | "Class"
   | "Unknown";
 
-// paxmon/PaxMonTripLoadInfo.fbs
+// paxmon/PaxMonCapacityType.fbs
 export type PaxMonCapacityType = "Known" | "Unknown" | "Unlimited";
 
 // paxmon/PaxMonTripLoadInfo.fbs
@@ -830,6 +831,70 @@ export interface PaxMonUniverseInfo {
 export interface PaxMonGetUniversesResponse {
   multiverse_id: number;
   universes: PaxMonUniverseInfo[];
+}
+
+// paxmon/PaxMonGetTripCapacityRequest.fbs
+export interface PaxMonGetTripCapacityRequest {
+  universe: number;
+  trips: TripId[];
+}
+
+// paxmon/PaxMonGetTripCapacityResponse.fbs
+export interface PaxMonCapacityData {
+  limit: number;
+  seats: number;
+  seats_1st: number;
+  seats_2nd: number;
+  standing: number;
+  total_limit: number;
+}
+
+// paxmon/PaxMonGetTripCapacityResponse.fbs
+export interface PaxMonVehicleCapacityInfo {
+  uic: number;
+  found: boolean;
+  baureihe: string;
+  type_code: string;
+  order: string;
+  data: PaxMonCapacityData;
+}
+
+// paxmon/PaxMonGetTripCapacityResponse.fbs
+export interface PaxMonMergedTripCapacityInfo {
+  trip: TripId;
+  service_info: ServiceInfo;
+  trip_lookup_capacity: number;
+  trip_lookup_capacity_source: PaxMonCapacitySource;
+  trip_formation_capacity: PaxMonCapacityData;
+  trip_formation_found: boolean;
+  trip_formation_all_vehicles_found: boolean;
+  vehicles: PaxMonVehicleCapacityInfo[];
+}
+
+// paxmon/PaxMonGetTripCapacityResponse.fbs
+export interface PaxMonSectionCapacityInfo {
+  from: Station;
+  to: Station;
+  departure_schedule_time: number;
+  departure_current_time: number;
+  arrival_schedule_time: number;
+  arrival_current_time: number;
+  capacity_type: PaxMonCapacityType;
+  capacity: number;
+  capacity_source: PaxMonCapacitySource;
+  merged_trips: PaxMonMergedTripCapacityInfo[];
+}
+
+// paxmon/PaxMonGetTripCapacityResponse.fbs
+export interface PaxMonTripCapacityInfo {
+  tsi: TripServiceInfo;
+  sections: PaxMonSectionCapacityInfo[];
+}
+
+// paxmon/PaxMonGetTripCapacityResponse.fbs
+export interface PaxMonGetTripCapacityResponse {
+  trips: PaxMonTripCapacityInfo[];
+  min_capacity: number;
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs

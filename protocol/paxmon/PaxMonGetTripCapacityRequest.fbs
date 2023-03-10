@@ -1,0 +1,9 @@
+include "base/TripId.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonGetTripCapacityRequest {
+  universe: uint;
+
+  trips: [motis.TripId];
+}

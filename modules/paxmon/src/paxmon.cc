@@ -33,6 +33,7 @@
 #include "motis/paxmon/api/get_groups_in_trip.h"
 #include "motis/paxmon/api/get_interchanges.h"
 #include "motis/paxmon/api/get_status.h"
+#include "motis/paxmon/api/get_trip_capacity.h"
 #include "motis/paxmon/api/get_trip_load_info.h"
 #include "motis/paxmon/api/get_universes.h"
 #include "motis/paxmon/api/group_statistics.h"
@@ -335,6 +336,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/groups_in_trip",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::get_groups_in_trip(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/trip_capacity",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_trip_capacity(data_, msg);
                   },
                   {});
 

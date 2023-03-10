@@ -303,6 +303,15 @@
     type: motis.paxmon.PaxMonStatusResponse
     description: Information about the requested paxmon universe
 
+/paxmon/trip_capacity:
+  summary: Trip capacity information
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonGetTripCapacityRequest
+  output:
+    type: motis.paxmon.PaxMonGetTripCapacityResponse
+    description: Capacity information for the requested trip
+
 /paxmon/trip_load_info:
   summary: Load information for a trip
   tags:

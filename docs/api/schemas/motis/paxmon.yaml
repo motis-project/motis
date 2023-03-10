@@ -1402,3 +1402,108 @@ PaxMonFootpath:
       description: TODO
     to_station:
       description: TODO
+PaxMonGetTripCapacityRequest:
+  description: TODO
+  fields:
+    universe:
+      description: The ID of the universe.
+    trips:
+      description: A list of Trip IDs.
+PaxMonCapacityData:
+  description: TODO
+  fields:
+    limit:
+      description: Capacity used for RSL functionality.
+    seats:
+      description: Total number of seats (0 if unknown).
+    seats_1st:
+      description: Number of first class seats (0 if unknown).
+    seats_2nd:
+      description: Number of second class seats (0 if unknown).
+    standing:
+      description: Standing capacity (0 if unknown).
+    total_limit:
+      description: Maximum number of passengers allowed (0 if unknown).
+PaxMonVehicleCapacityInfo:
+  description: TODO
+  fields:
+    uic:
+      description: UIC vehicle number
+    found:
+      description: Whether the vehicle was found in the vehicle database.
+    baureihe:
+      description: TODO
+    type_code:
+      description: TODO
+    order:
+      description: TODO
+    data:
+      description: TODO
+PaxMonMergedTripCapacityInfo:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    service_info:
+      description: TODO
+    trip_lookup_capacity:
+      description: >
+        Capacity according to the classic capacity lookup based on trip id,
+        train number or category.
+    trip_lookup_capacity_source:
+      description: The source of the capacity returned by the classic lookup.
+    trip_formation_capacity:
+      description: >
+        Capacity information returned on the lookup based on trip formation
+        and vehicle information.
+    trip_formation_found:
+      description: Whether trip formation information was found.
+    trip_formation_all_vehicles_found:
+      description: >
+        Whether capacity information for all vehicles in the trip formation
+        was found.
+    vehicles:
+      description: >
+        The vehicles according to the trip formation, with capacity
+        information from the vehicle database.
+PaxMonSectionCapacityInfo:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    departure_schedule_time:
+      description: TODO
+    departure_current_time:
+      description: TODO
+    arrival_schedule_time:
+      description: TODO
+    arrival_current_time:
+      description: TODO
+    capacity_type:
+      description: TODO
+    capacity:
+      description: TODO
+    capacity_source:
+      description: TODO
+    merged_trips:
+      description: TODO
+PaxMonTripCapacityInfo:
+  description: TODO
+  fields:
+    tsi:
+      description: TODO
+    sections:
+      description: TODO
+PaxMonGetTripCapacityResponse:
+  description: TODO
+  fields:
+    trips:
+      description: |
+        A list of trips. Contains the trips listed in the request and any
+        trips that are merged with those listed in the request.
+
+        Note that the order of the trips is undefined.
+    min_capacity:
+      description: The configured mininum capacity.
