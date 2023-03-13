@@ -271,6 +271,16 @@ struct reconstructor {
         std::pair<time, uint16_t> last_departure_info = std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
         bool invalid_path = false;
         while (r_k > 0) {
+          if(r_k == 1) {
+            if (std::find(
+                    q.meta_info_.equivalent_stations_.at(parent_station)
+                        .begin(),
+                    q.meta_info_.equivalent_stations_.at(parent_station).end(),
+                    current_station) !=
+                q.meta_info_.equivalent_stations_.at(parent_station).end()) {
+              break;
+            }
+          }
           if (r_k % 2 == 0 && current_station_label.route_id_) {
             last_departure_info =
                 ij.add_route(parent_station, current_station_label.route_id_,
