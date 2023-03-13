@@ -6,6 +6,8 @@
 #include "motis/rt/util.h"
 #include "motis/vector.h"
 
+#include "motis/core/conv/trip_conv.h"
+
 #include "motis/paxmon/update_capacity.h"
 
 using namespace motis::rt;
@@ -17,22 +19,34 @@ inline mcd::string fbs_to_mcd_str(flatbuffers::String const* s) {
   return mcd::string{std::string_view{s->c_str(), s->size()}};
 }
 
-mcd::vector<vehicle_info> get_section_vehicles(
-    TripFormationSection const* sec) {
-  auto vehicles = mcd::vector<vehicle_info>{};
-  for (auto const& vg : *sec->vehicle_groups()) {
+trip_formation_section to_trip_formation_section(
+    schedule const& sched, motis::ris::TripFormationSection const* tfs) {
+  auto sec = trip_formation_section{
+      view(tfs->departure_station()->eva()),
+      unix_to_motistime(sched.schedule_begin_, tfs->schedule_departure_time())};
+  for (auto const& vg : *tfs->vehicle_groups()) {
+    auto const vg_idx = static_cast<std::uint8_t>(sec.vehicle_groups_.size());
+    sec.vehicle_groups_.emplace_back(vehicle_group{
+        fbs_to_mcd_str(vg->name()), fbs_to_mcd_str(vg->start_station()->eva()),
+        fbs_to_mcd_str(vg->destination_station()->eva()),
+        parse_uuid(view(vg->trip_id()->uuid())),
+        to_extern_trip(vg->trip_id()->id())});
     for (auto const& vi : *vg->vehicles()) {
       auto const uic = vi->uic();
-      if (std::find_if(begin(vehicles), end(vehicles), [&](auto const& v) {
-            return v.uic_ == uic;
-          }) == end(vehicles)) {
-        vehicles.emplace_back(vehicle_info{uic, fbs_to_mcd_str(vi->baureihe()),
-                                           fbs_to_mcd_str(vi->type_code()),
-                                           fbs_to_mcd_str(vi->order())});
+      if (auto it = std::find_if(begin(sec.vehicles_), end(sec.vehicles_),
+                                 [&](auto const& v) { return v.uic_ == uic; });
+          it == end(sec.vehicles_)) {
+        sec.vehicles_.emplace_back(vehicle_info{uic,
+                                                fbs_to_mcd_str(vi->baureihe()),
+                                                fbs_to_mcd_str(vi->type_code()),
+                                                fbs_to_mcd_str(vi->order()),
+                                                {vg_idx}});
+      } else {
+        it->vehicle_groups_.emplace_back(vg_idx);
       }
     }
   }
-  return vehicles;
+  return sec;
 }
 
 void update_trip_formation(schedule const& sched, universe& uv,
@@ -46,11 +60,7 @@ void update_trip_formation(schedule const& sched, universe& uv,
   auto& formation = uv.capacity_maps_.trip_formation_map_[trip_uuid];
   formation.sections_ =
       mcd::to_vec(*tfm->sections(), [&](TripFormationSection const* sec) {
-        return trip_formation_section{
-            view(sec->departure_station()->eva()),
-            unix_to_motistime(sched.schedule_begin_,
-                              sec->schedule_departure_time()),
-            get_section_vehicles(sec)};
+        return to_trip_formation_section(sched, sec);
       });
 
   if (auto const it = sched.uuid_to_trip_.find(trip_uuid);

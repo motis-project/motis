@@ -1439,6 +1439,12 @@ PaxMonVehicleCapacityInfo:
       description: TODO
     data:
       description: TODO
+    vehicle_groups:
+      description: >
+        A list of vehicle groups that contain this vehicle. The vehicle
+        groups are referenced by their index in the `vehicle_groups` list, e.g.
+        an entry of `0` means that the vehicle is contained in the first vehicle
+        group.
 PaxMonMergedTripCapacityInfo:
   description: TODO
   fields:
@@ -1466,6 +1472,9 @@ PaxMonMergedTripCapacityInfo:
       description: >
         The vehicles according to the trip formation, with capacity
         information from the vehicle database.
+    vehicle_groups:
+      description: >
+        The vehicle groups according to the trip formation.
 PaxMonSectionCapacityInfo:
   description: TODO
   fields:
@@ -1507,3 +1516,24 @@ PaxMonGetTripCapacityResponse:
         Note that the order of the trips is undefined.
     min_capacity:
       description: The configured mininum capacity.
+PaxMonVehicleGroupInfo:
+  description: |
+    Information about a vehicle group.
+
+    Note the following peculiarities:
+    - For both the `start` and `destination` fields, only the `id` is
+      guaranteed to be set. Name and position are only set if the station
+      was found in the schedule.
+    - For the `primary_trip_id`, only the primary identifiers (`station_id`,
+      `train_nr` and `time`) are set. The other values must be ignored.
+  fields:
+    name:
+      description: TODO
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    trip_uuid:
+      description: TODO
+    primary_trip_id:
+      description: TODO
