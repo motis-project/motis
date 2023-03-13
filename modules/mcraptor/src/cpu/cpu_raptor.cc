@@ -121,18 +121,56 @@ void mc_raptor<T, L>::collect_routes_serving_updated_stops() {
     }
     // find the offset in form of stop_id where the route stops by current station (getRoutesTimeForStops method)
     for(route_with_stop_offset s : query_.meta_info_.routes_times_for_stop[stop]) {
+      bool is_circled_route = false;
       // id of this route
       const route_id route_id = s.route_id;
       // route object itself
       const raptor_route route = query_.tt_.routes_[route_id];
       // this offset where the route stops on this station
       const route_stops_index stop_offset = s.stop_offset;
+      // check if this a circled route ==> means s1 -> s2 -> s3 -> s2 -> s1
+      const stop_count trip_size = route.stop_count_;
+      if (query_.tt_.route_stops_[route.index_to_route_stops_ + (trip_size / 2) - 1] == query_.tt_.route_stops_[route.index_to_route_stops_ + (trip_size / 2) + 1]) {
+        is_circled_route = true;
+      }
       // if it is the last station
-      if(stop_offset == route.stop_count_ - 1) {
+      if(stop_offset == route.stop_count_ - 1 && !is_circled_route) {
         continue;
       }
       // write to this route the earliest stop from both
-      routes_serving_updated_stops_[route_id] = std::min(routes_serving_updated_stops_[route_id], stop_offset);
+      if (is_circled_route) {
+        auto const actual_stop_offset = stop_offset - trip_size / 2;
+        auto const actual_written_stop_offset = routes_serving_updated_stops_[route_id];
+        if (stop_offset > trip_size / 2) {
+          // after && after
+          if (actual_written_stop_offset > trip_size / 2) {
+            routes_serving_updated_stops_[route_id] =
+                std::min(routes_serving_updated_stops_[route_id], stop_offset);
+            // after && before
+          } else {
+            if(actual_stop_offset < routes_serving_updated_stops_[route_id]) {
+              routes_serving_updated_stops_[route_id] = stop_offset;
+            }
+          }
+        } else if (stop_offset == trip_size / 2) {
+          routes_serving_updated_stops_[route_id] =
+              std::min(routes_serving_updated_stops_[route_id], stop_offset);
+        } else {
+          // before && before
+          if (actual_written_stop_offset < trip_size / 2) {
+            routes_serving_updated_stops_[route_id] =
+                std::min(routes_serving_updated_stops_[route_id], stop_offset);
+            // before && after
+          } else {
+            if (stop_offset < actual_written_stop_offset) {
+              routes_serving_updated_stops_[route_id] = stop_offset;
+            }
+          }
+        }
+      } else {
+          routes_serving_updated_stops_[route_id] =
+              std::min(routes_serving_updated_stops_[route_id], stop_offset);
+      }
     }
   }
 }
