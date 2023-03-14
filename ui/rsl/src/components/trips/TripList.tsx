@@ -1,6 +1,7 @@
 import { Listbox, Transition } from "@headlessui/react";
 import {
   AdjustmentsVerticalIcon,
+  ArrowPathIcon,
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
@@ -104,6 +105,8 @@ function TripList(): JSX.Element {
     data,
     fetchNextPage,
     hasNextPage,
+    isFetching,
+    refetch,
     /*
     error,
     isFetching,
@@ -257,9 +260,18 @@ function TripList(): JSX.Element {
         </div>
       </div>
       {totalNumberOfTrips !== undefined && (
-        <div className="pb-2 text-lg">
-          {formatNumber(totalNumberOfTrips)}{" "}
-          {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
+        <div className="flex justify-between items-center">
+          <div className="pb-2 text-lg">
+            {formatNumber(totalNumberOfTrips)}{" "}
+            {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
+          </div>
+          <div>
+            {!isFetching && (
+              <button onClick={() => refetch()}>
+                <ArrowPathIcon className="w-5 h-5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       )}
       <div className="grow">
