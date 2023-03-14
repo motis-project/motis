@@ -8,7 +8,6 @@ namespace motis.paxmon;
 
 table PaxMonCapacityData {
   limit: uint;
-
   seats: uint;
   seats_1st: uint;
   seats_2nd: uint;

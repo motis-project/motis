@@ -14,6 +14,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "motis/hash_set.h"
+
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
 
@@ -232,21 +234,31 @@ trip_formation_section const* get_trip_formation_section(
 }
 
 std::optional<vehicle_capacity> get_section_capacity(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    ev_key const& ev_key_from) {
-  auto const* tf_sec =
-      get_trip_formation_section(sched, caps, trp, ev_key_from);
-  if (tf_sec == nullptr) {
-    return {};
+    schedule const& sched, capacity_maps const& caps,
+    std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
+  auto uics = mcd::hash_set<std::uint64_t>{};
+  for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
+    auto const* tf_sec =
+        get_trip_formation_section(sched, caps, trp, ev_key_from);
+    if (tf_sec != nullptr) {
+      for (auto const& vi : tf_sec->vehicles_) {
+        uics.insert(vi.uic_);
+      }
+    }
   }
+
   auto cap = vehicle_capacity{};
-  for (auto const& vi : tf_sec->vehicles_) {
-    if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
+  for (auto const& uic : uics) {
+    if (auto const it = caps.vehicle_capacity_map_.find(uic);
         it != end(caps.vehicle_capacity_map_)) {
       cap += it->second;
     }
   }
-  return cap;
+  if (cap.seats() > 0) {
+    return cap;
+  } else {
+    return {};
+  }
 }
 
 std::pair<std::uint16_t, capacity_source> get_capacity(
@@ -257,17 +269,16 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
   auto worst_source = capacity_source::TRIP_EXACT;
   auto some_unknown = false;
 
+  auto const section_capacity =
+      get_section_capacity(sched, caps, lc.trips_, ev_key_from);
+  if (section_capacity.has_value()) {
+    return {clamp_capacity(caps, section_capacity->seats()),
+            capacity_source::TRIP_EXACT};
+  }
+
   auto ci = lc.full_con_->con_info_;
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
     utl::verify(ci != nullptr, "get_capacity: missing connection_info");
-
-    auto const section_capacity =
-        get_section_capacity(sched, caps, trp, ev_key_from);
-    if (section_capacity.has_value()) {
-      // section specific capacities include merged trips
-      return {clamp_capacity(caps, section_capacity->seats()),
-              capacity_source::TRIP_EXACT};
-    }
 
     auto const trip_capacity =
         get_trip_capacity(sched, caps, trp, ci, lc.full_con_->clasz_);
