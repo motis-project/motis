@@ -265,7 +265,7 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
         get_section_capacity(sched, caps, trp, ev_key_from);
     if (section_capacity.has_value()) {
       // section specific capacities include merged trips
-      return {clamp_capacity(caps, section_capacity->limit()),
+      return {clamp_capacity(caps, section_capacity->seats()),
               capacity_source::TRIP_EXACT};
     }
 

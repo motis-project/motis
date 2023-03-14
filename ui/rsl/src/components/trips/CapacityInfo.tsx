@@ -206,7 +206,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
           <>
             <div className="flex gap-1 flex-wrap">
               <span className="font-semibold">Kapazität aus Wagenreihung:</span>
-              <span>{mt.trip_formation_capacity.limit}</span>
+              <span>{mt.trip_formation_capacity.seats}</span>
             </div>
             <SectionVehicles mt={mt} />
           </>
@@ -227,23 +227,29 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             <td className="px-2">Bauart</td>
             <td className="px-2">Baureihe</td>
             <td className="px-2">UIC-Wagennummer</td>
-            <td className="px-2" title="Verwendete Kapazität">
-              Kap.
-            </td>
-            <td className="px-2" title="Sitzplätze insgesamt">
+            <td className="px-2 text-center" title="Sitzplätze insgesamt">
               Sitze
             </td>
-            <td className="px-2" title="Sitzplätze 1. Klasse">
+            <td className="px-2 text-center" title="Sitzplätze 1. Klasse">
               1. Kl
             </td>
-            <td className="px-2" title="Sitzplätze 2. Klasse">
+            <td className=" text-center" title="Sitzplätze 2. Klasse">
               2. Kl
             </td>
-            <td className="px-2" title="Stehplätze">
+            <td className="px-2 text-center" title="Stehplätze">
               Steh.
             </td>
-            <td className="px-2" title="Zulässige Gesamtanzahl Reisender">
+            <td
+              className="px-2 text-center"
+              title="Zulässige Gesamtanzahl Reisender"
+            >
               Zul.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Maximalkapazität (Zulässige Gesamtanzahl Reisender oder Anzahl Sitzplätze)"
+            >
+              Max.
             </td>
             <td className="px-2">Wagengruppen</td>
           </tr>
@@ -257,12 +263,12 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
                 <Baureihe baureihe={v.baureihe} />
               </td>
               <td className="px-2">{v.uic}</td>
-              <td className="px-2 text-center">{v.data.limit}</td>
               <td className="px-2 text-center">{v.data.seats}</td>
               <td className="px-2 text-center">{v.data.seats_1st}</td>
               <td className="px-2 text-center">{v.data.seats_2nd}</td>
               <td className="px-2 text-center">{v.data.standing}</td>
               <td className="px-2 text-center">{v.data.total_limit}</td>
+              <td className="px-2 text-center">{v.data.limit}</td>
               <td className="px-2">
                 {v.vehicle_groups
                   .map((idx) => mt.vehicle_groups[idx].name)
@@ -274,9 +280,6 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         <tfoot>
           <tr className="font-semibold border-t-2 border-db-cool-gray-300">
             <td className="px-2" colSpan={4}></td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.limit}
-            </td>
             <td className="px-2 text-center">
               {mt.trip_formation_capacity.seats}
             </td>
@@ -291,6 +294,9 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             </td>
             <td className="px-2 text-center">
               {mt.trip_formation_capacity.total_limit}
+            </td>
+            <td className="px-2 text-center">
+              {mt.trip_formation_capacity.limit}
             </td>
             <td className="px-2"></td>
           </tr>
