@@ -90,7 +90,11 @@ struct route_label {
   }
 
   bool dominates(route_label& other) {
-    return trip_ <= other.trip_;
+    if (trip_ == other.trip_) {
+      return parent_journey_departure_time_ >= other.parent_journey_departure_time_;
+    } else {
+      return trip_ <= other.trip_;
+    }
   }
 
   bool is_equal(route_label& other) {
