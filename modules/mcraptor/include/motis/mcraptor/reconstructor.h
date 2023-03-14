@@ -29,11 +29,11 @@ struct intermediate_journey {
   }
 
   void add_footpath(stop_id const to, time const a_time, time const d_time, uint16_t const d_track,
-                    time const duration, raptor_meta_info const& raptor_sched) {
+                    time const duration, raptor_meta_info const& raptor_sched, bool exit = false, bool enter = true) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
     stops_.emplace_back(stops_.size(), motis_index, 0, d_track, 0, d_track,
-                        a_time, d_time, a_time, d_time,
-                        timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE, false, true);
+                        a_time + duration, d_time, a_time + duration, d_time,
+                        timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE, exit, enter);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, -1, 0, 0);
   }
 
@@ -270,7 +270,13 @@ struct reconstructor {
         stop_id parent_station = current_station_label.parent_station_;
         std::pair<time, uint16_t> last_departure_info = std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
         bool invalid_path = false;
+        //std::cout << "\t\t\t New label's iteration" << std::endl;
         while (r_k > 0) {
+          //std::cout << "Current station: " << q.meta_info_.raptor_id_to_eva_.at(current_station) << " on round " << (int)r_k << std::endl;
+          //std::cout << "\tParent station: " << q.meta_info_.raptor_id_to_eva_.at(parent_station) << " on round " << (int)r_k << std::endl;
+          /*if (current_station == q.meta_info_.eva_to_raptor_id_.at(std::to_string(8590721))) {
+            std::cout << "Yeah";
+          }*/
           if(r_k == 1) {
             if (std::find(
                     q.meta_info_.equivalent_stations_.at(parent_station)
@@ -282,23 +288,62 @@ struct reconstructor {
             }
           }
           if (r_k % 2 == 0 && current_station_label.route_id_) {
+            raptor_route route = q.tt_.routes_[current_station_label.route_id_];
+            stop_id stop = q.tt_.route_stops_[route.index_to_route_stops_ + current_station_label.stop_offset_];
+            stop_id mid = invalid<stop_id>;
+            //std::cout << "\tLast station of route " << q.meta_info_.raptor_id_to_eva_.at(stop) << std::endl;
+            if (std::find(q.meta_info_.equivalent_stations_[q.target_].begin(), q.meta_info_.equivalent_stations_[q.target_].end(), stop) == q.meta_info_.equivalent_stations_[q.target_].end()) {
+              for (stop_id s: q.meta_info_.equivalent_stations_[q.target_]) {
+                for (stop_id st: q.meta_info_.equivalent_stations_[stop]) {
+                  if (st == s && s == q.target_) {
+                    continue;
+                  }
+                  if (st == s) {
+                    mid = s;
+                    break;
+                  }
+                }
+              }
+              if (mid != invalid<stop_id>) {
+                //std::cout << "\tFound station " << q.meta_info_.raptor_id_to_eva_.at(mid) << std::endl;
+                auto index_into_transfers = q.tt_.stops_[stop].index_to_transfers_;
+                auto next_index_into_transfers = q.tt_.stops_[stop + 1].index_to_transfers_;
+                for (auto current_index = index_into_transfers;
+                     current_index < next_index_into_transfers; ++current_index) {
+                  auto const& to_stop = q.tt_.footpaths_[current_index].to_;
+                  auto const& duration = q.tt_.footpaths_[current_index].duration_;
+                  if (to_stop == mid) {
+                    //std::cout << "\tShould add footpath from " << q.meta_info_.raptor_id_to_eva_.at(stop) << " to " << q.meta_info_.raptor_id_to_eva_.at(to_stop) << std::endl;
+                    ij.add_footpath(
+                        to_stop, current_station_label.arrival_time_,
+                        last_departure_info.first, last_departure_info.second,
+                        duration, raptor_sched_, false, true);
+                    last_departure_info = std::pair<time, uint16_t>(last_departure_info.first - current_station_label.footpath_duration_, invalid<uint16_t>);
+                    break;
+                  }
+                }
+              }
+            }
             last_departure_info =
                 ij.add_route(parent_station, current_station_label.route_id_,
                              current_station_label.current_trip_id_,
                              current_station_label.stop_offset_,
                              raptor_sched_, timetable_);
+            //std::cout << "\tCurrent route id: " << current_station_label.route_id_ << ", stop offset: " << current_station_label.stop_offset_ << std::endl;
           } else if(r_k % 2 == 1 && r_k != target_station_label.changes_count_ && valid(current_station_label.footpath_duration_)) {
             ij.add_footpath(
                 current_station, current_station_label.arrival_time_,
                 last_departure_info.first, last_departure_info.second,
                 current_station_label.footpath_duration_, raptor_sched_);
               last_departure_info = std::pair<time, uint16_t>(last_departure_info.first - current_station_label.footpath_duration_, invalid<uint16_t>);
+              //std::cout << "\tCurrent added footpath: from " <<  q.meta_info_.raptor_id_to_eva_.at(parent_station) << " to " <<  q.meta_info_.raptor_id_to_eva_.at(current_station) <<  " on round " << (int)r_k << std::endl;
           }
 
           r_k--;
           current_station_label = result[r_k][parent_station].get_fastest_label(last_departure_info.first, empty_label);
           if(!valid(current_station_label.journey_departure_time_)) {
             invalid_path = true;
+            //std::cout << "Invalid path worked!" << std::endl;
             break;
           }
           current_station = parent_station;
