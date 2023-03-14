@@ -291,11 +291,10 @@ void mc_raptor_departure::init_arrivals() {
     label_departure new_label;
 
     for (auto const& add_start : query_.add_starts_) {
-      time add_start_time = source_time_begin_ + add_start.offset_;
-      new_label = label_departure(invalid<time>, add_start_time, round_);
+      //time add_start_time = source_time_begin_ + add_start.offset_;
+      new_label = label_departure(invalid<time>, source_time_begin_, round_);
       new_label.parent_station_ = add_start.s_id_;
-      new_label.journey_departure_time_ = add_start_time;
-      // std::cout << "Add start: " << add_start.s_id_ << std::endl;
+      new_label.journey_departure_time_ = source_time_begin_;
       arrival_by_route(add_start.s_id_, new_label);
     }
   }
@@ -337,7 +336,14 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
 
       route_label new_label;
       new_label.trip_ = trip;
-      new_label.parent_journey_departure_time_ = label.journey_departure_time_;
+      if (std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), label.parent_station_) != query_.meta_info_.equivalent_stations_[query_.source_].end() &&
+          std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), stop) != query_.meta_info_.equivalent_stations_[query_.source_].end()) {
+        new_label.parent_journey_departure_time_ =
+            trip_departure;
+      } else {
+        new_label.parent_journey_departure_time_ =
+            label.journey_departure_time_;
+      }
       new_label.parent_stop_ = stop;
       new_label.current_trip_id_ = current_trip_id;  // = tripId;
       new_route_bag.merge(new_label);
