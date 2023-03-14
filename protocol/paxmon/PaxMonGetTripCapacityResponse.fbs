@@ -45,6 +45,8 @@ table PaxMonMergedTripCapacityInfo {
   trip_formation_found: bool;
   trip_formation_all_vehicles_found: bool;
 
+  // TODO: trip formation section: departure eva + sched. departure time?
+
   vehicles: [PaxMonVehicleCapacityInfo];
   vehicle_groups: [PaxMonVehicleGroupInfo];
 }
@@ -71,5 +73,12 @@ table PaxMonTripCapacityInfo {
 
 table PaxMonGetTripCapacityResponse {
   trips: [PaxMonTripCapacityInfo];
+
   min_capacity: uint;
+  fuzzy_match_max_time_diff: int;
+
+  trip_capacity_map_size: ulong;
+  category_capacity_map_size: ulong;
+  vehicle_capacity_map_size: ulong;
+  trip_formation_map_size: ulong;
 }

@@ -22,3 +22,5 @@ export const showOptimizationDebugLogAtom = atomWithStorage(
   "showOptimizationDebugLog",
   false
 );
+
+export const showCapacityInfoAtom = atomWithStorage("showCapacityInfo", false);

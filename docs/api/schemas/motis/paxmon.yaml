@@ -1516,6 +1516,26 @@ PaxMonGetTripCapacityResponse:
         Note that the order of the trips is undefined.
     min_capacity:
       description: The configured mininum capacity.
+    fuzzy_match_max_time_diff:
+      description: >
+        The configured maximum allowed departure/arrival time difference in
+        minutes for fuzzy matching trip capacity data.
+    trip_capacity_map_size:
+      description: |
+        The number of trips for which capacity information is available
+        (mapping trip id to capacity).
+
+        Note that this does not include trip formation information.
+    category_capacity_map_size:
+      description: >
+        The number of train categories for which capacity information is
+        available (mapping category to capacity).
+    vehicle_capacity_map_size:
+      description: >
+        The number of vehicles for which capacity information is available.
+    trip_formation_map_size:
+      description: >
+        The number of trips for which trip formation information is available.
 PaxMonVehicleGroupInfo:
   description: |
     Information about a vehicle group.

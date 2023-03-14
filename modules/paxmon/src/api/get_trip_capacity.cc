@@ -65,7 +65,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonGetTripCapacityRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
-  auto& uv = uv_access.uv_;
+  auto const& uv = uv_access.uv_;
+  auto const& caps = uv.capacity_maps_;
 
   auto const trips = collect_merged_trips(sched, req->trips());
 
@@ -81,8 +82,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
 
       auto tl_capacity = 0U;
       auto tl_capacity_src = capacity_source::SPECIAL;
-      auto const trip_capacity = get_trip_capacity(
-          sched, uv.capacity_maps_, trp, ci, lc.full_con_->clasz_);
+      auto const trip_capacity =
+          get_trip_capacity(sched, caps, trp, ci, lc.full_con_->clasz_);
       if (trip_capacity) {
         tl_capacity = trip_capacity->first;
         tl_capacity_src = trip_capacity->second;
@@ -93,8 +94,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
       auto tf_all_vehicles_found = false;
       auto vehicles = std::vector<Offset<PaxMonVehicleCapacityInfo>>{};
       auto vehicle_groups = std::vector<Offset<PaxMonVehicleGroupInfo>>{};
-      auto const* tf_sec = get_trip_formation_section(sched, uv.capacity_maps_,
-                                                      trp, sec.ev_key_from());
+      auto const* tf_sec =
+          get_trip_formation_section(sched, caps, trp, sec.ev_key_from());
       if (tf_sec != nullptr) {
         tf_found = true;
         tf_all_vehicles_found = true;
@@ -113,9 +114,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
         for (auto const& vi : tf_sec->vehicles_) {
           auto const vgs = mc.CreateVector(utl::to_vec(
               vi.vehicle_groups_, [](auto const& vg) { return vg; }));
-          if (auto const it =
-                  uv.capacity_maps_.vehicle_capacity_map_.find(vi.uic_);
-              it != end(uv.capacity_maps_.vehicle_capacity_map_)) {
+          if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
+              it != end(caps.vehicle_capacity_map_)) {
             auto const& vc = it->second;
             tf_capacity += vc;
             vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
@@ -127,7 +127,9 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
             tf_all_vehicles_found = false;
             auto const empty_str = mc.CreateSharedString("");
             vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
-                mc, vi.uic_, false, empty_str, empty_str, empty_str,
+                mc, vi.uic_, false, mc.CreateSharedString(vi.baureihe_.str()),
+                mc.CreateSharedString(vi.type_code_.str()),
+                mc.CreateSharedString(vi.order_.str()),
                 to_fbs_capacity_data(mc, vehicle_capacity{}), vgs));
           }
         }
@@ -144,8 +146,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
       ci = ci->merged_with_;
     }
 
-    auto const lookup_result = get_capacity(sched, lc, sec.ev_key_from(),
-                                            sec.ev_key_to(), uv.capacity_maps_);
+    auto const lookup_result =
+        get_capacity(sched, lc, sec.ev_key_from(), sec.ev_key_to(), caps);
 
     return CreatePaxMonSectionCapacityInfo(
         mc, to_fbs(mc, sec.from_station(sched)),
@@ -166,11 +168,14 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
         mc.CreateVector(utl::to_vec(access::sections{trp}, section_to_fbs)));
   };
 
-  mc.create_and_finish(MsgContent_PaxMonGetTripCapacityResponse,
-                       CreatePaxMonGetTripCapacityResponse(
-                           mc, mc.CreateVector(utl::to_vec(trips, trip_to_fbs)),
-                           uv.capacity_maps_.min_capacity_)
-                           .Union());
+  mc.create_and_finish(
+      MsgContent_PaxMonGetTripCapacityResponse,
+      CreatePaxMonGetTripCapacityResponse(
+          mc, mc.CreateVector(utl::to_vec(trips, trip_to_fbs)),
+          caps.min_capacity_, caps.fuzzy_match_max_time_diff_,
+          caps.trip_capacity_map_.size(), caps.category_capacity_map_.size(),
+          caps.vehicle_capacity_map_.size(), caps.trip_formation_map_.size())
+          .Union());
   return make_msg(mc);
 }
 

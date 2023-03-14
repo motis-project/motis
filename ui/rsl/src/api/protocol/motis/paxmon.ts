@@ -906,6 +906,11 @@ export interface PaxMonTripCapacityInfo {
 export interface PaxMonGetTripCapacityResponse {
   trips: PaxMonTripCapacityInfo[];
   min_capacity: number;
+  fuzzy_match_max_time_diff: number;
+  trip_capacity_map_size: number;
+  category_capacity_map_size: number;
+  vehicle_capacity_map_size: number;
+  trip_formation_map_size: number;
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs
