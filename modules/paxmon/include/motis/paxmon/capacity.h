@@ -48,6 +48,8 @@ struct vehicle_capacity {
     return *this;
   }
 
+  inline std::uint16_t seats() const { return seats_; }
+
   inline std::uint16_t limit() const {
     return total_limit_ != 0U ? total_limit_ : seats_;
   }

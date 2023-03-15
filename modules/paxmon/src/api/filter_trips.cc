@@ -37,6 +37,8 @@ struct trip_info {
 
   std::uint16_t max_expected_pax_{};
   std::uint16_t max_pax_range_{};
+  std::uint16_t max_pax_{};
+  std::uint16_t max_capacity_{};
 
   std::vector<edge_load_info> edge_load_infos_{};
 };
@@ -149,6 +151,8 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       ti.max_pax_range_ = std::max(
           ti.max_pax_range_,
           static_cast<std::uint16_t>(pax_limits.max_ - pax_limits.min_));
+      ti.max_pax_ = std::max(ti.max_pax_, pax_limits.max_);
+      ti.max_capacity_ = std::max(ti.max_capacity_, capacity);
       if (include_edges) {
         ti.edge_load_infos_.emplace_back(
             make_edge_load_info(uv, e, pdf, cdf, false));
@@ -258,6 +262,20 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                                          lhs.max_excess_pax_) >
                                 std::tie(rhs.max_pax_range_, rhs.max_load_,
                                          rhs.max_excess_pax_);
+                       });
+      break;
+    case PaxMonFilterTripsSortOrder_MaxPax:
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [](trip_info const& lhs, trip_info const& rhs) {
+                         return std::tie(lhs.max_pax_, lhs.max_load_) >
+                                std::tie(rhs.max_pax_, rhs.max_load_);
+                       });
+      break;
+    case PaxMonFilterTripsSortOrder_MaxCapacity:
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [](trip_info const& lhs, trip_info const& rhs) {
+                         return std::tie(lhs.max_capacity_, lhs.max_load_) >
+                                std::tie(rhs.max_capacity_, rhs.max_load_);
                        });
       break;
     default: break;

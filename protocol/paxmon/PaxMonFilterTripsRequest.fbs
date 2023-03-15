@@ -10,6 +10,8 @@ enum PaxMonFilterTripsSortOrder : byte {
   MaxLoad, // trips with highest load first
   EarliestCritical, // earliest critical trip first
   MaxPaxRange, // trips with highest max - min pax first
+  MaxPax, // trips with most passengers first
+  MaxCapacity // trips with highest capacity first
 }
 
 enum PaxMonFilterTripsTimeFilter : byte {

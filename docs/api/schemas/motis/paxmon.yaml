@@ -565,6 +565,8 @@ PaxMonFilterTripsSortOrder:
     - `MaxLoad`: Sort by percentage load (trip with highest load first)
     - `EarliestCritical`: Sort by current time of the first critical section (earliest first)
     - `MaxPaxRange`: Sort by largest passenger range (trip with largest range first)
+    - `MaxPax`: Sort by number of passengers (trip with most passengers first)
+    - `MaxCapacity`: Sort by capacity (trip with highest capacity first)
 PaxMonFilterTripsTimeFilter:
   description: |
     Specifies which timestamps must be in the filter interval.

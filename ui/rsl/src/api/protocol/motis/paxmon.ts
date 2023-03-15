@@ -397,7 +397,9 @@ export type PaxMonFilterTripsSortOrder =
   | "TrainNr"
   | "MaxLoad"
   | "EarliestCritical"
-  | "MaxPaxRange";
+  | "MaxPaxRange"
+  | "MaxPax"
+  | "MaxCapacity";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export type PaxMonFilterTripsTimeFilter =
