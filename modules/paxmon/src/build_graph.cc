@@ -129,7 +129,9 @@ add_group_route_to_graph_result add_group_route_to_graph(
       }
       edges.clear();
 
-      std::cout << "add_group_route_to_graph: enter_found=" << enter_found
+      std::cout << "add_group_route_to_graph: pg=" << grp.id_
+                << ", route=" << gr.local_group_route_index_
+                << ", enter_found=" << enter_found
                 << ", exit_found=" << exit_found << "\n";
 
       std::cout << "current leg:\n";
@@ -139,9 +141,7 @@ add_group_route_to_graph_result add_group_route_to_graph(
       print_trip_sections(uv, sched, leg.trip_idx_, tdi);
 
       std::cout << "\ncompact planned journey:\n";
-      for (auto const& l : cj.legs()) {
-        print_leg(sched, l);
-      }
+      print_compact_journey(sched, cj);
 
       std::cout << "\n\n";
 

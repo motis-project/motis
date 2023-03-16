@@ -217,7 +217,8 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
         cpg.alternatives_ = find_alternatives(
             uv, sched, mod.routing_cache_, group_measures,
             remaining_planned_journey.destination_station_id(), loc,
-            &remaining_planned_journey, false, 61);
+            &remaining_planned_journey, false, 61, mod.allow_start_metas_,
+            mod.allow_dest_metas_);
       }));
     }
     ctx::await_all(futures);

@@ -48,6 +48,9 @@ struct paxforecast : public motis::module::module {
   bool revert_forecasts_{false};
   float probability_threshold_{0.01F};
 
+  bool allow_start_metas_{false};
+  bool allow_dest_metas_{false};
+
   std::string stats_file_;
   std::unique_ptr<stats_writer> stats_writer_;
   std::unique_ptr<measures::storage> measures_storage_;

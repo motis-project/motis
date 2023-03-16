@@ -72,6 +72,21 @@
 
 #/lookup/station_events:
 
+/lookup/station_info:
+  summary: Station information
+  description: |
+    Returns information about the requested stations, including information
+    about equivalent (meta) stations and stations reachable via footpaths.
+
+    The `schedule` input parameter can be used to lookup stations in
+    paxmon parallel universes.
+  tags:
+    - lookup
+  input: motis.lookup.LookupStationInfoRequest
+  output:
+    type: motis.lookup.LookupStationInfoResponse
+    description: Information about the requested stations
+
 #/osrm/one_to_many:
 #/osrm/smooth_via:
 #/osrm/table:

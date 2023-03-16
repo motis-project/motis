@@ -1,0 +1,20 @@
+include "base/Station.fbs";
+
+namespace motis.lookup;
+
+table LookupFootpathInfo {
+  other_station: motis.Station;
+  duration: uint; // minutes
+}
+
+table LookupStationInfo {
+  station: motis.Station;
+  external_ids: [string];
+  transfer_time: uint; // minutes
+  equivalent: [motis.Station];
+  footpaths: [LookupFootpathInfo];
+}
+
+table LookupStationInfoResponse {
+  station_infos: [LookupStationInfo];
+}

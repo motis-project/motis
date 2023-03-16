@@ -1,0 +1,8 @@
+namespace motis.lookup;
+
+table LookupStationInfoRequest {
+  schedule: ulong; // schedule id (0 = default)
+  station_ids: [string];
+  include_meta_stations: bool;
+  include_stations_reachable_via_footpaths: bool;
+}

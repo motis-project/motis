@@ -21,6 +21,8 @@ import {
   LookupScheduleInfoResponse,
   LookupStationEventsRequest,
   LookupStationEventsResponse,
+  LookupStationInfoRequest,
+  LookupStationInfoResponse,
 } from "@/api/protocol/motis/lookup";
 import {
   PaxForecastApplyMeasuresRequest,
@@ -360,7 +362,9 @@ export type MsgContent =
   | PaxMonGroupStatisticsResponse
   | PaxMonDebugGraphRequest
   | PaxMonDebugGraphResponse
-  | PaxMonGetUniversesResponse;
+  | PaxMonGetUniversesResponse
+  | LookupStationInfoRequest
+  | LookupStationInfoResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -429,7 +433,9 @@ export type MsgContentType =
   | "PaxMonGroupStatisticsResponse"
   | "PaxMonDebugGraphRequest"
   | "PaxMonDebugGraphResponse"
-  | "PaxMonGetUniversesResponse";
+  | "PaxMonGetUniversesResponse"
+  | "LookupStationInfoRequest"
+  | "LookupStationInfoResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

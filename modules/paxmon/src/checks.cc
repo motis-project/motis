@@ -330,9 +330,7 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
 
   if (!ok) {
     std::cout << "compact journey (errors above):\n";
-    for (auto const& leg : cj.legs_) {
-      print_leg(sched, leg);
-    }
+    print_compact_journey(sched, cj);
   }
 
   return ok;

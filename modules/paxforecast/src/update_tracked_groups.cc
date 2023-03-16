@@ -102,9 +102,7 @@ void update_tracked_groups(
             merge_journeys(sched, journey_prefix, alt->compact_journey_);
       } catch (std::runtime_error const& e) {
         std::cout << "\noriginal planned journey:\n";
-        for (auto const& leg : old_journey.legs()) {
-          print_leg(sched, leg);
-        }
+        print_compact_journey(sched, old_journey);
         std::cout << "\nlocalization: in_trip="
                   << result.localization_->in_trip()
                   << ", first_station=" << result.localization_->first_station_

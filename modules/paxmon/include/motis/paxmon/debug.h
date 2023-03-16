@@ -14,6 +14,17 @@ void print_trip(schedule const& sched, trip_idx_t idx);
 
 void print_leg(schedule const& sched, journey_leg const& leg);
 
+void print_final_footpath(schedule const& sched, final_footpath const& fp);
+
+template <typename CompactJourney>
+inline void print_compact_journey(schedule const& sched,
+                                  CompactJourney const& cj) {
+  for (auto const& l : cj.legs()) {
+    print_leg(sched, l);
+  }
+  print_final_footpath(sched, cj.final_footpath());
+}
+
 void print_trip_section(schedule const& sched,
                         motis::access::trip_section const& ts);
 

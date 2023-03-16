@@ -54,7 +54,7 @@ add_group_route_result add_group_route(universe& uv, schedule const& sched,
                 new_probability, previous_probability, probability,
                 gr.local_group_route_index_);
     gr.probability_ = std::clamp(new_probability, 0.F, 1.F);
-    if (gr.disabled_) {
+    if (gr.disabled_ && gr.probability_ != 0.F) {
       auto const add_to_graph_result = add_group_route_to_graph(
           sched, uv, uv.passenger_groups_.group(pgi), gr, log, reason);
       gr.disabled_ = false;

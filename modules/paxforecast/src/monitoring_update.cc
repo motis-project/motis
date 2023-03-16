@@ -269,7 +269,8 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
             spawn_job_void([&mod, &uv, &sched, destination_station_id, &cpg] {
               cpg.alternatives_ = find_alternatives(
                   uv, sched, mod.routing_cache_, {}, destination_station_id,
-                  cpg.localization_, nullptr, true, 0);
+                  cpg.localization_, nullptr, true, 0, mod.allow_start_metas_,
+                  mod.allow_dest_metas_);
             }));
       }
     }
