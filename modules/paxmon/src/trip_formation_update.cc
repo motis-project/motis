@@ -41,7 +41,8 @@ trip_formation_section to_trip_formation_section(
                                                 fbs_to_mcd_str(vi->type_code()),
                                                 fbs_to_mcd_str(vi->order()),
                                                 {vg_idx}});
-      } else {
+      } else if (std::find(begin(it->vehicle_groups_), end(it->vehicle_groups_),
+                           vg_idx) == end(it->vehicle_groups_)) {
         it->vehicle_groups_.emplace_back(vg_idx);
       }
     }
