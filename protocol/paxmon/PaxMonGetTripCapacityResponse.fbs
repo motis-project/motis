@@ -44,8 +44,6 @@ table PaxMonMergedTripCapacityInfo {
   trip_formation_found: bool;
   trip_formation_all_vehicles_found: bool;
 
-  // TODO: trip formation section: departure eva + sched. departure time?
-
   vehicles: [PaxMonVehicleCapacityInfo];
   vehicle_groups: [PaxMonVehicleGroupInfo];
 }
