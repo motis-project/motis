@@ -17,6 +17,8 @@
 
 #include "conf/date_time.h"
 
+#include "fmt/format.h"
+
 #include "tar/file_reader.h"
 #include "tar/tar_reader.h"
 #include "tar/zstd_reader.h"
@@ -84,6 +86,11 @@ constexpr auto const MIN_DAY_DB = "MIN_DAY_DB";
 // value: largest message timestamp from MSG_DB that has
 //        earliest <= day.end && latest >= day.begin
 constexpr auto const MAX_DAY_DB = "MAX_DAY_DB";
+
+// stores the latest stream offset received for each rabbitmq stream
+// key: rabbitmq stream identifier
+// value: stream offset of the latest message that was received
+constexpr auto const STREAM_OFFSET_DB = "STREAM_OFFSET_DB";
 
 constexpr auto const BATCH_SIZE = unixtime{3600};
 
@@ -249,6 +256,19 @@ struct ris::impl {
       return;
     }
 
+    if (config_.rabbitmq_resume_stream_) {
+      auto const stored_stream_offset =
+          get_stream_offset(get_queue_id(config_.rabbitmq_));
+      if (stored_stream_offset) {
+        LOG(info) << "rabbitmq: resuming at stored stream offset "
+                  << *stored_stream_offset;
+        config_.rabbitmq_.numeric_stream_offset_ = *stored_stream_offset + 1;
+      } else {
+        LOG(info) << "rabbitmq: no stored stream offset found, resuming at "
+                  << config_.rabbitmq_.stream_offset_;
+      }
+    }
+
     ribasis_receiver_ = std::make_unique<amqp::ssl_connection>(
         &config_.rabbitmq_, [](std::string const& log_msg) {
           LOG(info) << "rabbitmq: " << log_msg;
@@ -268,6 +288,9 @@ struct ris::impl {
         d->enqueue(
             ctx_data{d},
             [this, sched, msgs = std::move(msgs_copy)]() {
+              if (msgs.empty()) {
+                return;
+              }
               publisher pub;
               pub.schedule_res_id_ =
                   to_res_id(::motis::module::global_res_id::SCHEDULE);
@@ -283,6 +306,12 @@ struct ris::impl {
                 parse_str_and_write_to_db(
                     *file_upload_, {m.content_.c_str(), m.content_.size()},
                     file_type::JSON, pub);
+              }
+
+              auto const stream_offset = msgs.back().stream_offset_;
+              auto const queue_id = get_queue_id(config_.rabbitmq_);
+              if (stream_offset) {
+                store_stream_offset(queue_id, *stream_offset);
               }
 
               update_system_time(*sched, pub);
@@ -344,7 +373,7 @@ struct ris::impl {
       fs::remove_all(config_.db_path_ + "-lock");
     }
 
-    env_.set_maxdbs(4);
+    env_.set_maxdbs(5);
     env_.set_mapsize(config_.db_max_size_);
 
     try {
@@ -360,6 +389,7 @@ struct ris::impl {
     t.dbi_open(MSG_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.dbi_open(MIN_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.dbi_open(MAX_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
+    t.dbi_open(STREAM_OFFSET_DB, db::dbi_flags::CREATE);
     t.commit();
 
     std::vector<input> urls;
@@ -979,6 +1009,31 @@ struct ris::impl {
     t.commit();
   }
 
+  void store_stream_offset(std::string const& queue_id,
+                           std::int64_t stream_offset) {
+    auto t = db::txn{env_};
+    auto db = t.dbi_open(STREAM_OFFSET_DB);
+    t.put(db, queue_id,
+          std::string_view{reinterpret_cast<char const*>(&stream_offset),
+                           sizeof(stream_offset)});
+    t.commit();
+  }
+
+  std::optional<std::int64_t> get_stream_offset(std::string const& queue_id) {
+    auto t = db::txn{env_};
+    auto db = t.dbi_open(STREAM_OFFSET_DB);
+    if (auto const val = t.get(db, queue_id); val) {
+      return {lmdb::as_int<std::int64_t>(*val)};
+    } else {
+      return {};
+    }
+  }
+
+  std::string get_queue_id(amqp::login const& login) const {
+    return fmt::format("{}:{}/{}/{}", login.host_, login.port_, login.vhost_,
+                       login.queue_);
+  }
+
   static void publish_system_time_changed(ctx::res_id_t schedule_res_id) {
     message_creator mc;
     mc.create_and_finish(
@@ -1066,6 +1121,9 @@ ris::ris() : module("RIS", "ris") {
         "RabbitMQ streams)");
   param(config_.rabbitmq_.stream_offset_, "rabbitmq.stream_offset",
         "Stream offset if using RabbitMQ streams (e.g. next, 2h, 1D...)");
+  param(config_.rabbitmq_resume_stream_, "rabbitmq.resume_stream",
+        "Resume stream at last received stream offset (if using RabbitMQ "
+        "streams)");
 }
 
 ris::~ris() = default;

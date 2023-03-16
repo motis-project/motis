@@ -24,6 +24,7 @@ struct config {
   unsigned update_interval_{60};
   std::string rabbitmq_log_{};
   std::string http_proxy_;
+  bool rabbitmq_resume_stream_{true};
 };
 
 struct ris : public motis::module::module {
