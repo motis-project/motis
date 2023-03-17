@@ -3,13 +3,24 @@
 #include <numeric>
 #include <vector>
 
+#include "fmt/core.h"
+
 #include "utl/parser/buffer.h"
 
 namespace motis::routing {
 
+constexpr auto const alloc_tracing = false;
+
+template <typename... Ts>
+void alloc_trace(Ts&&... args) {
+  if (alloc_tracing) {
+    fmt::print(std::cerr, std::forward<Ts>(args)...);
+  }
+}
+
 struct allocator {
   explicit allocator(size_t const initial_size) {
-    mem_.emplace_back(utl::buffer(initial_size));
+    mem_.emplace_back(initial_size);
     clear();
   }
 
@@ -21,21 +32,29 @@ struct allocator {
   allocator(allocator&&) = delete;
   allocator& operator=(allocator&&) = delete;
 
-  inline void dealloc(void* p) { list_.push(p); }
+  inline void dealloc(void* p) {
+    alloc_trace("dealloc {}\n", fmt::ptr(p));
+    list_.push(p);
+  }
 
   inline void* alloc(size_t const size) {
+    alloc_trace("alloc size={} -> ", size);
     if (list_.next_ != nullptr) {
-      return list_.take();
+      auto const mem_ptr = list_.take();
+      alloc_trace(" freelist -> {}\n", fmt::ptr(mem_ptr));
+      return mem_ptr;
     } else if (next_ptr_ + size < end_ptr_) {
       auto const mem_ptr = next_ptr_;
       next_ptr_ += size;
+      alloc_trace(" membuf -> {}\n", fmt::ptr(mem_ptr));
       return mem_ptr;
     } else {
-      mem_.emplace_back(utl::buffer{mem_.back().size_ * 2});
+      mem_.emplace_back(mem_.back().size_ * 2);
       set_range();
       assert(next_ptr_ + size < end_ptr_);
       auto const mem_ptr = next_ptr_;
       next_ptr_ += size;
+      alloc_trace(" new membuf -> {}\n", fmt::ptr(mem_ptr));
       return mem_ptr;
     }
   }
@@ -65,17 +84,22 @@ private:
 
   struct node {
     inline void* take() {
+      assert(next_ != nullptr);
       auto const ptr = next_;
+      alloc_trace("  take: next = {}  ->   {}\n", fmt::ptr(next_),
+                  fmt::ptr(next_->next_));
       next_ = next_->next_;
       return ptr;
     }
     inline void push(void* p) {
       auto const mem_ptr = reinterpret_cast<node*>(p);
       mem_ptr->next_ = next_;
+      alloc_trace("  push: next = {}  ->  {}\n", fmt::ptr(next_),
+                  fmt::ptr(mem_ptr));
       next_ = mem_ptr;
     }
     node* next_{nullptr};
-  } list_;
+  } list_{};
 };
 
 }  // namespace motis::routing

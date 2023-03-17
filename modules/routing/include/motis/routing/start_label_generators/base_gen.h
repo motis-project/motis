@@ -130,8 +130,7 @@ struct base_gen {
 
         auto const node = e.get_destination(Dir);
 
-        if (node->is_foot_node() && starting_footpaths &&
-            p.edges_.size() < 10U) {
+        if (node->is_foot_node() && starting_footpaths) {
           expand_foot_edges(*node, p, e);
         } else if (node->is_route_node()) {
           auto const additional_cost =

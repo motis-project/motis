@@ -127,12 +127,6 @@ if len(sys.argv) < 2:
     with Pool(processes=6) as pool:
         glob_str = f"fail/{query_f('*', routers[0])}"
         files = glob.iglob(glob_str)
-        print(f"files {glob_str}: {files}")
         reproducable = pool.map(reproduce, files)
-
-        print("reproducable:")
-        for f, r in zip(files, reproducable):
-            if r:
-                print("  {}".format(f))
 else:
     reproduce(f"fail/{query_f(sys.argv[1], routers[0])}", True)

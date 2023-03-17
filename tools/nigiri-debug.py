@@ -29,6 +29,13 @@ else:
         f"--batch_output_file={result_f(id, routers[1])}",
         "--num_threads", "1"
     ]
+    # run_nigiri = [
+    #     "./motis",
+    #     "--modules", "nigiri", "intermodal", "lookup", "osrm",
+    #     f"--batch_input_file=fail/{query_f(id, 'nigiri')}",
+    #     f"--batch_output_file={result_f(id, 'nigiri')}",
+    #     "--num_threads", "1"
+    # ]
     print("NIGIRI_CMD:", " ".join(run_nigiri))
 
     out = subprocess.check_output(run_nigiri)

@@ -6,8 +6,6 @@
 
 namespace motis::routing {
 
-enum class label_type { kStartLabel, kSearchLabel };
-
 template <typename... DataClass>
 struct label_data : public DataClass... {};
 
@@ -27,8 +25,7 @@ struct label : public Data {  // NOLINT
         connection_(lcon),
         start_(pred != nullptr ? pred->start_ : now),
         now_(now),
-        dominated_(false),
-        type_(label_type::kStartLabel) {
+        dominated_(false) {
     Init::init(*this, lb);
   }
 
@@ -57,8 +54,9 @@ struct label : public Data {  // NOLINT
   node const* get_node() const { return edge_->get_destination<Dir>(); }
 
   template <typename Edge, typename LowerBounds>
-  bool create_label(label& l, Edge const& e, LowerBounds& lb, bool no_cost,
-                    label_type type, int additional_time_cost = 0) {
+  bool create_label(label& l, Edge const& e, LowerBounds& lb,
+                    duration const fastest_direct, bool no_cost,
+                    int additional_time_cost = 0) {
     if (pred_ && e.template get_destination<Dir>() == pred_->get_node()) {
       return false;
     }
@@ -83,13 +81,14 @@ struct label : public Data {  // NOLINT
     l.edge_ = &e;
     l.connection_ = ec.connection_;
     l.now_ += (Dir == search_dir::FWD) ? ec.time_ : -ec.time_;
-    l.type_ = type;
 
     Updater::update(l, ec, lb);
-    return !l.is_filtered();
+    return !l.is_filtered(fastest_direct);
   }
 
-  inline bool is_filtered() { return Filter::is_filtered(*this); }
+  inline bool is_filtered(duration const fastest_direct) {
+    return Filter::is_filtered(*this, fastest_direct);
+  }
 
   bool dominates(label const& o) const {
     if (incomparable(o)) {
@@ -99,8 +98,7 @@ struct label : public Data {  // NOLINT
   }
 
   bool incomparable(label const& o) const {
-    return type_ == label_type::kStartLabel ||
-           current_begin() < o.current_begin() ||
+    return current_begin() < o.current_begin() ||
            current_end() > o.current_end();
   }
 
@@ -127,7 +125,6 @@ struct label : public Data {  // NOLINT
   light_connection const* connection_;
   time start_, now_;
   bool dominated_;
-  label_type type_;
 };
 
 }  // namespace motis::routing
