@@ -1029,7 +1029,7 @@ struct ris::impl {
     }
   }
 
-  std::string get_queue_id(amqp::login const& login) const {
+  static std::string get_queue_id(amqp::login const& login) {
     return fmt::format("{}:{}/{}/{}", login.host_, login.port_, login.vhost_,
                        login.queue_);
   }
