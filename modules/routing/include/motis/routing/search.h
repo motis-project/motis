@@ -127,16 +127,11 @@ struct search {
     }
 
     auto const& meta_goals = q.sched_->stations_[q.to_->id_]->equivalent_;
-    //    std::cout << "GOAL: " << q.sched_->stations_[q.to_->id_]->name_ << "
-    //    ("
-    //              << q.sched_->stations_[q.to_->id_]->eva_nr_ << ")\n";
     std::vector<int> goal_ids;
     std::vector<bool> is_goal(q.sched_->stations_.size(), false);
     for (auto const& meta_goal : meta_goals) {
       goal_ids.push_back(meta_goal->index_);
       is_goal[meta_goal->index_] = true;
-      //      std::cout << "meta_goal: " << meta_goal->name_ << " ("
-      //                << meta_goal->eva_nr_ << ")\n";
       if (!q.use_dest_metas_) {
         break;
       }

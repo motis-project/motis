@@ -624,7 +624,7 @@ struct rule_service_route_builder {
       full_trip_id ftid;
       push_mem(gb_.sched_.trip_mem_, ftid, "", edges_ptr, lcon_idx,
                static_cast<trip_idx_t>(gb_.sched_.trip_mem_.size()),
-               trip_debug{nullptr, 0, 0}, mcd::vector<uint32_t>{});
+               trip_debug{}, mcd::vector<uint32_t>{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {
         route_trips.push_back(trip_ptr);

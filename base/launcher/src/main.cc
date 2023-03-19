@@ -8,6 +8,7 @@
 #include "boost/asio/signal_set.hpp"
 #include "boost/filesystem.hpp"
 
+#include "utl/erase_if.h"
 #include "utl/parser/cstr.h"
 #include "utl/to_vec.h"
 
@@ -58,9 +59,16 @@ int main(int argc, char const** argv) {
   dataset_opt.adjust_footpaths_ = true;
 
   module_settings module_opt(instance.module_names());
-  module_opt.exclude_modules_ = {"nigiri"};
   remote_settings remote_opt;
   launcher_settings launcher_opt;
+
+  // Disable nigiri module by default.
+  std::set<std::string> disabled_by_default{
+      "cc",     "csa",    "gbfs", "nigiri", "paxforecast", "paxmon",
+      "raptor", "revise", "ris",  "rt",     "tiles",       "tripbased"};
+  utl::erase_if(module_opt.modules_, [&](std::string const& m) {
+    return disabled_by_default.contains(m);
+  });
 
   std::vector<conf::configuration*> confs = {&server_opt,  &import_opt,
                                              &dataset_opt, &module_opt,
@@ -77,6 +85,12 @@ int main(int argc, char const** argv) {
     if (parser.help()) {
       std::cout << "\n\tMOTIS " << short_version() << "\n\n";
       reg.print_list();
+      if (auto const module_names = instance.module_names();
+          module_names.empty()) {
+        std::cout << "\nNo modules available.\n";
+      } else {
+        std::cout << "\nAvailable modules: " << module_names << "\n\n";
+      }
       parser.print_help(std::cout);
       return 0;
     } else if (parser.version()) {

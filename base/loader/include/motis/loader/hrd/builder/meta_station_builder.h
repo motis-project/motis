@@ -14,11 +14,4 @@ flatbuffers64::Offset<flatbuffers64::Vector<flatbuffers64::Offset<MetaStation>>>
 create_meta_stations(std::set<station_meta_data::meta_station> const&,
                      station_builder& sb, flatbuffers64::FlatBufferBuilder&);
 
-void add_equivalent_stations(std::vector<int>&, int,
-                             std::set<station_meta_data::meta_station> const&);
-
-std::vector<int> get_equivalent_stations(
-    station_meta_data::meta_station const&,
-    std::set<station_meta_data::meta_station> const&);
-
 }  // namespace motis::loader::hrd

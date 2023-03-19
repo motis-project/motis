@@ -82,7 +82,6 @@ struct footpath_builder {
         duration = *adjusted_duration;
       }
 
-      //      from_station->equivalent_.emplace_back(to_station.get());
       add_foot_edge_pair(from_node, to_node, duration);
     }
     LOG(ml::info) << "Skipped " << skipped

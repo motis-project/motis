@@ -41,29 +41,4 @@ Offset<Vector<Offset<MetaStation>>> create_meta_stations(
       | vec());
 }
 
-void add_equivalent_stations(
-    std::vector<int>& visited, int stationeva,
-    std::set<station_meta_data::meta_station> const& hrd_meta_stations) {
-  auto const& s = hrd_meta_stations.find({stationeva, {}});
-  if (s == hrd_meta_stations.end()) {
-    return;
-  }
-  for (auto const& e : s->equivalent_) {
-    if (std::find(begin(visited), end(visited), e) == end(visited)) {
-      visited.push_back(e);
-      add_equivalent_stations(visited, e, hrd_meta_stations);
-    }
-  }
-}
-
-std::vector<int> get_equivalent_stations(
-    station_meta_data::meta_station const& s,
-    std::set<station_meta_data::meta_station> const& hrd_meta_stations) {
-  auto stations = s.equivalent_;
-  for (auto const& station : s.equivalent_) {
-    add_equivalent_stations(stations, station, hrd_meta_stations);
-  }
-  return stations;
-}
-
 }  // namespace motis::loader::hrd
