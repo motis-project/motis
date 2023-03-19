@@ -1,11 +1,10 @@
 #include "motis/parking/parking.h"
 
 #include <cmath>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <string>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/get_or_create.h"
 #include "utl/progress_tracker.h"
@@ -42,7 +41,7 @@ using namespace motis::osrm;
 using namespace motis::ppr;
 using namespace flatbuffers;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::parking {
 

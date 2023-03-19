@@ -23,28 +23,28 @@ struct pretrip_gen {
                                       std::vector<edge> const& query_edges,
                                       time interval_begin, time interval_end,
                                       light_connection const*,
-                                      bool starting_footpaths) {
+                                      bool starting_footpaths,
+                                      duration const fastest_direct) {
     std::vector<Label*> labels;
     auto const start = sched.station_nodes_.at(0).get();
     if ((start_edge->to_ == start && Dir == search_dir::FWD) ||
         (start_edge->from_ == start && Dir == search_dir::BWD)) {
       generate_intermodal_starts(sched, mem, lbs, start_edge, query_edges,
                                  interval_begin, interval_end,
-                                 starting_footpaths, labels);
+                                 starting_footpaths, fastest_direct, labels);
     } else {
       generate_meta_starts(sched, mem, lbs, meta_edges, interval_begin,
-                           interval_end, starting_footpaths, labels);
+                           interval_end, starting_footpaths, fastest_direct,
+                           labels);
     }
     return labels;
   }
 
-  static void generate_intermodal_starts(schedule const& sched,
-                                         mem_manager& mem, lower_bounds& lbs,
-                                         edge const* start_edge,
-                                         std::vector<edge> const& query_edges,
-                                         time interval_begin, time interval_end,
-                                         bool starting_footpaths,
-                                         std::vector<Label*>& labels) {
+  static void generate_intermodal_starts(
+      schedule const& sched, mem_manager& mem, lower_bounds& lbs,
+      edge const* start_edge, std::vector<edge> const& query_edges,
+      time interval_begin, time interval_end, bool starting_footpaths,
+      duration const fastest_direct, std::vector<Label*>& labels) {
     auto const start = sched.station_nodes_.at(0).get();
     for (auto const& qe : query_edges) {
       if ((Dir == search_dir::FWD && qe.from_ != start) ||
@@ -69,7 +69,7 @@ struct pretrip_gen {
 
       generate_labels_at_route_nodes(sched, mem, lbs, path, edge_interval_begin,
                                      edge_interval_end, starting_footpaths,
-                                     true, labels);
+                                     true, fastest_direct, labels);
     }
   }
 
@@ -78,32 +78,36 @@ struct pretrip_gen {
                                    std::vector<edge> const& meta_edges,
                                    time interval_begin, time interval_end,
                                    bool starting_footpaths,
+                                   duration const fastest_direct,
                                    std::vector<Label*>& labels) {
     for (auto const& me : meta_edges) {
-      generate_labels_at_route_nodes(sched, mem, lbs, {{&me, 0}},
-                                     interval_begin, interval_end,
-                                     starting_footpaths, false, labels);
+      generate_labels_at_route_nodes(
+          sched, mem, lbs, {{&me, 0}}, interval_begin, interval_end,
+          starting_footpaths, false, fastest_direct, labels);
     }
   }
 
   static void generate_labels_at_route_nodes(
       schedule const& sched, mem_manager& mem, lower_bounds& lbs,
-      const std::vector<std::pair<edge const*, int>>& initial_path,
-      time interval_begin, time interval_end, bool starting_footpaths,
-      bool add_first_interchange_time, std::vector<Label*>& labels) {
+      std::vector<std::pair<edge const*, int>> const& initial_path,
+      time const interval_begin, time const interval_end,
+      bool const starting_footpaths, bool const add_first_interchange_time,
+      duration const fastest_direct, std::vector<Label*>& labels) {
     base_gen<Dir, Label>::generate_labels_at_route_nodes(
         sched, initial_path, starting_footpaths, add_first_interchange_time,
         [&](std::vector<std::pair<edge const*, int>> const& path,
             edge const& re, duration initial_walk) {
           return generate_start_labels(path, re, mem, lbs, interval_begin,
-                                       interval_end, initial_walk, labels);
+                                       interval_end, initial_walk,
+                                       fastest_direct, labels);
         });
   }
 
   static void generate_start_labels(
       std::vector<std::pair<edge const*, int>> const& path, edge const& re,
-      mem_manager& mem, lower_bounds& lbs, time interval_begin,
-      time interval_end, duration initial_walk, std::vector<Label*>& labels) {
+      mem_manager& mem, lower_bounds& lbs, time const interval_begin,
+      time const interval_end, duration const initial_walk,
+      duration const fastest_direct, std::vector<Label*>& labels) {
     assert(!path.empty());
 
     auto const departure_begin = static_cast<time>(
@@ -116,6 +120,7 @@ struct pretrip_gen {
     create_labels<Dir>(departure_begin, departure_end, re, [&](time t) {
       auto const start = static_cast<time>(
           Dir == search_dir::FWD ? t - initial_walk : t + initial_walk);
+
       Label* l = nullptr;
       for (auto const& [e, additional_time_cost] : path) {
         if (l == nullptr) {
@@ -123,7 +128,7 @@ struct pretrip_gen {
           l = mem.create<Label>(e, nullptr, start, lbs);
         } else {
           auto new_label = mem.create<Label>();
-          if (!l->create_label(*new_label, *e, lbs, false,
+          if (!l->create_label(*new_label, *e, lbs, fastest_direct, false,
                                additional_time_cost)) {
             return;
           }
@@ -133,13 +138,15 @@ struct pretrip_gen {
       labels.push_back(l);
     });
 
-    generate_ontrip_label(mem, lbs, path, interval_begin, interval_end, labels);
+    generate_ontrip_label(mem, lbs, path, interval_begin, interval_end,
+                          fastest_direct, labels);
   }
 
   static void generate_ontrip_label(
       mem_manager& mem, lower_bounds& lbs,
-      std::vector<std::pair<edge const*, int>> const& path, time interval_begin,
-      time interval_end, std::vector<Label*>& labels) {
+      std::vector<std::pair<edge const*, int>> const& path,
+      time const interval_begin, time const interval_end,
+      duration const fastest_direct, std::vector<Label*>& labels) {
     auto const start =
         Dir == search_dir::FWD ? interval_end + 1 : interval_begin - 1;
     Label* l = nullptr;
@@ -149,7 +156,7 @@ struct pretrip_gen {
         l = mem.create<Label>(e, nullptr, start, lbs);
       } else {
         auto new_label = mem.create<Label>();
-        if (!l->create_label(*new_label, *e, lbs, false,
+        if (!l->create_label(*new_label, *e, lbs, fastest_direct, false,
                              additional_time_cost)) {
           return;
         }

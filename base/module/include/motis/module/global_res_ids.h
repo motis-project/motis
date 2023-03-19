@@ -14,6 +14,8 @@ enum class global_res_id {
   RIS_DATA,
   GBFS_DATA,
   GUESSER_DATA,
+  NIGIRI_TIMETABLE,
+  NIGIRI_TAGS,
   FIRST_FREE_RES_ID
 };
 

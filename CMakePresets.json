@@ -58,6 +58,7 @@
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_MIMALLOC": "ON",
+        "CISTA_USE_MIMALLOC": "ON",
         "MOTIS_WITH_WEBUI": "ON"
       },
       "environment": {

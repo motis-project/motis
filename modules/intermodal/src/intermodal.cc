@@ -524,11 +524,14 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   auto routing_resp = msg_ptr{};
   if ((!start.is_intermodal_ || !deps.empty()) &&
       (!dest.is_intermodal_ || !arrs.empty())) {
-    auto const router = ((req->search_type() == SearchType_Default ||
-                          req->search_type() == SearchType_Accessibility) &&
-                         start.start_type_ != Start_OntripTrainStart)
-                            ? router_
-                            : "/routing";
+    auto const router =
+        req->router()->Length() == 0U
+            ? ((req->search_type() == SearchType_Default ||
+                req->search_type() == SearchType_Accessibility) &&
+               start.start_type_ != Start_OntripTrainStart)
+                  ? router_
+                  : "/routing"
+            : req->router()->str();
 
     mc.create_and_finish(
         MsgContent_RoutingRequest,

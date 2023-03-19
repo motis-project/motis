@@ -218,7 +218,7 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb) {
 
 void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
                        config const& c) {
-  LOG(info) << "parsing HRD data version " << c.version_;
+  LOG(info) << "parsing HRD data version " << c.version_.view();
 
   auto const core_data_root = hrd_root / c.core_data_;
   auto const bitfields_file = load(core_data_root, BITFIELDS, c);

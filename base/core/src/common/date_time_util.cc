@@ -46,7 +46,7 @@ unixtime parse_unix_time(std::string_view s, char const* format) {
   in << s;
   local_seconds ls;
   std::string tz;
-  in >> parse(format, ls, tz);
+  in >> date::parse(format, ls, tz);
   auto const time_stamp = date::make_zoned(tz, ls).get_sys_time();
   return std::chrono::duration_cast<std::chrono::seconds>(
              time_stamp.time_since_epoch())

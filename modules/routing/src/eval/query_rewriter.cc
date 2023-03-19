@@ -59,10 +59,34 @@ int rewrite_queries(int argc, char const** argv) {
   std::string json;
   while (!in.eof() && in.peek() != EOF) {
     std::getline(in, json);
-    auto const target = make_msg(json)->get()->destination()->target()->str();
+    auto const msg_in = make_msg(json);
 
-    boost::replace_all(json, target, opt.new_target_);
-    out << json << "\n";
+    motis::module::message_creator fbb;
+
+    flatbuffers::Offset<void> content;
+    switch (msg_in->get()->content_type()) {
+      case MsgContent_RoutingResponse: {
+        content =
+            motis_copy_table(RoutingResponse, fbb, msg_in->get()->content())
+                .Union();
+      } break;
+      case MsgContent_RoutingRequest: {
+        content =
+            motis_copy_table(RoutingRequest, fbb, msg_in->get()->content())
+                .Union();
+      } break;
+      case MsgContent_IntermodalRoutingRequest: {
+        using motis::intermodal::IntermodalRoutingRequest;
+        content = motis_copy_table(IntermodalRoutingRequest, fbb,
+                                   msg_in->get()->content())
+                      .Union();
+      } break;
+      default: std::cerr << "unsupported message content type\n"; return 1;
+    }
+    fbb.create_and_finish(msg_in->get()->content_type(), content.Union(),
+                          opt.new_target_, DestinationType_Module,
+                          msg_in->id());
+    out << make_msg(fbb)->to_json(true) << "\n";
 
     ++count;
   }

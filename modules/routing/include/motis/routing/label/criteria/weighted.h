@@ -73,8 +73,9 @@ struct weighted_dominance {
 
 struct weighted_filter {
   template <typename Label>
-  static bool is_filtered(Label const& l) {
-    return l.weighted_lb_ > MAX_WEIGHTED;
+  static bool is_filtered(Label const& l, duration const fastest_direct) {
+    return l.weighted_lb_ >
+           std::min(static_cast<int>(fastest_direct), MAX_WEIGHTED);
   }
 };
 

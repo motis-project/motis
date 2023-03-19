@@ -1,24 +1,14 @@
 #pragma once
 
+#include "motis/core/schedule/time.h"
+
 namespace motis::routing {
 
-template <typename... Traits>
-struct filter;
-
-template <typename FirstFilter, typename... RestFilters>
-struct filter<FirstFilter, RestFilters...> {
+template <typename... Filters>
+struct filter {
   template <typename Label>
-  static bool is_filtered(Label const& l) {
-    return FirstFilter::is_filtered(l) ||
-           filter<RestFilters...>::is_filtered(l);
-  }
-};
-
-template <>
-struct filter<> {
-  template <typename Label>
-  static bool is_filtered(Label const&) {
-    return false;
+  static bool is_filtered(Label const& l, duration const fastest_direct) {
+    return (Filters::is_filtered(l, fastest_direct) || ...);
   }
 };
 

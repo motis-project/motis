@@ -58,10 +58,12 @@ struct post_node_id {
   }
 
   struct hash {
-    std::size_t operator()(motis::path::post_node_id const& id) const {
-      return id.osm_id_ == -1
-                 ? cista::build_hash(id.osm_id_)
-                 : cista::build_hash(id.osm_id_, id.pos_.lat_, id.pos_.lng_);
+    std::size_t operator()(motis::path::post_node_id const& id,
+                           cista::hash_t const seed) const {
+      return cista::hash_combine(
+          seed, id.osm_id_ == -1 ? cista::build_hash(id.osm_id_)
+                                 : cista::build_hash(id.osm_id_, id.pos_.lat_,
+                                                     id.pos_.lng_));
     }
   };
 

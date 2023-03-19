@@ -147,7 +147,7 @@ using late_connections_post_search_dominance_for_tests =
 
 struct late_connections_filter {
   template <typename Label>
-  static bool is_filtered(Label const& l) {
+  static bool is_filtered(Label const& l, duration const /* fastest_direct */) {
     return l.visited_hotel_ == late_connections::FILTERED;
   }
 };

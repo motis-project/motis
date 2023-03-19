@@ -31,13 +31,6 @@
 namespace motis {
 
 struct schedule {
-  schedule() = default;
-  schedule(schedule&&) = delete;
-  schedule(schedule const&) = delete;
-  schedule& operator=(schedule&&) = delete;
-  schedule& operator=(schedule const&) = delete;
-  ~schedule() = default;
-
   unixtime first_event_schedule_time_{std::numeric_limits<time_t>::max()};
   unixtime last_event_schedule_time_{std::numeric_limits<time_t>::min()};
   unixtime schedule_begin_{0}, schedule_end_{0};

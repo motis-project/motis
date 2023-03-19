@@ -6,6 +6,8 @@
 
 #include "motis/core/common/timing.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/validate_graph.h"
+#include "motis/core/journey/print_trip.h"
 #include "motis/routing/lower_bounds.h"
 #include "motis/routing/output/labels_to_journey.h"
 #include "motis/routing/pareto_dijkstra.h"
@@ -44,6 +46,55 @@ struct search_result {
   time interval_end_{INVALID_TIME};
 };
 
+duration get_fastest_direct_with_foot(schedule const& sched,
+                                      search_query const& q,
+                                      search_dir const dir) {
+  auto min = std::numeric_limits<duration>::max();
+  for (auto const& start : q.query_edges_) {
+    auto const& start_station =
+        *sched.stations_.at(start.get_destination(dir)->id_);
+    auto const& footpaths =
+        (dir == search_dir::FWD ? start_station.outgoing_footpaths_
+                                : start_station.incoming_footpaths_);
+    for (auto const& fp : footpaths) {
+      auto const fp_target =
+          dir == search_dir::FWD ? fp.to_station_ : fp.from_station_;
+      for (auto const& dest : q.query_edges_) {
+        if (dest.get_source(dir)->id_ == fp_target) {
+          min = std::min(
+              min, static_cast<duration>(start.get_foot_edge_cost().time_ +
+                                         fp.duration_ +
+                                         dest.get_foot_edge_cost().time_));
+        }
+      }
+    }
+  }
+  return min;
+}
+
+duration get_fastest_start_dest_overlap(search_query const& q,
+                                        search_dir const dir) {
+  auto min = std::numeric_limits<duration>::max();
+  for (auto const& start : q.query_edges_) {
+    auto const start_station = start.get_destination(dir);
+    for (auto const& dest : q.query_edges_) {
+      auto const dest_station = dest.get_source(dir);
+      if (start_station == dest_station) {
+        min = std::min(min,
+                       static_cast<duration>(start.get_foot_edge_cost().time_ +
+                                             dest.get_foot_edge_cost().time_));
+      }
+    }
+  }
+  return min;
+}
+
+duration get_fastest_direct(schedule const& sched, search_query const& q,
+                            search_dir const dir) {
+  return std::min(get_fastest_direct_with_foot(sched, q, dir),
+                  get_fastest_start_dest_overlap(q, dir));
+}
+
 template <search_dir Dir, typename StartLabelGenerator, typename Label>
 struct search {
   static search_result get_connections(search_query const& q) {
@@ -77,7 +128,7 @@ struct search {
 
     auto const& meta_goals = q.sched_->stations_[q.to_->id_]->equivalent_;
     std::vector<int> goal_ids;
-    boost::container::vector<bool> is_goal(q.sched_->stations_.size(), false);
+    std::vector<bool> is_goal(q.sched_->stations_.size(), false);
     for (auto const& meta_goal : meta_goals) {
       goal_ids.push_back(meta_goal->index_);
       is_goal[meta_goal->index_] = true;
@@ -102,7 +153,23 @@ struct search {
     lbs.travel_time_.run();
     MOTIS_STOP_TIMING(travel_time_lb_timing);
 
-    if (!lbs.travel_time_.is_reachable(lbs.travel_time_[q.from_])) {
+    auto const reachable_start = [&]() {
+      if (lbs.travel_time_.is_reachable(lbs.travel_time_[q.from_])) {
+        return true;
+      } else if (!q.use_start_metas_ ||
+                 q.from_->id_ >= q.sched_->stations_.size()) {
+        return false;
+      } else {
+        auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
+        return std::any_of(
+            begin(meta_froms), end(meta_froms), [&](station const* meta) {
+              auto const* sn = q.sched_->station_nodes_.at(meta->index_).get();
+              return lbs.travel_time_.is_reachable(lbs.travel_time_[sn]);
+            });
+      }
+    };
+
+    if (!reachable_start()) {
       return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
     }
 
@@ -129,16 +196,9 @@ struct search {
       }
       meta_edges.push_back(start_edge);
     } else {
+      utl::verify(q.from_->id_ < q.sched_->stations_.size(),
+                  "invalid start node with meta station search");
       auto const& meta_froms = q.sched_->stations_[q.from_->id_]->equivalent_;
-      if (q.use_start_metas_ &&
-          std::all_of(begin(meta_froms), end(meta_froms),
-                      [&lbs, &q](station const* s) {
-                        return !lbs.travel_time_.is_reachable(
-                            lbs.travel_time_[q.sched_->station_nodes_[s->index_]
-                                                 .get()]);
-                      })) {
-        return search_result(MOTIS_TIMING_MS(travel_time_lb_timing));
-      }
       for (auto const& meta_from : meta_froms) {
         auto meta_edge = create_start_edge(
             q.sched_->station_nodes_[meta_from->index_].get());
@@ -151,14 +211,16 @@ struct search {
       additional_edges[e.get_source<Dir>()].push_back(e);
     }
 
+    auto const fastest_direct = get_fastest_direct(*q.sched_, q, Dir);
     pareto_dijkstra<Dir, Label, lower_bounds> pd(
-        q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
-        std::move(additional_edges), lbs, *q.mem_);
+        *q.sched_, q.sched_->next_node_id_, q.sched_->stations_.size(), is_goal,
+        std::move(additional_edges), fastest_direct, lbs, *q.mem_);
 
     auto const add_start_labels = [&](time interval_begin, time interval_end) {
       pd.add_start_labels(StartLabelGenerator::generate(
           *q.sched_, *q.mem_, lbs, &start_edge, meta_edges, q.query_edges_,
-          interval_begin, interval_end, q.lcon_, q.use_start_footpaths_));
+          interval_begin, interval_end, q.lcon_, q.use_start_footpaths_,
+          fastest_direct));
     };
 
     time const schedule_begin = SCHEDULE_OFFSET_MINUTES;

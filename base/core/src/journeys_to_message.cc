@@ -75,9 +75,7 @@ std::vector<Offset<MoveWrapper>> convert_moves(
     } else {
       moves.push_back(CreateMoveWrapper(
           b, Move_Transport,
-          CreateTransport(b, &r, b.CreateString(t.category_name_),
-                          t.category_id_, t.clasz_, t.train_nr_,
-                          b.CreateString(t.line_identifier_),
+          CreateTransport(b, &r, t.clasz_, b.CreateString(t.line_identifier_),
                           b.CreateString(t.name_), b.CreateString(t.provider_),
                           b.CreateString(t.direction_))
               .Union()));

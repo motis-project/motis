@@ -120,9 +120,11 @@ std::string file_identifier(std::string const& filename) {
 }
 
 bool check(int id, std::vector<msg_ptr> const& msgs,
-           std::vector<std::string> const& files, std::vector<int>& file_errors,
-           fs::path const& fail_path, bool local, query_type_t const query_type,
-           bool pretty_print) {
+           std::vector<msg_ptr> const& queries,
+           std::vector<std::string> const& files,
+           std::vector<std::string> const& query_files,
+           std::vector<int>& file_errors, fs::path const& fail_path, bool local,
+           query_type_t const query_type, bool pretty_print) {
   assert(msgs.size() == files.size());
   assert(msgs.size() > 1);
   auto const file_count = files.size();
@@ -134,7 +136,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
 
   auto const fail = [&](auto const file_idx) -> std::ostream& {
     if (match) {
-      std::cout << "\nMismatch at query id " << id << ":" << std::endl;
+      std::cout << "\nMismatch at query id " << id << ":\n";
       match = false;
     }
     failed_files.insert(file_idx);
@@ -197,11 +199,20 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
     if (fail_path.empty()) {
       return;
     }
+
     std::ofstream out{
-        (fail_path / fs::path{std::to_string(id) + "_" +
-                              file_identifier(files[file_idx]) + ".json"})
+        (fail_path / fmt::format("{}_{}.json", std::to_string(id),
+                                 file_identifier(files[file_idx])))
             .string()};
     out << msgs[file_idx]->to_json(!pretty_print) << std::endl;
+
+    if (!queries.empty()) {
+      std::ofstream query_out{
+          (fail_path / fmt::format("{}_{}.json", std::to_string(id),
+                                   file_identifier(query_files[file_idx])))
+              .string()};
+      query_out << queries[file_idx]->to_json(!pretty_print) << std::endl;
+    }
   };
 
   if (!match) {
@@ -225,6 +236,7 @@ int compare(int argc, char const** argv) {
   bool local = false;
   bool pretty_print = false;
   std::vector<std::string> filenames;
+  std::vector<std::string> query_paths;
   std::string fail_dir;
   query_type_t query_type{query_type_t::PRETRIP};
   po::options_description desc("Intermodal Comparator");
@@ -234,24 +246,26 @@ int compare(int argc, char const** argv) {
       ("utc,u", po::bool_switch(&utc), "print timestamps in UTC")
       ("local,l", po::bool_switch(&local), "print timestamps in local time")
       ("pretty,p", po::bool_switch(&pretty_print), "pretty-print json files")
-      ("i", po::value<std::vector<std::string>>(&filenames), "input file")
+      ("input", po::value<std::vector<std::string>>(&filenames)->multitoken(), "response files")
       ("fail", po::value<std::string>(&fail_dir)->default_value("fail"),
           "output directory for different responses (empty to disable)")
+      ("queries", po::value<std::vector<std::string>>(&query_paths)->multitoken(),
+       "query files if failed queries should be written")
       ("type,t",
           po::value<query_type_t>(&query_type)->default_value(query_type),
-          "query type: pretrip|ontrip_fwd|ontrip_bwd")
-      ;
+          "query type: pretrip|ontrip_fwd|ontrip_bwd");
   // clang-format on
-  po::positional_options_description pod;
-  pod.add("i", -1);
+
   po::variables_map vm;
-  po::store(
-      po::command_line_parser(argc, argv).options(desc).positional(pod).run(),
-      vm);
+  po::store(po::command_line_parser(argc, argv).options(desc).run(), vm);
   po::notify(vm);
 
   if (help || filenames.size() < 2) {
-    std::cout << desc << std::endl;
+    fmt::print("{}\n", desc);
+    if (filenames.size() < 2) {
+      fmt::print("only {} filenames given, >=2 required: {}\nquery_paths: {}\n",
+                 filenames.size(), filenames, query_paths);
+    }
     return 0;
   }
 
@@ -268,6 +282,18 @@ int compare(int argc, char const** argv) {
     return std::ifstream{filename};
   });
   auto const file_count = in_files.size();
+
+  auto in_query_files = utl::to_vec(
+      query_paths,
+      [](std::string const& filename) { return std::ifstream{filename}; });
+  utl::verify(
+      in_query_files.empty() || in_query_files.size() == file_count,
+      "query paths ({}) should be either empty or match the response file "
+      "count ({})",
+      in_query_files.size(), file_count);
+
+  auto const with_queries = !in_query_files.empty();
+  std::vector<std::unordered_map<int, msg_ptr>> queued_queries(file_count);
   std::vector<std::unordered_map<int, msg_ptr>> queued_msgs(file_count);
   std::vector<int> file_errors(file_count);
 
@@ -280,6 +306,20 @@ int compare(int argc, char const** argv) {
     read.clear();
     done = true;
     for (auto i = 0UL; i < file_count; ++i) {
+      if (with_queries) {
+        auto& query_in = in_query_files[i];
+        if (query_in.peek() != EOF && !query_in.eof()) {
+          std::string line;
+          std::getline(query_in, line);
+          auto const m = make_msg(line);
+          if (m->get()->content_type() == MsgContent_IntermodalRoutingRequest) {
+            queued_queries[i][m->id()] = m;
+            read.insert(m->id());
+            done = false;
+          }
+        }
+      }
+
       auto& in = in_files[i];
       if (in.peek() != EOF && !in.eof()) {
         std::string line;
@@ -294,20 +334,35 @@ int compare(int argc, char const** argv) {
     }
     for (auto const& id : read) {
       std::vector<msg_ptr> msgs;
+      std::vector<msg_ptr> queries;
       msgs.reserve(file_count);
       for (auto i = 0UL; i < file_count; ++i) {
-        auto const& q = queued_msgs[i];
-        auto it = q.find(id);
-        if (it == end(q)) {
-          break;
-        } else {
-          msgs.emplace_back(it->second);
+        {
+          auto const& q_responses = queued_msgs[i];
+          auto it = q_responses.find(id);
+          if (it == end(q_responses)) {
+            break;
+          } else {
+            msgs.emplace_back(it->second);
+          }
+        }
+
+        if (with_queries) {
+          auto const& q_queries = queued_queries[i];
+          auto it = q_queries.find(id);
+          if (it == end(q_queries)) {
+            break;
+          } else {
+            queries.emplace_back(it->second);
+          }
         }
       }
-      if (msgs.size() == file_count) {
+      if (msgs.size() == file_count &&
+          (!with_queries || queries.size() == file_count)) {
         ++msg_count;
-        auto success = check(id, msgs, filenames, file_errors, fail_path, local,
-                             query_type, pretty_print);
+        auto success =
+            check(id, msgs, queries, filenames, query_paths, file_errors,
+                  fail_path, local, query_type, pretty_print);
         if (!success) {
           ++errors;
         }

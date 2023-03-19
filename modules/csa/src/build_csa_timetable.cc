@@ -8,7 +8,9 @@
 #include <set>
 #include <thread>
 
+#ifndef _WIN32
 #include "boost/sort/sort.hpp"
+#endif
 
 #include "utl/enumerate.h"
 #include "utl/pipes/range.h"
@@ -252,7 +254,11 @@ trip_id get_connections_from_expanded_trips(
   {
     scoped_timer sort_timer{"csa: sort connections"};
     progress_tracker->status("Sort Connections").out_bounds(15.F, 35.F);
+#ifdef _WIN32
+    std::sort(
+#else
     boost::sort::parallel_stable_sort(
+#endif
         std::begin(tt.fwd_connections_), std::end(tt.fwd_connections_),
         [&](csa_connection const& c1, csa_connection const& c2) -> bool {
           return c1.departure_ < c2.departure_;
@@ -262,7 +268,11 @@ trip_id get_connections_from_expanded_trips(
     tt.bwd_connections_ = tt.fwd_connections_;
     std::reverse(std::begin(tt.bwd_connections_),
                  std::end(tt.bwd_connections_));
+#ifdef _WIN32
+    std::sort(
+#else
     boost::sort::parallel_stable_sort(
+#endif
         std::begin(tt.bwd_connections_), std::end(tt.bwd_connections_),
         [&](csa_connection const& c1, csa_connection const& c2) -> bool {
           return c1.arrival_ > c2.arrival_;

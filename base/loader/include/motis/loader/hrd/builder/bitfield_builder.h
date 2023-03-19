@@ -11,7 +11,7 @@
 namespace motis::loader::hrd {
 
 struct bitfield_builder {
-  static constexpr int no_bitfield_num = -1;
+  static constexpr int kNoBitfield = -1;
 
   explicit bitfield_builder(std::map<int, bitfield>);
 
@@ -19,8 +19,7 @@ struct bitfield_builder {
       int bitfield_num, flatbuffers64::FlatBufferBuilder&);
 
   flatbuffers64::Offset<flatbuffers64::String> get_or_create_bitfield(
-      bitfield const&, flatbuffers64::FlatBufferBuilder&,
-      int = no_bitfield_num);
+      bitfield const&, flatbuffers64::FlatBufferBuilder&, int = kNoBitfield);
 
   std::map<int, bitfield> hrd_bitfields_;
   mcd::hash_map<bitfield, flatbuffers64::Offset<flatbuffers64::String>,

@@ -1,10 +1,9 @@
 #include "motis/ppr/ppr.h"
 
 #include <cmath>
+#include <filesystem>
 #include <limits>
 #include <map>
-
-#include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
@@ -35,7 +34,7 @@ using namespace ppr::routing;
 using namespace ppr::serialization;
 using namespace flatbuffers;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace pp = ::ppr::preprocessing;
 
 namespace motis::ppr {

@@ -59,7 +59,7 @@ struct transfers_dominance {
 
 struct transfers_filter {
   template <typename Label>
-  static bool is_filtered(Label const& l) {
+  static bool is_filtered(Label const& l, duration const /* fastest_direct */) {
     return l.transfers_lb_ > MAX_TRANSFERS;
   }
 };

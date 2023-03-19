@@ -156,6 +156,7 @@ jobs:
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
             --dataset.begin 20151004 \
             --dataset.write_serialized false \
+            --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
             --exclude_modules address osrm parking path ppr tiles tripbased gbfs
 
@@ -175,7 +176,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
           restore-keys: |
             pnpm-${{ runner.os }}-
 
@@ -309,6 +310,7 @@ jobs:
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
             --dataset.begin 20151004 \
             --dataset.write_serialized false \
+            --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
             --exclude_modules address osrm parking path ppr tiles tripbased gbfs
 

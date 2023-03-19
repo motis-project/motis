@@ -1,8 +1,5 @@
 #include "motis/core/journey/message_to_journeys.h"
 
-#include <algorithm>
-
-#include "motis/core/schedule/category.h"
 #include "motis/core/conv/connection_status_conv.h"
 #include "motis/core/conv/problem_type_conv.h"
 #include "motis/core/conv/timestamp_reason_conv.h"
@@ -56,15 +53,12 @@ journey::transport to_transport(Transport const& transport, uint16_t duration) {
   t.from_ = transport.range()->from();
   t.to_ = transport.range()->to();
   t.is_walk_ = false;
-  t.category_name_ = transport.category_name()->c_str();
-  t.category_id_ = transport.category_id();
   t.clasz_ = transport.clasz();
   t.direction_ = transport.direction()->c_str();
   t.line_identifier_ = transport.line_id()->c_str();
   t.name_ = transport.name()->c_str();
   t.provider_ = transport.provider()->c_str();
   t.mumo_id_ = 0;
-  t.train_nr_ = transport.train_nr();
   return t;
 }
 

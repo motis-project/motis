@@ -2,7 +2,6 @@
 
 #include "utl/to_vec.h"
 
-#include "motis/core/schedule/category.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
@@ -95,8 +94,6 @@ journey create_journey1() {
   j.transports_.resize(3);
   {
     auto& transport = j.transports_[0];
-    transport.category_id_ = 0;
-    transport.category_name_ = "ICE";
     transport.direction_ = "X";
     transport.duration_ = 10;
     transport.from_ = 0;
@@ -105,13 +102,10 @@ journey create_journey1() {
     transport.provider_ = "DB1";
     transport.mumo_id_ = 0;
     transport.to_ = 1;
-    transport.train_nr_ = 111;
     transport.is_walk_ = false;
   }
   {
     auto& transport = j.transports_[1];
-    transport.category_id_ = 1;
-    transport.category_name_ = "IC";
     transport.direction_ = "Y";
     transport.duration_ = 11;
     transport.from_ = 1;
@@ -120,7 +114,6 @@ journey create_journey1() {
     transport.provider_ = "DB2";
     transport.mumo_id_ = 0;
     transport.to_ = 2;
-    transport.train_nr_ = 222;
     transport.is_walk_ = false;
   }
   {
@@ -129,14 +122,11 @@ journey create_journey1() {
     transport.duration_ = 5;
     transport.from_ = 2;
     transport.to_ = 3;
-    transport.category_id_ = 0;
-    transport.category_name_ = "";
     transport.direction_ = "";
     transport.line_identifier_ = "";
     transport.name_ = "";
     transport.provider_ = "";
     transport.mumo_id_ = 0;
-    transport.train_nr_ = 0;
   }
 
   j.trips_.resize(3);
@@ -232,8 +222,6 @@ journey create_journey2() {
   j.transports_.resize(1);
   {
     auto& transport = j.transports_[0];
-    transport.category_id_ = 0;
-    transport.category_name_ = "ICE";
     transport.direction_ = "X";
     transport.duration_ = 15;
     transport.from_ = 0;
@@ -242,7 +230,6 @@ journey create_journey2() {
     transport.provider_ = "DB1";
     transport.mumo_id_ = 0;
     transport.to_ = 1;
-    transport.train_nr_ = 111;
     transport.is_walk_ = false;
   }
   j.trips_.resize(1);
@@ -274,7 +261,6 @@ TEST(core_convert_journey, journey_message_journey) {
     auto const& o = original_journeys[i];
 
     ASSERT_EQ(o.duration_, j.duration_);
-    // ASSERT_TRUE(o.price_ == j.price_); TODO(Mohammad Keyhani)
     EXPECT_EQ(o.transfers_, j.transfers_);
     EXPECT_EQ(o.stops_.size(), j.stops_.size());
     EXPECT_EQ(o.transports_.size(), j.transports_.size());
@@ -306,8 +292,6 @@ TEST(core_convert_journey, journey_message_journey) {
     for (auto t = 0UL; t < o.transports_.size(); ++t) {
       auto const& ot = o.transports_[t];
       auto const& jt = j.transports_[t];
-      ASSERT_EQ(ot.category_id_, jt.category_id_);
-      ASSERT_EQ(ot.category_name_, jt.category_name_);
       ASSERT_EQ(ot.direction_, jt.direction_);
       ASSERT_EQ(ot.duration_, jt.duration_);
       ASSERT_EQ(ot.from_, jt.from_);
@@ -316,7 +300,6 @@ TEST(core_convert_journey, journey_message_journey) {
       ASSERT_EQ(ot.provider_, jt.provider_);
       ASSERT_EQ(ot.mumo_id_, jt.mumo_id_);
       ASSERT_EQ(ot.to_, jt.to_);
-      ASSERT_EQ(ot.train_nr_, jt.train_nr_);
       ASSERT_EQ(ot.is_walk_, jt.is_walk_);
       ASSERT_EQ(ot.mumo_price_, jt.mumo_price_);
       ASSERT_EQ(ot.mumo_type_, jt.mumo_type_);

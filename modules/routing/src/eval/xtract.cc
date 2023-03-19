@@ -205,6 +205,8 @@ int xtract(int argc, char const** argv) {
       }
     }
     for (auto const& fp : footpaths) {
+      std::cout << "footpath: " << fp.from_id_ << " --" << fp.duration_
+                << "--> " << fp.to_id_ << "\n";
       meta_bhf_out << fp.from_id_ << " " << fp.to_id_ << " " << std::setw(3)
                    << std::setfill('0') << fp.duration_ << "\n";
     }
@@ -309,18 +311,6 @@ int xtract(int argc, char const** argv) {
       }
       prev_line = line;
     }
-  }
-
-  for (auto const& file : {BASIC_DATA, TIMEZONES, MIN_CT_FILE}) {
-    fs::copy_file(schedule_path / CORE_DATA / parser_config.files(file),
-                  new_schedule_path / CORE_DATA / parser_config.files(file),
-                  fs::copy_option::overwrite_if_exists);
-  }
-
-  for (auto const& file : {ATTRIBUTES, TRACKS, INFOTEXT, THROUGH_SERVICES,
-                           MERGE_SPLIT_SERVICES, DIRECTIONS}) {
-    std::ofstream out{
-        (new_schedule_path / CORE_DATA / parser_config.files(file)).c_str()};
   }
 
   return 0;

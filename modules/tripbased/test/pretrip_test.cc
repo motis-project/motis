@@ -68,10 +68,6 @@ TEST_F(tripbased_pretrip, simple_fwd) {
       EXPECT_EQ("1000001", j.stops_[2].eva_no_);
     }
     EXPECT_EQ(1, j.transports_.size());
-    if (!j.transports_.empty()) {
-      EXPECT_EQ("RE", j.transports_[0].category_name_);
-      EXPECT_EQ(2, j.transports_[0].train_nr_);
-    }
   }
   EXPECT_TRUE(has_journey(journeys, 1512, 1555));
   EXPECT_TRUE(has_journey(journeys, 1542, 1625));

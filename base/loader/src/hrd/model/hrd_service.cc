@@ -46,7 +46,7 @@ hrd_service::section parse_initial_section(specification const& spec) {
 }
 
 std::vector<hrd_service::section> parse_section(
-    std::vector<hrd_service::section>& sections, cstr stop) {
+    std::vector<hrd_service::section> sections, cstr stop) {
   auto train_num = stop_train_num(stop);
   auto admin = stop_admin(stop);
 

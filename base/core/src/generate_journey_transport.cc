@@ -11,9 +11,7 @@ journey::transport generate_journey_transport(
   bool is_walk = true;
   mcd::string name;
   mcd::string cat_name;
-  unsigned cat_id = 0;
   unsigned clasz = 0;
-  unsigned train_nr = 0;
   mcd::string line_identifier;
   mcd::string direction;
   mcd::string provider;
@@ -21,7 +19,6 @@ journey::transport generate_journey_transport(
   if (con_info != nullptr) {
     is_walk = false;
 
-    cat_id = con_info->family_;
     cat_name = sched.categories_[con_info->family_]->name_;
 
     auto clasz_it = sched.classes_.find(cat_name);
@@ -30,9 +27,6 @@ journey::transport generate_journey_transport(
                                              : clasz_it->second);
 
     line_identifier = con_info->line_identifier_;
-
-    train_nr =
-        output_train_nr(con_info->train_nr_, con_info->original_train_nr_);
 
     if (con_info->dir_ != nullptr) {
       direction = *con_info->dir_;
@@ -49,10 +43,7 @@ journey::transport generate_journey_transport(
           to,
           is_walk,
           name.str(),
-          cat_name.str(),
-          cat_id,
           clasz,
-          train_nr,
           line_identifier.str(),
           duration,
           mumo_id,

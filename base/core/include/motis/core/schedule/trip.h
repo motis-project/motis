@@ -64,6 +64,11 @@ struct secondary_trip_id {
 };
 
 struct trip_debug {
+  trip_debug() = default;
+
+  trip_debug(mcd::string* file, int line_from, int line_to)
+      : file_{file}, line_from_{line_from}, line_to_{line_to} {}
+
   friend std::ostream& operator<<(std::ostream& out, trip_debug const& dbg) {
     return out << dbg.str();
   }
@@ -75,7 +80,7 @@ struct trip_debug {
                                   std::to_string(line_to_);
   }
 
-  mcd::string* file_{nullptr};
+  ptr<mcd::string> file_{nullptr};
   int line_from_{0}, line_to_{0};
 };
 
