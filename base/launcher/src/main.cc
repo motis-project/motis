@@ -58,6 +58,7 @@ int main(int argc, char const** argv) {
   dataset_opt.adjust_footpaths_ = true;
 
   module_settings module_opt(instance.module_names());
+  module_opt.exclude_modules_ = {"nigiri"};
   remote_settings remote_opt;
   launcher_settings launcher_opt;
 
