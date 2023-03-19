@@ -4,7 +4,7 @@ import {
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
-import { MapIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { MapIcon, UsersIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai";
@@ -26,7 +26,7 @@ import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
-import { formatNumber } from "@/data/numberFormat";
+import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
@@ -66,6 +66,22 @@ const sortOptions: Array<LabeledSortOrder> = [
 
 type GroupIdType = "internal" | "source";
 
+type LabeledRerouteReason = {
+  reason: PaxMonRerouteReason;
+  label: string;
+};
+
+const rerouteReasonOptions: Array<LabeledRerouteReason> = [
+  { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
+  { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
+  { reason: "Simulation", label: "Simulation" },
+  { reason: "Manual", label: "Manuelle Umleitung" },
+  { reason: "RevertForecast", label: "Rücknahme einer Vorhersage" },
+  { reason: "UpdateForecast", label: "Neuberechnung einer Vorhersage" },
+  { reason: "DestinationUnreachable", label: "Ziel nicht mehr erreichbar" },
+  { reason: "DestinationReachable", label: "Ziel wieder erreichbar" },
+];
+
 function getFilterGroupsRequest(
   pageParam: number,
   universe: number,
@@ -91,7 +107,7 @@ function getFilterGroupsRequest(
     filter_by_group_id: filterGroupIds,
     filter_by_data_source: filterDataSources,
     filter_by_train_nr: filterTrainNrs,
-    filter_by_time: selectedDate ? "DepartureOrArrivalTime" : "NoFilter",
+    filter_by_time: selectedDate ? "ActiveTime" : "NoFilter",
     filter_interval: {
       begin: selectedDate ? getUnixTime(selectedDate) : 0,
       end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
@@ -116,14 +132,7 @@ function GroupList(): JSX.Element {
   const [filterByRerouteReason, setFilterByRerouteReason] = useState(false);
   const [rerouteReasonFilter, setRerouteReasonFilter] = useState<
     PaxMonRerouteReason[]
-  >([
-    "Manual",
-    "BrokenTransfer",
-    "MajorDelayExpected",
-    "RevertForecast",
-    "Simulation",
-    "UpdateForecast",
-  ]);
+  >(rerouteReasonOptions.map((r) => r.reason));
 
   const filterTrainNrs = extractNumbers(trainNrFilter);
 
@@ -190,13 +199,9 @@ function GroupList(): JSX.Element {
       refetchOnWindowFocus: true,
       keepPreviousData: true,
       staleTime: 60000,
-      enabled: selectedDate != undefined,
     }
   );
 
-  if (selectedDate == undefined && scheduleInfo) {
-    setSelectedDate(fromUnixTime(scheduleInfo.begin));
-  }
   const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
   const maxDate =
     scheduleInfo && minDate
@@ -399,20 +404,6 @@ function GroupList(): JSX.Element {
   );
 }
 
-type LabeledRerouteReason = {
-  reason: PaxMonRerouteReason;
-  label: string;
-};
-
-const rerouteReasonOptions: Array<LabeledRerouteReason> = [
-  { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
-  { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
-  { reason: "Simulation", label: "Simulation" },
-  { reason: "Manual", label: "Manuelle Umleitung" },
-  { reason: "RevertForecast", label: "Rücknahme einer Vorhersage" },
-  { reason: "UpdateForecast", label: "Neuberechnung einer Vorhersage" },
-];
-
 type RerouteReasonOptionsProps = {
   rerouteReasonFilter: PaxMonRerouteReason[];
   setRerouteReasonFilter: React.Dispatch<
@@ -558,17 +549,25 @@ function GroupListEntry({
         </div>
         {firstRoute && <GroupRouteInfo route={firstRoute} />}
         <div className="flex justify-between">
-          <div className="flex gap-1">
-            Verspätung:
-            <Delay minutes={groupWithStats.expected_estimated_delay} />
-            {groupWithStats.min_estimated_delay !=
-            groupWithStats.max_estimated_delay ? (
-              <div>
-                (<Delay minutes={groupWithStats.min_estimated_delay} /> –{" "}
-                <Delay minutes={groupWithStats.max_estimated_delay} />)
-              </div>
-            ) : null}
-          </div>
+          {groupWithStats.prob_destination_unreachable == 0 ? (
+            <div className="flex gap-1">
+              Verspätung:
+              <Delay minutes={groupWithStats.expected_estimated_delay} />
+              {groupWithStats.min_estimated_delay !=
+              groupWithStats.max_estimated_delay ? (
+                <div>
+                  (<Delay minutes={groupWithStats.min_estimated_delay} /> –{" "}
+                  <Delay minutes={groupWithStats.max_estimated_delay} />)
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="flex items-center gap-x-1 text-fuchsia-600">
+              <XCircleIcon className="w-5 h-5" aria-hidden="true" />
+              Ziel nicht erreichbar (
+              {formatPercent(groupWithStats.prob_destination_unreachable)})
+            </div>
+          )}
           <div className="flex items-center gap-x-1">
             <MapIcon
               className="w-5 h-5 text-db-cool-gray-500"

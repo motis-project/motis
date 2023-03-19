@@ -36,13 +36,12 @@ double avg(std::vector<T> const& data) {
 }
 
 inline void add_group_to_alternative(schedule const& sched,
-                                     motis::paxmon::capacity_maps const& caps,
                                      motis::paxmon::universe& uv,
                                      simulation_result& result,
                                      motis::paxmon::additional_group const& ag,
                                      alternative const& alt) {
   for_each_edge(
-      sched, caps, uv, alt.compact_journey_,
+      sched, uv, alt.compact_journey_,
       [&](motis::paxmon::journey_leg const&, motis::paxmon::edge const* e) {
         if (e->is_trip()) {
           result.additional_groups_[e].emplace_back(ag);
@@ -71,7 +70,6 @@ struct sim_data {
 
 template <typename PassengerBehavior>
 inline void simulate_behavior_for_cpg(schedule const& sched,
-                                      motis::paxmon::capacity_maps const& caps,
                                       motis::paxmon::universe& uv,
                                       PassengerBehavior& pb,
                                       combined_passenger_group const& cpg,
@@ -97,7 +95,7 @@ inline void simulate_behavior_for_cpg(schedule const& sched,
       group_route_result.alternative_probabilities_.emplace_back(&alt,
                                                                  probability);
       add_group_to_alternative(
-          sched, caps, uv, sd.result_,
+          sched, uv, sd.result_,
           paxmon::additional_group{pgwrap.passengers_, probability}, alt);
       ++picked;
     }
@@ -123,8 +121,7 @@ inline void simulate_behavior_for_cpg(schedule const& sched,
 
 template <typename PassengerBehavior>
 inline simulation_result simulate_behavior(
-    schedule const& sched, motis::paxmon::capacity_maps const& caps,
-    motis::paxmon::universe& uv,
+    schedule const& sched, motis::paxmon::universe& uv,
     std::map<unsigned, std::vector<combined_passenger_group>> const&
         combined_groups,
     PassengerBehavior& pb, float const probability_threshold) {
@@ -132,7 +129,7 @@ inline simulation_result simulate_behavior(
   sim_data sd{result};
   motis_parallel_for(combined_groups, ([&](auto const& cpgs) {
                        for (auto const& cpg : cpgs.second) {
-                         simulate_behavior_for_cpg(sched, caps, uv, pb, cpg, sd,
+                         simulate_behavior_for_cpg(sched, uv, pb, cpg, sd,
                                                    probability_threshold);
                        }
                      }));
@@ -142,8 +139,7 @@ inline simulation_result simulate_behavior(
 
 template <typename PassengerBehavior>
 inline simulation_result simulate_behavior(
-    schedule const& sched, motis::paxmon::capacity_maps const& caps,
-    motis::paxmon::universe& uv,
+    schedule const& sched, motis::paxmon::universe& uv,
     mcd::hash_map<mcd::pair<motis::paxmon::passenger_localization,
                             motis::paxmon::compact_journey>,
                   combined_passenger_group> const& combined_groups,
@@ -151,8 +147,7 @@ inline simulation_result simulate_behavior(
   simulation_result result;
   sim_data sd{result};
   motis_parallel_for(combined_groups, ([&](auto const& cpgs) {
-                       simulate_behavior_for_cpg(sched, caps, uv, pb,
-                                                 cpgs.second, sd,
+                       simulate_behavior_for_cpg(sched, uv, pb, cpgs.second, sd,
                                                  probability_threshold);
                      }));
   sd.finish_stats(combined_groups.size());

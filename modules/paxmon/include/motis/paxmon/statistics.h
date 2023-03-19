@@ -35,6 +35,7 @@ struct tick_statistics {
   std::uint64_t rt_reroute_updates_{};
   std::uint64_t rt_track_updates_{};
   std::uint64_t rt_free_text_updates_{};
+  std::uint64_t rt_trip_formation_updates_{};
 
   // rt delay details
   std::uint64_t rt_delay_event_updates_{};

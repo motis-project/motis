@@ -1,0 +1,103 @@
+Box:
+  description: TODO
+  fields:
+    station_id_a:
+      description: TODO
+    station_id_b:
+      description: TODO
+    north_east:
+      description: TODO
+    south_west:
+      description: TODO
+PathBoxesResponse:
+  description: TODO
+  fields:
+    boxes:
+      description: TODO
+PathByStationSeqRequest:
+  description: TODO
+  fields:
+    station_ids:
+      description: TODO
+    clasz:
+      description: TODO
+    zoom_level:
+      description: TODO
+    debug_info:
+      description: TODO
+PathByTileFeatureRequest:
+  description: TODO
+  fields:
+    ref:
+      description: TODO
+TripIdSegments:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    segments:
+      description: TODO
+PathByTripIdBatchRequest:
+  description: TODO
+  fields:
+    trip_segments:
+      description: TODO
+    zoom_level:
+      description: TODO
+PolylineIndices:
+  description: TODO
+  fields:
+    indices:
+      description: TODO
+PathByTripIdBatchResponse:
+  description: TODO
+  fields:
+    segments:
+      description: TODO
+    polylines:
+      description: TODO
+    extras:
+      description: TODO
+PathByTripIdRequest:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    zoom_level:
+      description: TODO
+    debug_info:
+      description: TODO
+PathSourceInfo:
+  description: TODO
+  fields:
+    segment_idx:
+      description: TODO
+    from_idx:
+      description: TODO
+    to_idx:
+      description: TODO
+    type:
+      description: TODO
+Segment:
+  description: TODO
+  fields:
+    coordinates:
+      description: TODO
+    osm_node_ids:
+      description: TODO
+PathSeqResponse:
+  description: TODO
+  fields:
+    station_ids:
+      description: TODO
+    classes:
+      description: TODO
+    segments:
+      description: TODO
+    sourceInfos:
+      description: TODO
+MultiPathSeqResponse:
+  description: TODO
+  fields:
+    sequences:
+      description: TODO

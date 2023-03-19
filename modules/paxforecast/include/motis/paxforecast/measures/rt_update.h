@@ -3,11 +3,9 @@
 #include <string>
 
 #include "motis/core/schedule/time.h"
-#include "motis/core/journey/extern_trip.h"
 
-#include "motis/protocol/Message_generated.h"
+#include "motis/protocol/RISContentType_generated.h"
 
-#include "motis/paxforecast/measures/load_level.h"
 #include "motis/paxforecast/measures/recipients.h"
 
 namespace motis::paxforecast::measures {

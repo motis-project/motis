@@ -34,7 +34,7 @@ msg_ptr add_groups(paxmon_data& data, msg_ptr const& msg) {
                             }),
                 "paxmon::add_groups: trying to add a passenger group with an "
                 "empty route");
-    return add_passenger_group(uv, sched, data.capacity_maps_, input_pg, true,
+    return add_passenger_group(uv, sched, input_pg, true,
                                pci_log_reason_t::API);
   });
 

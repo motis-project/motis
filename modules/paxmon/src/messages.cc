@@ -75,28 +75,65 @@ journey_leg from_fbs(schedule const& sched,
           from_fbs(leg->enter_transfer())};
 }
 
+Offset<Vector<Offset<PaxMonFootpath>>> final_footpath_to_fbs(
+    schedule const& sched, FlatBufferBuilder& fbb, final_footpath const& fp) {
+  if (fp.is_footpath()) {
+    return fbb.CreateVector(
+        std::vector<Offset<PaxMonFootpath>>{CreatePaxMonFootpath(
+            fbb, fp.duration_,
+            to_fbs(fbb, *sched.stations_[fp.from_station_id_]),
+            to_fbs(fbb, *sched.stations_[fp.to_station_id_]))});
+  } else {
+    return fbb.CreateVector(std::vector<Offset<PaxMonFootpath>>{});
+  }
+}
+
+final_footpath final_footpath_from_fbs(
+    schedule const& sched, Vector<Offset<PaxMonFootpath>> const* opt) {
+  auto fp = final_footpath{};
+  if (opt->size() == 1) {
+    auto const* fbs_fp = opt->Get(0);
+    fp.duration_ = fbs_fp->duration();
+    fp.from_station_id_ =
+        get_station(sched, fbs_fp->from_station()->id()->str())->index_;
+    fp.to_station_id_ =
+        get_station(sched, fbs_fp->to_station()->id()->str())->index_;
+  } else {
+    utl::verify(opt->size() == 0,
+                "invalid optional PaxMonFootpath: {} entries (expected 0 or 1)",
+                opt->size());
+  }
+  return fp;
+}
+
 Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
                                     FlatBufferBuilder& fbb,
                                     compact_journey const& cj) {
   return CreatePaxMonCompactJourney(
-      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
-        return to_fbs(sched, fbb, leg);
-      })));
+      fbb,
+      fbb.CreateVector(utl::to_vec(
+          cj.legs(),
+          [&](journey_leg const& leg) { return to_fbs(sched, fbb, leg); })),
+      final_footpath_to_fbs(sched, fbb, cj.final_footpath()));
 }
 
 Offset<PaxMonCompactJourney> to_fbs(schedule const& sched,
                                     FlatBufferBuilder& fbb,
                                     fws_compact_journey const& cj) {
   return CreatePaxMonCompactJourney(
-      fbb, fbb.CreateVector(utl::to_vec(cj.legs(), [&](journey_leg const& leg) {
-        return to_fbs(sched, fbb, leg);
-      })));
+      fbb,
+      fbb.CreateVector(utl::to_vec(
+          cj.legs(),
+          [&](journey_leg const& leg) { return to_fbs(sched, fbb, leg); })),
+      final_footpath_to_fbs(sched, fbb, cj.final_footpath()));
 }
 
 compact_journey from_fbs(schedule const& sched,
                          PaxMonCompactJourney const* cj) {
-  return compact_journey{utl::to_vec(
-      *cj->legs(), [&](auto const& leg) { return from_fbs(sched, leg); })};
+  return compact_journey{
+      utl::to_vec(*cj->legs(),
+                  [&](auto const& leg) { return from_fbs(sched, leg); }),
+      final_footpath_from_fbs(sched, cj->final_footpath())};
 }
 
 Offset<PaxMonDataSource> to_fbs(FlatBufferBuilder& fbb, data_source const& ds) {
@@ -114,7 +151,8 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs(sched, fbb, tgr.journey_), tgr.probability_,
       to_fbs_time(sched, tgr.planned_arrival_time_), tgr.estimated_delay_,
       static_cast<std::uint8_t>(tgr.source_flags_), tgr.planned_,
-      false /* broken */, false /* disabled */);
+      false /* broken */, false /* disabled */,
+      false /* destination_unreachable */);
 }
 
 Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
@@ -125,7 +163,7 @@ Offset<PaxMonGroupRoute> to_fbs(schedule const& sched,
       to_fbs(sched, fbb, pgc.journey(gr.compact_journey_index_)),
       gr.probability_, to_fbs_time(sched, gr.planned_arrival_time_),
       gr.estimated_delay_, static_cast<std::uint8_t>(gr.source_flags_),
-      gr.planned_, gr.broken_, gr.disabled_);
+      gr.planned_, gr.broken_, gr.disabled_, gr.destination_unreachable_);
 }
 
 temp_group_route from_fbs(schedule const& sched, PaxMonGroupRoute const* gr) {
@@ -197,7 +235,9 @@ Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
       to_fbs(fbb, entry.old_route_),
       fbb.CreateVector(utl::to_vec(
           pgc.log_entry_new_routes_.at(entry.index_),
-          [&](auto const& new_route) { return to_fbs(fbb, new_route); })));
+          [&](auto const& new_route) { return to_fbs(fbb, new_route); })),
+      fbs_localization_type(entry.localization_),
+      to_fbs(sched, fbb, entry.localization_));
 }
 
 Offset<PaxMonGroup> to_fbs(schedule const& sched,
@@ -322,11 +362,35 @@ PaxMonLocalization fbs_localization_type(passenger_localization const& loc) {
                        : PaxMonLocalization_PaxMonAtStation;
 }
 
+PaxMonLocalization fbs_localization_type(reroute_log_localization const& loc) {
+  return loc.in_trip_ ? PaxMonLocalization_PaxMonInTrip
+                      : PaxMonLocalization_PaxMonAtStation;
+}
+
 Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
     schedule const& sched, FlatBufferBuilder& fbb,
     passenger_localization const& loc) {
   return CreatePaxMonLocalizationWrapper(fbb, fbs_localization_type(loc),
                                          to_fbs(sched, fbb, loc));
+}
+
+Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
+                    reroute_log_localization const& loc) {
+  if (loc.in_trip_) {
+    return CreatePaxMonInTrip(
+               fbb, to_fbs(sched, fbb, get_trip(sched, loc.trip_idx_)),
+               to_fbs(fbb, *sched.stations_.at(loc.station_id_)),
+               motis_to_unixtime(sched, loc.schedule_arrival_time_),
+               motis_to_unixtime(sched, loc.current_arrival_time_))
+        .Union();
+  } else {
+    return CreatePaxMonAtStation(
+               fbb, to_fbs(fbb, *sched.stations_.at(loc.station_id_)),
+               motis_to_unixtime(sched, loc.schedule_arrival_time_),
+               motis_to_unixtime(sched, loc.current_arrival_time_),
+               loc.first_station_)
+        .Union();
+  }
 }
 
 Offset<PaxMonReachability> reachability_to_fbs(
@@ -386,6 +450,22 @@ PaxMonCapacityType get_capacity_type(motis::paxmon::edge const* e) {
     return PaxMonCapacityType_Unlimited;
   } else {
     return PaxMonCapacityType_Known;
+  }
+}
+
+PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
+  switch (cs) {
+    case capacity_source::TRIP_EXACT:
+      return PaxMonCapacitySource_TripExactMatch;
+    case capacity_source::TRIP_PRIMARY:
+      return PaxMonCapacitySource_TripPrimaryIdMatch;
+    case capacity_source::TRAIN_NR_AND_STATIONS:
+      return PaxMonCapacitySource_TrainNrAndStations;
+    case capacity_source::TRAIN_NR: return PaxMonCapacitySource_TrainNr;
+    case capacity_source::CATEGORY: return PaxMonCapacitySource_Category;
+    case capacity_source::CLASZ: return PaxMonCapacitySource_Class;
+    case capacity_source::SPECIAL:
+    default: return PaxMonCapacitySource_Unknown;
   }
 }
 
@@ -449,6 +529,7 @@ Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       motis_to_unixtime(sched, to->schedule_time()),
       motis_to_unixtime(sched, to->current_time()),
       get_capacity_type(eli.edge_), eli.edge_->capacity(),
+      to_fbs_capacity_source(eli.edge_->get_capacity_source()),
       to_fbs_distribution(fbb, eli.forecast_pdf_, eli.forecast_cdf_),
       eli.updated_, eli.possibly_over_capacity_, eli.probability_over_capacity_,
       eli.expected_passengers_);

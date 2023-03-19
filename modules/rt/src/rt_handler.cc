@@ -20,6 +20,7 @@
 #include "motis/rt/separate_trip.h"
 #include "motis/rt/track_change.h"
 #include "motis/rt/trip_correction.h"
+#include "motis/rt/trip_formation_handler.h"
 #include "motis/rt/update_constant_graph.h"
 #include "motis/rt/validate_constant_graph.h"
 #include "motis/rt/validity_check.h"
@@ -247,6 +248,13 @@ void rt_handler::update(motis::ris::Message const* m) {
       handle_full_trip_msg(stats_, sched_, update_builder_, propagator_,
                            reinterpret_cast<ris::FullTripMessage const*>(c),
                            cancelled_delays_);
+      break;
+    }
+
+    case ris::MessageUnion_TripFormationMessage: {
+      handle_trip_formation_msg(
+          stats_, sched_, update_builder_,
+          reinterpret_cast<ris::TripFormationMessage const*>(c));
       break;
     }
 

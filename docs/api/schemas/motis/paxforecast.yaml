@@ -1,0 +1,328 @@
+PaxForecastAlternative:
+  description: TODO
+  fields:
+    journey:
+      description: TODO
+    probability:
+      description: TODO
+PaxForecastGroupRoute:
+  description: TODO
+  fields:
+    group_route:
+      description: TODO
+    localization:
+      description: TODO
+    forecast_alternatives:
+      description: TODO
+PaxForecastUpdate:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    system_time:
+      description: TODO
+    groups:
+      description: TODO
+    trips:
+      description: TODO
+MeasureRecipients:
+  description: >
+    Select a subset of passengers that is made aware of the measure
+    (e.g. using an announcement)
+  fields:
+    trips:
+      description: >
+        Select passengers that are in one of the listed trip (at the
+        measure `time`).
+    stations:
+      description: >
+        Select passengers that are at one of the listed stations (at the
+        measure `time`). Does not include passengers in a trip that is currently
+        waiting at the station.
+LoadLevel:
+  description: TODO
+TripLoadInfoMeasure:
+  description: >
+    This measure type is deprecated. Use `TripLoadRecommendationMeasure` instead.
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: TODO
+    trip:
+      description: TODO
+    level:
+      description: TODO
+TripRecommendationMeasure:
+  description: >
+    This measure type is deprecated. Use `TripLoadRecommendationMeasure` instead.
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: TODO
+    planned_trips:
+      description: TODO
+    planned_destinations:
+      description: TODO
+    recommended_trip:
+      description: TODO
+TripWithLoadLevel:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    level:
+      description: TODO
+TripLoadRecommendationMeasure:
+  description: |
+    Simulate an announcement that a trip is overcrowded and recommend
+    alternative trips with load information.
+
+    This simulates an announcement of the form:
+    - Passengers travelling to `planned_destinations`
+    - Trip(s) `full_trips` are overcrowded (can't be used)
+    - Recommended alternatives: `recommended_trips`
+
+    The announcement is made at `time` in the trips/at the stations
+    specified in `recipients`.
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: >
+        Time at which the announcement is made (unix timestamp).
+    planned_destinations:
+      description: TODO
+    full_trips:
+      description: TODO
+    recommended_trips:
+      description: TODO
+RtUpdateMeasure:
+  description: |
+    Simulate a real-time update.
+
+    Real-time updates can be provided in RIBasis or RISML formats.
+    Set `type` to the format and supply the complete real-time update
+    in the corresponding format as a string in the `content` field.
+
+    Passengers whose journey breaks because of the real-time update
+    are automatically rerouted and do not need to be specified via
+    `recipients`. If additional passengers should be made aware of the
+    update and be allowed to change their route (e.g. because an
+    additional train was added), they can be listed in `recipients`,
+    otherwise `recipients` can be empty for this measure type.
+  fields:
+    recipients:
+      description: TODO
+    time:
+      description: |
+        Time at which the measure takes effect (unix timestamp).
+
+        This must match the creation/release time of the given real-time update
+        (e.g. `meta.created` for RI Basis messages).
+    type:
+      description: The format of the real-time message given in `content`.
+    content:
+      description: A real-time message in the format specified by `type`.
+Measure:
+  description: TODO
+MeasureWrapper:
+  description: TODO
+  fields:
+    measure:
+      description: TODO
+PaxForecastApplyMeasuresRequest:
+  description: TODO
+  fields:
+    universe:
+      description: Paxmon universe ID
+    measures:
+      description: |
+        A list of measures to simulate
+
+        Measures have the following shared properties:
+
+        - `time`: Time at which the measure takes effect and passengers are made
+          aware of it. Note that the time is not forwarded to this point during the
+          simulation, i.e. no real-time updates (other than those specified as rt
+          update measures) are applied during the simulation. If a call to
+          `/paxforecast/apply_measures` contains measures with different timestamps,
+          a simulation is run for each unique timestamp. All measures with the same
+          timestamp are applied in one step.
+        - `recipients`: Select a subset of passengers that is made aware of the
+          measure (e.g. using an announcement)
+          - `trips`: Select passengers that are in one of the listed trips at `time`
+          - `stations`: Select passengers that are at one of the listed stations at
+            `time` (not in a trip)
+    replace_existing:
+      description: |
+        If set to true, only simulate the measures given in this API call.
+        If set to false, measures from previous calls are kept and merged with
+        the new measures for this simulation.
+
+        **Should always be set to true for now.**
+      examples:
+        - true
+    preparation_time:
+      description: |
+        Preparation time for passengers in minutes. Passengers can only
+        change trains after the preparation time.
+
+        Should usually be set to 0.
+    include_before_trip_load_info:
+      description: |
+        If set to true, `before_edges` in the response (in `PaxMonUpdatedTrip`)
+        is set, otherwise it will be empty. It contains load information for
+        all trip edges before any changes were made.
+
+        Note that if the trip route is modified using real-time updates, this
+        contains the state of the trip *before* any of those changes were
+        applied.
+    include_after_trip_load_info:
+      description: |
+        If set to true, `after_edges` in the response (in `PaxMonUpdatedTrip`)
+        is set, otherwise it will be empty. It contains load information for
+        all trip edges after all changes were made.
+
+        Note that if the trip route is modified using real-time updates, this
+        contains the state of the trip *after* any of those changes were
+        applied.
+    include_trips_with_unchanged_load:
+      description: |
+        If set to true, all trips that are modified are included in the
+        response, even if there is no major change in the predicted number
+        of passengers on any section.
+
+        If set to false, trips with only minor changes are not included
+        the response.
+
+        Currently used criteria are changes in the number of critical sections
+        or the maximum number of passengers.
+PaxForecastApplyMeasuresStatistics:
+  description: TODO
+  fields:
+    measure_time_points:
+      description: The number of different timestamps in the given measures.
+    total_measures_applied:
+      description: The number of measures applied.
+    total_affected_groups:
+      description: |
+        Number of passenger groups reached via the `recipients` in the
+        given measures.
+
+        Does not include passenger groups affected by real-time
+        updates (e.g. because an rt update broke their journey).
+    total_alternative_routings:
+      description: |
+        The number of alternative routing requests performed.
+
+        Does not include alternative routings performed as part of the handling
+        of real-time updates.
+    total_alternatives_found:
+      description: |
+        The total number of alternative routes found.
+
+        Does not include alternative routes found as part of the handling
+        of real-time updates.
+    group_routes_broken:
+      description: >
+        The total number of passenger group routes broken by the measures.
+    group_routes_with_major_delay:
+      description: >
+        The total number of passenger groups with a major delay that were
+        affected by the measures.
+    t_rt_updates:
+      description: |
+        Time used to apply real-time updates (ms).
+
+        Includes time for broken journey detection, alternative routing,
+        passenger behavior simulation and updates.
+    t_get_affected_groups:
+      description: Time used to determine affected groups (ms).
+    t_find_alternatives:
+      description: |
+        Time used to find alternative routes (ms).
+
+        Does not include time used to find alternatives for passenger groups
+        affected by real-time updates.
+    t_add_alternatives_to_graph:
+      description: |
+        Time used to add alternatives to paxmon (ms).
+
+        Does not include alternatives for passenger groups affected by
+        real-time updates.
+    t_behavior_simulation:
+      description: |
+        Time used for passenger behavior simulation (ms).
+
+        Does not include time used for behavior simulation of passenger groups
+        affected by real-time updates.
+    t_update_groups:
+      description: |
+        Time used to update passenger groups (ms).
+
+        Does not include time used for updating passenger groups affected
+        by real-time updates.
+    t_update_tracker:
+      description: Time used for tracking changes (ms).
+    t_update_capacities:
+      description: Time used for updating capacities (ms).
+PaxForecastApplyMeasuresResponse:
+  description: TODO
+  fields:
+    stats:
+      description: Various statistics
+    updates:
+      description: Changes made to trips and passenger groups
+UpdateCapacitiesMeasure:
+  description: |
+    Load new capacity information.
+
+    Capacity data can be supplied in the same file formats supported
+    for capacity files (CSV). Multiple capacity files can be loaded
+    at once.
+
+    If the `remove_` fields are set to true, existing capacity information
+    is reset before loading the supplied capacity data. Otherwise, existing
+    capacity information is kept and updated using the supplied data.
+
+    After loading the new capacity data, the capacity information for all
+    tracked trips is recomputed.
+  fields:
+    time:
+      description: Time at which the measure takes effect (unix timestamp).
+    file_contents:
+      description: |
+        An array of file contents of capacity files (in CSV format) to load.
+    remove_existing_trip_capacities:
+      description: |
+        If set to true, existing trip capacity information (i.e. capacity
+        information loaded from CSV files mapping trips to capacities)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    remove_existing_category_capacities:
+      description: |
+        If set to true, existing category capacity information (i.e. capacity
+        information loaded from CSV files mapping train categories to capacities)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    remove_existing_vehicle_capacities:
+      description: |
+        If set to true, existing vehicle capacity information (i.e. capacity
+        information loaded from CSV files mapping vehicle UICs to capacities)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    remove_existing_trip_formations:
+      description: |
+        If set to true, existing trip formation information (i.e. formation
+        information received via RiBasisFormation messages)
+        is reset before loading the new capacity data supplied in this
+        measure.
+    track_trip_updates:
+      description: |
+        If set to true, changing the capacity of a trip causes it to be
+        included in the list of updated trips in the response.
+
+        This should only be set to true if changing the capacity of a
+        small number of trips.

@@ -12,6 +12,8 @@
 
 namespace motis::json {
 
+bool has_key(rapidjson::Value const& parent, char const* key);
+
 rapidjson::Value const& get_value(rapidjson::Value const& parent,
                                   char const* key);
 
@@ -38,12 +40,19 @@ std::uint64_t get_uint64(rapidjson::Value const& obj, char const* key);
 double get_double(rapidjson::Value const& obj, char const* key);
 
 template <typename T>
-T get_parsed_number(rapidjson::Value const& obj, char const* key) {
+T get_parsed_number(rapidjson::Value const& obj, char const* key,
+                    bool const allow_empty = false,
+                    bool const ignore_invalid = false) {
   auto val = T{};
   auto const s = get_str(obj, key);
+  if (allow_empty && s.size() == 0) {
+    return 0;
+  }
   auto const result = std::from_chars(s.data(), s.data() + s.size(), val);
-  utl::verify(result.ec == std::errc{} && result.ptr == s.data() + s.size(),
-              "not a number ({}): {}", key, s);
+  if (!ignore_invalid) {
+    utl::verify(result.ec == std::errc{} && result.ptr == s.data() + s.size(),
+                "not a number ({}): {}", key, s);
+  }
   return val;
 }
 

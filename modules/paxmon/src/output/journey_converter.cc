@@ -5,7 +5,7 @@
 #include "utl/enumerate.h"
 #include "utl/verify.h"
 
-#include "motis/paxmon/loader/journeys/journey_access.h"
+#include "motis/paxmon/loader/motis_journeys/journey_access.h"
 
 namespace motis::paxmon::output {
 

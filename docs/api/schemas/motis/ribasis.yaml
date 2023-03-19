@@ -1,0 +1,248 @@
+RiBasisMeta:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    owner:
+      description: TODO
+    format:
+      description: TODO
+    version:
+      description: TODO
+    correlation:
+      description: TODO
+    created:
+      description: TODO
+    sequence:
+      description: TODO
+RiBasisFahrtKategorie:
+  description: TODO
+RiBasisFahrtTyp:
+  description: TODO
+RiBasisHaltestelle:
+  description: TODO
+  fields:
+    haltestelleid:
+      description: TODO
+    bezeichnung:
+      description: TODO
+    evanummer:
+      description: TODO
+    rl100:
+      description: TODO
+RiBasisBetreiber:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    code:
+      description: TODO
+RiBasisVerwaltung:
+  description: TODO
+  fields:
+    verwaltungid:
+      description: TODO
+    betreiber:
+      description: TODO
+RiBasisGattung:
+  description: TODO
+  fields:
+    gattungid:
+      description: TODO
+    name:
+      description: TODO
+    code:
+      description: TODO
+RiBasisLinie:
+  description: TODO
+  fields:
+    linieid:
+      description: TODO
+    name:
+      description: TODO
+RiBasisFahrtRelation:
+  description: TODO
+  fields:
+    startfahrtnummer:
+      description: TODO
+    startzeit:
+      description: TODO
+    startverwaltung:
+      description: TODO
+    startgattung:
+      description: TODO
+    startlinie:
+      description: TODO
+    starthaltestelle:
+      description: TODO
+    zielzeit:
+      description: TODO
+    zielhaltestelle:
+      description: TODO
+RiBasisZeitstatus:
+  description: TODO
+RiBasisOrtTyp:
+  description: TODO
+RiBasisOrt:
+  description: TODO
+  fields:
+    ortid:
+      description: TODO
+    bezeichnung:
+      description: TODO
+    orttyp:
+      description: TODO
+RiBasisHaltzuordnungstyp:
+  description: TODO
+RiBasisAbfahrtZuordnung:
+  description: TODO
+  fields:
+    fahrtid:
+      description: TODO
+    abfahrtid:
+      description: TODO
+    typ:
+      description: TODO
+RiBasisAbfahrt:
+  description: TODO
+  fields:
+    abfahrtid:
+      description: TODO
+    haltestelle:
+      description: TODO
+    fahrgastwechsel:
+      description: TODO
+    planabfahrtzeit:
+      description: TODO
+    abfahrtzeit:
+      description: TODO
+    abfahrtzeitstatus:
+      description: TODO
+    planabfahrtort:
+      description: TODO
+    abfahrtort:
+      description: TODO
+    zusatzhalt:
+      description: TODO
+    bedarfshalt:
+      description: TODO
+    allAbfahrtzuordnung:
+      description: TODO
+RiBasisAnkunftZuordnung:
+  description: TODO
+  fields:
+    fahrtid:
+      description: TODO
+    ankunftid:
+      description: TODO
+    typ:
+      description: TODO
+RiBasisAnkunft:
+  description: TODO
+  fields:
+    ankunftid:
+      description: TODO
+    haltestelle:
+      description: TODO
+    fahrgastwechsel:
+      description: TODO
+    planankunftzeit:
+      description: TODO
+    ankunftzeit:
+      description: TODO
+    ankunftzeitstatus:
+      description: TODO
+    planankunftort:
+      description: TODO
+    ankunftort:
+      description: TODO
+    zusatzhalt:
+      description: TODO
+    bedarfshalt:
+      description: TODO
+    allAnkunftzuordnung:
+      description: TODO
+RiBasisFormation:
+  description: TODO
+  fields:
+    fahrtid:
+      description: TODO
+    abfahrtid:
+      description: TODO
+    ankunftid:
+      description: TODO
+RiBasisFahrtAbschnitt:
+  description: TODO
+  fields:
+    fahrtnummer:
+      description: TODO
+    fahrtbezeichnung:
+      description: TODO
+    fahrtname:
+      description: TODO
+    verwaltungid:
+      description: TODO
+    gattungid:
+      description: TODO
+    linieid:
+      description: TODO
+    abfahrt:
+      description: TODO
+    ankunft:
+      description: TODO
+    allVereinigtmit:
+      description: TODO
+RiBasisFahrtZuordnungstyp:
+  description: TODO
+RiBasisZubringerFahrtZuordnung:
+  description: TODO
+  fields:
+    fahrtid:
+      description: TODO
+    ankunftid:
+      description: TODO
+    typ:
+      description: TODO
+RiBasisAbbringerFahrtZuordnung:
+  description: TODO
+  fields:
+    fahrtid:
+      description: TODO
+    abfahrtid:
+      description: TODO
+    typ:
+      description: TODO
+RiBasisFahrtData:
+  description: TODO
+  fields:
+    kategorie:
+      description: TODO
+    planstarttag:
+      description: TODO
+    fahrtid:
+      description: TODO
+    fahrtrelation:
+      description: TODO
+    verkehrstag:
+      description: TODO
+    fahrttyp:
+      description: TODO
+    allVerwaltung:
+      description: TODO
+    allGattung:
+      description: TODO
+    allLinie:
+      description: TODO
+    allFahrtabschnitt:
+      description: TODO
+    allZubringerfahrtzuordnung:
+      description: TODO
+    allAbbringerfahrtzuordnung:
+      description: TODO
+RiBasisFahrt:
+  description: TODO
+  fields:
+    meta:
+      description: TODO
+    data:
+      description: TODO

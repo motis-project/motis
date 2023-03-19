@@ -1,0 +1,172 @@
+SearchOptions:
+  description: TODO
+  fields:
+    profile:
+      description: Name of the profile
+    duration_limit:
+      description: Upper limit for walking duration in seconds
+  examples:
+    - profile: default
+      duration: 1800
+EdgeType:
+  description: TODO
+CrossingType:
+  description: TODO
+StreetType:
+  description: TODO
+TriState:
+  description: TODO
+Edge:
+  description: TODO
+  fields:
+    distance:
+      description: TODO
+    duration:
+      description: TODO
+    accessibility:
+      description: TODO
+    path:
+      description: TODO
+    name:
+      description: TODO
+    osm_way_id:
+      description: TODO
+    edge_type:
+      description: TODO
+    street_type:
+      description: TODO
+    crossing_type:
+      description: TODO
+    elevation_up:
+      description: TODO
+    elevation_down:
+      description: TODO
+    incline_up:
+      description: TODO
+    handrail:
+      description: TODO
+RouteStepType:
+  description: TODO
+RouteStep:
+  description: TODO
+  fields:
+    step_type:
+      description: TODO
+    street_name:
+      description: TODO
+    street_type:
+      description: TODO
+    crossing_type:
+      description: TODO
+    distance:
+      description: TODO
+    duration:
+      description: TODO
+    accessibility:
+      description: TODO
+    path:
+      description: TODO
+    elevation_up:
+      description: TODO
+    elevation_down:
+      description: TODO
+    incline_up:
+      description: TODO
+    handrail:
+      description: TODO
+Route:
+  description: TODO
+  fields:
+    distance:
+      description: TODO
+    duration:
+      description: TODO
+    duration_exact:
+      description: TODO
+    duration_division:
+      description: TODO
+    accessibility:
+      description: TODO
+    accessibility_exact:
+      description: TODO
+    accessibility_division:
+      description: TODO
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    steps:
+      description: TODO
+    edges:
+      description: TODO
+    path:
+      description: TODO
+    elevation_up:
+      description: TODO
+    elevation_down:
+      description: TODO
+FootRoutingProfileInfo:
+  description: Information about a PPR profile
+  fields:
+    name:
+      description: Name of the profile
+    walking_speed:
+      description: Walking speed in meters per second
+FootRoutingProfilesResponse:
+  description: A list of loaded PPR profiles
+  fields:
+    profiles:
+      description: Available profiles
+FootRoutingRequest:
+  description: TODO
+  fields:
+    start:
+      description: Start location
+    destinations:
+      description: Destination locations (at least one)
+    search_options:
+      description: Search profile and maximum walking duration
+    search_direction:
+      description: |
+        The search direction:
+
+        - `Forward`: Calculate routes from the start to the destinations
+        - `Backward`: Calculate routes from the destinations to the start
+    include_steps:
+      description: Whether to include a travel itinerary in the response
+      examples: [ true ]
+    include_edges:
+      description: Whether to include a list of all used edges in the response (useful
+        for debugging purposes)
+      examples: [ false ]
+    include_path:
+      description: Whether to include the complete path as a single polyline in the response
+      examples: [ true ]
+Routes:
+  description: TODO
+  fields:
+    routes:
+      description: TODO
+FootRoutingResponse:
+  description: TODO
+  fields:
+    routes:
+      description: TODO
+FootRoutingSimpleRequest:
+  description: TODO
+  fields:
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    include_steps:
+      description: TODO
+    include_path:
+      description: TODO
+    max_duration:
+      description: TODO
+FootRoutingSimpleResponse:
+  description: TODO
+  fields:
+    routes:
+      description: TODO

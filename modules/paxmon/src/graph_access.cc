@@ -33,9 +33,8 @@ struct rule_trip_adder {
       std::tuple<uint32_t /* station_idx */, time /* schedule_time */,
                  uint32_t /* merged_trips_idx */>;
 
-  rule_trip_adder(schedule const& sched, capacity_maps const& caps,
-                  universe& uv)
-      : sched_{sched}, caps_{caps}, uv_{uv} {}
+  rule_trip_adder(schedule const& sched, universe& uv)
+      : sched_{sched}, uv_{uv} {}
 
   trip_data_index add_trip(trip const* trp) {
     if (auto const [_, inserted] = trips_.insert(trp); !inserted) {
@@ -175,7 +174,7 @@ struct rule_trip_adder {
     return utl::get_or_create(trip_edges_, &section.lcon(), [&]() {
       auto const encoded_capacity = encode_capacity(
           get_capacity(sched_, section.lcon(), section.ev_key_from(),
-                       section.ev_key_to(), caps_));
+                       section.ev_key_to(), uv_.capacity_maps_));
       auto const* e =
           add_edge(uv_, make_trip_edge(uv_, dep_node, arr_node, edge_type::TRIP,
                                        section.lcon().trips_, encoded_capacity,
@@ -209,7 +208,6 @@ struct rule_trip_adder {
   }
 
   schedule const& sched_;
-  capacity_maps const& caps_;
   universe& uv_;
   std::set<trip const*> trips_;
   std::map<rule_node_key, event_node_index> dep_nodes_;
@@ -221,38 +219,34 @@ struct rule_trip_adder {
       through_edges_;
 };
 
-trip_data_index add_trip(schedule const& sched, capacity_maps const& caps,
-                         universe& uv, trip const* trp) {
-  auto adder = rule_trip_adder{sched, caps, uv};
+trip_data_index add_trip(schedule const& sched, universe& uv, trip const* trp) {
+  auto adder = rule_trip_adder{sched, uv};
   return adder.add_trip(trp);
 }
 
-trip_data_index get_or_add_trip(schedule const& sched,
-                                capacity_maps const& caps, universe& uv,
+trip_data_index get_or_add_trip(schedule const& sched, universe& uv,
                                 trip_idx_t const trip_idx) {
   if (auto const idx = uv.trip_data_.find_index(trip_idx);
       idx != INVALID_TRIP_DATA_INDEX) {
     return idx;
   } else {
-    return add_trip(sched, caps, uv, get_trip(sched, trip_idx));
+    return add_trip(sched, uv, get_trip(sched, trip_idx));
   }
 }
 
-trip_data_index get_or_add_trip(schedule const& sched,
-                                capacity_maps const& caps, universe& uv,
+trip_data_index get_or_add_trip(schedule const& sched, universe& uv,
                                 trip const* trp) {
   if (auto const idx = uv.trip_data_.find_index(trp->trip_idx_);
       idx != INVALID_TRIP_DATA_INDEX) {
     return idx;
   } else {
-    return add_trip(sched, caps, uv, trp);
+    return add_trip(sched, uv, trp);
   }
 }
 
-trip_data_index get_or_add_trip(schedule const& sched,
-                                capacity_maps const& caps, universe& uv,
+trip_data_index get_or_add_trip(schedule const& sched, universe& uv,
                                 extern_trip const& et) {
-  return get_or_add_trip(sched, caps, uv, get_trip(sched, et));
+  return get_or_add_trip(sched, uv, get_trip(sched, et));
 }
 
 trip_data_index get_trip(universe const& uv, trip_idx_t const trip_idx) {
@@ -335,8 +329,8 @@ void update_event_times(schedule const& sched, universe& uv,
   }
 }
 
-void update_trip_route(schedule const& sched, capacity_maps const& caps,
-                       universe& uv, RtRerouteUpdate const* ru,
+void update_trip_route(schedule const& sched, universe& uv,
+                       RtRerouteUpdate const* ru,
                        std::vector<edge_index>& updated_interchange_edges) {
   ++uv.system_stats_.update_trip_route_count_;
   auto const trp = from_fbs(sched, ru->trip());
@@ -350,7 +344,7 @@ void update_trip_route(schedule const& sched, capacity_maps const& caps,
   auto const current_teks = to_trip_ev_keys(tdi, uv);
   auto const new_teks = to_trip_ev_keys(sched, *ru->new_route());
 
-  apply_reroute(uv, caps, sched, trp, tdi, current_teks, new_teks,
+  apply_reroute(uv, sched, trp, tdi, current_teks, new_teks,
                 updated_interchange_edges);
 }
 
@@ -429,18 +423,17 @@ bool remove_broken_group_route_from_edge(
 }
 
 void for_each_trip(
-    schedule const& sched, capacity_maps const& caps, universe& uv,
-    compact_journey const& journey,
+    schedule const& sched, universe& uv, compact_journey const& journey,
     std::function<void(journey_leg const&, trip_data_index)> const& fn) {
   for (auto const& leg : journey.legs_) {
-    fn(leg, get_or_add_trip(sched, caps, uv, leg.trip_idx_));
+    fn(leg, get_or_add_trip(sched, uv, leg.trip_idx_));
   }
 }
 
-void for_each_edge(schedule const& sched, capacity_maps const& caps,
-                   universe& uv, compact_journey const& journey,
+void for_each_edge(schedule const& sched, universe& uv,
+                   compact_journey const& journey,
                    std::function<void(journey_leg const&, edge*)> const& fn) {
-  for_each_trip(sched, caps, uv, journey,
+  for_each_trip(sched, uv, journey,
                 [&](journey_leg const& leg, trip_data_index const tdi) {
                   auto in_trip = false;
                   for (auto const& ei : uv.trip_data_.edges(tdi)) {

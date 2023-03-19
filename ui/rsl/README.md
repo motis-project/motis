@@ -58,8 +58,7 @@ The TypeScript MOTIS API definitions (in `src/api/protocol`) are
 generated automatically from the FlatBuffers protocol specification
 (see the `protocol` directory in the root project).
 To update the TypeScript definitions after modifying the FlatBuffers
-files, run `pnpm run update-protocol` (not all types are generated,
-see `protocol.config.json`).
+files, see the instructions in `/tools/protocol`.
 
 ## Using the UI
 
@@ -68,7 +67,6 @@ by running `pnpm run dev` and go to http://127.0.0.1:5173/rsl/?motis=8080.
 
 ### URL parameters
 
-* `?motis=8082`: Connect to MOTIS on <window.location.hostname>:8082
-* `?motis=host`: Connect to MOTIS on host:8080
-* `?motis=host:8082`: Connect to MOTIS on host:8082
-
+- `?motis=8082`: Connect to MOTIS on <window.location.hostname>:8082
+- `?motis=host`: Connect to MOTIS on host:8080
+- `?motis=host:8082`: Connect to MOTIS on host:8082

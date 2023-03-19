@@ -41,7 +41,9 @@ std::set<std::uint32_t> get_train_nrs(trip const* trp) {
 
 std::string_view capacity_source_str(capacity_source const src) {
   switch (src) {
-    case capacity_source::TRIP_EXACT: return "trip";
+    case capacity_source::TRIP_EXACT: return "trip_exact";
+    case capacity_source::TRIP_PRIMARY: return "trip_primary_id";
+    case capacity_source::TRAIN_NR_AND_STATIONS: return "train_nr_and_stations";
     case capacity_source::TRAIN_NR: return "train_nr";
     case capacity_source::CATEGORY: return "category";
     case capacity_source::CLASZ: return "clasz";

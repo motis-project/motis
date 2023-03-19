@@ -1,10 +1,10 @@
 import { PrimitiveAtom, useAtom } from "jotai";
-import { focusAtom } from "jotai/optics";
+import { focusAtom } from "jotai-optics";
 import { useMemo } from "react";
 
 import { Station, TripServiceInfo } from "@/api/protocol/motis";
 
-import { MeasureUnion } from "@/data/measures";
+import { MeasureUnion, measureTypeNeedsRecipients } from "@/data/measures";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import StationPicker from "@/components/inputs/StationPicker";
@@ -29,8 +29,7 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   );
   const [measureType] = useAtom(typeAtom);
 
-  const showRecipients =
-    measureType !== "RtUpdateMeasure" && measureType !== "RtCancelMeasure";
+  const showRecipients = measureTypeNeedsRecipients(measureType);
 
   const addTrip = (trip: TripServiceInfo | undefined) => {
     if (trip) {

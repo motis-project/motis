@@ -121,6 +121,14 @@ void update_msg_builder::expanded_trip_moved(
   etui.new_route_ = new_eti;
 }
 
+void update_msg_builder::trip_formation_message(
+    motis::ris::TripFormationMessage const* msg) {
+  using motis::ris::TripFormationMessage;
+  updates_.emplace_back(CreateRtUpdate(
+      fbb_, Content_TripFormationMessage,
+      motis_copy_table(TripFormationMessage, fbb_, msg).Union()));
+}
+
 std::pair<expanded_trip_update_info&, bool>
 update_msg_builder::get_or_insert_expanded_trip(trip const* trp) {
   if (auto it = expanded_trips_.find(trp); it != end(expanded_trips_)) {

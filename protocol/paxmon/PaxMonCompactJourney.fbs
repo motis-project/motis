@@ -25,6 +25,13 @@ table PaxMonCompactJourneyLeg {
   enter_transfer: PaxMonTransferInfo;
 }
 
+table PaxMonFootpath {
+  duration: uint;
+  from_station: motis.Station;
+  to_station: motis.Station;
+}
+
 table PaxMonCompactJourney {
   legs: [PaxMonCompactJourneyLeg];
+  final_footpath: [PaxMonFootpath]; // optional (0 or 1)
 }

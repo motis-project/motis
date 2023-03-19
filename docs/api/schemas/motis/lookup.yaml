@@ -1,0 +1,181 @@
+LookupGeoStationIdRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    min_radius:
+      description: TODO
+    max_radius:
+      description: TODO
+LookupGeoStationRequest:
+  description: TODO
+  fields:
+    pos:
+      description: TODO
+    min_radius:
+      description: TODO
+    max_radius:
+      description: TODO
+LookupBatchGeoStationRequest:
+  description: TODO
+  fields:
+    requests:
+      description: TODO
+LookupGeoStationResponse:
+  description: TODO
+  fields:
+    stations:
+      description: TODO
+LookupBatchGeoStationResponse:
+  description: TODO
+  fields:
+    responses:
+      description: TODO
+LookupIdTrainRequest:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+LookupIdTrainResponse:
+  description: TODO
+  fields:
+    train:
+      description: TODO
+LookupMetaStationRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+LookupBatchMetaStationRequest:
+  description: TODO
+  fields:
+    requests:
+      description: TODO
+LookupMetaStationResponse:
+  description: TODO
+  fields:
+    equivalent:
+      description: TODO
+LookupBatchMetaStationResponse:
+  description: TODO
+  fields:
+    responses:
+      description: TODO
+LookupRiBasisRequest:
+  description: TODO
+  fields:
+    trip_id:
+      description: Trip ID of the trip to retrieve.
+    schedule:
+      description: |
+        The ID of the schedule to use.
+
+        Use `0` for the default schedule.
+RiBasisTrip:
+  description: TODO
+  fields:
+    trip_id:
+      description: The trip ID.
+    fahrt:
+      description: The full trip in RiBasisFahrt format.
+LookupRiBasisResponse:
+  description: TODO
+  fields:
+    trips:
+      description: >
+        The requested trip and all associated trips (merged and through
+        services).
+LookupScheduleInfoResponse:
+  description: Information about the loaded schedule
+  fields:
+    name:
+      description: Name of the loaded schedule
+    begin:
+      description: First loaded day (unix timestamp)
+    end:
+      description: Last loaded day (unix timestamp)
+TableType:
+  description: TODO
+LookupStationEventsRequest:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    interval:
+      description: TODO
+    type:
+      description: TODO
+StationEvent:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    type:
+      description: TODO
+    train_nr:
+      description: TODO
+    line_id:
+      description: TODO
+    time:
+      description: TODO
+    schedule_time:
+      description: TODO
+    direction:
+      description: TODO
+    service_name:
+      description: TODO
+    track:
+      description: TODO
+LookupStationEventsResponse:
+  description: TODO
+  fields:
+    events:
+      description: TODO
+LookupStationInfoRequest:
+  description: TODO
+  fields:
+    schedule:
+      description: |
+        The ID of the schedule to use.
+
+        Use `0` for the default schedule.
+    station_ids:
+      description: Station IDs to look up.
+    include_meta_stations:
+      description: >
+        Whether stations that are marked as equivalent should be included
+        in the response as well (recursively).
+    include_stations_reachable_via_footpaths:
+      description: >
+        Whether stations that are reachable via footpaths should be
+        included in the response as well (recursively).
+LookupFootpathInfo:
+  description: TODO
+  fields:
+    other_station:
+      description: The other station reachable via this footpath.
+    duration:
+      description: Duration of the footpath in minutes.
+LookupStationInfo:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    external_ids:
+      description: External IDs for the station (e.g. DS100).
+    transfer_time:
+      description: Transfer time at the station in minutes.
+    equivalent:
+      description: Equivalent stations (meta stations).
+    footpaths:
+      description: Stations reachable via footpath from this station.
+LookupStationInfoResponse:
+  description: TODO
+  fields:
+    station_infos:
+      description: |
+        Information about the requested stations and, depending on the
+        options specified in the request, equivalent stations and stations
+        reachable via footpaths.
+
+        The order of the stations is unspecified.

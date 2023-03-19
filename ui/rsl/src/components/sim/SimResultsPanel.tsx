@@ -157,6 +157,10 @@ function SimResultDetails({
       label: "Aktualisierung der Reisendengruppen",
     },
     { duration: r.stats.t_update_tracker, label: "Statistiken zu Änderungen" },
+    {
+      duration: r.stats.t_update_capacities,
+      label: "Aktualisierung der Kapazitäten",
+    },
   ]
     .map(({ duration, label }) => `${formatMiliseconds(duration)} ${label}`)
     .join("\n");
@@ -166,6 +170,13 @@ function SimResultDetails({
       <div className="mt-2">
         <div title={runtimeStats}>
           Simulationsdauer insgesamt: {formatMiliseconds(duration)}
+        </div>
+        <div
+          title={`Betroffene Reisendengruppen: ${formatNumber(
+            r.updates.updated_group_count
+          )} (${formatNumber(r.updates.updated_group_route_count)} Routen)`}
+        >
+          Betroffende Reisende: {formatNumber(r.updates.updated_pax_count)}
         </div>
         <div className="mt-1 font-semibold">
           Nachfragebeeinflussende Maßnahmen

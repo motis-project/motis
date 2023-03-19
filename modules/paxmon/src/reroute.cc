@@ -293,8 +293,7 @@ std::optional<merged_trips_idx> get_merged_trips(trip const* trp) {
   return get_lcon(trp->edges_->front().get_edge(), trp->lcon_idx_).trips_;
 }
 
-void apply_reroute(universe& uv, capacity_maps const& caps,
-                   schedule const& sched, trip const* trp,
+void apply_reroute(universe& uv, schedule const& sched, trip const* trp,
                    trip_data_index const tdi,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
@@ -354,7 +353,7 @@ void apply_reroute(universe& uv, capacity_maps const& caps,
     canceled_nodes.emplace_back(n->index(uv));
   }
 
-  update_trip_capacity(uv, sched, caps, trp, false);
+  update_trip_capacity(uv, sched, trp);
 
   for (auto const& pgwr : affected_group_routes) {
     update_group_route(tdi, trp, pgwr, uv, sched);

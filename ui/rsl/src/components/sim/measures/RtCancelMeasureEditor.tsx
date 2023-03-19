@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { PrimitiveAtom, useAtom } from "jotai";
-import { focusAtom } from "jotai/optics";
+import { focusAtom } from "jotai-optics";
 import { useAtomCallback } from "jotai/utils";
 import { zip } from "lodash-es";
 import React, { useCallback, useEffect, useMemo, useState } from "react";

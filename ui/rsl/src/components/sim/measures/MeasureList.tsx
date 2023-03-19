@@ -1,7 +1,7 @@
 import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PrimitiveAtom, atom, useAtom } from "jotai";
-import { useAtomCallback, useUpdateAtom } from "jotai/utils";
+import { PrimitiveAtom, atom, useAtom, useSetAtom } from "jotai";
+import { useAtomCallback } from "jotai/utils";
 import { useCallback } from "react";
 
 import { TripServiceInfo } from "@/api/protocol/motis";
@@ -15,6 +15,7 @@ import {
   MeasureUnion,
   UiMeasureType,
   currentEditorMeasureAtom,
+  measureNeedsRecipients,
   measuresAtom,
   newEmptyMeasure,
   toMeasureWrapper,
@@ -42,6 +43,7 @@ const measureTypeTexts: Record<UiMeasureType, string> = {
   TripLoadRecommendationMeasure: "Alternativenempfehlung",
   RtUpdateMeasure: "Echtzeitmeldung",
   RtCancelMeasure: "(Teil-)Ausfall",
+  UpdateCapacitiesMeasure: "Kapazitätsänderung",
   Empty: "Neue Maßnahme",
 };
 
@@ -131,6 +133,20 @@ function MeasureTypeDetail({
         </div>
       );
     }
+    case "UpdateCapacitiesMeasure": {
+      return (
+        <div className="text-sm text-gray-500">
+          {measure.data.trip ? (
+            <>
+              <TripServiceInfoView tsi={measure.data.trip} format="Short" />
+              {`: ${measure.data.seats}`}
+            </>
+          ) : (
+            <span className="text-db-red-500">Kein Trip gewählt</span>
+          )}
+        </div>
+      );
+    }
     case "Empty": {
       return <></>;
     }
@@ -184,8 +200,7 @@ function MeasureListEntry({
     measure.shared.recipients.stations.length > 0 ||
     measure.shared.recipients.trips.length > 0;
 
-  const needsRecipients =
-    measure.type !== "RtUpdateMeasure" && measure.type !== "RtCancelMeasure";
+  const needsRecipients = measureNeedsRecipients(measure);
 
   const tripName = (tsi: TripServiceInfo) =>
     tsi.service_infos.length > 0
@@ -242,8 +257,8 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const [selectedMeasure, setSelectedMeasure] = useAtom(
     currentEditorMeasureAtom
   );
-  const setSimResults = useUpdateAtom(simResultsAtom);
-  const setSelectedSimResult = useUpdateAtom(selectedSimResultAtom);
+  const setSimResults = useSetAtom(simResultsAtom);
+  const setSelectedSimResult = useSetAtom(selectedSimResultAtom);
 
   const applyMeasuresMutation = useMutation(
     (measures: MeasureWrapper[]) =>

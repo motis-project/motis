@@ -72,7 +72,7 @@ function getFilterTripsRequest(
     sort_by: sortOrder,
     max_results: 100,
     skip_first: pageParam,
-    filter_by_time: selectedDate ? "DepartureOrArrivalTime" : "NoFilter",
+    filter_by_time: selectedDate ? "ActiveTime" : "NoFilter",
     filter_interval: {
       begin: selectedDate ? getUnixTime(selectedDate) : 0,
       end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
@@ -141,13 +141,9 @@ function TripList(): JSX.Element {
       refetchOnWindowFocus: false,
       keepPreviousData: true,
       staleTime: 60000,
-      enabled: selectedDate != undefined,
     }
   );
 
-  if (selectedDate == undefined && scheduleInfo) {
-    setSelectedDate(fromUnixTime(scheduleInfo.begin));
-  }
   const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
   const maxDate =
     scheduleInfo && minDate

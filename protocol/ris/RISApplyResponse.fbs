@@ -1,0 +1,7 @@
+namespace motis.ris;
+
+table RISApplyResponse {
+  new_system_time: ulong;
+  successful: ulong;
+  failed: ulong;
+}

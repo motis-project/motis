@@ -1,4 +1,5 @@
-// generated file - do not modify - run update-protocol to update
+// GENERATED FILE - DO NOT MODIFY
+// -> see /tools/protocol for information on how to update this file
 import {
   Connection,
   EventType,
@@ -118,4 +119,32 @@ export interface StationEvent {
 // lookup/LookupStationEventsResponse.fbs
 export interface LookupStationEventsResponse {
   events: StationEvent[];
+}
+
+// lookup/LookupStationInfoRequest.fbs
+export interface LookupStationInfoRequest {
+  schedule: number;
+  station_ids: string[];
+  include_meta_stations: boolean;
+  include_stations_reachable_via_footpaths: boolean;
+}
+
+// lookup/LookupStationInfoResponse.fbs
+export interface LookupFootpathInfo {
+  other_station: Station;
+  duration: number;
+}
+
+// lookup/LookupStationInfoResponse.fbs
+export interface LookupStationInfo {
+  station: Station;
+  external_ids: string[];
+  transfer_time: number;
+  equivalent: Station[];
+  footpaths: LookupFootpathInfo[];
+}
+
+// lookup/LookupStationInfoResponse.fbs
+export interface LookupStationInfoResponse {
+  station_infos: LookupStationInfo[];
 }

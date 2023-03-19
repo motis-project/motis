@@ -31,10 +31,6 @@ struct paxforecast : public motis::module::module {
 
   void init(motis::module::registry&) override;
 
-private:
-  void on_monitoring_event(motis::module::msg_ptr const& msg);
-  motis::module::msg_ptr apply_measures(motis::module::msg_ptr const& msg);
-
   std::string forecast_filename_;
   std::ofstream forecast_file_;
 
@@ -51,6 +47,9 @@ private:
   duration min_delay_improvement_{5};
   bool revert_forecasts_{false};
   float probability_threshold_{0.01F};
+
+  bool allow_start_metas_{false};
+  bool allow_dest_metas_{false};
 
   std::string stats_file_;
   std::unique_ptr<stats_writer> stats_writer_;

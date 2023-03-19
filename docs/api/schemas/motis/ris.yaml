@@ -1,0 +1,357 @@
+RISContentType:
+  description: TODO
+RISInputMessage:
+  description: TODO
+  fields:
+    type:
+      description: TODO
+    content:
+      description: TODO
+RISApplyRequest:
+  description: TODO
+  fields:
+    schedule:
+      description: TODO
+    input_messages:
+      description: TODO
+Event:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    service_num:
+      description: TODO
+    line_id:
+      description: TODO
+    type:
+      description: TODO
+    schedule_time:
+      description: TODO
+IdEventType:
+  description: TODO
+IdEvent:
+  description: TODO
+  fields:
+    station_id:
+      description: TODO
+    service_num:
+      description: TODO
+    schedule_time:
+      description: TODO
+    trip_type:
+      description: TODO
+CancelMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    events:
+      description: TODO
+UpdatedEvent:
+  description: TODO
+  fields:
+    base:
+      description: TODO
+    updated_time:
+      description: TODO
+DelayType:
+  description: TODO
+DelayMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    type:
+      description: TODO
+    events:
+      description: TODO
+AdditionalEvent:
+  description: TODO
+  fields:
+    base:
+      description: TODO
+    category:
+      description: TODO
+    track:
+      description: TODO
+    seq_no:
+      description: TODO
+AdditionMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    events:
+      description: TODO
+RerouteStatus:
+  description: TODO
+ReroutedEvent:
+  description: TODO
+  fields:
+    base:
+      description: TODO
+    status:
+      description: TODO
+RerouteMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    cancelled_events:
+      description: TODO
+    new_events:
+      description: TODO
+UpdatedTrack:
+  description: TODO
+  fields:
+    base:
+      description: TODO
+    updated_track:
+      description: TODO
+TrackMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    events:
+      description: TODO
+FreeTextMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    events:
+      description: TODO
+    free_text:
+      description: TODO
+ConnectionDecision:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    base:
+      description: TODO
+    hold:
+      description: TODO
+ConnectionDecisionMessage:
+  description: TODO
+  fields:
+    from_trip_id:
+      description: TODO
+    from:
+      description: TODO
+    to:
+      description: TODO
+ConnectionAssessment:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    base:
+      description: TODO
+    assessment:
+      description: TODO
+ConnectionAssessmentMessage:
+  description: TODO
+  fields:
+    from_trip_id:
+      description: TODO
+    from:
+      description: TODO
+    to:
+      description: TODO
+StationInfo:
+  description: TODO
+  fields:
+    eva:
+      description: TODO
+    ds100:
+      description: TODO
+    name:
+      description: TODO
+CategoryInfo:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    code:
+      description: TODO
+ProviderInfo:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    name:
+      description: TODO
+    code:
+      description: TODO
+FullTripId:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    uuid:
+      description: TODO
+    start_station:
+      description: TODO
+    target_station:
+      description: TODO
+TimestampType:
+  description: TODO
+TripEvent:
+  description: TODO
+  fields:
+    uuid:
+      description: TODO
+    station:
+      description: TODO
+    schedule_time:
+      description: TODO
+    current_time:
+      description: TODO
+    current_time_type:
+      description: TODO
+    interchange_allowed:
+      description: TODO
+    schedule_track:
+      description: TODO
+    current_track:
+      description: TODO
+TripSection:
+  description: TODO
+  fields:
+    train_nr:
+      description: TODO
+    category:
+      description: TODO
+    line_id:
+      description: TODO
+    provider:
+      description: TODO
+    departure:
+      description: TODO
+    arrival:
+      description: TODO
+FullTripMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    sections:
+      description: TODO
+MessageUnion:
+  description: TODO
+Message:
+  description: TODO
+  fields:
+    earliest:
+      description: TODO
+    latest:
+      description: TODO
+    timestamp:
+      description: TODO
+    content:
+      description: TODO
+MessageHolder:
+  description: TODO
+  fields:
+    message:
+      description: TODO
+RISBatch:
+  description: TODO
+  fields:
+    messages:
+      description: TODO
+    schedule:
+      description: TODO
+RISForwardTimeRequest:
+  description: TODO
+  fields:
+    new_time:
+      description: TODO
+    schedule:
+      description: TODO
+GTFSID:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    day:
+      description: TODO
+    trip:
+      description: TODO
+RISGTFSRTMapping:
+  description: TODO
+  fields:
+    ids:
+      description: TODO
+RISPurgeRequest:
+  description: TODO
+  fields:
+    until:
+      description: TODO
+RISSystemTimeChanged:
+  description: TODO
+  fields:
+    schedule:
+      description: TODO
+HalfTripId:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    uuid:
+      description: TODO
+VehicleInfo:
+  description: TODO
+  fields:
+    uic:
+      description: TODO
+    baureihe:
+      description: TODO
+    type_code:
+      description: TODO
+    order:
+      description: TODO
+VehicleGroup:
+  description: TODO
+  fields:
+    name:
+      description: TODO
+    start_station:
+      description: TODO
+    destination_station:
+      description: TODO
+    trip_id:
+      description: TODO
+    departure_uuid:
+      description: TODO
+    vehicles:
+      description: TODO
+TripFormationSection:
+  description: TODO
+  fields:
+    departure_uuid:
+      description: TODO
+    departure_station:
+      description: TODO
+    schedule_departure_time:
+      description: TODO
+    vehicle_groups:
+      description: TODO
+TripFormationMessage:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+    sections:
+      description: TODO
+RISApplyResponse:
+  description: TODO
+  fields:
+    new_system_time:
+      description: TODO
+    successful:
+      description: TODO
+    failed:
+      description: TODO

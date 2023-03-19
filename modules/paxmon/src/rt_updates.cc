@@ -17,9 +17,11 @@
 #include "motis/paxmon/print_stats.h"
 #include "motis/paxmon/reachability.h"
 #include "motis/paxmon/track_update.h"
+#include "motis/paxmon/trip_formation_update.h"
 #include "motis/paxmon/update_load.h"
 
 using namespace motis::rt;
+using namespace motis::ris;
 using namespace motis::logging;
 using namespace motis::module;
 
@@ -58,31 +60,43 @@ void check_broken_interchanges(
         }
         uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
       }
-    } else if (ice->broken_) {
-      // interchange valid again
-      ice->broken_ = false;
-      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
-      }
-      for (auto const& pgwr :
-           uv.pax_connection_info_.broken_group_routes(ice->pci_)) {
-        uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
-      }
-    } else if (arrival_delay_threshold >= 0 && to->station_ == 0) {
-      // check for delayed arrival at destination
-      auto const estimated_arrival = static_cast<int>(from->schedule_time());
-      for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
-        auto const& gr = uv.passenger_groups_.route(pgwr);
-        if (gr.probability_ == 0) {
-          continue;
-        }
-        auto const estimated_delay =
-            estimated_arrival - static_cast<int>(gr.planned_arrival_time_);
-        if (gr.planned_arrival_time_ != INVALID_TIME &&
-            estimated_delay >= arrival_delay_threshold) {
+    } else {
+      if (ice->broken_) {
+        // interchange valid again
+        ice->broken_ = false;
+        for (auto const& pgwr :
+             uv.pax_connection_info_.group_routes(ice->pci_)) {
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
-        // TODO(pablo): check broken groups
+        for (auto const& pgwr :
+             uv.pax_connection_info_.broken_group_routes(ice->pci_)) {
+          uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
+        }
+      }
+      if (to->station_ == 0) {
+        // update delay + check for delayed arrival at destination
+        auto const check_threshold = arrival_delay_threshold >= 0;
+        auto const estimated_arrival = static_cast<int>(from->current_time());
+        for (auto const& pgwr :
+             uv.pax_connection_info_.group_routes(ice->pci_)) {
+          auto& gr = uv.passenger_groups_.route(pgwr);
+          if (gr.planned_arrival_time_ == INVALID_TIME) {
+            continue;
+          }
+          auto const& final_footpath =
+              uv.passenger_groups_.journey(gr.compact_journey_index_)
+                  .final_footpath();
+          auto const estimated_delay = static_cast<std::int16_t>(
+              estimated_arrival + static_cast<int>(final_footpath.duration_) -
+              static_cast<int>(gr.planned_arrival_time_));
+          gr.estimated_delay_ = estimated_delay;
+          if (check_threshold && gr.probability_ != 0 &&
+              estimated_delay >= arrival_delay_threshold) {
+            uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(
+                pgwr);
+          }
+          // TODO(pablo): check broken groups
+        }
       }
     }
     if (uv.graph_log_.enabled_) {
@@ -93,9 +107,8 @@ void check_broken_interchanges(
   }
 }
 
-void handle_rt_update(universe& uv, capacity_maps const& caps,
-                      schedule const& sched, RtUpdates const* update,
-                      int arrival_delay_threshold) {
+void handle_rt_update(universe& uv, schedule const& sched,
+                      RtUpdates const* update, int arrival_delay_threshold) {
   uv.tick_stats_.rt_updates_ += update->updates()->size();
 
   std::vector<edge_index> updated_interchange_edges;
@@ -132,7 +145,7 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
         ++uv.system_stats_.reroute_updates_;
         ++uv.tick_stats_.rt_reroute_updates_;
         auto const ru = reinterpret_cast<RtRerouteUpdate const*>(u->content());
-        update_trip_route(sched, caps, uv, ru, updated_interchange_edges);
+        update_trip_route(sched, uv, ru, updated_interchange_edges);
         break;
       }
       case Content_RtTrackUpdate: {
@@ -143,6 +156,13 @@ void handle_rt_update(universe& uv, capacity_maps const& caps,
       }
       case Content_RtFreeTextUpdate: {
         ++uv.tick_stats_.rt_free_text_updates_;
+        break;
+      }
+      case Content_TripFormationMessage: {
+        ++uv.tick_stats_.rt_trip_formation_updates_;
+        auto const tfm =
+            reinterpret_cast<TripFormationMessage const*>(u->content());
+        update_trip_formation(sched, uv, tfm);
         break;
       }
       default: break;
@@ -232,7 +252,8 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
     if (reachability.ok_) {
       gr.estimated_delay_ = static_cast<std::int16_t>(
           static_cast<int>(
-              reachability.reachable_trips_.back().exit_real_time_) -
+              reachability.reachable_trips_.back().exit_real_time_) +
+          static_cast<int>(cj.final_footpath().duration_) -
           static_cast<int>(gr.planned_arrival_time_));
     }
     MOTIS_STOP_TIMING(reachability);

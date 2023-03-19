@@ -1,6 +1,8 @@
 include "base/EventType.fbs";
 include "base/Connection.fbs";
 include "base/TripId.fbs";
+include "ris/StationInfo.fbs";
+include "ris/TripFormationMessage.fbs";
 
 namespace motis.ris;
 
@@ -115,12 +117,6 @@ table ConnectionAssessmentMessage { // Anschlussbewertung
 // Full Trip Messages
 // ----------------------------------------------------------------------------
 
-table StationInfo {
-  eva:string;
-  ds100:string;
-  name:string;
-}
-
 table CategoryInfo {
   name:string;
   code:string;
@@ -179,7 +175,8 @@ union MessageUnion {
   ConnectionAssessmentMessage,
   TrackMessage,
   FreeTextMessage,
-  FullTripMessage
+  FullTripMessage,
+  TripFormationMessage
 }
 
 table Message {

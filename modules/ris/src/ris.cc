@@ -34,9 +34,11 @@
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
+
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
+
 #include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
 #include "motis/ris/gtfs-rt/util.h"
@@ -119,6 +121,12 @@ unixtime to_unixtime(std::string_view s) {
 
 std::string_view from_unixtime(unixtime const& t) {
   return {reinterpret_cast<char const*>(&t), sizeof(t)};
+}
+
+template <typename Publisher>
+inline void update_system_time(schedule& sched, Publisher const& pub) {
+  sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
+  sched.last_update_timestamp_ = std::time(nullptr);
 }
 
 struct ris::impl {
@@ -278,8 +286,7 @@ struct ris::impl {
                     file_type::JSON, pub);
               }
 
-              sched->system_time_ = pub.max_timestamp_;
-              sched->last_update_timestamp_ = std::time(nullptr);
+              update_system_time(*sched, pub);
 
               if (rabbitmq_log_enabled_) {
                 rabbitmq_log_file_
@@ -322,8 +329,7 @@ struct ris::impl {
       }
     }
 
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
   }
 
@@ -417,8 +423,7 @@ struct ris::impl {
     parse_str_and_write_to_db(*file_upload_,
                               {content->c_str(), content->size()}, ft, pub);
 
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
@@ -430,8 +435,7 @@ struct ris::impl {
         parse_sequential(sched, in, pub);
       }
     }
-    sched.system_time_ = pub.max_timestamp_;
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
@@ -479,16 +483,27 @@ struct ris::impl {
     auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
 
     publisher pub{schedule_res_id};
+    auto successful = 0ULL;
+    auto failed = 0ULL;
     for (auto const& rim : *req->input_messages()) {
-      parse_and_publish_message(rim, pub);
+      if (parse_and_publish_message(rim, pub)) {
+        ++successful;
+      } else {
+        ++failed;
+      }
     }
 
     pub.flush();
-    sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
-    sched.last_update_timestamp_ = std::time(nullptr);
+    update_system_time(sched, pub);
 
     publish_system_time_changed(schedule_res_id);
-    return {};
+
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_RISApplyResponse,
+        CreateRISApplyResponse(mc, sched.system_time_, successful, failed)
+            .Union());
+    return make_msg(mc);
   }
 
   struct publisher {
@@ -748,8 +763,7 @@ struct ris::impl {
       try {
         parse_file_and_write_to_db(in, path, type, pub);
         if (config_.instant_forward_) {
-          sched.system_time_ = pub.max_timestamp_;
-          sched.last_update_timestamp_ = std::time(nullptr);
+          update_system_time(sched, pub);
           try {
             publish_system_time_changed(pub.schedule_res_id_);
           } catch (std::system_error& e) {
@@ -976,7 +990,7 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_and_publish_message(RISInputMessage const* rim, Publisher& pub) {
+  bool parse_and_publish_message(RISInputMessage const* rim, Publisher& pub) {
     auto content_sv =
         std::string_view{rim->content()->c_str(), rim->content()->size()};
 
@@ -986,12 +1000,10 @@ struct ris::impl {
 
     switch (rim->type()) {
       case RISContentType_RIBasis: {
-        ribasis::to_ris_message(content_sv, handle_message);
-        break;
+        return ribasis::to_ris_message(content_sv, handle_message);
       }
       case RISContentType_RISML: {
-        risml::to_ris_message(content_sv, handle_message);
-        break;
+        return risml::to_ris_message(content_sv, handle_message);
       }
       default: throw utl::fail("ris: unsupported message type");
     }
@@ -1048,6 +1060,11 @@ ris::ris() : module("RIS", "ris") {
   param(config_.rabbitmq_log_, "rabbitmq.log",
         "Path to log file for RabbitMQ messages (set to empty string to "
         "disable logging)");
+  param(config_.rabbitmq_.prefetch_count_, "rabbitmq.prefetch_count",
+        "Number of RabbitMQ messages to prefetch (must be > 0 if using "
+        "RabbitMQ streams)");
+  param(config_.rabbitmq_.stream_offset_, "rabbitmq.stream_offset",
+        "Stream offset if using RabbitMQ streams (e.g. next, 2h, 1D...)");
 }
 
 ris::~ris() = default;

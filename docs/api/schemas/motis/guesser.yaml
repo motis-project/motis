@@ -1,0 +1,16 @@
+StationGuesserRequest:
+  description: TODO
+  fields:
+    guess_count:
+      description: TODO
+      examples:
+        - 10
+    input:
+      description: TODO
+      examples:
+        - Frankfurt
+StationGuesserResponse:
+  description: TODO
+  fields:
+    guesses:
+      description: TODO

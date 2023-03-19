@@ -45,11 +45,22 @@ table RtUpdateMeasure {
   content: string;
 }
 
+table UpdateCapacitiesMeasure {
+  time: long;
+  file_contents: [string];
+  remove_existing_trip_capacities: bool;
+  remove_existing_category_capacities: bool;
+  remove_existing_vehicle_capacities: bool;
+  remove_existing_trip_formations: bool;
+  track_trip_updates: bool;
+}
+
 union Measure {
   TripLoadInfoMeasure,
   TripRecommendationMeasure,
   TripLoadRecommendationMeasure,
-  RtUpdateMeasure
+  RtUpdateMeasure,
+  UpdateCapacitiesMeasure
 }
 
 table MeasureWrapper {

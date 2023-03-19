@@ -307,7 +307,7 @@ boost::optional<ris_message> parse_message(xml_node const& msg,
   return {{ctx.earliest_, ctx.latest_, ctx.timestamp_, std::move(ctx.b_)}};
 }
 
-void to_ris_message(std::string_view s,
+bool to_ris_message(std::string_view s,
                     std::function<void(ris_message&&)> const& cb,
                     std::string const& tag) {
   utl::verify(tag.empty(), "risml does not support multi-schedule");
@@ -317,7 +317,7 @@ void to_ris_message(std::string_view s,
     auto r = d.load_buffer(reinterpret_cast<void const*>(s.data()), s.size());
     if (!r) {
       LOG(error) << "bad XML: " << r.description();
-      return;
+      return false;
     }
 
     auto t_out = parse_time(child_attr(d, "Paket", "TOut").value());
@@ -328,9 +328,12 @@ void to_ris_message(std::string_view s,
     }
   } catch (std::exception const& e) {
     LOG(error) << "unable to parse RIS message: " << e.what();
+    return false;
   } catch (...) {
     LOG(error) << "unable to parse RIS message";
+    return false;
   }
+  return true;
 }
 
 std::vector<ris_message> parse(std::string_view s, std::string const& tag) {

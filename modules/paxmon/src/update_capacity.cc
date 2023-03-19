@@ -1,29 +1,38 @@
 #include "motis/paxmon/update_capacity.h"
 
+#include "motis/core/access/trip_access.h"
+
 #include "motis/paxmon/trip_section_load_iterator.h"
 
 namespace motis::paxmon {
 
-void update_trip_capacity(universe& uv, schedule const& sched,
-                          capacity_maps const& caps, trip const* trp,
-                          bool const force_downgrade) {
-  auto const sections = sections_with_load{sched, caps, uv, trp};
+bool update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
+                          bool const track_updates) {
+  auto const sections =
+      sections_with_load{sched, uv, trp, capacity_info_source::LOOKUP};
   if (!sections.has_paxmon_data() || sections.empty()) {
-    return;
+    return false;
   }
+  auto changed = false;
   for (auto const& sec : sections) {
-    auto const capacity = get_capacity(sched, sec.lcon(), sec.ev_key_from(),
-                                       sec.ev_key_to(), caps);
-    auto const new_source = capacity.second;
-    // update capacity if new capacity source is better or equal (or forced)
-    if (force_downgrade ||
-        static_cast<std::underlying_type_t<capacity_source>>(new_source) <=
-            static_cast<std::underlying_type_t<capacity_source>>(
-                sec.get_capacity_source())) {
-      auto const encoded_capacity = encode_capacity(capacity);
-      auto* e = const_cast<edge*>(sec.paxmon_edge());  // NOLINT
-      e->encoded_capacity_ = encoded_capacity;
+    auto* e = const_cast<edge*>(sec.paxmon_edge());  // NOLINT
+    if (!changed && e->capacity() != sec.capacity()) {
+      changed = true;
+      if (track_updates) {
+        uv.update_tracker_.before_trip_capacity_changed(trp->trip_idx_);
+      }
     }
+    e->encoded_capacity_ = sec.encoded_capacity();
+  }
+  return changed;
+}
+
+void update_all_trip_capacities(universe& uv, schedule const& sched,
+                                bool const track_updates) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
+    (void)tdi;
+    auto const* trp = get_trip(sched, trp_idx);
+    update_trip_capacity(uv, sched, trp, track_updates);
   }
 }
 

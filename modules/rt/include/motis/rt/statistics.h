@@ -24,6 +24,7 @@ struct statistics {
     c("reroute", s.reroute_msgs_);
     c("track", s.track_change_msgs_);
     c("free text", s.free_text_msgs_);
+    c("trip formation", s.trip_formation_msgs_);
 
     o << "\nseparate trip:\n";
     c("edge fit", s.edge_fit_);
@@ -208,6 +209,7 @@ struct statistics {
   unsigned con_assessment_msgs_ = 0;
   unsigned track_change_msgs_ = 0;
   unsigned free_text_msgs_ = 0;
+  unsigned trip_formation_msgs_ = 0;
 
   unsigned total_evs_ = 0;
   unsigned ev_invalid_time_ = 0;

@@ -1,183 +1,125 @@
 #include "motis/paxmon/capacity.h"
 
 #include <charconv>
+#include <cmath>
 #include <cstdint>
 #include <ctime>
 #include <algorithm>
-#include <fstream>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <set>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-#include "utl/parser/buf_reader.h"
-#include "utl/parser/csv_range.h"
-#include "utl/parser/file.h"
-#include "utl/parser/line_range.h"
-#include "utl/pipes/for_each.h"
-
-#include "motis/core/common/logging.h"
+#include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
-#include "motis/core/access/uuids.h"
+
+#include "motis/core/debug/trip.h"
 
 #include "motis/paxmon/util/get_station_idx.h"
 
-using namespace motis::logging;
 using namespace motis::paxmon::util;
 
 namespace motis::paxmon {
 
-namespace {
-
-struct trip_row {
-  utl::csv_col<std::uint32_t, UTL_NAME("train_nr")> train_nr_;
-  utl::csv_col<utl::cstr, UTL_NAME("category")> category_;
-  utl::csv_col<utl::cstr, UTL_NAME("from")> from_;
-  utl::csv_col<utl::cstr, UTL_NAME("from_name")> from_name_;
-  utl::csv_col<utl::cstr, UTL_NAME("to")> to_;
-  utl::csv_col<utl::cstr, UTL_NAME("to_name")> to_name_;
-  utl::csv_col<std::time_t, UTL_NAME("departure")> departure_;
-  utl::csv_col<std::time_t, UTL_NAME("arrival")> arrival_;
-  utl::csv_col<std::uint16_t, UTL_NAME("seats")> seats_;
-};
-
-struct vehicle_row {
-  utl::csv_col<std::uint64_t, UTL_NAME("uic_number")> uic_number_;
-  utl::csv_col<utl::cstr, UTL_NAME("attribute_name")> attribute_name_;
-  utl::csv_col<std::uint16_t, UTL_NAME("attribute_value")> attribute_value_;
-};
-
-enum class csv_format { TRIP, VEHICLE };
-
-csv_format get_csv_format(std::string_view const file_content) {
-  if (auto const nl = file_content.find('\n'); nl != std::string_view::npos) {
-    auto const header = file_content.substr(0, nl);
-    utl::verify(header.find(',') != std::string_view::npos,
-                "paxmon: only ',' separator supported for capacity csv files");
-    if (header.find("seats") != std::string_view::npos) {
-      return csv_format::TRIP;
-    } else if (header.find("uic_number") != std::string_view::npos) {
-      return csv_format::VEHICLE;
-    } else {
-      throw utl::fail("paxmon: unsupported capacity csv input format");
-    }
+struct debug_cap_trip_id {
+  friend std::ostream& operator<<(std::ostream& out,
+                                  debug_cap_trip_id const& t) {
+    auto const& sched = t.sched_;
+    auto const& id = t.id_;
+    return out << "{train_nr=" << id.train_nr_ << ", from_station="
+               << debug::station{sched, id.from_station_idx_}
+               << ", to_station=" << debug::station{sched, id.to_station_idx_}
+               << ", departure=" << format_time(id.departure_)
+               << ", arrival=" << format_time(id.arrival_) << "}";
   }
-  throw utl::fail("paxmon: empty capacity input file");
+
+  schedule const& sched_;
+  cap_trip_id id_;
+};
+
+bool primary_trip_id_matches(cap_trip_id const& a, cap_trip_id const& b) {
+  return a.train_nr_ == b.train_nr_ &&
+         a.from_station_idx_ == b.from_station_idx_ &&
+         a.departure_ == b.departure_;
 }
 
-};  // namespace
-
-std::size_t load_capacities(schedule const& sched,
-                            std::string const& capacity_file,
-                            capacity_maps& caps,
-                            std::string const& match_log_file) {
-  auto buf = utl::file(capacity_file.data(), "r").content();
-  auto file_content = utl::cstr{buf.data(), buf.size()};
-  if (file_content.starts_with("\xEF\xBB\xBF")) {
-    // skip utf-8 byte order mark (otherwise the first column is ignored)
-    file_content = file_content.substr(3);
-  }
-  auto const format = get_csv_format(file_content.view());
-  auto entry_count = 0ULL;
-
-  std::set<std::pair<std::string, std::string>> stations_not_found;
-
-  if (format == csv_format::TRIP) {
-    utl::line_range<utl::buf_reader>{file_content}  //
-        | utl::csv<trip_row>()  //
-        |
-        utl::for_each([&](trip_row const& row) {
-          if (row.train_nr_.val() != 0) {
-            auto const from_station_idx =
-                get_station_idx(sched, row.from_.val().view()).value_or(0);
-            auto const to_station_idx =
-                get_station_idx(sched, row.to_.val().view()).value_or(0);
-            time departure = row.departure_.val() != 0
-                                 ? unix_to_motistime(sched.schedule_begin_,
-                                                     row.departure_.val())
-                                 : 0;
-            time arrival = row.arrival_.val() != 0
-                               ? unix_to_motistime(sched.schedule_begin_,
-                                                   row.arrival_.val())
-                               : 0;
-
-            if (row.from_.val() && from_station_idx == 0) {
-              stations_not_found.insert(std::make_pair(
-                  row.from_.val().to_str(), row.from_name_.val().to_str()));
-            }
-            if (row.to_.val() && to_station_idx == 0) {
-              stations_not_found.insert(std::make_pair(
-                  row.to_.val().to_str(), row.to_name_.val().to_str()));
-            }
-            if (departure == INVALID_TIME || arrival == INVALID_TIME) {
-              return;
-            }
-
-            auto const tid = cap_trip_id{row.train_nr_.val(), from_station_idx,
-                                         to_station_idx, departure, arrival};
-            caps.trip_capacity_map_[tid] = row.seats_.val();
-            ++entry_count;
-          } else if (row.category_.val()) {
-            caps.category_capacity_map_[row.category_.val().view()] =
-                row.seats_.val();
-            ++entry_count;
-          }
-        });
-  } else if (format == csv_format::VEHICLE) {
-    utl::line_range<utl::buf_reader>{file_content}  //
-        | utl::csv<vehicle_row>()  //
-        | utl::for_each([&](vehicle_row const& row) {
-            auto& cap = caps.vehicle_capacity_map_[row.uic_number_.val()];
-            auto const& attr = row.attribute_name_.val();
-            auto const val = row.attribute_value_.val();
-            if (attr == "SITZPL_GESAMT") {
-              cap.seats_ = val;
-            } else if (attr == "ANZAHL_STEHPL") {
-              cap.standing_ = val;
-            } else if (attr == "PERS_ZUGELASSEN") {
-              cap.total_limit_ = val;
-            }
-          });
-  }
-
-  if (!stations_not_found.empty()) {
-    LOG(warn) << stations_not_found.size() << " stations not found";
-    if (!match_log_file.empty()) {
-      std::ofstream ml{match_log_file};
-      ml << "stations not found:\n";
-      for (auto const& [id, name] : stations_not_found) {
-        ml << id << ": " << name << "\n";
-      }
-      LOG(warn) << "capacity match log report written to: " << match_log_file;
-    }
-  }
-
-  return entry_count;
+bool stations_match(cap_trip_id const& a, cap_trip_id const& b) {
+  return a.from_station_idx_ == b.from_station_idx_ &&
+         a.to_station_idx_ == b.to_station_idx_;
 }
 
 std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    trip_capacity_map_t const& trip_map, trip const* trp,
+    schedule const& /*sched*/, capacity_maps const& caps, trip const* trp,
     std::uint32_t train_nr) {
   auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
-                               trp->id_.secondary_.target_station_id_,
                                trp->id_.primary_.get_time(),
+                               trp->id_.secondary_.target_station_id_,
                                trp->id_.secondary_.target_time_};
-  if (auto const lb = trip_map.lower_bound(tid); lb != end(trip_map)) {
+  // try to match full trip id or primary trip id
+  if (auto const lb = caps.trip_capacity_map_.lower_bound(tid);
+      lb != end(caps.trip_capacity_map_)) {
     if (lb->first == tid) {
       return {{lb->second, capacity_source::TRIP_EXACT}};
-    } else if (lb->first.train_nr_ == train_nr) {
-      return {{lb->second, capacity_source::TRAIN_NR}};
-    } else if (lb != begin(trip_map)) {
+    }
+    if (primary_trip_id_matches(lb->first, tid)) {
+      return {{lb->second, capacity_source::TRIP_PRIMARY}};
+    } else if (lb != begin(caps.trip_capacity_map_)) {
       if (auto const prev = std::prev(lb);
-          prev != end(trip_map) && prev->first.train_nr_ == train_nr) {
-        return {{prev->second, capacity_source::TRAIN_NR}};
+          primary_trip_id_matches(prev->first, tid)) {
+        return {{prev->second, capacity_source::TRIP_PRIMARY}};
       }
     }
   }
-  return {};
+
+  if (caps.fuzzy_match_max_time_diff_ == 0) {
+    return {};
+  }
+
+  // find the best possible match where train number matches
+  auto const tid_train_nr_only = cap_trip_id{train_nr};
+  auto best_result = std::optional<std::pair<std::uint16_t, capacity_source>>{};
+  auto best_station_matches = 0;
+  auto best_diff = std::numeric_limits<int>::max();
+  for (auto it = caps.trip_capacity_map_.lower_bound(tid_train_nr_only);
+       it != end(caps.trip_capacity_map_) && it->first.train_nr_ == train_nr;
+       it = std::next(it)) {
+    auto const& cid = it->first;
+    auto const cur_dep_diff = std::abs(static_cast<int>(cid.departure_) -
+                                       static_cast<int>(tid.departure_));
+    auto const cur_arr_diff = std::abs(static_cast<int>(cid.arrival_) -
+                                       static_cast<int>(tid.arrival_));
+
+    if (cur_dep_diff > caps.fuzzy_match_max_time_diff_ ||
+        cur_arr_diff > caps.fuzzy_match_max_time_diff_) {
+      continue;
+    }
+
+    auto const cur_from_station_match =
+        cid.from_station_idx_ == tid.from_station_idx_;
+    auto const cur_to_station_match =
+        cid.to_station_idx_ == tid.to_station_idx_;
+    auto const cur_station_matches =
+        (cur_from_station_match ? 1 : 0) + (cur_to_station_match ? 1 : 0);
+    auto const cur_diff = cur_dep_diff + cur_arr_diff;
+
+    auto const better =
+        (cur_station_matches > best_station_matches) ||
+        (cur_station_matches == best_station_matches && cur_diff < best_diff);
+
+    if (better) {
+      best_result = {{it->second, stations_match(tid, cid)
+                                      ? capacity_source::TRAIN_NR_AND_STATIONS
+                                      : capacity_source::TRAIN_NR}};
+      best_station_matches = cur_station_matches;
+      best_diff = cur_diff;
+    }
+  }
+
+  return best_result;
 }
 
 std::optional<std::uint32_t> get_line_nr(mcd::string const& line_id) {
@@ -193,19 +135,19 @@ std::optional<std::uint32_t> get_line_nr(mcd::string const& line_id) {
 }
 
 std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    schedule const& sched, trip_capacity_map_t const& trip_map,
-    category_capacity_map_t const& category_map, trip const* trp,
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
     connection_info const* ci, service_class const clasz) {
 
   auto const trp_train_nr = trp->id_.primary_.get_train_nr();
-  if (auto const trip_capacity = get_trip_capacity(trip_map, trp, trp_train_nr);
+  if (auto const trip_capacity =
+          get_trip_capacity(sched, caps, trp, trp_train_nr);
       trip_capacity) {
     return trip_capacity;
   }
 
   if (ci->train_nr_ != trp_train_nr) {
     if (auto const trip_capacity =
-            get_trip_capacity(trip_map, trp, ci->train_nr_);
+            get_trip_capacity(sched, caps, trp, ci->train_nr_);
         trip_capacity) {
       return trip_capacity;
     }
@@ -214,7 +156,7 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
   auto const trp_line_nr = get_line_nr(trp->id_.secondary_.line_id_);
   if (trp_line_nr && *trp_line_nr != trp_train_nr) {
     if (auto const trip_capacity =
-            get_trip_capacity(trip_map, trp, *trp_line_nr);
+            get_trip_capacity(sched, caps, trp, *trp_line_nr);
         trip_capacity) {
       return trip_capacity;
     }
@@ -223,83 +165,87 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
   auto const ci_line_nr = get_line_nr(ci->line_identifier_);
   if (ci_line_nr && ci_line_nr != trp_line_nr && *ci_line_nr != trp_train_nr) {
     if (auto const trip_capacity =
-            get_trip_capacity(trip_map, trp, *ci_line_nr);
+            get_trip_capacity(sched, caps, trp, *ci_line_nr);
         trip_capacity) {
       return trip_capacity;
     }
   }
 
   auto const& category = sched.categories_[ci->family_]->name_;
-  if (auto const it = category_map.find(category); it != end(category_map)) {
+  if (auto const it = caps.category_capacity_map_.find(category);
+      it != end(caps.category_capacity_map_)) {
     return {{it->second, capacity_source::CATEGORY}};
-  } else if (auto const it = category_map.find(
+  } else if (auto const it = caps.category_capacity_map_.find(
                  std::to_string(static_cast<service_class_t>(clasz)));
-             it != end(category_map)) {
+             it != end(caps.category_capacity_map_)) {
     return {{it->second, capacity_source::CLASZ}};
   }
 
   return {};
 }
 
-std::optional<std::uint16_t> get_vehicle_capacity(capacity_maps const& caps,
-                                                  std::uint64_t const uic) {
-  if (auto const it = caps.vehicle_capacity_map_.find(uic);
-      it != end(caps.vehicle_capacity_map_)) {
-    return {it->second.limit()};
+trip_formation const* get_trip_formation(capacity_maps const& caps,
+                                         trip const* trp) {
+  auto trip_uuid = trp->uuid_;
+  if (trip_uuid.is_nil()) {
+    if (auto const it = caps.trip_uuid_map_.find(trp->id_.primary_);
+        it != end(caps.trip_uuid_map_)) {
+      trip_uuid = it->second;
+    } else {
+      return nullptr;
+    }
+  }
+  if (auto const it = caps.trip_formation_map_.find(trip_uuid);
+      it != end(caps.trip_formation_map_)) {
+    return &it->second;
   } else {
-    return {};
+    return nullptr;
   }
 }
 
-std::uint16_t get_vehicles_capacity(capacity_maps const& caps,
-                                    vehicle_order const& vo) {
-  std::uint16_t cap = 0;
-  // TODO(pablo): handle missing vehicle info
-  for (auto const& uic : vo.uics_) {
-    cap += get_vehicle_capacity(caps, uic).value_or(0);
-  }
-  return cap;
-}
-
-std::optional<std::pair<std::uint16_t, capacity_source>> get_section_capacity(
+trip_formation_section const* get_trip_formation_section(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
-    ev_key const& ev_key_from, ev_key const& /*ev_key_to*/) {
-  if (trp->uuid_.is_nil()) {
-    return {};
+    ev_key const& ev_key_from) {
+  auto const* formation = get_trip_formation(caps, trp);
+  if (formation == nullptr || formation->sections_.empty()) {
+    return nullptr;
   }
-  if (auto const vo_it = caps.trip_vehicle_map_.find(trp->uuid_);
-      vo_it != end(caps.trip_vehicle_map_)) {
-    auto const& vo = vo_it->second;
-    // try to match by event uuid
-    auto const maybe_dep_uuid =
-        motis::access::get_event_uuid(sched, trp, ev_key_from);
-    if (maybe_dep_uuid.has_value()) {
-      auto const dep_uuid = maybe_dep_uuid.value();
-      if (auto const sec_vo =
-              std::find_if(begin(vo.sections_), end(vo.sections_),
-                           [&](auto const& sec_vo) {
-                             return sec_vo.departure_uuid_ == dep_uuid;
-                           });
-          sec_vo != end(vo.sections_)) {
-        return {{get_vehicles_capacity(caps, sec_vo->vehicles_),
-                 capacity_source::TRIP_EXACT}};
+  auto const schedule_departure = get_schedule_time(sched, ev_key_from);
+  auto const& station_eva =
+      sched.stations_[ev_key_from.get_station_idx()]->eva_nr_;
+  auto const* best_section_match = &formation->sections_.front();
+  auto station_found = false;
+  for (auto const& sec : formation->sections_) {
+    auto const station_match = sec.departure_eva_ == station_eva;
+    if (station_match && sec.schedule_departure_time_ == schedule_departure) {
+      return &sec;
+    }
+    if (!station_found) {
+      station_found = station_match;
+      if (station_found || sec.schedule_departure_time_ < schedule_departure) {
+        best_section_match = &sec;
       }
     }
-    // departure eva fallback
-    auto const dep_eva =
-        sched.stations_.at(ev_key_from.get_station_idx())->eva_nr_;
-    if (auto const sec_vo = std::find_if(begin(vo.sections_), end(vo.sections_),
-                                         [&](auto const& sec_vo) {
-                                           return sec_vo.departure_eva_ ==
-                                                  dep_eva;
-                                         });
-        sec_vo != end(vo.sections_)) {
-      return {{get_vehicles_capacity(caps, sec_vo->vehicles_),
-               capacity_source::TRIP_EXACT}};
-    }
-    // TODO(pablo): station range fallback?
   }
-  return {};
+  return best_section_match;
+}
+
+std::optional<vehicle_capacity> get_section_capacity(
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
+    ev_key const& ev_key_from) {
+  auto const* tf_sec =
+      get_trip_formation_section(sched, caps, trp, ev_key_from);
+  if (tf_sec == nullptr) {
+    return {};
+  }
+  auto cap = vehicle_capacity{};
+  for (auto const& uic : tf_sec->uics_) {
+    if (auto const it = caps.vehicle_capacity_map_.find(uic);
+        it != end(caps.vehicle_capacity_map_)) {
+      cap += it->second;
+    }
+  }
+  return cap;
 }
 
 inline capacity_source get_worst_source(capacity_source const a,
@@ -309,38 +255,48 @@ inline capacity_source get_worst_source(capacity_source const a,
                static_cast<std::underlying_type_t<capacity_source>>(b)));
 }
 
+inline std::uint16_t clamp_capacity(capacity_maps const& caps,
+                                    std::uint16_t const capacity) {
+  return std::max(caps.min_capacity_, capacity);
+}
+
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
-    ev_key const& ev_key_from, ev_key const& ev_key_to,
+    ev_key const& ev_key_from, ev_key const& /*ev_key_to*/,
     capacity_maps const& caps) {
   std::uint16_t capacity = 0;
   auto worst_source = capacity_source::TRIP_EXACT;
+  auto some_unknown = false;
 
   auto ci = lc.full_con_->con_info_;
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
     utl::verify(ci != nullptr, "get_capacity: missing connection_info");
 
     auto const section_capacity =
-        get_section_capacity(sched, caps, trp, ev_key_from, ev_key_to);
+        get_section_capacity(sched, caps, trp, ev_key_from);
     if (section_capacity.has_value()) {
-      capacity += section_capacity->first;
-      worst_source = get_worst_source(worst_source, section_capacity->second);
+      // section specific capacities include merged trips
+      return {clamp_capacity(caps, section_capacity->limit()),
+              capacity_source::TRIP_EXACT};
+    }
+
+    auto const trip_capacity =
+        get_trip_capacity(sched, caps, trp, ci, lc.full_con_->clasz_);
+    if (trip_capacity.has_value()) {
+      capacity += trip_capacity->first;
+      worst_source = get_worst_source(worst_source, trip_capacity->second);
     } else {
-      auto const trip_capacity = get_trip_capacity(
-          sched, caps.trip_capacity_map_, caps.category_capacity_map_, trp, ci,
-          lc.full_con_->clasz_);
-      if (trip_capacity.has_value()) {
-        capacity += trip_capacity->first;
-        worst_source = get_worst_source(worst_source, trip_capacity->second);
-      } else {
-        return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
-      }
+      some_unknown = true;
     }
 
     ci = ci->merged_with_;
   }
 
-  return {capacity, worst_source};
+  if (some_unknown) {
+    return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
+  } else {
+    return {clamp_capacity(caps, capacity), worst_source};
+  }
 }
 
 }  // namespace motis::paxmon

@@ -1,0 +1,71 @@
+input: ../../protocol/Message.fbs
+doc:
+  schemas: ../../docs/api/schemas
+  paths: ../../docs/api/paths.yaml
+  tags: ../../docs/api/tags.yaml
+output:
+  json-schema:
+    format: json-schema
+    #dir: ../../docs/generated/json-schema
+    bundle: ../../docs/generated/json-schema/bundle.json
+    base-uri: &base-uri https://motis-project.de/schemas/
+    strict-int-types: false
+    strict-unions: true
+    exclude: &public-exclude
+      - motis.import.*
+  openapi-3.1:
+    format: openapi
+    version: 3.1.0
+    file: ../../docs/generated/openapi-3.1/openapi.yaml
+    base-uri: *base-uri
+    ids: false
+    info: &openapi-info
+      title: MOTIS API
+      version: 0.0.0
+      contact:
+        name: MOTIS Project
+        url: https://github.com/motis-project
+      license:
+        name: MIT
+        url: https://raw.githubusercontent.com/motis-project/motis/master/LICENSE
+    externalDocs: &openapi-externalDocs
+      description: MOTIS Project
+      url: https://motis-project.de/
+    servers: &openapi-servers
+      - url: /
+        description: Local MOTIS server
+    exclude: *public-exclude
+  openapi-3.0:
+    format: openapi
+    version: 3.0.3
+    file: ../../docs/generated/openapi-3.0/openapi.yaml
+    base-uri: *base-uri
+    ids: false
+    info: *openapi-info
+    externalDocs: *openapi-externalDocs
+    servers: *openapi-servers
+    exclude: *public-exclude
+  markdown:
+    format: markdown
+    dir: ../../docs/generated/markdown
+    exclude: *public-exclude
+  rsl-ui:
+    format: typescript
+    dir: ../../ui/rsl/src/api/protocol
+    header: |
+      // GENERATED FILE - DO NOT MODIFY
+      // -> see /tools/protocol for information on how to update this file
+    import-base: "@/api/protocol/"
+    prettier: true
+    include: &rsl-include
+      - motis.*
+      - motis.ris.RISForwardTimeRequest
+      - motis.ris.RISContentType
+      - motis.paxmon.*
+      - motis.paxforecast.*
+      - motis.routing.*
+      - motis.guesser.*
+      - motis.lookup.*
+      - motis.ribasis.*
+    exclude: &rsl-exclude
+      - motis.HTTP*

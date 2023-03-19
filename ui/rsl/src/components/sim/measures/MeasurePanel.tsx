@@ -1,5 +1,4 @@
-import { PrimitiveAtom, useAtom } from "jotai";
-import { useUpdateAtom } from "jotai/utils";
+import { PrimitiveAtom, useAtom, useSetAtom } from "jotai";
 import { useCallback } from "react";
 
 import {
@@ -18,7 +17,7 @@ export type MeasurePanelProps = {
 function MeasurePanel({
   onSimulationFinished,
 }: MeasurePanelProps): JSX.Element {
-  const setMeasureAtoms = useUpdateAtom(measuresAtom);
+  const setMeasureAtoms = useSetAtom(measuresAtom);
   const [currentMeasureAtom, setCurrentMeasureAtom] = useAtom(
     currentEditorMeasureAtom
   );

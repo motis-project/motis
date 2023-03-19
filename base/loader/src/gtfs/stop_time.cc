@@ -9,6 +9,7 @@
 #include "utl/progress_tracker.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/loader/gtfs/parse_time.h"
 #include "motis/loader/util.h"
 
 using std::get;
@@ -31,25 +32,6 @@ enum {
 static const column_mapping<gtfs_stop_time> stop_time_columns = {
     {"trip_id", "arrival_time", "departure_time", "stop_id", "stop_sequence",
      "stop_headsign", "pickup_type", "drop_off_type"}};
-
-int hhmm_to_min(cstr s) {
-  if (s.empty()) {
-    return kInterpolate;
-  } else {
-    int hours = 0;
-    parse_arg(s, hours, 0);
-    if (s) {
-      ++s;
-    } else {
-      return -1;
-    }
-
-    int minutes = 0;
-    parse_arg(s, minutes, 0);
-
-    return hours * 60 + minutes;
-  }
-}
 
 void read_stop_times(loaded_file const& file, trip_map& trips,
                      stop_map const& stops) {

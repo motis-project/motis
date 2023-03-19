@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "boost/uuid/nil_generator.hpp"
-#include "boost/uuid/string_generator.hpp"
 #include "boost/uuid/uuid_io.hpp"
 
 #include "utl/enumerate.h"
@@ -33,15 +32,12 @@
 #include "motis/rt/expanded_trips.h"
 #include "motis/rt/incoming_edges.h"
 #include "motis/rt/update_constant_graph.h"
+#include "motis/rt/util.h"
 
 using namespace motis::logging;
 using namespace motis::ris;
 
 namespace motis::rt {
-
-inline std::string_view view(flatbuffers::String const* s) {
-  return {s->c_str(), s->size()};
-}
 
 inline timestamp_reason from_fbs(TimestampType const t) {
   switch (t) {
@@ -51,10 +47,6 @@ inline timestamp_reason from_fbs(TimestampType const t) {
     case TimestampType_Forecast: return timestamp_reason::FORECAST;
     default: return timestamp_reason::SCHEDULE;
   }
-}
-
-inline boost::uuids::uuid parse_uuid(std::string_view const sv) {
-  return boost::uuids::string_generator{}(sv.begin(), sv.end());
 }
 
 struct full_trip_handler {

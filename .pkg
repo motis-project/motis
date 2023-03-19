@@ -49,7 +49,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=9a99a76683897dd27a87fe27ee61d2cfc7034545
+  commit=c4174ff47ea04eee883b5d00b9937fb0fa39a831
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
@@ -93,7 +93,7 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=5e6efe17f52a66da36994d1c6ae28e1280e0bc4f
+  commit=8bfc669e6ffd5800ed47144cf59c15b3e752ba10
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=wip

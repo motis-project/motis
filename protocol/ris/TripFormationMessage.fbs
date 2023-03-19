@@ -1,0 +1,37 @@
+include "base/TripId.fbs";
+include "ris/StationInfo.fbs";
+
+namespace motis.ris;
+
+table HalfTripId {
+  id: TripId; // secondary values not set/ignored
+  uuid: string;
+}
+
+table VehicleInfo {
+  uic: ulong;
+  baureihe: string;
+  type_code: string;
+  order: string;
+}
+
+table VehicleGroup {
+  name: string;
+  start_station: StationInfo;
+  destination_station: StationInfo;
+  trip_id: HalfTripId;
+  departure_uuid: string;
+  vehicles: [VehicleInfo];
+}
+
+table TripFormationSection {
+  departure_uuid: string;
+  departure_station: StationInfo;
+  schedule_departure_time: ulong;
+  vehicle_groups: [VehicleGroup];
+}
+
+table TripFormationMessage {
+  trip_id: HalfTripId;
+  sections: [TripFormationSection];
+}

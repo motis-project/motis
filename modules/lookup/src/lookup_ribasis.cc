@@ -429,9 +429,7 @@ Offset<LookupRiBasisResponse> lookup_ribasis(FlatBufferBuilder& fbb,
                                              schedule const& sched,
                                              LookupRiBasisRequest const* req) {
   auto const t = req->trip_id();
-  auto requested_trp = get_trip(sched, t->station_id()->str(), t->train_nr(),
-                                t->time(), t->target_station_id()->str(),
-                                t->target_time(), t->line_id()->str());
+  auto requested_trp = from_fbs(sched, t);
 
   auto rc = rib_ctx{fbb, sched};
   auto const trips_and_through_edges =

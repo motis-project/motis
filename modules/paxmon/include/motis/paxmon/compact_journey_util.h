@@ -152,6 +152,7 @@ inline compact_journey get_suffix(schedule const& sched,
     }
   }
 
+  suffix.final_footpath_ = cj.final_footpath();
   return suffix;
 }
 
@@ -249,14 +250,20 @@ inline std::optional<transfer_info> get_merged_transfer_info(
                                  *first_suffix_section);
 }
 
-template <typename PrefixCompactJourney, typename SuffixCompactJourney>
 inline compact_journey merge_journeys(schedule const& sched,
-                                      PrefixCompactJourney const& prefix,
-                                      SuffixCompactJourney const& suffix) {
+                                      compact_journey const& prefix,
+                                      compact_journey const& suffix) {
   if (prefix.legs().empty()) {
     return suffix;
   } else if (suffix.legs().empty()) {
-    return prefix;
+    auto const& suffix_ffp = suffix.final_footpath();
+    if (suffix_ffp.is_footpath()) {
+      auto merged = prefix;
+      merged.final_footpath_ = suffix_ffp;
+      return merged;
+    } else {
+      return prefix;
+    }
   }
 
   auto merged = prefix;
@@ -276,6 +283,7 @@ inline compact_journey merge_journeys(schedule const& sched,
     new_first_suffix_leg.enter_transfer_ =
         get_merged_transfer_info(sched, prefix, suffix);
   }
+  merged.final_footpath_ = suffix.final_footpath();
 
   return merged;
 }

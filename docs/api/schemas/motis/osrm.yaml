@@ -1,0 +1,74 @@
+OSRMManyToManyRequest:
+  description: TODO
+  fields:
+    profile:
+      description: TODO
+    from:
+      description: TODO
+    to:
+      description: TODO
+OSRMManyToManyResponse:
+  description: TODO
+  fields:
+    costs:
+      description: TODO
+OSRMOneToManyRequest:
+  description: TODO
+  fields:
+    profile:
+      description: TODO
+    direction:
+      description: TODO
+    one:
+      description: TODO
+    many:
+      description: TODO
+Cost:
+  description: TODO
+  fields:
+    duration:
+      description: TODO
+    distance:
+      description: TODO
+OSRMOneToManyResponse:
+  description: TODO
+  fields:
+    costs:
+      description: TODO
+Waypoint:
+  description: TODO
+  fields:
+    positions:
+      description: TODO
+OSRMSmoothViaRouteRequest:
+  description: TODO
+  fields:
+    profile:
+      description: TODO
+    waypoints:
+      description: TODO
+OSRMSmoothViaRouteResponse:
+  description: TODO
+  fields:
+    time:
+      description: TODO
+    distance:
+      description: TODO
+    segments:
+      description: TODO
+OSRMViaRouteRequest:
+  description: TODO
+  fields:
+    profile:
+      description: TODO
+    waypoints:
+      description: TODO
+OSRMViaRouteResponse:
+  description: TODO
+  fields:
+    time:
+      description: TODO
+    distance:
+      description: TODO
+    polyline:
+      description: TODO

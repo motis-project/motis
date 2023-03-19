@@ -15,6 +15,8 @@ struct journey_input_settings {
   double split_groups_size_mean_{1.5};
   double split_groups_size_stddev_{3.0};
   unsigned split_groups_seed_{0};
+
+  unsigned max_station_wait_time_{0};  // minutes
 };
 
 }  // namespace motis::paxmon::settings

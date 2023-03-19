@@ -58,9 +58,8 @@ void add_interchange(event_node_index const from, event_node_index const to,
 };  // namespace
 
 add_group_route_to_graph_result add_group_route_to_graph(
-    schedule const& sched, capacity_maps const& caps, universe& uv,
-    passenger_group const& grp, group_route const& gr, bool const log,
-    pci_log_reason_t const reason) {
+    schedule const& sched, universe& uv, passenger_group const& grp,
+    group_route const& gr, bool const log, pci_log_reason_t const reason) {
   auto result = add_group_route_to_graph_result{};
   auto edges = uv.passenger_groups_.route_edges(gr.edges_index_);
   auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
@@ -77,7 +76,7 @@ add_group_route_to_graph_result add_group_route_to_graph(
 
     auto tdi = INVALID_TRIP_DATA_INDEX;
     try {
-      tdi = get_or_add_trip(sched, caps, uv, leg.trip_idx_);
+      tdi = get_or_add_trip(sched, uv, leg.trip_idx_);
     } catch (std::system_error const& e) {
       std::cerr << "could not add trip for passenger group " << grp.id_
                 << " (source=" << grp.source_.primary_ref_ << "."
@@ -115,8 +114,10 @@ add_group_route_to_graph_result add_group_route_to_graph(
           exit_node = to->index_;
           last_trip = tdi;
           exit_found = true;
-          result.scheduled_arrival_time_ = to->schedule_time_;
-          result.current_arrival_time_ = to->time_;
+          auto const& final_footpath = cj.final_footpath();
+          result.scheduled_arrival_time_ =
+              to->schedule_time_ + final_footpath.duration_;
+          result.current_arrival_time_ = to->time_ + final_footpath.duration_;
           break;
         }
       }
@@ -128,7 +129,9 @@ add_group_route_to_graph_result add_group_route_to_graph(
       }
       edges.clear();
 
-      std::cout << "add_group_route_to_graph: enter_found=" << enter_found
+      std::cout << "add_group_route_to_graph: pg=" << grp.id_
+                << ", route=" << gr.local_group_route_index_
+                << ", enter_found=" << enter_found
                 << ", exit_found=" << exit_found << "\n";
 
       std::cout << "current leg:\n";
@@ -138,9 +141,7 @@ add_group_route_to_graph_result add_group_route_to_graph(
       print_trip_sections(uv, sched, leg.trip_idx_, tdi);
 
       std::cout << "\ncompact planned journey:\n";
-      for (auto const& l : cj.legs()) {
-        print_leg(sched, l);
-      }
+      print_compact_journey(sched, cj);
 
       std::cout << "\n\n";
 

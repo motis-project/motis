@@ -47,6 +47,10 @@ struct primary_trip_id {
   motis::time get_time() const { return static_cast<motis::time>(time_); }
   uint32_t get_train_nr() const { return static_cast<uint32_t>(train_nr_); }
 
+  cista::hash_t hash() const {
+    return cista::build_hash(station_id_, time_, train_nr_);
+  }
+
   uint64_t station_id_ : 31;
   uint64_t time_ : 16;
   uint64_t train_nr_ : 17;
@@ -172,6 +176,7 @@ struct trip {
   trip_debug dbg_;
   mcd::vector<uint32_t> stop_seq_numbers_;
   boost::uuids::uuid uuid_{};
+  bool unscheduled_{false};
 };
 
 }  // namespace motis

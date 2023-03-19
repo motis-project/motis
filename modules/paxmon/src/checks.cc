@@ -294,7 +294,7 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
                            bool scheduled) {
   auto ok = true;
 
-  if (cj.legs_.empty()) {
+  if (cj.legs().empty() && !cj.final_footpath().is_footpath()) {
     std::cout << "!! empty compact journey\n";
     ok = false;
   }
@@ -330,9 +330,7 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
 
   if (!ok) {
     std::cout << "compact journey (errors above):\n";
-    for (auto const& leg : cj.legs_) {
-      print_leg(sched, leg);
-    }
+    print_compact_journey(sched, cj);
   }
 
   return ok;
