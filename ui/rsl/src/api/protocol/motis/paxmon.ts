@@ -882,6 +882,7 @@ export interface PaxMonMergedTripCapacityInfo {
   trip_formation_all_vehicles_found: boolean;
   vehicles: PaxMonVehicleCapacityInfo[];
   vehicle_groups: PaxMonVehicleGroupInfo[];
+  override: PaxMonCapacityData[];
 }
 
 // paxmon/PaxMonGetTripCapacityResponse.fbs
@@ -913,6 +914,7 @@ export interface PaxMonGetTripCapacityResponse {
   category_capacity_map_size: number;
   vehicle_capacity_map_size: number;
   trip_formation_map_size: number;
+  capacity_override_map_size: number;
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs

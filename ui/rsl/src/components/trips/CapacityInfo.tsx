@@ -181,7 +181,8 @@ function SectionCapacityInfo({
 function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
   const has_trip_lookup = mt.trip_lookup_capacity_source !== "Unknown";
   const has_trip_formation = mt.trip_formation_found;
-  const has_capacity = has_trip_lookup || has_trip_formation;
+  const has_override = mt.override.length === 1;
+  const has_capacity = has_trip_lookup || has_trip_formation || has_override;
 
   return (
     <div className="flex gap-2">
@@ -191,6 +192,14 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         </Link>
       </div>
       <div className="flex flex-col gap-1">
+        {has_override && (
+          <div className="flex gap-1 flex-wrap text-db-red-500">
+            <span className="font-semibold">
+              Manuell überschriebene Kapazität:
+            </span>
+            <span>{mt.override[0].seats}</span>
+          </div>
+        )}
         {has_trip_lookup && (
           <div className="flex gap-1 flex-wrap">
             <span className="font-semibold">Zugkapazität:</span>

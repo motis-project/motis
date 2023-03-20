@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <map>
+#include <optional>
 #include <string>
 
 #include "boost/uuid/uuid.hpp"
@@ -60,12 +61,20 @@ struct vehicle_capacity {
   }
 };
 
+struct capacity_override_section {
+  std::uint32_t departure_station_idx_{};
+  time schedule_departure_time_{INVALID_TIME};
+  vehicle_capacity total_capacity_{};
+};
+
 using trip_capacity_map_t = std::map<cap_trip_id, std::uint16_t>;
 using category_capacity_map_t = mcd::hash_map<mcd::string, std::uint16_t>;
 using vehicle_capacity_map_t =
     mcd::hash_map<std::uint64_t /* UIC number */, vehicle_capacity>;
 using trip_formation_map_t = mcd::hash_map<boost::uuids::uuid, trip_formation>;
 using trip_uuid_map_t = mcd::hash_map<primary_trip_id, boost::uuids::uuid>;
+using capacity_override_map_t =
+    mcd::hash_map<cap_trip_id, mcd::vector<capacity_override_section>>;
 
 struct capacity_maps {
   trip_capacity_map_t trip_capacity_map_;
@@ -75,9 +84,19 @@ struct capacity_maps {
   trip_formation_map_t trip_formation_map_;
   trip_uuid_map_t trip_uuid_map_;
 
+  capacity_override_map_t override_map_;
+
   int fuzzy_match_max_time_diff_{};  // minutes
   std::uint16_t min_capacity_{};
 };
+
+inline cap_trip_id get_cap_trip_id(full_trip_id const& id,
+                                   std::optional<std::uint32_t> train_nr = {}) {
+  return cap_trip_id{train_nr.value_or(id.primary_.train_nr_),
+                     id.primary_.get_station_id(), id.primary_.get_time(),
+                     id.secondary_.target_station_id_,
+                     id.secondary_.target_time_};
+}
 
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,

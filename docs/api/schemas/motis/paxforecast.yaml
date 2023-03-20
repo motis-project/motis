@@ -326,3 +326,40 @@ UpdateCapacitiesMeasure:
 
         This should only be set to true if changing the capacity of a
         small number of trips.
+OverrideCapacitySection:
+  description: TODO
+  fields:
+    departure_station:
+      description: Station ID of the departure station for the trip section.
+    departure_schedule_time:
+      description: Scheduled departure time for the trip section.
+    seats:
+      description: The number of seats for this trip section.
+OverrideCapacityMeasure:
+  description: |
+    Manually override the capacity information for a trip.
+
+    The trip must already exist in MOTIS, otherwise applying the measure fails.
+
+    This has the highest priority and will override all other capacity sources.
+
+    To remove an override and restore the original capacity, supply an empty
+    list of sections.
+  fields:
+    time:
+      description: Time at which the measure takes effect (unix timestamp).
+    trip:
+      description: The ID of the trip.
+    sections:
+      description: |
+        A list of trip sections with the corresponding capacity data.
+
+        To set the capacity for all sections of a trip, a single section
+        with `departure_station` set to an empty string and
+        `departure_schedule_time` set to 0 can be supplied.
+
+        Otherwise, the list of sections must match the current sections of
+        the trip and must be sorted.
+
+        If this list is empty, the override is removed and the original
+        capacity for the trip is restored.

@@ -3,6 +3,8 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/common/raii.h"
 
+#include "motis/core/access/trip_access.h"
+
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_spawn.h"
 
@@ -58,6 +60,22 @@ void apply_update_capacities_measure(universe& uv, schedule const& sched,
 
   // update all trip capacities
   update_all_trip_capacities(uv, sched, m.track_trip_updates_);
+}
+
+void apply_override_capacity_measure(universe& uv, schedule const& sched,
+                                     measures::override_capacity const& m) {
+  auto& caps = uv.capacity_maps_;
+  auto const tid = get_cap_trip_id(m.trip_id_);
+
+  if (m.sections_.empty()) {
+    caps.override_map_.erase(tid);
+  } else {
+    caps.override_map_[tid] = m.sections_;
+  }
+
+  if (auto const* trp = find_trip(sched, m.trip_id_); trp != nullptr) {
+    update_trip_capacity(uv, sched, trp, true);
+  }
 }
 
 msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
@@ -160,6 +178,9 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
       if (std::holds_alternative<measures::update_capacities>(m)) {
         auto const ucm = std::get<measures::update_capacities>(m);
         apply_update_capacities_measure(uv, sched, ucm);
+      } else if (std::holds_alternative<measures::override_capacity>(m)) {
+        auto const ocm = std::get<measures::override_capacity>(m);
+        apply_override_capacity_measure(uv, sched, ocm);
       }
     }
     update_capacities_timer.stop_and_print();

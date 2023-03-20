@@ -1477,6 +1477,10 @@ PaxMonMergedTripCapacityInfo:
     vehicle_groups:
       description: >
         The vehicle groups according to the trip formation.
+    override:
+      description: >
+        Manually overriden capacity information (optional, contains either
+        0 or 1 entries).
 PaxMonSectionCapacityInfo:
   description: TODO
   fields:
@@ -1538,6 +1542,10 @@ PaxMonGetTripCapacityResponse:
     trip_formation_map_size:
       description: >
         The number of trips for which trip formation information is available.
+    capacity_override_map_size:
+      description: >
+        The number of trips for which capacity information was manually
+        overriden.
 PaxMonVehicleGroupInfo:
   description: |
     Information about a vehicle group.

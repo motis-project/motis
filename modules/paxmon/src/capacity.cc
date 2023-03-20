@@ -58,10 +58,7 @@ bool stations_match(cap_trip_id const& a, cap_trip_id const& b) {
 std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     schedule const& /*sched*/, capacity_maps const& caps, trip const* trp,
     std::uint32_t train_nr) {
-  auto const tid = cap_trip_id{train_nr, trp->id_.primary_.get_station_id(),
-                               trp->id_.primary_.get_time(),
-                               trp->id_.secondary_.target_station_id_,
-                               trp->id_.secondary_.target_time_};
+  auto const tid = get_cap_trip_id(trp->id_, train_nr);
   // try to match full trip id or primary trip id
   if (auto const lb = caps.trip_capacity_map_.lower_bound(tid);
       lb != end(caps.trip_capacity_map_)) {
@@ -261,6 +258,47 @@ std::optional<vehicle_capacity> get_section_capacity(
   }
 }
 
+std::optional<vehicle_capacity> get_override_capacity(
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
+    ev_key const& ev_key_from) {
+  auto const tid = get_cap_trip_id(trp->id_);
+  if (auto const it = caps.override_map_.find(tid);
+      it != end(caps.override_map_)) {
+    auto const schedule_departure = get_schedule_time(sched, ev_key_from);
+    auto const departure_station = ev_key_from.get_station_idx();
+    auto best_section_capacity = std::optional<vehicle_capacity>{};
+    auto station_found = false;
+    for (auto const& sec : it->second) {
+      auto const station_match =
+          sec.departure_station_idx_ == departure_station;
+      if (station_match && sec.schedule_departure_time_ == schedule_departure) {
+        return sec.total_capacity_;
+      }
+      if (!station_found) {
+        station_found = station_match;
+        if (station_found ||
+            sec.schedule_departure_time_ < schedule_departure) {
+          best_section_capacity = sec.total_capacity_;
+        }
+      }
+    }
+    return best_section_capacity;
+  }
+  return {};
+}
+
+std::optional<vehicle_capacity> get_override_capacity(
+    schedule const& sched, capacity_maps const& caps,
+    std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
+  for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
+    auto const result = get_override_capacity(sched, caps, trp, ev_key_from);
+    if (result) {
+      return result;
+    }
+  }
+  return {};
+}
+
 std::pair<std::uint16_t, capacity_source> get_capacity(
     schedule const& sched, light_connection const& lc,
     ev_key const& ev_key_from, ev_key const& /*ev_key_to*/,
@@ -268,6 +306,12 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
   std::uint16_t capacity = 0;
   auto worst_source = capacity_source::TRIP_EXACT;
   auto some_unknown = false;
+
+  auto const override_capacity =
+      get_override_capacity(sched, caps, lc.trips_, ev_key_from);
+  if (override_capacity.has_value()) {
+    return {override_capacity->seats(), capacity_source::TRIP_EXACT};
+  }
 
   auto const section_capacity =
       get_section_capacity(sched, caps, lc.trips_, ev_key_from);

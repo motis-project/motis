@@ -39,4 +39,8 @@ inline std::uint16_t clamp_capacity(capacity_maps const& caps,
   return std::max(caps.min_capacity_, capacity);
 }
 
+std::optional<vehicle_capacity> get_override_capacity(
+    schedule const& sched, capacity_maps const& caps, trip const* trp,
+    ev_key const& ev_key_from);
+
 }  // namespace motis::paxmon

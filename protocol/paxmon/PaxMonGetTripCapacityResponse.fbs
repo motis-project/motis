@@ -46,6 +46,8 @@ table PaxMonMergedTripCapacityInfo {
 
   vehicles: [PaxMonVehicleCapacityInfo];
   vehicle_groups: [PaxMonVehicleGroupInfo];
+
+  override: [PaxMonCapacityData];
 }
 
 table PaxMonSectionCapacityInfo {
@@ -78,4 +80,5 @@ table PaxMonGetTripCapacityResponse {
   category_capacity_map_size: ulong;
   vehicle_capacity_map_size: ulong;
   trip_formation_map_size: ulong;
+  capacity_override_map_size: ulong;
 }

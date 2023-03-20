@@ -125,7 +125,6 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
                 to_fbs_capacity_data(mc, vc), vgs));
           } else {
             tf_all_vehicles_found = false;
-            auto const empty_str = mc.CreateSharedString("");
             vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
                 mc, vi.uic_, false, mc.CreateSharedString(vi.baureihe_.str()),
                 mc.CreateSharedString(vi.type_code_.str()),
@@ -135,13 +134,20 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
         }
       }
 
+      auto override = std::vector<Offset<PaxMonCapacityData>>{};
+      if (auto const override_cap =
+              get_override_capacity(sched, caps, trp, sec.ev_key_from());
+          override_cap) {
+        override.emplace_back(to_fbs_capacity_data(mc, *override_cap));
+      }
+
       merged_trip_infos.emplace_back(CreatePaxMonMergedTripCapacityInfo(
           mc, to_fbs(sched, mc, trp),
           to_fbs(mc, get_service_info(sched, *lc.full_con_, ci)), tl_capacity,
           to_fbs_capacity_source(tl_capacity_src),
           to_fbs_capacity_data(mc, tf_capacity), tf_found,
           tf_all_vehicles_found, mc.CreateVector(vehicles),
-          mc.CreateVector(vehicle_groups)));
+          mc.CreateVector(vehicle_groups), mc.CreateVector(override)));
 
       ci = ci->merged_with_;
     }
@@ -174,7 +180,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
           mc, mc.CreateVector(utl::to_vec(trips, trip_to_fbs)),
           caps.min_capacity_, caps.fuzzy_match_max_time_diff_,
           caps.trip_capacity_map_.size(), caps.category_capacity_map_.size(),
-          caps.vehicle_capacity_map_.size(), caps.trip_formation_map_.size())
+          caps.vehicle_capacity_map_.size(), caps.trip_formation_map_.size(),
+          caps.override_map_.size())
           .Union());
   return make_msg(mc);
 }
