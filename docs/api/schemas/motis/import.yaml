@@ -77,3 +77,6 @@ ScheduleEvent:
       description: TODO
     hash:
       description: TODO
+NigiriEvent:
+  description: TODO
+  fields: {}
