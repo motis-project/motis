@@ -20,8 +20,8 @@
     "@headlessui/tailwindcss": "^0.1.2",
     "@heroicons/react": "^2.0.16",
     "@radix-ui/react-tooltip": "^1.0.5",
-    "@tanstack/react-query": "^4.26.1",
-    "@tanstack/react-query-devtools": "^4.26.1",
+    "@tanstack/react-query": "^4.28.0",
+    "@tanstack/react-query-devtools": "^4.28.0",
     "@visx/axis": "^3.1.0",
     "@visx/grid": "^3.0.1",
     "@visx/group": "^3.0.0",
@@ -31,14 +31,14 @@
     "@visx/stats": "^3.0.0",
     "d3-array": "^3.2.2",
     "date-fns": "^2.29.3",
-    "downshift": "^7.4.1",
+    "downshift": "^7.6.0",
     "jotai": "^2.0.3",
     "jotai-optics": "^0.3.0",
     "lodash-es": "^4.17.21",
     "optics-ts": "^2.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hook-form": "^7.43.5",
+    "react-hook-form": "^7.43.7",
     "react-router-dom": "^6.9.0",
     "react-virtuoso": "^4.1.0",
     "uuid": "^9.0.0"
@@ -62,9 +62,9 @@
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "postcss": "^8.4.21",
-    "prettier": "^2.8.4",
+    "prettier": "^2.8.5",
     "tailwindcss": "^3.2.7",
     "typescript": "^4.9.5",
-    "vite": "^4.1.4"
+    "vite": "^4.2.0"
   }
 }
