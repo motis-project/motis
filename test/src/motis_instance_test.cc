@@ -22,7 +22,8 @@ using namespace motis::bootstrap;
 
 namespace motis::test {
 
-motis_instance_test::motis_instance_test(
+template <typename Base>
+generic_motis_instance_test<Base>::generic_motis_instance_test(
     loader::loader_options const& dataset_opt,
     std::vector<std::string> const& modules,
     std::vector<std::string> const& modules_cmdline_opt)
@@ -34,6 +35,7 @@ motis_instance_test::motis_instance_test(
   auto modules_cmdline_opt_patched = modules_cmdline_opt;
   modules_cmdline_opt_patched.emplace_back("--ris.db_max_size=1048576");
   modules_cmdline_opt_patched.emplace_back("--ris.clear_db=true");
+  modules_cmdline_opt_patched.emplace_back("--nigiri.no_cache=true");
 
   std::vector<conf::configuration*> confs;
   for (auto const& module : instance_->modules()) {
@@ -68,37 +70,50 @@ motis_instance_test::motis_instance_test(
   instance_->init_modules(module_settings{modules});
 }
 
-msg_ptr motis_instance_test::call(msg_ptr const& msg) const {
+template <typename Base>
+msg_ptr generic_motis_instance_test<Base>::call(msg_ptr const& msg) const {
   return instance_->call(msg);
 }
 
-void motis_instance_test::publish(msg_ptr const& msg) const {
+template <typename Base>
+void generic_motis_instance_test<Base>::publish(msg_ptr const& msg) const {
   instance_->publish(msg);
 }
 
-msg_ptr motis_instance_test::call(std::string const& target) const {
+template <typename Base>
+msg_ptr generic_motis_instance_test<Base>::call(
+    std::string const& target) const {
   return call(make_no_msg(target));
 }
 
-void motis_instance_test::publish(std::string const& target) const {
+template <typename Base>
+void generic_motis_instance_test<Base>::publish(
+    std::string const& target) const {
   publish(make_no_msg(target));
 }
 
+template <typename Base>
 std::function<module::msg_ptr(module::msg_ptr const&)>
-motis_instance_test::msg_sink(std::vector<module::msg_ptr>* vec) {
+generic_motis_instance_test<Base>::msg_sink(std::vector<module::msg_ptr>* vec) {
   return [vec](module::msg_ptr const& m) -> module::msg_ptr {
     vec->push_back(m);
     return nullptr;
   };
 }
 
-schedule const& motis_instance_test::sched() const {
+template <typename Base>
+schedule const& generic_motis_instance_test<Base>::sched() const {
   return instance_->sched();
 }
 
-std::time_t motis_instance_test::unix_time(int hhmm, int day_idx,
-                                           int timezone_offset) const {
+template <typename Base>
+std::time_t generic_motis_instance_test<Base>::unix_time(
+    int hhmm, int day_idx, int timezone_offset) const {
   return motis::unix_time(sched(), hhmm, day_idx, timezone_offset);
 }
+
+template struct generic_motis_instance_test<::testing::Test>;
+template struct generic_motis_instance_test<
+    testing::TestWithParam<const char*>>;
 
 }  // namespace motis::test

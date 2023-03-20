@@ -33,6 +33,24 @@ constexpr auto const MODE =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_VERSION;
 
 template <typename Ctx>
+inline void serialize(Ctx& c, trip_debug const* origin,
+                      cista::offset_t const offset) {
+  cista::serialize(c, &origin->file_, offset + offsetof(trip_debug, file_));
+}
+
+template <typename Ctx>
+inline void deserialize(Ctx const& c, trip_debug* el) {
+  cista::deserialize(c, &el->file_);
+}
+
+cista::hash_t type_hash(trip_debug const& el, cista::hash_t const h,
+                        std::map<cista::hash_t, unsigned>& done) {
+  return cista::hash_combine(cista::type_hash(el.file_, h, done),
+                             cista::type_hash(el.line_from_, h, done),
+                             cista::type_hash(el.line_to_, h, done));
+}
+
+template <typename Ctx>
 inline void serialize(Ctx& c, light_connection const* origin,
                       cista::offset_t const offset) {
   serialize(c, &origin->full_con_,

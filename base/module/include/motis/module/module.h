@@ -1,11 +1,11 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
 #include "boost/asio/io_service.hpp"
 #include "boost/asio/strand.hpp"
-#include "boost/filesystem/path.hpp"
 
 #include "ctx/ctx.h"
 
@@ -41,7 +41,7 @@ struct module : public conf::configuration {
 
   std::string const& module_name() const { return prefix(); }
 
-  std::string data_path(boost::filesystem::path const&) const;
+  std::string data_path(std::filesystem::path const&) const;
   void set_data_directory(std::string const&);
   void set_shared_data(dispatcher*);
 
@@ -82,10 +82,10 @@ struct module : public conf::configuration {
   locked_resources lock_resources(
       ctx::accesses_t access, ctx::op_type_t op_type = ctx::op_type_t::WORK);
 
-  boost::filesystem::path const& get_data_directory() const;
+  std::filesystem::path const& get_data_directory() const;
 
   dispatcher* shared_data_{nullptr};
-  boost::filesystem::path data_directory_;
+  std::filesystem::path data_directory_;
 };
 
 }  // namespace module

@@ -1,7 +1,7 @@
 #include "motis/core/journey/print_trip.h"
 
-#include <codecvt>
-#include <iomanip>
+#include "fmt/core.h"
+#include "fmt/ostream.h"
 
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/realtime_access.h"
@@ -42,22 +42,14 @@ std::ostream& print_time(std::ostream& out, schedule const& sched,
 
 void print_trip(std::ostream& out, schedule const& sched, trip const* trp,
                 bool const local_time) {
-  std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> utf8_conv;
-
   auto i = 0U;
   out << to_extern_trip(sched, trp) << "\n";
   if (!trp->gtfs_trip_id_.empty()) {
     out << trp->gtfs_trip_id_ << "\n";
   }
   for (auto const& stop : motis::access::stops{trp}) {
-    auto const& stop_name = stop.get_station(sched).name_;
-    auto const stop_name_len = utf8_conv.from_bytes(stop_name.str()).size();
-    std::cout << std::right << std::setw(2) << i << ": " << std::left
-              << std::setw(20) << stop.get_station(sched).eva_nr_ << " "
-              << std::left
-              << std::setw(std::max(0, 50 - static_cast<int>(stop_name_len) +
-                                           static_cast<int>(stop_name.size())))
-              << std::setfill('.') << stop_name << std::setfill(' ') << " a: ";
+    auto const& s = stop.get_station(sched);
+    fmt::print(out, "{:2}: {:7} {:.<48} a: ", i, s.eva_nr_, s.name_);
 
     if (!stop.is_first()) {
       auto const di = get_delay_info(sched, stop.arr());

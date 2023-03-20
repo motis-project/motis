@@ -96,8 +96,8 @@ struct travel_time_alpha_dominance {
 
 struct travel_time_filter {
   template <typename Label>
-  static bool is_filtered(Label const& l) {
-    return l.travel_time_lb_ > MAX_TRAVEL_TIME;
+  static bool is_filtered(Label const& l, duration const fastest_direct) {
+    return l.travel_time_lb_ > fastest_direct;
   }
 };
 

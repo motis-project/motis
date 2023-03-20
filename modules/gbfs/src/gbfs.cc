@@ -1,9 +1,8 @@
 #include "motis/gbfs/gbfs.h"
 
+#include <filesystem>
 #include <mutex>
 #include <numeric>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
@@ -35,7 +34,7 @@
 #include "motis/gbfs/system_status.h"
 
 namespace fbs = flatbuffers;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::logging;
 using namespace motis::module;
 

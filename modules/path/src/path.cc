@@ -30,6 +30,7 @@ using namespace flatbuffers;
 using namespace motis::module;
 using namespace motis::access;
 using namespace motis::logging;
+namespace fs = std::filesystem;
 
 namespace motis::path {
 
@@ -62,7 +63,7 @@ void path::import(import_dispatcher& reg) {
         auto const osrm = motis_content(OSRMEvent, dependencies.at("OSRM"));
 
         auto const dir = get_data_directory() / "path";
-        boost::filesystem::create_directories(dir);
+        fs::create_directories(dir);
 
         auto const state =
             import_state{data_path(osm->path()->str()), osm->hash(),

@@ -162,6 +162,8 @@ std::vector<journey::ranged_attribute> generate_journey_attributes(
     }
   }
 
+  std::sort(begin(journey_attributes), end(journey_attributes));
+
   return journey_attributes;
 }
 

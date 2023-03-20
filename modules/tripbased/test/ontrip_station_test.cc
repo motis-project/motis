@@ -64,10 +64,6 @@ TEST_F(tripbased_ontrip_station, simple_fwd) {
   auto const& s2 = j.stops_[2];
   EXPECT_EQ("8000105", s2.eva_no_);
   EXPECT_EQ(unix_time(1440), s2.arrival_.timestamp_);
-
-  auto const& m0 = j.transports_[0];
-  EXPECT_EQ("IC", m0.category_name_);
-  EXPECT_EQ(2292, m0.train_nr_);
 }
 
 TEST_F(tripbased_ontrip_station, simple_bwd) {
@@ -90,7 +86,6 @@ TEST_F(tripbased_ontrip_station, simple_bwd) {
           .Union(),
       "/tripbased");
   auto const msg = call(make_msg(fbb));
-  //  std::cout << msg->to_json() << std::endl;
   auto const res = motis_content(RoutingResponse, msg);
   auto const journeys = message_to_journeys(res);
 
@@ -112,10 +107,6 @@ TEST_F(tripbased_ontrip_station, simple_bwd) {
   auto const& s2 = j.stops_[2];
   EXPECT_EQ("8000105", s2.eva_no_);
   EXPECT_EQ(unix_time(1440), s2.arrival_.timestamp_);
-
-  auto const& m0 = j.transports_[0];
-  EXPECT_EQ("IC", m0.category_name_);
-  EXPECT_EQ(2292, m0.train_nr_);
 }
 
 TEST_F(tripbased_ontrip_station, intermodal_start_fwd) {
@@ -177,8 +168,6 @@ TEST_F(tripbased_ontrip_station, intermodal_start_fwd) {
 
   auto const& m1 = j.transports_[1];
   EXPECT_FALSE(m1.is_walk_);
-  EXPECT_EQ("IC", m1.category_name_);
-  EXPECT_EQ(2292, m1.train_nr_);
 }
 
 TEST_F(tripbased_ontrip_station, intermodal_start_bwd) {
@@ -240,8 +229,6 @@ TEST_F(tripbased_ontrip_station, intermodal_start_bwd) {
 
   auto const& m1 = j.transports_[1];
   EXPECT_FALSE(m1.is_walk_);
-  EXPECT_EQ("IC", m1.category_name_);
-  EXPECT_EQ(2292, m1.train_nr_);
 }
 
 TEST_F(tripbased_ontrip_station, intermodal_destination_fwd) {
@@ -299,8 +286,6 @@ TEST_F(tripbased_ontrip_station, intermodal_destination_fwd) {
 
   auto const& m0 = j.transports_[0];
   EXPECT_FALSE(m0.is_walk_);
-  EXPECT_EQ("IC", m0.category_name_);
-  EXPECT_EQ(2292, m0.train_nr_);
 
   auto const& m1 = j.transports_[1];
   EXPECT_TRUE(m1.is_walk_);
@@ -362,8 +347,6 @@ TEST_F(tripbased_ontrip_station, intermodal_destination_bwd) {
 
   auto const& m0 = j.transports_[0];
   EXPECT_FALSE(m0.is_walk_);
-  EXPECT_EQ("IC", m0.category_name_);
-  EXPECT_EQ(2292, m0.train_nr_);
 
   auto const& m1 = j.transports_[1];
   EXPECT_TRUE(m1.is_walk_);
@@ -439,8 +422,6 @@ TEST_F(tripbased_ontrip_station, intermodal_start_and_destination_fwd) {
 
   auto const& m1 = j.transports_[1];
   EXPECT_FALSE(m1.is_walk_);
-  EXPECT_EQ("IC", m1.category_name_);
-  EXPECT_EQ(2292, m1.train_nr_);
 
   auto const& m2 = j.transports_[2];
   EXPECT_TRUE(m2.is_walk_);
@@ -516,8 +497,6 @@ TEST_F(tripbased_ontrip_station, intermodal_start_and_destination_bwd) {
 
   auto const& m1 = j.transports_[1];
   EXPECT_FALSE(m1.is_walk_);
-  EXPECT_EQ("IC", m1.category_name_);
-  EXPECT_EQ(2292, m1.train_nr_);
 
   auto const& m2 = j.transports_[2];
   EXPECT_TRUE(m2.is_walk_);

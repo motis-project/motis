@@ -558,6 +558,7 @@ struct tripbased::impl {
                 tb_footpath{e.station_id_, q.destination_station_, e.duration_},
                 connection_arrival, connection_arrival + e.duration_,
                 e.mumo_id_, e.price_, e.accessibility_);
+            tbj.arrival_time_ += e.duration_;
           } else {
             auto const& first_edge = tbj.edges_.front();
             auto connection_departure = tbj.edges_.front().departure_time_;
@@ -570,6 +571,7 @@ struct tripbased::impl {
                 tb_footpath{q.destination_station_, e.station_id_, e.duration_},
                 connection_departure - e.duration_, connection_departure,
                 e.mumo_id_, e.price_, e.accessibility_);
+            tbj.arrival_time_ -= e.duration_;
           }
         }
         add_starts(tbjs);
@@ -655,7 +657,7 @@ void tripbased::import(motis::module::import_dispatcher& reg) {
 
         if (use_data_file_) {
           auto const dir = get_data_directory() / "tripbased";
-          boost::filesystem::create_directories(dir);
+          std::filesystem::create_directories(dir);
           auto const filename = dir / "tripbased.bin";
 
           auto const state = import_state{schedule->hash()};

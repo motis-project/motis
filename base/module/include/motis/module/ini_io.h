@@ -1,8 +1,7 @@
 #pragma once
 
+#include <filesystem>
 #include <map>
-
-#include "boost/filesystem/path.hpp"
 
 #include "boost/property_tree/ini_parser.hpp"
 #include "boost/property_tree/ptree.hpp"
@@ -47,7 +46,7 @@ void write_ini(std::ostream& out, T const& s) {
 }
 
 template <typename T>
-void write_ini(boost::filesystem::path const& p, T const& s) {
+void write_ini(std::filesystem::path const& p, T const& s) {
   std::ofstream f;
   f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
   f.open(p.generic_string().c_str());
@@ -73,7 +72,7 @@ T read_ini(std::string const& s) {
 }
 
 template <typename T>
-T read_ini(boost::filesystem::path const& p) {
+T read_ini(std::filesystem::path const& p) {
   auto const file_content = utl::read_file(p.generic_string().c_str());
   return file_content.has_value() ? read_ini<T>(*file_content) : T{};
 }

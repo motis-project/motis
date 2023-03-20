@@ -76,10 +76,6 @@ TEST_P(csa_ontrip_station, simple_fwd) {  // NOLINT
   auto const& s2 = j.stops_[2];
   EXPECT_EQ("8000105", s2.eva_no_);
   EXPECT_EQ(unix_time(1440), s2.arrival_.timestamp_);
-
-  auto const& m0 = j.transports_[0];
-  EXPECT_EQ("IC", m0.category_name_);
-  EXPECT_EQ(2292, m0.train_nr_);
 }
 
 TEST_P(csa_ontrip_station, simple_bwd) {  // NOLINT
@@ -126,10 +122,6 @@ TEST_P(csa_ontrip_station, simple_bwd) {  // NOLINT
   auto const& s2 = j.stops_[2];
   EXPECT_EQ("8000105", s2.eva_no_);
   EXPECT_EQ(unix_time(1440), s2.arrival_.timestamp_);
-
-  auto const& m0 = j.transports_[0];
-  EXPECT_EQ("IC", m0.category_name_);
-  EXPECT_EQ(2292, m0.train_nr_);
 }
 
 TEST_P(csa_ontrip_station, interchange_fwd) {  // NOLINT

@@ -117,7 +117,8 @@ table ModeWrapper {
 //       "mode_type": "Foot",
 //       "mode": { "max_duration": 900 }
 //     }],
-//     "search_type": "SingleCriterion"
+//     "search_type": "SingleCriterion",
+//     "router": "/routing"
 //   }
 // }
 table IntermodalRoutingRequest {
@@ -127,4 +128,5 @@ table IntermodalRoutingRequest {
   destination_modes: [ModeWrapper];
   search_type: routing.SearchType;
   search_dir: motis.SearchDir;
+  router: string;
 }

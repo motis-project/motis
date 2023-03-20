@@ -30,10 +30,7 @@ struct Range {
 
 table Transport {
   range:Range;
-  category_name:string;
-  category_id:uint;
   clasz:uint;
-  train_nr:uint;
   line_id:string;
   name:string;
   provider:string;

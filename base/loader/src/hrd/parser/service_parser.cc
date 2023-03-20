@@ -21,7 +21,9 @@ void parse_specification(loaded_file const& file,
                          std::function<void(specification const&)> builder,
                          std::function<void(std::size_t)> bytes_consumed) {
   specification spec;
+  auto last_line = 0U;
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
+    last_line = line_number;
     bytes_consumed(line.c_str() - file.content().c_str());
 
     bool finished = spec.read_line(line, file.name(), line_number);
@@ -51,6 +53,7 @@ void parse_specification(loaded_file const& file,
   });
 
   if (!spec.is_empty() && spec.valid() && !spec.ignore()) {
+    spec.line_number_to_ = last_line;
     builder(spec);
   }
 }

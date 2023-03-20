@@ -1,8 +1,7 @@
 #include "motis/osrm/osrm.h"
 
+#include <filesystem>
 #include <mutex>
-
-#include "boost/filesystem.hpp"
 
 #include "cista/reflection/comparable.h"
 
@@ -12,7 +11,6 @@
 #include "extractor/extractor_config.hpp"
 
 #include "motis/core/common/logging.h"
-#include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_parallel_for.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
@@ -24,7 +22,7 @@
 using namespace motis::module;
 using namespace motis::logging;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::osrm {
 

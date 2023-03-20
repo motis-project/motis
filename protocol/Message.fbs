@@ -8,6 +8,7 @@ include "guesser/StationGuesserResponse.fbs";
 include "import/CoastlineEvent.fbs";
 include "import/DEMEvent.fbs";
 include "import/FileEvent.fbs";
+include "import/NigiriEvent.fbs";
 include "import/OSMEvent.fbs";
 include "import/OSRMEvent.fbs";
 include "import/PPREvent.fbs";
@@ -311,8 +312,9 @@ union MsgContent {
   motis.ris.RISApplyResponse                                              = 144,
   motis.lookup.LookupStationInfoRequest                                   = 145,
   motis.lookup.LookupStationInfoResponse                                  = 146,
-  motis.paxmon.PaxMonGetTripCapacityRequest                               = 147,
-  motis.paxmon.PaxMonGetTripCapacityResponse                              = 148
+  motis.import.NigiriEvent                                                = 147,
+  motis.paxmon.PaxMonGetTripCapacityRequest                               = 148,
+  motis.paxmon.PaxMonGetTripCapacityResponse                              = 149
 }
 
 // Destination Examples:
