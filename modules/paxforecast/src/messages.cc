@@ -148,7 +148,7 @@ measures::override_capacity from_fbs(schedule const& sched,
                     ? static_cast<time>(0)
                     : unix_to_motistime(sched.schedule_begin_,
                                         sec->departure_schedule_time()),
-                {static_cast<std::uint16_t>(sec->seats())}};
+                {.seats_ = static_cast<std::uint16_t>(sec->seats())}};
           })};
 }
 

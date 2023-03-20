@@ -22,25 +22,30 @@ inline mcd::string fbs_to_mcd_str(flatbuffers::String const* s) {
 trip_formation_section to_trip_formation_section(
     schedule const& sched, motis::ris::TripFormationSection const* tfs) {
   auto sec = trip_formation_section{
-      view(tfs->departure_station()->eva()),
-      unix_to_motistime(sched.schedule_begin_, tfs->schedule_departure_time())};
+      .departure_eva_ = view(tfs->departure_station()->eva()),
+      .schedule_departure_time_ = unix_to_motistime(
+          sched.schedule_begin_, tfs->schedule_departure_time()),
+      .vehicles_ = {},
+      .vehicle_groups_ = {}};
   for (auto const& vg : *tfs->vehicle_groups()) {
     auto const vg_idx = static_cast<std::uint8_t>(sec.vehicle_groups_.size());
     sec.vehicle_groups_.emplace_back(vehicle_group{
-        fbs_to_mcd_str(vg->name()), fbs_to_mcd_str(vg->start_station()->eva()),
-        fbs_to_mcd_str(vg->destination_station()->eva()),
-        parse_uuid(view(vg->trip_id()->uuid())),
-        to_extern_trip(vg->trip_id()->id())});
+        .name_ = fbs_to_mcd_str(vg->name()),
+        .start_eva_ = fbs_to_mcd_str(vg->start_station()->eva()),
+        .destination_eva_ = fbs_to_mcd_str(vg->destination_station()->eva()),
+        .trip_uuid_ = parse_uuid(view(vg->trip_id()->uuid())),
+        .primary_trip_id_ = to_extern_trip(vg->trip_id()->id())});
     for (auto const& vi : *vg->vehicles()) {
       auto const uic = vi->uic();
       if (auto it = std::find_if(begin(sec.vehicles_), end(sec.vehicles_),
                                  [&](auto const& v) { return v.uic_ == uic; });
           it == end(sec.vehicles_)) {
-        sec.vehicles_.emplace_back(vehicle_info{uic,
-                                                fbs_to_mcd_str(vi->baureihe()),
-                                                fbs_to_mcd_str(vi->type_code()),
-                                                fbs_to_mcd_str(vi->order()),
-                                                {vg_idx}});
+        sec.vehicles_.emplace_back(
+            vehicle_info{.uic_ = uic,
+                         .baureihe_ = fbs_to_mcd_str(vi->baureihe()),
+                         .type_code_ = fbs_to_mcd_str(vi->type_code()),
+                         .order_ = fbs_to_mcd_str(vi->order()),
+                         .vehicle_groups_ = {vg_idx}});
       } else if (std::find(begin(it->vehicle_groups_), end(it->vehicle_groups_),
                            vg_idx) == end(it->vehicle_groups_)) {
         it->vehicle_groups_.emplace_back(vg_idx);
