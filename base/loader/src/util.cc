@@ -1,5 +1,7 @@
 #include "motis/loader/util.h"
 
+#include "boost/algorithm/string/predicate.hpp"
+
 #include <iomanip>
 #include <sstream>
 
@@ -29,6 +31,10 @@ std::size_t collect_files(fs::path const& root,
   } else {
     auto size_sum = std::size_t{0U};
     for (auto const& entry : fs::recursive_directory_iterator(root)) {
+      if (boost::algorithm::starts_with(entry.path().filename().string(),
+                                        ".")) {
+        continue;
+      }
       if (fs::is_regular(entry.path()) &&
           (file_extension.empty() ||
            entry.path().extension() == file_extension)) {
