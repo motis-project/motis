@@ -179,8 +179,14 @@ void parse_and_build_services(
     LOG(info) << "parsing " << i << "/" << files.size() << " "
               << schedule_data.back()->name();
 
-    for_each_service(*loaded, bitfields, service_builder_fun, progress_update,
-                     c);
+    try {
+      for_each_service(*loaded, bitfields, service_builder_fun, progress_update,
+                       c);
+    } catch (parser_error const& e) {
+      LOG(error) << "unable to parse " << e.filename_copy_ << " (error in line "
+                 << e.line_number_ << ")";
+    }
+
     total_consumed += fs::file_size(file);
   }
 }
