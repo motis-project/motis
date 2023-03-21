@@ -40,21 +40,11 @@ longTransportName transport =
 
 shortTransportName : TransportInfo -> String
 shortTransportName transport =
-    let
-        train_nr =
-            Maybe.withDefault 0 transport.train_nr
-    in
     if useLineId transport.class then
         transport.line_id
 
     else if String.length transport.name < 7 then
         transport.name
-
-    else if String.isEmpty transport.line_id && train_nr == 0 then
-        transport.name
-
-    else if String.isEmpty transport.line_id then
-        toString train_nr
 
     else
         transport.line_id
@@ -144,16 +134,6 @@ trainBox viewMode locale t =
             else
                 Nothing
 
-        trainNr =
-            Maybe.withDefault 0 t.train_nr
-
-        trainNrTooltip =
-            if trainNr /= 0 && not (String.contains (toString trainNr) name) then
-                Just (locale.t.connections.trainNr ++ ": " ++ toString trainNr)
-
-            else
-                Nothing
-
         lineIdTooltip =
             if not (String.isEmpty t.line_id) && not (String.contains t.line_id name) then
                 Just (locale.t.connections.lineId ++ ": " ++ t.line_id)
@@ -162,7 +142,7 @@ trainBox viewMode locale t =
                 Nothing
 
         tooltipText =
-            List.filterMap identity [ providerTooltip, trainNrTooltip, lineIdTooltip ]
+            List.filterMap identity [ providerTooltip, lineIdTooltip ]
                 |> String.join "\n"
     in
     div
