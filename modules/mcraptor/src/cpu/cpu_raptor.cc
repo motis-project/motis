@@ -336,14 +336,7 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
 
       route_label new_label;
       new_label.trip_ = trip;
-      if (std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), label.parent_station_) != query_.meta_info_.equivalent_stations_[query_.source_].end() &&
-          std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), stop) != query_.meta_info_.equivalent_stations_[query_.source_].end()) {
-        new_label.parent_journey_departure_time_ =
-            trip_departure;
-      } else {
-        new_label.parent_journey_departure_time_ =
-            label.journey_departure_time_;
-      }
+      new_label.parent_journey_departure_time_ = label.journey_departure_time_;
       new_label.parent_stop_ = stop;
       new_label.current_trip_id_ = current_trip_id;  // = tripId;
       new_route_bag.merge(new_label);
