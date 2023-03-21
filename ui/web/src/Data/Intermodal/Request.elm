@@ -284,6 +284,7 @@ encodeRequest request =
                     => Encode.list (List.map encodeMode request.destinationModes)
                 , "search_type" => encodeSearchType request.searchType
                 , "search_dir" => encodeSearchDirection request.searchDir
+                , "router" => Encode.string ""
                 ]
         ]
 
