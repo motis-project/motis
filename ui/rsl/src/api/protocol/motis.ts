@@ -51,6 +51,8 @@ import {
   PaxMonGetGroupsResponse,
   PaxMonGetInterchangesRequest,
   PaxMonGetInterchangesResponse,
+  PaxMonGetTripCapacityRequest,
+  PaxMonGetTripCapacityResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
   PaxMonGetUniversesResponse,
@@ -155,10 +157,7 @@ export interface Range {
 // base/Connection.fbs
 export interface Transport {
   range: Range;
-  category_name: string;
-  category_id: number;
   clasz: number;
-  train_nr: number;
   line_id: string;
   name: string;
   provider: string;
@@ -364,7 +363,9 @@ export type MsgContent =
   | PaxMonDebugGraphResponse
   | PaxMonGetUniversesResponse
   | LookupStationInfoRequest
-  | LookupStationInfoResponse;
+  | LookupStationInfoResponse
+  | PaxMonGetTripCapacityRequest
+  | PaxMonGetTripCapacityResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -435,7 +436,9 @@ export type MsgContentType =
   | "PaxMonDebugGraphResponse"
   | "PaxMonGetUniversesResponse"
   | "LookupStationInfoRequest"
-  | "LookupStationInfoResponse";
+  | "LookupStationInfoResponse"
+  | "PaxMonGetTripCapacityRequest"
+  | "PaxMonGetTripCapacityResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

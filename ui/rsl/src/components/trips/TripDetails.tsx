@@ -3,8 +3,12 @@ import { useParams } from "react-router-dom";
 
 import { TripId } from "@/api/protocol/motis";
 
-import { showLegacyLoadForecastChartAtom } from "@/data/settings";
+import {
+  showCapacityInfoAtom,
+  showLegacyLoadForecastChartAtom,
+} from "@/data/settings";
 
+import CapacityInfo from "@/components/trips/CapacityInfo";
 import TripLoadForecastChart from "@/components/trips/TripLoadForecastChart";
 import TripRoute from "@/components/trips/TripRoute";
 
@@ -16,10 +20,12 @@ function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
   const [showLegacyLoadForecastChart] = useAtom(
     showLegacyLoadForecastChartAtom
   );
+  const [showCapacityInfo] = useAtom(showCapacityInfoAtom);
 
   return (
     <div>
       <TripRoute tripId={tripId} />
+      {showCapacityInfo && <CapacityInfo tripId={tripId} />}
       {showLegacyLoadForecastChart && (
         <TripLoadForecastChart tripId={tripId} mode="Interactive" />
       )}

@@ -94,19 +94,35 @@ export interface UpdateCapacitiesMeasure {
 }
 
 // paxforecast/Measures.fbs
+export interface OverrideCapacitySection {
+  departure_station: string;
+  departure_schedule_time: number;
+  seats: number;
+}
+
+// paxforecast/Measures.fbs
+export interface OverrideCapacityMeasure {
+  time: number;
+  trip: TripId;
+  sections: OverrideCapacitySection[];
+}
+
+// paxforecast/Measures.fbs
 export type Measure =
   | TripLoadInfoMeasure
   | TripRecommendationMeasure
   | TripLoadRecommendationMeasure
   | RtUpdateMeasure
-  | UpdateCapacitiesMeasure;
+  | UpdateCapacitiesMeasure
+  | OverrideCapacityMeasure;
 
 export type MeasureType =
   | "TripLoadInfoMeasure"
   | "TripRecommendationMeasure"
   | "TripLoadRecommendationMeasure"
   | "RtUpdateMeasure"
-  | "UpdateCapacitiesMeasure";
+  | "UpdateCapacitiesMeasure"
+  | "OverrideCapacityMeasure";
 
 // paxforecast/Measures.fbs
 export interface MeasureWrapper {

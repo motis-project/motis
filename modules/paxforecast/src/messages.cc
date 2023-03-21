@@ -2,6 +2,8 @@
 
 #include "utl/to_vec.h"
 
+#include "motis/vector.h"
+
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
@@ -132,6 +134,24 @@ measures::update_capacities from_fbs(schedule const& sched,
       m->track_trip_updates()};
 }
 
+measures::override_capacity from_fbs(schedule const& sched,
+                                     OverrideCapacityMeasure const* m) {
+  return {unix_to_motistime(sched.schedule_begin_, m->time()),
+          from_fbs(sched, m->trip())->id_,
+          mcd::to_vec(*m->sections(), [&](OverrideCapacitySection const* sec) {
+            auto const dep_time = sec->departure_schedule_time();
+            return paxmon::capacity_override_section{
+                sec->departure_station()->size() == 0
+                    ? 0U
+                    : get_station_index(sched, sec->departure_station()),
+                dep_time == 0
+                    ? static_cast<time>(0)
+                    : unix_to_motistime(sched.schedule_begin_,
+                                        sec->departure_schedule_time()),
+                {.seats_ = static_cast<std::uint16_t>(sec->seats())}};
+          })};
+}
+
 measures::measure_collection from_fbs(
     schedule const& sched, Vector<Offset<MeasureWrapper>> const* ms) {
   measures::measure_collection res;
@@ -167,6 +187,13 @@ measures::measure_collection from_fbs(
         auto const m = from_fbs(
             sched,
             reinterpret_cast<UpdateCapacitiesMeasure const*>(fm->measure()));
+        res[m.time_].emplace_back(m);
+        break;
+      }
+      case Measure_OverrideCapacityMeasure: {
+        auto const m = from_fbs(
+            sched,
+            reinterpret_cast<OverrideCapacityMeasure const*>(fm->measure()));
         res[m.time_].emplace_back(m);
         break;
       }

@@ -26,6 +26,8 @@ import {
   PaxMonGetGroupsResponse,
   PaxMonGetInterchangesRequest,
   PaxMonGetInterchangesResponse,
+  PaxMonGetTripCapacityRequest,
+  PaxMonGetTripCapacityResponse,
   PaxMonGetTripLoadInfosRequest,
   PaxMonGetTripLoadInfosResponse,
   PaxMonGetUniversesResponse,
@@ -300,6 +302,26 @@ export async function sendPaxMonGetUniversesRequest(): Promise<PaxMonGetUniverse
   return msg.content as PaxMonGetUniversesResponse;
 }
 
+export async function sendPaxMonGetTripCapacityRequest(
+  content: PaxMonGetTripCapacityRequest
+): Promise<PaxMonGetTripCapacityResponse> {
+  const msg = await sendRequest(
+    "/paxmon/trip_capacity",
+    "PaxMonGetTripCapacityRequest",
+    content
+  );
+  verifyContentType(msg, "PaxMonGetTripCapacityResponse");
+  return msg.content as PaxMonGetTripCapacityResponse;
+}
+
+export function usePaxMonGetTripCapacity(
+  content: PaxMonGetTripCapacityRequest
+): UseQueryResult<PaxMonGetTripCapacityResponse> {
+  return useQuery(queryKeys.tripCapacity(content), () =>
+    sendPaxMonGetTripCapacityRequest(content)
+  );
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -326,4 +348,6 @@ export const queryKeys = {
     [...queryKeys.all, "group_statistics", req] as const,
   debugGraph: (req: PaxMonDebugGraphRequest) =>
     [...queryKeys.all, "debug_graph", req] as const,
+  tripCapacity: (req: PaxMonGetTripCapacityRequest) =>
+    [...queryKeys.all, "trip_capacity", req] as const,
 };

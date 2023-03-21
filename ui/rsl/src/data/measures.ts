@@ -7,6 +7,7 @@ import {
   MeasureRecipients,
   MeasureType,
   MeasureWrapper,
+  OverrideCapacitySection,
 } from "@/api/protocol/motis/paxforecast";
 import {
   RiBasisFahrt,
@@ -250,27 +251,20 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
       if (!d.trip) {
         return null;
       }
-      const t = d.trip.trip;
+      const sections: OverrideCapacitySection[] = [];
+      if (d.seats !== 0) {
+        sections.push({
+          departure_station: "",
+          departure_schedule_time: 0,
+          seats: d.seats,
+        });
+      }
       return {
-        measure_type: "UpdateCapacitiesMeasure",
+        measure_type: "OverrideCapacityMeasure",
         measure: {
           time: shared.time,
-          file_contents: [
-            "train_nr,from,to,departure,arrival,seats\n" +
-              [
-                t.train_nr,
-                t.station_id,
-                t.target_station_id,
-                t.time,
-                t.target_time,
-                d.seats,
-              ].join(","),
-          ],
-          remove_existing_trip_capacities: false,
-          remove_existing_category_capacities: false,
-          remove_existing_vehicle_capacities: false,
-          remove_existing_trip_formations: false,
-          track_trip_updates: true,
+          trip: d.trip.trip,
+          sections,
         },
       };
     }

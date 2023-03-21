@@ -87,3 +87,5 @@ IntermodalRoutingRequest:
       description: TODO
     search_dir:
       description: TODO
+    router:
+      description: TODO

@@ -118,6 +118,8 @@ include "paxmon/PaxMonGroupStatisticsResponse.fbs";
 include "paxmon/PaxMonDebugGraphRequest.fbs";
 include "paxmon/PaxMonDebugGraphResponse.fbs";
 include "paxmon/PaxMonGetUniversesResponse.fbs";
+include "paxmon/PaxMonGetTripCapacityRequest.fbs";
+include "paxmon/PaxMonGetTripCapacityResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -310,7 +312,9 @@ union MsgContent {
   motis.ris.RISApplyResponse                                              = 144,
   motis.lookup.LookupStationInfoRequest                                   = 145,
   motis.lookup.LookupStationInfoResponse                                  = 146,
-  motis.import.NigiriEvent                                                = 147
+  motis.import.NigiriEvent                                                = 147,
+  motis.paxmon.PaxMonGetTripCapacityRequest                               = 148,
+  motis.paxmon.PaxMonGetTripCapacityResponse                              = 149
 }
 
 // Destination Examples:

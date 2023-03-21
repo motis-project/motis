@@ -1,6 +1,7 @@
 import { Listbox, Switch, Transition } from "@headlessui/react";
 import {
   AdjustmentsVerticalIcon,
+  ArrowPathIcon,
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
@@ -153,6 +154,8 @@ function GroupList(): JSX.Element {
     data,
     fetchNextPage,
     hasNextPage,
+    isFetching,
+    refetch,
     /*
     error,
     isFetching,
@@ -376,10 +379,19 @@ function GroupList(): JSX.Element {
         </div>
       </div>
       {totalNumberOfGroups !== undefined && (
-        <div className="pb-2 text-lg">
-          {formatNumber(totalNumberOfGroups)}{" "}
-          {totalNumberOfGroups === 1 ? "Gruppe" : "Gruppen"}
-          {` (${formatNumber(totalNumberOfPassengers || 0)} Reisende)`}
+        <div className="flex justify-between items-center">
+          <div className="pb-2 text-lg">
+            {formatNumber(totalNumberOfGroups)}{" "}
+            {totalNumberOfGroups === 1 ? "Gruppe" : "Gruppen"}
+            {` (${formatNumber(totalNumberOfPassengers || 0)} Reisende)`}
+          </div>
+          <div>
+            {!isFetching && (
+              <button onClick={() => refetch()}>
+                <ArrowPathIcon className="w-5 h-5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       )}
       <div className="grow">

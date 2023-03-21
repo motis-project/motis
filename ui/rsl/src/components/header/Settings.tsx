@@ -5,6 +5,7 @@ import { Fragment } from "react";
 
 import {
   sectionGraphPlotTypeAtom,
+  showCapacityInfoAtom,
   showLegacyLoadForecastChartAtom,
   showLegacyMeasureTypesAtom,
   showOptimizationDebugLogAtom,
@@ -61,6 +62,27 @@ function SectionGraphPlotSettings() {
   );
 }
 
+function CapacitySettings() {
+  const [showCapacityInfo, setShowCapacityInfo] = useAtom(showCapacityInfoAtom);
+
+  return (
+    <div className="bg-white p-7 pt-0">
+      Kapazitätsdaten:
+      <div className="flex flex-col pl-3 pt-2 gap-2">
+        <label className="inline-flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="capacity-info"
+            checked={showCapacityInfo}
+            onChange={() => setShowCapacityInfo((c) => !c)}
+          />
+          Kapazitätsinformationen anzeigen
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function MeasureSettings() {
   const [showLegacyMeasureTypes, setShowLegacyMeasureTypes] = useAtom(
     showLegacyMeasureTypesAtom
@@ -73,7 +95,7 @@ function MeasureSettings() {
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
-            name="legacy-load-forecast-chart"
+            name="legacy-measure-types"
             checked={showLegacyMeasureTypes}
             onChange={() => setShowLegacyMeasureTypes((c) => !c)}
           />
@@ -96,7 +118,7 @@ function OptimizationSettings() {
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
-            name="legacy-load-forecast-chart"
+            name="optimization-debug-log"
             checked={showOptimizationDebugLog}
             onChange={() => setShowOptimizationDebugLog((c) => !c)}
           />
@@ -133,6 +155,7 @@ function Settings(): JSX.Element {
               <Popover.Panel className="absolute z-10 w-screen px-4 mt-1 right-0 max-w-sm">
                 <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
                   <SectionGraphPlotSettings />
+                  <CapacitySettings />
                   <MeasureSettings />
                   <OptimizationSettings />
                 </div>

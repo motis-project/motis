@@ -1,6 +1,7 @@
 import { Listbox, Transition } from "@headlessui/react";
 import {
   AdjustmentsVerticalIcon,
+  ArrowPathIcon,
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
@@ -52,6 +53,8 @@ const sortOptions: Array<LabeledFilterOption> = [
   },
   { option: "TrainNr", label: "Züge sortiert nach Zugnummer" },
   { option: "MaxPaxRange", label: "Züge sortiert nach Unsicherheit" },
+  { option: "MaxPax", label: "Züge sortiert nach Anzahl Reisender" },
+  { option: "MaxCapacity", label: "Züge sortiert nach Kapazität" },
 ];
 
 function getFilterTripsRequest(
@@ -104,6 +107,8 @@ function TripList(): JSX.Element {
     data,
     fetchNextPage,
     hasNextPage,
+    isFetching,
+    refetch,
     /*
     error,
     isFetching,
@@ -182,7 +187,7 @@ function TripList(): JSX.Element {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-80 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
               {sortOptions.map((opt) => (
                 <Listbox.Option
                   key={opt.option}
@@ -257,9 +262,18 @@ function TripList(): JSX.Element {
         </div>
       </div>
       {totalNumberOfTrips !== undefined && (
-        <div className="pb-2 text-lg">
-          {formatNumber(totalNumberOfTrips)}{" "}
-          {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
+        <div className="flex justify-between items-center">
+          <div className="pb-2 text-lg">
+            {formatNumber(totalNumberOfTrips)}{" "}
+            {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
+          </div>
+          <div>
+            {!isFetching && (
+              <button onClick={() => refetch()}>
+                <ArrowPathIcon className="w-5 h-5" aria-hidden="true" />
+              </button>
+            )}
+          </div>
         </div>
       )}
       <div className="grow">

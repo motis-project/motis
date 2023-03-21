@@ -134,7 +134,8 @@ struct edge {
   }
 
   inline bool has_capacity() const {
-    return !has_unknown_capacity() && !has_unlimited_capacity();
+    return !has_unknown_capacity() && !has_unlimited_capacity() &&
+           capacity() != 0;
   }
 
   inline bool is_broken() const { return broken_; }

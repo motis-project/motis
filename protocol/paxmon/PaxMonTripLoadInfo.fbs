@@ -2,10 +2,9 @@ include "base/TripServiceInfo.fbs";
 include "base/Station.fbs";
 include "paxmon/PaxMonDistribution.fbs";
 include "paxmon/PaxMonCapacitySource.fbs";
+include "paxmon/PaxMonCapacityType.fbs";
 
 namespace motis.paxmon;
-
-enum PaxMonCapacityType : byte { Known, Unknown, Unlimited }
 
 table PaxMonEdgeLoadInfo {
   from: motis.Station;

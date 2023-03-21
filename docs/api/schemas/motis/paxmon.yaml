@@ -565,6 +565,8 @@ PaxMonFilterTripsSortOrder:
     - `MaxLoad`: Sort by percentage load (trip with highest load first)
     - `EarliestCritical`: Sort by current time of the first critical section (earliest first)
     - `MaxPaxRange`: Sort by largest passenger range (trip with largest range first)
+    - `MaxPax`: Sort by number of passengers (trip with most passengers first)
+    - `MaxCapacity`: Sort by capacity (trip with highest capacity first)
 PaxMonFilterTripsTimeFilter:
   description: |
     Specifies which timestamps must be in the filter interval.
@@ -1401,4 +1403,167 @@ PaxMonFootpath:
     from_station:
       description: TODO
     to_station:
+      description: TODO
+PaxMonGetTripCapacityRequest:
+  description: TODO
+  fields:
+    universe:
+      description: The ID of the universe.
+    trips:
+      description: A list of Trip IDs.
+PaxMonCapacityData:
+  description: TODO
+  fields:
+    limit:
+      description: Capacity used for RSL functionality.
+    seats:
+      description: Total number of seats (0 if unknown).
+    seats_1st:
+      description: Number of first class seats (0 if unknown).
+    seats_2nd:
+      description: Number of second class seats (0 if unknown).
+    standing:
+      description: Standing capacity (0 if unknown).
+    total_limit:
+      description: Maximum number of passengers allowed (0 if unknown).
+PaxMonVehicleCapacityInfo:
+  description: TODO
+  fields:
+    uic:
+      description: UIC vehicle number
+    found:
+      description: Whether the vehicle was found in the vehicle database.
+    baureihe:
+      description: TODO
+    type_code:
+      description: TODO
+    order:
+      description: TODO
+    data:
+      description: TODO
+    vehicle_groups:
+      description: >
+        A list of vehicle groups that contain this vehicle. The vehicle
+        groups are referenced by their index in the `vehicle_groups` list, e.g.
+        an entry of `0` means that the vehicle is contained in the first vehicle
+        group.
+PaxMonMergedTripCapacityInfo:
+  description: TODO
+  fields:
+    trip:
+      description: TODO
+    service_info:
+      description: TODO
+    trip_lookup_capacity:
+      description: >
+        Capacity according to the classic capacity lookup based on trip id,
+        train number or category.
+    trip_lookup_capacity_source:
+      description: The source of the capacity returned by the classic lookup.
+    trip_formation_capacity:
+      description: >
+        Capacity information returned on the lookup based on trip formation
+        and vehicle information.
+    trip_formation_found:
+      description: Whether trip formation information was found.
+    trip_formation_all_vehicles_found:
+      description: >
+        Whether capacity information for all vehicles in the trip formation
+        was found.
+    vehicles:
+      description: >
+        The vehicles according to the trip formation, with capacity
+        information from the vehicle database.
+    vehicle_groups:
+      description: >
+        The vehicle groups according to the trip formation.
+    override:
+      description: >
+        Manually overriden capacity information (optional, contains either
+        0 or 1 entries).
+PaxMonSectionCapacityInfo:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    departure_schedule_time:
+      description: TODO
+    departure_current_time:
+      description: TODO
+    arrival_schedule_time:
+      description: TODO
+    arrival_current_time:
+      description: TODO
+    capacity_type:
+      description: TODO
+    capacity:
+      description: TODO
+    capacity_source:
+      description: TODO
+    merged_trips:
+      description: TODO
+PaxMonTripCapacityInfo:
+  description: TODO
+  fields:
+    tsi:
+      description: TODO
+    sections:
+      description: TODO
+PaxMonGetTripCapacityResponse:
+  description: TODO
+  fields:
+    trips:
+      description: |
+        A list of trips. Contains the trips listed in the request and any
+        trips that are merged with those listed in the request.
+
+        Note that the order of the trips is undefined.
+    min_capacity:
+      description: The configured mininum capacity.
+    fuzzy_match_max_time_diff:
+      description: >
+        The configured maximum allowed departure/arrival time difference in
+        minutes for fuzzy matching trip capacity data.
+    trip_capacity_map_size:
+      description: |
+        The number of trips for which capacity information is available
+        (mapping trip id to capacity).
+
+        Note that this does not include trip formation information.
+    category_capacity_map_size:
+      description: >
+        The number of train categories for which capacity information is
+        available (mapping category to capacity).
+    vehicle_capacity_map_size:
+      description: >
+        The number of vehicles for which capacity information is available.
+    trip_formation_map_size:
+      description: >
+        The number of trips for which trip formation information is available.
+    capacity_override_map_size:
+      description: >
+        The number of trips for which capacity information was manually
+        overriden.
+PaxMonVehicleGroupInfo:
+  description: |
+    Information about a vehicle group.
+
+    Note the following peculiarities:
+    - For both the `start` and `destination` fields, only the `id` is
+      guaranteed to be set. Name and position are only set if the station
+      was found in the schedule.
+    - For the `primary_trip_id`, only the primary identifiers (`station_id`,
+      `train_nr` and `time`) are set. The other values must be ignored.
+  fields:
+    name:
+      description: TODO
+    start:
+      description: TODO
+    destination:
+      description: TODO
+    trip_uuid:
+      description: TODO
+    primary_trip_id:
       description: TODO

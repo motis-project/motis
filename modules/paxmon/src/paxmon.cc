@@ -1,5 +1,7 @@
 #include "motis/paxmon/paxmon.h"
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
 
 #include "boost/filesystem.hpp"
@@ -33,6 +35,7 @@
 #include "motis/paxmon/api/get_groups_in_trip.h"
 #include "motis/paxmon/api/get_interchanges.h"
 #include "motis/paxmon/api/get_status.h"
+#include "motis/paxmon/api/get_trip_capacity.h"
 #include "motis/paxmon/api/get_trip_load_info.h"
 #include "motis/paxmon/api/get_universes.h"
 #include "motis/paxmon/api/group_statistics.h"
@@ -48,6 +51,7 @@
 #include "motis/paxmon/load_info.h"
 #include "motis/paxmon/loader/capacities/load_capacities.h"
 #include "motis/paxmon/loader/csv_journeys/csv_journeys.h"
+#include "motis/paxmon/loader/dailytrek.h"
 #include "motis/paxmon/loader/motis_journeys/motis_journeys.h"
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/output/journey_converter.h"
@@ -165,6 +169,8 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
           } else if (tag == "journeys") {
             if (fs::is_regular_file(path)) {
               journey_files_.emplace_back(path);
+            } else if (fs::is_directory(path)) {
+              journey_dirs_.emplace_back(path);
             } else {
               LOG(warn) << "journey file not found: " << path;
               import_successful_ = false;
@@ -173,6 +179,7 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
         }
 
         load_capacity_files();
+        find_journey_files();
         load_journeys();
       })
       ->require("SCHEDULE",
@@ -335,6 +342,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/groups_in_trip",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::get_groups_in_trip(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/trip_capacity",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_trip_capacity(data_, msg);
                   },
                   {});
 
@@ -560,6 +573,15 @@ void paxmon::load_journeys() {
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(uv, sched),
                 "load_journeys: check_graph_integrity");
+  }
+}
+
+void paxmon::find_journey_files() {
+  auto const& sched = get_sched();
+
+  for (auto const& dir : journey_dirs_) {
+    auto const files = loader::get_dailytrek_files(sched, dir);
+    std::copy(begin(files), end(files), std::back_inserter(journey_files_));
   }
 }
 

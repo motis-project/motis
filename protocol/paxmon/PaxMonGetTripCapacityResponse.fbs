@@ -1,0 +1,84 @@
+include "base/TripServiceInfo.fbs";
+include "base/Station.fbs";
+include "base/ServiceInfo.fbs";
+include "paxmon/PaxMonCapacitySource.fbs";
+include "paxmon/PaxMonCapacityType.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonCapacityData {
+  limit: uint;
+  seats: uint;
+  seats_1st: uint;
+  seats_2nd: uint;
+  standing: uint;
+  total_limit: uint;
+}
+
+table PaxMonVehicleCapacityInfo {
+  uic: ulong;
+  found: bool;
+  baureihe: string;
+  type_code: string;
+  order: string;
+  data: PaxMonCapacityData;
+  vehicle_groups: [ubyte];
+}
+
+table PaxMonVehicleGroupInfo {
+  name: string;
+  start: motis.Station;
+  destination: motis.Station;
+  trip_uuid: string;
+  primary_trip_id: motis.TripId;
+}
+
+table PaxMonMergedTripCapacityInfo {
+  trip: motis.TripId;
+  service_info: motis.ServiceInfo;
+
+  trip_lookup_capacity: uint;
+  trip_lookup_capacity_source: PaxMonCapacitySource;
+
+  trip_formation_capacity: PaxMonCapacityData;
+  trip_formation_found: bool;
+  trip_formation_all_vehicles_found: bool;
+
+  vehicles: [PaxMonVehicleCapacityInfo];
+  vehicle_groups: [PaxMonVehicleGroupInfo];
+
+  override: [PaxMonCapacityData];
+}
+
+table PaxMonSectionCapacityInfo {
+  from: motis.Station;
+  to: motis.Station;
+  departure_schedule_time: ulong;
+  departure_current_time: ulong;
+  arrival_schedule_time: ulong;
+  arrival_current_time: ulong;
+
+  capacity_type: PaxMonCapacityType;
+  capacity: uint;
+  capacity_source: PaxMonCapacitySource;
+
+  merged_trips: [PaxMonMergedTripCapacityInfo];
+}
+
+table PaxMonTripCapacityInfo {
+  tsi: motis.TripServiceInfo;
+  sections: [PaxMonSectionCapacityInfo];
+}
+
+table PaxMonGetTripCapacityResponse {
+  trips: [PaxMonTripCapacityInfo];
+
+  min_capacity: uint;
+  fuzzy_match_max_time_diff: int;
+
+  trip_capacity_map_size: ulong;
+  category_capacity_map_size: ulong;
+  vehicle_capacity_map_size: ulong;
+  trip_formation_map_size: ulong;
+  capacity_override_map_size: ulong;
+}

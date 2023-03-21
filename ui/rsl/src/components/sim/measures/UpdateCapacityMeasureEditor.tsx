@@ -79,8 +79,8 @@ function UpdateCapacityMeasureEditor({
       </div>
 
       <div>
-        Hinweis: Falls für den gewählten Zug Wagenreihungsdaten vorhanden sind,
-        kann die Kapazität über diese Oberfläche nicht geändert werden.
+        Hinweis: Eine frühere Kapazitätsänderung kann rückgängig gemacht werden,
+        indem die Kapazität oben auf 0 gesetzt wird.
       </div>
 
       <button

@@ -9,10 +9,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
-import {
-  PaxMonCapacitySource,
-  PaxMonEdgeLoadInfo,
-} from "@/api/protocol/motis/paxmon";
+import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
 import {
   queryKeys,
@@ -25,6 +22,7 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
+import { getCapacitySourceTooltip } from "@/util/capacitySource";
 import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
@@ -250,25 +248,6 @@ function TripSection({
       ) : null}
     </>
   );
-}
-
-function getCapacitySourceTooltip(cs: PaxMonCapacitySource) {
-  switch (cs) {
-    case "TripExactMatch":
-      return "Kapazitätsinformationen für den Zug gefunden";
-    case "TripPrimaryIdMatch":
-      return "Kapazitätsinformationen für den Zug gefunden (nur Übereinstimmung der primären Trip Id)";
-    case "TrainNrAndStations":
-      return "Kapazitätsinformationen möglicherweise falsch - nur Übereinstimmung der Zugnummer und Start-/Zielstationen";
-    case "TrainNr":
-      return "Kapazitätsinformationen möglicherweise falsch - nur Übereinstimmung der Zugnummer";
-    case "Category":
-      return "Keine zugspezifischen Kapazitätsinformationen vorhanden, Standardwert für Zugkategorie";
-    case "Class":
-      return "Keine zugspezifischen Kapazitätsinformationen vorhanden, Standardwert für Zugklasse";
-    case "Unknown":
-      return "Keine Kapazitätsinformationen vorhanden";
-  }
 }
 
 function Legend() {

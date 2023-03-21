@@ -86,13 +86,7 @@ Transport:
   fields:
     range:
       description: TODO
-    category_name:
-      description: TODO
-    category_id:
-      description: TODO
     clasz:
-      description: TODO
-    train_nr:
       description: TODO
     line_id:
       description: TODO

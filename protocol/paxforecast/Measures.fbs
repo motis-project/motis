@@ -55,12 +55,25 @@ table UpdateCapacitiesMeasure {
   track_trip_updates: bool;
 }
 
+table OverrideCapacitySection {
+  departure_station: string; // station id
+  departure_schedule_time: ulong;
+  seats: uint;
+}
+
+table OverrideCapacityMeasure {
+  time: long;
+  trip: TripId;
+  sections: [OverrideCapacitySection];
+}
+
 union Measure {
   TripLoadInfoMeasure,
   TripRecommendationMeasure,
   TripLoadRecommendationMeasure,
   RtUpdateMeasure,
-  UpdateCapacitiesMeasure
+  UpdateCapacitiesMeasure,
+  OverrideCapacityMeasure
 }
 
 table MeasureWrapper {

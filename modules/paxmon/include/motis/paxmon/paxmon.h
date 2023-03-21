@@ -38,6 +38,7 @@ struct paxmon : public motis::module::module {
 private:
   void load_journeys();
   loader::loader_result load_journeys(std::string const& file);
+  void find_journey_files();
   void load_capacity_files();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied(motis::module::msg_ptr const& msg);
@@ -47,6 +48,7 @@ private:
   universe& primary_universe();
 
   std::vector<std::string> journey_files_;
+  std::vector<std::string> journey_dirs_;
   settings::journey_input_settings journey_input_settings_{};
   std::vector<std::string> capacity_files_;
   std::string generated_capacity_file_;

@@ -44,6 +44,7 @@ const measureTypeTexts: Record<UiMeasureType, string> = {
   RtUpdateMeasure: "Echtzeitmeldung",
   RtCancelMeasure: "(Teil-)Ausfall",
   UpdateCapacitiesMeasure: "Kapazitätsänderung",
+  OverrideCapacityMeasure: "Kapazitätsänderung",
   Empty: "Neue Maßnahme",
 };
 
