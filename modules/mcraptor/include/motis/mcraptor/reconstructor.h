@@ -380,6 +380,7 @@ struct reconstructor {
         ij.add_start_station(current_station, raptor_sched_,
                              last_departure_info.first);
       }
+      journeys_.push_back(ij);
     }
   }
 
