@@ -132,19 +132,21 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
 
+  auto min_connection_count = static_cast<std::uint8_t>(0U);
+  auto extend_interval_earlier = false;
+  auto extend_interval_later = false;
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
   if (req->start_type() == routing::Start_PretripStart) {
     auto const start =
         reinterpret_cast<routing::PretripStart const*>(req->start());
-    utl::verify(start->min_connection_count() == 0U &&
-                    !start->extend_interval_earlier() &&
-                    !start->extend_interval_later(),
-                "nigiri currently does not support interval extension");
     start_time = n::interval<n::unixtime_t>{
         to_nigiri_unixtime(start->interval()->begin()),
         to_nigiri_unixtime(start->interval()->end()) + std::chrono::minutes{1}};
     start_station = get_location_idx(tags, tt, start->station()->id()->str());
+    min_connection_count = start->min_connection_count();
+    extend_interval_earlier = start->extend_interval_earlier();
+    extend_interval_later = start->extend_interval_later();
   } else if (req->start_type() == routing::Start_OntripStationStart) {
     auto const start =
         reinterpret_cast<routing::OntripStationStart const*>(req->start());
@@ -251,9 +253,9 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
       .via_destinations_ = {},
       .allowed_classes_ = cista::bitset<n::kNumClasses>::max(),
       .max_transfers_ = n::routing::kMaxTransfers,
-      .min_connection_count_ = 0U,
-      .extend_interval_earlier_ = false,
-      .extend_interval_later_ = false};
+      .min_connection_count_ = min_connection_count,
+      .extend_interval_earlier_ = extend_interval_earlier,
+      .extend_interval_later_ = extend_interval_later};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destinations_[0].empty(), "no destination edges");

@@ -77,7 +77,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=711afd25f2242ad9f750a5283b810582af41e9e2
+  commit=24d9b12d579898be088ea5a75a4ff35e81079728
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -96,8 +96,8 @@
   commit=8bfc669e6ffd5800ed47144cf59c15b3e752ba10
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=wip
-  commit=130c30538dd753886ff4cc10cdcb308606fa70fd
+  branch=interval
+  commit=2b73cd3b65af0a0e0ad8c46d5239b12fe46a995e
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
