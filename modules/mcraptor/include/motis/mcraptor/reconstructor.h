@@ -291,8 +291,6 @@ struct reconstructor {
       std::pair<time, uint16_t> last_departure_info =
           std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
       bool invalid_path = false;
-      if (output) {
-      }
       while (r_k > 0) {
         if (r_k == 1) {
           if (std::find(
@@ -342,13 +340,6 @@ struct reconstructor {
               parent_station, current_station_label.route_id_,
               current_station_label.current_trip_id_,
               current_station_label.stop_offset_, raptor_sched_, timetable_);
-          if (output) {
-            std::cout << "\tCurrent route id: "
-                      << current_station_label.route_id_
-                      << ", stop offset: " << current_station_label.stop_offset_
-                      << ", trip id: " << current_station_label.current_trip_id_
-                      << std::endl;
-          }
         } else if (r_k % 2 == 1 && r_k != target_station_label.changes_count_ &&
                    valid(current_station_label.footpath_duration_)) {
           ij.add_footpath(current_station, current_station_label.arrival_time_,
@@ -359,13 +350,6 @@ struct reconstructor {
               last_departure_info.first -
                   current_station_label.footpath_duration_,
               invalid<uint16_t>);
-          if (output) {
-            std::cout << "\tCurrent added footpath: from "
-                      << q.meta_info_.raptor_id_to_eva_.at(parent_station)
-                      << " to "
-                      << q.meta_info_.raptor_id_to_eva_.at(current_station)
-                      << " on round " << (int)r_k << std::endl;
-          }
         }
 
         r_k--;
