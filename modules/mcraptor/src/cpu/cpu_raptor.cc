@@ -16,20 +16,19 @@ inline bool mc_raptor<T, L>::is_label_pruned(stop_id stop, L& new_label) {
 
   const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
   bool merged_target = false;
-  for(stop_id target : t) {
-    if(stop == target) {
-      if(!target_labels_[stop].merge(new_label)) {
+  for (stop_id target : t) {
+    if (stop == target) {
+      if (!target_labels_[stop].merge(new_label)) {
         return true;
       }
       else {
         merged_target = true;
       }
-    }
-    else if(target_labels_[target].dominates(new_label)) {
+    } else if (target_labels_[target].dominates(new_label)) {
       return true;
     }
   }
-  if(!merged_target && !target_labels_[stop].merge(new_label)) {
+  if (!merged_target && !target_labels_[stop].merge(new_label)) {
     return true;
   }
 
@@ -60,7 +59,6 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equ
       }
     }
   }
-
 }
 
 template <class T, class L>
@@ -241,6 +239,11 @@ void mc_raptor<T, L>::set_query_source_time(time other_time) {
 }
 
 template <class T, class L>
+void mc_raptor<T, L>::set_current_start_edge(motis::mcraptor::raptor_edge edge) {
+  current_source_edge = edge;
+}
+
+template <class T, class L>
 void mc_raptor<T, L>::reset() {
   round_ = -1;
   std::fill(routes_serving_updated_stops_.begin(), routes_serving_updated_stops_.end(), invalid<route_stops_index>);
@@ -278,26 +281,26 @@ void mc_raptor<T, L>::invoke_cpu_raptor() {
 void mc_raptor_departure::init_arrivals() {
   start_new_round();
 
-  if (query_.source_ == 0) {
-    for (raptor_edge edge : query_.raptor_edges_start_) {
-      // std::cout << "EDGE from: " << edge.from_ << "; to: " << edge.to_ << "; time: " << edge.time_ << std::endl;
-      time edge_to_time = source_time_begin_ + edge.duration_;
-      label_departure new_label(invalid<time>, edge_to_time, round_);
-      new_label.parent_station_ = edge.to_;
-      new_label.journey_departure_time_ = edge_to_time;
-      arrival_by_route(edge.to_, new_label);
-    }
-  } else {
-    label_departure new_label;
+  label_departure new_label;
+  new_label = label_departure(invalid<time>, source_time_begin_, round_);
+  new_label.parent_station_ = current_source_edge.to_;
+  new_label.journey_departure_time_ = source_time_begin_ - current_source_edge.duration_;
+  //std::cout << "EDGE from: " << query_.meta_info_.raptor_id_to_eva_.at(current_source_edge.from_) << "; to: " << query_.meta_info_.raptor_id_to_eva_.at(current_source_edge.to_) << "; time: " << current_source_edge.duration_ << "; arrival time: " << source_time_begin_ <<  std::endl;
+  arrival_by_route(current_source_edge.to_, new_label);
 
+  if (query_.source_ != 0) {
     for (auto const& add_start : query_.add_starts_) {
-      //time add_start_time = source_time_begin_ + add_start.offset_;
+      if (add_start.s_id_ == query_.source_) {
+        continue;
+      }
       new_label = label_departure(invalid<time>, source_time_begin_, round_);
       new_label.parent_station_ = add_start.s_id_;
       new_label.journey_departure_time_ = source_time_begin_;
+      //std::cout << "EDGE from: " << query_.meta_info_.raptor_id_to_eva_.at(add_start.s_id_) << "; to: " << query_.meta_info_.raptor_id_to_eva_.at(add_start.s_id_) << "; arrival time: " << source_time_begin_ <<  std::endl;
       arrival_by_route(add_start.s_id_, new_label);
     }
   }
+
   start_new_round();
 }
 
@@ -334,12 +337,37 @@ void mc_raptor_departure::scan_route(stop_id stop, route_stops_index stop_offset
         continue;
       }
 
+      //bool from_source = std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), label.parent_station_) != query_.meta_info_.equivalent_stations_[query_.source_].end() &&
+                         std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), stop) != query_.meta_info_.equivalent_stations_[query_.source_].end();
+
       route_label new_label;
       new_label.trip_ = trip;
-      if (std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), label.parent_station_) != query_.meta_info_.equivalent_stations_[query_.source_].end() &&
-          std::find(query_.meta_info_.equivalent_stations_[query_.source_].begin(), query_.meta_info_.equivalent_stations_[query_.source_].end(), stop) != query_.meta_info_.equivalent_stations_[query_.source_].end()) {
-        new_label.parent_journey_departure_time_ =
-            trip_departure;
+      if (query_.source_ != 0) {
+        if (round_ < 3) {
+          bool from_source =
+              std::find(
+                  query_.meta_info_.equivalent_stations_[query_.source_]
+                      .begin(),
+                  query_.meta_info_.equivalent_stations_[query_.source_].end(),
+                  label.parent_station_) !=
+                  query_.meta_info_.equivalent_stations_[query_.source_]
+                      .end() &&
+              std::find(
+                  query_.meta_info_.equivalent_stations_[query_.source_]
+                      .begin(),
+                  query_.meta_info_.equivalent_stations_[query_.source_].end(),
+                  stop) !=
+                  query_.meta_info_.equivalent_stations_[query_.source_].end();
+          if (from_source) {
+            new_label.parent_journey_departure_time_ = trip_departure;
+          } else {
+            new_label.parent_journey_departure_time_ =
+                label.journey_departure_time_;
+          }
+        } else {
+          new_label.parent_journey_departure_time_ =
+              label.journey_departure_time_;
+        }
       } else {
         new_label.parent_journey_departure_time_ =
             label.journey_departure_time_;

@@ -22,6 +22,7 @@ struct mc_raptor {
                                         stop_count_(q.tt_.stop_count()) { };
 
   void set_query_source_time(time other_time);
+  void set_current_start_edge(raptor_edge edge);
 
   void invoke_cpu_raptor();
 
@@ -42,6 +43,7 @@ struct mc_raptor {
   //fields
   raptor_query<L> const& query_;
   time source_time_begin_;
+  raptor_edge current_source_edge;
   rounds<L>& result_;
   int round_;
   stop_id stop_count_;
@@ -59,7 +61,7 @@ struct mc_raptor_departure: public mc_raptor<mc_raptor_departure, label_departur
   std::vector<stop_id> targets_;
   mc_raptor_departure(raptor_query<label_departure> const& q)
       : mc_raptor(q),
-        targets_(q.targets_) { }
+        targets_(q.targets_) {}
   void init_arrivals();
   void init_new_label(bag<label_departure> bag, stop_id stop, time8 duration, stop_id to_stop);
   void scan_route(stop_id stop, route_stops_index stop_offset,

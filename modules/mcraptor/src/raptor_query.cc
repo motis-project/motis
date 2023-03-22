@@ -114,6 +114,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
     }
   }
   else {
+    q.raptor_edges_end_.push_back(raptor_edge{0, q.target_, q.target_});
     q.targets_.push_back(q.target_);
   }
 
@@ -123,6 +124,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
     }
   }
   else {
+    q.raptor_edges_start_.push_back(raptor_edge{0, q.source_, q.source_});
     q.sources_.push_back(q.source_);
   }
 
