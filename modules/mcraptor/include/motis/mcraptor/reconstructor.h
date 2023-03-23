@@ -292,7 +292,6 @@ struct reconstructor {
           std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
       bool invalid_path = false;
       while (r_k > 0) {
-        if (r_k == 1) {
         if (r_k == 1 && q.source_ != 0) {
           if (std::find(
                   q.meta_info_.equivalent_stations_.at(parent_station).begin(),
