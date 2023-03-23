@@ -293,6 +293,7 @@ struct reconstructor {
       bool invalid_path = false;
       while (r_k > 0) {
         if (r_k == 1) {
+        if (r_k == 1 && q.source_ != 0) {
           if (std::find(
                   q.meta_info_.equivalent_stations_.at(parent_station).begin(),
                   q.meta_info_.equivalent_stations_.at(parent_station).end(),
@@ -302,36 +303,49 @@ struct reconstructor {
           }
         }
         if (r_k % 2 == 0 && current_station_label.route_id_) {
-          raptor_route route = q.tt_.routes_[current_station_label.route_id_];
-          stop_id stop = q.tt_.route_stops_[route.index_to_route_stops_ +
-          current_station_label.stop_offset_];
-          stop_id mid = invalid<stop_id>;
-          if(std::find(q.meta_info_.equivalent_stations_[q.target_].begin(),
-          q.meta_info_.equivalent_stations_[q.target_].end(), stop) ==
-          q.meta_info_.equivalent_stations_[q.target_].end()) {
-            for (stop_id s: q.meta_info_.equivalent_stations_[q.target_]) {
-              for (stop_id st: q.meta_info_.equivalent_stations_[stop]) {
-                if (st == s && s == q.target_) {
-                  continue;
-                }
-                if (st == s) {
-                  mid = s;
-                  break;
+          if (q.source_ != 0) {
+            raptor_route route = q.tt_.routes_[current_station_label.route_id_];
+            stop_id stop =
+                q.tt_.route_stops_[route.index_to_route_stops_ +
+                                   current_station_label.stop_offset_];
+            stop_id mid = invalid<stop_id>;
+            if (std::find(q.meta_info_.equivalent_stations_[q.target_].begin(),
+                          q.meta_info_.equivalent_stations_[q.target_].end(),
+                          stop) ==
+                q.meta_info_.equivalent_stations_[q.target_].end()) {
+              for (stop_id s : q.meta_info_.equivalent_stations_[q.target_]) {
+                for (stop_id st : q.meta_info_.equivalent_stations_[stop]) {
+                  if (st == s && s == q.target_) {
+                    continue;
+                  }
+                  if (st == s) {
+                    mid = s;
+                    break;
+                  }
                 }
               }
-            }
-            if (mid != invalid<stop_id>) {
-              auto index_into_transfers = q.tt_.stops_[stop].index_to_transfers_;
-              auto next_index_into_transfers = q.tt_.stops_[stop + 1].index_to_transfers_;
-              for (auto current_index = index_into_transfers; current_index < next_index_into_transfers; ++current_index) {
-                auto const& to_stop = q.tt_.footpaths_[current_index].to_;
-                auto const& duration = q.tt_.footpaths_[current_index].duration_;
-                if (to_stop == mid) {
-                  ij.add_footpath(
-                      to_stop, current_station_label.arrival_time_,
-                      last_departure_info.first, last_departure_info.second,
-                      duration, raptor_sched_, false, false);
-                  last_departure_info = std::pair<time, uint16_t>(last_departure_info.first - current_station_label.footpath_duration_, invalid<uint16_t>); break;
+              if (mid != invalid<stop_id>) {
+                auto index_into_transfers =
+                    q.tt_.stops_[stop].index_to_transfers_;
+                auto next_index_into_transfers =
+                    q.tt_.stops_[stop + 1].index_to_transfers_;
+                for (auto current_index = index_into_transfers;
+                     current_index < next_index_into_transfers;
+                     ++current_index) {
+                  auto const& to_stop = q.tt_.footpaths_[current_index].to_;
+                  auto const& duration =
+                      q.tt_.footpaths_[current_index].duration_;
+                  if (to_stop == mid) {
+                    ij.add_footpath(
+                        to_stop, current_station_label.arrival_time_,
+                        last_departure_info.first, last_departure_info.second,
+                        duration, raptor_sched_, false, false);
+                    last_departure_info = std::pair<time, uint16_t>(
+                        last_departure_info.first -
+                            current_station_label.footpath_duration_,
+                        invalid<uint16_t>);
+                    break;
+                  }
                 }
               }
             }
