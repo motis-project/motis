@@ -106,7 +106,7 @@ add_subdirectory(modules/ris/gtfsrtpb)
 # Basic Compiler Flags
 ################################
 if (NOT MSVC)
-  set(MOTIS_CXX_FLAGS -std=c++17 -Wall -Wextra -Wno-sign-compare)
+  set(MOTIS_CXX_FLAGS -Wall -Wextra -Wno-sign-compare)
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -Wno-maybe-uninitialized -Wno-unused-but-set-parameter)
   endif()
