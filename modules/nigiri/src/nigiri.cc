@@ -105,11 +105,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         read_datasets:
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               cista::raw::make_unique<n::timetable>());
+          (*impl_->tt_)->date_range_ = interval;
           for (auto const& [src, config, dir] : datasets) {
             LOG(logging::info) << "loading nigiri timetable with configuration "
                                << config->version_.view();
-            n::loader::hrd::load_timetable(src, *config, *dir, **impl_->tt_,
-                                           interval);
+            n::loader::hrd::load_timetable(src, *config, *dir, **impl_->tt_);
           }
 
           if (!no_cache_) {
