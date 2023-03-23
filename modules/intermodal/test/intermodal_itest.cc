@@ -35,7 +35,8 @@ struct intermodal_itest
             testing::TestWithParam<const char*>>(
             dataset_opt,
             {"intermodal", "routing", "tripbased", "nigiri", "lookup"},
-            {"--tripbased.use_data_file=false"}) {
+            {"--tripbased.use_data_file=false",
+             "--nigiri.first_day=2015-11-24"}) {
     instance_->register_op(
         "/osrm/one_to_many",
         [](msg_ptr const& msg) {
