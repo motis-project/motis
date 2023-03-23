@@ -254,39 +254,36 @@ struct reconstructor {
     rounds<L>& result = q.result();
     L empty_label;
     bag<L> filter_bag;
-    std::vector<std::pair<stop_id, L>> target_labels = {};
-    //for (stop_id target : q.targets_) {
     for (raptor_edge target_edge: q.raptor_edges_end_) {
       auto labels =
           result.getAllLabelsForStop(target_edge.from_, max_raptor_round * 2, false);
       for (L& label : labels) {
         if (label.journey_departure_time_ >= q.source_time_begin_ &&
             label.journey_departure_time_ <= q.source_time_end_) {
-          if (filter_bag.merge(label, true)) {
-            target_labels.push_back(std::make_pair(target_edge.from_, label));
-          }
+          label.current_target_ = target_edge.from_;
+          filter_bag.merge(label, true);
         }
       }
     }
 
-    for (std::pair<stop_id, L> l: target_labels) {
+    for (L& l: filter_bag.labels_) {
       intermediate_journey ij = intermediate_journey(
-          l.second.changes_count_, q.ontrip_, q.source_time_begin_);
+          l.changes_count_, q.ontrip_, q.source_time_begin_);
 
       if (q.target_ == 1) {
         for (raptor_edge edge : q.raptor_edges_end_) {
-          if (edge.from_ == l.first) {
-            ij.add_end_footpath(l.second.arrival_time_ + edge.duration_,
+          if (edge.from_ == l.current_target_) {
+            ij.add_end_footpath(l.arrival_time_ + edge.duration_,
                                 edge.duration_, raptor_sched_);
             break;
           }
         }
       }
 
-      L current_station_label = l.second;
-      L target_station_label = l.second;
+      L current_station_label = l;
+      L target_station_label = l;
       raptor_round r_k = current_station_label.changes_count_;
-      stop_id current_station = l.first;
+      stop_id current_station = l.current_target_;
       stop_id parent_station = current_station_label.parent_station_;
       std::pair<time, uint16_t> last_departure_info =
           std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);

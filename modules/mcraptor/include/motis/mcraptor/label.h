@@ -31,6 +31,9 @@ struct label {
   size_t changes_count_ = invalid<size_t>;
   time arrival_time_ = invalid<time>;
 
+  // Reconstructor
+  stop_id current_target_ = invalid<stop_id>;
+
   // Parent info
   stop_id parent_station_ = invalid<stop_id>;
 
