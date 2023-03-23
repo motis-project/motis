@@ -18,7 +18,8 @@ struct routing_itest : public motis_instance_test {
   routing_itest()
       : motis::test::motis_instance_test(
             dataset_opt, {"routing", "csa", "raptor", "tripbased", "nigiri"},
-            {"--tripbased.use_data_file=false"}) {}
+            {"--tripbased.use_data_file=false",
+             "--nigiri.first_day=2015-11-24"}) {}
 
   msg_ptr make_routing_request(std::string const& target) {
     message_creator fbb;
