@@ -71,6 +71,7 @@ struct generator_settings : public conf::configuration {
           "  intermodal_ontrip = start time at station");
     param(start_type_, "dest_type", "destination type: coordinate|station");
     param(routers_, "routers", "routing targets");
+    param(search_dir_, "search_dir", "search direction forward/backward");
   }
 
   IntermodalStart get_start_type() const {
