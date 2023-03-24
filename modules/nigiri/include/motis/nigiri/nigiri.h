@@ -29,7 +29,7 @@ private:
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
   std::string first_day_;
-  std::uint16_t num_days_{0U};
+  std::uint16_t num_days_{2U};
 };
 
 }  // namespace motis::nigiri

@@ -50,14 +50,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         impl_ = std::make_unique<impl>();
 
-        auto const begin = std::chrono::sys_days{
-            std::chrono::duration_cast<std::chrono::days>(std::chrono::seconds{
-                first_day_.empty() ? 0U : conf::parse_date_time(first_day_)})};
-        auto const interval =
-            first_day_.empty()
-                ? n::kMaxInterval<std::chrono::sys_days>
-                : n::interval<std::chrono::sys_days>{
-                      begin, begin + std::chrono::days{num_days_}};
+        auto const begin =
+            std::chrono::sys_days{std::chrono::duration_cast<std::chrono::days>(
+                std::chrono::seconds{conf::parse_date_time(first_day_)})};
+        auto const interval = n::interval<std::chrono::sys_days>{
+            begin, begin + std::chrono::days{num_days_}};
 
         using import::FileEvent;
         auto h = cista::BASE_HASH;
@@ -105,11 +102,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         read_datasets:
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               cista::raw::make_unique<n::timetable>());
+          (*impl_->tt_)->date_range_ = interval;
           for (auto const& [src, config, dir] : datasets) {
             LOG(logging::info) << "loading nigiri timetable with configuration "
                                << config->version_.view();
-            n::loader::hrd::load_timetable(src, *config, *dir, **impl_->tt_,
-                                           interval);
+            n::loader::hrd::load_timetable(src, *config, *dir, **impl_->tt_);
           }
 
           if (!no_cache_) {
