@@ -43,35 +43,72 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
   auto const& dep_events = q.use_start_metas_
                                ? raptor_sched.departure_events_with_metas_
                                : raptor_sched.departure_events_;
+  auto const& arr_events = q.use_start_metas_
+                               ? raptor_sched.arrival_events_with_metas_
+                               : raptor_sched.arrival_events_;
+  //TODO MERGE WITH INTERMODAL
+  auto events = q.forward_ ? dep_events[q.source_] : arr_events[q.target_];
   auto const [lower, upper] = get_departure_range(
       q.source_time_begin_, q.source_time_end_, dep_events[q.source_]);
 
-  stats.raptor_queries_ += 1;
-  MOTIS_START_TIMING(plus_one_time);
-  raptor.set_query_source_time(q.source_time_end_ + 1);
-  raptor.invoke_cpu_raptor();
-  stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
-
-  MOTIS_START_TIMING(plus_one_rec_time);
-  stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
-
-  for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
-    raptor.reset();
+  //TODO FIX THIS - make virtual method in cpu raptor and implement it for forward and backward
+  if(q.forward_) {
     stats.raptor_queries_ += 1;
-    time new_query_time = dep_events[q.source_][dep_idx];
-
-    MOTIS_START_TIMING(raptor_time);
-    raptor.set_query_source_time(new_query_time);
+    MOTIS_START_TIMING(plus_one_time);
+    raptor.set_query_source_time(q.source_time_end_ + 1);
     raptor.invoke_cpu_raptor();
-    stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
+    stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
 
-    MOTIS_START_TIMING(rec_timing);
-    stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
+    MOTIS_START_TIMING(plus_one_rec_time);
+    stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
+
+    for (auto dep_idx = upper; dep_idx != lower; --dep_idx) {
+      raptor.reset();
+      stats.raptor_queries_ += 1;
+      time new_query_time = dep_events[q.source_][dep_idx];
+
+      MOTIS_START_TIMING(raptor_time);
+      raptor.set_query_source_time(new_query_time);
+      raptor.invoke_cpu_raptor();
+      stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
+
+      MOTIS_START_TIMING(rec_timing);
+      stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
+    }
+
+    raptor.reset();
+    raptor.set_query_source_time(q.source_time_begin_);
+    raptor.invoke_cpu_raptor();
+  }
+  else {
+    stats.raptor_queries_ += 1;
+    MOTIS_START_TIMING(plus_one_time);
+    raptor.set_query_source_time(q.source_time_begin_ - 1);
+    raptor.invoke_cpu_raptor();
+    stats.raptor_time_ += MOTIS_GET_TIMING_US(plus_one_time);
+
+    MOTIS_START_TIMING(plus_one_rec_time);
+    stats.rec_time_ += MOTIS_GET_TIMING_US(plus_one_rec_time);
+
+    for (auto dep_idx = lower; dep_idx != upper; ++dep_idx) {
+      raptor.reset();
+      stats.raptor_queries_ += 1;
+      time new_query_time = arr_events[q.target_][dep_idx];
+
+      MOTIS_START_TIMING(raptor_time);
+      raptor.set_query_source_time(new_query_time);
+      raptor.invoke_cpu_raptor();
+      stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);
+
+      MOTIS_START_TIMING(rec_timing);
+      stats.rec_time_ += MOTIS_GET_TIMING_US(rec_timing);
+    }
+
+    raptor.reset();
+    raptor.set_query_source_time(q.source_time_end_);
+    raptor.invoke_cpu_raptor();
   }
 
-  raptor.reset();
-  raptor.set_query_source_time(q.source_time_begin_);
-  raptor.invoke_cpu_raptor();
 
   reconstructor.add(q);
   return reconstructor.get_journeys(q.source_time_end_);
@@ -88,9 +125,9 @@ inline std::vector<journey> cpu_raptor(base_query& bq,
     return raptor_gen<label_departure, mc_raptor_departure>( q, stats, sched, raptor_sched, tt,mc_raptor_departure(q));
   }
   else {
-//    raptor_query<label_arrival> q =
-//        raptor_query<label_arrival>{bq, raptor_sched, tt};
-//    return raptor_gen<label_arrival, mc_raptor_arrival>(q, stats, sched, raptor_sched, tt, mc_raptor_arrival(q));
+    raptor_query<label_backward> q =
+        raptor_query<label_backward>{bq, raptor_sched, tt};
+    return raptor_gen<label_backward, mc_raptor_backward>(q, stats, sched, raptor_sched, tt, mc_raptor_backward(q));
   }
 
 

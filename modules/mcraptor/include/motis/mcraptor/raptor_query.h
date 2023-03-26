@@ -76,6 +76,11 @@ struct raptor_query : public base_query {
   raptor_meta_info const& meta_info_;
 };
 
+std::vector<additional_start> get_add_starts(raptor_meta_info const& meta_info,
+                                             stop_id const source,
+                                             bool const use_start_footpaths,
+                                             bool const use_start_metas);
+
 #if defined(MOTIS_CUDA)
 struct d_query : public base_query {
   d_query() = delete;
