@@ -67,8 +67,7 @@ struct label {
   }
 
   bool is_equal(label& other) {
-    if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_
-        && parent_station_ == other.parent_station_) {
+    if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_) {
       return true;
     }
     return false;
