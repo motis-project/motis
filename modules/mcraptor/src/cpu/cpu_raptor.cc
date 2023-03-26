@@ -37,6 +37,22 @@ inline bool mc_raptor<T, L>::is_label_pruned(stop_id stop, L& new_label) {
 
 template <class T, class L>
 void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equal_station) {
+  if (query_.source_ == 0) {
+    bool found = false;
+    time duration = 0;
+    for (raptor_edge target_edge: query_.raptor_edges_end_) {
+      if (target_edge.from_ == stop) {
+        found = true;
+        duration = target_edge.duration_;
+        break;
+      }
+    }
+    if (found) {
+      new_label.current_target_ = stop;
+      new_label.arrival_time_ += duration;
+    }
+  }
+
   if(is_label_pruned(stop, new_label)) {
     return;
   }
@@ -47,7 +63,7 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equ
   stops_for_routes_.mark(stop);
 
   // Check equal stations if there is target among them
-  if(!from_equal_station) {
+  if(!from_equal_station && query_.source_ != 0) {
     const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
     for (stop_id s : query_.meta_info_.equivalent_stations_[stop]) {
       if (s == stop) {

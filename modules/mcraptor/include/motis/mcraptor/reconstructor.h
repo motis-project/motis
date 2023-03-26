@@ -273,7 +273,7 @@ struct reconstructor {
       if (q.target_ == 1) {
         for (raptor_edge edge : q.raptor_edges_end_) {
           if (edge.from_ == l.current_target_) {
-            ij.add_end_footpath(l.arrival_time_ + edge.duration_,
+            ij.add_end_footpath(l.arrival_time_,
                                 edge.duration_, raptor_sched_);
             break;
           }
