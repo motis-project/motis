@@ -273,8 +273,24 @@ struct reconstructor {
       if (q.target_ == 1) {
         for (raptor_edge edge : q.raptor_edges_end_) {
           if (edge.from_ == l.current_target_) {
-            ij.add_end_footpath(l.arrival_time_,
-                                edge.duration_, raptor_sched_);
+            time8 min_footpath_duration = edge.duration_;
+            auto index_into_transfers = q.tt_.stops_[edge.from_].index_to_transfers_;
+            auto next_index_into_transfers = q.tt_.stops_[edge.from_ + 1].index_to_transfers_;
+            for (raptor_edge target_edge_to: q.raptor_edges_end_) {
+              for (auto current_index = index_into_transfers;
+                   current_index < next_index_into_transfers; ++current_index) {
+                auto const& to_stop = q.tt_.footpaths_[current_index].to_;
+                auto const& duration = q.tt_.footpaths_[current_index].duration_;
+                if (to_stop == target_edge_to.from_) {
+                  if (duration + target_edge_to.duration_ < min_footpath_duration) {
+                    min_footpath_duration = duration + target_edge_to.duration_;
+                  }
+                  break;
+                }
+              }
+            }
+            ij.add_end_footpath(l.arrival_time_ - edge.duration_ + min_footpath_duration,
+                                min_footpath_duration, raptor_sched_);
             break;
           }
         }
