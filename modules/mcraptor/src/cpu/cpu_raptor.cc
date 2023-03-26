@@ -378,7 +378,7 @@ void mc_raptor_backward::init_arrivals() {
 
    // TODO FIX THIS
    auto target_add_starts = get_add_starts(query_.meta_info_, query_.target_, query_.use_start_footpaths_, query_.use_dest_metas_);
-   for (auto const& add_start : query_.add_starts_) {
+   for (auto const& add_start : target_add_starts) {
      new_label = label_backward(source_time_begin_, source_time_begin_, round_);
      new_label.parent_station_ = add_start.s_id_;
      arrival_by_route(add_start.s_id_, new_label);
@@ -416,7 +416,7 @@ void mc_raptor_backward::scan_route(stop_id stop, route_stops_index stop_offset,
       }
 
       time trip_arrival = trip[stop_offset].arrival_;
-      if (!valid(trip_arrival) || trip_arrival < label.arrival_time_) {
+      if (!valid(trip_arrival) || label.departure_time_ > trip_arrival) {
         continue;
       }
 
@@ -491,6 +491,14 @@ void mc_raptor_backward::init_parents() {
 }
 
 route_stops_index mc_raptor_backward::get_earliest(route_stops_index a, route_stops_index b) {
+  if(!valid(a)) {
+    return b;
+  }
+
+  if(!valid(b)) {
+    return a;
+  }
+
   return std::max(a, b);
 }
 
