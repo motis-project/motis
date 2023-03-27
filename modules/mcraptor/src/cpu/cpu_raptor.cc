@@ -380,7 +380,7 @@ void mc_raptor_backward::init_arrivals() {
    auto target_add_starts = get_add_starts(query_.meta_info_, query_.target_, query_.use_start_footpaths_, query_.use_dest_metas_);
    for (auto const& add_start : target_add_starts) {
      new_label = label_backward(source_time_begin_, source_time_begin_, round_);
-     new_label.parent_station_ = add_start.s_id_;
+     new_label.backward_parent_station_ = add_start.s_id_;
      arrival_by_route(add_start.s_id_, new_label);
    }
 

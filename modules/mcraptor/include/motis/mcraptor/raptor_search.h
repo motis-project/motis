@@ -40,16 +40,16 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
   reconstructor reconstructor(sched, raptor_sched, timetable);
 
   // Get departure range before we do the +1 query
-  auto const& dep_events = q.use_start_metas_
+  std::vector<std::vector<time>> const& dep_events = q.use_start_metas_
                                ? raptor_sched.departure_events_with_metas_
                                : raptor_sched.departure_events_;
-  auto const& arr_events = q.use_start_metas_
+  std::vector<std::vector<time>> const& arr_events = q.use_start_metas_
                                ? raptor_sched.arrival_events_with_metas_
                                : raptor_sched.arrival_events_;
   //TODO MERGE WITH INTERMODAL
-  auto events = q.forward_ ? dep_events[q.source_] : arr_events[q.target_];
+  std::vector<time> const& events = q.forward_ ? dep_events[q.source_] : arr_events[q.target_];
   auto const [lower, upper] = get_departure_range(
-      q.source_time_begin_, q.source_time_end_, dep_events[q.source_]);
+      q.source_time_begin_, q.source_time_end_, events);
 
   //TODO FIX THIS - make virtual method in cpu raptor and implement it for forward and backward
   if(q.forward_) {
