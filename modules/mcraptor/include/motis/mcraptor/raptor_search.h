@@ -100,6 +100,8 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
     raptor.reset();
     raptor.set_query_source_time(q.source_time_end_);
     raptor.invoke_cpu_raptor();
+
+    raptor.init_parents();
   }
 
   stats.raptor_time_ += MOTIS_GET_TIMING_US(raptor_time);

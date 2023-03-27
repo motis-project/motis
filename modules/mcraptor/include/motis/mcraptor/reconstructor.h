@@ -258,8 +258,7 @@ struct reconstructor {
       auto labels =
           result.getAllLabelsForStop(target_edge.from_, max_raptor_round * 2, false);
       for (L& label : labels) {
-        if (label.journey_departure_time_ >= q.source_time_begin_ &&
-            label.journey_departure_time_ <= q.source_time_end_) {
+        if (label.is_in_range(q.source_time_begin_, q.source_time_end_)) {
           label.current_target_ = target_edge.from_;
           filter_bag.merge(label, true);
         }

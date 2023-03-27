@@ -67,6 +67,10 @@ struct label {
     return static_cast<T*>(this)->is_valid(source_time);
   }
 
+  bool is_in_range(time source_time_begin, time source_time_end) {
+    return static_cast<T*>(this)->is_in_range(source_time_begin, source_time_end);
+  }
+
 protected:
   inline int compare_to(int a, int b) {
     return (a > b) ? 1 : ((a == b) ? 0 : -1);
@@ -83,6 +87,8 @@ struct route_label {
   time parent_journey_departure_time_ = invalid<time>;
 
   time parent_journey_arrival_time_ = invalid<time>;
+  route_stops_index parent_stop_offset_ = invalid<route_stops_index>;
+  time parent_arrival_time_ = invalid<time>;
 
   route_label() {
   }
@@ -117,24 +123,29 @@ struct label_departure : public label<label_departure> {
   label_departure(label_departure& parent_label, stop_id parent_station)
       : label(parent_label, parent_station) { }
 
-    bool dominates(label& other) {
-      int domination_arrival_time = arrival_time_rule(other);
-      int domination_journey_departure_time = journey_departure_time_rule(other);
-      int domination_changes_count = changes_count_rule(other);
+  bool dominates(label& other) {
+    int domination_arrival_time = arrival_time_rule(other);
+    int domination_journey_departure_time = journey_departure_time_rule(other);
+    int domination_changes_count = changes_count_rule(other);
 
-      return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
-             (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
+    return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
+           (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
   }
 
-    bool is_equal(label& other) {
-      if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_) {
-        return true;
-      }
-      return false;
+  bool is_equal(label& other) {
+    if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_) {
+      return true;
     }
+    return false;
+  }
 
-    bool is_valid(time source_time) {
-      return arrival_time_ >= source_time;
+  bool is_valid(time source_time) {
+    return arrival_time_ >= source_time;
+  }
+
+  bool is_in_range(time source_time_begin, time source_time_end) {
+    return journey_departure_time_ >= source_time_begin &&
+           journey_departure_time_ <= source_time_end;
   }
 };
 
@@ -146,6 +157,8 @@ struct label_backward : public label<label_backward> {
 
   // Parent info
   stop_id backward_parent_station_ = invalid<stop_id>;
+  route_stops_index parent_stop_offset_ = invalid<route_stops_index>;
+  time parent_arrival_time_ = invalid<time>;
 
   inline int journey_arrival_time_rule(label_backward& other) {
     return compare_to( other.journey_arrival_time_, journey_arrival_time_);
@@ -170,6 +183,8 @@ struct label_backward : public label<label_backward> {
     journey_arrival_time_ = parent_label.journey_arrival_time_;
     departure_time_ = parent_label.departure_time_;
     backward_parent_station_ = backward_parent_station;
+    footpath_duration_ = 0;
+    parent_arrival_time_ = parent_label.departure_time_;
   }
 
   bool dominates(label_backward& other) {
@@ -190,6 +205,13 @@ struct label_backward : public label<label_backward> {
 
   bool is_valid(time source_time) {
     return departure_time_ <= source_time;
+  }
+
+  bool is_in_range(time source_time_begin, time source_time_end) {
+//    std::cout << "RANGE: " << source_time_begin << " - " << source_time_end << "; value: " << journey_arrival_time_ << std::endl;
+//    return journey_arrival_time_ >= source_time_begin &&
+//           journey_arrival_time_ <= source_time_end;
+return true;
   }
 };
 
