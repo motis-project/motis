@@ -32,6 +32,25 @@ struct bag {
     return closest_label == nullptr ? def : *closest_label;
   }
 
+  L& get_fastest_backward_label(motis::time prev_arrival_time, L& def) {
+    if (labels_.empty()) {
+      return def;
+    }
+
+    motis::time min_diff = invalid<motis::time>;
+    L* closest_label = nullptr;
+    for (L& label : labels_) {
+      if (label.departure_time_ >= prev_arrival_time) {
+        motis::time current_diff = label.journey_arrival_time_ - prev_arrival_time;
+        if (current_diff < min_diff) {
+          closest_label = &label;
+          min_diff = current_diff;
+        }
+      }
+    }
+
+    return closest_label == nullptr ? def : *closest_label;
+  }
   bool merge(L& other_label, bool on_reconstruct = false) noexcept {
     size_t removed_labels = 0;
     size_t labels_size = labels_.size();

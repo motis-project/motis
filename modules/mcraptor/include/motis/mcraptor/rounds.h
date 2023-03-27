@@ -43,6 +43,12 @@ public:
     }
   }
 
+  void change(rounds<L>& other) {
+    delete[] bags_;
+    this->bags_ = other.bags_;
+    other.bags_ = nullptr;
+  }
+
   bag<L>* data() const { return bags_; }
 
   bag<L>* operator[](raptor_round const index) {  // NOLINT

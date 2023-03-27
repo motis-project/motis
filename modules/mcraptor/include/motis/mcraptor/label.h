@@ -8,24 +8,6 @@ namespace motis::mcraptor {
 template <class T>
 struct label {
 
-  static const time MAX_DIFF_FOR_LESS_TRANSFERS = 120;
-
-  inline int arrival_time_rule(label& other) {
-    return static_cast<T*>(this)->arrival_time_rule(other);
-  }
-
-  inline int journey_departure_time_rule(label& other) {
-    return static_cast<T*>(this)->journey_departure_time_rule(other);
-  }
-
-  inline int changes_count_rule(label& other) {
-    return static_cast<T*>(this)->changes_count_rule(other);
-  }
-
-  inline int travel_duration_rule(label& other) {
-    return static_cast<T*>(this)->travel_duration_rule(other);
-  }
-
   // Parameters
   time journey_departure_time_ = invalid<time>;
   size_t changes_count_ = invalid<size_t>;
@@ -43,6 +25,22 @@ struct label {
   route_stops_index stop_offset_ = invalid<route_stops_index>;
   time footpath_duration_ = invalid<time>;
 
+  inline int arrival_time_rule(label& other) {
+    return compare_to(other.arrival_time_, arrival_time_);
+  }
+
+  inline int journey_departure_time_rule(label& other) {
+    return compare_to(journey_departure_time_, other.journey_departure_time_);
+  }
+
+  inline int changes_count_rule(label& other) {
+    return compare_to(other.changes_count_, changes_count_);
+  }
+
+  inline int travel_duration_rule(label& other) {
+    return compare_to(other.arrival_time_ - other.journey_departure_time_, arrival_time_ - journey_departure_time_);
+  }
+
   label() {
   }
 
@@ -56,21 +54,17 @@ struct label {
                                                                             journey_departure_time_(parent_label.journey_departure_time_),
                                                                             parent_station_(parent_station){ }
 
-  bool dominates(label& other) {
-    int domination_arrival_time = arrival_time_rule(other);
-    int domination_journey_departure_time = journey_departure_time_rule(other);
-    int domination_changes_count = changes_count_rule(other);
-    int domination_travel_duration = travel_duration_rule(other);
 
-    return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
-           (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
+  inline bool dominates(label& other) {
+    return static_cast<T*>(this)->dominates(other);
   }
 
   bool is_equal(label& other) {
-    if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_) {
-      return true;
+    return static_cast<T*>(this)->is_equal(other);
     }
-    return false;
+
+  bool is_valid(time source_time) {
+    return static_cast<T*>(this)->is_valid(source_time);
   }
 
 protected:
@@ -88,12 +82,19 @@ struct route_label {
   route_stops_index parent_stop_ = invalid<route_stops_index>;
   time parent_journey_departure_time_ = invalid<time>;
 
+  time parent_journey_arrival_time_ = invalid<time>;
+
   route_label() {
   }
 
   bool dominates(route_label& other) {
     if (trip_ == other.trip_) {
+      if(valid(parent_journey_departure_time_)) {
       return parent_journey_departure_time_ >= other.parent_journey_departure_time_;
+      }
+      else {
+        return parent_journey_arrival_time_ >= other.parent_journey_arrival_time_;
+      }
     } else {
       return trip_ <= other.trip_;
     }
@@ -109,28 +110,87 @@ struct label_departure : public label<label_departure> {
   label_departure() {
   }
 
-  label_departure(time departure_time, time arrival_time, size_t changes_count)
-      : label(departure_time, arrival_time, changes_count){ }
+  label_departure(time journey_departure_time, time arrival_time, size_t changes_count)
+      : label(journey_departure_time, arrival_time, changes_count){ }
 
   // to create labels for current round from labels from previous round for certain station
   label_departure(label_departure& parent_label, stop_id parent_station)
       : label(parent_label, parent_station) { }
 
-  inline int arrival_time_rule(label& other) {
-    return compare_to(other.arrival_time_, arrival_time_);
-  }
-  inline int journey_departure_time_rule(label& other) {
-    return compare_to(journey_departure_time_, other.journey_departure_time_);
+    bool dominates(label& other) {
+      int domination_arrival_time = arrival_time_rule(other);
+      int domination_journey_departure_time = journey_departure_time_rule(other);
+      int domination_changes_count = changes_count_rule(other);
+
+      return domination_arrival_time >= 0 && domination_changes_count >= 0 && domination_journey_departure_time >= 0 &&
+             (domination_arrival_time > 0 || domination_changes_count > 0 || domination_journey_departure_time > 0);
   }
 
-  inline int changes_count_rule(label& other) {
-    return compare_to(other.changes_count_, changes_count_);
+    bool is_equal(label& other) {
+      if(arrival_time_ == other.arrival_time_ && journey_departure_time_ == other.journey_departure_time_ && changes_count_ == other.changes_count_) {
+        return true;
+      }
+      return false;
+    }
+
+    bool is_valid(time source_time) {
+      return arrival_time_ >= source_time;
+  }
+};
+
+struct label_backward : public label<label_backward> {
+
+  // Parameters
+  time journey_arrival_time_ = invalid<time>;
+  time departure_time_ = invalid<time>;
+
+  // Parent info
+  stop_id backward_parent_station_ = invalid<stop_id>;
+
+  inline int journey_arrival_time_rule(label_backward& other) {
+    return compare_to( other.journey_arrival_time_, journey_arrival_time_);
   }
 
-  inline int travel_duration_rule(label& other) {
-    return compare_to(other.arrival_time_ - other.journey_departure_time_, arrival_time_ - journey_departure_time_);
+  inline int departure_time_rule(label_backward& other) {
+    return compare_to( departure_time_, other.departure_time_);
   }
 
+  label_backward() {
+  }
+
+  label_backward(time journey_arrival_time, time departure_time, size_t changes_count)
+      : label(invalid<time>, invalid<time>, changes_count){
+    journey_arrival_time_ = journey_arrival_time;
+    departure_time_ = departure_time;
+  }
+
+  // to create labels for current round from labels from previous round for certain station
+  label_backward(label_backward& parent_label, stop_id backward_parent_station)
+      : label(parent_label, invalid<stop_id>) {
+    journey_arrival_time_ = parent_label.journey_arrival_time_;
+    departure_time_ = parent_label.departure_time_;
+    backward_parent_station_ = backward_parent_station;
+  }
+
+  bool dominates(label_backward& other) {
+    int domination_departure_time = departure_time_rule(other);
+    int domination_journey_arrival_time = journey_arrival_time_rule(other);
+    int domination_changes_count = changes_count_rule(other);
+
+    return domination_departure_time >= 0 && domination_changes_count >= 0 && domination_journey_arrival_time >= 0 &&
+           (domination_departure_time > 0 || domination_changes_count > 0 || domination_journey_arrival_time > 0);
+  }
+
+  bool is_equal(label_backward& other) {
+    if(departure_time_ == other.departure_time_ && journey_arrival_time_ == other.journey_arrival_time_ && changes_count_ == other.changes_count_) {
+      return true;
+    }
+    return false;
+  }
+
+  bool is_valid(time source_time) {
+    return departure_time_ >= source_time;
+  }
 };
 
 } // namespace motis::mcraptor

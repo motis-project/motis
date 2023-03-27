@@ -278,7 +278,8 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 }
 
 auto get_station_departure_events(transformable_timetable const& ttt,
-                                  stop_id const s_id) {
+                                  stop_id const s_id,
+                                  bool get_arrival_events_instead = false) {
   std::vector<time> dep_events;
 
   auto const& station = ttt.stations_[s_id];
@@ -295,7 +296,12 @@ auto get_station_departure_events(transformable_timetable const& ttt,
         if (!trip.lcons_[offset].in_allowed_) {
           continue;
         }
-        dep_events.push_back(trip.lcons_[offset].departure_);
+        if(get_arrival_events_instead) {
+          dep_events.push_back(trip.lcons_[offset].arrival_);
+        }
+        else {
+          dep_events.push_back(trip.lcons_[offset].departure_);
+        }
       }
     }
   }
@@ -328,6 +334,7 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
   meta_info->station_id_to_index_.reserve(ttt.stations_.size());
 
   meta_info->departure_events_.resize(ttt.stations_.size());
+  meta_info->arrival_events_.resize(ttt.stations_.size());
   meta_info->equivalent_stations_.resize(ttt.stations_.size());
 
   // Loop over the stations
@@ -357,7 +364,22 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
       }
     }
 
+   // set arrival events
+   meta_info->arrival_events_[s_id] =
+       get_station_departure_events(ttt, s_id, true);
+
+   // gather all arrival events from stations reachable by foot
+   for (auto const& f : ttt.stations_[s_id].footpaths_) {
+     for (auto const& dep_event :
+          get_station_departure_events(ttt, f.to_, true)) {
+       meta_info->arrival_events_[s_id].emplace_back(dep_event +
+                                                       f.duration_);
+     }
+   }
+
+
     utl::erase_duplicates(meta_info->departure_events_[s_id]);
+    utl::erase_duplicates(meta_info->arrival_events_[s_id]);
   }
 
   // create departure events with meta stations included
@@ -375,6 +397,24 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     utl::erase_duplicates(meta_departures);
     for (auto const equi_s_id : s.equivalent_) {
       meta_info->departure_events_with_metas_[equi_s_id] = meta_departures;
+    }
+  }
+
+  // create arrival events with meta stations included
+  meta_info->arrival_events_with_metas_ = meta_info->arrival_events_;
+
+  for (auto s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
+    auto& meta_arrivals = meta_info->arrival_events_with_metas_[s_id];
+    if (!meta_arrivals.empty()) {
+      continue;
+    }
+    auto const s = ttt.stations_[s_id];
+    for (auto const equi_s_id : s.equivalent_) {
+      utl::concat(meta_arrivals, meta_info->arrival_events_[equi_s_id]);
+    }
+    utl::erase_duplicates(meta_arrivals);
+    for (auto const equi_s_id : s.equivalent_) {
+      meta_info->arrival_events_with_metas_[equi_s_id] = meta_arrivals;
     }
   }
 
