@@ -383,7 +383,7 @@ struct reconstructor {
             last_departure_info.first, empty_label);
         if (!valid(current_station_label.journey_departure_time_)) {
           invalid_path = true;
-          std::cout << "Invalid path worked!" << std::endl;
+//          std::cout << "Invalid path worked!" << std::endl;
           break;
         }
         current_station = parent_station;
