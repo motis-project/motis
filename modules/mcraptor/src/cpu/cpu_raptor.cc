@@ -428,13 +428,13 @@ void mc_raptor_backward::scan_route(stop_id stop, route_stops_index stop_offset,
     for (auto& label : previous_round()[stop].labels_) {
       const stop_time* trip = last_trip;
       trip_id current_trip_id = (last_trip - first_trip) / trip_size;
-      while ((trip > first_trip) && (label.departure_time_ > trip[stop_offset].arrival_)) {
+      while ((trip > first_trip) && (label.departure_time_ < trip[stop_offset].arrival_)) {
         trip -= trip_size;
         current_trip_id--;
       }
 
       time trip_arrival = trip[stop_offset].arrival_;
-      if (!valid(trip_arrival) || label.departure_time_ > trip_arrival) {
+      if (!valid(trip_arrival) || label.departure_time_ < trip_arrival) {
         continue;
       }
 

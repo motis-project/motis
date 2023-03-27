@@ -189,7 +189,7 @@ struct label_backward : public label<label_backward> {
   }
 
   bool is_valid(time source_time) {
-    return departure_time_ >= source_time;
+    return departure_time_ <= source_time;
   }
 };
 
