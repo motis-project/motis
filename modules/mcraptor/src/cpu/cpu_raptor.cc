@@ -286,8 +286,6 @@ void mc_raptor<T, L>::invoke_cpu_raptor() {
     relax_transfers();
   }
 
-  init_parents();
-
 }
 
 
@@ -425,7 +423,6 @@ void mc_raptor_backward::scan_route(stop_id stop, route_stops_index stop_offset,
                                      route_id route_id) {
   bag<route_label> new_route_bag;
 
-  while(stop_offset > 0) {
   while(stop_offset > 1) {
     for (auto& label : previous_round()[stop].labels_) {
       const stop_time* trip = last_trip;
