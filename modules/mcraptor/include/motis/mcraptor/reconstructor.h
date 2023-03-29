@@ -120,6 +120,9 @@ struct intermediate_journey {
         }
       }
 
+      if(lcon == NULL) {
+        return std::pair<time, uint16_t>(invalid<time>, invalid<uint16_t>);
+      }
       auto const a_track = lcon->full_con_->a_track_;
       auto const motis_index = raptor_sched.station_id_to_index_[station_idx];
 
@@ -261,6 +264,8 @@ struct reconstructor {
         if (label.is_in_range(q.source_time_begin_, q.source_time_end_)) {
           label.current_target_ = target_edge.from_;
           filter_bag.merge(label, true);
+//          label.out();
+//          filter_bag.labels_.push_back(label);
         }
       }
     }
@@ -365,6 +370,11 @@ struct reconstructor {
               parent_station, current_station_label.route_id_,
               current_station_label.current_trip_id_,
               current_station_label.stop_offset_, raptor_sched_, timetable_);
+          if (!valid(last_departure_info.first)) {
+            invalid_path = true;
+            //          std::cout << "Invalid path worked!" << std::endl;
+            break;
+          }
         } else if (r_k % 2 == 1 && r_k != target_station_label.changes_count_ &&
                    valid(current_station_label.footpath_duration_)) {
           ij.add_footpath(current_station, current_station_label.arrival_time_,

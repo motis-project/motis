@@ -52,6 +52,24 @@ struct bag {
     return closest_label == nullptr ? def : *closest_label;
   }
   bool merge(L& other_label, bool on_reconstruct = false) noexcept {
+    if(on_reconstruct) {
+      size_t removed_labels = 0;
+      size_t labels_size = labels_.size();
+      for (size_t i = 0; i < labels_size; i++) {
+        if(labels_[i].is_equal(other_label)) return !on_reconstruct;
+        if (labels_[i].dominates_supermega2(other_label)) return false;
+        if (other_label.dominates_supermega2(labels_[i])) {
+          removed_labels++;
+          continue;
+        }
+        labels_[i - removed_labels] = labels_[i];
+      }
+      labels_.resize(labels_size - removed_labels + 1);
+      labels_.back() = other_label;
+      return true;
+    }
+
+
     size_t removed_labels = 0;
     size_t labels_size = labels_.size();
     for (size_t i = 0; i < labels_size; i++) {

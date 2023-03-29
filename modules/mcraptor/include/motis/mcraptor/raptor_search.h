@@ -38,6 +38,16 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
                                        raptor_timetable const& timetable,
                                        MCRaptor raptor) {
   reconstructor reconstructor(sched, raptor_sched, timetable);
+//  std::cout << "SCHED BEGIN: " << sched.schedule_begin_ << std::endl;
+//  std::cout << "NEED TIME: " << unix_to_motistime(sched.schedule_begin_, 1655021460) << std::endl;
+//  std::cout << "INTERVAL_BEGIN: " << motis_to_unixtime(sched.schedule_begin_, q.source_time_begin_) << std::endl;
+//  std::cout << "INTERVAL_END: " << motis_to_unixtime(sched.schedule_begin_, q.source_time_end_) << std::endl;
+//
+//  std::cout << "SOURCE: " << q.source_ << "; " << q.meta_info_.raptor_id_to_eva_[q.source_] << std::endl;
+//  std::cout << "TARGET: " << q.target_ << "; " << q.meta_info_.raptor_id_to_eva_[q.target_] << std::endl;
+//
+//  std::cout << "Current station raptor id: " << q.meta_info_.eva_to_raptor_id_.at("8502350") << std::endl;
+//  std::cout << "NEED station raptor id: " << q.meta_info_.eva_to_raptor_id_.at("8572745") << std::endl;
 
   // Get departure range before we do the +1 query
   std::vector<std::vector<time>> const& dep_events = q.use_start_metas_
@@ -92,6 +102,8 @@ inline std::vector<journey> raptor_gen(raptor_query<L>& q, raptor_statistics& st
       raptor.reset();
       stats.raptor_queries_ += 1;
       time new_query_time = arr_events[q.target_][dep_idx];
+
+//      std::cout << "TIME BEGIN: " << new_query_time << "; " << motis_to_unixtime(sched.schedule_begin_, new_query_time) << std::endl;
 
       raptor.set_query_source_time(new_query_time);
       raptor.invoke_cpu_raptor();

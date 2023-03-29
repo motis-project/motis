@@ -69,6 +69,12 @@ base_query get_base_query(RoutingRequest const* routing_request,
   q.forward_ = (routing_request->search_dir() == SearchDir::SearchDir_Forward);
   q.ontrip_ = routing_request->start_type() != Start::Start_PretripStart;
 
+  if (!q.forward_) {
+    stop_id t = q.source_;
+    q.source_ = q.target_;
+    q.target_ = t;
+  }
+
   // Don't use start meta stations in the ontrip case, because:
   // do as the routing module does
   q.use_start_metas_ =
