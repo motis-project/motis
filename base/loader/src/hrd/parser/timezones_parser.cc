@@ -13,15 +13,50 @@ namespace motis::loader::hrd {
 using namespace boost::gregorian;
 using namespace utl;
 
-int eva_number(cstr str) { return parse<int>(str); }
-
-int distance_to_midnight(cstr hhmm) { return hhmm_to_min(parse<int>(hhmm)); }
-
 int bitfield_idx(cstr ddmmyyyy, date const& first_schedule_date) {
   date season_begin_date(parse<int>(ddmmyyyy.substr(4, size(4))),
                          parse<int>(ddmmyyyy.substr(2, size(2))),
                          parse<int>(ddmmyyyy.substr(0, size(2))));
   return (season_begin_date - first_schedule_date).days();
+}
+
+int eva_number(cstr str) { return parse<int>(str); }
+
+int distance_to_midnight(cstr hhmm) { return hhmm_to_min(parse<int>(hhmm)); }
+
+std::vector<season_entry> parse_seasons(cstr const line,
+                                        date const& schedule_begin) {
+  enum state {
+    kSeasonOffset,
+    kSeasonBeginDate,
+    kSeasonBeginHour,
+    kSeasonEndDate,
+    kSeasonEndHour,
+    kNumStates
+  } s{kSeasonOffset};
+  std::vector<season_entry> seasons;
+  auto e = season_entry{};
+  for_each_token(line, ' ', [&](cstr const t) {
+    switch (s) {
+      case kSeasonOffset: e.gmt_offset_ = hhmm_to_min(parse<int>(t)); break;
+      case kSeasonBeginDate:
+        e.first_day_idx_ = bitfield_idx(t, schedule_begin);
+        break;
+      case kSeasonBeginHour:
+        e.season_begin_time_ = hhmm_to_min(parse<int>(t));
+        break;
+      case kSeasonEndDate:
+        e.last_day_idx_ = bitfield_idx(t, schedule_begin);
+        break;
+      case kSeasonEndHour:
+        e.season_end_time_ = hhmm_to_min(parse<int>(t));
+        seasons.push_back(e);
+        break;
+      default:;
+    }
+    s = static_cast<state>((s + 1) % kNumStates);
+  });
+  return seasons;
 }
 
 timezones parse_timezones(loaded_file const& timezones_file,
@@ -30,6 +65,11 @@ timezones parse_timezones(loaded_file const& timezones_file,
 
   timezones tz;
   for_each_line(timezones_file.content(), [&](cstr line) {
+    if (auto const comment_start = line.view().find('%');
+        comment_start != std::string::npos) {
+      line = line.substr(0, comment_start);
+    }
+
     if (line.length() == 15) {
       auto first_valid_eva_number =
           eva_number(line.substr(c.tz_.type1_first_valid_eva_));
@@ -43,22 +83,11 @@ timezones parse_timezones(loaded_file const& timezones_file,
     }
 
     if ((isdigit(line[0]) != 0) && line.length() >= 47) {
-      boost::optional<season_entry> opt_season_entry;
-      if (!line.substr(14, size(33)).trim().empty()) {
-        opt_season_entry.emplace(
-            distance_to_midnight(line.substr(c.tz_.type3_dst_to_midnight1_)),
-            bitfield_idx(line.substr(c.tz_.type3_bitfield_idx1_),
-                         first_schedule_date),
-            bitfield_idx(line.substr(c.tz_.type3_bitfield_idx2_),
-                         first_schedule_date),
-            distance_to_midnight(line.substr(c.tz_.type3_dst_to_midnight2_)),
-            distance_to_midnight(line.substr(c.tz_.type3_dst_to_midnight3_)));
-      }
-
-      tz.timezone_entries_.push_back(std::make_unique<timezone_entry>(
+      tz.timezone_entries_.emplace_back(std::make_unique<timezone_entry>(
           distance_to_midnight(line.substr(c.tz_.type2_dst_to_midnight_)),
-          opt_season_entry));
-
+          line.substr(14, size(33)).trim().empty()
+              ? std::vector<season_entry>{}
+              : parse_seasons(line.substr(14), first_schedule_date)));
       tz.eva_to_tze_[eva_number(line.substr(c.tz_.type2_eva_))] =
           tz.timezone_entries_.back().get();
     }

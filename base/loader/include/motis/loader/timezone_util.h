@@ -3,6 +3,7 @@
 #include <ctime>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "cista/reflection/comparable.h"
 
@@ -10,6 +11,8 @@
 
 #include "motis/core/schedule/timezone.h"
 #include "motis/hash_map.h"
+
+#include "motis/schedule-format/Timezone_generated.h"
 
 namespace motis::loader {
 
@@ -32,13 +35,9 @@ struct tz_cache {
   mcd::hash_map<tz_cache_key, time> cache_;
 };
 
-timezone create_timezone(int general_offset, int season_offset,
-                         int day_idx_schedule_first_day,
+timezone create_timezone(int general_offset, int day_idx_schedule_first_day,
                          int day_idx_schedule_last_day,
-                         int day_idx_season_first_day,
-                         int day_idx_season_last_day,
-                         int minutes_after_midnight_season_begin,
-                         int minutes_after_midnight_season_end);
+                         std::vector<Season> const&);
 
 time get_event_time(tz_cache&, std::time_t schedule_begin, int day_idx,
                     int local_time, timezone const* tz,

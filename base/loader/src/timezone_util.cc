@@ -6,6 +6,7 @@
 #include "flatbuffers/flatbuffers.h"
 
 #include "utl/get_or_create.h"
+#include "utl/pipes.h"
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
@@ -37,35 +38,36 @@ int day_idx(int day_idx_schedule_first_day, int day_idx_schedule_last_day,
       0);
 }
 
-timezone create_timezone(int general_offset, int season_offset,
-                         int day_idx_schedule_first_day,
+timezone create_timezone(int general_offset, int day_idx_schedule_first_day,
                          int day_idx_schedule_last_day,
-                         int day_idx_season_first_day,
-                         int day_idx_season_last_day,
-                         int minutes_after_midnight_season_begin,
-                         int minutes_after_midnight_season_end) {
-  if (day_idx_season_last_day < day_idx_schedule_first_day ||
-      day_idx_schedule_last_day < day_idx_season_first_day) {
-    return timezone{general_offset};
-  }
+                         std::vector<Season> const& seasons) {
+  return {general_offset,
+          utl::all(seasons)  //
+              | utl::remove_if([&](Season const& s) {
+                  return s.day_idx_last_day() < day_idx_schedule_first_day ||
+                         day_idx_schedule_last_day < s.day_idx_first_day();
+                })  //
+              |
+              utl::transform([&](Season const& s) {
+                time season_begin = 0;
+                if (day_idx_schedule_first_day <= s.day_idx_first_day()) {
+                  season_begin = to_motis_time(
+                      day_idx(day_idx_schedule_first_day,
+                              day_idx_schedule_last_day, s.day_idx_first_day()),
+                      s.minutes_after_midnight_first_day() - general_offset);
+                }
 
-  time season_begin = 0;
-  if (day_idx_schedule_first_day <= day_idx_season_first_day) {
-    season_begin = to_motis_time(
-        day_idx(day_idx_schedule_first_day, day_idx_schedule_last_day,
-                day_idx_season_first_day),
-        minutes_after_midnight_season_begin - general_offset);
-  }
+                time season_end = INVALID_TIME - s.offset();
+                if (s.day_idx_last_day() <= day_idx_schedule_last_day) {
+                  season_end = to_motis_time(
+                      day_idx(day_idx_schedule_first_day,
+                              day_idx_schedule_last_day, s.day_idx_last_day()),
+                      s.minutes_after_midnight_last_day() - s.offset());
+                }
 
-  time season_end = INVALID_TIME - season_offset;
-  if (day_idx_season_last_day <= day_idx_schedule_last_day) {
-    season_end = to_motis_time(
-        day_idx(day_idx_schedule_first_day, day_idx_schedule_last_day,
-                day_idx_season_last_day),
-        minutes_after_midnight_season_end - season_offset);
-  }
-
-  return {general_offset, {season_offset, season_begin, season_end}};
+                return season{s.offset(), season_begin, season_end};
+              })  //
+              | utl::emplace_back_to<mcd::vector<season>>()};
 }
 
 time get_event_time(tz_cache& cache, std::time_t const schedule_begin,
