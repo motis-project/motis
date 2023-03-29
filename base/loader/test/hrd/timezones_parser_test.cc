@@ -65,6 +65,14 @@ constexpr char const* BASIC_DATA_TEST_DATA_2 = R"(01.01.2015
 JF077 EVA_PRD~RIS Server~RIS OEV IMM~~J15~077_001 000000 END
 )";
 
+constexpr char const* TIMEZONES_TEST_DATA_3 = R"(%
+0000000 +0100 +0200 27032022 0200 30102022 0300 +0200 26032023 0200 29102023 0300
+)";
+constexpr char const* BASIC_DATA_TEST_DATA_3 = R"(01.03.2023
+09.12.2023
+comment
+)";
+
 class loader_timezones_test : public testing::Test {
 
 protected:
@@ -98,21 +106,27 @@ public:
       : loader_timezones_test(TIMEZONES_TEST_DATA_2, BASIC_DATA_TEST_DATA_2) {}
 };
 
+class loader_timezones_extended : public loader_timezones_test {
+public:
+  loader_timezones_extended()
+      : loader_timezones_test(TIMEZONES_TEST_DATA_3, BASIC_DATA_TEST_DATA_3) {}
+};
+
 void test_timezone_entry(
     timezone_entry const* tze, int expected_general_gmt_offset,
     boost::optional<season_entry> const& expected_season_entry = {}) {
   ASSERT_EQ(expected_general_gmt_offset, tze->general_gmt_offset_);
   if (expected_season_entry) {
-    ASSERT_TRUE(tze->season_);
+    ASSERT_FALSE(tze->seasons_.empty());
     auto const& expected = *expected_season_entry;
-    auto const& actual = *(tze->season_);
+    auto const& actual = tze->seasons_.front();
     ASSERT_EQ(expected.gmt_offset_, actual.gmt_offset_);
     ASSERT_EQ(expected.first_day_idx_, actual.first_day_idx_);
     ASSERT_EQ(expected.last_day_idx_, actual.last_day_idx_);
     ASSERT_EQ(expected.season_begin_time_, actual.season_begin_time_);
     ASSERT_EQ(expected.season_end_time_, actual.season_end_time_);
   } else {
-    ASSERT_FALSE(tze->season_);
+    ASSERT_TRUE(tze->seasons_.empty());
   }
 }
 
@@ -129,6 +143,27 @@ TEST_F(loader_timezones_synthetic, timezone_interval) {
   for (auto tz : {&tz_, &tz_new_}) {
     test_timezone_entry(tz->find(0), 60, {{120, 0, 6, 120, 180}});
     test_timezone_entry(tz->find(9999999), 60, {{120, 0, 6, 120, 180}});
+  }
+}
+
+TEST_F(loader_timezones_extended, timezone_interval) {
+  for (auto tz : {&tz_, &tz_new_}) {
+    auto const t = tz->find(0);
+    EXPECT_EQ(2, t->seasons_.size());
+
+    auto const s1 = tz->find(0)->seasons_[0];
+    EXPECT_EQ(120, s1.gmt_offset_);
+    EXPECT_EQ(-339, s1.first_day_idx_);
+    EXPECT_EQ(-122, s1.last_day_idx_);
+    EXPECT_EQ(120, s1.season_begin_time_);
+    EXPECT_EQ(180, s1.season_end_time_);
+
+    auto const s2 = tz->find(0)->seasons_[1];
+    EXPECT_EQ(120, s2.gmt_offset_);
+    EXPECT_EQ(25, s2.first_day_idx_);
+    EXPECT_EQ(242, s2.last_day_idx_);
+    EXPECT_EQ(120, s2.season_begin_time_);
+    EXPECT_EQ(180, s2.season_end_time_);
   }
 }
 

@@ -117,16 +117,12 @@ struct stations_builder {
   timezone const* get_or_create_timezone(Timezone const* input_timez) {
     return utl::get_or_create(timezones_, input_timez, [&] {
       auto const tz =
-          input_timez->season() != nullptr
-              ? create_timezone(
-                    input_timez->general_offset(),
-                    input_timez->season()->offset(),  //
-                    first_day_, last_day_,
-                    input_timez->season()->day_idx_first_day(),
-                    input_timez->season()->day_idx_last_day(),
-                    input_timez->season()->minutes_after_midnight_first_day(),
-                    input_timez->season()->minutes_after_midnight_last_day())
-              : timezone{input_timez->general_offset()};
+          input_timez->seasons() != nullptr
+              ? create_timezone(input_timez->general_offset(), first_day_,
+                                last_day_,
+                                utl::to_vec(*input_timez->seasons(),
+                                            [](Season const* s) { return *s; }))
+              : timezone{input_timez->general_offset(), {}};
       sched_.timezones_.emplace_back(mcd::make_unique<timezone>(tz));
       return sched_.timezones_.back().get();
     });
