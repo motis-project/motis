@@ -118,6 +118,10 @@ struct full_trip_handler {
     auto existing_sections = get_existing_sections(result_.trp_);
     auto sections = get_msg_sections();
 
+    if (existing_sections.empty() && sections.empty()) {
+      return;
+    }
+
     result_.is_reroute_ = !is_same_route(existing_sections, sections);
 
     if (is_reroute()) {
