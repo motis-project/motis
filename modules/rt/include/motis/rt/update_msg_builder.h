@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -19,6 +20,12 @@ namespace motis::rt {
 struct expanded_trip_update_info {
   std::optional<expanded_trip_index> old_route_{};
   std::optional<expanded_trip_index> new_route_{};
+};
+
+struct rt_update_info {
+  Content content_type_{Content_NONE};
+  flatbuffers::Offset<void> content_{0};
+  bool intermediate_{false};
 };
 
 struct update_msg_builder {
@@ -69,10 +76,14 @@ private:
   motis::module::message_creator fbb_;
   schedule const& sched_;
   ctx::res_id_t schedule_res_id_;
-  std::vector<flatbuffers::Offset<RtUpdate>> updates_;
+
+  std::vector<rt_update_info> updates_;
   mcd::hash_map<trip const*, std::vector<delay_info const*>> delays_;
   mcd::hash_map<trip const*, expanded_trip_update_info> expanded_trips_;
   mcd::hash_set<trip const*> separated_trips_;
+  mcd::hash_map<trip const*, std::size_t> previous_reroute_update_;
+  mcd::hash_map<std::string, std::size_t> previous_trip_formation_update_;
+  mcd::hash_map<ev_key, std::size_t> previous_track_update_;
   std::size_t delay_count_{0};
   std::size_t reroute_count_{0};
 };
