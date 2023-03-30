@@ -93,7 +93,7 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=8bfc669e6ffd5800ed47144cf59c15b3e752ba10
+  commit=c056b0e04bc49395728b6b3e0b318474da074c49
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=interval
