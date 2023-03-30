@@ -53,6 +53,8 @@ state next_state(state const s, Label const* c, Label const* n) {
     case state::AT_STATION:
       if (n && get_node(*n)->is_station_node()) {
         return state::WALK;
+      } else if (get_node(*c)->is_route_node()) {
+        return state::IN_CONNECTION;
       } else {
         return state::PRE_CONNECTION;
       }
@@ -200,6 +202,18 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
   while (it != end(labels)) {
     auto& current = *it;
 
+    std::cerr
+        << "state=" << state_to_str(current_state)
+        << ", node_type=" << get_node(current)->type_str() << ", station="
+        << sched.stations_.at(get_node(current)->get_station()->id_)->name_
+        << ", edge_type=" << current.edge_->type_str()
+        << ", mumo_id=" << current.edge_->get_mumo_id() << ", connection="
+        << (current.connection_ == nullptr
+                ? "nullptr"
+                : get_service_name(sched,
+                                   current.connection_->full_con_->con_info_))
+        << ", now=" << format_time(current.now_) << "\n";
+
     switch (current_state) {
       case state::ONTRIP_TRAIN_START:
       case state::AT_STATION: {
@@ -207,6 +221,15 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
             get_node(*std::next(it))->is_foot_node()) {
           break;
         }
+
+        std::cerr
+            << "  Add stop [AT_STATION]: idx=" << (stop_index + 1) << ", id="
+            << sched.stations_.at(get_node(current)->get_station()->id_)
+                   ->eva_nr_
+            << ", name="
+            << sched.stations_.at(get_node(current)->get_station()->id_)->name_
+            << "\n";
+
         unsigned a_track = MOTIS_UNKNOWN_TRACK,
                  a_sched_track = MOTIS_UNKNOWN_TRACK;
         unsigned d_track = MOTIS_UNKNOWN_TRACK,
@@ -269,6 +292,14 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
       case state::WALK: {
         utl::verify(std::next(it) != end(labels),
                     "label chain parser in state walk at last label");
+
+        std::cerr
+            << "  Add stop [WALK]: idx=" << (stop_index + 1) << ", id="
+            << sched.stations_.at(get_node(current)->get_station()->id_)
+                   ->eva_nr_
+            << ", name="
+            << sched.stations_.at(get_node(current)->get_station()->id_)->name_
+            << "\n";
 
         if (last_con != nullptr) {
           walk_arrival_di =
@@ -348,7 +379,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
 
           // through edge used but not the route edge after that
           // (instead: went to station node using the leaving edge)
-          if (succ.connection_) {
+          if (succ.connection_ && current.connection_) {
             auto const a_di = get_delay_info(
                 sched, get_node(current), current.connection_, event_type::ARR);
             auto const d_di = get_delay_info(sched, dep_route_node,
@@ -357,6 +388,17 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
                 sched, get_node(current), current.connection_, event_type::ARR);
             auto const d_sched_track = get_schedule_track(
                 sched, dep_route_node, succ.connection_, event_type::DEP);
+
+            std::cerr << " Add stop [CONNECTION]: idx=" << (stop_index + 1)
+                      << ", id="
+                      << sched.stations_
+                             .at(get_node(current)->get_station()->id_)
+                             ->eva_nr_
+                      << ", name="
+                      << sched.stations_
+                             .at(get_node(current)->get_station()->id_)
+                             ->name_
+                      << "\n";
 
             stops.emplace_back(
                 static_cast<unsigned int>(++stop_index),
@@ -367,7 +409,13 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
                 succ.connection_->d_time_, a_di.get_schedule_time(),
                 d_di.get_schedule_time(), a_di.get_reason(), d_di.get_reason(),
                 false, false);
+          } else {
+            std::cerr << "  IN_CONNECTION: no stop [succ.connection_=null]\n";
           }
+        } else {
+          std::cerr << "  IN_CONNECTION: no stop [succ is not route node: "
+                    << get_node(succ)->type_str()
+                    << ", succ.connection=" << succ.connection_ << "]\n";
         }
 
         last_route_node = get_node(current);

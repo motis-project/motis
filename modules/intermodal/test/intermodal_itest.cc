@@ -98,10 +98,14 @@ TEST_F(intermodal_itest, forward) {
   };
 
   for (auto const& router : {"/routing", "/tripbased", "/nigiri"}) {
+    SCOPED_TRACE(router);
+
     auto res = call(make_msg(json(router)));
     auto content = motis_content(RoutingResponse, res);
 
     ASSERT_EQ(1, content->connections()->size());
+
+    print_journey(message_to_journeys(content)[0], std::cout);
 
     auto const& stops = content->connections()->Get(0)->stops();
 
@@ -179,6 +183,8 @@ TEST_F(intermodal_itest, backward) {
   };
 
   for (auto const& router : {"/routing", "/tripbased", "/nigiri"}) {
+    SCOPED_TRACE(router);
+
     auto res = call(make_msg(json(router)));
     auto content = motis_content(RoutingResponse, res);
 

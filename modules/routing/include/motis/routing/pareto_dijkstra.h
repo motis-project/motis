@@ -17,7 +17,7 @@ namespace motis::routing {
 
 const bool FORWARDING = true;
 
-constexpr auto const kTracing = false;
+constexpr auto const kTracing = true;
 
 template <typename... T>
 void trace(T&&... t) {
