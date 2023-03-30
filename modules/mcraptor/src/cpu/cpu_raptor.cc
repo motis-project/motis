@@ -61,7 +61,7 @@ void mc_raptor<T, L>::arrival_by_route(stop_id stop, L& new_label, bool from_equ
   stops_for_routes_.mark(stop);
 
   // Check equal stations if there is target among them
-  if(!from_equal_station && query_.source_ != 0) {
+  if(query_.forward_ && !from_equal_station && query_.source_ != 0) {
     const std::vector<stop_id>& t = static_cast<T*>(this)->targets_;
     for (stop_id s : query_.meta_info_.equivalent_stations_[stop]) {
       if (s == stop) {
