@@ -17,8 +17,6 @@
 
 #include "conf/date_time.h"
 
-#include "fmt/format.h"
-
 #include "tar/file_reader.h"
 #include "tar/tar_reader.h"
 #include "tar/zstd_reader.h"
@@ -41,14 +39,19 @@
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 
+#include "motis/ris/amqp_buffer_reader.h"
+#include "motis/ris/ris_message.h"
+#include "motis/ris/string_view_reader.h"
+#include "motis/ris/zip_reader.h"
+
+#include "motis/ris/risml/risml_parser.h"
+
 #include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
 #include "motis/ris/gtfs-rt/util.h"
+
 #include "motis/ris/ribasis/ribasis_parser.h"
-#include "motis/ris/ris_message.h"
-#include "motis/ris/risml/risml_parser.h"
-#include "motis/ris/string_view_reader.h"
-#include "motis/ris/zip_reader.h"
+#include "motis/ris/ribasis/ribasis_receiver.h"
 
 #ifdef GetMessage
 #undef GetMessage
@@ -134,6 +137,16 @@ template <typename Publisher>
 inline void update_system_time(schedule& sched, Publisher const& pub) {
   sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
   sched.last_update_timestamp_ = std::time(nullptr);
+}
+
+template <typename Fn>
+inline void for_each_rabbitmq_config(config& ris_config, Fn&& fn) {
+  for (auto& [config, prefix] : {std::pair<rabbitmq_config&, std::string>{
+                                     ris_config.rabbitmq1_, "rabbitmq1"},
+                                 std::pair<rabbitmq_config&, std::string>{
+                                     ris_config.rabbitmq2_, "rabbitmq2"}}) {
+    fn(config, prefix);
+  }
 }
 
 struct ris::impl {
@@ -240,98 +253,71 @@ struct ris::impl {
     std::unique_ptr<amqp::ssl_connection> con_;
   };
 
-  explicit impl(config& c)
-      : config_{c}, rabbitmq_log_enabled_{!config_.rabbitmq_log_.empty()} {
-    if (rabbitmq_log_enabled_) {
-      LOG(info) << "Logging RabbitMQ messages to: " << config_.rabbitmq_log_;
-      rabbitmq_log_file_.exceptions(std::ios_base::failbit |
-                                    std::ios_base::badbit);
-      rabbitmq_log_file_.open(config_.rabbitmq_log_, std::ios_base::app);
-    }
-  }
+  explicit impl(config& c) : config_{c} {}
 
-  void init_ribasis_receiver(dispatcher* d, schedule* sched) {
-    utl::verify(config_.rabbitmq_.valid(), "invalid rabbitmq configuration");
-    if (config_.rabbitmq_.empty()) {
-      return;
-    }
-
-    if (config_.rabbitmq_resume_stream_) {
-      auto const stored_stream_offset =
-          get_stream_offset(get_queue_id(config_.rabbitmq_));
-      if (stored_stream_offset) {
-        LOG(info) << "rabbitmq: resuming at stored stream offset "
-                  << *stored_stream_offset;
-        config_.rabbitmq_.numeric_stream_offset_ = *stored_stream_offset + 1;
-      } else {
-        LOG(info) << "rabbitmq: no stored stream offset found, resuming at "
-                  << config_.rabbitmq_.stream_offset_;
-      }
-    }
-
-    ribasis_receiver_ = std::make_unique<amqp::ssl_connection>(
-        &config_.rabbitmq_, [](std::string const& log_msg) {
-          LOG(info) << "rabbitmq: " << log_msg;
-        });
-    ribasis_receiver_->run([this, d, sched](amqp::msg const& m) mutable {
-      ribasis_buffer_.emplace_back(m);
-
-      if (auto const n = now();
-          (n - ribasis_receiver_last_update_) < config_.update_interval_) {
+  void init_ribasis_receivers(dispatcher* d, schedule* sched) {
+    for_each_rabbitmq_config(config_, [&](rabbitmq_config& config,
+                                          std::string const& prefix) {
+      utl::verify(config.login_.valid(), "invalid {} configuration", prefix);
+      if (config.login_.empty()) {
         return;
-      } else {
-        ribasis_receiver_last_update_ = n;
-
-        auto msgs_copy = ribasis_buffer_;
-        ribasis_buffer_.clear();
-
-        d->enqueue(
-            ctx_data{d},
-            [this, sched, msgs = std::move(msgs_copy)]() {
-              if (msgs.empty()) {
-                return;
-              }
-              publisher pub;
-              pub.schedule_res_id_ =
-                  to_res_id(::motis::module::global_res_id::SCHEDULE);
-
-              for (auto const& m : msgs) {
-                if (rabbitmq_log_enabled_) {
-                  rabbitmq_log_file_ << "[" << motis::logging::time()
-                                     << "] msg size=" << m.content_.size()
-                                     << "\n"
-                                     << m.content_ << "\n"
-                                     << std::endl;
-                }
-                parse_str_and_write_to_db(
-                    *file_upload_, {m.content_.c_str(), m.content_.size()},
-                    file_type::JSON, pub);
-              }
-
-              auto const stream_offset = msgs.back().stream_offset_;
-              auto const queue_id = get_queue_id(config_.rabbitmq_);
-              if (stream_offset) {
-                store_stream_offset(queue_id, *stream_offset);
-              }
-
-              update_system_time(*sched, pub);
-
-              if (rabbitmq_log_enabled_) {
-                rabbitmq_log_file_
-                    << "[" << motis::logging::time() << "] published "
-                    << msgs.size()
-                    << " messages, system_time=" << sched->system_time_ << " ("
-                    << format_unix_time(sched->system_time_) << ")"
-                    << std::endl;
-              }
-
-              publish_system_time_changed(pub.schedule_res_id_);
-            },
-            ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
-            ctx::accesses_t{ctx::access_request{
-                to_res_id(::motis::module::global_res_id::RIS_DATA),
-                ctx::access_t::WRITE}});
       }
+
+      if (config.resume_stream_) {
+        auto const stored_stream_offset =
+            get_stream_offset(ribasis::get_queue_id(config.login_));
+        if (stored_stream_offset) {
+          LOG(info) << prefix << ": resuming at stored stream offset "
+                    << *stored_stream_offset;
+          config.login_.numeric_stream_offset_ = *stored_stream_offset + 1;
+        } else {
+          LOG(info) << prefix << ": no stored stream offset found, resuming at "
+                    << config.login_.stream_offset_;
+        }
+      }
+
+      auto& receiver =
+          ribasis_receivers_.emplace_back(std::make_unique<ribasis::receiver>(
+              config, [this, d, sched](ribasis::receiver& rec,
+                                       std::vector<amqp::msg>&& msgs) {
+                d->enqueue(
+                    ctx_data{d},
+                    [this, &rec, sched, msgs = std::move(msgs)]() {
+                      publisher pub;
+                      pub.schedule_res_id_ =
+                          to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+                      LOG(info) << rec.name() << ": processing " << msgs.size()
+                                << " messages";
+
+                      parse_and_write_to_db(*file_upload_,
+                                            amqp_buffer_reader{msgs},
+                                            file_type::JSON, pub);
+
+                      auto const stream_offset = msgs.back().stream_offset_;
+                      if (stream_offset) {
+                        LOG(info) << rec.name()
+                                  << ": new stream offset: " << *stream_offset
+                                  << ", queue id: " << rec.queue_id();
+                        store_stream_offset(rec.queue_id(), *stream_offset);
+                      }
+
+                      LOG(info)
+                          << rec.name() << ": system time: old="
+                          << format_unix_time(sched->system_time_)
+                          << ", max=" << format_unix_time(pub.max_timestamp_);
+
+                      update_system_time(*sched, pub);
+
+                      publish_system_time_changed(pub.schedule_res_id_);
+                    },
+                    ctx::op_id{"ribasis_receive_" + rec.name(), CTX_LOCATION,
+                               0U},
+                    ctx::op_type_t::IO,
+                    ctx::accesses_t{ctx::access_request{
+                        to_res_id(::motis::module::global_res_id::RIS_DATA),
+                        ctx::access_t::WRITE}});
+              }));
     });
   }
 
@@ -417,7 +403,7 @@ struct ris::impl {
     if (has_urls) {
       d.register_timer(
           "RIS GTFS-RT Update",
-          boost::posix_time::seconds{config_.update_interval_},
+          boost::posix_time::seconds{config_.gtfs_rt_update_interval_},
           [this, &sched]() { update_gtfs_rt(sched); },
           ctx::accesses_t{ctx::access_request{
               to_res_id(::motis::module::global_res_id::RIS_DATA),
@@ -428,7 +414,7 @@ struct ris::impl {
       forward(sched, 0U, config_.init_time_.unix_time_, true);
     }
 
-    init_ribasis_receiver(&d, &sched);
+    init_ribasis_receivers(&d, &sched);
   }
 
   static std::string_view get_content_type(HTTPRequest const* req) {
@@ -870,21 +856,21 @@ struct ris::impl {
   void parse_and_write_to_db(input& in, Reader&& reader, file_type const type,
                              Publisher& pub) {
     auto const risml_fn = [&](std::string_view s, std::string_view,
-                              std::function<void(ris_message &&)> const& cb) {
+                              std::function<void(ris_message&&)> const& cb) {
       risml::to_ris_message(s, cb, in.tag());
     };
     auto const gtfsrt_fn = [&](std::string_view s, std::string_view,
-                               std::function<void(ris_message &&)> const& cb) {
+                               std::function<void(ris_message&&)> const& cb) {
       gtfsrt::to_ris_message(in.gtfs_knowledge(),
                              config_.gtfs_is_addition_skip_allowed_, s, cb,
                              in.tag());
     };
     auto const ribasis_fn = [&](std::string_view s, std::string_view,
-                                std::function<void(ris_message &&)> const& cb) {
+                                std::function<void(ris_message&&)> const& cb) {
       ribasis::to_ris_message(s, cb, in.tag());
     };
     auto const file_fn = [&](std::string_view s, std::string_view file_name,
-                             std::function<void(ris_message &&)> const& cb) {
+                             std::function<void(ris_message&&)> const& cb) {
       if (boost::ends_with(file_name, ".xml")) {
         return risml_fn(s, file_name, cb);
       } else if (boost::ends_with(file_name, ".json")) {
@@ -1029,11 +1015,6 @@ struct ris::impl {
     }
   }
 
-  static std::string get_queue_id(amqp::login const& login) {
-    return fmt::format("{}:{}/{}/{}", login.host_, login.port_, login.vhost_,
-                       login.queue_);
-  }
-
   static void publish_system_time_changed(ctx::res_id_t schedule_res_id) {
     message_creator mc;
     mc.create_and_finish(
@@ -1064,13 +1045,12 @@ struct ris::impl {
   }
 
   void stop_io() const {
-    if (ribasis_receiver_ != nullptr) {
-      ribasis_receiver_->stop();
+    for (auto& rec : ribasis_receivers_) {
+      if (rec) {
+        rec->stop();
+      }
     }
   }
-
-  std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
-  unixtime ribasis_receiver_last_update_{now()};
 
   db::env env_;
   std::mutex min_max_mutex_;
@@ -1081,10 +1061,7 @@ struct ris::impl {
   std::unique_ptr<input> file_upload_;
   std::vector<input> inputs_;
 
-  bool rabbitmq_log_enabled_{false};
-  std::ofstream rabbitmq_log_file_;
-
-  std::vector<amqp::msg> ribasis_buffer_;
+  std::vector<std::unique_ptr<ribasis::receiver>> ribasis_receivers_;
 };
 
 ris::ris() : module("RIS", "ris") {
@@ -1100,30 +1077,35 @@ ris::ris() : module("RIS", "ris") {
   param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
   param(config_.http_proxy_, "http_proxy", "proxy for HTTP requests");
-  param(config_.update_interval_, "update_interval",
-        "RT update interval in seconds (RabbitMQ messages get buffered)");
-  param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
-  param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
-  param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
-  param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
-  param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
-  param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
-  param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
-  param(config_.rabbitmq_.cert_, "rabbitmq.cert",
-        "RabbitMQ path to client certificate");
-  param(config_.rabbitmq_.key_, "rabbitmq.key",
-        "RabbitMQ path to client key file");
-  param(config_.rabbitmq_log_, "rabbitmq.log",
-        "Path to log file for RabbitMQ messages (set to empty string to "
-        "disable logging)");
-  param(config_.rabbitmq_.prefetch_count_, "rabbitmq.prefetch_count",
-        "Number of RabbitMQ messages to prefetch (must be > 0 if using "
-        "RabbitMQ streams)");
-  param(config_.rabbitmq_.stream_offset_, "rabbitmq.stream_offset",
-        "Stream offset if using RabbitMQ streams (e.g. next, 2h, 1D...)");
-  param(config_.rabbitmq_resume_stream_, "rabbitmq.resume_stream",
-        "Resume stream at last received stream offset (if using RabbitMQ "
-        "streams)");
+  param(config_.gtfs_rt_update_interval_, "gtfsrt.update_interval",
+        "RT update interval in seconds for GTFS-RT");
+
+  for_each_rabbitmq_config(
+      config_, [&](rabbitmq_config& config, std::string const& prefix) {
+        config.name_ = prefix;
+        param(config.name_, prefix + ".name", "Name for logs");
+        param(config.login_.host_, prefix + ".host", "RabbitMQ remote host");
+        param(config.login_.port_, prefix + ".port", "RabbitMQ remote port");
+        param(config.login_.user_, prefix + ".username", "RabbitMQ username");
+        param(config.login_.pw_, prefix + ".password", "RabbitMQ password");
+        param(config.login_.vhost_, prefix + ".vhost", "RabbitMQ vhost");
+        param(config.login_.queue_, prefix + ".queue", "RabbitMQ queue name");
+        param(config.login_.ca_, prefix + ".ca", "RabbitMQ path to CA file");
+        param(config.login_.cert_, prefix + ".cert",
+              "RabbitMQ path to client certificate");
+        param(config.login_.key_, prefix + ".key",
+              "RabbitMQ path to client key file");
+        param(config.login_.prefetch_count_, prefix + ".prefetch_count",
+              "Number of RabbitMQ messages to prefetch (must be > 0 if using "
+              "RabbitMQ streams)");
+        param(config.login_.stream_offset_, prefix + ".stream_offset",
+              "Stream offset if using RabbitMQ streams (e.g. next, 2h, 1D...)");
+        param(config.resume_stream_, prefix + ".resume_stream",
+              "Resume stream at last received stream offset (if using RabbitMQ "
+              "streams)");
+        param(config.update_interval_, prefix + ".update_interval",
+              "RT update interval in seconds (RabbitMQ messages get buffered)");
+      });
 }
 
 ris::~ris() = default;

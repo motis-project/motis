@@ -6,9 +6,9 @@
 
 #include "conf/date_time.h"
 
-#include "rabbitmq/login.hpp"
-
 #include "motis/module/module.h"
+
+#include "motis/ris/rabbitmq_config.h"
 
 namespace motis::ris {
 
@@ -20,11 +20,10 @@ struct config {
   size_t db_max_size_{static_cast<size_t>(1024) * 1024 * 1024 * 512};
   bool instant_forward_{false};
   bool gtfs_is_addition_skip_allowed_{true};
-  amqp::login rabbitmq_;
-  unsigned update_interval_{60};
-  std::string rabbitmq_log_{};
+  unsigned gtfs_rt_update_interval_{60};
   std::string http_proxy_;
-  bool rabbitmq_resume_stream_{true};
+  rabbitmq_config rabbitmq1_;
+  rabbitmq_config rabbitmq2_;
 };
 
 struct ris : public motis::module::module {
