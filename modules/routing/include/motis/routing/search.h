@@ -101,10 +101,13 @@ struct search {
     mcd::hash_map<unsigned, std::vector<simple_edge>>
         travel_time_lb_graph_edges;
     mcd::hash_map<unsigned, std::vector<simple_edge>> transfers_lb_graph_edges;
+
     auto const route_offset = q.sched_->non_station_node_offset_;
-    for (auto const& e : q.query_edges_) {
-      auto const from_node = (Dir == search_dir::FWD) ? e.from_ : e.to_;
-      auto const to_node = (Dir == search_dir::FWD) ? e.to_ : e.from_;
+
+    auto const add_lb_edge = [&](node const* from, node const* to,
+                                 duration const time, bool const is_transfer) {
+      auto const from_node = (Dir == search_dir::FWD) ? from : to;
+      auto const to_node = (Dir == search_dir::FWD) ? to : from;
 
       // station graph
       auto const from_station = from_node->get_station()->id_;
@@ -118,12 +121,33 @@ struct search {
                                       ? route_offset + to_node->route_
                                       : to_station;
 
-      auto const ec = e.get_minimum_cost();
-
       travel_time_lb_graph_edges[to_station].emplace_back(
-          simple_edge{from_station, ec.time_});
+          simple_edge{from_station, time});
       transfers_lb_graph_edges[to_interchange].emplace_back(simple_edge{
-          from_interchange, static_cast<uint16_t>(ec.transfer_ ? 1 : 0)});
+          from_interchange, static_cast<uint16_t>(is_transfer ? 1 : 0)});
+    };
+
+    for (auto const& e : q.query_edges_) {
+      auto const ec = e.get_minimum_cost();
+      add_lb_edge(e.from_, e.to_, ec.time_, ec.transfer_ ? 1 : 0);
+
+      // Enable not counting the transfer when leaving a transport at the
+      // destination station to walk directly to the intermodal destination:
+      // FWD: ROUTE_NODE --AFTER_TRAIN_FWD_EDGE,intermodal_costs--> END
+      // BWD: ROUTE_NODE <--AFTER_TRAIN_BWD_EDGE,intermodal_costs-- END
+      if constexpr (Dir == search_dir::FWD) {
+        if (e.to_->id_ == 1U /* intermodal destination */) {
+          e.from_->for_each_route_node([&](node const* rn) {
+            add_lb_edge(rn, e.to_, ec.time_, ec.transfer_ ? 1 : 0);
+          });
+        }
+      } else if constexpr (Dir == search_dir::BWD) {
+        if (e.from_->id_ == 1U /* intermodal destination */) {
+          e.to_->for_each_route_node([&](node const* rn) {
+            add_lb_edge(e.from_, rn, ec.time_, ec.transfer_ ? 1 : 0);
+          });
+        }
+      }
     }
 
     auto const& meta_goals = q.sched_->stations_[q.to_->id_]->equivalent_;
@@ -209,6 +233,24 @@ struct search {
     mcd::hash_map<node const*, std::vector<edge>> additional_edges;
     for (auto const& e : q.query_edges_) {
       additional_edges[e.get_source<Dir>()].push_back(e);
+
+      if constexpr (Dir == search_dir::FWD) {
+        if (e.to_->id_ == 1U /* intermodal destination */) {
+          e.from_->for_each_route_node([&](node* rn) {
+            additional_edges[rn].push_back(make_after_train_fwd_edge(
+                rn, e.to_, e.get_foot_edge_cost().time_, false,
+                e.get_mumo_id()));
+          });
+        }
+      } else if constexpr (Dir == search_dir::BWD) {
+        if (e.from_->id_ == 1U /* intermodal destination */) {
+          e.to_->for_each_route_node([&](node* rn) {
+            additional_edges[rn].push_back(make_after_train_bwd_edge(
+                e.from_, rn, e.get_foot_edge_cost().time_, false,
+                e.get_mumo_id()));
+          });
+        }
+      }
     }
 
     auto const fastest_direct = get_fastest_direct(*q.sched_, q, Dir);

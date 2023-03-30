@@ -143,6 +143,12 @@ state initial_state(LabelIt& it) {
       ++it;
     }
     return state::WALK;
+  } else if (auto first_edge_type = std::next(it)->edge_->type();
+             first_edge_type == edge::AFTER_TRAIN_BWD_EDGE ||
+             first_edge_type == edge::AFTER_TRAIN_FWD_EDGE) {
+    // After train foot edge:
+    // route node at destination station --AFTER_TRAIN_FOOT_EDGE--> END
+    return state::WALK;
   } else {
     return state::AT_STATION;
   }

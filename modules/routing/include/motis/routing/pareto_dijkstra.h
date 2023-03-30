@@ -52,8 +52,15 @@ struct pareto_dijkstra {
         for (auto const& e : edges) {
           auto const& from = sched.stations_[e.from_->get_station()->id_];
           auto const& to = sched.stations_[e.to_->get_station()->id_];
-          trace("{} --{},{}--> {}\n", from->name_, e.type_str(),
-                e.get_foot_edge_cost().time_, to->name_);
+          trace("{} [{}] --{},{}--> {} [{}]\n", from->name_,
+                e.from_->type_str(), e.type_str(), e.get_foot_edge_cost().time_,
+                to->name_, e.to_->type_str());
+        }
+      }
+      for (auto i = 0U; i != is_goal_.size(); ++i) {
+        if (is_goal_[i]) {
+          trace(" GOAL: {} {}\n", sched.stations_[i]->eva_nr_,
+                sched.stations_[i]->name_);
         }
       }
     }
@@ -63,7 +70,7 @@ struct pareto_dijkstra {
     for (auto const& l : start_labels) {
       trace("START: ");
       if (kTracing) {
-        l->print(sched_, std::cout);
+        l->print(sched_, std::cerr);
       }
       trace("\n");
 

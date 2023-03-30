@@ -348,6 +348,8 @@ public:
     switch (type()) {
       case TIME_DEPENDENT_MUMO_EDGE:
       case PERIODIC_MUMO_EDGE:
+      case AFTER_TRAIN_FWD_EDGE:
+      case AFTER_TRAIN_BWD_EDGE: [[fallthrough]];
       case MUMO_EDGE: return m_.foot_edge_.mumo_id_;
       case HOTEL_EDGE: return m_.hotel_edge_.mumo_id_;
       default: return -1;
@@ -540,14 +542,16 @@ inline edge make_foot_edge(node* from, node* to, uint16_t time_cost = 0,
 
 inline edge make_after_train_fwd_edge(node* from, node* to,
                                       uint16_t time_cost = 0,
-                                      bool transfer = false) {
-  return edge(from, to, edge::AFTER_TRAIN_FWD_EDGE, time_cost, 0, transfer);
+                                      bool transfer = false, int mumo_id = 0) {
+  return edge(from, to, edge::AFTER_TRAIN_FWD_EDGE, time_cost, 0, transfer,
+              mumo_id);
 }
 
 inline edge make_after_train_bwd_edge(node* from, node* to,
                                       uint16_t time_cost = 0,
-                                      bool transfer = false) {
-  return edge(from, to, edge::AFTER_TRAIN_BWD_EDGE, time_cost, 0, transfer);
+                                      bool transfer = false, int mumo_id = 0) {
+  return edge(from, to, edge::AFTER_TRAIN_BWD_EDGE, time_cost, 0, transfer,
+              mumo_id);
 }
 
 inline edge make_mumo_edge(node* from, node* to, uint16_t time_cost = 0,
