@@ -102,3 +102,7 @@
   url=git@github.com:motis-project/libosmium.git
   branch=master
   commit=bc09725a4636d5036bfed30de2db0764cdff2de9
+[valhalla]
+  url=git@github.com:motis-project/valhalla.git
+  branch=master
+  commit=b54704045314f6a7080692ddfee6bff4d2748add
