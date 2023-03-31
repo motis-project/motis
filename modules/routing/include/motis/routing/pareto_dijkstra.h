@@ -17,7 +17,7 @@ namespace motis::routing {
 
 const bool FORWARDING = true;
 
-constexpr auto const kTracing = true;
+constexpr auto const kTracing = false;
 
 template <typename... T>
 void trace(T&&... t) {
@@ -227,7 +227,7 @@ private:
 
     trace("START: ");
     if (kTracing) {
-      terminal_label->print(sched_, std::cout);
+      terminal_label->print(sched_, std::cerr);
     }
     trace("\n");
 
