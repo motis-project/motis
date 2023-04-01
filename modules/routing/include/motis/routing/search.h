@@ -7,6 +7,8 @@
 #include "motis/core/common/timing.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/validate_graph.h"
+#include "motis/core/journey/check_journey.h"
+#include "motis/core/journey/print_journey.h"
 #include "motis/core/journey/print_trip.h"
 #include "motis/routing/lower_bounds.h"
 #include "motis/routing/output/labels_to_journey.h"
@@ -137,15 +139,13 @@ struct search {
       // BWD: ROUTE_NODE <--AFTER_TRAIN_BWD_EDGE,intermodal_costs-- END
       if constexpr (Dir == search_dir::FWD) {
         if (e.to_->id_ == 1U /* intermodal destination */) {
-          e.from_->for_each_route_node([&](node const* rn) {
-            add_lb_edge(rn, e.to_, ec.time_, ec.transfer_ ? 1 : 0);
-          });
+          e.from_->for_each_route_node(
+              [&](node const* rn) { add_lb_edge(rn, e.to_, ec.time_, 1); });
         }
       } else if constexpr (Dir == search_dir::BWD) {
         if (e.from_->id_ == 1U /* intermodal destination */) {
-          e.to_->for_each_route_node([&](node const* rn) {
-            add_lb_edge(e.from_, rn, ec.time_, ec.transfer_ ? 1 : 0);
-          });
+          e.to_->for_each_route_node(
+              [&](node const* rn) { add_lb_edge(e.from_, rn, ec.time_, 1); });
         }
       }
     }
@@ -237,17 +237,21 @@ struct search {
       if constexpr (Dir == search_dir::FWD) {
         if (e.to_->id_ == 1U /* intermodal destination */) {
           e.from_->for_each_route_node([&](node* rn) {
-            additional_edges[rn].push_back(make_after_train_fwd_edge(
-                rn, e.to_, e.get_foot_edge_cost().time_, false,
-                e.get_mumo_id()));
+            if (rn->is_out_allowed()) {
+              additional_edges[rn].push_back(make_after_train_fwd_edge(
+                  rn, e.to_, e.get_foot_edge_cost().time_, true,
+                  e.get_mumo_id()));
+            }
           });
         }
       } else if constexpr (Dir == search_dir::BWD) {
         if (e.from_->id_ == 1U /* intermodal destination */) {
           e.to_->for_each_route_node([&](node* rn) {
-            additional_edges[rn].push_back(make_after_train_bwd_edge(
-                e.from_, rn, e.get_foot_edge_cost().time_, false,
-                e.get_mumo_id()));
+            if (rn->is_in_allowed()) {
+              additional_edges[rn].push_back(make_after_train_bwd_edge(
+                  e.from_, rn, e.get_foot_edge_cost().time_, true,
+                  e.get_mumo_id()));
+            }
           });
         }
       }
@@ -345,13 +349,20 @@ struct search {
                                   }),
                    end(filtered));
 
-    return search_result(stats,
-                         utl::to_vec(filtered,
-                                     [&q](Label* label) {
-                                       return output::labels_to_journey(
-                                           *q.sched_, label, Dir);
-                                     }),
-                         interval_begin, interval_end);
+    return search_result(
+        stats,
+        utl::to_vec(filtered,
+                    [&q](Label* label) {
+                      auto const j =
+                          output::labels_to_journey(*q.sched_, label, Dir);
+                      auto const good = check_journey(
+                          j, [](bool) -> std::ostream& { return std::cout; });
+                      if (!good) {
+                        print_journey(j, std::cout);
+                      }
+                      return j;
+                    }),
+        interval_begin, interval_end);
   }
 };
 

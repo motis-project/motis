@@ -153,7 +153,8 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
                                   std::vector<journey> const& journeys) {
     for (auto const& j : journeys) {
       if (!check_journey(j, report_journey_error)) {
-        fail(file_idx) << "Broken journey" << std::endl;
+        fail(file_idx) << "Broken journey" << journey_errors.str() << std::endl;
+        journey_errors.str("");
       }
     }
   };
