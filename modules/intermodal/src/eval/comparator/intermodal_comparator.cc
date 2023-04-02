@@ -119,20 +119,21 @@ std::string file_identifier(std::string const& filename) {
   return fs::path{filename}.stem().string();
 }
 
-bool check(int id, std::vector<msg_ptr> const& msgs,
+bool check(int id, std::vector<msg_ptr> const& responses,
            std::vector<msg_ptr> const& queries,
-           std::vector<std::string> const& files,
+           std::vector<std::string> const& response_files,
            std::vector<std::string> const& query_files,
            std::vector<int>& file_errors, fs::path const& fail_path, bool local,
            query_type_t const query_type, bool pretty_print) {
-  assert(msgs.size() == files.size());
-  assert(msgs.size() > 1);
-  auto const file_count = files.size();
+  assert(responses.size() == response_files.size());
+  assert(responses.size() > 1);
+  auto const file_count = response_files.size();
   auto match = true;
   std::unordered_set<int> failed_files;
 
-  auto const res = utl::to_vec(
-      msgs, [](auto const& m) { return motis_content(RoutingResponse, m); });
+  auto const res = utl::to_vec(responses, [](auto const& m) {
+    return motis_content(RoutingResponse, m);
+  });
 
   auto const fail = [&](auto const file_idx) -> std::ostream& {
     if (match) {
@@ -140,7 +141,7 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
       match = false;
     }
     failed_files.insert(file_idx);
-    std::cout << "  " << files[file_idx] << ": ";
+    std::cout << "  " << response_files[file_idx] << ": ";
     return std::cout;
   };
 
@@ -203,9 +204,9 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
 
     std::ofstream out{
         (fail_path / fmt::format("{}_{}.json", std::to_string(id),
-                                 file_identifier(files[file_idx])))
+                                 file_identifier(response_files[file_idx])))
             .string()};
-    out << msgs[file_idx]->to_json(!pretty_print) << std::endl;
+    out << responses[file_idx]->to_json(!pretty_print) << std::endl;
 
     if (!queries.empty()) {
       std::ofstream query_out{
@@ -299,6 +300,7 @@ int compare(int argc, char const** argv) {
   std::vector<int> file_errors(file_count);
 
   auto msg_count = 0;
+  auto non_empty_msg_count = 0;
   auto errors = 0;
   auto done = false;
   std::unordered_set<int> read;
@@ -313,7 +315,8 @@ int compare(int argc, char const** argv) {
           std::string line;
           std::getline(query_in, line);
           auto const m = make_msg(line);
-          if (m->get()->content_type() == MsgContent_IntermodalRoutingRequest) {
+          if (m->get()->content_type() == MsgContent_IntermodalRoutingRequest ||
+              m->get()->content_type() == MsgContent_RoutingRequest) {
             queued_queries[i][m->id()] = m;
             read.insert(m->id());
             done = false;
@@ -367,6 +370,10 @@ int compare(int argc, char const** argv) {
         if (!success) {
           ++errors;
         }
+        if (motis_content(RoutingResponse, msgs[0])->connections()->size() ==
+            0U) {
+          ++non_empty_msg_count;
+        }
         for (auto& q : queued_msgs) {
           q.erase(id);
         }
@@ -399,7 +406,11 @@ int compare(int argc, char const** argv) {
   }
 
   std::cout << "Queries where responses don't match: " << errors << "/"
-            << msg_count << std::endl;
+            << msg_count << " (non-empty: " << non_empty_msg_count
+            << ", non-empty-error-rate: "
+            << static_cast<int>(
+                   (static_cast<double>(errors) / non_empty_msg_count) * 100)
+            << "%)" << std::endl;
   std::cout << "Mismatches by file:" << std::endl;
   std::cout << "  " << filenames[0] << ": Used as reference" << std::endl;
   for (auto i = 1UL; i < filenames.size(); ++i) {

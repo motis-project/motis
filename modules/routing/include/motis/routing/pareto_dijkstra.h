@@ -164,7 +164,7 @@ private:
   void create_new_label(Label* l, edge const& edge) {
     Label blank{};
     bool created = l->create_label(
-        blank, edge, lower_bounds_, fastest_direct_, false,
+        blank, edge, lower_bounds_, fastest_direct_,
         (Dir == search_dir::FWD && edge.type() == edge::EXIT_EDGE &&
          is_goal_[edge.get_source<Dir>()->get_station()->id_]) ||
             (Dir == search_dir::BWD && edge.type() == edge::ENTER_EDGE &&
