@@ -30,17 +30,15 @@ Offset<Station> station_builder::get_or_create_station(int eva_num,
         utl::get_or_create(
             fbs_timezones_, tze,
             [&]() {
-              if (tze->season_) {
-                auto const& season = *(tze->season_);
-                return CreateTimezone(
-                    fbb, tze->general_gmt_offset_,
-                    CreateSeason(fbb, season.gmt_offset_, season.first_day_idx_,
-                                 season.last_day_idx_,
-                                 season.season_begin_time_,
-                                 season.season_end_time_));
-              } else {
-                return CreateTimezone(fbb, tze->general_gmt_offset_);
-              }
+              return CreateTimezone(
+                  fbb, tze->general_gmt_offset_,
+                  fbb.CreateVectorOfStructs(utl::to_vec(
+                      tze->seasons_, [&](season_entry const& season) {
+                        return Season(season.gmt_offset_, season.first_day_idx_,
+                                      season.last_day_idx_,
+                                      season.season_begin_time_,
+                                      season.season_end_time_);
+                      })));
             }),
         0, it->second.platform_change_time_,
         fbb.CreateVector(

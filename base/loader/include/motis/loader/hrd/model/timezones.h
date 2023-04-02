@@ -11,6 +11,7 @@
 namespace motis::loader::hrd {
 
 struct season_entry {
+  season_entry() = default;
   season_entry(int const gmt_offset, int const first_day_idx,
                int const last_day_idx, int const season_begin_time,
                int const season_end_time)
@@ -28,10 +29,11 @@ struct season_entry {
 };
 
 struct timezone_entry {
-  timezone_entry(int general_gmt_offset, boost::optional<season_entry> season)
-      : general_gmt_offset_(general_gmt_offset), season_(std::move(season)) {}
+  timezone_entry() = default;
+  timezone_entry(int general_gmt_offset, std::vector<season_entry> seasons)
+      : general_gmt_offset_(general_gmt_offset), seasons_(std::move(seasons)) {}
   int general_gmt_offset_;  // in minutes
-  boost::optional<season_entry> season_;
+  std::vector<season_entry> seasons_;
 };
 
 struct timezones {

@@ -116,7 +116,6 @@ jobs:
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
     steps:
       - uses: actions/checkout@v3
-      - uses: seanmiddleditch/gha-setup-ninja@master
 
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
@@ -137,6 +136,9 @@ jobs:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
           restore-keys: deps-
+
+      - name: Install Ninja
+        run: brew install ninja
 
       # ==== BUILD ====
       - name: CMake
