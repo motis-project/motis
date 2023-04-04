@@ -427,8 +427,6 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
       case IntermodalStart_IntermodalOntripStart: {
         auto const start_pt = point_gen.random_point_near(
             {from->lat(), from->lng()}, start_radius);
-        auto const dest_pt =
-            point_gen.random_point_near({to->lat(), to->lng()}, dest_radius);
 
         for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;

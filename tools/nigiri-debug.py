@@ -13,7 +13,7 @@ def result_f(id, router):
     return f"{id}_responses_{router}.json"
 
 if len(sys.argv) < 3:
-    print(f"usage: {sys.argv[0]} ID START_TIME")
+    print(f"usage: {sys.argv[0]} ID YYYY-MM-DD HH:MM")
 else:
     id = int(sys.argv[1])
     start_time = sys.argv[2]
@@ -28,8 +28,8 @@ else:
         "--nigiri.no_cache=true",
         "--import.paths", "schedule:input-{}".format(id), "osm:input/osm.pbf",
         "--import.data_dir=data_{}".format(id),
-        f"--batch_input_file=fail/{query_f(id, routers[1])}",
-        f"--batch_output_file={result_f(id, routers[1])}",
+        f"--batch_input_file=fail/{query_f(id, 'nigiri')}",
+        f"--batch_output_file={result_f(id, 'nigiri')}",
         "--num_threads", "1"
     ]
     # run_nigiri = [
