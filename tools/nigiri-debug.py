@@ -3,6 +3,9 @@
 import sys
 import subprocess
 
+routers = ["routing", "nigiri"]
+
+
 def query_f(id, router):
     return f"{id}_queries_{router}.json"
 
