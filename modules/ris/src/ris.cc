@@ -276,48 +276,44 @@ struct ris::impl {
         }
       }
 
-      auto& receiver =
-          ribasis_receivers_.emplace_back(std::make_unique<ribasis::receiver>(
-              config, [this, d, sched](ribasis::receiver& rec,
-                                       std::vector<amqp::msg>&& msgs) {
-                d->enqueue(
-                    ctx_data{d},
-                    [this, &rec, sched, msgs = std::move(msgs)]() {
-                      publisher pub;
-                      pub.schedule_res_id_ =
-                          to_res_id(::motis::module::global_res_id::SCHEDULE);
+      ribasis_receivers_.emplace_back(std::make_unique<ribasis::receiver>(
+          config, [this, d, sched](ribasis::receiver& rec,
+                                   std::vector<amqp::msg>&& msgs) {
+            d->enqueue(
+                ctx_data{d},
+                [this, &rec, sched, msgs = std::move(msgs)]() {
+                  publisher pub;
+                  pub.schedule_res_id_ =
+                      to_res_id(::motis::module::global_res_id::SCHEDULE);
 
-                      LOG(info) << rec.name() << ": processing " << msgs.size()
-                                << " messages";
+                  LOG(info) << rec.name() << ": processing " << msgs.size()
+                            << " messages";
 
-                      parse_and_write_to_db(*file_upload_,
-                                            amqp_buffer_reader{msgs},
-                                            file_type::JSON, pub);
+                  parse_and_write_to_db(*file_upload_, amqp_buffer_reader{msgs},
+                                        file_type::JSON, pub);
 
-                      auto const stream_offset = msgs.back().stream_offset_;
-                      if (stream_offset) {
-                        LOG(info) << rec.name()
-                                  << ": new stream offset: " << *stream_offset
-                                  << ", queue id: " << rec.queue_id();
-                        store_stream_offset(rec.queue_id(), *stream_offset);
-                      }
+                  auto const stream_offset = msgs.back().stream_offset_;
+                  if (stream_offset) {
+                    LOG(info) << rec.name()
+                              << ": new stream offset: " << *stream_offset
+                              << ", queue id: " << rec.queue_id();
+                    store_stream_offset(rec.queue_id(), *stream_offset);
+                  }
 
-                      LOG(info)
-                          << rec.name() << ": system time: old="
-                          << format_unix_time(sched->system_time_)
-                          << ", max=" << format_unix_time(pub.max_timestamp_);
+                  LOG(info) << rec.name() << ": system time: old="
+                            << format_unix_time(sched->system_time_)
+                            << ", max=" << format_unix_time(pub.max_timestamp_);
 
-                      update_system_time(*sched, pub);
+                  update_system_time(*sched, pub);
 
-                      publish_system_time_changed(pub.schedule_res_id_);
-                    },
-                    ctx::op_id{"ribasis_receive_" + rec.name(), CTX_LOCATION,
-                               0U},
-                    ctx::op_type_t::IO,
-                    ctx::accesses_t{ctx::access_request{
-                        to_res_id(::motis::module::global_res_id::RIS_DATA),
-                        ctx::access_t::WRITE}});
-              }));
+                  publish_system_time_changed(pub.schedule_res_id_);
+                },
+                ctx::op_id{"ribasis_receive_" + rec.name(), CTX_LOCATION, 0U},
+                ctx::op_type_t::IO,
+                ctx::accesses_t{ctx::access_request{
+                    to_res_id(::motis::module::global_res_id::RIS_DATA),
+                    ctx::access_t::WRITE}});
+          }));
     });
   }
 
