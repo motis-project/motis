@@ -7,10 +7,11 @@ routers = ["routing", "nigiri"]
 
 
 def query_f(id, router):
-    return f"{id}_queries_{router}.json"
+    return f"{id}_q100_bwd_{router}.json"
+
 
 def result_f(id, router):
-    return f"{id}_responses_{router}.json"
+    return f"{id}_r100_bwd_{router}.json"
 
 if len(sys.argv) < 3:
     print(f"usage: {sys.argv[0]} ID YYYY-MM-DD HH:MM")
@@ -45,6 +46,7 @@ else:
 
     needle = bytes("init: time_at_start={}".format(start_time), encoding='utf8')
     do_print = False
+    printed = False
     for line in out.splitlines():
         if line.startswith(needle):
             do_print = True
@@ -52,4 +54,8 @@ else:
             do_print = False
 
         if do_print:
+            printed = True
             print(line.decode("utf-8"))
+
+    if not printed:
+        print("NOTHING FOUND")

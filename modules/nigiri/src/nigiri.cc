@@ -1,5 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
+#include "cista/memory_holder.h"
+
 #include "conf/date_time.h"
 
 #include "utl/enumerate.h"
@@ -7,7 +9,9 @@
 #include "utl/verify.h"
 
 #include "nigiri/loader/dir.h"
-#include "nigiri/loader/hrd/load_timetable.h"
+#include "nigiri/loader/gtfs/loader.h"
+#include "nigiri/loader/hrd/loader.h"
+#include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
@@ -20,6 +24,18 @@ namespace n = ::nigiri;
 namespace motis::nigiri {
 
 struct nigiri::impl {
+  impl() {
+    loaders_.emplace_back(std::make_unique<n::loader::gtfs::gtfs_loader>());
+    loaders_.emplace_back(
+        std::make_unique<n::loader::hrd::hrd_5_00_8_loader>());
+    loaders_.emplace_back(
+        std::make_unique<n::loader::hrd::hrd_5_20_26_loader>());
+    loaders_.emplace_back(
+        std::make_unique<n::loader::hrd::hrd_5_20_39_loader>());
+    loaders_.emplace_back(
+        std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
+  }
+  std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
   std::vector<std::string> tags_;
 };
@@ -42,18 +58,17 @@ void nigiri::init(motis::module::registry& reg) {
 }
 
 void nigiri::import(motis::module::import_dispatcher& reg) {
+  impl_ = std::make_unique<impl>();
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "nigiri", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
              mm::event_collector::publish_fn_t const& publish) {
         auto const& msg = dependencies.at("SCHEDULE");
 
-        impl_ = std::make_unique<impl>();
-
         auto const begin =
-            std::chrono::sys_days{std::chrono::duration_cast<std::chrono::days>(
+            date::sys_days{std::chrono::duration_cast<std::chrono::days>(
                 std::chrono::seconds{conf::parse_date_time(first_day_)})};
-        auto const interval = n::interval<std::chrono::sys_days>{
+        auto const interval = n::interval<date::sys_days>{
             begin, begin + std::chrono::days{num_days_}};
 
         using import::FileEvent;
@@ -61,9 +76,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         h = cista::hash_combine(h, interval.from_.time_since_epoch().count());
         h = cista::hash_combine(h, interval.to_.time_since_epoch().count());
 
-        auto datasets = std::vector<std::tuple<
-            n::source_idx_t, decltype(n::loader::hrd::configs)::const_iterator,
-            std::unique_ptr<n::loader::dir>>>{};
+        auto datasets =
+            std::vector<std::tuple<n::source_idx_t,
+                                   decltype(impl_->loaders_)::const_iterator,
+                                   std::unique_ptr<n::loader::dir>>>{};
         for (auto const [i, p] :
              utl::enumerate(*motis_content(FileEvent, msg)->paths())) {
           if (p->tag()->str() != "schedule") {
@@ -71,12 +87,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
           auto const path = fs::path{p->path()->str()};
           auto d = n::loader::make_dir(path);
-          auto const c = utl::find_if(n::loader::hrd::configs, [&](auto&& c) {
-            return n::loader::hrd::applicable(c, *d);
-          });
-          utl::verify(c != end(n::loader::hrd::configs),
-                      "no loader applicable to {}", path);
-          h = n::loader::hrd::hash(*c, *d, h);
+          auto const c = utl::find_if(
+              impl_->loaders_, [&](auto&& c) { return c->applicable(*d); });
+          utl::verify(c != end(impl_->loaders_), "no loader applicable to {}",
+                      path);
+          h = cista::hash_combine((*c)->hash(*d), h);
 
           datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
 
@@ -86,7 +101,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
-        if (!no_cache_ && std::filesystem::is_regular_file(dump_file_path)) {
+        if (!no_cache_ && fs::is_regular_file(dump_file_path)) {
           try {
             impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
                 n::timetable::read(cista::memory_holder{
@@ -103,10 +118,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               cista::raw::make_unique<n::timetable>());
           (*impl_->tt_)->date_range_ = interval;
-          for (auto const& [src, config, dir] : datasets) {
+          for (auto const& [src, loader, dir] : datasets) {
             LOG(logging::info) << "loading nigiri timetable with configuration "
-                               << config->version_.view();
-            n::loader::hrd::load_timetable(src, *config, *dir, **impl_->tt_);
+                               << (*loader)->name();
+            (*loader)->load(src, *dir, **impl_->tt_);
           }
 
           if (!no_cache_) {
@@ -133,21 +148,20 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                               "/import", DestinationType_Topic);
         publish(make_msg(fbb));
       })
-      ->require("SCHEDULE", [](mm::msg_ptr const& msg) {
+      ->require("SCHEDULE", [this](mm::msg_ptr const& msg) {
         if (msg->get()->content_type() != MsgContent_FileEvent) {
           return false;
         }
         using import::FileEvent;
         return utl::all_of(
             *motis_content(FileEvent, msg)->paths(),
-            [](import::ImportPath const* p) {
+            [this](import::ImportPath const* p) {
               if (p->tag()->str() != "schedule") {
                 return true;
               }
               auto const d = n::loader::make_dir(fs::path{p->path()->str()});
-              return utl::any_of(n::loader::hrd::configs, [&](auto&& c) {
-                return n::loader::hrd::applicable(c, *d);
-              });
+              return utl::any_of(impl_->loaders_,
+                                 [&](auto&& c) { return c->applicable(*d); });
             });
       });
 }
