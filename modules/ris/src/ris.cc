@@ -1,5 +1,6 @@
 #include "motis/ris/ris.h"
 
+#include <chrono>
 #include <cstdint>
 #include <atomic>
 #include <fstream>
@@ -95,6 +96,11 @@ constexpr auto const MAX_DAY_DB = "MAX_DAY_DB";
 // value: stream offset of the latest message that was received
 constexpr auto const STREAM_OFFSET_DB = "STREAM_OFFSET_DB";
 
+// stores the timestamp of the last message received for each rabbitmq stream
+// key: rabbitmq stream identifier
+// value: timestamp of the latest message that was received
+constexpr auto const STREAM_TIMESTAMP_DB = "STREAM_TIMESTAMP_DB";
+
 constexpr auto const BATCH_SIZE = unixtime{3600};
 
 constexpr auto const WRITE_MSG_BUF_MAX_SIZE = 50000;
@@ -125,8 +131,15 @@ inline void for_each_day(ris_message const& m, Fn&& f) {
   }
 }
 
-unixtime to_unixtime(std::string_view s) {
+inline unixtime to_unixtime(std::string_view s) {
   return *reinterpret_cast<unixtime const*>(s.data());
+}
+
+inline unixtime unixtime_duration_ago(conf::duration const& duration) {
+  return std::chrono::duration_cast<std::chrono::seconds>(
+             (std::chrono::system_clock::now() - duration.duration_)
+                 .time_since_epoch())
+      .count();
 }
 
 std::string_view from_unixtime(unixtime const& t) {
@@ -256,7 +269,8 @@ struct ris::impl {
   explicit impl(config& c) : config_{c} {}
 
   void init_ribasis_receivers(dispatcher* d, schedule* sched) {
-    for_each_rabbitmq_config(config_, [&](rabbitmq_config& config,
+    for_each_rabbitmq_config(config_, [this, &d, &sched](
+                                          rabbitmq_config& config,
                                           std::string const& prefix) {
       utl::verify(config.login_.valid(), "invalid {} configuration", prefix);
       if (config.login_.empty()) {
@@ -264,12 +278,25 @@ struct ris::impl {
       }
 
       if (config.resume_stream_) {
-        auto const stored_stream_offset =
-            get_stream_offset(ribasis::get_queue_id(config.login_));
+        auto const queue_id = ribasis::get_queue_id(config.login_);
+        auto const stored_stream_offset = get_stream_offset(queue_id);
+        auto const stored_stream_timestamp = get_stream_timestamp(queue_id);
         if (stored_stream_offset) {
-          LOG(info) << prefix << ": resuming at stored stream offset "
-                    << *stored_stream_offset;
-          config.login_.numeric_stream_offset_ = *stored_stream_offset + 1;
+          auto resume = true;
+          if (config.max_resume_age_ && stored_stream_timestamp) {
+            if (*stored_stream_timestamp <
+                unixtime_duration_ago(config.max_resume_age_)) {
+              LOG(info) << prefix
+                        << ": last stream timestamp is too old, resuming at "
+                        << config.login_.stream_offset_;
+              resume = false;
+            }
+          }
+          if (resume) {
+            LOG(info) << prefix << ": resuming at stored stream offset "
+                      << *stored_stream_offset;
+            config.login_.numeric_stream_offset_ = *stored_stream_offset + 1;
+          }
         } else {
           LOG(info) << prefix << ": no stored stream offset found, resuming at "
                     << config.login_.stream_offset_;
@@ -298,6 +325,10 @@ struct ris::impl {
                               << ": new stream offset: " << *stream_offset
                               << ", queue id: " << rec.queue_id();
                     store_stream_offset(rec.queue_id(), *stream_offset);
+                  }
+
+                  if (pub.max_timestamp_ != 0) {
+                    store_stream_timestamp(rec.queue_id(), pub.max_timestamp_);
                   }
 
                   LOG(info) << rec.name() << ": system time: old="
@@ -355,7 +386,7 @@ struct ris::impl {
       fs::remove_all(config_.db_path_ + "-lock");
     }
 
-    env_.set_maxdbs(5);
+    env_.set_maxdbs(6);
     env_.set_mapsize(config_.db_max_size_);
 
     try {
@@ -372,7 +403,15 @@ struct ris::impl {
     t.dbi_open(MIN_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.dbi_open(MAX_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.dbi_open(STREAM_OFFSET_DB, db::dbi_flags::CREATE);
+    t.dbi_open(STREAM_TIMESTAMP_DB, db::dbi_flags::CREATE);
     t.commit();
+
+    if (config_.init_purge_) {
+      LOG(info) << "removing ris messages older than " << config_.init_purge_
+                << " from database";
+      auto const deleted = purge(unixtime_duration_ago(config_.init_purge_));
+      LOG(info) << "removed " << deleted << " old messages";
+    }
 
     std::vector<input> urls;
     for (auto& in : inputs_) {
@@ -468,20 +507,27 @@ struct ris::impl {
     auto const until =
         static_cast<unixtime>(motis_content(RISPurgeRequest, msg)->until());
 
+    purge(until);
+
+    return {};
+  }
+
+  std::uint64_t purge(unixtime const until) {
     auto t = db::txn{env_};
     auto db = t.dbi_open(MSG_DB);
     auto c = db::cursor{t, db};
     auto bucket = c.get(db::cursor_op::SET_RANGE, until);
+    auto deleted = 0ULL;
     while (bucket) {
       if (bucket->first <= until) {
         c.del();
+        ++deleted;
       }
       bucket = c.get(db::cursor_op::PREV, 0);
     }
     t.commit();
     c.reset();
-
-    return {};
+    return deleted;
   }
 
   msg_ptr apply(module& mod, msg_ptr const& msg) {
@@ -1011,6 +1057,24 @@ struct ris::impl {
     }
   }
 
+  void store_stream_timestamp(std::string const& queue_id, unixtime const ts) {
+    auto t = db::txn{env_};
+    auto db = t.dbi_open(STREAM_TIMESTAMP_DB);
+    t.put(db, queue_id,
+          std::string_view{reinterpret_cast<char const*>(&ts), sizeof(ts)});
+    t.commit();
+  }
+
+  std::optional<unixtime> get_stream_timestamp(std::string const& queue_id) {
+    auto t = db::txn{env_};
+    auto db = t.dbi_open(STREAM_TIMESTAMP_DB);
+    if (auto const val = t.get(db, queue_id); val) {
+      return {lmdb::as_int<unixtime>(*val)};
+    } else {
+      return {};
+    }
+  }
+
   static void publish_system_time_changed(ctx::res_id_t schedule_res_id) {
     message_creator mc;
     mc.create_and_finish(
@@ -1068,6 +1132,9 @@ ris::ris() : module("RIS", "ris") {
   param(config_.db_max_size_, "db_max_size", "virtual memory map size");
   param(config_.init_time_, "init_time", "initial forward time");
   param(config_.clear_db_, "clear_db", "clean db before init");
+  param(config_.init_purge_, "init_purge",
+        "remove messages older than this value from the database during "
+        "startup (e.g. 12h, 1D)");
   param(config_.instant_forward_, "instant_forward",
         "automatically forward after every file during read");
   param(config_.gtfs_is_addition_skip_allowed_,
@@ -1077,7 +1144,7 @@ ris::ris() : module("RIS", "ris") {
         "RT update interval in seconds for GTFS-RT");
 
   for_each_rabbitmq_config(
-      config_, [&](rabbitmq_config& config, std::string const& prefix) {
+      config_, [this](rabbitmq_config& config, std::string const& prefix) {
         config.name_ = prefix;
         param(config.name_, prefix + ".name", "Name for logs");
         param(config.login_.host_, prefix + ".host", "RabbitMQ remote host");
@@ -1099,6 +1166,10 @@ ris::ris() : module("RIS", "ris") {
         param(config.resume_stream_, prefix + ".resume_stream",
               "Resume stream at last received stream offset (if using RabbitMQ "
               "streams)");
+        param(config.max_resume_age_, prefix + ".max_resume_age",
+              "Only resume stream if last message is not older than this "
+              "duration (e.g. 12h, 1D...), otherwise use stream_offset - "
+              "empty/0 to always resume");
         param(config.update_interval_, prefix + ".update_interval",
               "RT update interval in seconds (RabbitMQ messages get buffered)");
       });
