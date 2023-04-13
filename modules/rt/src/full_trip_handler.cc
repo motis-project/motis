@@ -255,16 +255,24 @@ private:
   }
 
   trip* find_existing_trip(full_trip_id const& ftid) {
-    auto it = std::lower_bound(
+    auto const first_it = std::lower_bound(
         begin(sched_.trips_), end(sched_.trips_),
         std::make_pair(ftid.primary_, static_cast<trip*>(nullptr)));
-    if (it == end(sched_.trips_) || !(it->first == ftid.primary_)) {
+    if (first_it == end(sched_.trips_) || !(first_it->first == ftid.primary_)) {
       return nullptr;
     }
-    for (; it != end(sched_.trips_) && it->first == ftid.primary_; ++it) {
+    auto primary_matches = 0;
+    for (auto it = first_it;
+         it != end(sched_.trips_) && it->first == ftid.primary_; ++it) {
       if (it->second->id_.secondary_ == ftid.secondary_) {
         return it->second;
       }
+      ++primary_matches;
+    }
+    if (primary_matches == 1) {
+      // match by primary trip id for now if there is only one trip
+      // with a matching primary trip id
+      return first_it->second;
     }
     return nullptr;
   }
