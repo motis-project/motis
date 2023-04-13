@@ -37,7 +37,8 @@ n::location_idx_t resolve_parent(n::timetable const& tt,
 
 mcd::string get_station_id(std::vector<std::string> const& tags,
                            n::timetable const& tt, n::location_idx_t const l) {
-  return tags.at(to_idx(tt.locations_.src_.at(l))) +
+  auto const src = tt.locations_.src_.at(l);
+  return (src == n::source_idx_t::invalid() ? "" : tags.at(to_idx(src))) +
          std::string{tt.locations_.ids_.at(l).view()};
 }
 

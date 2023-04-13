@@ -97,7 +97,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
 
           auto const tag = p->options()->str();
-          impl_->tags_.emplace_back(tag + (tag.empty() ? "default-" : "-"));
+          impl_->tags_.emplace_back(tag + (tag.empty() ? "default_" : "_"));
         }
 
         auto const data_dir = get_data_directory() / "nigiri";
