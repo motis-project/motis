@@ -11,6 +11,7 @@
 #include "nigiri/loader/dir.h"
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
+#include "nigiri/loader/init_finish.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
@@ -96,7 +97,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
 
           auto const tag = p->options()->str();
-          impl_->tags_.emplace_back(tag + (tag.empty() ? "" : "-"));
+          impl_->tags_.emplace_back(tag + (tag.empty() ? "default-" : "-"));
         }
 
         auto const data_dir = get_data_directory() / "nigiri";
@@ -117,12 +118,17 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         read_datasets:
           impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
               cista::raw::make_unique<n::timetable>());
+
           (*impl_->tt_)->date_range_ = interval;
+          n::loader::register_special_stations(**impl_->tt_);
+
           for (auto const& [src, loader, dir] : datasets) {
             LOG(logging::info) << "loading nigiri timetable with configuration "
                                << (*loader)->name();
             (*loader)->load(src, *dir, **impl_->tt_);
           }
+
+          n::loader::finalize(**impl_->tt_);
 
           if (!no_cache_) {
             std::filesystem::create_directories(data_dir);
