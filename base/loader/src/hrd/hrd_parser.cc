@@ -43,7 +43,7 @@ namespace motis::loader::hrd {
 using namespace flatbuffers64;
 using namespace utl;
 using namespace motis::logging;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 cista::hash_t hash(fs::path const& hrd_root) {
   for (auto const& c : configs) {

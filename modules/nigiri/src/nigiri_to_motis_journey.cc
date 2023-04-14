@@ -28,13 +28,6 @@ struct transport_display_info {
   std::string line_;
 };
 
-n::location_idx_t resolve_parent(n::timetable const& tt,
-                                 n::location_idx_t const x) {
-  return tt.locations_.types_.at(x) == n::location_type::kTrack
-             ? tt.locations_.parents_.at(x)
-             : x;
-}
-
 mcd::string get_station_id(std::vector<std::string> const& tags,
                            n::timetable const& tt, n::location_idx_t const l) {
   auto const src = tt.locations_.src_.at(l);
@@ -46,6 +39,18 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                                        n::timetable const& tt,
                                        n::trip_idx_t const trip,
                                        n::day_idx_t const day) {
+  auto const resolve_parent = [&](n::timetable const& tt,
+                                  n::location_idx_t const x) {
+    if (tt.locations_.ids_[x].view().starts_with("T:")) {
+      // T:... are dummy locations to represent tracks.
+      return tt.locations_.types_.at(x) == n::location_type::kTrack
+                 ? tt.locations_.parents_.at(x)
+                 : x;
+    } else {
+      return x;
+    }
+  };
+
   auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
   auto const first_location = resolve_parent(
       tt,
@@ -58,10 +63,12 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
           tt.route_location_seq_[tt.transport_route_[transport]].back()}
           .location_idx());
   auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
+  auto const line =
+      tt.trip_lines_.at(tt.transport_section_lines_.at(transport).front())
+          .view();
   auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
-              last_stop_time, line] =
-      utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned,
-                 utl::cstr>(id);
+              last_stop_time] =
+      utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned>(id);
   return extern_trip{
       .station_id_ = get_station_id(tags, tt, first_location),
       .train_nr_ = train_nr,
@@ -70,12 +77,19 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
       .target_station_id_ = get_station_id(tags, tt, last_location),
       .target_time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
-      .line_id_ = line.to_str()};
+      .line_id_ = std::string{line}};
 }
 
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                                        std::vector<std::string> const& tags,
                                        n::routing::journey const& nj) {
+  auto const resolve_parent = [&](n::timetable const& tt,
+                                  n::location_idx_t const x) {
+    return tt.locations_.types_.at(x) == n::location_type::kTrack
+               ? tt.locations_.parents_.at(x)
+               : x;
+  };
+
   journey mj;
 
   auto const fill_stop_info = [&](motis::journey::stop& s,
@@ -114,7 +128,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     from_stop.departure_.schedule_timestamp_ = to_motis_unixtime(leg.dep_time_);
 
     if (!is_transfer) {
-      auto& to_stop = is_transfer ? mj.stops_.back() : mj.stops_.emplace_back();
+      auto& to_stop = mj.stops_.emplace_back();
       auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
       fill_stop_info(to_stop, leg.to_);
       to_stop.arrival_.valid_ = true;
@@ -204,9 +218,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
               fmt::format(
                   "{}:{}:{}",
-                  tt.source_file_names_
-                      .at(tt.trip_debug_.at(trip)[0].source_file_idx_)
-                      .view(),
+                  std::string{
+                      tt.trip_id_strings_.at(tt.trip_ids_.at(trip).front())
+                          .view()},
                   std::to_string(tt.trip_debug_.at(trip)[0].line_number_from_),
                   std::to_string(tt.trip_debug_.at(trip)[0].line_number_to_))},
           mj.stops_.size() - 1, mj.stops_.size());

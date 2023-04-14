@@ -71,7 +71,7 @@ loaded_file::loaded_file(char const* filename, std::string&& buf,
   }
 }
 
-loaded_file::loaded_file(boost::filesystem::path const& p, bool convert_utf8)
+loaded_file::loaded_file(std::filesystem::path const& p, bool convert_utf8)
     : name_(p.filename().string()),
       buf_(utl::file(p.string().c_str(), "r").content_str()) {
   if (convert_utf8) {

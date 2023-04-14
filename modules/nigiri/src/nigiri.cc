@@ -12,6 +12,7 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
+#include "nigiri/print_transport.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
@@ -134,6 +135,38 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             std::filesystem::create_directories(data_dir);
             (*impl_->tt_)->write(dump_file_path);
           }
+          //
+          //          auto& tt = **impl_->tt_;
+          //          auto const reverse = [](std::string s) {
+          //            std::reverse(s.begin(), s.end());
+          //            return s;
+          //          };
+          //          auto const range = tt.internal_interval_days();
+          //          auto const num_days = static_cast<size_t>(
+          //              (range.size() + std::chrono::days{2}) /
+          //              std::chrono::days{1});
+          //          for (auto i = 0U; i != tt.transport_traffic_days_.size();
+          //          ++i) {
+          //            auto const transport_idx = n::transport_idx_t{i};
+          //            auto const traffic_days =
+          //                tt.bitfields_.at(tt.transport_traffic_days_.at(transport_idx));
+          //            std::cout << "TRAFFIC_DAYS="
+          //                      << reverse(traffic_days.to_string().substr(
+          //                             traffic_days.size() - num_days))
+          //                      << "\n";
+          //            for (auto d = range.from_; d != range.to_;
+          //                 d += std::chrono::days{1}) {
+          //              auto const day_idx =
+          //                  n::day_idx_t{static_cast<n::day_idx_t::value_t>(
+          //                      (d - range.from_) / std::chrono::days{1})};
+          //              if (traffic_days.test(to_idx(day_idx))) {
+          //                date::to_stream(std::cout, "%F", d);
+          //                std::cout << " (day_idx=" << day_idx << ")\n";
+          //                n::print_transport(tt, std::cout, {transport_idx,
+          //                day_idx});
+          //              }
+          //            }
+          //          }
         }
 
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
