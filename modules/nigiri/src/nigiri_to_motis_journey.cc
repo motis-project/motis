@@ -94,11 +94,11 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
   auto const fill_stop_info = [&](motis::journey::stop& s,
                                   n::location_idx_t const x) {
-    auto const l = resolve_parent(tt, x);
-    auto const& l_name = tt.locations_.names_.at(l);
-    auto const& pos = tt.locations_.coordinates_.at(l);
+    auto const p = resolve_parent(tt, x);
+    auto const& l_name = tt.locations_.names_.at(p);
+    auto const& pos = tt.locations_.coordinates_.at(x);
     s.name_ = l_name.view();
-    s.eva_no_ = get_station_id(tags, tt, l);
+    s.eva_no_ = get_station_id(tags, tt, x);
     s.lat_ = pos.lat_;
     s.lng_ = pos.lng_;
   };
@@ -112,8 +112,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
         (leg.to_ == tt.locations_.parents_.at(leg.from_)) ||
         (tt.locations_.parents_.at(leg.from_) ==
              tt.locations_.parents_.at(leg.to_) &&
-         (tt.locations_.types_.at(leg.from_) == n::location_type::kTrack ||
-          tt.locations_.types_.at(leg.to_) == n::location_type::kTrack));
+         ((tt.locations_.types_.at(leg.from_) == n::location_type::kTrack &&
+           tt.locations_.ids_.at(leg.from_).view().starts_with("T:")) ||
+          (tt.locations_.types_.at(leg.to_) == n::location_type::kTrack &&
+           tt.locations_.ids_.at(leg.to_).view().starts_with("T:"))));
 
     if (is_transfer && is_last) {
       return;

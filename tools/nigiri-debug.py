@@ -7,11 +7,12 @@ routers = ["routing", "nigiri"]
 
 
 def query_f(id, router):
-    return f"{id}_q100_bwd_{router}.json"
+    return f"{id}_queries-fwd-{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r100_bwd_{router}.json"
+    return f"{id}_responses-fwd-{router}.json"
+
 
 if len(sys.argv) < 3:
     print(f"usage: {sys.argv[0]} ID YYYY-MM-DD HH:MM")
