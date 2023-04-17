@@ -517,6 +517,10 @@ struct ris::impl {
     auto db = t.dbi_open(MSG_DB);
     auto c = db::cursor{t, db};
     auto bucket = c.get(db::cursor_op::SET_RANGE, until);
+    if (!bucket) {
+      // no entry >= until found, maybe all messages are older
+      bucket = c.get(db::cursor_op::LAST, 0);
+    }
     auto deleted = 0ULL;
     while (bucket) {
       if (bucket->first <= until) {
