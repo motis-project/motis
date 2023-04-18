@@ -48,6 +48,8 @@ using namespace motis::logging;
 using std::get;
 
 namespace motis::loader::gtfs {
+// crashes clang-tidy
+// NOLINTBEGIN(bugprone-unchecked-optional-access)
 
 auto const required_files = {AGENCY_FILE, STOPS_FILE, ROUTES_FILE, TRIPS_FILE,
                              STOP_TIMES_FILE};
@@ -522,4 +524,5 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                             fbb.CreateString(dataset_name), hash(root)));
 }
 
+// NOLINTEND(bugprone-unchecked-optional-access)
 }  // namespace motis::loader::gtfs
