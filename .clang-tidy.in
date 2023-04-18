@@ -72,7 +72,8 @@ Checks: "*,\
 -readability-avoid-const-params-in-decls,\
 -cppcoreguidelines-avoid-const-or-ref-data-members,\
 -cppcoreguidelines-avoid-do-while,\
--altera-struct-pack-align"
+-altera-struct-pack-align,\
+-bugprone-unchecked-optional-access"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false
