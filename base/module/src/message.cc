@@ -84,7 +84,7 @@ msg_ptr make_msg(std::string const& json, bool const fix,
     throw std::system_error(error::unable_to_parse_msg);
   }
 
-  bool parse_ok =
+  bool const parse_ok =
       json_parser->Parse(fix ? fix_json(json).c_str() : json.c_str());
   if (!parse_ok) {
     LOG(motis::logging::error) << "parse error: " << json_parser->error_;
