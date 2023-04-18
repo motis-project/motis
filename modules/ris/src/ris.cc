@@ -870,21 +870,21 @@ struct ris::impl {
   void parse_and_write_to_db(input& in, Reader&& reader, file_type const type,
                              Publisher& pub) {
     auto const risml_fn = [&](std::string_view s, std::string_view,
-                              std::function<void(ris_message &&)> const& cb) {
+                              std::function<void(ris_message&&)> const& cb) {
       risml::to_ris_message(s, cb, in.tag());
     };
     auto const gtfsrt_fn = [&](std::string_view s, std::string_view,
-                               std::function<void(ris_message &&)> const& cb) {
+                               std::function<void(ris_message&&)> const& cb) {
       gtfsrt::to_ris_message(in.gtfs_knowledge(),
                              config_.gtfs_is_addition_skip_allowed_, s, cb,
                              in.tag());
     };
     auto const ribasis_fn = [&](std::string_view s, std::string_view,
-                                std::function<void(ris_message &&)> const& cb) {
+                                std::function<void(ris_message&&)> const& cb) {
       ribasis::to_ris_message(s, cb, in.tag());
     };
     auto const file_fn = [&](std::string_view s, std::string_view file_name,
-                             std::function<void(ris_message &&)> const& cb) {
+                             std::function<void(ris_message&&)> const& cb) {
       if (boost::ends_with(file_name, ".xml")) {
         return risml_fn(s, file_name, cb);
       } else if (boost::ends_with(file_name, ".json")) {

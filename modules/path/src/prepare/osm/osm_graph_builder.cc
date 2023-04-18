@@ -132,7 +132,7 @@ void osm_graph_builder::add_component(
 
       std::vector<std::pair<std::string, double>> links;
       for (auto it = std::lower_bound(begin(n_phantoms), end(n_phantoms), id,
-                                      [](auto const&lhs, auto const&rhs) {
+                                      [](auto const& lhs, auto const& rhs) {
                                         return lhs.phantom_.id_ < rhs;
                                       });
            it != end(n_phantoms) && it->phantom_.id_ == id; ++it) {
@@ -224,7 +224,7 @@ void osm_graph_builder::add_component(
     };
 
     for (auto it = std::lower_bound(begin(e_phantoms), end(e_phantoms), way_idx,
-                                    [](auto const&a, auto const&b) {
+                                    [](auto const& a, auto const& b) {
                                       return a.phantom_.way_idx_ < b;
                                     });
          it != end(e_phantoms) && it->phantom_.way_idx_ == way_idx;) {

@@ -1,7 +1,7 @@
-//#include "gtest/gtest.h"
+// #include "gtest/gtest.h"
 //
-//#include "motis/loader/loader.h"
-//#include "motis/core/schedule/waiting_time_rules.h"
+// #include "motis/loader/loader.h"
+// #include "motis/core/schedule/waiting_time_rules.h"
 
 // TODO(Mohammad Keyhani) new schedule required
 // auto schedule = motis::load_schedule("../schedule/test", 0, 0);
