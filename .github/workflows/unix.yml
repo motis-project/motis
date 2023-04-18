@@ -118,6 +118,7 @@ jobs:
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
+      CLICOLOR_FORCE: 1
     steps:
       - uses: actions/checkout@v3
 
