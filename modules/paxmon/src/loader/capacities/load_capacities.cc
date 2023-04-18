@@ -74,7 +74,8 @@ load_capacities_result load_capacities(schedule const& sched,
   res.format_ = get_csv_format(file_content.view());
 
   if (res.format_ == csv_format::TRIP) {
-    utl::line_range<utl::buf_reader>{file_content}  //
+    utl::line_range{
+        utl::make_buf_reader(file_content, utl::noop_progress_consumer{})}  //
         | utl::csv<trip_row>()  //
         |
         utl::for_each([&](trip_row const& row) {
@@ -115,7 +116,8 @@ load_capacities_result load_capacities(schedule const& sched,
           }
         });
   } else if (res.format_ == csv_format::VEHICLE) {
-    utl::line_range<utl::buf_reader>{file_content}  //
+    utl::line_range{
+        utl::make_buf_reader(file_content, utl::noop_progress_consumer{})}  //
         | utl::csv<vehicle_row>()  //
         | utl::for_each([&](vehicle_row const& row) {
             auto& cap = caps.vehicle_capacity_map_[row.uic_number_.val()];

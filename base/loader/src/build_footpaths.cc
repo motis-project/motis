@@ -205,7 +205,7 @@ struct footpath_builder {
         ranges,
         [&](auto const& range) {
           process_component(range.first, range.second, fgraph);
-        },
+        }, utl::noop_progress_update{},
         utl::parallel_error_strategy::CONTINUE_EXEC);
     for (auto const& [idx, ex] : errors) {
       try {
