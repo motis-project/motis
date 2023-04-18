@@ -491,7 +491,7 @@ struct plattform_handler : public oh::Handler, relation_way_base {
 };
 
 mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
-  logging::scoped_timer timer("parse_osm");
+  logging::scoped_timer const timer("parse_osm");
   auto progress_tracker = utl::get_active_progress_tracker();
   auto const update_status = [&](auto const& status) {
     progress_tracker->status(status);
@@ -557,7 +557,7 @@ mcd::unique_ptr<osm_data> parse_osm(std::string const& osm_file) {
   auto plattforms = plattform_handler{};
 
   {
-    oio::File input_file{osm_file};
+    oio::File const input_file{osm_file};
     tiles::hybrid_node_idx node_idx;
 
     {
