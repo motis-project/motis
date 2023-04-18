@@ -331,15 +331,16 @@ struct web_server::impl {
       message_creator mc;
       mc.create_and_finish(
           MsgContent_HTTPRequest,
-          CreateHTTPRequest(mc, HTTPMethod_POST, mc.CreateString(to_sv(req.target())),
-                            mc.CreateVector(utl::to_vec(
-                                req,
-                                [&](auto const& f) {
-                                  return CreateHTTPHeader(
-                                      mc, mc.CreateString(to_sv(f.name_string())),
-                                      mc.CreateString(to_sv(f.value())));
-                                })),
-                            mc.CreateString(req.body()))
+          CreateHTTPRequest(
+              mc, HTTPMethod_POST, mc.CreateString(to_sv(req.target())),
+              mc.CreateVector(
+                  utl::to_vec(req,
+                              [&](auto const& f) {
+                                return CreateHTTPHeader(
+                                    mc, mc.CreateString(to_sv(f.name_string())),
+                                    mc.CreateString(to_sv(f.value())));
+                              })),
+              mc.CreateString(req.body()))
               .Union(),
           std::string{req.target()});
       auto const msg = make_msg(mc);
