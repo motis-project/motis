@@ -14,9 +14,9 @@ using namespace boost::gregorian;
 using namespace utl;
 
 int bitfield_idx(cstr ddmmyyyy, date const& first_schedule_date) {
-  date season_begin_date(parse<int>(ddmmyyyy.substr(4, size(4))),
-                         parse<int>(ddmmyyyy.substr(2, size(2))),
-                         parse<int>(ddmmyyyy.substr(0, size(2))));
+  date const season_begin_date(parse<int>(ddmmyyyy.substr(4, size(4))),
+                               parse<int>(ddmmyyyy.substr(2, size(2))),
+                               parse<int>(ddmmyyyy.substr(0, size(2))));
   return (season_begin_date - first_schedule_date).days();
 }
 

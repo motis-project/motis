@@ -158,7 +158,7 @@ void add_rule_service(
 }
 
 void rule_service_builder::resolve_rule_services() {
-  scoped_timer timer("resolve service rules");
+  scoped_timer const timer("resolve service rules");
 
   rules_graph rg;
   build_graph(input_rules_, rg);
@@ -185,6 +185,7 @@ void create_rule_service(
   }
 
   std::vector<Offset<Rule>> fbb_rules;
+  fbb_rules.reserve(rs.rules_.size());
   for (auto const& r : rs.rules_) {
     fbb_rules.push_back(CreateRule(
         fbb, static_cast<RuleType>(r.rule_info_.type_), services.at(r.s1_),
@@ -201,7 +202,7 @@ void create_rule_service(
 void rule_service_builder::create_rule_services(service_builder_fun const& sbf,
                                                 station_builder& sb,
                                                 FlatBufferBuilder& fbb) {
-  scoped_timer timer("create rule and remaining services");
+  scoped_timer const timer("create rule and remaining services");
   LOG(info) << "#remaining services: " << origin_services_.size();
   for (auto const& s : origin_services_) {
     if (s->traffic_days_.any()) {

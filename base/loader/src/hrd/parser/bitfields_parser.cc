@@ -19,7 +19,7 @@ namespace motis::loader::hrd {
 std::string hex_to_string(char c) {
   char str[2] = {c, '\0'};
   auto i = flatbuffers64::StringToInt(str, 16);  // NOLINT
-  std::bitset<4> bits(i);
+  std::bitset<4> const bits(i);
   return bits.to_string();
 }
 
@@ -47,7 +47,7 @@ bitfield hex_str_to_bitset(cstr hex, char const* filename, int line_number) {
 }
 
 std::map<int, bitfield> parse_bitfields(loaded_file const& f, config const& c) {
-  scoped_timer timer("parsing bitfields");
+  scoped_timer const timer("parsing bitfields");
 
   std::map<int, bitfield> bitfields;
   for_each_line_numbered(f.content(), [&](cstr line, int line_number) {

@@ -59,7 +59,7 @@ std::pair<cstr, cstr> mask_dates(cstr str) {
 }
 
 Interval parse_interval(loaded_file const& basic_info_file) {
-  scoped_timer timer("parsing schedule interval");
+  scoped_timer const timer("parsing schedule interval");
   cstr first_date;
   cstr last_date;
   std::tie(first_date, last_date) = mask_dates(basic_info_file.content());

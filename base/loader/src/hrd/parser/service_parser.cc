@@ -26,7 +26,7 @@ void parse_specification(loaded_file const& file,
     last_line = line_number;
     bytes_consumed(line.c_str() - file.content().c_str());
 
-    bool finished = spec.read_line(line, file.name(), line_number);
+    bool const finished = spec.read_line(line, file.name(), line_number);
 
     if (!finished) {
       return;
