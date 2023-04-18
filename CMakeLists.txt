@@ -311,7 +311,7 @@ endif()
 ################################
 # clang-format check
 ################################
-find_program(CLANG_FORMAT_COMMAND NAMES clang-format clang-format-9)
+find_program(CLANG_FORMAT_COMMAND NAMES clang-format clang-format-16)
 add_custom_target(format-check
   COMMAND find
       ${CMAKE_CURRENT_SOURCE_DIR}/base

@@ -20,7 +20,7 @@ jobs:
         run: |
           find base libs modules test \
             -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
-            -print0 | xargs -0 clang-format-14 -i
+            -print0 | xargs -0 clang-format-16 -i
 
       - name: Check for differences
         run: |
