@@ -219,7 +219,7 @@ struct parking::impl {
       auto const new_lot_indices = db_.add_parking_lots(parking_lots);
       new_parking_lots_added += new_lot_indices.size();
       if (!new_lot_indices.empty()) {
-        scoped_timer new_lot_timer{
+        scoped_timer const new_lot_timer{
             "ParkenDD: Computing foot edges for new parking lots"};
         auto const new_parking_lots = utl::to_vec(
             new_lot_indices, [&](auto const idx) { return parking_lots[idx]; });
@@ -259,7 +259,7 @@ struct parking::impl {
     auto const req = motis_content(ParkingLookupRequest, msg);
     auto const p = parkings_.get_parking(req->id());
     if (p) {
-      Position pos{p->location_.lat_, p->location_.lng_};
+      Position const pos{p->location_.lat_, p->location_.lng_};
       message_creator fbb;
       fbb.create_and_finish(
           MsgContent_ParkingLookupResponse,
@@ -274,7 +274,7 @@ struct parking::impl {
     auto const req = motis_content(ParkingEdgeRequest, msg);
     auto const p = parkings_.get_parking(req->id());
     if (p) {
-      Position parking_pos{p->location_.lat_, p->location_.lng_};
+      Position const parking_pos{p->location_.lat_, p->location_.lng_};
       message_creator fbb;
 
       auto const outward = req->direction() == ParkingEdgeDirection_Outward;
@@ -326,7 +326,7 @@ struct parking::impl {
       auto const ppr_route = find_matching_ppr_route(ppr_resp, target_duration,
                                                      target_accessibility, fbb);
 
-      Position parking_pos{0, 0};
+      Position const parking_pos{0, 0};
       fbb.create_and_finish(
           MsgContent_ParkingEdgeResponse,
           CreateParkingEdgeResponse(

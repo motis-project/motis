@@ -80,7 +80,7 @@ void apply_override_capacity_measure(universe& uv, schedule const& sched,
 
 msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
                        msg_ptr const& msg) {
-  scoped_timer all_timer{"apply_measures"};
+  scoped_timer const all_timer{"apply_measures"};
   auto const req = motis_content(PaxForecastApplyMeasuresRequest, msg);
   auto const uv_access =
       get_universe_and_schedule(data, req->universe(), ctx::access_t::WRITE);
@@ -129,7 +129,7 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
 
   // simulate passenger behavior with measures
   for (auto const& [t, ms] : measures) {
-    scoped_timer measure_timer{"measure"};
+    scoped_timer const measure_timer{"measure"};
     ++measure_time_points;
     total_measures_applied += ms.size();
     auto const contains_rt_updates =
