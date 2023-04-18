@@ -188,7 +188,7 @@ struct footpath_builder {
   }
 
   void transitivize_footpaths() {
-    ml::scoped_timer timer("building transitively closed foot graph");
+    ml::scoped_timer const timer("building transitively closed foot graph");
 
     auto const fgraph = get_footpath_graph();
 

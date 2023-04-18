@@ -30,7 +30,7 @@ calendar_date read_date(gtfs_calendar_date const& gtfs_date) {
 
 std::map<std::string, std::vector<calendar_date>> read_calendar_date(
     loaded_file f) {
-  motis::logging::scoped_timer timer{"calendar dates"};
+  motis::logging::scoped_timer const timer{"calendar dates"};
   std::map<std::string, std::vector<calendar_date>> services;
   auto const entries = read<gtfs_calendar_date>(f.content(), calendar_columns);
   auto progress_tracker = utl::get_active_progress_tracker();

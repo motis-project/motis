@@ -26,7 +26,7 @@ scoped_timer::scoped_timer(std::string name)
 scoped_timer::~scoped_timer() {
   using namespace std::chrono;
   auto stop = steady_clock::now();
-  double t = duration_cast<microseconds>(stop - start_).count() / 1000.0;
+  double const t = duration_cast<microseconds>(stop - start_).count() / 1000.0;
   LOG(info) << "[" << name_ << "] finished"
             << " (" << t << "ms)";
 }

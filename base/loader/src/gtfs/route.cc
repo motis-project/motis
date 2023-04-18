@@ -201,7 +201,7 @@ static const column_mapping<gtfs_route> columns = {
      "route_desc", "route_type"}};
 
 route_map read_routes(loaded_file file, agency_map const& agencies) {
-  motis::logging::scoped_timer timer{"read routes"};
+  motis::logging::scoped_timer const timer{"read routes"};
 
   auto const get_type = [](cstr s) {
     if (!s.empty() && std::isdigit(s[0]) != 0) {

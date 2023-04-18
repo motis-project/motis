@@ -197,13 +197,13 @@ void write_graph(std::string const& path, schedule const& sched) {
   auto writer = cista::buf<cista::mmap>(std::move(mmap));
 
   {
-    logging::scoped_timer t{"writing graph"};
+    logging::scoped_timer const t{"writing graph"};
     cista::serialize<MODE>(writer, sched);
   }
 }
 
 schedule_data copy_graph(schedule const& sched) {
-  logging::scoped_timer timer{"clone schedule"};
+  logging::scoped_timer const timer{"clone schedule"};
   auto buf = cista::serialize<cista::mode::NONE>(sched);
   auto ptr = schedule_ptr{};
   ptr.self_allocated_ = false;
