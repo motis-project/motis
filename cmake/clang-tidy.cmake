@@ -14,7 +14,11 @@ if(NOT CLANG_TIDY_COMMAND)
   message(FATAL_ERROR "CMake_RUN_CLANG_TIDY is ON but clang-tidy is not found!")
 endif()
 
-set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+if(DEFINED ENV{CI})
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
+else()
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}" --format-style=file --fix-errors)
+endif()
 
 file(SHA1 ${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy.in clang_tidy_sha1)
 set(CLANG_TIDY_DEFINITIONS "CLANG_TIDY_SHA1=${clang_tidy_sha1}")
