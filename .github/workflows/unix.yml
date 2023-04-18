@@ -2,9 +2,9 @@ name: Linux+MacOS Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
   release:
     types:
       - published
@@ -12,7 +12,7 @@ on:
 jobs:
   formatting:
     runs-on: ubuntu-latest
-    container: ghcr.io/motis-project/docker-cpp-build
+    container: ghcr.io/motis-project/docker-cpp-build:pr-1
     steps:
       - uses: actions/checkout@v3
 
@@ -250,10 +250,10 @@ jobs:
           key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
 
   linux:
-    runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
+    runs-on: [self-hosted, linux, x64, "${{ matrix.config.preset }}"]
     needs: api-docs
     container:
-      image: ghcr.io/motis-project/docker-cpp-build
+      image: ghcr.io/motis-project/docker-cpp-build:pr-1
       volumes:
         - ${{ matrix.config.preset }}-deps:/deps
         - ${{ matrix.config.preset }}-buildcache:/buildcache
@@ -391,7 +391,7 @@ jobs:
 
   full-data-set-test:
     runs-on: ${{ matrix.config.os }}
-    needs: [ linux, macos ]
+    needs: [linux, macos]
     strategy:
       fail-fast: false
       matrix:
