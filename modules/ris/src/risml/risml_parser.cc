@@ -69,7 +69,7 @@ Offset<IdEvent> inline parse_trip_id(
   auto schedule_time =
       parse_schedule_time(ctx, node.attribute("IdZeit").value());
 
-  std::string reg_sta(node.attribute("RegSta").value());
+  std::string const reg_sta(node.attribute("RegSta").value());
   auto trip_type = (reg_sta.empty() || reg_sta == "Plan")
                        ? IdEventType_Schedule
                        : IdEventType_Additional;
@@ -83,7 +83,7 @@ Offset<IdEvent> inline parse_trip_id(
 Offset<FreeText> parse_free_text(context& ctx, xml_node const& msg,
                                  char const* selector = "./FT") {
   auto const& node = msg.select_node(selector).node();
-  Range r(0, 0);
+  Range const r(0, 0);
   return CreateFreeText(ctx.b_, &r, node.attribute("Code").as_int(),
                         ctx.b_.CreateString(node.attribute("Text").value()),
                         ctx.b_.CreateString(node.attribute("Typ").value()));
@@ -183,7 +183,7 @@ Offset<Message> parse_reroute_msg(context& ctx, xml_node const& msg) {
       [&](Offset<Event> const& event, xml_node const& e_node,
           xml_node const& t_node) {
         auto additional = parse_additional_event(ctx.b_, event, e_node, t_node);
-        cstr status_str = e_node.attribute("RegSta").value();
+        cstr const status_str = e_node.attribute("RegSta").value();
         auto status = (status_str == "Normal") ? RerouteStatus_Normal
                                                : RerouteStatus_UmlNeu;
         new_events.push_back(CreateReroutedEvent(ctx.b_, additional, status));

@@ -23,7 +23,7 @@ namespace mm = motis::module;
 namespace motis::bootstrap {
 
 mm::msg_ptr make_file_event(std::vector<std::string> const& import_paths) {
-  std::regex re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
+  std::regex const re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
 
   mm::message_creator mc;
   std::vector<flatbuffers::Offset<mi::ImportPath>> fbs_paths;

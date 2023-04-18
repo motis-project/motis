@@ -392,7 +392,7 @@ struct ris::impl {
     t.dbi_open(STREAM_OFFSET_DB, db::dbi_flags::CREATE);
     t.commit();
 
-    std::vector<input> urls;
+    std::vector<input> const urls;
     for (auto& in : inputs_) {
       if (in.source_type() != input::source_type::path) {
         continue;
@@ -918,7 +918,7 @@ struct ris::impl {
         return;
       }
 
-      std::lock_guard<std::mutex> lock{merge_mutex_};
+      std::lock_guard<std::mutex> const lock{merge_mutex_};
 
       auto t = db::txn{env_};
       auto db = t.dbi_open(MSG_DB);
@@ -984,7 +984,7 @@ struct ris::impl {
 
   void update_min_max(std::map<unixtime, unixtime> const& min,
                       std::map<unixtime, unixtime> const& max) {
-    std::lock_guard<std::mutex> lock{min_max_mutex_};
+    std::lock_guard<std::mutex> const lock{min_max_mutex_};
 
     auto t = db::txn{env_};
     auto min_db = t.dbi_open(MIN_DAY_DB);

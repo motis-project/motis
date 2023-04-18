@@ -258,7 +258,7 @@ bool data_okay_for_schedule(std::string const& filename,
     LOG(info) << "trip-based data file not found";
     return false;
   }
-  file f(filename.c_str(), "rb");
+  file const f(filename.c_str(), "rb");
   if (f.size() < sizeof(header)) {
     LOG(info) << "trip-based data file does not contain header";
     return false;
