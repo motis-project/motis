@@ -56,6 +56,10 @@ msg_ptr decode_msg(std::string const& req_buf, bool const binary) {
   }
 }
 
+inline std::string_view to_sv(boost::beast::string_view const& bsv) {
+  return {bsv.data(), bsv.size()};
+}
+
 struct ws_client : public client,
                    public std::enable_shared_from_this<ws_client> {
   ws_client(boost::asio::io_service& ios, net::ws_session_ptr session,
@@ -327,13 +331,13 @@ struct web_server::impl {
       message_creator mc;
       mc.create_and_finish(
           MsgContent_HTTPRequest,
-          CreateHTTPRequest(mc, HTTPMethod_POST, mc.CreateString(req.target()),
+          CreateHTTPRequest(mc, HTTPMethod_POST, mc.CreateString(to_sv(req.target())),
                             mc.CreateVector(utl::to_vec(
                                 req,
                                 [&](auto const& f) {
                                   return CreateHTTPHeader(
-                                      mc, mc.CreateString(f.name_string()),
-                                      mc.CreateString(f.value()));
+                                      mc, mc.CreateString(to_sv(f.name_string())),
+                                      mc.CreateString(to_sv(f.value())));
                                 })),
                             mc.CreateString(req.body()))
               .Union(),
