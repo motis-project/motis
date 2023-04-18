@@ -17,7 +17,7 @@ std::vector<specification> test_spec::get_specs() const {
 std::vector<hrd_service> test_spec::get_hrd_services(config const& c) const {
   std::vector<hrd_service> services;
   parse_specification(lf_, [&services, &c](specification const& spec) {
-    services.emplace_back(hrd_service(spec, c));
+    services.emplace_back(spec, c);
   });
   return services;
 }
