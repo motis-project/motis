@@ -381,10 +381,6 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
           return stop_count < 2;
         })  //
       | utl::remove_if([&](auto const& entry) {
-          // Rule services are written separately.
-          return entry.second->block_ != nullptr;
-        })  //
-      | utl::remove_if([&](auto const& entry) {
           // Frequency services are written separately.
           return entry.second->frequency_.has_value();
         })  //

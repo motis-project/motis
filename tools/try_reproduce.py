@@ -28,10 +28,14 @@ def reproduce(filepath, verbose=False):
     data_dir = f"{reproduce_dir}/data"
     input_dir = f"{reproduce_dir}/input"
 
+    if verbose:
+        print("cleaning reproduce dir")
     subprocess.check_call(["rm", "-rf", reproduce_dir])
     subprocess.check_call(["mkdir", "-p", data_dir])
     subprocess.check_call(["mkdir", "-p", input_dir])
 
+    if verbose:
+        print("extracting...")
     run_xtract = [
         "./motis",
         "xtract",
@@ -47,6 +51,8 @@ def reproduce(filepath, verbose=False):
     else:
         subprocess.check_call(run_xtract, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    if verbose:
+        print("extracting...")
     subprocess.check_call(["ln", "-s", f"{current_dir}/input/osm.pbf", input_dir])
     subprocess.check_call(["ln", "-s", f"{current_dir}/data/osrm", data_dir])
 
@@ -168,7 +174,7 @@ def reproduce(filepath, verbose=False):
 
 
 if len(sys.argv) < 2:
-    with Pool(processes=6) as pool:
+    with Pool(processes=12) as pool:
         glob_str = f"fail/{query_f('*', routers[0])}"
         files = glob.iglob(glob_str)
         reproducable = pool.map(reproduce, files)
