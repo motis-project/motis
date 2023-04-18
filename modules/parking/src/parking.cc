@@ -274,7 +274,6 @@ struct parking::impl {
     auto const req = motis_content(ParkingEdgeRequest, msg);
     auto const p = parkings_.get_parking(req->id());
     if (p) {
-      Position const parking_pos{p->location_.lat_, p->location_.lng_};
       message_creator fbb;
 
       auto const outward = req->direction() == ParkingEdgeDirection_Outward;
@@ -282,7 +281,13 @@ struct parking::impl {
       auto const car_dest =
           outward ? p->location_ : to_latlng(req->destination());
       auto const foot_start = outward ? p->location_ : to_latlng(req->start());
-      auto const foot_dest = outward ? *req->destination() : parking_pos;
+
+      auto foot_dest = Position{p->location_.lat_, p->location_.lng_};
+      if (outward) {
+        // clang-tidy...
+        foot_dest.mutate_lat(req->destination()->lat());
+        foot_dest.mutate_lng(req->destination()->lng());
+      }
 
       auto const osrm_msg =
           motis_call(make_osrm_via_request(car_start, car_dest))->val();
