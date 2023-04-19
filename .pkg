@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=71febe940c0715ea69aa0c9980e08d31c5c946b8
+  commit=12d8648de6394af1391be5f9492ed1ac4afdd368
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -93,7 +93,7 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=8bfc669e6ffd5800ed47144cf59c15b3e752ba10
+  commit=3be31133abf01103c46e90f4aa6f7a32ac7a53c4
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master

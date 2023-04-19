@@ -3,6 +3,8 @@
 #include <iomanip>
 #include <iostream>
 
+#include "boost/uuid/uuid_io.hpp"
+
 #include "motis/hash_set.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -56,7 +58,7 @@ struct trip {
     auto const* trp = t.trp_;
     out << "{"
         << "ptr=" << trp << ", idx=" << trp->trip_idx_
-        << ", id=" << trip_id{sched, trp->id_}
+        << ", id=" << trip_id{sched, trp->id_} << ", uuid=" << trp->uuid_
         << ", edges=" << trp->edges_->size() << ", lcon_idx=" << trp->lcon_idx_
         << ", dbg=" << trp->dbg_.str() << "}";
     return out;

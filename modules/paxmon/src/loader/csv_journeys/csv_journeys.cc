@@ -427,6 +427,34 @@ csv_format get_csv_format(std::string_view const file_content) {
   throw utl::fail("paxmon: empty journey input file");
 }
 
+// https://github.com/HowardHinnant/date/issues/779#issuecomment-1452312811
+template <class Duration>
+auto to_sys(date::local_time<Duration> tp, date::time_zone const* tz) {
+  auto const get_info = [](date::local_time<Duration> tp,
+                           date::time_zone const* tz) {
+    auto info = tz->get_info(tp);
+    if (info.result != date::local_info::unique) {
+      throw std::runtime_error("local time point is not unique");
+    }
+    return info;
+  };
+
+  thread_local date::time_zone const* tz_save = tz;
+  thread_local date::local_info info = get_info(tp, tz);
+
+  if (tz != tz_save) {
+    tz_save = tz;
+    info = get_info(tp, tz);
+    return date::sys_time<Duration>{tp.time_since_epoch() - info.first.offset};
+  }
+  date::sys_time<Duration> utc_tp{tp.time_since_epoch() - info.first.offset};
+  if (info.first.begin <= utc_tp && utc_tp < info.first.end) {
+    return utc_tp;
+  }
+  info = get_info(tp, tz);
+  return date::sys_time<Duration>{tp.time_since_epoch() - info.first.offset};
+}
+
 time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
                           schedule const& sched, char const* ts_format) {
   auto ss = std::stringstream{};
@@ -436,8 +464,7 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
   if (ss.fail()) {
     return INVALID_TIME;
   }
-  auto const zoned = date::make_zoned(tz, ls);
-  auto const ts = zoned.get_sys_time();
+  auto const ts = to_sys(ls, tz);
   auto unix_ts =
       std::chrono::duration_cast<std::chrono::seconds>(ts.time_since_epoch())
           .count();
