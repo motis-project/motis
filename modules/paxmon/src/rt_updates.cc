@@ -112,7 +112,12 @@ void handle_rt_update(universe& uv, schedule const& sched,
   uv.tick_stats_.rt_updates_ += update->updates()->size();
 
   std::vector<edge_index> updated_interchange_edges;
+  auto intermediate_skipped = 0;
   for (auto const& u : *update->updates()) {
+    if (u->intermediate()) {
+      ++intermediate_skipped;
+      continue;
+    }
     switch (u->content_type()) {
       case Content_RtDelayUpdate: {
         ++uv.system_stats_.delay_updates_;
@@ -168,6 +173,10 @@ void handle_rt_update(universe& uv, schedule const& sched,
       default: break;
     }
   }
+  if (intermediate_skipped > 0) {
+    LOG(info) << "skipped " << intermediate_skipped << "/"
+              << update->updates()->size() << " intermediate rt updates";
+  }
   check_broken_interchanges(uv, sched, updated_interchange_edges,
                             arrival_delay_threshold);
 }
@@ -189,7 +198,7 @@ monitoring_event_type get_monitoring_event_type(
 std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
                                             int arrival_delay_threshold,
                                             int preparation_time) {
-  scoped_timer timer{"update affected passenger groups"};
+  scoped_timer const timer{"update affected passenger groups"};
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME,

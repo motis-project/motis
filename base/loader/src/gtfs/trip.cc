@@ -231,6 +231,7 @@ void trip::expand_frequencies(
     const {
   utl::verify(frequency_.has_value(), "bad call to trip::expand_frequencies");
 
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   for (auto const& f : frequency_.value()) {
     for (auto start = f.start_time_; start < f.end_time_; start += f.headway_) {
       trip t{*this};
@@ -261,7 +262,7 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
       {"route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name",
        "block_id"}};
 
-  motis::logging::scoped_timer timer{"read trips"};
+  motis::logging::scoped_timer const timer{"read trips"};
 
   std::pair<trip_map, block_map> ret;
   auto& [trips, blocks] = ret;

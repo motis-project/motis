@@ -36,14 +36,18 @@ using pq_t = clearable_priority_queue<osm_graph_dijkstra_label,
                                       std::vector<osm_graph_dijkstra_label>,
                                       std::greater<>>;
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<std::vector<size_t>> tls_dists;
+namespace {
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<std::vector<osm_edge const*>> tls_edges;
+boost::thread_specific_ptr<std::vector<size_t>> tls_dists;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<pq_t> tls_pq;
+boost::thread_specific_ptr<std::vector<osm_edge const*>> tls_edges;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+boost::thread_specific_ptr<pq_t> tls_pq;
+
+}  // namespace
 
 struct osm_graph_dijkstra {
   osm_graph_dijkstra(osm_graph const& graph, size_t initial,

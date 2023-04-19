@@ -262,7 +262,7 @@ private:
     std::vector<int> v;
     for (unixtime t = begin, hour = 0; t < end - k_two_hours;
          t += 3600, ++hour) {
-      int h = hour % 24;
+      int const h = hour % 24;
       v.push_back(prob[h]);  // NOLINT
     }
     return {std::begin(v), std::end(v)};
@@ -275,7 +275,9 @@ private:
   std::discrete_distribution<int> d_;
 };
 
-static int rand_in(int start, int end) {
+namespace {
+
+int rand_in(int start, int end) {
   static bool initialized = false;
   static std::mt19937 rng;  // NOLINT
   if (!initialized) {
@@ -288,9 +290,11 @@ static int rand_in(int start, int end) {
 }
 
 template <typename It>
-static It rand_in(It begin, It end) {
+It rand_in(It begin, It end) {
   return std::next(begin, rand_in(0, std::distance(begin, end) - 1));
 }
+
+}  // namespace
 
 constexpr auto EQUATOR_EARTH_RADIUS = 6378137.0;
 
@@ -348,9 +352,10 @@ struct point_generator {
     geo::latlng pt;
     do {
       // http://mathworld.wolfram.com/DiskPointPicking.html
-      double radius =
+      double const radius =
           std::sqrt(real_dist_(mt_)) * (max_dist / scale_factor(ref_merc));
-      double angle = real_dist_(mt_) * 2 * boost::math::constants::pi<double>();
+      double const angle =
+          real_dist_(mt_) * 2 * boost::math::constants::pi<double>();
       auto const pt_merc = geo::merc_xy{ref_merc.x_ + radius * std::cos(angle),
                                         ref_merc.y_ + radius * std::sin(angle)};
       pt = geo::merc_to_latlng(pt_merc);

@@ -25,14 +25,13 @@ event_collector::event_collector(std::string data_dir, std::string module_name,
 
 event_collector* event_collector::require(
     std::string const& name, std::function<bool(msg_ptr)> matcher) {
-  auto const matcher_it =
-      matchers_.emplace(dependency_matcher{name, std::move(matcher)});
+  auto const matcher_it = matchers_.emplace(name, std::move(matcher));
   waiting_for_.emplace(name);
   reg_.subscribe([&, matcher_it = matcher_it.first, name,
                   self = shared_from_this()](msg_ptr const& msg) -> msg_ptr {
     auto const logs_path = fs::path{data_dir_} / "log";
     fs::create_directories(logs_path);
-    clog_redirect redirect{
+    clog_redirect const redirect{
         (logs_path / (module_name_ + ".txt")).generic_string().c_str()};
 
     // Dummy message asking for initial status.

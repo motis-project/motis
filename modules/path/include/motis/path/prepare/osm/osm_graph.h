@@ -46,24 +46,6 @@ struct osm_graph {
   std::vector<std::pair<size_t, size_t>> component_offsets_;
 };
 
-struct osm_node {
-  osm_node(size_t idx, size_t component_id, int64_t osm_id, geo::latlng pos)
-      : idx_{idx},
-        component_id_{component_id},
-        osm_id_{osm_id},
-        pos_{pos},
-        xyz_{pos} {}
-
-  size_t idx_;
-  size_t component_id_;
-
-  int64_t osm_id_;
-  geo::latlng pos_;
-  geo::xyz xyz_;
-
-  std::vector<osm_edge> edges_;
-};
-
 struct osm_edge {
   osm_edge(uint64_t polyline_idx, bool forward, size_t dist,
            osm_node const* from, osm_node const* to)
@@ -82,6 +64,24 @@ struct osm_edge {
 
   osm_node const* from_;
   osm_node const* to_;
+};
+
+struct osm_node {
+  osm_node(size_t idx, size_t component_id, int64_t osm_id, geo::latlng pos)
+      : idx_{idx},
+        component_id_{component_id},
+        osm_id_{osm_id},
+        pos_{pos},
+        xyz_{pos} {}
+
+  size_t idx_;
+  size_t component_id_;
+
+  int64_t osm_id_;
+  geo::latlng pos_;
+  geo::xyz xyz_;
+
+  std::vector<osm_edge> edges_;
 };
 
 inline void print_osm_graph_stats(source_spec const& source_spec,

@@ -14,7 +14,7 @@ namespace motis::loader::hrd {
 
 std::map<uint32_t, category> parse_categories(loaded_file const& file,
                                               config const& c) {
-  scoped_timer timer("parsing categories");
+  scoped_timer const timer("parsing categories");
   bool ignore = false;
   std::map<uint32_t, category> categories;
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {

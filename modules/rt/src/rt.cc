@@ -91,7 +91,7 @@ void rt::init(motis::module::registry& reg) {
 
 rt_handler& rt::get_or_create_rt_handler(schedule& sched,
                                          ctx::res_id_t const schedule_res_id) {
-  std::lock_guard guard{handler_mutex};
+  std::lock_guard const guard{handler_mutex};
   return *utl::get_or_create(handlers_, schedule_res_id, [&]() {
             return std::make_unique<rt_handler>(
                 sched, schedule_res_id, validate_graph_,

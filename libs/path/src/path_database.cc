@@ -40,7 +40,7 @@ lmdb::txn::dbi path_database::data_dbi(lmdb::txn& txn,
 std::string path_database::get(std::string const& k) const {
   auto ret = try_get(k);
   utl::verify_ex(ret.has_value(), std::system_error{error::not_found});
-  return *ret;
+  return *ret;  // NOLINT(bugprone-unchecked-optional-access)
 }
 
 std::optional<std::string> path_database::try_get(std::string const& k) const {

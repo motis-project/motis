@@ -42,7 +42,7 @@ load_forecast calc_load_forecast(schedule const& sched, universe const& uv,
     add_additional_groups(pdf, additional_groups);
     auto cdf = get_cdf(pdf);
 
-    std::lock_guard guard{mutex};
+    std::lock_guard const guard{mutex};
     edges.emplace(
         e, make_edge_load_info(uv, e, std::move(pdf), std::move(cdf), true));
     for (auto const& trp : e->get_trips(sched)) {

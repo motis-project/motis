@@ -17,7 +17,7 @@ namespace motis::loader::hrd {
 
 TEST(loader_hrd_specification, parse_specification) {
   const auto fahrten = SCHEDULES / "hand-crafted" / "fahrten";
-  test_spec services_file(fahrten, "services-1.101");
+  test_spec const services_file(fahrten, "services-1.101");
 
   const auto specs = services_file.get_specs();
   ASSERT_TRUE(specs.size() == 1);

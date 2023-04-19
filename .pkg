@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=71febe940c0715ea69aa0c9980e08d31c5c946b8
+  commit=12d8648de6394af1391be5f9492ed1ac4afdd368
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -17,7 +17,7 @@
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=38d0b684c7fc3796b2c7f887c7dde8d6493b062f
+  commit=443af47fb86db22d2c93f78106f90493d2513a9b
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=e9996f1df2375240e7402dc471e2a1746312ef58
+  commit=c525139f13428335a86a8bab2f2a46f8a94c20e0
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=e92e23a42d9883dcc9806d7ae027fb8febd11175
+  commit=858c69e2195821251a1263bc54c599a771233b7e
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -85,7 +85,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=ad6cbb38470efd74265715e0972cb5ae44527fb1
+  commit=be5235eb2258d2ec19e32546ab767a62311d9b46
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
@@ -93,7 +93,7 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=8bfc669e6ffd5800ed47144cf59c15b3e752ba10
+  commit=3be31133abf01103c46e90f4aa6f7a32ac7a53c4
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master

@@ -252,24 +252,24 @@ EventType get_type(std::vector<ris_message> const& messages) {
 
 TEST(ris_delay_message, train_event_type) {
   auto start_msg = type_fixture("Start");
-  auto start = parse(start_msg.c_str());
+  auto start = parse(start_msg);
   ASSERT_EQ(EventType_DEP, get_type(start));
 
   auto ab_msg = type_fixture("Ab");
-  auto ab = parse(ab_msg.c_str());
+  auto ab = parse(ab_msg);
   ASSERT_EQ(EventType_DEP, get_type(ab));
 
   auto an_msg = type_fixture("An");
-  auto an = parse(an_msg.c_str());
+  auto an = parse(an_msg);
   ASSERT_EQ(EventType_ARR, get_type(an));
 
   auto ziel_msg = type_fixture("Ziel");
-  auto ziel = parse(ziel_msg.c_str());
+  auto ziel = parse(ziel_msg);
   ASSERT_EQ(EventType_ARR, get_type(ziel));
 
   // "Durch" events are ignored
   auto pass_msg = type_fixture("Durch");
-  auto pass = parse(pass_msg.c_str());
+  auto pass = parse(pass_msg);
   auto content = motis::ris::GetMessage(pass[0].data())->content();
   auto delay_message = reinterpret_cast<DelayMessage const*>(content);
   EXPECT_EQ(0, delay_message->events()->size());

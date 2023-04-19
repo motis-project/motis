@@ -44,12 +44,18 @@ void update_msg_builder::add_reroute(
     trip const* trp, mcd::vector<trip::route_edge> const& old_edges,
     lcon_idx_t const old_lcon_idx) {
   ++reroute_count_;
-  updates_.emplace_back(CreateRtUpdate(
-      fbb_, Content_RtRerouteUpdate,
+  if (auto it = previous_reroute_update_.find(trp);
+      it != end(previous_reroute_update_)) {
+    auto& prev = updates_[it->second];
+    prev.intermediate_ = true;
+  }
+  updates_.emplace_back(rt_update_info{
+      Content_RtRerouteUpdate,
       CreateRtRerouteUpdate(fbb_, to_fbs(sched_, fbb_, trp),
                             to_fbs_event_infos(old_edges, old_lcon_idx),
                             to_fbs_event_infos(*trp->edges_, trp->lcon_idx_))
-          .Union()));
+          .Union()});
+  previous_reroute_update_[trp] = updates_.size() - 1;
 }
 
 void update_msg_builder::add_free_text_nodes(
@@ -60,8 +66,8 @@ void update_msg_builder::add_free_text_nodes(
       CreateFreeText(fbb_, &r, ft.code_, fbb_.CreateString(ft.text_),
                      fbb_.CreateString(ft.type_));
   for (auto const& k : events) {
-    updates_.emplace_back(CreateRtUpdate(
-        fbb_, Content_RtFreeTextUpdate,
+    updates_.emplace_back(rt_update_info{
+        Content_RtFreeTextUpdate,
         CreateRtFreeTextUpdate(
             fbb_, trip,
             CreateRtEventInfo(
@@ -72,7 +78,7 @@ void update_msg_builder::add_free_text_nodes(
                     sched_, k ? get_schedule_time(sched_, k) : INVALID_TIME),
                 to_fbs(k.ev_type_)),
             free_text)
-            .Union()));
+            .Union()});
   }
 }
 
@@ -81,8 +87,13 @@ void update_msg_builder::add_track_nodes(ev_key const& k,
                                          motis::time const schedule_time) {
   auto const trip =
       to_fbs(sched_, fbb_, sched_.merged_trips_[k.lcon()->trips_]->at(0));
-  updates_.emplace_back(CreateRtUpdate(
-      fbb_, Content_RtTrackUpdate,
+  if (auto it = previous_track_update_.find(k);
+      it != end(previous_track_update_)) {
+    auto& prev = updates_[it->second];
+    prev.intermediate_ = true;
+  }
+  updates_.emplace_back(rt_update_info{
+      Content_RtTrackUpdate,
       CreateRtTrackUpdate(
           fbb_, trip,
           CreateRtEventInfo(
@@ -91,16 +102,17 @@ void update_msg_builder::add_track_nodes(ev_key const& k,
                   sched_.stations_.at(k.get_station_idx())->eva_nr_),
               motis_to_unixtime(sched_, schedule_time), to_fbs(k.ev_type_)),
           fbb_.CreateString(track))
-          .Union()));
+          .Union()});
+  previous_track_update_[k] = updates_.size() - 1;
 }
 
 void update_msg_builder::add_station(node_id_t const station_idx) {
   auto const station = sched_.stations_.at(station_idx).get();
-  updates_.emplace_back(CreateRtUpdate(
-      fbb_, Content_RtStationAdded,
+  updates_.emplace_back(rt_update_info{
+      Content_RtStationAdded,
       CreateRtStationAdded(fbb_, fbb_.CreateString(station->eva_nr_),
                            fbb_.CreateString(station->name_))
-          .Union()));
+          .Union()});
 }
 
 void update_msg_builder::expanded_trip_added(trip const* trp,
@@ -124,9 +136,16 @@ void update_msg_builder::expanded_trip_moved(
 void update_msg_builder::trip_formation_message(
     motis::ris::TripFormationMessage const* msg) {
   using motis::ris::TripFormationMessage;
-  updates_.emplace_back(CreateRtUpdate(
-      fbb_, Content_TripFormationMessage,
-      motis_copy_table(TripFormationMessage, fbb_, msg).Union()));
+  auto const uuid = msg->trip_id()->uuid()->str();
+  if (auto it = previous_trip_formation_update_.find(uuid);
+      it != end(previous_trip_formation_update_)) {
+    auto& prev = updates_[it->second];
+    prev.intermediate_ = true;
+  }
+  updates_.emplace_back(rt_update_info{
+      Content_TripFormationMessage,
+      motis_copy_table(TripFormationMessage, fbb_, msg).Union()});
+  previous_trip_formation_update_[uuid] = updates_.size() - 1;
 }
 
 std::pair<expanded_trip_update_info&, bool>
@@ -139,10 +158,14 @@ update_msg_builder::get_or_insert_expanded_trip(trip const* trp) {
 }
 
 void update_msg_builder::reset() {
-  delays_.clear();
-  updates_.clear();
-  separated_trips_.clear();
   fbb_.Clear();
+
+  updates_.clear();
+  expanded_trips_.clear();
+  delays_.clear();
+  separated_trips_.clear();
+  previous_reroute_update_.clear();
+  previous_trip_formation_update_.clear();
   delay_count_ = 0;
   reroute_count_ = 0;
 }
@@ -185,8 +208,8 @@ void update_msg_builder::build_delay_updates() {
                  std::tie(b->schedule_time_, b_station_idx, b_is_dep);
         });
     auto const separated = separated_trips_.find(trp) != end(separated_trips_);
-    updates_.emplace_back(CreateRtUpdate(
-        fbb_, Content_RtDelayUpdate,
+    updates_.emplace_back(rt_update_info{
+        Content_RtDelayUpdate,
         CreateRtDelayUpdate(
             fbb_, fbs_trip,
             fbb_.CreateVector(utl::to_vec(
@@ -206,7 +229,7 @@ void update_msg_builder::build_delay_updates() {
                       to_fbs(di->get_reason()));
                 })),
             separated)
-            .Union()));
+            .Union()});
   }
   delays_.clear();
 }
@@ -243,11 +266,11 @@ void update_msg_builder::build_expanded_trip_updates() {
     auto const update_type = get_expanded_trip_update_type(etui);
     auto const old_route = to_fbs(etui.old_route_);
     auto const new_route = to_fbs(etui.new_route_);
-    updates_.emplace_back(CreateRtUpdate(
-        fbb_, Content_RtExpandedTripUpdate,
+    updates_.emplace_back(rt_update_info{
+        Content_RtExpandedTripUpdate,
         CreateRtExpandedTripUpdate(fbb_, trp->trip_idx_, update_type,
                                    &old_route, &new_route)
-            .Union()));
+            .Union()});
   }
 }
 
@@ -256,7 +279,15 @@ msg_ptr update_msg_builder::finish() {
   build_expanded_trip_updates();
   fbb_.create_and_finish(
       MsgContent_RtUpdates,
-      CreateRtUpdates(fbb_, fbb_.CreateVector(updates_), schedule_res_id_)
+      CreateRtUpdates(
+          fbb_,
+          fbb_.CreateVector(utl::to_vec(updates_,
+                                        [&](rt_update_info const& ui) {
+                                          return CreateRtUpdate(
+                                              fbb_, ui.content_type_,
+                                              ui.content_, ui.intermediate_);
+                                        })),
+          schedule_res_id_)
           .Union(),
       "/rt/update", DestinationType_Topic);
   return make_msg(fbb_);

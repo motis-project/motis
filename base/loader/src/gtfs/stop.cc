@@ -74,7 +74,7 @@ std::set<stop*> stop::get_metas(std::vector<stop*> const& stops) {
 }
 
 stop_map read_stops(loaded_file file) {
-  motis::logging::scoped_timer timer{"read stops"};
+  motis::logging::scoped_timer const timer{"read stops"};
 
   stop_map stops;
   mcd::hash_map<std::string, std::vector<stop*>> equal_names;

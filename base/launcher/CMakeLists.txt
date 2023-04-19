@@ -16,6 +16,7 @@ target_link_libraries(motis
   pbf_sdf_fonts_res-res
   tiles_server_res-res
 )
+target_compile_options(motis PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 if (NOT MSVC)
   set_target_properties(motis PROPERTIES LINK_FLAGS "-Wl,-rpath,./")

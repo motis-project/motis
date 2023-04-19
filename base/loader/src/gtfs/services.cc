@@ -106,7 +106,7 @@ void add_exception(std::string const& service_name, greg::date const& start,
 traffic_days merge_traffic_days(
     std::map<std::string, calendar> const& base,
     std::map<std::string, std::vector<calendar_date>> const& exceptions) {
-  motis::logging::scoped_timer timer{"traffic days"};
+  motis::logging::scoped_timer const timer{"traffic days"};
 
   traffic_days s;
   s.first_day_ = bound_date(base, exceptions, bound::first);

@@ -26,7 +26,7 @@ void create_free_text_msg(FlatBufferBuilder& fbb, std::string const& eva_num,
                           std::string const& free_text_text,
                           std::string const& free_text_type) {
   // clang-format off
-  std::vector<Offset<Event>> events{
+  std::vector<Offset<Event>> const events{
         CreateEvent(fbb,
           fbb.CreateString(eva_num),
           service_num,
@@ -63,7 +63,7 @@ msg_ptr get_free_text_ris_msg(std::string const& eva_num, int const service_num,
                        trip_start_eva, trip_start_schedule_time, free_text_code,
                        free_text_text, free_text_type);
   message_creator mc;
-  std::vector<Offset<MessageHolder>> messages{CreateMessageHolder(
+  std::vector<Offset<MessageHolder>> const messages{CreateMessageHolder(
       mc,
       mc.CreateVector(is_msg_fbb.GetBufferPointer(), is_msg_fbb.GetSize()))};
   mc.create_and_finish(MsgContent_RISBatch,
@@ -101,7 +101,7 @@ void create_station_event_time_change_msg(
     event_type const type, time_t const schedule_time, time_t const update_time,
     std::string const& trip_start_eva, time_t const trip_start_schedule_time) {
   // clang-format off
-  std::vector<Offset<UpdatedEvent>> events{
+  std::vector<Offset<UpdatedEvent>> const events{
     CreateUpdatedEvent(fbb,
         CreateEvent(fbb,
           fbb.CreateString(eva_num), service_num,
@@ -134,7 +134,7 @@ msg_ptr get_delay_ris_msg(std::string const& eva_num, int const service_num,
       is_msg_fbb, eva_num, service_num, type, schedule_time, update_time,
       trip_start_eva, trip_start_schedule_time);
   message_creator mc;
-  std::vector<Offset<MessageHolder>> messages{CreateMessageHolder(
+  std::vector<Offset<MessageHolder>> const messages{CreateMessageHolder(
       mc,
       mc.CreateVector(is_msg_fbb.GetBufferPointer(), is_msg_fbb.GetSize()))};
   mc.create_and_finish(MsgContent_RISBatch,
@@ -150,7 +150,7 @@ void create_canceled_train_msg(
     time_t const schedule_time1, std::string const& trip_start_eva,
     time_t const trip_start_schedule_time) {
   // clang-format off
-  std::vector<Offset<Event>> events{
+  std::vector<Offset<Event>> const events{
         CreateEvent(fbb,
           fbb.CreateString(eva_num),
           service_num,
@@ -186,7 +186,7 @@ msg_ptr get_canceled_train_ris_message(
                             schedule_time, eva_num1, type1, schedule_time1,
                             trip_start_eva, trip_start_schedule_time);
   message_creator mc;
-  std::vector<Offset<MessageHolder>> messages{CreateMessageHolder(
+  std::vector<Offset<MessageHolder>> const messages{CreateMessageHolder(
       mc,
       mc.CreateVector(is_msg_fbb.GetBufferPointer(), is_msg_fbb.GetSize()))};
   mc.create_and_finish(MsgContent_RISBatch,
@@ -202,7 +202,7 @@ void create_track_msg(FlatBufferBuilder& fbb, std::string const& eva_num,
                       time_t const trip_start_schedule_time,
                       std::string const& updated_track) {
   // clang-format off
-      std::vector<Offset<UpdatedTrack>> events{
+      std::vector<Offset<UpdatedTrack>> const events{
             CreateUpdatedTrack(fbb,CreateEvent(fbb,
               fbb.CreateString(eva_num),
               service_num,
@@ -231,7 +231,7 @@ msg_ptr get_track_ris_msg(std::string const& eva_num, int const service_num,
   create_track_msg(is_msg_fbb, eva_num, service_num, type, schedule_time,
                    trip_start_eva, trip_start_schedule_time, updated_track);
   message_creator mc;
-  std::vector<Offset<MessageHolder>> messages{CreateMessageHolder(
+  std::vector<Offset<MessageHolder>> const messages{CreateMessageHolder(
       mc,
       mc.CreateVector(is_msg_fbb.GetBufferPointer(), is_msg_fbb.GetSize()))};
   mc.create_and_finish(MsgContent_RISBatch,

@@ -448,10 +448,10 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
   auto& uv = primary_universe();
   auto result = loader::loader_result{};
   if (journey_path.extension() == ".txt") {
-    scoped_timer journey_timer{"load motis journeys"};
+    scoped_timer const journey_timer{"load motis journeys"};
     result = loader::motis_journeys::load_journeys(sched, uv, file);
   } else if (journey_path.extension() == ".csv") {
-    scoped_timer journey_timer{"load csv journeys"};
+    scoped_timer const journey_timer{"load csv journeys"};
     result = loader::csv_journeys::load_journeys(sched, uv, file,
                                                  journey_input_settings_);
   } else {
@@ -517,7 +517,7 @@ void paxmon::load_journeys() {
     for (auto const& file : journey_files_) {
       auto const result = load_journeys(file);
       if (reroute_unmatched_) {
-        scoped_timer timer{"reroute unmatched journeys"};
+        scoped_timer const timer{"reroute unmatched journeys"};
         LOG(info) << "routing " << result.unmatched_journeys_.size()
                   << " unmatched journeys using " << initial_reroute_router_
                   << "...";
@@ -551,7 +551,7 @@ void paxmon::load_journeys() {
   }
 
   {
-    scoped_timer timer{"init expected load"};
+    scoped_timer const timer{"init expected load"};
     uv.pax_connection_info_.init_expected_load(uv.passenger_groups_);
   }
 
@@ -630,7 +630,7 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
 
 // called after rt flush
 void paxmon::rt_updates_applied(msg_ptr const& msg) {
-  scoped_timer t{"paxmon: graph_updated"};
+  scoped_timer const t{"paxmon: graph_updated"};
   auto const rgu = motis_content(RtGraphUpdated, msg);
   auto const schedule_res_id = rgu->schedule();
   auto const uv_ids =

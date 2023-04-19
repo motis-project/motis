@@ -43,7 +43,7 @@ void parse_ds100_mappings(loaded_file const& infotext_file,
   column_map[3] = 0;
   column_map[4] = 1;
 
-  std::vector<entry> entries;
+  std::vector<entry> const entries;
   auto next = infotext_file.content();
   while (next) {
     next = skip_lines(next, [](cstr const& line) { return line.len < 38; });

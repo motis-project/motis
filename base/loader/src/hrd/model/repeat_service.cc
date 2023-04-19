@@ -29,7 +29,7 @@ hrd_service create_repetition(hrd_service const& origin, int repetition) {
 }
 
 void expand_repetitions(std::vector<hrd_service>& services) {
-  int size = services.size();
+  int const size = services.size();
   services.reserve(services.size() * (services[0].num_repetitions_ + 1));
   for (int service_idx = 0; service_idx < size; ++service_idx) {
     auto const& service = services[service_idx];

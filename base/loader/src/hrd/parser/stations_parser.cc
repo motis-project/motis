@@ -16,7 +16,7 @@ namespace motis::loader::hrd {
 void parse_station_names(loaded_file const& file,
                          std::map<int, intermediate_station>& stations,
                          config const& c) {
-  scoped_timer timer("parsing station names");
+  scoped_timer const timer("parsing station names");
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
     if (line.len == 0 || line[0] == '%') {
       return;
@@ -39,7 +39,7 @@ void parse_station_names(loaded_file const& file,
 void parse_station_coordinates(loaded_file const& file,
                                std::map<int, intermediate_station>& stations,
                                config const& c) {
-  scoped_timer timer("parsing station coordinates");
+  scoped_timer const timer("parsing station coordinates");
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
     if (line.len == 0 || line[0] == '%') {
       return;
@@ -57,7 +57,7 @@ void parse_station_coordinates(loaded_file const& file,
 
 void set_change_times(station_meta_data const& metas,
                       std::map<int, intermediate_station>& stations) {
-  scoped_timer timer("set station change times");
+  scoped_timer const timer("set station change times");
   for (auto& station_entry : stations) {
     auto const ct = metas.get_station_change_time(station_entry.first);
     station_entry.second.change_time_ = ct.first;
@@ -96,7 +96,7 @@ std::map<int, intermediate_station> parse_stations(
     loaded_file const& station_names_file,
     loaded_file const& station_coordinates_file, station_meta_data const& metas,
     config const& config) {
-  scoped_timer timer("parsing stations");
+  scoped_timer const timer("parsing stations");
   std::map<int, intermediate_station> stations;
   parse_station_names(station_names_file, stations, config);
   parse_station_coordinates(station_coordinates_file, stations, config);

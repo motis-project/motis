@@ -91,6 +91,8 @@ RtUpdate:
   fields:
     content:
       description: TODO
+    intermediate:
+      description: TODO
 RtUpdates:
   description: TODO
   fields:

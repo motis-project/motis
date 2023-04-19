@@ -192,7 +192,7 @@ struct stations_builder {
       sched_.tracks_.emplace_back("");
     }
     return utl::get_or_create(tracks_, name, [&]() {
-      int index = sched_.tracks_.size();
+      int const index = sched_.tracks_.size();
       sched_.tracks_.emplace_back(name);
       return index;
     });

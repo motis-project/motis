@@ -17,7 +17,7 @@ bool is_multiple_spaces(cstr line) {
 
 std::map<uint16_t, std::string> parse_attributes(loaded_file const& file,
                                                  config const& c) {
-  scoped_timer timer("parsing attributes");
+  scoped_timer const timer("parsing attributes");
   std::map<uint16_t, std::string> attributes;
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
     if (line.len == 0 || line.str[0] == '#') {
