@@ -14,8 +14,16 @@ using namespace rapidjson;
 
 namespace motis::module {
 
+namespace {
+
+constexpr auto const kTypeKey = "_type";
+
+}  // namespace
+
 void write_json_value(Value const& v, Writer<StringBuffer>& writer,
-                      bool const is_root = false) {
+                      std::string_view current_key = std::string_view{},
+                      bool const is_root = false,
+                      std::string_view const target = std::string_view{}) {
   auto const is_type_key = [](auto const& m, std::string_view& union_key) {
     auto const key = m.name.GetString();
     auto const key_len = m.name.GetStringLength();
@@ -25,6 +33,36 @@ void write_json_value(Value const& v, Writer<StringBuffer>& writer,
     }
     return false;
   };
+
+  auto add_msg_wrapper = false;
+  if (is_root && v.IsObject()) {
+    if (!v.HasMember("destination") && !v.HasMember("content")) {
+      add_msg_wrapper = true;
+      writer.StartObject();
+
+      writer.String("destination");
+      writer.StartObject();
+      writer.String("target");
+      writer.String(target.data(), static_cast<SizeType>(target.size()));
+      writer.EndObject();
+
+      current_key = "content";
+    }
+  }
+
+  if (!current_key.empty()) {
+    if (v.IsObject()) {
+      if (auto const it = v.GetObject().FindMember(kTypeKey);
+          it != v.MemberEnd()) {
+        auto const union_key = std::string{current_key} + kTypeKey;
+        writer.String(union_key.data(),
+                      static_cast<SizeType>(union_key.size()));
+        write_json_value(it->value, writer);
+      }
+    }
+    writer.String(current_key.data(),
+                  static_cast<SizeType>(current_key.size()));
+  }
 
   switch (v.GetType()) {  // NOLINT
     case rapidjson::kObjectType: {
@@ -50,8 +88,7 @@ void write_json_value(Value const& v, Writer<StringBuffer>& writer,
         write_json_value(m.value, writer);
 
         // Write union.
-        writer.String(it->name.GetString(), it->name.GetStringLength());
-        write_json_value(it->value, writer);
+        write_json_value(it->value, writer, union_key);
 
         // Remember written values.
         written.emplace(m.name.GetString(), m.name.GetStringLength());
@@ -60,10 +97,10 @@ void write_json_value(Value const& v, Writer<StringBuffer>& writer,
 
       // Write remaining values
       for (auto const& m : v.GetObject()) {
-        if (written.find({m.name.GetString(), m.name.GetStringLength()}) ==
-            end(written)) {
-          writer.String(m.name.GetString(), m.name.GetStringLength());
-          write_json_value(m.value, writer);
+        auto const key =
+            std::string_view{m.name.GetString(), m.name.GetStringLength()};
+        if (key != kTypeKey && written.find(key) == end(written)) {
+          write_json_value(m.value, writer, key);
         }
       }
 
@@ -88,9 +125,13 @@ void write_json_value(Value const& v, Writer<StringBuffer>& writer,
 
     default: v.Accept(writer);  // NOLINT
   }
+
+  if (add_msg_wrapper) {
+    writer.EndObject();
+  }
 }
 
-std::string fix_json(std::string const& json) {
+std::string fix_json(std::string const& json, std::string_view const target) {
   rapidjson::Document d;
   if (d.Parse(json.c_str()).HasParseError()) {  // NOLINT
     throw std::system_error(module::error::unable_to_parse_msg);
@@ -99,7 +140,7 @@ std::string fix_json(std::string const& json) {
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
 
-  write_json_value(d, writer, true);
+  write_json_value(d, writer, std::string_view{}, true, target);
 
   return buffer.GetString();
 }

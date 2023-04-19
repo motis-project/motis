@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/reflection.h"
 
@@ -50,6 +53,7 @@ struct message : public typed_flatbuffer<Message> {
 using msg_ptr = std::shared_ptr<message>;
 
 msg_ptr make_msg(std::string const& json, bool fix = false,
+                 std::string_view const target = std::string_view{},
                  std::size_t fbs_max_depth = DEFAULT_FBS_MAX_DEPTH,
                  std::size_t fbs_max_tables = DEFAULT_FBS_MAX_TABLES);
 msg_ptr make_msg(message_creator& builder);

@@ -48,11 +48,12 @@ msg_ptr build_reply(int const id, msg_ptr const& res,
   return m;
 }
 
-msg_ptr decode_msg(std::string const& req_buf, bool const binary) {
+msg_ptr decode_msg(std::string const& req_buf, bool const binary,
+                   std::string_view const target = std::string_view{}) {
   if (binary) {
     return make_msg(req_buf.data(), req_buf.size());
   } else {
-    return make_msg(req_buf, true);
+    return make_msg(req_buf, true, target);
   }
 }
 
@@ -269,7 +270,7 @@ struct web_server::impl {
             std::make_error_code(std::errc::operation_not_supported))));
     }
 
-    return on_msg_req(req_msg, false, res_cb);
+    return on_msg_req(req_msg, false, to_sv(req.target()), res_cb);
   }
 
   void on_ws_open(net::ws_session_ptr session, std::string const& target) {
@@ -288,7 +289,7 @@ struct web_server::impl {
   void on_ws_msg(net::ws_session_ptr const& session, std::string const& msg,
                  net::ws_msg_type type) {
     auto const is_binary = type == net::ws_msg_type::BINARY;
-    return on_msg_req(msg, is_binary,
+    return on_msg_req(msg, is_binary, {},
                       [session, type, is_binary](msg_ptr const& response) {
                         if (auto s = session.lock()) {
                           s->send(encode_msg(response, is_binary), type,
@@ -298,11 +299,12 @@ struct web_server::impl {
   }
 
   void on_msg_req(std::string const& request, bool binary,
+                  std::string_view const target,
                   std::function<void(msg_ptr const&)> const& cb) {
     msg_ptr err;
     int req_id = 0;
     try {
-      auto const req = decode_msg(request, binary);
+      auto const req = decode_msg(request, binary, target);
       log_request(req);
       req_id = req->get()->id();
       return receiver_.on_msg(

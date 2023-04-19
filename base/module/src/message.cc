@@ -81,7 +81,7 @@ std::pair<const char**, size_t> message::get_fbs_definitions() {
 }
 
 msg_ptr make_msg(std::string const& json, bool const fix,
-                 std::size_t const fbs_max_depth,
+                 std::string_view const target, std::size_t const fbs_max_depth,
                  std::size_t const fbs_max_tables) {
   if (json.empty()) {
     LOG(motis::logging::error) << "empty request";
@@ -89,7 +89,7 @@ msg_ptr make_msg(std::string const& json, bool const fix,
   }
 
   bool const parse_ok =
-      json_parser->Parse(fix ? fix_json(json).c_str() : json.c_str());
+      json_parser->Parse(fix ? fix_json(json, target).c_str() : json.c_str());
   if (!parse_ok) {
     LOG(motis::logging::error) << "parse error: " << json_parser->error_;
     throw std::system_error(error::unable_to_parse_msg);
