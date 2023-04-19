@@ -27,12 +27,34 @@ def reproduce(filepath, verbose=False):
     reproduce_dir = f"./reproduce/{id}"
     data_dir = f"{reproduce_dir}/data"
     input_dir = f"{reproduce_dir}/input"
-
-    if verbose:
-        print("cleaning reproduce dir")
     subprocess.check_call(["rm", "-rf", reproduce_dir])
     subprocess.check_call(["mkdir", "-p", data_dir])
     subprocess.check_call(["mkdir", "-p", input_dir])
+
+    if verbose:
+        run_rewrite = [
+            "./motis",
+            "rewrite",
+            "--in", f"fail/{result_f(id, routers[1])}",
+            "--out", f"{reproduce_dir}/check_orig_{result_f(id, routers[1])}",
+            "--target", "/cc"
+        ]
+        print("###", " ".join(run_rewrite))
+        subprocess.run(run_rewrite, check=True)
+
+        try:
+            run_check = [
+                "./motis",
+                "-c", "input/config.ini",
+                "--modules", "cc",
+                "--mode", "init",
+                "--init", f"{reproduce_dir}/check_orig_{result_f(id, routers[1])}"
+            ]
+            print("###", " ".join(run_check))
+            subprocess.run(run_check, check=True)
+        except subprocess.CalledProcessError as e:
+            print("NOT FEASILBE")
+
 
     if verbose:
         print("extracting...")
