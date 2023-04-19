@@ -5,11 +5,11 @@ import subprocess
 
 
 def query_f(id, router):
-    return f"{id}_q200_fwd_{router}.json"
+    return f"{id}_q10k_fwd_{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r200_fwd_{router}.json"
+    return f"{id}_r10k_fwd_{router}.json"
 
 
 if len(sys.argv) < 3:
@@ -18,7 +18,6 @@ else:
     id = int(sys.argv[1])
     start_time = sys.argv[2]
     print(f"debug for id={id}, time={start_time}")
-
 
     reproduce_dir = f"./reproduce/{id}"
     data_dir = f"{reproduce_dir}/data"

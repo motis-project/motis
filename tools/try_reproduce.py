@@ -13,11 +13,11 @@ routers = ["routing", "nigiri"]
 
 
 def query_f(id, router):
-    return f"{id}_q200_fwd_{router}.json"
+    return f"{id}_q10k_fwd_{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r200_fwd_{router}.json"
+    return f"{id}_r10k_fwd_{router}.json"
 
 
 def reproduce(filepath, verbose=False):
