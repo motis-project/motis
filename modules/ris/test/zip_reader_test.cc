@@ -7,7 +7,7 @@
 namespace motis::ris {
 
 TEST(ris_zip_reader, read_zip) {
-  zip_reader r{"modules/ris/test_resources/test.zip"};
+  zip_reader const r{"modules/ris/test_resources/test.zip"};
   std::optional<std::string_view> file_content;
 
   // f9735b6d730a91f9a77af2ac17fcb833  test.200.raw
