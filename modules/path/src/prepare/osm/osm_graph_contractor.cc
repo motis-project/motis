@@ -277,7 +277,7 @@ std::vector<osm_graph_dist> osm_graph_contractor::collect_distances() {
 }
 
 osm_graph contract_graph(osm_graph const& orig) {
-  motis::logging::scoped_timer t{"contract_graph"};
+  motis::logging::scoped_timer const t{"contract_graph"};
   osm_graph contr;
   contr.components_ = orig.components_;
   contr.nodes_.resize(orig.nodes_.size());

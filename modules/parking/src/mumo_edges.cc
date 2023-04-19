@@ -20,7 +20,7 @@ inline geo::latlng to_latlng(Position const* pos) {
 }
 
 msg_ptr make_geo_station_request(geo::latlng const& pos, double radius) {
-  Position fbs_position{pos.lat_, pos.lng_};
+  Position const fbs_position{pos.lat_, pos.lng_};
   message_creator mc;
   mc.create_and_finish(
       MsgContent_LookupGeoStationRequest,
@@ -32,7 +32,7 @@ msg_ptr make_geo_station_request(geo::latlng const& pos, double radius) {
 msg_ptr make_osrm_request(geo::latlng const& pos,
                           std::vector<parking_lot> const& destinations,
                           std::string const& profile, SearchDir direction) {
-  Position fbs_position{pos.lat_, pos.lng_};
+  Position const fbs_position{pos.lat_, pos.lng_};
   auto const many = utl::to_vec(destinations, [](auto const& dest) {
     return Position{dest.location_.lat_, dest.location_.lng_};
   });

@@ -106,12 +106,12 @@ FF ;Frankfurt (Main) Hbf;U2;U2;p
 
 TEST(loader_hrd_stations_parser, meta_data) {
   try {
-    loaded_file info_text_file("infotext.101", infotext);
-    loaded_file fp_old_file("footpaths_old.101", footpaths_old);
-    loaded_file fp_new_file("footpaths_new.101", footpaths_new);
-    loaded_file fp_new_file_2("footpats_new_2.101", footpaths_hrd_20_26);
-    loaded_file minct_csv("minct.csv", minct_data);
-    loaded_file platform_csv("platform.csv", platform_data);
+    loaded_file const info_text_file("infotext.101", infotext);
+    loaded_file const fp_old_file("footpaths_old.101", footpaths_old);
+    loaded_file const fp_new_file("footpaths_new.101", footpaths_new);
+    loaded_file const fp_new_file_2("footpats_new_2.101", footpaths_hrd_20_26);
+    loaded_file const minct_csv("minct.csv", minct_data);
+    loaded_file const platform_csv("platform.csv", platform_data);
 
     station_meta_data meta_old;
     parse_station_meta_data(info_text_file, fp_old_file, fp_new_file, minct_csv,

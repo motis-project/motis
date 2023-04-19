@@ -140,8 +140,8 @@ void update_footpaths(raptor_timetable const& tt, time* current_round,
       // are chained together
       time const new_arrival = ea[stop_id] + footpath.duration_;
 
-      time to_earliest_arrival = ea[footpath.to_];
-      time to_arrival = current_round[footpath.to_];
+      time const to_earliest_arrival = ea[footpath.to_];
+      time const to_arrival = current_round[footpath.to_];
 
       auto const min = std::min(to_arrival, to_earliest_arrival);
       if (new_arrival < min) {

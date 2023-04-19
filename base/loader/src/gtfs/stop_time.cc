@@ -35,7 +35,7 @@ static const column_mapping<gtfs_stop_time> stop_time_columns = {
 
 void read_stop_times(loaded_file const& file, trip_map& trips,
                      stop_map const& stops) {
-  motis::logging::scoped_timer timer{"read stop times"};
+  motis::logging::scoped_timer const timer{"read stop times"};
   std::string last_trip_id;
   trip* last_trip = nullptr;
 

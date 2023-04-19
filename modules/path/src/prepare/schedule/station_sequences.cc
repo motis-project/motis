@@ -36,7 +36,7 @@ constexpr auto const CISTA_MODE =
 
 mcd::vector<station_seq> load_station_sequences(
     motis::loader::Schedule const* sched, std::string const& prefix) {
-  scoped_timer timer("loading station sequences");
+  scoped_timer const timer("loading station sequences");
 
   auto const& mapping = loader::class_mapping();
 

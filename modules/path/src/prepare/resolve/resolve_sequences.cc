@@ -52,7 +52,7 @@ struct plan_executor {
   }
 
   void execute() {
-    ml::scoped_timer t{"resolve_sequences"};
+    ml::scoped_timer const t{"resolve_sequences"};
     start_ = sc::steady_clock::now();
     progress_tracker_->in_high(pp_.part_task_queue_.size());
 
@@ -242,7 +242,8 @@ struct plan_executor {
 
   void dump_queue_stats(size_t curr_part_task) const {
     auto stop = sc::steady_clock::now();
-    double t_curr = sc::duration_cast<sc::microseconds>(stop - start_).count();
+    double const t_curr =
+        sc::duration_cast<sc::microseconds>(stop - start_).count();
 
     auto factor = static_cast<double>(pp_.part_task_queue_.size()) /
                   static_cast<double>(curr_part_task);
@@ -281,7 +282,7 @@ struct plan_executor {
       int t_m = t_s / 60;
       t_s = t_s % 60;
 
-      int t_h = t_m / 60;
+      int const t_h = t_m / 60;
       t_m = t_m % 60;
 
       return os << std::setfill('0') << std::setw(2) << t_h << ":"  //

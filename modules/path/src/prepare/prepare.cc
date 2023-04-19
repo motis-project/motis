@@ -37,7 +37,7 @@ namespace motis::path {
 
 inline void filter_sequences(std::vector<std::string> const& filters,
                              mcd::vector<station_seq>& sequences) {
-  ml::scoped_timer timer("filter station sequences");
+  ml::scoped_timer const timer("filter station sequences");
   for (auto const& filter : filters) {
     auto const pos = filter.find_first_of(':');
     utl::verify(pos != std::string::npos, "unexpected filter");

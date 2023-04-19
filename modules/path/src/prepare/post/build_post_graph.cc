@@ -18,7 +18,7 @@ struct post_graph_builder {
       : graph_{std::move(seq)}, color_(0) {}
 
   void make_nodes() {
-    ml::scoped_timer t{"build_post_graph|make_nodes"};
+    ml::scoped_timer const t{"build_post_graph|make_nodes"};
 
     for (auto const& seq : *graph_.originals_) {
       for (auto const& path : seq.paths_) {
@@ -39,7 +39,7 @@ struct post_graph_builder {
   }
 
   void make_edges() {
-    ml::scoped_timer t{"build_post_graph|make_edges"};
+    ml::scoped_timer const t{"build_post_graph|make_edges"};
 
     // node -> max color
     thread_local std::unique_ptr<std::vector<color_t>> node_max_colors;
@@ -155,8 +155,8 @@ struct post_graph_builder {
         auto const current_color = base_color + color_offset;
 
         auto const& edge = edges[i];
-        std::scoped_lock lock(node_mutex_[edge.from_idx_],
-                              node_mutex_[edge.to_idx_]);
+        std::scoped_lock const lock(node_mutex_[edge.from_idx_],
+                                    node_mutex_[edge.to_idx_]);
 
         auto* from = graph_.nodes_.at(edge.from_idx_).get();
         auto* to = graph_.nodes_.at(edge.to_idx_).get();
@@ -228,7 +228,7 @@ void check_out_colors(post_graph const& graph) {
 }
 
 post_graph build_post_graph(mcd::unique_ptr<mcd::vector<station_seq>> seq) {
-  ml::scoped_timer t{"build_post_graph"};
+  ml::scoped_timer const t{"build_post_graph"};
 
   post_graph_builder builder{std::move(seq)};
   builder.make_nodes();

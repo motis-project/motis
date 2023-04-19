@@ -197,7 +197,7 @@ std::vector<direct_connection> get_direct_connections(
       auto const ppr_resp = motis_content(FootRoutingResponse, ppr_msg);
       auto const routes = ppr_resp->routes();
       if (routes->size() == 1) {
-        std::lock_guard guard{direct_mutex};
+        std::lock_guard const guard{direct_mutex};
         for (auto const& route : *routes->Get(0)->routes()) {
           direct.emplace_back(mumo_type::FOOT, route->duration(),
                               route->accessibility());
@@ -221,7 +221,7 @@ std::vector<direct_connection> get_direct_connections(
       auto const duration =
           static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
       if (duration <= osrm_bike_settings.max_duration_) {
-        std::lock_guard guard{direct_mutex};
+        std::lock_guard const guard{direct_mutex};
         direct.emplace_back(mumo_type::BIKE, duration / 60, 0);
       }
     }));
@@ -242,7 +242,7 @@ std::vector<direct_connection> get_direct_connections(
       auto const duration =
           static_cast<unsigned>(osrm_resp->costs()->Get(0)->duration());
       if (duration <= osrm_car_settings.max_duration_) {
-        std::lock_guard guard{direct_mutex};
+        std::lock_guard const guard{direct_mutex};
         direct.emplace_back(mumo_type::CAR, duration / 60, 0);
       }
     }));

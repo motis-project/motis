@@ -93,8 +93,8 @@ void collect_events(trip_update_context& update_ctx,
       if (!skipped_stops->is_skipped(stop_ctx.seq_no_)) {
         // stop was not skipped until now
         skipped_stops->skipped_stops_[stop_ctx.seq_no_] = true;
-        evt evt_arr(trip, stop_ctx, event_type::ARR);
-        evt evt_dep(trip, stop_ctx, event_type::DEP);
+        evt const evt_arr(trip, stop_ctx, event_type::ARR);
+        evt const evt_dep(trip, stop_ctx, event_type::DEP);
 
         update_ctx.is_stop_skip_new_[stop_ctx.idx_] = true;
         if (stop_ctx.idx_ > 0) {
@@ -221,7 +221,7 @@ void collect_canceled_events(trip_update_context& update_ctx,
     if (stop.index() > 0) {
       stop_ctx.stop_arrival_ = get_schedule_time(*update_ctx.trip_, sched,
                                                  stop.index(), event_type::ARR);
-      evt arr(*update_ctx.trip_, stop_ctx, event_type::ARR);
+      evt const arr(*update_ctx.trip_, stop_ctx, event_type::ARR);
       arr.verify_times(sched);
       update_ctx.reroute_events_.emplace_back(arr);
     }
@@ -229,7 +229,7 @@ void collect_canceled_events(trip_update_context& update_ctx,
     if (stop.index() < update_ctx.trip_->edges_->size()) {
       stop_ctx.stop_departure_ = get_schedule_time(
           *update_ctx.trip_, sched, stop.index(), event_type::DEP);
-      evt dep(*update_ctx.trip_, stop_ctx, event_type::DEP);
+      evt const dep(*update_ctx.trip_, stop_ctx, event_type::DEP);
       dep.verify_times(sched);
       update_ctx.reroute_events_.emplace_back(dep);
     }

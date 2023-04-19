@@ -41,7 +41,7 @@ inline bool is_same_bucket(time const a, time const b) {
 
 void init_trip_to_connections(csa_timetable& tt,
                               utl::progress_tracker_ptr& progress_tracker) {
-  scoped_timer timer("csa: trip to connections");
+  scoped_timer const timer("csa: trip to connections");
   progress_tracker->status("Trip to Connections")
       .out_bounds(40.F, 60.F)
       .in_high(tt.fwd_connections_.size());
@@ -59,7 +59,7 @@ void init_trip_to_connections(csa_timetable& tt,
 
 void init_stop_to_connections(csa_timetable& tt,
                               utl::progress_tracker_ptr& progress_tracker) {
-  scoped_timer timer("csa: stop to connections");
+  scoped_timer const timer("csa: stop to connections");
   progress_tracker->status("Stop to Connections")
       .out_bounds(60.F, 100.F)
       .in_high(tt.fwd_connections_.size());
@@ -148,13 +148,13 @@ trip_id get_connections_from_expanded_trips(
     csa_timetable& tt, schedule const& sched,
     bool bridge_zero_duration_connections, bool add_footpath_connections,
     utl::progress_tracker_ptr& progress_tracker) {
-  scoped_timer build_timer{"csa: get connections"};
+  scoped_timer const build_timer{"csa: get connections"};
   trip_id trip_idx = 0;
   auto bridged_count = 0U;
   auto bridged_footpath_count = 0U;
   auto footpath_connections_count = 0U;
   {
-    scoped_timer connections_timer{"csa: build connections"};
+    scoped_timer const connections_timer{"csa: build connections"};
     progress_tracker->status("Build Connections")
         .out_bounds(0.F, 15.F)
         .in_high(sched.expanded_trips_.index_size());
@@ -252,7 +252,7 @@ trip_id get_connections_from_expanded_trips(
   }
 
   {
-    scoped_timer sort_timer{"csa: sort connections"};
+    scoped_timer const sort_timer{"csa: sort connections"};
     progress_tracker->status("Sort Connections").out_bounds(15.F, 35.F);
 #ifdef _WIN32
     std::sort(
@@ -280,7 +280,7 @@ trip_id get_connections_from_expanded_trips(
   }
 
   {
-    scoped_timer sort_timer{"csa: compute buckets"};
+    scoped_timer const sort_timer{"csa: compute buckets"};
     progress_tracker->status("Compute Buckets").out_bounds(35.F, 40.F);
     tt.fwd_bucket_starts_ =
         get_bucket_starts(begin(tt.fwd_connections_), end(tt.fwd_connections_),
@@ -311,7 +311,7 @@ void add_footpaths(schedule const& sched, csa_timetable& tt) {
 std::unique_ptr<csa_timetable> build_csa_timetable(
     schedule const& sched, bool const bridge_zero_duration_connections,
     bool const add_footpath_connections) {
-  scoped_timer timer("building csa timetable");
+  scoped_timer const timer("building csa timetable");
 
   auto progress_tracker = utl::get_active_progress_tracker_or_activate("csa");
 

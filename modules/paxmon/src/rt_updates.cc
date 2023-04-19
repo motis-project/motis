@@ -198,7 +198,7 @@ monitoring_event_type get_monitoring_event_type(
 std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
                                             int arrival_delay_threshold,
                                             int preparation_time) {
-  scoped_timer timer{"update affected passenger groups"};
+  scoped_timer const timer{"update affected passenger groups"};
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
   utl::verify(current_time != INVALID_TIME,

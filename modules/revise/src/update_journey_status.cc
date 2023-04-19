@@ -96,7 +96,7 @@ void update_interchange_status(schedule const& sched, journey& j) {
 
 void update_canceled_train_status(journey& j) {
   interval_map<int> canceled_trains;
-  unsigned counter = 0;
+  unsigned const counter = 0;
   for (auto it = begin(j.stops_); it != end(j.stops_); ++it) {
     auto const arrival_valid = it->arrival_.valid_ || it == begin(j.stops_);
     auto const departure_valid =

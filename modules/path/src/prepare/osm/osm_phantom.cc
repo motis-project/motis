@@ -58,12 +58,13 @@ void osm_edge_phantom_match::locate() {
     along_track_dist_ = a_dist_12 * geo::kEarthRadiusMeters;  // conv. to meters
     eq_to_ = true;
   } else {  // in between
-    double lat_1_r = to_rad(p1.lat_);
-    double lng_1_r = to_rad(p1.lng_);
+    double const lat_1_r = to_rad(p1.lat_);
+    double const lng_1_r = to_rad(p1.lng_);
 
-    double lat_x_r = asin(sin(lat_1_r) * cos(a_dist_at) +
-                          cos(lat_1_r) * sin(a_dist_at) * cos(bearing_12));
-    double lng_x_r =
+    double const lat_x_r =
+        asin(sin(lat_1_r) * cos(a_dist_at) +
+             cos(lat_1_r) * sin(a_dist_at) * cos(bearing_12));
+    double const lng_x_r =
         lng_1_r + atan2(sin(bearing_12) * sin(a_dist_at) * cos(lat_1_r),
                         cos(a_dist_at) - sin(lat_1_r) * sin(lat_x_r));
 
@@ -281,7 +282,7 @@ void osm_phantom_builder::append_phantoms(
     return;
   }
 
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   utl::concat(n_phantoms_, n_phantoms);
   utl::concat(e_phantoms_, e_phantoms);
 }

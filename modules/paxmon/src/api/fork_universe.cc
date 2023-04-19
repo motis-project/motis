@@ -17,7 +17,7 @@ msg_ptr fork_universe(paxmon_data& data, msg_ptr const& msg) {
   auto const& base_uv = uv_access.uv_;
   auto const& base_sched = uv_access.sched_;
   auto const fork_schedule = req->fork_schedule();
-  scoped_timer timer{"paxmon: fork universe"};
+  scoped_timer const timer{"paxmon: fork universe"};
 
   auto ttl = std::chrono::seconds{req->ttl()};
   if ((ttl.count() == 0 && !data.allow_infinite_universe_ttl_) ||

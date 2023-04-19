@@ -81,7 +81,7 @@ struct preprocessing {
             utl::get_active_progress_tracker_or_activate("tripbased")} {}
 
   void init() {
-    scoped_timer timer{"trip-based preprocessing: init"};
+    scoped_timer const timer{"trip-based preprocessing: init"};
     auto const prev_locale =
         std::cout.imbue(std::locale(std::locale::classic(), new thousands_sep));
     auto const stop_count = sched_.station_nodes_.size();
@@ -289,7 +289,7 @@ struct preprocessing {
   void precompute_transfers() {
     progress_tracker_->status("Transfers: FWD").out_bounds(0.F, 50.F);
 
-    scoped_timer timer{"trip-based preprocessing: precompute transfers"};
+    scoped_timer const timer{"trip-based preprocessing: precompute transfers"};
     auto const prev_locale =
         std::cout.imbue(std::locale(std::locale::classic(), new thousands_sep));
     LOG(info) << "precompute transfers: " << data_.trip_count_ << " trips, "
@@ -329,7 +329,7 @@ struct preprocessing {
   void precompute_reverse_transfers() {
     progress_tracker_->status("Transfers: BWD").out_bounds(50.F, 100.F);
 
-    scoped_timer timer{
+    scoped_timer const timer{
         "trip-based preprocessing: precompute reverse transfers"};
     expected_trip_id_ = 0;
     uturns_ = 0;
@@ -589,7 +589,7 @@ private:
 
   void add_transfers(trip_id trip_idx,
                      std::vector<std::vector<tb_transfer>> trip_transfers) {
-    std::lock_guard<std::mutex> guard{transfers_mutex_};
+    std::lock_guard<std::mutex> const guard{transfers_mutex_};
 
     auto const add_to_transfers =
         [&](trip_id trip,
@@ -622,7 +622,7 @@ private:
   void add_reverse_transfers(
       trip_id trip_idx,
       std::vector<std::vector<tb_reverse_transfer>> trip_transfers) {
-    std::lock_guard<std::mutex> guard{transfers_mutex_};
+    std::lock_guard<std::mutex> const guard{transfers_mutex_};
 
     auto const add_to_transfers =
         [&](trip_id trip,
@@ -844,7 +844,7 @@ std::unique_ptr<tb_data> update_data_file(schedule const& sched,
 
   if (!force_update && fs::exists(filename)) {
     LOG(info) << "loading trip-based data from file " << filename;
-    scoped_timer load_timer{"trip-based deserialization"};
+    scoped_timer const load_timer{"trip-based deserialization"};
     if (serialization::data_okay_for_schedule(filename, sched)) {
       return {};
     } else {
@@ -855,7 +855,7 @@ std::unique_ptr<tb_data> update_data_file(schedule const& sched,
   LOG(info) << "calculating trip-based data...";
   auto data = build_data(sched);
   LOG(info) << "writing trip-based data to file " << filename;
-  scoped_timer write_timer{"trip-based serialization"};
+  scoped_timer const write_timer{"trip-based serialization"};
   serialization::write_data(*data, filename, sched);
   return data;
 }
