@@ -33,7 +33,7 @@ char get_relation_symbol(T const& u1, T const& u2) {
 
 std::string format_time(unixtime t, bool local_time) {
   constexpr auto const TIME_FORMAT = "%d.%m. %H:%M";
-  std::time_t conv = t;
+  std::time_t const conv = t;
   std::ostringstream out;
   out << std::put_time(
       local_time ? std::localtime(&conv) : std::gmtime(&conv),  // NOLINT
@@ -291,7 +291,7 @@ int compare(int argc, char const** argv) {
     return 0;
   }
 
-  bool print_only_second_empty = false;
+  bool const print_only_second_empty = false;
 
   statistics stats;
   std::ifstream in1(argv[1]), in2(argv[2]), inq(argv[3]);

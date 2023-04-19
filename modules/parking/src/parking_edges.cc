@@ -164,7 +164,7 @@ void add_parking_edges(std::vector<parking_edges>& edges,
     }
   }
 
-  std::lock_guard<std::mutex> guard{mutex};
+  std::lock_guard<std::mutex> const guard{mutex};
   pe_stats.parking_ppr_duration_ += MOTIS_TIMING_MS(ppr_timing);
 
   if ((outward_costs.empty() && return_costs.empty()) ||
@@ -384,7 +384,7 @@ unsigned add_nocar_parking_edges(
        (outward_costs.empty() || return_costs.empty()))) {
     return count;
   }
-  parking_lot no_parking;
+  parking_lot const no_parking;
   edges.emplace_back(no_parking, outward_costs, return_costs);
 
   return count;

@@ -18,7 +18,7 @@ namespace motis::loader::hrd {
 track_rules parse_track_rules(loaded_file const& file,
                               flatbuffers64::FlatBufferBuilder& b,
                               config const& c) {
-  scoped_timer timer("parsing track rules");
+  scoped_timer const timer("parsing track rules");
   track_rules prs;
   std::map<uint64_t, Offset<String>> track_names;
 

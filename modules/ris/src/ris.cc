@@ -392,7 +392,7 @@ struct ris::impl {
     t.dbi_open(STREAM_OFFSET_DB, db::dbi_flags::CREATE);
     t.commit();
 
-    std::vector<input> urls;
+    std::vector<input> const urls;
     for (auto& in : inputs_) {
       if (in.source_type() != input::source_type::path) {
         continue;
@@ -870,21 +870,21 @@ struct ris::impl {
   void parse_and_write_to_db(input& in, Reader&& reader, file_type const type,
                              Publisher& pub) {
     auto const risml_fn = [&](std::string_view s, std::string_view,
-                              std::function<void(ris_message &&)> const& cb) {
+                              std::function<void(ris_message&&)> const& cb) {
       risml::to_ris_message(s, cb, in.tag());
     };
     auto const gtfsrt_fn = [&](std::string_view s, std::string_view,
-                               std::function<void(ris_message &&)> const& cb) {
+                               std::function<void(ris_message&&)> const& cb) {
       gtfsrt::to_ris_message(in.gtfs_knowledge(),
                              config_.gtfs_is_addition_skip_allowed_, s, cb,
                              in.tag());
     };
     auto const ribasis_fn = [&](std::string_view s, std::string_view,
-                                std::function<void(ris_message &&)> const& cb) {
+                                std::function<void(ris_message&&)> const& cb) {
       ribasis::to_ris_message(s, cb, in.tag());
     };
     auto const file_fn = [&](std::string_view s, std::string_view file_name,
-                             std::function<void(ris_message &&)> const& cb) {
+                             std::function<void(ris_message&&)> const& cb) {
       if (boost::ends_with(file_name, ".xml")) {
         return risml_fn(s, file_name, cb);
       } else if (boost::ends_with(file_name, ".json")) {
@@ -918,7 +918,7 @@ struct ris::impl {
         return;
       }
 
-      std::lock_guard<std::mutex> lock{merge_mutex_};
+      std::lock_guard<std::mutex> const lock{merge_mutex_};
 
       auto t = db::txn{env_};
       auto db = t.dbi_open(MSG_DB);
@@ -984,7 +984,7 @@ struct ris::impl {
 
   void update_min_max(std::map<unixtime, unixtime> const& min,
                       std::map<unixtime, unixtime> const& max) {
-    std::lock_guard<std::mutex> lock{min_max_mutex_};
+    std::lock_guard<std::mutex> const lock{min_max_mutex_};
 
     auto t = db::txn{env_};
     auto min_db = t.dbi_open(MIN_DAY_DB);

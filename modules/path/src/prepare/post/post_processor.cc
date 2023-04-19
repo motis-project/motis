@@ -18,7 +18,7 @@ namespace ml = motis::logging;
 namespace motis::path {
 
 void mark_essentials(post_graph& graph) {
-  ml::scoped_timer timer("post_processor|mark_essentials");
+  ml::scoped_timer const timer("post_processor|mark_essentials");
   utl::parallel_for_run(graph.nodes_.size(), [&](auto const i) {
     auto& node = graph.nodes_.at(i);
 
@@ -109,7 +109,7 @@ void construct_atomic_path(post_graph& graph, post_graph_node* start_node,
 }
 
 void find_atomic_paths(post_graph& graph) {
-  ml::scoped_timer timer("post_processor|find_atomic_paths");
+  ml::scoped_timer const timer("post_processor|find_atomic_paths");
 
   for (auto const& node : graph.nodes_) {
     for (auto& edge : node->out_) {

@@ -14,7 +14,7 @@ using namespace motis::module;
 namespace motis::paxmon {
 
 universe* multiverse::create_default_universe() {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   utl::verify(universe_info_map_.find(0) == end(universe_info_map_),
               "default paxmon universe already exists");
   auto const default_schedule_res_id =
@@ -116,7 +116,7 @@ bool multiverse::destroy(universe_id const id) {
 
 std::vector<universe_id> multiverse::universes_using_schedule(
     ctx::res_id_t const schedule_res_id) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   if (auto const it = universes_using_schedule_.find(schedule_res_id);
       it != end(universes_using_schedule_)) {
     return it->second;
@@ -136,7 +136,7 @@ std::shared_ptr<universe_info> multiverse::get_universe_info(universe_id id) {
 
 keep_alive_response multiverse::keep_alive(
     std::vector<universe_id> const& universes) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   keep_alive_response res;
   auto const now = std::chrono::steady_clock::now();
   for (auto const& id : universes) {
@@ -198,7 +198,7 @@ void multiverse::release_universe(universe_info& uv_info) {
   auto const uv_res_id = uv_info.universe_res_;
   auto const schedule_res_id = uv_info.schedule_res_;
 
-  std::unique_lock lock{mutex_};
+  std::unique_lock const lock{mutex_};
   mod_.remove_shared_data(uv_res_id);
   auto& sched_refs = universes_using_schedule_[schedule_res_id];
   utl::erase(sched_refs, uv_id);
@@ -213,7 +213,7 @@ void multiverse::release_universe(universe_info& uv_info) {
 std::vector<current_universe_info> multiverse::get_current_universe_infos() {
   auto infos = std::vector<current_universe_info>{};
 
-  std::unique_lock lock{mutex_};
+  std::unique_lock const lock{mutex_};
   auto const now = std::chrono::steady_clock::now();
   for (auto const& [id, uvi] : universe_info_storage_) {
     std::optional<std::chrono::seconds> expires_in;

@@ -156,17 +156,17 @@ void compute_foot_edges_direct(
 
   routing_graph rg;
   {
-    scoped_timer ppr_load_timer{"Loading ppr routing graph"};
+    scoped_timer const ppr_load_timer{"Loading ppr routing graph"};
     read_routing_graph(rg, ppr_graph);
   }
   {
-    scoped_timer ppr_rtree_timer{"Preparing ppr r-trees"};
+    scoped_timer const ppr_rtree_timer{"Preparing ppr r-trees"};
     rg.prepare_for_routing(
         edge_rtree_max_size, area_rtree_max_size,
         lock_rtrees ? rtree_options::LOCK : rtree_options::PREFETCH);
   }
 
-  scoped_timer timer{"Computing foot edges"};
+  scoped_timer const timer{"Computing foot edges"};
 
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->reset_bounds().in_high(tasks.size());
@@ -192,7 +192,7 @@ void compute_foot_edges_via_module(
     database& db, std::vector<foot_edge_task> const& tasks,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
     bool ppr_exact) {
-  scoped_timer timer{"compute foot edges"};
+  scoped_timer const timer{"compute foot edges"};
   auto const route_fn = [&](location const& parking_loc,
                             std::vector<location> const& station_locs,
                             std::string const& profile_name,

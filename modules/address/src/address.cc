@@ -162,7 +162,7 @@ void address::init(motis::module::registry& reg) {
     ia(context);
   }
 
-  address_typeahead::typeahead t{context};
+  address_typeahead::typeahead const t{context};
 
   impl_ = std::make_unique<impl>(db_file());
   reg.register_op(

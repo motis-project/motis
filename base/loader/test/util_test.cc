@@ -16,8 +16,8 @@ using namespace utl;
 namespace motis::loader::hrd {
 
 TEST(loader_util, bitset_to_string_and_back) {
-  std::string bit_string = "0101010100101010";
-  std::bitset<16> before(bit_string);
+  std::string const bit_string = "0101010100101010";
+  std::bitset<16> const before(bit_string);
 
   ASSERT_TRUE(deserialize_bitset<16>(serialize_bitset<16>(before).c_str()) ==
               before);

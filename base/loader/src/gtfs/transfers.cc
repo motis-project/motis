@@ -23,7 +23,7 @@ static const column_mapping<gtfs_transfer> columns = {
 
 std::map<stop_pair, transfer> read_transfers(loaded_file f,
                                              stop_map const& stops) {
-  motis::logging::scoped_timer timer{"read transfers"};
+  motis::logging::scoped_timer const timer{"read transfers"};
   std::map<stop_pair, transfer> transfers;
 
   if (f.empty()) {

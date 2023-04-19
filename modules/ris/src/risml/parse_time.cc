@@ -26,7 +26,7 @@ using adjustor = boost::date_time::local_adjustor<ptime, 1, engine>;
 namespace motis::ris::risml {
 
 inline unixtime to_unix_time(boost::posix_time::ptime const& t) {
-  boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+  boost::posix_time::ptime const epoch(boost::gregorian::date(1970, 1, 1));
   return (t - epoch).total_seconds();
 }
 
@@ -36,15 +36,15 @@ unixtime parse_time(cstr const& raw) {
     throw std::runtime_error("bad time format (length < 14)");
   }
 
-  date d(parse<int>(raw.substr(0, size(4))),  //
-         parse<int>(raw.substr(4, size(2))),
-         parse<int>(raw.substr(6, size(2))));
+  date const d(parse<int>(raw.substr(0, size(4))),  //
+               parse<int>(raw.substr(4, size(2))),
+               parse<int>(raw.substr(6, size(2))));
 
-  time_duration t(parse<int>(raw.substr(8, size(2))),
-                  parse<int>(raw.substr(10, size(2))),
-                  parse<int>(raw.substr(12, size(2))));
+  time_duration const t(parse<int>(raw.substr(8, size(2))),
+                        parse<int>(raw.substr(10, size(2))),
+                        parse<int>(raw.substr(12, size(2))));
 
-  ptime local_time(d, t);
+  ptime const local_time(d, t);
   return to_unix_time(adjustor::local_to_utc(local_time));
 }
 

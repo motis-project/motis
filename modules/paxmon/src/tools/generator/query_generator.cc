@@ -17,14 +17,14 @@ using namespace motis::routing;
 
 namespace motis::paxmon::tools::generator {
 
-static int rand_in(int start, int end) {
+int rand_in(int start, int end) {
   static std::mt19937 rng{std::random_device{}()};
   std::uniform_int_distribution<int> dist(start, end);
   return dist(rng);
 }
 
 template <typename It>
-static It rand_in(It begin, It end) {
+It rand_in(It begin, It end) {
   return std::next(begin, rand_in(0, std::distance(begin, end) - 1));
 }
 

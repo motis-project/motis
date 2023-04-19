@@ -490,7 +490,7 @@ TEST(post_graph, reverse_path_min_class) {
 
   auto const& ap = *g.atomic_paths_.front();
 
-  mp::color_to_seq_seg_index index{g};
+  mp::color_to_seq_seg_index const index{g};
 
   auto const& [seq_segs, classes] = index.resolve_atomic_path(ap);
 

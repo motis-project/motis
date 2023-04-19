@@ -77,7 +77,7 @@ get_transport_debug_infos(FlatBufferBuilder& fbb, schedule const& sched,
                           trip_id const trp, stop_idx_t const stop_idx) {
   std::vector<Offset<TransportDebugInfo>> arrival_transports,
       departure_transports;
-  access::trip_stop stop{sched.expanded_trips_.data_[trp], stop_idx};
+  access::trip_stop const stop{sched.expanded_trips_.data_[trp], stop_idx};
   auto const add_transports = [&](std::vector<Offset<TransportDebugInfo>>&
                                       transports,
                                   light_connection const& lcon) {

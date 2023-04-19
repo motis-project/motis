@@ -81,8 +81,8 @@ known_stop_skips* knowledge_context::find_trip_stop_skips(
 void knowledge_context::remember_additional(gtfs_trip_id trip_id,
                                             const time start_date,
                                             const int first_station_id) {
-  known_additional_.emplace_back(known_addition_trip{
-      std::move(trip_id), primary_trip_id(first_station_id, 0, start_date)});
+  known_additional_.emplace_back(
+      std::move(trip_id), primary_trip_id(first_station_id, 0, start_date));
   ++new_known_add_cnt_;
 }
 

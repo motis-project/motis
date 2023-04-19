@@ -23,8 +23,8 @@ void verify_line_format(cstr line, char const* filename, int line_number) {
 }
 
 std::string parse_name(cstr s) {
-  bool start_is_quote = s[0] == '\'' || s[0] == '\"';
-  char end = start_is_quote ? s[0] : ' ';
+  bool const start_is_quote = s[0] == '\'' || s[0] == '\"';
+  char const end = start_is_quote ? s[0] : ' ';
   int i = start_is_quote ? 1 : 0;
   while (s && s[i] != end) {
     ++i;
@@ -37,9 +37,9 @@ provider_info read_provider_names(cstr line, char const* filename,
                                   int line_number) {
   provider_info info;
 
-  int short_name = line.substr_offset(" K ");
-  int long_name = line.substr_offset(" L ");
-  int full_name = line.substr_offset(" V ");
+  int const short_name = line.substr_offset(" K ");
+  int const long_name = line.substr_offset(" L ");
+  int const full_name = line.substr_offset(" V ");
 
   utl::verify(short_name != -1 && long_name != -1 && full_name != -1,
               "provider line format mismatch in {}:{}", filename, line_number);
@@ -53,7 +53,7 @@ provider_info read_provider_names(cstr line, char const* filename,
 
 std::map<uint64_t, provider_info> parse_providers(loaded_file const& file,
                                                   config const& c) {
-  scoped_timer timer("parsing providers");
+  scoped_timer const timer("parsing providers");
 
   std::map<uint64_t, provider_info> providers;
   provider_info current_info;

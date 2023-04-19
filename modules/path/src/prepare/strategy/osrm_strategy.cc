@@ -63,7 +63,7 @@ struct osrm_strategy::impl {
         mt_forward_(osrm_data_facade_.get(), *osrm_heaps_),
         mt_backward_(osrm_data_facade_.get(), *osrm_heaps_),
         via_route_(std::make_unique<ViaRoutePlugin>(*osrm_data_facade_, -1)) {
-    ml::scoped_timer t{"load osrm strategy"};
+    ml::scoped_timer const t{"load osrm strategy"};
 
     std::mutex m;
     std::vector<int> node_counts(stations.size());

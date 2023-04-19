@@ -465,7 +465,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   std::mutex mumo_stats_mutex;
 
   auto const mumo_stats_appender = [&](stats_category&& s) {
-    std::lock_guard guard(mumo_stats_mutex);
+    std::lock_guard const guard(mumo_stats_mutex);
     mumo_stats.emplace_back(s);
   };
 

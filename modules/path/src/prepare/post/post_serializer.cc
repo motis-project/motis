@@ -18,8 +18,8 @@ namespace ml = motis::logging;
 namespace motis::path {
 
 void serialize_geometry(post_graph& graph, db_builder& builder) {
-  ml::scoped_timer timer("post_serializer: serialize_geometry");
-  color_to_seq_seg_index index{graph};
+  ml::scoped_timer const timer("post_serializer: serialize_geometry");
+  color_to_seq_seg_index const index{graph};
 
   std::vector<seq_seg> stub_seq_seqs;
   for (auto seq_idx = 0ULL; seq_idx < graph.originals_->size(); ++seq_idx) {
@@ -120,7 +120,7 @@ void reconstruct_and_serialize_seqs(post_graph const& graph,
                                     db_builder& builder) {
   utl::verify(graph.originals_->size() == graph.segment_ids_.size(),
               "size mismatch");
-  ml::scoped_timer timer("post_serializer: serialize_seqs");
+  ml::scoped_timer const timer("post_serializer: serialize_seqs");
 
   utl::parallel_for_run(graph.originals_->size(), [&](auto const i) {
     auto const& seq = graph.originals_->at(i);

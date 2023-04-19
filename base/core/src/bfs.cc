@@ -24,7 +24,7 @@ std::set<trip::route_edge> route_bfs(ev_key const& k, bfs_direction const dir,
         }
 
         if (visited.emplace(in).second) {
-          q.push(trip::route_edge{in});
+          q.emplace(in);
         }
       }
     }
@@ -37,7 +37,7 @@ std::set<trip::route_edge> route_bfs(ev_key const& k, bfs_direction const dir,
         }
 
         if (visited.insert(&out).second) {
-          q.push(&out);
+          q.emplace(&out);
         }
       }
     }

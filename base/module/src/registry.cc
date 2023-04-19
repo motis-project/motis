@@ -49,7 +49,7 @@ void registry::subscribe(std::string const& topic, void_op_fn_t fn,
 
 std::vector<std::string> registry::register_remote_ops(
     std::vector<std::string> const& names, remote_op_fn_t const& fn) {
-  std::lock_guard g{remote_op_mutex_};
+  std::lock_guard const g{remote_op_mutex_};
   std::vector<std::string> successful_names;
   for (auto const& name : names) {
     if (remote_operations_.emplace(name, fn).second) {
@@ -60,7 +60,7 @@ std::vector<std::string> registry::register_remote_ops(
 }
 
 void registry::unregister_remote_op(std::vector<std::string> const& names) {
-  std::lock_guard g{remote_op_mutex_};
+  std::lock_guard const g{remote_op_mutex_};
   for (auto const& name : names) {
     remote_operations_.erase(name);
   }
@@ -68,7 +68,7 @@ void registry::unregister_remote_op(std::vector<std::string> const& names) {
 
 std::optional<remote_op_fn_t> registry::get_remote_op(
     std::string const& prefix) {
-  std::lock_guard g{remote_op_mutex_};
+  std::lock_guard const g{remote_op_mutex_};
   if (auto const it = remote_operations_.upper_bound(prefix);
       it != begin(remote_operations_) &&
       boost::algorithm::starts_with(prefix, std::next(it, -1)->first)) {

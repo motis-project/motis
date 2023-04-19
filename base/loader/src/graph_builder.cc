@@ -397,16 +397,18 @@ int graph_builder::get_index(
       --section_idx;
     } else {
       // Check if departures stay sorted.
-      bool earlier_eq_dep =
+      bool const earlier_eq_dep =
           index > 0 && lc.d_time_ <= route_section[index - 1].d_time_;
-      bool later_eq_dep = static_cast<unsigned>(index) < route_section.size() &&
-                          lc.d_time_ >= route_section[index].d_time_;
+      bool const later_eq_dep =
+          static_cast<unsigned>(index) < route_section.size() &&
+          lc.d_time_ >= route_section[index].d_time_;
 
       // Check if arrivals stay sorted.
-      bool earlier_eq_arr =
+      bool const earlier_eq_arr =
           index > 0 && lc.a_time_ <= route_section[index - 1].a_time_;
-      bool later_eq_arr = static_cast<unsigned>(index) < route_section.size() &&
-                          lc.a_time_ >= route_section[index].a_time_;
+      bool const later_eq_arr =
+          static_cast<unsigned>(index) < route_section.size() &&
+          lc.a_time_ >= route_section[index].a_time_;
 
       // Check if both tracks have the same platform or both tracks have no
       // platform information.
@@ -442,7 +444,7 @@ void graph_builder::add_to_routes(
     mcd::vector<light_connection> const& sections,
     mcd::vector<station*> const& stations) {
   for (auto& alt_route : alt_routes) {
-    int index = get_index(alt_route, sections, stations);
+    int const index = get_index(alt_route, sections, stations);
     if (index == -1) {
       continue;
     }
@@ -536,8 +538,8 @@ light_connection graph_builder::section_to_connection(
   auto arr_time = ref->times()->Get(section_idx * 2 + 2);
 
   // Day indices for shifted bitfields (tracks, attributes)
-  int dep_day_index = day + (dep_time / MINUTES_A_DAY);
-  int arr_day_index = day + (arr_time / MINUTES_A_DAY);
+  int const dep_day_index = day + (dep_time / MINUTES_A_DAY);
+  int const arr_day_index = day + (arr_time / MINUTES_A_DAY);
 
   // Build full connection.
   auto clasz_it = sched_.classes_.find(section->category()->name()->str());
@@ -675,7 +677,7 @@ provider const* graph_builder::get_or_create_provider(Provider const* p) {
 
 int graph_builder::get_or_create_category_index(Category const* c) {
   return utl::get_or_create(categories_, c, [&]() {
-    int index = sched_.categories_.size();
+    int const index = sched_.categories_.size();
     sched_.categories_.emplace_back(mcd::make_unique<category>(
         c->name()->str(), static_cast<uint8_t>(c->output_rule())));
     return index;
@@ -702,7 +704,7 @@ int graph_builder::get_or_create_track(int day,
   } else {
     auto name = track_it->name()->str();
     return utl::get_or_create(tracks_, name, [&]() {
-      int index = sched_.tracks_.size();
+      int const index = sched_.tracks_.size();
       sched_.tracks_.emplace_back(name);
       return index;
     });
@@ -816,7 +818,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
                          loader_options const& opt) {
   utl::verify(!fbs_schedules.empty(), "build_graph: no schedules");
 
-  scoped_timer timer("building graph");
+  scoped_timer const timer("building graph");
   for (auto const* fbs_schedule : fbs_schedules) {
     LOG(info) << "schedule: " << fbs_schedule->name()->str();
   }
@@ -868,7 +870,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
         first_last_days(*sched, i, fbs_schedule->interval());
     builder.add_services(fbs_schedule->services());
     if (opt.apply_rules_) {
-      scoped_timer timer("rule services");
+      scoped_timer const timer("rule services");
       progress_tracker->status(fmt::format("Rule Services {}", dataset_prefix))
           .out_bounds(out_mid, out_high);
       build_rule_routes(builder, fbs_schedule->rule_services());

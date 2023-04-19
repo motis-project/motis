@@ -65,7 +65,7 @@ std::vector<Offset<MoveWrapper>> convert_moves(
   std::vector<Offset<MoveWrapper>> moves;
 
   for (auto const& t : transports) {
-    Range r(t.from_, t.to_);
+    Range const r(t.from_, t.to_);
     if (t.is_walk_) {
       moves.push_back(CreateMoveWrapper(
           b, Move_Walk,

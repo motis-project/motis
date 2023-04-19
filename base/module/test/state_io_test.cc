@@ -16,7 +16,7 @@ size=54321
 )";
 
 TEST(motis_module_state, write) {
-  test_state s{std::string{"test"}, 12345ULL, 54321U};
+  test_state const s{std::string{"test"}, 12345ULL, 54321U};
   std::stringstream ss;
   write_ini(ss, s);
   EXPECT_EQ(ss.str(), file_content);

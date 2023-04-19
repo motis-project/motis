@@ -1,3 +1,6 @@
+// clang-tidy crashes while processing this file
+// NOLINTBEGIN(bugprone-unchecked-optional-access)
+
 #include "motis/loader/gtfs/gtfs_parser.h"
 
 #include <numeric>
@@ -107,7 +110,7 @@ std::vector<std::string> gtfs_parser::missing_files(
 }
 
 std::time_t to_unix_time(boost::gregorian::date const& date) {
-  boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+  boost::posix_time::ptime const epoch(boost::gregorian::date(1970, 1, 1));
   return (boost::posix_time::ptime(date) - epoch).total_seconds();
 }
 
@@ -171,7 +174,7 @@ void fix_flixtrain_transfers(trip_map& trips,
 }
 
 void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
-  motis::logging::scoped_timer global_timer{"gtfs parser"};
+  motis::logging::scoped_timer const global_timer{"gtfs parser"};
 
   auto const load = [&](char const* file) {
     return fs::is_regular_file(root / file) ? loaded_file{root / file}
@@ -200,7 +203,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   std::map<trip::stop_seq, fbs64::Offset<Route>> fbs_routes;
   std::map<trip::stop_seq_numbers, fbs64::Offset<fbs64::Vector<uint32_t>>>
       fbs_seq_numbers;
-  std::vector<fbs64::Offset<Service>> fbs_services;
+  std::vector<fbs64::Offset<Service>> const fbs_services;
 
   auto get_or_create_stop = [&](stop const* s) {
     return utl::get_or_create(fbs_stations, s, [&]() {
@@ -283,7 +286,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
     }
   };
 
-  motis::logging::scoped_timer export_timer{"export"};
+  motis::logging::scoped_timer const export_timer{"export"};
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->status("Export schedule.raw")
       .out_bounds(60.F, 100.F)
@@ -523,3 +526,5 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
 }
 
 }  // namespace motis::loader::gtfs
+
+// NOLINTEND(bugprone-unchecked-optional-access)

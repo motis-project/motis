@@ -53,7 +53,7 @@ using dataset_mem_t = std::variant<cista::mmap, typed_flatbuffer<Schedule>>;
 schedule_ptr load_schedule_impl(loader_options const& opt,
                                 cista::memory_holder& schedule_buf,
                                 std::string const& data_dir) {
-  ml::scoped_timer time("loading schedule");
+  ml::scoped_timer const time("loading schedule");
 
   // ensure there is an active progress tracker (e.g. for test cases)
   utl::get_active_progress_tracker_or_activate("schedule");

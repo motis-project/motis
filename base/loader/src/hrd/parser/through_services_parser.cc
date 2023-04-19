@@ -128,7 +128,7 @@ struct ts_rule : public service_rule {
 void parse_through_service_rules(loaded_file const& file,
                                  std::map<int, bitfield> const& hrd_bitfields,
                                  service_rules& rules, config const& c) {
-  scoped_timer timer("parsing through trains");
+  scoped_timer const timer("parsing through trains");
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
     if (line.len < 40) {
       return;
@@ -145,7 +145,7 @@ void parse_through_service_rules(loaded_file const& file,
     auto key_2 =
         std::make_pair(parse<int>(line.substr(c.th_s_.key2_nr_)),
                        raw_to_int<uint64_t>(line.substr(c.th_s_.key2_admin_)));
-    std::shared_ptr<service_rule> rule(new ts_rule(
+    std::shared_ptr<service_rule> const rule(new ts_rule(
         key_1, key_2, parse<int>(line.substr(c.th_s_.eva_)), it->second));
 
     rules[key_1].push_back(rule);

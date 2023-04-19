@@ -112,7 +112,7 @@ struct mss_rule : public service_rule {
     }
 
     // ensure that all stops between the merge and split match
-    int stop_count = split_idx_s1 - merge_idx_s1 + 1;
+    int const stop_count = split_idx_s1 - merge_idx_s1 + 1;
     for (int i = 0; i < stop_count; ++i) {
       auto const& stop_s1 = s1->stops_[merge_idx_s1 + i];
       auto const& stop_s2 = s2->stops_[merge_idx_s2 + i];
@@ -168,7 +168,7 @@ struct mss_rule : public service_rule {
 void parse_merge_split_service_rules(
     loaded_file const& file, std::map<int, bitfield> const& hrd_bitfields,
     service_rules& rules, config const& c) {
-  scoped_timer timer("parsing merge split rules");
+  scoped_timer const timer("parsing merge split rules");
 
   for_each_line_numbered(file.content(), [&](cstr line, int line_number) {
     if (line.len < c.merge_spl_.line_length_) {
@@ -192,7 +192,7 @@ void parse_merge_split_service_rules(
 
     auto eva_num_begin = parse<int>(line.substr(c.merge_spl_.eva_begin_));
     auto eva_num_end = parse<int>(line.substr(c.merge_spl_.eva_end_));
-    std::shared_ptr<service_rule> rule(
+    std::shared_ptr<service_rule> const rule(
         new mss_rule(key_1, key_2, eva_num_begin, eva_num_end, it->second));
 
     rules[key_1].push_back(rule);

@@ -50,7 +50,7 @@ std::ostream& operator<<(std::ostream& out, mumo_edge const& e) {
 }
 
 msg_ptr make_geo_request(latlng const& pos, double radius) {
-  Position fbs_position{pos.lat_, pos.lng_};
+  Position const fbs_position{pos.lat_, pos.lng_};
   message_creator mc;
   mc.create_and_finish(
       MsgContent_LookupGeoStationRequest,
@@ -62,7 +62,7 @@ msg_ptr make_geo_request(latlng const& pos, double radius) {
 msg_ptr make_osrm_request(latlng const& pos,
                           Vector<Offset<Station>> const* stations,
                           std::string const& profile, SearchDir direction) {
-  Position fbs_position{pos.lat_, pos.lng_};
+  Position const fbs_position{pos.lat_, pos.lng_};
   std::vector<Position> many;
   for (auto const* station : *stations) {
     many.push_back(*station->pos());
@@ -157,7 +157,7 @@ void car_parking_edges(latlng const& pos, int max_car_duration,
                        SearchDir direction, appender_fun const& appender,
                        mumo_stats_appender_fun const& mumo_stats_appender,
                        std::string const& mumo_stats_prefix) {
-  Position fbs_position{pos.lat_, pos.lng_};
+  Position const fbs_position{pos.lat_, pos.lng_};
   message_creator mc;
   mc.create_and_finish(
       MsgContent_ParkingEdgesRequest,
@@ -196,7 +196,7 @@ void gbfs_edges(appender_fun const& appender, SearchDir const dir,
                 unsigned const max_ride_duration) {
   using gbfs::GBFSRoutingResponse;
 
-  Position fbs_position{pos.lat_, pos.lng_};
+  Position const fbs_position{pos.lat_, pos.lng_};
   message_creator mc;
   mc.create_and_finish(
       MsgContent_GBFSRoutingRequest,
