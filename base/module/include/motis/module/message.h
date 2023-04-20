@@ -15,6 +15,7 @@
 #include "motis/core/common/typed_flatbuffer.h"
 
 #include "motis/module/error.h"
+#include "motis/module/json_format.h"
 
 namespace motis::module {
 
@@ -43,7 +44,7 @@ struct message : public typed_flatbuffer<Message> {
 
   int id() const { return get()->id(); }
 
-  std::string to_json(bool compact = false) const;
+  std::string to_json(json_format jf = json_format::DEFAULT_FLATBUFFERS) const;
 
   static reflection::Schema const& get_schema();
   static reflection::Object const* get_objectref(char const* name);
@@ -52,10 +53,11 @@ struct message : public typed_flatbuffer<Message> {
 
 using msg_ptr = std::shared_ptr<message>;
 
-msg_ptr make_msg(std::string const& json, bool fix = false,
+msg_ptr make_msg(std::string const& json, json_format& jf, bool fix = false,
                  std::string_view const target = std::string_view{},
                  std::size_t fbs_max_depth = DEFAULT_FBS_MAX_DEPTH,
                  std::size_t fbs_max_tables = DEFAULT_FBS_MAX_TABLES);
+msg_ptr make_msg(std::string const& json);
 msg_ptr make_msg(message_creator& builder);
 msg_ptr make_msg(void const* buf, size_t len,
                  std::size_t fbs_max_depth = DEFAULT_FBS_MAX_DEPTH,

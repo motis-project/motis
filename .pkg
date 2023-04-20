@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=22636700295def02cc7495929161bda471d58c8d
+  commit=fd953b0d0dee3f56d2a1388232531d6cf92adccf
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master

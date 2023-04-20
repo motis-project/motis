@@ -539,7 +539,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
 
   for (auto const& [out_file, fbbp] : utl::zip(out_files, fbbs)) {
     auto& fbb = *fbbp;
-    out_file << make_msg(fbb)->to_json(true) << "\n";
+    out_file << make_msg(fbb)->to_json(json_format::SINGLE_LINE) << "\n";
   }
 }
 

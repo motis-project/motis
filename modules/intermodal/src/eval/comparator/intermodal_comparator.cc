@@ -200,18 +200,21 @@ bool check(int id, std::vector<msg_ptr> const& msgs,
       return;
     }
 
+    auto const jf = pretty_print ? json_format::DEFAULT_FLATBUFFERS
+                                 : json_format::SINGLE_LINE;
+
     std::ofstream out{
         (fail_path / fmt::format("{}_{}.json", std::to_string(id),
                                  file_identifier(files[file_idx])))
             .string()};
-    out << msgs[file_idx]->to_json(!pretty_print) << std::endl;
+    out << msgs[file_idx]->to_json(jf) << std::endl;
 
     if (!queries.empty()) {
       std::ofstream query_out{
           (fail_path / fmt::format("{}_{}.json", std::to_string(id),
                                    file_identifier(query_files[file_idx])))
               .string()};
-      query_out << queries[file_idx]->to_json(!pretty_print) << std::endl;
+      query_out << queries[file_idx]->to_json(jf) << std::endl;
     }
   };
 

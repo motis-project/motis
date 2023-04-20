@@ -13,6 +13,7 @@
 #include "version.h"
 
 using namespace motis;
+using motis::module::json_format;
 using motis::module::make_msg;
 
 namespace motis::routing::eval {
@@ -86,7 +87,7 @@ int rewrite_queries(int argc, char const** argv) {
     fbb.create_and_finish(msg_in->get()->content_type(), content.Union(),
                           opt.new_target_, DestinationType_Module,
                           msg_in->id());
-    out << make_msg(fbb)->to_json(true) << "\n";
+    out << make_msg(fbb)->to_json(json_format::SINGLE_LINE) << "\n";
 
     ++count;
   }

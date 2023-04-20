@@ -17,14 +17,22 @@ using namespace flatbuffers;
 
 namespace motis::module {
 
-std::unique_ptr<Parser> init_parser(bool compact = false) {
+std::unique_ptr<Parser> init_parser(
+    json_format const jf = json_format::DEFAULT_FLATBUFFERS) {
   auto parser = std::make_unique<Parser>();
   parser->opts.strict_json = true;
   parser->opts.skip_unexpected_fields_in_json = true;
   parser->opts.output_default_scalars_in_json = true;
-  if (compact) {
-    parser->opts.indent_step = -1;
+
+  switch (jf) {
+    case json_format::DEFAULT_FLATBUFFERS: break;
+    case json_format::SINGLE_LINE: parser->opts.indent_step = -1; break;
+    case json_format::TYPES_IN_UNIONS:
+    case json_format::CONTENT_ONLY_TYPES_IN_UNIONS:
+      parser->opts.type_tags_in_unions = true;
+      break;
   }
+
   int message_symbol_index = -1;
   for (unsigned i = 0; i < number_of_symbols; ++i) {
     if (strcmp(filenames[i], "Message.fbs") == 0) {  // NOLINT
@@ -53,7 +61,12 @@ namespace {
 std::unique_ptr<Parser> json_parser = init_parser();
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-std::unique_ptr<Parser> compact_json_parser = init_parser(true);
+std::unique_ptr<Parser> single_line_json_parser =
+    init_parser(json_format::SINGLE_LINE);
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+std::unique_ptr<Parser> types_in_unions_json_parser =
+    init_parser(json_format::TYPES_IN_UNIONS);
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 std::unique_ptr<Parser> reflection_parser = init_parser();
@@ -63,10 +76,23 @@ reflection::Schema const& schema = init_schema(*reflection_parser);
 
 }  // namespace
 
-std::string message::to_json(bool compact) const {
+std::string message::to_json(json_format const jf) const {
   std::string json;
-  flatbuffers::GenerateText(compact ? *compact_json_parser : *json_parser,
-                            data(), &json);
+  switch (jf) {
+    case json_format::DEFAULT_FLATBUFFERS:
+      flatbuffers::GenerateText(*json_parser, data(), &json);
+      break;
+    case json_format::SINGLE_LINE:
+      flatbuffers::GenerateText(*single_line_json_parser, data(), &json);
+      break;
+    case json_format::TYPES_IN_UNIONS:
+      flatbuffers::GenerateText(*types_in_unions_json_parser, data(), &json);
+      break;
+    case json_format::CONTENT_ONLY_TYPES_IN_UNIONS:
+      flatbuffers::GenerateTextSingleField(*types_in_unions_json_parser, data(),
+                                           &json, "content");
+      break;
+  }
   return json;
 }
 
@@ -80,7 +106,7 @@ std::pair<const char**, size_t> message::get_fbs_definitions() {
   return std::make_pair(symbols, number_of_symbols);
 }
 
-msg_ptr make_msg(std::string const& json, bool const fix,
+msg_ptr make_msg(std::string const& json, json_format& jf, bool const fix,
                  std::string_view const target, std::size_t const fbs_max_depth,
                  std::size_t const fbs_max_tables) {
   if (json.empty()) {
@@ -88,8 +114,15 @@ msg_ptr make_msg(std::string const& json, bool const fix,
     throw std::system_error(error::unable_to_parse_msg);
   }
 
-  bool const parse_ok =
-      json_parser->Parse(fix ? fix_json(json, target).c_str() : json.c_str());
+  auto parse_ok = false;
+  if (fix) {
+    auto const fix_result = fix_json(json, target);
+    parse_ok = json_parser->Parse(fix_result.fixed_json_.c_str());
+    jf = fix_result.detected_format_;
+  } else {
+    parse_ok = json_parser->Parse(json.c_str());
+  }
+
   if (!parse_ok) {
     LOG(motis::logging::error) << "parse error: " << json_parser->error_;
     throw std::system_error(error::unable_to_parse_msg);
@@ -106,6 +139,11 @@ msg_ptr make_msg(std::string const& json, bool const fix,
 
   json_parser->builder_.Clear();
   return std::make_shared<message>(size, std::move(buffer));
+}
+
+msg_ptr make_msg(std::string const& json) {
+  auto jf = json_format::DEFAULT_FLATBUFFERS;
+  return make_msg(json, jf);
 }
 
 msg_ptr make_msg(message_creator& builder) {

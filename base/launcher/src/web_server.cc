@@ -3,6 +3,8 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <optional>
+#include <utility>
 
 #include "boost/beast/version.hpp"
 #include "boost/filesystem.hpp"
@@ -26,12 +28,15 @@ using namespace motis::module;
 
 namespace motis::launcher {
 
-std::string encode_msg(msg_ptr const& msg, bool const binary) {
+constexpr auto const kDefaultOuputJsonFormat = json_format::DEFAULT_FLATBUFFERS;
+
+std::string encode_msg(msg_ptr const& msg, bool const binary,
+                       json_format const jf = kDefaultOuputJsonFormat) {
   std::string b;
   if (binary) {
     b = std::string{reinterpret_cast<char const*>(msg->data()), msg->size()};
   } else {
-    b = msg->to_json();
+    b = msg->to_json(jf);
   }
   return b;
 }
@@ -48,12 +53,15 @@ msg_ptr build_reply(int const id, msg_ptr const& res,
   return m;
 }
 
-msg_ptr decode_msg(std::string const& req_buf, bool const binary,
-                   std::string_view const target = std::string_view{}) {
+std::pair<msg_ptr, json_format> decode_msg(
+    std::string const& req_buf, bool const binary,
+    std::string_view const target = std::string_view{}) {
+  auto jf = json_format::DEFAULT_FLATBUFFERS;
   if (binary) {
-    return make_msg(req_buf.data(), req_buf.size());
+    return {make_msg(req_buf.data(), req_buf.size()), jf};
   } else {
-    return make_msg(req_buf, true, target);
+    auto const msg = make_msg(req_buf, jf, true, target);
+    return {msg, jf};
   }
 }
 
@@ -61,6 +69,7 @@ inline std::string_view to_sv(boost::beast::string_view const& bsv) {
   return {bsv.data(), bsv.size()};
 }
 
+// TODO(pablo): json_format support
 struct ws_client : public client,
                    public std::enable_shared_from_this<ws_client> {
   ws_client(boost::asio::io_service& ios, net::ws_session_ptr session,
@@ -86,7 +95,7 @@ struct ws_client : public client,
         int req_id = 0;
 
         try {
-          auto const req =
+          auto const [req, jf] =
               decode_msg(req_buf, type == net::ws_msg_type::BINARY);
           req_id = req->get()->id();
           return cb(req);
@@ -201,7 +210,9 @@ struct web_server::impl {
                        net::web_server::http_res_cb_t const& cb) {
     using namespace boost::beast::http;
 
-    auto const build_response = [req](msg_ptr const& response) {
+    auto const build_response = [req](msg_ptr const& response,
+                                      std::optional<json_format> jf =
+                                          std::nullopt) {
       net::web_server::string_res_t res{
           response == nullptr ? status::ok
           : response->get()->content_type() == MsgContent_MotisError
@@ -230,15 +241,19 @@ struct web_server::impl {
         }
       } else {
         res.set(field::content_type, "application/json");
-        res.body() = response == nullptr ? "" : response->to_json();
+        res.body() =
+            response == nullptr
+                ? ""
+                : response->to_json(jf.value_or(kDefaultOuputJsonFormat));
       }
 
       res.prepare_payload();
       return res;
     };
 
-    auto const res_cb = [cb, build_response](msg_ptr const& response) {
-      cb(build_response(response));
+    auto const res_cb = [cb, build_response](msg_ptr const& response,
+                                             std::optional<json_format> jf) {
+      cb(build_response(response, jf));
     };
 
     std::string req_msg;
@@ -289,28 +304,35 @@ struct web_server::impl {
   void on_ws_msg(net::ws_session_ptr const& session, std::string const& msg,
                  net::ws_msg_type type) {
     auto const is_binary = type == net::ws_msg_type::BINARY;
-    return on_msg_req(msg, is_binary, {},
-                      [session, type, is_binary](msg_ptr const& response) {
-                        if (auto s = session.lock()) {
-                          s->send(encode_msg(response, is_binary), type,
-                                  [](boost::system::error_code, size_t) {});
-                        }
-                      });
+    return on_msg_req(
+        msg, is_binary, {},
+        [session, type, is_binary](msg_ptr const& response,
+                                   std::optional<json_format> jf) {
+          if (auto s = session.lock()) {
+            s->send(encode_msg(response, is_binary,
+                               jf.value_or(kDefaultOuputJsonFormat)),
+                    type, [](boost::system::error_code, size_t) {});
+          }
+        });
   }
 
-  void on_msg_req(std::string const& request, bool binary,
-                  std::string_view const target,
-                  std::function<void(msg_ptr const&)> const& cb) {
+  void on_msg_req(
+      std::string const& request, bool binary, std::string_view const target,
+      std::function<void(msg_ptr const&, std::optional<json_format>)> const& cb,
+      std::optional<json_format> jf = std::nullopt) {
     msg_ptr err;
     int req_id = 0;
     try {
-      auto const req = decode_msg(request, binary, target);
+      auto const [req, detected_jf] = decode_msg(request, binary, target);
+      if (!jf) {
+        jf = detected_jf;
+      }
       log_request(req);
       req_id = req->get()->id();
       return receiver_.on_msg(
-          req, ios_.wrap([&, cb, req_id](msg_ptr const& res,
-                                         std::error_code const& ec) {
-            cb(build_reply(req_id, res, ec));
+          req, ios_.wrap([cb, req_id, jf](msg_ptr const& res,
+                                          std::error_code const& ec) {
+            cb(build_reply(req_id, res, ec), jf);
           }));
     } catch (std::system_error const& e) {
       err = build_reply(req_id, nullptr, e.code());
@@ -320,11 +342,13 @@ struct web_server::impl {
       err = make_unknown_error_msg("unknown");
     }
     err->get()->mutate_id(req_id);
-    return cb(err);
+    return cb(err, jf);
   }
 
-  void on_generic_req(net::web_server::http_req_t const& req,
-                      std::function<void(msg_ptr const&)> const& cb) {
+  void on_generic_req(
+      net::web_server::http_req_t const& req,
+      std::function<void(msg_ptr const&, std::optional<json_format>)> const& cb,
+      std::optional<json_format> jf = std::nullopt) {
     using namespace boost::beast::http;
 
     auto const req_id = 1;
@@ -349,7 +373,7 @@ struct web_server::impl {
       return receiver_.on_msg(
           msg,
           ios_.wrap([&, cb](msg_ptr const& res, std::error_code const& ec) {
-            cb(build_reply(req_id, res, ec));
+            cb(build_reply(req_id, res, ec), jf);
           }));
     } catch (std::system_error const& e) {
       err = build_reply(req_id, nullptr, e.code());
@@ -359,7 +383,7 @@ struct web_server::impl {
       err = make_unknown_error_msg("unknown");
     }
     LOG(logging::error) << err->to_json();
-    return cb(err);
+    return cb(err, jf);
   }
 
   void log_request(msg_ptr const& msg) {
@@ -368,8 +392,8 @@ struct web_server::impl {
     }
 
     try {
-      log_file_ << "[" << motis::logging::time() << "] " << msg->to_json(true)
-                << std::endl;
+      log_file_ << "[" << motis::logging::time() << "] "
+                << msg->to_json(json_format::SINGLE_LINE) << std::endl;
     } catch (std::ios_base::failure const& e) {
       LOG(logging::error) << "could not log request: " << e.what();
       reset_logging(false);
