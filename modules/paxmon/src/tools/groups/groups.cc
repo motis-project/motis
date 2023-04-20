@@ -184,7 +184,7 @@ int gen_groups(int argc, char const** argv) {
     }
   };
 
-  utl::line_range<utl::buf_reader>{file_content}  //
+  utl::line_range{utl::buf_reader{file_content}}  //
       | utl::csv<loader::csv_journeys::motis_row>()  //
       |
       utl::for_each([&](loader::csv_journeys::motis_row const& row) {
