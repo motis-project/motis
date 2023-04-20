@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=22636700295def02cc7495929161bda471d58c8d
+  commit=5cea97c2dc88f629978434505b0f4d902827a5ea
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -101,4 +101,4 @@
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
-  commit=bc09725a4636d5036bfed30de2db0764cdff2de9
+  commit=6e6d6b3081cc8bdf25dda89730e25c36eb995516

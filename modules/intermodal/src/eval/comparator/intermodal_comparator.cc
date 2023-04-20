@@ -3,6 +3,7 @@
 #include <cstring>
 #include <ctime>
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -13,7 +14,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "boost/filesystem.hpp"
 #include "boost/program_options.hpp"
 
 #include "utl/to_vec.h"
@@ -31,7 +31,7 @@
 #include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 using namespace motis;
 using namespace motis::bootstrap;

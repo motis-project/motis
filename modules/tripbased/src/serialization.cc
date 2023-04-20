@@ -2,8 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
-
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
@@ -12,7 +11,7 @@
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::logging;
 
 namespace motis::tripbased::serialization {

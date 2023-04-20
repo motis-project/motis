@@ -1,11 +1,11 @@
 #include "motis/launcher/web_server.h"
 
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
 
 #include "boost/beast/version.hpp"
-#include "boost/filesystem.hpp"
 
 #include "utl/to_vec.h"
 
@@ -21,7 +21,7 @@
 namespace ssl = boost::asio::ssl;
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::module;
 
 namespace motis::launcher {

@@ -1,6 +1,6 @@
 #include "motis/path/prepare/resolve/path_routing.h"
 
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "utl/enumerate.h"
 

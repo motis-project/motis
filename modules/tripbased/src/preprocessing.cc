@@ -1,6 +1,7 @@
 #include <chrono>
 #include <algorithm>
 #include <atomic>
+#include <filesystem>
 #include <locale>
 #include <map>
 #include <mutex>
@@ -11,8 +12,6 @@
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
 #include "utl/zip.h"
-
-#include "boost/filesystem.hpp"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/edges.h"
@@ -25,7 +24,7 @@
 using namespace motis::access;
 using namespace motis::logging;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::tripbased {
 

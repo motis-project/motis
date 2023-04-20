@@ -1,5 +1,6 @@
 #include "motis/intermodal/eval/commands.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include "boost/filesystem.hpp"
 #include "boost/math/constants/constants.hpp"
 
 #define CISTA_PRINTABLE_NO_VEC

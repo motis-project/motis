@@ -1,10 +1,9 @@
 #include "motis/paxmon/loader/dailytrek.h"
 
 #include <chrono>
+#include <filesystem>
 #include <map>
 #include <regex>
-
-#include "boost/filesystem.hpp"
 
 #include "date/date.h"
 
@@ -14,7 +13,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/access/time_access.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 using namespace motis::logging;
 

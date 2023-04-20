@@ -1,6 +1,6 @@
 #include "motis/module/event_collector.h"
 
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "fmt/ranges.h"
 
@@ -8,7 +8,7 @@
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::module {
 

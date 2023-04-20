@@ -1,11 +1,10 @@
 #include "motis/bootstrap/import_files.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <regex>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
@@ -15,7 +14,7 @@
 
 #include "motis/core/common/logging.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace mi = motis::import;
 namespace ml = motis::logging;
 namespace mm = motis::module;

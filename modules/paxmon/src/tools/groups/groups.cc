@@ -2,12 +2,11 @@
 
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <utility>
-
-#include "boost/filesystem.hpp"
 
 #include "fmt/core.h"
 
@@ -27,7 +26,7 @@
 
 using namespace motis::paxmon;
 using namespace motis::paxmon::tools::groups;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::paxmon::tools {
 

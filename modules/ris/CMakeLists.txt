@@ -10,7 +10,6 @@ target_link_libraries(motis-ris PUBLIC
   protobuf
   rabbitmq-cpp
   boost-system
-  boost-filesystem
   motis-module
   motis-core
   miniz

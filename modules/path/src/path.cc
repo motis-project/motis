@@ -1,8 +1,7 @@
 #include "motis/path/path.h"
 
+#include <filesystem>
 #include <memory>
-
-#include "boost/filesystem.hpp"
 
 #include "geo/polyline.h"
 #include "geo/tile.h"

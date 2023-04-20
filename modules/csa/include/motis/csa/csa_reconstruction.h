@@ -1,9 +1,9 @@
 #pragma once
 
+#include <filesystem>
+
 #include "utl/pipes.h"
 #include "utl/verify.h"
-
-#include "boost/filesystem.hpp"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/access/service_access.h"

@@ -3,11 +3,11 @@
 
 #include "motis/loader/gtfs/gtfs_parser.h"
 
+#include <filesystem>
 #include <numeric>
 
 #include "boost/algorithm/string.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
-#include "boost/filesystem.hpp"
 
 #include "utl/erase_if.h"
 #include "utl/get_or_create.h"

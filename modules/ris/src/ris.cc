@@ -3,12 +3,12 @@
 #include <chrono>
 #include <cstdint>
 #include <atomic>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <optional>
 
 #include "boost/algorithm/string/predicate.hpp"
-#include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
 #include "utl/parser/file.h"
@@ -58,7 +58,7 @@
 #undef GetMessage
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace db = lmdb;
 using namespace motis::module;
 using namespace motis::logging;

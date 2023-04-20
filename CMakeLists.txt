@@ -248,7 +248,6 @@ target_link_libraries(motis-test
   motis-module
   conf
   ianatzdb-res
-  boost-filesystem
 )
 target_link_libraries(motis-test gtest gtest_main gmock)
 

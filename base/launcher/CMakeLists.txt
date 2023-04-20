@@ -8,7 +8,6 @@ target_include_directories(motis PRIVATE include)
 target_link_libraries(motis
   ${CMAKE_THREAD_LIBS_INIT}
   boost-system
-  boost-filesystem
   conf
   motis-bootstrap
   web-server-tls

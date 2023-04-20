@@ -4,8 +4,6 @@
 #include <limits>
 #include <vector>
 
-#include "boost/filesystem/path.hpp"
-
 #include "utl/parser/cstr.h"
 
 #ifdef HAVE_DESIGNATED_INITIALIZERS
