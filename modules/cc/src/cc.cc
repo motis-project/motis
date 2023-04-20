@@ -160,7 +160,7 @@ duration get_shortest_footpath(schedule const& sched, node const* from_node,
     edges.push_back(pred);
     pred = pred_edge[pred->from_->id_];
   }
-  
+
   std::reverse(begin(edges), end(edges));
 
   for (auto const& e : edges) {
