@@ -3,7 +3,13 @@ import * as path from "path";
 
 import { AstFieldType, AstTopLevel } from "@/fbs/ast";
 import { schema } from "@/fbs/parser/schema";
-import { FieldType, SchemaType, SchemaTypes, TypeRef } from "@/schema/types";
+import {
+  FieldType,
+  SchemaType,
+  SchemaTypes,
+  TableType,
+  TypeRef,
+} from "@/schema/types";
 
 interface ResolverContext {
   schema: SchemaTypes;
@@ -174,6 +180,8 @@ function extractTypes(
               metadata: a.metadata,
             };
           }),
+          usedInUnion: false,
+          usedInTable: false,
         });
         break;
       }
@@ -207,6 +215,17 @@ function resolveType(ctx: ResolverContext, ref: TypeRef) {
   }
 }
 
+function markResolvedType(
+  ctx: ResolverContext,
+  ref: TypeRef,
+  fn: (resolved: TableType) => void
+) {
+  const resolved = ctx.schema.types.get(ref.resolvedFqtn.join("."));
+  if (resolved && resolved.type === "table") {
+    fn(resolved);
+  }
+}
+
 function resolveFieldType(ctx: ResolverContext, ft: FieldType) {
   switch (ft.c) {
     case "basic":
@@ -214,9 +233,15 @@ function resolveFieldType(ctx: ResolverContext, ft: FieldType) {
     case "vector":
       resolveFieldType(ctx, ft.type);
       break;
-    case "custom":
+    case "custom": {
       resolveType(ctx, ft.type);
+      markResolvedType(
+        ctx,
+        ft.type,
+        (resolved) => (resolved.usedInTable = true)
+      );
       break;
+    }
   }
 }
 
@@ -228,6 +253,11 @@ function resolveTypes(ctx: ResolverContext) {
       case "union":
         for (const uv of t.values) {
           resolveType(ctx, uv.typeRef);
+          markResolvedType(
+            ctx,
+            uv.typeRef,
+            (resolved) => (resolved.usedInUnion = true)
+          );
         }
         break;
       case "table":
@@ -239,5 +269,10 @@ function resolveTypes(ctx: ResolverContext) {
   }
   if (ctx.schema.rootType) {
     resolveType(ctx, ctx.schema.rootType);
+    markResolvedType(
+      ctx,
+      ctx.schema.rootType,
+      (resolved) => (resolved.usedInTable = true)
+    );
   }
 }

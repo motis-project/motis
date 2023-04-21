@@ -11,11 +11,11 @@ Station:
   description: TODO
   fields:
     id:
-      description: TODO
+      description: The unique station ID.
     name:
-      description: TODO
+      description: The human readable station name.
     pos:
-      description: TODO
+      description: The coordinates where the station is located.
 Interval:
   description: TODO
   fields:

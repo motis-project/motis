@@ -9,6 +9,8 @@
 
 /api:
   summary: /api
+  tags:
+    - internal
   output:
     type: motis.ApiDescription
     description: List of available endpoints
@@ -462,9 +464,6 @@
   tags:
     - internal
   input: motis.paxmon.PaxMonRemoveGroupsRequest
-  output:
-    type: motis.MotisSuccess
-    description: Response
 
 /paxmon/addressable_groups:
   summary: /paxmon/addressable_groups
@@ -577,26 +576,17 @@
   tags:
     - internal
   input: motis.ris.RISForwardTimeRequest
-  output:
-    type: motis.MotisSuccess
-    description: Response
 
 /ris/purge:
   summary: /ris/purge
   tags:
     - internal
   input: motis.ris.RISPurgeRequest
-  output:
-    type: motis.MotisSuccess
-    description: Response
 
 /ris/read:
   summary: /ris/read
   tags:
     - internal
-  output:
-    type: motis.MotisSuccess
-    description: Response
 
 # Custom HTTP requests are not supported by the protocol tool.
 #/ris/upload:

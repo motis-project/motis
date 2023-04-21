@@ -7,8 +7,15 @@ export interface JSContext {
   typeFilter: TypeFilter;
   baseUri: URL;
   jsonSchema: Map<string, JSONSchema>;
+  taggedToUntaggedType: Map<string, string>; // tagged -> untagged fqtn
+  untaggedToTaggedType: Map<string, string>; // tagged -> untagged fqtn
   strictIntTypes: boolean;
   numberFormats: boolean;
   strictUnions: boolean;
+  typesInUnions: boolean;
   getRefUrl: (fqtn: string[]) => string;
+  getTaggedType: (fqtn: string[]) => string[];
+  typeKey: string;
+  includeOpenApiDiscriminators: boolean;
+  constAsEnum: boolean;
 }

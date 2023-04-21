@@ -55,6 +55,8 @@ export interface TableType extends TypeBase {
   type: "table";
   isStruct: boolean;
   fields: TableField[];
+  usedInUnion: boolean;
+  usedInTable: boolean;
 }
 
 export type SchemaType = EnumType | UnionType | TableType;
