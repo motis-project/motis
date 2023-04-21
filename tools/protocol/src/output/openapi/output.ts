@@ -184,6 +184,9 @@ function writePaths(ctx: OpenApiContext) {
     if (path.tags.length > 0) {
       oaOperation.set("tags", path.tags);
     }
+    if (path.deprecated) {
+      oaOperation.set("deprecated", true);
+    }
 
     if (path.input) {
       const reqFqtn = path.input;

@@ -193,6 +193,7 @@ function readPaths(ctx: DocContext) {
       input: props.input,
       output: undefined,
       operationId: props.operationId,
+      deprecated: props.deprecated,
     };
     if (dp.input) {
       if (!ctx.schema.types.has(dp.input)) {
