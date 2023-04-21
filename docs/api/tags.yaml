@@ -10,3 +10,5 @@
   description: Routing
 - name: rsl
   description: Passenger flow monitoring and forecasting
+- name: internal
+  description: Internal APIs
