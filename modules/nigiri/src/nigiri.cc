@@ -65,7 +65,17 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
       get_data_directory().generic_string(), "nigiri", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
              mm::event_collector::publish_fn_t const& publish) {
+        using import::FileEvent;
+
         auto const& msg = dependencies.at("SCHEDULE");
+
+        utl::verify(
+            utl::all_of(*motis_content(FileEvent, msg)->paths(),
+                        [](auto&& p) {
+                          return p->tag()->str() != "schedule" ||
+                                 !p->options()->str().empty();
+                        }),
+            "all schedules require a name tag, even with only one schedule");
 
         auto const begin =
             date::sys_days{std::chrono::duration_cast<std::chrono::days>(
@@ -73,7 +83,6 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const interval = n::interval<date::sys_days>{
             begin, begin + std::chrono::days{num_days_}};
 
-        using import::FileEvent;
         auto h = cista::BASE_HASH;
         h = cista::hash_combine(h, interval.from_.time_since_epoch().count());
         h = cista::hash_combine(h, interval.to_.time_since_epoch().count());

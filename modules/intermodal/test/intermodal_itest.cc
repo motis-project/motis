@@ -28,12 +28,17 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 
 namespace motis::intermodal {
 
+loader::loader_options add_tag(loader::loader_options opt) {
+  opt.dataset_prefix_.emplace_back("x");
+  return opt;
+}
+
 struct intermodal_itest
     : public generic_motis_instance_test<testing::TestWithParam<const char*>> {
   intermodal_itest()
       : motis::test::generic_motis_instance_test<
             testing::TestWithParam<const char*>>(
-            dataset_opt,
+            add_tag(dataset_opt),
             {"intermodal", "routing", "tripbased", "nigiri", "lookup"},
             {"--tripbased.use_data_file=false",
              "--nigiri.first_day=2015-11-24"}) {
@@ -117,12 +122,12 @@ TEST_F(intermodal_itest, forward) {
     EXPECT_DOUBLE_EQ(8.6768716, start->station()->pos()->lng());
 
     auto const& first_station = stops->Get(1);
-    EXPECT_STREQ("8000156", first_station->station()->id()->c_str());
+    EXPECT_STREQ("x_8000156", first_station->station()->id()->c_str());
     EXPECT_DOUBLE_EQ(49.403567, first_station->station()->pos()->lat());
     EXPECT_DOUBLE_EQ(8.675442, first_station->station()->pos()->lng());
 
     auto const& last_station = stops->Get(3);
-    EXPECT_STREQ("8000031", last_station->station()->id()->c_str());
+    EXPECT_STREQ("x_8000031", last_station->station()->id()->c_str());
     EXPECT_DOUBLE_EQ(49.681329, last_station->station()->pos()->lat());
     EXPECT_DOUBLE_EQ(8.616717, last_station->station()->pos()->lng());
 
@@ -202,12 +207,12 @@ TEST_F(intermodal_itest, backward) {
     EXPECT_DOUBLE_EQ(8.6768716, start->station()->pos()->lng());
 
     auto const& first_station = stops->Get(1);
-    EXPECT_STREQ("8000156", first_station->station()->id()->c_str());
+    EXPECT_STREQ("x_8000156", first_station->station()->id()->c_str());
     EXPECT_DOUBLE_EQ(49.403567, first_station->station()->pos()->lat());
     EXPECT_DOUBLE_EQ(8.675442, first_station->station()->pos()->lng());
 
     auto const& last_station = stops->Get(3);
-    EXPECT_STREQ("8000031", last_station->station()->id()->c_str());
+    EXPECT_STREQ("x_8000031", last_station->station()->id()->c_str());
     EXPECT_DOUBLE_EQ(49.681329, last_station->station()->pos()->lat());
     EXPECT_DOUBLE_EQ(8.616717, last_station->station()->pos()->lng());
 
@@ -231,12 +236,12 @@ TEST_F(intermodal_itest, not_so_intermodal) {
       "content": {{
         "start_type": "OntripStationStart",
         "start": {{
-          "station": {{ "id": "8000156", "name": "" }},
+          "station": {{ "id": "x_8000156", "name": "" }},
           "departure_time": 1448368200
         }},
         "start_modes": [],
         "destination_type": "InputStation",
-        "destination": {{ "id": "8000031", "name": "" }},
+        "destination": {{ "id": "x_8000031", "name": "" }},
         "destination_modes": [],
         "search_type": "Default",
         "router": ""
@@ -256,12 +261,12 @@ TEST_F(intermodal_itest, not_so_intermodal) {
     ASSERT_EQ(3, stops->size());
 
     auto const& first_station = stops->Get(0);
-    EXPECT_STREQ("8000156", first_station->station()->id()->c_str());
+    EXPECT_STREQ("x_8000156", first_station->station()->id()->c_str());
     EXPECT_DOUBLE_EQ(49.403567, first_station->station()->pos()->lat());
     EXPECT_DOUBLE_EQ(8.675442, first_station->station()->pos()->lng());
 
     auto const& last_station = stops->Get(2);
-    EXPECT_STREQ("8000031", last_station->station()->id()->c_str());
+    EXPECT_STREQ("x_8000031", last_station->station()->id()->c_str());
     EXPECT_DOUBLE_EQ(49.681329, last_station->station()->pos()->lat());
     EXPECT_DOUBLE_EQ(8.616717, last_station->station()->pos()->lng());
   }
