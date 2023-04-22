@@ -5,11 +5,11 @@ import subprocess
 
 
 def query_f(id, router):
-    return f"{id}_q10k_fwd_{router}.json"
+    return f"{id}_q_fwd_{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r10k_fwd_{router}.json"
+    return f"{id}_r_fwd_{router}.json"
 
 
 if len(sys.argv) < 3:
@@ -31,7 +31,7 @@ else:
         "--dataset.read_graph=false",
         "--dataset.read_graph_mmap=true",
         "--nigiri.no_cache=true",
-        "--import.paths", f"schedule:{input_dir}/schedule", f"osm:input/osm.pbf",
+        "--import.paths", f"schedule-x:{input_dir}/schedule", f"osm:input/osm.pbf",
         f"--import.data_dir={data_dir}",
         f"--batch_input_file=fail/{query_f(id, 'nigiri')}",
         f"--batch_output_file={reproduce_dir}/{result_f(id, 'nigiri')}",

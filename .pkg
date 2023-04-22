@@ -4,8 +4,8 @@
   commit=b6b5e60faac2921f1c0b3813da9c11731a3ca31d
 [cista]
   url=git@github.com:felixguendling/cista.git
-  branch=ankerl
-  commit=bb0d0cd1c024bd76f0b3a6536420087570351250
+  branch=master
+  commit=0a0dfeb9a65bedbf7517b1c5f6fdf0be0dd6c87a
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=c525139f13428335a86a8bab2f2a46f8a94c20e0
+  commit=4fdd79d50481fdf642cb77bc92cdd4c68ddce040
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -96,8 +96,8 @@
   commit=3be31133abf01103c46e90f4aa6f7a32ac7a53c4
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=master
-  commit=a604650fd98c9c77f5896ed8840b318c3104c758
+  branch=hashmap
+  commit=c2dd5782159cd395316dc581671634c436a1569b
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
