@@ -79,7 +79,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                                        n::routing::journey const& nj) {
   auto const resolve_parent = [&](n::timetable const& tt,
                                   n::location_idx_t const x) {
-    return tt.locations_.types_.at(x) == n::location_type::kTrack
+    return tt.locations_.types_.at(x) == n::location_type::kGeneratedTrack
                ? tt.locations_.parents_.at(x)
                : x;
   };
@@ -92,7 +92,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     auto const& l_name = tt.locations_.names_.at(p);
     auto const& pos = tt.locations_.coordinates_.at(x);
     s.name_ = l_name.view();
-    s.eva_no_ = get_station_id(tags, tt, x);
+    s.eva_no_ = get_station_id(tags, tt, p);
     s.lat_ = pos.lat_;
     s.lng_ = pos.lng_;
   };
@@ -270,7 +270,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   auto const time = to_motis_unixtime(
                       tt.event_time(t.t_, stop_idx, n::event_type::kArr));
                   auto const track =
-                      tt.locations_.types_.at(l) == n::location_type::kTrack
+                      (tt.locations_.types_.at(l) == n::location_type::kTrack ||
+                       tt.locations_.types_.at(l) ==
+                           n::location_type::kGeneratedTrack)
                           ? tt.locations_.names_.at(l).view()
                           : "";
                   stop.arrival_.valid_ = true;
@@ -285,7 +287,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   auto const time = to_motis_unixtime(
                       tt.event_time(t.t_, stop_idx, n::event_type::kDep));
                   auto const track =
-                      tt.locations_.types_.at(l) == n::location_type::kTrack
+                      (tt.locations_.types_.at(l) == n::location_type::kTrack ||
+                       tt.locations_.types_.at(l) ==
+                           n::location_type::kGeneratedTrack)
                           ? tt.locations_.names_.at(l).view()
                           : "";
                   stop.departure_.valid_ = true;
