@@ -38,9 +38,15 @@ struct path_database_query_test : public ::testing::Test {
 
   void SetUp() override {
     // use boost filesystem for unique test case file names
-    auto name = std::string{"pathdb_test_%%%%-%%%%-%%%%-%%%%"};
-    // NOLINTNEXTLINE(concurrency-mt-unsafe)
-    db_fname_ = std::filesystem::path(std::tmpnam(name.data())).string();
+    const auto now = std::chrono::system_clock::now();
+    auto const tmp = std::filesystem::temp_directory_path();
+    db_fname_ =
+        (tmp /
+         fmt::format("pathdb_test_{}",
+                     std::chrono::time_point_cast<std::chrono::seconds>(now)
+                         .time_since_epoch()
+                         .count()))
+            .string();
 
     utl::activate_progress_tracker("query_test");
   }
