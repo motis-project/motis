@@ -39,43 +39,36 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                                        n::timetable const& tt,
                                        n::trip_idx_t const trip,
                                        n::day_idx_t const day) {
-  auto const resolve_parent = [&](n::timetable const& tt,
-                                  n::location_idx_t const x) {
-    if (tt.locations_.ids_[x].view().starts_with("T:")) {
-      // T:... are dummy locations to represent tracks.
-      return tt.locations_.types_.at(x) == n::location_type::kTrack
-                 ? tt.locations_.parents_.at(x)
-                 : x;
-    } else {
-      return x;
-    }
+  auto const resolve_id = [&](n::location_idx_t const x) {
+    return get_station_id(
+        tags, tt,
+        tt.locations_.types_.at(x) == n::location_type::kGeneratedTrack
+            ? tt.locations_.parents_.at(x)
+            : x);
   };
 
   auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
-  auto const first_location = resolve_parent(
-      tt,
-      n::timetable::stop{
-          tt.route_location_seq_[tt.transport_route_[transport]].front()}
-          .location_idx());
-  auto const last_location = resolve_parent(
-      tt,
-      n::timetable::stop{
-          tt.route_location_seq_[tt.transport_route_[transport]].back()}
-          .location_idx());
-  auto const& id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
+  auto const first_location = resolve_id(n::timetable::stop{
+      tt.route_location_seq_[tt.transport_route_[transport]].front()}
+                                             .location_idx());
+  auto const last_location = resolve_id(n::timetable::stop{
+      tt.route_location_seq_[tt.transport_route_[transport]].back()}
+                                            .location_idx());
+  auto const id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const section_lines = tt.transport_section_lines_.at(transport);
-  auto const line = section_lines.empty()
+  auto const line = section_lines.empty() || section_lines.front() ==
+                                                 n::trip_line_idx_t::invalid()
                         ? ""
                         : tt.trip_lines_.at(section_lines.front()).view();
   auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time] =
       utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned>(id);
   return extern_trip{
-      .station_id_ = get_station_id(tags, tt, first_location),
+      .station_id_ = first_location,
       .train_nr_ = train_nr,
       .time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.from_, n::event_type::kDep)),
-      .target_station_id_ = get_station_id(tags, tt, last_location),
+      .target_station_id_ = last_location,
       .target_time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
       .line_id_ = std::string{line}};
@@ -113,10 +106,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
         (leg.to_ == tt.locations_.parents_.at(leg.from_)) ||
         (tt.locations_.parents_.at(leg.from_) ==
              tt.locations_.parents_.at(leg.to_) &&
-         ((tt.locations_.types_.at(leg.from_) == n::location_type::kTrack &&
-           tt.locations_.ids_.at(leg.from_).view().starts_with("T:")) ||
-          (tt.locations_.types_.at(leg.to_) == n::location_type::kTrack &&
-           tt.locations_.ids_.at(leg.to_).view().starts_with("T:"))));
+         ((tt.locations_.types_.at(leg.from_) ==
+           n::location_type::kGeneratedTrack) ||
+          (tt.locations_.types_.at(leg.to_) ==
+           n::location_type::kGeneratedTrack)));
 
     if (is_transfer && is_last) {
       return;
