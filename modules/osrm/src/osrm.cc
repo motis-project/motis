@@ -41,8 +41,7 @@ osrm::~osrm() = default;
 
 void osrm::import(motis::module::import_dispatcher& reg) {
   for (auto const& p : profiles_) {
-    auto const profile_name =
-        boost::filesystem::path{p}.stem().generic_string();
+    auto const profile_name = std::filesystem::path{p}.stem().generic_string();
     std::make_shared<event_collector>(
         get_data_directory().generic_string(), "osrm-" + profile_name, reg,
         [this, profile_name, p](

@@ -78,13 +78,10 @@ greg::date bound_date(
 
 bitfield calendar_to_bitfield(std::string const& service_name,
                               greg::date const& start, calendar const& c) {
-  auto first = std::min(start, c.first_day_);
-  auto last =
-      std::min(start + greg::days(BIT_COUNT), c.last_day_ + greg::days(1));
-
   bitfield traffic_days;
-  auto bit = (first - start).days();
-  for (auto d = first; d != last; d += greg::days(1), ++bit) {
+  auto bit = (c.first_day_ - start).days();
+  for (auto d = c.first_day_; d != c.last_day_ + greg::days(1);
+       d += greg::days(1), ++bit) {
     if (bit >= traffic_days.size()) {
       LOG(logging::error) << "date " << d << " for service " << service_name
                           << " out of range\n";

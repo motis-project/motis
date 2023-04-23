@@ -27,7 +27,7 @@ struct category {
 
   CISTA_COMPARABLE()
   std::string name_;
-  unsigned output_rule_{PRINT_ID};
+  unsigned output_rule_{PRINT_CATEGORY_AND_ID};
 };
 
 struct route {

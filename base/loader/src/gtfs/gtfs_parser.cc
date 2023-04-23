@@ -3,11 +3,11 @@
 
 #include "motis/loader/gtfs/gtfs_parser.h"
 
+#include <filesystem>
 #include <numeric>
 
 #include "boost/algorithm/string.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
-#include "boost/filesystem.hpp"
 
 #include "utl/erase_if.h"
 #include "utl/get_or_create.h"
@@ -46,7 +46,7 @@
 #include "motis/schedule-format/Schedule_generated.h"
 
 namespace fbs64 = flatbuffers64;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::logging;
 using std::get;
 
@@ -196,6 +196,9 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
     trip->interpolate();
   }
 
+  LOG(logging::info) << "read " << trips.size() << " trips, " << routes.size()
+                     << " routes";
+
   std::map<category, fbs64::Offset<Category>> fbs_categories;
   std::map<agency const*, fbs64::Offset<Provider>> fbs_providers;
   std::map<std::string, fbs64::Offset<fbs64::String>> fbs_strings;
@@ -294,6 +297,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   auto const interval = Interval{to_unix_time(traffic_days.first_day_),
                                  to_unix_time(traffic_days.last_day_)};
 
+  auto n_services = 0U;
   auto const create_service =
       [&](trip const* t, bitfield const& traffic_days,
           bool const is_rule_service_participant,
@@ -312,6 +316,8 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
         }
 
         auto const stop_seq = t->stops();
+
+        ++n_services;
         return CreateService(
             fbb,
             utl::get_or_create(
@@ -356,8 +362,8 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                    },
                                    std::vector<int>())),
             0 /* route key obsolete */,
-            CreateServiceDebugInfo(fbb, get_or_create_str(t->id_), t->line_,
-                                   t->line_),
+            CreateServiceDebugInfo(fbb, get_or_create_str(t->id_),
+                                   t->from_line_, t->to_line_),
             is_rule_service_participant, 0 /* initial train number */,
             get_or_create_str(t->id_),
             utl::get_or_create(
@@ -376,10 +382,6 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                       << entry.second->stops().size() << " stops";
           }
           return stop_count < 2;
-        })  //
-      | utl::remove_if([&](auto const& entry) {
-          // Rule services are written separately.
-          return entry.second->block_ != nullptr;
         })  //
       | utl::remove_if([&](auto const& entry) {
           // Frequency services are written separately.
@@ -523,6 +525,8 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                             fbb.CreateVector(rule_services),
                             fbb.CreateVector(meta_stations),
                             fbb.CreateString(dataset_name), hash(root)));
+
+  LOG(logging::info) << "wrote " << n_services << " services";
 }
 
 }  // namespace motis::loader::gtfs

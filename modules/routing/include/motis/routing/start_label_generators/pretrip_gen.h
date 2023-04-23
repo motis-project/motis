@@ -69,7 +69,7 @@ struct pretrip_gen {
 
       generate_labels_at_route_nodes(sched, mem, lbs, path, edge_interval_begin,
                                      edge_interval_end, starting_footpaths,
-                                     true, fastest_direct, labels);
+                                     false, fastest_direct, labels);
     }
   }
 

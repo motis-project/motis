@@ -1,5 +1,6 @@
 #include "motis/intermodal/eval/commands.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include "boost/filesystem.hpp"
 #include "boost/math/constants/constants.hpp"
 
 #define CISTA_PRINTABLE_NO_VEC
@@ -55,13 +55,13 @@ constexpr auto const kTargetEscape = std::string_view{"TARGET"};
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Options", "") {
     param(query_count_, "query_count", "number of queries to generate");
-    param(target_file_fwd_, "target_file_fwd",
-          "file to write generated queries to");
+    param(out_, "out", "file to write generated queries to");
     param(bbox_, "bbox", "bounding box for locations");
     param(poly_file_, "poly", "bounding polygon for locations");
     param(start_modes_, "start_modes", "start modes ppr-15|osrm_car-15|...");
     param(dest_modes_, "dest_modes", "destination modes (see start modes)");
     param(large_stations_, "large_stations", "use only large stations");
+    param(message_type_, "message_type", "intermodal|routing");
     param(start_type_, "start_type",
           "query type:\n"
           "  pretrip = interval at station\n"
@@ -69,9 +69,18 @@ struct generator_settings : public conf::configuration {
           "  ontrip_train = start in train\n"
           "  intermodal_pretrip = interval at coordinate\n"
           "  intermodal_ontrip = start time at station");
-    param(start_type_, "dest_type", "destination type: coordinate|station");
+    param(dest_type_, "dest_type", "destination type: coordinate|station");
     param(routers_, "routers", "routing targets");
     param(search_dir_, "search_dir", "search direction forward/backward");
+  }
+
+  MsgContent get_message_type() const {
+    using cista::hash;
+    switch (hash(message_type_)) {
+      case hash("routing"): return MsgContent_RoutingRequest;
+      case hash("intermodal"): return MsgContent_IntermodalRoutingRequest;
+    }
+    throw std::runtime_error{"query type not "};
   }
 
   IntermodalStart get_start_type() const {
@@ -107,7 +116,8 @@ struct generator_settings : public conf::configuration {
   }
 
   int query_count_{1000};
-  std::string target_file_fwd_{"intermodal-queries-TARGET.txt"};
+  std::string message_type_{"intermodal"};
+  std::string out_{"q_TARGET.txt"};
   std::string bbox_;
   std::string poly_file_;
   std::string start_modes_;
@@ -373,7 +383,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                  Interval const interval, station const* from,
                  station const* to, std::vector<mode> const& start_modes,
                  std::vector<mode> const& dest_modes, double const start_radius,
-                 double const dest_radius, IntermodalStart const start_type,
+                 double const dest_radius, MsgContent const message_type,
+                 IntermodalStart const start_type,
                  IntermodalDestination const destination_type, SearchDir dir,
                  std::vector<std::string> const& routers,
                  std::vector<std::ofstream>& out_files) {
@@ -391,150 +402,256 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                      .Union();
   };
 
-  switch (start_type) {
-    case IntermodalStart_IntermodalPretripStart: {
-      auto const start_pt =
-          point_gen.random_point_near({from->lat(), from->lng()}, start_radius);
+  if (message_type == MsgContent_IntermodalRoutingRequest) {
+    switch (start_type) {
+      case IntermodalStart_IntermodalPretripStart: {
+        auto const start_pt = point_gen.random_point_near(
+            {from->lat(), from->lng()}, start_radius);
 
-      for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
-        auto& fbb = *fbbp;
-        fbb.create_and_finish(
-            MsgContent_IntermodalRoutingRequest,
-            CreateIntermodalRoutingRequest(
-                fbb, start_type,
-                CreateIntermodalPretripStart(fbb, &start_pt, &interval, 0,
-                                             false, false)
-                    .Union(),
-                fbb.CreateVector(create_modes(fbb, start_modes)),
-                destination_type, get_destination(fbb),
-                fbb.CreateVector(create_modes(fbb, dest_modes)),
-                SearchType_Default, dir, fbb.CreateString(router))
-                .Union(),
-            "/intermodal", DestinationType_Module, id);
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_IntermodalRoutingRequest,
+              CreateIntermodalRoutingRequest(
+                  fbb, start_type,
+                  CreateIntermodalPretripStart(fbb, &start_pt, &interval, 0,
+                                               false, false)
+                      .Union(),
+                  fbb.CreateVector(create_modes(fbb, start_modes)),
+                  destination_type, get_destination(fbb),
+                  fbb.CreateVector(create_modes(fbb, dest_modes)),
+                  SearchType_Default, dir, fbb.CreateString(router))
+                  .Union(),
+              "/intermodal", DestinationType_Module, id);
+        }
+
+        break;
       }
 
-      break;
+      case IntermodalStart_IntermodalOntripStart: {
+        auto const start_pt = point_gen.random_point_near(
+            {from->lat(), from->lng()}, start_radius);
+
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_IntermodalRoutingRequest,
+              CreateIntermodalRoutingRequest(
+                  fbb, start_type,
+                  CreateIntermodalOntripStart(fbb, &start_pt, interval.begin())
+                      .Union(),
+                  fbb.CreateVector(create_modes(fbb, start_modes)),
+                  destination_type,
+                  destination_type == IntermodalDestination_InputPosition
+                      ? CreateInputPosition(fbb, dest_pt.lat(), dest_pt.lng())
+                            .Union()
+                      : CreateInputStation(fbb, fbb.CreateString(to->eva_nr_),
+                                           fbb.CreateString(""))
+                            .Union(),
+                  fbb.CreateVector(create_modes(fbb, dest_modes)),
+                  SearchType_Default, dir, fbb.CreateString(router))
+                  .Union(),
+              "/intermodal", DestinationType_Module, id);
+        }
+
+        break;
+      }
+
+      case IntermodalStart_OntripTrainStart: {
+        auto const [trip, trip_stop] = random_trip_and_station(sched);
+
+        auto const& primary = trip->id_.primary_;
+        auto const& secondary = trip->id_.secondary_;
+
+        auto const& primary_station_eva =
+            sched.stations_[primary.get_station_id()]->eva_nr_;
+        auto const& target_station_eva =
+            sched.stations_[secondary.target_station_id_]->eva_nr_;
+
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_IntermodalRoutingRequest,
+              CreateIntermodalRoutingRequest(
+                  fbb, start_type,
+                  CreateOntripTrainStart(
+                      fbb,
+                      CreateTripId(
+                          fbb, fbb.CreateString(primary_station_eva),
+                          primary.get_train_nr(),
+                          motis_to_unixtime(sched, primary.get_time()),
+                          fbb.CreateString(target_station_eva),
+                          motis_to_unixtime(sched, secondary.target_time_),
+                          fbb.CreateString(secondary.line_id_)),
+                      CreateInputStation(
+                          fbb,
+                          fbb.CreateString(
+                              trip_stop.get_station(sched).eva_nr_),
+                          fbb.CreateString("")),
+                      motis_to_unixtime(sched, trip_stop.arr_lcon().a_time_))
+                      .Union(),
+                  fbb.CreateVector(create_modes(fbb, start_modes)),
+                  destination_type, get_destination(fbb),
+                  fbb.CreateVector(create_modes(fbb, dest_modes)),
+                  SearchType_Default, dir, fbb.CreateString(router))
+                  .Union(),
+              "/intermodal", DestinationType_Module, id);
+        }
+
+        break;
+      }
+
+      case IntermodalStart_OntripStationStart:
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_IntermodalRoutingRequest,
+              CreateIntermodalRoutingRequest(
+                  fbb, start_type,
+                  CreateOntripStationStart(
+                      fbb,
+                      CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
+                                         fbb.CreateString("")),
+                      interval.begin())
+                      .Union(),
+                  fbb.CreateVector(create_modes(fbb, start_modes)),
+                  destination_type, get_destination(fbb),
+                  fbb.CreateVector(create_modes(fbb, dest_modes)),
+                  SearchType_Default, dir, fbb.CreateString(router))
+                  .Union(),
+              "/intermodal", DestinationType_Module, id);
+        }
+        break;
+
+      case IntermodalStart_PretripStart:
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_IntermodalRoutingRequest,
+              CreateIntermodalRoutingRequest(
+                  fbb, start_type,
+                  CreatePretripStart(
+                      fbb,
+                      CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
+                                         fbb.CreateString("")),
+                      &interval)
+                      .Union(),
+                  fbb.CreateVector(create_modes(fbb, start_modes)),
+                  destination_type, get_destination(fbb),
+                  fbb.CreateVector(create_modes(fbb, dest_modes)),
+                  SearchType_Default, dir, fbb.CreateString(router))
+                  .Union(),
+              "/intermodal", DestinationType_Module, id);
+        }
+        break;
+
+      default:
+        throw utl::fail(
+            "start type {} not supported for message type intermodal",
+            EnumNameIntermodalStart(start_type));
     }
+  } else if (message_type == MsgContent_RoutingRequest) {
+    using namespace motis::routing;
 
-    case IntermodalStart_IntermodalOntripStart: {
-      auto const start_pt =
-          point_gen.random_point_near({from->lat(), from->lng()}, start_radius);
-      auto const dest_pt =
-          point_gen.random_point_near({to->lat(), to->lng()}, dest_radius);
+    switch (start_type) {
+      case IntermodalStart_OntripTrainStart: {
+        auto const [trip, trip_stop] = random_trip_and_station(sched);
 
-      for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
-        auto& fbb = *fbbp;
-        fbb.create_and_finish(
-            MsgContent_IntermodalRoutingRequest,
-            CreateIntermodalRoutingRequest(
-                fbb, start_type,
-                CreateIntermodalOntripStart(fbb, &start_pt, interval.begin())
-                    .Union(),
-                fbb.CreateVector(create_modes(fbb, start_modes)),
-                destination_type,
-                destination_type == IntermodalDestination_InputPosition
-                    ? CreateInputPosition(fbb, dest_pt.lat(), dest_pt.lng())
-                          .Union()
-                    : CreateInputStation(fbb, fbb.CreateString(to->eva_nr_),
-                                         fbb.CreateString(""))
-                          .Union(),
-                fbb.CreateVector(create_modes(fbb, dest_modes)),
-                SearchType_Default, dir, fbb.CreateString(router))
-                .Union(),
-            "/intermodal", DestinationType_Module, id);
+        auto const& primary = trip->id_.primary_;
+        auto const& secondary = trip->id_.secondary_;
+
+        auto const& primary_station_eva =
+            sched.stations_[primary.get_station_id()]->eva_nr_;
+        auto const& target_station_eva =
+            sched.stations_[secondary.target_station_id_]->eva_nr_;
+
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_RoutingRequest,
+              motis::routing::CreateRoutingRequest(
+                  fbb, Start_OntripTrainStart,
+                  CreateOntripTrainStart(
+                      fbb,
+                      CreateTripId(
+                          fbb, fbb.CreateString(primary_station_eva),
+                          primary.get_train_nr(),
+                          motis_to_unixtime(sched, primary.get_time()),
+                          fbb.CreateString(target_station_eva),
+                          motis_to_unixtime(sched, secondary.target_time_),
+                          fbb.CreateString(secondary.line_id_)),
+                      CreateInputStation(
+                          fbb,
+                          fbb.CreateString(
+                              trip_stop.get_station(sched).eva_nr_),
+                          fbb.CreateString("")),
+                      motis_to_unixtime(sched, trip_stop.arr_lcon().a_time_))
+                      .Union(),
+                  CreateInputStation(fbb, fbb.CreateString(to->eva_nr_),
+                                     fbb.CreateString("")),
+                  SearchType_Default, dir,
+                  fbb.CreateVector(std::vector<fbs::Offset<Via>>()),
+                  fbb.CreateVector(
+                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()))
+                  .Union(),
+              router, DestinationType_Module, id);
+        }
+
+        break;
       }
 
-      break;
+      case IntermodalStart_OntripStationStart:
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_RoutingRequest,
+              CreateRoutingRequest(
+                  fbb, Start_OntripStationStart,
+                  CreateOntripStationStart(
+                      fbb,
+                      CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
+                                         fbb.CreateString("")),
+                      interval.begin())
+                      .Union(),
+                  CreateInputStation(fbb, fbb.CreateString(to->eva_nr_),
+                                     fbb.CreateString("")),
+                  SearchType_Default, dir,
+                  fbb.CreateVector(std::vector<fbs::Offset<Via>>()),
+                  fbb.CreateVector(
+                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()))
+                  .Union(),
+              router, DestinationType_Module, id);
+        }
+        break;
+
+      case IntermodalStart_PretripStart:
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
+          auto& fbb = *fbbp;
+          fbb.create_and_finish(
+              MsgContent_RoutingRequest,
+              CreateRoutingRequest(
+                  fbb, Start_PretripStart,
+                  CreatePretripStart(
+                      fbb,
+                      CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
+                                         fbb.CreateString("")),
+                      &interval)
+                      .Union(),
+                  CreateInputStation(fbb, fbb.CreateString(to->eva_nr_),
+                                     fbb.CreateString("")),
+                  SearchType_Default, dir,
+                  fbb.CreateVector(std::vector<fbs::Offset<Via>>()),
+                  fbb.CreateVector(
+                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()))
+                  .Union(),
+              router, DestinationType_Module, id);
+        }
+        break;
+
+      default:
+        throw utl::fail("start type {} not supported for message type routing",
+                        EnumNameIntermodalStart(start_type));
     }
-
-    case IntermodalStart_OntripTrainStart: {
-      auto const [trip, trip_stop] = random_trip_and_station(sched);
-
-      auto const& primary = trip->id_.primary_;
-      auto const& secondary = trip->id_.secondary_;
-
-      auto const& primary_station_eva =
-          sched.stations_[primary.get_station_id()]->eva_nr_;
-      auto const& target_station_eva =
-          sched.stations_[secondary.target_station_id_]->eva_nr_;
-
-      for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
-        auto& fbb = *fbbp;
-        fbb.create_and_finish(
-            MsgContent_IntermodalRoutingRequest,
-            CreateIntermodalRoutingRequest(
-                fbb, start_type,
-                CreateOntripTrainStart(
-                    fbb,
-                    CreateTripId(
-                        fbb, fbb.CreateString(primary_station_eva),
-                        primary.get_train_nr(),
-                        motis_to_unixtime(sched, primary.get_time()),
-                        fbb.CreateString(target_station_eva),
-                        motis_to_unixtime(sched, secondary.target_time_),
-                        fbb.CreateString(secondary.line_id_)),
-                    CreateInputStation(
-                        fbb,
-                        fbb.CreateString(trip_stop.get_station(sched).eva_nr_),
-                        fbb.CreateString("")),
-                    motis_to_unixtime(sched, trip_stop.arr_lcon().a_time_))
-                    .Union(),
-                fbb.CreateVector(create_modes(fbb, start_modes)),
-                destination_type, get_destination(fbb),
-                fbb.CreateVector(create_modes(fbb, dest_modes)),
-                SearchType_Default, dir, fbb.CreateString(router))
-                .Union(),
-            "/intermodal", DestinationType_Module, id);
-      }
-
-      break;
-    }
-
-    case IntermodalStart_OntripStationStart:
-      for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
-        auto& fbb = *fbbp;
-        fbb.create_and_finish(
-            MsgContent_IntermodalRoutingRequest,
-            CreateIntermodalRoutingRequest(
-                fbb, start_type,
-                CreateOntripStationStart(
-                    fbb,
-                    CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
-                                       fbb.CreateString("")),
-                    interval.begin())
-                    .Union(),
-                fbb.CreateVector(create_modes(fbb, start_modes)),
-                destination_type, get_destination(fbb),
-                fbb.CreateVector(create_modes(fbb, dest_modes)),
-                SearchType_Default, dir, fbb.CreateString(router))
-                .Union(),
-            "/intermodal", DestinationType_Module, id);
-      }
-      break;
-
-    case IntermodalStart_PretripStart:
-      for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
-        auto& fbb = *fbbp;
-        fbb.create_and_finish(
-            MsgContent_IntermodalRoutingRequest,
-            CreateIntermodalRoutingRequest(
-                fbb, start_type,
-                CreatePretripStart(
-                    fbb,
-                    CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
-                                       fbb.CreateString("")),
-                    &interval)
-                    .Union(),
-                fbb.CreateVector(create_modes(fbb, start_modes)),
-                destination_type, get_destination(fbb),
-                fbb.CreateVector(create_modes(fbb, dest_modes)),
-                SearchType_Default, dir, fbb.CreateString(router))
-                .Union(),
-            "/intermodal", DestinationType_Module, id);
-      }
-      break;
-
-    default: break;
   }
 
   for (auto const& [out_file, fbbp] : utl::zip(out_files, fbbs)) {
@@ -637,21 +754,28 @@ int generate(int argc, char const** argv) {
 
   auto const start_modes = read_modes(generator_opt.start_modes_);
   auto const dest_modes = read_modes(generator_opt.dest_modes_);
+  auto const start_type = generator_opt.get_start_type();
+  auto const dest_type = generator_opt.get_dest_type();
+  auto const message_type = generator_opt.get_message_type();
 
   utl::verify(generator_opt.dest_type_ == "coordinate" ||
                   generator_opt.dest_type_ == "station",
               "unknown destination type {}, supported: coordinate, station",
               generator_opt.dest_type_);
-  utl::verify(!start_modes.empty(), "no start modes given: {}",
-              generator_opt.start_modes_);
-  utl::verify(!dest_modes.empty(), "no destination modes given: {}",
-              generator_opt.dest_modes_);
+  utl::verify(!start_modes.empty() ||
+                  (start_type != IntermodalStart_IntermodalOntripStart &&
+                   start_type != IntermodalStart_IntermodalPretripStart),
+              "no start modes given: {} (start_type={})",
+              generator_opt.start_modes_, EnumNameIntermodalStart(start_type));
+  utl::verify(
+      !dest_modes.empty() || dest_type != IntermodalDestination_InputPosition,
+      "no destination modes given: {}, dest_type={}", generator_opt.dest_modes_,
+      EnumNameIntermodalDestination(dest_type));
 
   auto bds = parse_bounds(generator_opt);
   auto of_streams =
       utl::to_vec(generator_opt.routers_, [&](std::string const& router) {
-        return std::ofstream{
-            replace_target_escape(generator_opt.target_file_fwd_, router)};
+        return std::ofstream{replace_target_escape(generator_opt.out_, router)};
       });
 
   motis_instance instance;
@@ -711,8 +835,6 @@ int generate(int argc, char const** argv) {
 
   auto const start_radius = get_radius_in_m(start_modes);
   auto const dest_radius = get_radius_in_m(dest_modes);
-  auto const start_type = generator_opt.get_start_type();
-  auto const dest_type = generator_opt.get_dest_type();
 
   for (int i = 1; i <= generator_opt.query_count_; ++i) {
     if ((i % 100) == 0) {
@@ -723,9 +845,9 @@ int generate(int argc, char const** argv) {
     auto const [from, to] = random_stations(sched, station_nodes, interval);
 
     write_query(sched, point_gen, i, interval, from, to, start_modes,
-                dest_modes, start_radius, dest_radius, start_type, dest_type,
-                generator_opt.get_search_dir(), generator_opt.routers_,
-                of_streams);
+                dest_modes, start_radius, dest_radius, message_type, start_type,
+                dest_type, generator_opt.get_search_dir(),
+                generator_opt.routers_, of_streams);
   }
 
   return 0;

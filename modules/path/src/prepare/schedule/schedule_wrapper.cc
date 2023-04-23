@@ -1,8 +1,7 @@
 #include "motis/path/prepare/schedule/schedule_wrapper.h"
 
+#include <filesystem>
 #include <iostream>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/parser/file.h"
 
@@ -10,7 +9,7 @@
 
 #include "motis/schedule-format/Schedule_generated.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::loader;
 
 namespace motis::path {

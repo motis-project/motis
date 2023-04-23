@@ -1,6 +1,6 @@
 #pragma once
 
-#include "boost/filesystem/path.hpp"
+#include <filesystem>
 
 #include "utl/parser/buffer.h"
 #include "utl/parser/cstr.h"
@@ -15,7 +15,7 @@ struct loaded_file {
   loaded_file(char const* filename, std::string&& buf,
               bool convert_utf8 = false);
 
-  explicit loaded_file(boost::filesystem::path const& p,
+  explicit loaded_file(std::filesystem::path const& p,
                        bool convert_utf8 = false);
 
   loaded_file(loaded_file const&) = delete;

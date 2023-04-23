@@ -4,8 +4,6 @@
 #include <limits>
 #include <vector>
 
-#include "boost/filesystem/path.hpp"
-
 #include "utl/parser/cstr.h"
 
 #ifdef HAVE_DESIGNATED_INITIALIZERS
@@ -145,8 +143,8 @@ struct config {
   utl::cstr version_;
   std::vector<std::vector<std::string>> required_files_;
 
-  boost::filesystem::path core_data_;
-  boost::filesystem::path fplan_;
+  std::string core_data_;
+  std::string fplan_;
   std::string fplan_file_extension_;
 
   bool convert_utf8_;

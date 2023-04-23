@@ -1,11 +1,10 @@
 #include "motis/paxmon/tools/commands.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "conf/configuration.h"
 #include "conf/options_parser.h"
@@ -41,7 +40,7 @@ using namespace motis::paxmon::tools::generator;
 using namespace motis::paxmon::output;
 using namespace motis::paxmon::tools::groups;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::paxmon::tools {
 

@@ -1,10 +1,9 @@
 #include "motis/paxmon/loader/dailytrek.h"
 
 #include <chrono>
+#include <filesystem>
 #include <map>
 #include <regex>
-
-#include "boost/filesystem.hpp"
 
 #include "date/date.h"
 
@@ -14,7 +13,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/access/time_access.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 using namespace motis::logging;
 
@@ -57,7 +56,11 @@ std::vector<std::string> get_dailytrek_files(schedule const& sched,
       if (file_day < first_day || file_day > last_day) {
         continue;
       }
-      auto const file_time = static_cast<unixtime>(fs::last_write_time(p));
+      auto const file_time = static_cast<unixtime>(
+          std::chrono::time_point_cast<std::chrono::seconds>(
+              fs::last_write_time(p))
+              .time_since_epoch()
+              .count());
       auto const fi = file_info{p, file_time};
       if (auto it = newest_file_per_day.insert({file_day, fi}); !it.second) {
         if (it.first->second.modified_ < file_time) {

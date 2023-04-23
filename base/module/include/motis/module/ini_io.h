@@ -54,6 +54,13 @@ void write_ini(std::filesystem::path const& p, T const& s) {
 }
 
 template <typename T>
+std::string ini_to_str(T const& s) {
+  std::ostringstream ss;
+  write_ini(ss, s);
+  return ss.str();
+}
+
+template <typename T>
 T read_ini(std::string const& s) {
   namespace pt = boost::property_tree;
 

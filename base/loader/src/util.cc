@@ -7,7 +7,7 @@
 
 using namespace flatbuffers64;
 using namespace utl;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::loader {
 

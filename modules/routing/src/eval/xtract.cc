@@ -1,11 +1,11 @@
 #include "motis/routing/eval/commands.h"
 
+#include <filesystem>
 #include <iostream>
 #include <map>
+#include <numeric>
 #include <set>
 #include <string>
-
-#include "boost/filesystem.hpp"
 
 #include "cista/mmap.h"
 #include "cista/reflection/comparable.h"
@@ -15,14 +15,16 @@
 #include "utl/parser/arg_parser.h"
 #include "utl/verify.h"
 
-#include "motis/core/schedule/footpath.h"
 #include "motis/module/message.h"
+#include "motis/loader/gtfs/files.h"
+#include "motis/loader/gtfs/gtfs_parser.h"
 #include "motis/loader/hrd/hrd_parser.h"
 #include "motis/loader/hrd/parse_config.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis;
 using namespace motis::loader::hrd;
+using namespace motis::loader::gtfs;
 using namespace motis::module;
 using motis::routing::RoutingResponse;
 
@@ -33,18 +35,157 @@ std::tuple<std::string, int, int> get_service_source(std::string const& d) {
   auto const line_end = d.find_last_of(':');
   utl::verify(file_end != std::string::npos && file_end != line_end,
               "malformed service_source info");
-  return {d.substr(0, file_end),
-          std::stoi(d.substr(file_end + 1, line_end - file_end)),
+  auto file = d.substr(0, file_end);
+  if (auto const slash = file.find_last_of('/'); slash != std::string::npos) {
+    file = file.substr(slash + 1);
+  }
+  return {file, std::stoi(d.substr(file_end + 1, line_end - file_end)),
           std::stoi(d.substr(line_end + 1))};
 }
 
-struct hrd_footpath {
-  CISTA_COMPARABLE()
-  std::string from_id_, to_id_;
-  int duration_;
-};
+std::map<std::string /* filename / trip_id */,
+         std::set<std::pair<int, int>> /* first/last line */>
+get_services(std::vector<fs::path> const& response_files) {
+  std::map<std::string, std::set<std::pair<int, int>>> services;
+  for (auto const& [res_idx, path] : utl::enumerate(response_files)) {
+    if (!std::filesystem::is_regular_file(path)) {
+      std::cout << "not a regular file: " << path << "\n";
+      continue;
+    }
 
-auto const parser_config = hrd_5_20_26;
+    int i = res_idx;
+    std::cout << "reading " << path << "\n";
+    utl::for_each_line_in_file(
+        path.generic_string(), [&](auto const& response_str) {
+          auto const msg = make_msg(response_str);
+          auto const routing_res = motis_content(RoutingResponse, msg);
+          auto service_sources = std::vector<std::string>{};
+
+          std::cout << "number of connections "
+                    << routing_res->connections()->size() << "\n";
+
+          auto c_idx = 0U;
+          for (auto const& c : *routing_res->connections()) {
+            for (auto const& trip : *c->trips()) {
+              auto const source = trip->debug()->str();
+              if (source.empty()) {
+                std::cout << "Error: Response " << i << " connection " << c_idx
+                          << ": trip without service source info: train_nr="
+                          << trip->id()->train_nr() << "\n";
+                continue;
+              }
+
+              auto const [filename, line_from, line_to] =
+                  get_service_source(source);
+
+              services[filename].emplace(line_from, line_to);
+              std::cout << "Service \"" << filename << "\": " << line_from
+                        << " - " << line_to << "\n";
+            }
+
+            ++c_idx;
+          }
+        });
+  }
+  return services;
+}
+
+void xtract_hrd(
+    fs::path const& schedule_path, fs::path const& new_schedule_path,
+    std::map<std::string, std::set<std::pair<int, int>>> const& services) {
+  fs::remove_all(new_schedule_path);
+  fs::create_directories(new_schedule_path / SCHEDULE_DATA);
+  fs::create_symlink(absolute(schedule_path) / CORE_DATA,
+                     new_schedule_path / CORE_DATA);
+
+  std::cout << "writing services.txt\n";
+  std::ofstream services_file{
+      (new_schedule_path / SCHEDULE_DATA / "services.txt").c_str()};
+  for (auto const& [filename, line_ranges] : services) {
+    if (!fs::is_regular_file(schedule_path / SCHEDULE_DATA / filename)) {
+      std::cout << "Error: Schedule file " << filename << " not found\n";
+      continue;
+    }
+
+    cista::mmap f{
+        (schedule_path / SCHEDULE_DATA / filename).generic_string().c_str(),
+        cista::mmap::protection::READ};
+    auto const file_content = utl::cstr{f.data(), f.size()};
+
+    auto line_number = 0U;
+    auto line_range_it = begin(line_ranges);
+    for (auto const& line : utl::lines(file_content)) {
+      ++line_number;
+
+      if (line_number > line_range_it->second) {
+        ++line_range_it;
+        if (line_range_it == end(line_ranges)) {
+          break;
+        }
+      }
+      if (line_number < line_range_it->first) {
+        continue;
+      }
+
+      services_file << line.view() << "\n";
+    }
+  }
+}
+
+void xtract_gtfs(
+    fs::path const& schedule_path, fs::path const& new_schedule_path,
+    std::map<std::string, std::set<std::pair<int, int>>> const& services) {
+  fs::remove_all(new_schedule_path);
+  fs::create_directories(new_schedule_path);
+
+  fs::create_symlink(absolute(schedule_path) / AGENCY_FILE,
+                     new_schedule_path / AGENCY_FILE);
+  fs::create_symlink(absolute(schedule_path) / STOPS_FILE,
+                     new_schedule_path / STOPS_FILE);
+  fs::create_symlink(absolute(schedule_path) / CALENDAR_FILE,
+                     new_schedule_path / CALENDAR_FILE);
+  fs::create_symlink(absolute(schedule_path) / CALENDAR_DATES_FILE,
+                     new_schedule_path / CALENDAR_DATES_FILE);
+  fs::create_symlink(absolute(schedule_path) / TRANSFERS_FILE,
+                     new_schedule_path / TRANSFERS_FILE);
+  fs::create_symlink(absolute(schedule_path) / FREQUENCIES_FILE,
+                     new_schedule_path / FREQUENCIES_FILE);
+  fs::create_symlink(absolute(schedule_path) / ROUTES_FILE,
+                     new_schedule_path / ROUTES_FILE);
+  fs::create_symlink(absolute(schedule_path) / TRIPS_FILE,
+                     new_schedule_path / TRIPS_FILE);
+
+  std::cout << "writing stop_times.txt\n";
+  std::ofstream services_file{(new_schedule_path / "stop_times.txt").c_str()};
+  std::set<std::pair<int, int>> line_ranges;
+  for (auto const& [trip_id, ranges] : services) {
+    line_ranges.insert(ranges.begin(), ranges.end());
+  }
+  cista::mmap f{(schedule_path / STOP_TIMES_FILE).generic_string().c_str(),
+                cista::mmap::protection::READ};
+  auto line_number = 0U;
+  auto line_range_it = begin(line_ranges);
+  for (auto const& line : utl::lines(utl::cstr{f.data(), f.size()})) {
+    ++line_number;
+
+    if (line_number == 1) {
+      services_file << line.view() << "\n";
+    }
+
+    if (line_number > line_range_it->second) {
+      ++line_range_it;
+      if (line_range_it == end(line_ranges)) {
+        break;
+      }
+    }
+
+    if (line_number < line_range_it->first) {
+      continue;
+    }
+
+    services_file << line.view() << "\n";
+  }
+}
 
 int xtract(int argc, char const** argv) {
   if (argc < 4) {
@@ -56,261 +197,26 @@ int xtract(int argc, char const** argv) {
   auto const schedule_path = fs::path{argv[1]};
   auto const new_schedule_path = fs::path{argv[2]};
   auto const response_files = [&]() {
-    std::vector<std::string> r;
+    std::vector<fs::path> r;
     for (auto i = 3U; i != argc; ++i) {
       r.emplace_back(argv[i]);
     }
     return r;
   }();
 
-  hrd_parser parser;
-  if (!parser.applicable(schedule_path)) {
-    std::cout << "No schedule in " << schedule_path << " found\n";
-    std::cout << "Missing files:\n";
-    for (auto const& missing_file : parser.missing_files(schedule_path)) {
-      std::cout << "  " << missing_file << "\n";
-    }
-    return 1;
-  }
+  auto const services = get_services(response_files);
+  auto const number_of_trips = std::accumulate(
+      begin(services), end(services), 0U, [](unsigned const sum, auto&& entry) {
+        return sum + entry.second.size();
+      });
+  std::cout << "number of trips: " << number_of_trips << "\n";
 
-  std::set<hrd_footpath> footpaths;
-  std::map<std::string /* filename */,
-           std::set<std::pair<int, int>> /* first/last line */>
-      services;
-  std::set<std::string> meta_candidates;
-  for (auto const& [res_idx, path] : utl::enumerate(response_files)) {
-    int i = res_idx;
-    utl::for_each_line_in_file(path, [&](std::string const& response_str) {
-      auto const msg = make_msg(response_str);
-      auto const routing_res = motis_content(RoutingResponse, msg);
-      auto service_sources = std::vector<std::string>{};
-
-      auto c_idx = 0U;
-      for (auto const& c : *routing_res->connections()) {
-        meta_candidates.emplace(c->stops()->Get(0)->station()->id()->str());
-        meta_candidates.emplace(
-            c->stops()->Get(c->stops()->size() - 1)->station()->id()->str());
-
-        for (auto const& fp : *c->transports()) {
-          if (fp->move_type() != Move_Walk) {
-            continue;
-          }
-
-          auto const walk = static_cast<Walk const*>(fp->move());
-          auto const from = c->stops()->Get(walk->range()->from());
-          auto const to = c->stops()->Get(walk->range()->to());
-          footpaths.emplace(hrd_footpath{
-              from->station()->id()->str(), to->station()->id()->str(),
-              static_cast<int>(
-                  (to->arrival()->time() - from->departure()->time()) / 60)});
-        }
-
-        for (auto const& trip : *c->trips()) {
-          auto const source = trip->debug()->str();
-          if (source.empty()) {
-            std::cout << "Error: Response " << i << " connection " << c_idx
-                      << ": trip without service source info: train_nr="
-                      << trip->id()->train_nr() << "\n";
-            continue;
-          }
-
-          auto const [filename, line_from, line_to] =
-              get_service_source(source);
-          if (!fs::is_regular_file(schedule_path / SCHEDULE_DATA / filename)) {
-            std::cout << "Error: Schedule file " << filename << " not found\n";
-            continue;
-          }
-
-          services[filename].emplace(line_from, line_to);
-          std::cout << "Service " << filename << ": " << line_from << " - "
-                    << line_to << "\n";
-        }
-        ++c_idx;
-      }
-    });
-  }
-
-  std::set<std::string> station_ids, categories, bitfields, providers;
-  {
-    fs::create_directories(new_schedule_path / SCHEDULE_DATA);
-    std::cout << "writing services.txt\n";
-    std::ofstream services_file{
-        (new_schedule_path / SCHEDULE_DATA / "services.txt").c_str()};
-    for (auto const& [filename, line_ranges] : services) {
-      cista::mmap f{
-          (schedule_path / SCHEDULE_DATA / filename).generic_string().c_str(),
-          cista::mmap::protection::READ};
-      auto const file_content = utl::cstr{f.data(), f.size()};
-
-      auto line_number = 0U;
-      auto line_range_it = begin(line_ranges);
-      for (auto const& line : utl::lines(file_content)) {
-        ++line_number;
-
-        if (line_number > line_range_it->second) {
-          ++line_range_it;
-          if (line_range_it == end(line_ranges)) {
-            break;
-          }
-        }
-        if (line_number < line_range_it->first) {
-          continue;
-        }
-
-        if (line.starts_with("*A VE")) {
-          bitfields.emplace(
-              line.substr(parser_config.s_info_.traff_days_).to_str());
-        } else if (line.starts_with("*A") || line.starts_with("*R")) {
-          continue;
-        } else if (line.starts_with("*Z")) {
-          providers.emplace(line.substr(9, utl::size(6)).to_str());
-        } else if (line.starts_with("*G ")) {
-          categories.emplace(line.substr(parser_config.s_info_.cat_).to_str());
-        } else if (std::isdigit(line[0]) != 0) {
-          station_ids.emplace(line.substr(0, utl::size(7)).to_str());
-        }
-
-        services_file << line.view() << "\n";
-      }
-    }
-  }
-
-  {
-    cista::mmap metabhf_file{
-        (schedule_path / CORE_DATA / parser_config.files(FOOTPATHS))
-            .generic_string()
-            .c_str(),
-        cista::mmap::protection::READ};
-    auto const metabhf_file_content =
-        utl::cstr{metabhf_file.data(), metabhf_file.size()};
-    fs::create_directories(new_schedule_path / CORE_DATA);
-    auto meta_bhf_out = std::ofstream{
-        (new_schedule_path / CORE_DATA / parser_config.files(FOOTPATHS))
-            .c_str()};
-    for (auto const& line : utl::lines(metabhf_file_content)) {
-      if (line[7] == ':' &&
-          std::any_of(begin(meta_candidates), end(meta_candidates),
-                      [&](std::string const& s) { return line.contains(s); })) {
-        meta_bhf_out << line.view() << "\n";
-
-        station_ids.emplace(
-            line.substr(parser_config.meta_.meta_stations_.eva_).to_str());
-        utl::for_each_token(line.substr(8), ' ',
-                            [&](utl::cstr meta_station_id) {
-                              if (meta_station_id.starts_with("F")) {
-                                return;
-                              }
-                              station_ids.emplace(meta_station_id.to_str());
-                            });
-      }
-    }
-    for (auto const& fp : footpaths) {
-      std::cout << "footpath: " << fp.from_id_ << " --" << fp.duration_
-                << "--> " << fp.to_id_ << "\n";
-      meta_bhf_out << fp.from_id_ << " " << fp.to_id_ << " " << std::setw(3)
-                   << std::setfill('0') << fp.duration_ << "\n";
-    }
-  }
-
-  {
-    cista::mmap stations_file{
-        (schedule_path / CORE_DATA / parser_config.files(STATIONS))
-            .generic_string()
-            .c_str(),
-        cista::mmap::protection::READ};
-    auto const stations_file_content =
-        utl::cstr{stations_file.data(), stations_file.size()};
-    auto stations_out = std::ofstream{
-        (new_schedule_path / CORE_DATA / parser_config.files(STATIONS))
-            .c_str()};
-    for (auto const& line : utl::lines(stations_file_content)) {
-      if (station_ids.find(
-              line.substr(parser_config.st_.names_.eva_).to_str()) !=
-          end(station_ids)) {
-        stations_out << line.view() << "\n";
-      }
-    }
-  }
-
-  {
-    cista::mmap station_coords_file{
-        (schedule_path / CORE_DATA / parser_config.files(COORDINATES))
-            .generic_string()
-            .c_str(),
-        cista::mmap::protection::READ};
-    auto const station_coords_file_content =
-        utl::cstr{station_coords_file.data(), station_coords_file.size()};
-    auto station_coords_out = std::ofstream{
-        (new_schedule_path / CORE_DATA / parser_config.files(COORDINATES))
-            .c_str()};
-    for (auto const& line : utl::lines(station_coords_file_content)) {
-      if (station_ids.find(
-              line.substr(parser_config.st_.names_.eva_).to_str()) !=
-          end(station_ids)) {
-        station_coords_out << line.view() << "\n";
-      }
-    }
-  }
-
-  {
-    cista::mmap categories_file{
-        (schedule_path / CORE_DATA / parser_config.files(CATEGORIES))
-            .generic_string()
-            .c_str(),
-        cista::mmap::protection::READ};
-    auto const categories_file_content =
-        utl::cstr{categories_file.data(), categories_file.size()};
-    auto categories_out = std::ofstream{
-        (new_schedule_path / CORE_DATA / parser_config.files(CATEGORIES))
-            .c_str()};
-    for (auto const& line : utl::lines(categories_file_content)) {
-      if (categories.find(line.substr(parser_config.cat_.code_).to_str()) !=
-          end(categories)) {
-        categories_out << line.view() << "\n";
-      }
-    }
-  }
-
-  {
-    cista::mmap bitfields_file{
-        (schedule_path / CORE_DATA / parser_config.files(BITFIELDS))
-            .generic_string()
-            .c_str(),
-        cista::mmap::protection::READ};
-    auto const bitfields_file_content =
-        utl::cstr{bitfields_file.data(), bitfields_file.size()};
-    auto bitfields_out = std::ofstream{
-        (new_schedule_path / CORE_DATA / parser_config.files(BITFIELDS))
-            .c_str()};
-    for (auto const& line : utl::lines(bitfields_file_content)) {
-      if (bitfields.find(line.substr(parser_config.bf_.index_).to_str()) !=
-          end(bitfields)) {
-        bitfields_out << line.view() << "\n";
-      }
-    }
-  }
-
-  {
-    cista::mmap providers_file{
-        (schedule_path / CORE_DATA / parser_config.files(PROVIDERS))
-            .generic_string()
-            .c_str(),
-        cista::mmap::protection::READ};
-    auto const providers_file_content =
-        utl::cstr{providers_file.data(), providers_file.size()};
-    auto providers_out = std::ofstream{
-        (new_schedule_path / CORE_DATA / parser_config.files(PROVIDERS))
-            .c_str()};
-    auto prev_line = utl::cstr{};
-    for (auto const& line : utl::lines(providers_file_content)) {
-      if (line[6] != 'K' &&
-          providers.find(line.substr(utl::field{8, 6}).to_str()) !=
-              end(providers)) {
-        providers_out << prev_line.view() << "\n";
-        providers_out << line.view() << "\n";
-      }
-      prev_line = line;
-    }
+  if (hrd_parser{}.applicable(schedule_path)) {
+    xtract_hrd(schedule_path, new_schedule_path, services);
+  } else if (gtfs_parser{}.applicable(schedule_path)) {
+    xtract_gtfs(schedule_path, new_schedule_path, services);
+  } else {
+    std::cout << "no timetable format detected: " << schedule_path << "\n";
   }
 
   return 0;

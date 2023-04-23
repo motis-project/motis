@@ -55,7 +55,7 @@ struct ontrip_gen {
       std::vector<std::pair<edge const*, int>> path{{start_edge, 0}, {&qe, 0}};
 
       generate_labels_at_route_nodes(sched, mem, lbs, path, start_time,
-                                     starting_footpaths, true, nullptr,
+                                     starting_footpaths, false, nullptr,
                                      fastest_direct, labels);
     }
   }

@@ -15,6 +15,15 @@ constexpr auto MOTIS_UNKNOWN_TRACK = 0;
 
 namespace motis::routing::output {
 
+constexpr auto const kTracing = false;
+
+template <typename... T>
+void trace(T&&... t) {
+  if (kTracing) {
+    fmt::print(std::cerr, std::forward<T>(t)...);
+  }
+}
+
 enum class state {
   AT_STATION,
   PRE_CONNECTION,
@@ -49,9 +58,15 @@ inline node* get_node(Label const& l) {
 
 template <typename Label>
 state next_state(state const s, Label const* c, Label const* n) {
+  trace("  next state: {}, {}\n", c->edge_->type_str(),
+        (n == nullptr ? "NULL" : n->edge_->type_str()));
   switch (s) {
     case state::AT_STATION:
-      if (n && get_node(*n)->is_station_node()) {
+      if (get_node(*c)->is_route_node()) {
+        return state::IN_CONNECTION;
+      } else if (n && n->edge_->type() == edge::EXIT_EDGE) {
+        return state::PRE_CONNECTION;
+      } else if (n && get_node(*n)->is_station_node()) {
         return state::WALK;
       } else {
         return state::PRE_CONNECTION;
@@ -143,6 +158,12 @@ state initial_state(LabelIt& it) {
       ++it;
     }
     return state::WALK;
+  } else if (auto first_edge_type = std::next(it)->edge_->type();
+             first_edge_type == edge::AFTER_TRAIN_BWD_EDGE ||
+             first_edge_type == edge::AFTER_TRAIN_FWD_EDGE) {
+    // After train foot edge:
+    // route node at destination station --AFTER_TRAIN_FOOT_EDGE--> END
+    return state::WALK;
   } else {
     return state::AT_STATION;
   }
@@ -152,6 +173,10 @@ template <typename Label>
 std::pair<std::vector<intermediate::stop>, std::vector<intermediate::transport>>
 parse_label_chain(schedule const& sched, Label* terminal_label,
                   search_dir const dir) {
+  if (kTracing) {
+    terminal_label->print(sched, std::cout);
+  }
+
   std::vector<Label> labels;
 
   auto c = terminal_label;
@@ -194,6 +219,18 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
   while (it != end(labels)) {
     auto& current = *it;
 
+    trace(
+        "state={}, node_type={}, station={}, edge_type={}, mumo_id={}, "
+        "connection={}, now={}\n",
+        state_to_str(current_state), get_node(current)->type_str(),
+        sched.stations_.at(get_node(current)->get_station()->id_)->name_,
+        current.edge_->type_str(), current.edge_->get_mumo_id(),
+        (current.connection_ == nullptr
+             ? "nullptr"
+             : get_service_name(sched,
+                                current.connection_->full_con_->con_info_)),
+        format_time(current.now_));
+
     switch (current_state) {
       case state::ONTRIP_TRAIN_START:
       case state::AT_STATION: {
@@ -201,6 +238,7 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
             get_node(*std::next(it))->is_foot_node()) {
           break;
         }
+
         unsigned a_track = MOTIS_UNKNOWN_TRACK,
                  a_sched_track = MOTIS_UNKNOWN_TRACK;
         unsigned d_track = MOTIS_UNKNOWN_TRACK,
@@ -247,15 +285,39 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
             d_sched_track = get_schedule_track(
                 sched, get_node(*s1), succ.connection_, event_type::DEP);
           }
+
+          // Special case: intermodal AFTER_TRAIN_BWD_EDGE:
+          // END (STATION_NODE) << AFTER_TRAIN_EDGE << ROUTE_NODE << connection
+          // it                 <<                  << s1         << connection
+          if (current.edge_->type() == edge::AFTER_TRAIN_BWD_EDGE &&
+              s1 != end(labels) && s1->connection_ != nullptr) {
+            trace("  taking d_time from direct predecessor\n");
+            auto const& succ = *s1;
+            d_track = succ.connection_->full_con_->d_track_;
+            d_time = succ.connection_->d_time_;
+
+            auto d_di = get_delay_info(sched, get_node(*it), succ.connection_,
+                                       event_type::DEP);
+            d_sched_time = d_di.get_schedule_time();
+            d_reason = d_di.get_reason();
+            d_sched_track = get_schedule_track(
+                sched, get_node(*it), succ.connection_, event_type::DEP);
+          }
         }
 
-        stops.emplace_back(static_cast<unsigned int>(++stop_index),
-                           get_node(current)->get_station()->id_, a_track,
-                           d_track, a_sched_track, d_sched_track, a_time,
-                           d_time, a_sched_time, d_sched_time, a_reason,
-                           d_reason,
-                           last_con != nullptr && a_time != INVALID_TIME,
-                           d_time != INVALID_TIME);
+        trace(
+            "  Add stop [AT_STATION]: idx={}, id={}, name={}\n", stop_index + 1,
+            sched.stations_.at(get_node(current)->get_station()->id_)->eva_nr_,
+            sched.stations_.at(get_node(current)->get_station()->id_)->name_);
+
+        stops.emplace_back(
+            static_cast<unsigned int>(++stop_index),
+            get_node(current)->get_station()->id_, a_track, d_track,
+            a_sched_track, d_sched_track, a_time, d_time, a_sched_time,
+            d_sched_time, a_reason, d_reason,
+            last_con != nullptr && a_time != INVALID_TIME &&
+                current.edge_->type() != edge::AFTER_TRAIN_FWD_EDGE,
+            d_time != INVALID_TIME);
         break;
       }
 
@@ -268,6 +330,11 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
           walk_arrival_di =
               get_delay_info(sched, last_route_node, last_con, event_type::ARR);
         }
+
+        trace(
+            "  Add stop [WALK]: idx={}, id={}, name={}\n", stop_index + 1,
+            sched.stations_.at(get_node(current)->get_station()->id_)->eva_nr_,
+            sched.stations_.at(get_node(current)->get_station()->id_)->name_);
 
         stops.emplace_back(static_cast<unsigned int>(++stop_index),
                            get_node(current)->get_station()->id_,
@@ -330,38 +397,106 @@ parse_label_chain(schedule const& sched, Label* terminal_label,
         // do not collect the last connection route node.
         assert(std::next(it) != end(labels));
         auto succ = *std::next(it);
+        auto const is_intermodal_dest =
+            (succ.edge_->type() == edge::AFTER_TRAIN_FWD_EDGE ||
+             succ.edge_->type() == edge::AFTER_TRAIN_BWD_EDGE) &&
+            succ.edge_->get_destination(dir)->id_ == 1U;
 
-        if (get_node(succ)->is_route_node()) {
+        if (get_node(succ)->is_route_node() || is_intermodal_dest) {
           auto dep_route_node = get_node(current);
 
           // skip through edge.
-          if (!succ.connection_) {
+          if (!succ.connection_ && !is_intermodal_dest) {
             dep_route_node = get_node(succ);
             succ = *std::next(it, 2);
           }
 
           // through edge used but not the route edge after that
           // (instead: went to station node using the leaving edge)
-          if (succ.connection_) {
-            auto const a_di = get_delay_info(
-                sched, get_node(current), current.connection_, event_type::ARR);
-            auto const d_di = get_delay_info(sched, dep_route_node,
-                                             succ.connection_, event_type::DEP);
-            auto const a_sched_track = get_schedule_track(
-                sched, get_node(current), current.connection_, event_type::ARR);
-            auto const d_sched_track = get_schedule_track(
-                sched, dep_route_node, succ.connection_, event_type::DEP);
+          if ((succ.connection_ || is_intermodal_dest) && current.connection_) {
+            auto const a_di =
+                current.connection_ == nullptr
+                    ? delay_info{}
+                    : get_delay_info(sched, get_node(current),
+                                     current.connection_, event_type::ARR);
+            auto const d_di =
+                succ.connection_ == nullptr
+                    ? delay_info{}
+                    : get_delay_info(sched, dep_route_node, succ.connection_,
+                                     event_type::DEP);
+            auto const a_sched_track =
+                current.connection_ == nullptr
+                    ? MOTIS_UNKNOWN_TRACK
+                    : get_schedule_track(sched, get_node(current),
+                                         current.connection_, event_type::ARR);
+            auto const d_sched_track =
+                succ.connection_ == nullptr
+                    ? MOTIS_UNKNOWN_TRACK
+                    : get_schedule_track(sched, dep_route_node,
+                                         succ.connection_, event_type::DEP);
 
+            trace(
+                "  Add stop [CONNECTION]: idx={}, id={}, name={}, "
+                "current.connection={} [{} - {}], succ.connection={} [{} - "
+                "{}]\n",
+                stop_index + 1,
+                sched.stations_.at(get_node(current)->get_station()->id_)
+                    ->eva_nr_,
+                sched.stations_.at(get_node(current)->get_station()->id_)
+                    ->name_,
+                current.connection_ != nullptr,
+                current.connection_ == nullptr
+                    ? format_time(INVALID_TIME)
+                    : format_time(current.connection_->d_time_),
+                current.connection_ == nullptr
+                    ? format_time(INVALID_TIME)
+                    : format_time(current.connection_->a_time_),
+                succ.connection_ != nullptr,
+                succ.connection_ == nullptr
+                    ? format_time(INVALID_TIME)
+                    : format_time(succ.connection_->d_time_),
+                succ.connection_ == nullptr
+                    ? format_time(INVALID_TIME)
+                    : format_time(succ.connection_->a_time_));
             stops.emplace_back(
                 static_cast<unsigned int>(++stop_index),
                 get_node(current)->get_station()->id_,
                 current.connection_->full_con_->a_track_,  // NOLINT
-                succ.connection_->full_con_->d_track_, a_sched_track,
-                d_sched_track, current.connection_->a_time_,
-                succ.connection_->d_time_, a_di.get_schedule_time(),
-                d_di.get_schedule_time(), a_di.get_reason(), d_di.get_reason(),
-                false, false);
+                succ.connection_ == nullptr
+                    ? MOTIS_UNKNOWN_TRACK
+                    : succ.connection_->full_con_->d_track_,
+                a_sched_track, d_sched_track,
+                current.connection_ == nullptr ? MOTIS_UNKNOWN_TRACK
+                                               : current.connection_->a_time_,
+                succ.connection_ == nullptr ? current.connection_->a_time_
+                                            : succ.connection_->d_time_,
+                a_di.get_schedule_time(),
+                d_di.ev_.is_not_null() ? d_di.get_schedule_time()
+                                       : a_di.get_schedule_time(),
+                a_di.get_reason(),
+                d_di.ev_.is_not_null() ? d_di.get_reason() : a_di.get_reason(),
+                dir == search_dir::FWD && is_intermodal_dest,
+                dir == search_dir::BWD && is_intermodal_dest);
+          } else {
+            trace("  IN_CONNECTION: no stop [succ.connection_=null]\n");
           }
+        } else {
+          trace(
+              "  IN_CONNECTION: no stop [succ is not route node: {}, "
+              "succ.connection={}, is_intermodal_dest={}\n",
+              get_node(succ)->type_str(), fmt::ptr(succ.connection_),
+              is_intermodal_dest);
+        }
+
+        if (is_intermodal_dest) {
+          trace("  Intermodal destination: adding walk {} - {}\n",
+                format_time(std::next(it)->now_), format_time(current.now_));
+          transports.emplace_back(
+              stop_index, static_cast<unsigned int>(stop_index) + 1,
+              std::next(it)->now_ - current.now_,
+              std::next(it)->edge_->get_mumo_id(), 0,
+              std::next(it)->edge_->get_minimum_cost().accessibility_);
+          walk_arrival = std::next(it)->now_;
         }
 
         last_route_node = get_node(current);

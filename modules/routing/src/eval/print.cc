@@ -2,13 +2,13 @@
 
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <vector>
 
-#include "boost/filesystem.hpp"
 #include "boost/program_options.hpp"
 
 #include "utl/for_each_line_in_file.h"
@@ -24,7 +24,7 @@ using namespace motis::module;
 using namespace motis::routing;
 using namespace flatbuffers;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 namespace motis::routing::eval {

@@ -3,12 +3,11 @@ project(motis)
 
 file(GLOB_RECURSE motis-launcher-files src/*.cc)
 add_executable(motis ${motis-launcher-files})
-target_compile_features(motis PUBLIC cxx_std_17)
+target_compile_features(motis PUBLIC cxx_std_20)
 target_include_directories(motis PRIVATE include)
 target_link_libraries(motis
   ${CMAKE_THREAD_LIBS_INIT}
   boost-system
-  boost-filesystem
   conf
   motis-bootstrap
   web-server-tls

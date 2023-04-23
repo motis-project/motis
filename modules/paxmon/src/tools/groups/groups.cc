@@ -2,12 +2,11 @@
 
 #include <cmath>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <utility>
-
-#include "boost/filesystem.hpp"
 
 #include "fmt/core.h"
 
@@ -27,7 +26,7 @@
 
 using namespace motis::paxmon;
 using namespace motis::paxmon::tools::groups;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::paxmon::tools {
 
@@ -185,7 +184,7 @@ int gen_groups(int argc, char const** argv) {
     }
   };
 
-  utl::line_range<utl::buf_reader>{file_content}  //
+  utl::line_range{utl::buf_reader{file_content}}  //
       | utl::csv<loader::csv_journeys::motis_row>()  //
       |
       utl::for_each([&](loader::csv_journeys::motis_row const& row) {
