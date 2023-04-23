@@ -215,7 +215,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               fmt::format(
                   "{}:{}:{}",
                   std::string{
-                      tt.trip_id_strings_.at(tt.trip_ids_.at(trip).front())
+                      tt.source_file_names_
+                          .at(tt.trip_debug_.at(trip).front().source_file_idx_)
                           .view()},
                   std::to_string(tt.trip_debug_.at(trip)[0].line_number_from_),
                   std::to_string(tt.trip_debug_.at(trip)[0].line_number_to_))},
