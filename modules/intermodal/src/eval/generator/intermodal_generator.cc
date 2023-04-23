@@ -55,8 +55,7 @@ constexpr auto const kTargetEscape = std::string_view{"TARGET"};
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Options", "") {
     param(query_count_, "query_count", "number of queries to generate");
-    param(target_file_fwd_, "target_file_fwd",
-          "file to write generated queries to");
+    param(out_, "out", "file to write generated queries to");
     param(bbox_, "bbox", "bounding box for locations");
     param(poly_file_, "poly", "bounding polygon for locations");
     param(start_modes_, "start_modes", "start modes ppr-15|osrm_car-15|...");
@@ -118,7 +117,7 @@ struct generator_settings : public conf::configuration {
 
   int query_count_{1000};
   std::string message_type_{"intermodal"};
-  std::string target_file_fwd_{"intermodal-queries-TARGET.txt"};
+  std::string out_{"q_TARGET.txt"};
   std::string bbox_;
   std::string poly_file_;
   std::string start_modes_;
@@ -776,8 +775,7 @@ int generate(int argc, char const** argv) {
   auto bds = parse_bounds(generator_opt);
   auto of_streams =
       utl::to_vec(generator_opt.routers_, [&](std::string const& router) {
-        return std::ofstream{
-            replace_target_escape(generator_opt.target_file_fwd_, router)};
+        return std::ofstream{replace_target_escape(generator_opt.out_, router)};
       });
 
   motis_instance instance;
