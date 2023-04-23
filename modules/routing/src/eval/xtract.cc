@@ -55,36 +55,37 @@ get_services(std::vector<fs::path> const& response_files) {
 
     int i = res_idx;
     std::cout << "reading " << path << "\n";
-    utl::for_each_line_in_file(path, [&](std::string const& response_str) {
-      auto const msg = make_msg(response_str);
-      auto const routing_res = motis_content(RoutingResponse, msg);
-      auto service_sources = std::vector<std::string>{};
+    utl::for_each_line_in_file(
+        path.generic_string(), [&](auto const& response_str) {
+          auto const msg = make_msg(response_str);
+          auto const routing_res = motis_content(RoutingResponse, msg);
+          auto service_sources = std::vector<std::string>{};
 
-      std::cout << "number of connections "
-                << routing_res->connections()->size() << "\n";
+          std::cout << "number of connections "
+                    << routing_res->connections()->size() << "\n";
 
-      auto c_idx = 0U;
-      for (auto const& c : *routing_res->connections()) {
-        for (auto const& trip : *c->trips()) {
-          auto const source = trip->debug()->str();
-          if (source.empty()) {
-            std::cout << "Error: Response " << i << " connection " << c_idx
-                      << ": trip without service source info: train_nr="
-                      << trip->id()->train_nr() << "\n";
-            continue;
+          auto c_idx = 0U;
+          for (auto const& c : *routing_res->connections()) {
+            for (auto const& trip : *c->trips()) {
+              auto const source = trip->debug()->str();
+              if (source.empty()) {
+                std::cout << "Error: Response " << i << " connection " << c_idx
+                          << ": trip without service source info: train_nr="
+                          << trip->id()->train_nr() << "\n";
+                continue;
+              }
+
+              auto const [filename, line_from, line_to] =
+                  get_service_source(source);
+
+              services[filename].emplace(line_from, line_to);
+              std::cout << "Service \"" << filename << "\": " << line_from
+                        << " - " << line_to << "\n";
+            }
+
+            ++c_idx;
           }
-
-          auto const [filename, line_from, line_to] =
-              get_service_source(source);
-
-          services[filename].emplace(line_from, line_to);
-          std::cout << "Service \"" << filename << "\": " << line_from << " - "
-                    << line_to << "\n";
-        }
-
-        ++c_idx;
-      }
-    });
+        });
   }
   return services;
 }
