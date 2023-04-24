@@ -1,11 +1,10 @@
 #include "motis/address/address.h"
 
+#include <filesystem>
 #include <fstream>
 #include <istream>
 #include <regex>
 #include <sstream>
-
-#include "boost/filesystem.hpp"
 
 #include "cereal/archives/binary.hpp"
 

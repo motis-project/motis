@@ -1,13 +1,13 @@
 #include "motis/loader/loader_options.h"
 
+#include <filesystem>
 #include <sstream>
 
 #include "boost/date_time/local_time/local_time.hpp"
-#include "boost/filesystem.hpp"
 
 #include "motis/core/common/date_time_util.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::loader {
 

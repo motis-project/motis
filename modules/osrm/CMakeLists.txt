@@ -10,7 +10,6 @@ target_include_directories(motis-osrm PUBLIC include)
 target_compile_features(motis-osrm PUBLIC cxx_std_17)
 target_link_libraries(motis-osrm
   boost-system
-  boost-filesystem
   tbb_static
   cista
   osrm

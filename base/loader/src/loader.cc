@@ -14,7 +14,7 @@
 #include "cista/serialization.h"
 #include "cista/targets/file.h"
 
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -36,7 +36,7 @@
 
 #include "motis/schedule-format/Schedule_generated.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace ml = motis::logging;
 
 namespace motis::loader {

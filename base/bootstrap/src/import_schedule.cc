@@ -1,7 +1,5 @@
 #include "motis/bootstrap/import_schedule.h"
 
-#include "boost/filesystem.hpp"
-
 #include "utl/pipes.h"
 
 #include "motis/core/common/logging.h"

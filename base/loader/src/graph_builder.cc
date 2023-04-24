@@ -10,14 +10,10 @@
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/progress_tracker.h"
-#include "utl/to_vec.h"
 #include "utl/verify.h"
-
-#include "date/date.h"
 
 #include "utl/parser/cstr.h"
 
-#include "motis/core/common/constants.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/build_route_node.h"
@@ -835,7 +831,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
   }
 
   if (fbs_schedules.size() == 1 && opt.dataset_prefix_.empty()) {
-    sched->prefixes_.emplace_back();  // dont force prefix for single
+    sched->prefixes_.emplace_back("");  // dont force prefix for single
   } else {
     utl::verify(std::set<std::string>{begin(opt.dataset_prefix_),
                                       end(opt.dataset_prefix_)}

@@ -1,11 +1,10 @@
 #include "motis/loader/wzr_loader.h"
 
+#include <filesystem>
 #include <fstream>
 #include <istream>
 #include <mutex>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/parallel_for.h"
 #include "utl/parser/buf_reader.h"
@@ -58,7 +57,7 @@ waiting_time_rules load_waiting_time_rules(
         waiting_times.emplace_back(entry);
       }
     } catch (std::exception const& e) {
-      std::clog << boost::filesystem::current_path() << "\n";
+      std::clog << std::filesystem::current_path() << "\n";
       LOG(error) << "exception reading wzr matrix file " << wzr_matrix_path
                  << ": " << e.what();
       utl::verify(false, "unable to open wzr matrix file {}", wzr_matrix_path);

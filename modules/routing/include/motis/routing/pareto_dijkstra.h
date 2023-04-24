@@ -22,7 +22,7 @@ constexpr auto const kTracing = false;
 template <typename... T>
 void trace(T&&... t) {
   if (kTracing) {
-    fmt::print(std::cerr, std::forward<T>(t)...);
+    fmt::print(std::cout, std::forward<T>(t)...);
   }
 }
 
@@ -52,9 +52,29 @@ struct pareto_dijkstra {
         for (auto const& e : edges) {
           auto const& from = sched.stations_[e.from_->get_station()->id_];
           auto const& to = sched.stations_[e.to_->get_station()->id_];
-          trace("{} --{},{}--> {}\n", from->name_, e.type_str(),
-                e.get_foot_edge_cost().time_, to->name_);
+          trace("{} ({}) [{}] --{},{}--> {} ({}) [{}]\n", from->name_,
+                from->eva_nr_, e.from_->type_str(), e.type_str(),
+                e.get_foot_edge_cost().time_, to->name_, to->eva_nr_,
+                e.to_->type_str());
         }
+      }
+      for (auto i = 0U; i != is_goal_.size(); ++i) {
+        if (is_goal_[i]) {
+          trace(" GOAL: {} {}\n", sched.stations_[i]->eva_nr_,
+                sched.stations_[i]->name_);
+        }
+      }
+    }
+  }
+
+  void print_dominated(std::string_view reason, Label const* dominating,
+                       Label const* dominated = nullptr) {
+    if (kTracing) {
+      trace("DOMINATION: {}\n", reason);
+      dominating->print(sched_, std::cout, 1);
+      if (dominated != nullptr) {
+        trace("  -- dominates --\n");
+        dominated->print(sched_, std::cout, 2);
       }
     }
   }
@@ -157,12 +177,13 @@ private:
   void create_new_label(Label* l, edge const& edge) {
     Label blank{};
     bool created = l->create_label(
-        blank, edge, lower_bounds_, fastest_direct_, false,
+        blank, edge, lower_bounds_, fastest_direct_,
         (Dir == search_dir::FWD && edge.type() == edge::EXIT_EDGE &&
          is_goal_[edge.get_source<Dir>()->get_station()->id_]) ||
             (Dir == search_dir::BWD && edge.type() == edge::ENTER_EDGE &&
              is_goal_[edge.get_source<Dir>()->get_station()->id_]));
     if (!created) {
+      print_dominated("FILTERED", &blank);
       return;
     }
 
@@ -209,9 +230,11 @@ private:
       Label* o = *it;
       if (terminal_label->dominates(*o)) {
         trace("release result {}\n", fmt::ptr(o));
+        print_dominated("BY_NEW_TERMINAL", terminal_label, o);
         label_store_.release(o);
         it = results_.erase(it);
       } else if (o->dominates(*terminal_label)) {
+        print_dominated("BY_OLD_TERMINAL", o, terminal_label);
         return false;
       } else {
         ++it;
@@ -234,10 +257,12 @@ private:
     for (auto it = dest_labels.begin(); it != dest_labels.end();) {
       Label* o = *it;
       if (o->dominates(*new_label)) {
+        print_dominated("BY_OLD_NODE_LABEL", o, new_label);
         return false;
       }
 
       if (new_label->dominates(*o)) {
+        print_dominated("BY_OLD_NODE_LABEL", new_label, o);
         it = dest_labels.erase(it);
         o->dominated_ = true;
       } else {

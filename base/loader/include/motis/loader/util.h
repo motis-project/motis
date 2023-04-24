@@ -4,11 +4,10 @@
 #include <cmath>
 #include <algorithm>
 #include <bitset>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
-
-#include "boost/filesystem.hpp"
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -96,10 +95,10 @@ inline int yyyymmdd_month(int yyyymmdd) { return (yyyymmdd % 10000) / 100; }
 inline int yyyymmdd_day(int yyyymmdd) { return yyyymmdd % 100; }
 
 void write_schedule(flatbuffers64::FlatBufferBuilder& b,
-                    boost::filesystem::path const& path);
+                    std::filesystem::path const& path);
 
-size_t collect_files(boost::filesystem::path const& root,
+size_t collect_files(std::filesystem::path const& root,
                      std::string const& file_extension,
-                     std::vector<boost::filesystem::path>& files);
+                     std::vector<std::filesystem::path>& files);
 
 }  // namespace motis::loader

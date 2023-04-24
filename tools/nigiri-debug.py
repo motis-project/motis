@@ -3,30 +3,38 @@
 import sys
 import subprocess
 
+
 def query_f(id, router):
-    return f"{id}_queries_{router}.json"
+    return f"{id}_q_fwd_{router}.json"
+
 
 def result_f(id, router):
-    return f"{id}_responses_{router}.json"
+    return f"{id}_r_fwd_{router}.json"
+
 
 if len(sys.argv) < 3:
-    print(f"usage: {sys.argv[0]} ID START_TIME")
+    print(f"usage: {sys.argv[0]} ID YYYY-MM-DD HH:MM")
 else:
     id = int(sys.argv[1])
     start_time = sys.argv[2]
     print(f"debug for id={id}, time={start_time}")
 
+    reproduce_dir = f"./reproduce/{id}"
+    data_dir = f"{reproduce_dir}/data"
+    input_dir = f"{reproduce_dir}/input"
+
     run_nigiri = [
         "./motis",
+        "-c", "input/config.ini",
         "--modules", "nigiri", "intermodal", "lookup", "osrm",
-        "--dataset.write_serialized=false",
-        "--dataset.cache_graph=false",
+        "--dataset.cache_graph=true",
         "--dataset.read_graph=false",
+        "--dataset.read_graph_mmap=true",
         "--nigiri.no_cache=true",
-        "--import.paths", "schedule:input-{}".format(id), "osm:input/osm.pbf",
-        "--import.data_dir=data_{}".format(id),
-        f"--batch_input_file=fail/{query_f(id, routers[1])}",
-        f"--batch_output_file={result_f(id, routers[1])}",
+        "--import.paths", f"schedule-x:{input_dir}/schedule", f"osm:input/osm.pbf",
+        f"--import.data_dir={data_dir}",
+        f"--batch_input_file=fail/{query_f(id, 'nigiri')}",
+        f"--batch_output_file={reproduce_dir}/{result_f(id, 'nigiri')}",
         "--num_threads", "1"
     ]
     # run_nigiri = [
@@ -42,6 +50,7 @@ else:
 
     needle = bytes("init: time_at_start={}".format(start_time), encoding='utf8')
     do_print = False
+    printed = False
     for line in out.splitlines():
         if line.startswith(needle):
             do_print = True
@@ -49,4 +58,8 @@ else:
             do_print = False
 
         if do_print:
+            printed = True
             print(line.decode("utf-8"))
+
+    if not printed:
+        print("NOTHING FOUND")

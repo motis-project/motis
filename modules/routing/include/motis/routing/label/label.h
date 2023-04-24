@@ -29,14 +29,25 @@ struct label : public Data {  // NOLINT
     Init::init(*this, lb);
   }
 
-  void print(schedule const& sched, std::ostream& out) {
+  void print(schedule const& sched, std::ostream& out,
+             unsigned const indent = 0U) const {
     label const* l = this;
     while (l != nullptr) {
-      auto const station_id = l->edge_->to_->get_station()->id_;
+      for (auto i = 0; i != indent; ++i) {
+        out << "  ";
+      }
+      if (l->edge_ == nullptr) {
+        out << "NULL\n";
+        l = l->pred_;
+        continue;
+      }
+      auto const station_id =
+          l->edge_->get_destination(Dir)->get_station()->id_;
       auto const& station = *sched.stations_[station_id];
       out << (l == this ? "" : "  ");
-      out << station.name_ << " " << l->edge_->to_->type_str() << " ["
-          << station.eva_nr_ << "] @ " << format_time(l->now_) << " <--";
+      out << station.name_ << " " << l->edge_->get_destination(Dir)->type_str()
+          << " [" << station.name_ << ", " << station.eva_nr_ << "] @ "
+          << format_time(l->now_) << " <--";
       if (l->connection_ != nullptr) {
         out << get_service_name(sched, l->connection_->full_con_->con_info_)
             << " ";

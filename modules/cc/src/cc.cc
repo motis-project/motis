@@ -140,7 +140,9 @@ duration get_shortest_footpath(schedule const& sched, node const* from_node,
     }
 
     for (auto const& e : l.node_->edges_) {
-      if (e.type() != edge::ROUTE_EDGE && e.type() != edge::HOTEL_EDGE) {
+      if (e.type() != edge::ROUTE_EDGE && e.type() != edge::HOTEL_EDGE &&
+          e.type() != edge::BWD_EDGE &&
+          e.type() != edge::AFTER_TRAIN_BWD_EDGE) {
         auto const new_dist = l.dist_ + e.get_foot_edge_cost().time_;
         if (new_dist < dists[e.to_->id_] &&
             new_dist <= MAX_TRAVEL_TIME_MINUTES) {
@@ -152,23 +154,22 @@ duration get_shortest_footpath(schedule const& sched, node const* from_node,
     }
   }
 
-  auto const print_edge = [&](edge const* e) {
-    if (e == nullptr) {
-      return;
-    }
+  std::vector<edge const*> edges;
+  edge const* pred = pred_edge[to_node->id_];
+  while (pred != nullptr && pred->from_ != from_node) {
+    edges.push_back(pred);
+    pred = pred_edge[pred->from_->id_];
+  }
+
+  std::reverse(begin(edges), end(edges));
+
+  for (auto const& e : edges) {
     auto const& from = *sched.stations_.at(e->from_->get_station()->id_);
     auto const& to = *sched.stations_.at(e->to_->get_station()->id_);
     std::cout << from.name_ << " (" << from.eva_nr_ << ")"
               << " --" << e->type_str() << "--" << e->get_foot_edge_cost().time_
               << "--> " << to.name_ << "(" << to.eva_nr_ << ")\n";
-  };
-  edge const* pred = pred_edge[to_node->id_];
-  while (pred != nullptr && pred->from_ != from_node) {
-    print_edge(pred);
-    pred = pred_edge[pred->from_->id_];
   }
-  print_edge(pred);
-
   std::cout << "distance: " << dists[to_node->id_] << "\n";
 
   return dists[to_node->id_];
@@ -215,11 +216,18 @@ void check_interchange(schedule const& sched, Connection const* con,
     for (auto i = ic.exit_stop_idx_; i < ic.enter_stop_idx_; ++i) {
       min_transfer_time += get_foot_edge_duration(sched, con, i);
     }
-    utl::verify(transfer_time >= min_transfer_time,
-                "transfer_time={} < min_transfer_time={} (exit_stop_idx={}, "
-                "enter_stop_idx={})",
-                transfer_time, min_transfer_time, ic.exit_stop_idx_,
-                ic.enter_stop_idx_);
+    utl::verify(
+        transfer_time >= min_transfer_time,
+        "exit={}, enter={}, transfer_time={} < min_transfer_time={} "
+        "(exit_stop_idx={}, exit_stop={} ({}), enter_stop_idx={}, "
+        "enter_stop={} ({}))",
+        format_time(ic.exit_.get_time()), format_time(ic.enter_.get_time()),
+        transfer_time, min_transfer_time, ic.exit_stop_idx_,
+        con->stops()->Get(ic.exit_stop_idx_)->station()->name()->view(),
+        con->stops()->Get(ic.exit_stop_idx_)->station()->id()->view(),
+        ic.enter_stop_idx_,
+        con->stops()->Get(ic.enter_stop_idx_)->station()->name()->view(),
+        con->stops()->Get(ic.enter_stop_idx_)->station()->id()->view());
   }
 }
 

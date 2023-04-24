@@ -13,7 +13,7 @@
 #include "motis/paxmon/messages.h"
 #include "motis/paxmon/trip_section_load_iterator.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::module;
 
 namespace motis::paxmon::output {

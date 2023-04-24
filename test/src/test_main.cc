@@ -1,6 +1,5 @@
+#include <filesystem>
 #include <iostream>
-
-#include "boost/filesystem.hpp"
 
 #include "gtest/gtest.h"
 
@@ -12,7 +11,7 @@
 #include "google/protobuf/stubs/common.h"
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 int main(int argc, char** argv) {
   utl::get_active_progress_tracker_or_activate("test");

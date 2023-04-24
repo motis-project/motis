@@ -2,9 +2,8 @@
 
 #include <algorithm>
 #include <exception>
+#include <filesystem>
 #include <iostream>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"

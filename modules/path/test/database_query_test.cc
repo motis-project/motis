@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "utl/equal_ranges_linear.h"
 #include "utl/progress_tracker.h"
@@ -38,8 +38,14 @@ struct path_database_query_test : public ::testing::Test {
 
   void SetUp() override {
     // use boost filesystem for unique test case file names
+    const auto now = std::chrono::system_clock::now();
+    auto const tmp = std::filesystem::temp_directory_path();
     db_fname_ =
-        boost::filesystem::unique_path("pathdb_test_%%%%-%%%%-%%%%-%%%%")
+        (tmp /
+         fmt::format("pathdb_test_{}",
+                     std::chrono::time_point_cast<std::chrono::seconds>(now)
+                         .time_since_epoch()
+                         .count()))
             .string();
 
     utl::activate_progress_tracker("query_test");
@@ -48,9 +54,9 @@ struct path_database_query_test : public ::testing::Test {
   void TearDown() override {
     utl::get_global_progress_trackers().clear();
 
-    boost::filesystem::remove(db_fname_ + ".mdb");
-    boost::filesystem::remove(db_fname_ + ".mdb-lock");
-    boost::filesystem::remove(db_fname_ + ".pck");
+    std::filesystem::remove(db_fname_ + ".mdb");
+    std::filesystem::remove(db_fname_ + ".mdb-lock");
+    std::filesystem::remove(db_fname_ + ".pck");
   }
 
   std::string db_fname() const { return db_fname_ + ".mdb"; }

@@ -1,8 +1,7 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "motis/core/schedule/schedule.h"
 
@@ -12,7 +11,7 @@
 
 namespace motis::paxmon::output {
 
-void write_scenario(boost::filesystem::path const& dir, schedule const& sched,
+void write_scenario(std::filesystem::path const& dir, schedule const& sched,
                     universe const& uv,
                     std::vector<motis::module::msg_ptr> const& messages,
                     bool include_trip_info = false);

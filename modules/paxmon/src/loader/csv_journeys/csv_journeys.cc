@@ -646,7 +646,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   };
 
   if (format == csv_format::MOTIS) {
-    utl::line_range<utl::buf_reader>{file_content}  //
+    utl::line_range{utl::buf_reader{file_content}}  //
         | utl::csv<motis_row>()  //
         | utl::for_each([&](motis_row const& row) {
             auto const id = id_t{row.id_.val(), row.secondary_id_.val()};
@@ -714,13 +714,13 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     };
 
     if (format == csv_format::TREK1) {
-      utl::line_range<utl::buf_reader>{file_content}  //
+      utl::line_range{utl::buf_reader{file_content}}  //
           | utl::csv<trek1_row, ';'>()  //
           | utl::for_each([&](trek1_row const& row) {
               process_trek_row(row, "%d.%m.%Y %H:%M:%S");
             });
     } else /* if (format == csv_format::TREK2) */ {
-      utl::line_range<utl::buf_reader>{file_content}  //
+      utl::line_range{utl::buf_reader{file_content}}  //
           | utl::csv<trek2_row, ';'>()  //
           | utl::for_each([&](trek2_row const& row) {
               process_trek_row(row, "%Y-%m-%d %H:%M:%S");

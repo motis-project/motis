@@ -2,14 +2,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <iostream>
 #include <limits>
 #include <mutex>
 #include <utility>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"

@@ -104,15 +104,13 @@ stop_time::stop_time(stop* s, std::string headsign, int arr_time,
       dep_{dep_time, in_allowed} {}
 
 trip::trip(route const* route, bitfield const* service, block* blk,
-           std::string id, std::string headsign, std::string short_name,
-           std::size_t line)
+           std::string id, std::string headsign, std::string short_name)
     : route_(route),
       service_(service),
       block_{blk},
       id_{std::move(id)},
       headsign_(std::move(headsign)),
-      short_name_(std::move(short_name)),
-      line_(line) {}
+      short_name_(std::move(short_name)) {}
 
 void trip::interpolate() {
   struct bound {
@@ -290,7 +288,7 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
                              .get(),
                          blk, get<trip_id>(t).to_str(),
                          get<trip_headsign>(t).to_str(),
-                         get<trip_short_name>(t).to_str(), i + 1))
+                         get<trip_short_name>(t).to_str()))
             .first->second.get();
     if (blk != nullptr) {
       blk->trips_.emplace_back(trp);

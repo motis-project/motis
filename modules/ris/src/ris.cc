@@ -3,12 +3,12 @@
 #include <chrono>
 #include <cstdint>
 #include <atomic>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <optional>
 
 #include "boost/algorithm/string/predicate.hpp"
-#include "boost/filesystem.hpp"
 
 #include "utl/concat.h"
 #include "utl/parser/file.h"
@@ -58,7 +58,7 @@
 #undef GetMessage
 #endif
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace db = lmdb;
 using namespace motis::module;
 using namespace motis::logging;
@@ -788,7 +788,13 @@ struct ris::impl {
     if (fs::is_regular_file(p)) {
       if (auto const t = get_file_type(p);
           t != file_type::NONE && !is_known_file(p)) {
-        return {std::make_tuple(fs::last_write_time(p), p, t)};
+        return {std::make_tuple(
+            static_cast<unixtime>(
+                std::chrono::time_point_cast<std::chrono::seconds>(
+                    fs::last_write_time(p))
+                    .time_since_epoch()
+                    .count()),
+            p, t)};
       }
     } else if (fs::is_directory(p)) {
       std::vector<std::tuple<unixtime, fs::path, file_type>> files;
@@ -802,25 +808,14 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_parallel(fs::path const& p, Publisher& pub) {
-    ctx::await_all(utl::to_vec(
-        collect_files(fs::canonical(p, p.root_path())), [&](auto&& e) {
-          return spawn_job_void([e, this, &pub]() {
-            parse_file_and_write_to_db(std::get<1>(e), std::get<2>(e), pub);
-          });
-        }));
-    env_.force_sync();
-  }
-
-  template <typename Publisher>
   void parse_sequential(schedule& sched, input& in, Publisher& pub) {
     if (!fs::exists(in.get_path())) {
       l(logging::error, "ris input path {} does not exist", in.get_path());
       return;
     }
 
-    for (auto const& [t, path, type] : collect_files(
-             fs::canonical(in.get_path(), in.get_path().root_path()))) {
+    for (auto const& [t, path, type] :
+         collect_files(fs::canonical(in.get_path()))) {
       try {
         parse_file_and_write_to_db(in, path, type, pub);
         if (config_.instant_forward_) {

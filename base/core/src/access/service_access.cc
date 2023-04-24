@@ -26,20 +26,37 @@ std::string get_service_name(schedule const& sched,
   if (is(kNoOutput)) {
     return "";
   } else {
+    auto const& cat_name = sched.categories_[info->family_]->name_;
+    auto const& line_id = info->line_identifier_;
+    auto const clasz_it = sched.classes_.find(cat_name);
+    auto const clasz = clasz_it == end(sched.classes_) ? service_class::OTHER
+                                                       : clasz_it->second;
+    if (!line_id.empty() && clasz != service_class::BUS &&
+        clasz != service_class::STR &&
+        (line_id.view().front() > '9' || line_id.view().front() < '0') &&
+        (line_id.view().back() >= '0' && line_id.view().back() <= '9')) {
+      // Line ID starts with letter and ends with number, seems to be complete.
+      return line_id.str();
+    }
+
     auto const train_nr =
         output_train_nr(info->train_nr_, info->original_train_nr_);
-    auto const line_id = info->line_identifier_;
-    auto const& cat = *sched.categories_[info->family_];
-    std::string provider;
-    if (info->provider_ != nullptr) {
-      provider = info->provider_->short_name_;
-    }
-    auto const first =
-        is(kOnlyTrainNr) ? "" : (is(kUseProvider) ? provider : cat.name_);
+    auto const provider =
+        info->provider_ == nullptr ? "" : info->provider_->short_name_;
+
     auto const second =
-        is(kOnlyCategory)
-            ? ""
-            : (train_nr == 0U ? line_id : fmt::to_string(train_nr));
+        is(kOnlyCategory) ? ""
+                          : (train_nr == 0U || ((clasz == service_class::BUS ||
+                                                 clasz == service_class::STR ||
+                                                 clasz == service_class::S) &&
+                                                !line_id.empty())
+                                 ? line_id
+                                 : fmt::to_string(train_nr));
+    auto const omit_s =
+        (!second.empty() && second[0] == 'S' && clasz == service_class::S);
+    auto const first = is(kOnlyTrainNr) || omit_s
+                           ? ""
+                           : (is(kUseProvider) ? provider : cat_name);
     return fmt::format("{}{}{}", first, first.empty() ? "" : " ", second);
   }
 }

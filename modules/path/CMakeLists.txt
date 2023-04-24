@@ -52,7 +52,6 @@ target_link_libraries(motis-path-prepare
   lmdb
   cista
   boost-system
-  boost-filesystem
   ${CMAKE_THREAD_LIBS_INIT}
 )
 target_compile_options(motis-path-prepare PRIVATE ${MOTIS_CXX_FLAGS})

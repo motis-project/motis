@@ -78,8 +78,14 @@ struct db_builder::impl {
   impl& operator=(impl&&) noexcept = delete;
 
   ~impl() {
-    utl::verify(db_cache_size_ == 0 && db_cache_.empty(),
-                "db_builder: cache is not empty in dtor");
+    if (db_cache_size_ != 0U) {
+      LOG(logging::error) << "db_cache_size=" << db_cache_size_
+                          << ", should be 0";
+    }
+    if (!db_cache_.empty()) {
+      LOG(logging::error) << "db_cache_size=" << db_cache_.size()
+                          << ", should be empty";
+    }
   }
 
   void store_stations(mcd::vector<station_seq> const& sequences) {

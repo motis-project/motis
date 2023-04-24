@@ -1,10 +1,9 @@
 #include "motis/paxmon/paxmon.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iterator>
 #include <memory>
-
-#include "boost/filesystem.hpp"
 
 #include "fmt/format.h"
 
@@ -62,7 +61,7 @@
 #include "motis/paxmon/service_info.h"
 #include "motis/paxmon/tools/commands.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 using namespace motis::module;
 using namespace motis::routing;

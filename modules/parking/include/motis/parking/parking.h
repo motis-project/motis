@@ -1,10 +1,9 @@
 #pragma once
 
+#include <filesystem>
 #include <map>
 #include <string>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "motis/ppr/profile_info.h"
 
