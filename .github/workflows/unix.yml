@@ -116,6 +116,7 @@ jobs:
       BUILDCACHE_ACCURACY: SLOPPY
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+      BUILDCACHE_MAX_CACHE_SIZE: 536870912
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
       CLICOLOR_FORCE: 1
@@ -290,7 +291,7 @@ jobs:
     env:
       BUILDCACHE_DIR: /buildcache
       BUILDCACHE_DIRECT_MODE: true
-      BUILDCACHE_MAX_CACHE_SIZE: 26843545600
+      BUILDCACHE_MAX_CACHE_SIZE: 536870912
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
     steps:
       - uses: actions/checkout@v3
