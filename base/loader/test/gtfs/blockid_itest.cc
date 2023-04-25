@@ -25,9 +25,10 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
                 .schedule_begin_ = schedule_begin,
                 .num_days_ = 1},
             {"routing", "csa", "raptor", "tripbased", "nigiri"},
-            {fmt::format(
-                "--nigiri.first_day={}-{}-{}", schedule_begin.substr(0, 4),
-                schedule_begin.substr(4, 2), schedule_begin.substr(6, 2))}) {}
+            {"--tripbased.use_data_file=false",
+             fmt::format(
+                 "--nigiri.first_day={}-{}-{}", schedule_begin.substr(0, 4),
+                 schedule_begin.substr(4, 2), schedule_begin.substr(6, 2))}) {}
 
   msg_ptr routing_query(std::string_view from, std::string_view to,
                         std::string_view start_time, std::string_view target) {
