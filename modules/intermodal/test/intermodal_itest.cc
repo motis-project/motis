@@ -28,7 +28,7 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 
 namespace motis::intermodal {
 
-loader::loader_options add_tag(loader::loader_options opt) {
+static loader::loader_options add_tag(loader::loader_options opt) {
   opt.dataset_prefix_.emplace_back("x");
   return opt;
 }
