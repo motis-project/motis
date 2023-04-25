@@ -124,7 +124,8 @@ msg_ptr make_msg(std::string const& json, json_format& jf, bool const fix,
   }
 
   if (!parse_ok) {
-    LOG(motis::logging::error) << "parse error: " << json_parser->error_;
+    LOG(motis::logging::error)
+        << "JSON parse error (step 2): " << json_parser->error_;
     throw std::system_error(error::unable_to_parse_msg);
   }
 
@@ -132,6 +133,8 @@ msg_ptr make_msg(std::string const& json, json_format& jf, bool const fix,
                                  json_parser->builder_.GetSize(), fbs_max_depth,
                                  fbs_max_tables);
   if (!VerifyMessageBuffer(verifier)) {
+    LOG(motis::logging::error)
+        << "JSON parse error (step 3): verification failed";
     throw std::system_error(error::malformed_msg);
   }
   auto size = json_parser->builder_.GetSize();

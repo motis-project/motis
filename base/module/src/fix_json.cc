@@ -5,9 +5,11 @@
 #include <string_view>
 
 #include "rapidjson/document.h"
+#include "rapidjson/error/en.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/module/error.h"
 
 using namespace rapidjson;
@@ -159,6 +161,9 @@ fix_json_result fix_json(std::string const& json,
                          std::string_view const target) {
   rapidjson::Document d;
   if (d.Parse(json.c_str()).HasParseError()) {  // NOLINT
+    LOG(motis::logging::error)
+        << "JSON parse error (step 1): " << GetParseError_En(d.GetParseError())
+        << " at offset " << d.GetErrorOffset();
     throw std::system_error(module::error::unable_to_parse_msg);
   }
 
