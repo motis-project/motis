@@ -22,6 +22,12 @@ output:
     info: &openapi-info
       title: MOTIS API
       version: 0.0.0
+      description: |
+        For more information see:
+        
+        - [MOTIS Project Website](https://motis-project.de/)
+        - [MOTIS GitHub Project](https://github.com/motis-project/motis)
+        - [MOTIS GitHub Wiki](https://github.com/motis-project/motis/wiki)
       contact:
         name: MOTIS Project
         url: https://github.com/motis-project
