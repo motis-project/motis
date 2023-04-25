@@ -1,10 +1,10 @@
 Position:
-  description: TODO
+  description: A geographic coordinate.
   fields:
     lat:
-      description: TODO
+      description: Latitude (north-south position)
     lng:
-      description: TODO
+      description: Longitude (east-west position)
 SearchDir:
   description: TODO
 Station:
@@ -17,12 +17,12 @@ Station:
     pos:
       description: The coordinates where the station is located.
 Interval:
-  description: TODO
+  description: A time interval.
   fields:
     begin:
-      description: TODO
+      description: The first time in the interval (unix timestamp).
     end:
-      description: TODO
+      description: The first time not in the interval (unix timestamp).
 EventType:
   description: TODO
 TripId:
@@ -41,7 +41,24 @@ TripId:
     line_id:
       description: The line name.
 TimestampReason:
-  description: TODO
+  description: |
+    The information source for the real-time timestamp. The system is
+    conservative in the sense that it selects the maximum timestamp from
+    propagation, forecast or schedule time if there is no `IS` or `REPAIR`
+    timestamp given.
+
+    - `SCHEDULE`: the real-time timestamp is the schedule time. No real-time
+      information.
+    - `REPAIR`: there are conflicting real-time information and this
+      timestamp needed to be repaired such that basic properties of the
+      timetable hold (i.e. timestamps need to correspond to the event
+      order).
+    - `IS`: the system received a real-time message that the event took
+      place with this timestamp.
+    - `PROPAGATION`: the timestamp was computed by propagating times (e.g.
+      from earlier stops of the stop sequence of a trip)
+    - `FORECAST`: the system received a message that forecasted the event
+      time.
 ConnectionStatus:
   description: TODO
 ProblemType:
@@ -50,19 +67,33 @@ EventInfo:
   description: TODO
   fields:
     time:
-      description: TODO
+      description: Real-time timestamp (unix timestamp).
     schedule_time:
-      description: TODO
+      description: Schedule timestamp (unix timestamp).
     track:
-      description: TODO
+      description: The real-time track name.
     schedule_track:
-      description: TODO
+      description: The schedule track name.
     valid:
-      description: TODO
+      description: |
+        If this flag is `false`, the event is invalid. This is the case for the
+        arrival event at the first stop and the departure event at the last
+        stop.
     reason:
       description: TODO
 Stop:
-  description: TODO
+  description: |
+    The stops are the basic building block of the journey data structure.
+    Everything else references stops by their index.
+
+    Note that there are four cases for `exit` and `enter`: when entering the
+    first train, only `enter` is set. When exiting the last train, only `exit`
+    is set. There may be walk segments before the first `enter` and after the
+    last `exit`. For a direct interchange between two trains, `enter` *and*
+    `exit` are set. For a walk between two stops, `exit` is set at the first
+    stop and `enter` is set at the second stop. There may be more than one walk
+    segments in between. For every stop where the train just stops, neither
+    `enter` nor `exit` is set.
   fields:
     station:
       description: TODO
@@ -71,9 +102,11 @@ Stop:
     departure:
       description: TODO
     exit:
-      description: TODO
+      description: |
+        Indicates whether the passenger alights from the vehicle at this stop.
     enter:
-      description: TODO
+      description: |
+        Indicates whether the passenger enters the vehicle at this stop.
 Range:
   description: TODO
   fields:
@@ -153,20 +186,38 @@ Problem:
     type:
       description: TODO
 Connection:
-  description: TODO
+  description: |
+    A connection is a journey from a coordinate/station to another
+    coordinate/station. The core of the journey is the stop sequence. Other
+    information (such as `transports` and `trips`) reference stops by their
+    index in the stop sequence.
   fields:
     stops:
-      description: TODO
+      description: |
+        The stop sequence including (real-time) event times and information
+        about alighting and entering of services. This is the core of the
+        journey. All other collections in the `Connection` reference stop
+        indices.
     transports:
-      description: TODO
+      description: |
+        Information about the transports that are used with their corresponding
+        stop range.
     trips:
-      description: TODO
+      description: |
+        Trip IDs for each trip that is used in the journey with their
+        corresponding stop range.
     attributes:
-      description: TODO
+      description: |
+        Attributes that are active within the corresponding stop range.
     free_texts:
-      description: TODO
+      description: |
+        Free text messages can be used by the operator to inform and guide
+        users.
     problems:
-      description: TODO
+      description: |
+        Problems with the journey. This is empty for fresh journeys but can be
+        populated when real-time information such as cancellations, etc. are
+        processed.
     night_penalty:
       description: TODO
     db_costs:
