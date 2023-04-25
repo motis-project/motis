@@ -1,0 +1,7 @@
+{
+  "yaml.schemas": {
+    "./docs/schemas/paths.json": "/docs/api/paths.yaml",
+    "./docs/schemas/tags.json": "/docs/api/tags.yaml",
+    "./docs/schemas/schema.json": "/docs/api/schemas/**.yaml"
+  }
+}
