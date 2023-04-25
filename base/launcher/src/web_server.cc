@@ -28,8 +28,6 @@ using namespace motis::module;
 
 namespace motis::launcher {
 
-constexpr auto const kDefaultOuputJsonFormat = json_format::DEFAULT_FLATBUFFERS;
-
 std::string encode_msg(msg_ptr const& msg, bool const binary,
                        json_format const jf = kDefaultOuputJsonFormat) {
   std::string b;
@@ -69,7 +67,6 @@ inline std::string_view to_sv(boost::beast::string_view const& bsv) {
   return {bsv.data(), bsv.size()};
 }
 
-// TODO(pablo): json_format support
 struct ws_client : public client,
                    public std::enable_shared_from_this<ws_client> {
   ws_client(boost::asio::io_service& ios, net::ws_session_ptr session,
@@ -83,7 +80,8 @@ struct ws_client : public client,
 
   ~ws_client() override = default;
 
-  void set_on_msg_cb(std::function<void(msg_ptr const&)>&& cb) override {
+  void set_on_msg_cb(
+      std::function<void(msg_ptr const&, json_format)>&& cb) override {
     if (auto const lock = session_.lock(); lock) {
       lock->on_msg([this, cb = std::move(cb)](std::string const& req_buf,
                                               net::ws_msg_type const type) {
@@ -98,7 +96,7 @@ struct ws_client : public client,
           auto const [req, jf] =
               decode_msg(req_buf, type == net::ws_msg_type::BINARY);
           req_id = req->get()->id();
-          return cb(req);
+          return cb(req, jf);
         } catch (std::system_error const& e) {
           err = build_reply(req_id, nullptr, e.code());
         } catch (std::exception const& e) {
@@ -127,11 +125,11 @@ struct ws_client : public client,
     }
   }
 
-  void send(msg_ptr const& m) override {
-    ios_.post([self = shared_from_this(), m]() {
+  void send(msg_ptr const& m, json_format const jf) override {
+    ios_.post([self = shared_from_this(), m, jf]() {
       if (auto s = self->session_.lock()) {
         s->send(
-            encode_msg(m, self->binary_),
+            encode_msg(m, self->binary_, jf),
             self->binary_ ? net::ws_msg_type::BINARY : net::ws_msg_type::TEXT,
             [](boost::system::error_code, size_t) {});
       }
