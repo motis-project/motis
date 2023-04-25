@@ -54,7 +54,7 @@ msg_ptr build_reply(int const id, msg_ptr const& res,
 std::pair<msg_ptr, json_format> decode_msg(
     std::string const& req_buf, bool const binary,
     std::string_view const target = std::string_view{}) {
-  auto jf = json_format::DEFAULT_FLATBUFFERS;
+  auto jf = kDefaultOuputJsonFormat;
   if (binary) {
     return {make_msg(req_buf.data(), req_buf.size()), jf};
   } else {
@@ -265,7 +265,8 @@ struct web_server::impl {
         }
         req_msg = req.body();
         if (req_msg.empty()) {
-          req_msg = make_no_msg(std::string{req.target()})->to_json();
+          req_msg = make_no_msg(std::string{req.target()})
+                        ->to_json(kDefaultOuputJsonFormat);
         }
         break;
       }
@@ -275,7 +276,8 @@ struct web_server::impl {
             net::serve_static_file(static_file_path_, req, cb)) {
           return;
         } else {
-          req_msg = make_no_msg(std::string{req.target()})->to_json();
+          req_msg = make_no_msg(std::string{req.target()})
+                        ->to_json(kDefaultOuputJsonFormat);
           break;
         }
       default:

@@ -11,6 +11,7 @@ enum class json_format : std::uint8_t {
   CONTENT_ONLY_TYPES_IN_UNIONS
 };
 
-constexpr auto const kDefaultOuputJsonFormat = json_format::DEFAULT_FLATBUFFERS;
+constexpr auto const kDefaultOuputJsonFormat =
+    json_format::CONTENT_ONLY_TYPES_IN_UNIONS;
 
 }  // namespace motis::module
