@@ -1,13 +1,14 @@
 #include "gtest/gtest.h"
 
+#include "utl/zip.h"
+
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "motis/core/journey/print_journey.h"
 #include "motis/test/motis_instance_test.h"
 
-#include "motis/core/journey/print_journey.h"
 #include "./resources.h"
-#include "utl/zip.h"
 
 namespace fbs = flatbuffers;
 using namespace motis;
