@@ -34,6 +34,7 @@ jobs:
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_MAX_CACHE_SIZE: 1073741824
 
     steps:
       - uses: actions/checkout@v3
