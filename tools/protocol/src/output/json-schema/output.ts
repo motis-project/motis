@@ -50,6 +50,7 @@ export function writeJsonSchemaOutput(
     config["types-in-unions"] !== false,
     false,
     false,
+    !!config["explicit-additional-properties"],
     config["tagged-type-suffix"] || "T"
   );
 
@@ -102,6 +103,7 @@ export function createJSContext(
   typesInUnions = true,
   includeOpenApiDiscriminators = false,
   constAsEnum = false,
+  explicitAdditionalProperties = false,
   taggedTypeFnOrSuffix: ((fqtn: string[]) => string[]) | string = "T",
   typeKey = "_type"
 ): JSContext {
@@ -124,6 +126,7 @@ export function createJSContext(
     typeKey,
     includeOpenApiDiscriminators,
     constAsEnum,
+    explicitAdditionalProperties,
   };
   return ctx;
 }
@@ -322,6 +325,9 @@ function addTableProperties(
   }
   if (required.length > 0) {
     js.required = required;
+  }
+  if (ctx.explicitAdditionalProperties) {
+    js.additionalProperties = true;
   }
   return js;
 }

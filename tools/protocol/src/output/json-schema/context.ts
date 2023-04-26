@@ -18,4 +18,5 @@ export interface JSContext {
   typeKey: string;
   includeOpenApiDiscriminators: boolean;
   constAsEnum: boolean;
+  explicitAdditionalProperties: boolean;
 }

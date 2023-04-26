@@ -32,6 +32,7 @@ export type JSONSchema = {
 
   properties?: { [name: string]: JSONSchema };
   required?: string[];
+  additionalProperties?: boolean | JSONSchema;
 
   items?: JSONSchema;
 

@@ -48,6 +48,8 @@ export function writeOpenAPIOutput(
 
   const typesInUnions = config["types-in-unions"] !== false;
   const msgContentOnly = typesInUnions && config["msg-content-only"] !== false;
+  const explicitAdditionalProperties =
+    config["explicit-additional-properties"] !== false;
 
   const jsCtx = createJSContext(
     schema,
@@ -59,7 +61,8 @@ export function writeOpenAPIOutput(
     false,
     typesInUnions,
     typesInUnions,
-    true
+    true,
+    explicitAdditionalProperties
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
 
@@ -367,4 +370,5 @@ function writeSchema(
   setKey("if");
   setKey("then");
   setKey("else");
+  setKey("additionalProperties");
 }
