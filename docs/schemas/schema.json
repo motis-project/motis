@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "properties": {
+      "description": { "type": "string" },
+      "tags": { "type": "array", "items": { "type": "string" } },
+      "examples": { "type": "array" },
+      "fields": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "description": { "type": "string" },
+            "examples": { "type": "array" }
+          },
+          "required": ["description"]
+        }
+      }
+    },
+    "required": ["description"]
+  }
+}

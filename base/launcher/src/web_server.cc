@@ -4,6 +4,8 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <optional>
+#include <utility>
 
 #include "boost/beast/version.hpp"
 
@@ -26,12 +28,13 @@ using namespace motis::module;
 
 namespace motis::launcher {
 
-std::string encode_msg(msg_ptr const& msg, bool const binary) {
+std::string encode_msg(msg_ptr const& msg, bool const binary,
+                       json_format const jf = kDefaultOuputJsonFormat) {
   std::string b;
   if (binary) {
     b = std::string{reinterpret_cast<char const*>(msg->data()), msg->size()};
   } else {
-    b = msg->to_json();
+    b = msg->to_json(jf);
   }
   return b;
 }
@@ -48,11 +51,15 @@ msg_ptr build_reply(int const id, msg_ptr const& res,
   return m;
 }
 
-msg_ptr decode_msg(std::string const& req_buf, bool const binary) {
+std::pair<msg_ptr, json_format> decode_msg(
+    std::string const& req_buf, bool const binary,
+    std::string_view const target = std::string_view{}) {
+  auto jf = kDefaultOuputJsonFormat;
   if (binary) {
-    return make_msg(req_buf.data(), req_buf.size());
+    return {make_msg(req_buf.data(), req_buf.size()), jf};
   } else {
-    return make_msg(req_buf, true);
+    auto const msg = make_msg(req_buf, jf, true, target);
+    return {msg, jf};
   }
 }
 
@@ -73,7 +80,8 @@ struct ws_client : public client,
 
   ~ws_client() override = default;
 
-  void set_on_msg_cb(std::function<void(msg_ptr const&)>&& cb) override {
+  void set_on_msg_cb(
+      std::function<void(msg_ptr const&, json_format)>&& cb) override {
     if (auto const lock = session_.lock(); lock) {
       lock->on_msg([this, cb = std::move(cb)](std::string const& req_buf,
                                               net::ws_msg_type const type) {
@@ -85,10 +93,10 @@ struct ws_client : public client,
         int req_id = 0;
 
         try {
-          auto const req =
+          auto const [req, jf] =
               decode_msg(req_buf, type == net::ws_msg_type::BINARY);
           req_id = req->get()->id();
-          return cb(req);
+          return cb(req, jf);
         } catch (std::system_error const& e) {
           err = build_reply(req_id, nullptr, e.code());
         } catch (std::exception const& e) {
@@ -117,11 +125,11 @@ struct ws_client : public client,
     }
   }
 
-  void send(msg_ptr const& m) override {
-    ios_.post([self = shared_from_this(), m]() {
+  void send(msg_ptr const& m, json_format const jf) override {
+    ios_.post([self = shared_from_this(), m, jf]() {
       if (auto s = self->session_.lock()) {
         s->send(
-            encode_msg(m, self->binary_),
+            encode_msg(m, self->binary_, jf),
             self->binary_ ? net::ws_msg_type::BINARY : net::ws_msg_type::TEXT,
             [](boost::system::error_code, size_t) {});
       }
@@ -200,7 +208,9 @@ struct web_server::impl {
                        net::web_server::http_res_cb_t const& cb) {
     using namespace boost::beast::http;
 
-    auto const build_response = [req](msg_ptr const& response) {
+    auto const build_response = [req](msg_ptr const& response,
+                                      std::optional<json_format> jf =
+                                          std::nullopt) {
       net::web_server::string_res_t res{
           response == nullptr ? status::ok
           : response->get()->content_type() == MsgContent_MotisError
@@ -229,15 +239,19 @@ struct web_server::impl {
         }
       } else {
         res.set(field::content_type, "application/json");
-        res.body() = response == nullptr ? "" : response->to_json();
+        res.body() =
+            response == nullptr
+                ? ""
+                : response->to_json(jf.value_or(kDefaultOuputJsonFormat));
       }
 
       res.prepare_payload();
       return res;
     };
 
-    auto const res_cb = [cb, build_response](msg_ptr const& response) {
-      cb(build_response(response));
+    auto const res_cb = [cb, build_response](msg_ptr const& response,
+                                             std::optional<json_format> jf) {
+      cb(build_response(response, jf));
     };
 
     std::string req_msg;
@@ -251,7 +265,8 @@ struct web_server::impl {
         }
         req_msg = req.body();
         if (req_msg.empty()) {
-          req_msg = make_no_msg(std::string{req.target()})->to_json();
+          req_msg = make_no_msg(std::string{req.target()})
+                        ->to_json(kDefaultOuputJsonFormat);
         }
         break;
       }
@@ -261,7 +276,8 @@ struct web_server::impl {
             net::serve_static_file(static_file_path_, req, cb)) {
           return;
         } else {
-          req_msg = make_no_msg(std::string{req.target()})->to_json();
+          req_msg = make_no_msg(std::string{req.target()})
+                        ->to_json(kDefaultOuputJsonFormat);
           break;
         }
       default:
@@ -269,7 +285,7 @@ struct web_server::impl {
             std::make_error_code(std::errc::operation_not_supported))));
     }
 
-    return on_msg_req(req_msg, false, res_cb);
+    return on_msg_req(req_msg, false, to_sv(req.target()), res_cb);
   }
 
   void on_ws_open(net::ws_session_ptr session, std::string const& target) {
@@ -288,27 +304,35 @@ struct web_server::impl {
   void on_ws_msg(net::ws_session_ptr const& session, std::string const& msg,
                  net::ws_msg_type type) {
     auto const is_binary = type == net::ws_msg_type::BINARY;
-    return on_msg_req(msg, is_binary,
-                      [session, type, is_binary](msg_ptr const& response) {
-                        if (auto s = session.lock()) {
-                          s->send(encode_msg(response, is_binary), type,
-                                  [](boost::system::error_code, size_t) {});
-                        }
-                      });
+    return on_msg_req(
+        msg, is_binary, {},
+        [session, type, is_binary](msg_ptr const& response,
+                                   std::optional<json_format> jf) {
+          if (auto s = session.lock()) {
+            s->send(encode_msg(response, is_binary,
+                               jf.value_or(kDefaultOuputJsonFormat)),
+                    type, [](boost::system::error_code, size_t) {});
+          }
+        });
   }
 
-  void on_msg_req(std::string const& request, bool binary,
-                  std::function<void(msg_ptr const&)> const& cb) {
+  void on_msg_req(
+      std::string const& request, bool binary, std::string_view const target,
+      std::function<void(msg_ptr const&, std::optional<json_format>)> const& cb,
+      std::optional<json_format> jf = std::nullopt) {
     msg_ptr err;
     int req_id = 0;
     try {
-      auto const req = decode_msg(request, binary);
+      auto const [req, detected_jf] = decode_msg(request, binary, target);
+      if (!jf) {
+        jf = detected_jf;
+      }
       log_request(req);
       req_id = req->get()->id();
       return receiver_.on_msg(
-          req, ios_.wrap([&, cb, req_id](msg_ptr const& res,
-                                         std::error_code const& ec) {
-            cb(build_reply(req_id, res, ec));
+          req, ios_.wrap([cb, req_id, jf](msg_ptr const& res,
+                                          std::error_code const& ec) {
+            cb(build_reply(req_id, res, ec), jf);
           }));
     } catch (std::system_error const& e) {
       err = build_reply(req_id, nullptr, e.code());
@@ -318,11 +342,13 @@ struct web_server::impl {
       err = make_unknown_error_msg("unknown");
     }
     err->get()->mutate_id(req_id);
-    return cb(err);
+    return cb(err, jf);
   }
 
-  void on_generic_req(net::web_server::http_req_t const& req,
-                      std::function<void(msg_ptr const&)> const& cb) {
+  void on_generic_req(
+      net::web_server::http_req_t const& req,
+      std::function<void(msg_ptr const&, std::optional<json_format>)> const& cb,
+      std::optional<json_format> jf = std::nullopt) {
     using namespace boost::beast::http;
 
     auto const req_id = 1;
@@ -347,7 +373,7 @@ struct web_server::impl {
       return receiver_.on_msg(
           msg,
           ios_.wrap([&, cb](msg_ptr const& res, std::error_code const& ec) {
-            cb(build_reply(req_id, res, ec));
+            cb(build_reply(req_id, res, ec), jf);
           }));
     } catch (std::system_error const& e) {
       err = build_reply(req_id, nullptr, e.code());
@@ -357,7 +383,7 @@ struct web_server::impl {
       err = make_unknown_error_msg("unknown");
     }
     LOG(logging::error) << err->to_json();
-    return cb(err);
+    return cb(err, jf);
   }
 
   void log_request(msg_ptr const& msg) {
@@ -366,8 +392,8 @@ struct web_server::impl {
     }
 
     try {
-      log_file_ << "[" << motis::logging::time() << "] " << msg->to_json(true)
-                << std::endl;
+      log_file_ << "[" << motis::logging::time() << "] "
+                << msg->to_json(json_format::SINGLE_LINE) << std::endl;
     } catch (std::ios_base::failure const& e) {
       LOG(logging::error) << "could not log request: " << e.what();
       reset_logging(false);

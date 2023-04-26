@@ -419,7 +419,8 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
     MOTIS_START_TIMING(write_load_forecast);
     if (mod.forecast_file_.is_open() && uv.id_ == 0) {
       scoped_timer const load_forecast_msg_timer{"load forecast to json"};
-      mod.forecast_file_ << forecast_msg->to_json(true) << std::endl;
+      mod.forecast_file_ << forecast_msg->to_json(json_format::SINGLE_LINE)
+                         << std::endl;
     }
     MOTIS_STOP_TIMING(write_load_forecast);
     tick_stats.t_write_load_forecast_ = MOTIS_TIMING_MS(write_load_forecast);

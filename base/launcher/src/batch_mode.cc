@@ -117,7 +117,7 @@ private:
     }
     response->get()->mutate_id(id);
 
-    out_ << response->to_json(true) << "\n";
+    out_ << response->to_json(json_format::SINGLE_LINE) << "\n";
     out_.flush();
   }
 

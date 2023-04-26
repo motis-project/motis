@@ -46,6 +46,11 @@ export function writeOpenAPIOutput(
     baseUri.pathname += "/";
   }
 
+  const typesInUnions = config["types-in-unions"] !== false;
+  const msgContentOnly = typesInUnions && config["msg-content-only"] !== false;
+  const explicitAdditionalProperties =
+    config["explicit-additional-properties"] !== false;
+
   const jsCtx = createJSContext(
     schema,
     typeFilter,
@@ -53,7 +58,11 @@ export function writeOpenAPIOutput(
     getRefUrl,
     false,
     true,
-    false
+    false,
+    typesInUnions,
+    typesInUnions,
+    true,
+    explicitAdditionalProperties
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
 
@@ -68,6 +77,8 @@ export function writeOpenAPIOutput(
     doc,
     yd,
     includeIds: config["ids"] !== false,
+    typesInUnions,
+    msgContentOnly,
   };
 
   yd.contents = yd.createNode({});
@@ -88,13 +99,21 @@ export function writeOpenAPIOutput(
 
   const oaSchemas = createMap(yd, yd, ["components", "schemas"]);
 
-  const types = Object.keys(jsonSchema);
+  const types = Object.keys(jsonSchema.types);
   sortTypes(types);
 
   for (const fqtn of types) {
+    const origFqtn = jsonSchema.taggedToUntaggedType.get(fqtn) || fqtn;
     const oaSchema = createMap(yd, oaSchemas, [fqtn]);
-    const typeDoc = ctx.doc.types.get(fqtn);
-    writeSchema(ctx, oaSchema, jsonSchema[fqtn], typeDoc);
+    const typeDoc = ctx.doc.types.get(origFqtn);
+    writeSchema(
+      ctx,
+      oaSchema,
+      jsonSchema.types[fqtn],
+      typeDoc,
+      undefined,
+      fqtn
+    );
   }
 
   oaSchemas.items.sort((a, b) =>
@@ -141,26 +160,34 @@ function writeResponse(
     "application/json",
     "schema",
   ]);
-  oaResponseSchema.set("type", "object");
-  oaResponseSchema.set("required", ["content_type", "content"]);
-  oaResponseSchema.set("properties", {
-    destination: {
-      type: "object",
-      required: ["target"],
-      properties: {
-        target: { type: "string", enum: [""] },
-        type: { type: "string", enum: ["Module"] },
+  if (ctx.msgContentOnly) {
+    const taggedType = ctx.jsonSchema.untaggedToTaggedType.get(fqtn);
+    if (!taggedType) {
+      throw new Error(`OpenAPI: No tagged type for ${fqtn} found`);
+    }
+    oaResponseSchema.set("$ref", getRefUrl(taggedType.split(".")));
+  } else {
+    oaResponseSchema.set("type", "object");
+    oaResponseSchema.set("required", ["content_type", "content"]);
+    oaResponseSchema.set("properties", {
+      destination: {
+        type: "object",
+        required: ["target"],
+        properties: {
+          target: { type: "string", enum: [""] },
+          type: { type: "string", enum: ["Module"] },
+        },
       },
-    },
-    content_type: {
-      type: "string",
-      enum: [resTypeName],
-    },
-    content: {
-      $ref: getRefUrl(resType),
-    },
-    id: { type: "integer", format: "int32" },
-  });
+      content_type: {
+        type: "string",
+        enum: [resTypeName],
+      },
+      content: {
+        $ref: getRefUrl(resType),
+      },
+      id: { type: "integer", format: "int32" },
+    });
+  }
 }
 
 function writePaths(ctx: OpenApiContext) {
@@ -184,11 +211,12 @@ function writePaths(ctx: OpenApiContext) {
     if (path.tags.length > 0) {
       oaOperation.set("tags", path.tags);
     }
+    if (path.deprecated) {
+      oaOperation.set("deprecated", true);
+    }
 
     if (path.input) {
       const reqFqtn = path.input;
-      const reqType = reqFqtn.split(".");
-      const reqTypeName = reqType[reqType.length - 1];
       const oaRequest = createMap(ctx.yd, oaOperation, ["requestBody"]);
       oaRequest.set("required", true);
       const oaRequestSchema = createMap(ctx.yd, oaRequest, [
@@ -196,30 +224,40 @@ function writePaths(ctx: OpenApiContext) {
         "application/json",
         "schema",
       ]);
-      oaRequestSchema.set("type", "object");
-      oaRequestSchema.set("required", [
-        "destination",
-        "content_type",
-        "content",
-      ]);
-      oaRequestSchema.set("properties", {
-        destination: {
-          type: "object",
-          required: ["target"],
-          properties: {
-            target: { type: "string", enum: [path.path] },
-            type: { type: "string", enum: ["Module"] },
+      if (ctx.msgContentOnly) {
+        const taggedType = ctx.jsonSchema.untaggedToTaggedType.get(reqFqtn);
+        if (!taggedType) {
+          throw new Error(`OpenAPI: No tagged type for ${reqFqtn} found`);
+        }
+        oaRequestSchema.set("$ref", getRefUrl(taggedType.split(".")));
+      } else {
+        const reqType = reqFqtn.split(".");
+        const reqTypeName = reqType[reqType.length - 1];
+        oaRequestSchema.set("type", "object");
+        oaRequestSchema.set("required", [
+          "destination",
+          "content_type",
+          "content",
+        ]);
+        oaRequestSchema.set("properties", {
+          destination: {
+            type: "object",
+            required: ["target"],
+            properties: {
+              target: { type: "string", enum: [path.path] },
+              type: { type: "string", enum: ["Module"] },
+            },
           },
-        },
-        content_type: {
-          type: "string",
-          enum: [reqTypeName],
-        },
-        content: {
-          $ref: getRefUrl(reqType),
-        },
-        id: { type: "integer", format: "int32" },
-      });
+          content_type: {
+            type: "string",
+            enum: [reqTypeName],
+          },
+          content: {
+            $ref: getRefUrl(reqType),
+          },
+          id: { type: "integer", format: "int32" },
+        });
+      }
     }
 
     const oaResponses = createMap(ctx.yd, oaOperation, ["responses"]);
@@ -228,7 +266,7 @@ function writePaths(ctx: OpenApiContext) {
       ctx,
       oaResponses,
       "200",
-      path.output?.type ?? "motis.MotisNoMessage",
+      path.output?.type ?? "motis.MotisSuccess",
       path.output?.description ?? "Empty response"
     );
 
@@ -241,7 +279,8 @@ function writeSchema(
   oaSchema: YAMLMap,
   jsonSchema: JSONSchema,
   typeDoc?: DocType | undefined,
-  fieldDoc?: DocField | undefined
+  fieldDoc?: DocField | undefined,
+  fqtn?: string | undefined
 ) {
   function setKey(key: keyof JSONSchema) {
     if (key in jsonSchema) {
@@ -259,6 +298,10 @@ function writeSchema(
   if (ctx.includeIds) {
     setKey("$id");
   }
+  if (fqtn) {
+    oaSchema.set("title", fqtn);
+  }
+
   setKey("type");
 
   if (typeDoc) {
@@ -304,7 +347,7 @@ function writeSchema(
       const jsProp = jsProps[key];
       const oaProp = createMap(ctx.yd, oaProps, [key]);
       let fieldDoc = typeDoc?.fields?.get(key);
-      if (!fieldDoc && key.endsWith("_type")) {
+      if (!fieldDoc && !ctx.typesInUnions && key.endsWith("_type")) {
         fieldDoc = {
           name: key,
           description: `Type of the \`${key.replace(/_type$/, "")}\` field`,
@@ -322,8 +365,10 @@ function writeSchema(
   setKey("allOf");
   setKey("anyOf");
   setKey("oneOf");
+  setKey("discriminator");
   setKey("not");
   setKey("if");
   setKey("then");
   setKey("else");
+  setKey("additionalProperties");
 }

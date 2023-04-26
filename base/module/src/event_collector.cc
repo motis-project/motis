@@ -51,9 +51,10 @@ event_collector* event_collector::require(
       LOG(logging::info) << "prevented double execution";
       LOG(logging::info) << "previous import events\n";
       for (auto const& [k, v] : dependencies_) {
-        LOG(logging::info) << k << ": " << v->to_json(true);
+        LOG(logging::info) << k << ": " << v->to_json(json_format::SINGLE_LINE);
       }
-      LOG(logging::info) << "new import event: " << msg->to_json(true);
+      LOG(logging::info) << "new import event: "
+                         << msg->to_json(json_format::SINGLE_LINE);
       return nullptr;
     }
 

@@ -1,42 +1,43 @@
-/*ccache*
-/.vscode
-/.vs
-/out
-/data
-.pkg.mutex
-CMakeSettings.json
-.settings
-.cproject
-.project
-Bestandsstatistik.stat
-Differenzstatistik.stat
-/build*
-/rohdaten*
-*.user
-*.bin
-*.*~
-*.zip
-*.sublime-project
-*.sublime-workspace
-*.raw
-*.db
-*.sqlite
-*.sqlite3
-*.sqlite3-journal
-stats.csv
-tracking-in-messages.txt
-gmon.out
-/bikesharing*
-config.ini
-/eval
-*.mdb
-*.mdb-lock
+# Build directories/files
 /*build*
-/.idea
+
+# Dependencies
 /deps
-pkg
-/.clang-tidy
+.pkg.mutex
+
+# Temp files
+*.*~
 callgrind.out.*
 *.callgrind
 /.clangd
 /compile_commands.json
+/.clang-tidy
+
+# Local settings
+CMakeSettings.json
+config.ini
+.settings
+.cproject
+.project
+*.user
+*.sublime-project
+*.sublime-workspace
+/.vs
+
+# JetBrains IDEs
+**/.idea/**
+!**/.idea/jsonSchemas.xml
+
+# Visual Studio Code
+**/.vscode/**
+!**/.vscode/settings.json
+
+# Data files
+/data
+*.mdb
+*.mdb-lock
+*.raw
+*.db
+*.bin
+*.zip
+*.7z
