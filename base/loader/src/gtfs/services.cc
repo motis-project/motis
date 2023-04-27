@@ -2,8 +2,6 @@
 
 #include "motis/core/common/logging.h"
 
-namespace greg = boost::gregorian;
-
 namespace motis::loader::gtfs {
 
 enum class bound { first, last };
