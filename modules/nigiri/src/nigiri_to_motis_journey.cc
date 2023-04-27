@@ -84,22 +84,19 @@ std::string_view get_gtfs_trip_id(std::string_view s) {
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                                        std::vector<std::string> const& tags,
                                        n::routing::journey const& nj) {
-  auto const resolve_parent = [&](n::timetable const& tt,
-                                  n::location_idx_t const x) {
-    return tt.locations_.types_.at(x) == n::location_type::kGeneratedTrack
-               ? tt.locations_.parents_.at(x)
-               : x;
-  };
-
   journey mj;
 
   auto const fill_stop_info = [&](motis::journey::stop& s,
                                   n::location_idx_t const x) {
-    auto const p = resolve_parent(tt, x);
-    auto const& l_name = tt.locations_.names_.at(p);
-    auto const& pos = tt.locations_.coordinates_.at(x);
-    s.name_ = l_name.view();
-    s.eva_no_ = get_station_id(tags, tt, p);
+    auto const type = tt.locations_.types_.at(x);
+    auto const p = (type == n::location_type::kGeneratedTrack ||
+                    type == n::location_type::kTrack)
+                       ? tt.locations_.parents_.at(x)
+                       : x;
+    auto const pos = tt.locations_.coordinates_.at(x);
+    s.name_ = tt.locations_.names_.at(p).view();
+    s.eva_no_ = get_station_id(
+        tags, tt, type == n::location_type::kGeneratedTrack ? p : x);
     s.lat_ = pos.lat_;
     s.lng_ = pos.lng_;
   };
