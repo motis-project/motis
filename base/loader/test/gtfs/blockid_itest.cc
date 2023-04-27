@@ -60,8 +60,8 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
     return call(make_msg(fbb));
   }
 
-  msg_ptr routing_query(std::string_view from, std::string_view to,
-                        std::string_view start_time) {
+  static msg_ptr routing_query(std::string_view from, std::string_view to,
+                               std::string_view start_time) {
     auto const targets = std::initializer_list<std::string_view>{
         "/routing", "/tripbased", "/raptor_cpu", "/csa", "/nigiri"};
     auto const results = utl::to_vec(targets, [&](auto&& target) {
