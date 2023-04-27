@@ -11,6 +11,8 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "date/date.h"
+
 #include "utl/to_vec.h"
 
 #include "utl/parser/buffer.h"
@@ -90,9 +92,15 @@ inline std::vector<T> repeat_n(T const& el, std::size_t n) {
   return els;
 }
 
-inline int yyyymmdd_year(int yyyymmdd) { return yyyymmdd / 10000; }
-inline int yyyymmdd_month(int yyyymmdd) { return (yyyymmdd % 10000) / 100; }
-inline int yyyymmdd_day(int yyyymmdd) { return yyyymmdd % 100; }
+inline date::year yyyymmdd_year(int yyyymmdd) {
+  return date::year{yyyymmdd / 10000};
+}
+inline date::month yyyymmdd_month(int yyyymmdd) {
+  return date::month{static_cast<unsigned>((yyyymmdd % 10000) / 100)};
+}
+inline date::day yyyymmdd_day(int yyyymmdd) {
+  return date::day{static_cast<unsigned>(yyyymmdd % 100)};
+}
 
 void write_schedule(flatbuffers64::FlatBufferBuilder& b,
                     std::filesystem::path const& path);

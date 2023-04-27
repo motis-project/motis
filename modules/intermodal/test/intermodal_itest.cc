@@ -28,10 +28,12 @@ using motis::test::schedule::simple_realtime::dataset_opt;
 
 namespace motis::intermodal {
 
-static loader::loader_options add_tag(loader::loader_options opt) {
+namespace {
+loader::loader_options add_tag(loader::loader_options opt) {
   opt.dataset_prefix_.emplace_back("x");
   return opt;
 }
+}  // namespace
 
 struct intermodal_itest
     : public generic_motis_instance_test<testing::TestWithParam<const char*>> {

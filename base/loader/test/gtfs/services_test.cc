@@ -10,6 +10,7 @@
 using namespace utl;
 using namespace motis::loader;
 using namespace motis::loader::gtfs;
+using namespace date;
 
 /*
  * -- BASE --
@@ -45,9 +46,9 @@ TEST(loader_gtfs_traffic_days, read_traffic_days_example_data) {
   bitfield const we_traffic_days(we_bit_str);
   bitfield const wd_traffic_days(wd_bit_str);
 
-  EXPECT_EQ(boost::gregorian::date(2006, 7, 1), traffic_days.first_day_);
-  EXPECT_EQ(boost::gregorian::date(2006, 7, 31), traffic_days.last_day_);
+  EXPECT_TRUE(2006_y / 7 / 1 == traffic_days.first_day_);
+  EXPECT_TRUE(2006_y / 7 / 31 == traffic_days.last_day_);
 
-  EXPECT_EQ(we_traffic_days, *traffic_days.traffic_days_["WE"]);
-  EXPECT_EQ(wd_traffic_days, *traffic_days.traffic_days_["WD"]);
+  EXPECT_TRUE(we_traffic_days == *traffic_days.traffic_days_["WE"]);
+  EXPECT_TRUE(wd_traffic_days == *traffic_days.traffic_days_["WD"]);
 }

@@ -1,7 +1,5 @@
 #include "motis/loader/gtfs/services.h"
 
-#include "boost/date_time/gregorian/gregorian.hpp"
-
 #include "motis/core/common/logging.h"
 
 namespace greg = boost::gregorian;
@@ -10,12 +8,12 @@ namespace motis::loader::gtfs {
 
 enum class bound { first, last };
 
-greg::date bound_date(
+date::sys_days bound_date(
     std::map<std::string, calendar> const& base,
     std::map<std::string, std::vector<calendar_date>> const& exceptions,
     bound const b) {
-  constexpr auto const kMin = greg::date{9999, 12, 31};
-  constexpr auto const kMax = greg::date{1400, 1, 1};
+  constexpr auto const kMin = date::sys_days::max();
+  constexpr auto const kMax = date::sys_days::min();
 
   auto const min_base_day = [&]() {
     auto const it =
@@ -51,7 +49,8 @@ greg::date bound_date(
         }
       }
 
-      LOG(logging::info) << "first date " << min << " from service " << min_id;
+      LOG(logging::info) << "first date " << date::format("%T", min)
+                         << " from service " << min_id;
 
       return min;
     }
@@ -66,7 +65,8 @@ greg::date bound_date(
         }
       }
 
-      LOG(logging::info) << "last date " << max << " from service " << max_id;
+      LOG(logging::info) << "last date " << date::format("%T", max)
+                         << " from service " << max_id;
 
       return max;
     }
@@ -77,27 +77,29 @@ greg::date bound_date(
 }
 
 bitfield calendar_to_bitfield(std::string const& service_name,
-                              greg::date const& start, calendar const& c) {
+                              date::sys_days const& start, calendar const& c) {
   bitfield traffic_days;
-  auto bit = (c.first_day_ - start).days();
-  for (auto d = c.first_day_; d != c.last_day_ + greg::days(1);
-       d += greg::days(1), ++bit) {
+  auto bit = (c.first_day_ - start).count();
+  for (auto d = c.first_day_; d != c.last_day_ + date::days(1);
+       d += date::days(1), ++bit) {
     if (bit >= traffic_days.size()) {
-      LOG(logging::error) << "date " << d << " for service " << service_name
-                          << " out of range\n";
+      LOG(logging::error) << "date " << date::format("%T", d) << " for service "
+                          << service_name << " out of range\n";
       continue;
     }
-    traffic_days.set(bit, c.week_days_.test(d.day_of_week()));
+    auto const weekday_index =
+        date::year_month_weekday{d}.weekday().c_encoding();
+    traffic_days.set(bit, c.week_days_.test(weekday_index));
   }
   return traffic_days;
 }
 
-void add_exception(std::string const& service_name, greg::date const& start,
+void add_exception(std::string const& service_name, date::sys_days const& start,
                    calendar_date const& exception, bitfield& b) {
-  auto const day_idx = (exception.day_ - start).days();
+  auto const day_idx = (exception.day_ - start).count();
   if (day_idx < 0 || day_idx >= static_cast<int>(b.size())) {
-    LOG(logging::error) << "date " << exception.day_ << " for service "
-                        << service_name << " out of range\n";
+    LOG(logging::error) << "date " << date::format("%T", exception.day_)
+                        << " for service " << service_name << " out of range\n";
     return;
   }
   b.set(day_idx, exception.type_ == calendar_date::ADD);

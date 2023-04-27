@@ -13,7 +13,7 @@
 namespace motis::loader::gtfs {
 
 struct traffic_days {
-  boost::gregorian::date first_day_, last_day_;
+  date::sys_days first_day_, last_day_;
   std::map<std::string, std::unique_ptr<bitfield>> traffic_days_;
 };
 
