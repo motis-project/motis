@@ -9,7 +9,6 @@ using namespace utl;
 using namespace motis::loader;
 using namespace motis::loader::gtfs;
 using namespace date;
-using date::operator<<;
 
 TEST(loader_gtfs_calendar_date, read_calendar_date_example_data) {
   auto dates = read_calendar_date(
