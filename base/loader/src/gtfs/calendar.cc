@@ -50,12 +50,12 @@ std::map<std::string, calendar> read_calendar(loaded_file file) {
     services.insert(std::make_pair(
         get<service_id>(c).to_str(),
         calendar{traffic_week_days(c),
-                 {static_cast<uint16_t>(yyyymmdd_year(get<start_date>(c))),
-                  static_cast<uint16_t>(yyyymmdd_month(get<start_date>(c))),
-                  static_cast<uint16_t>(yyyymmdd_day(get<start_date>(c)))},
-                 {static_cast<uint16_t>(yyyymmdd_year(get<end_date>(c))),
-                  static_cast<uint16_t>(yyyymmdd_month(get<end_date>(c))),
-                  static_cast<uint16_t>(yyyymmdd_day(get<end_date>(c)))}}));
+                 date::year_month_day{yyyymmdd_year(get<start_date>(c)),
+                                      yyyymmdd_month(get<start_date>(c)),
+                                      yyyymmdd_day(get<start_date>(c))},
+                 date::year_month_day{yyyymmdd_year(get<end_date>(c)),
+                                      yyyymmdd_month(get<end_date>(c)),
+                                      yyyymmdd_day(get<end_date>(c))}}));
   }
   return services;
 }

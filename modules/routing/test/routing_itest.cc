@@ -14,10 +14,12 @@ using namespace motis::module;
 using namespace motis::routing;
 using motis::test::schedule::simple_realtime::dataset_opt;
 
+namespace {
 loader::loader_options add_tag(loader::loader_options opt) {
   opt.dataset_prefix_.emplace_back("x");
   return opt;
 }
+}  // namespace
 
 struct routing_itest : public motis_instance_test {
   routing_itest()

@@ -20,9 +20,9 @@ static const column_mapping<gtfs_calendar_date> calendar_columns = {
 
 calendar_date read_date(gtfs_calendar_date const& gtfs_date) {
   calendar_date d;
-  d.day_ = {static_cast<uint16_t>(yyyymmdd_year(get<date_column>(gtfs_date))),
-            static_cast<uint16_t>(yyyymmdd_month(get<date_column>(gtfs_date))),
-            static_cast<uint16_t>(yyyymmdd_day(get<date_column>(gtfs_date)))};
+  d.day_ = date::year_month_day{yyyymmdd_year(get<date_column>(gtfs_date)),
+                                yyyymmdd_month(get<date_column>(gtfs_date)),
+                                yyyymmdd_day(get<date_column>(gtfs_date))};
   d.type_ = get<exception_type>(gtfs_date) == 1 ? calendar_date::ADD
                                                 : calendar_date::REMOVE;
   return d;

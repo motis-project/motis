@@ -109,9 +109,10 @@ std::vector<std::string> gtfs_parser::missing_files(
   return files;
 }
 
-std::time_t to_unix_time(boost::gregorian::date const& date) {
-  boost::posix_time::ptime const epoch(boost::gregorian::date(1970, 1, 1));
-  return (boost::posix_time::ptime(date) - epoch).total_seconds();
+std::time_t to_unix_time(date::sys_days const& date) {
+  return std::chrono::time_point_cast<std::chrono::seconds>(date)
+      .time_since_epoch()
+      .count();
 }
 
 void fix_flixtrain_transfers(trip_map& trips,
