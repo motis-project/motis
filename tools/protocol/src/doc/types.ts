@@ -22,6 +22,7 @@ export interface DocPath {
   input?: string | undefined;
   output?: DocResponse | undefined;
   operationId?: string | undefined;
+  deprecated?: boolean | undefined;
 }
 
 export interface DocResponse {

@@ -14,6 +14,12 @@ export type JSONValue =
   | JSONValue[]
   | { [name: string]: JSONValue };
 
+// not json schema, openapi extension
+export type JSONDiscriminator = {
+  propertyName: string;
+  mapping: { [name: string]: string };
+};
+
 // just a rough subset
 export type JSONSchema = {
   $schema?: string;
@@ -26,6 +32,7 @@ export type JSONSchema = {
 
   properties?: { [name: string]: JSONSchema };
   required?: string[];
+  additionalProperties?: boolean | JSONSchema;
 
   items?: JSONSchema;
 
@@ -53,4 +60,7 @@ export type JSONSchema = {
   readOnly?: boolean;
   writeOnly?: boolean;
   deprecated?: boolean;
+
+  // openapi extension
+  discriminator?: JSONDiscriminator;
 };

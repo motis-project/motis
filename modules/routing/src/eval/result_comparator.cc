@@ -272,13 +272,14 @@ bool analyze_result(int i, std::tuple<msg_ptr, msg_ptr, msg_ptr> const& res,
     ++stats.matches_;
   } else {
     ++stats.mismatches_;
-    failed_queries << q->to_json(true) << "\n";
+    failed_queries << q->to_json(json_format::SINGLE_LINE) << "\n";
     failed_queries.flush();
-    write_file(r1->to_json(true),
+    write_file(r1->to_json(json_format::SINGLE_LINE),
                "fail_responses/" + std::to_string(i) + "_1.json");
-    write_file(r2->to_json(true),
+    write_file(r2->to_json(json_format::SINGLE_LINE),
                "fail_responses/" + std::to_string(i) + "_2.json");
-    write_file(q->to_json(true), "fail_queries/" + std::to_string(i) + ".json");
+    write_file(q->to_json(json_format::SINGLE_LINE),
+               "fail_queries/" + std::to_string(i) + ".json");
   }
 
   return true;
