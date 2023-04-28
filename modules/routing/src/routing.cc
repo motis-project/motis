@@ -12,6 +12,7 @@
 #include "motis/core/access/edge_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/journeys_to_message.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/routing/additional_edges.h"
 #include "motis/routing/build_query.h"
@@ -54,6 +55,20 @@ void routing::init(motis::module::registry& reg) {
       [this](msg_ptr const& msg) { return trip_to_connection(msg); },
       {kScheduleReadAccess});
 }
+
+void routing::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "routing", reg,
+      [this](event_collector::dependencies_map_t const&,
+             event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool routing::import_successful() const { return import_successful_; }
 
 msg_ptr routing::route(msg_ptr const& msg) {
   auto const req = motis_content(RoutingRequest, msg);

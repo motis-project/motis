@@ -1,12 +1,14 @@
 #include "motis/cc/cc.h"
 
+#include "utl/enumerate.h"
 #include "utl/verify.h"
 
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/message_to_journeys.h"
-#include "utl/enumerate.h"
+
+#include "motis/module/event_collector.h"
 
 using namespace motis::module;
 
@@ -25,6 +27,20 @@ void cc::init(motis::module::registry& reg) {
   reg.register_op("/cc", [&](msg_ptr const& m) { return cc::check_journey(m); },
                   {kScheduleReadAccess});
 }
+
+void cc::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "cc", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool cc::import_successful() const { return import_successful_; }
 
 ev_key get_event_at(schedule const& sched, Connection const* con,
                     std::size_t stop_idx, event_type const ev_type) {

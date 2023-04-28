@@ -2,6 +2,7 @@
 
 #include "utl/get_or_create.h"
 
+#include "motis/module/event_collector.h"
 #include "motis/core/schedule/serialization.h"
 #include "motis/module/global_res_ids.h"
 
@@ -88,6 +89,20 @@ void rt::init(motis::module::registry& reg) {
                   },
                   {::motis::module::kScheduleReadAccess});
 }
+
+void rt::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "rt", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool rt::import_successful() const { return import_successful_; }
 
 rt_handler& rt::get_or_create_rt_handler(schedule& sched,
                                          ctx::res_id_t const schedule_res_id) {

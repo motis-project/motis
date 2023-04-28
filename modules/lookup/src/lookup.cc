@@ -4,6 +4,8 @@
 
 #include "motis/core/access/time_access.h"
 
+#include "motis/module/event_collector.h"
+
 #include "motis/lookup/error.h"
 #include "motis/lookup/lookup_geo_station.h"
 #include "motis/lookup/lookup_id_train.h"
@@ -56,6 +58,20 @@ void lookup::init(registry& r) {
   r.register_op("/lookup/station_info",
                 [&](msg_ptr const& m) { return lookup_station_info(m); }, {});
 }
+
+void lookup::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "lookup", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool lookup::import_successful() const { return import_successful_; }
 
 msg_ptr lookup::lookup_station_id(msg_ptr const& msg) const {
   auto req = motis_content(LookupGeoStationIdRequest, msg);
