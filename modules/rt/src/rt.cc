@@ -2,8 +2,8 @@
 
 #include "utl/get_or_create.h"
 
-#include "motis/module/event_collector.h"
 #include "motis/core/schedule/serialization.h"
+#include "motis/module/event_collector.h"
 #include "motis/module/global_res_ids.h"
 
 #include "motis/rt/rt_handler.h"

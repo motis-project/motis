@@ -10,8 +10,8 @@
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/module/event_collector.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/module/event_collector.h"
 #include "motis/protocol/Message_generated.h"
 
 using namespace flatbuffers;
