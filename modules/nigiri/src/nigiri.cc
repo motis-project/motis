@@ -8,6 +8,8 @@
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
 
+#include "geo/point_rtree.h"
+
 #include "nigiri/loader/dir.h"
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
@@ -17,6 +19,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
+#include "motis/nigiri/geo_station_lookup.h"
 #include "motis/nigiri/routing.h"
 
 namespace fs = std::filesystem;
@@ -40,6 +43,7 @@ struct nigiri::impl {
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
   std::vector<std::string> tags_;
+  geo::point_rtree station_geo_index_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -47,6 +51,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
+  param(geo_lookup_, "geo_lookup", "provide geo station lookup");
 }
 
 nigiri::~nigiri() = default;
@@ -57,6 +62,15 @@ void nigiri::init(motis::module::registry& reg) {
                     return route(impl_->tags_, **impl_->tt_, msg);
                   },
                   {});
+
+  if (geo_lookup_) {
+    reg.register_op("/lookup/geo_station",
+                    [&](mm::msg_ptr const& msg) {
+                      return geo_station_lookup(impl_->tags_, **impl_->tt_,
+                                                impl_->station_geo_index_, msg);
+                    },
+                    {});
+  }
 }
 
 void nigiri::import(motis::module::import_dispatcher& reg) {
@@ -155,6 +169,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                            << (*impl_->tt_)->locations_.names_.size()
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
+
+        if (geo_lookup_) {
+          impl_->station_geo_index_ =
+              geo::make_point_rtree((**impl_->tt_).locations_.coordinates_);
+        }
 
         import_successful_ = true;
 

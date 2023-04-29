@@ -18,6 +18,10 @@ void register_import_schedule(motis_instance& instance,
                               mm::import_dispatcher& reg,
                               loader::loader_options const& dataset_opt,
                               std::string const& data_dir) {
+  if (dataset_opt.no_schedule_) {
+    return;
+  }
+
   std::make_shared<mm::event_collector>(
       data_dir, "schedule", reg,
       [&, dataset_opt](

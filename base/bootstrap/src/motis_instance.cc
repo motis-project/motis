@@ -94,9 +94,6 @@ void motis_instance::import(module_settings const& module_opt,
 
   registry_.reset();
 
-  utl::verify(includes(to_res_id(global_res_id::SCHEDULE)),
-              "schedule not loaded");
-
   if (import_opt.require_successful_) {
     auto const unsuccessful_imports =
         utl::all(modules_)  //
@@ -172,11 +169,13 @@ void motis_instance::init_remotes(
   }
 }
 
-msg_ptr motis_instance::call(std::string const& target, unsigned num_threads) {
-  return call(make_no_msg(target), num_threads);
+msg_ptr motis_instance::call(std::string const& target, unsigned num_threads,
+                             std::vector<ctx::access_request>&& access) {
+  return call(make_no_msg(target), num_threads, std::move(access));
 }
 
-msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
+msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads,
+                             std::vector<ctx::access_request>&& access) {
   if (direct_mode_dispatcher_ != nullptr) {
     ctx_data const data{dispatcher::direct_mode_dispatcher_};
     return static_cast<dispatcher*>(this)->req(msg, data, ctx::op_id{})->val();
@@ -192,9 +191,7 @@ msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
             e = std::current_exception();
           }
         },
-        {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                             ctx::access_t::READ}},
-        num_threads);
+        std::move(access), num_threads);
 
     if (e) {
       std::rethrow_exception(e);
@@ -204,11 +201,13 @@ msg_ptr motis_instance::call(msg_ptr const& msg, unsigned num_threads) {
   }
 }
 
-void motis_instance::publish(std::string const& target, unsigned num_threads) {
-  publish(make_no_msg(target), num_threads);
+void motis_instance::publish(std::string const& target, unsigned num_threads,
+                             std::vector<ctx::access_request>&& access) {
+  publish(make_no_msg(target), num_threads, std::move(access));
 }
 
-void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
+void motis_instance::publish(msg_ptr const& msg, unsigned num_threads,
+                             std::vector<ctx::access_request>&& access) {
   if (direct_mode_dispatcher_ != nullptr) {
     ctx_data const data{dispatcher::direct_mode_dispatcher_};
     static_cast<dispatcher*>(this)->publish(msg, data, ctx::op_id{});
@@ -223,9 +222,7 @@ void motis_instance::publish(msg_ptr const& msg, unsigned num_threads) {
             e = std::current_exception();
           }
         },
-        {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
-                             ctx::access_t::READ}},
-        num_threads);
+        std::move(access), num_threads);
 
     if (e) {
       std::rethrow_exception(e);

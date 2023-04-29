@@ -23,6 +23,9 @@ namespace motis::loader {
 
 std::string pad_to_7_digits(int eva_num);
 
+void write_schedule(flatbuffers64::FlatBufferBuilder& b,
+                    std::filesystem::path const& path);
+
 template <typename T>
 inline flatbuffers64::Offset<flatbuffers64::String> to_fbs_string(
     flatbuffers64::FlatBufferBuilder& b, T const& s) {
@@ -101,9 +104,6 @@ inline date::month yyyymmdd_month(int yyyymmdd) {
 inline date::day yyyymmdd_day(int yyyymmdd) {
   return date::day{static_cast<unsigned>(yyyymmdd % 100)};
 }
-
-void write_schedule(flatbuffers64::FlatBufferBuilder& b,
-                    std::filesystem::path const& path);
 
 size_t collect_files(std::filesystem::path const& root,
                      std::string const& file_extension,
