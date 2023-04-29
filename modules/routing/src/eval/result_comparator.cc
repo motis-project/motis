@@ -33,7 +33,7 @@ char get_relation_symbol(T const& u1, T const& u2) {
 
 std::string format_time(unixtime t, bool local_time) {
   constexpr auto const TIME_FORMAT = "%d.%m. %H:%M";
-  std::time_t conv = t;
+  std::time_t const conv = t;
   std::ostringstream out;
   out << std::put_time(
       local_time ? std::localtime(&conv) : std::gmtime(&conv),  // NOLINT
@@ -272,13 +272,14 @@ bool analyze_result(int i, std::tuple<msg_ptr, msg_ptr, msg_ptr> const& res,
     ++stats.matches_;
   } else {
     ++stats.mismatches_;
-    failed_queries << q->to_json(true) << "\n";
+    failed_queries << q->to_json(json_format::SINGLE_LINE) << "\n";
     failed_queries.flush();
-    write_file(r1->to_json(true),
+    write_file(r1->to_json(json_format::SINGLE_LINE),
                "fail_responses/" + std::to_string(i) + "_1.json");
-    write_file(r2->to_json(true),
+    write_file(r2->to_json(json_format::SINGLE_LINE),
                "fail_responses/" + std::to_string(i) + "_2.json");
-    write_file(q->to_json(true), "fail_queries/" + std::to_string(i) + ".json");
+    write_file(q->to_json(json_format::SINGLE_LINE),
+               "fail_queries/" + std::to_string(i) + ".json");
   }
 
   return true;
@@ -291,7 +292,7 @@ int compare(int argc, char const** argv) {
     return 0;
   }
 
-  bool print_only_second_empty = false;
+  bool const print_only_second_empty = false;
 
   statistics stats;
   std::ifstream in1(argv[1]), in2(argv[2]), inq(argv[3]);

@@ -104,15 +104,13 @@ stop_time::stop_time(stop* s, std::string headsign, int arr_time,
       dep_{dep_time, in_allowed} {}
 
 trip::trip(route const* route, bitfield const* service, block* blk,
-           std::string id, std::string headsign, std::string short_name,
-           std::size_t line)
+           std::string id, std::string headsign, std::string short_name)
     : route_(route),
       service_(service),
       block_{blk},
       id_{std::move(id)},
       headsign_(std::move(headsign)),
-      short_name_(std::move(short_name)),
-      line_(line) {}
+      short_name_(std::move(short_name)) {}
 
 void trip::interpolate() {
   struct bound {
@@ -233,6 +231,7 @@ void trip::expand_frequencies(
     const {
   utl::verify(frequency_.has_value(), "bad call to trip::expand_frequencies");
 
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
   for (auto const& f : frequency_.value()) {
     for (auto start = f.start_time_; start < f.end_time_; start += f.headway_) {
       trip t{*this};
@@ -263,7 +262,7 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
       {"route_id", "service_id", "trip_id", "trip_headsign", "trip_short_name",
        "block_id"}};
 
-  motis::logging::scoped_timer timer{"read trips"};
+  motis::logging::scoped_timer const timer{"read trips"};
 
   std::pair<trip_map, block_map> ret;
   auto& [trips, blocks] = ret;
@@ -289,7 +288,7 @@ std::pair<trip_map, block_map> read_trips(loaded_file file,
                              .get(),
                          blk, get<trip_id>(t).to_str(),
                          get<trip_headsign>(t).to_str(),
-                         get<trip_short_name>(t).to_str(), i + 1))
+                         get<trip_short_name>(t).to_str()))
             .first->second.get();
     if (blk != nullptr) {
       blk->trips_.emplace_back(trp);

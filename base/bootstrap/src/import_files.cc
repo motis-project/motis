@@ -1,11 +1,10 @@
 #include "motis/bootstrap/import_files.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iostream>
 #include <regex>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
@@ -15,7 +14,7 @@
 
 #include "motis/core/common/logging.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace mi = motis::import;
 namespace ml = motis::logging;
 namespace mm = motis::module;
@@ -23,7 +22,7 @@ namespace mm = motis::module;
 namespace motis::bootstrap {
 
 mm::msg_ptr make_file_event(std::vector<std::string> const& import_paths) {
-  std::regex re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
+  std::regex const re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
 
   mm::message_creator mc;
   std::vector<flatbuffers::Offset<mi::ImportPath>> fbs_paths;

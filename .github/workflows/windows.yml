@@ -9,6 +9,10 @@ on:
     types:
       - published
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-latest
@@ -30,10 +34,13 @@ jobs:
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_MAX_CACHE_SIZE: 1073741824
 
     steps:
       - uses: actions/checkout@v3
-      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Install ninja
+        run: choco install ninja
 
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
@@ -112,7 +119,7 @@ jobs:
         uses: pnpm/action-setup@v2
         if: matrix.config.webui == 'On'
         with:
-          version: ^7.15.0
+          version: ^8.3.1
           run_install: |
             - cwd: ./ui/rsl
 
@@ -126,7 +133,7 @@ jobs:
         if: matrix.config.mode == 'Release'
         uses: pnpm/action-setup@v2
         with:
-          version: ^7.15.0
+          version: ^8.3.1
           run_install: |
             - cwd: tools/protocol
 

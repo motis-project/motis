@@ -259,7 +259,7 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
 
   {
     MOTIS_START_TIMING(find_alternatives);
-    scoped_timer alt_timer{"on_monitoring_event: find alternatives"};
+    scoped_timer const alt_timer{"on_monitoring_event: find alternatives"};
     std::vector<ctx::future_ptr<ctx_data, void>> futures;
     for (auto& cgs : combined_groups) {
       auto const destination_station_id = cgs.first;
@@ -285,7 +285,7 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
 
   {
     MOTIS_START_TIMING(add_alternatives);
-    scoped_timer alt_trips_timer{"add alternatives to graph"};
+    scoped_timer const alt_trips_timer{"add alternatives to graph"};
     for (auto& cgs : combined_groups) {
       for (auto& cpg : cgs.second) {
         alternatives_found += cpg.alternatives_.size();
@@ -418,8 +418,9 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
 
     MOTIS_START_TIMING(write_load_forecast);
     if (mod.forecast_file_.is_open() && uv.id_ == 0) {
-      scoped_timer load_forecast_msg_timer{"load forecast to json"};
-      mod.forecast_file_ << forecast_msg->to_json(true) << std::endl;
+      scoped_timer const load_forecast_msg_timer{"load forecast to json"};
+      mod.forecast_file_ << forecast_msg->to_json(json_format::SINGLE_LINE)
+                         << std::endl;
     }
     MOTIS_STOP_TIMING(write_load_forecast);
     tick_stats.t_write_load_forecast_ = MOTIS_TIMING_MS(write_load_forecast);
@@ -437,7 +438,7 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
   }
 
   MOTIS_START_TIMING(update_tracked_groups);
-  scoped_timer update_tracked_groups_timer{"update tracked groups"};
+  scoped_timer const update_tracked_groups_timer{"update tracked groups"};
   update_tracked_groups(sched, uv, sim_result, pgwr_event_types,
                         broken_transfer_infos, pgwr_localizations, tick_stats,
                         reroute_reason_t::REVERT_FORECAST);

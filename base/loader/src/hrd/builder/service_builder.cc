@@ -61,9 +61,9 @@ Offset<Vector<Offset<TrackRules>>> create_tracks(
 
   std::vector<stop_tracks> stops_tracks(stops.size());
   for (auto i = 0UL; i < sections.size(); ++i) {
-    int section_index = i;
-    int from_stop_index = section_index;
-    int to_stop_index = from_stop_index + 1;
+    int const section_index = i;
+    int const from_stop_index = section_index;
+    int const to_stop_index = from_stop_index + 1;
 
     auto const& section = sections[section_index];
     auto const& from_stop = stops[from_stop_index];

@@ -33,7 +33,7 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
       assert(e.to_stop_index_ > e.from_stop_index_);
       for (auto trip_stop_idx = e.from_stop_index_;
            trip_stop_idx < e.to_stop_index_; ++trip_stop_idx) {
-        trip_stop stop{trp, trip_stop_idx};
+        trip_stop const stop{trp, trip_stop_idx};
         assert(stop.has_departure());
         auto const& dep_lcon = stop.dep_lcon();
         auto const enter = trip_stop_idx == e.from_stop_index_;
@@ -71,7 +71,7 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
   if (last_edge.is_connection()) {
     auto const trp = sched.expanded_trips_.data_[last_edge.trip_];
     assert(trp != nullptr);
-    trip_stop stop{trp, last_edge.to_stop_index_};
+    trip_stop const stop{trp, last_edge.to_stop_index_};
     last_stop = stop.get_station_id();
   } else {
     last_stop = last_edge.footpath_.to_stop_;

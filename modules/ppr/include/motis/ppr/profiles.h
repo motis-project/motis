@@ -1,11 +1,10 @@
 #pragma once
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "cista/hash.h"
 
@@ -26,9 +25,9 @@ inline std::string read_file(std::string const& filename) {
 }
 
 template <typename Map>
-inline void read_profile_file(boost::filesystem::path const& profile_file,
+inline void read_profile_file(std::filesystem::path const& profile_file,
                               Map& profiles) {
-  namespace fs = boost::filesystem;
+  namespace fs = std::filesystem;
   if (!fs::exists(profile_file)) {
     LOG(motis::logging::error)
         << "ppr profile file not found: " << profile_file;
@@ -45,7 +44,7 @@ inline void read_profile_file(boost::filesystem::path const& profile_file,
 template <typename Map>
 inline void read_profile_files(std::vector<std::string> const& profile_files,
                                Map& profiles) {
-  namespace fs = boost::filesystem;
+  namespace fs = std::filesystem;
   for (auto const& pf : profile_files) {
     fs::path path{pf};
     if (!fs::exists(path)) {

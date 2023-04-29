@@ -41,10 +41,11 @@ using namespace motis;
 using namespace motis::intermodal;
 
 TEST(fix_json, fix_json) {
-  EXPECT_THROW(make_msg(req, false), std::system_error);  // NO_LINT
-  EXPECT_NO_THROW(make_msg(req, true));  // NO_LINT
+  auto jf = json_format::DEFAULT_FLATBUFFERS;
+  EXPECT_THROW(make_msg(req, jf, false), std::system_error);  // NO_LINT
+  EXPECT_NO_THROW(make_msg(req, jf, true));  // NO_LINT
 
-  auto const msg = make_msg(req, true);
+  auto const msg = make_msg(req, jf, true);
   auto const r = motis_content(IntermodalRoutingRequest, msg);
   EXPECT_EQ(1, msg->id());
   EXPECT_EQ("/intermodal", msg->get()->destination()->target()->str());

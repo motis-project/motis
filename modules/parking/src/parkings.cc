@@ -25,7 +25,7 @@ void parkings::create_rtree() {
 
 std::vector<parking_lot> parkings::get_parkings(geo::latlng const& center,
                                                 double radius) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   return utl::all(rtree_.in_radius(center, radius))  //
          | utl::transform(
                [this](std::size_t index) { return parkings_[index]; })  //
@@ -37,7 +37,7 @@ std::vector<parking_lot> parkings::get_parkings(geo::latlng const& center,
 }
 
 std::optional<parking_lot> parkings::get_parking(int32_t id) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   if (id > 0 && static_cast<std::size_t>(id) <= parkings_.size()) {
     return parkings_[id - 1];
   } else {
@@ -46,7 +46,7 @@ std::optional<parking_lot> parkings::get_parking(int32_t id) {
 }
 
 void parkings::add_parkings(std::vector<parking_lot> const& parking_lots) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   for (auto const& lot : parking_lots) {
     parkings_.emplace_back(lot);
     if (lot.is_from_parkendd()) {
@@ -58,13 +58,13 @@ void parkings::add_parkings(std::vector<parking_lot> const& parking_lots) {
 }
 
 std::int32_t parkings::get_parkendd_lot_id(std::string_view parkendd_id) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   return parkendd_id_to_parking_lot_id_.at(parkendd_id);
 }
 
 void parkings::set_unavailable_parking_lots(
     mcd::hash_set<std::int32_t>&& unavailable) {
-  std::lock_guard lock{mutex_};
+  std::lock_guard const lock{mutex_};
   unavailable_parking_lots_ = std::move(unavailable);
 }
 

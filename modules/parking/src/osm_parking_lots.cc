@@ -95,7 +95,7 @@ private:
 };
 
 std::vector<parking_lot> extract_osm_parking_lots(std::string const& osm_file) {
-  scoped_timer timer("Extracting OSM parking lot data");
+  scoped_timer const timer("Extracting OSM parking lot data");
 
   osmium::io::File const input_file{osm_file};
 

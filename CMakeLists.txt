@@ -110,6 +110,11 @@ if (NOT MSVC)
   if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -Wno-maybe-uninitialized -Wno-unused-but-set-parameter)
   endif()
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+      set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -Wno-unsafe-buffer-usage)
+    endif()
+  endif()
   if (MOTIS_COV)
     set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} --coverage)
     set(CMAKE_EXE_LINKER_FLAGS  ${CMAKE_EXE_LINKER_FLAGS} --coverage)
@@ -243,7 +248,6 @@ target_link_libraries(motis-test
   motis-module
   conf
   ianatzdb-res
-  boost-filesystem
 )
 target_link_libraries(motis-test gtest gtest_main gmock)
 
@@ -311,7 +315,7 @@ endif()
 ################################
 # clang-format check
 ################################
-find_program(CLANG_FORMAT_COMMAND NAMES clang-format clang-format-9)
+find_program(CLANG_FORMAT_COMMAND NAMES clang-format clang-format-16)
 add_custom_target(format-check
   COMMAND find
       ${CMAKE_CURRENT_SOURCE_DIR}/base

@@ -35,7 +35,7 @@ static const column_mapping<gtfs_stop_time> stop_time_columns = {
 
 void read_stop_times(loaded_file const& file, trip_map& trips,
                      stop_map const& stops) {
-  motis::logging::scoped_timer timer{"read stop times"};
+  motis::logging::scoped_timer const timer{"read stop times"};
   std::string last_trip_id;
   trip* last_trip = nullptr;
 
@@ -47,11 +47,16 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
       .in_high(entries.size());
   for (auto const& [i, s] : utl::enumerate(entries)) {
     progress_tracker->update(i);
+
     trip* t = nullptr;
     auto t_id = get<trip_id>(s).to_str();
     if (last_trip != nullptr && t_id == last_trip_id) {
       t = last_trip;
     } else {
+      if (last_trip != nullptr) {
+        last_trip->to_line_ = i + 1;
+      }
+
       auto const trip_it = trips.find(t_id);
       if (trip_it == end(trips)) {
         LOG(logging::error) << "trip \"" << t_id << "\" in " << file.name()
@@ -61,6 +66,8 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
       t = trip_it->second.get();
       last_trip_id = t_id;
       last_trip = t;
+
+      t->from_line_ = i + 2;
     }
 
     try {
@@ -73,6 +80,10 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
       LOG(logging::warn) << "unkown stop " << get<stop_id>(s).to_str() << " at "
                          << file.name() << ":" << i;
     }
+  }
+
+  if (last_trip != nullptr) {
+    last_trip->to_line_ = entries.size() + 1;
   }
 }
 

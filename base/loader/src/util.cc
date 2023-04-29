@@ -7,7 +7,7 @@
 
 using namespace flatbuffers64;
 using namespace utl;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::loader {
 
@@ -35,7 +35,7 @@ std::size_t collect_files(fs::path const& root,
                                         ".")) {
         continue;
       }
-      if (fs::is_regular(entry.path()) &&
+      if (fs::is_regular_file(entry.path()) &&
           (file_extension.empty() ||
            entry.path().extension() == file_extension)) {
         files.push_back(entry.path());

@@ -13,10 +13,12 @@ namespace motis::loader::hrd {
 using namespace boost::gregorian;
 using namespace utl;
 
-int bitfield_idx(cstr ddmmyyyy, date const& first_schedule_date) {
-  date season_begin_date(parse<int>(ddmmyyyy.substr(4, size(4))),
-                         parse<int>(ddmmyyyy.substr(2, size(2))),
-                         parse<int>(ddmmyyyy.substr(0, size(2))));
+int bitfield_idx(cstr ddmmyyyy,
+                 boost::gregorian::date const& first_schedule_date) {
+  boost::gregorian::date const season_begin_date(
+      parse<int>(ddmmyyyy.substr(4, size(4))),
+      parse<int>(ddmmyyyy.substr(2, size(2))),
+      parse<int>(ddmmyyyy.substr(0, size(2))));
   return (season_begin_date - first_schedule_date).days();
 }
 
@@ -24,8 +26,8 @@ int eva_number(cstr str) { return parse<int>(str); }
 
 int distance_to_midnight(cstr hhmm) { return hhmm_to_min(parse<int>(hhmm)); }
 
-std::vector<season_entry> parse_seasons(cstr const line,
-                                        date const& schedule_begin) {
+std::vector<season_entry> parse_seasons(
+    cstr const line, boost::gregorian::date const& schedule_begin) {
   enum state {
     kSeasonOffset,
     kSeasonBeginDate,

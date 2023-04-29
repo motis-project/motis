@@ -1,11 +1,10 @@
 #include "motis/loader/wzr_loader.h"
 
+#include <filesystem>
 #include <fstream>
 #include <istream>
 #include <mutex>
 #include <vector>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/parallel_for.h"
 #include "utl/parser/buf_reader.h"
@@ -58,7 +57,7 @@ waiting_time_rules load_waiting_time_rules(
         waiting_times.emplace_back(entry);
       }
     } catch (std::exception const& e) {
-      std::clog << boost::filesystem::current_path() << "\n";
+      std::clog << std::filesystem::current_path() << "\n";
       LOG(error) << "exception reading wzr matrix file " << wzr_matrix_path
                  << ": " << e.what();
       utl::verify(false, "unable to open wzr matrix file {}", wzr_matrix_path);
@@ -84,9 +83,9 @@ waiting_time_rules load_waiting_time_rules(
   rules.waiting_time_matrix_ = make_flat_matrix<duration>(number_of_groups + 1);
 
   for (int i = 0; i < number_of_groups * number_of_groups; i++) {
-    int connecting_cat = i / number_of_groups + 1;
-    int feeder_cat = i % number_of_groups + 1;
-    int waiting_time = waiting_times[i];
+    int const connecting_cat = i / number_of_groups + 1;
+    int const feeder_cat = i % number_of_groups + 1;
+    int const waiting_time = waiting_times[i];
 
     rules.waiting_time_matrix_[connecting_cat][feeder_cat] = waiting_time;
 
@@ -169,7 +168,7 @@ void add_dependencies(schedule& sched,
     }
   }
   if (!entries.empty()) {
-    std::lock_guard guard{mutex};
+    std::lock_guard const guard{mutex};
     for (auto const& [feeder, connector] : entries) {
       sched.waits_for_trains_[connector].push_back(feeder);
       sched.trains_wait_for_[feeder].push_back(connector);
@@ -178,7 +177,7 @@ void add_dependencies(schedule& sched,
 }
 
 void calc_waits_for(schedule& sched, duration planned_transfer_delta) {
-  scoped_timer timer("calculating waiting time rule dependencies");
+  scoped_timer const timer("calculating waiting time rule dependencies");
   std::mutex mutex;
   utl::parallel_for(sched.station_nodes_, [&](auto const& st) {
     std::vector<ev_key> waits_for_other_trains;

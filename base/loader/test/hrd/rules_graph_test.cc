@@ -1,7 +1,7 @@
 #include <cinttypes>
+#include <filesystem>
 #include <iostream>
 
-#include "boost/filesystem.hpp"
 #include "boost/range/iterator_range.hpp"
 
 #include "gtest/gtest.h"
@@ -26,23 +26,23 @@
 
 namespace motis::loader::hrd {
 
-using namespace boost::filesystem;
-using namespace motis::logging;
-
 class rule_services_test : public ::testing::Test {
 protected:
   explicit rule_services_test(std::string schedule_name)
       : schedule_name_(std::move(schedule_name)) {}
 
   void SetUp() override {
+    using namespace std::filesystem;
+    using namespace motis::logging;
+
     path const root = SCHEDULES / schedule_name_;
     path const stamm = root / "stamm";
     path const fahrten = root / "fahrten";
 
     // load bitfields
-    flatbuffers64::FlatBufferBuilder fbb;
+    flatbuffers64::FlatBufferBuilder const fbb;
     data_.emplace_back(stamm / "bitfield.101");
-    bitfield_builder bb(parse_bitfields(data_.back(), hrd_5_00_8));
+    bitfield_builder const bb(parse_bitfields(data_.back(), hrd_5_00_8));
 
     // load service rules
     service_rules rs;

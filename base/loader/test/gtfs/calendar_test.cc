@@ -8,6 +8,7 @@
 using namespace utl;
 using namespace motis::loader;
 using namespace motis::loader::gtfs;
+using namespace date;
 
 TEST(loader_gtfs_calendar, read_calendar_example_data) {
   auto calendar =
@@ -31,8 +32,12 @@ TEST(loader_gtfs_calendar, read_calendar_example_data) {
   EXPECT_TRUE(calendar["WD"].week_days_.test(5));
   EXPECT_FALSE(calendar["WD"].week_days_.test(6));
 
-  EXPECT_EQ(boost::gregorian::date(2006, 07, 01), calendar["WE"].first_day_);
-  EXPECT_EQ(boost::gregorian::date(2006, 07, 31), calendar["WE"].last_day_);
-  EXPECT_EQ(boost::gregorian::date(2006, 07, 01), calendar["WD"].first_day_);
-  EXPECT_EQ(boost::gregorian::date(2006, 07, 31), calendar["WD"].last_day_);
+  EXPECT_TRUE(2006_y / 7 / 1 ==
+              date::year_month_day{calendar["WE"].first_day_});
+  EXPECT_TRUE(2006_y / 7 / 31 ==
+              date::year_month_day{calendar["WE"].last_day_});
+  EXPECT_TRUE(2006_y / 7 / 1 ==
+              date::year_month_day{calendar["WD"].first_day_});
+  EXPECT_TRUE(2006_y / 7 / 31 ==
+              date::year_month_day{calendar["WD"].last_day_});
 }

@@ -1,8 +1,7 @@
 #include "motis/path/path.h"
 
+#include <filesystem>
 #include <memory>
-
-#include "boost/filesystem.hpp"
 
 #include "geo/polyline.h"
 #include "geo/tile.h"
@@ -259,9 +258,10 @@ msg_ptr path::path_tiles(msg_ptr const& msg) const {
   utl::verify_ex(tile.has_value(), std::system_error{error::invalid_request});
 
   tiles::null_perf_counter pc;
-  auto rendered_tile =
-      tiles::get_tile(*data.db_->db_handle_, *data.db_->pack_handle_,
-                      data.render_ctx_, *tile, pc);
+  auto rendered_tile = tiles::get_tile(
+      // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+      *data.db_->db_handle_, *data.db_->pack_handle_, data.render_ctx_, *tile,
+      pc);
 
   message_creator mc;
   std::vector<Offset<HTTPHeader>> headers;

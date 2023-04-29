@@ -5,11 +5,11 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=67bd8f01cb67c703ae186b5c0eba267783c3a5e0
+  commit=44d0aad5e4765812ae0506d4b804b37eae872c0e
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=71febe940c0715ea69aa0c9980e08d31c5c946b8
+  commit=12d8648de6394af1391be5f9492ed1ac4afdd368
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -17,11 +17,11 @@
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=38d0b684c7fc3796b2c7f887c7dde8d6493b062f
+  commit=443af47fb86db22d2c93f78106f90493d2513a9b
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=22636700295def02cc7495929161bda471d58c8d
+  commit=fd953b0d0dee3f56d2a1388232531d6cf92adccf
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=e9996f1df2375240e7402dc471e2a1746312ef58
+  commit=4fdd79d50481fdf642cb77bc92cdd4c68ddce040
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=e92e23a42d9883dcc9806d7ae027fb8febd11175
+  commit=858c69e2195821251a1263bc54c599a771233b7e
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -77,7 +77,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=a8967cc26e852fc053863955772617006984f5c4
+  commit=b7d850e0688ee302028dc4caa5b5ab5a3ae1c65e
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -85,7 +85,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=ad6cbb38470efd74265715e0972cb5ae44527fb1
+  commit=be5235eb2258d2ec19e32546ab767a62311d9b46
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
@@ -93,15 +93,15 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=8bfc669e6ffd5800ed47144cf59c15b3e752ba10
+  commit=3be31133abf01103c46e90f4aa6f7a32ac7a53c4
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=interval
-  commit=945f7ca770db5ffcc91080b5e5acfc6651a03887
+  branch=master
+  commit=7125672228fa9ed023c19292c97dd4b221e47807
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
-  commit=bc09725a4636d5036bfed30de2db0764cdff2de9
+  commit=6e6d6b3081cc8bdf25dda89730e25c36eb995516
 [valhalla]
   url=git@github.com:motis-project/valhalla.git
   branch=master

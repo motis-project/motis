@@ -24,9 +24,7 @@ connection_info const& trip_section::info(schedule const& sched) const {
   return get_connection_info(sched, lcon(), trip_);
 }
 
-class edge const* trip_section::edge() const {
-  return edge_;
-}
+class edge const* trip_section::edge() const { return edge_; }
 
 station const& trip_section::from_station(schedule const& sched) const {
   return get_station(sched, edge_->from_);

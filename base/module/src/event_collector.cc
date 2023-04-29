@@ -1,17 +1,14 @@
 #include "motis/module/event_collector.h"
 
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "fmt/ranges.h"
-
-#include "utl/to_vec.h"
-#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::module {
 
@@ -28,14 +25,13 @@ event_collector::event_collector(std::string data_dir, std::string module_name,
 
 event_collector* event_collector::require(
     std::string const& name, std::function<bool(msg_ptr)> matcher) {
-  auto const matcher_it =
-      matchers_.emplace(dependency_matcher{name, std::move(matcher)});
+  auto const matcher_it = matchers_.emplace(name, std::move(matcher));
   waiting_for_.emplace(name);
   reg_.subscribe([&, matcher_it = matcher_it.first, name,
                   self = shared_from_this()](msg_ptr const& msg) -> msg_ptr {
     auto const logs_path = fs::path{data_dir_} / "log";
     fs::create_directories(logs_path);
-    clog_redirect redirect{
+    clog_redirect const redirect{
         (logs_path / (module_name_ + ".txt")).generic_string().c_str()};
 
     // Dummy message asking for initial status.
@@ -55,9 +51,10 @@ event_collector* event_collector::require(
       LOG(logging::info) << "prevented double execution";
       LOG(logging::info) << "previous import events\n";
       for (auto const& [k, v] : dependencies_) {
-        LOG(logging::info) << k << ": " << v->to_json(true);
+        LOG(logging::info) << k << ": " << v->to_json(json_format::SINGLE_LINE);
       }
-      LOG(logging::info) << "new import event: " << msg->to_json(true);
+      LOG(logging::info) << "new import event: "
+                         << msg->to_json(json_format::SINGLE_LINE);
       return nullptr;
     }
 

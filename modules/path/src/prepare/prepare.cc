@@ -1,8 +1,9 @@
 #include "motis/path/prepare/prepare.h"
 
+#include <filesystem>
+
 #include "boost/algorithm/string/classification.hpp"
 #include "boost/algorithm/string/split.hpp"
-#include "boost/filesystem.hpp"
 
 #include "cista/memory_holder.h"
 
@@ -30,14 +31,14 @@
 #include "motis/path/prepare/schedule/station_sequences.h"
 #include "motis/path/prepare/schedule/stations.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace ml = motis::logging;
 
 namespace motis::path {
 
 inline void filter_sequences(std::vector<std::string> const& filters,
                              mcd::vector<station_seq>& sequences) {
-  ml::scoped_timer timer("filter station sequences");
+  ml::scoped_timer const timer("filter station sequences");
   for (auto const& filter : filters) {
     auto const pos = filter.find_first_of(':');
     utl::verify(pos != std::string::npos, "unexpected filter");
@@ -57,7 +58,7 @@ inline void filter_sequences(std::vector<std::string> const& filters,
                            end(seq.station_ids_));
       });
     } else if (key == "extent") {
-      utl::verify(boost::filesystem::is_regular_file(value),
+      utl::verify(std::filesystem::is_regular_file(value),
                   "cannot find extent polygon");
       auto const extent_polygon = geo::read_poly_file(value);
       utl::erase_if(sequences, [&](auto const& seq) {

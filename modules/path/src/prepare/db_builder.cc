@@ -78,8 +78,14 @@ struct db_builder::impl {
   impl& operator=(impl&&) noexcept = delete;
 
   ~impl() {
-    utl::verify(db_cache_size_ == 0 && db_cache_.empty(),
-                "db_builder: cache is not empty in dtor");
+    if (db_cache_size_ != 0U) {
+      LOG(logging::error) << "db_cache_size=" << db_cache_size_
+                          << ", should be 0";
+    }
+    if (!db_cache_.empty()) {
+      LOG(logging::error) << "db_cache_size=" << db_cache_.size()
+                          << ", should be empty";
+    }
   }
 
   void store_stations(mcd::vector<station_seq> const& sequences) {
@@ -223,7 +229,7 @@ struct db_builder::impl {
 
   void finish() {
     {
-      motis::logging::scoped_timer timer("finish index and boxes");
+      motis::logging::scoped_timer const timer("finish index and boxes");
       finish_index();
       finish_boxes();
       db_flush_maybe(0);
@@ -232,7 +238,7 @@ struct db_builder::impl {
 
     auto progress_tracker = utl::get_active_progress_tracker();
     {
-      motis::logging::scoped_timer timer("tiles: pack");
+      motis::logging::scoped_timer const timer("tiles: pack");
       progress_tracker->status("Pack Database").out_bounds(90, 95);
 
       auto const metadata_coder = make_shared_metadata_coder(*db_->db_handle_);
@@ -245,7 +251,7 @@ struct db_builder::impl {
                     });
     }
     {
-      motis::logging::scoped_timer timer("tiles: prepare");
+      motis::logging::scoped_timer const timer("tiles: prepare");
       progress_tracker->status("Prepare Tiles").out_bounds(95, 100);
 
       tiles::prepare_tiles(*db_->db_handle_, *db_->pack_handle_, 10);

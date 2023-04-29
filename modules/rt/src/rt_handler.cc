@@ -347,7 +347,7 @@ void rt_handler::propagate() {
 }
 
 msg_ptr rt_handler::flush(msg_ptr const&) {
-  scoped_timer t("flush");
+  scoped_timer const t("flush");
 
   MOTIS_FINALLY([this]() {
     if (print_stats_) {

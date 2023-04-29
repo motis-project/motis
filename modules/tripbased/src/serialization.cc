@@ -2,8 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
-
-#include "boost/filesystem.hpp"
+#include <filesystem>
 
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
@@ -12,7 +11,7 @@
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 using namespace motis::logging;
 
 namespace motis::tripbased::serialization {
@@ -258,7 +257,7 @@ bool data_okay_for_schedule(std::string const& filename,
     LOG(info) << "trip-based data file not found";
     return false;
   }
-  file f(filename.c_str(), "rb");
+  file const f(filename.c_str(), "rb");
   if (f.size() < sizeof(header)) {
     LOG(info) << "trip-based data file does not contain header";
     return false;

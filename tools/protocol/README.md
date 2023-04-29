@@ -74,6 +74,12 @@ Configuration:
 - `strict-int-types` (bool): Add constraints for min/max values depending on the type width
 - `strict-unions` (bool): Force matching `_type` tags for unions
 - `number-formats` (bool): Add `format` annotations for numeric types
+- `types-in-unions` (bool): If true, `_type` tags are generated in unions, otherwise the FlatBuffers default is used
+- `tagged-type-suffix`: If `types-in-unions` is set to true and a type is used in a union, the generated type
+  with the type tag uses a name with this suffix added
+- `explicit-additional-properties` (bool): If true, explicitly add `"additionalProperties": true` to all schema object
+  types. Although this is the implicit default, some tools incorrectly use `"additionalProperties": false` as the
+  default.
 
 ### OpenAPI
 
@@ -88,7 +94,13 @@ Configuration:
   - `3.1.0`
 - `file`: Output file
 - `base-uri`: The JSON Schema Base URI
-- `ids` (boolean): Include `$id` for schema types
+- `ids` (bool): Include `$id` for schema types
+- `types-in-unions` (bool): If true, `_type` tags are generated in unions, otherwise the FlatBuffers default is used
+- `msg-content-only` (bool): If true, messages only consist of the message content
+  (compact format, requires `types-in-unions`)
+- `explicit-additional-properties` (bool): If true, explicitly add `"additionalProperties": true` to all schema object
+  types. Although this is the implicit default, some tools incorrectly use `"additionalProperties": false` as the
+  default.
 - `info`: The info block for the OpenAPI file (must include at least `title` and `version`)
 - `externalDocs` (optional): The externalDocs block for the OpenAPI file
 - `servers` (optional): The servers block for the OpenAPI file
@@ -97,7 +109,7 @@ Configuration:
 
 - Descriptions of fields with custom types are currently missing, because custom types
   are referenced using `$ref` and no other sibling elements are allowed in OpenAPI 3.0.
-- Matching union type tags are not enforced by the schema.
+- Matching union type tags are not enforced by the schema if `types-in-unions == false`.
 - Only one example per type is allowed (the first example is used, all others are ignored).
 
 ### TypeScript Type Definitions
@@ -155,8 +167,9 @@ The top level keys are the API paths, and each path has the following properties
 - `summary`: Short summary of the operation
 - `description` (optional): Longer description of the operation
 - `tags` (optional): A list of tags for the operation
+- `deprecated` (optional, bool): Marks the operation as deprecated.
 - `input` (optional): Full type name for the request. If missing, a `GET` request is used.
-- `output`:
+- `output` (optional): Non-error response. If missing, `motis.MotisSuccess` is generated.
   - `type`: Full type name for the response
   - `description`: Description for the response
 

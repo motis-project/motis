@@ -9,6 +9,10 @@ on:
     types:
       - published
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: [ self-hosted, linux, x64, gpu ]
@@ -17,8 +21,10 @@ jobs:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_MAX_CACHE_SIZE: 536870912
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       CUDACXX: /usr/local/cuda/bin/nvcc
+      CLICOLOR_FORCE: 1
     steps:
       - uses: actions/checkout@v3
 

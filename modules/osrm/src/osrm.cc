@@ -41,8 +41,7 @@ osrm::~osrm() = default;
 
 void osrm::import(motis::module::import_dispatcher& reg) {
   for (auto const& p : profiles_) {
-    auto const profile_name =
-        boost::filesystem::path{p}.stem().generic_string();
+    auto const profile_name = std::filesystem::path{p}.stem().generic_string();
     std::make_shared<event_collector>(
         get_data_directory().generic_string(), "osrm-" + profile_name, reg,
         [this, profile_name, p](
@@ -140,17 +139,17 @@ void osrm::init_async() {
   std::mutex mutex;
   motis_parallel_for(
       datasets_, ([&mutex, this](std::string const& dataset) {
-        fs::path path(dataset);
+        fs::path const path(dataset);
         auto directory = path.parent_path();
         if (!is_directory(directory)) {
           throw std::runtime_error("OSRM dataset is not a folder!");
         }
 
         auto const profile = directory.filename().string();
-        scoped_timer timer("loading OSRM dataset: " + profile);
+        scoped_timer const timer("loading OSRM dataset: " + profile);
         auto r = std::make_unique<router>(dataset);
 
-        std::lock_guard<std::mutex> lock(mutex);
+        std::lock_guard<std::mutex> const lock(mutex);
         routers_.emplace(profile, std::move(r));
       }));
 }

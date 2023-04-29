@@ -7,7 +7,24 @@
     type: motis.address.AddressResponse
     description: A list of guesses
 
-#/cc:
+/api:
+  summary: /api
+  tags:
+    - internal
+  output:
+    type: motis.ApiDescription
+    description: List of available endpoints
+
+# Also accepts RoutingResponse, but the protocol tool doesn't support
+# multiple input types per operation.
+/cc:
+  summary: /cc (Connection)
+  tags:
+    - internal
+  input: motis.Connection
+  output:
+    type: motis.MotisSuccess
+    description: Valid connection
 
 /csa:
   summary: Public transport routing (CSA)
@@ -37,12 +54,59 @@
     type: motis.routing.RoutingResponse
     description: Routing response
 
-#/lookup/geo_station:
-#/lookup/geo_station_batch:
-#/lookup/geo_station_id:
-#/lookup/id_train:
-#/lookup/meta_station:
-#/lookup/meta_station_batch:
+/lookup/geo_station:
+  summary: /lookup/geo_station
+  tags:
+    - internal
+  input: motis.lookup.LookupGeoStationRequest
+  output:
+    type: motis.lookup.LookupGeoStationResponse
+    description: Stations matching the request
+
+/lookup/geo_station_batch:
+  summary: /lookup/geo_station_batch
+  tags:
+    - internal
+  input: motis.lookup.LookupBatchGeoStationRequest
+  output:
+    type: motis.lookup.LookupBatchGeoStationResponse
+    description: Stations matching the request
+
+/lookup/geo_station_id:
+  summary: /lookup/geo_station_id
+  tags:
+    - internal
+  input: motis.lookup.LookupGeoStationIdRequest
+  output:
+    type: motis.lookup.LookupGeoStationResponse
+    description: Stations matching the request
+
+/lookup/id_train:
+  summary: /lookup/id_train
+  tags:
+    - internal
+  input: motis.lookup.LookupIdTrainRequest
+  output:
+    type: motis.lookup.LookupIdTrainResponse
+    description: Response
+
+/lookup/meta_station:
+  summary: /lookup/meta_station
+  tags:
+    - internal
+  input: motis.lookup.LookupMetaStationRequest
+  output:
+    type: motis.lookup.LookupMetaStationResponse
+    description: Response
+
+/lookup/meta_station_batch:
+  summary: /lookup/meta_station_batch
+  tags:
+    - internal
+  input: motis.lookup.LookupBatchMetaStationRequest
+  output:
+    type: motis.lookup.LookupBatchMetaStationResponse
+    description: Response
 
 /lookup/ribasis:
   summary: Retrieve a trip in RI Basis format
@@ -70,7 +134,14 @@
     type: motis.lookup.LookupScheduleInfoResponse
     description: Information about the currently loaded schedule
 
-#/lookup/station_events:
+/lookup/station_events:
+  summary: /lookup/station_events
+  tags:
+    - internal
+  input: motis.lookup.LookupStationEventsRequest
+  output:
+    type: motis.lookup.LookupStationEventsResponse
+    description: Response
 
 /lookup/station_info:
   summary: Station information
@@ -87,13 +158,59 @@
     type: motis.lookup.LookupStationInfoResponse
     description: Information about the requested stations
 
-#/osrm/one_to_many:
-#/osrm/smooth_via:
-#/osrm/table:
-#/osrm/via:
+/osrm/one_to_many:
+  summary: /osrm/one_to_many
+  tags:
+    - internal
+  input: motis.osrm.OSRMManyToManyRequest
+  output:
+    type: motis.osrm.OSRMOneToManyResponse
+    description: Response
 
-#/parking/edge:
-#/parking/edges:
+/osrm/smooth_via:
+  summary: /osrm/smooth_via
+  tags:
+    - internal
+  input: motis.osrm.OSRMSmoothViaRouteRequest
+  output:
+    type: motis.osrm.OSRMSmoothViaRouteResponse
+    description: Response
+
+/osrm/table:
+  summary: /osrm/table
+  tags:
+    - internal
+  input: motis.osrm.OSRMManyToManyResponse
+  output:
+    type: motis.osrm.OSRMManyToManyResponse
+    description: Response
+
+/osrm/via:
+  summary: /osrm/via
+  tags:
+    - internal
+  input: motis.osrm.OSRMViaRouteRequest
+  output:
+    type: motis.osrm.OSRMViaRouteResponse
+    description: Response
+
+/parking/edge:
+  summary: /parking/edge
+  tags:
+    - internal
+  input: motis.parking.ParkingEdgeRequest
+  output:
+    type: motis.parking.ParkingEdgeResponse
+    description: Response
+
+/parking/edges:
+  summary: /parking/edges
+  tags:
+    - internal
+  input: motis.parking.ParkingEdgesRequest
+  output:
+    type: motis.parking.ParkingEdgesResponse
+    description: Response
 
 /parking/geo:
   summary: Parking lots in an area
@@ -103,7 +220,6 @@
   output:
     type: motis.parking.ParkingGeoResponse
     description: A list of parking lots
-
 
 /parking/lookup:
   summary: Lookup a parking lot by ID
@@ -129,8 +245,6 @@
   output:
     type: motis.paxforecast.PaxForecastApplyMeasuresResponse
     description: Information about the simulation result
-
-#/paxmon/add_groups:
 
 /paxmon/destroy_universe:
   summary: Destroy a paxmon universe
@@ -332,6 +446,43 @@
     type: motis.paxmon.PaxMonGetUniversesResponse
     description: A list of paxmon universes
 
+/paxmon/add_groups:
+  summary: /paxmon/add_groups
+  description: Deprecated. DO NOT USE.
+  deprecated: true
+  tags:
+    - internal
+  input: motis.paxmon.PaxMonAddGroupsRequest
+  output:
+    type: motis.paxmon.PaxMonAddGroupsResponse
+    description: Response
+
+/paxmon/remove_groups:
+  summary: /paxmon/remove_groups
+  description: Deprecated. DO NOT USE.
+  deprecated: true
+  tags:
+    - internal
+  input: motis.paxmon.PaxMonRemoveGroupsRequest
+
+/paxmon/addressable_groups:
+  summary: /paxmon/addressable_groups
+  tags:
+    - internal
+  input: motis.paxmon.PaxMonGetAddressableGroupsRequest
+  output:
+    type: motis.paxmon.PaxMonGetAddressableGroupsResponse
+    description: Response
+
+/paxmon/debug_graph:
+  summary: /paxmon/debug_graph
+  tags:
+    - internal
+  input: motis.paxmon.PaxMonDebugGraphRequest
+  output:
+    type: motis.paxmon.PaxMonDebugGraphResponse
+    description: Response
+
 /ppr/profiles:
   summary: List available pedestrian routing profiles
   tags:
@@ -358,6 +509,41 @@
     type: motis.railviz.RailVizStationResponse
     description: A list of trips arring and departing at the station
 
+/railviz/get_trains:
+  summary: /railviz/get_trains
+  tags:
+    - internal
+  input: motis.railviz.RailVizTrainsRequest
+  output:
+    type: motis.railviz.RailVizTrainsResponse
+    description: Response
+
+/railviz/get_trips:
+  summary: /railviz/get_trips
+  tags:
+    - internal
+  input: motis.railviz.RailVizTripsRequest
+  output:
+    type: motis.railviz.RailVizTrainsResponse
+    description: Response
+
+/railviz/get_trip_guesses:
+  summary: /railviz/get_trip_guesses
+  tags:
+    - internal
+  input: motis.railviz.RailVizTripGuessRequest
+  output:
+    type: motis.railviz.RailVizTripGuessResponse
+    description: Response
+
+/railviz/map_config:
+  summary: /railviz/map_config
+  tags:
+    - internal
+  output:
+    type: motis.railviz.RailVizMapConfigResponse
+    description: Response
+
 /raptor:
   summary: Public transport routing (RAPTOR)
   tags:
@@ -375,6 +561,35 @@
   output:
     type: motis.Connection
     description: The updated connection
+
+/ris/apply:
+  summary: /ris/apply
+  tags:
+    - internal
+  input: motis.ris.RISApplyRequest
+  output:
+    type: motis.ris.RISApplyResponse
+    description: Response
+
+/ris/forward:
+  summary: /ris/forward
+  tags:
+    - internal
+  input: motis.ris.RISForwardTimeRequest
+
+/ris/purge:
+  summary: /ris/purge
+  tags:
+    - internal
+  input: motis.ris.RISPurgeRequest
+
+/ris/read:
+  summary: /ris/read
+  tags:
+    - internal
+
+# Custom HTTP requests are not supported by the protocol tool.
+#/ris/upload:
 
 /routing:
   summary: Public transport routing (Multi Criteria Pareto Dijkstra)
@@ -402,3 +617,12 @@
   output:
     type: motis.routing.RoutingResponse
     description: Routing response
+
+/rt/single:
+  summary: /rt/single
+  tags:
+    - internal
+  input: motis.ris.Message
+  output:
+    type: motis.MotisSuccess
+    description: Response

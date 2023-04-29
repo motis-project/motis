@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="JsonSchemaMappingsProjectConfiguration">
+    <state>
+      <map>
+        <entry key="paths">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="paths" />
+              <option name="name" value="paths" />
+              <option name="relativePathToSchema" value="docs/schemas/paths.json" />
+              <option name="schemaVersion" value="JSON Schema version 7" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="docs/api/paths.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="schema">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="schema" />
+              <option name="name" value="schema" />
+              <option name="relativePathToSchema" value="docs/schemas/schema.json" />
+              <option name="schemaVersion" value="JSON Schema version 7" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="pattern" value="true" />
+                    <option name="path" value="docs/api/schemas/*.yaml" />
+                    <option name="mappingKind" value="Pattern" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+        <entry key="tags">
+          <value>
+            <SchemaInfo>
+              <option name="generatedName" value="tags" />
+              <option name="name" value="tags" />
+              <option name="relativePathToSchema" value="docs/schemas/tags.json" />
+              <option name="schemaVersion" value="JSON Schema version 7" />
+              <option name="patterns">
+                <list>
+                  <Item>
+                    <option name="path" value="docs/api/tags.yaml" />
+                  </Item>
+                </list>
+              </option>
+            </SchemaInfo>
+          </value>
+        </entry>
+      </map>
+    </state>
+  </component>
+</project>

@@ -332,7 +332,7 @@ std::vector<ev_key> get_shortest_path(schedule const& sched, journey const& j,
         continue;
       }
 
-      trip::route_edge out_re{&out};
+      trip::route_edge const out_re{&out};
 
       if (visited.insert(out_re).second) {
         q.push(out_re);

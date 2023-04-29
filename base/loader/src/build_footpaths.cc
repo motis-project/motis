@@ -188,7 +188,7 @@ struct footpath_builder {
   }
 
   void transitivize_footpaths() {
-    ml::scoped_timer timer("building transitively closed foot graph");
+    ml::scoped_timer const timer("building transitively closed foot graph");
 
     auto const fgraph = get_footpath_graph();
 
@@ -206,6 +206,7 @@ struct footpath_builder {
         [&](auto const& range) {
           process_component(range.first, range.second, fgraph);
         },
+        utl::noop_progress_update{},
         utl::parallel_error_strategy::CONTINUE_EXEC);
     for (auto const& [idx, ex] : errors) {
       try {

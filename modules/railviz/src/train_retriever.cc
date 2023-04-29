@@ -156,7 +156,7 @@ train_retriever::train_retriever(
 train_retriever::~train_retriever() = default;
 
 void train_retriever::update(rt::RtUpdates const* updates) {
-  std::unique_lock lock(mutex_);
+  std::unique_lock const lock(mutex_);
 
   std::vector<std::vector<value>> new_values;
   new_values.resize(RELEVANT_CLASSES);
@@ -271,7 +271,7 @@ std::vector<train> train_retriever::trains(
     return false;
   };
 
-  std::shared_lock lock(mutex_);
+  std::shared_lock const lock(mutex_);
   std::vector<train> result_trains;
   std::vector<train> clasz_trains;
   for (auto clasz = service_class::AIR; clasz < service_class::NUM_CLASSES;

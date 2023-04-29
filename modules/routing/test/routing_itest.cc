@@ -14,10 +14,18 @@ using namespace motis::module;
 using namespace motis::routing;
 using motis::test::schedule::simple_realtime::dataset_opt;
 
+namespace {
+loader::loader_options add_tag(loader::loader_options opt) {
+  opt.dataset_prefix_.emplace_back("x");
+  return opt;
+}
+}  // namespace
+
 struct routing_itest : public motis_instance_test {
   routing_itest()
       : motis::test::motis_instance_test(
-            dataset_opt, {"routing", "csa", "raptor", "tripbased", "nigiri"},
+            add_tag(dataset_opt),
+            {"routing", "csa", "raptor", "tripbased", "nigiri"},
             {"--tripbased.use_data_file=false",
              "--nigiri.first_day=2015-11-24"}) {}
 
@@ -29,11 +37,11 @@ struct routing_itest : public motis_instance_test {
             fbb, motis::routing::Start_OntripStationStart,
             CreateOntripStationStart(
                 fbb,
-                CreateInputStation(fbb, fbb.CreateString("8000096"),
+                CreateInputStation(fbb, fbb.CreateString("x_8000096"),
                                    fbb.CreateString("")),
                 unix_time(1300))
                 .Union(),
-            CreateInputStation(fbb, fbb.CreateString("8000080"),
+            CreateInputStation(fbb, fbb.CreateString("x_8000080"),
                                fbb.CreateString("")),
             SearchType_Default, SearchDir_Forward,
             fbb.CreateVector(std::vector<Offset<Via>>()),
@@ -50,6 +58,8 @@ TEST_F(routing_itest, all_routings_deliver_equal_journey) {
   EXPECT_EQ(reference.size(), 1U);
   for (auto const& target :
        {"/routing", "/tripbased", "/raptor_cpu", "/csa", "/nigiri"}) {
+    SCOPED_TRACE(target);
+
     std::vector<journey> testee;
     EXPECT_NO_THROW(testee = message_to_journeys(motis_content(
                         RoutingResponse, call(make_routing_request(target)))));

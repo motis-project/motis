@@ -398,7 +398,7 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
 
 std::pair<std::unique_ptr<raptor_meta_info>, std::unique_ptr<raptor_timetable>>
 get_raptor_timetable(schedule const& sched) {
-  log::scoped_timer timer("building RAPTOR timetable");
+  log::scoped_timer const timer("building RAPTOR timetable");
 
   transformable_timetable ttt;
 

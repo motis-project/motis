@@ -135,16 +135,16 @@ struct ppr::impl {
                 bool verify_routing_graph)
       : profiles_{profiles} {
     {
-      scoped_timer timer("loading ppr routing graph");
+      scoped_timer const timer("loading ppr routing graph");
       read_routing_graph(rg_, rg_path);
     }
     {
-      scoped_timer timer("preparing ppr r-trees");
+      scoped_timer const timer("preparing ppr r-trees");
       rg_.prepare_for_routing(edge_rtree_max_size, area_rtree_max_size,
                               rtree_opt);
     }
     if (verify_routing_graph) {
-      scoped_timer timer("verifying ppr routing graph");
+      scoped_timer const timer("verifying ppr routing graph");
       if (!verify_graph(rg_)) {
         throw std::runtime_error("invalid ppr routing graph");
       }
@@ -214,7 +214,7 @@ private:
     auto const req = motis_content(FootRoutingSimpleRequest, msg);
 
     auto start = to_location(req->start());
-    std::vector<location> destinations{to_location(req->destination())};
+    std::vector<location> const destinations{to_location(req->destination())};
 
     search_profile profile{};
     if (req->max_duration() != 0) {
@@ -388,10 +388,10 @@ void ppr::import(import_dispatcher& reg) {
 }
 
 void ppr::init(motis::module::registry& reg) {
-  rtree_options rtree_opt = lock_rtrees_
-                                ? rtree_options::LOCK
-                                : (prefetch_rtrees_ ? rtree_options::PREFETCH
-                                                    : rtree_options::DEFAULT);
+  rtree_options const rtree_opt =
+      lock_rtrees_ ? rtree_options::LOCK
+                   : (prefetch_rtrees_ ? rtree_options::PREFETCH
+                                       : rtree_options::DEFAULT);
 
   try {
     impl_ =

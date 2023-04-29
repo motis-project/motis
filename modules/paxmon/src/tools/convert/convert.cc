@@ -1,8 +1,7 @@
 #include "motis/paxmon/tools/commands.h"
 
+#include <filesystem>
 #include <iostream>
-
-#include "boost/filesystem.hpp"
 
 #include "utl/for_each_line_in_file.h"
 
@@ -18,7 +17,7 @@ using namespace motis::routing;
 using namespace motis::paxmon;
 using namespace motis::paxmon::output;
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace motis::paxmon::tools {
 

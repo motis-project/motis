@@ -122,7 +122,7 @@ private:
     std::vector<int> v;
     for (unixtime t = begin, hour = 0; t < end - k_two_hours;
          t += 3600, ++hour) {
-      int h = hour % 24;
+      int const h = hour % 24;
       v.push_back(prob[h]);  // NOLINT
     }
     return {std::begin(v), std::end(v)};
@@ -135,7 +135,7 @@ private:
   std::discrete_distribution<int> d_;
 };
 
-static int rand_in(int start, int end) {
+int rand_in(int start, int end) {
   static bool initialized = false;
   static std::mt19937 rng;  // NOLINT
   if (!initialized) {
@@ -148,7 +148,7 @@ static int rand_in(int start, int end) {
 }
 
 template <typename It>
-static It rand_in(It begin, It end) {
+It rand_in(It begin, It end) {
   return std::next(begin, rand_in(0, std::distance(begin, end) - 1));
 }
 
@@ -369,7 +369,7 @@ int generate(int argc, char const** argv) {
 
   parser.read_configuration_file();
 
-  bool fns_contain_target_esc =
+  bool const fns_contain_target_esc =
       (generator_opt.target_file_fwd_.find(TARGET_ESCAPE) !=
            std::string::npos &&
        generator_opt.target_file_bwd_.find(TARGET_ESCAPE) != std::string::npos);
