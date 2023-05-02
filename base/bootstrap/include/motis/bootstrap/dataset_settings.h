@@ -16,6 +16,7 @@ struct dataset_settings : public conf::configuration,
                           public motis::loader::loader_options {
   dataset_settings() : configuration("Dataset Settings", "dataset") {
     param(dataset_, "path", "MOTIS Dataset root");
+    param(no_schedule_, "no_schedule", "skip loading schedule");
     param(dataset_prefix_, "prefix",
           "station id prefixes (one per path or empty).");
     param(graph_path_, "graph_path",

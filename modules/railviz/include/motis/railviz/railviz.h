@@ -17,6 +17,8 @@ struct railviz : public motis::module::module {
   railviz& operator=(railviz&&) = delete;
 
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override;
 
 private:
   motis::module::msg_ptr get_map_config(motis::module::msg_ptr const&);
@@ -29,6 +31,8 @@ private:
 
   std::string initial_permalink_;
   std::string tiles_redirect_;
+
+  bool import_successful_{false};
 };
 
 }  // namespace motis::railviz

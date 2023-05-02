@@ -39,6 +39,7 @@
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/ris/amqp_buffer_reader.h"
 #include "motis/ris/ris_message.h"
@@ -1258,5 +1259,19 @@ void ris::init(motis::module::registry& r) {
   r.register_op("/ris/apply",
                 [this](auto&& m) { return impl_->apply(*this, m); }, {});
 }
+
+void ris::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "ris", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool ris::import_successful() const { return import_successful_; }
 
 }  // namespace motis::ris

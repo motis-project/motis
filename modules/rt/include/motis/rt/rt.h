@@ -28,6 +28,8 @@ struct rt : public motis::module::module {
   rt& operator=(rt&&) = delete;
 
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override;
 
 private:
   rt_handler& get_or_create_rt_handler(schedule& sched,
@@ -39,6 +41,8 @@ private:
 
   std::mutex handler_mutex;
   std::map<ctx::res_id_t, std::unique_ptr<rt_handler>> handlers_;
+
+  bool import_successful_{false};
 };
 
 }  // namespace motis::rt

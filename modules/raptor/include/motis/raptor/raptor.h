@@ -28,12 +28,15 @@ struct raptor : public motis::module::module {
   raptor& operator=(raptor&&) = delete;
 
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override;
 
 private:
   struct impl;
   std::unique_ptr<impl> impl_;
 
   config config_;
+  bool import_successful_{false};
 };
 
 }  // namespace motis::raptor

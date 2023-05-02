@@ -165,6 +165,20 @@ void railviz::init(motis::module::registry& reg) {
                 {{to_res_id(global_res_id::SCHEDULE), ctx::access_t::WRITE}});
 }
 
+void railviz::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "railviz", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool railviz::import_successful() const { return import_successful_; }
+
 msg_ptr railviz::get_map_config(msg_ptr const&) {
   message_creator mc;
   mc.create_and_finish(

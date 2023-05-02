@@ -12,6 +12,8 @@ namespace motis::guesser {
 struct guesser : public motis::module::module {
   guesser();
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override;
 
 private:
   void update_stations();
@@ -19,6 +21,8 @@ private:
 
   std::vector<unsigned> station_indices_;
   std::unique_ptr<guess::guesser> guesser_;
+
+  bool import_successful_{false};
 };
 
 }  // namespace motis::guesser

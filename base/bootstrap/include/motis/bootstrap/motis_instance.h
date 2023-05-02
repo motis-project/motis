@@ -52,15 +52,19 @@ struct motis_instance : public motis::module::controller {
 
   module::msg_ptr call(
       std::string const& target,
-      unsigned num_threads = std::thread::hardware_concurrency());
+      unsigned num_threads = std::thread::hardware_concurrency(),
+      std::vector<ctx::access_request>&& access = {});
   module::msg_ptr call(
       module::msg_ptr const&,
-      unsigned num_threads = std::thread::hardware_concurrency());
+      unsigned num_threads = std::thread::hardware_concurrency(),
+      std::vector<ctx::access_request>&& access = {});
 
   void publish(std::string const& target,
-               unsigned num_threads = std::thread::hardware_concurrency());
+               unsigned num_threads = std::thread::hardware_concurrency(),
+               std::vector<ctx::access_request>&& access = {});
   void publish(module::msg_ptr const&,
-               unsigned num_threads = std::thread::hardware_concurrency());
+               unsigned num_threads = std::thread::hardware_concurrency(),
+               std::vector<ctx::access_request>&& access = {});
 
   std::vector<std::shared_ptr<motis::module::remote>> remotes_;
   std::function<void()> on_remotes_registered_;

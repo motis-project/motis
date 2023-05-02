@@ -11,6 +11,7 @@
 #include "motis/core/journey/journey_util.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/raptor/get_raptor_timetable.h"
 #include "motis/raptor/raptor_query.h"
@@ -152,6 +153,20 @@ raptor::~raptor() {
 #else
 raptor::~raptor() = default;
 #endif
+
+void raptor::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "raptor", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool raptor::import_successful() const { return import_successful_; }
 
 void raptor::init(motis::module::registry& reg) {
   impl_ = std::make_unique<impl>(get_sched(), config_);

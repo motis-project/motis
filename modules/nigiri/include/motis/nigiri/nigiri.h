@@ -30,6 +30,7 @@ private:
   bool no_cache_{false};
   std::string first_day_;
   std::uint16_t num_days_{2U};
+  bool geo_lookup_{false};
 };
 
 }  // namespace motis::nigiri
