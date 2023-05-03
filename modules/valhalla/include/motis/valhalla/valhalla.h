@@ -15,6 +15,7 @@ struct valhalla : public motis::module::module {
   valhalla& operator=(valhalla&&) = delete;
 
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
 
 private:
   motis::module::msg_ptr route(motis::module::msg_ptr const&);
