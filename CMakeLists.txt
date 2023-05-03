@@ -93,6 +93,9 @@ configure_file (
 ################################
 # Dependencies
 ################################
+if (MOTIS_MIMALLOC)
+  set(PPR_MIMALLOC ON)
+endif()
 find_package(Threads)
 include(cmake/pkg.cmake)
 if (MOTIS_MIMALLOC)
