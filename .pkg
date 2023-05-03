@@ -105,4 +105,4 @@
 [valhalla]
   url=git@github.com:motis-project/valhalla.git
   branch=master
-  commit=235e693eb6c88a891af1fc9616d84233e6df4db9
+  commit=61d807a65f5de7a2e189ca44fb5576c0d3d25f67
