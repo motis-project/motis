@@ -222,10 +222,53 @@ foreach(module ${modules})
 endforeach(module)
 
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
-add_subdirectory(base/launcher)
+
+file(GLOB_RECURSE motis-launcher-files base/launcher/src/*.cc)
+add_executable(motis ${motis-launcher-files})
+target_compile_features(motis PUBLIC cxx_std_20)
+target_include_directories(motis PRIVATE base/launcher/include)
+target_link_libraries(motis
+  ${CMAKE_THREAD_LIBS_INIT}
+  boost-system
+  conf
+  motis-bootstrap
+  web-server-tls
+  ianatzdb-res
+  pbf_sdf_fonts_res-res
+  tiles_server_res-res
+)
+target_compile_options(motis PRIVATE ${MOTIS_CXX_FLAGS})
+set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+if (NOT MSVC)
+  set_target_properties(motis PROPERTIES LINK_FLAGS "-Wl,-rpath,./")
+
+  if (${CMAKE_BUILD_TYPE} STREQUAL Release)
+    add_custom_command(
+      TARGET motis
+      POST_BUILD
+      COMMAND ${CMAKE_STRIP} ${CMAKE_BINARY_DIR}/motis
+    )
+  endif()
+endif()
 
 if (MOTIS_MIMALLOC)
   target_link_libraries(motis ${motis-mimalloc-lib})
+  if(WIN32)
+    add_custom_command(
+      TARGET motis POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E copy
+        $<TARGET_FILE:mimalloc>
+        $<TARGET_FILE_DIR:motis>
+        COMMENT "Copy mimalloc.dll to output directory"
+    )
+    add_custom_command(
+      TARGET motis POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E copy
+        "${CMAKE_CURRENT_BINARY_DIR}/deps/mimalloc/mimalloc-redirect.dll"
+        $<TARGET_FILE_DIR:motis>
+        COMMENT "Copy mimalloc-redirect.dll to output directory"
+    )
+  endif()
 endif()
 
 if(MOTIS_WITH_WEBUI)
