@@ -13,7 +13,7 @@
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
-  commit=aec268c603d5d2fde734c4cea83445369b835a1d
+  commit=1400527a1be2abccdada58b7323a6ebe1aeee4b6
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=ab03e99a5199cae8be00fac0e7291daa5a75455b
+  commit=b5a417ffe832b5c9e00b9108012f784e1b67553b
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -73,11 +73,11 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=6214a010957fe3a946e54754be9f9224163c0507
+  commit=4a1352d5c6d3e1b777085877d1be18eed58667a2
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=b7d850e0688ee302028dc4caa5b5ab5a3ae1c65e
+  commit=3d3b9f2d45fd6e864cfda0b32a924e8d445c8b69
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
