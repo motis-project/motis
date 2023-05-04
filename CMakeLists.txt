@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.21)
 project(motis)
 
 enable_language(CXX C ASM)
@@ -35,8 +35,6 @@ if (APPLE)
   add_compile_options(-fvisibility-inlines-hidden -fvisibility=hidden)
 endif()
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 option(MOTIS_AVX "enable AVX functions" ON)
 option(MOTIS_AVX2 "enable AVX2 + FMA functions" ON)
@@ -44,6 +42,14 @@ option(MOTIS_CUDA "enable CUDA functions" OFF)
 option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
 option(MOTIS_COV "enable coverage (coverage) target" OFF)
 option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
+
+if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+  if(MOTIS_MIMALLOC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+  else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  endif()
+endif()
 
 if (MOTIS_CUDA)
   if (MSVC)
@@ -95,13 +101,26 @@ configure_file (
 ################################
 if (MOTIS_MIMALLOC)
   set(PPR_MIMALLOC ON)
+  if(WIN32)
+    set(MI_BUILD_SHARED ON)
+  endif()
 endif()
+
 find_package(Threads)
 include(cmake/pkg.cmake)
+
 if (MOTIS_MIMALLOC)
-  target_link_libraries(cista INTERFACE mimalloc-static)
+  if(WIN32)
+    set(motis-mimalloc-lib mimalloc)
+    target_link_libraries(cista INTERFACE mimalloc)
+  else()
+    set(motis-mimalloc-lib mimalloc-obj)
+    target_link_libraries(cista INTERFACE mimalloc-static)
+  endif()
+  target_compile_definitions(cista INTERFACE CISTA_USE_MIMALLOC=1)
   target_compile_definitions(boost INTERFACE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
 endif()
+
 add_subdirectory(modules/ris/gtfsrtpb)
 
 
@@ -206,7 +225,7 @@ add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 add_subdirectory(base/launcher)
 
 if (MOTIS_MIMALLOC)
-  target_link_libraries(motis mimalloc-obj)
+  target_link_libraries(motis ${motis-mimalloc-lib})
 endif()
 
 if(MOTIS_WITH_WEBUI)
