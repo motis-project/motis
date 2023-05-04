@@ -216,15 +216,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               .view();
       extern_trips.add_entry(
           {nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
-           fmt::format(
-               "{}:{}:{}",
-               src_file == "trips.txt"
-                   ? get_gtfs_trip_id(
-                         tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back())
-                             .view())
-                   : src_file,
-               tt.trip_debug_.at(trip).at(0).line_number_from_,
-               tt.trip_debug_.at(trip).at(0).line_number_to_)},
+           fmt::format("{}:{}:{}", src_file,
+                       tt.trip_debug_.at(trip).at(0).line_number_from_,
+                       tt.trip_debug_.at(trip).at(0).line_number_to_)},
           mj.stops_.size() - 1, mj.stops_.size());
 
       auto const section_attributes =

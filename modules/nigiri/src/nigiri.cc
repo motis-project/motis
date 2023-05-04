@@ -91,11 +91,15 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                         }),
             "all schedules require a name tag, even with only one schedule");
 
-        auto const begin =
-            date::sys_days{std::chrono::duration_cast<std::chrono::days>(
-                std::chrono::seconds{conf::parse_date_time(first_day_)})};
+        std::stringstream ss;
+        ss << first_day_;
+        date::sys_days begin;
+        ss >> date::parse("%F", begin);
+
         auto const interval = n::interval<date::sys_days>{
             begin, begin + std::chrono::days{num_days_}};
+        LOG(logging::info) << "interval: " << interval.from_ << " - "
+                           << interval.to_;
 
         auto h = cista::BASE_HASH;
         h = cista::hash_combine(h, interval.from_.time_since_epoch().count());
@@ -147,9 +151,24 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           n::loader::register_special_stations(**impl_->tt_);
 
           for (auto const& [src, loader, dir] : datasets) {
+            auto progress_tracker = utl::activate_progress_tracker(
+                fmt::format("{}nigiri", impl_->tags_[to_idx(src)]));
+
             LOG(logging::info) << "loading nigiri timetable with configuration "
                                << (*loader)->name();
-            (*loader)->load(src, *dir, **impl_->tt_);
+
+            try {
+              (*loader)->load(src, *dir, **impl_->tt_);
+              progress_tracker->status("FINISHED").show_progress(false);
+            } catch (std::exception const& e) {
+              progress_tracker->status(fmt::format("ERROR: {}", e.what()))
+                  .show_progress(false);
+              throw;
+            } catch (...) {
+              progress_tracker->status("ERROR: UNKNOWN EXCEPTION")
+                  .show_progress(false);
+              throw;
+            }
           }
 
           n::loader::finalize(**impl_->tt_);

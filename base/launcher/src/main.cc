@@ -62,7 +62,6 @@ int main(int argc, char const** argv) {
   remote_settings remote_opt;
   launcher_settings launcher_opt;
 
-  // Disable nigiri module by default.
   std::set<std::string> disabled_by_default{
       "cc",     "csa",    "gbfs", "nigiri", "paxforecast", "paxmon",
       "raptor", "revise", "ris",  "rt",     "tiles",       "tripbased"};

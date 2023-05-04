@@ -299,6 +299,8 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                  to_unix_time(traffic_days.last_day_)};
 
   auto n_services = 0U;
+  auto const trips_file =
+      fbb.CreateString((root / STOP_TIMES_FILE).generic_string());
   auto const create_service =
       [&](trip const* t, bitfield const& traffic_days,
           bool const is_rule_service_participant,
@@ -363,8 +365,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                    },
                                    std::vector<int>())),
             0 /* route key obsolete */,
-            CreateServiceDebugInfo(fbb, get_or_create_str(t->id_),
-                                   t->from_line_, t->to_line_),
+            CreateServiceDebugInfo(fbb, trips_file, t->from_line_, t->to_line_),
             is_rule_service_participant, 0 /* initial train number */,
             get_or_create_str(t->id_),
             utl::get_or_create(
