@@ -232,7 +232,7 @@ int xtract(int argc, char const** argv) {
     return !rel.empty() && rel.native()[0] != '.';
   };
   for (auto const& [path, lines] : services) {
-    auto const sched_it = utl::find_if(schedule_paths, [&](auto&& p) {
+    auto const sched_it = utl::find_if(schedule_paths, [&, path](auto&& p) {
       auto const sp = fs::path{std::get<1>(p)};
       return is_subpath(path, sp);
     });
