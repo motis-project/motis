@@ -176,7 +176,8 @@ int xtract(int argc, char const** argv) {
 
   mb::import_settings import_opt;
   xtract_settings xtract_opt;
-  std::vector<conf::configuration*> confs = {&import_opt, &xtract_opt};
+  auto const confs =
+      std::vector<conf::configuration*>{&import_opt, &xtract_opt};
   conf::options_parser parser(confs);
   try {
     parser.read_environment("MOTIS_");
