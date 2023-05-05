@@ -318,16 +318,6 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
           train_nr = std::stoi(t->headsign_);
         }
 
-        auto adjusted_traffic_days = traffic_days;
-        if (t->stop_times_.front().dep_.time_ >= 1440) {
-          auto const day_offset = t->stop_times_.front().dep_.time_ / 1440;
-          adjusted_traffic_days = traffic_days << day_offset;
-          for (auto& [seq, stop_time] : t->stop_times_) {
-            stop_time.arr_.time_ -= day_offset * 1440;
-            stop_time.dep_.time_ -= day_offset * 1440;
-          }
-        }
-
         ++n_services;
         auto const stop_seq = t->stops();
         return CreateService(
@@ -354,7 +344,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                                                        : 0U);
                           })));
                 }),
-            fbb.CreateString(serialize_bitset(adjusted_traffic_days)),
+            fbb.CreateString(serialize_bitset(traffic_days)),
             fbb.CreateVector(repeat_n(
                 CreateSection(
                     fbb, get_or_create_category(t),
@@ -427,9 +417,22 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
         continue;
       }
 
+      auto const t = trips.front();
+      auto adjusted_traffic_days = traffic_days;
+      if (t->stop_times_.front().dep_.time_ >= 1440) {
+        auto const day_offset = t->stop_times_.front().dep_.time_ / 1440;
+        adjusted_traffic_days = traffic_days << day_offset;
+
+        for (auto const& rt : trips) {
+          for (auto& [seq, stop_time] : rt->stop_times_) {
+            stop_time.arr_.time_ -= day_offset * 1440;
+            stop_time.dep_.time_ -= day_offset * 1440;
+          }
+        }
+      }
+
       std::vector<fbs64::Offset<Rule>> rules;
       std::map<trip*, fbs64::Offset<Service>> services;
-      auto const traffic_day = traffic_days;
       for (auto const& p : utl::pairwise(trips)) {
         auto const& a = get<0>(p);
         auto const& b = get<1>(p);
@@ -440,13 +443,13 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                        utl::get_or_create(services, a,
                                           [&] {
                                             return create_service(
-                                                a, traffic_day, true,
+                                                a, adjusted_traffic_days, true,
                                                 ScheduleRelationship_SCHEDULED);
                                           }),
                        utl::get_or_create(services, b,
                                           [&] {
                                             return create_service(
-                                                b, traffic_day, true,
+                                                b, adjusted_traffic_days, true,
                                                 ScheduleRelationship_SCHEDULED);
                                           }),
                        transition_stop, transition_stop));
