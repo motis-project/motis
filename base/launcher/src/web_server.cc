@@ -1,5 +1,6 @@
 #include "motis/launcher/web_server.h"
 
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -7,7 +8,12 @@
 #include <optional>
 #include <utility>
 
+#include "boost/beast/http/rfc7230.hpp"
 #include "boost/beast/version.hpp"
+
+#include "boost/iostreams/device/back_inserter.hpp"
+#include "boost/iostreams/filter/gzip.hpp"
+#include "boost/iostreams/filtering_stream.hpp"
 
 #include "utl/to_vec.h"
 
@@ -24,9 +30,41 @@ namespace ssl = boost::asio::ssl;
 #endif
 
 namespace fs = std::filesystem;
+namespace bio = boost::iostreams;
 using namespace motis::module;
 
 namespace motis::launcher {
+
+enum class http_content_encoding { IDENTITY, GZIP };
+
+http_content_encoding select_content_encoding(
+    boost::beast::string_view const accept_encoding) {
+  auto const is_acceptable = [](boost::beast::http::param_list const& params) {
+    for (auto const& param : params) {
+      if (param.first == "q") {
+        auto value = 0.F;
+        auto const parse_result =
+            std::from_chars(param.second.data(),
+                            param.second.data() + param.second.size(), value);
+        if (parse_result.ec != std::errc{} || value == 0.F) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+  auto any_acceptable = false;
+  for (auto const& ext : boost::beast::http::ext_list{accept_encoding}) {
+    if (ext.first == "gzip") {
+      return is_acceptable(ext.second) ? http_content_encoding::GZIP
+                                       : http_content_encoding::IDENTITY;
+    } else if (ext.first == "*") {
+      any_acceptable = is_acceptable(ext.second);
+    }
+  }
+  return any_acceptable ? http_content_encoding::GZIP
+                        : http_content_encoding::IDENTITY;
+}
 
 std::string encode_msg(msg_ptr const& msg, bool const binary,
                        json_format const jf = kDefaultOuputJsonFormat) {
@@ -225,6 +263,8 @@ struct web_server::impl {
       res.keep_alive(req.keep_alive());
       res.set(field::server, BOOST_BEAST_VERSION_STRING);
 
+      std::string content;
+
       if (response != nullptr &&
           response->get()->content_type() == MsgContent_HTTPResponse) {
         auto const http_res = motis_content(HTTPResponse, response);
@@ -233,16 +273,34 @@ struct web_server::impl {
                                                           : status::no_content
                        : status::internal_server_error);
 
-        res.body() = http_res->content()->str();
         for (auto const& h : *http_res->headers()) {
           res.set(h->name()->str(), h->value()->str());
         }
+        content = http_res->content()->str();
       } else {
         res.set(field::content_type, "application/json");
-        res.body() =
-            response == nullptr
-                ? ""
-                : response->to_json(jf.value_or(kDefaultOuputJsonFormat));
+        if (response != nullptr) {
+          content = response->to_json(jf.value_or(kDefaultOuputJsonFormat));
+        }
+      }
+
+      auto const content_encoding =
+          select_content_encoding(req[field::accept_encoding]);
+      switch (content_encoding) {
+        case http_content_encoding::IDENTITY: res.body() = content; break;
+        case http_content_encoding::GZIP: {
+          auto compressed = std::string{};
+          auto sink = bio::back_inserter(compressed);
+          auto stream = bio::filtering_ostream{};
+          stream.push(bio::gzip_compressor{
+              bio::gzip_params{bio::gzip::default_compression}});
+          stream.push(sink);
+          stream << content;
+          stream.pop();
+          res.set(field::content_encoding, "gzip");
+          res.body() = compressed;
+          break;
+        }
       }
 
       res.prepare_payload();
