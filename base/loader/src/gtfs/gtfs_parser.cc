@@ -319,7 +319,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
         }
 
         auto adjusted_traffic_days = traffic_days;
-        if (t->stop_times_.front().dep_.time_ > 1440) {
+        if (t->stop_times_.front().dep_.time_ >= 1440) {
           auto const day_offset = t->stop_times_.front().dep_.time_ / 1440;
           adjusted_traffic_days = traffic_days << day_offset;
           for (auto& [seq, stop_time] : t->stop_times_) {
