@@ -230,7 +230,6 @@ target_include_directories(motis PRIVATE base/launcher/include)
 target_link_libraries(motis
   ${CMAKE_THREAD_LIBS_INIT}
   boost-system
-  boost-iostreams
   conf
   motis-bootstrap
   web-server-tls
