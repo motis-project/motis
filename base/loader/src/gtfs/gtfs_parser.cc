@@ -302,7 +302,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   auto const trips_file =
       fbb.CreateString((root / STOP_TIMES_FILE).generic_string());
   auto const create_service =
-      [&](trip const* t, bitfield const& traffic_days,
+      [&](trip* t, bitfield const& traffic_days,
           bool const is_rule_service_participant,
           ScheduleRelationship const schedule_relationship) {
         auto const is_train_number = [](auto const& s) {
@@ -318,9 +318,18 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
           train_nr = std::stoi(t->headsign_);
         }
 
-        auto const stop_seq = t->stops();
+        auto adjusted_traffic_days = traffic_days;
+        if (t->stop_times_.front().dep_.time_ > 1440) {
+          auto const day_offset = t->stop_times_.front().dep_.time_ / 1440;
+          adjusted_traffic_days = traffic_days << day_offset;
+          for (auto& [seq, stop_time] : t->stop_times_) {
+            stop_time.arr_.time_ -= day_offset * 1440;
+            stop_time.dep_.time_ -= day_offset * 1440;
+          }
+        }
 
         ++n_services;
+        auto const stop_seq = t->stops();
         return CreateService(
             fbb,
             utl::get_or_create(
@@ -345,7 +354,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                                                        : 0U);
                           })));
                 }),
-            fbb.CreateString(serialize_bitset(traffic_days)),
+            fbb.CreateString(serialize_bitset(adjusted_traffic_days)),
             fbb.CreateVector(repeat_n(
                 CreateSection(
                     fbb, get_or_create_category(t),
@@ -401,7 +410,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   for (auto const& [id, t] : trips) {
     if (t->frequency_.has_value()) {
       t->expand_frequencies(
-          [&](trip const& x, ScheduleRelationship const schedule_relationship) {
+          [&](trip& x, ScheduleRelationship const schedule_relationship) {
             output_services.emplace_back(
                 create_service(&x, *x.service_, false, schedule_relationship));
           });

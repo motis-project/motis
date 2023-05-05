@@ -136,6 +136,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 n::timetable::read(cista::memory_holder{
                     cista::file{dump_file_path.string().c_str(), "r"}
                         .content()}));
+            (**impl_->tt_).locations_.resolve_timezones();
           } catch (std::exception const& e) {
             LOG(logging::error)
                 << "cannot read cached timetable image: " << e.what()

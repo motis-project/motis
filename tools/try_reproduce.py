@@ -79,39 +79,44 @@ def reproduce(filepath, verbose=False):
     subprocess.check_call(["ln", "-s", f"{current_dir}/input/osm.pbf", input_dir])
     subprocess.check_call(["ln", "-s", f"{current_dir}/data/osrm", data_dir])
 
-    run_routing = [
-        f"{current_dir}/motis",
-        "-c", "input/config.ini",
-        f"--batch_input_file={fail_dir}/{query_f(id, routers[0])}",
-        f"--batch_output_file={result_f(id, routers[0])}",
-        "--num_threads", "1"
-    ]
-    if verbose:
-        print("###", " ".join(run_routing))
-        subprocess.run(run_routing, check=True, cwd=reproduce_dir)
-    else:
-        subprocess.check_call(
-            run_routing,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=reproduce_dir)
+    try:
+        run_routing = [
+            f"{current_dir}/motis",
+            "-c", "input/config.ini",
+            f"--batch_input_file={fail_dir}/{query_f(id, routers[0])}",
+            f"--batch_output_file={result_f(id, routers[0])}",
+            "--num_threads", "1"
+        ]
+        if verbose:
+            print("###", "cd", reproduce_dir, "&&", " ".join(run_routing))
+            subprocess.run(run_routing, check=True, cwd=reproduce_dir)
+        else:
+            subprocess.check_call(
+                run_routing,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=reproduce_dir)
 
-    run_nigiri = [
-        f"{current_dir}/motis",
-        "-c", "input/config.ini",
-        f"--batch_input_file={fail_dir}/{query_f(id, routers[1])}",
-        f"--batch_output_file={result_f(id, routers[1])}",
-        "--num_threads", "1"
-    ]
-    if verbose:
-        print("###", " ".join(run_nigiri))
-        subprocess.run(run_nigiri, check=True, cwd=reproduce_dir)
-    else:
-        subprocess.check_call(
-            run_nigiri,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            cwd=reproduce_dir)
+        run_nigiri = [
+            f"{current_dir}/motis",
+            "-c", "input/config.ini",
+            f"--batch_input_file={fail_dir}/{query_f(id, routers[1])}",
+            f"--batch_output_file={result_f(id, routers[1])}",
+            "--num_threads", "1"
+        ]
+        if verbose:
+            print("###", "cd", reproduce_dir, "&&", " ".join(run_nigiri))
+            subprocess.run(run_nigiri, check=True, cwd=reproduce_dir)
+        else:
+            subprocess.check_call(
+                run_nigiri,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                cwd=reproduce_dir)
+    except subprocess.CalledProcessError as e:
+        print(f"FAIL: {' '.join(e.cmd)}")
+        print(e.output)
+        raise e
 
     try:
         run_compare = [
@@ -164,24 +169,24 @@ def reproduce(filepath, verbose=False):
             subprocess.run(run_rewrite, check=True)
 
             run_check = [
-                "./motis",
+                f"{current_dir}/motis",
                 "-c", "input/config.ini",
                 "--modules", "cc",
                 "--mode", "init",
-                "--init", f"{reproduce_dir}/check_{result_f(id, routers[0])}"
+                "--init", f"./check_{result_f(id, routers[0])}"
             ]
             print("###", " ".join(run_check))
-            subprocess.run(run_check, check=False)
+            subprocess.run(run_check, check=False, cwd=reproduce_dir)
 
             run_check = [
-                "./motis",
+                f"{current_dir}/motis",
                 "-c", "input/config.ini",
                 "--modules", "cc",
                 "--mode", "init",
-                "--init", f"{reproduce_dir}/check_{result_f(id, routers[1])}"
+                "--init", f"./check_{result_f(id, routers[1])}"
             ]
             print("###", " ".join(run_check))
-            subprocess.run(run_check, check=False)
+            subprocess.run(run_check, check=False, cwd=reproduce_dir)
 
         print("\n\n\n\n")
         return 1
@@ -193,7 +198,7 @@ def reproduce(filepath, verbose=False):
 
 
 if len(sys.argv) < 2:
-    with Pool(processes=12) as pool:
+    with Pool(processes=16) as pool:
         glob_str = f"fail/{query_f('*', routers[0])}"
         files = glob.iglob(glob_str)
         reproducable = pool.map(reproduce, files)

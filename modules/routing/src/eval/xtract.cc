@@ -247,13 +247,8 @@ int xtract(int argc, char const** argv) {
     xtract_services(path, new_path / rel, lines);
   }
 
-  auto config_ini =
-      std::ofstream{xtract_opt.new_schedule_path_ / ".." / "config.ini"};
-  auto old_config_ini =
-      cista::mmap{parser.file().c_str(), cista::mmap::protection::READ};
-  for (auto const& l : utl::lines{old_config_ini.view()}) {
-    config_ini << l.view() << "\n";
-  }
+  create_symlink(absolute(fs::path{parser.file()}),
+                 xtract_opt.new_schedule_path_ / ".." / "config.ini");
 
   return 0;
 }

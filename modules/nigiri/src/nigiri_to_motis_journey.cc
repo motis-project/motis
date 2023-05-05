@@ -57,10 +57,14 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
           .location_idx());
   auto const id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const section_lines = tt.transport_section_lines_.at(transport);
-  auto const line = section_lines.empty() || section_lines.front() ==
-                                                 n::trip_line_idx_t::invalid()
-                        ? ""
-                        : tt.trip_lines_.at(section_lines.front()).view();
+  auto const line =
+      section_lines.empty() ||
+              section_lines.front() == n::trip_line_idx_t::invalid()
+          ? ""
+          : (section_lines.size() == 1
+                 ? tt.trip_lines_.at(section_lines.front()).view()
+                 : tt.trip_lines_.at(section_lines.at(stop_range.from_))
+                       .view());
   auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
               last_stop_time] =
       utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned>(id);
