@@ -17,6 +17,8 @@
 #include "utl/pipes.h"
 #include "utl/verify.h"
 
+#include "conf/options_parser.h"
+
 #include "motis/module/message.h"
 #include "motis/bootstrap/import_files.h"
 #include "motis/bootstrap/import_settings.h"
@@ -24,7 +26,6 @@
 #include "motis/loader/gtfs/gtfs_parser.h"
 #include "motis/loader/hrd/hrd_parser.h"
 #include "motis/loader/hrd/parse_config.h"
-#include "conf/options_parser.h"
 
 namespace fs = std::filesystem;
 namespace mb = motis::bootstrap;
