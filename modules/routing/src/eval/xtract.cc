@@ -234,9 +234,9 @@ int xtract(int argc, char const** argv) {
     return !rel.empty() && rel.native()[0] != '.';
   };
   for (auto const& [path, lines] : services) {
-    auto const sched_it = utl::find_if(schedule_paths, [&, path](auto&& p) {
-      auto const sp = fs::path{std::get<1>(p)};
-      return is_subpath(path, sp);
+    auto const p = path;
+    auto const sched_it = utl::find_if(schedule_paths, [&](auto&& sched_p) {
+      return is_subpath(p, std::get<1>(sched_p));
     });
     if (sched_it == end(schedule_paths)) {
       std::cout << "no schedule found for " << path << "\n";
