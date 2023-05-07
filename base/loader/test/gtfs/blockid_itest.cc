@@ -24,7 +24,7 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
                 .dataset_ = {(gtfs::SCHEDULES / "block_id").generic_string()},
                 .dataset_prefix_ = {"x"},
                 .schedule_begin_ = schedule_begin,
-                .num_days_ = 1},
+                .num_days_ = 2},
             {"routing", "csa", "raptor", "tripbased", "nigiri"},
             {"--tripbased.use_data_file=false",
              fmt::format(
@@ -154,14 +154,14 @@ TEST_F(loader_graph_builder_gtfs_block_id_once, search_s2_s1) {
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_saturday, search_s2_s3) {
-  auto res = routing_query("S2", "S3", "2006-07-09 00:00 Europe/Berlin");
+  auto res = routing_query("S2", "S3", "2006-07-08 00:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
 TEST_F(loader_graph_builder_gtfs_block_id_saturday, search_s2_s7) {
-  auto res = routing_query("S2", "S7", "2006-07-09 00:00 Europe/Berlin");
+  auto res = routing_query("S2", "S7", "2006-07-08 00:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));

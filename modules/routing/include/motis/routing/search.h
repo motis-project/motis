@@ -13,6 +13,7 @@
 #include "motis/routing/lower_bounds.h"
 #include "motis/routing/output/labels_to_journey.h"
 #include "motis/routing/pareto_dijkstra.h"
+#include "utl/helpers/algorithm.h"
 
 namespace motis::routing {
 
@@ -172,6 +173,24 @@ struct search {
         Dir == search_dir::FWD ? q.sched_->transfers_lower_bounds_fwd_
                                : q.sched_->transfers_lower_bounds_bwd_,
         goal_ids, travel_time_lb_graph_edges, transfers_lb_graph_edges);
+
+    auto const overlaps_start = [&](station const* s) {
+      if (q.use_start_metas_) {
+        return utl::any_of(
+            q.sched_->stations_.at(q.from_->get_station()->id_)->equivalent_,
+            [&](auto&& start_eq) { return start_eq == s; });
+      } else {
+        return q.sched_->stations_.at(q.from_->get_station()->id_).get() == s;
+      }
+    };
+    if (overlaps_start(
+            q.sched_->stations_.at(q.to_->get_station()->id_).get()) ||
+        (q.use_dest_metas_ &&
+         utl::any_of(
+             q.sched_->stations_.at(q.to_->get_station()->id_)->equivalent_,
+             [&](auto&& dest_eq) { return overlaps_start(dest_eq); }))) {
+      return search_result();
+    }
 
     MOTIS_START_TIMING(travel_time_lb_timing);
     lbs.travel_time_.run();

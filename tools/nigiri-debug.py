@@ -26,7 +26,7 @@ else:
     fail_dir = f"{current_dir}/fail"
 
     run_nigiri = [
-        "./motis",
+        f"{current_dir}/motis",
         "-c", "input/config.ini",
         f"--batch_input_file={fail_dir}/{query_f(id, 'nigiri')}",
         f"--batch_output_file={result_f(id, 'nigiri')}",
@@ -34,7 +34,7 @@ else:
     ]
     print("NIGIRI_CMD:", " ".join(run_nigiri))
 
-    out = subprocess.check_output(run_nigiri)
+    out = subprocess.check_output(run_nigiri, cwd=reproduce_dir)
 
     needle = bytes("init: time_at_start={}".format(start_time), encoding='utf8')
     do_print = False

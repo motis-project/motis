@@ -3,6 +3,7 @@
 
 #include "motis/loader/gtfs/gtfs_parser.h"
 
+#include <chrono>
 #include <filesystem>
 #include <numeric>
 
@@ -187,9 +188,9 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   auto const routes = read_routes(load(ROUTES_FILE), agencies);
   auto const calendar = read_calendar(load(CALENDAR_FILE));
   auto const dates = read_calendar_date(load(CALENDAR_DATES_FILE));
-  auto const traffic_days = merge_traffic_days(calendar, dates);
+  auto const service = merge_traffic_days(calendar, dates);
   auto transfers = read_transfers(load(TRANSFERS_FILE), stops);
-  auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, traffic_days);
+  auto [trips, blocks] = read_trips(load(TRIPS_FILE), routes, service);
   read_frequencies(load(FREQUENCIES_FILE), trips);
   read_stop_times(load(STOP_TIMES_FILE), trips, stops);
   fix_flixtrain_transfers(trips, transfers);
@@ -295,8 +296,8 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   progress_tracker->status("Export schedule.raw")
       .out_bounds(60.F, 100.F)
       .in_high(trips.size());
-  auto const interval = Interval{to_unix_time(traffic_days.first_day_),
-                                 to_unix_time(traffic_days.last_day_)};
+  auto const interval = Interval{to_unix_time(service.first_day_),
+                                 to_unix_time(service.last_day_)};
 
   auto n_services = 0U;
   auto const trips_file =
@@ -310,6 +311,9 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                  std::all_of(begin(s), end(s),
                              [](auto&& c) -> bool { return std::isdigit(c); });
         };
+
+        auto const day_offset = t->stop_times_.front().dep_.time_ / 1440;
+        auto const adjusted_traffic_days = traffic_days << day_offset;
 
         int train_nr = 0;
         if (is_train_number(t->short_name_)) {
@@ -344,7 +348,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                                                                        : 0U);
                           })));
                 }),
-            fbb.CreateString(serialize_bitset(traffic_days)),
+            fbb.CreateString(serialize_bitset(adjusted_traffic_days)),
             fbb.CreateVector(repeat_n(
                 CreateSection(
                     fbb, get_or_create_category(t),
@@ -358,8 +362,10 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
                              | utl::accumulate(
                                    [&](std::vector<int>&& times,
                                        flat_map<stop_time>::entry_t const& st) {
-                                     times.emplace_back(st.second.arr_.time_);
-                                     times.emplace_back(st.second.dep_.time_);
+                                     times.emplace_back(st.second.arr_.time_ -
+                                                        day_offset * 1440);
+                                     times.emplace_back(st.second.dep_.time_ -
+                                                        day_offset * 1440);
                                      return std::move(times);
                                    },
                                    std::vector<int>())),
@@ -417,20 +423,6 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
         continue;
       }
 
-      auto const t = trips.front();
-      auto adjusted_traffic_days = traffic_days;
-      if (t->stop_times_.front().dep_.time_ >= 1440) {
-        auto const day_offset = t->stop_times_.front().dep_.time_ / 1440;
-        adjusted_traffic_days = traffic_days << day_offset;
-
-        for (auto const& rt : trips) {
-          for (auto& [seq, stop_time] : rt->stop_times_) {
-            stop_time.arr_.time_ -= day_offset * 1440;
-            stop_time.dep_.time_ -= day_offset * 1440;
-          }
-        }
-      }
-
       std::vector<fbs64::Offset<Rule>> rules;
       std::map<trip*, fbs64::Offset<Service>> services;
       for (auto const& p : utl::pairwise(trips)) {
@@ -438,21 +430,25 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
         auto const& b = get<1>(p);
         auto const transition_stop =
             get_or_create_stop(a->stop_times_.back().stop_);
-        rules.emplace_back(
-            CreateRule(fbb, RuleType_THROUGH,
-                       utl::get_or_create(services, a,
-                                          [&] {
-                                            return create_service(
-                                                a, adjusted_traffic_days, true,
-                                                ScheduleRelationship_SCHEDULED);
-                                          }),
-                       utl::get_or_create(services, b,
-                                          [&] {
-                                            return create_service(
-                                                b, adjusted_traffic_days, true,
-                                                ScheduleRelationship_SCHEDULED);
-                                          }),
-                       transition_stop, transition_stop));
+        auto const base_offset_a = a->stop_times_.front().dep_.time_ / 1440;
+        rules.emplace_back(CreateRule(
+            fbb, RuleType_THROUGH,
+            utl::get_or_create(services, a,
+                               [&] {
+                                 return create_service(
+                                     a, traffic_days, true,
+                                     ScheduleRelationship_SCHEDULED);
+                               }),
+            utl::get_or_create(services, b,
+                               [&] {
+                                 return create_service(
+                                     b, traffic_days, true,
+                                     ScheduleRelationship_SCHEDULED);
+                               }),
+            transition_stop, transition_stop,
+            (a->stop_times_.back().arr_.time_ / 1440) - base_offset_a, 0,
+            ((a->stop_times_.back().arr_.time_ / 1440) !=
+             (b->stop_times_.front().dep_.time_ / 1440))));
       }
       rule_services.emplace_back(
           CreateRuleService(fbb, fbb.CreateVector(rules)));
