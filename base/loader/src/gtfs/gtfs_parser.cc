@@ -398,7 +398,7 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
           auto const t = entry.second.get();
           return create_service(
               entry.second.get(), *t->service_,
-              t->block_ != nullptr && t->block_->trips_.size() > 2,
+              t->block_ != nullptr && t->block_->trips_.size() >= 2,
               ScheduleRelationship_SCHEDULED);  //
         })  //
       | utl::vec();
