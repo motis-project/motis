@@ -197,6 +197,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         import_successful_ = true;
 
+        std::cout << "NIGIRI TIMETABLE\n";
+        std::cout << (**impl_->tt_) << "\n";
+
         mm::message_creator fbb;
         fbb.create_and_finish(MsgContent_NigiriEvent,
                               motis::import::CreateNigiriEvent(fbb).Union(),

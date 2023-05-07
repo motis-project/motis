@@ -16,6 +16,15 @@ struct service_node {
   explicit service_node(Service const* service, bitfield&& traffic_days)
       : service_(service), traffic_days_(traffic_days) {}
 
+  void print(std::ostream& out, date::sys_days const first_day) {
+    auto const line_id = service_->sections()->Get(0)->line_id()->view();
+    out << "[" << line_id << ", traffic_days=";
+    print_bitfield(out, first_day, traffic_days_);
+    out << ", first=" << format_time(service_->times()->Get(0)) << ", last="
+        << format_time(service_->times()->Get(service_->times()->size() - 1U))
+        << "]";
+  }
+
   std::vector<rule_node*> rule_nodes_;
   Service const* service_{nullptr};
   bitfield traffic_days_;
@@ -24,6 +33,21 @@ struct service_node {
 struct rule_node {
   rule_node(service_node* s1, service_node* s2, Rule const* rule)
       : s1_(s1), s2_(s2), rule_(rule) {}
+
+  void print(std::ostream& out, date::sys_days const first_day) {
+    out << "[\n"
+        << "\t" << EnumNameRuleType(rule_->type()) << "\n"
+        << "\tday_offset1=" << rule_->day_offset1() << "\n"
+        << "\tday_offset2=" << rule_->day_offset2() << "\n"
+        << "\tday_switch=" << std::boolalpha << rule_->day_switch() << "\n"
+        << "\ts1=";
+    s1_->print(out, first_day);
+    out << "\n"
+        << "\ts2=";
+    s2_->print(out, first_day);
+    out << "\n"
+        << "]\n";
+  }
 
   service_node *s1_, *s2_;
   Rule const* rule_;
@@ -85,15 +109,32 @@ private:
   }
 
   void build_routes() {
+    auto const first_day =
+        date::sys_days{std::chrono::duration_cast<date::days>(
+            std::chrono::seconds{gb_.fbs_sched_->interval()->from()})};
+    for (auto const& rn : rg_.rule_nodes_) {
+      rn->print(std::cout, first_day);
+    }
+
     for (auto& rn : rg_.rule_nodes_) {
       while (build_routes(rn.get())) {
       }
     }
+
+    for (auto const& rr : rule_routes_) {
+      rr.print(std::cout, first_day);
+    }
+
+    std::cout << "SINGLE SERVICES\n";
     for (auto& sn : rg_.service_nodes_) {
       if (sn->traffic_days_.any()) {
+        sn->print(std::cout, first_day);
+        std::cout << "\n";
+
         single_services_.emplace_back(sn->service_, sn->traffic_days_);
       }
     }
+    std::cout << "END SINGLE SERVICES\n";
   }
 
   bool build_routes(rule_node* ref_rn) {
@@ -162,8 +203,6 @@ private:
       route.traffic_days_[sn->service_] = service_traffic_days;
       sn->traffic_days_ &= ~service_traffic_days;
     }
-    route.first_day_ = static_cast<unsigned>(gb_.first_day_);
-    route.last_day_ = static_cast<unsigned>(gb_.last_day_);
     for (auto const& rn : route_rules) {
       route.rules_.push_back(rn->rule_);
     }

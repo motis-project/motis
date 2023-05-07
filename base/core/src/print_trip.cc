@@ -8,6 +8,7 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_journey.h"
+#include "utl/helpers/algorithm.h"
 
 namespace motis {
 
@@ -79,6 +80,37 @@ void print_trip(std::ostream& out, schedule const& sched, trip const* trp,
 
     ++i;
   }
+
+  auto const stops = motis::access::stops{trp};
+  auto const last_stop = std::next(begin(stops), stops.size() - 1);
+  auto const last_rn = (*last_stop).get_route_node();
+  auto const through_edge_it = utl::find_if(last_rn->edges_, [](edge const& e) {
+    return e.type() == edge::THROUGH_EDGE;
+  });
+  if (through_edge_it == end(last_rn->edges_)) {
+    out << "  NO THROUGH EDGE AT " << (*last_stop).get_station(sched).eva_nr_
+        << " FOUND\n\n";
+    return;
+  }
+
+  auto const dest = through_edge_it->get_destination();
+  for (auto const& re : dest->edges_) {
+    if (re.empty()) {
+      continue;
+    }
+    auto const con = re.get_connection((*last_stop).arr_lcon().a_time_);
+    if (con == nullptr) {
+      out << "ERROR: NO CONTINUATION FOUND\n";
+      continue;
+    }
+    auto const next_trp = sched.merged_trips_[con->trips_]->front();
+    out << "--> THROUGH EDGE " << through_edge_it->from_->id_ << " -  "
+        << through_edge_it->to_->id_ << "\n";
+    print_trip(out, sched, next_trp, local_time);
+    out << "---- END THROUGH SERVICE\n";
+  }
+
+  out << "\n\n";
 }
 
 }  // namespace motis

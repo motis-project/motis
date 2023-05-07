@@ -22,6 +22,52 @@ using namespace motis::logging;
 
 using neighbor = std::pair<Service const*, Rule const*>;
 
+void print_bitfield(std::ostream& out, date::sys_days const first_day,
+                    bitfield const& b) {
+  auto day = first_day;
+  auto first = true;
+  out << "(";
+  for (auto i = 0U; i != b.size(); ++i, day += date::days{1}) {
+    if (b.test(i)) {
+      if (!first) {
+        out << " ";
+      }
+      first = false;
+      out << date::format("%F", day);
+    }
+  }
+  out << ")";
+}
+
+void rule_route::print(std::ostream& out,
+                       date::sys_days const first_day) const {
+  auto const print_service = [&](Service const* s, bitfield const& b) {
+    auto const line_id = s->sections()->Get(0)->line_id()->view();
+    out << "[" << line_id << ", traffic_days=";
+    print_bitfield(out, first_day, b);
+    out << ", first=" << format_time(s->times()->Get(0))
+        << ", last=" << format_time(s->times()->Get(s->times()->size() - 1U))
+        << "]";
+  };
+
+  out << "RULE ROUTE:\n";
+  for (auto const& r : rules_) {
+    out << "[\n"
+        << "\t" << EnumNameRuleType(r->type()) << "\n"
+        << "\tday_offset1=" << r->day_offset1() << "\n"
+        << "\tday_offset2=" << r->day_offset2() << "\n"
+        << "\tday_switch=" << std::boolalpha << r->day_switch() << "\n"
+        << "\ts1=";
+    print_service(r->service1(), traffic_days_.at(r->service1()));
+    out << "\n"
+        << "\ts2=";
+    print_service(r->service2(), traffic_days_.at(r->service1()));
+    out << "\n"
+        << "]\n";
+  }
+  out << "END RULE ROUTE\n";
+}
+
 struct service_section {
   route_section route_section_;
   mcd::vector<participant> participants_;
@@ -234,12 +280,9 @@ struct node_id_cmp {
 struct rule_service_route_builder {
   rule_service_route_builder(
       graph_builder& gb,  //
-      unsigned first_day, unsigned last_day,
       std::map<Service const*, mcd::vector<service_section*>>& sections,
       unsigned route_id, rule_route const& rs)
       : gb_(gb),
-        first_day_(first_day),
-        last_day_(last_day),
         sections_(sections),
         route_id_(route_id),
         traffic_days_(rs.traffic_days_) {}
@@ -324,7 +367,8 @@ struct rule_service_route_builder {
     mcd::vector<light_connection> lcons;
     bool adjusted = false;
     auto const& traffic_days = traffic_days_.at(services[0].service_);
-    for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
+    for (unsigned day_idx = gb_.first_day_; day_idx <= gb_.last_day_;
+         ++day_idx) {
       if (traffic_days.test(day_idx)) {
         lcons.push_back(
             gb_.section_to_connection(get_or_create_trips(services, day_idx),
@@ -489,7 +533,8 @@ struct rule_service_route_builder {
     auto const& traffic_days = traffic_days_.at(s);
     auto edges = gb_.sched_.trip_edges_.back().get();
     auto lcon_idx = lcon_idx_t{};
-    for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
+    for (unsigned day_idx = gb_.first_day_; day_idx <= gb_.last_day_;
+         ++day_idx) {
       if (traffic_days.test(day_idx)) {
         auto trp = single_trips_.at(std::make_pair(s, day_idx));
         trp->edges_ = edges;
@@ -637,7 +682,6 @@ struct rule_service_route_builder {
   }
 
   graph_builder& gb_;
-  unsigned first_day_, last_day_;
   std::map<Service const*, mcd::vector<service_section*>>& sections_;
   std::map<std::pair<Service const*, int>, trip*> single_trips_;
   std::map<services_key, merged_trips_idx> trips_;
@@ -662,9 +706,8 @@ void rule_service_graph_builder::add_rule_services(
     rule_service_section_builder section_builder(gb_, rule_service);
     section_builder.build_sections(rule_service);
 
-    rule_service_route_builder route_builder(
-        gb_, rule_service.first_day_, rule_service.last_day_,
-        section_builder.sections_, route_id, rule_service);
+    rule_service_route_builder route_builder(gb_, section_builder.sections_,
+                                             route_id, rule_service);
     route_builder.build_routes();
     route_builder.connect_through_services(rule_service);
 

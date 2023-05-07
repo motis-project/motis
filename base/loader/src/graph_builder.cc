@@ -35,6 +35,7 @@
 #include "motis/loader/rule_service_graph_builder.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
+#include "utl/helpers/algorithm.h"
 
 using namespace motis::logging;
 using namespace flatbuffers64;
@@ -167,6 +168,8 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
     auto route = (*it)->route();
     do {
       if (!apply_rules_ || !(*it)->rule_participant()) {
+        std::cout << "BUILDING " << (*it)->trip_id()->view()
+                  << " AS SINGLE SERVICE\n";
         route_services.push_back(*it);
       }
       ++it;
@@ -343,7 +346,19 @@ void graph_builder::add_expanded_trips(route const& r) {
 
 bool graph_builder::check_trip(trip const* trp) {
   if (trp->edges_->empty()) {
-    LOG(info) << "broken trip: " << debug::trip{sched_, trp} << ": no edges";
+    LOG(error) << "broken trip: " << debug::trip{sched_, trp} << ": no edges";
+    return false;
+  }
+  if (utl::any_of(*trp->edges_, [&](edge const* e) {
+        auto const n_lcons = e->m_.route_edge_.conns_.size();
+        auto const ok = n_lcons > trp->lcon_idx_;
+        if (!ok) {
+          LOG(error) << "broken trip: " << debug::trip{sched_, trp}
+                     << ": lcon_idx=" << trp->lcon_idx_
+                     << ", lcons.size=" << n_lcons;
+        }
+        return !ok;
+      })) {
     return false;
   }
   time last_time = 0;
@@ -862,6 +877,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     builder.dataset_prefix_ =
         dataset_prefix.empty() ? dataset_prefix : dataset_prefix + "_";
 
+    builder.fbs_sched_ = fbs_schedule;
     std::tie(builder.first_day_, builder.last_day_) =
         first_last_days(*sched, i, fbs_schedule->interval());
     builder.add_services(fbs_schedule->services());

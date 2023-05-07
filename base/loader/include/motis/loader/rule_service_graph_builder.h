@@ -8,10 +8,14 @@
 
 namespace motis::loader {
 
+void print_bitfield(std::ostream&, date::sys_days const first_day,
+                    bitfield const&);
+
 struct rule_route {
+  void print(std::ostream&, date::sys_days) const;
+
   std::map<Service const*, bitfield> traffic_days_;
   std::vector<Rule const*> rules_;
-  unsigned first_day_{}, last_day_{};
 };
 
 struct rule_service_graph_builder {
