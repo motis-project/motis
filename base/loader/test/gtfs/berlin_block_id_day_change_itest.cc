@@ -104,6 +104,40 @@ struct loader_graph_builder_gtfs_berlin_block_id_day_change
 };
 
 TEST_F(loader_graph_builder_gtfs_berlin_block_id_day_change, search) {
+  auto const& s = sched();
+  for (auto const& t : s.trips_) {
+    print_trip(std::cout, s, t.second, false);
+  }
+
+  std::cout << "digraph {\n";
+  for (auto const& sn : s.station_nodes_) {
+    if (sn->child_nodes_.empty()) {
+      continue;
+    }
+    std::cout << "  subgraph cluster_" << sn->id_ << " {\n";
+    std::cout << "    label=\"" << s.stations_[sn->id_]->name_ << "\"\n    ";
+    sn->for_each_route_node(
+        [&](node const* n) { std::cout << n->id_ << "; "; });
+    std::cout << "\n  }\n";
+  }
+  for (auto const& sn : s.station_nodes_) {
+    sn->for_each_route_node([&](node const* n) {
+      for (auto const& e : n->edges_) {
+        if (e.empty() && e.type() != edge::THROUGH_EDGE) {
+          continue;
+        }
+        std::cout << "  " << e.from_->id_ << " -> " << e.to_->id_;
+        if (e.type() == edge::THROUGH_EDGE) {
+          std::cout << " [color=red,penwidth=3.0];";
+        } else {
+          std::cout << ";";
+        }
+        std::cout << "\n";
+      }
+    });
+  }
+  std::cout << "}\n";
+
   auto res = routing_query("de:11000:900175002::2", "de:11000:900195524::1",
                            "2023-04-16 00:14 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();

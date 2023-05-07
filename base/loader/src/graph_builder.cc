@@ -31,7 +31,6 @@
 #include "motis/loader/classes.h"
 #include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
-#include "motis/loader/rule_route_builder.h"
 #include "motis/loader/rule_service_graph_builder.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
@@ -168,8 +167,6 @@ void graph_builder::add_services(Vector<Offset<Service>> const* services) {
     auto route = (*it)->route();
     do {
       if (!apply_rules_ || !(*it)->rule_participant()) {
-        std::cout << "BUILDING " << (*it)->trip_id()->view()
-                  << " AS SINGLE SERVICE\n";
         route_services.push_back(*it);
       }
       ++it;
@@ -885,7 +882,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
       scoped_timer const timer("rule services");
       progress_tracker->status(fmt::format("Rule Services {}", dataset_prefix))
           .out_bounds(out_mid, out_high);
-      build_rule_routes(builder, fbs_schedule->rule_services());
+      rule_service_graph_builder{builder}.add_rule_services(
+          fbs_schedule->rule_services());
     }
   }
 

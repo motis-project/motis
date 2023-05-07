@@ -105,14 +105,14 @@ struct services_key {
   services_key(std::set<service_with_day_offset> services, int day_idx)
       : services_(std::move(services)), day_idx_(day_idx) {}
 
-  friend bool operator<(services_key const& lhs, services_key const& rhs) {
-    return std::tie(lhs.services_, lhs.day_idx_) <
-           std::tie(rhs.services_, rhs.day_idx_);
+  friend bool operator<(services_key const& a, services_key const& b) {
+    return std::tie(a.services_, a.day_idx_) <
+           std::tie(b.services_, b.day_idx_);
   }
 
-  friend bool operator==(services_key const& lhs, services_key const& rhs) {
-    return std::tie(lhs.services_, lhs.day_idx_) ==
-           std::tie(rhs.services_, rhs.day_idx_);
+  friend bool operator==(services_key const& a, services_key const& b) {
+    return std::tie(a.services_, a.day_idx_) ==
+           std::tie(b.services_, b.day_idx_);
   }
 
   std::set<service_with_day_offset> services_;
