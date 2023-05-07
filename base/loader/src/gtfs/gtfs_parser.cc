@@ -416,6 +416,8 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   std::vector<fbs64::Offset<RuleService>> rule_services;
   for (auto const& blk : blocks) {
     for (auto const& [trips, traffic_days] : blk.second->rule_services()) {
+      auto const td = traffic_days;
+
       if (trips.size() == 1) {
         output_services.emplace_back(
             create_service(trips.front(), traffic_days, false,
@@ -436,13 +438,13 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
             utl::get_or_create(services, a,
                                [&] {
                                  return create_service(
-                                     a, traffic_days, true,
+                                     a, td, true,
                                      ScheduleRelationship_SCHEDULED);
                                }),
             utl::get_or_create(services, b,
                                [&] {
                                  return create_service(
-                                     b, traffic_days, true,
+                                     b, td, true,
                                      ScheduleRelationship_SCHEDULED);
                                }),
             transition_stop, transition_stop,
