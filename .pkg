@@ -9,7 +9,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=12d8648de6394af1391be5f9492ed1ac4afdd368
+  commit=3aca4248da3f67d2a31ccce358ad9ee6102ab539
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=fde7223a1ffd4fd84364926a2ad40d8f0340e1e2
+  commit=6e81ca8d0f4b5994481d098fda47bc5e1545cf20
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master

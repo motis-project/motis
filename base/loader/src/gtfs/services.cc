@@ -1,5 +1,7 @@
 #include "motis/loader/gtfs/services.h"
 
+#include "utl/get_or_create.h"
+
 #include "motis/core/common/logging.h"
 
 namespace motis::loader::gtfs {
@@ -119,12 +121,10 @@ traffic_days merge_traffic_days(
 
   for (auto const& [service_name, service_exceptions] : exceptions) {
     for (auto const& day : service_exceptions) {
-      auto bits = s.traffic_days_.find(service_name);
-      if (bits == end(s.traffic_days_)) {
-        std::tie(bits, std::ignore) =
-            s.traffic_days_.emplace(service_name, std::make_unique<bitfield>());
-      }
-      add_exception(service_name, s.first_day_, day, *bits->second);
+      add_exception(service_name, s.first_day_, day,
+                    *utl::get_or_create(s.traffic_days_, service_name, []() {
+                      return std::make_unique<bitfield>();
+                    }));
     }
   }
 

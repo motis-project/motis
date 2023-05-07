@@ -70,6 +70,15 @@ std::set<stop*> stop::get_metas(std::vector<stop*> const& stops) {
     }
   }
 
+  std::set<stop*> children;
+  for (auto const& d : done) {
+    for (auto const& c : d->children_) {
+      children.emplace(c);
+    }
+  }
+
+  done.insert(begin(children), end(children));
+
   return done;
 }
 

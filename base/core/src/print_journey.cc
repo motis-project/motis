@@ -5,6 +5,8 @@
 #include "fmt/core.h"
 #include "fmt/ostream.h"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/constants.h"
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/journey/check_journey.h"
@@ -100,6 +102,8 @@ inline bool is_virtual_station(journey::stop const& stop) {
 
 bool print_journey(journey const& j, std::ostream& out, bool local_time,
                    realtime_format rt_format) {
+  utl::verify(!j.stops_.empty(), "invalid journey: no stops");
+
   out << std::setfill(' ');
   out << "Journey: duration=" << std::left << std::setw(3) << j.duration_
       << " transfers=" << std::left << std::setw(2) << j.transfers_

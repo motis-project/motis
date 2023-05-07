@@ -21,22 +21,25 @@ namespace mm = motis::module;
 
 namespace motis::bootstrap {
 
-mm::msg_ptr make_file_event(std::vector<std::string> const& import_paths) {
-  std::regex const re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
+std::tuple<std::string, std::string, std::string> split_import_path(
+    std::string const& import_path) {
+  static std::regex const re{R"(^(\w+)(?:\-(.*?))?:(.*)$)"};
+  std::smatch m;
+  utl::verify(std::regex_match(import_path, m, re) && m.size() == 4,
+              "import_path does not match tag-options:path : {}", import_path);
+  utl::verify(fs::exists(m.str(3)), "file does not exist: {}", m.str(3));
+  return {m.str(1), m.str(2), m.str(3)};
+}
 
+mm::msg_ptr make_file_event(std::vector<std::string> const& import_paths) {
   mm::message_creator mc;
   std::vector<flatbuffers::Offset<mi::ImportPath>> fbs_paths;
   for (auto const& import_path : import_paths) {
-    std::smatch m;
-    utl::verify(std::regex_match(import_path, m, re) && m.size() == 4,
-                "import_path does not match tag-options:path : {}",
-                import_path);
-
-    utl::verify(fs::exists(m.str(3)), "file does not exist: {}", m.str(3));
-
-    fbs_paths.push_back(mi::CreateImportPath(mc, mc.CreateString(m.str(1)),
-                                             mc.CreateString(m.str(2)),
-                                             mc.CreateString(m.str(3))));
+    auto const [tag, options, path] = split_import_path(import_path);
+    utl::verify(fs::exists(path), "file does not exist: {}", path);
+    fbs_paths.push_back(mi::CreateImportPath(mc, mc.CreateString(tag),
+                                             mc.CreateString(options),
+                                             mc.CreateString(path)));
   }
   mc.create_and_finish(
       MsgContent_FileEvent,

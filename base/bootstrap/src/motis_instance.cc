@@ -94,6 +94,10 @@ void motis_instance::import(module_settings const& module_opt,
 
   registry_.reset();
 
+  utl::verify(
+      dataset_opt.no_schedule_ || includes(to_res_id(global_res_id::SCHEDULE)),
+      "schedule not loaded");
+
   if (import_opt.require_successful_) {
     auto const unsuccessful_imports =
         utl::all(modules_)  //
