@@ -255,18 +255,31 @@ struct rule_service_route_builder {
 
   bool is_active() const {
     return utl::any_of(
-        service_intervals_,
-        [&](std::pair<Service const*, interval> const& s_i) {
-          auto const& [service, interval] = s_i;
-          auto const& traffic_days =
-              gb_.get_or_create_bitfield(service->traffic_days());
-          for (auto i = interval.min_day_; i <= interval.max_day_; ++i) {
-            if (traffic_days.test(i)) {
-              return true;
-            }
-          }
-          return false;
-        });
+               service_intervals_,
+               [&](std::pair<Service const*, interval> const& s_i) {
+                 auto const& [service, interval] = s_i;
+                 auto const& traffic_days =
+                     gb_.get_or_create_bitfield(service->traffic_days());
+                 for (auto i = interval.min_day_; i <= interval.max_day_; ++i) {
+                   if (traffic_days.test(i)) {
+                     return true;
+                   }
+                 }
+                 return false;
+               }) &&
+           utl::none_of(
+               service_intervals_,
+               [&](std::pair<Service const*, interval> const& s_i) {
+                 auto const& [service, interval] = s_i;
+                 auto const& traffic_days =
+                     gb_.get_or_create_bitfield(service->traffic_days());
+                 for (auto i = interval.min_day_; i <= interval.max_day_; ++i) {
+                   if (traffic_days.test(i)) {
+                     return false;
+                   }
+                 }
+                 return true;
+               });
   }
 
   void print(std::ostream& out, RuleService const& rs) {
@@ -285,6 +298,11 @@ struct rule_service_route_builder {
 
     auto const print_bitfield = [&](bitfield const& b, int const from = 0,
                                     int const to = BIT_COUNT) {
+      if (!b.any()) {
+        out << "EMPTY";
+        return;
+      }
+
       auto day = first_day + from * date::days{1};
       auto first = true;
       out << "(";
@@ -312,8 +330,8 @@ struct rule_service_route_builder {
       out << ", active_traffic_days=";
       print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()),
                      interval.min_day_, interval.max_day_);
-      out << ", first=" << format_time(s->times()->Get(0))
-          << ", last=" << format_time(s->times()->Get(s->times()->size() - 1U))
+      out << ", first=" << format_time(s->times()->Get(1))
+          << ", last=" << format_time(s->times()->Get(s->times()->size() - 2U))
           << ", min="
           << date::format("%F", first_day + date::days{interval.min_day_})
           << ", max="
