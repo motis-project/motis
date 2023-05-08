@@ -133,7 +133,8 @@ TEST_F(service_rules_day_shift_test_1, through_every_day) {
       continue;
     }
     std::cout << "  subgraph cluster_" << sn->id_ << " {\n";
-    std::cout << "    label=\"" << s.stations_[sn->id_]->name_ << "\"\n    ";
+    std::cout << "    label=\"" << s.stations_[sn->id_]->name_ << "\\n"
+              << s.stations_[sn->id_]->eva_nr_ << "\"\n    ";
     sn->for_each_route_node(
         [&](node const* n) { std::cout << n->id_ << "; "; });
     std::cout << "\n  }\n";
@@ -148,7 +149,7 @@ TEST_F(service_rules_day_shift_test_1, through_every_day) {
         if (e.type() == edge::THROUGH_EDGE) {
           std::cout << " [color=red,penwidth=3.0];";
         } else {
-          std::cout << ";";
+          std::cout << " [label=\"" << e.m_.route_edge_.conns_.size() << "\"];";
         }
         std::cout << "\n";
       }
