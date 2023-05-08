@@ -13,6 +13,7 @@
 #include "motis/core/access/trip_stop.h"
 #include "motis/loader/timezone_util.h"
 
+#include "motis/core/journey/print_trip.h"
 #include "./graph_builder_test.h"
 
 using namespace motis::access;
@@ -120,6 +121,41 @@ TEST_F(service_rules_day_shift_test_1, valid_trip_times) {
 }
 
 TEST_F(service_rules_day_shift_test_1, through_every_day) {
+  auto const& s = *sched_;
+  for (auto const& t : s.trips_) {
+    ::motis::print_trip(std::cout, s, t.second, false);
+    print_trip(t.second);
+  }
+
+  std::cout << "digraph {\n";
+  for (auto const& sn : s.station_nodes_) {
+    if (sn->child_nodes_.empty()) {
+      continue;
+    }
+    std::cout << "  subgraph cluster_" << sn->id_ << " {\n";
+    std::cout << "    label=\"" << s.stations_[sn->id_]->name_ << "\"\n    ";
+    sn->for_each_route_node(
+        [&](node const* n) { std::cout << n->id_ << "; "; });
+    std::cout << "\n  }\n";
+  }
+  for (auto const& sn : s.station_nodes_) {
+    sn->for_each_route_node([&](node const* n) {
+      for (auto const& e : n->edges_) {
+        if (e.empty() && e.type() != edge::THROUGH_EDGE) {
+          continue;
+        }
+        std::cout << "  " << e.from_->id_ << " -> " << e.to_->id_;
+        if (e.type() == edge::THROUGH_EDGE) {
+          std::cout << " [color=red,penwidth=3.0];";
+        } else {
+          std::cout << ";";
+        }
+        std::cout << "\n";
+      }
+    });
+  }
+  std::cout << "}\n";
+
   auto const* a = get_station(*sched_, "0000001");
   auto const* c = get_station(*sched_, "0000003");
   auto const* d = get_station(*sched_, "0000004");
