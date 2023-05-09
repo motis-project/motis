@@ -274,14 +274,7 @@ struct rule_service_route_builder {
       : gb_(gb),
         sections_(sections),
         route_id_(route_id),
-        service_intervals_{calculate_first_and_last_day(rs)} {
-    try {
-      utl::verify(verify(rs, true), "bad service");
-    } catch (...) {
-      print(std::cout, rs, true);
-      std::cout.flush();
-    }
-  }
+        service_intervals_{calculate_first_and_last_day(rs)} {}
 
   bool verify(RuleService const& rs, bool const final) const {
     std::set<Service const*> services;
@@ -307,8 +300,9 @@ struct rule_service_route_builder {
       }
       auto const s_count = s_traffic_days.count();
       if (s_count != ref_count) {
-        std::cout << "BAD TRAFFIC DAY COUNT: " << ref_count << " != " << s_count
-                  << ", ref=" << (*services.begin()) << " vs " << s << "\n";
+        LOG(error) << "BAD TRAFFIC DAY COUNT: " << ref_count
+                   << " != " << s_count << ", ref=" << (*services.begin())
+                   << " vs " << s << "\n";
         return false;
       }
     }
@@ -323,91 +317,8 @@ struct rule_service_route_builder {
                        });
   }
 
-  void print(std::ostream& out, RuleService const& rs,
-             bool const print_active) const {
-    auto const first_day =
-        date::sys_days{std::chrono::duration_cast<date::days>(
-            std::chrono::seconds{gb_.fbs_sched_->interval()->from()})};
-    auto const last_day = date::sys_days{std::chrono::duration_cast<date::days>(
-        std::chrono::seconds{gb_.fbs_sched_->interval()->to()})};
-    auto const sched_first_day = first_day + date::days{gb_.first_day_};
-    auto const sched_last_day = first_day + date::days{gb_.last_day_};
-
-    out << "FIRST: " << date::format("%F", first_day) << ", "
-        << date::format("%F", sched_first_day) << "\n";
-    out << "LAST: " << date::format("%F", last_day) << ", "
-        << date::format("%F", sched_last_day) << "\n";
-
-    auto const print_bitfield = [&](bitfield const& b, int const from = 0,
-                                    int const to = BIT_COUNT) {
-      if (!b.any()) {
-        out << "EMPTY";
-        return;
-      }
-
-      auto day = first_day + from * date::days{1};
-      auto first = true;
-      out << "(";
-      for (auto i = from; i <= std::min(to, BIT_COUNT - 1);
-           ++i, day += date::days{1}) {
-        if (b.test(i)) {
-          if (!first) {
-            out << " ";
-          }
-          first = false;
-          out << date::format("%F", day);
-        }
-      }
-      out << ")";
-    };
-
-    auto const print_service = [&](Service const* s) {
-      out << "[" << s << ", first=" << format_time(s->times()->Get(1))
-          << ", last=" << format_time(s->times()->Get(s->times()->size() - 2U));
-      if (print_active) {
-        auto const iv_it = service_intervals_.find(s);
-        auto const iv =
-            iv_it == end(service_intervals_) ? interval{} : iv_it->second;
-        out << ", min="
-            << date::format("%F", first_day + date::days{iv.min_day_})
-            << ", max="
-            << date::format("%F", first_day + date::days{iv.max_day_});
-        out << ", active_traffic_days=";
-        print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()),
-                       iv.min_day_, iv.max_day_);
-      }
-      out << ", traffic_days=";
-      print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()));
-      out << "]";
-    };
-
-    out << "RULE ROUTE:\n";
-    for (auto const& r : *rs.rules()) {
-      out << "[\n"
-          << "\t" << EnumNameRuleType(r->type()) << "\n"
-          << "\tday_offset1=" << r->day_offset1() << "\n"
-          << "\tday_offset2=" << r->day_offset2() << "\n"
-          << "\tday_switch=" << std::boolalpha << r->day_switch() << "\n"
-          << "\ts1=";
-      print_service(r->service1());
-      out << "\n"
-          << "\ts2=";
-      print_service(r->service2());
-      out << "\n"
-          << "]\n";
-    }
-    out << "END RULE ROUTE\n";
-  }
-
   std::map<Service const*, interval> calculate_first_and_last_day(
       RuleService const& rs) {
-    constexpr auto const kTracing = false;
-    auto const trace = [](auto&& x...) {
-      if (kTracing) {
-        fmt::print(x);
-      }
-    };
-
     verify(rs, false);
 
     // Create mapping from service -> "rules that contain the service".
@@ -435,18 +346,10 @@ struct rule_service_route_builder {
       interval iv_;
     };
 
-    trace("INITIAL\n");
-    for (auto const& [s, iv] : service_intervals) {
-      trace("  {}: [{} - {}]\n", s, iv.min_day_, iv.max_day_);
-    }
-
     for (auto const& [s, _] : service_rules) {
       std::set<Service const*> visited;
       std::queue<queue_entry> q;
-
       q.push(queue_entry{s, service_intervals[s]});
-      trace("START: {}\n", s);
-
       while (!q.empty()) {
         auto const item = q.front();
         q.pop();
@@ -454,11 +357,8 @@ struct rule_service_route_builder {
         visited.emplace(item.service_);
 
         auto& iv = service_intervals[item.service_];
-
-        trace("  EXTRACT ({}, {}): {}", item.service_, item.iv_, iv);
         iv.min_day_ = std::min(iv.min_day_, item.iv_.min_day_);
         iv.max_day_ = std::max(iv.max_day_, item.iv_.max_day_);
-        trace(" -> {}\n", iv);
 
         for (auto const& r : service_rules[item.service_]) {
           auto const delta_offset =
@@ -473,19 +373,12 @@ struct rule_service_route_builder {
           auto const new_iv = interval{.min_day_ = iv.min_day_ - delta_offset,
                                        .max_day_ = iv.max_day_ - delta_offset};
 
-          trace("  THIS = {} = {}\n", item.service_,
-                r->service1() == item.service_ ? "S1" : "S2");
-
           if (item.service_ == r->service1()) {
             if (visited.find(r->service2()) == end(visited)) {
-              trace("  PUSH {}, new_iv={}, delta_offset={}\n", r->service2(),
-                    new_iv, delta_offset);
               q.push({r->service2(), new_iv});
             }
           } else {
             if (visited.find(r->service1()) == end(visited)) {
-              trace("  PUSH {}, new_iv={}, delta_offset={}\n", r->service1(),
-                    new_iv, delta_offset);
               q.push({r->service1(), new_iv});
             }
           }
@@ -493,9 +386,7 @@ struct rule_service_route_builder {
       }
     }
 
-    trace("RESULT\n");
     for (auto const& [s, iv] : service_intervals) {
-      trace("  {}: [{} - {}]\n", s, iv.min_day_, iv.max_day_);
       service_traffic_days_[s] =
           iv.mask(gb_.get_or_create_bitfield(s->traffic_days()));
     }
@@ -516,8 +407,8 @@ struct rule_service_route_builder {
     for (auto const& [s, iv] : service_intervals) {
       auto const count = count_active(service_traffic_days_.at(s), iv);
       if (count != ref_count) {
-        std::cout << "BAD SERVICES AFTER INTERVAL: " << ref_service << " vs "
-                  << s << ": " << ref_count << " vs " << count << "\n";
+        LOG(error) << "BAD SERVICES AFTER INTERVAL: " << ref_service << " vs "
+                   << s << ": " << ref_count << " vs " << count << "\n";
       }
     }
 
