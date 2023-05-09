@@ -862,6 +862,7 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
     builder.dataset_prefix_ =
         dataset_prefix.empty() ? dataset_prefix : dataset_prefix + "_";
 
+    builder.fbs_sched_ = fbs_schedule;
     std::tie(builder.first_day_, builder.last_day_) =
         first_last_days(*sched, i, fbs_schedule->interval());
     builder.add_services(fbs_schedule->services());
@@ -869,7 +870,8 @@ schedule_ptr build_graph(std::vector<Schedule const*> const& fbs_schedules,
       scoped_timer const timer("rule services");
       progress_tracker->status(fmt::format("Rule Services {}", dataset_prefix))
           .out_bounds(out_mid, out_high);
-      build_rule_routes(builder, fbs_schedule->rule_services());
+      rule_service_graph_builder{builder}.add_rule_services(
+          fbs_schedule->rule_services());
     }
   }
 

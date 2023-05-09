@@ -6,12 +6,14 @@
 #include <set>
 #include <vector>
 
+#include "utl/get_or_create.h"
+#include "utl/helpers/algorithm.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
 #include "motis/core/schedule/trip.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/loader/util.h"
-#include "utl/get_or_create.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
 
@@ -21,6 +23,19 @@ using namespace flatbuffers64;
 using namespace motis::logging;
 
 using neighbor = std::pair<Service const*, Rule const*>;
+
+std::ostream& operator<<(std::ostream& out, Service const* s) {
+  auto const line_id = s->sections()->Get(0)->line_id();
+  out << "[train_nr=" << s->initial_train_nr();
+  if (line_id != nullptr) {
+    out << ", line_id=\"" << line_id->view() << "\"";
+  }
+  if (s->trip_id() != nullptr) {
+    out << ", trip_id=\"" << s->trip_id()->view() << "\"";
+  }
+  out << "]";
+  return out;
+}
 
 struct service_section {
   route_section route_section_;
@@ -32,15 +47,15 @@ struct service_section {
 };
 
 struct rule_service_section_builder {
-  rule_service_section_builder(graph_builder& gb, rule_route const& rs)
+  rule_service_section_builder(graph_builder& gb, RuleService const& rs)
       : gb_(gb),
         neighbors_(build_neighbors(rs)),
         sections_(build_empty_sections(rs)) {}
 
   static std::map<Service const*, mcd::vector<neighbor>> build_neighbors(
-      rule_route const& rs) {
+      RuleService const& rs) {
     std::map<Service const*, mcd::vector<neighbor>> neighbors;
-    for (auto const& r : rs.rules_) {
+    for (auto const& r : *rs.rules()) {
       if (r->type() != RuleType_THROUGH) {
         neighbors[r->service1()].emplace_back(r->service2(), r);
         neighbors[r->service2()].emplace_back(r->service1(), r);
@@ -50,9 +65,9 @@ struct rule_service_section_builder {
   }
 
   static std::map<Service const*, mcd::vector<service_section*>>
-  build_empty_sections(rule_route const& rs) {
+  build_empty_sections(RuleService const& rs) {
     std::map<Service const*, mcd::vector<service_section*>> sections;
-    for (auto const& r : rs.rules_) {
+    for (auto const& r : *rs.rules()) {
       sections.emplace(
           r->service1(),
           mcd::vector<service_section*>(
@@ -74,9 +89,9 @@ struct rule_service_section_builder {
     return static_cast<unsigned>(std::distance(std::begin(stations), it));
   }
 
-  void build_sections(rule_route const& rs) {
+  void build_sections(RuleService const& rs) {
     std::set<Service const*> built;
-    for (auto const& r : rs.rules_) {
+    for (auto const& r : *rs.rules()) {
       for (auto const& s : {r->service1(), r->service2()}) {
         if (built.insert(s).second) {
           add_service(s);
@@ -232,17 +247,272 @@ struct node_id_cmp {
 };
 
 struct rule_service_route_builder {
+  struct interval {
+    friend std::ostream& operator<<(std::ostream& out, interval const& iv) {
+      return out << "[" << iv.min_day_ << " - " << iv.max_day_ << "]";
+    }
+
+    // Interval looking at the service itself.
+    int initial_first_day_{0}, initial_last_day_{0};
+
+    // Interval looking at all services in the rule construct.
+    int min_day_{0}, max_day_{0};
+  };
+
   rule_service_route_builder(
       graph_builder& gb,  //
-      unsigned first_day, unsigned last_day,
       std::map<Service const*, mcd::vector<service_section*>>& sections,
-      unsigned route_id, rule_route const& rs)
+      unsigned route_id, RuleService const& rs)
       : gb_(gb),
-        first_day_(first_day),
-        last_day_(last_day),
         sections_(sections),
         route_id_(route_id),
-        traffic_days_(rs.traffic_days_) {}
+        service_intervals_{calculate_first_and_last_day(rs)} {
+    utl::verify(verify(rs), "bad service");
+  }
+
+  bool verify(RuleService const& rs) const {
+    std::set<Service const*> services;
+    for (auto const& r : *rs.rules()) {
+      services.insert(r->service1());
+      services.insert(r->service2());
+    }
+
+    auto const ref_traffic_days =
+        gb_.get_or_create_bitfield((*services.begin())->traffic_days());
+    auto const ref_count = ref_traffic_days.count();
+    for (auto const& s : services) {
+      auto const s_traffic_days = gb_.get_or_create_bitfield(s->traffic_days());
+      auto const s_count = s_traffic_days.count();
+      if (s_count != ref_count) {
+        std::cout << "BAD TRAFFIC DAY COUNT: " << ref_count << " != " << s_count
+                  << ", ref=" << (*services.begin()) << " vs " << s << "\n";
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool is_active() const {
+    return utl::any_of(
+        service_intervals_,
+        [&](std::pair<Service const*, interval> const& s_i) {
+          auto const& [service, interval] = s_i;
+          auto const& traffic_days =
+              gb_.get_or_create_bitfield(service->traffic_days());
+          for (auto i = interval.min_day_; i <= interval.max_day_; ++i) {
+            if (traffic_days.test(i)) {
+              return true;
+            }
+          }
+          return false;
+        });
+  }
+
+  void print(std::ostream& out, RuleService const& rs,
+             bool const print_active) const {
+    auto const first_day =
+        date::sys_days{std::chrono::duration_cast<date::days>(
+            std::chrono::seconds{gb_.fbs_sched_->interval()->from()})};
+    auto const last_day = date::sys_days{std::chrono::duration_cast<date::days>(
+        std::chrono::seconds{gb_.fbs_sched_->interval()->to()})};
+    auto const sched_first_day = first_day + date::days{gb_.first_day_};
+    auto const sched_last_day = first_day + date::days{gb_.last_day_};
+
+    out << "FIRST: " << date::format("%F", first_day) << ", "
+        << date::format("%F", sched_first_day) << "\n";
+    out << "LAST: " << date::format("%F", last_day) << ", "
+        << date::format("%F", sched_last_day) << "\n";
+
+    auto const print_bitfield = [&](bitfield const& b, int const from = 0,
+                                    int const to = BIT_COUNT) {
+      if (!b.any()) {
+        out << "EMPTY";
+        return;
+      }
+
+      auto day = first_day + from * date::days{1};
+      auto first = true;
+      out << "(";
+      for (auto i = from; i <= std::min(to, BIT_COUNT - 1);
+           ++i, day += date::days{1}) {
+        if (b.test(i)) {
+          if (!first) {
+            out << " ";
+          }
+          first = false;
+          out << date::format("%F", day);
+        }
+      }
+      out << ")";
+    };
+
+    auto const print_service = [&](Service const* s) {
+      out << "[" << s << ", first=" << format_time(s->times()->Get(1))
+          << ", last=" << format_time(s->times()->Get(s->times()->size() - 2U));
+      if (print_active) {
+        auto const iv_it = service_intervals_.find(s);
+        auto const iv =
+            iv_it == end(service_intervals_) ? interval{} : iv_it->second;
+        out << ", min="
+            << date::format("%F", first_day + date::days{iv.min_day_})
+            << ", max="
+            << date::format("%F", first_day + date::days{iv.max_day_});
+        out << ", active_traffic_days=";
+        print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()),
+                       iv.min_day_, iv.max_day_);
+      }
+      out << ", traffic_days=";
+      print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()));
+      out << "]";
+    };
+
+    out << "RULE ROUTE:\n";
+    for (auto const& r : *rs.rules()) {
+      out << "[\n"
+          << "\t" << EnumNameRuleType(r->type()) << "\n"
+          << "\tday_offset1=" << r->day_offset1() << "\n"
+          << "\tday_offset2=" << r->day_offset2() << "\n"
+          << "\tday_switch=" << std::boolalpha << r->day_switch() << "\n"
+          << "\ts1=";
+      print_service(r->service1());
+      out << "\n"
+          << "\ts2=";
+      print_service(r->service2());
+      out << "\n"
+          << "]\n";
+    }
+    out << "END RULE ROUTE\n";
+  }
+
+  std::map<Service const*, interval> calculate_first_and_last_day(
+      RuleService const& rs) {
+    constexpr auto const kTracing = false;
+    auto const trace = [](auto&& x...) {
+      if (kTracing) {
+        fmt::print(x);
+      }
+    };
+
+    trace("\n\n");
+    try {
+      utl::verify(verify(rs), "bad service");
+    } catch (...) {
+      print(std::cout, rs, false);
+      throw;
+    }
+
+    // Create mapping from service -> "rules that contain the service".
+    std::map<Service const*, std::vector<Rule const*>> service_rules;
+    for (auto const& r : *rs.rules()) {
+      service_rules[r->service1()].emplace_back(r);
+      service_rules[r->service2()].emplace_back(r);
+    }
+
+    // Initialize with the basic graph builder interval
+    // adjusted by first day offset (if the service travels > 1 day)
+    // so the service will show up if it starts before the timetable interval
+    // but travels into the timetable interval.
+    std::map<Service const*, interval> service_intervals;
+    for (auto const& [s, _] : service_rules) {
+      auto const first_day_offset =
+          s->times()->Get(s->times()->size() - 2) / 1440;
+      auto const first_day = std::max(0, gb_.first_day_ - first_day_offset);
+      service_intervals[s] = {first_day, gb_.last_day_, first_day,
+                              gb_.last_day_};
+    }
+
+    struct queue_entry {
+      Service const* service_;
+      interval iv_;
+    };
+
+    trace("INITIAL\n");
+    for (auto const& [s, iv] : service_intervals) {
+      trace("  {}: [{} - {}]\n", s, iv.min_day_, iv.max_day_);
+    }
+
+    for (auto const& [s, _] : service_rules) {
+      std::set<Service const*> visited;
+      std::queue<queue_entry> q;
+
+      q.push(queue_entry{s, service_intervals[s]});
+      trace("START: {}\n", s);
+
+      while (!q.empty()) {
+        auto const item = q.front();
+        q.pop();
+
+        visited.emplace(item.service_);
+
+        auto& iv = service_intervals[item.service_];
+
+        trace("  EXTRACT ({}, {}): {}", item.service_, item.iv_, iv);
+        iv.min_day_ = std::min(iv.min_day_, item.iv_.min_day_);
+        iv.max_day_ = std::max(iv.max_day_, item.iv_.max_day_);
+        trace(" -> {}\n", iv);
+
+        for (auto const& r : service_rules[item.service_]) {
+          auto const delta_offset =
+              r->service1() == item.service_
+                  ? static_cast<int>(r->day_offset2()) -
+                        static_cast<int>(r->day_offset1()) -
+                        (r->day_switch() ? 1 : 0)
+                  : static_cast<int>(r->day_offset1()) -
+                        static_cast<int>(r->day_offset2()) +
+                        (r->day_switch() ? 1 : 0);
+
+          auto const new_iv = interval{.min_day_ = iv.min_day_ - delta_offset,
+                                       .max_day_ = iv.max_day_ - delta_offset};
+
+          trace("  THIS = {} = {}\n", item.service_,
+                r->service1() == item.service_ ? "S1" : "S2");
+
+          if (item.service_ == r->service1()) {
+            if (visited.find(r->service2()) == end(visited)) {
+              trace("  PUSH {}, new_iv={}, delta_offset={}\n", r->service2(),
+                    new_iv, delta_offset);
+              q.push({r->service2(), new_iv});
+            }
+          } else {
+            if (visited.find(r->service1()) == end(visited)) {
+              trace("  PUSH {}, new_iv={}, delta_offset={}\n", r->service1(),
+                    new_iv, delta_offset);
+              q.push({r->service1(), new_iv});
+            }
+          }
+        }
+      }
+    }
+
+    trace("RESULT\n");
+    for (auto const& [s, iv] : service_intervals) {
+      trace("  {}: [{} - {}]\n", s, iv.min_day_, iv.max_day_);
+    }
+
+    auto const count_active = [](bitfield const& bf, interval const& iv) {
+      auto count = 0U;
+      for (auto i = iv.min_day_; i <= iv.max_day_; ++i) {
+        if (bf.test(i)) {
+          ++count;
+        }
+      }
+      return count;
+    };
+    auto const& [ref_service, ref_interval] = *service_intervals.begin();
+    auto const ref_count = count_active(
+        gb_.get_or_create_bitfield(ref_service->traffic_days()), ref_interval);
+
+    for (auto const& [s, iv] : service_intervals) {
+      auto const count =
+          count_active(gb_.get_or_create_bitfield(s->traffic_days()), iv);
+      if (count != ref_count) {
+        std::cout << "BAD SERVICES AFTER INTERVAL: " << ref_service << " vs "
+                  << s << ": " << ref_count << " vs " << count << "\n";
+      }
+    }
+
+    return service_intervals;
+  }
 
   void build_routes() {
     for (auto& entry : sections_) {
@@ -323,8 +593,11 @@ struct rule_service_route_builder {
 
     mcd::vector<light_connection> lcons;
     bool adjusted = false;
-    auto const& traffic_days = traffic_days_.at(services[0].service_);
-    for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
+    auto const& traffic_days =
+        gb_.get_or_create_bitfield(services[0].service_->traffic_days());
+    auto const interval = service_intervals_.at(services[0].service_);
+    for (unsigned day_idx = interval.min_day_; day_idx <= interval.max_day_;
+         ++day_idx) {
       if (traffic_days.test(day_idx)) {
         lcons.push_back(
             gb_.section_to_connection(get_or_create_trips(services, day_idx),
@@ -486,10 +759,12 @@ struct rule_service_route_builder {
               return trip::route_edge(section->route_section_.get_route_edge());
             }));
 
-    auto const& traffic_days = traffic_days_.at(s);
+    auto const& traffic_days = gb_.get_or_create_bitfield(s->traffic_days());
+    auto const& interval = service_intervals_.at(s);
     auto edges = gb_.sched_.trip_edges_.back().get();
     auto lcon_idx = lcon_idx_t{};
-    for (unsigned day_idx = first_day_; day_idx <= last_day_; ++day_idx) {
+    for (unsigned day_idx = interval.min_day_; day_idx <= interval.max_day_;
+         ++day_idx) {
       if (traffic_days.test(day_idx)) {
         auto trp = single_trips_.at(std::make_pair(s, day_idx));
         trp->edges_ = edges;
@@ -499,8 +774,8 @@ struct rule_service_route_builder {
     }
   }
 
-  void connect_through_services(rule_route const& rs) {
-    for (auto const& r : rs.rules_) {
+  void connect_through_services(RuleService const& rs) {
+    for (auto const& r : *rs.rules()) {
       if (r->type() == RuleType_THROUGH) {
         connect_route_nodes(r);
       }
@@ -637,38 +912,37 @@ struct rule_service_route_builder {
   }
 
   graph_builder& gb_;
-  unsigned first_day_, last_day_;
   std::map<Service const*, mcd::vector<service_section*>>& sections_;
   std::map<std::pair<Service const*, int>, trip*> single_trips_;
   std::map<services_key, merged_trips_idx> trips_;
   unsigned route_id_;
   std::set<node const*, node_id_cmp> start_nodes_;
   std::set<node const*> through_target_nodes_;
-  std::map<Service const*, bitfield> const& traffic_days_;
+  std::map<Service const*, interval> service_intervals_;
 };
 
 rule_service_graph_builder::rule_service_graph_builder(graph_builder& gb)
     : gb_(gb) {}
 
 void rule_service_graph_builder::add_rule_services(
-    mcd::vector<rule_route> const& rule_services) {
-  if (rule_services.empty()) {
+    Vector<Offset<RuleService>> const* rule_services) {
+  if (rule_services->size() == 0U) {
     return;
   }
 
-  for (auto const& rule_service : rule_services) {
+  for (auto const& rule_service : *rule_services) {
     auto route_id = gb_.next_route_index_++;
 
-    rule_service_section_builder section_builder(gb_, rule_service);
-    section_builder.build_sections(rule_service);
+    rule_service_section_builder section_builder(gb_, *rule_service);
+    section_builder.build_sections(*rule_service);
 
-    rule_service_route_builder route_builder(
-        gb_, rule_service.first_day_, rule_service.last_day_,
-        section_builder.sections_, route_id, rule_service);
-    route_builder.build_routes();
-    route_builder.connect_through_services(rule_service);
-
-    route_builder.expand_trips();
+    rule_service_route_builder route_builder(gb_, section_builder.sections_,
+                                             route_id, *rule_service);
+    if (route_builder.is_active()) {
+      route_builder.build_routes();
+      route_builder.connect_through_services(*rule_service);
+      route_builder.expand_trips();
+    }
   }
 }
 
