@@ -266,9 +266,9 @@ struct rule_service_route_builder {
         sections_(sections),
         route_id_(route_id),
         service_intervals_{calculate_first_and_last_day(rs)} {
-    print(std::cout, rs);
-    std::cout.flush();
     utl::verify(verify(rs), "bad service");
+    print(std::cout, rs, true);
+    std::cout.flush();
   }
 
   bool verify(RuleService const& rs) const {
@@ -285,9 +285,8 @@ struct rule_service_route_builder {
       auto const s_traffic_days = gb_.get_or_create_bitfield(s->traffic_days());
       auto const s_count = s_traffic_days.count();
       if (s_count != ref_count) {
-        std::cout << "BAD TRAFFIC DAY COUNT: " << ref_count << " ["
-                  << "] vs " << s_count << " " << s << "\n";
-        print(std::cout, rs);
+        std::cout << "BAD TRAFFIC DAY COUNT: " << ref_count << " != " << s_count
+                  << ", ref=" << (*services.begin()) << " vs " << s << "\n";
         return false;
       }
     }
@@ -310,7 +309,8 @@ struct rule_service_route_builder {
         });
   }
 
-  void print(std::ostream& out, RuleService const& rs) const {
+  void print(std::ostream& out, RuleService const& rs,
+             bool const print_active) const {
     auto const first_day =
         date::sys_days{std::chrono::duration_cast<date::days>(
             std::chrono::seconds{gb_.fbs_sched_->interval()->from()})};
@@ -348,17 +348,20 @@ struct rule_service_route_builder {
     };
 
     auto const print_service = [&](Service const* s) {
-      auto const& interval = service_intervals_.at(s);
-
       out << "[" << s << ", first=" << format_time(s->times()->Get(1))
-          << ", last=" << format_time(s->times()->Get(s->times()->size() - 2U))
-          << ", min="
-          << date::format("%F", first_day + date::days{interval.min_day_})
-          << ", max="
-          << date::format("%F", first_day + date::days{interval.max_day_});
-      out << ", active_traffic_days=";
-      print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()),
-                     interval.min_day_, interval.max_day_);
+          << ", last=" << format_time(s->times()->Get(s->times()->size() - 2U));
+      if (print_active) {
+        auto const iv_it = service_intervals_.find(s);
+        auto const iv =
+            iv_it == end(service_intervals_) ? interval{} : iv_it->second;
+        out << ", min="
+            << date::format("%F", first_day + date::days{iv.min_day_})
+            << ", max="
+            << date::format("%F", first_day + date::days{iv.max_day_});
+        out << ", active_traffic_days=";
+        print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()),
+                       iv.min_day_, iv.max_day_);
+      }
       out << ", traffic_days=";
       print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()));
       out << "]";
@@ -384,6 +387,14 @@ struct rule_service_route_builder {
 
   std::map<Service const*, interval> calculate_first_and_last_day(
       RuleService const& rs) {
+    std::cout << "\n\n";
+    try {
+      utl::verify(verify(rs), "bad service");
+    } catch (...) {
+      print(std::cout, rs, false);
+      throw;
+    }
+
     // Create mapping from service -> "rules that contain the service".
     std::map<Service const*, std::vector<Rule const*>> service_rules;
     for (auto const& r : *rs.rules()) {
