@@ -28,10 +28,12 @@ void rule_node::resolve_services(
     auto const s1_traffic_days = active_traffic_days >> s1_traffic_days_offset;
     auto const s2_traffic_days =
         active_traffic_days >> rule_.s2_traffic_days_offset_;
-    sr_resolvents.emplace_back(
-        rule_,  //
-        resolve(s1_traffic_days, s1_->service_, s_resolvents),
-        resolve(s2_traffic_days, s2_->service_, s_resolvents));
+    if (s1_traffic_days.any() && s2_traffic_days.any()) {
+      sr_resolvents.emplace_back(
+          rule_,  //
+          resolve(s1_traffic_days, s1_->service_, s_resolvents),
+          resolve(s2_traffic_days, s2_->service_, s_resolvents));
+    }
   }
 }
 
