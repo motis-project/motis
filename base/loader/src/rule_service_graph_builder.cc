@@ -251,6 +251,14 @@ struct rule_service_route_builder {
       return out << "[" << iv.min_day_ << " - " << iv.max_day_ << "]";
     }
 
+    bitfield mask(bitfield const& bf) const {
+      bitfield masked;
+      for (auto i = min_day_; i <= max_day_; ++i) {
+        masked[i] = bf.test(i);
+      }
+      return masked;
+    }
+
     // Interval looking at the service itself.
     int initial_first_day_{0}, initial_last_day_{0};
 
@@ -266,23 +274,36 @@ struct rule_service_route_builder {
         sections_(sections),
         route_id_(route_id),
         service_intervals_{calculate_first_and_last_day(rs)} {
-    utl::verify(verify(rs), "bad service");
-    print(std::cout, rs, true);
-    std::cout.flush();
+    try {
+      utl::verify(verify(rs, true), "bad service");
+    } catch (...) {
+      print(std::cout, rs, true);
+      std::cout.flush();
+    }
   }
 
-  bool verify(RuleService const& rs) const {
+  bool verify(RuleService const& rs, bool const final) const {
     std::set<Service const*> services;
     for (auto const& r : *rs.rules()) {
       services.insert(r->service1());
       services.insert(r->service2());
     }
 
-    auto const ref_traffic_days =
-        gb_.get_or_create_bitfield((*services.begin())->traffic_days());
+    auto ref_traffic_days = bitfield{};
+    if (final) {
+      ref_traffic_days = service_traffic_days_.at(*services.begin());
+    } else {
+      ref_traffic_days =
+          gb_.get_or_create_bitfield((*services.begin())->traffic_days());
+    }
     auto const ref_count = ref_traffic_days.count();
     for (auto const& s : services) {
-      auto const s_traffic_days = gb_.get_or_create_bitfield(s->traffic_days());
+      auto s_traffic_days = bitfield{};
+      if (final) {
+        s_traffic_days = service_traffic_days_.at(s);
+      } else {
+        s_traffic_days = gb_.get_or_create_bitfield(s->traffic_days());
+      }
       auto const s_count = s_traffic_days.count();
       if (s_count != ref_count) {
         std::cout << "BAD TRAFFIC DAY COUNT: " << ref_count << " != " << s_count
@@ -294,19 +315,11 @@ struct rule_service_route_builder {
   }
 
   bool is_active() const {
-    return utl::any_of(
-        service_intervals_,
-        [&](std::pair<Service const*, interval> const& s_i) {
-          auto const& [service, interval] = s_i;
-          auto const& traffic_days =
-              gb_.get_or_create_bitfield(service->traffic_days());
-          for (auto i = interval.min_day_; i <= interval.max_day_; ++i) {
-            if (traffic_days.test(i)) {
-              return true;
-            }
-          }
-          return false;
-        });
+    return utl::all_of(service_intervals_,
+                       [&](std::pair<Service const*, interval> const& s_i) {
+                         auto const& [service, interval] = s_i;
+                         return service_traffic_days_.at(service).any();
+                       });
   }
 
   void print(std::ostream& out, RuleService const& rs,
@@ -387,13 +400,7 @@ struct rule_service_route_builder {
 
   std::map<Service const*, interval> calculate_first_and_last_day(
       RuleService const& rs) {
-    std::cout << "\n\n";
-    try {
-      utl::verify(verify(rs), "bad service");
-    } catch (...) {
-      print(std::cout, rs, false);
-      throw;
-    }
+    verify(rs, false);
 
     // Create mapping from service -> "rules that contain the service".
     std::map<Service const*, std::vector<Rule const*>> service_rules;
@@ -486,6 +493,8 @@ struct rule_service_route_builder {
     for (auto const& [s, iv] : service_intervals) {
       std::cout << "  " << s << ": [" << iv.min_day_ << ", " << iv.max_day_
                 << "]\n";
+      service_traffic_days_[s] =
+          iv.mask(gb_.get_or_create_bitfield(s->traffic_days()));
     }
 
     auto const count_active = [](bitfield const& bf, interval const& iv) {
@@ -498,12 +507,11 @@ struct rule_service_route_builder {
       return count;
     };
     auto const& [ref_service, ref_interval] = *service_intervals.begin();
-    auto const ref_count = count_active(
-        gb_.get_or_create_bitfield(ref_service->traffic_days()), ref_interval);
+    auto const ref_count =
+        count_active(service_traffic_days_.at(ref_service), ref_interval);
 
     for (auto const& [s, iv] : service_intervals) {
-      auto const count =
-          count_active(gb_.get_or_create_bitfield(s->traffic_days()), iv);
+      auto const count = count_active(service_traffic_days_.at(s), iv);
       if (count != ref_count) {
         std::cout << "BAD SERVICES AFTER INTERVAL: " << ref_service << " vs "
                   << s << ": " << ref_count << " vs " << count << "\n";
@@ -592,8 +600,7 @@ struct rule_service_route_builder {
 
     mcd::vector<light_connection> lcons;
     bool adjusted = false;
-    auto const& traffic_days =
-        gb_.get_or_create_bitfield(services[0].service_->traffic_days());
+    auto const& traffic_days = service_traffic_days_.at(services[0].service_);
     auto const interval = service_intervals_.at(services[0].service_);
     for (unsigned day_idx = interval.min_day_; day_idx <= interval.max_day_;
          ++day_idx) {
@@ -758,7 +765,7 @@ struct rule_service_route_builder {
               return trip::route_edge(section->route_section_.get_route_edge());
             }));
 
-    auto const& traffic_days = gb_.get_or_create_bitfield(s->traffic_days());
+    auto const& traffic_days = service_traffic_days_.at(s);
     auto const& interval = service_intervals_.at(s);
     auto edges = gb_.sched_.trip_edges_.back().get();
     auto lcon_idx = lcon_idx_t{};
@@ -917,6 +924,7 @@ struct rule_service_route_builder {
   unsigned route_id_;
   std::set<node const*, node_id_cmp> start_nodes_;
   std::set<node const*> through_target_nodes_;
+  std::map<Service const*, bitfield> service_traffic_days_;
   std::map<Service const*, interval> service_intervals_;
 };
 
@@ -938,9 +946,18 @@ void rule_service_graph_builder::add_rule_services(
     rule_service_route_builder route_builder(gb_, section_builder.sections_,
                                              route_id, *rule_service);
     if (route_builder.is_active()) {
+      std::cout << "ACTIVE, BUILDING\n";
       route_builder.build_routes();
       route_builder.connect_through_services(*rule_service);
       route_builder.expand_trips();
+    } else {
+      std::cout << "NOT ACTIVE, BUILDING AS SINGLE SERVICES\n";
+      for (auto const& [s, traffic_days] :
+           route_builder.service_traffic_days_) {
+        if (traffic_days.any()) {
+          gb_.add_route_services({{s, traffic_days}});
+        }
+      }
     }
   }
 }

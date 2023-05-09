@@ -9,13 +9,14 @@ namespace motis::loader::hrd {
 std::optional<hrd_service*> resolve(
     bitfield const& upper_traffic_days, hrd_service* origin,
     std::set<service_resolvent>& resolved_services) {
-  auto const service_traffic_days = origin->traffic_days_ & upper_traffic_days;
-  if (service_traffic_days.none()) {
-    return std::nullopt;
-  }
-
   auto resolved_it = resolved_services.find(service_resolvent(origin));
   if (resolved_it == end(resolved_services)) {
+    auto const service_traffic_days =
+        origin->traffic_days_ & upper_traffic_days;
+    if (service_traffic_days.none()) {
+      return std::nullopt;
+    }
+
     auto resolved = std::make_unique<hrd_service>(*origin);
     resolved->traffic_days_ &= upper_traffic_days;
     origin->traffic_days_ &= ~upper_traffic_days;
@@ -53,21 +54,17 @@ void rule_node::resolve_services(
     return;
   }
 
-  if (rule_.traffic_days_.any() && s1_traffic_days.any() &&
-      s2_traffic_days.any()) {
-    sr_resolvents.emplace_back(rule_, *s1, *s2);
+  sr_resolvents.emplace_back(rule_, *s1, *s2);
 
-    std::cout << "RESOLVE: {";
-    std::cout << "\n\ttraffic_days=" << print_ids{rule_.traffic_days_};
-    std::cout << "\n\tactive_traffic_days=" << print_ids{active_traffic_days};
-    std::cout << "\n\ts1_traffic_day_offset=" << rule_.s1_traffic_days_offset_
-              << " + day_switch=" << std::boolalpha << rule_.day_switch_
-              << " => " << s1_traffic_days_offset;
-    std::cout << "\n\ts1_traffic_day_offset=" << rule_.s2_traffic_days_offset_
-              << "\n\ts1_traffic_days=" << print_ids{s1_traffic_days}
-              << "\n\ts2_traffic_days=" << print_ids{s2_traffic_days}
-              << "\n}\n";
-  }
+  std::cout << "RESOLVE: {";
+  std::cout << "\n\ttraffic_days=" << print_ids{rule_.traffic_days_};
+  std::cout << "\n\tactive_traffic_days=" << print_ids{active_traffic_days};
+  std::cout << "\n\ts1_traffic_day_offset=" << rule_.s1_traffic_days_offset_
+            << " + day_switch=" << std::boolalpha << rule_.day_switch_ << " => "
+            << s1_traffic_days_offset;
+  std::cout << "\n\ts1_traffic_day_offset=" << rule_.s2_traffic_days_offset_
+            << "\n\ts1_traffic_days=" << print_ids{s1_traffic_days}
+            << "\n\ts2_traffic_days=" << print_ids{s2_traffic_days} << "\n}\n";
 }
 
 service_node::service_node(hrd_service* s) : service_(s) {}

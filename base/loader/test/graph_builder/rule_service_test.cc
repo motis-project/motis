@@ -8,6 +8,8 @@
 #include "motis/core/access/trip_stop.h"
 #include "motis/loader/timezone_util.h"
 
+#include "motis/core/debug/route_graph.h"
+#include "motis/core/journey/print_trip.h"
 #include "./graph_builder_test.h"
 
 using namespace motis::access;
@@ -168,6 +170,48 @@ TEST_F(service_rules_graph_builder_test_virt, trip_1) {
 TEST_F(service_rules_graph_builder_test_virt, trip_2) {
   auto trp = get_trip(*sched_, "0000002", 3, unix_time(210, 0, 60), "0000011",
                       unix_time(800, 0, 120), "");
+
+  auto const& s = *sched_;
+
+  std::cout << motis::debug::route_graph{s,
+                                         ev_key{trp->edges_->at(0), 0,
+                                                event_type::DEP},
+                                         true}
+            << "\n";
+  for (auto const& t : s.trips_) {
+    ::motis::print_trip(std::cout, s, t.second, false);
+    //    print_trip(t.second);
+  }
+
+  std::cout << "digraph {\n";
+  for (auto const& sn : s.station_nodes_) {
+    if (sn->child_nodes_.empty()) {
+      continue;
+    }
+    std::cout << "  subgraph cluster_" << sn->id_ << " {\n";
+    std::cout << "    label=\"" << s.stations_[sn->id_]->name_ << "\\n"
+              << s.stations_[sn->id_]->eva_nr_ << "\"\n    ";
+    sn->for_each_route_node(
+        [&](node const* n) { std::cout << n->id_ << "; "; });
+    std::cout << "\n  }\n";
+  }
+  for (auto const& sn : s.station_nodes_) {
+    sn->for_each_route_node([&](node const* n) {
+      for (auto const& e : n->edges_) {
+        if (e.empty() && e.type() != edge::THROUGH_EDGE) {
+          continue;
+        }
+        std::cout << "  " << e.from_->id_ << " -> " << e.to_->id_;
+        if (e.type() == edge::THROUGH_EDGE) {
+          std::cout << " [color=red,penwidth=3.0];";
+        } else {
+          std::cout << " [label=\"" << e.m_.route_edge_.conns_.size() << "\"];";
+        }
+        std::cout << "\n";
+      }
+    });
+  }
+  std::cout << "}\n";
 
   auto sections = access::sections(trp);
   auto sec2 = *std::next(begin(sections));
