@@ -31,7 +31,6 @@
 #include "motis/loader/classes.h"
 #include "motis/loader/filter/local_stations.h"
 #include "motis/loader/interval_util.h"
-#include "motis/loader/rule_route_builder.h"
 #include "motis/loader/rule_service_graph_builder.h"
 #include "motis/loader/util.h"
 #include "motis/loader/wzr_loader.h"
