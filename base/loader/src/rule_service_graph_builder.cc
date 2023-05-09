@@ -370,8 +370,9 @@ struct rule_service_route_builder {
                         static_cast<int>(r->day_offset2()) +
                         (r->day_switch() ? 1 : 0);
 
-          auto const new_iv = interval{.min_day_ = iv.min_day_ - delta_offset,
-                                       .max_day_ = iv.max_day_ - delta_offset};
+          auto new_iv = interval{};
+          new_iv.min_day_ = iv.min_day_ - delta_offset;
+          new_iv.max_day_ = iv.max_day_ - delta_offset;
 
           if (item.service_ == r->service1()) {
             if (visited.find(r->service2()) == end(visited)) {
