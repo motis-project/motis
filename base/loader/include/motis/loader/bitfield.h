@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 #include <bitset>
+#include <ostream>
 
 #include "utl/parser/cstr.h"
 
@@ -10,6 +11,32 @@ namespace motis::loader {
 
 constexpr int BIT_COUNT = 2048;
 using bitfield = std::bitset<BIT_COUNT>;
+
+struct print_ids {
+  bitfield bf_;
+};
+
+inline std::ostream& operator<<(std::ostream& out, print_ids const& p) {
+  auto const& bf = p.bf_;
+  if (bf.all()) {
+    return out << "ALL";
+  } else if (bf.none()) {
+    return out << "NONE";
+  } else {
+    auto first = true;
+    out << "[";
+    for (auto i = 0U; i != BIT_COUNT; ++i) {
+      if (bf.test(i)) {
+        if (!first) {
+          out << ", ";
+        }
+        first = false;
+        out << i;
+      }
+    }
+    return out << "]";
+  }
+}
 
 template <std::size_t BitSetSize>
 struct bitset_comparator {

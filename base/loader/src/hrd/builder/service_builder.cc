@@ -102,6 +102,7 @@ Offset<Service> service_builder::create_service(
     category_builder& cb, provider_builder& pb, line_builder& lb,
     attribute_builder& ab, bitfield_builder& bb, direction_builder& db,
     FlatBufferBuilder& fbb, bool is_rule_participant) {
+  std::cout << "CREATE SERVICE: " << s << "\n";
   fbs_services_.push_back(CreateService(
       fbb, rb.get_or_create_route(s.stops_, sb, fbb),
       bb.get_or_create_bitfield(s.traffic_days_, fbb),

@@ -142,6 +142,11 @@ hrd_service::hrd_service(specification const& spec, config const& c)
   verify_service();
 }
 
+std::ostream& operator<<(std::ostream& out, hrd_service const& s) {
+  return out << "[ptr=" << &s << ", train_nr=" << s.initial_train_num_
+             << ", traffic_days=" << print_ids{s.traffic_days_} << "]";
+}
+
 void hrd_service::verify_service() {
   int section_index = 0;
   utl::verify(stops_.size() >= 2, "service with less than 2 stops");

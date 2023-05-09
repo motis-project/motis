@@ -72,6 +72,8 @@ struct hrd_service {
 
   hrd_service(specification const& spec, config const&);
 
+  friend std::ostream& operator<<(std::ostream&, hrd_service const&);
+
   void verify_service();
 
   std::vector<std::pair<int, uint64_t>> get_ids() const {

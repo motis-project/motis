@@ -21,6 +21,7 @@ void rule_node::resolve_services(
     std::set<service_resolvent>& s_resolvents,
     std::vector<service_rule_resolvent>& sr_resolvents) {
   if (traffic_days_.any()) {
+
     auto const active_traffic_days = traffic_days_ & upper_traffic_days;
     traffic_days_ &= ~active_traffic_days;
     auto const s1_traffic_days_offset =
@@ -28,10 +29,24 @@ void rule_node::resolve_services(
     auto const s1_traffic_days = active_traffic_days >> s1_traffic_days_offset;
     auto const s2_traffic_days =
         active_traffic_days >> rule_.s2_traffic_days_offset_;
-    sr_resolvents.emplace_back(
-        rule_,  //
-        resolve(s1_traffic_days, s1_->service_, s_resolvents),
-        resolve(s2_traffic_days, s2_->service_, s_resolvents));
+
+    if (traffic_days_.any() && s1_traffic_days.any() && s2_traffic_days.any()) {
+      sr_resolvents.emplace_back(
+          rule_,  //
+          resolve(s1_traffic_days, s1_->service_, s_resolvents),
+          resolve(s2_traffic_days, s2_->service_, s_resolvents));
+    }
+
+    std::cout << "RESOLVE: {";
+    std::cout << "\n\ttraffic_days=" << print_ids{traffic_days_};
+    std::cout << "\n\tactive_traffic_days=" << print_ids{active_traffic_days};
+    std::cout << "\n\ts1_traffic_day_offset=" << rule_.s1_traffic_days_offset_
+              << " + day_switch=" << std::boolalpha << rule_.day_switch_
+              << " => " << s1_traffic_days_offset << "\n";
+    std::cout << "\n\ts1_traffic_day_offset=" << rule_.s2_traffic_days_offset_
+              << "\n\ts1_traffic_days=" << print_ids{s1_traffic_days}
+              << "\n\ts2_traffic_days=" << print_ids{s2_traffic_days}
+              << "\n}\n";
   }
 }
 
@@ -97,6 +112,22 @@ std::pair<std::set<rule_node*>, bitfield> rule_node::max_component() {
   }
 
   return max;
+}
+
+std::ostream& operator<<(std::ostream& out, rule_node const& rn) {
+  return out << "{\n\t"
+             << EnumNameRuleType(static_cast<RuleType>(rn.rule_.type_))
+             << ", traffic_days=" << print_ids{rn.traffic_days_}
+             << "\n\trule_info={"
+             << "\n\t\toffset_s1=" << rn.rule_.s1_traffic_days_offset_
+             << "\n\t\toffset_s2=" << rn.rule_.s2_traffic_days_offset_
+             << "\n\t\tday_switch=" << std::boolalpha << rn.rule_.day_switch_
+             << "\n\t\tstation1=" << rn.rule_.eva_num_1_
+             << "\n\t\tstation2=" << rn.rule_.eva_num_2_
+             << "\n\t\ttraffic_days=" << print_ids{rn.rule_.traffic_days_}
+             << "\n\t}"
+             << ",\n\ts1=" << (*rn.s1_->service_)
+             << ",\n\ts2=" << (*rn.s2_->service_) << "\n}";
 }
 
 }  // namespace motis::loader::hrd

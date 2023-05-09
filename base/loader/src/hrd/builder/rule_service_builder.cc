@@ -166,6 +166,13 @@ void rule_service_builder::resolve_rule_services() {
   std::pair<std::set<rule_node*>, bitfield> component;
   for (auto const& rn : rg.rule_nodes_) {
     while (!(component = rn->max_component()).first.empty()) {
+
+      std::cout << "COMPONENT: " << print_ids{component.second} << "\n";
+      for (auto const& rn : component.first) {
+        std::cout << *rn << "\n";
+      }
+      std::cout << "END COMPONENT\n\n";
+
       add_rule_service(component, rule_services_);
     }
   }
@@ -187,6 +194,20 @@ void create_rule_service(
   std::vector<Offset<Rule>> fbb_rules;
   fbb_rules.reserve(rs.rules_.size());
   for (auto const& r : rs.rules_) {
+    std::cout << "CREATE RULE: \n";
+    std::cout << "{\n\t"
+              << EnumNameRuleType(static_cast<RuleType>(r.rule_info_.type_))
+              << ", traffic_days=" << print_ids{r.rule_info_.traffic_days_}
+              << "\n\trule_info={"
+              << "\n\t\toffset_s1=" << r.rule_info_.s1_traffic_days_offset_
+              << "\n\t\toffset_s2=" << r.rule_info_.s2_traffic_days_offset_
+              << "\n\t\tday_switch=" << std::boolalpha
+              << r.rule_info_.day_switch_
+              << "\n\t\tstation1=" << r.rule_info_.eva_num_1_
+              << "\n\t\tstation2=" << r.rule_info_.eva_num_2_
+              << "\n\t\ttraffic_days=" << print_ids{r.rule_info_.traffic_days_}
+              << "\n\t}"
+              << ",\n\ts1=" << (*r.s1_) << ",\n\ts2=" << (*r.s2_) << "\n}\n";
     fbb_rules.push_back(CreateRule(
         fbb, static_cast<RuleType>(r.rule_info_.type_), services.at(r.s1_),
         services.at(r.s2_),

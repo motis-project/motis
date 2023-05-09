@@ -30,9 +30,12 @@ struct rule_node : public node {
   rule_node(service_node*, service_node*, resolved_rule_info);
 
   std::pair<std::set<rule_node*>, bitfield> max_component();
+
   void resolve_services(bitfield const& upper_traffic_days,
                         std::set<service_resolvent>& s_resolvents,
                         std::vector<service_rule_resolvent>& sr_resolvents);
+
+  friend std::ostream& operator<<(std::ostream&, rule_node const&);
 
   service_node *s1_, *s2_;
   resolved_rule_info rule_;
