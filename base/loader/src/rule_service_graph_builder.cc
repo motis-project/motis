@@ -24,19 +24,6 @@ using namespace motis::logging;
 
 using neighbor = std::pair<Service const*, Rule const*>;
 
-std::ostream& operator<<(std::ostream& out, Service const* s) {
-  auto const line_id = s->sections()->Get(0)->line_id();
-  out << "[train_nr=" << s->initial_train_nr();
-  if (line_id != nullptr) {
-    out << ", line_id=\"" << line_id->view() << "\"";
-  }
-  if (s->trip_id() != nullptr) {
-    out << ", trip_id=\"" << s->trip_id()->view() << "\"";
-  }
-  out << "]";
-  return out;
-}
-
 struct service_section {
   route_section route_section_;
   mcd::vector<participant> participants_;
