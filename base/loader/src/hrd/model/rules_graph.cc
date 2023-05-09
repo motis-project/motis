@@ -1,17 +1,28 @@
 #include "motis/loader/hrd/model/rules_graph.h"
+
+#include <optional>
+
 #include "motis/schedule-format/RuleService_generated.h"
 
 namespace motis::loader::hrd {
 
-hrd_service* resolve(bitfield const& upper_traffic_days, hrd_service* origin,
-                     std::set<service_resolvent>& resolved_services) {
+std::optional<hrd_service*> resolve(
+    bitfield const& upper_traffic_days, hrd_service* origin,
+    std::set<service_resolvent>& resolved_services) {
+  auto const service_traffic_days = origin->traffic_days_ & upper_traffic_days;
+  if (service_traffic_days.none()) {
+    return std::nullopt;
+  }
+
   auto resolved_it = resolved_services.find(service_resolvent(origin));
   if (resolved_it == end(resolved_services)) {
     auto resolved = std::make_unique<hrd_service>(*origin);
     resolved->traffic_days_ &= upper_traffic_days;
     origin->traffic_days_ &= ~upper_traffic_days;
-    std::tie(resolved_it, std::ignore) =
-        resolved_services.emplace(std::move(resolved), origin);
+    if (resolved->traffic_days_.any()) {
+      std::tie(resolved_it, std::ignore) =
+          resolved_services.emplace(std::move(resolved), origin);
+    }
   }
   return resolved_it->service_.get();
 }
@@ -20,29 +31,38 @@ void rule_node::resolve_services(
     bitfield const& upper_traffic_days,
     std::set<service_resolvent>& s_resolvents,
     std::vector<service_rule_resolvent>& sr_resolvents) {
-  if (traffic_days_.any()) {
+  if (traffic_days_.none()) {
+    return;
+  }
 
-    auto const active_traffic_days = traffic_days_ & upper_traffic_days;
-    traffic_days_ &= ~active_traffic_days;
-    auto const s1_traffic_days_offset =
-        rule_.s1_traffic_days_offset_ + (rule_.day_switch_ ? 1 : 0);
-    auto const s1_traffic_days = active_traffic_days >> s1_traffic_days_offset;
-    auto const s2_traffic_days =
-        active_traffic_days >> rule_.s2_traffic_days_offset_;
+  auto const active_traffic_days = traffic_days_ & upper_traffic_days;
+  traffic_days_ &= ~active_traffic_days;
+  auto const s1_traffic_days_offset =
+      rule_.s1_traffic_days_offset_ + (rule_.day_switch_ ? 1 : 0);
+  auto const s1_traffic_days = active_traffic_days >> s1_traffic_days_offset;
+  auto const s2_traffic_days =
+      active_traffic_days >> rule_.s2_traffic_days_offset_;
 
-    if (traffic_days_.any() && s1_traffic_days.any() && s2_traffic_days.any()) {
-      sr_resolvents.emplace_back(
-          rule_,  //
-          resolve(s1_traffic_days, s1_->service_, s_resolvents),
-          resolve(s2_traffic_days, s2_->service_, s_resolvents));
-    }
+  auto const s1 = resolve(s1_traffic_days, s1_->service_, s_resolvents);
+  if (!s1.has_value()) {
+    return;
+  }
+
+  auto const s2 = resolve(s2_traffic_days, s2_->service_, s_resolvents);
+  if (!s2.has_value()) {
+    return;
+  }
+
+  if (rule_.traffic_days_.any() && s1_traffic_days.any() &&
+      s2_traffic_days.any()) {
+    sr_resolvents.emplace_back(rule_, *s1, *s2);
 
     std::cout << "RESOLVE: {";
-    std::cout << "\n\ttraffic_days=" << print_ids{traffic_days_};
+    std::cout << "\n\ttraffic_days=" << print_ids{rule_.traffic_days_};
     std::cout << "\n\tactive_traffic_days=" << print_ids{active_traffic_days};
     std::cout << "\n\ts1_traffic_day_offset=" << rule_.s1_traffic_days_offset_
               << " + day_switch=" << std::boolalpha << rule_.day_switch_
-              << " => " << s1_traffic_days_offset << "\n";
+              << " => " << s1_traffic_days_offset;
     std::cout << "\n\ts1_traffic_day_offset=" << rule_.s2_traffic_days_offset_
               << "\n\ts1_traffic_days=" << print_ids{s1_traffic_days}
               << "\n\ts2_traffic_days=" << print_ids{s2_traffic_days}
