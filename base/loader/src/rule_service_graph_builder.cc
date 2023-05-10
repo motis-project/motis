@@ -296,6 +296,82 @@ struct rule_service_route_builder {
     return true;
   }
 
+  void print(std::ostream& out, RuleService const& rs,
+             bool const print_active) const {
+    auto const first_day =
+        date::sys_days{std::chrono::duration_cast<date::days>(
+            std::chrono::seconds{gb_.fbs_sched_->interval()->from()})};
+    auto const last_day = date::sys_days{std::chrono::duration_cast<date::days>(
+        std::chrono::seconds{gb_.fbs_sched_->interval()->to()})};
+    auto const sched_first_day = first_day + date::days{gb_.first_day_};
+    auto const sched_last_day = first_day + date::days{gb_.last_day_};
+
+    out << "FIRST: " << date::format("%F", first_day) << ", "
+        << date::format("%F", sched_first_day) << "\n";
+    out << "LAST: " << date::format("%F", last_day) << ", "
+        << date::format("%F", sched_last_day) << "\n";
+
+    auto const print_bitfield = [&](bitfield const& b, int const from = 0,
+                                    int const to = BIT_COUNT) {
+      if (!b.any()) {
+        out << "EMPTY";
+        return;
+      }
+
+      auto day = first_day + from * date::days{1};
+      auto first = true;
+      out << "(";
+      for (auto i = from; i <= std::min(to, BIT_COUNT - 1);
+           ++i, day += date::days{1}) {
+        if (b.test(i)) {
+          if (!first) {
+            out << " ";
+          }
+          first = false;
+          out << date::format("%F", day);
+        }
+      }
+      out << ")";
+    };
+
+    auto const print_service = [&](Service const* s) {
+      out << "[" << s << ", first=" << format_time(s->times()->Get(1))
+          << ", last=" << format_time(s->times()->Get(s->times()->size() - 2U));
+      if (print_active) {
+        auto const iv_it = service_intervals_.find(s);
+        auto const iv =
+            iv_it == end(service_intervals_) ? interval{} : iv_it->second;
+        out << ", min="
+            << date::format("%F", first_day + date::days{iv.min_day_})
+            << ", max="
+            << date::format("%F", first_day + date::days{iv.max_day_});
+        out << ", active_traffic_days=";
+        print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()),
+                       iv.min_day_, iv.max_day_);
+      }
+      out << ", traffic_days=";
+      print_bitfield(gb_.get_or_create_bitfield(s->traffic_days()));
+      out << "]";
+    };
+
+    out << "RULE ROUTE:\n";
+    for (auto const& r : *rs.rules()) {
+      out << "[\n"
+          << "\t" << EnumNameRuleType(r->type()) << "\n"
+          << "\tday_offset1=" << r->day_offset1() << "\n"
+          << "\tday_offset2=" << r->day_offset2() << "\n"
+          << "\tday_switch=" << std::boolalpha << r->day_switch() << "\n"
+          << "\ts1=";
+      print_service(r->service1());
+      out << "\n"
+          << "\ts2=";
+      print_service(r->service2());
+      out << "\n"
+          << "]\n";
+    }
+    out << "END RULE ROUTE\n";
+  }
+
   bool is_active() const {
     return utl::all_of(service_intervals_,
                        [&](std::pair<Service const*, interval> const& s_i) {
@@ -707,11 +783,12 @@ struct rule_service_route_builder {
         return;
       }
     }
-    utl::verify(std::find_if(begin(s1_node->edges_), end(s1_node->edges_),
-                             [](edge const& e) {
-                               return e.type() == edge::THROUGH_EDGE;
-                             }) == end(s1_node->edges_),
-                "multiple outgoing through edges");
+    if (std::find_if(begin(s1_node->edges_), end(s1_node->edges_),
+                     [](edge const& e) {
+                       return e.type() == edge::THROUGH_EDGE;
+                     }) != end(s1_node->edges_)) {
+      LOG(error) << "multiple outgoing through edges";
+    }
     s1_node->edges_.push_back(make_through_edge(s1_node, s2_node));
     through_target_nodes_.insert(s2_node);
   }
@@ -827,10 +904,15 @@ void rule_service_graph_builder::add_rule_services(
 
     rule_service_route_builder route_builder(gb_, section_builder.sections_,
                                              route_id, *rule_service);
-    if (route_builder.is_active()) {
-      route_builder.build_routes();
-      route_builder.connect_through_services(*rule_service);
-      route_builder.expand_trips();
+    if (route_builder.is_active() &&
+        route_builder.verify(*rule_service, true)) {
+      try {
+        route_builder.build_routes();
+        route_builder.connect_through_services(*rule_service);
+        route_builder.expand_trips();
+      } catch (...) {
+        route_builder.print(std::cout, *rule_service, true);
+      }
     } else {
       for (auto const& [s, traffic_days] :
            route_builder.service_traffic_days_) {
