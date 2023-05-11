@@ -117,7 +117,7 @@ void rt::init(motis::module::registry& reg) {
                   {::motis::module::kScheduleReadAccess});
 
   reg.register_op(
-      "/rt/trip_history",
+      "/rt/message_history",
       [this](msg_ptr const& msg) {
         auto const req = motis_content(RtMessageHistoryRequest, msg);
         auto const schedule_res_id = get_schedule_res_id(req);
