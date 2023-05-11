@@ -622,7 +622,26 @@
   summary: /rt/single
   tags:
     - internal
-  input: motis.ris.Message
+  input: motis.ris.RISMessage
   output:
     type: motis.MotisSuccess
+    description: Response
+
+/rt/message_history:
+  summary: /rt/message_history
+  description: |
+    Internal debugging API to retrieve real-time updates that have been
+    received and processed for a trip.
+
+    The config option `rt.history = 1` must be set to enable the history
+    feature.
+
+    While the API supports different schedules, if a schedule was forked,
+    only updates applied to the schedule after the fork operation are
+    returned.
+  tags:
+    - internal
+  input: motis.rt.RtMessageHistoryRequest
+  output:
+    type: motis.rt.RtMessageHistoryResponse
     description: Response
