@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <iterator>
 #include <tuple>
 
@@ -103,6 +104,10 @@ struct sections {
   static iterator begin(trip const* t) { return {t, 0}; }
   static iterator end(trip const* t) {
     return {t, static_cast<int>(t->edges_->size())};
+  }
+
+  std::uint32_t size() const {
+    return static_cast<std::uint32_t>(t_->edges_->size());
   }
 
   trip const* t_;

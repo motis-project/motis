@@ -243,12 +243,9 @@ struct sections_with_load {
 
   sections_with_load(
       schedule const& sched, universe const& uv, trip const* trp,
+      trip_data_index const tdi,
       capacity_info_source const cs = capacity_info_source::TRIP_OR_LOOKUP)
-      : sched_{sched},
-        uv_{uv},
-        trip_{trp},
-        tdi_{uv.trip_data_.find_index(trp->trip_idx_)},
-        cs_{cs} {
+      : sched_{sched}, uv_{uv}, trip_{trp}, tdi_{tdi}, cs_{cs} {
     if (tdi_ != INVALID_TRIP_DATA_INDEX) {
       auto const td_edges = uv.trip_data_.edges(tdi_);
       utl::verify(trip_->edges_->size() == td_edges.size(),
@@ -256,6 +253,12 @@ struct sections_with_load {
                   trip_->edges_->size(), td_edges.size());
     }
   }
+
+  sections_with_load(
+      schedule const& sched, universe const& uv, trip const* trp,
+      capacity_info_source const cs = capacity_info_source::TRIP_OR_LOOKUP)
+      : sections_with_load{sched, uv, trp,
+                           uv.trip_data_.find_index(trp->trip_idx_), cs} {}
 
   inline std::size_t size() const { return trip_->edges_->size(); }
   inline bool empty() const { return trip_->edges_->empty(); }
