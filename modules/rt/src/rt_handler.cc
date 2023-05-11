@@ -57,17 +57,17 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
 }
 
 msg_ptr rt_handler::single(msg_ptr const& msg) {
-  using ris::Message;
-  update(motis_content(Message, msg));
+  using ris::RISMessage;
+  update(motis_content(RISMessage, msg));
   return flush(nullptr);
 }
 
-void rt_handler::update(motis::ris::Message const* m) {
+void rt_handler::update(motis::ris::RISMessage const* m) {
   stats_.count_message(m->content_type());
   auto c = m->content();
 
   switch (m->content_type()) {
-    case ris::MessageUnion_DelayMessage: {
+    case ris::RISMessageUnion_DelayMessage: {
       auto const msg = reinterpret_cast<ris::DelayMessage const*>(c);
       stats_.total_updates_ += msg->events()->size();
 
@@ -101,7 +101,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
-    case ris::MessageUnion_AdditionMessage: {
+    case ris::RISMessageUnion_AdditionMessage: {
       auto result = additional_service_builder(stats_, sched_, update_builder_)
                         .build_additional_train(
                             reinterpret_cast<ris::AdditionMessage const*>(c));
@@ -109,7 +109,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
-    case ris::MessageUnion_CancelMessage: {
+    case ris::RISMessageUnion_CancelMessage: {
       auto const msg = reinterpret_cast<ris::CancelMessage const*>(c);
 
       propagate();
@@ -132,7 +132,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
-    case ris::MessageUnion_RerouteMessage: {
+    case ris::RISMessageUnion_RerouteMessage: {
       auto const msg = reinterpret_cast<ris::RerouteMessage const*>(c);
 
       propagate();
@@ -158,7 +158,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
-    case ris::MessageUnion_TrackMessage: {
+    case ris::RISMessageUnion_TrackMessage: {
       auto const msg = reinterpret_cast<ris::TrackMessage const*>(c);
 
       stats_.total_evs_ += msg->events()->size();
@@ -221,7 +221,7 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
-    case ris::MessageUnion_FreeTextMessage: {
+    case ris::RISMessageUnion_FreeTextMessage: {
       auto const msg = reinterpret_cast<ris::FreeTextMessage const*>(c);
       stats_.total_evs_ += msg->events()->size();
       auto const [trp, resolved] = resolve_events_and_trip(
@@ -244,14 +244,14 @@ void rt_handler::update(motis::ris::Message const* m) {
       break;
     }
 
-    case ris::MessageUnion_FullTripMessage: {
+    case ris::RISMessageUnion_FullTripMessage: {
       handle_full_trip_msg(stats_, sched_, update_builder_, propagator_,
                            reinterpret_cast<ris::FullTripMessage const*>(c),
                            cancelled_delays_);
       break;
     }
 
-    case ris::MessageUnion_TripFormationMessage: {
+    case ris::RISMessageUnion_TripFormationMessage: {
       handle_trip_formation_msg(
           stats_, sched_, update_builder_,
           reinterpret_cast<ris::TripFormationMessage const*>(c));

@@ -166,7 +166,7 @@ table FullTripMessage {
 // Connection Envelope
 // ----------------------------------------------------------------------------
 
-union MessageUnion {
+union RISMessageUnion {
   DelayMessage,
   CancelMessage,
   AdditionMessage,
@@ -179,11 +179,11 @@ union MessageUnion {
   TripFormationMessage
 }
 
-table Message {
+table RISMessage {
   earliest:long;
   latest:long;
   timestamp:long;
-  content:MessageUnion;
+  content:RISMessageUnion;
 }
 
-root_type Message;
+root_type RISMessage;

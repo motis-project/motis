@@ -89,8 +89,8 @@ TEST(ris_free_text_message, free_text_test) {
   EXPECT_EQ(1444195800, message.earliest_);
   EXPECT_EQ(1444197420, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_FreeTextMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_FreeTextMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<FreeTextMessage const*>(outer_msg->content());
 
@@ -129,8 +129,8 @@ TEST(ris_free_text_message, free_text_test2) {
   EXPECT_EQ(1460277480, message.earliest_);
   EXPECT_EQ(1460288460, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_FreeTextMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_FreeTextMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<FreeTextMessage const*>(outer_msg->content());
 

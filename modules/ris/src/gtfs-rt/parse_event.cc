@@ -65,13 +65,13 @@ Offset<Event> create_event(message_context& ctx, evt const& event) {
       event.orig_sched_time_);
 }
 
-Offset<Message> create_delay_message(message_context& ctx,
-                                     Offset<IdEvent> const& id_event,
-                                     std::vector<evt> const& delay_evts,
-                                     DelayType delay) {
-  return CreateMessage(
+Offset<RISMessage> create_delay_message(message_context& ctx,
+                                        Offset<IdEvent> const& id_event,
+                                        std::vector<evt> const& delay_evts,
+                                        DelayType delay) {
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_DelayMessage,
+      RISMessageUnion_DelayMessage,
       CreateDelayMessage(ctx.b_, id_event, delay,
                          ctx.b_.CreateVector(utl::to_vec(
                              delay_evts,
@@ -84,39 +84,39 @@ Offset<Message> create_delay_message(message_context& ctx,
           .Union());
 }
 
-Offset<Message> create_reroute_msg(message_context& ctx,
-                                   Offset<IdEvent> const& id_event,
-                                   std::vector<evt> const& reroute_evts) {
+Offset<RISMessage> create_reroute_msg(message_context& ctx,
+                                      Offset<IdEvent> const& id_event,
+                                      std::vector<evt> const& reroute_evts) {
   std::vector<Offset<Event>> events;
   std::for_each(begin(reroute_evts), end(reroute_evts), [&](evt const& event) {
     events.emplace_back(create_event(ctx, event));
   });
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_RerouteMessage,
+      RISMessageUnion_RerouteMessage,
       CreateRerouteMessage(
           ctx.b_, id_event, ctx.b_.CreateVector(events),
           ctx.b_.CreateVector(std::vector<Offset<ReroutedEvent>>{}))
           .Union());
 }
 
-Offset<Message> create_cancel_msg(message_context& ctx,
-                                  Offset<IdEvent> const& id_event,
-                                  std::vector<evt> const& reroute_evts) {
+Offset<RISMessage> create_cancel_msg(message_context& ctx,
+                                     Offset<IdEvent> const& id_event,
+                                     std::vector<evt> const& reroute_evts) {
   std::vector<Offset<Event>> events;
   std::for_each(begin(reroute_evts), end(reroute_evts), [&](evt const& event) {
     events.emplace_back(create_event(ctx, event));
   });
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_CancelMessage,
+      RISMessageUnion_CancelMessage,
       CreateCancelMessage(ctx.b_, id_event, ctx.b_.CreateVector(events))
           .Union());
 }
 
-Offset<Message> create_additional_msg(message_context& ctx,
-                                      Offset<IdEvent> const& id_event,
-                                      std::vector<evt> const& additional_evts) {
+Offset<RISMessage> create_additional_msg(
+    message_context& ctx, Offset<IdEvent> const& id_event,
+    std::vector<evt> const& additional_evts) {
   std::vector<Offset<AdditionalEvent>> events;
   std::for_each(
       begin(additional_evts), end(additional_evts), [&](evt const& event) {
@@ -125,9 +125,9 @@ Offset<Message> create_additional_msg(message_context& ctx,
                                   ctx.b_.CreateString("Additional Service"),
                                   ctx.b_.CreateString(""), event.seq_no_));
       });
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_AdditionMessage,
+      RISMessageUnion_AdditionMessage,
       CreateAdditionMessage(ctx.b_, id_event, ctx.b_.CreateVector(events))
           .Union());
 }

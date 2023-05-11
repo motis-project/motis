@@ -245,7 +245,7 @@ union MsgContent {
   motis.ris.RISBatch                                                      = 077,
   motis.ris.UpdatedEvent                                                  = 078,
   motis.ris.Event                                                         = 079,
-  motis.ris.Message                                                       = 080,
+  motis.ris.RISMessage                                                    = 080,
   motis.ris.RISGTFSRTMapping                                              = 081,
   motis.ris.RISForwardTimeRequest                                         = 082,
   motis.ris.RISPurgeRequest                                               = 083,

@@ -39,7 +39,7 @@ private:
     motis::time schedule_time_;
   };
 
-  void update(motis::ris::Message const*);
+  void update(motis::ris::RISMessage const*);
   void propagate();
 
   schedule& sched_;
