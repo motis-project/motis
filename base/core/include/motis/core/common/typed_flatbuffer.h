@@ -1,5 +1,9 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+#include <utility>
+
 #include "flatbuffers/flatbuffers.h"
 
 namespace motis {
@@ -33,8 +37,15 @@ struct typed_flatbuffer {
       std::string_view s)
       : typed_flatbuffer(s.size(), s.data()) {}
 
-  typed_flatbuffer(typed_flatbuffer const&) = delete;
-  typed_flatbuffer& operator=(typed_flatbuffer const&) = delete;
+  typed_flatbuffer(  // NOLINT (delegating member init)
+      typed_flatbuffer const& other)
+      : typed_flatbuffer(other.size(), other.data()) {}
+
+  typed_flatbuffer& operator=(typed_flatbuffer other) {
+    std::swap(buffer_size_, other.buffer_size_);
+    std::swap(buffer_, other.buffer_);
+    return *this;
+  }
 
   typed_flatbuffer(typed_flatbuffer&&) = default;  // NOLINT
   typed_flatbuffer& operator=(typed_flatbuffer&&) = default;  // NOLINT
@@ -49,6 +60,10 @@ struct typed_flatbuffer {
   };
 
   std::string to_string() const {
+    return {reinterpret_cast<char const*>(data()), size()};
+  }
+
+  std::string_view to_string_view() const {
     return {reinterpret_cast<char const*>(data()), size()};
   }
 

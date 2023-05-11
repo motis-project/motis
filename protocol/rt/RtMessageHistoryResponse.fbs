@@ -1,0 +1,7 @@
+include "ris/RISMessage.fbs";
+
+namespace motis.rt;
+
+table RtMessageHistoryResponse {
+  messages: [motis.ris.RISMessage];
+}

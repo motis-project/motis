@@ -3,12 +3,16 @@
 #include "utl/get_or_create.h"
 
 #include "motis/core/schedule/serialization.h"
+
+#include "motis/core/conv/trip_conv.h"
+
 #include "motis/module/event_collector.h"
 #include "motis/module/global_res_ids.h"
 
 #include "motis/rt/rt_handler.h"
 
 using namespace motis::ris;
+using namespace motis::module;
 
 namespace motis::rt {
 
@@ -18,6 +22,7 @@ rt::rt() : module("RT", "rt") {
   param(validate_constant_graph_, "validate_constant_graph",
         "validate constant graph after every rt update");
   param(print_stats_, "print_stats", "print statistics after every rt update");
+  param(enable_history_, "history", "enable message history for debugging");
 }
 
 rt::~rt() = default;
@@ -25,15 +30,37 @@ rt::~rt() = default;
 constexpr auto const DEFAULT_SCHEDULE_RES_ID =
     to_res_id(motis::module::global_res_id::SCHEDULE);
 
-void rt::init(motis::module::registry& reg) {
-  auto const get_schedule_res_id = [](auto const& m) {
-    return m->schedule() == 0U ? DEFAULT_SCHEDULE_RES_ID
-                               : static_cast<ctx::res_id_t>(m->schedule());
-  };
+template <typename T>
+ctx::res_id_t get_schedule_res_id(T const& m) {
+  return m->schedule() == 0U ? DEFAULT_SCHEDULE_RES_ID
+                             : static_cast<ctx::res_id_t>(m->schedule());
+}
 
+msg_ptr get_trip_history(schedule const& sched, rt_handler* rth,
+                         RtMessageHistoryRequest const* req) {
+  auto const trp = from_fbs(sched, req->trip());
+  message_creator mc;
+  std::vector<flatbuffers::Offset<motis::ris::RISMessage>> messages;
+  if (rth != nullptr) {
+    if (auto const it = rth->msg_history_.messages_.find(trp->trip_idx_);
+        it != end(rth->msg_history_.messages_)) {
+      auto const& buffers = it->second;
+      messages.reserve(buffers.size());
+      for (auto const& buf : buffers) {
+        messages.emplace_back(motis_copy_table(RISMessage, mc, buf.get()));
+      }
+    }
+  }
+  mc.create_and_finish(
+      MsgContent_RtMessageHistoryResponse,
+      CreateRtMessageHistoryResponse(mc, mc.CreateVector(messages)).Union());
+  return make_msg(mc);
+}
+
+void rt::init(motis::module::registry& reg) {
   reg.subscribe(
       "/ris/messages",
-      [&](motis::module::msg_ptr const& msg) {
+      [this](motis::module::msg_ptr const& msg) {
         auto const req = motis_content(RISBatch, msg);
         auto const schedule_res_id = get_schedule_res_id(req);
         auto res_lock =
@@ -45,7 +72,7 @@ void rt::init(motis::module::registry& reg) {
 
   reg.register_op(
       "/rt/single",
-      [&](motis::module::msg_ptr const& msg) {
+      [this](motis::module::msg_ptr const& msg) {
         return get_or_create_rt_handler(
                    const_cast<schedule&>(get_sched()),  // NOLINT
                    DEFAULT_SCHEDULE_RES_ID)
@@ -57,7 +84,7 @@ void rt::init(motis::module::registry& reg) {
 
   reg.subscribe(
       "/ris/system_time_changed",
-      [&](motis::module::msg_ptr const& msg) {
+      [this](motis::module::msg_ptr const& msg) {
         auto schedule_res_id = DEFAULT_SCHEDULE_RES_ID;
         if (msg->get()->content_type() == MsgContent_RISSystemTimeChanged) {
           schedule_res_id =
@@ -67,7 +94,7 @@ void rt::init(motis::module::registry& reg) {
         auto res_lock =
             lock_resources({{schedule_res_id, ctx::access_t::WRITE}});
 
-        std::unique_lock lock{handler_mutex};
+        std::unique_lock lock{handler_mutex_};
         if (auto const it = handlers_.find(schedule_res_id);
             it != end(handlers_)) {
           lock.unlock();
@@ -82,12 +109,24 @@ void rt::init(motis::module::registry& reg) {
       {});
 
   reg.register_op("/rt/dump",
-                  [&](motis::module::msg_ptr const& msg) {
+                  [this](motis::module::msg_ptr const& msg) {
                     auto const m = motis_content(RtWriteGraphRequest, msg);
                     write_graph(m->path()->str(), get_sched());
                     return motis::module::msg_ptr{};
                   },
                   {::motis::module::kScheduleReadAccess});
+
+  reg.register_op(
+      "/rt/trip_history",
+      [this](msg_ptr const& msg) {
+        auto const req = motis_content(RtMessageHistoryRequest, msg);
+        auto const schedule_res_id = get_schedule_res_id(req);
+        auto res_lock =
+            lock_resources({{schedule_res_id, ctx::access_t::READ}});
+        auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+        return get_trip_history(sched, get_rt_handler(schedule_res_id), req);
+      },
+      {});
 }
 
 void rt::import(motis::module::import_dispatcher& reg) {
@@ -106,12 +145,24 @@ bool rt::import_successful() const { return import_successful_; }
 
 rt_handler& rt::get_or_create_rt_handler(schedule& sched,
                                          ctx::res_id_t const schedule_res_id) {
-  std::lock_guard const guard{handler_mutex};
-  return *utl::get_or_create(handlers_, schedule_res_id, [&]() {
-            return std::make_unique<rt_handler>(
-                sched, schedule_res_id, validate_graph_,
-                validate_constant_graph_, print_stats_);
-          }).get();
+  std::lock_guard const guard{handler_mutex_};
+  return *utl::get_or_create(handlers_, schedule_res_id,
+                             [this, &sched, schedule_res_id]() {
+                               return std::make_unique<rt_handler>(
+                                   sched, schedule_res_id, validate_graph_,
+                                   validate_constant_graph_, print_stats_,
+                                   enable_history_);
+                             })
+              .get();
+}
+
+rt_handler* rt::get_rt_handler(ctx::res_id_t const schedule_res_id) {
+  std::lock_guard const guard{handler_mutex_};
+  if (auto const it = handlers_.find(schedule_res_id); it != end(handlers_)) {
+    return it->second.get();
+  } else {
+    return nullptr;
+  }
 }
 
 }  // namespace motis::rt

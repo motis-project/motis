@@ -1,5 +1,9 @@
 #include "motis/rt/rt_handler.h"
 
+#include <iostream>
+
+#include "cista/hash.h"
+
 #include "utl/to_vec.h"
 
 #include "utl/pipes.h"
@@ -27,16 +31,18 @@
 
 using motis::module::msg_ptr;
 using namespace motis::logging;
+using namespace motis::module;
 
 namespace motis::rt {
 
 rt_handler::rt_handler(schedule& sched, ctx::res_id_t schedule_res_id,
                        bool validate_graph, bool validate_constant_graph,
-                       bool print_stats)
+                       bool print_stats, bool enable_history)
     : sched_(sched),
       schedule_res_id_(schedule_res_id),
       propagator_(sched),
       update_builder_(sched, schedule_res_id),
+      msg_history_(enable_history),
       validate_graph_(validate_graph),
       validate_constant_graph_(validate_constant_graph),
       print_stats_(print_stats) {}
@@ -46,7 +52,10 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
 
   for (auto const& m : *motis_content(RISBatch, msg)->messages()) {
     try {
-      update(m->message_nested_root());
+      update(
+          m->message_nested_root(),
+          std::string_view{reinterpret_cast<char const*>(m->message()->data()),
+                           m->message()->size()});
     } catch (std::exception const& e) {
       LOG(logging::error) << "rt::on_message: UNEXPECTED ERROR: " << e.what();
     } catch (...) {
@@ -58,11 +67,12 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
 
 msg_ptr rt_handler::single(msg_ptr const& msg) {
   using ris::RISMessage;
-  update(motis_content(RISMessage, msg));
+  update(motis_content(RISMessage, msg), msg->to_string_view());
   return flush(nullptr);
 }
 
-void rt_handler::update(motis::ris::RISMessage const* m) {
+void rt_handler::update(motis::ris::RISMessage const* m,
+                        std::string_view const msg_buffer) {
   stats_.count_message(m->content_type());
   auto c = m->content();
 
@@ -245,9 +255,10 @@ void rt_handler::update(motis::ris::RISMessage const* m) {
     }
 
     case ris::RISMessageUnion_FullTripMessage: {
-      handle_full_trip_msg(stats_, sched_, update_builder_, propagator_,
+      handle_full_trip_msg(stats_, sched_, update_builder_, msg_history_,
+                           propagator_,
                            reinterpret_cast<ris::FullTripMessage const*>(c),
-                           cancelled_delays_);
+                           msg_buffer, cancelled_delays_);
       break;
     }
 
