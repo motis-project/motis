@@ -1,7 +1,5 @@
 #include "motis/rt/rt_handler.h"
 
-#include <iostream>
-
 #include "cista/hash.h"
 
 #include "utl/to_vec.h"
