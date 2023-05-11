@@ -6,6 +6,8 @@
 #include "flatbuffers/idl.h"
 #include "flatbuffers/util.h"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/module/error.h"
 #include "motis/module/fix_json.h"
@@ -94,6 +96,45 @@ std::string message::to_json(json_format const jf) const {
       break;
   }
   return json;
+}
+
+flatbuffers::StructDef const* get_fbs_struct_def(
+    std::string const& table_name) {
+  if (auto const it = json_parser->structs_.dict.find(table_name);
+      it != json_parser->structs_.dict.end()) {
+    return it->second;
+  } else {
+    throw utl::fail("fbs_table_to_json: table definition not found: {}",
+                    table_name);
+  }
+}
+
+std::string fbs_table_to_json(void const* table,
+                              flatbuffers::StructDef const* struct_def,
+                              json_format const jf) {
+  std::string json;
+  Parser* parser = nullptr;
+  switch (jf) {
+    case json_format::DEFAULT_FLATBUFFERS: parser = json_parser.get(); break;
+    case json_format::SINGLE_LINE:
+      parser = single_line_json_parser.get();
+      break;
+    case json_format::TYPES_IN_UNIONS:
+      parser = types_in_unions_json_parser.get();
+      break;
+    case json_format::CONTENT_ONLY_TYPES_IN_UNIONS: break;
+  }
+
+  utl::verify(parser != nullptr, "fbs_table_to_json: invalid json format");
+
+  flatbuffers::GenerateText(*parser, table, struct_def, &json);
+
+  return json;
+}
+
+std::string fbs_table_to_json(void const* table, std::string const& table_name,
+                              json_format const jf) {
+  return fbs_table_to_json(table, get_fbs_struct_def(table_name), jf);
 }
 
 reflection::Schema const& message::get_schema() { return schema; }
