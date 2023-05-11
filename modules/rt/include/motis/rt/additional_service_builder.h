@@ -4,6 +4,7 @@
 #include <iterator>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "boost/uuid/nil_generator.hpp"
@@ -293,14 +294,15 @@ struct additional_service_builder {
     return find_trip(sched_, trip_id) != nullptr;
   }
 
-  status build_additional_train(ris::AdditionMessage const* msg) {
-    auto const result = check_events(msg->events());
-    if (result != status::OK) {
-      return result;
+  std::pair<status, trip const*> build_additional_train(
+      ris::AdditionMessage const* msg) {
+    auto const events_status = check_events(msg->events());
+    if (events_status != status::OK) {
+      return {events_status, nullptr};
     }
 
     if (trip_already_exists(msg)) {
-      return status::DUPLICATE_TRIP;
+      return {status::DUPLICATE_TRIP, nullptr};
     }
 
     auto const sections = build_sections(msg->events());
@@ -314,7 +316,7 @@ struct additional_service_builder {
 
     update_builder_.add_reroute(trp, {}, 0);
 
-    return verify_trip_id(trp, msg->trip_id());
+    return {verify_trip_id(trp, msg->trip_id()), trp};
   }
 
   statistics& stats_;

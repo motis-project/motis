@@ -85,10 +85,14 @@ void rt_handler::update(motis::ris::RISMessage const* m,
                               ? timestamp_reason::IS
                               : timestamp_reason::FORECAST;
 
-      auto const resolved = resolve_events(
+      auto const [trp, resolved] = resolve_events_and_trip(
           stats_, sched_, msg->trip_id(),
           utl::to_vec(*msg->events(),
                       [](ris::UpdatedEvent const* ev) { return ev->base(); }));
+
+      if (trp != nullptr) {
+        msg_history_.add(trp->trip_idx_, msg_buffer);
+      }
 
       for (auto i = 0UL; i < resolved.size(); ++i) {
         auto const& resolved_ev = resolved[i];
@@ -112,10 +116,14 @@ void rt_handler::update(motis::ris::RISMessage const* m,
     }
 
     case ris::RISMessageUnion_AdditionMessage: {
-      auto result = additional_service_builder(stats_, sched_, update_builder_)
-                        .build_additional_train(
-                            reinterpret_cast<ris::AdditionMessage const*>(c));
+      auto const [result, trp] =
+          additional_service_builder(stats_, sched_, update_builder_)
+              .build_additional_train(
+                  reinterpret_cast<ris::AdditionMessage const*>(c));
       stats_.count_additional(result);
+      if (trp != nullptr) {
+        msg_history_.add(trp->trip_idx_, msg_buffer);
+      }
       break;
     }
 
@@ -148,21 +156,22 @@ void rt_handler::update(motis::ris::RISMessage const* m,
       propagate();
 
       std::vector<ev_key> cancelled_evs;
-      auto const result =
+      auto const [result, trp] =
           reroute(stats_, sched_, cancelled_delays_, cancelled_evs,
                   msg->trip_id(), utl::to_vec(*msg->cancelled_events()),
                   utl::to_vec(*msg->new_events()), update_builder_);
 
-      stats_.count_reroute(result.first);
+      stats_.count_reroute(result);
 
-      if (result.first == reroute_result::OK) {
-        for (auto const& e : *result.second->edges_) {
+      if (result == reroute_result::OK) {
+        for (auto const& e : *trp->edges_) {
           propagator_.recalculate(ev_key{e, 0, event_type::DEP});
           propagator_.recalculate(ev_key{e, 0, event_type::ARR});
         }
         for (auto const& e : cancelled_evs) {
           propagator_.recalculate(e);
         }
+        msg_history_.add(trp->trip_idx_, msg_buffer);
       }
 
       break;
@@ -174,13 +183,13 @@ void rt_handler::update(motis::ris::RISMessage const* m,
       stats_.total_evs_ += msg->events()->size();
 
       auto const resolve = [&]() {
-        return resolve_events(
+        return resolve_events_and_trip(
             stats_, sched_, msg->trip_id(),
             utl::to_vec(*msg->events(), [](ris::UpdatedTrack const* ev) {
               return ev->base();
             }));
       };
-      auto resolved = resolve();
+      auto [trp, resolved] = resolve();
       auto new_tracks = std::vector<uint16_t>(msg->events()->size());
 
       trip* separate_trp = nullptr;
@@ -202,7 +211,9 @@ void rt_handler::update(motis::ris::RISMessage const* m,
 
       if (separate_trp != nullptr) {
         separate_trip(sched_, separate_trp, update_builder_);
-        resolved = resolve();
+        auto r = resolve();
+        trp = r.first;
+        resolved = std::move(r.second);
         stats_.track_separations_++;
       }
 
@@ -228,6 +239,10 @@ void rt_handler::update(motis::ris::RISMessage const* m,
 
         update_track(sched_, *k, new_track);
       }
+
+      if (trp != nullptr) {
+        msg_history_.add(trp->trip_idx_, msg_buffer);
+      }
       break;
     }
 
@@ -251,6 +266,7 @@ void rt_handler::update(motis::ris::RISMessage const* m,
         sched_.graph_to_free_texts_[k].emplace(ft);
       }
       free_text_events_.emplace_back(free_texts{trp, ft, events});
+      msg_history_.add(trp->trip_idx_, msg_buffer);
       break;
     }
 
