@@ -17,6 +17,10 @@
 #include "motis/module/error.h"
 #include "motis/module/json_format.h"
 
+namespace flatbuffers {
+struct StructDef;
+}
+
 namespace motis::module {
 
 constexpr auto const DEFAULT_FBS_MAX_DEPTH = 64;
@@ -67,6 +71,16 @@ msg_ptr make_no_msg(std::string const& target = "", int id = 1);
 msg_ptr make_success_msg(std::string const& target = "", int id = 1);
 msg_ptr make_error_msg(std::error_code const&, int id = 1);
 msg_ptr make_unknown_error_msg(std::string const& reason, int id = 1);
+
+std::string fbs_table_to_json(void const* table,
+                              flatbuffers::StructDef const* struct_def,
+                              json_format const jf);
+
+std::string fbs_table_to_json(
+    void const* table, std::string const& table_name,
+    json_format const jf = json_format::TYPES_IN_UNIONS);
+
+flatbuffers::StructDef const* get_fbs_struct_def(std::string const& table_name);
 
 template <typename T>
 inline T const* motis_content_impl(msg_ptr const& msg,

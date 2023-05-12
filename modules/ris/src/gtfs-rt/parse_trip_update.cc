@@ -415,8 +415,8 @@ void initialize_update_context(knowledge_context const& knowledge,
 void handle_trip_update(
     trip_update_context& update_ctx, knowledge_context& knowledge,
     unixtime const timestamp,
-    std::function<void(message_context&, flatbuffers::Offset<Message>)> const&
-        place_msg,
+    std::function<void(message_context&,
+                       flatbuffers::Offset<RISMessage>)> const& place_msg,
     std::string const& tag) {
   auto& sched = update_ctx.sched_;
   initialize_update_context(knowledge, update_ctx, tag);

@@ -105,3 +105,15 @@ RtWriteGraphRequest:
   fields:
     path:
       description: TODO
+RtMessageHistoryRequest:
+  description: TODO
+  fields:
+    schedule:
+      description: TODO
+    trip:
+      description: TODO
+RtMessageHistoryResponse:
+  description: TODO
+  fields:
+    messages:
+      description: TODO

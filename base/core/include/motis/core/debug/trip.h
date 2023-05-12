@@ -13,6 +13,8 @@
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_iterator.h"
 
+#include "motis/core/debug/fbs.h"
+
 namespace motis::debug {
 
 struct station {
@@ -60,7 +62,8 @@ struct trip {
         << "ptr=" << trp << ", idx=" << trp->trip_idx_
         << ", id=" << trip_id{sched, trp->id_} << ", uuid=" << trp->uuid_
         << ", edges=" << trp->edges_->size() << ", lcon_idx=" << trp->lcon_idx_
-        << ", dbg=" << trp->dbg_.str() << "}";
+        << ", dbg=" << trp->dbg_.str() << ", fbs=" << to_fbs_json(sched, trp)
+        << "}";
     return out;
   }
 

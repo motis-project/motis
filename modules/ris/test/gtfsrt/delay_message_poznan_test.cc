@@ -65,8 +65,8 @@ TEST_F(gtfsrt_delay_test_poznan, simple_delay_poznan) {
   EXPECT_EQ(parse_unix_time("2021-12-17 12:26 CET"), message.earliest_);
   EXPECT_EQ(parse_unix_time("2021-12-17 12:27 CET"), message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();

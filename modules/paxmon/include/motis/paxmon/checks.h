@@ -8,6 +8,9 @@ namespace motis::paxmon {
 
 bool check_graph_integrity(universe const& uv, schedule const& sched);
 
+bool check_trip_in_sync(universe const& uv, schedule const& sched,
+                        trip const* trp, trip_data_index const tdi);
+
 bool check_graph_times(universe const& uv, schedule const& sched);
 
 bool check_compact_journey(schedule const& sched, compact_journey const& cj,

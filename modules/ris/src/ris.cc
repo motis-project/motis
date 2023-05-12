@@ -55,10 +55,6 @@
 #include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ribasis/ribasis_receiver.h"
 
-#ifdef GetMessage
-#undef GetMessage
-#endif
-
 namespace fs = std::filesystem;
 namespace db = lmdb;
 using namespace motis::module;
@@ -602,19 +598,19 @@ struct ris::impl {
     }
 
     void add(uint8_t const* ptr, size_t const size) {
-      max_timestamp_ = std::max(
-          max_timestamp_,
-          static_cast<unixtime>(
-              flatbuffers::GetRoot<Message>(reinterpret_cast<void const*>(ptr))
-                  ->timestamp()));
+      max_timestamp_ =
+          std::max(max_timestamp_,
+                   static_cast<unixtime>(flatbuffers::GetRoot<RISMessage>(
+                                             reinterpret_cast<void const*>(ptr))
+                                             ->timestamp()));
       offsets_.push_back(
-          CreateMessageHolder(fbb_, fbb_.CreateVector(ptr, size)));
+          CreateRISMessageHolder(fbb_, fbb_.CreateVector(ptr, size)));
     }
 
     size_t size() const { return offsets_.size(); }
 
     message_creator fbb_;
-    std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
+    std::vector<flatbuffers::Offset<RISMessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
     bool skip_flush_{false};
     ctx::res_id_t schedule_res_id_{0U};
@@ -690,7 +686,7 @@ struct ris::impl {
 
         utl::verify(ptr + size <= end, "ris: ptr + size > end");
 
-        if (auto const msg = GetMessage(ptr);
+        if (auto const msg = GetRISMessage(ptr);
             msg->timestamp() <= to && msg->timestamp() >= from) {
           pub.add(reinterpret_cast<uint8_t const*>(ptr), size);
         }

@@ -94,13 +94,17 @@ struct full_trip_handler {
 
   full_trip_handler(statistics& stats, schedule& sched,
                     update_msg_builder& update_builder,
-                    delay_propagator& propagator, FullTripMessage const* msg,
+                    message_history& msg_history, delay_propagator& propagator,
+                    FullTripMessage const* msg,
+                    std::string_view const msg_buffer,
                     std::map<schedule_event, delay_info*>& cancelled_delays)
       : stats_{stats},
         sched_{sched},
         update_builder_{update_builder},
+        msg_history_{msg_history},
         propagator_{propagator},
         msg_{msg},
+        msg_buffer_{msg_buffer},
         cancelled_delays_{cancelled_delays} {}
 
   void handle_msg() {
@@ -196,6 +200,7 @@ struct full_trip_handler {
     if (result_.track_updates_ > 0) {
       ++stats_.track_change_msgs_;
     }
+    msg_history_.add(result_.trp_->trip_idx_, msg_buffer_);
   }
 
 private:
@@ -751,8 +756,10 @@ public:
   statistics& stats_;
   schedule& sched_;
   update_msg_builder& update_builder_;
+  message_history& msg_history_;
   delay_propagator& propagator_;
   ris::FullTripMessage const* msg_;
+  std::string_view msg_buffer_;
   full_trip_result result_;
   std::map<connection_info, connection_info const*> con_infos_;
   std::map<schedule_event, delay_info*>& cancelled_delays_;
@@ -760,10 +767,12 @@ public:
 
 full_trip_result handle_full_trip_msg(
     statistics& stats, schedule& sched, update_msg_builder& update_builder,
-    delay_propagator& propagator, ris::FullTripMessage const* msg,
+    message_history& msg_history, delay_propagator& propagator,
+    ris::FullTripMessage const* msg, std::string_view const msg_buffer,
     std::map<schedule_event, delay_info*>& cancelled_delays) {
-  auto handler = full_trip_handler{stats,      sched, update_builder,
-                                   propagator, msg,   cancelled_delays};
+  auto handler =
+      full_trip_handler{stats,      sched, update_builder, msg_history,
+                        propagator, msg,   msg_buffer,     cancelled_delays};
   handler.handle_msg();
   return handler.get_result();
 }

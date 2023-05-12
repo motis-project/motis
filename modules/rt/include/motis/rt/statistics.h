@@ -113,20 +113,26 @@ struct statistics {
     }
   }
 
-  void count_message(motis::ris::MessageUnion const type) {
+  void count_message(motis::ris::RISMessageUnion const type) {
     switch (type) {
-      case motis::ris::MessageUnion_DelayMessage: ++delay_msgs_; break;
-      case motis::ris::MessageUnion_CancelMessage: ++cancel_msgs_; break;
-      case motis::ris::MessageUnion_AdditionMessage: ++additional_msgs_; break;
-      case motis::ris::MessageUnion_RerouteMessage: ++reroute_msgs_; break;
-      case motis::ris::MessageUnion_ConnectionDecisionMessage:
+      case motis::ris::RISMessageUnion_DelayMessage: ++delay_msgs_; break;
+      case motis::ris::RISMessageUnion_CancelMessage: ++cancel_msgs_; break;
+      case motis::ris::RISMessageUnion_AdditionMessage:
+        ++additional_msgs_;
+        break;
+      case motis::ris::RISMessageUnion_RerouteMessage: ++reroute_msgs_; break;
+      case motis::ris::RISMessageUnion_ConnectionDecisionMessage:
         ++con_decision_msgs_;
         break;
-      case motis::ris::MessageUnion_ConnectionAssessmentMessage:
+      case motis::ris::RISMessageUnion_ConnectionAssessmentMessage:
         ++con_assessment_msgs_;
         break;
-      case motis::ris::MessageUnion_TrackMessage: ++track_change_msgs_; break;
-      case motis::ris::MessageUnion_FreeTextMessage: ++free_text_msgs_; break;
+      case motis::ris::RISMessageUnion_TrackMessage:
+        ++track_change_msgs_;
+        break;
+      case motis::ris::RISMessageUnion_FreeTextMessage:
+        ++free_text_msgs_;
+        break;
       default: break;
     }
   }

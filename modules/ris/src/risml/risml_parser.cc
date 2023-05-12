@@ -89,8 +89,8 @@ Offset<FreeText> parse_free_text(context& ctx, xml_node const& msg,
                         ctx.b_.CreateString(node.attribute("Typ").value()));
 }
 
-Offset<Message> parse_delay_msg(context& ctx, xml_node const& msg,
-                                DelayType type) {
+Offset<RISMessage> parse_delay_msg(context& ctx, xml_node const& msg,
+                                   DelayType type) {
   std::vector<Offset<UpdatedEvent>> events;
   foreach_event(
       ctx, msg,
@@ -101,27 +101,27 @@ Offset<Message> parse_delay_msg(context& ctx, xml_node const& msg,
         events.push_back(CreateUpdatedEvent(ctx.b_, event, updated));
       });
   auto trip_id = parse_trip_id(ctx, msg);
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_DelayMessage,
+      RISMessageUnion_DelayMessage,
       CreateDelayMessage(ctx.b_, trip_id, type, ctx.b_.CreateVector(events))
           .Union());
 }
 
-Offset<Message> parse_cancel_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_cancel_msg(context& ctx, xml_node const& msg) {
   std::vector<Offset<Event>> events;
   foreach_event(ctx, msg,
                 [&](Offset<Event> const& event, xml_node const&,
                     xml_node const&) { events.push_back(event); });
   auto trip_id = parse_trip_id(ctx, msg);
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_CancelMessage,
+      RISMessageUnion_CancelMessage,
       CreateCancelMessage(ctx.b_, trip_id, ctx.b_.CreateVector(events))
           .Union());
 }
 
-Offset<Message> parse_track_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_track_msg(context& ctx, xml_node const& msg) {
   std::vector<Offset<UpdatedTrack>> events;
   foreach_event(
       ctx, msg,
@@ -131,13 +131,13 @@ Offset<Message> parse_track_msg(context& ctx, xml_node const& msg) {
             ctx.b_, event, ctx.b_.CreateString(updated_track)));
       });
   auto trip_id = parse_trip_id(ctx, msg);
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_TrackMessage,
+      RISMessageUnion_TrackMessage,
       CreateTrackMessage(ctx.b_, trip_id, ctx.b_.CreateVector(events)).Union());
 }
 
-Offset<Message> parse_free_text_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_free_text_msg(context& ctx, xml_node const& msg) {
   std::vector<Offset<Event>> events;
   foreach_event(
       ctx, msg,
@@ -147,15 +147,15 @@ Offset<Message> parse_free_text_msg(context& ctx, xml_node const& msg) {
       "./ListService/Service/ListZug/Zug");
   auto trip_id = parse_trip_id(ctx, msg, "./ListService/Service");
   auto free_text = parse_free_text(ctx, msg);
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_FreeTextMessage,
+      RISMessageUnion_FreeTextMessage,
       CreateFreeTextMessage(ctx.b_, trip_id, ctx.b_.CreateVector(events),
                             free_text)
           .Union());
 }
 
-Offset<Message> parse_addition_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_addition_msg(context& ctx, xml_node const& msg) {
   std::vector<Offset<AdditionalEvent>> events;
   foreach_event(
       ctx, msg,
@@ -164,14 +164,14 @@ Offset<Message> parse_addition_msg(context& ctx, xml_node const& msg) {
         events.push_back(parse_additional_event(ctx.b_, event, e_node, t_node));
       });
   auto trip_id = parse_trip_id(ctx, msg);
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_AdditionMessage,
+      RISMessageUnion_AdditionMessage,
       CreateAdditionMessage(ctx.b_, trip_id, ctx.b_.CreateVector(events))
           .Union());
 }
 
-Offset<Message> parse_reroute_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_reroute_msg(context& ctx, xml_node const& msg) {
   std::vector<Offset<Event>> cancelled_events;
   foreach_event(ctx, msg,
                 [&](Offset<Event> const& event, xml_node const&,
@@ -191,16 +191,16 @@ Offset<Message> parse_reroute_msg(context& ctx, xml_node const& msg) {
       "./Service/ListUml/Uml/ListZug/Zug");
 
   auto trip_id = parse_trip_id(ctx, msg);
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_RerouteMessage,
+      RISMessageUnion_RerouteMessage,
       CreateRerouteMessage(ctx.b_, trip_id,
                            ctx.b_.CreateVector(cancelled_events),
                            ctx.b_.CreateVector(new_events))
           .Union());
 }
 
-Offset<Message> parse_conn_decision_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_conn_decision_msg(context& ctx, xml_node const& msg) {
   auto const& from_e_node = msg.child("ZE");
   auto from = parse_standalone_event(ctx, from_e_node);
   if (from == boost::none) {
@@ -227,15 +227,16 @@ Offset<Message> parse_conn_decision_msg(context& ctx, xml_node const& msg) {
     throw std::runtime_error("zero valid to events in RIS conn decision");
   }
 
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_ConnectionDecisionMessage,
+      RISMessageUnion_ConnectionDecisionMessage,
       CreateConnectionDecisionMessage(ctx.b_, from_trip_id, *from,
                                       ctx.b_.CreateVector(decisions))
           .Union());
 }
 
-Offset<Message> parse_conn_assessment_msg(context& ctx, xml_node const& msg) {
+Offset<RISMessage> parse_conn_assessment_msg(context& ctx,
+                                             xml_node const& msg) {
   auto const& from_e_node = msg.child("ZE");
   auto from = parse_standalone_event(ctx, from_e_node);
   if (from == boost::none) {
@@ -262,9 +263,9 @@ Offset<Message> parse_conn_assessment_msg(context& ctx, xml_node const& msg) {
     throw std::runtime_error("zero valid to events in RIS conn assessment");
   }
 
-  return CreateMessage(
+  return CreateRISMessage(
       ctx.b_, ctx.earliest_, ctx.latest_, ctx.timestamp_,
-      MessageUnion_ConnectionAssessmentMessage,
+      RISMessageUnion_ConnectionAssessmentMessage,
       CreateConnectionAssessmentMessage(ctx.b_, from_trip_id, *from,
                                         ctx.b_.CreateVector(assessments))
           .Union());
@@ -273,7 +274,7 @@ Offset<Message> parse_conn_assessment_msg(context& ctx, xml_node const& msg) {
 boost::optional<ris_message> parse_message(xml_node const& msg,
                                            unixtime t_out) {
   using parser_func_t =
-      std::function<Offset<Message>(context&, xml_node const&)>;
+      std::function<Offset<RISMessage>(context&, xml_node const&)>;
   static std::map<cstr, parser_func_t> map(
       {{"Ist",
         [](auto&& c, auto&& m) { return parse_delay_msg(c, m, DelayType_Is); }},

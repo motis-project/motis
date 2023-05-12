@@ -34,19 +34,19 @@ flatbuffers::Offset<Event> create_event(trip const&, schedule const&,
 
 flatbuffers::Offset<Event> create_event(message_context&, evt const&);
 
-flatbuffers::Offset<Message> create_delay_message(
+flatbuffers::Offset<RISMessage> create_delay_message(
     message_context&, flatbuffers::Offset<IdEvent> const&,
     std::vector<evt> const&, motis::ris::DelayType);
 
-flatbuffers::Offset<Message> create_reroute_msg(
+flatbuffers::Offset<RISMessage> create_reroute_msg(
     message_context&, flatbuffers::Offset<IdEvent> const&,
     std::vector<evt> const&);
 
-flatbuffers::Offset<Message> create_cancel_msg(
+flatbuffers::Offset<RISMessage> create_cancel_msg(
     message_context&, flatbuffers::Offset<IdEvent> const&,
     std::vector<evt> const&);
 
-flatbuffers::Offset<Message> create_additional_msg(
+flatbuffers::Offset<RISMessage> create_additional_msg(
     message_context&, flatbuffers::Offset<IdEvent> const&,
     std::vector<evt> const&);
 

@@ -52,8 +52,9 @@ TEST(DISABLED_ris_connection_decision_message, message_1) {
   EXPECT_EQ(1444205340, message.earliest_);
   EXPECT_EQ(1444233600, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_ConnectionDecisionMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_ConnectionDecisionMessage,
+            outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<ConnectionDecisionMessage const*>(outer_msg->content());
 
@@ -134,8 +135,9 @@ TEST(DISABLED_ris_connection_decision_message, message_2) {
   EXPECT_EQ(1444223760, message.earliest_);
   EXPECT_EQ(1444246920, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_ConnectionDecisionMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_ConnectionDecisionMessage,
+            outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<ConnectionDecisionMessage const*>(outer_msg->content());
 

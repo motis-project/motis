@@ -5,10 +5,6 @@
 
 #include "./gtfsrt_test.h"
 
-#ifdef GetMessage
-#undef GetMessage
-#endif
-
 using namespace motis;
 using namespace motis::test;
 using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
@@ -26,8 +22,8 @@ void gtfsrt_additional_test::check_addition_message(
   EXPECT_EQ(1561597920, message.earliest_);
   EXPECT_EQ(1561600800, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_AdditionMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_AdditionMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<AdditionMessage const*>(outer_msg->content());
 
@@ -171,8 +167,8 @@ TEST_F(gtfsrt_additional_test, receive_additional_and_delay) {
   EXPECT_EQ(1561599120, message.earliest_);
   EXPECT_EQ(1561600800, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
@@ -270,8 +266,8 @@ TEST_F(gtfsrt_additional_test, receive_addition_delay_reroute) {
   EXPECT_EQ(1561600800, addition_msg.latest_);
 
   // addition Message
-  auto outer_addition = GetMessage(addition_msg.data());
-  ASSERT_EQ(MessageUnion_AdditionMessage, outer_addition->content_type());
+  auto outer_addition = GetRISMessage(addition_msg.data());
+  ASSERT_EQ(RISMessageUnion_AdditionMessage, outer_addition->content_type());
   auto inner_addition =
       reinterpret_cast<AdditionMessage const*>(outer_addition->content());
 
@@ -298,8 +294,8 @@ TEST_F(gtfsrt_additional_test, receive_addition_delay_reroute) {
   EXPECT_EQ(1561600800, delay_msg.latest_);
 
   // Delay Message
-  auto outer_delay = GetMessage(delay_msg.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_delay->content_type());
+  auto outer_delay = GetRISMessage(delay_msg.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_delay->content_type());
   auto inner_delay =
       reinterpret_cast<DelayMessage const*>(outer_delay->content());
 

@@ -239,24 +239,6 @@ FullTripMessage:
       description: TODO
     sections:
       description: TODO
-MessageUnion:
-  description: TODO
-Message:
-  description: TODO
-  fields:
-    earliest:
-      description: TODO
-    latest:
-      description: TODO
-    timestamp:
-      description: TODO
-    content:
-      description: TODO
-MessageHolder:
-  description: TODO
-  fields:
-    message:
-      description: TODO
 RISBatch:
   description: TODO
   fields:
@@ -354,4 +336,22 @@ RISApplyResponse:
     successful:
       description: TODO
     failed:
+      description: TODO
+RISMessageUnion:
+  description: TODO
+RISMessage:
+  description: TODO
+  fields:
+    earliest:
+      description: TODO
+    latest:
+      description: TODO
+    timestamp:
+      description: TODO
+    content:
+      description: TODO
+RISMessageHolder:
+  description: TODO
+  fields:
+    message:
       description: TODO

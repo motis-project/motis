@@ -20,7 +20,7 @@ using namespace motis::logging;
 
 namespace motis::ris::gtfsrt {
 
-void finish_ris_msg(message_context& ctx, Offset<Message> message,
+void finish_ris_msg(message_context& ctx, Offset<RISMessage> message,
                     std::function<void(ris_message&&)> const& cb) {
   ctx.b_.Finish(message);
   auto ris_msg = ris_message(ctx.earliest_, ctx.latest_, ctx.timestamp_,
@@ -44,7 +44,7 @@ void parse_trip_updates(knowledge_context& knowledge,
                                      is_additional_skip_allowed};
       handle_trip_update(
           update_ctx, knowledge, timestamp,
-          [&](message_context& ctx, Offset<Message> msg) {
+          [&](message_context& ctx, Offset<RISMessage> msg) {
             finish_ris_msg(ctx, msg, cb);
           },
           tag);

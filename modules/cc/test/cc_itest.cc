@@ -132,8 +132,8 @@ struct cc_check_routed_connection_test : public motis_instance_test {
                          std::vector<event> const& cancel_events,
                          std::vector<rerouted_event> const& rerouted_events) {
     FlatBufferBuilder fbb;
-    fbb.Finish(ris::CreateMessage(
-        fbb, 0U, 0U, 0U, ris::MessageUnion_RerouteMessage,
+    fbb.Finish(ris::CreateRISMessage(
+        fbb, 0U, 0U, 0U, ris::RISMessageUnion_RerouteMessage,
         ris::CreateRerouteMessage(
             fbb, id.to_fbs(sched, fbb),
             fbb.CreateVector(utl::to_vec(
@@ -146,7 +146,7 @@ struct cc_check_routed_connection_test : public motis_instance_test {
 
     message_creator mc;
     auto const msg_holders =
-        std::vector<Offset<ris::MessageHolder>>{ris::CreateMessageHolder(
+        std::vector<Offset<ris::RISMessageHolder>>{ris::CreateRISMessageHolder(
             mc, mc.CreateVector(fbb.GetBufferPointer(), fbb.GetSize()))};
     mc.create_and_finish(
         MsgContent_RISBatch,
@@ -160,8 +160,8 @@ struct cc_check_routed_connection_test : public motis_instance_test {
                        std::vector<updated_event> const& delays,
                        bool is_message) {
     FlatBufferBuilder fbb;
-    fbb.Finish(ris::CreateMessage(
-        fbb, 0U, 0U, 0U, ris::MessageUnion_DelayMessage,
+    fbb.Finish(ris::CreateRISMessage(
+        fbb, 0U, 0U, 0U, ris::RISMessageUnion_DelayMessage,
         ris::CreateDelayMessage(
             fbb, id.to_fbs(sched, fbb),
             is_message ? ris::DelayType_Is : ris::DelayType_Forecast,
@@ -171,7 +171,7 @@ struct cc_check_routed_connection_test : public motis_instance_test {
 
     message_creator mc;
     auto const msg_holders =
-        std::vector<Offset<ris::MessageHolder>>{ris::CreateMessageHolder(
+        std::vector<Offset<ris::RISMessageHolder>>{ris::CreateRISMessageHolder(
             mc, mc.CreateVector(fbb.GetBufferPointer(), fbb.GetSize()))};
     mc.create_and_finish(
         MsgContent_RISBatch,
