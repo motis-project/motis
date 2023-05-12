@@ -40,10 +40,8 @@ routing::~routing() = default;
 
 void routing::reg_subc(motis::module::subc_reg& r) {
   r.register_cmd("print", "prints journeys", eval::print);
-  r.register_cmd("generate", "generate routing queries", eval::generate);
   r.register_cmd("rewrite", "rewrite query targets", eval::rewrite_queries);
   r.register_cmd("analyze", "print result statistics", eval::analyze_results);
-  r.register_cmd("compare", "print difference between results", eval::compare);
   r.register_cmd("xtract", "extract timetable from connections", eval::xtract);
 }
 
