@@ -2,7 +2,6 @@
 
 #include <string>
 #include <string_view>
-#include <utility>
 
 #include "flatbuffers/flatbuffers.h"
 
@@ -37,15 +36,8 @@ struct typed_flatbuffer {
       std::string_view s)
       : typed_flatbuffer(s.size(), s.data()) {}
 
-  typed_flatbuffer(  // NOLINT (delegating member init)
-      typed_flatbuffer const& other)
-      : typed_flatbuffer(other.size(), other.data()) {}
-
-  typed_flatbuffer& operator=(typed_flatbuffer other) {
-    std::swap(buffer_size_, other.buffer_size_);
-    std::swap(buffer_, other.buffer_);
-    return *this;
-  }
+  typed_flatbuffer(typed_flatbuffer const&) = delete;
+  typed_flatbuffer& operator=(typed_flatbuffer const&) = delete;
 
   typed_flatbuffer(typed_flatbuffer&&) = default;  // NOLINT
   typed_flatbuffer& operator=(typed_flatbuffer&&) = default;  // NOLINT
