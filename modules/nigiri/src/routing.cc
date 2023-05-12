@@ -207,7 +207,7 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
                               }),
               "intermodal start but no edge from START");
 
-  utl::verify(!is_intermodal_start ||
+  utl::verify(!is_intermodal_dest ||
                   utl::any_of(*req->additional_edges(),
                               [&](routing::AdditionalEdgeWrapper const* e) {
                                 auto const me =
@@ -225,12 +225,11 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
   utl::verify(destination_station != n::location_idx_t::invalid(),
               "unknown station {}", req->destination()->id()->view());
 
-  auto destination =
-      std::vector{{is_intermodal_start
-                       ? get_offsets(tags, tt, req->additional_edges(),
-                                     req->search_dir(), false)
-                       : std::vector<n::routing::offset>{
-                             {destination_station, n::duration_t{0U}, 0U}}}};
+  auto destination = std::vector{
+      {is_intermodal_dest ? get_offsets(tags, tt, req->additional_edges(),
+                                        req->search_dir(), false)
+                          : std::vector<n::routing::offset>{
+                                {destination_station, n::duration_t{0U}, 0U}}}};
   auto q = n::routing::query{
       .start_time_ = start_time,
       .start_match_mode_ = is_intermodal_start

@@ -13,11 +13,11 @@ routers = ["routing", "nigiri"]
 
 
 def query_f(id, router):
-    return f"{id}_q_{router}.json"
+    return f"{id}_q_bwd_iontrip_idest-{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r_{router}.json"
+    return f"{id}_r_bwd_iontrip_idest-{router}.json"
 
 
 def reproduce(filepath, verbose=False):
@@ -121,12 +121,12 @@ def reproduce(filepath, verbose=False):
     try:
         run_compare = [
             "./motis",
-            "intermodal_compare",
+            "compare",
             "--fail", "",
             "--queries",
             f"fail/{query_f(id, routers[0])}",
             f"fail/{query_f(id, routers[1])}",
-            "--input",
+            "--responses",
             f"{reproduce_dir}/{result_f(id, routers[0])}",
             f"{reproduce_dir}/{result_f(id, routers[1])}"
         ]
