@@ -50,8 +50,8 @@ TEST(ris_addition_message, message_1) {
   EXPECT_EQ(1444206000, message.earliest_);
   EXPECT_EQ(1444235100, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_AdditionMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_AdditionMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<AdditionMessage const*>(outer_msg->content());
 
@@ -150,8 +150,8 @@ TEST(ris_addition_message, message_2) {
   EXPECT_EQ(1444308480, message.earliest_);
   EXPECT_EQ(1444316640, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_AdditionMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_AdditionMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<AdditionMessage const*>(outer_msg->content());
 

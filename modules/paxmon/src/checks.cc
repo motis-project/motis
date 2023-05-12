@@ -36,7 +36,7 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
   for (auto const& n : uv.graph_.nodes_) {
     for (auto const& e : n.outgoing_edges(uv)) {
       if (!check_edge_in_incoming(uv, e)) {
-        std::cout << "!! outdoing edge missing in target incoming edges\n";
+        std::cout << "!! outgoing edge missing in target incoming edges\n";
         ok = false;
       }
       for (auto const& pgwr : uv.pax_connection_info_.group_routes_[e.pci_]) {
@@ -204,8 +204,8 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
   return ok;
 }
 
-bool check_trip_times(universe const& uv, schedule const& sched,
-                      trip const* trp, trip_data_index const tdi) {
+bool check_trip_in_sync(universe const& uv, schedule const& sched,
+                        trip const* trp, trip_data_index const tdi) {
   auto trip_ok = true;
   std::vector<event_node const*> nodes;
   auto const edges = uv.trip_data_.edges(tdi);
@@ -216,55 +216,77 @@ bool check_trip_times(universe const& uv, schedule const& sched,
   }
   auto const sections = motis::access::sections(trp);
 
-  auto node_idx = 0ULL;
-  for (auto const& sec : sections) {
-    if (node_idx + 1 > nodes.size()) {
-      trip_ok = false;
-      std::cout << "!! trip in paxmon graph has fewer sections\n";
-      break;
-    }
-    auto const ev_from = sec.ev_key_from();
-    auto const ev_to = sec.ev_key_to();
-    auto const pm_from = nodes[node_idx];
-    auto const pm_to = nodes[node_idx + 1];
+  if (edges.size() == sections.size()) {
+    auto node_idx = 0ULL;
+    for (auto const& sec : sections) {
+      if (node_idx + 1 > nodes.size()) {
+        trip_ok = false;
+        std::cout << "!! trip in paxmon graph has fewer sections\n";
+        break;
+      }
+      auto const ev_from = sec.ev_key_from();
+      auto const ev_to = sec.ev_key_to();
+      auto const pm_from = nodes[node_idx];
+      auto const pm_to = nodes[node_idx + 1];
 
-    if (pm_from->type() != event_type::DEP ||
-        pm_to->type() != event_type::ARR) {
-      std::cout << "!! event nodes out of order @node_idx=" << node_idx << ","
-                << (node_idx + 1) << "\n";
-      trip_ok = false;
-      break;
+      if (pm_from->type() != event_type::DEP ||
+          pm_to->type() != event_type::ARR) {
+        std::cout << "!! event nodes out of order @node_idx=" << node_idx << ","
+                  << (node_idx + 1) << "\n";
+        trip_ok = false;
+        break;
+      }
+      if (pm_from->station_idx() == ev_from.get_station_idx() &&
+          pm_to->station_idx() == ev_to.get_station_idx()) {
+        if (pm_from->schedule_time() != get_schedule_time(sched, ev_from)) {
+          std::cout << "!! schedule time mismatch @dep "
+                    << sched.stations_.at(pm_from->station_idx())->name_.str()
+                    << "\n";
+          trip_ok = false;
+        }
+        if (pm_to->schedule_time() != get_schedule_time(sched, ev_to)) {
+          std::cout << "!! schedule time mismatch @arr "
+                    << sched.stations_.at(pm_to->station_idx())->name_.str()
+                    << "\n";
+          trip_ok = false;
+        }
+        if (pm_from->current_time() != ev_from.get_time()) {
+          std::cout << "!! current time mismatch @dep "
+                    << sched.stations_.at(pm_from->station_idx())->name_.str()
+                    << "\n";
+          trip_ok = false;
+        }
+        if (pm_to->current_time() != ev_to.get_time()) {
+          std::cout << "!! current time mismatch @arr "
+                    << sched.stations_.at(pm_to->station_idx())->name_.str()
+                    << "\n";
+          trip_ok = false;
+        }
+      } else {
+        std::cout << "!! station mismatch: section " << node_idx / 2
+                  << ":\n  dep: s="
+                  << sched.stations_.at(ev_from.get_station_idx())->name_.str()
+                  << ", p="
+                  << sched.stations_.at(pm_from->station_idx())->name_.str()
+                  << "\n  arr: s="
+                  << sched.stations_.at(ev_to.get_station_idx())->name_.str()
+                  << ", p="
+                  << sched.stations_.at(pm_to->station_idx())->name_.str()
+                  << "\n";
+        trip_ok = false;
+      }
+      node_idx += 2;
     }
-    if (pm_from->schedule_time() != get_schedule_time(sched, ev_from)) {
-      std::cout << "!! schedule time mismatch @dep "
-                << sched.stations_.at(pm_from->station_idx())->name_.str()
-                << "\n";
+    if (node_idx != nodes.size()) {
       trip_ok = false;
+      std::cout << "!! trip in paxmon graph has more sections\n";
     }
-    if (pm_to->schedule_time() != get_schedule_time(sched, ev_to)) {
-      std::cout << "!! schedule time mismatch @arr "
-                << sched.stations_.at(pm_to->station_idx())->name_.str()
-                << "\n";
-      trip_ok = false;
-    }
-    if (pm_from->current_time() != ev_from.get_time()) {
-      std::cout << "!! current time mismatch @dep "
-                << sched.stations_.at(pm_from->station_idx())->name_.str()
-                << "\n";
-      trip_ok = false;
-    }
-    if (pm_to->current_time() != ev_to.get_time()) {
-      std::cout << "!! current time mismatch @arr "
-                << sched.stations_.at(pm_to->station_idx())->name_.str()
-                << "\n";
-      trip_ok = false;
-    }
-    node_idx += 2;
-  }
-  if (node_idx != nodes.size()) {
+  } else {
     trip_ok = false;
-    std::cout << "!! trip in paxmon graph has more sections\n";
+    std::cout << "!! trip out of sync: schedule sections=" << sections.size()
+              << ", paxmon edges=" << edges.size() << "\n";
   }
+
   if (!trip_ok) {
     std::cout << "trip (errors above):\n";
     print_trip(sched, trp);
@@ -273,8 +295,9 @@ bool check_trip_times(universe const& uv, schedule const& sched,
               << ", event nodes: " << nodes.size() << std::endl;
 
     print_trip_sections(uv, sched, trp, tdi);
-    std::cout << "\n\n";
+    std::cout << "\n" << std::endl;
   }
+
   return trip_ok;
 }
 
@@ -282,7 +305,7 @@ bool check_graph_times(universe const& uv, schedule const& sched) {
   auto ok = true;
 
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
-    if (!check_trip_times(uv, sched, get_trip(sched, trp_idx), tdi)) {
+    if (!check_trip_in_sync(uv, sched, get_trip(sched, trp_idx), tdi)) {
       ok = false;
     }
   }
@@ -331,6 +354,7 @@ bool check_compact_journey(schedule const& sched, compact_journey const& cj,
   if (!ok) {
     std::cout << "compact journey (errors above):\n";
     print_compact_journey(sched, cj);
+    std::cout << std::endl;
   }
 
   return ok;

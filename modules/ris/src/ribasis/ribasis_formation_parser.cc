@@ -127,9 +127,9 @@ void parse_ribasis_formation(ris_msg_context& ris_ctx,
   auto const sections = parse_sections(ctx, data);
   auto const formation_msg =
       CreateTripFormationMessage(ctx.ris_.b_, ctx.half_trip_id_, sections);
-  ctx.ris_.b_.Finish(CreateMessage(
+  ctx.ris_.b_.Finish(CreateRISMessage(
       ctx.ris_.b_, ctx.ris_.earliest_, ctx.ris_.latest_, ctx.ris_.timestamp_,
-      MessageUnion_TripFormationMessage, formation_msg.Union()));
+      RISMessageUnion_TripFormationMessage, formation_msg.Union()));
 }
 
 }  // namespace motis::ris::ribasis::formation

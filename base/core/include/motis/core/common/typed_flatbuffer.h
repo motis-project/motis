@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <string_view>
+
 #include "flatbuffers/flatbuffers.h"
 
 namespace motis {
@@ -49,6 +52,10 @@ struct typed_flatbuffer {
   };
 
   std::string to_string() const {
+    return {reinterpret_cast<char const*>(data()), size()};
+  }
+
+  std::string_view to_string_view() const {
     return {reinterpret_cast<char const*>(data()), size()};
   }
 

@@ -47,8 +47,8 @@ TEST(ris_track_message, track_test) {
   EXPECT_EQ(1444195800, message.earliest_);
   EXPECT_EQ(1444197420, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_TrackMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_TrackMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<TrackMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();

@@ -48,8 +48,8 @@ TEST(ris_delay_message, ist_message_1) {
   EXPECT_EQ(1444168774, message.timestamp_);
   EXPECT_EQ(1444172760, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
@@ -115,8 +115,8 @@ TEST(ris_delay_message, ist_message_2) {
   EXPECT_EQ(1444168802, message.timestamp_);
   EXPECT_EQ(1444173360, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   EXPECT_EQ(DelayType_Is, inner_msg->type());
@@ -180,8 +180,8 @@ TEST(ris_delay_message, ist_message_3) {
   EXPECT_EQ(1447688700, message.earliest_);
   EXPECT_EQ(1447693200, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   EXPECT_EQ(DelayType_Is, inner_msg->type());
@@ -245,7 +245,7 @@ EventType get_type(std::vector<ris_message> const& messages) {
   if (messages.empty()) {
     throw std::runtime_error("messages empty");
   }
-  auto content = motis::ris::GetMessage(messages[0].data())->content();
+  auto content = motis::ris::GetRISMessage(messages[0].data())->content();
   auto delay_message = reinterpret_cast<DelayMessage const*>(content);
   return delay_message->events()->Get(0)->base()->type();
 }
@@ -270,7 +270,7 @@ TEST(ris_delay_message, train_event_type) {
   // "Durch" events are ignored
   auto pass_msg = type_fixture("Durch");
   auto pass = parse(pass_msg);
-  auto content = motis::ris::GetMessage(pass[0].data())->content();
+  auto content = motis::ris::GetRISMessage(pass[0].data())->content();
   auto delay_message = reinterpret_cast<DelayMessage const*>(content);
   EXPECT_EQ(0, delay_message->events()->size());
 }
@@ -317,8 +317,8 @@ TEST(ris_delay_message, ist_prog_message_1) {
   EXPECT_EQ(1444166580, message.earliest_);
   EXPECT_EQ(1444169100, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   EXPECT_EQ(DelayType_Forecast, inner_msg->type());
@@ -384,8 +384,8 @@ TEST(ris_delay_message, ist_prog_message_2) {
   EXPECT_EQ(1444165800, message.earliest_);
   EXPECT_EQ(1444169940, message.latest_);
 
-  auto outer_msg = motis::ris::GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
+  auto outer_msg = motis::ris::GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_DelayMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
 
   EXPECT_EQ(DelayType_Forecast, inner_msg->type());

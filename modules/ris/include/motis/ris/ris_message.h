@@ -8,15 +8,11 @@
 #include "motis/core/common/typed_flatbuffer.h"
 #include "motis/core/common/unixtime.h"
 
-#ifdef GetMessage
-#undef GetMessage
-#endif
-
 #include "motis/protocol/RISMessage_generated.h"
 
 namespace motis::ris {
 
-struct ris_message : typed_flatbuffer<Message> {
+struct ris_message : typed_flatbuffer<RISMessage> {
   ris_message(unixtime earliest, unixtime latest, unixtime timestamp,
               flatbuffers::FlatBufferBuilder&& fbb)
       : typed_flatbuffer(std::move(fbb)),

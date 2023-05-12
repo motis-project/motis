@@ -2,12 +2,12 @@ include "ris/RISMessage.fbs";
 
 namespace motis.ris;
 
-table MessageHolder {
-  message:[ubyte] (nested_flatbuffer: "Message");
+table RISMessageHolder {
+  message:[ubyte] (nested_flatbuffer: "RISMessage");
 }
 
 table RISBatch {
-  messages:[MessageHolder] (required);
+  messages:[RISMessageHolder] (required);
   schedule: ulong;
 }
 

@@ -50,8 +50,8 @@ TEST_F(gtfsrt_cancel_test, simple_cancel) {
   EXPECT_EQ(1561597200 + TIMEZONE_OFFSET, message.earliest_);
   EXPECT_EQ(1561600800 + TIMEZONE_OFFSET, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_CancelMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_CancelMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<CancelMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();

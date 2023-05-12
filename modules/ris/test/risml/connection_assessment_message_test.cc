@@ -57,8 +57,8 @@ TEST(DISABLED_ris_connection_assessment_message, message_1) {
   EXPECT_EQ(1444187640, message.earliest_);
   EXPECT_EQ(1444193880, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_ConnectionAssessmentMessage,
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_ConnectionAssessmentMessage,
             outer_msg->content_type());
   auto inner_msg = reinterpret_cast<ConnectionAssessmentMessage const*>(
       outer_msg->content());
@@ -160,8 +160,8 @@ TEST(DISABLED_ris_connection_assessment_message, message_2) {
   EXPECT_EQ(1444167120, message.earliest_);
   EXPECT_EQ(1444172700, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_ConnectionAssessmentMessage,
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_ConnectionAssessmentMessage,
             outer_msg->content_type());
   auto inner_msg = reinterpret_cast<ConnectionAssessmentMessage const*>(
       outer_msg->content());

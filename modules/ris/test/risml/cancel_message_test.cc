@@ -55,8 +55,8 @@ TEST(ris_cancel_message, message_1) {
   EXPECT_EQ(1444195800, message.earliest_);
   EXPECT_EQ(1444197420, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_CancelMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_CancelMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<CancelMessage const*>(outer_msg->content());
 
   auto id = inner_msg->trip_id();
@@ -132,8 +132,8 @@ TEST(ris_ausfall_message, message_2) {
   EXPECT_EQ(1444226100, message.earliest_);
   EXPECT_EQ(1444228560, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_CancelMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_CancelMessage, outer_msg->content_type());
   auto inner_msg = reinterpret_cast<CancelMessage const*>(outer_msg->content());
 
   auto events = inner_msg->events();
