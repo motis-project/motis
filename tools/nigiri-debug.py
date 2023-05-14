@@ -8,11 +8,11 @@ import os
 current_dir = os.getcwd()
 
 def query_f(id, router):
-    return f"{id}_q_{router}.json"
+    return f"{id}_q_bwd_iontrip_idest-{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r_{router}.json"
+    return f"{id}_r_bwd_iontrip_idest-{router}.json"
 
 
 if len(sys.argv) < 3:

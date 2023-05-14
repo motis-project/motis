@@ -75,20 +75,41 @@ duration get_fastest_direct_with_foot(schedule const& sched,
   return min;
 }
 
-duration get_fastest_start_dest_overlap(search_query const& q,
-                                        search_dir const dir) {
-  auto min = std::numeric_limits<duration>::max();
-  for (auto const& start : q.query_edges_) {
-    auto const start_station = start.get_destination(dir);
-    for (auto const& dest : q.query_edges_) {
-      auto const dest_station = dest.get_source(dir);
-      if (start_station == dest_station) {
-        min = std::min(min,
-                       static_cast<duration>(start.get_foot_edge_cost().time_ +
-                                             dest.get_foot_edge_cost().time_));
+template <typename Fn>
+void for_each_meta(schedule const& sched, node const* node,
+                   std::vector<edge> const& query_edges, bool const use_metas,
+                   search_dir const dir, bool const dest, Fn&& fn) {
+  if (node->id_ > 1 && use_metas) {
+    auto const& station = *sched.stations_.at(node->get_station()->id_);
+    for (auto const& meta : station.equivalent_) {
+      fn(sched.station_nodes_.at(meta->index_).get(), duration{0});
+    }
+  } else {
+    for (auto const& qe : query_edges) {
+      if (!dest && qe.get_source(dir) == node) {
+        fn(qe.get_destination(dir), qe.get_foot_edge_cost().time_);
+      } else if (dest && qe.get_destination(dir) == node) {
+        fn(qe.get_source(dir), qe.get_foot_edge_cost().time_);
       }
     }
   }
+}
+
+duration get_fastest_start_dest_overlap(search_query const& q,
+                                        search_dir const dir) {
+  auto min = std::numeric_limits<duration>::max();
+  for_each_meta(
+      *q.sched_, q.from_, q.query_edges_, q.use_start_metas_, dir, false,
+      [&](node const* start_eq, duration const start_duration) {
+        for_each_meta(
+            *q.sched_, q.to_, q.query_edges_, q.use_dest_metas_, dir, true,
+            [&](node const* dest_eq, duration const dest_duration) {
+              if (start_eq == dest_eq) {
+                min = std::min(
+                    min, static_cast<duration>(start_duration + dest_duration));
+              }
+            });
+      });
   return min;
 }
 

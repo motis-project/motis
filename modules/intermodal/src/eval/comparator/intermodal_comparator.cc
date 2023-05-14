@@ -119,17 +119,43 @@ std::string file_identifier(std::string const& filename) {
   return fs::path{filename}.stem().string();
 }
 
+query_type_t get_query_type(msg_ptr const& msg) {
+  switch (msg->get()->content_type()) {
+    case MsgContent_IntermodalRoutingRequest: {
+      auto const req = motis_content(IntermodalRoutingRequest, msg);
+      return (req->start_type() == IntermodalStart_IntermodalPretripStart ||
+              req->start_type() == IntermodalStart_PretripStart)
+                 ? query_type_t::PRETRIP
+                 : (req->search_dir() == SearchDir_Forward
+                        ? query_type_t::ONTRIP_FWD
+                        : query_type_t::ONTRIP_BWD);
+    }
+    case MsgContent_RoutingRequest: {
+      auto const req = motis_content(RoutingRequest, msg);
+      return req->start_type() == routing::Start_PretripStart
+                 ? query_type_t::PRETRIP
+                 : (req->search_dir() == SearchDir_Forward
+                        ? query_type_t::ONTRIP_FWD
+                        : query_type_t::ONTRIP_BWD);
+    }
+    default:
+      throw utl::fail("unsupported query type {}",
+                      EnumNameMsgContent(msg->get()->content_type()));
+  }
+}
+
 bool check(int id, std::vector<msg_ptr> const& responses,
            std::vector<msg_ptr> const& queries,
            std::vector<std::string> const& response_files,
            std::vector<std::string> const& query_files,
            std::vector<int>& file_errors, fs::path const& fail_path, bool local,
-           query_type_t const query_type, bool pretty_print) {
+           bool pretty_print) {
   assert(responses.size() == response_files.size());
   assert(responses.size() > 1);
   auto const file_count = response_files.size();
   auto match = true;
   std::unordered_set<int> failed_files;
+  auto const query_type = get_query_type(queries.at(0));
 
   auto const res = utl::to_vec(responses, [](auto const& m) {
     return motis_content(RoutingResponse, m);
@@ -243,7 +269,6 @@ int compare(int argc, char const** argv) {
   std::vector<std::string> filenames;
   std::vector<std::string> query_paths;
   std::string fail_dir;
-  query_type_t query_type{query_type_t::PRETRIP};
   po::options_description desc("Intermodal Comparator");
   // clang-format off
   desc.add_options()
@@ -251,14 +276,11 @@ int compare(int argc, char const** argv) {
       ("utc,u", po::bool_switch(&utc), "print timestamps in UTC")
       ("local,l", po::bool_switch(&local), "print timestamps in local time")
       ("pretty,p", po::bool_switch(&pretty_print), "pretty-print json files")
-      ("input", po::value<std::vector<std::string>>(&filenames)->multitoken(), "response files")
-      ("fail", po::value<std::string>(&fail_dir)->default_value("fail"),
-          "output directory for different responses (empty to disable)")
       ("queries", po::value<std::vector<std::string>>(&query_paths)->multitoken(),
        "query files if failed queries should be written")
-      ("type,t",
-          po::value<query_type_t>(&query_type)->default_value(query_type),
-          "query type: pretrip|ontrip_fwd|ontrip_bwd");
+      ("responses", po::value<std::vector<std::string>>(&filenames)->multitoken(), "response files")
+      ("fail", po::value<std::string>(&fail_dir)->default_value("fail"),
+          "output directory for different responses (empty to disable)");
   // clang-format on
 
   po::variables_map vm;
@@ -367,9 +389,8 @@ int compare(int argc, char const** argv) {
       if (msgs.size() == file_count &&
           (!with_queries || queries.size() == file_count)) {
         ++msg_count;
-        auto success =
-            check(id, msgs, queries, filenames, query_paths, file_errors,
-                  fail_path, local, query_type, pretty_print);
+        auto success = check(id, msgs, queries, filenames, query_paths,
+                             file_errors, fail_path, local, pretty_print);
         if (!success) {
           ++errors;
         }
