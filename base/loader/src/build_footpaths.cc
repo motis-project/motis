@@ -437,6 +437,10 @@ struct footpath_builder {
         auto idx_a = std::next(lb, i)->second;
         auto idx_b = std::next(lb, j)->second;
 
+        print_dbg("MOTIS OUTPUT: {} --{}--> {}\n",
+                  sched_.stations_[idx_a]->eva_nr_, mat(i, j),
+                  sched_.stations_[idx_b]->eva_nr_);
+
         // each node only in one cluster -> no sync required
         sched_.stations_[idx_a]->outgoing_footpaths_.emplace_back(idx_a, idx_b,
                                                                   mat(i, j));
