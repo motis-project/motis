@@ -97,10 +97,6 @@ void for_each_meta(schedule const& sched, node const* node,
 
 duration get_fastest_start_dest_overlap(search_query const& q,
                                         search_dir const dir) {
-  auto const get = [&](node const* n) {
-    return q.sched_->stations_.at(n->get_station()->id_)->eva_nr_;
-  };
-
   auto min = std::numeric_limits<duration>::max();
   for_each_meta(
       *q.sched_, q.from_, q.query_edges_, q.use_start_metas_, dir, false,
