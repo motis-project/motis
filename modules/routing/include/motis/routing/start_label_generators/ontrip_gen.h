@@ -14,7 +14,7 @@ template <search_dir Dir, typename Label>
 struct ontrip_gen {
   static std::vector<Label*> generate(
       schedule const& sched, mem_manager& mem, lower_bounds& lbs,
-      edge const* start_edge, std::vector<edge> const&,
+      edge const* start_edge, std::vector<edge> const& meta_edges,
       std::vector<edge> const& query_edges, time interval_begin,
       time /* interval_end */, light_connection const* lcon,
       bool starting_footpaths, duration const fastest_direct) {
@@ -29,8 +29,11 @@ struct ontrip_gen {
       generate_train_start(sched, mem, lbs, start_edge, interval_begin, lcon,
                            fastest_direct, labels);
     } else {
-      generate_station_starts(sched, mem, lbs, start_edge, interval_begin,
-                              starting_footpaths, lcon, fastest_direct, labels);
+      for (auto const& me : meta_edges) {
+        generate_station_starts(sched, mem, lbs, &me, interval_begin,
+                                starting_footpaths, lcon, fastest_direct,
+                                labels);
+      }
     }
     return labels;
   }

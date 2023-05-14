@@ -89,6 +89,7 @@ inline search_query build_query(schedule const& sched,
       q.from_ = get_station_node(sched, start->station());
       q.interval_begin_ = unix_to_motistime(sched, start->departure_time());
       q.interval_end_ = INVALID_TIME;
+      q.use_start_metas_ = req->use_start_metas();
       q.use_dest_metas_ = req->use_dest_metas();
       q.use_start_footpaths_ = req->use_start_footpaths();
       break;
