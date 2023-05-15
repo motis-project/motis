@@ -40,33 +40,35 @@ mm::msg_ptr to_routing_response(
         return to_connection(fbb, nigiri_to_motis_journey(tt, tags, j));
       });
   MOTIS_STOP_TIMING(conversion);
-  std::vector<fbs::Offset<Statistics>> statistics{CreateStatistics(
-      fbb, fbb.CreateString("nigiri.raptor"),
-      fbb.CreateVector(std::vector<fbs::Offset<StatisticsEntry>>{
-          CreateStatisticsEntry(fbb, fbb.CreateString("routing_time_ms"),
-                                stats.n_routing_time_),
-          CreateStatisticsEntry(fbb, fbb.CreateString("lower_bounds_time_ms"),
-                                stats.lb_time_),
-          CreateStatisticsEntry(fbb, fbb.CreateString("footpaths_visited"),
-                                stats.n_footpaths_visited_),
-          CreateStatisticsEntry(fbb, fbb.CreateString("routes_visited"),
-                                stats.n_routes_visited_),
-          CreateStatisticsEntry(fbb, fbb.CreateString("earliest_trip_calls"),
-                                stats.n_earliest_trip_calls_),
-          CreateStatisticsEntry(
-              fbb, fbb.CreateString("earliest_arrival_updated_by_route"),
-              stats.n_earliest_arrival_updated_by_route_),
-          CreateStatisticsEntry(
-              fbb, fbb.CreateString("earliest_arrival_updated_by_footpath"),
-              stats.n_earliest_arrival_updated_by_footpath_),
-          CreateStatisticsEntry(
-              fbb, fbb.CreateString("fp_update_prevented_by_lower_bound"),
-              stats.fp_update_prevented_by_lower_bound_),
-          CreateStatisticsEntry(
-              fbb, fbb.CreateString("route_update_prevented_by_lower_bound"),
-              stats.route_update_prevented_by_lower_bound_),
-          CreateStatisticsEntry(fbb, fbb.CreateString("conversion"),
-                                MOTIS_TIMING_MS(conversion))}))};
+
+  auto entries = std::vector<fbs::Offset<StatisticsEntry>>{
+      CreateStatisticsEntry(fbb, fbb.CreateString("routing_time_ms"),
+                            stats.n_routing_time_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("lower_bounds_time_ms"),
+                            stats.lb_time_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("footpaths_visited"),
+                            stats.n_footpaths_visited_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("routes_visited"),
+                            stats.n_routes_visited_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("earliest_trip_calls"),
+                            stats.n_earliest_trip_calls_),
+      CreateStatisticsEntry(
+          fbb, fbb.CreateString("earliest_arrival_updated_by_route"),
+          stats.n_earliest_arrival_updated_by_route_),
+      CreateStatisticsEntry(
+          fbb, fbb.CreateString("earliest_arrival_updated_by_footpath"),
+          stats.n_earliest_arrival_updated_by_footpath_),
+      CreateStatisticsEntry(
+          fbb, fbb.CreateString("fp_update_prevented_by_lower_bound"),
+          stats.fp_update_prevented_by_lower_bound_),
+      CreateStatisticsEntry(
+          fbb, fbb.CreateString("route_update_prevented_by_lower_bound"),
+          stats.route_update_prevented_by_lower_bound_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("conversion"),
+                            MOTIS_TIMING_MS(conversion))};
+  auto statistics = std::vector<fbs::Offset<Statistics>>{
+      CreateStatistics(fbb, fbb.CreateString("nigiri.raptor"),
+                       fbb.CreateVectorOfSortedTables(&entries))};
   fbb.create_and_finish(
       MsgContent_RoutingResponse,
       routing::CreateRoutingResponse(
