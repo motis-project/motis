@@ -52,7 +52,9 @@ private:
     // or uses the compact format (content only, target taken from URL).
     auto add_msg_wrapper = false;
     if (is_root && v.IsObject()) {
-      if (!v.HasMember("destination") && !v.HasMember("content")) {
+      if (!(v.HasMember("destination") &&
+            v.FindMember("destination")->value.IsString()) &&
+          !v.HasMember("content")) {
         add_msg_wrapper = true;
         content_only_detected_ = true;
         writer_.StartObject();
@@ -172,7 +174,8 @@ fix_json_result fix_json(std::string const& json,
 
   auto converter = json_converter{writer, target};
   converter.fix(d);
-  return {buffer.GetString(), converter.detected_format()};
+  return {{buffer.GetString(), buffer.GetLength()},
+          converter.detected_format()};
 }
 
 }  // namespace motis::module
