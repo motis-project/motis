@@ -291,7 +291,7 @@ msg_ptr update_msg_builder::finish() {
           schedule_res_id_)
           .Union(),
       "/rt/update", DestinationType_Topic);
-  auto const msg = make_msg(fbb_);
+  auto msg = make_msg(fbb_);
   reset();
   return msg;
 }
