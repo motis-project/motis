@@ -145,10 +145,6 @@ struct full_trip_handler {
 
       if (rule_service) {
         ++stats_.reroute_rule_service_not_supported_;
-        if (debug_) {
-          LOG(info) << "[FTH] ignoring message because reroute of rule "
-                       "services is not supported";
-        }
         return;
       }
 
