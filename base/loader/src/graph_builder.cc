@@ -105,13 +105,23 @@ std::optional<merged_trips_idx> graph_builder::create_merged_trips(
 trip* graph_builder::register_service(Service const* s, int day_idx,
                                       bool allow_duplicates) {
   auto const ftid = get_full_trip_id(s, day_idx);
-  if (added_full_trip_ids_.find(ftid) != added_full_trip_ids_.end()) {
-    if (allow_duplicates) {
-      LOG(warn) << "service with duplicate trip id: "
-                << debug::trip_id{sched_, ftid};
-    } else {
-      LOG(warn) << "ignoring service with duplicate trip id: "
-                << debug::trip_id{sched_, ftid};
+  if (auto const it = added_full_trip_ids_.find(ftid);
+      it != added_full_trip_ids_.end()) {
+    LOG(warn) << "service with duplicate trip id: "
+              << debug::trip_id{sched_, ftid}
+              << (allow_duplicates ? " - may cause problems!" : " - ignored");
+    if (s->debug() != nullptr) {
+      LOG(warn) << "duplicate service definition: " << s->debug()->file()->str()
+                << " lines " << s->debug()->line_from() << "-"
+                << s->debug()->line_to();
+    }
+    auto const& existing_trp = sched_.trip_mem_.at(it->second);
+    if (existing_trp->dbg_.file_ != nullptr) {
+      LOG(warn) << "existing service definition:  " << *existing_trp->dbg_.file_
+                << " lines " << existing_trp->dbg_.line_from_ << "-"
+                << existing_trp->dbg_.line_to_;
+    }
+    if (!allow_duplicates) {
       return nullptr;
     }
   }
@@ -139,7 +149,7 @@ trip* graph_builder::register_service(Service const* s, int day_idx,
               s->schedule_relationship() == ScheduleRelationship_UNSCHEDULED))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
-  added_full_trip_ids_.insert(ftid);
+  added_full_trip_ids_[ftid] = stored->trip_idx_;
 
   if (s->trip_id() != nullptr) {
     auto const motis_time = to_motis_time(day_idx - first_day_ - 5, 0);

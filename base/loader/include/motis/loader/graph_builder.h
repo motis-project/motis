@@ -240,7 +240,7 @@ struct graph_builder {
                 deep_ptr_eq<connection>>
       connections_;
   mcd::hash_map<flatbuffers64::String const*, mcd::string*> filenames_;
-  mcd::hash_set<full_trip_id> added_full_trip_ids_;
+  mcd::hash_map<full_trip_id, trip_idx_t> added_full_trip_ids_;
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   bool apply_rules_{false};
