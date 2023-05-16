@@ -6,12 +6,13 @@
 #include <set>
 #include <vector>
 
+#include "utl/get_or_create.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
 #include "motis/core/schedule/trip.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/loader/util.h"
-#include "utl/get_or_create.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
 
@@ -304,8 +305,9 @@ struct rule_service_route_builder {
                         return ptr<trip>{utl::get_or_create(
                             single_trips_,
                             std::make_pair(sp.service_, s_day_idx), [&]() {
+                              // TODO(pablo): handle duplicate trip id
                               return gb_.register_service(sp.service_,
-                                                          s_day_idx);
+                                                          s_day_idx, true);
                             })};
                       })));
     });

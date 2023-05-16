@@ -3,6 +3,7 @@
 #include <ctime>
 #include <array>
 #include <map>
+#include <optional>
 #include <set>
 
 #include "flatbuffers/flatbuffers.h"
@@ -135,9 +136,10 @@ struct graph_builder {
 
   full_trip_id get_full_trip_id(Service const* s, int day, int section_idx = 0);
 
-  merged_trips_idx create_merged_trips(Service const* s, int day_idx);
+  std::optional<merged_trips_idx> create_merged_trips(Service const* s,
+                                                      int day_idx);
 
-  trip* register_service(Service const* s, int day_idx);
+  trip* register_service(Service const* s, int day_idx, bool allow_duplicates);
 
   void add_services(
       flatbuffers64::Vector<flatbuffers64::Offset<Service>> const* services);
@@ -238,6 +240,7 @@ struct graph_builder {
                 deep_ptr_eq<connection>>
       connections_;
   mcd::hash_map<flatbuffers64::String const*, mcd::string*> filenames_;
+  mcd::hash_set<full_trip_id> added_full_trip_ids_;
   schedule& sched_;
   int first_day_{0}, last_day_{0};
   bool apply_rules_{false};
