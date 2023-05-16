@@ -166,6 +166,7 @@ void update_msg_builder::reset() {
   separated_trips_.clear();
   previous_reroute_update_.clear();
   previous_trip_formation_update_.clear();
+  previous_track_update_.clear();
   delay_count_ = 0;
   reroute_count_ = 0;
 }
@@ -290,7 +291,9 @@ msg_ptr update_msg_builder::finish() {
           schedule_res_id_)
           .Union(),
       "/rt/update", DestinationType_Topic);
-  return make_msg(fbb_);
+  auto const msg = make_msg(fbb_);
+  reset();
+  return msg;
 }
 
 }  // namespace motis::rt
