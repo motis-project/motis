@@ -92,8 +92,8 @@ void update_trip_formation(schedule const& sched, universe& uv,
                            motis::ris::TripFormationMessage const* tfm) {
   auto const trip_uuid = parse_uuid(view(tfm->trip_id()->uuid()));
   primary_trip_id ptid;
-  auto has_ptid = false;
-  if ((has_ptid = get_primary_trip_id(sched, tfm->trip_id(), ptid))) {
+  auto const has_ptid = get_primary_trip_id(sched, tfm->trip_id(), ptid);
+  if (has_ptid) {
     if (auto it = uv.capacity_maps_.trip_uuid_map_.find(ptid);
         it != end(uv.capacity_maps_.trip_uuid_map_)) {
       if (it->second != trip_uuid) {
