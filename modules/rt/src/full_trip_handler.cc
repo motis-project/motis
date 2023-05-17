@@ -129,6 +129,7 @@ struct full_trip_handler {
     result_.is_reroute_ = !is_same_route(existing_sections, sections);
 
     if (is_reroute()) {
+      auto const rule_service = is_rule_service(result_.trp_);
       if (is_new_trip()) {
         ++stats_.additional_msgs_;
         ++stats_.additional_total_;
@@ -137,11 +138,14 @@ struct full_trip_handler {
         ++stats_.cancel_msgs_;
       } else {
         ++stats_.reroute_msgs_;
-        if (is_rule_service(result_.trp_)) {
-          ++stats_.reroute_rule_service_not_supported_;
-          return;
+        if (!rule_service) {
+          ++stats_.reroute_ok_;
         }
-        ++stats_.reroute_ok_;
+      }
+
+      if (rule_service) {
+        ++stats_.reroute_rule_service_not_supported_;
+        return;
       }
 
       auto const canceled_ev_keys =

@@ -278,7 +278,7 @@ void rt_handler::update(motis::ris::RISMessage const* m,
 
     case ris::RISMessageUnion_TripFormationMessage: {
       handle_trip_formation_msg(
-          stats_, sched_, update_builder_,
+          stats_, update_builder_,
           reinterpret_cast<ris::TripFormationMessage const*>(c));
       break;
     }

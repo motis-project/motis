@@ -6,12 +6,13 @@
 #include <set>
 #include <vector>
 
+#include "utl/get_or_create.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
 #include "motis/core/schedule/trip.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/loader/util.h"
-#include "utl/get_or_create.h"
 
 #include "motis/schedule-format/Schedule_generated.h"
 
@@ -304,8 +305,9 @@ struct rule_service_route_builder {
                         return ptr<trip>{utl::get_or_create(
                             single_trips_,
                             std::make_pair(sp.service_, s_day_idx), [&]() {
+                              // TODO(pablo): handle duplicate trip id
                               return gb_.register_service(sp.service_,
-                                                          s_day_idx);
+                                                          s_day_idx, true);
                             })};
                       })));
     });
@@ -544,11 +546,20 @@ struct rule_service_route_builder {
         return;
       }
     }
-    utl::verify(std::find_if(begin(s1_node->edges_), end(s1_node->edges_),
-                             [](edge const& e) {
-                               return e.type() == edge::THROUGH_EDGE;
-                             }) == end(s1_node->edges_),
-                "multiple outgoing through edges");
+    if (std::find_if(begin(s1_node->edges_), end(s1_node->edges_),
+                     [](edge const& e) {
+                       return e.type() == edge::THROUGH_EDGE;
+                     }) != end(s1_node->edges_)) {
+      auto const s1_debug = r->service1()->debug();
+      auto const s2_debug = r->service2()->debug();
+      LOG(warn) << "multiple outgoing through edges: "
+                << s1_debug->file()->view() << " lines "
+                << s1_debug->line_from() << "-" << s1_debug->line_to() << " -> "
+                << s2_debug->file()->view() << " lines "
+                << s2_debug->line_from() << "-" << s2_debug->line_to()
+                << " at station " << r->from()->id()->view() << " "
+                << r->from()->name()->view();
+    }
     s1_node->edges_.push_back(make_through_edge(s1_node, s2_node));
     through_target_nodes_.insert(s2_node);
   }

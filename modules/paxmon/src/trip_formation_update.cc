@@ -1,7 +1,13 @@
 #include "motis/paxmon/trip_formation_update.h"
 
 #include <algorithm>
+#include <iostream>
 #include <string_view>
+
+#include "boost/uuid/uuid_io.hpp"
+
+#include "motis/core/common/date_time_util.h"
+#include "motis/core/debug/trip.h"
 
 #include "motis/rt/util.h"
 #include "motis/vector.h"
@@ -55,12 +61,75 @@ trip_formation_section to_trip_formation_section(
   return sec;
 }
 
+trip* find_trip_by_primary_trip_id(schedule const& sched,
+                                   primary_trip_id const& ptid,
+                                   boost::uuids::uuid const& trip_uuid) {
+  trip* result = nullptr;
+  auto matching_trips = 0;
+  for (auto it =
+           std::lower_bound(begin(sched.trips_), end(sched.trips_),
+                            std::make_pair(ptid, static_cast<trip*>(nullptr)));
+       it != end(sched.trips_) && it->first == ptid; ++it) {
+    result = it->second;
+    ++matching_trips;
+  }
+  if (matching_trips > 1) {
+    std::cout << "[UTF-06] found " << matching_trips
+              << " matching trips by primary id: (formation trip uuid: "
+              << trip_uuid << ")" << std::endl;
+    for (auto it = std::lower_bound(
+             begin(sched.trips_), end(sched.trips_),
+             std::make_pair(ptid, static_cast<trip*>(nullptr)));
+         it != end(sched.trips_) && it->first == ptid; ++it) {
+      std::cout << "  " << debug::trip{sched, it->second} << std::endl;
+    }
+  }
+  // only return trip if there is an unambiguous match
+  return matching_trips == 1 ? result : nullptr;
+}
+
 void update_trip_formation(schedule const& sched, universe& uv,
                            motis::ris::TripFormationMessage const* tfm) {
   auto const trip_uuid = parse_uuid(view(tfm->trip_id()->uuid()));
   primary_trip_id ptid;
-  if (get_primary_trip_id(sched, tfm->trip_id(), ptid)) {
+  auto const has_ptid = get_primary_trip_id(sched, tfm->trip_id(), ptid);
+  if (has_ptid) {
+    if (auto it = uv.capacity_maps_.trip_uuid_map_.find(ptid);
+        it != end(uv.capacity_maps_.trip_uuid_map_)) {
+      if (it->second != trip_uuid) {
+        std::cout << "[UTF-01] trip uuid CHANGED: " << it->second << " -> "
+                  << trip_uuid << "\n  ptid: train_nr=" << ptid.get_train_nr()
+                  << ", station="
+                  << sched.stations_[ptid.get_station_id()]->name_
+                  << ", time=" << format_time(ptid.get_time()) << std::endl;
+      }
+      if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
+          tf_it == end(uv.capacity_maps_.trip_formation_map_)) {
+        std::cout << "[UTF-02] trip primary id found, but uuid not found: uuid="
+                  << trip_uuid << ", train_nr=" << ptid.get_train_nr()
+                  << ", station="
+                  << sched.stations_[ptid.get_station_id()]->name_
+                  << ", time=" << format_time(ptid.get_time()) << std::endl;
+      }
+    } else {
+      if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
+          tf_it != end(uv.capacity_maps_.trip_formation_map_)) {
+        std::cout << "[UTF-03] trip primary id not found, but uuid found: uuid="
+                  << trip_uuid << ", train_nr=" << ptid.get_train_nr()
+                  << ", station="
+                  << sched.stations_[ptid.get_station_id()]->name_
+                  << ", time=" << format_time(ptid.get_time()) << std::endl;
+      }
+    }
     uv.capacity_maps_.trip_uuid_map_[ptid] = trip_uuid;
+  } else {
+    auto const& tid = tfm->trip_id()->id();
+    std::cout << "[UTF-04] station from trip id not found: {station_id="
+              << tid->station_id()->str() << ", train_nr=" << tid->train_nr()
+              << ", time=" << tid->time() << " ("
+              << format_unix_time(tid->time())
+              << ")}, uuid=" << tfm->trip_id()->uuid()->str() << ", "
+              << tfm->sections()->size() << " sections" << std::endl;
   }
 
   auto& formation = uv.capacity_maps_.trip_formation_map_[trip_uuid];
@@ -69,9 +138,11 @@ void update_trip_formation(schedule const& sched, universe& uv,
         return to_trip_formation_section(sched, sec);
       });
 
-  if (auto const it = sched.uuid_to_trip_.find(trip_uuid);
-      it != end(sched.uuid_to_trip_)) {
-    update_trip_capacity(uv, sched, it->second);
+  if (has_ptid) {
+    if (auto* trp = find_trip_by_primary_trip_id(sched, ptid, trip_uuid);
+        trp != nullptr) {
+      update_trip_capacity(uv, sched, trp);
+    }
   }
 }
 

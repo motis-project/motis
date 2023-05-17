@@ -186,18 +186,15 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
 
 trip_formation const* get_trip_formation(capacity_maps const& caps,
                                          trip const* trp) {
-  auto trip_uuid = trp->uuid_;
-  if (trip_uuid.is_nil()) {
-    if (auto const it = caps.trip_uuid_map_.find(trp->id_.primary_);
-        it != end(caps.trip_uuid_map_)) {
-      trip_uuid = it->second;
+  if (auto const it = caps.trip_uuid_map_.find(trp->id_.primary_);
+      it != end(caps.trip_uuid_map_)) {
+    auto const trip_uuid = it->second;
+    if (auto const it = caps.trip_formation_map_.find(trip_uuid);
+        it != end(caps.trip_formation_map_)) {
+      return &it->second;
     } else {
       return nullptr;
     }
-  }
-  if (auto const it = caps.trip_formation_map_.find(trip_uuid);
-      it != end(caps.trip_formation_map_)) {
-    return &it->second;
   } else {
     return nullptr;
   }
