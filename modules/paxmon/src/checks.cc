@@ -10,7 +10,10 @@
 
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/trip_access.h"
+#include "motis/core/conv/trip_conv.h"
 #include "motis/core/debug/trip.h"
+
+#include "motis/module/context/motis_call.h"
 
 #include "motis/paxmon/debug.h"
 #include "motis/paxmon/reachability.h"
@@ -205,7 +208,8 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
 }
 
 bool check_trip_in_sync(universe const& uv, schedule const& sched,
-                        trip const* trp, trip_data_index const tdi) {
+                        trip const* trp, trip_data_index const tdi,
+                        bool const check_times) {
   auto trip_ok = true;
   std::vector<event_node const*> nodes;
   auto const edges = uv.trip_data_.edges(tdi);
@@ -238,29 +242,31 @@ bool check_trip_in_sync(universe const& uv, schedule const& sched,
       }
       if (pm_from->station_idx() == ev_from.get_station_idx() &&
           pm_to->station_idx() == ev_to.get_station_idx()) {
-        if (pm_from->schedule_time() != get_schedule_time(sched, ev_from)) {
-          std::cout << "!! schedule time mismatch @dep "
-                    << sched.stations_.at(pm_from->station_idx())->name_.str()
-                    << "\n";
-          trip_ok = false;
-        }
-        if (pm_to->schedule_time() != get_schedule_time(sched, ev_to)) {
-          std::cout << "!! schedule time mismatch @arr "
-                    << sched.stations_.at(pm_to->station_idx())->name_.str()
-                    << "\n";
-          trip_ok = false;
-        }
-        if (pm_from->current_time() != ev_from.get_time()) {
-          std::cout << "!! current time mismatch @dep "
-                    << sched.stations_.at(pm_from->station_idx())->name_.str()
-                    << "\n";
-          trip_ok = false;
-        }
-        if (pm_to->current_time() != ev_to.get_time()) {
-          std::cout << "!! current time mismatch @arr "
-                    << sched.stations_.at(pm_to->station_idx())->name_.str()
-                    << "\n";
-          trip_ok = false;
+        if (check_times) {
+          if (pm_from->schedule_time() != get_schedule_time(sched, ev_from)) {
+            std::cout << "!! schedule time mismatch @dep "
+                      << sched.stations_.at(pm_from->station_idx())->name_.str()
+                      << "\n";
+            trip_ok = false;
+          }
+          if (pm_to->schedule_time() != get_schedule_time(sched, ev_to)) {
+            std::cout << "!! schedule time mismatch @arr "
+                      << sched.stations_.at(pm_to->station_idx())->name_.str()
+                      << "\n";
+            trip_ok = false;
+          }
+          if (pm_from->current_time() != ev_from.get_time()) {
+            std::cout << "!! current time mismatch @dep "
+                      << sched.stations_.at(pm_from->station_idx())->name_.str()
+                      << "\n";
+            trip_ok = false;
+          }
+          if (pm_to->current_time() != ev_to.get_time()) {
+            std::cout << "!! current time mismatch @arr "
+                      << sched.stations_.at(pm_to->station_idx())->name_.str()
+                      << "\n";
+            trip_ok = false;
+          }
         }
       } else {
         std::cout << "!! station mismatch: section " << node_idx / 2
@@ -292,10 +298,49 @@ bool check_trip_in_sync(universe const& uv, schedule const& sched,
     print_trip(sched, trp);
     std::cout << "  sections: " << std::distance(begin(sections), end(sections))
               << ", td edges: " << edges.size()
-              << ", event nodes: " << nodes.size() << std::endl;
+              << ", event nodes: " << nodes.size() << ", tdi: " << tdi
+              << std::endl;
 
     print_trip_sections(uv, sched, trp, tdi);
-    std::cout << "\n" << std::endl;
+
+    mcd::hash_set<trip const*> merged_trips;
+    merged_trips.insert(trp);
+
+    for (auto const ei : edges) {
+      for (auto const& mt :
+           *sched.merged_trips_.at(ei.get(uv)->get_merged_trips_idx())) {
+        merged_trips.insert(mt);
+      }
+    }
+
+    for (auto const& sec : sections) {
+      for (auto const& mt : *sched.merged_trips_.at(sec.lcon().trips_)) {
+        merged_trips.insert(mt);
+      }
+    }
+
+    for (auto const mt : merged_trips) {
+      std::cout << "\nrt updates for " << debug::trip{sched, mt} << ":\n";
+      try {
+        using namespace motis::module;
+        using namespace motis::rt;
+        message_creator mc;
+        mc.create_and_finish(
+            MsgContent_RtMessageHistoryRequest,
+            CreateRtMessageHistoryRequest(mc, 0, to_fbs(sched, mc, mt)).Union(),
+            "/rt/message_history");
+        auto const req = make_msg(mc);
+        auto const res = motis_call(req)->val();
+        std::cout << res->to_json(json_format::CONTENT_ONLY_TYPES_IN_UNIONS)
+                  << std::endl;
+      } catch (std::system_error const& e) {
+        std::cout << "could not get message history for trip (system_error): "
+                  << e.what() << std::endl;
+      } catch (std::runtime_error const& e) {
+        std::cout << "could not get message history for trip (runtime_error): "
+                  << e.what() << std::endl;
+      }
+    }
   }
 
   return trip_ok;
