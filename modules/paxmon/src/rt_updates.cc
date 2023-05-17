@@ -3,6 +3,7 @@
 #include <limits>
 #include <numeric>
 #include <set>
+#include <vector>
 
 #include "utl/verify.h"
 
@@ -112,6 +113,7 @@ void handle_rt_update(universe& uv, schedule const& sched,
   uv.tick_stats_.rt_updates_ += update->updates()->size();
 
   std::vector<edge_index> updated_interchange_edges;
+  std::vector<TripFormationMessage const*> trip_formation_messages;
   auto intermediate_skipped = 0;
   for (auto const& u : *update->updates()) {
     if (u->intermediate()) {
@@ -167,11 +169,16 @@ void handle_rt_update(universe& uv, schedule const& sched,
         ++uv.tick_stats_.rt_trip_formation_updates_;
         auto const tfm =
             reinterpret_cast<TripFormationMessage const*>(u->content());
-        update_trip_formation(sched, uv, tfm);
+        trip_formation_messages.emplace_back(tfm);
+        // will be handled at the end, after reroutes have been applied
+        // (so that the schedule graph + paxmon graph are in sync)
         break;
       }
       default: break;
     }
+  }
+  for (auto const tfm : trip_formation_messages) {
+    update_trip_formation(sched, uv, tfm);
   }
   if (intermediate_skipped > 0) {
     LOG(info) << "skipped " << intermediate_skipped << "/"
