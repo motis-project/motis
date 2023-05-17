@@ -24,21 +24,6 @@ void handle_trip_formation_msg(statistics& stats, schedule& sched,
                                ris::TripFormationMessage const* msg) {
   ++stats.trip_formation_msgs_;
   update_builder.trip_formation_message(msg);
-
-  // store trip uuid mapping
-  primary_trip_id ptid;
-  if (get_primary_trip_id(sched, msg->trip_id(), ptid)) {
-    auto const trip_uuid = parse_uuid(view(msg->trip_id()->uuid()));
-    if (sched.uuid_to_trip_.find(trip_uuid) != end(sched.uuid_to_trip_)) {
-      return;
-    }
-    if (auto* trp = find_trip_by_primary_trip_id(sched, ptid); trp != nullptr) {
-      sched.uuid_to_trip_[trip_uuid] = trp;
-      if (trp->uuid_.is_nil()) {
-        trp->uuid_ = trip_uuid;
-      }
-    }
-  }
 }
 
 }  // namespace motis::rt
