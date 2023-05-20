@@ -24,6 +24,7 @@
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/access/time_access.h"
+#include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/check_journey.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
@@ -144,6 +145,91 @@ query_type_t get_query_type(msg_ptr const& msg) {
   }
 }
 
+void print_query(std::ostream& out, msg_ptr const& msg, bool const local) {
+  auto const print_pretrip_start = [&](routing::PretripStart const* start) {
+    out << start->station()->id()->view() << " @ ["
+        << format_time(start->interval()->begin(), local) << ", "
+        << format_time(start->interval()->end(), local) << "]";
+  };
+
+  auto const print_ontrip_station_start =
+      [&](routing::OntripStationStart const* start) {
+        out << start->station()->id()->view() << " @ "
+            << format_time(start->departure_time(), local);
+      };
+
+  auto const print_ontrip_train_start =
+      [&](routing::OntripTrainStart const* start) {
+        out << start->station()->id()->view() << " @ "
+            << format_time(start->arrival_time(), local) << " @ "
+            << to_extern_trip(start->trip()).to_str();
+      };
+
+  switch (msg->get()->content_type()) {
+    case MsgContent_IntermodalRoutingRequest: {
+      auto const req = motis_content(IntermodalRoutingRequest, msg);
+      out << (req->search_dir() == SearchDir_Forward ? "FWD" : "BWD") << " ";
+      switch (req->start_type()) {
+        case intermodal::IntermodalStart_IntermodalPretripStart: {
+          auto const start =
+              reinterpret_cast<intermodal::IntermodalPretripStart const*>(
+                  req->start());
+          out << "(" << start->position()->lat() << ", "
+              << start->position()->lng() << ") @ ["
+              << format_time(start->interval()->begin(), local) << ", "
+              << format_time(start->interval()->end(), local) << "]";
+          return;
+        }
+        case intermodal::IntermodalStart_IntermodalOntripStart: {
+          auto const start =
+              reinterpret_cast<intermodal::IntermodalOntripStart const*>(
+                  req->start());
+          out << "(" << start->position()->lat() << ", "
+              << start->position()->lng() << ") @ "
+              << format_time(start->departure_time(), local);
+          return;
+        }
+        case intermodal::IntermodalStart_PretripStart:
+          return print_pretrip_start(
+              reinterpret_cast<routing::PretripStart const*>(req->start()));
+        case intermodal::IntermodalStart_OntripStationStart:
+          return print_ontrip_station_start(
+              reinterpret_cast<routing::OntripStationStart const*>(
+                  req->start()));
+        case intermodal::IntermodalStart_OntripTrainStart:
+          return print_ontrip_train_start(
+              reinterpret_cast<routing::OntripTrainStart const*>(req->start()));
+        default:
+          throw utl::fail("unsupported intermodal start type {}",
+                          EnumNameIntermodalStart(req->start_type()));
+      }
+    }
+    case MsgContent_RoutingRequest: {
+      auto const req = motis_content(RoutingRequest, msg);
+      out << (req->search_dir() == SearchDir_Forward ? "FWD" : "BWD") << " ";
+      switch (req->start_type()) {
+        case routing::Start_PretripStart:
+          return print_pretrip_start(
+              reinterpret_cast<routing::PretripStart const*>(req->start()));
+        case routing::Start_OntripStationStart:
+          return print_ontrip_station_start(
+              reinterpret_cast<routing::OntripStationStart const*>(
+                  req->start()));
+        case routing::Start_OntripTrainStart:
+          return print_ontrip_train_start(
+              reinterpret_cast<routing::OntripTrainStart const*>(req->start()));
+        default:
+          throw utl::fail("unsupported routing start type {}",
+                          EnumNameStart(req->start_type()));
+      }
+    }
+
+    default:
+      throw utl::fail("unsupported query type {}",
+                      EnumNameMsgContent(msg->get()->content_type()));
+  }
+}
+
 bool check(int id, std::vector<msg_ptr> const& responses,
            std::vector<msg_ptr> const& queries,
            std::vector<std::string> const& response_files,
@@ -163,7 +249,9 @@ bool check(int id, std::vector<msg_ptr> const& responses,
 
   auto const fail = [&](auto const file_idx) -> std::ostream& {
     if (match) {
-      std::cout << "\nMismatch at query id " << id << ":\n";
+      std::cout << "\nMismatch at id=" << id << ", query={";
+      print_query(std::cout, queries[0], local);
+      std::cout << "}:\n";
       match = false;
     }
     failed_files.insert(file_idx);
@@ -419,9 +507,33 @@ int compare(int argc, char const** argv) {
     for (auto const& id : unmatched_msgs) {
       std::cout << " query id " << id << " missing in:";
       for (auto file_idx = 0UL; file_idx < file_count; ++file_idx) {
-        const auto& q = queued_msgs[file_idx];
-        if (q.find(id) == end(q)) {
+        auto const& response = queued_msgs[file_idx];
+        if (auto const it = response.find(id); it == end(response)) {
           std::cout << " " << filenames[file_idx];
+        } else {
+          std::ofstream out{
+              (fail_path / fmt::format("{}_{}.json", std::to_string(id),
+                                       file_identifier(filenames[file_idx])))
+                  .string()};
+          out << it->second->to_json(pretty_print
+                                         ? json_format::DEFAULT_FLATBUFFERS
+                                         : json_format::SINGLE_LINE)
+              << std::endl;
+        }
+
+        if (with_queries) {
+          auto const& query = queued_queries[file_idx];
+          if (auto const it = query.find(id); it != end(query)) {
+            std::ofstream query_out{
+                (fail_path /
+                 fmt::format("{}_{}.json", std::to_string(id),
+                             file_identifier(query_paths[file_idx])))
+                    .string()};
+            query_out << it->second->to_json(
+                             pretty_print ? json_format::DEFAULT_FLATBUFFERS
+                                          : json_format::SINGLE_LINE)
+                      << std::endl;
+          }
         }
       }
       std::cout << std::endl;
