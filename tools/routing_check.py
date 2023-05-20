@@ -3,8 +3,9 @@
 from enum import Enum
 import subprocess
 
-
-routers = ["/routing", "/nigiri"]
+generate = False
+run_routers = ["/nigiri"]
+cmp_routers = ["/routing", "/nigiri"]
 
 num_queries = 500
 
@@ -27,7 +28,7 @@ class Query:
         ]
 
         cmd.extend(["--routers"])
-        cmd.extend(routers)
+        cmd.extend(cmp_routers)
 
         cmd.extend(["--query_count", str(num_queries)])
 
@@ -63,11 +64,13 @@ class Query:
             file_name = file_name + "_sdest"
             cmd.extend(["--dest_type", "station"])
 
-        query_files = [f"queries/q_{file_name}-{r[1:]}.txt" for r in routers]
-        response_files = [f"responses/r_{file_name}-{r[1:]}.txt" for r in routers]
+        run_query_files = [f"queries/q_{file_name}-{r[1:]}.txt" for r in run_routers]
+        run_response_files = [f"responses/r_{file_name}-{r[1:]}.txt" for r in run_routers]
+        cmp_query_files = [f"queries/q_{file_name}-{r[1:]}.txt" for r in cmp_routers]
+        cmp_response_files = [f"responses/r_{file_name}-{r[1:]}.txt" for r in cmp_routers]
         cmd.extend(["--out", f"queries/q_{file_name}-TARGET.txt"])
 
-        return cmd, query_files, response_files
+        return cmd, run_query_files, run_response_files, cmp_query_files, cmp_response_files
 
 
 subprocess.check_call(["mkdir", "-p", "queries", "responses"])
@@ -79,16 +82,17 @@ for start_type in [StartType.PreTrip, StartType.OnTripStation, StartType.Intermo
             q.interalmodal_dest = intermodal_dest
             q.forward = forward
 
-            cmd, query_files, response_files = q.cmd()
-            print(" ".join(cmd))
-            try:
-                subprocess.check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except subprocess.CalledProcessError as e:
-                print(" ".join(e.cmd))
-                print(e.output)
-                raise e
+            generate_cmd, run_query_files, run_response_files, cmp_query_files, cmp_response_files = q.cmd()
+            if generate:
+                try:
+                    print(" ".join(generate_cmd))
+                    subprocess.check_call(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except subprocess.CalledProcessError as e:
+                    print(" ".join(e.cmd))
+                    print(e.output)
+                    raise e
 
-            for query_file, response_file in zip(query_files, response_files):
+            for query_file, response_file in zip(run_query_files, run_response_files):
                 motis_cmd = [
                     "./motis",
                     "-c", "input/config.ini",
@@ -105,9 +109,9 @@ for start_type in [StartType.PreTrip, StartType.OnTripStation, StartType.Intermo
 
             compare_cmd = ["./motis", "compare"]
             compare_cmd.append("--queries")
-            compare_cmd.extend(query_files)
+            compare_cmd.extend(cmp_query_files)
             compare_cmd.append("--responses")
-            compare_cmd.extend(response_files)
+            compare_cmd.extend(cmp_response_files)
             print("      ", " ".join(compare_cmd))
 
             try:
