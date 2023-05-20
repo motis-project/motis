@@ -229,7 +229,8 @@ int analyze_results(int argc, char const** argv) {
     return 0;
   }
 
-  std::cout << "   total count: " << total_count << "\n"
+  std::cout << filename << "\n"
+            << "   total count: " << total_count << "\n"
             << "       no conn: " << no_con_count << "\n"
             << "        errors: " << invalid << "\n"
             << "       counted: " << count << "\n"
