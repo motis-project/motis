@@ -275,7 +275,7 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
 
   MOTIS_START_TIMING(routing);
   auto search_interval = n::interval<n::unixtime_t>{};
-  n::pareto_set<n::routing::journey> const* journeys;
+  n::pareto_set<n::routing::journey> const* journeys{nullptr};
   n::routing::search_stats search_stats;
   n::routing::raptor_stats raptor_stats;
   if (req->search_dir() == SearchDir_Forward) {
