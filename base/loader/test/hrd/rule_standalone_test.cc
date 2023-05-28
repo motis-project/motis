@@ -30,7 +30,7 @@ TEST(loader_hrd_fbs_services, rule_standalone) {
 
   ASSERT_TRUE(p.applicable(hrd_root));
 
-  p.parse(hrd_root, b);
+  p.parse(parser_options{}, hrd_root, b);
   auto schedule = GetSchedule(b.GetBufferPointer());
 
   ASSERT_EQ(1U, schedule->rule_services()->size());
