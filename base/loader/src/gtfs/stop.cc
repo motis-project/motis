@@ -22,13 +22,14 @@ static const column_mapping<gtfs_stop> columns = {
     {"stop_id", "stop_name", "stop_timezone", "parent_station", "stop_lat",
      "stop_lon"}};
 
-void stop::compute_close_stations(geo::point_rtree const& stop_rtree) {
+void stop::compute_close_stations(geo::point_rtree const& stop_rtree,
+                                  unsigned const max_meters) {
   if (std::abs(coord_.lat_) < 2.0 && std::abs(coord_.lng_) < 2.0) {
     return;
   }
-  close_ = utl::to_vec(stop_rtree.in_radius(coord_, 100), [](size_t const idx) {
-    return static_cast<unsigned>(idx);
-  });
+  close_ =
+      utl::to_vec(stop_rtree.in_radius(coord_, max_meters),
+                  [](size_t const idx) { return static_cast<unsigned>(idx); });
 }
 
 std::set<stop*> stop::get_metas(std::vector<stop*> const& stops) {

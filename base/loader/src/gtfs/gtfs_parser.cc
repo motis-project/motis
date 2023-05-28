@@ -175,7 +175,8 @@ void fix_flixtrain_transfers(trip_map& trips,
   }
 }
 
-void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
+void gtfs_parser::parse(parser_options const& opt, fs::path const& root,
+                        fbs64::FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer const global_timer{"gtfs parser"};
 
   auto const load = [&](char const* file) {
@@ -507,9 +508,11 @@ void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
     }
   };
 
-  utl::parallel_for(stops, [&](auto const& s) {
-    s.second->compute_close_stations(stop_rtree);
-  });
+  if (opt.link_stop_distance_ != 0U) {
+    utl::parallel_for(stops, [&](auto const& s) {
+      s.second->compute_close_stations(stop_rtree, opt.link_stop_distance_);
+    });
+  }
 
   auto const meta_stations =
       utl::all(stops)  //

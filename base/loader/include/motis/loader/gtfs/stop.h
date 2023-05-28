@@ -14,7 +14,8 @@
 namespace motis::loader::gtfs {
 
 struct stop {
-  void compute_close_stations(geo::point_rtree const& stop_rtree);
+  void compute_close_stations(geo::point_rtree const& stop_rtree,
+                              unsigned const max_meters);
   std::set<stop*> get_metas(std::vector<stop*> const& stops);
 
   std::string id_;
