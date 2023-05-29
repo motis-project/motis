@@ -171,24 +171,32 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             n::loader::finalize(**impl_->tt_);
 
-            std::filesystem::create_directories(data_dir);
-            (*impl_->tt_)->write(dump_file_path);
+            if (no_cache_) {
+              loaded = true;
+              break;
+            } else {
+              // Write to disk, next step: read from disk.
+              std::filesystem::create_directories(data_dir);
+              (*impl_->tt_)->write(dump_file_path);
+            }
           }
 
-          // Read memory image.
-          try {
-            impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
-                n::timetable::read(cista::memory_holder{
-                    cista::file{dump_file_path.string().c_str(), "r"}
-                        .content()}));
-            (**impl_->tt_).locations_.resolve_timezones();
-            loaded = true;
-            break;
-          } catch (std::exception const& e) {
-            LOG(logging::error)
-                << "cannot read cached timetable image: " << e.what();
-            std::filesystem::remove(dump_file_path);
-            continue;
+          // Read memory image from disk.
+          if (!no_cache_) {
+            try {
+              impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
+                  n::timetable::read(cista::memory_holder{
+                      cista::file{dump_file_path.string().c_str(), "r"}
+                          .content()}));
+              (**impl_->tt_).locations_.resolve_timezones();
+              loaded = true;
+              break;
+            } catch (std::exception const& e) {
+              LOG(logging::error)
+                  << "cannot read cached timetable image: " << e.what();
+              std::filesystem::remove(dump_file_path);
+              continue;
+            }
           }
         }
 
