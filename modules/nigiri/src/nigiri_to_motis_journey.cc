@@ -48,13 +48,13 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
   };
 
   auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
-  auto const first_location = resolve_id(n::timetable::stop{
+  auto const first_location = resolve_id(n::stop{
       tt.route_location_seq_[tt.transport_route_[transport]][stop_range.from_]}
                                              .location_idx());
-  auto const last_location = resolve_id(
-      n::timetable::stop{tt.route_location_seq_[tt.transport_route_[transport]]
+  auto const last_location =
+      resolve_id(n::stop{tt.route_location_seq_[tt.transport_route_[transport]]
                                                [stop_range.to_ - 1]}
-          .location_idx());
+                     .location_idx());
   auto const id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const section_lines = tt.transport_section_lines_.at(transport);
   auto const line =
@@ -259,8 +259,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                 auto const reuse_arrival = enter && !mj.stops_.empty();
                 auto& stop =
                     reuse_arrival ? mj.stops_.back() : mj.stops_.emplace_back();
-                auto const l =
-                    n::timetable::stop{stop_seq.at(stop_idx)}.location_idx();
+                auto const l = n::stop{stop_seq.at(stop_idx)}.location_idx();
                 fill_stop_info(stop, l);
 
                 if (exit) {
@@ -311,10 +310,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               }
             },
             [&, i = i, leg = leg](n::footpath const fp) {
-              add_walk(leg, fp.duration_, -1, i == nj.legs_.size() - 1U);
+              add_walk(leg, fp.duration(), -1, i == nj.legs_.size() - 1U);
             },
             [&, leg = leg](n::routing::offset const x) {
-              add_walk(leg, x.duration_, x.type_, false);
+              add_walk(leg, x.duration(), x.type_, false);
             }},
         leg.uses_);
   }

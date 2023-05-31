@@ -52,6 +52,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
   param(geo_lookup_, "geo_lookup", "provide geo station lookup");
+  param(link_stop_distance_, "link_stop_distance",
+        "GTFS only: radius to connect stations, 0=skip");
 }
 
 nigiri::~nigiri() = default;
@@ -101,9 +103,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         LOG(logging::info) << "interval: " << interval.from_ << " - "
                            << interval.to_;
 
-        auto h = cista::BASE_HASH;
-        h = cista::hash_combine(h, interval.from_.time_since_epoch().count());
-        h = cista::hash_combine(h, interval.to_.time_since_epoch().count());
+        auto h =
+            cista::hash_combine(cista::BASE_HASH,
+                                interval.from_.time_since_epoch().count(),  //
+                                interval.to_.time_since_epoch().count(),  //
+                                link_stop_distance_);
 
         auto datasets =
             std::vector<std::tuple<n::source_idx_t,
@@ -120,65 +124,83 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               impl_->loaders_, [&](auto&& c) { return c->applicable(*d); });
           utl::verify(c != end(impl_->loaders_), "no loader applicable to {}",
                       path);
-          h = cista::hash_combine((*c)->hash(*d), h);
+          h = cista::hash_combine(h, (*c)->hash(*d));
 
           datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
 
           auto const tag = p->options()->str();
           impl_->tags_.emplace_back(tag + (tag.empty() ? "default_" : "_"));
         }
+        utl::verify(!datasets.empty(), "no schedule datasets found");
 
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
-        if (!no_cache_ && fs::is_regular_file(dump_file_path)) {
-          try {
+
+        auto loaded = false;
+        for (auto i = 0U; i != 2; ++i) {
+          // Parse from input files and write memory image.
+          if (no_cache_ || !fs::is_regular_file(dump_file_path)) {
             impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
-                n::timetable::read(cista::memory_holder{
-                    cista::file{dump_file_path.string().c_str(), "r"}
-                        .content()}));
-            (**impl_->tt_).locations_.resolve_timezones();
-          } catch (std::exception const& e) {
-            LOG(logging::error)
-                << "cannot read cached timetable image: " << e.what()
-                << ", retry loading from scratch";
-            goto read_datasets;
-          }
-        } else {
-        read_datasets:
-          impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
-              cista::raw::make_unique<n::timetable>());
+                cista::raw::make_unique<n::timetable>());
 
-          (*impl_->tt_)->date_range_ = interval;
-          n::loader::register_special_stations(**impl_->tt_);
+            (*impl_->tt_)->date_range_ = interval;
+            n::loader::register_special_stations(**impl_->tt_);
 
-          for (auto const& [src, loader, dir] : datasets) {
-            auto progress_tracker = utl::activate_progress_tracker(
-                fmt::format("{}nigiri", impl_->tags_[to_idx(src)]));
+            for (auto const& [src, loader, dir] : datasets) {
+              auto progress_tracker = utl::activate_progress_tracker(
+                  fmt::format("{}nigiri", impl_->tags_[to_idx(src)]));
 
-            LOG(logging::info) << "loading nigiri timetable with configuration "
-                               << (*loader)->name();
+              LOG(logging::info)
+                  << "loading nigiri timetable with configuration "
+                  << (*loader)->name();
 
-            try {
-              (*loader)->load(src, *dir, **impl_->tt_);
-              progress_tracker->status("FINISHED").show_progress(false);
-            } catch (std::exception const& e) {
-              progress_tracker->status(fmt::format("ERROR: {}", e.what()))
-                  .show_progress(false);
-              throw;
-            } catch (...) {
-              progress_tracker->status("ERROR: UNKNOWN EXCEPTION")
-                  .show_progress(false);
-              throw;
+              try {
+                (*loader)->load({.link_stop_distance_ = link_stop_distance_},
+                                src, *dir, **impl_->tt_);
+                progress_tracker->status("FINISHED").show_progress(false);
+              } catch (std::exception const& e) {
+                progress_tracker->status(fmt::format("ERROR: {}", e.what()))
+                    .show_progress(false);
+                throw;
+              } catch (...) {
+                progress_tracker->status("ERROR: UNKNOWN EXCEPTION")
+                    .show_progress(false);
+                throw;
+              }
+            }
+
+            n::loader::finalize(**impl_->tt_);
+
+            if (no_cache_) {
+              loaded = true;
+              break;
+            } else {
+              // Write to disk, next step: read from disk.
+              std::filesystem::create_directories(data_dir);
+              (*impl_->tt_)->write(dump_file_path);
             }
           }
 
-          n::loader::finalize(**impl_->tt_);
-
+          // Read memory image from disk.
           if (!no_cache_) {
-            std::filesystem::create_directories(data_dir);
-            (*impl_->tt_)->write(dump_file_path);
+            try {
+              impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
+                  n::timetable::read(cista::memory_holder{
+                      cista::file{dump_file_path.string().c_str(), "r"}
+                          .content()}));
+              (**impl_->tt_).locations_.resolve_timezones();
+              loaded = true;
+              break;
+            } catch (std::exception const& e) {
+              LOG(logging::error)
+                  << "cannot read cached timetable image: " << e.what();
+              std::filesystem::remove(dump_file_path);
+              continue;
+            }
           }
         }
+
+        utl::verify(loaded, "loading failed");
 
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
                         impl_->tt_->get());
@@ -208,16 +230,18 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           return false;
         }
         using import::FileEvent;
-        return utl::all_of(
-            *motis_content(FileEvent, msg)->paths(),
-            [this](import::ImportPath const* p) {
-              if (p->tag()->str() != "schedule") {
-                return true;
-              }
-              auto const d = n::loader::make_dir(fs::path{p->path()->str()});
-              return utl::any_of(impl_->loaders_,
-                                 [&](auto&& c) { return c->applicable(*d); });
-            });
+        return motis_content(FileEvent, msg)->paths()->size() != 0U &&
+               utl::all_of(*motis_content(FileEvent, msg)->paths(),
+                           [this](import::ImportPath const* p) {
+                             if (p->tag()->str() != "schedule") {
+                               return true;
+                             }
+                             auto const d = n::loader::make_dir(
+                                 fs::path{p->path()->str()});
+                             return utl::any_of(impl_->loaders_, [&](auto&& c) {
+                               return c->applicable(*d);
+                             });
+                           });
       });
 }
 

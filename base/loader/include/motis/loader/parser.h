@@ -12,6 +12,12 @@ class FlatBufferBuilder;  // NOLINT(readability-identifier-naming)
 
 namespace motis::loader {
 
+struct parser_options {
+  // Set to zero to not create additional connections
+  // based on proximity of stops at all.
+  unsigned link_stop_distance_{100};
+};
+
 struct format_parser {
   format_parser() = default;
   format_parser(format_parser const&) = default;
@@ -23,7 +29,7 @@ struct format_parser {
   virtual bool applicable(std::filesystem::path const&) = 0;
   virtual std::vector<std::string> missing_files(
       std::filesystem::path const&) const = 0;
-  virtual void parse(std::filesystem::path const&,
+  virtual void parse(parser_options const&, std::filesystem::path const&,
                      flatbuffers64::FlatBufferBuilder&) = 0;
 };
 

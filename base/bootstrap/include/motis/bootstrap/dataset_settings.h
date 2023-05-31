@@ -49,6 +49,8 @@ struct dataset_settings : public conf::configuration,
           "don't load local transport");
     param(debug_broken_trips_, "debug_broken_trips",
           "print debug information for broken trips");
+    param(link_stop_distance_, "link_stop_distance",
+          "GTFS only: radius to connect stations, 0=skip");
   }
 };
 
