@@ -1,7 +1,5 @@
 #include "motis/loader/loader.h"
 
-#include <fstream>
-#include <istream>
 #include <memory>
 #include <ostream>
 #include <variant>
@@ -10,9 +8,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-#include "cista/serialization.h"
-#include "cista/targets/file.h"
 
 #include <filesystem>
 
