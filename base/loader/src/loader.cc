@@ -182,7 +182,7 @@ schedule_ptr load_schedule(loader_options const& loader_opt,
                            std::string const& data_dir) {
 #ifdef _WIN32
   auto ptr = schedule_ptr{};
-  utl::verify(load_schedule_checked(opt, schedule_buf, data_dir, ptr),
+  utl::verify(load_schedule_checked(loader_opt, schedule_buf, data_dir, ptr),
               "load_schedule: file access error: EXCEPTION_IN_PAGE_ERROR");
   return ptr;
 #else
