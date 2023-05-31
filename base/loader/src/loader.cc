@@ -121,7 +121,7 @@ schedule_ptr load_schedule_impl(loader_options const& loader_opt,
 
     flatbuffers64::FlatBufferBuilder builder;
     try {
-      (**it).parse({.link_stop_distance_ = loader_opt.link_stop_distance_},
+      (**it).parse({loader_opt.link_stop_distance_},
                    path, builder);
       progress_tracker->status("FINISHED").show_progress(false);
     } catch (std::exception const& e) {
