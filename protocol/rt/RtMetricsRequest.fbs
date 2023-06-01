@@ -1,0 +1,5 @@
+namespace motis.rt;
+
+table RtMetricsRequest {
+  schedule: ulong;
+}

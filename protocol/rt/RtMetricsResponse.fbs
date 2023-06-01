@@ -1,0 +1,20 @@
+namespace motis.rt;
+
+table RtMetrics {
+  start_time: ulong; // unix timestamp
+  entries: ulong; // number of entries (minutes)
+
+  messages: [ulong];
+  delay_messages: [ulong];
+  cancel_messages: [ulong];
+  additional_messages: [ulong];
+  reroute_messages: [ulong];
+  track_messages: [ulong];
+  full_trip_messages: [ulong];
+  trip_formation_messages: [ulong];
+}
+
+table RtMetricsResponse {
+  by_msg_timestamp: RtMetrics;
+  by_processing_time: RtMetrics;
+}

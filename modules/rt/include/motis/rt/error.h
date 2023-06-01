@@ -9,6 +9,7 @@ namespace error {
 enum error_code_t {
   ok = 0,
   sanity_check_failed = 1,
+  schedule_not_found = 2,
 };
 }  // namespace error
 
@@ -20,6 +21,7 @@ public:
     switch (ev) {
       case error::ok: return "rt: no error";
       case error::sanity_check_failed: return "rt: sanity check failed";
+      case error::schedule_not_found: return "rt: schedule not found";
       default: return "rt: unkown error";
     }
   }

@@ -7,6 +7,7 @@
 #include "utl/pipes.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/raii.h"
 #include "motis/core/schedule/validate_graph.h"
@@ -48,12 +49,14 @@ rt_handler::rt_handler(schedule& sched, ctx::res_id_t schedule_res_id,
 msg_ptr rt_handler::update(msg_ptr const& msg) {
   using ris::RISBatch;
 
+  auto const processing_time = now();
   for (auto const& m : *motis_content(RISBatch, msg)->messages()) {
     try {
       update(
           m->message_nested_root(),
           std::string_view{reinterpret_cast<char const*>(m->message()->data()),
-                           m->message()->size()});
+                           m->message()->size()},
+          processing_time);
     } catch (std::exception const& e) {
       LOG(logging::error) << "rt::on_message: UNEXPECTED ERROR: " << e.what();
     } catch (...) {
@@ -65,13 +68,15 @@ msg_ptr rt_handler::update(msg_ptr const& msg) {
 
 msg_ptr rt_handler::single(msg_ptr const& msg) {
   using ris::RISMessage;
-  update(motis_content(RISMessage, msg), msg->to_string_view());
+  update(motis_content(RISMessage, msg), msg->to_string_view(), now());
   return flush(nullptr);
 }
 
 void rt_handler::update(motis::ris::RISMessage const* m,
-                        std::string_view const msg_buffer) {
+                        std::string_view const msg_buffer,
+                        unixtime const processing_time) {
   stats_.count_message(m->content_type());
+  count_message(metrics_, m, processing_time);
   auto c = m->content();
 
   switch (m->content_type()) {
@@ -278,7 +283,7 @@ void rt_handler::update(motis::ris::RISMessage const* m,
 
     case ris::RISMessageUnion_TripFormationMessage: {
       handle_trip_formation_msg(
-          stats_, update_builder_,
+          stats_, sched_, update_builder_,
           reinterpret_cast<ris::TripFormationMessage const*>(c));
       break;
     }

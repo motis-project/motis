@@ -80,6 +80,8 @@ include "routing/RoutingResponse.fbs";
 include "rt/RtGraphUpdated.fbs";
 include "rt/RtMessageHistoryRequest.fbs";
 include "rt/RtMessageHistoryResponse.fbs";
+include "rt/RtMetricsRequest.fbs";
+include "rt/RtMetricsResponse.fbs";
 include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
@@ -320,7 +322,9 @@ union MsgContent {
   motis.paxmon.PaxMonGetTripCapacityResponse                              = 149,
   motis.rt.RtMessageHistoryRequest                                        = 150,
   motis.rt.RtMessageHistoryResponse                                       = 151,
-  motis.ris.RISStatusResponse                                             = 152
+  motis.ris.RISStatusResponse                                             = 152,
+  motis.rt.RtMetricsRequest                                               = 153,
+  motis.rt.RtMetricsResponse                                              = 154
 }
 
 // Destination Examples:

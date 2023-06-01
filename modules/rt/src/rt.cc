@@ -9,6 +9,7 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/global_res_ids.h"
 
+#include "motis/rt/error.h"
 #include "motis/rt/rt_handler.h"
 
 using namespace motis::ris;
@@ -54,6 +55,51 @@ msg_ptr get_trip_history(schedule const& sched, rt_handler* rth,
   mc.create_and_finish(
       MsgContent_RtMessageHistoryResponse,
       CreateRtMessageHistoryResponse(mc, mc.CreateVector(messages)).Union());
+  return make_msg(mc);
+}
+
+msg_ptr get_metrics(rt_metrics const& metrics) {
+  message_creator mc;
+
+  auto const metrics_to_fbs = [&](rt_metrics_storage const& m) {
+    std::vector<std::uint64_t> messages, delay_messages, cancel_messages,
+        additional_messages, reroute_messages, track_messages,
+        full_trip_messages, trip_formation_messages;
+
+    messages.reserve(m.size());
+    delay_messages.reserve(m.size());
+    cancel_messages.reserve(m.size());
+    additional_messages.reserve(m.size());
+    reroute_messages.reserve(m.size());
+    track_messages.reserve(m.size());
+    full_trip_messages.reserve(m.size());
+    trip_formation_messages.reserve(m.size());
+
+    for (auto i = 0UL; i < m.size(); ++i) {
+      auto const& entry = m.data_[(m.start_index_ + i) % m.size()];
+      messages.push_back(entry.messages_);
+      delay_messages.push_back(entry.delay_messages_);
+      cancel_messages.push_back(entry.cancel_messages_);
+      additional_messages.push_back(entry.additional_messages_);
+      reroute_messages.push_back(entry.reroute_messages_);
+      track_messages.push_back(entry.track_messages_);
+      full_trip_messages.push_back(entry.full_trip_messages_);
+      trip_formation_messages.push_back(entry.trip_formation_messages_);
+    }
+
+    return CreateRtMetrics(
+        mc, m.start_time(), m.size(), mc.CreateVector(messages),
+        mc.CreateVector(delay_messages), mc.CreateVector(cancel_messages),
+        mc.CreateVector(additional_messages), mc.CreateVector(reroute_messages),
+        mc.CreateVector(track_messages), mc.CreateVector(full_trip_messages),
+        mc.CreateVector(trip_formation_messages));
+  };
+
+  mc.create_and_finish(
+      MsgContent_RtMetricsResponse,
+      CreateRtMetricsResponse(mc, metrics_to_fbs(metrics.by_msg_timestamp_),
+                              metrics_to_fbs(metrics.by_processing_time_))
+          .Union());
   return make_msg(mc);
 }
 
@@ -125,6 +171,32 @@ void rt::init(motis::module::registry& reg) {
             lock_resources({{schedule_res_id, ctx::access_t::READ}});
         auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
         return get_trip_history(sched, get_rt_handler(schedule_res_id), req);
+      },
+      {});
+
+  reg.register_op(
+      "/rt/metrics",
+      [this](msg_ptr const& msg) -> msg_ptr {
+        auto schedule_res_id = DEFAULT_SCHEDULE_RES_ID;
+        if (msg->get()->content_type() == MsgContent_RISSystemTimeChanged) {
+          schedule_res_id =
+              get_schedule_res_id(motis_content(RISSystemTimeChanged, msg));
+        }
+        switch (msg->get()->content_type()) {
+          case MsgContent_RtMetricsRequest:
+            schedule_res_id =
+                get_schedule_res_id(motis_content(RtMetricsRequest, msg));
+            break;
+          case MsgContent_MotisNoMessage: break;
+          default:
+            throw std::system_error{
+                motis::module::error::unexpected_message_type};
+        }
+        auto const* handler = get_rt_handler(schedule_res_id);
+        if (handler == nullptr) {
+          throw std::system_error{error::schedule_not_found};
+        }
+        return get_metrics(handler->metrics_);
       },
       {});
 }
