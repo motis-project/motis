@@ -12,3 +12,5 @@
   description: Passenger flow monitoring and forecasting
 - name: internal
   description: Internal APIs
+- name: rt
+  description: Real-time updates

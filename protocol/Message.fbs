@@ -73,6 +73,7 @@ include "ris/RISForwardTimeRequest.fbs";
 include "ris/RISGTFSRTMapping.fbs";
 include "ris/RISMessage.fbs";
 include "ris/RISPurgeRequest.fbs";
+include "ris/RISStatusResponse.fbs";
 include "ris/RISSystemTimeChanged.fbs";
 include "routing/RoutingRequest.fbs";
 include "routing/RoutingResponse.fbs";
@@ -318,7 +319,8 @@ union MsgContent {
   motis.paxmon.PaxMonGetTripCapacityRequest                               = 148,
   motis.paxmon.PaxMonGetTripCapacityResponse                              = 149,
   motis.rt.RtMessageHistoryRequest                                        = 150,
-  motis.rt.RtMessageHistoryResponse                                       = 151
+  motis.rt.RtMessageHistoryResponse                                       = 151,
+  motis.ris.RISStatusResponse                                             = 152
 }
 
 // Destination Examples:

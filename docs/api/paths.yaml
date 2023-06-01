@@ -588,6 +588,14 @@
   tags:
     - internal
 
+/ris/status:
+  summary: Real-time feed status
+  tags:
+    - rt
+  output:
+    type: motis.ris.RISStatusResponse
+    description: Status of real-time feeds
+
 # Custom HTTP requests are not supported by the protocol tool.
 #/ris/upload:
 
