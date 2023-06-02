@@ -9,15 +9,20 @@ import sys
 
 current_dir = os.getcwd()
 
-routers = ["routing", "nigiri"]
+binaries = [
+    f"{current_dir}/motis-0.9.2/motis",
+    f"{current_dir}/motis"
+]
+routers = ["nigiri-0.9.2", "nigiri-perf-trlb"]
+queries = ["nigiri", "nigiri"]
 
 
 def query_f(id, router):
-    return f"{id}_q_{router}.json"
+    return f"{id}_q_fwd_{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r_{router}.json"
+    return f"{id}_r_fwd_{router}.json"
 
 
 def reproduce(filepath, verbose=False):
@@ -34,7 +39,7 @@ def reproduce(filepath, verbose=False):
 
     if False and verbose:
         run_rewrite = [
-            "./motis",
+            binaries[0],
             "rewrite",
             "--in", f"{fail_dir}/{result_f(id, routers[1])}",
             "--out", f"{reproduce_dir}/check_orig_{result_f(id, routers[1])}",
@@ -45,7 +50,7 @@ def reproduce(filepath, verbose=False):
 
         try:
             run_check = [
-                "./motis",
+                binaries[0],
                 "-c", "input/config.ini",
                 "--modules", "cc",
                 "--mode", "init",
@@ -60,7 +65,7 @@ def reproduce(filepath, verbose=False):
     if verbose:
         print("extracting...")
     run_xtract = [
-        "./motis",
+        binaries[1],
         "xtract",
         "-c", "input/config.ini",
         "--new_schedule", f"{input_dir}/schedule",
@@ -81,9 +86,9 @@ def reproduce(filepath, verbose=False):
 
     try:
         run_routing = [
-            f"{current_dir}/motis",
+            binaries[0],
             "-c", "input/config.ini",
-            f"--batch_input_file={fail_dir}/{query_f(id, routers[0])}",
+            f"--batch_input_file={fail_dir}/{query_f(id, queries[0])}",
             f"--batch_output_file={result_f(id, routers[0])}",
             "--num_threads", "1"
         ]
@@ -98,9 +103,9 @@ def reproduce(filepath, verbose=False):
                 cwd=reproduce_dir)
 
         run_nigiri = [
-            f"{current_dir}/motis",
+            binaries[1],
             "-c", "input/config.ini",
-            f"--batch_input_file={fail_dir}/{query_f(id, routers[1])}",
+            f"--batch_input_file={fail_dir}/{query_f(id, queries[1])}",
             f"--batch_output_file={result_f(id, routers[1])}",
             "--num_threads", "1"
         ]
@@ -120,12 +125,12 @@ def reproduce(filepath, verbose=False):
 
     try:
         run_compare = [
-            "./motis",
+            binaries[1],
             "compare",
             "--fail", "",
             "--queries",
-            f"fail/{query_f(id, routers[0])}",
-            f"fail/{query_f(id, routers[1])}",
+            f"fail/{query_f(id, queries[0])}",
+            f"fail/{query_f(id, queries[1])}",
             "--responses",
             f"{reproduce_dir}/{result_f(id, routers[0])}",
             f"{reproduce_dir}/{result_f(id, routers[1])}"
@@ -139,7 +144,7 @@ def reproduce(filepath, verbose=False):
         print("ROUTING_CMD:", " ".join(run_routing))
         print("NIGIRI_CMD:", " ".join(run_nigiri))
         print("CONNECTIONS:", " ".join([
-            "./motis",
+            binaries[1],
             "print",
             f"{reproduce_dir}/{result_f(id, routers[0])}",
             f"{reproduce_dir}/{result_f(id, routers[1])}"
@@ -147,9 +152,9 @@ def reproduce(filepath, verbose=False):
         print("COMPARE_CMD:", " ".join(e.cmd))
         subprocess.run(e.cmd)
 
-        if verbose:
+        if False and verbose:
             run_rewrite = [
-                "./motis",
+                binaries[0],
                 "rewrite",
                 "--in", f"{reproduce_dir}/{result_f(id, routers[0])}",
                 "--out", f"{reproduce_dir}/check_{result_f(id, routers[0])}",
@@ -159,7 +164,7 @@ def reproduce(filepath, verbose=False):
             subprocess.run(run_rewrite, check=True)
 
             run_rewrite = [
-                "./motis",
+                binaries[0],
                 "rewrite",
                 "--in", f"{reproduce_dir}/{result_f(id, routers[1])}",
                 "--out", f"{reproduce_dir}/check_{result_f(id, routers[1])}",
@@ -169,7 +174,7 @@ def reproduce(filepath, verbose=False):
             subprocess.run(run_rewrite, check=True)
 
             run_check = [
-                f"{current_dir}/motis",
+                binaries[0],
                 "-c", "input/config.ini",
                 "--modules", "cc",
                 "--mode", "init",
@@ -179,7 +184,7 @@ def reproduce(filepath, verbose=False):
             subprocess.run(run_check, check=False, cwd=reproduce_dir)
 
             run_check = [
-                f"{current_dir}/motis",
+                binaries[0],
                 "-c", "input/config.ini",
                 "--modules", "cc",
                 "--mode", "init",
@@ -198,9 +203,9 @@ def reproduce(filepath, verbose=False):
 
 
 if len(sys.argv) < 2:
-    with Pool(processes=16) as pool:
-        glob_str = f"fail/{query_f('*', routers[0])}"
+    with Pool(processes=6) as pool:
+        glob_str = f"fail/{query_f('*', queries[0])}"
         files = glob.iglob(glob_str)
         reproducable = pool.map(reproduce, files)
 else:
-    reproduce(f"fail/{query_f(sys.argv[1], routers[0])}", True)
+    reproduce(f"fail/{query_f(sys.argv[1], queries[0])}", True)
