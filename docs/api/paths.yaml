@@ -446,6 +446,24 @@
     type: motis.paxmon.PaxMonGetUniversesResponse
     description: A list of paxmon universes
 
+/paxmon/capacity_status:
+  summary: Capacity status information
+  description: >
+    Returns information about the available capacity information
+    for tracked trips for debugging purposes.
+
+    This API only supports trip formation and vehicle capacity data
+    (i.e. RiBasisFormation).
+
+    This is a computationally expensive operation because capacity
+    information for all sections for all trips is looked up.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonCapacityStatusRequest
+  output:
+    type: motis.paxmon.PaxMonCapacityStatusResponse
+    description: Information about capacity data
+
 /paxmon/add_groups:
   summary: /paxmon/add_groups
   description: Deprecated. DO NOT USE.

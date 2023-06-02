@@ -125,6 +125,8 @@ include "paxmon/PaxMonDebugGraphResponse.fbs";
 include "paxmon/PaxMonGetUniversesResponse.fbs";
 include "paxmon/PaxMonGetTripCapacityRequest.fbs";
 include "paxmon/PaxMonGetTripCapacityResponse.fbs";
+include "paxmon/PaxMonCapacityStatusRequest.fbs";
+include "paxmon/PaxMonCapacityStatusResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -324,7 +326,9 @@ union MsgContent {
   motis.rt.RtMessageHistoryResponse                                       = 151,
   motis.ris.RISStatusResponse                                             = 152,
   motis.rt.RtMetricsRequest                                               = 153,
-  motis.rt.RtMetricsResponse                                              = 154
+  motis.rt.RtMetricsResponse                                              = 154,
+  motis.paxmon.PaxMonCapacityStatusRequest                                = 155,
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 156
 }
 
 // Destination Examples:

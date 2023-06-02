@@ -117,3 +117,38 @@ RtMessageHistoryResponse:
   fields:
     messages:
       description: TODO
+RtMetricsRequest:
+  description: TODO
+  fields:
+    schedule:
+      description: TODO
+RtMetrics:
+  description: TODO
+  fields:
+    start_time:
+      description: TODO
+    entries:
+      description: TODO
+    messages:
+      description: TODO
+    delay_messages:
+      description: TODO
+    cancel_messages:
+      description: TODO
+    additional_messages:
+      description: TODO
+    reroute_messages:
+      description: TODO
+    track_messages:
+      description: TODO
+    full_trip_messages:
+      description: TODO
+    trip_formation_messages:
+      description: TODO
+RtMetricsResponse:
+  description: TODO
+  fields:
+    by_msg_timestamp:
+      description: TODO
+    by_processing_time:
+      description: TODO
