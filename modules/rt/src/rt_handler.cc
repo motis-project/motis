@@ -274,10 +274,10 @@ void rt_handler::update(motis::ris::RISMessage const* m,
     }
 
     case ris::RISMessageUnion_FullTripMessage: {
-      handle_full_trip_msg(stats_, sched_, update_builder_, msg_history_,
-                           propagator_,
-                           reinterpret_cast<ris::FullTripMessage const*>(c),
-                           msg_buffer, cancelled_delays_);
+      handle_full_trip_msg(
+          stats_, sched_, update_builder_, msg_history_, propagator_,
+          reinterpret_cast<ris::FullTripMessage const*>(c), msg_buffer,
+          cancelled_delays_, metrics_, m->timestamp(), processing_time);
       break;
     }
 

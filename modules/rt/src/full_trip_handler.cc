@@ -129,7 +129,9 @@ struct full_trip_handler {
                     message_history& msg_history, delay_propagator& propagator,
                     FullTripMessage const* msg,
                     std::string_view const msg_buffer,
-                    std::map<schedule_event, delay_info*>& cancelled_delays)
+                    std::map<schedule_event, delay_info*>& cancelled_delays,
+                    rt_metrics& metrics, unixtime const msg_timestamp,
+                    unixtime const processing_time)
       : stats_{stats},
         sched_{sched},
         update_builder_{update_builder},
@@ -137,7 +139,10 @@ struct full_trip_handler {
         propagator_{propagator},
         msg_{msg},
         msg_buffer_{msg_buffer},
-        cancelled_delays_{cancelled_delays} {}
+        cancelled_delays_{cancelled_delays},
+        metrics_{metrics},
+        msg_timestamp_{msg_timestamp},
+        processing_time_{processing_time} {}
 
   void handle_msg() {
     if (!check_events()) {
@@ -181,12 +186,18 @@ struct full_trip_handler {
         ++stats_.additional_msgs_;
         ++stats_.additional_total_;
         ++stats_.additional_ok_;
+        update_metrics([](metrics_entry* m) { ++m->ft_new_trips_; });
       } else if (sections.empty()) {
         ++stats_.cancel_msgs_;
+        update_metrics([](metrics_entry* m) { ++m->ft_cancellations_; });
       } else {
         ++stats_.reroute_msgs_;
+        update_metrics([](metrics_entry* m) { ++m->ft_reroutes_; });
         if (!rule_service) {
           ++stats_.reroute_ok_;
+        } else {
+          update_metrics(
+              [](metrics_entry* m) { ++m->ft_rule_service_reroutes_; });
         }
       }
 
@@ -255,9 +266,14 @@ struct full_trip_handler {
 
     if (result_.delay_updates_ > 0) {
       ++stats_.delay_msgs_;
+      update_metrics([this](metrics_entry* m) {
+        ++m->ft_trip_delay_updates_;
+        m->ft_event_delay_updates_ += result_.delay_updates_;
+      });
     }
     if (result_.track_updates_ > 0) {
       ++stats_.track_change_msgs_;
+      update_metrics([](metrics_entry* m) { ++m->ft_trip_track_updates_; });
     }
     msg_history_.add(result_.trp_->trip_idx_, msg_buffer_);
   }
@@ -323,6 +339,7 @@ private:
         begin(sched_.trips_), end(sched_.trips_),
         std::make_pair(ftid.primary_, static_cast<trip*>(nullptr)));
     if (first_it == end(sched_.trips_) || !(first_it->first == ftid.primary_)) {
+      update_metrics([](metrics_entry* m) { ++m->ft_trip_id_not_found_; });
       return nullptr;
     }
     auto primary_matches = 0;
@@ -337,6 +354,8 @@ private:
       // match by primary trip id for now if there is only one trip
       // with a matching primary trip id
       return first_it->second;
+    } else if (primary_matches > 1) {
+      update_metrics([](metrics_entry* m) { ++m->ft_trip_id_ambiguous_; });
     }
     return nullptr;
   }
@@ -368,7 +387,7 @@ private:
   }
 
   std::vector<section> get_msg_sections() {
-    return utl::to_vec(*msg_->sections(), [&](TripSection const* ts) {
+    return utl::to_vec(*msg_->sections(), [this](TripSection const* ts) {
       auto const from = get_or_add_station(ts->departure()->station());
       auto const to = get_or_add_station(ts->arrival()->station());
       return section{
@@ -399,7 +418,7 @@ private:
       return {};
     }
     return utl::to_vec(
-        access::sections{trp}, [&](access::trip_section const& sec) {
+        access::sections{trp}, [this, trp](access::trip_section const& sec) {
           auto const& lc = sec.lcon();
           auto const ev_from = sec.ev_key_from();
           auto const ev_to = sec.ev_key_to();
@@ -487,8 +506,9 @@ private:
     auto nodes = std::vector<node*>{};
     nodes.reserve(sections.size() + 1);
 
-    auto const build_node = [&](station_node* sn, bool in_allowed,
-                                bool out_allowed) {
+    auto const build_node = [this, route_id, &incoming](station_node* sn,
+                                                        bool in_allowed,
+                                                        bool out_allowed) {
       return build_route_node(sched_, route_id, sched_.next_node_id_++, sn,
                               sched_.stations_.at(sn->id_)->transfer_time_,
                               in_allowed, out_allowed, incoming);
@@ -803,7 +823,7 @@ private:
     }
 
     return std::all_of(begin(utl::zip(a, b)), end(utl::zip(a, b)),
-                       [&](auto const& tup) {
+                       [this](auto const& tup) {
                          auto const& [sa, sb] = tup;
                          return is_same_route_stop(sa.dep_, sb.dep_) &&
                                 is_same_route_stop(sa.arr_, sb.arr_);
@@ -812,6 +832,11 @@ private:
 
   bool is_new_trip() const { return result_.is_new_trip_; }
   bool is_reroute() const { return result_.is_reroute_; }
+
+  template <typename Fn>
+  inline void update_metrics(Fn&& fn) {
+    metrics_.update(msg_timestamp_, processing_time_, std::forward<Fn>(fn));
+  }
 
 public:
   full_trip_result get_result() const { return result_; }
@@ -827,16 +852,22 @@ public:
   std::map<connection_info, connection_info const*> con_infos_;
   std::map<schedule_event, delay_info*>& cancelled_delays_;
   bool debug_{};
+  rt_metrics& metrics_;
+  unixtime msg_timestamp_;
+  unixtime processing_time_;
 };
 
 full_trip_result handle_full_trip_msg(
     statistics& stats, schedule& sched, update_msg_builder& update_builder,
     message_history& msg_history, delay_propagator& propagator,
     ris::FullTripMessage const* msg, std::string_view const msg_buffer,
-    std::map<schedule_event, delay_info*>& cancelled_delays) {
-  auto handler =
-      full_trip_handler{stats,      sched, update_builder, msg_history,
-                        propagator, msg,   msg_buffer,     cancelled_delays};
+    std::map<schedule_event, delay_info*>& cancelled_delays,
+    rt_metrics& metrics, unixtime const msg_timestamp,
+    unixtime const processing_time) {
+  auto handler = full_trip_handler{
+      stats,      sched,         update_builder, msg_history,
+      propagator, msg,           msg_buffer,     cancelled_delays,
+      metrics,    msg_timestamp, processing_time};
   handler.handle_msg();
   return handler.get_result();
 }

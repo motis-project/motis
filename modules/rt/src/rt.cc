@@ -58,51 +58,6 @@ msg_ptr get_trip_history(schedule const& sched, rt_handler* rth,
   return make_msg(mc);
 }
 
-msg_ptr get_metrics(rt_metrics const& metrics) {
-  message_creator mc;
-
-  auto const metrics_to_fbs = [&](rt_metrics_storage const& m) {
-    std::vector<std::uint64_t> messages, delay_messages, cancel_messages,
-        additional_messages, reroute_messages, track_messages,
-        full_trip_messages, trip_formation_messages;
-
-    messages.reserve(m.size());
-    delay_messages.reserve(m.size());
-    cancel_messages.reserve(m.size());
-    additional_messages.reserve(m.size());
-    reroute_messages.reserve(m.size());
-    track_messages.reserve(m.size());
-    full_trip_messages.reserve(m.size());
-    trip_formation_messages.reserve(m.size());
-
-    for (auto i = 0UL; i < m.size(); ++i) {
-      auto const& entry = m.data_[(m.start_index_ + i) % m.size()];
-      messages.push_back(entry.messages_);
-      delay_messages.push_back(entry.delay_messages_);
-      cancel_messages.push_back(entry.cancel_messages_);
-      additional_messages.push_back(entry.additional_messages_);
-      reroute_messages.push_back(entry.reroute_messages_);
-      track_messages.push_back(entry.track_messages_);
-      full_trip_messages.push_back(entry.full_trip_messages_);
-      trip_formation_messages.push_back(entry.trip_formation_messages_);
-    }
-
-    return CreateRtMetrics(
-        mc, m.start_time(), m.size(), mc.CreateVector(messages),
-        mc.CreateVector(delay_messages), mc.CreateVector(cancel_messages),
-        mc.CreateVector(additional_messages), mc.CreateVector(reroute_messages),
-        mc.CreateVector(track_messages), mc.CreateVector(full_trip_messages),
-        mc.CreateVector(trip_formation_messages));
-  };
-
-  mc.create_and_finish(
-      MsgContent_RtMetricsResponse,
-      CreateRtMetricsResponse(mc, metrics_to_fbs(metrics.by_msg_timestamp_),
-                              metrics_to_fbs(metrics.by_processing_time_))
-          .Union());
-  return make_msg(mc);
-}
-
 void rt::init(motis::module::registry& reg) {
   reg.subscribe(
       "/ris/messages",
@@ -196,7 +151,7 @@ void rt::init(motis::module::registry& reg) {
         if (handler == nullptr) {
           throw std::system_error{error::schedule_not_found};
         }
-        return get_metrics(handler->metrics_);
+        return get_metrics_api(handler->metrics_);
       },
       {});
 }

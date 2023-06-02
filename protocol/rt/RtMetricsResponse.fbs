@@ -12,6 +12,17 @@ table RtMetrics {
   track_messages: [ulong];
   full_trip_messages: [ulong];
   trip_formation_messages: [ulong];
+
+  // full trip messages:
+  new_trips: [ulong];
+  cancellations: [ulong];
+  reroutes: [ulong];
+  rule_service_rerotues: [ulong];
+  trip_delay_updates: [ulong];
+  event_delay_updates: [ulong];
+  trip_track_updates: [ulong];
+  trip_id_not_found: [ulong];
+  trip_id_ambiguous: [ulong];
 }
 
 table RtMetricsResponse {
