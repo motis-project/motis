@@ -49,49 +49,81 @@ inline timestamp_reason from_fbs(TimestampType const t) {
   }
 }
 
+namespace {
+
+struct event_info {
+  station_node* station_{};
+  bool interchange_allowed_{};
+  time schedule_time_{INVALID_TIME};
+  time current_time_{INVALID_TIME};
+  timestamp_reason timestamp_reason_{timestamp_reason::SCHEDULE};
+  std::uint16_t schedule_track_{};
+  std::uint16_t current_track_{};
+  ev_key ev_key_;
+  boost::uuids::uuid uuid_{};
+
+  inline bool time_updated(event_info const& o) const {
+    return current_time_ != o.current_time_ ||
+           timestamp_reason_ != o.timestamp_reason_;
+  }
+
+  inline bool track_updated(event_info const& o) const {
+    return current_track_ != o.current_track_;
+  }
+
+  inline ev_key const& get_ev_key() const {
+    assert(ev_key_.is_not_null());
+    return ev_key_;
+  }
+};
+
+struct section {
+  light_connection* lcon() const {
+    assert(lc_ != nullptr);
+    return lc_;
+  }
+
+  event_info dep_;
+  event_info arr_;
+  light_connection* lc_{};
+};
+
+struct trip_backup {
+  mcd::vector<trip::route_edge> edges_;
+  lcon_idx_t lcon_idx_{};
+};
+
+struct event_info_debug {
+  friend std::ostream& operator<<(std::ostream& out,
+                                  event_info_debug const& eid) {
+    auto const& sched = eid.sched_;
+    auto const& ei = eid.ei_;
+
+    auto const& st = sched.stations_[ei.station_->id_].get();
+    out << "{st=" << st->eva_nr_ << " " << st->name_
+        << ", i/o=" << ei.interchange_allowed_
+        << ", sched_time=" << format_time(ei.schedule_time_)
+        << ", cur_time=" << format_time(ei.current_time_)
+        << ", reason=" << ei.timestamp_reason_
+        << ", sched_track=" << ei.schedule_track_
+        << ", cur_track=" << ei.current_track_;
+    if (ei.ev_key_.is_not_null()) {
+      auto const& ek = ei.ev_key_;
+      out << ", type=" << (ek.is_departure() ? "DEP" : "ARR")
+          << ", lcon_valid=" << ek.lcon_is_valid()
+          << ", canceled=" << ek.is_canceled();
+    }
+    out << "}";
+    return out;
+  }
+
+  schedule const& sched_;
+  event_info const& ei_;
+};
+
+}  // namespace
+
 struct full_trip_handler {
-  struct event_info {
-    station_node* station_{};
-    bool interchange_allowed_{};
-    time schedule_time_{INVALID_TIME};
-    time current_time_{INVALID_TIME};
-    timestamp_reason timestamp_reason_{timestamp_reason::SCHEDULE};
-    std::uint16_t schedule_track_{};
-    std::uint16_t current_track_{};
-    ev_key ev_key_;
-    boost::uuids::uuid uuid_{};
-
-    inline bool time_updated(event_info const& o) const {
-      return current_time_ != o.current_time_ ||
-             timestamp_reason_ != o.timestamp_reason_;
-    }
-
-    inline bool track_updated(event_info const& o) const {
-      return current_track_ != o.current_track_;
-    }
-
-    inline ev_key const& get_ev_key() const {
-      assert(ev_key_.is_not_null());
-      return ev_key_;
-    }
-  };
-
-  struct section {
-    light_connection* lcon() const {
-      assert(lc_ != nullptr);
-      return lc_;
-    }
-
-    event_info dep_;
-    event_info arr_;
-    light_connection* lc_{};
-  };
-
-  struct trip_backup {
-    mcd::vector<trip::route_edge> edges_;
-    lcon_idx_t lcon_idx_{};
-  };
-
   full_trip_handler(statistics& stats, schedule& sched,
                     update_msg_builder& update_builder,
                     message_history& msg_history, delay_propagator& propagator,
@@ -109,6 +141,8 @@ struct full_trip_handler {
 
   void handle_msg() {
     if (!check_events()) {
+      LOG(warn) << "[FTH] invalid event sequence (status "
+                << static_cast<int>(result_.status_) << ")";
       return;
     }
 
@@ -123,10 +157,23 @@ struct full_trip_handler {
     auto sections = get_msg_sections();
 
     if (existing_sections.empty() && sections.empty()) {
+      if (debug_) {
+        LOG(info) << "[FTH] no sections, useless message";
+      }
       return;
     }
 
     result_.is_reroute_ = !is_same_route(existing_sections, sections);
+
+    if (debug_) {
+      auto const rule_service = is_rule_service(result_.trp_);
+      LOG(info) << "[FTH] is_new_trip=" << is_new_trip()
+                << ", is_reroute=" << is_reroute()
+                << ", is_rule_service=" << rule_service
+                << ", existing_sections=" << existing_sections.size()
+                << ", new_sections=" << sections.size()
+                << ", trip_uuid=" << view(msg_->trip_id()->uuid());
+    }
 
     if (is_reroute()) {
       auto const rule_service = is_rule_service(result_.trp_);
@@ -145,6 +192,10 @@ struct full_trip_handler {
 
       if (rule_service) {
         ++stats_.reroute_rule_service_not_supported_;
+        if (debug_) {
+          LOG(info) << "[FTH] ignoring message because reroute of rule "
+                       "services is not supported";
+        }
         return;
       }
 
@@ -186,6 +237,10 @@ struct full_trip_handler {
     }
 
     auto const recalculate_delays = is_reroute() && !is_new_trip();
+    if (debug_) {
+      LOG(info) << "[FTH] updating events, recalculate_delays="
+                << recalculate_delays;
+    }
     for (auto const& [msg_sec, cur_sec] :
          utl::zip(sections, existing_sections)) {
       update_event(cur_sec.dep_, msg_sec.dep_, cur_sec.lcon());
@@ -716,6 +771,10 @@ private:
 
   void update_trip_uuid(boost::uuids::uuid const& trip_uuid) {
     if (result_.trp_->uuid_ != trip_uuid) {
+      if (!result_.trp_->uuid_.is_nil()) {
+        LOG(warn) << "[FTH] trip uuid changed: " << result_.trp_->uuid_
+                  << " => " << trip_uuid;
+      }
       result_.trp_->uuid_ = trip_uuid;
       sched_.uuid_to_trip_[trip_uuid] = result_.trp_;
     }
@@ -767,6 +826,7 @@ public:
   full_trip_result result_;
   std::map<connection_info, connection_info const*> con_infos_;
   std::map<schedule_event, delay_info*>& cancelled_delays_;
+  bool debug_{};
 };
 
 full_trip_result handle_full_trip_msg(
