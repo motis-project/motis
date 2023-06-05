@@ -151,8 +151,6 @@ RtMetrics:
       description: TODO
     reroutes:
       description: TODO
-    rule_service_rerotues:
-      description: TODO
     trip_delay_updates:
       description: TODO
     event_delay_updates:
@@ -162,6 +160,8 @@ RtMetrics:
     trip_id_not_found:
       description: TODO
     trip_id_ambiguous:
+      description: TODO
+    rule_service_reroutes:
       description: TODO
 RtMetricsResponse:
   description: TODO

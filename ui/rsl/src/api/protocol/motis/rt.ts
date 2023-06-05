@@ -21,7 +21,7 @@ export interface RtMetrics {
   new_trips: number[];
   cancellations: number[];
   reroutes: number[];
-  rule_service_rerotues: number[];
+  rule_service_reroutes: number[];
   trip_delay_updates: number[];
   event_delay_updates: number[];
   trip_track_updates: number[];

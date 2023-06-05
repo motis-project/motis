@@ -17,7 +17,7 @@ table RtMetrics {
   new_trips: [ulong];
   cancellations: [ulong];
   reroutes: [ulong];
-  rule_service_rerotues: [ulong];
+  rule_service_reroutes: [ulong];
   trip_delay_updates: [ulong];
   event_delay_updates: [ulong];
   trip_track_updates: [ulong];
