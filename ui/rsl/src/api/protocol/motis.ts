@@ -32,6 +32,8 @@ import {
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
+  PaxMonCapacityStatusRequest,
+  PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
@@ -70,8 +72,12 @@ import {
   PaxMonUniverseForked,
   PaxMonUpdate,
 } from "@/api/protocol/motis/paxmon";
-import { RISForwardTimeRequest } from "@/api/protocol/motis/ris";
+import {
+  RISForwardTimeRequest,
+  RISStatusResponse,
+} from "@/api/protocol/motis/ris";
 import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
+import { RtMetricsRequest, RtMetricsResponse } from "@/api/protocol/motis/rt";
 
 // base/Position.fbs
 export interface Position {
@@ -365,7 +371,12 @@ export type MsgContent =
   | LookupStationInfoRequest
   | LookupStationInfoResponse
   | PaxMonGetTripCapacityRequest
-  | PaxMonGetTripCapacityResponse;
+  | PaxMonGetTripCapacityResponse
+  | RISStatusResponse
+  | RtMetricsRequest
+  | RtMetricsResponse
+  | PaxMonCapacityStatusRequest
+  | PaxMonCapacityStatusResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -438,7 +449,12 @@ export type MsgContentType =
   | "LookupStationInfoRequest"
   | "LookupStationInfoResponse"
   | "PaxMonGetTripCapacityRequest"
-  | "PaxMonGetTripCapacityResponse";
+  | "PaxMonGetTripCapacityResponse"
+  | "RISStatusResponse"
+  | "RtMetricsRequest"
+  | "RtMetricsResponse"
+  | "PaxMonCapacityStatusRequest"
+  | "PaxMonCapacityStatusResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

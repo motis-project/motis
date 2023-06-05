@@ -917,6 +917,55 @@ export interface PaxMonGetTripCapacityResponse {
   capacity_override_map_size: number;
 }
 
+// paxmon/PaxMonCapacityStatusRequest.fbs
+export interface PaxMonCapacityStatusRequest {
+  universe: number;
+  include_trips_without_capacity: boolean;
+  include_other_trips_without_capacity: boolean;
+  include_missing_vehicle_infos: boolean;
+  include_uics_not_found: boolean;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonTripCapacityStats {
+  tracked: number;
+  ok: number;
+  no_formation_data_at_all: number;
+  no_formation_data_some_sections_some_merged: number;
+  no_formation_data_some_sections_all_merged: number;
+  no_vehicles_found_at_all: number;
+  no_vehicles_found_some_sections: number;
+  some_vehicles_not_found_some_sections: number;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonMissingVehicleInfo {
+  baureihe: string;
+  type_code: string;
+  count: number;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonTripCapacityShortInfo {
+  tsi: TripServiceInfo;
+  sections: number;
+  no_formation_data_all_merged: number;
+  no_formation_data_some_merged: number;
+  no_vehicles_found: number;
+  some_vehicles_not_found: number;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCapacityStatusResponse {
+  all_trips: PaxMonTripCapacityStats;
+  high_speed_rail_trips: PaxMonTripCapacityStats;
+  long_distance_trips: PaxMonTripCapacityStats;
+  other_trips: PaxMonTripCapacityStats;
+  trips_without_capacity: PaxMonTripCapacityShortInfo[];
+  missing_vehicle_infos: PaxMonMissingVehicleInfo[];
+  uics_not_found: number[];
+}
+
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonCriticalTripInfo {
   critical_sections: number;

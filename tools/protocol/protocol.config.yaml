@@ -72,6 +72,9 @@ output:
       - motis.*
       - motis.ris.RISForwardTimeRequest
       - motis.ris.RISContentType
+      - motis.ris.RISStatusResponse
+      - motis.ris.RISSourceStatus
+      - motis.rt.RtMetrics*
       - motis.paxmon.*
       - motis.paxforecast.*
       - motis.routing.*

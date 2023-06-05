@@ -64,6 +64,7 @@ function MainMenu(): JSX.Element {
       <MainPageLink to="trips">Züge</MainPageLink>
       <MainPageLink to="groups">Reisende</MainPageLink>
       <MainPageLink to="stats">Statistiken</MainPageLink>
+      <MainPageLink to="status">Status</MainPageLink>
       <PageLink
         active={showSimPanel}
         onClick={() => setShowSimPanel((v) => !v)}
