@@ -22,6 +22,7 @@ import classNames from "@/util/classNames";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import Baureihe from "@/components/util/Baureihe";
 
 type CapacityInfoProps = {
   tripId: TripId;
@@ -328,18 +329,4 @@ function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
     </div>
   );
 }
-
-function Baureihe({ baureihe }: { baureihe: string }) {
-  const m = /^[ITR](\d{3})([0-9A-Z])$/.exec(baureihe);
-  if (m) {
-    return (
-      <span title={baureihe}>
-        {m[1]}.{m[2]}
-      </span>
-    );
-  } else {
-    return <span>{baureihe}</span>;
-  }
-}
-
 export default CapacityInfo;

@@ -11,13 +11,15 @@ import { usePaxMonCapacityStatus } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
+import Baureihe from "@/components/util/Baureihe";
+
 function CapacityStatus(): ReactElement {
   const [universe] = useAtom(universeAtom);
   const { data } = usePaxMonCapacityStatus({
     universe,
     include_trips_without_capacity: false,
     include_other_trips_without_capacity: false,
-    include_missing_vehicle_infos: false,
+    include_missing_vehicle_infos: true,
     include_uics_not_found: false,
   });
 
@@ -33,11 +35,24 @@ type CapacityStatusDisplayProps = {
   data: PaxMonCapacityStatusResponse | undefined;
 };
 
+type CapacityStatusDataProps = {
+  data: PaxMonCapacityStatusResponse;
+};
+
 function CapacityStatusDisplay({ data }: CapacityStatusDisplayProps) {
   if (!data) {
     return <div>Daten werden geladen...</div>;
   }
 
+  return (
+    <>
+      <CapacityStatusStats data={data} />
+      <MissingVehicles data={data} />
+    </>
+  );
+}
+
+function CapacityStatusStats({ data }: CapacityStatusDataProps) {
   type Column = { label: string; stats: PaxMonTripCapacityStats };
 
   const columns: Column[] = [
@@ -147,6 +162,48 @@ function CapacityStatusDisplay({ data }: CapacityStatusDisplayProps) {
           </tr>
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function MissingVehicles({ data }: CapacityStatusDataProps) {
+  return (
+    <div className="pt-3">
+      <details>
+        <summary className="cursor-pointer select-none">
+          Nicht gefundene Wagen nach Bauart und Baureihe
+        </summary>
+        <table className="border-separate border-spacing-x-2">
+          <thead>
+            <tr className="text-left">
+              <th className="font-medium">Anzahl</th>
+              <th className="font-medium">
+                <a
+                  href="https://de.wikipedia.org/wiki/UIC-Bauart-Bezeichnungssystem_f%C3%BCr_Reisezugwagen"
+                  target="_blank"
+                  rel="noreferrer"
+                  referrerPolicy="no-referrer"
+                  className="underline decoration-dotted"
+                >
+                  Bauart
+                </a>
+              </th>
+              <th className="font-medium">Baureihe</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.missing_vehicle_infos.map((vi) => (
+              <tr key={`${vi.type_code} ${vi.baureihe}`}>
+                <td>{formatNumber(vi.count)}</td>
+                <td>{vi.type_code}</td>
+                <td>
+                  <Baureihe baureihe={vi.baureihe} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
     </div>
   );
 }
