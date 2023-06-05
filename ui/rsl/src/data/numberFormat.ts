@@ -15,6 +15,9 @@ export function formatMiliseconds(n: number): string {
   });
 }
 
-export function formatPercent(n: number): string {
-  return formatNumber(n, { style: "percent" });
+export function formatPercent(
+  n: number,
+  options?: Intl.NumberFormatOptions
+): string {
+  return formatNumber(n, { ...options, style: "percent" });
 }
