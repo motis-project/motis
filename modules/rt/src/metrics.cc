@@ -1,5 +1,7 @@
 #include "motis/rt/metrics.h"
 
+#include <vector>
+
 using namespace motis::module;
 
 namespace motis::rt {

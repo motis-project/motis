@@ -1640,3 +1640,32 @@ PaxMonCapacityStatusResponse:
       description: TODO
     uics_not_found:
       description: TODO
+PaxMonMetricsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+PaxMonMetrics:
+  description: TODO
+  fields:
+    start_time:
+      description: TODO
+    entries:
+      description: TODO
+    affected_group_routes:
+      description: TODO
+    ok_group_routes:
+      description: TODO
+    broken_group_routes:
+      description: TODO
+    major_delay_group_routes:
+      description: TODO
+    total_timing:
+      description: TODO
+PaxMonMetricsResponse:
+  description: TODO
+  fields:
+    by_system_time:
+      description: TODO
+    by_processing_time:
+      description: TODO

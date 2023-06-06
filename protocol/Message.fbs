@@ -127,9 +127,13 @@ include "paxmon/PaxMonGetTripCapacityRequest.fbs";
 include "paxmon/PaxMonGetTripCapacityResponse.fbs";
 include "paxmon/PaxMonCapacityStatusRequest.fbs";
 include "paxmon/PaxMonCapacityStatusResponse.fbs";
+include "paxmon/PaxMonMetricsRequest.fbs";
+include "paxmon/PaxMonMetricsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
+include "paxforecast/PaxForecastMetricsRequest.fbs";
+include "paxforecast/PaxForecastMetricsResponse.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -328,7 +332,11 @@ union MsgContent {
   motis.rt.RtMetricsRequest                                               = 153,
   motis.rt.RtMetricsResponse                                              = 154,
   motis.paxmon.PaxMonCapacityStatusRequest                                = 155,
-  motis.paxmon.PaxMonCapacityStatusResponse                               = 156
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 156,
+  motis.paxmon.PaxMonMetricsRequest                                       = 157,
+  motis.paxmon.PaxMonMetricsResponse                                      = 158,
+  motis.paxforecast.PaxForecastMetricsRequest                             = 159,
+  motis.paxforecast.PaxForecastMetricsResponse                            = 160
 }
 
 // Destination Examples:

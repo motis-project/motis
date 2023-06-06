@@ -29,4 +29,12 @@ event_node const* edge::to(universe const& u) const {
 
 event_node* edge::to(universe& u) const { return &u.graph_.nodes_[to_]; }
 
+bool edge::is_valid(universe const& u) const {
+  return !is_disabled() && from(u)->is_valid() && to(u)->is_valid();
+}
+
+bool edge::is_canceled(universe const& u) const {
+  return is_disabled() || from(u)->is_canceled() || to(u)->is_canceled();
+}
+
 }  // namespace motis::paxmon

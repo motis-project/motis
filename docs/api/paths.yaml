@@ -246,6 +246,15 @@
     type: motis.paxforecast.PaxForecastApplyMeasuresResponse
     description: Information about the simulation result
 
+/paxforecast/metrics:
+  summary: /paxforecast/metrics
+  tags:
+    - internal
+  input: motis.paxforecast.PaxForecastMetricsRequest
+  output:
+    type: motis.paxforecast.PaxForecastMetricsResponse
+    description: Metrics
+
 /paxmon/destroy_universe:
   summary: Destroy a paxmon universe
   description: |
@@ -501,6 +510,15 @@
     type: motis.paxmon.PaxMonDebugGraphResponse
     description: Response
 
+/paxmon/metrics:
+  summary: /paxmon/metrics
+  tags:
+    - internal
+  input: motis.paxmon.PaxMonMetricsRequest
+  output:
+    type: motis.paxmon.PaxMonMetricsResponse
+    description: Metrics
+
 /ppr/profiles:
   summary: List available pedestrian routing profiles
   tags:
@@ -671,3 +689,11 @@
   output:
     type: motis.rt.RtMessageHistoryResponse
     description: Response
+
+/rt/metrics:
+  summary: /rt/metrics
+  tags:
+    - internal
+  output:
+    type: motis.rt.RtMetricsResponse
+    description: Metrics

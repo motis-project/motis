@@ -165,3 +165,29 @@ export interface PaxForecastApplyMeasuresResponse {
   stats: PaxForecastApplyMeasuresStatistics;
   updates: PaxMonTrackedUpdates;
 }
+
+// paxforecast/PaxForecastMetricsRequest.fbs
+export interface PaxForecastMetricsRequest {
+  universe: number;
+}
+
+// paxforecast/PaxForecastMetricsResponse.fbs
+export interface PaxForecastMetrics {
+  start_time: number;
+  entries: number;
+  monitoring_events: number[];
+  group_routes: number[];
+  major_delay_group_routes: number[];
+  routing_requests: number[];
+  alternatives_found: number[];
+  rerouted_group_routes: number[];
+  removed_group_routes: number[];
+  major_delay_group_routes_with_alternatives: number[];
+  total_timing: number[];
+}
+
+// paxforecast/PaxForecastMetricsResponse.fbs
+export interface PaxForecastMetricsResponse {
+  by_system_time: PaxForecastMetrics;
+  by_processing_time: PaxForecastMetrics;
+}

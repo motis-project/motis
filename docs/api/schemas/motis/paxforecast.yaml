@@ -363,3 +363,40 @@ OverrideCapacityMeasure:
 
         If this list is empty, the override is removed and the original
         capacity for the trip is restored.
+PaxForecastMetricsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+PaxForecastMetrics:
+  description: TODO
+  fields:
+    start_time:
+      description: TODO
+    entries:
+      description: TODO
+    monitoring_events:
+      description: TODO
+    group_routes:
+      description: TODO
+    major_delay_group_routes:
+      description: TODO
+    routing_requests:
+      description: TODO
+    alternatives_found:
+      description: TODO
+    rerouted_group_routes:
+      description: TODO
+    removed_group_routes:
+      description: TODO
+    major_delay_group_routes_with_alternatives:
+      description: TODO
+    total_timing:
+      description: TODO
+PaxForecastMetricsResponse:
+  description: TODO
+  fields:
+    by_system_time:
+      description: TODO
+    by_processing_time:
+      description: TODO

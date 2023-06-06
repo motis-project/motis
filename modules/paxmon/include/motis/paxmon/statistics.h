@@ -27,6 +27,42 @@ struct system_statistics {
 };
 
 struct tick_statistics {
+  tick_statistics& operator+=(tick_statistics const& rhs) {
+    rt_updates_ += rhs.rt_updates_;
+    rt_delay_updates_ += rhs.rt_delay_updates_;
+    rt_reroute_updates_ += rhs.rt_reroute_updates_;
+    rt_track_updates_ += rhs.rt_track_updates_;
+    rt_free_text_updates_ += rhs.rt_free_text_updates_;
+    rt_trip_formation_updates_ += rhs.rt_trip_formation_updates_;
+
+    rt_delay_event_updates_ += rhs.rt_delay_event_updates_;
+    rt_delay_is_updates_ += rhs.rt_delay_is_updates_;
+    rt_delay_propagation_updates_ += rhs.rt_delay_propagation_updates_;
+    rt_delay_forecast_updates_ += rhs.rt_delay_forecast_updates_;
+    rt_delay_repair_updates_ += rhs.rt_delay_repair_updates_;
+    rt_delay_schedule_updates_ += rhs.rt_delay_schedule_updates_;
+
+    affected_group_routes_ += rhs.affected_group_routes_;
+    ok_group_routes_ += rhs.ok_group_routes_;
+    broken_group_routes_ += rhs.broken_group_routes_;
+    major_delay_group_routes_ += rhs.major_delay_group_routes_;
+
+    t_reachability_ += rhs.t_reachability_;
+    t_localization_ += rhs.t_localization_;
+    t_update_load_ += rhs.t_update_load_;
+    t_fbs_events_ += rhs.t_fbs_events_;
+    t_publish_ += rhs.t_publish_;
+    t_rt_updates_applied_total_ += rhs.t_rt_updates_applied_total_;
+
+    return *this;
+  }
+
+  friend tick_statistics operator+(tick_statistics lhs,
+                                   tick_statistics const& rhs) {
+    lhs += rhs;
+    return lhs;
+  }
+
   std::uint64_t system_time_{};
 
   // rt update counts

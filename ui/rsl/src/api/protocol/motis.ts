@@ -27,6 +27,8 @@ import {
 import {
   PaxForecastApplyMeasuresRequest,
   PaxForecastApplyMeasuresResponse,
+  PaxForecastMetricsRequest,
+  PaxForecastMetricsResponse,
   PaxForecastUpdate,
 } from "@/api/protocol/motis/paxforecast";
 import {
@@ -62,6 +64,8 @@ import {
   PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
+  PaxMonMetricsRequest,
+  PaxMonMetricsResponse,
   PaxMonRemoveGroupsRequest,
   PaxMonRerouteGroupsRequest,
   PaxMonRerouteGroupsResponse,
@@ -376,7 +380,11 @@ export type MsgContent =
   | RtMetricsRequest
   | RtMetricsResponse
   | PaxMonCapacityStatusRequest
-  | PaxMonCapacityStatusResponse;
+  | PaxMonCapacityStatusResponse
+  | PaxMonMetricsRequest
+  | PaxMonMetricsResponse
+  | PaxForecastMetricsRequest
+  | PaxForecastMetricsResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -454,7 +462,11 @@ export type MsgContentType =
   | "RtMetricsRequest"
   | "RtMetricsResponse"
   | "PaxMonCapacityStatusRequest"
-  | "PaxMonCapacityStatusResponse";
+  | "PaxMonCapacityStatusResponse"
+  | "PaxMonMetricsRequest"
+  | "PaxMonMetricsResponse"
+  | "PaxForecastMetricsRequest"
+  | "PaxForecastMetricsResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

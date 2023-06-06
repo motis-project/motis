@@ -28,6 +28,7 @@
 #include "motis/paxmon/edge_type.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/graph_log.h"
+#include "motis/paxmon/metrics.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
 #include "motis/paxmon/rt_update_context.h"
@@ -38,55 +39,13 @@
 
 namespace motis::paxmon {
 
-struct edge;
+struct event_node;
 struct universe;
 
-struct event_node {
-  using mutable_outgoing_edge_bucket =
-      typename fws_graph<event_node, edge>::mutable_outgoing_edge_bucket;
-  using const_outgoing_edge_bucket =
-      typename fws_graph<event_node, edge>::const_outgoing_edge_bucket;
-
-  using mutable_incoming_edge_bucket =
-      fws_graph<event_node, edge>::mutable_incoming_edge_bucket;
-  using const_incoming_edge_bucket =
-      fws_graph<event_node, edge>::const_incoming_edge_bucket;
-
-  inline bool is_valid() const { return valid_; }
-  inline bool is_canceled() const { return !valid_; }
-  inline bool is_enter_exit_node() const { return station_ == 0; }
-
-  const_outgoing_edge_bucket outgoing_edges(universe const&) const;
-  mutable_outgoing_edge_bucket outgoing_edges(universe&) const;
-
-  const_incoming_edge_bucket incoming_edges(universe const&) const;
-
-  inline time current_time() const { return time_; }
-  inline time schedule_time() const { return schedule_time_; }
-  inline event_type type() const { return type_; }
-  inline std::uint32_t station_idx() const { return station_; }
-  inline station const& get_station(schedule const& sched) const {
-    return *sched.stations_[station_idx()];
-  }
-
-  inline event_node_index index(universe const&) const { return index_; }
-
-  event_node_index index_{};
-  time time_{INVALID_TIME};
-  time schedule_time_{INVALID_TIME};
-  event_type type_{event_type::ARR};
-  bool valid_{true};
-  std::uint32_t station_{0};
-};
-
 struct edge {
-  inline bool is_valid(universe const& u) const {
-    return !is_disabled() && from(u)->is_valid() && to(u)->is_valid();
-  }
+  bool is_valid(universe const& u) const;
 
-  inline bool is_canceled(universe const& u) const {
-    return is_disabled() || from(u)->is_canceled() || to(u)->is_canceled();
-  }
+  bool is_canceled(universe const& u) const;
 
   inline bool is_trip() const { return type() == edge_type::TRIP; }
 
@@ -151,6 +110,44 @@ struct edge {
   pci_index pci_{};
 };
 
+struct event_node {
+  using mutable_outgoing_edge_bucket =
+      typename fws_graph<event_node, edge>::mutable_outgoing_edge_bucket;
+  using const_outgoing_edge_bucket =
+      typename fws_graph<event_node, edge>::const_outgoing_edge_bucket;
+
+  using mutable_incoming_edge_bucket =
+      fws_graph<event_node, edge>::mutable_incoming_edge_bucket;
+  using const_incoming_edge_bucket =
+      fws_graph<event_node, edge>::const_incoming_edge_bucket;
+
+  inline bool is_valid() const { return valid_; }
+  inline bool is_canceled() const { return !valid_; }
+  inline bool is_enter_exit_node() const { return station_ == 0; }
+
+  const_outgoing_edge_bucket outgoing_edges(universe const&) const;
+  mutable_outgoing_edge_bucket outgoing_edges(universe&) const;
+
+  const_incoming_edge_bucket incoming_edges(universe const&) const;
+
+  inline time current_time() const { return time_; }
+  inline time schedule_time() const { return schedule_time_; }
+  inline event_type type() const { return type_; }
+  inline std::uint32_t station_idx() const { return station_; }
+  inline station const& get_station(schedule const& sched) const {
+    return *sched.stations_[station_idx()];
+  }
+
+  inline event_node_index index(universe const&) const { return index_; }
+
+  event_node_index index_{};
+  time time_{INVALID_TIME};
+  time schedule_time_{INVALID_TIME};
+  event_type type_{event_type::ARR};
+  bool valid_{true};
+  std::uint32_t station_{0};
+};
+
 struct universe {
   bool uses_default_schedule() const {
     return schedule_res_id_ ==
@@ -171,7 +168,7 @@ struct universe {
   rt_update_context rt_update_ctx_;
   system_statistics system_stats_;
   tick_statistics tick_stats_;
-  tick_statistics last_tick_stats_;
+  metrics<tick_statistics> metrics_;
   update_tracker update_tracker_;
 };
 

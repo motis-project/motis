@@ -966,6 +966,28 @@ export interface PaxMonCapacityStatusResponse {
   uics_not_found: number[];
 }
 
+// paxmon/PaxMonMetricsRequest.fbs
+export interface PaxMonMetricsRequest {
+  universe: number;
+}
+
+// paxmon/PaxMonMetricsResponse.fbs
+export interface PaxMonMetrics {
+  start_time: number;
+  entries: number;
+  affected_group_routes: number[];
+  ok_group_routes: number[];
+  broken_group_routes: number[];
+  major_delay_group_routes: number[];
+  total_timing: number[];
+}
+
+// paxmon/PaxMonMetricsResponse.fbs
+export interface PaxMonMetricsResponse {
+  by_system_time: PaxMonMetrics;
+  by_processing_time: PaxMonMetrics;
+}
+
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonCriticalTripInfo {
   critical_sections: number;

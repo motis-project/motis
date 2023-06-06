@@ -10,6 +10,7 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
 
@@ -30,6 +31,7 @@
 #include "motis/paxforecast/paxforecast.h"
 #include "motis/paxforecast/revert_forecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
+#include "motis/paxforecast/universe_data.h"
 #include "motis/paxforecast/update_tracked_groups.h"
 
 #include "motis/paxforecast/behavior/default_behavior.h"
@@ -468,6 +470,9 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
     mod.stats_writer_->write_tick(tick_stats);
     mod.stats_writer_->flush();
   }
+
+  auto& metrics = mod.universe_storage_.get(uv.id_).metrics_;
+  metrics.add(sched.system_time_, now(), tick_stats);
 }
 
 }  // namespace motis::paxforecast
