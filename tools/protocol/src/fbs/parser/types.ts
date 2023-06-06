@@ -1,14 +1,14 @@
-import { Parser, choice, recursiveParser, str } from "arcsecond";
+import { choice, Parser, recursiveParser, str } from "arcsecond";
 
 import { AstCustomType, AstFieldType } from "@/fbs/ast";
 import {
   BasicType,
-  FLOAT_TYPES,
   FLOAT_TYPE_PROPERTIES,
+  FLOAT_TYPES,
   FloatTypeName,
-  INT_TYPES,
   INT_TYPE_PROPERTIES,
-  IntTypeName,
+  INT_TYPES,
+  IntTypeName
 } from "@/fbs/basic_types";
 import { identWithOptionalNamespace } from "@/fbs/parser/constants";
 import { betweenBrackets } from "@/fbs/parser/helpers";
@@ -46,17 +46,17 @@ export const basicType: Parser<BasicType> = choice([
 
 export const customType: Parser<AstCustomType> = identWithOptionalNamespace.map(
   (x) => {
-    return { c: "custom", type: x };
+    return { c: "custom" as const, type: x };
   }
 );
 
 export const type: Parser<AstFieldType> = recursiveParser(() =>
   choice([
     basicType.map((x) => {
-      return { c: "basic", type: x };
+      return { c: "basic" as const, type: x };
     }),
     betweenBrackets(type).map((x) => {
-      return { c: "vector", type: x as AstFieldType };
+      return { c: "vector" as const, type: x as AstFieldType };
     }),
     customType,
   ])

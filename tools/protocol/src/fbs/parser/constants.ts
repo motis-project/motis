@@ -1,13 +1,4 @@
-import {
-  Parser,
-  char,
-  choice,
-  everyCharUntil,
-  regex,
-  sepBy1,
-  sequenceOf,
-  str,
-} from "arcsecond";
+import { char, choice, everyCharUntil, Parser, regex, sepBy1, sequenceOf, str } from "arcsecond";
 
 import {
   AstBooleanLiteral,
@@ -15,7 +6,7 @@ import {
   AstNumericLiteral,
   AstRefLiteral,
   AstScalarLiteral,
-  AstStringLiteral,
+  AstStringLiteral
 } from "@/fbs/ast";
 
 export const ident: Parser<string> = regex(/^[a-zA-Z_][a-zA-Z0-9_]*/);
@@ -73,7 +64,7 @@ export const scalarOrRefLiteral: Parser<AstScalarLiteral | AstRefLiteral> =
   choice([
     scalar,
     ident.map((x) => {
-      return { t: "ref", value: x };
+      return { t: "ref" as const, value: x };
     }),
   ]);
 
