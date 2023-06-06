@@ -209,6 +209,12 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
         from_fbs(sched, event->reachability()->broken_transfer());
 
     auto& destination_groups = combined_groups[destination_station_id];
+    // TODO(pablo): localization includes the scheduled arrival time, which
+    // is needed later (journey prefix calculation). to make sure this works,
+    // the scheduled time is currently included in the comparison.
+    // it might be better to only check the current arrival time
+    // and store the scheduled arrival time / localization per group
+    // instead of per combined group.
     auto cpg = std::find_if(
         begin(destination_groups), end(destination_groups),
         [&](auto const& g) { return g.localization_ == localization; });
