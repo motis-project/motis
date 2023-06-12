@@ -17,14 +17,14 @@
   "devDependencies": {
     "@limegrass/eslint-plugin-import-alias": "^1.0.6",
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
-    "@types/node": "^20.2.5",
+    "@types/node": "^20.3.0",
     "@types/prettier": "^2.7.3",
     "@typescript-eslint/eslint-plugin": "^5.59.9",
     "@typescript-eslint/parser": "^5.59.9",
     "eslint": "^8.42.0",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.0.4 <5.1.0"
+    "typescript": "^5.0.4"
   },
   "dependencies": {
     "arcsecond": "^5.0.0",
