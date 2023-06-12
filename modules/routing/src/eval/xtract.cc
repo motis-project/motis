@@ -105,9 +105,10 @@ void create_base_copy(schedule_format const format, fs::path const& src,
   };
 
   auto const abs_src = absolute(src);
+  auto ec = std::error_code{};
   switch (format) {
     case schedule_format::kGTFS:
-      fs::remove_all(dest);
+      fs::remove_all(dest, ec);
       fs::create_directories(dest);
       link_if_exists(abs_src / AGENCY_FILE, dest / AGENCY_FILE);
       link_if_exists(abs_src / STOPS_FILE, dest / STOPS_FILE);
@@ -121,7 +122,7 @@ void create_base_copy(schedule_format const format, fs::path const& src,
       break;
 
     case schedule_format::kHRD:
-      fs::remove_all(dest);
+      fs::remove_all(dest, ec);
       fs::create_directories(dest / SCHEDULE_DATA);
       fs::create_symlink(abs_src / CORE_DATA, dest / CORE_DATA);
       std::ofstream{dest / SCHEDULE_DATA / "services.txt"}.write("", 0);
