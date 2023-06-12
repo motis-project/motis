@@ -379,8 +379,9 @@ struct ris::impl {
 
     if (config_.clear_db_ && fs::exists(config_.db_path_)) {
       LOG(info) << "clearing database path " << config_.db_path_;
-      fs::remove_all(config_.db_path_);
-      fs::remove_all(config_.db_path_ + "-lock");
+      std::error_code ec;
+      fs::remove_all(config_.db_path_, ec);
+      fs::remove_all(config_.db_path_ + "-lock", ec);
     }
 
     env_.set_maxdbs(6);
