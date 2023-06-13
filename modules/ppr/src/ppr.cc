@@ -132,11 +132,11 @@ struct ppr::impl {
                 std::map<std::string, profile_info>& profiles,
                 std::size_t edge_rtree_max_size,
                 std::size_t area_rtree_max_size, rtree_options rtree_opt,
-                bool verify_routing_graph)
+                bool verify_routing_graph, bool check_integrity)
       : profiles_{profiles} {
     {
       scoped_timer const timer("loading ppr routing graph");
-      read_routing_graph(rg_, rg_path);
+      read_routing_graph(rg_, rg_path, check_integrity);
     }
     {
       scoped_timer const timer("preparing ppr r-trees");
@@ -262,13 +262,15 @@ private:
 ppr::ppr() : module("Foot Routing", "ppr") {
   param(use_dem_, "import.use_dem", "Use elevation data");
   param(profile_files_, "profile", "Search profile");
-  param(edge_rtree_max_size_, "edge-rtree-max-size",
+  param(edge_rtree_max_size_, "edge_rtree_max_size",
         "Maximum size for edge r-tree file");
-  param(area_rtree_max_size_, "area-rtree-max-size",
+  param(area_rtree_max_size_, "area_rtree_max_size",
         "Maximum size for area r-tree file");
-  param(lock_rtrees_, "lock-rtrees", "Prefetch and lock r-trees in memory");
-  param(prefetch_rtrees_, "prefetch-rtrees", "Prefetch r-trees");
-  param(verify_graph_, "verify-graph", "Verify routing graph");
+  param(lock_rtrees_, "lock_rtrees", "Prefetch and lock r-trees in memory");
+  param(prefetch_rtrees_, "prefetch_rtrees", "Prefetch r-trees");
+  param(verify_graph_, "verify_graph", "Verify routing graph");
+  param(check_integrity_, "check_integrity",
+        "Check routing graph file integrity");
 }
 
 ppr::~ppr() = default;
@@ -297,7 +299,33 @@ void ppr::import(import_dispatcher& reg) {
         auto const state =
             import_state{data_path(osm_path), osm->hash(), osm->size(),
                          data_path(dem_path), dem_hash};
-        if (read_ini<import_state>(dir / "import.ini") != state) {
+        auto const state_changed =
+            read_ini<import_state>(dir / "import.ini") != state;
+
+        auto const rtree_opt =
+            lock_rtrees_ ? rtree_options::LOCK
+                         : (prefetch_rtrees_ ? rtree_options::PREFETCH
+                                             : rtree_options::DEFAULT);
+
+        auto const load_graph = [&]() {
+          impl_ = std::make_unique<impl>(
+              graph_file(), profiles_, edge_rtree_max_size_,
+              area_rtree_max_size_, rtree_opt, verify_graph_, check_integrity_);
+        };
+
+        if (!state_changed) {
+          // try to load existing routing graph - this will fail if it is
+          // incompatible with the current ppr version
+          try {
+            load_graph();
+          } catch (std::exception const& e) {
+            impl_.reset();
+            LOG(logging::error) << "loading existing ppr routing graph failed ("
+                                << e.what() << "), will be re-created";
+          }
+        }
+
+        if (!impl_) {
           fs::create_directories(dir);
 
           pp::options opt;
@@ -339,7 +367,16 @@ void ppr::import(import_dispatcher& reg) {
           utl::verify(result.successful(), result.error_msg_);
           write_ini(dir / "import.ini", state);
         }
-        import_successful_ = true;
+
+        try {
+          load_graph();
+        } catch (std::exception const& e) {
+          impl_.reset();
+          LOG(logging::error)
+              << "loading ppr routing graph failed: " << e.what();
+        }
+
+        import_successful_ = impl_ != nullptr;
 
         progress_tracker->update(100);
         auto graph_hash = cista::hash_t{};
@@ -388,23 +425,15 @@ void ppr::import(import_dispatcher& reg) {
 }
 
 void ppr::init(motis::module::registry& reg) {
-  rtree_options const rtree_opt =
-      lock_rtrees_ ? rtree_options::LOCK
-                   : (prefetch_rtrees_ ? rtree_options::PREFETCH
-                                       : rtree_options::DEFAULT);
-
-  try {
-    impl_ =
-        std::make_unique<impl>(graph_file(), profiles_, edge_rtree_max_size_,
-                               area_rtree_max_size_, rtree_opt, verify_graph_);
+  if (impl_) {
     reg.register_op("/ppr/route",
                     [this](msg_ptr const& msg) { return impl_->route(msg); },
                     {});
     reg.register_op("/ppr/profiles",
                     [this](msg_ptr const&) { return impl_->get_profiles(); },
                     {});
-  } catch (std::exception const& e) {
-    LOG(logging::error) << "ppr module not initialized (" << e.what() << ")";
+  } else {
+    LOG(logging::error) << "ppr module not initialized";
   }
 }
 
