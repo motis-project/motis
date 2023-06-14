@@ -24,6 +24,7 @@ Offset<HalfTripId> parse_half_trip_id(context& ctx,
   auto const start_station_eva = get_str(rel, "startEvanummer");
   auto const train_nr =
       get_parsed_number<std::uint32_t>(rel, "startFahrtnummer");
+  auto const start_category = get_optional_str(rel, "startGattung");
 
   ctx.fahrtnummer_ = train_nr;
   ctx.gattung_ = get_str(rel, "startGattung");
@@ -35,7 +36,7 @@ Offset<HalfTripId> parse_half_trip_id(context& ctx,
                    ctx.ris_.b_.CreateSharedString(start_station_eva.data(),
                                                   start_station_eva.size()),
                    train_nr, start_time, empty_str, 0, empty_str),
-      ctx.ris_.b_.CreateString(uuid));
+      ctx.ris_.b_.CreateString(uuid), ctx.ris_.b_.CreateString(start_category));
 }
 
 Offset<StationInfo> parse_station(context& ctx, rapidjson::Value const& stop) {
