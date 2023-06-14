@@ -23,6 +23,11 @@ table RtMetrics {
   trip_track_updates: [ulong];
   trip_id_not_found: [ulong];
   trip_id_ambiguous: [ulong];
+
+  // formation messages:
+  formation_invalid_trip_id: [ulong];
+  formation_trip_id_not_found: [ulong];
+  formation_trip_id_ambiguous: [ulong];
 }
 
 table RtMetricsResponse {

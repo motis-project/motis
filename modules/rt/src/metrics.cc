@@ -50,7 +50,8 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
         full_trip_messages, trip_formation_messages, new_trips, cancellations,
         reroutes, rule_service_reroutes, trip_delay_updates,
         event_delay_updates, trip_track_updates, trip_id_not_found,
-        trip_id_ambiguous;
+        trip_id_ambiguous, formation_invalid_trip_id,
+        formation_trip_id_not_found, formation_trip_id_ambiguous;
 
     messages.reserve(m.size());
     delay_messages.reserve(m.size());
@@ -69,6 +70,9 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
     trip_track_updates.reserve(m.size());
     trip_id_not_found.reserve(m.size());
     trip_id_ambiguous.reserve(m.size());
+    formation_invalid_trip_id.reserve(m.size());
+    formation_trip_id_not_found.reserve(m.size());
+    formation_trip_id_ambiguous.reserve(m.size());
 
     for (auto i = 0UL; i < m.size(); ++i) {
       auto const& entry = m.data_[(m.start_index_ + i) % m.size()];
@@ -89,6 +93,12 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
       trip_track_updates.push_back(entry.ft_trip_track_updates_);
       trip_id_not_found.push_back(entry.ft_trip_id_not_found_);
       trip_id_ambiguous.push_back(entry.ft_trip_id_ambiguous_);
+      formation_invalid_trip_id.push_back(
+          entry.formation_invalid_primary_trip_id_);
+      formation_trip_id_not_found.push_back(
+          entry.formation_primary_trip_id_not_found_);
+      formation_trip_id_ambiguous.push_back(
+          entry.formation_primary_trip_id_ambiguous_);
     }
 
     return CreateRtMetrics(
@@ -102,7 +112,10 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
         mc.CreateVector(trip_delay_updates),
         mc.CreateVector(event_delay_updates),
         mc.CreateVector(trip_track_updates), mc.CreateVector(trip_id_not_found),
-        mc.CreateVector(trip_id_ambiguous));
+        mc.CreateVector(trip_id_ambiguous),
+        mc.CreateVector(formation_invalid_trip_id),
+        mc.CreateVector(formation_trip_id_not_found),
+        mc.CreateVector(formation_trip_id_ambiguous));
   };
 
   mc.create_and_finish(

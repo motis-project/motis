@@ -31,6 +31,11 @@ struct metrics_entry {
   std::uint32_t ft_trip_track_updates_{};
   std::uint32_t ft_trip_id_not_found_{};
   std::uint32_t ft_trip_id_ambiguous_{};
+
+  // trip formation messages:
+  std::uint32_t formation_invalid_primary_trip_id_{};
+  std::uint32_t formation_primary_trip_id_not_found_{};
+  std::uint32_t formation_primary_trip_id_ambiguous_{};
 };
 
 using rt_metrics_storage = metrics_storage<metrics_entry>;

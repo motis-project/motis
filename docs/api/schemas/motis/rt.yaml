@@ -163,6 +163,12 @@ RtMetrics:
       description: TODO
     rule_service_reroutes:
       description: TODO
+    formation_invalid_trip_id:
+      description: TODO
+    formation_trip_id_not_found:
+      description: TODO
+    formation_trip_id_ambiguous:
+      description: TODO
 RtMetricsResponse:
   description: TODO
   fields:

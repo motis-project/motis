@@ -27,18 +27,18 @@ PaxForecastUpdate:
       description: TODO
 MeasureRecipients:
   description: >
-    Select a subset of passengers that is made aware of the measure
-    (e.g. using an announcement)
+    Select a subset of passengers that is made aware of the measure (e.g. using
+    an announcement)
   fields:
     trips:
       description: >
-        Select passengers that are in one of the listed trip (at the
-        measure `time`).
+        Select passengers that are in one of the listed trip (at the measure
+        `time`).
     stations:
       description: >
-        Select passengers that are at one of the listed stations (at the
-        measure `time`). Does not include passengers in a trip that is currently
-        waiting at the station.
+        Select passengers that are at one of the listed stations (at the measure
+        `time`). Does not include passengers in a trip that is currently waiting
+        at the station.
 LoadLevel:
   description: TODO
 TripLoadInfoMeasure:
