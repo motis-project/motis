@@ -51,24 +51,6 @@ trip const* get_trip(schedule const& sched, std::string_view eva_nr,
                      std::string_view target_eva_nr,
                      unixtime const target_timestamp, std::string_view line_id,
                      bool const fuzzy) {
-  auto const print_all = [&]() {
-    for (auto const& t : sched.trips_) {
-      auto const& from = sched.stations_[t.first.station_id_];
-      auto const& to =
-          sched.stations_[t.second->id_.secondary_.target_station_id_];
-      auto const& from_time = motis_to_unixtime(sched, t.first.time_);
-      auto const& to_time =
-          motis_to_unixtime(sched, t.second->id_.secondary_.target_time_);
-      auto const& line_id = t.second->id_.secondary_.line_id_;
-      auto const train_nr = t.first.train_nr_;
-      std::cout << "(station=" << from->eva_nr_ << ", train_nr=" << train_nr
-                << ", time=" << format_unix_time(from_time)
-                << ", target=" << to->eva_nr_
-                << ", target_time=" << format_unix_time(to_time)
-                << ", line=" << line_id << ") (dbg=" << t.second->dbg_ << ")\n";
-    }
-  };
-
   auto const station_id = get_station(sched, eva_nr)->index_;
   auto const motis_time = unix_to_motistime(sched, timestamp);
   auto const primary_id = primary_trip_id(station_id, train_nr, motis_time);
@@ -77,7 +59,6 @@ trip const* get_trip(schedule const& sched, std::string_view eva_nr,
       std::lower_bound(begin(sched.trips_), end(sched.trips_),
                        std::make_pair(primary_id, static_cast<trip*>(nullptr)));
   if (it == end(sched.trips_) || !(it->first == primary_id)) {
-    print_all();
     throw std::system_error(access::error::service_not_found);
   }
 
@@ -93,7 +74,6 @@ trip const* get_trip(schedule const& sched, std::string_view eva_nr,
     }
   }
 
-  print_all();
   throw std::system_error(access::error::service_not_found);
 }
 
