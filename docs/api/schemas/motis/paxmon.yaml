@@ -1595,6 +1595,8 @@ PaxMonTripCapacityStats:
       description: TODO
     some_vehicles_not_found_some_sections:
       description: TODO
+    trip_formation_data_found:
+      description: TODO
 PaxMonMissingVehicleInfo:
   description: TODO
   fields:

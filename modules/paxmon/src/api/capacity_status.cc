@@ -33,8 +33,8 @@ namespace {
 struct capacity_stats {
   Offset<PaxMonTripCapacityStats> to_fbs(FlatBufferBuilder& fbb) const {
     return CreatePaxMonTripCapacityStats(
-        fbb, tracked_, ok_, no_formation_data_at_all_,
-        no_formation_data_some_sections_some_merged_,
+        fbb, tracked_, ok_, trip_formation_data_found_,
+        no_formation_data_at_all_, no_formation_data_some_sections_some_merged_,
         no_formation_data_some_sections_all_merged_, no_vehicles_found_at_all_,
         no_vehicles_found_some_sections_,
         some_vehicles_not_found_some_sections_);
@@ -43,6 +43,8 @@ struct capacity_stats {
   std::uint32_t tracked_{};
 
   std::uint32_t ok_{};
+
+  std::uint32_t trip_formation_data_found_{};
 
   std::uint32_t no_formation_data_at_all_{};
   std::uint32_t no_formation_data_some_sections_some_merged_{};
@@ -106,6 +108,8 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
     auto secs_with_some_missing_tfs = 0U;
     auto secs_with_all_missing_uics = 0U;
     auto secs_with_some_missing_uics = 0U;
+
+    auto const* tf = get_trip_formation(uv.capacity_maps_, trp);
 
     for (auto const& sec : sections) {
       auto const& lc = sec.lcon();
@@ -180,6 +184,10 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
 
     if (trip_ok) {
       count([](capacity_stats& stats) { ++stats.ok_; });
+    }
+
+    if (tf != nullptr) {
+      count([](capacity_stats& stats) { ++stats.trip_formation_data_found_; });
     }
 
     if (secs_with_all_missing_tfs == sec_count) {

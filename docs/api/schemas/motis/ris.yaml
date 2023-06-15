@@ -284,6 +284,8 @@ HalfTripId:
       description: TODO
     uuid:
       description: TODO
+    category:
+      description: TODO
 VehicleInfo:
   description: TODO
   fields:

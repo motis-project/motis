@@ -94,6 +94,14 @@ function CapacityStatusStats({ data }: CapacityStatusDataProps) {
             ))}
           </tr>
           <tr>
+            <td className="font-medium">Formationsdaten vorhanden</td>
+            {columns.map((c) => (
+              <td key={c.label}>
+                {numWithPercent(c, c.stats.trip_formation_data_found)}
+              </td>
+            ))}
+          </tr>
+          <tr>
             <td className="font-medium">Keinerlei Formationsdaten</td>
             {columns.map((c) => (
               <td key={c.label}>

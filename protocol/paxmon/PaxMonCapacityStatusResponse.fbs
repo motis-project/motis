@@ -7,6 +7,8 @@ table PaxMonTripCapacityStats {
 
   ok: uint;
 
+  trip_formation_data_found: uint;
+
   no_formation_data_at_all: uint;
   no_formation_data_some_sections_some_merged: uint;
   no_formation_data_some_sections_all_merged: uint;

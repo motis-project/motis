@@ -930,6 +930,7 @@ export interface PaxMonCapacityStatusRequest {
 export interface PaxMonTripCapacityStats {
   tracked: number;
   ok: number;
+  trip_formation_data_found: number;
   no_formation_data_at_all: number;
   no_formation_data_some_sections_some_merged: number;
   no_formation_data_some_sections_all_merged: number;
