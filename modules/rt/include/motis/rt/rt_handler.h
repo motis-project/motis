@@ -48,6 +48,8 @@ private:
               unixtime processing_time);
   void propagate();
 
+  void batch_updates();
+
 public:
   schedule& sched_;
   ctx::res_id_t schedule_res_id_;

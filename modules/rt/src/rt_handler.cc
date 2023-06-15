@@ -291,6 +291,8 @@ void rt_handler::update(motis::ris::RISMessage const* m,
 
     default: break;
   }
+
+  batch_updates();
 }
 
 void rt_handler::propagate() {
@@ -339,6 +341,7 @@ void rt_handler::propagate() {
     }
 
     update_builder_.add_delay(di);
+    batch_updates();
   }
 
   for (auto const& trp : trips_to_correct) {
@@ -350,6 +353,7 @@ void rt_handler::propagate() {
         ++stats_.edge_fit_1_;
         separate_trip(sched_, di->get_ev_key(), update_builder_);
       }
+      batch_updates();
     }
   }
 
@@ -375,6 +379,13 @@ void rt_handler::propagate() {
   update_builder_.reset();
   track_events_.clear();
   free_text_events_.clear();
+}
+
+void rt_handler::batch_updates() {
+  if (update_builder_.should_finish()) {
+    ctx::await_all(motis_publish(update_builder_.finish()));
+    update_builder_.reset();
+  }
 }
 
 msg_ptr rt_handler::flush(msg_ptr const&) {
