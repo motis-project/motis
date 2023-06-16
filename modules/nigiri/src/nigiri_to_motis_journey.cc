@@ -65,12 +65,9 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                  ? tt.trip_lines_.at(section_lines.front()).view()
                  : tt.trip_lines_.at(section_lines.at(stop_range.from_))
                        .view());
-  auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
-              last_stop_time] =
-      utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned>(id);
   return extern_trip{
       .station_id_ = first_location,
-      .train_nr_ = train_nr,
+      .train_nr_ = tt.trip_train_nr_.at(tt.trip_ids_.at(trip).back()),
       .time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.from_, n::event_type::kDep)),
       .target_station_id_ = last_location,
