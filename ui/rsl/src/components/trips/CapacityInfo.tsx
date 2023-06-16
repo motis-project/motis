@@ -266,7 +266,12 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         </thead>
         <tbody>
           {mt.vehicles.map((v) => (
-            <tr key={v.uic} className={classNames(!v.found && "text-red-500")}>
+            <tr
+              key={v.uic}
+              className={classNames(
+                v.guessed ? "text-fuchsia-500" : !v.found && "text-red-500"
+              )}
+            >
               <td className="px-2">{v.order}</td>
               <td className="px-2">{v.type_code}</td>
               <td className="px-2">

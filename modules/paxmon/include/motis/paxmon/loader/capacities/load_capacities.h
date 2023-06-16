@@ -10,7 +10,7 @@
 
 namespace motis::paxmon::loader::capacities {
 
-enum class csv_format { TRIP, VEHICLE };
+enum class csv_format { TRIP, VEHICLE, BAUREIHE };
 
 struct load_capacities_result {
   csv_format format_{};

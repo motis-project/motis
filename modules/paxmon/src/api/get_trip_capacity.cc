@@ -119,17 +119,27 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
             auto const& vc = it->second;
             tf_capacity += vc;
             vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
-                mc, vi.uic_, true, mc.CreateSharedString(vi.baureihe_.str()),
+                mc, vi.uic_, true, false,
+                mc.CreateSharedString(vi.baureihe_.str()),
                 mc.CreateSharedString(vi.type_code_.str()),
                 mc.CreateSharedString(vi.order_.str()),
                 to_fbs_capacity_data(mc, vc), vgs));
           } else {
             tf_all_vehicles_found = false;
+            auto vc = vehicle_capacity{};
+            auto guessed = false;
+            if (auto const it = caps.baureihe_capacity_map_.find(vi.baureihe_);
+                it != end(caps.baureihe_capacity_map_)) {
+              vc = it->second;
+              tf_capacity += vc;
+              guessed = true;
+            }
             vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
-                mc, vi.uic_, false, mc.CreateSharedString(vi.baureihe_.str()),
+                mc, vi.uic_, false, guessed,
+                mc.CreateSharedString(vi.baureihe_.str()),
                 mc.CreateSharedString(vi.type_code_.str()),
                 mc.CreateSharedString(vi.order_.str()),
-                to_fbs_capacity_data(mc, vehicle_capacity{}), vgs));
+                to_fbs_capacity_data(mc, vc), vgs));
           }
         }
       }
@@ -181,7 +191,7 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
           caps.min_capacity_, caps.fuzzy_match_max_time_diff_,
           caps.trip_capacity_map_.size(), caps.category_capacity_map_.size(),
           caps.vehicle_capacity_map_.size(), caps.trip_formation_map_.size(),
-          caps.override_map_.size())
+          caps.override_map_.size(), caps.baureihe_capacity_map_.size())
           .Union());
   return make_msg(mc);
 }

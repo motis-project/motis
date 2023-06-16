@@ -18,6 +18,7 @@ table PaxMonCapacityData {
 table PaxMonVehicleCapacityInfo {
   uic: ulong;
   found: bool;
+  guessed: bool;
   baureihe: string;
   type_code: string;
   order: string;
@@ -81,4 +82,5 @@ table PaxMonGetTripCapacityResponse {
   vehicle_capacity_map_size: ulong;
   trip_formation_map_size: ulong;
   capacity_override_map_size: ulong;
+  baureihe_capacity_map_size: ulong;
 }

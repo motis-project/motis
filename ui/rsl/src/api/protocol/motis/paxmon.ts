@@ -855,6 +855,7 @@ export interface PaxMonCapacityData {
 export interface PaxMonVehicleCapacityInfo {
   uic: number;
   found: boolean;
+  guessed: boolean;
   baureihe: string;
   type_code: string;
   order: string;
@@ -915,6 +916,7 @@ export interface PaxMonGetTripCapacityResponse {
   vehicle_capacity_map_size: number;
   trip_formation_map_size: number;
   capacity_override_map_size: number;
+  baureihe_capacity_map_size: number;
 }
 
 // paxmon/PaxMonCapacityStatusRequest.fbs

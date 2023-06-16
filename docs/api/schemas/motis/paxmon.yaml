@@ -1443,6 +1443,8 @@ PaxMonVehicleCapacityInfo:
         are referenced by their index in the `vehicle_groups` list, e.g. an
         entry of `0` means that the vehicle is contained in the first vehicle
         group.
+    guessed:
+      description: Whether the vehicle capacity was guessed.
 PaxMonMergedTripCapacityInfo:
   description: TODO
   fields:
@@ -1542,6 +1544,8 @@ PaxMonGetTripCapacityResponse:
       description: >
         The number of trips for which capacity information was manually
         overriden.
+    baureihe_capacity_map_size:
+      description: TODO
 PaxMonVehicleGroupInfo:
   description: |
     Information about a vehicle group.

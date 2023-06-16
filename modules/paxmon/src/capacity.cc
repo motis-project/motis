@@ -15,6 +15,7 @@
 #include <utility>
 
 #include "motis/hash_set.h"
+#include "motis/pair.h"
 
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
@@ -230,21 +231,24 @@ trip_formation_section const* get_trip_formation_section(
 std::optional<vehicle_capacity> get_section_capacity(
     schedule const& sched, capacity_maps const& caps,
     std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
-  auto uics = mcd::hash_set<std::uint64_t>{};
+  auto vehicles = mcd::hash_set<mcd::pair<std::uint64_t, mcd::string>>{};
   for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
     auto const* tf_sec =
         get_trip_formation_section(sched, caps, trp, ev_key_from);
     if (tf_sec != nullptr) {
       for (auto const& vi : tf_sec->vehicles_) {
-        uics.insert(vi.uic_);
+        vehicles.insert(mcd::pair(vi.uic_, vi.baureihe_));
       }
     }
   }
 
   auto cap = vehicle_capacity{};
-  for (auto const& uic : uics) {
+  for (auto const& [uic, baureihe] : vehicles) {
     if (auto const it = caps.vehicle_capacity_map_.find(uic);
         it != end(caps.vehicle_capacity_map_)) {
+      cap += it->second;
+    } else if (auto const it = caps.baureihe_capacity_map_.find(baureihe);
+               it != end(caps.baureihe_capacity_map_)) {
       cap += it->second;
     }
   }

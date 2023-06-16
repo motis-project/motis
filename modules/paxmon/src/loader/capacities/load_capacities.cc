@@ -46,12 +46,23 @@ struct vehicle_row {
   utl::csv_col<std::uint16_t, UTL_NAME("attribute_value")> attribute_value_;
 };
 
+struct baureihe_row {
+  utl::csv_col<utl::cstr, UTL_NAME("vehicle_abr")> vehicle_abr_;
+  utl::csv_col<std::uint16_t, UTL_NAME("seats")> seats_;
+  utl::csv_col<std::uint16_t, UTL_NAME("seats_1st")> seats_1st_;
+  utl::csv_col<std::uint16_t, UTL_NAME("seats_2nd")> seats_2nd_;
+  utl::csv_col<std::uint16_t, UTL_NAME("standing")> standing_;
+  utl::csv_col<std::uint16_t, UTL_NAME("total_limit")> total_limit_;
+};
+
 csv_format get_csv_format(std::string_view const file_content) {
   if (auto const nl = file_content.find('\n'); nl != std::string_view::npos) {
     auto const header = file_content.substr(0, nl);
     utl::verify(header.find(',') != std::string_view::npos,
                 "paxmon: only ',' separator supported for capacity csv files");
-    if (header.find("seats") != std::string_view::npos) {
+    if (header.find("vehicle_abr") != std::string_view::npos) {
+      return csv_format::BAUREIHE;
+    } else if (header.find("seats") != std::string_view::npos) {
       return csv_format::TRIP;
     } else if (header.find("uic_number") != std::string_view::npos) {
       return csv_format::VEHICLE;
@@ -135,6 +146,17 @@ load_capacities_result load_capacities(schedule const& sched,
               cap.update_seats();
             }
             ++res.loaded_entry_count_;
+          });
+  } else if (res.format_ == csv_format::BAUREIHE) {
+    utl::line_range{utl::buf_reader{file_content}}  //
+        | utl::csv<baureihe_row>()  //
+        | utl::for_each([&](baureihe_row const& row) {
+            auto& cap = caps.baureihe_capacity_map_[row.vehicle_abr_->view()];
+            cap.seats_ = row.seats_.val();
+            cap.seats_1st_ = row.seats_1st_.val();
+            cap.seats_2nd_ = row.seats_2nd_.val();
+            cap.standing_ = row.standing_.val();
+            cap.total_limit_ = row.total_limit_.val();
           });
   }
 
