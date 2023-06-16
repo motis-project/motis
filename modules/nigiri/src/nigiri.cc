@@ -112,8 +112,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             std::vector<std::tuple<n::source_idx_t,
                                    decltype(impl_->loaders_)::const_iterator,
                                    std::unique_ptr<n::loader::dir>>>{};
-        for (auto const [i, p] :
-             utl::enumerate(*motis_content(FileEvent, msg)->paths())) {
+        auto i = 0U;
+        for (auto const p : *motis_content(FileEvent, msg)->paths()) {
           if (p->tag()->str() != "schedule") {
             continue;
           }
@@ -125,10 +125,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       path);
           h = cista::hash_combine(h, (*c)->hash(*d));
 
-          datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
-
-          auto const tag = p->options()->str();
-          impl_->tags_.emplace_back(tag + (tag.empty() ? "default_" : "_"));
+          datasets.emplace_back(n::source_idx_t{i++}, c, std::move(d));
+          impl_->tags_.emplace_back(p->options()->str() + "_");
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 

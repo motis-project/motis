@@ -28,6 +28,7 @@ include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
 include "lookup/LookupStationInfoRequest.fbs";
 include "lookup/LookupStationInfoResponse.fbs";
+include "lookup/LookupStationLocationResponse.fbs";
 include "osrm/OSRMManyToManyRequest.fbs";
 include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
@@ -318,7 +319,9 @@ union MsgContent {
   motis.paxmon.PaxMonGetTripCapacityRequest                               = 148,
   motis.paxmon.PaxMonGetTripCapacityResponse                              = 149,
   motis.rt.RtMessageHistoryRequest                                        = 150,
-  motis.rt.RtMessageHistoryResponse                                       = 151
+  motis.rt.RtMessageHistoryResponse                                       = 151,
+  motis.lookup.LookupStationLocationResponse                              = 152,
+  motis.routing.InputStation                                              = 153
 }
 
 // Destination Examples:
