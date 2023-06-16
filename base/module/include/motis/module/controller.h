@@ -13,8 +13,7 @@ namespace motis::module {
 
 struct controller : public dispatcher, public registry {
   explicit controller(
-      std::vector<std::unique_ptr<motis::module::module>>&& modules)
-      : dispatcher{*static_cast<registry*>(this), std::move(modules)} {}
+      std::vector<std::unique_ptr<motis::module::module>>&& modules);
 
   template <typename Fn>
   auto run(Fn f,

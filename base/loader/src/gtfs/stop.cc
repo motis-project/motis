@@ -17,7 +17,7 @@ using std::get;
 namespace motis::loader::gtfs {
 
 enum { stop_id, stop_name, stop_timezone, parent_station, stop_lat, stop_lon };
-using gtfs_stop = std::tuple<cstr, cstr, cstr, cstr, float, float>;
+using gtfs_stop = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
 static const column_mapping<gtfs_stop> columns = {
     {"stop_id", "stop_name", "stop_timezone", "parent_station", "stop_lat",
      "stop_lon"}};
@@ -96,7 +96,8 @@ stop_map read_stops(loaded_file file) {
 
     new_stop->id_ = get<stop_id>(s).to_str();
     new_stop->name_ = get<stop_name>(s).to_str();
-    new_stop->coord_ = {get<stop_lat>(s), get<stop_lon>(s)};
+    new_stop->coord_ = {parse<float>(get<stop_lat>(s).trim()),
+                        parse<float>(get<stop_lon>(s).trim())};
     new_stop->timezone_ = get<stop_timezone>(s).to_str();
 
     if (!get<parent_station>(s).trim().empty()) {

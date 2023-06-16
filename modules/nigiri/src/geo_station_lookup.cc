@@ -4,6 +4,9 @@
 
 #include "utl/to_vec.h"
 
+#include "motis/core/conv/position_conv.h"
+#include "motis/nigiri/location.h"
+
 namespace mm = motis::module;
 namespace n = ::nigiri;
 
@@ -38,6 +41,21 @@ motis::module::msg_ptr geo_station_lookup(std::vector<std::string> const& tags,
                     mc.CreateString(locations.names_.at(l).view()), &pos);
               })))
           .Union());
+  return mm::make_msg(mc);
+}
+
+motis::module::msg_ptr station_location(std::vector<std::string> const& tags,
+                                        ::nigiri::timetable const& tt,
+                                        motis::module::msg_ptr const& msg) {
+  using motis::lookup::CreateLookupStationLocationResponse;
+  using motis::lookup::LookupStationLocationResponse;
+  using routing::InputStation;
+  auto const req = motis_content(InputStation, msg);
+  auto const l_idx = get_location_idx(tags, tt, req->id()->view());
+  auto const pos = to_fbs(tt.locations_.coordinates_.at(l_idx));
+  mm::message_creator mc;
+  mc.create_and_finish(MsgContent_LookupGeoStationResponse,
+                       CreateLookupStationLocationResponse(mc, &pos).Union());
   return mm::make_msg(mc);
 }
 

@@ -56,10 +56,10 @@
       motisParam: params.get("motis"),
       timeParam: timeParam,
       langParam: langParam,
-      fromLocation: localStorage.getItem("motis.routing.from_location"),
-      toLocation: localStorage.getItem("motis.routing.to_location"),
-      fromModes: localStorage.getItem("motis.routing.from_modes"),
-      toModes: localStorage.getItem("motis.routing.to_modes"),
+      fromLocation: null,
+      toLocation: null,
+      fromModes: null,
+      toModes: null,
       intermodalPprMode: null,
     });
 

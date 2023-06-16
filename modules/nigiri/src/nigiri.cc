@@ -14,7 +14,6 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
-#include "nigiri/print_transport.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
@@ -72,6 +71,12 @@ void nigiri::init(motis::module::registry& reg) {
                                                 impl_->station_geo_index_, msg);
                     },
                     {});
+
+    reg.register_op("/lookup/station_location",
+                    [&](mm::msg_ptr const& msg) {
+                      return station_location(impl_->tags_, **impl_->tt_, msg);
+                    },
+                    {});
   }
 }
 
@@ -113,8 +118,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             std::vector<std::tuple<n::source_idx_t,
                                    decltype(impl_->loaders_)::const_iterator,
                                    std::unique_ptr<n::loader::dir>>>{};
-        for (auto const [i, p] :
-             utl::enumerate(*motis_content(FileEvent, msg)->paths())) {
+        auto i = 0U;
+        for (auto const p : *motis_content(FileEvent, msg)->paths()) {
           if (p->tag()->str() != "schedule") {
             continue;
           }
@@ -126,10 +131,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       path);
           h = cista::hash_combine(h, (*c)->hash(*d));
 
-          datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
-
-          auto const tag = p->options()->str();
-          impl_->tags_.emplace_back(tag + (tag.empty() ? "default_" : "_"));
+          datasets.emplace_back(n::source_idx_t{i++}, c, std::move(d));
+          impl_->tags_.emplace_back(p->options()->str() + "_");
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
