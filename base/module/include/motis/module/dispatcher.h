@@ -19,7 +19,7 @@ namespace motis::module {
 struct module;
 
 struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
-  explicit dispatcher(registry&, std::vector<std::unique_ptr<module>>&&);
+  dispatcher(registry&, std::vector<std::unique_ptr<::motis::module::module>>);
 
   template <typename Module>
   Module& get_module(std::string_view module_name) {
@@ -58,7 +58,7 @@ struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
   registry& registry_;
   bool queue_no_target_msgs_{false};
   std::queue<std::pair<msg_ptr, callback>> no_target_msg_queue_;
-  std::vector<std::unique_ptr<module>> modules_;
+  std::vector<std::unique_ptr<module>> modules_{};
   std::map<std::string, std::shared_ptr<timer>> timers_;
 
   // If this is set to a value != nullptr, it indicates direct mode is on.
