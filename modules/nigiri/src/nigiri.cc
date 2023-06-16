@@ -14,7 +14,6 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
-#include "nigiri/print_transport.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"

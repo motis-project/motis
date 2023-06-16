@@ -47,7 +47,7 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
             : x);
   };
 
-  auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
+  auto const [transport, stop_range] = tt.trip_transport_ranges_[trip].front();
   auto const first_location = resolve_id(n::stop{
       tt.route_location_seq_[tt.transport_route_[transport]][stop_range.from_]}
                                              .location_idx());
@@ -246,8 +246,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   for (auto const [i, leg] : utl::enumerate(nj.legs_)) {
     std::visit(
         utl::overloaded{
-            [&](n::routing::journey::transport_enter_exit const& t) {
-              auto const& route_idx = tt.transport_route_.at(t.t_.t_idx_);
+            [&](n::routing::journey::run_enter_exit const& t) {
+              auto const& route_idx = tt.transport_route_.at(t.r_.t_.t_idx_);
               auto const& stop_seq = tt.route_location_seq_.at(route_idx);
 
               for (auto const& stop_idx : t.stop_range_) {
@@ -271,7 +271,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
                 if (!enter) {
                   auto const time = to_motis_unixtime(
-                      tt.event_time(t.t_, stop_idx, n::event_type::kArr));
+                      tt.event_time(t.r_.t_, stop_idx, n::event_type::kArr));
                   auto const track =
                       (tt.locations_.types_.at(l) == n::location_type::kTrack ||
                        tt.locations_.types_.at(l) ==
@@ -288,7 +288,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
                 if (!exit) {
                   auto const time = to_motis_unixtime(
-                      tt.event_time(t.t_, stop_idx, n::event_type::kDep));
+                      tt.event_time(t.r_.t_, stop_idx, n::event_type::kDep));
                   auto const track =
                       (tt.locations_.types_.at(l) == n::location_type::kTrack ||
                        tt.locations_.types_.at(l) ==
@@ -305,7 +305,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                 }
 
                 if (!exit) {
-                  add_transports(t.t_, stop_idx);
+                  add_transports(t.r_.t_, stop_idx);
                 }
               }
             },
