@@ -71,6 +71,12 @@ void nigiri::init(motis::module::registry& reg) {
                                                 impl_->station_geo_index_, msg);
                     },
                     {});
+
+    reg.register_op("/lookup/station_location",
+                    [&](mm::msg_ptr const& msg) {
+                      return station_location(impl_->tags_, **impl_->tt_, msg);
+                    },
+                    {});
   }
 }
 
