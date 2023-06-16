@@ -55,7 +55,6 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
       resolve_id(n::stop{tt.route_location_seq_[tt.transport_route_[transport]]
                                                [stop_range.to_ - 1]}
                      .location_idx());
-  auto const id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const section_lines = tt.transport_section_lines_.at(transport);
   auto const line =
       section_lines.empty() ||
@@ -74,12 +73,6 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
       .target_time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
       .line_id_ = std::string{line}};
-}
-
-std::string_view get_gtfs_trip_id(std::string_view s) {
-  auto const last_slash = s.find_last_of('/');
-  utl::verify(last_slash != std::string_view::npos, "invalid trip id {}", s);
-  return s.substr(last_slash + 1);
 }
 
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
