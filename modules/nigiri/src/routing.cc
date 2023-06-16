@@ -120,7 +120,7 @@ std::vector<n::routing::offset> get_offsets(
                                       ? e->to_station_id()->str()
                                       : e->from_station_id()->str()),
                  n::duration_t{static_cast<std::int16_t>(e->duration())},
-                 static_cast<std::uint8_t>(e->mumo_id())};
+                 e->mumo_id()};
            })  //
          | utl::vec();
 }
