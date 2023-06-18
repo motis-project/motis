@@ -31,18 +31,19 @@ std::string get_service_name(schedule const& sched,
     auto const clasz_it = sched.classes_.find(cat_name);
     auto const clasz = clasz_it == end(sched.classes_) ? service_class::OTHER
                                                        : clasz_it->second;
+    auto const provider =
+        info->provider_ == nullptr ? "" : info->provider_->long_name_;
     if (!line_id.empty() && clasz != service_class::BUS &&
         clasz != service_class::STR &&
         (line_id.view().front() > '9' || line_id.view().front() < '0') &&
         (line_id.view().back() >= '0' && line_id.view().back() <= '9')) {
       // Line ID starts with letter and ends with number, seems to be complete.
-      return line_id.str();
+      return is(kUseProvider) ? (provider.str() + " " + line_id.str())
+                              : line_id.str();
     }
 
     auto const train_nr =
         output_train_nr(info->train_nr_, info->original_train_nr_);
-    auto const provider =
-        info->provider_ == nullptr ? "" : info->provider_->short_name_;
 
     auto const second =
         is(kOnlyCategory) ? ""
