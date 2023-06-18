@@ -54,6 +54,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(geo_lookup_, "geo_lookup", "provide geo station lookup");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
+  param(default_timezone_, "default_timezone",
+        "tz for agencies w/o tz or routes w/o agency");
 }
 
 nigiri::~nigiri() = default;
@@ -155,7 +157,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                   << (*loader)->name();
 
               try {
-                (*loader)->load({.link_stop_distance_ = link_stop_distance_},
+                (*loader)->load({.link_stop_distance_ = link_stop_distance_,
+                                 .default_tz_ = default_timezone_},
                                 src, *dir, **impl_->tt_);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
