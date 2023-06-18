@@ -29,6 +29,7 @@ private:
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
   std::string first_day_;
+  std::string default_timezone_;
   std::uint16_t num_days_{2U};
   bool geo_lookup_{false};
   unsigned link_stop_distance_{100U};
