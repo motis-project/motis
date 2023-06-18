@@ -53,6 +53,7 @@ jobs:
           ./build/buildcache/bin/buildcache -s
 
       - name: Save deps
+        if: always()
         run: mv deps ~
 
       - name: Run Tests
