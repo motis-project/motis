@@ -120,7 +120,7 @@ std::vector<n::routing::offset> get_offsets(
                                       ? e->to_station_id()->str()
                                       : e->from_station_id()->str()),
                  n::duration_t{static_cast<std::int16_t>(e->duration())},
-                 static_cast<std::uint8_t>(e->mumo_id())};
+                 e->mumo_id()};
            })  //
          | utl::vec();
 }
@@ -129,9 +129,9 @@ template <n::direction SearchDir>
 auto run_search(n::routing::search_state& search_state,
                 n::routing::raptor_state& raptor_state, n::timetable const& tt,
                 n::routing::query&& q) {
-  using algo_t = n::routing::raptor<SearchDir>;
-  return n::routing::search<SearchDir, algo_t>{tt, search_state, raptor_state,
-                                               std::move(q)}
+  using algo_t = n::routing::raptor<SearchDir, false>;
+  return n::routing::search<SearchDir, algo_t>{tt, nullptr, search_state,
+                                               raptor_state, std::move(q)}
       .execute();
 }
 
