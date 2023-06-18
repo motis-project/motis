@@ -15,11 +15,11 @@ int min_zoom_level(service_class const clasz, float const distance) {
       [[fallthrough]];
     case service_class::ICE:
     case service_class::IC:
-    case service_class::N: return 4;
+    case service_class::N:
+    case service_class::RE:
+    case service_class::RB: return 5;
 
     // regional distance
-    case service_class::RE:
-    case service_class::RB: return 7;
     case service_class::S: return 8;
 
     // metro distance

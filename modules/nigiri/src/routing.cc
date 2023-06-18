@@ -33,7 +33,7 @@ boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 namespace motis::nigiri {
 
 mm::msg_ptr to_routing_response(
-    n::timetable const& tt, std::vector<std::string> const& tags,
+    n::timetable const& tt, tag_map_t const& tags,
     n::pareto_set<n::routing::journey> const* journeys,
     n::interval<n::unixtime_t> search_interval,
     n::routing::search_stats const& search_stats,
@@ -90,7 +90,7 @@ mm::msg_ptr to_routing_response(
 }
 
 std::vector<n::routing::offset> get_offsets(
-    std::vector<std::string> const& tags, n::timetable const& tt,
+    tag_map_t const& tags, n::timetable const& tt,
     fbs::Vector<fbs::Offset<motis::routing::AdditionalEdgeWrapper>> const*
         edges,
     SearchDir const dir, bool const is_start) {
@@ -120,7 +120,7 @@ std::vector<n::routing::offset> get_offsets(
                                       ? e->to_station_id()->str()
                                       : e->from_station_id()->str()),
                  n::duration_t{static_cast<std::int16_t>(e->duration())},
-                 static_cast<std::uint8_t>(e->mumo_id())};
+                 e->mumo_id()};
            })  //
          | utl::vec();
 }
@@ -129,14 +129,13 @@ template <n::direction SearchDir>
 auto run_search(n::routing::search_state& search_state,
                 n::routing::raptor_state& raptor_state, n::timetable const& tt,
                 n::routing::query&& q) {
-  using algo_t = n::routing::raptor<SearchDir>;
-  return n::routing::search<SearchDir, algo_t>{tt, search_state, raptor_state,
-                                               std::move(q)}
+  using algo_t = n::routing::raptor<SearchDir, false>;
+  return n::routing::search<SearchDir, algo_t>{tt, nullptr, search_state,
+                                               raptor_state, std::move(q)}
       .execute();
 }
 
-motis::module::msg_ptr route(std::vector<std::string> const& tags,
-                             n::timetable& tt,
+motis::module::msg_ptr route(tag_map_t const& tags, n::timetable& tt,
                              motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);

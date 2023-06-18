@@ -4,8 +4,6 @@
 
 #include "motis/core/common/logging.h"
 
-#include "utl/helpers/algorithm.h"
-
 #include "nigiri/timetable.h"
 
 namespace n = ::nigiri;

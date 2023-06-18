@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=b5a417ffe832b5c9e00b9108012f784e1b67553b
+  commit=b0f98362573189e49a8b1b9d3331648a4b0b4e60
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -77,7 +77,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=3d3b9f2d45fd6e864cfda0b32a924e8d445c8b69
+  commit=bfee00828c75e740b60ab403202988890b8e3f55
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=36280d63cac0f1980e3ea02e7be43bc77b0a4fee
+  commit=a3e40280f5ded2d32b5ec88465e7d363cf3cdb2e
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
