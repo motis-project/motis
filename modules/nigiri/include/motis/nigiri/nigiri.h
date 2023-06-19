@@ -30,7 +30,7 @@ private:
   bool no_cache_{false};
   std::string first_day_;
   std::uint16_t num_days_{2U};
-  std::uint8_t no_profiles{1};  // number of used profiles >= 1;
+  std::uint8_t no_profiles_{1};  // number of used profiles >= 1;
   bool geo_lookup_{false};
   unsigned link_stop_distance_{100U};
 };
