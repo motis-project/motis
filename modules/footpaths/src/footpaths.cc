@@ -35,8 +35,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
              event_collector::publish_fn_t const&) {
         using import::OSMEvent;
         using import::PPREvent;
-
-        scoped_timer const timer("loading ppr routing graph");
+        
         impl_ = std::make_unique<impl>();
         impl_->tt_ = *get_shared_data<nigiri::timetable*>(
             to_res_id(global_res_id::NIGIRI_TIMETABLE));
