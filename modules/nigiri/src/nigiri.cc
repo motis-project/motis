@@ -54,7 +54,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(geo_lookup_, "geo_lookup", "provide geo station lookup");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
-  param(no_profiles, "no_profiles",
+  param(no_profiles_, "no_profiles",
         "number of used profiles in module 'footpath'. Default: 1.");
 }
 
@@ -171,7 +171,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               }
             }
 
-            n::loader::finalize(**impl_->tt_, no_profiles);
+            n::loader::finalize(**impl_->tt_, no_profiles_);
 
             if (no_cache_) {
               loaded = true;
