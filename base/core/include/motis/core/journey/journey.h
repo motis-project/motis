@@ -53,7 +53,20 @@ struct journey {
   };
 
   struct stop {
-    CISTA_COMPARABLE()
+    bool operator==(stop const& b) const {
+      auto const match =
+          std::tie(exit_, enter_, name_, eva_no_, arrival_, departure_) ==
+          std::tie(b.exit_, b.enter_, b.name_, b.eva_no_, b.arrival_,
+                   b.departure_);
+      if (!match) {
+        return false;
+      }
+      return std::abs(lat_ - b.lat_) < 0.0001 &&
+             std::abs(lng_ - b.lng_) < 0.0001;
+    }
+
+    bool operator!=(stop const& b) const { return !(*this == b); }
+
     bool exit_{false}, enter_{false};
     std::string name_;
     std::string eva_no_;

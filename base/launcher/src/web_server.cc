@@ -9,6 +9,7 @@
 
 #include "boost/beast/version.hpp"
 
+#include "utl/helpers/algorithm.h"
 #include "utl/to_vec.h"
 
 #include "net/web_server/content_encoding.h"
@@ -227,7 +228,7 @@ struct web_server::impl {
       res.set(field::server, BOOST_BEAST_VERSION_STRING);
 
       std::string content;
-
+      auto has_already_content_encoding = false;
       if (response != nullptr &&
           response->get()->content_type() == MsgContent_HTTPResponse) {
         auto const http_res = motis_content(HTTPResponse, response);
@@ -239,6 +240,12 @@ struct web_server::impl {
         for (auto const& h : *http_res->headers()) {
           res.set(h->name()->str(), h->value()->str());
         }
+
+        has_already_content_encoding =
+            utl::find_if(*http_res->headers(), [](HTTPHeader const* hdr) {
+              return boost::beast::iequals("content-encoding",
+                                           hdr->name()->view());
+            }) != std::end(*http_res->headers());
         content = http_res->content()->str();
       } else {
         res.set(field::content_type, "application/json");
@@ -247,8 +254,14 @@ struct web_server::impl {
         }
       }
 
-      net::set_response_body(res, req, content);
-      res.prepare_payload();
+      if (has_already_content_encoding) {
+        res.body() = content;
+      } else {
+        net::set_response_body(res, req, content);
+      }
+      if (!content.empty()) {
+        res.prepare_payload();
+      }
       return res;
     };
 

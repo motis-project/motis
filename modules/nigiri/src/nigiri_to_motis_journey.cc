@@ -47,7 +47,7 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
             : x);
   };
 
-  auto const [transport, stop_range] = tt.trip_ref_transport_[trip];
+  auto const [transport, stop_range] = tt.trip_transport_ranges_[trip].front();
   auto const first_location = resolve_id(n::stop{
       tt.route_location_seq_[tt.transport_route_[transport]][stop_range.from_]}
                                              .location_idx());
@@ -55,7 +55,6 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
       resolve_id(n::stop{tt.route_location_seq_[tt.transport_route_[transport]]
                                                [stop_range.to_ - 1]}
                      .location_idx());
-  auto const id = tt.trip_id_strings_.at(tt.trip_ids_.at(trip).back()).view();
   auto const section_lines = tt.transport_section_lines_.at(transport);
   auto const line =
       section_lines.empty() ||
@@ -65,24 +64,15 @@ extern_trip nigiri_trip_to_extern_trip(std::vector<std::string> const& tags,
                  ? tt.trip_lines_.at(section_lines.front()).view()
                  : tt.trip_lines_.at(section_lines.at(stop_range.from_))
                        .view());
-  auto const [train_nr, first_stop_eva, fist_start_time, last_stop_eva,
-              last_stop_time] =
-      utl::split<'/', unsigned, utl::cstr, unsigned, utl::cstr, unsigned>(id);
   return extern_trip{
       .station_id_ = first_location,
-      .train_nr_ = train_nr,
+      .train_nr_ = tt.trip_train_nr_.at(tt.trip_ids_.at(trip).back()),
       .time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.from_, n::event_type::kDep)),
       .target_station_id_ = last_location,
       .target_time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
       .line_id_ = std::string{line}};
-}
-
-std::string_view get_gtfs_trip_id(std::string_view s) {
-  auto const last_slash = s.find_last_of('/');
-  utl::verify(last_slash != std::string_view::npos, "invalid trip id {}", s);
-  return s.substr(last_slash + 1);
 }
 
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
@@ -246,8 +236,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   for (auto const [i, leg] : utl::enumerate(nj.legs_)) {
     std::visit(
         utl::overloaded{
-            [&](n::routing::journey::transport_enter_exit const& t) {
-              auto const& route_idx = tt.transport_route_.at(t.t_.t_idx_);
+            [&](n::routing::journey::run_enter_exit const& t) {
+              auto const& route_idx = tt.transport_route_.at(t.r_.t_.t_idx_);
               auto const& stop_seq = tt.route_location_seq_.at(route_idx);
 
               for (auto const& stop_idx : t.stop_range_) {
@@ -271,7 +261,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
                 if (!enter) {
                   auto const time = to_motis_unixtime(
-                      tt.event_time(t.t_, stop_idx, n::event_type::kArr));
+                      tt.event_time(t.r_.t_, stop_idx, n::event_type::kArr));
                   auto const track =
                       (tt.locations_.types_.at(l) == n::location_type::kTrack ||
                        tt.locations_.types_.at(l) ==
@@ -288,7 +278,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
                 if (!exit) {
                   auto const time = to_motis_unixtime(
-                      tt.event_time(t.t_, stop_idx, n::event_type::kDep));
+                      tt.event_time(t.r_.t_, stop_idx, n::event_type::kDep));
                   auto const track =
                       (tt.locations_.types_.at(l) == n::location_type::kTrack ||
                        tt.locations_.types_.at(l) ==
@@ -305,7 +295,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                 }
 
                 if (!exit) {
-                  add_transports(t.t_, stop_idx);
+                  add_transports(t.r_.t_, stop_idx);
                 }
               }
             },

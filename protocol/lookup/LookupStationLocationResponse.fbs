@@ -1,0 +1,7 @@
+include "base/Position.fbs";
+
+namespace motis.lookup;
+
+table LookupStationLocationResponse {
+  position: Position;
+}

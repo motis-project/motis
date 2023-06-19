@@ -28,6 +28,7 @@ include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
 include "lookup/LookupStationInfoRequest.fbs";
 include "lookup/LookupStationInfoResponse.fbs";
+include "lookup/LookupStationLocationResponse.fbs";
 include "osrm/OSRMManyToManyRequest.fbs";
 include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
@@ -328,15 +329,17 @@ union MsgContent {
   motis.paxmon.PaxMonGetTripCapacityResponse                              = 149,
   motis.rt.RtMessageHistoryRequest                                        = 150,
   motis.rt.RtMessageHistoryResponse                                       = 151,
-  motis.ris.RISStatusResponse                                             = 152,
-  motis.rt.RtMetricsRequest                                               = 153,
-  motis.rt.RtMetricsResponse                                              = 154,
-  motis.paxmon.PaxMonCapacityStatusRequest                                = 155,
-  motis.paxmon.PaxMonCapacityStatusResponse                               = 156,
-  motis.paxmon.PaxMonMetricsRequest                                       = 157,
-  motis.paxmon.PaxMonMetricsResponse                                      = 158,
-  motis.paxforecast.PaxForecastMetricsRequest                             = 159,
-  motis.paxforecast.PaxForecastMetricsResponse                            = 160
+  motis.lookup.LookupStationLocationResponse                              = 152,
+  motis.routing.InputStation                                              = 153,
+  motis.ris.RISStatusResponse                                             = 154,
+  motis.rt.RtMetricsRequest                                               = 155,
+  motis.rt.RtMetricsResponse                                              = 156,
+  motis.paxmon.PaxMonCapacityStatusRequest                                = 157,
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 158,
+  motis.paxmon.PaxMonMetricsRequest                                       = 159,
+  motis.paxmon.PaxMonMetricsResponse                                      = 160,
+  motis.paxforecast.PaxForecastMetricsRequest                             = 161,
+  motis.paxforecast.PaxForecastMetricsResponse                            = 162
 }
 
 // Destination Examples:

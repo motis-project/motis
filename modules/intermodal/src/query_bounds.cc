@@ -19,6 +19,18 @@ inline unixtime get_direct_start_time(Interval const* interval) {
   return interval->begin() + (interval->end() - interval->begin()) / 2;
 }
 
+inline geo::latlng get_station_coordinates(InputStation const* s) {
+  using lookup::LookupStationLocationResponse;
+  module::message_creator b;
+  b.create_and_finish(MsgContent_InputStation,
+                      motis_copy_table(InputStation, b, s).Union(),
+                      "/lookup/station_location");
+  auto const msg = motis_call(make_msg(b))->val();
+  auto const pos =
+      motis_content(LookupStationLocationResponse, msg)->position();
+  return {pos->lat(), pos->lng()};
+}
+
 query_start parse_query_start(FlatBufferBuilder& fbb,
                               IntermodalRoutingRequest const* req) {
   auto start_station = CreateInputStation(fbb, fbb.CreateString(STATION_START),
@@ -61,8 +73,7 @@ query_start parse_query_start(FlatBufferBuilder& fbb,
                                  fbb.CreateString(start->station()->name())),
               start->arrival_time())
               .Union(),
-          {},
-          start->arrival_time(),
+          get_station_coordinates(start->station()), start->arrival_time(),
           false};
     }
 
@@ -77,8 +88,7 @@ query_start parse_query_start(FlatBufferBuilder& fbb,
                                  fbb.CreateString(start->station()->name())),
               start->departure_time())
               .Union(),
-          {},
-          start->departure_time(),
+          get_station_coordinates(start->station()), start->departure_time(),
           false};
     }
 
@@ -93,9 +103,8 @@ query_start parse_query_start(FlatBufferBuilder& fbb,
               start->interval(), start->min_connection_count(),
               start->extend_interval_earlier(), start->extend_interval_later())
               .Union(),
-          {},
-          get_direct_start_time(start->interval()),
-          false};
+          get_station_coordinates(start->station()),
+          get_direct_start_time(start->interval()), false};
     }
 
     default: throw utl::fail("invalid query start");

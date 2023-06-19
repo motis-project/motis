@@ -19,7 +19,7 @@ namespace motis::module {
 struct module;
 
 struct dispatcher : public receiver, public ctx::access_scheduler<ctx_data> {
-  explicit dispatcher(registry&, std::vector<std::unique_ptr<module>>&&);
+  dispatcher(registry&, std::vector<std::unique_ptr<::motis::module::module>>);
 
   template <typename Module>
   Module& get_module(std::string_view module_name) {

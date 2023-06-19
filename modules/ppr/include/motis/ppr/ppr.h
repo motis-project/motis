@@ -38,6 +38,7 @@ private:
   bool lock_rtrees_{false};
   bool prefetch_rtrees_{true};
   bool verify_graph_{false};
+  bool check_integrity_{true};
 
   bool use_dem_{false};
 
