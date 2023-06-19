@@ -239,6 +239,7 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
                                        req->search_dir(), false)
                          : std::vector<n::routing::offset>{
                                {destination_station, n::duration_t{0U}, 0U}};
+  // TODO (Carsten) add profile as a param
   auto q = n::routing::query{
       .start_time_ = start_time,
       .start_match_mode_ = is_intermodal_start
@@ -261,7 +262,8 @@ motis::module::msg_ptr route(std::vector<std::string> const& tags,
       .max_transfers_ = n::routing::kMaxTransfers,
       .min_connection_count_ = min_connection_count,
       .extend_interval_earlier_ = extend_interval_earlier,
-      .extend_interval_later_ = extend_interval_later};
+      .extend_interval_later_ = extend_interval_later,
+      .profile_ = 0};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
