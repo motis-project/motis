@@ -10,6 +10,14 @@ namespace n = ::nigiri;
 
 namespace motis::nigiri {
 
+mcd::string get_station_id(tag_lookup const& tags, n::timetable const& tt,
+                           n::location_idx_t const l) {
+  auto const src = tt.locations_.src_.at(l);
+  return (src == n::source_idx_t::invalid() ? ""
+                                            : std::string{tags.get_tag(src)}) +
+         std::string{tt.locations_.ids_.at(l).view()};
+}
+
 std::pair<std::string_view, std::string_view> split_tag_and_location_id(
     std::string_view station_id) {
   auto const first_underscore_pos = station_id.find('_');
@@ -19,30 +27,22 @@ std::pair<std::string_view, std::string_view> split_tag_and_location_id(
              : std::pair{std::string_view{}, station_id};
 }
 
-n::source_idx_t get_src(n::hash_map<std::string, n::source_idx_t> const& tags,
-                        std::string_view tag) {
-  auto const it = tags.find(tag);
-  return it == end(tags) ? n::source_idx_t::invalid() : it->second;
-}
-
-n::location_id motis_station_to_nigiri_id(
-    n::hash_map<std::string, n::source_idx_t> const& tags,
-    std::string_view station_id) {
+n::location_id motis_station_to_nigiri_id(tag_lookup const& tags,
+                                          std::string_view station_id) {
   auto const [tag, id] = split_tag_and_location_id(station_id);
-  return {n::string{id}, get_src(tags, tag)};
+  return {n::string{id}, tags.get_src(tag)};
 }
 
-n::location_idx_t get_location_idx(
-    n::hash_map<std::string, n::source_idx_t> const& tags,
-    n::timetable const& tt, std::string_view station_id) {
+n::location_idx_t get_location_idx(tag_lookup const& tags,
+                                   n::timetable const& tt,
+                                   std::string_view station_id) {
   auto const id = motis_station_to_nigiri_id(tags, station_id);
   try {
     return tt.locations_.location_id_to_idx_.at(id);
   } catch (...) {
     LOG(logging::error) << "nigiri: could not find " << station_id << ", "
                         << id.id_ << ", " << static_cast<int>(to_idx(id.src_))
-                        << ", tags: "
-                        << utl::to_vec(tags, [](auto&& x) { return x.second; });
+                        << ", tags: " << tags;
     throw;
   }
 }

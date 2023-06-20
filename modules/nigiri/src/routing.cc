@@ -33,7 +33,7 @@ boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 namespace motis::nigiri {
 
 mm::msg_ptr to_routing_response(
-    n::timetable const& tt, tag_map_t const& tags,
+    n::timetable const& tt, tag_lookup const& tags,
     n::pareto_set<n::routing::journey> const* journeys,
     n::interval<n::unixtime_t> search_interval,
     n::routing::search_stats const& search_stats,
@@ -90,7 +90,7 @@ mm::msg_ptr to_routing_response(
 }
 
 std::vector<n::routing::offset> get_offsets(
-    tag_map_t const& tags, n::timetable const& tt,
+    tag_lookup const& tags, n::timetable const& tt,
     fbs::Vector<fbs::Offset<motis::routing::AdditionalEdgeWrapper>> const*
         edges,
     SearchDir const dir, bool const is_start) {
@@ -135,7 +135,7 @@ auto run_search(n::routing::search_state& search_state,
       .execute();
 }
 
-motis::module::msg_ptr route(tag_map_t const& tags, n::timetable& tt,
+motis::module::msg_ptr route(tag_lookup const& tags, n::timetable& tt,
                              motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);

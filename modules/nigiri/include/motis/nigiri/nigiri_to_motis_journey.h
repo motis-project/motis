@@ -1,7 +1,7 @@
 #pragma once
 
 #include "motis/core/journey/journey.h"
-#include "motis/nigiri/tag_map.h"
+#include "motis/nigiri/tag_lookup.h"
 
 namespace nigiri {
 struct timetable;
@@ -13,7 +13,7 @@ struct journey;
 namespace motis::nigiri {
 
 motis::journey nigiri_to_motis_journey(::nigiri::timetable const&,
-                                       tag_map_t const&,
+                                       tag_lookup const&,
                                        ::nigiri::routing::journey const&);
 
 }  // namespace motis::nigiri

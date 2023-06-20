@@ -12,6 +12,7 @@
 #include "motis/core/common/interval_map.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/journey/print_journey.h"
+#include "motis/nigiri/location.h"
 #include "motis/nigiri/unixtime_conv.h"
 
 namespace n = ::nigiri;
@@ -28,14 +29,7 @@ struct transport_display_info {
   std::string line_;
 };
 
-mcd::string get_station_id(tag_map_t const& tags, n::timetable const& tt,
-                           n::location_idx_t const l) {
-  auto const src = tt.locations_.src_.at(l);
-  return (src == n::source_idx_t::invalid() ? "" : tags.at(to_idx(src))) +
-         std::string{tt.locations_.ids_.at(l).view()};
-}
-
-extern_trip nigiri_trip_to_extern_trip(tag_map_t const& tags,
+extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
                                        n::timetable const& tt,
                                        n::trip_idx_t const trip,
                                        n::day_idx_t const day) {
@@ -76,7 +70,7 @@ extern_trip nigiri_trip_to_extern_trip(tag_map_t const& tags,
 }
 
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
-                                       tag_map_t const& tags,
+                                       tag_lookup const& tags,
                                        n::routing::journey const& nj) {
   journey mj;
 

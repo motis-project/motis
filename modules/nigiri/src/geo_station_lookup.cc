@@ -44,7 +44,7 @@ motis::module::msg_ptr geo_station_lookup(std::vector<std::string> const& tags,
   return mm::make_msg(mc);
 }
 
-motis::module::msg_ptr station_location(tag_map_t const& tags,
+motis::module::msg_ptr station_location(tag_lookup const& tags,
                                         ::nigiri::timetable const& tt,
                                         motis::module::msg_ptr const& msg) {
   using motis::lookup::CreateLookupStationLocationResponse;

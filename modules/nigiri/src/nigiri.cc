@@ -41,7 +41,7 @@ struct nigiri::impl {
   }
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
-  std::vector<std::string> tags_;
+  tag_lookup tags_;
   geo::point_rtree station_geo_index_;
 };
 
@@ -133,8 +133,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       path);
           h = cista::hash_combine(h, (*c)->hash(*d));
 
-          datasets.emplace_back(n::source_idx_t{i++}, c, std::move(d));
-          impl_->tags_.emplace_back(p->options()->str() + "_");
+          auto const src = n::source_idx_t{i++};
+          datasets.emplace_back(src, c, std::move(d));
+          impl_->tags_.add(src, p->options()->str() + "_");
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
@@ -153,7 +154,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
-                  fmt::format("{}nigiri", impl_->tags_[to_idx(src)]));
+                  fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
 
               LOG(logging::info)
                   << "loading nigiri timetable with configuration "
