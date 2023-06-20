@@ -259,7 +259,9 @@ struct web_server::impl {
       } else {
         net::set_response_body(res, req, content);
       }
-      res.prepare_payload();
+      if (!content.empty()) {
+        res.prepare_payload();
+      }
       return res;
     };
 

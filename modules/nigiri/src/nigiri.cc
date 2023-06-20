@@ -100,10 +100,15 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                         }),
             "all schedules require a name tag, even with only one schedule");
 
-        std::stringstream ss;
-        ss << first_day_;
         date::sys_days begin;
-        ss >> date::parse("%F", begin);
+        if (first_day_ == "TODAY") {
+          begin = std::chrono::time_point_cast<date::days>(
+              std::chrono::system_clock::now());
+        } else {
+          std::stringstream ss;
+          ss << first_day_;
+          ss >> date::parse("%F", begin);
+        }
 
         auto const interval = n::interval<date::sys_days>{
             begin, begin + std::chrono::days{num_days_}};
