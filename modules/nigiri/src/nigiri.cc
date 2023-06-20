@@ -19,7 +19,10 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/geo_station_lookup.h"
+#include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/routing.h"
+#include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/rt/rt_timetable.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -41,8 +44,10 @@ struct nigiri::impl {
   }
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
+  std::atomic<std::shared_ptr<n::rt_timetable>> rtt_;
   tag_lookup tags_;
   geo::point_rtree station_geo_index_;
+  std::vector<gtfsrt> gtfsrt_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -55,6 +60,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
         "tz for agencies w/o tz or routes w/o agency");
+  param(gtfsrt_urls_, "gtfsrt", "list of GTFS-RT URL endpoints");
 }
 
 nigiri::~nigiri() = default;
@@ -79,6 +85,39 @@ void nigiri::init(motis::module::registry& reg) {
                       return station_location(impl_->tags_, **impl_->tt_, msg);
                     },
                     {});
+  }
+
+  reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
+}
+
+void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
+  if (!gtfsrt_urls_.empty()) {
+    d.register_timer("RIS GTFS-RT Update",
+                     boost::posix_time::seconds{gtfsrt_update_interval_},
+                     [&]() { update_gtfsrt(); }, {});
+  }
+}
+
+void nigiri::update_gtfsrt() {
+  auto const futures = utl::to_vec(
+      impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
+  auto const rtt_copy =
+      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->rtt_.load()});
+  auto statistics = std::vector<n::rt::statistics>{};
+  for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
+    auto const tag = impl_->tags_.get_tag(endpoint.src());
+    statistics.emplace_back(n::rt::gtfsrt_update_buf(
+        **impl_->tt_, *rtt_copy, endpoint.src(), tag, f->val().body));
+  }
+  impl_->rtt_.store(rtt_copy);
+
+  for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
+    LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "
+                       << stats.total_entities_success_ << "/"
+                       << stats.total_entities_ << " ("
+                       << static_cast<double>(stats.total_entities_success_) /
+                              stats.total_entities_ * 100
+                       << "%)";
   }
 }
 

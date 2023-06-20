@@ -6,7 +6,8 @@
 
 #include "motis/nigiri/location.h"
 
-namespace n = ::nigiri;
+namespace mm = motis::module;
+namespace n = nigiri;
 
 namespace motis::nigiri {
 
@@ -24,5 +25,11 @@ gtfsrt::gtfsrt(tag_lookup const& tags, std::string const& config) {
   }
   impl_ = std::make_unique<impl>(std::move(req), tags.get_src(tag.view()));
 }
+
+gtfsrt::~gtfsrt() = default;
+
+mm::http_future_t gtfsrt::fetch() { return motis_http(impl_->req_); }
+
+n::source_idx_t gtfsrt::src() const { return impl_->src_; }
 
 }  // namespace motis::nigiri
