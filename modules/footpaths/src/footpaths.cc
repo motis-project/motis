@@ -35,7 +35,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
              event_collector::publish_fn_t const&) {
         using import::OSMEvent;
         using import::PPREvent;
-        
+
         impl_ = std::make_unique<impl>();
         impl_->tt_ = *get_shared_data<nigiri::timetable*>(
             to_res_id(global_res_id::NIGIRI_TIMETABLE));
@@ -43,10 +43,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         auto const osm_event = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_event = motis_content(PPREvent, dependencies.at("PPR"));
 
-        uint8_t const& no_profiles = 1 + uint8_t{wheelchair_};
-        std::cout << impl_->tt_.locations_.footpaths_out_.size() << std::endl;
-
-        // TODO (Carsten) Update On Change
+        uint16_t const& no_profiles = 1 + uint16_t{wheelchair_};
         utl::verify(
             no_profiles == impl_->tt_.locations_.footpaths_out_.size(),
             "[footpath_out_] Profiles are not fully initialized. "

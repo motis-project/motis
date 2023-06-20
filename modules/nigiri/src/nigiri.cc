@@ -202,6 +202,27 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
         }
 
+        if (no_profiles_ !=
+                impl_->tt_->get()->locations_.footpaths_out_.size() ||
+            no_profiles_ !=
+                impl_->tt_->get()->locations_.footpaths_in_.size()) {
+          utl::verify(impl_->tt_->get()->locations_.footpaths_out_.size() >= 1,
+                      "nigiri timetable footpaths_out: should contain at least "
+                      "the default footpaths.");
+          utl::verify(impl_->tt_->get()->locations_.footpaths_in_.size() >= 1,
+                      "nigiri timetable footpaths_in: should contain at least "
+                      "the default footpaths.");
+
+          // reinitialize profile-based footpaths
+          n::loader::reinitialize_footpaths(**impl_->tt_, no_profiles_);
+          loaded = true;
+        }
+
+        LOG(logging::info)
+            << "nigiri profile-based footpaths: initialized "
+            << impl_->tt_->get()->locations_.footpaths_out_.size()
+            << " profile(s).";
+
         utl::verify(loaded, "loading failed");
 
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
