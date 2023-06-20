@@ -13,9 +13,10 @@ namespace motis::nigiri {
 mcd::string get_station_id(tag_lookup const& tags, n::timetable const& tt,
                            n::location_idx_t const l) {
   auto const src = tt.locations_.src_.at(l);
-  return (src == n::source_idx_t::invalid() ? ""
-                                            : std::string{tags.get_tag(src)}) +
-         std::string{tt.locations_.ids_.at(l).view()};
+  return fmt::format(
+      "{}{}",
+      (src == n::source_idx_t::invalid() ? "" : std::string{tags.get_tag(src)}),
+      std::string{tt.locations_.ids_.at(l).view()});
 }
 
 std::pair<std::string_view, std::string_view> split_tag_and_location_id(
