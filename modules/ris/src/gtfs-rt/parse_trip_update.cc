@@ -392,9 +392,8 @@ void initialize_update_context(knowledge_context const& knowledge,
   } else {
     return;
   }
-
   utl::verify(update_ctx.trip_ != nullptr,
-              "GTFS trip update: unkown trip \"{}\"", update_ctx.trip_id_);
+              "GTFS trip update: unknown trip \"{}\"", update_ctx.trip_id_);
 
   update_ctx.is_stop_skip_new_.resize(
       (update_ctx.is_new_addition_ ||

@@ -23,7 +23,7 @@ public:
       case error::universe_not_found: return "paxmon: universe not found";
       case error::universe_destruction_failed:
         return "paxmon: universe destruction failed";
-      default: return "paxmon: unkown error";
+      default: return "paxmon: unknown error";
     }
   }
 };

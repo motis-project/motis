@@ -20,7 +20,7 @@ public:
     switch (ev) {
       case error::ok: return "rt: no error";
       case error::sanity_check_failed: return "rt: sanity check failed";
-      default: return "rt: unkown error";
+      default: return "rt: unknown error";
     }
   }
 };
