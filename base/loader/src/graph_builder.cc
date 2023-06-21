@@ -594,7 +594,7 @@ light_connection graph_builder::section_to_connection(
     LOG(logging::error) << "invalid times: " << *error
                         << ", section_idx=" << section_idx << ", trip="
                         << (ref->trip_id() != nullptr ? ref->trip_id()->str()
-                                                      : "unkown");
+                                                      : "unknown");
   }
 
   // Count events.

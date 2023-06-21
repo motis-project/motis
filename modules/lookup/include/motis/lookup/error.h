@@ -29,7 +29,7 @@ public:
       case error::station_not_found: return "lookup: station not found";
       case error::route_not_found: return "lookup: route not found";
       case error::route_edge_not_found: return "lookup: route edge not found";
-      default: return "lookup: unkown error";
+      default: return "lookup: unknown error";
     }
   }
 };
