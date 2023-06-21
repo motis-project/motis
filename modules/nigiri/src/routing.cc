@@ -33,7 +33,7 @@ boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 namespace motis::nigiri {
 
 mm::msg_ptr to_routing_response(
-    n::timetable const& tt, tag_lookup const& tags,
+    n::timetable const& tt, n::rt_timetable const* rtt, tag_lookup const& tags,
     n::pareto_set<n::routing::journey> const* journeys,
     n::interval<n::unixtime_t> search_interval,
     n::routing::search_stats const& search_stats,
@@ -43,7 +43,7 @@ mm::msg_ptr to_routing_response(
   MOTIS_START_TIMING(conversion);
   auto const connections =
       utl::to_vec(*journeys, [&](n::routing::journey const& j) {
-        return to_connection(fbb, nigiri_to_motis_journey(tt, tags, j));
+        return to_connection(fbb, nigiri_to_motis_journey(tt, rtt, tags, j));
       });
   MOTIS_STOP_TIMING(conversion);
 
@@ -136,6 +136,7 @@ auto run_search(n::routing::search_state& search_state,
 }
 
 motis::module::msg_ptr route(tag_lookup const& tags, n::timetable& tt,
+                             n::rt_timetable const* rtt,
                              motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
@@ -294,8 +295,9 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable& tt,
   }
   MOTIS_STOP_TIMING(routing);
 
-  return to_routing_response(tt, tags, journeys, search_interval, search_stats,
-                             raptor_stats, MOTIS_TIMING_MS(routing));
+  return to_routing_response(tt, rtt, tags, journeys, search_interval,
+                             search_stats, raptor_stats,
+                             MOTIS_TIMING_MS(routing));
 }
 
 }  // namespace motis::nigiri

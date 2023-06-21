@@ -5,6 +5,7 @@
 
 namespace nigiri {
 struct timetable;
+struct rt_timetable;
 namespace routing {
 struct journey;
 }
@@ -13,6 +14,7 @@ struct journey;
 namespace motis::nigiri {
 
 motis::journey nigiri_to_motis_journey(::nigiri::timetable const&,
+                                       ::nigiri::rt_timetable const*,
                                        tag_lookup const&,
                                        ::nigiri::routing::journey const&);
 

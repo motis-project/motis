@@ -21,6 +21,7 @@
 #include "motis/nigiri/geo_station_lookup.h"
 #include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/routing.h"
+#include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
 
@@ -68,7 +69,8 @@ nigiri::~nigiri() = default;
 void nigiri::init(motis::module::registry& reg) {
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
-                    return route(impl_->tags_, **impl_->tt_, msg);
+                    return route(impl_->tags_, **impl_->tt_,
+                                 impl_->rtt_.load().get(), msg);
                   },
                   {});
 
@@ -140,9 +142,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             "all schedules require a name tag, even with only one schedule");
 
         date::sys_days begin;
+        auto const today = std::chrono::time_point_cast<date::days>(
+            std::chrono::system_clock::now());
         if (first_day_ == "TODAY") {
-          begin = std::chrono::time_point_cast<date::days>(
-              std::chrono::system_clock::now());
+          begin = today;
         } else {
           std::stringstream ss;
           ss << first_day_;
@@ -240,6 +243,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       cista::file{dump_file_path.string().c_str(), "r"}
                           .content()}));
               (**impl_->tt_).locations_.resolve_timezones();
+              if (!gtfsrt_urls_.empty()) {
+                impl_->rtt_.store(std::make_shared<n::rt_timetable>(
+                    n::rt::create_rt_timetable(**impl_->tt_, today)));
+              }
               loaded = true;
               break;
             } catch (std::exception const& e) {
