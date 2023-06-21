@@ -22,8 +22,8 @@ mcd::string get_station_id(tag_lookup const& tags, n::timetable const& tt,
 std::pair<std::string_view, std::string_view> split_tag_and_location_id(
     std::string_view station_id) {
   auto const first_underscore_pos = station_id.find('_');
-  return first_underscore_pos == std::string_view::npos
-             ? std::pair{station_id.substr(0, first_underscore_pos),
+  return first_underscore_pos != std::string_view::npos
+             ? std::pair{station_id.substr(0, first_underscore_pos + 1U),
                          station_id.substr(first_underscore_pos + 1U)}
              : std::pair{std::string_view{}, station_id};
 }

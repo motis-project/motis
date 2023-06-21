@@ -118,7 +118,12 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     fill_stop_info(from_stop, leg.from_);
     from_stop.departure_.valid_ = true;
     from_stop.departure_.timestamp_ = to_motis_unixtime(leg.dep_time_);
-    from_stop.departure_.schedule_timestamp_ = kPropagate;
+    from_stop.departure_.timestamp_reason_ =
+        from_stop.arrival_.timestamp_reason_;
+    from_stop.departure_.schedule_timestamp_ =
+        from_stop.departure_.timestamp_ -
+        (from_stop.arrival_.timestamp_ -
+         from_stop.arrival_.schedule_timestamp_);
 
     if (!is_transfer) {
       auto& to_stop = mj.stops_.emplace_back();
@@ -126,7 +131,12 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       fill_stop_info(to_stop, leg.to_);
       to_stop.arrival_.valid_ = true;
       to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.arr_time_);
-      to_stop.arrival_.schedule_timestamp_ = kPropagate;
+      to_stop.arrival_.schedule_timestamp_ =
+          to_stop.arrival_.timestamp_ -
+          (from_stop.departure_.timestamp_ -
+           from_stop.departure_.schedule_timestamp_);
+      to_stop.arrival_.timestamp_reason_ =
+          from_stop.departure_.timestamp_reason_;
 
       auto t = journey::transport{};
       t.from_ = from_idx;
@@ -272,8 +282,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   stop.departure_.valid_ = true;
                   stop.departure_.timestamp_ =
                       to_motis_unixtime(stp.time(n::event_type::kDep));
-                  stop.departure_.schedule_timestamp_ =
-                      to_motis_unixtime(stp.time(n::event_type::kArr));
+                  stop.departure_.schedule_timestamp_ = to_motis_unixtime(
+                      stp.scheduled_time(n::event_type::kDep));
                   stop.departure_.timestamp_reason_ =
                       fr.is_rt() ? timestamp_reason::FORECAST
                                  : timestamp_reason::SCHEDULE;
@@ -331,22 +341,6 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
             [](auto&& a, auto&& b) { return a.from_ < b.from_; });
   std::sort(begin(mj.trips_), end(mj.trips_));
   std::sort(begin(mj.attributes_), end(mj.attributes_));
-
-  std::optional<duration> pred_delay;
-  auto const propagate = [&](journey::stop::event_info& ev) {
-    if (!ev.valid_) {
-      return;
-    }
-
-    if (ev.schedule_timestamp_ == kPropagate && pred_delay.has_value()) {
-      ev.schedule_timestamp_ = ev.timestamp_ - *pred_delay;
-    }
-    pred_delay = ev.timestamp_ - ev.schedule_timestamp_;
-  };
-  for (auto& s : mj.stops_) {
-    propagate(s.arrival_);
-    propagate(s.departure_);
-  }
 
   return mj;
 }
