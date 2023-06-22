@@ -44,9 +44,36 @@ struct nigiri::impl {
         std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
   }
 
+  void update_rtt(std::shared_ptr<n::rt_timetable>&& rtt) {
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+    rtt_.store(rtt);
+#else
+    auto lock = std::lock_guard{mutex_};
+    rtt_ = rtt;
+#endif
+  }
+
+  std::shared_ptr<n::rt_timetable> get_rtt() const {
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+    return rtt_.load();
+#else
+    std::shared_ptr<n::rt_timetable> copy;
+    {
+      auto lock = std::lock_guard{mutex_};
+      copy = rtt_;
+    }
+    return copy;
+#endif
+  }
+
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
   std::atomic<std::shared_ptr<n::rt_timetable>> rtt_;
+#else
+  std::shared_ptr<n::rt_timetable> rtt_;
+  std::mutex mutex_;
+#endif
   tag_lookup tags_;
   geo::point_rtree station_geo_index_;
   std::vector<gtfsrt> gtfsrt_;
@@ -71,7 +98,7 @@ void nigiri::init(motis::module::registry& reg) {
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
                     return route(impl_->tags_, **impl_->tt_,
-                                 impl_->rtt_.load().get(), msg);
+                                 impl_->get_rtt().get(), msg);
                   },
                   {});
 
@@ -110,15 +137,15 @@ void nigiri::update_gtfsrt() {
 
   auto const futures = utl::to_vec(
       impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
-  auto const rtt_copy =
-      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->rtt_.load()});
+  auto rtt_copy =
+      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->get_rtt()});
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
     auto const tag = impl_->tags_.get_tag(endpoint.src());
     statistics.emplace_back(n::rt::gtfsrt_update_buf(
         **impl_->tt_, *rtt_copy, endpoint.src(), tag, f->val().body));
   }
-  impl_->rtt_.store(rtt_copy);
+  impl_->update_rtt(std::move(rtt_copy));
 
   for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
     LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "
@@ -251,7 +278,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                           .content()}));
               (**impl_->tt_).locations_.resolve_timezones();
               if (!gtfsrt_urls_.empty()) {
-                impl_->rtt_.store(std::make_shared<n::rt_timetable>(
+                impl_->update_rtt(std::make_shared<n::rt_timetable>(
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
               loaded = true;
