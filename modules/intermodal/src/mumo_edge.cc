@@ -61,12 +61,16 @@ msg_ptr make_geo_request(latlng const& pos, double radius) {
 }
 
 msg_ptr make_osrm_request(latlng const& pos,
-                          const std::vector<minimalistic_station>& stations,
+                          Vector<Offset<Station>> const* stations,
+                          //const std::vector<minimalistic_station>& stations,
                           std::string const& profile, SearchDir direction) {
   Position const fbs_position{pos.lat_, pos.lng_};
   std::vector<Position> many;
-  for (auto const& station : stations) {
+  /*for (auto const& station : stations) {
     many.push_back(station.pos);
+  }*/
+  for (auto const* station : *stations) {
+    many.push_back(*station->pos());
   }
 
   message_creator mc;
@@ -85,22 +89,23 @@ void osrm_edges(latlng const& pos, int max_dur, int max_dist,
   auto const geo_msg = motis_call(make_geo_request(pos, max_dist))->val();
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
   auto const stations = geo_resp->stations();
-  printf(" Filter: \n");
-  std::vector<minimalistic_station> v_min_stations;
-  v_min_stations = first_filter(pos, max_dur, max_dist, stations);
+  //printf(" Filter: \n");
+  //std::vector<minimalistic_station> v_min_stations;
+  //v_min_stations = first_filter(pos, max_dur, max_dist, stations);
 
   auto const osrm_msg =
-      motis_call(make_osrm_request(pos, v_min_stations, to_string(type), direction))
+      motis_call(make_osrm_request(pos, stations, to_string(type), direction))
           ->val();
   auto const osrm_resp = motis_content(OSRMOneToManyResponse, osrm_msg);
 
-  for (auto i = 0UL; i < v_min_stations.size(); ++i) {
+  for (auto i = 0UL; i < stations->size(); ++i) {
     auto const dur = osrm_resp->costs()->Get(i)->duration();
     if (dur > max_dur) {
       continue;
     }
 
-    appender(v_min_stations.at(i).id, v_min_stations.at(i).geo_pos,
+    //appender(v_min_stations.at(i).id, v_min_stations.at(i).geo_pos,
+      appender(stations->Get(i)->id()->str(), from_fbs(stations->Get(i)->pos()),
              dur / 60, 0, type, 0);
   }
 }

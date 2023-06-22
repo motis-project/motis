@@ -37,6 +37,8 @@ std::vector<minimalistic_station> first_filter(latlng pos, int max_dur, int max_
     station_position.lat_ = s->pos()->lat();
     station_position.lng_ = s->pos()->lng();
     double dist = distance(pos, station_position);
+    // vielleicht hier sowas wie vergleich mit max_dist und das dann jeweils anders wenns car,foot,bike ist,
+    // weil bei car usw, ja anderes intervall wo es sich lohnt
     stations_distances sd = {dist, s->id()->c_str()};
     v_sd.emplace_back(sd);
     Position motispos_spos = Position(station_position.lat_, station_position.lng_);
