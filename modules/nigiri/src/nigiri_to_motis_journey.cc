@@ -21,8 +21,6 @@ namespace n = ::nigiri;
 
 namespace motis::nigiri {
 
-constexpr auto const kPropagate = std::numeric_limits<unixtime>::min();
-
 struct transport_display_info {
   CISTA_COMPARABLE()
   unsigned duration_;

@@ -36,7 +36,7 @@ gtfsrt& gtfsrt::operator=(gtfsrt&&) noexcept = default;
 
 gtfsrt::~gtfsrt() = default;
 
-mm::http_future_t gtfsrt::fetch() { return motis_http(impl_->req_); }
+mm::http_future_t gtfsrt::fetch() const { return motis_http(impl_->req_); }
 
 n::source_idx_t gtfsrt::src() const { return impl_->src_; }
 

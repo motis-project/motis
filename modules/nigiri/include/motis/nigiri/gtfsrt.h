@@ -17,7 +17,7 @@ struct gtfsrt {
   gtfsrt& operator=(gtfsrt&&) noexcept;
   ~gtfsrt();
 
-  motis::module::http_future_t fetch();
+  motis::module::http_future_t fetch() const;
   ::nigiri::source_idx_t src() const;
 
   struct impl;
