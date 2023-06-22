@@ -32,7 +32,7 @@ public:
         return "module: unexpected message type";
       case error::remote_error: return "module: remote execution error";
       case error::unknown_error:
-      default: return "module: unkown error";
+      default: return "module: unknown error";
     }
   }
 };
