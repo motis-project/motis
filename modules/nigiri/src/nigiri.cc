@@ -53,13 +53,13 @@ struct nigiri::impl {
 #endif
   }
 
-  std::shared_ptr<n::rt_timetable> get_rtt() const {
+  std::shared_ptr<n::rt_timetable> get_rtt() {
 #if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
     return rtt_.load();
 #else
     std::shared_ptr<n::rt_timetable> copy;
     {
-      auto lock = std::lock_guard{mutex_};
+      auto const lock = std::lock_guard{mutex_};
       copy = rtt_;
     }
     return copy;
@@ -122,7 +122,7 @@ void nigiri::init(motis::module::registry& reg) {
 
 void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
   if (!gtfsrt_urls_.empty()) {
-    impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](std::string const& config) {
+    impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](auto&& config) {
       return gtfsrt{impl_->tags_, config};
     });
     d.register_timer("RIS GTFS-RT Update",

@@ -16,7 +16,7 @@ struct gtfsrt::impl {
   n::source_idx_t src_;
 };
 
-gtfsrt::gtfsrt(tag_lookup const& tags, std::string const& config) {
+gtfsrt::gtfsrt(tag_lookup const& tags, std::string_view config) {
   auto const [tag, url, auth] =
       utl::split<'|', utl::cstr, utl::cstr, utl::cstr>(config);
   auto const src = tags.get_src(tag.to_str() + "_");

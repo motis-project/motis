@@ -12,7 +12,7 @@ struct gtfsrt {
   // Config format: tag|url|auth
   // Example 1: nl|http://gtfs.ovapi.nl/nl/tripUpdates.pb|my_api_key
   // Example 2: nl|http://gtfs.ovapi.nl/nl/tripUpdates.pb
-  gtfsrt(tag_lookup const&, std::string const& config);
+  gtfsrt(tag_lookup const&, std::string_view config);
   gtfsrt(gtfsrt&&) noexcept;
   gtfsrt& operator=(gtfsrt&&) noexcept;
   ~gtfsrt();
