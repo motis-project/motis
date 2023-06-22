@@ -19,12 +19,20 @@ struct gtfsrt::impl {
 gtfsrt::gtfsrt(tag_lookup const& tags, std::string const& config) {
   auto const [tag, url, auth] =
       utl::split<'|', utl::cstr, utl::cstr, utl::cstr>(config);
+  auto const src = tags.get_src(tag.to_str() + "_");
+  utl::verify(
+      src != n::source_idx_t::invalid(),
+      "nigiri GTFS-RT tag {} not found as static timetable (known tags: {})",
+      tag.view(), tags);
   auto req = net::http::client::request{url.to_str()};
   if (!auth.empty()) {
     req.headers.emplace("Authorization", auth.to_str());
   }
-  impl_ = std::make_unique<impl>(std::move(req), tags.get_src(tag.view()));
+  impl_ = std::make_unique<impl>(std::move(req), src);
 }
+
+gtfsrt::gtfsrt(gtfsrt&&) noexcept = default;
+gtfsrt& gtfsrt::operator=(gtfsrt&&) noexcept = default;
 
 gtfsrt::~gtfsrt() = default;
 

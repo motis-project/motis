@@ -43,6 +43,7 @@ struct nigiri::impl {
     loaders_.emplace_back(
         std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
   }
+
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
   std::atomic<std::shared_ptr<n::rt_timetable>> rtt_;
@@ -94,13 +95,19 @@ void nigiri::init(motis::module::registry& reg) {
 
 void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
   if (!gtfsrt_urls_.empty()) {
+    impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](std::string const& config) {
+      return gtfsrt{impl_->tags_, config};
+    });
     d.register_timer("RIS GTFS-RT Update",
                      boost::posix_time::seconds{gtfsrt_update_interval_},
                      [&]() { update_gtfsrt(); }, {});
+    update_gtfsrt();
   }
 }
 
 void nigiri::update_gtfsrt() {
+  LOG(logging::info) << "Starting GTFS-RT update: fetch URLs";
+
   auto const futures = utl::to_vec(
       impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
   auto const rtt_copy =

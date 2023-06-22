@@ -13,6 +13,8 @@ struct gtfsrt {
   // Example 1: nl|http://gtfs.ovapi.nl/nl/tripUpdates.pb|my_api_key
   // Example 2: nl|http://gtfs.ovapi.nl/nl/tripUpdates.pb
   gtfsrt(tag_lookup const&, std::string const& config);
+  gtfsrt(gtfsrt&&) noexcept;
+  gtfsrt& operator=(gtfsrt&&) noexcept;
   ~gtfsrt();
 
   motis::module::http_future_t fetch();
