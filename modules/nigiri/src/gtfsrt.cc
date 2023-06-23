@@ -12,6 +12,8 @@ namespace n = nigiri;
 namespace motis::nigiri {
 
 struct gtfsrt::impl {
+  impl(net::http::client::request req, n::source_idx_t const src)
+      : req_{std::move(req)}, src_{src} {}
   net::http::client::request req_;
   n::source_idx_t src_;
 };
