@@ -112,6 +112,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
 
     auto& from_stop =
         mj.stops_.empty() ? mj.stops_.emplace_back() : mj.stops_.back();
+    auto const from_stop_idx = mj.stops_.size() - 1U;
     auto const from_idx = static_cast<unsigned>(mj.stops_.size() - 1);
     fill_stop_info(from_stop, leg.from_);
     from_stop.departure_.valid_ = true;
@@ -124,17 +125,17 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
          from_stop.arrival_.schedule_timestamp_);
 
     if (!is_transfer) {
-      auto& to_stop = mj.stops_.emplace_back();
+      auto& to_stop = mj.stops_.emplace_back();  // invalidates from_stop ref!
       auto const to_idx = static_cast<unsigned>(mj.stops_.size() - 1);
       fill_stop_info(to_stop, leg.to_);
       to_stop.arrival_.valid_ = true;
       to_stop.arrival_.timestamp_ = to_motis_unixtime(leg.arr_time_);
       to_stop.arrival_.schedule_timestamp_ =
           to_stop.arrival_.timestamp_ -
-          (from_stop.departure_.timestamp_ -
-           from_stop.departure_.schedule_timestamp_);
+          (mj.stops_[from_stop_idx].departure_.timestamp_ -
+           mj.stops_[from_stop_idx].departure_.schedule_timestamp_);
       to_stop.arrival_.timestamp_reason_ =
-          from_stop.departure_.timestamp_reason_;
+          mj.stops_[from_stop_idx].departure_.timestamp_reason_;
 
       auto t = journey::transport{};
       t.from_ = from_idx;
