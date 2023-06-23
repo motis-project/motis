@@ -314,7 +314,7 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
-        if: ${{ !matrix.config.skipui }}
+        if: ${{ !matrix.config.skiptests }}
         run: |
           ${{ matrix.config.emulator }} ./build/motis --mode test \
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
@@ -325,7 +325,7 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles tripbased gbfs
 
       - name: Run Tests
-        if: ${{ !matrix.config.skipui }}
+        if: ${{ !matrix.config.skiptests }}
         run: |
           ${{ matrix.config.emulator }} build/motis-test & \
           ${{ matrix.config.emulator }} build/motis-itest
