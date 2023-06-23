@@ -19,7 +19,11 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/geo_station_lookup.h"
+#include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/routing.h"
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/rt/rt_timetable.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -39,10 +43,40 @@ struct nigiri::impl {
     loaders_.emplace_back(
         std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
   }
+
+  void update_rtt(std::shared_ptr<n::rt_timetable>&& rtt) {
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+    rtt_.store(rtt);
+#else
+    auto lock = std::lock_guard{mutex_};
+    rtt_ = rtt;
+#endif
+  }
+
+  std::shared_ptr<n::rt_timetable> get_rtt() {
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+    return rtt_.load();
+#else
+    std::shared_ptr<n::rt_timetable> copy;
+    {
+      auto const lock = std::lock_guard{mutex_};
+      copy = rtt_;
+    }
+    return copy;
+#endif
+  }
+
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
-  std::vector<std::string> tags_;
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+  std::atomic<std::shared_ptr<n::rt_timetable>> rtt_;
+#else
+  std::shared_ptr<n::rt_timetable> rtt_;
+  std::mutex mutex_;
+#endif
+  tag_lookup tags_;
   geo::point_rtree station_geo_index_;
+  std::vector<gtfsrt> gtfsrt_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -55,6 +89,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
         "tz for agencies w/o tz or routes w/o agency");
+  param(gtfsrt_urls_, "gtfsrt", "list of GTFS-RT URL endpoints");
 }
 
 nigiri::~nigiri() = default;
@@ -62,7 +97,8 @@ nigiri::~nigiri() = default;
 void nigiri::init(motis::module::registry& reg) {
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
-                    return route(impl_->tags_, **impl_->tt_, msg);
+                    return route(impl_->tags_, **impl_->tt_,
+                                 impl_->get_rtt().get(), msg);
                   },
                   {});
 
@@ -79,6 +115,45 @@ void nigiri::init(motis::module::registry& reg) {
                       return station_location(impl_->tags_, **impl_->tt_, msg);
                     },
                     {});
+  }
+
+  reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
+}
+
+void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
+  if (!gtfsrt_urls_.empty()) {
+    impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](auto&& config) {
+      return gtfsrt{impl_->tags_, config};
+    });
+    d.register_timer("RIS GTFS-RT Update",
+                     boost::posix_time::seconds{gtfsrt_update_interval_},
+                     [&]() { update_gtfsrt(); }, {});
+    update_gtfsrt();
+  }
+}
+
+void nigiri::update_gtfsrt() {
+  LOG(logging::info) << "Starting GTFS-RT update: fetch URLs";
+
+  auto const futures = utl::to_vec(
+      impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
+  auto rtt_copy =
+      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->get_rtt()});
+  auto statistics = std::vector<n::rt::statistics>{};
+  for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
+    auto const tag = impl_->tags_.get_tag(endpoint.src());
+    statistics.emplace_back(n::rt::gtfsrt_update_buf(
+        **impl_->tt_, *rtt_copy, endpoint.src(), tag, f->val().body));
+  }
+  impl_->update_rtt(std::move(rtt_copy));
+
+  for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
+    LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "
+                       << stats.total_entities_success_ << "/"
+                       << stats.total_entities_ << " ("
+                       << static_cast<double>(stats.total_entities_success_) /
+                              stats.total_entities_ * 100
+                       << "%)";
   }
 }
 
@@ -101,9 +176,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             "all schedules require a name tag, even with only one schedule");
 
         date::sys_days begin;
+        auto const today = std::chrono::time_point_cast<date::days>(
+            std::chrono::system_clock::now());
         if (first_day_ == "TODAY") {
-          begin = std::chrono::time_point_cast<date::days>(
-              std::chrono::system_clock::now());
+          begin = today;
         } else {
           std::stringstream ss;
           ss << first_day_;
@@ -138,8 +214,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       path);
           h = cista::hash_combine(h, (*c)->hash(*d));
 
-          datasets.emplace_back(n::source_idx_t{i++}, c, std::move(d));
-          impl_->tags_.emplace_back(p->options()->str() + "_");
+          auto const src = n::source_idx_t{i++};
+          datasets.emplace_back(src, c, std::move(d));
+          impl_->tags_.add(src, p->options()->str() + "_");
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
@@ -158,7 +235,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
-                  fmt::format("{}nigiri", impl_->tags_[to_idx(src)]));
+                  fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
 
               LOG(logging::info)
                   << "loading nigiri timetable with configuration "
@@ -200,6 +277,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       cista::file{dump_file_path.string().c_str(), "r"}
                           .content()}));
               (**impl_->tt_).locations_.resolve_timezones();
+              if (!gtfsrt_urls_.empty()) {
+                impl_->update_rtt(std::make_shared<n::rt_timetable>(
+                    n::rt::create_rt_timetable(**impl_->tt_, today)));
+              }
               loaded = true;
               break;
             } catch (std::exception const& e) {

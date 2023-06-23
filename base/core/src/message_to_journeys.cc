@@ -12,8 +12,8 @@ namespace motis {
 
 journey::stop::event_info to_event_info(EventInfo const& event) {
   journey::stop::event_info e;
-  e.track_ = event.track()->c_str();
-  e.schedule_track_ = event.schedule_track()->c_str();
+  e.track_ = event.track()->view();
+  e.schedule_track_ = event.schedule_track()->view();
   e.timestamp_ = event.time();
   e.schedule_timestamp_ = event.schedule_time();
   e.timestamp_reason_ = from_fbs(event.reason());
@@ -23,12 +23,12 @@ journey::stop::event_info to_event_info(EventInfo const& event) {
 
 journey::stop to_stop(Stop const& stop) {
   journey::stop s;
-  s.eva_no_ = stop.station()->id()->c_str();
+  s.eva_no_ = stop.station()->id()->view();
   s.exit_ = static_cast<bool>(stop.exit());
   s.enter_ = static_cast<bool>(stop.enter());
   s.lat_ = stop.station()->pos()->lat();
   s.lng_ = stop.station()->pos()->lng();
-  s.name_ = stop.station()->name()->c_str();
+  s.name_ = stop.station()->name()->view();
   s.arrival_ = to_event_info(*stop.arrival());
   s.departure_ = to_event_info(*stop.departure());
   return s;
@@ -43,7 +43,7 @@ journey::transport to_transport(Walk const& walk, uint16_t duration) {
   t.mumo_id_ = walk.mumo_id();
   t.mumo_price_ = walk.price();
   t.mumo_accessibility_ = walk.accessibility();
-  t.mumo_type_ = walk.mumo_type()->c_str();
+  t.mumo_type_ = walk.mumo_type()->view();
   return t;
 }
 
@@ -54,10 +54,10 @@ journey::transport to_transport(Transport const& transport, uint16_t duration) {
   t.to_ = transport.range()->to();
   t.is_walk_ = false;
   t.clasz_ = transport.clasz();
-  t.direction_ = transport.direction()->c_str();
-  t.line_identifier_ = transport.line_id()->c_str();
-  t.name_ = transport.name()->c_str();
-  t.provider_ = transport.provider()->c_str();
+  t.direction_ = transport.direction()->view();
+  t.line_identifier_ = transport.line_id()->view();
+  t.name_ = transport.name()->view();
+  t.provider_ = transport.provider()->view();
   t.mumo_id_ = 0;
   return t;
 }
@@ -66,20 +66,20 @@ journey::trip to_trip(Trip const& trip) {
   auto t = journey::trip{};
   t.from_ = trip.range()->from();
   t.to_ = trip.range()->to();
-  t.extern_trip_.station_id_ = trip.id()->station_id()->str();
+  t.extern_trip_.station_id_ = trip.id()->station_id()->view();
   t.extern_trip_.train_nr_ = trip.id()->train_nr();
   t.extern_trip_.time_ = trip.id()->time();
-  t.extern_trip_.target_station_id_ = trip.id()->target_station_id()->str();
+  t.extern_trip_.target_station_id_ = trip.id()->target_station_id()->view();
   t.extern_trip_.target_time_ = trip.id()->target_time();
-  t.extern_trip_.line_id_ = trip.id()->line_id()->str();
-  t.debug_ = trip.debug()->str();
+  t.extern_trip_.line_id_ = trip.id()->line_id()->view();
+  t.debug_ = trip.debug()->view();
   return t;
 }
 
 journey::ranged_attribute to_attribute(Attribute const& attribute) {
   journey::ranged_attribute a;
-  a.attr_.code_ = attribute.code()->c_str();
-  a.attr_.text_ = attribute.text()->c_str();
+  a.attr_.code_ = attribute.code()->view();
+  a.attr_.text_ = attribute.text()->view();
   a.from_ = attribute.range()->from();
   a.to_ = attribute.range()->to();
   return a;
@@ -88,8 +88,8 @@ journey::ranged_attribute to_attribute(Attribute const& attribute) {
 journey::ranged_free_text to_free_text(FreeText const& free_text) {
   journey::ranged_free_text f;
   f.text_.code_ = free_text.code();
-  f.text_.text_ = free_text.text()->c_str();
-  f.text_.type_ = free_text.type()->c_str();
+  f.text_.text_ = free_text.text()->view();
+  f.text_.type_ = free_text.type()->view();
   f.from_ = free_text.range()->from();
   f.to_ = free_text.range()->to();
   return f;

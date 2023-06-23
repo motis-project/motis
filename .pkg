@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=8c090ea6e1f87386006ddf4cfb88ad5e0b575a6d
+  commit=671e4d063dcaec30d6e33190af797d4ca1a386f5
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -17,11 +17,11 @@
 [date]
   url=git@github.com:motis-project/date.git
   branch=master
-  commit=443af47fb86db22d2c93f78106f90493d2513a9b
+  commit=26d109612ddb8ba331edba7619a6452667f842bb
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=519dd0e8e48e171e66a54534444b7a3f1d1d08e8
+  commit=8053a1f105e7dbfb250a8e5d249aea565238cf16
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=a3e40280f5ded2d32b5ec88465e7d363cf3cdb2e
+  commit=571a8fe8e56b5aac88fde949857fd3416beb28b8
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
