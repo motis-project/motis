@@ -1,8 +1,8 @@
 #include "motis/nigiri/location.h"
 
-#include "motis/core/common/logging.h"
+#include "utl/to_vec.h"
 
-#include "utl/helpers/algorithm.h"
+#include "motis/core/common/logging.h"
 
 #include "nigiri/timetable.h"
 
@@ -10,19 +10,31 @@ namespace n = ::nigiri;
 
 namespace motis::nigiri {
 
-n::location_id motis_station_to_nigiri_id(std::vector<std::string> const& tags,
-                                          std::string_view station_id) {
-  auto const start_tag_it = utl::find_if(
-      tags, [&](auto&& tag) { return station_id.starts_with(tag); });
-  return start_tag_it == end(tags)
-             ? n::location_id{station_id, n::source_idx_t::invalid()}
-             : n::location_id{
-                   station_id.substr(start_tag_it->length()),
-                   n::source_idx_t{static_cast<cista::base_t<n::source_idx_t>>(
-                       std::distance(begin(tags), start_tag_it))}};
+mcd::string get_station_id(tag_lookup const& tags, n::timetable const& tt,
+                           n::location_idx_t const l) {
+  auto const src = tt.locations_.src_.at(l);
+  return fmt::format(
+      "{}{}",
+      (src == n::source_idx_t::invalid() ? "" : std::string{tags.get_tag(src)}),
+      std::string{tt.locations_.ids_.at(l).view()});
 }
 
-n::location_idx_t get_location_idx(std::vector<std::string> const& tags,
+std::pair<std::string_view, std::string_view> split_tag_and_location_id(
+    std::string_view station_id) {
+  auto const first_underscore_pos = station_id.find('_');
+  return first_underscore_pos != std::string_view::npos
+             ? std::pair{station_id.substr(0, first_underscore_pos + 1U),
+                         station_id.substr(first_underscore_pos + 1U)}
+             : std::pair{std::string_view{}, station_id};
+}
+
+n::location_id motis_station_to_nigiri_id(tag_lookup const& tags,
+                                          std::string_view station_id) {
+  auto const [tag, id] = split_tag_and_location_id(station_id);
+  return {n::string{id}, tags.get_src(tag)};
+}
+
+n::location_idx_t get_location_idx(tag_lookup const& tags,
                                    n::timetable const& tt,
                                    std::string_view station_id) {
   auto const id = motis_station_to_nigiri_id(tags, station_id);

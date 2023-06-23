@@ -23,6 +23,9 @@ struct nigiri : public motis::module::module {
   bool import_successful() const override { return import_successful_; }
 
 private:
+  void register_gtfsrt_timer(motis::module::dispatcher&);
+  void update_gtfsrt();
+
   bool import_successful_{false};
 
   struct impl;
@@ -33,6 +36,8 @@ private:
   std::uint16_t num_days_{2U};
   bool geo_lookup_{false};
   unsigned link_stop_distance_{100U};
+  std::vector<std::string> gtfsrt_urls_;
+  unsigned gtfsrt_update_interval_{60U};
 };
 
 }  // namespace motis::nigiri

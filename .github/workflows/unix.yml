@@ -283,6 +283,7 @@ jobs:
             emulator: qemu-aarch64-static
           - preset: clang-tidy
             skipui: true
+            skiptests: true
           - preset: linux-sanitizer
             skipui: true
           - preset: linux-debug
@@ -313,6 +314,7 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
+        if: ${{ !matrix.config.skiptests }}
         run: |
           ${{ matrix.config.emulator }} ./build/motis --mode test \
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
@@ -323,6 +325,7 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles tripbased gbfs
 
       - name: Run Tests
+        if: ${{ !matrix.config.skiptests }}
         run: |
           ${{ matrix.config.emulator }} build/motis-test & \
           ${{ matrix.config.emulator }} build/motis-itest
