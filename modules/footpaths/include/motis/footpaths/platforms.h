@@ -3,9 +3,12 @@
 #include <string>
 #include <utility>
 #include <vector>
+
 #include "osmium/tags/taglist.hpp"
 
 #include "geo/latlng.h"
+#include "geo/point_rtree.h"
+
 #include "nigiri/types.h"
 
 namespace motis::footpaths {
@@ -27,6 +30,25 @@ struct platform_info {
   nigiri::location_idx_t idx_{nigiri::location_idx_t::invalid()};
   osm_type osm_type_{osm_type::NODE};
   geo::latlng pos_;  // used to calculate distance to other tracks
+};
+
+struct platforms {
+  std::vector<platform_info> platforms_;
+
+  explicit platforms(std::vector<platform_info> platforms)
+      : platforms_(std::move(platforms)) {
+    platform_index_ =
+        geo::make_point_rtree(platforms_, [](auto const& p) { return p.pos_; });
+  }
+
+  std::size_t size() const { return platforms_.size(); }
+
+  platform_info* get_platform_info(std::size_t const& i) {
+    return &platforms_.at(i);
+  };
+
+private:
+  geo::point_rtree platform_index_;
 };
 
 /**
