@@ -93,6 +93,7 @@ struct trip_backup {
   lcon_idx_t lcon_idx_{};
 };
 
+/*
 struct event_info_debug {
   friend std::ostream& operator<<(std::ostream& out,
                                   event_info_debug const& eid) {
@@ -120,6 +121,7 @@ struct event_info_debug {
   schedule const& sched_;
   event_info const& ei_;
 };
+*/
 
 }  // namespace
 
