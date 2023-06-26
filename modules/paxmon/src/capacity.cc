@@ -237,7 +237,7 @@ std::optional<vehicle_capacity> get_section_capacity(
         get_trip_formation_section(sched, caps, trp, ev_key_from);
     if (tf_sec != nullptr) {
       for (auto const& vi : tf_sec->vehicles_) {
-        vehicles.insert(mcd::pair(vi.uic_, vi.baureihe_));
+        vehicles.insert(mcd::pair{vi.uic_, vi.baureihe_});
       }
     }
   }
