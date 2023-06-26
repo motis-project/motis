@@ -213,9 +213,10 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
 
     if (out_type == output_type::CSV_TRIPS) {
       auto const category =
-          con_info ? sched.categories_.at(con_info->family_)->name_.view()
-                   : std::string_view{};
-      auto const train_nr = con_info ? con_info->train_nr_ : 0U;
+          con_info != nullptr
+              ? sched.categories_.at(con_info->family_)->name_.view()
+              : std::string_view{};
+      auto const train_nr = con_info != nullptr ? con_info->train_nr_ : 0U;
       auto const& start_st =
           sched.stations_.at(trp->id_.primary_.get_station_id());
       auto const& end_st =
