@@ -205,7 +205,6 @@ struct dynamic_fws_multimap_base {
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     void clear() {
       auto& index = get_index();
-      auto& data = mutable_mm().data_;
       mutable_mm().element_count_ -= index.size_;
       index.size_ = 0;
     }
