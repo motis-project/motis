@@ -8,6 +8,7 @@
 #include "motis/vector.h"
 
 #include "motis/core/schedule/time.h"
+#include "motis/core/schedule/trip.h"
 #include "motis/core/journey/extern_trip.h"
 
 namespace motis::paxmon {
@@ -36,6 +37,9 @@ struct trip_formation_section {
 };
 
 struct trip_formation {
+  primary_trip_id ptid_{};
+  boost::uuids::uuid uuid_;
+  mcd::string category_;
   mcd::vector<trip_formation_section> sections_;
 };
 

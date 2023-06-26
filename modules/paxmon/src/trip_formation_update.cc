@@ -133,6 +133,9 @@ void update_trip_formation(schedule const& sched, universe& uv,
   }
 
   auto& formation = uv.capacity_maps_.trip_formation_map_[trip_uuid];
+  formation.ptid_ = ptid;
+  formation.uuid_ = trip_uuid;
+  formation.category_ = fbs_to_mcd_str(tfm->trip_id()->category());
   formation.sections_ =
       mcd::to_vec(*tfm->sections(), [&](TripFormationSection const* sec) {
         return to_trip_formation_section(sched, sec);

@@ -1,3 +1,4 @@
+import { ArrowDownTrayIcon } from "@heroicons/react/20/solid";
 import { useAtom } from "jotai/index";
 import { ReactElement } from "react";
 
@@ -6,6 +7,7 @@ import {
   PaxMonTripCapacityStats,
 } from "@/api/protocol/motis/paxmon";
 
+import { getApiEndpoint } from "@/api/endpoint";
 import { usePaxMonCapacityStatus } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
@@ -27,6 +29,22 @@ function CapacityStatus(): ReactElement {
     <div className="py-3">
       <h2 className="text-lg font-semibold">Kapazitätsdaten</h2>
       <CapacityStatusDisplay data={data} />
+      <div className="flex gap-3 pt-5">
+        <a
+          href={`${getApiEndpoint()}paxmon/capacity_status/trips.csv`}
+          className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
+        >
+          <ArrowDownTrayIcon className="h-5 w-5" />
+          Liste überwachter Züge (CSV)
+        </a>
+        <a
+          href={`${getApiEndpoint()}paxmon/capacity_status/formations.csv`}
+          className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
+        >
+          <ArrowDownTrayIcon className="h-5 w-5" />
+          Wagenreihungen (CSV)
+        </a>
+      </div>
     </div>
   );
 }
