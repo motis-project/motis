@@ -6,6 +6,7 @@ include_directories(include)
 file(GLOB_RECURSE motis-footpaths-files src/*.cc)
 add_library(motis-footpaths STATIC ${motis-footpaths-files})
 target_include_directories(motis-footpaths PUBLIC include)
+target_include_directories(motis-footpaths PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../ppr/include)
 target_compile_features(motis-footpaths PRIVATE cxx_std_20)
 target_link_libraries(motis-footpaths
         boost-system
