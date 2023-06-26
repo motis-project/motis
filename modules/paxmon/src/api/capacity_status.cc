@@ -390,7 +390,7 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
             mc.CreateVector(std::vector<Offset<HTTPHeader>>{
                 CreateHTTPHeader(mc, mc.CreateString("Content-Type"),
                                  mc.CreateString("text/csv"))}),
-            mc.CreateString(csv.view()))
+            mc.CreateString(csv.str()))
             .Union());
   }
 
