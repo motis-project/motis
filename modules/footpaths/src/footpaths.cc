@@ -10,6 +10,8 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
+#include "motis/footpaths/platforms.h"
+
 #include "motis/ppr/profiles.h"
 
 #include "nigiri/timetable.h"
@@ -119,6 +121,25 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         // Implementation of footpaths is inspired by parking
 
         // TODO (Carsten, 1) Calculate internal and external transfers
+        // 1st extract all platforms from a given osm file
+        auto const osm_file = osm_event->path()->str();
+
+        LOG(info) << "Extracting platforms from " << osm_file;
+        auto extracted_platforms = extract_osm_platforms(osm_file);
+
+        // 2nd extract all stations from the nigiri graph
+        std::vector<platform_info> stations{};
+
+        for (auto i = nigiri::location_idx_t{0U};
+             i != impl_->tt_.locations_.ids_.size(); ++i) {
+          if (impl_->tt_.locations_.types_[i] ==
+              nigiri::location_type::kStation) {
+            auto const name = impl_->tt_.locations_.names_[i].view();
+            stations.emplace_back(static_cast<std::string>(name), i,
+                                  impl_->tt_.locations_.coordinates_[i]);
+          }
+        }
+
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
 
         // TODO (Carsten, 2) Check for existing calculations. if state ==
