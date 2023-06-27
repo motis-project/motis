@@ -42,14 +42,16 @@ struct platforms {
   }
 
   /**
-   * Calculates all platforms that are within a radius of the given location.
+   * Calculates all valid platforms that are within a radius of the given
+   * location. A platform is valid if location_idx_t is valid
+   *
    *
    * @param loc the location in the vicinity of which platforms are searched
    * for.
    * @param radius the maximal allowed distance |location, platform.pos|   *
    */
-  std::vector<platform_info> get_platforms_in_radius(geo::latlng const& loc,
-                                                     double radius);
+  std::vector<platform_info*> get_valid_platforms_in_radius(
+      geo::latlng const& loc, double const radius);
 
   std::size_t size() const { return platforms_.size(); }
 
