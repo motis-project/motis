@@ -140,6 +140,15 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           }
         }
 
+        // 3rd combine platforms and stations
+        {
+          scoped_timer const combine_platforms_and_stations{
+              "transfers: combine single platforms and stations, build rtree."};
+          extracted_platforms.insert(extracted_platforms.end(),
+                                     stations.begin(), stations.end());
+          platforms_ =
+              std::make_unique<platforms>(platforms{extracted_platforms});
+        }
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
 
         // TODO (Carsten, 2) Check for existing calculations. if state ==
