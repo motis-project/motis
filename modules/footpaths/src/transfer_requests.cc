@@ -3,7 +3,7 @@
 namespace motis::footpaths {
 
 std::vector<transfer_requests> build_transfer_requests(
-    platforms* pf, std::vector<ppr::profile_info> const& profile_info,
+    platforms* pf, std::vector<ppr::profile_info>& profile_info,
     int const max_walk_duration) {
   std::vector<transfer_requests> result{};
 
@@ -25,18 +25,19 @@ std::vector<transfer_requests> build_transfer_requests(
       transfer_targets.insert(transfer_targets.end(),
                               valid_platforms_in_radius.begin(),
                               valid_platforms_in_radius.end());
+
+      // donot create a transfer request if no valid transfer could be found
+      if (transfer_targets.empty()) {
+        continue;
+      }
+
+      transfer_requests tmp{};
+      tmp.transfer_start_ = &platform;
+      tmp.transfer_targets_ = transfer_targets;
+      tmp.ppr_profile_ = &pi;
+
+      result.emplace_back(tmp);
     }
-
-    // donot create a transfer request if no valid transfer could be found
-    if (transfer_targets.empty()) {
-      continue;
-    }
-
-    transfer_requests tmp{};
-    tmp.transfer_start = &platform;
-    tmp.transfer_targets = transfer_targets;
-
-    result.emplace_back(tmp);
   }
 
   return result;

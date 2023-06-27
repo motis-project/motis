@@ -8,8 +8,9 @@
 namespace motis::footpaths {
 
 struct transfer_requests {
-  platform_info* transfer_start;
-  std::vector<platform_info*> transfer_targets;
+  platform_info* transfer_start_;
+  std::vector<platform_info*> transfer_targets_;
+  ppr::profile_info* ppr_profile_;
 };
 
 /**
@@ -23,7 +24,7 @@ struct transfer_requests {
  *
  */
 std::vector<transfer_requests> build_transfer_requests(
-    platforms* pf, std::vector<ppr::profile_info> const& profile_info,
+    platforms* pf, std::vector<ppr::profile_info>& profile_info,
     int const max_walk_duration);
 
 }  // namespace motis::footpaths
