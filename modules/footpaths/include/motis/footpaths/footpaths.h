@@ -31,7 +31,8 @@ private:
 
   struct impl;
   std::unique_ptr<impl> impl_;
-  std::map<std::string, motis::ppr::profile_info> ppr_profiles_;
+  std::map<std::string, ppr::profile_info> ppr_profiles_;
+  std::vector<ppr::profile_info> profiles_;
   std::map<std::string, size_t> ppr_profile_pos_;
   std::unique_ptr<platforms> platforms_;
   bool import_successful_{false};

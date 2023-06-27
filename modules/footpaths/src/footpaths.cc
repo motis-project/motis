@@ -11,6 +11,7 @@
 #include "motis/module/ini_io.h"
 
 #include "motis/footpaths/platforms.h"
+#include "motis/footpaths/transfer_requests.h"
 
 #include "motis/ppr/profiles.h"
 
@@ -114,13 +115,17 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         // generate (profile_name, profile position in footpath)
         // REMARK: there is no need to use the default profile
         for (auto& p : ppr_profiles_) {
+          // convert walk_duration from minutes to seconds
           p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
+          // build profile to idx map
           ppr_profile_pos_.insert({p.first, ppr_profile_pos_.size()});
+
+          // build list of profile infos
+          profiles_.emplace_back(p.second);
         }
 
         // Implementation of footpaths is inspired by parking
 
-        // TODO (Carsten, 1) Calculate internal and external transfers
         // 1st extract all platforms from a given osm file
         auto const osm_file = osm_event->path()->str();
 
@@ -141,14 +146,21 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 3rd combine platforms and stations
-        {
-          scoped_timer const combine_platforms_and_stations{
-              "transfers: combine single platforms and stations, build rtree."};
-          extracted_platforms.insert(extracted_platforms.end(),
-                                     stations.begin(), stations.end());
-          platforms_ =
-              std::make_unique<platforms>(platforms{extracted_platforms});
-        }
+
+        scoped_timer const combine_platforms_and_stations{
+            "transfers: combine single platforms and stations, build rtree."};
+        extracted_platforms.insert(extracted_platforms.end(), stations.begin(),
+                                   stations.end());
+        platforms_ =
+            std::make_unique<platforms>(platforms{extracted_platforms});
+
+        // 4th update osm_id and location_idx
+
+        // 5th build transfer requests
+        auto transfer_reqs = build_transfer_requests(
+            platforms_.get(), profiles_, max_walk_duration_);
+
+        // 6th get transfer requests result
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
 
         // TODO (Carsten, 2) Check for existing calculations. if state ==

@@ -155,12 +155,13 @@ std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
 }
 
 std::vector<platform_info*> platforms::get_valid_platforms_in_radius(
-    geo::latlng const& loc, double radius) {
-  return utl::all(platform_index_.in_radius(loc, radius)) |
+    platform_info* platform, double radius) {
+  return utl::all(platform_index_.in_radius(platform->pos_, radius)) |
          utl::transform(
              [this](std::size_t i) { return get_platform_info(i); }) |
-         utl::remove_if([&](auto* platform) {
-           return platform->idx_ == nigiri::location_idx_t::invalid();
+         utl::remove_if([&](auto* target_platform) {
+           return target_platform->idx_ == nigiri::location_idx_t::invalid() ||
+                  target_platform->idx_ == platform->idx_;
          }) |
          utl::vec();
 }
