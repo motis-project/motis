@@ -43,28 +43,29 @@ struct platform_handler : public osmium::handler::Handler {
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_track(osm_type::NODE, node.id(), node.location(), tags);
+      add_track(nigiri::osm_type::NODE, node.id(), node.location(), tags);
     }
   }
 
   void way(osmium::Way const& way) {
     auto const& tags = way.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_track(osm_type::WAY, way.id(), way.envelope().bottom_left(), tags);
+      add_track(nigiri::osm_type::WAY, way.id(), way.envelope().bottom_left(),
+                tags);
     }
   }
 
   void area(osmium::Area const& area) {
     auto const& tags = area.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_track(area.from_way() ? osm_type::WAY : osm_type::RELATION,
-                area.orig_id(), calc_center(*area.cbegin<osmium::OuterRing>()),
-                tags);
+      add_track(
+          area.from_way() ? nigiri::osm_type::WAY : nigiri::osm_type::RELATION,
+          area.orig_id(), calc_center(*area.cbegin<osmium::OuterRing>()), tags);
     }
   }
 
 private:
-  void add_track(osm_type const type, osmium::object_id_type const id,
+  void add_track(nigiri::osm_type const type, osmium::object_id_type const id,
                  osmium::geom::Coordinates const& coord,
                  osmium::TagList const& tags) {
     auto names = extract_platform_names(tags);
@@ -163,6 +164,14 @@ std::vector<platform_info*> platforms::get_valid_platforms_in_radius(
            return target_platform->idx_ == nigiri::location_idx_t::invalid() ||
                   target_platform->idx_ == platform->idx_;
          }) |
+         utl::vec();
+}
+
+std::vector<platform_info*> platforms::get_platforms_in_radius(
+    geo::latlng loc, double const radius) {
+  return utl::all(platform_index_.in_radius(loc, radius)) |
+         utl::transform(
+             [this](std::size_t i) { return get_platform_info(i); }) |
          utl::vec();
 }
 

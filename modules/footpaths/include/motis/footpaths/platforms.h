@@ -12,11 +12,11 @@
 #include "nigiri/types.h"
 
 namespace motis::footpaths {
-enum class osm_type : std::uint8_t { NODE, WAY, RELATION };
+// enum class osm_type : std::uint8_t { NODE, WAY, RELATION };
 
 struct platform_info {
   platform_info() = default;
-  platform_info(std::string name, int64_t osm_id, osm_type osm_type,
+  platform_info(std::string name, int64_t osm_id, nigiri::osm_type osm_type,
                 geo::latlng pos)
       : name_(std::move(name)),
         osm_id_(osm_id),
@@ -28,7 +28,7 @@ struct platform_info {
   std::string name_;
   int64_t osm_id_{-1};
   nigiri::location_idx_t idx_{nigiri::location_idx_t::invalid()};
-  osm_type osm_type_{osm_type::NODE};
+  nigiri::osm_type osm_type_{nigiri::osm_type::NODE};
   geo::latlng pos_;  // used to calculate distance to other tracks
 };
 
@@ -48,12 +48,23 @@ struct platforms {
    *  (2) target location_idx_t != platform location_idx_t => no transfer from
    * 'a' to 'a'
    *
-   * @param loc the location in the vicinity of which platforms are searched
-   * for.
-   * @param radius the maximal allowed distance |location, platform.pos|   *
+   * @param platform the platform in the vicinity of which other platforms are
+   * searched.
+   * @param radius the maximal allowed distance |location, platform.pos|
    */
   std::vector<platform_info*> get_valid_platforms_in_radius(
       platform_info* platform, double const radius);
+
+  /**
+   * Calculates all platforms within a radius of a given location.
+   * cf. get_valid_platforms_in_radius, but without validations.
+   *
+   * @param loc the location in the vicinity of which other platforms are
+   * searched.
+   * @param radius the maximal allowed distance |location, platform.pos|
+   */
+  std::vector<platform_info*> get_platforms_in_radius(geo::latlng loc,
+                                                      double const radius);
 
   std::size_t size() const { return platforms_.size(); }
 
