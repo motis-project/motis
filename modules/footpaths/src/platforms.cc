@@ -11,6 +11,8 @@
 #include "osmium/index/map/flex_mem.hpp"
 #include "osmium/visitor.hpp"
 
+#include "utl/pipes.h"
+
 namespace logging = motis::logging;
 
 using index_type = osmium::index::map::FlexMem<osmium::unsigned_object_id_type,
@@ -150,6 +152,13 @@ std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
     platform_names.emplace_back(tags["ref"]);
   }
   return platform_names;
+}
+
+std::vector<platform_info> platforms::get_platforms_in_radius(
+    geo::latlng const& loc, double radius) {
+  return utl::all(platform_index_.in_radius(loc, radius)) |
+         utl::transform([this](std::size_t i) { return platforms_[i]; }) |
+         utl::vec();
 }
 
 }  // namespace motis::footpaths

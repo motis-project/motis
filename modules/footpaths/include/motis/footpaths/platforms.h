@@ -15,7 +15,7 @@ namespace motis::footpaths {
 enum class osm_type : std::uint8_t { NODE, WAY, RELATION };
 
 struct platform_info {
-  platform_info() = delete;
+  platform_info() = default;
   platform_info(std::string name, int64_t osm_id, osm_type osm_type,
                 geo::latlng pos)
       : name_(std::move(name)),
@@ -40,6 +40,16 @@ struct platforms {
     platform_index_ =
         geo::make_point_rtree(platforms_, [](auto const& p) { return p.pos_; });
   }
+
+  /**
+   * Calculates all platforms that are within a radius of the given location.
+   *
+   * @param loc the location in the vicinity of which platforms are searched
+   * for.
+   * @param radius the maximal allowed distance |location, platform.pos|   *
+   */
+  std::vector<platform_info> get_platforms_in_radius(geo::latlng const& loc,
+                                                     double radius);
 
   std::size_t size() const { return platforms_.size(); }
 
