@@ -152,7 +152,7 @@ struct ppr::impl {
     }
   }
 
-  msg_ptr route(msg_ptr const& msg) {
+  msg_ptr route(msg_ptr const& msg) const {
     switch (msg->get()->content_type()) {
       case MsgContent_FootRoutingRequest: return route_normal(msg);
       case MsgContent_FootRoutingSimpleRequest: return route_simple(msg);
@@ -163,7 +163,7 @@ struct ppr::impl {
     }
   }
 
-  msg_ptr get_profiles() {
+  msg_ptr get_profiles() const {
     message_creator fbb;
     auto profiles = utl::to_vec(data_.profiles_, [&](auto const& e) {
       auto const& p = e.second.profile_;
@@ -178,7 +178,7 @@ struct ppr::impl {
   }
 
 private:
-  msg_ptr route_normal(msg_ptr const& msg) {
+  msg_ptr route_normal(msg_ptr const& msg) const {
     auto const req = motis_content(FootRoutingRequest, msg);
 
     auto start = to_location(req->start());
@@ -212,7 +212,7 @@ private:
     return make_msg(fbb);
   }
 
-  msg_ptr route_simple(msg_ptr const& msg) {
+  msg_ptr route_simple(msg_ptr const& msg) const {
     auto const req = motis_content(FootRoutingSimpleRequest, msg);
 
     auto start = to_location(req->start());
@@ -244,7 +244,7 @@ private:
     return make_msg(fbb);
   }
 
-  search_profile get_search_profile(SearchOptions const* opt) {
+  search_profile get_search_profile(SearchOptions const* opt) const {
     auto profile = search_profile{};
     auto const name = opt->profile()->str();
     auto const it = data_.profiles_.find(name);
