@@ -20,6 +20,7 @@
 
 #include "nigiri/timetable.h"
 
+#include "utl/parallel_for.h"
 #include "utl/verify.h"
 
 using namespace motis::logging;
@@ -216,6 +217,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
 }
 
 void footpaths::match_locations_and_platforms() {
+  // --- initialization:
   // initialize match distance range
   auto const match_distance = boost::irange(
       match_distance_min_, match_distance_max_, match_distance_step_);
@@ -286,21 +288,25 @@ void footpaths::match_locations_and_platforms() {
     return matched_location;
   };
 
-  // TODO (Carsten) use utl::parallel_for
-  for (auto i = nigiri::location_idx_t{0U};
-       i < impl_->tt_.locations_.ids_.size(); ++i) {
-    if (impl_->tt_.locations_.types_[i] != nigiri::location_type::kTrack) {
-      continue;
+  // --- matching:
+  auto locations =
+      boost::irange(0, static_cast<int>(impl_->tt_.locations_.ids_.size()), 1);
+
+  utl::parallel_for(locations, [&](auto i) {
+    auto location_idx = nigiri::location_idx_t{i};
+    if (impl_->tt_.locations_.types_[location_idx] !=
+        nigiri::location_type::kTrack) {
+      return;
     }
 
     // match location and platform using exact name match
-    auto matched = match_by_distance(i, exact_name_match);
+    auto matched = match_by_distance(location_idx, exact_name_match);
 
     // if no exact match was found: try regex name match
     if (!matched) {
-      match_by_distance(i, exact_first_number_match);
+      match_by_distance(location_idx, exact_first_number_match);
     }
-  }
+  });
 
   return;
 }
