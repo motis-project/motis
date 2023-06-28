@@ -2,9 +2,12 @@
 
 #include <filesystem>
 #include <iostream>
+#include <regex>
+
+#include "boost/range/adaptors.hpp"
+#include "boost/range/irange.hpp"
 
 #include "cista/memory_holder.h"
-#include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
@@ -16,6 +19,8 @@
 #include "motis/ppr/profiles.h"
 
 #include "nigiri/timetable.h"
+
+#include "utl/verify.h"
 
 using namespace motis::logging;
 using namespace motis::module;
@@ -127,38 +132,56 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         // Implementation of footpaths is inspired by parking
 
         // 1st extract all platforms from a given osm file
-        auto const osm_file = osm_event->path()->str();
+        std::vector<platform_info> extracted_platforms;
+        {
+          scoped_timer const timer{
+              "transfers: extract all platforms from a given osm file."};
+          auto const osm_file = osm_event->path()->str();
 
-        LOG(info) << "Extracting platforms from " << osm_file;
-        auto extracted_platforms = extract_osm_platforms(osm_file);
+          LOG(info) << "Extracting platforms from " << osm_file;
+          extracted_platforms = extract_osm_platforms(osm_file);
+        }
 
         // 2nd extract all stations from the nigiri graph
         std::vector<platform_info> stations{};
+        {
+          scoped_timer const timer{
+              "transfers: extract stations from nigiri graph."};
 
-        for (auto i = nigiri::location_idx_t{0U};
-             i != impl_->tt_.locations_.ids_.size(); ++i) {
-          if (impl_->tt_.locations_.types_[i] ==
-              nigiri::location_type::kStation) {
-            auto const name = impl_->tt_.locations_.names_[i].view();
-            stations.emplace_back(static_cast<std::string>(name), i,
-                                  impl_->tt_.locations_.coordinates_[i]);
+          for (auto i = nigiri::location_idx_t{0U};
+               i != impl_->tt_.locations_.ids_.size(); ++i) {
+            if (impl_->tt_.locations_.types_[i] ==
+                nigiri::location_type::kStation) {
+              auto const name = impl_->tt_.locations_.names_[i].view();
+              stations.emplace_back(static_cast<std::string>(name), i,
+                                    impl_->tt_.locations_.coordinates_[i]);
+            }
           }
         }
 
         // 3rd combine platforms and stations
-
-        scoped_timer const combine_platforms_and_stations{
-            "transfers: combine single platforms and stations, build rtree."};
-        extracted_platforms.insert(extracted_platforms.end(), stations.begin(),
-                                   stations.end());
-        platforms_ =
-            std::make_unique<platforms>(platforms{extracted_platforms});
+        {
+          scoped_timer const timer{
+              "transfers: combine single platforms and stations, build rtree."};
+          extracted_platforms.insert(extracted_platforms.end(),
+                                     stations.begin(), stations.end());
+          platforms_ =
+              std::make_unique<platforms>(platforms{extracted_platforms});
+        }
 
         // 4th update osm_id and location_idx
+        {
+          scoped_timer const timer{
+              "transfers: match locations and osm platforms"};
+          match_locations_and_platforms();
+        }
 
         // 5th build transfer requests
-        auto transfer_reqs = build_transfer_requests(
-            platforms_.get(), profiles_, max_walk_duration_);
+        {
+          scoped_timer const timer{"transfer: build transfer requests."};
+          auto transfer_reqs = build_transfer_requests(
+              platforms_.get(), profiles_, max_walk_duration_);
+        }
 
         // 6th get transfer requests result
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
@@ -190,6 +213,96 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
       ->require("PPR", [](msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_PPREvent;
       });
+}
+
+void footpaths::match_locations_and_platforms() {
+  // initialize match distance range
+  auto const match_distance = boost::irange(
+      match_distance_min_, match_distance_max_, match_distance_step_);
+
+  // initialize str_a == str_b lambda function
+  auto exact_name_match = [](std::string str_a, std::string_view str_b) {
+    return str_a == str_b;
+  };
+
+  // initialize number_a == number_b regex number match lambda
+  auto exact_first_number_match = [](std::string str_a,
+                                     std::string_view str_b) {
+    str_a = std::regex_replace(str_a, std::regex("[^0-9]+"), std::string("$1"));
+    str_b = std::regex_replace(std::string{str_b}, std::regex("[^0-9]+"),
+                               std::string("$1"));
+    if (str_b.length() == 0) {
+      return false;
+    }
+    return str_a == str_b;
+  };
+
+  // initialize match location and platforms using platforms near location
+  auto match_by_distance = [this, match_distance](
+                               nigiri::location_idx_t const i, auto& matches) {
+    auto loc = impl_->tt_.locations_.coordinates_[i];
+    bool matched_location{false};
+
+    for (auto dist : match_distance) {
+      for (auto* platform :
+           platforms_.get()->get_platforms_in_radius(loc, dist)) {
+        // only match bus stops with a distance of up to a certain distance
+        if (platform->is_bus_stop_ && dist > match_bus_stop_max_distance_) {
+          continue;
+        }
+
+        // TODO (Carsten) Bus-Stops are matched within a
+        // 120m radius;
+        // only match platforms with location if they have the same name
+        if (matches(platform->name_,
+                    this->impl_->tt_.locations_.names_[i].view())) {
+          continue;
+        }
+        // only match platforms with a valid osm id
+        if (platform->osm_id_ == -1) {
+          continue;
+        }
+
+        // matched: update osm_id and osm_type of location to match platform
+        impl_->tt_.locations_.osm_ids_[i] =
+            nigiri::osm_node_id_t{platform->osm_id_};
+        impl_->tt_.locations_.osm_types_[i] = platform->osm_type_;
+        if (platform->idx_ == nigiri::location_idx_t::invalid()) {
+          platform->idx_ = i;
+        }
+
+        matched_location = true;
+        break;
+      }
+
+      // location unmatched: increase match distance
+      if (!matched_location) {
+        continue;
+      }
+
+      // matched location to platform. GoTo next platform
+      break;
+    }
+    return matched_location;
+  };
+
+  // TODO (Carsten) use utl::parallel_for
+  for (auto i = nigiri::location_idx_t{0U};
+       i < impl_->tt_.locations_.ids_.size(); ++i) {
+    if (impl_->tt_.locations_.types_[i] != nigiri::location_type::kTrack) {
+      continue;
+    }
+
+    // match location and platform using exact name match
+    auto matched = match_by_distance(i, exact_name_match);
+
+    // if no exact match was found: try regex name match
+    if (!matched) {
+      match_by_distance(i, exact_first_number_match);
+    }
+  }
+
+  return;
 }
 
 }  // namespace motis::footpaths

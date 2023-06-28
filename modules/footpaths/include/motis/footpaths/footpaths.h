@@ -27,7 +27,27 @@ private:
   // directories
   fs::path module_data_dir() const;
 
+  /**
+   * Matches any location to one imported osm platform (or station). Updates the
+   * osm_id and type of a location (when match is found)
+   *
+   * The match distance is iteratively increased from match_distance_min to
+   * match_distance_max in step size match_distance_step_.
+   *
+   * Bus Stops are only matched up to a distance of match_bus_stop_distance_.
+   *
+   * 1st. for each location exact matches by name are searched.
+   * 2nd. (if 1st failed) for each location only match platform number.
+   *
+   */
+  void match_locations_and_platforms();
+
   int max_walk_duration_{15};
+
+  int match_distance_min_{0};
+  int match_distance_max_{400};
+  int match_distance_step_{40};
+  int match_bus_stop_max_distance_{120};
 
   struct impl;
   std::unique_ptr<impl> impl_;
