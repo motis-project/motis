@@ -512,9 +512,11 @@ void parking::import(import_dispatcher& reg) {
                       << " ppr profiles, " << stations_->size() << " stations)";
 
             progress_tracker->status("Compute Foot Edges");
+            auto const& ppr_data =
+                *get_shared_data<motis::ppr::ppr_data const*>(
+                    to_res_id(global_res_id::PPR_DATA));
             compute_foot_edges_direct(
-                db, foot_edge_tasks, ppr_profiles_, ppr_ev->graph_path()->str(),
-                edge_rtree_max_size_, area_rtree_max_size_, lock_rtrees_,
+                db, foot_edge_tasks, ppr_data, ppr_profiles_,
                 std::thread::hardware_concurrency(), ppr_exact_);
           } else {
             std::clog << "OSM import disabled, not importing parking lots"
