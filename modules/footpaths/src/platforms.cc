@@ -43,38 +43,41 @@ struct platform_handler : public osmium::handler::Handler {
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_track(nigiri::osm_type::NODE, node.id(), node.location(), tags);
+      add_platform(nigiri::osm_type::NODE, node.id(), node.location(), tags);
     }
   }
 
   void way(osmium::Way const& way) {
     auto const& tags = way.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_track(nigiri::osm_type::WAY, way.id(), way.envelope().bottom_left(),
-                tags);
+      add_platform(nigiri::osm_type::WAY, way.id(),
+                   way.envelope().bottom_left(), tags);
     }
   }
 
   void area(osmium::Area const& area) {
     auto const& tags = area.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_track(
+      add_platform(
           area.from_way() ? nigiri::osm_type::WAY : nigiri::osm_type::RELATION,
           area.orig_id(), calc_center(*area.cbegin<osmium::OuterRing>()), tags);
     }
   }
 
 private:
-  void add_track(nigiri::osm_type const type, osmium::object_id_type const id,
-                 osmium::geom::Coordinates const& coord,
-                 osmium::TagList const& tags) {
+  void add_platform(nigiri::osm_type const type,
+                    osmium::object_id_type const id,
+                    osmium::geom::Coordinates const& coord,
+                    osmium::TagList const& tags) {
     auto names = extract_platform_names(tags);
+    // TODO (Carsten) Update Postprocess names; Names are used in lookup;
+
     platforms_.emplace_back(names.front(), id, type,
-                            geo::latlng{coord.y, coord.x});
+                            geo::latlng{coord.y, coord.x},
+                            platform_is_bus_stop(tags));
 
     /**
-    // TODO (Carsten) Update Postprocess names; Names are used in lookup;
-    // TODO (Carsten)
+
     auto const name = names.back();
 
     names.clear();
@@ -153,6 +156,11 @@ std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
     platform_names.emplace_back(tags["ref"]);
   }
   return platform_names;
+}
+
+bool platform_is_bus_stop(osmium::TagList const& tags) {
+  return (tags.has_key("highway") &&
+          strcmp(tags.get_value_by_key("highway"), "bus_stop") == 0);
 }
 
 std::vector<platform_info*> platforms::get_valid_platforms_in_radius(

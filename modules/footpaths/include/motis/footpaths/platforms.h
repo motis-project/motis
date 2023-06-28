@@ -17,11 +17,12 @@ namespace motis::footpaths {
 struct platform_info {
   platform_info() = default;
   platform_info(std::string name, int64_t osm_id, nigiri::osm_type osm_type,
-                geo::latlng pos)
+                geo::latlng pos, bool is_bus_stop)
       : name_(std::move(name)),
         osm_id_(osm_id),
         osm_type_(osm_type),
-        pos_(pos){};
+        pos_(pos),
+        is_bus_stop_(is_bus_stop){};
   platform_info(std::string name, nigiri::location_idx_t idx, geo::latlng pos)
       : name_(std::move(name)), idx_(idx), pos_(pos){};
 
@@ -30,6 +31,7 @@ struct platform_info {
   nigiri::location_idx_t idx_{nigiri::location_idx_t::invalid()};
   nigiri::osm_type osm_type_{nigiri::osm_type::NODE};
   geo::latlng pos_;  // used to calculate distance to other tracks
+  bool is_bus_stop_{false};
 };
 
 struct platforms {
@@ -95,5 +97,13 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file);
  * @return a list of names found in tags.
  */
 std::vector<std::string> extract_platform_names(osmium::TagList const& tags);
+
+/**
+ * Extracts the the information whether a platform is a bus stop or not from a
+ * given tag list.
+ *
+ * @param tags a list of key-value pairs describing an OSM-Object.
+ */
+bool platform_is_bus_stop(osmium::TagList const& tags);
 
 }  // namespace motis::footpaths
