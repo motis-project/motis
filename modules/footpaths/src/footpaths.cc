@@ -253,8 +253,6 @@ void footpaths::match_locations_and_platforms() {
           continue;
         }
 
-        // TODO (Carsten) Bus-Stops are matched within a
-        // 120m radius;
         // only match platforms with location if they have the same name
         if (matches(platform->name_,
                     this->impl_->tt_.locations_.names_[i].view())) {

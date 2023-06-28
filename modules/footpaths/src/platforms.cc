@@ -70,32 +70,11 @@ private:
                     osmium::geom::Coordinates const& coord,
                     osmium::TagList const& tags) {
     auto names = extract_platform_names(tags);
-    // TODO (Carsten) Update Postprocess names; Names are used in lookup;
+    // TODO (Carsten) Update/Postprocess names;
 
     platforms_.emplace_back(names.front(), id, type,
                             geo::latlng{coord.y, coord.x},
                             platform_is_bus_stop(tags));
-
-    /**
-
-    auto const name = names.back();
-
-    names.clear();
-    boost::split(names, name, [](char c) { return c == ';' || c == '/'; });
-    bool use_only_one_name =
-        std::any_of(names.begin(), names.end(),
-                    [](std::string const& name) { return name.length() > 3; });
-
-    if (use_only_one_name) {
-      platforms_.emplace_back(
-          track_info{id, type, names.front(), geo::latlng{coord.y, coord.x}});
-    } else {
-      for (auto const& name : names) {
-        platforms_.emplace_back(
-            track_info{id, type, name, geo::latlng{coord.y, coord.x}});
-      }
-    }
-     */
   }
 
   std::vector<platform_info>& platforms_;
