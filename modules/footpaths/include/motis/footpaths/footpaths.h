@@ -49,6 +49,12 @@ private:
   int match_distance_step_{40};
   int match_bus_stop_max_distance_{120};
 
+  // initialize ppr routing data
+  std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};
+  std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
+  bool lock_rtrees_{false};
+  bool ppr_exact_{true};
+
   struct impl;
   std::unique_ptr<impl> impl_;
   std::map<std::string, ppr::profile_info> ppr_profiles_;

@@ -15,8 +15,12 @@
 
 #include "motis/footpaths/platforms.h"
 #include "motis/footpaths/transfer_requests.h"
+#include "motis/footpaths/transfer_updates.h"
 
 #include "motis/ppr/profiles.h"
+
+#include "ppr/common/routing_graph.h"
+#include "ppr/serialization/reader.h"
 
 #include "nigiri/timetable.h"
 
@@ -25,6 +29,7 @@
 
 using namespace motis::logging;
 using namespace motis::module;
+using namespace ppr::serialization;
 
 namespace fs = std::filesystem;
 
@@ -178,13 +183,35 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 5th build transfer requests
+        std::vector<transfer_requests> transfer_reqs;
         {
           scoped_timer const timer{"transfer: build transfer requests."};
-          auto transfer_reqs = build_transfer_requests(
-              platforms_.get(), profiles_, max_walk_duration_);
+          transfer_reqs = build_transfer_requests(platforms_.get(), profiles_,
+                                                  max_walk_duration_);
         }
 
         // 6th get transfer requests result
+        ::ppr::routing_graph rg;
+        {
+          scoped_timer const timer{"transfers: loading ppr routing graph."};
+          read_routing_graph(rg, ppr_event->graph_path()->str());
+        }
+
+        {
+          scoped_timer const timer{"transfers: preparing ppr rtrees."};
+          rg.prepare_for_routing(
+              edge_rtree_max_size_, area_rtree_max_size_,
+              lock_rtrees_ ? rtree_options::LOCK : rtree_options::PREFETCH);
+        }
+        {
+          scoped_timer const timer{"transfers: delete default transfers."};
+          // TODO (Carsten) delete all transfers in nigiri tt.
+        }
+        {
+          scoped_timer const timer{"transfers: update nigiri transfers"};
+          update_nigiri_transfers(rg, impl_->tt_, transfer_reqs);
+        }
+
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
 
         // TODO (Carsten, 2) Check for existing calculations. if state ==
