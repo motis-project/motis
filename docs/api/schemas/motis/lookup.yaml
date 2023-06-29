@@ -179,3 +179,8 @@ LookupStationInfoResponse:
         reachable via footpaths.
 
         The order of the stations is unspecified.
+LookupStationLocationResponse:
+  description: TODO
+  fields:
+    position:
+      description: TODO

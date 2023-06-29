@@ -18,6 +18,8 @@ export interface RtMetrics {
   track_messages: number[];
   full_trip_messages: number[];
   trip_formation_messages: number[];
+  full_trip_schedule_messages: number[];
+  full_trip_update_messages: number[];
   new_trips: number[];
   cancellations: number[];
   reroutes: number[];

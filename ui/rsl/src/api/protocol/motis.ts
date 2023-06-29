@@ -23,6 +23,7 @@ import {
   LookupStationEventsResponse,
   LookupStationInfoRequest,
   LookupStationInfoResponse,
+  LookupStationLocationResponse,
 } from "@/api/protocol/motis/lookup";
 import {
   PaxForecastApplyMeasuresRequest,
@@ -80,7 +81,11 @@ import {
   RISForwardTimeRequest,
   RISStatusResponse,
 } from "@/api/protocol/motis/ris";
-import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
+import {
+  InputStation,
+  RoutingRequest,
+  RoutingResponse,
+} from "@/api/protocol/motis/routing";
 import { RtMetricsRequest, RtMetricsResponse } from "@/api/protocol/motis/rt";
 
 // base/Position.fbs
@@ -376,6 +381,8 @@ export type MsgContent =
   | LookupStationInfoResponse
   | PaxMonGetTripCapacityRequest
   | PaxMonGetTripCapacityResponse
+  | LookupStationLocationResponse
+  | InputStation
   | RISStatusResponse
   | RtMetricsRequest
   | RtMetricsResponse
@@ -458,6 +465,8 @@ export type MsgContentType =
   | "LookupStationInfoResponse"
   | "PaxMonGetTripCapacityRequest"
   | "PaxMonGetTripCapacityResponse"
+  | "LookupStationLocationResponse"
+  | "InputStation"
   | "RISStatusResponse"
   | "RtMetricsRequest"
   | "RtMetricsResponse"

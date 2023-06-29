@@ -22,6 +22,8 @@ struct metrics_entry {
   std::uint32_t trip_formation_messages_{};
 
   // full trip messages:
+  std::uint32_t ft_schedule_messages_{};
+  std::uint32_t ft_update_messages_{};
   std::uint32_t ft_new_trips_{};
   std::uint32_t ft_cancellations_{};
   std::uint32_t ft_reroutes_{};

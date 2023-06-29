@@ -14,6 +14,8 @@ table RtMetrics {
   trip_formation_messages: [ulong];
 
   // full trip messages:
+  full_trip_schedule_messages: [ulong];
+  full_trip_update_messages: [ulong];
   new_trips: [ulong];
   cancellations: [ulong];
   reroutes: [ulong];

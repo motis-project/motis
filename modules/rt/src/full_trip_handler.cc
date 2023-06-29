@@ -147,6 +147,12 @@ struct full_trip_handler {
         processing_time_{processing_time} {}
 
   void handle_msg() {
+    if (msg_->message_type() == FullTripMessageType_Schedule) {
+      update_metrics([](metrics_entry* m) { ++m->ft_schedule_messages_; });
+    } else {
+      update_metrics([](metrics_entry* m) { ++m->ft_update_messages_; });
+    }
+
     if (!check_events()) {
       LOG(warn) << "[FTH] invalid event sequence (status "
                 << static_cast<int>(result_.status_) << ")";

@@ -19,20 +19,26 @@ export type RtMetricsChartProps = {
   margin?: { top: number; right: number; bottom: number; left: number };
 };
 
-const dataColor1 = "#6c5efb";
-const dataColor2 = "#f8a041";
+const dataColor1 = "#090062";
+const dataColor2 = "#6c5efb";
+const dataColor3 = "#f8a041";
 const axisColor = "#a44afe";
 const background = "#eaedff";
 const defaultMargin = { top: 40, right: 20, bottom: 0, left: 20 };
 
 interface MinuteMetrics {
   index: number;
-  "Trip Updates": number;
+  Sollfahrten: number;
+  "Fahrt Updates": number;
   "Formation Updates": number;
 }
 
-type MetricName = "Trip Updates" | "Formation Updates";
-const keys: MetricName[] = ["Trip Updates", "Formation Updates"];
+type MetricName = "Sollfahrten" | "Fahrt Updates" | "Formation Updates";
+const keys: MetricName[] = [
+  "Sollfahrten",
+  "Fahrt Updates",
+  "Formation Updates",
+];
 
 const getIndex = (d: MinuteMetrics) => d.index;
 
@@ -54,7 +60,8 @@ function RtMetricsChart({
     for (let i = 0; i < metrics.entries; i++) {
       data.push({
         index: i,
-        "Trip Updates": metrics.full_trip_messages[i],
+        Sollfahrten: metrics.full_trip_schedule_messages[i],
+        "Fahrt Updates": metrics.full_trip_update_messages[i],
         "Formation Updates": metrics.trip_formation_messages[i],
       });
     }
@@ -75,7 +82,7 @@ function RtMetricsChart({
   });
   const colorScale = scaleOrdinal<MetricName, string>({
     domain: keys,
-    range: [dataColor1, dataColor2],
+    range: [dataColor1, dataColor2, dataColor3],
   });
 
   const formatIndexDate = (index: number) =>

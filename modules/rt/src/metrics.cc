@@ -47,8 +47,9 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
   auto const metrics_to_fbs = [&](rt_metrics_storage const& m) {
     std::vector<std::uint64_t> messages, delay_messages, cancel_messages,
         additional_messages, reroute_messages, track_messages,
-        full_trip_messages, trip_formation_messages, new_trips, cancellations,
-        reroutes, rule_service_reroutes, trip_delay_updates,
+        full_trip_messages, trip_formation_messages,
+        full_trip_schedule_messages, full_trip_update_messages, new_trips,
+        cancellations, reroutes, rule_service_reroutes, trip_delay_updates,
         event_delay_updates, trip_track_updates, trip_id_not_found,
         trip_id_ambiguous, formation_invalid_trip_id,
         formation_trip_id_not_found, formation_trip_id_ambiguous;
@@ -61,6 +62,8 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
     track_messages.reserve(m.size());
     full_trip_messages.reserve(m.size());
     trip_formation_messages.reserve(m.size());
+    full_trip_schedule_messages.reserve(m.size());
+    full_trip_update_messages.reserve(m.size());
     new_trips.reserve(m.size());
     cancellations.reserve(m.size());
     reroutes.reserve(m.size());
@@ -84,6 +87,8 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
       track_messages.push_back(entry.track_messages_);
       full_trip_messages.push_back(entry.full_trip_messages_);
       trip_formation_messages.push_back(entry.trip_formation_messages_);
+      full_trip_schedule_messages.push_back(entry.ft_schedule_messages_);
+      full_trip_update_messages.push_back(entry.ft_update_messages_);
       new_trips.push_back(entry.ft_new_trips_);
       cancellations.push_back(entry.ft_cancellations_);
       reroutes.push_back(entry.ft_reroutes_);
@@ -106,7 +111,9 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
         mc.CreateVector(delay_messages), mc.CreateVector(cancel_messages),
         mc.CreateVector(additional_messages), mc.CreateVector(reroute_messages),
         mc.CreateVector(track_messages), mc.CreateVector(full_trip_messages),
-        mc.CreateVector(trip_formation_messages), mc.CreateVector(new_trips),
+        mc.CreateVector(trip_formation_messages),
+        mc.CreateVector(full_trip_schedule_messages),
+        mc.CreateVector(full_trip_update_messages), mc.CreateVector(new_trips),
         mc.CreateVector(cancellations), mc.CreateVector(reroutes),
         mc.CreateVector(rule_service_reroutes),
         mc.CreateVector(trip_delay_updates),

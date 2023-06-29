@@ -239,6 +239,8 @@ FullTripMessage:
       description: TODO
     sections:
       description: TODO
+    message_type:
+      description: TODO
 RISBatch:
   description: TODO
   fields:
@@ -409,3 +411,5 @@ RISStatusResponse:
       description: TODO
     init_status:
       description: TODO
+FullTripMessageType:
+  description: TODO
