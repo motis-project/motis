@@ -24,6 +24,7 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
+#include "motis/ppr/data.h"
 #include "motis/ppr/error.h"
 #include "motis/ppr/profiles.h"
 
@@ -132,26 +133,26 @@ struct ppr::impl {
                 std::map<std::string, profile_info>& profiles,
                 std::size_t edge_rtree_max_size,
                 std::size_t area_rtree_max_size, rtree_options rtree_opt,
-                bool verify_routing_graph, bool check_integrity)
-      : profiles_{profiles} {
+                bool verify_routing_graph, bool check_integrity) {
+    data_.profiles_ = profiles;
     {
       scoped_timer const timer("loading ppr routing graph");
-      read_routing_graph(rg_, rg_path, check_integrity);
+      read_routing_graph(data_.rg_, rg_path, check_integrity);
     }
     {
       scoped_timer const timer("preparing ppr r-trees");
-      rg_.prepare_for_routing(edge_rtree_max_size, area_rtree_max_size,
-                              rtree_opt);
+      data_.rg_.prepare_for_routing(edge_rtree_max_size, area_rtree_max_size,
+                                    rtree_opt);
     }
     if (verify_routing_graph) {
       scoped_timer const timer("verifying ppr routing graph");
-      if (!verify_graph(rg_)) {
+      if (!verify_graph(data_.rg_)) {
         throw std::runtime_error("invalid ppr routing graph");
       }
     }
   }
 
-  msg_ptr route(msg_ptr const& msg) {
+  msg_ptr route(msg_ptr const& msg) const {
     switch (msg->get()->content_type()) {
       case MsgContent_FootRoutingRequest: return route_normal(msg);
       case MsgContent_FootRoutingSimpleRequest: return route_simple(msg);
@@ -162,9 +163,9 @@ struct ppr::impl {
     }
   }
 
-  msg_ptr get_profiles() {
+  msg_ptr get_profiles() const {
     message_creator fbb;
-    auto profiles = utl::to_vec(profiles_, [&](auto const& e) {
+    auto profiles = utl::to_vec(data_.profiles_, [&](auto const& e) {
       auto const& p = e.second.profile_;
       return CreateFootRoutingProfileInfo(fbb, fbb.CreateString(e.first),
                                           p.walking_speed_);
@@ -177,7 +178,7 @@ struct ppr::impl {
   }
 
 private:
-  msg_ptr route_normal(msg_ptr const& msg) {
+  msg_ptr route_normal(msg_ptr const& msg) const {
     auto const req = motis_content(FootRoutingRequest, msg);
 
     auto start = to_location(req->start());
@@ -191,7 +192,8 @@ private:
                          ? search_direction::FWD
                          : search_direction::BWD;
 
-    auto const result = find_routes(rg_, start, destinations, profile, dir);
+    auto const result =
+        find_routes(data_.rg_, start, destinations, profile, dir);
 
     message_creator fbb;
     auto const include_steps = req->include_steps();
@@ -210,7 +212,7 @@ private:
     return make_msg(fbb);
   }
 
-  msg_ptr route_simple(msg_ptr const& msg) {
+  msg_ptr route_simple(msg_ptr const& msg) const {
     auto const req = motis_content(FootRoutingSimpleRequest, msg);
 
     auto start = to_location(req->start());
@@ -220,8 +222,8 @@ private:
     if (req->max_duration() != 0) {
       profile.duration_limit_ = req->max_duration();
     }
-    auto const result =
-        find_routes(rg_, start, destinations, profile, search_direction::FWD);
+    auto const result = find_routes(data_.rg_, start, destinations, profile,
+                                    search_direction::FWD);
 
     message_creator fbb;
     auto const include_steps = req->include_steps();
@@ -242,11 +244,11 @@ private:
     return make_msg(fbb);
   }
 
-  search_profile get_search_profile(SearchOptions const* opt) {
+  search_profile get_search_profile(SearchOptions const* opt) const {
     auto profile = search_profile{};
     auto const name = opt->profile()->str();
-    auto const it = profiles_.find(name);
-    if (it != end(profiles_)) {
+    auto const it = data_.profiles_.find(name);
+    if (it != end(data_.profiles_)) {
       profile = it->second.profile_;
     } else if (!name.empty() && name != "default") {
       throw std::system_error(error::profile_not_available);
@@ -255,8 +257,8 @@ private:
     return profile;
   }
 
-  routing_graph rg_;
-  std::map<std::string, profile_info>& profiles_;
+public:
+  ppr_data data_;
 };
 
 ppr::ppr() : module("Foot Routing", "ppr") {
@@ -307,10 +309,32 @@ void ppr::import(import_dispatcher& reg) {
                          : (prefetch_rtrees_ ? rtree_options::PREFETCH
                                              : rtree_options::DEFAULT);
 
+        auto profiles = std::map<std::string, profile_info>{};
+        read_profile_files(profile_files_, profiles);
+        auto profiles_hash = cista::BASE_HASH;
+        for (auto const& p : profiles) {
+          profiles_hash =
+              cista::hash_combine(profiles_hash, p.second.file_hash_);
+        }
+
+        auto graph_hash = cista::hash_t{};
+        auto graph_size = std::size_t{};
+
         auto const load_graph = [&]() {
           impl_ = std::make_unique<impl>(
-              graph_file(), profiles_, edge_rtree_max_size_,
+              graph_file(), profiles, edge_rtree_max_size_,
               area_rtree_max_size_, rtree_opt, verify_graph_, check_integrity_);
+
+          auto& mem_holder = impl_->data_.rg_.data_.mem_;
+          utl::verify(
+              std::holds_alternative<cista::buf<cista::mmap>>(mem_holder),
+              "expected memory mapped ppr graph");
+          auto& mmap_buf = std::get<cista::buf<cista::mmap>>(mem_holder);
+          graph_hash = cista::hash(std::string_view{
+              reinterpret_cast<char const*>(mmap_buf.base()),
+              std::min(static_cast<std::size_t>(50 * 1024 * 1024),
+                       mmap_buf.size())});
+          graph_size = mmap_buf.size();
         };
 
         if (!state_changed) {
@@ -366,35 +390,24 @@ void ppr::import(import_dispatcher& reg) {
           auto const result = pp::create_routing_data(opt, log);
           utl::verify(result.successful(), result.error_msg_);
           write_ini(dir / "import.ini", state);
-        }
 
-        try {
-          load_graph();
-        } catch (std::exception const& e) {
-          impl_.reset();
-          LOG(logging::error)
-              << "loading ppr routing graph failed: " << e.what();
+          try {
+            load_graph();
+          } catch (std::exception const& e) {
+            impl_.reset();
+            LOG(logging::error)
+                << "loading ppr routing graph failed: " << e.what();
+          }
         }
 
         import_successful_ = impl_ != nullptr;
-
         progress_tracker->update(100);
-        auto graph_hash = cista::hash_t{};
-        auto graph_size = std::size_t{};
-        {
-          cista::mmap m{graph_file().c_str(), cista::mmap::protection::READ};
-          graph_hash = cista::hash(std::string_view{
-              reinterpret_cast<char const*>(m.begin()),
-              std::min(static_cast<std::size_t>(50 * 1024 * 1024), m.size())});
-          graph_size = m.size();
+
+        if (impl_ == nullptr) {
+          return;
         }
 
-        read_profile_files(profile_files_, profiles_);
-        auto profiles_hash = cista::BASE_HASH;
-        for (auto const& p : profiles_) {
-          profiles_hash =
-              cista::hash_combine(profiles_hash, p.second.file_hash_);
-        }
+        add_shared_data(to_res_id(global_res_id::PPR_DATA), &impl_->data_);
 
         message_creator fbb;
         fbb.create_and_finish(
@@ -402,7 +415,7 @@ void ppr::import(import_dispatcher& reg) {
             motis::import::CreatePPREvent(
                 fbb, fbb.CreateString(graph_file()), graph_hash, graph_size,
                 fbb.CreateVector(utl::to_vec(
-                    profiles_,
+                    profiles,
                     [&](auto const& p) {
                       return motis::import::CreatePPRProfile(
                           fbb, fbb.CreateString(p.first),
