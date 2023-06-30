@@ -48,25 +48,22 @@ jobs:
         id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
-          restore-keys: |
-            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
-            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-
-            buildcache-wnds-${{ matrix.config.mode }}-
+          key: buildcache-wnds-${{ matrix.config.mode }}
 
       - name: Restore Dependencies Cache
         uses: actions/cache/restore@v3
         id: restore-deps-cache
         with:
           path: ${{ github.workspace }}/deps
-          key: deps-${{ hashFiles('.pkg') }}
-          restore-keys: deps-
+          key: deps
+          enableCrossOsArchive: true
 
       # ==== BUILD ====
       - uses: ilammy/msvc-dev-cmd@v1
 
       - name: Build
         run: |
+          git config --global core.autocrlf input
           cmake `
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} `
@@ -208,3 +205,4 @@ jobs:
         with:
           path: ${{ github.workspace }}/deps
           key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
+          enableCrossOsArchive: true
