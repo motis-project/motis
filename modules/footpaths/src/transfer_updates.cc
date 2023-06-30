@@ -2,21 +2,45 @@
 
 #include <cmath>
 
+#include "cista/containers/vector.h"
+#include "cista/containers/vecvec.h"
+
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/time.h"
+
 #include "motis/footpaths/thread_pool.h"
 
 #include "ppr/routing/search.h"
 
 #include "utl/progress_tracker.h"
+#include "utl/to_vec.h"
 
 using namespace motis::logging;
 using namespace ppr;
 using namespace ppr::routing;
 
+namespace n = nigiri;
+
 namespace motis::footpaths {
+
+struct transfer_edge_info {
+  n::duration_t duration_{};
+  std::uint16_t accessibility_{};
+  double distance_{};
+};
 
 inline location to_location(geo::latlng const& pos) {
   return make_location(pos.lng_, pos.lat_);
+}
+
+inline n::duration_t get_duration(route const& r) {
+  return n::duration_t{
+      std::min(static_cast<int>(std::round(r.duration_ / 60)),
+               static_cast<int>(std::numeric_limits<duration>::max()))};
+}
+
+inline uint16_t get_accessibility(route const& r) {
+  return static_cast<uint16_t>(std::ceil(r.accessibility_));
 }
 
 /**
@@ -77,20 +101,55 @@ search_result route_ppr_direct(routing_graph const& rg,
 
   // route using find_routes_v2
   return find_routes_v2(rg, rq);
-};
+}
+
+std::vector<std::vector<transfer_edge_info>> to_transfer_edge_info(
+    search_result const& res) {
+  return utl::to_vec(res.routes_, [&](auto const& routes) {
+    return utl::to_vec(routes, [&](auto const& r) {
+      return transfer_edge_info{get_duration(r), get_accessibility(r),
+                                r.distance_};
+    });
+  });
+}
 
 void compute_and_update_nigiri_transfers(routing_graph const& rg,
-                                         nigiri::timetable tt,
-                                         transfer_requests t_req,
+                                         nigiri::timetable& tt,
+                                         transfer_requests const& t_req,
                                          boost::mutex& mutex) {
   auto const& res = route_ppr_direct(rg, t_req);
-  // TODO (Carsten) Post-Process Routing Results
-  std::ignore = tt;
-  std::ignore = mutex;
-};
+
+  if (res.destinations_reached() == 0) {
+    return;
+  }
+
+  auto const& fwd_result = to_transfer_edge_info(res);
+  assert(fwd_result.size() == t_req.transfer_targets_.size());
+
+  for (auto platform_idx = 0U; platform_idx < t_req.transfer_targets_.size();
+       ++platform_idx) {
+    auto const& fwd_routes = fwd_result[platform_idx];
+    if (fwd_routes.empty()) {
+      continue;
+    }
+
+    // TODO (Carsten) choose valid profile_; add profile-map to tt
+    //  replace 0 by tt.profiles_[profile_name]
+    for (auto const& r : fwd_routes) {
+      boost::unique_lock<boost::mutex> const scoped_lock(mutex);
+
+      tt.locations_.footpaths_out_[0][t_req.transfer_start_->idx_].push_back(
+          n::footpath{t_req.transfer_targets_[platform_idx]->idx_,
+                      r.duration_});
+      tt.locations_
+          .footpaths_out_[0][t_req.transfer_targets_[platform_idx]->idx_]
+          .push_back(n::footpath{t_req.transfer_start_->idx_, r.duration_});
+    }
+  }
+}
 
 void precompute_nigiri_transfers(
-    routing_graph const& rg, nigiri::timetable tt,
+    routing_graph const& rg, nigiri::timetable& tt,
     std::vector<transfer_requests> const& transfer_reqs) {
   std::ignore = rg;
   std::ignore = tt;
