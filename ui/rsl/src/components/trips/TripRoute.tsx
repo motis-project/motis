@@ -22,7 +22,10 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
-import { getCapacitySourceTooltip } from "@/util/capacitySource";
+import {
+  getCapacitySourceTooltip,
+  isExactCapacitySource,
+} from "@/util/capacitySource";
 import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
@@ -79,7 +82,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
   const missingExactCapacityInfo = edges.some(
-    (eli) => eli.capacity_source !== "TripExactMatch"
+    (eli) => !isExactCapacitySource(eli.capacity_source)
   );
 
   const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
@@ -237,7 +240,7 @@ function TripSection({
             className="w-7 pt-3 flex justify-center"
             title={getCapacitySourceTooltip(section.capacity_source)}
           >
-            {section.capacity_source !== "TripExactMatch" ? (
+            {!isExactCapacitySource(section.capacity_source) ? (
               <QuestionMarkCircleIcon className="w-5 h-5 fill-db-cool-gray-500" />
             ) : null}
           </div>

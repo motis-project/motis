@@ -301,12 +301,17 @@ export interface PaxMonDistribution {
 
 // paxmon/PaxMonCapacitySource.fbs
 export type PaxMonCapacitySource =
+  | "FormationVehicles"
+  | "FormationVehicleGroups"
+  | "FormationBaureihe"
+  | "FormationGattung"
   | "TripExactMatch"
   | "TripPrimaryIdMatch"
   | "TrainNrAndStations"
   | "TrainNr"
   | "Category"
   | "Class"
+  | "Override"
   | "Unknown";
 
 // paxmon/PaxMonCapacityType.fbs
@@ -917,6 +922,8 @@ export interface PaxMonGetTripCapacityResponse {
   trip_formation_map_size: number;
   capacity_override_map_size: number;
   baureihe_capacity_map_size: number;
+  gattung_capacity_map_size: number;
+  vehicle_group_capacity_map_size: number;
 }
 
 // paxmon/PaxMonCapacityStatusRequest.fbs

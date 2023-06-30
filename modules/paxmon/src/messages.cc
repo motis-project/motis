@@ -455,6 +455,14 @@ PaxMonCapacityType get_capacity_type(motis::paxmon::edge const* e) {
 
 PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
   switch (cs) {
+    case capacity_source::FORMATION_VEHICLES:
+      return PaxMonCapacitySource_FormationVehicles;
+    case capacity_source::FORMATION_VEHICLE_GROUPS:
+      return PaxMonCapacitySource_FormationVehicleGroups;
+    case capacity_source::FORMATION_BAUREIHE:
+      return PaxMonCapacitySource_FormationBaureihe;
+    case capacity_source::FORMATION_GATTUNG:
+      return PaxMonCapacitySource_FormationGattung;
     case capacity_source::TRIP_EXACT:
       return PaxMonCapacitySource_TripExactMatch;
     case capacity_source::TRIP_PRIMARY:
@@ -464,6 +472,7 @@ PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
     case capacity_source::TRAIN_NR: return PaxMonCapacitySource_TrainNr;
     case capacity_source::CATEGORY: return PaxMonCapacitySource_Category;
     case capacity_source::CLASZ: return PaxMonCapacitySource_Class;
+    case capacity_source::OVERRIDE: return PaxMonCapacitySource_Override;
     case capacity_source::SPECIAL:
     default: return PaxMonCapacitySource_Unknown;
   }

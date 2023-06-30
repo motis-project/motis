@@ -133,6 +133,12 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
               vc = it->second;
               tf_capacity += vc;
               guessed = true;
+            } else if (auto const it =
+                           caps.gattung_capacity_map_.find(vi.type_code_);
+                       it != end(caps.gattung_capacity_map_)) {
+              vc = it->second;
+              tf_capacity += vc;
+              guessed = true;
             }
             vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
                 mc, vi.uic_, false, guessed,
@@ -191,7 +197,9 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
           caps.min_capacity_, caps.fuzzy_match_max_time_diff_,
           caps.trip_capacity_map_.size(), caps.category_capacity_map_.size(),
           caps.vehicle_capacity_map_.size(), caps.trip_formation_map_.size(),
-          caps.override_map_.size(), caps.baureihe_capacity_map_.size())
+          caps.override_map_.size(), caps.baureihe_capacity_map_.size(),
+          caps.gattung_capacity_map_.size(),
+          caps.vehicle_group_capacity_map_.size())
           .Union());
   return make_msg(mc);
 }

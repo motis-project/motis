@@ -33,7 +33,7 @@ struct trip_section_with_load {
                   ? nullptr
                   : uv.trip_data_.edges(tdi).at(idx).get(uv)} {
 
-    auto const get_trip_capacity = [&]() {
+    auto const get_trip_capacity = [this]() {
       if (edge_ != nullptr) {
         capacity_ = edge_->capacity();
         capacity_source_ = edge_->get_capacity_source();
@@ -43,7 +43,7 @@ struct trip_section_with_load {
       }
     };
 
-    auto const lookup_capacity = [&]() {
+    auto const lookup_capacity = [this, &sched, &uv]() {
       auto const cap =
           get_capacity(sched, section_.lcon(), section_.ev_key_from(),
                        section_.ev_key_to(), uv.capacity_maps_);
@@ -71,10 +71,6 @@ struct trip_section_with_load {
 
   inline capacity_source get_capacity_source() const {
     return capacity_source_;
-  }
-
-  inline std::uint16_t encoded_capacity() const {
-    return encode_capacity(capacity_, capacity_source_);
   }
 
   std::uint16_t base_load() const {

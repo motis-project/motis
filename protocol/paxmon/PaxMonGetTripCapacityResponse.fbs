@@ -83,4 +83,6 @@ table PaxMonGetTripCapacityResponse {
   trip_formation_map_size: ulong;
   capacity_override_map_size: ulong;
   baureihe_capacity_map_size: ulong;
+  gattung_capacity_map_size: ulong;
+  vehicle_group_capacity_map_size: ulong;
 }

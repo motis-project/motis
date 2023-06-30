@@ -172,12 +172,12 @@ struct rule_trip_adder {
                                      event_node_index dep_node,
                                      event_node_index arr_node) {
     return utl::get_or_create(trip_edges_, &section.lcon(), [&]() {
-      auto const encoded_capacity = encode_capacity(
+      auto const [cap, cap_source] =
           get_capacity(sched_, section.lcon(), section.ev_key_from(),
-                       section.ev_key_to(), uv_.capacity_maps_));
+                       section.ev_key_to(), uv_.capacity_maps_);
       auto const* e =
           add_edge(uv_, make_trip_edge(uv_, dep_node, arr_node, edge_type::TRIP,
-                                       section.lcon().trips_, encoded_capacity,
+                                       section.lcon().trips_, cap, cap_source,
                                        section.fcon().clasz_));
       return get_edge_index(uv_, e);
     });
@@ -191,8 +191,8 @@ struct rule_trip_adder {
           auto const* e = add_edge(
               uv_,
               make_trip_edge(uv_, prev_node, dep_node, edge_type::WAIT,
-                             section.lcon().trips_, UNLIMITED_ENCODED_CAPACITY,
-                             section.fcon().clasz_));
+                             section.lcon().trips_, UNLIMITED_CAPACITY,
+                             capacity_source::SPECIAL, section.fcon().clasz_));
           return get_edge_index(uv_, e);
         });
   }

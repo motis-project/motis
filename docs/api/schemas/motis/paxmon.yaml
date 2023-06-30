@@ -1546,6 +1546,10 @@ PaxMonGetTripCapacityResponse:
         overriden.
     baureihe_capacity_map_size:
       description: TODO
+    gattung_capacity_map_size:
+      description: TODO
+    vehicle_group_capacity_map_size:
+      description: TODO
 PaxMonVehicleGroupInfo:
   description: |
     Information about a vehicle group.

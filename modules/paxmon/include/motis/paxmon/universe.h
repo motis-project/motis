@@ -76,20 +76,20 @@ struct edge {
 
   inline duration transfer_time() const { return transfer_time_; }
 
-  inline std::uint16_t capacity() const {
-    return get_capacity(encoded_capacity_);
-  }
+  inline std::uint16_t capacity() const { return capacity_; }
 
   inline capacity_source get_capacity_source() const {
-    return ::motis::paxmon::get_capacity_source(encoded_capacity_);
+    return capacity_source_;
   }
 
   inline bool has_unlimited_capacity() const {
-    return encoded_capacity_ == UNLIMITED_ENCODED_CAPACITY;
+    return capacity_ == UNLIMITED_CAPACITY &&
+           capacity_source_ == capacity_source::SPECIAL;
   }
 
   inline bool has_unknown_capacity() const {
-    return encoded_capacity_ == UNKNOWN_ENCODED_CAPACITY;
+    return capacity_ == UNKNOWN_CAPACITY &&
+           capacity_source_ == capacity_source::SPECIAL;
   }
 
   inline bool has_capacity() const {
@@ -104,7 +104,8 @@ struct edge {
   edge_type type_{};
   bool broken_{false};
   duration transfer_time_{};
-  std::uint16_t encoded_capacity_{};
+  std::uint16_t capacity_{};
+  capacity_source capacity_source_{};
   service_class clasz_{service_class::OTHER};
   merged_trips_idx trips_{};
   pci_index pci_{};

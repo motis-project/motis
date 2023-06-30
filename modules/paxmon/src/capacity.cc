@@ -14,8 +14,9 @@
 #include <type_traits>
 #include <utility>
 
+#include "cista/reflection/comparable.h"
+
 #include "motis/hash_set.h"
-#include "motis/pair.h"
 
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
@@ -228,32 +229,77 @@ trip_formation_section const* get_trip_formation_section(
   return best_section_match;
 }
 
-std::optional<vehicle_capacity> get_section_capacity(
-    schedule const& sched, capacity_maps const& caps,
-    std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
-  auto vehicles = mcd::hash_set<mcd::pair<std::uint64_t, mcd::string>>{};
+struct vehicle_id {
+  CISTA_COMPARABLE()
+  std::uint64_t uic_{};
+  mcd::string baureihe_;
+  mcd::string type_code_;
+};
+
+std::optional<std::pair<vehicle_capacity, capacity_source>>
+get_section_capacity(schedule const& sched, capacity_maps const& caps,
+                     std::uint32_t const merged_trips_idx,
+                     ev_key const& ev_key_from) {
+  auto has_vehicles = false;
+  auto vehicles = std::set<vehicle_id>{};
+  auto vehicle_groups = mcd::hash_set<mcd::string>{};
+
   for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
     auto const* tf_sec =
         get_trip_formation_section(sched, caps, trp, ev_key_from);
     if (tf_sec != nullptr) {
       for (auto const& vi : tf_sec->vehicles_) {
-        vehicles.insert(mcd::pair{vi.uic_, vi.baureihe_});
+        vehicles.insert(vehicle_id{vi.uic_, vi.baureihe_, vi.type_code_});
+      }
+      for (auto const& vg : tf_sec->vehicle_groups_) {
+        vehicle_groups.insert(vg.name_);
       }
     }
   }
 
-  auto cap = vehicle_capacity{};
-  for (auto const& [uic, baureihe] : vehicles) {
-    if (auto const it = caps.vehicle_capacity_map_.find(uic);
+  auto v_cap = vehicle_capacity{};
+  auto baureihe_matches = 0;
+  auto gattung_matches = 0;
+  for (auto const& vehicle : vehicles) {
+    if (vehicle.uic_ != 0) {
+      has_vehicles = true;
+    }
+    if (auto const it = caps.vehicle_capacity_map_.find(vehicle.uic_);
         it != end(caps.vehicle_capacity_map_)) {
-      cap += it->second;
-    } else if (auto const it = caps.baureihe_capacity_map_.find(baureihe);
+      v_cap += it->second;
+    } else if (auto const it =
+                   caps.baureihe_capacity_map_.find(vehicle.baureihe_);
                it != end(caps.baureihe_capacity_map_)) {
-      cap += it->second;
+      v_cap += it->second;
+      ++baureihe_matches;
+    } else if (auto const it =
+                   caps.gattung_capacity_map_.find(vehicle.type_code_);
+               it != end(caps.gattung_capacity_map_)) {
+      v_cap += it->second;
+      ++gattung_matches;
     }
   }
-  if (cap.seats() > 0) {
-    return cap;
+  auto v_source = capacity_source::FORMATION_VEHICLES;
+  if (gattung_matches > 0) {
+    v_source = capacity_source::FORMATION_GATTUNG;
+  } else if (baureihe_matches > 0) {
+    v_source = capacity_source::FORMATION_BAUREIHE;
+  }
+
+  auto vg_cap = vehicle_capacity{};
+  for (auto const& vg : vehicle_groups) {
+    if (auto const it = caps.vehicle_group_capacity_map_.find(vg);
+        it != end(caps.vehicle_group_capacity_map_)) {
+      vg_cap += it->second;
+    }
+  }
+
+  if (!has_vehicles && vg_cap.seats() > 0) {
+    return {{vg_cap, capacity_source::FORMATION_VEHICLE_GROUPS}};
+  } else if (v_cap.seats() > 0) {
+    return {{v_cap, v_source}};
+  } else if (vg_cap.seats() > 0) {
+    return {{vg_cap, capacity_source::FORMATION_VEHICLE_GROUPS}};
   } else {
     return {};
   }
@@ -311,14 +357,14 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
   auto const override_capacity =
       get_override_capacity(sched, caps, lc.trips_, ev_key_from);
   if (override_capacity.has_value()) {
-    return {override_capacity->seats(), capacity_source::TRIP_EXACT};
+    return {override_capacity->seats(), capacity_source::OVERRIDE};
   }
 
   auto const section_capacity =
       get_section_capacity(sched, caps, lc.trips_, ev_key_from);
   if (section_capacity.has_value()) {
-    return {clamp_capacity(caps, section_capacity->seats()),
-            capacity_source::TRIP_EXACT};
+    return {clamp_capacity(caps, section_capacity->first.seats()),
+            section_capacity->second};
   }
 
   auto ci = lc.full_con_->con_info_;

@@ -22,7 +22,8 @@ bool update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
         uv.update_tracker_.before_trip_capacity_changed(trp->trip_idx_);
       }
     }
-    e->encoded_capacity_ = sec.encoded_capacity();
+    e->capacity_ = sec.capacity();
+    e->capacity_source_ = sec.get_capacity_source();
   }
   return changed;
 }

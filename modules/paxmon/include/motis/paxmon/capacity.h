@@ -67,27 +67,21 @@ struct capacity_override_section {
   vehicle_capacity total_capacity_{};
 };
 
-using trip_capacity_map_t = std::map<cap_trip_id, std::uint16_t>;
-using category_capacity_map_t = mcd::hash_map<mcd::string, std::uint16_t>;
-using vehicle_capacity_map_t =
-    mcd::hash_map<std::uint64_t /* UIC number */, vehicle_capacity>;
-using baureihe_capacity_map_t = mcd::hash_map<mcd::string, vehicle_capacity>;
-using trip_formation_map_t = mcd::hash_map<boost::uuids::uuid, trip_formation>;
-using trip_uuid_map_t = mcd::hash_map<primary_trip_id, boost::uuids::uuid>;
-using capacity_override_map_t =
-    mcd::hash_map<cap_trip_id, mcd::vector<capacity_override_section>>;
-
 struct capacity_maps {
-  trip_capacity_map_t trip_capacity_map_;
-  category_capacity_map_t category_capacity_map_;
+  std::map<cap_trip_id, std::uint16_t> trip_capacity_map_;
+  mcd::hash_map<mcd::string, std::uint16_t> category_capacity_map_;
 
-  vehicle_capacity_map_t vehicle_capacity_map_;
-  trip_formation_map_t trip_formation_map_;
-  trip_uuid_map_t trip_uuid_map_;
+  mcd::hash_map<std::uint64_t /* UIC number */, vehicle_capacity>
+      vehicle_capacity_map_;
+  mcd::hash_map<boost::uuids::uuid, trip_formation> trip_formation_map_;
+  mcd::hash_map<primary_trip_id, boost::uuids::uuid> trip_uuid_map_;
 
-  baureihe_capacity_map_t baureihe_capacity_map_;
+  mcd::hash_map<mcd::string, vehicle_capacity> vehicle_group_capacity_map_;
+  mcd::hash_map<mcd::string, vehicle_capacity> gattung_capacity_map_;
+  mcd::hash_map<mcd::string, vehicle_capacity> baureihe_capacity_map_;
 
-  capacity_override_map_t override_map_;
+  mcd::hash_map<cap_trip_id, mcd::vector<capacity_override_section>>
+      override_map_;
 
   int fuzzy_match_max_time_diff_{};  // minutes
   std::uint16_t min_capacity_{};
