@@ -205,3 +205,4 @@ jobs:
         with:
           path: ${{ github.workspace }}/deps
           key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
+          enableCrossOsArchive: true
