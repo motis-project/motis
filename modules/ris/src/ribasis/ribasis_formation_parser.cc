@@ -6,6 +6,8 @@
 
 #include "motis/json/json.h"
 
+#include "motis/core/common/logging.h"
+
 #include "motis/ris/ribasis/common.h"
 #include "motis/ris/ribasis/ribasis_formation_parser.h"
 
@@ -121,13 +123,28 @@ Offset<Vector<Offset<TripFormationSection>>> parse_sections(
       }));
 }
 
+TripFormationMessageType parse_message_type(rapidjson::Value const& data) {
+  auto const s = get_str(data, "kategorie");
+  if (s == "SOLL") {
+    return TripFormationMessageType_Schedule;
+  } else if (s == "VORSCHAU") {
+    return TripFormationMessageType_Preview;
+  } else if (s == "IS") {
+    return TripFormationMessageType_Is;
+  } else {
+    LOG(logging::warn) << "unknown ri basis formation kategorie: " << s;
+    return TripFormationMessageType_Preview;
+  }
+}
+
 void parse_ribasis_formation(ris_msg_context& ris_ctx,
                              rapidjson::Value const& data) {
   auto ctx = context{ris_ctx};
   ctx.half_trip_id_ = parse_half_trip_id(ctx, get_obj(data, "fahrt"));
+  auto const message_type = parse_message_type(data);
   auto const sections = parse_sections(ctx, data);
-  auto const formation_msg =
-      CreateTripFormationMessage(ctx.ris_.b_, ctx.half_trip_id_, sections);
+  auto const formation_msg = CreateTripFormationMessage(
+      ctx.ris_.b_, ctx.half_trip_id_, message_type, sections);
   ctx.ris_.b_.Finish(CreateRISMessage(
       ctx.ris_.b_, ctx.ris_.earliest_, ctx.ris_.latest_, ctx.ris_.timestamp_,
       RISMessageUnion_TripFormationMessage, formation_msg.Union()));

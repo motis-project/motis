@@ -29,6 +29,9 @@ export interface RtMetrics {
   trip_track_updates: number[];
   trip_id_not_found: number[];
   trip_id_ambiguous: number[];
+  formation_schedule_messages: number[];
+  formation_preview_messages: number[];
+  formation_is_messages: number[];
   formation_invalid_trip_id: number[];
   formation_trip_id_not_found: number[];
   formation_trip_id_ambiguous: number[];

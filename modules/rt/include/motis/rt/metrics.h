@@ -35,6 +35,9 @@ struct metrics_entry {
   std::uint32_t ft_trip_id_ambiguous_{};
 
   // trip formation messages:
+  std::uint32_t formation_schedule_messages_{};
+  std::uint32_t formation_preview_messages_{};
+  std::uint32_t formation_is_messages_{};
   std::uint32_t formation_invalid_primary_trip_id_{};
   std::uint32_t formation_primary_trip_id_not_found_{};
   std::uint32_t formation_primary_trip_id_ambiguous_{};

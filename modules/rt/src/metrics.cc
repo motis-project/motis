@@ -51,8 +51,10 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
         full_trip_schedule_messages, full_trip_update_messages, new_trips,
         cancellations, reroutes, rule_service_reroutes, trip_delay_updates,
         event_delay_updates, trip_track_updates, trip_id_not_found,
-        trip_id_ambiguous, formation_invalid_trip_id,
-        formation_trip_id_not_found, formation_trip_id_ambiguous;
+        trip_id_ambiguous, formation_schedule_messages,
+        formation_preview_messages, formation_is_messages,
+        formation_invalid_trip_id, formation_trip_id_not_found,
+        formation_trip_id_ambiguous;
 
     messages.reserve(m.size());
     delay_messages.reserve(m.size());
@@ -73,6 +75,9 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
     trip_track_updates.reserve(m.size());
     trip_id_not_found.reserve(m.size());
     trip_id_ambiguous.reserve(m.size());
+    formation_schedule_messages.reserve(m.size());
+    formation_preview_messages.reserve(m.size());
+    formation_is_messages.reserve(m.size());
     formation_invalid_trip_id.reserve(m.size());
     formation_trip_id_not_found.reserve(m.size());
     formation_trip_id_ambiguous.reserve(m.size());
@@ -98,6 +103,9 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
       trip_track_updates.push_back(entry.ft_trip_track_updates_);
       trip_id_not_found.push_back(entry.ft_trip_id_not_found_);
       trip_id_ambiguous.push_back(entry.ft_trip_id_ambiguous_);
+      formation_schedule_messages.push_back(entry.formation_schedule_messages_);
+      formation_preview_messages.push_back(entry.formation_preview_messages_);
+      formation_is_messages.push_back(entry.formation_is_messages_);
       formation_invalid_trip_id.push_back(
           entry.formation_invalid_primary_trip_id_);
       formation_trip_id_not_found.push_back(
@@ -120,6 +128,9 @@ msg_ptr get_metrics_api(rt_metrics const& metrics) {
         mc.CreateVector(event_delay_updates),
         mc.CreateVector(trip_track_updates), mc.CreateVector(trip_id_not_found),
         mc.CreateVector(trip_id_ambiguous),
+        mc.CreateVector(formation_schedule_messages),
+        mc.CreateVector(formation_preview_messages),
+        mc.CreateVector(formation_is_messages),
         mc.CreateVector(formation_invalid_trip_id),
         mc.CreateVector(formation_trip_id_not_found),
         mc.CreateVector(formation_trip_id_ambiguous));

@@ -27,6 +27,9 @@ table RtMetrics {
   trip_id_ambiguous: [ulong];
 
   // formation messages:
+  formation_schedule_messages: [ulong];
+  formation_preview_messages: [ulong];
+  formation_is_messages: [ulong];
   formation_invalid_trip_id: [ulong];
   formation_trip_id_not_found: [ulong];
   formation_trip_id_ambiguous: [ulong];

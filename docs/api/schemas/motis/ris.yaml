@@ -332,6 +332,8 @@ TripFormationMessage:
       description: TODO
     sections:
       description: TODO
+    message_type:
+      description: TODO
 RISApplyResponse:
   description: TODO
   fields:
@@ -412,4 +414,6 @@ RISStatusResponse:
     init_status:
       description: TODO
 FullTripMessageType:
+  description: TODO
+TripFormationMessageType:
   description: TODO

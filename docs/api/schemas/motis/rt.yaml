@@ -173,6 +173,12 @@ RtMetrics:
       description: TODO
     full_trip_update_messages:
       description: TODO
+    formation_schedule_messages:
+      description: TODO
+    formation_preview_messages:
+      description: TODO
+    formation_is_messages:
+      description: TODO
 RtMetricsResponse:
   description: TODO
   fields:

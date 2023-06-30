@@ -34,6 +34,19 @@ void handle_trip_formation_msg(statistics& stats, schedule& sched,
     metrics.update(msg_timestamp, processing_time, fn);
   };
 
+  switch (msg->message_type()) {
+    case ris::TripFormationMessageType_Schedule:
+      update_metrics(
+          [](metrics_entry* m) { ++m->formation_schedule_messages_; });
+      break;
+    case ris::TripFormationMessageType_Preview:
+      update_metrics(
+          [](metrics_entry* m) { ++m->formation_preview_messages_; });
+      break;
+    case ris::TripFormationMessageType_Is:
+      update_metrics([](metrics_entry* m) { ++m->formation_is_messages_; });
+      break;
+  }
   primary_trip_id ptid;
   if (get_primary_trip_id(sched, msg->trip_id(), ptid)) {
     auto const find_result = find_trip_by_primary_trip_id(sched, ptid);

@@ -170,7 +170,7 @@ FullTripMessageType parse_message_type(rapidjson::Value const& data) {
   } else if (s == "VORSCHAU") {
     return FullTripMessageType_Update;
   } else {
-    LOG(logging::warn) << "unknown ri basis kategorie: " << s;
+    LOG(logging::warn) << "unknown ri basis fahrt kategorie: " << s;
     return FullTripMessageType_Update;
   }
 }
