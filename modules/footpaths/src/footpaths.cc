@@ -116,7 +116,6 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                 std::to_string(impl_->tt_.locations_.footpaths_out_.size()) +
                 "/" + std::to_string(no_profiles));
 
-        // load ppr profiles; store all profiles in a map
         // (profile-name, profile-info)
         motis::ppr::read_profile_files(
             utl::to_vec(*ppr_event->profiles(),
@@ -128,12 +127,15 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         for (auto& p : ppr_profiles_) {
           // convert walk_duration from minutes to seconds
           p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
-          // build profile to idx map
-          ppr_profile_pos_.insert({p.first, ppr_profile_pos_.size()});
+
+          // build profile_name to idx map in nigiri::tt
+          impl_->tt_.locations_.profile_idx_.insert(
+              {p.first, impl_->tt_.locations_.profile_idx_.size()});
 
           // build list of profile infos
           profiles_.emplace_back(p.second);
         }
+        assert(impl_->tt_.locations_.profile_idx_.size() == profiles_.size());
 
         // Implementation of footpaths is inspired by parking
 
@@ -186,8 +188,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         std::vector<transfer_requests> transfer_reqs;
         {
           scoped_timer const timer{"transfer: build transfer requests."};
-          transfer_reqs = build_transfer_requests(platforms_.get(), profiles_,
-                                                  max_walk_duration_);
+          transfer_reqs = build_transfer_requests(
+              platforms_.get(), ppr_profiles_, max_walk_duration_);
         }
 
         // 6th get transfer requests result

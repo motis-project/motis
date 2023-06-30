@@ -87,7 +87,7 @@ routing_query make_routing_query(transfer_requests const& t_req) {
                  [](auto const& pi) { return pi_to_il(*pi); });
 
   // query: get search profile
-  auto const& profile = t_req.ppr_profile_->profile_;
+  auto const& profile = t_req.ppr_profile_.profile_;
 
   // query: get search direction (default: FWD)
   auto const& dir = search_direction::FWD;
@@ -133,16 +133,17 @@ void compute_and_update_nigiri_transfers(routing_graph const& rg,
       continue;
     }
 
-    // TODO (Carsten) choose valid profile_; add profile-map to tt
-    //  replace 0 by tt.profiles_[profile_name]
     for (auto const& r : fwd_routes) {
       boost::unique_lock<boost::mutex> const scoped_lock(mutex);
 
-      tt.locations_.footpaths_out_[0][t_req.transfer_start_->idx_].push_back(
-          n::footpath{t_req.transfer_targets_[platform_idx]->idx_,
-                      r.duration_});
+      auto const& profile_idx = tt.locations_.profile_idx_[t_req.profile_name];
+
+      tt.locations_.footpaths_out_[profile_idx][t_req.transfer_start_->idx_]
+          .push_back(n::footpath{t_req.transfer_targets_[platform_idx]->idx_,
+                                 r.duration_});
       tt.locations_
-          .footpaths_out_[0][t_req.transfer_targets_[platform_idx]->idx_]
+          .footpaths_out_[profile_idx]
+                         [t_req.transfer_targets_[platform_idx]->idx_]
           .push_back(n::footpath{t_req.transfer_start_->idx_, r.duration_});
     }
   }
@@ -151,9 +152,6 @@ void compute_and_update_nigiri_transfers(routing_graph const& rg,
 void precompute_nigiri_transfers(
     routing_graph const& rg, nigiri::timetable& tt,
     std::vector<transfer_requests> const& transfer_reqs) {
-  std::ignore = rg;
-  std::ignore = tt;
-
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->reset_bounds().in_high(transfer_reqs.size());
 

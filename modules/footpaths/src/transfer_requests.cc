@@ -3,7 +3,7 @@
 namespace motis::footpaths {
 
 std::vector<transfer_requests> build_transfer_requests(
-    platforms* pf, std::vector<ppr::profile_info>& profile_info,
+    platforms* pf, std::map<std::string, ppr::profile_info> const& profiles,
     int const max_walk_duration) {
   std::vector<transfer_requests> result{};
 
@@ -18,10 +18,12 @@ std::vector<transfer_requests> build_transfer_requests(
     std::vector<platform_info*> transfer_targets{};
     // different profiles result in different transfer_targets: determine for
     // each profile the reachable platforms
-    for (auto& pi : profile_info) {
+    for (auto& profile : profiles) {
+      // remark: profile {profile_name -> profile_info}
       // get all valid platforms in radius of current platform
       auto valid_platforms_in_radius = pf->get_valid_platforms_in_radius(
-          &platform, pi.profile_.walking_speed_ * max_walk_duration);
+          &platform,
+          profile.second.profile_.walking_speed_ * max_walk_duration);
       transfer_targets.insert(transfer_targets.end(),
                               valid_platforms_in_radius.begin(),
                               valid_platforms_in_radius.end());
@@ -34,7 +36,8 @@ std::vector<transfer_requests> build_transfer_requests(
       transfer_requests tmp{};
       tmp.transfer_start_ = &platform;
       tmp.transfer_targets_ = transfer_targets;
-      tmp.ppr_profile_ = &pi;
+      tmp.profile_name = profile.first;
+      tmp.ppr_profile_ = profile.second;
 
       result.emplace_back(tmp);
     }
