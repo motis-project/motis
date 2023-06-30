@@ -1445,6 +1445,8 @@ PaxMonVehicleCapacityInfo:
         group.
     guessed:
       description: Whether the vehicle capacity was guessed.
+    capacity_source:
+      description: TODO
 PaxMonMergedTripCapacityInfo:
   description: TODO
   fields:
@@ -1479,6 +1481,8 @@ PaxMonMergedTripCapacityInfo:
       description: >
         Manually overriden capacity information (optional, contains either 0 or
         1 entries).
+    trip_formation_capacity_source:
+      description: TODO
 PaxMonSectionCapacityInfo:
   description: TODO
   fields:
@@ -1570,6 +1574,8 @@ PaxMonVehicleGroupInfo:
     trip_uuid:
       description: TODO
     primary_trip_id:
+      description: TODO
+    capacity:
       description: TODO
 PaxMonCapacityStatusRequest:
   description: TODO

@@ -7,7 +7,6 @@ import {
   PaxMonMergedTripCapacityInfo,
   PaxMonSectionCapacityInfo,
   PaxMonTripCapacityInfo,
-  PaxMonVehicleGroupInfo,
 } from "@/api/protocol/motis/paxmon";
 
 import { usePaxMonGetTripCapacity } from "@/api/paxmon";
@@ -17,6 +16,7 @@ import { universeAtom } from "@/data/multiverse";
 import {
   getCapacitySourceShortText,
   getCapacitySourceTooltip,
+  getFormationCapacitySourceShortText,
 } from "@/util/capacitySource";
 import classNames from "@/util/classNames";
 import { formatDate, formatTime } from "@/util/dateFormat";
@@ -217,6 +217,12 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             <div className="flex gap-1 flex-wrap">
               <span className="font-semibold">Kapazität aus Wagenreihung:</span>
               <span>{mt.trip_formation_capacity.seats}</span>
+              <span>
+                {`(Kapazitätsdaten: ${getFormationCapacitySourceShortText(
+                  mt.trip_formation_capacity_source,
+                  false
+                )})`}
+              </span>
             </div>
             <SectionVehicles mt={mt} />
           </>
@@ -230,7 +236,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
 function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
   return (
     <div>
-      <table>
+      <table className="mt-2">
         <thead>
           <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
             <td className="px-2">Wagen</td>
@@ -261,7 +267,8 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             >
               Max.
             </td>
-            <td className="px-2">Wagengruppen</td>
+            <td className="px-2 text-center">Quelle</td>
+            <td className="px-2">Fahrzeuggruppen</td>
           </tr>
         </thead>
         <tbody>
@@ -284,6 +291,9 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
               <td className="px-2 text-center">{v.data.standing}</td>
               <td className="px-2 text-center">{v.data.total_limit}</td>
               <td className="px-2 text-center">{v.data.limit}</td>
+              <td className="px-2 text-center">
+                {getFormationCapacitySourceShortText(v.capacity_source, true)}
+              </td>
               <td className="px-2">
                 {v.vehicle_groups
                   .map((idx) => mt.vehicle_groups[idx].name)
@@ -317,21 +327,77 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
           </tr>
         </tfoot>
       </table>
-      <div className="flex flex-col gap-2">
-        {mt.vehicle_groups.map((vg) => (
-          <VehicleGroup vg={vg} key={vg.name} />
-        ))}
-      </div>
+      <table className="mt-2">
+        <thead>
+          <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
+            <td className="px-2">Fahrzeuggruppe</td>
+            <td className="px-2">Zugnummer</td>
+            <td className="px-2">von</td>
+            <td className="px-2">bis</td>
+            <td className="px-2 text-center" title="Sitzplätze insgesamt">
+              Sitze
+            </td>
+            <td className="px-2 text-center" title="Sitzplätze 1. Klasse">
+              1. Kl
+            </td>
+            <td className=" text-center" title="Sitzplätze 2. Klasse">
+              2. Kl
+            </td>
+            <td className="px-2 text-center" title="Stehplätze">
+              Steh.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Zulässige Gesamtanzahl Reisender"
+            >
+              Zul.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Maximalkapazität (Zulässige Gesamtanzahl Reisender oder Anzahl Sitzplätze)"
+            >
+              Max.
+            </td>
+          </tr>
+        </thead>
+        <tbody>
+          {mt.vehicle_groups.map((vg) => (
+            <tr
+              key={vg.name}
+              className={classNames(
+                vg.capacity.length === 1
+                  ? "text-green-600"
+                  : "text-db-cool-gray-500"
+              )}
+            >
+              <td className="px-2">{vg.name}</td>
+              <td className="px-2">{vg.primary_trip_id.train_nr}</td>
+              <td className="px-2">{vg.start.name}</td>
+              <td className="px-2">{vg.destination.name}</td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].seats : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].seats_1st : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].seats_2nd : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].standing : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].total_limit : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].limit : 0}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
-  return (
-    <div>
-      Wagengruppe {vg.name}: Zug {vg.primary_trip_id.train_nr}, von{" "}
-      {vg.start.name} bis {vg.destination.name}
-    </div>
-  );
-}
 export default CapacityInfo;

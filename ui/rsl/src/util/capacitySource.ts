@@ -58,6 +58,24 @@ export function getCapacitySourceShortText(cs: PaxMonCapacitySource): string {
   }
 }
 
+export function getFormationCapacitySourceShortText(
+  cs: PaxMonCapacitySource,
+  single: boolean
+): string {
+  switch (cs) {
+    case "FormationVehicles":
+      return single ? "Fahrzeugnummer" : "Fahrzeugnummern";
+    case "FormationVehicleGroups":
+      return "Fahrzeuggruppe";
+    case "FormationBaureihe":
+      return "Baureihe";
+    case "FormationGattung":
+      return "Fahrzeuggattung";
+    default:
+      return "???";
+  }
+}
+
 const EXACT_SOURCES: PaxMonCapacitySource[] = [
   "FormationVehicles",
   "FormationVehicleGroups",

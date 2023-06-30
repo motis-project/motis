@@ -866,6 +866,7 @@ export interface PaxMonVehicleCapacityInfo {
   order: string;
   data: PaxMonCapacityData;
   vehicle_groups: number[];
+  capacity_source: PaxMonCapacitySource;
 }
 
 // paxmon/PaxMonGetTripCapacityResponse.fbs
@@ -875,6 +876,7 @@ export interface PaxMonVehicleGroupInfo {
   destination: Station;
   trip_uuid: string;
   primary_trip_id: TripId;
+  capacity: PaxMonCapacityData[];
 }
 
 // paxmon/PaxMonGetTripCapacityResponse.fbs
@@ -884,6 +886,7 @@ export interface PaxMonMergedTripCapacityInfo {
   trip_lookup_capacity: number;
   trip_lookup_capacity_source: PaxMonCapacitySource;
   trip_formation_capacity: PaxMonCapacityData;
+  trip_formation_capacity_source: PaxMonCapacitySource;
   trip_formation_found: boolean;
   trip_formation_all_vehicles_found: boolean;
   vehicles: PaxMonVehicleCapacityInfo[];

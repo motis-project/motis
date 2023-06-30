@@ -24,6 +24,7 @@ table PaxMonVehicleCapacityInfo {
   order: string;
   data: PaxMonCapacityData;
   vehicle_groups: [ubyte];
+  capacity_source: PaxMonCapacitySource;
 }
 
 table PaxMonVehicleGroupInfo {
@@ -32,6 +33,7 @@ table PaxMonVehicleGroupInfo {
   destination: motis.Station;
   trip_uuid: string;
   primary_trip_id: motis.TripId;
+  capacity: [PaxMonCapacityData];
 }
 
 table PaxMonMergedTripCapacityInfo {
@@ -42,6 +44,7 @@ table PaxMonMergedTripCapacityInfo {
   trip_lookup_capacity_source: PaxMonCapacitySource;
 
   trip_formation_capacity: PaxMonCapacityData;
+  trip_formation_capacity_source: PaxMonCapacitySource;
   trip_formation_found: bool;
   trip_formation_all_vehicles_found: bool;
 
