@@ -15,7 +15,7 @@ struct tag_lookup {
 
   friend std::ostream& operator<<(std::ostream& out, tag_lookup const& tags);
 
-  ::nigiri::vecvec<::nigiri::source_idx_t, char> src_to_tag_;
+  ::nigiri::vecvec<::nigiri::source_idx_t, char, std::uint32_t> src_to_tag_;
   ::nigiri::hash_map<std::string, ::nigiri::source_idx_t> tag_to_src_;
 };
 
