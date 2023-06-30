@@ -15,7 +15,81 @@ using namespace ppr::routing;
 
 namespace motis::footpaths {
 
-void update_nigiri_transfers(
+inline location to_location(geo::latlng const& pos) {
+  return make_location(pos.lng_, pos.lat_);
+}
+
+/**
+ * Returns the equivalent OSM_TYPE of PPR.
+ * Default: NODE
+ */
+osm_namespace to_ppr_osm_type(nigiri::osm_type const& t) {
+  switch (t) {
+    case nigiri::osm_type::NODE: return osm_namespace::NODE;
+    case nigiri::osm_type::WAY: return osm_namespace::WAY;
+    case nigiri::osm_type::RELATION: return osm_namespace::RELATION;
+    default: return osm_namespace::NODE;
+  }
+}
+
+/**
+ * Creates an input-location struct from a platform-info struct.
+ *
+ * @param pi the platform-info from which to create an input location.
+ * @return an input location struct
+ */
+input_location pi_to_il(platform_info const& pi) {
+  input_location il;
+  // TODO (Carsten) OSM_ELEMENT LEVEL missing
+  il.osm_element_ = {pi.osm_id_, to_ppr_osm_type(pi.osm_type_)};
+  il.location_ = to_location(pi.pos_);
+  return il;
+}
+
+/**
+ * Creates a routing_query from a transfer_request.
+ *
+ * @param req the transfer-request from which to create a routing query.
+ * @return a routing query struct.
+ */
+routing_query make_routing_query(transfer_requests const& t_req) {
+  // query: create start input_location
+  auto const& li_start = pi_to_il(*t_req.transfer_start_);
+
+  // query: create dest input_locations
+  std::vector<input_location> ils_dests;
+  std::transform(t_req.transfer_targets_.cbegin(),
+                 t_req.transfer_targets_.cend(), std::back_inserter(ils_dests),
+                 [](auto const& pi) { return pi_to_il(*pi); });
+
+  // query: get search profile
+  auto const& profile = t_req.ppr_profile_->profile_;
+
+  // query: get search direction (default: FWD)
+  auto const& dir = search_direction::FWD;
+
+  return routing_query(li_start, ils_dests, profile, dir);
+}
+
+search_result route_ppr_direct(routing_graph const& rg,
+                               transfer_requests const& t_req) {
+  auto const& rq = make_routing_query(t_req);
+
+  // route using find_routes_v2
+  return find_routes_v2(rg, rq);
+};
+
+void compute_and_update_nigiri_transfers(routing_graph const& rg,
+                                         nigiri::timetable tt,
+                                         transfer_requests t_req,
+                                         boost::mutex& mutex) {
+  auto const& res = route_ppr_direct(rg, t_req);
+  // TODO (Carsten) Post-Process Routing Results
+  std::ignore = tt;
+  std::ignore = mutex;
+};
+
+void precompute_nigiri_transfers(
     routing_graph const& rg, nigiri::timetable tt,
     std::vector<transfer_requests> const& transfer_reqs) {
   std::ignore = rg;
@@ -25,17 +99,15 @@ void update_nigiri_transfers(
   progress_tracker->reset_bounds().in_high(transfer_reqs.size());
 
   thread_pool pool{std::max(1U, std::thread::hardware_concurrency())};
-  for (auto const& req : transfer_reqs) {
-    pool.post([&, &req = req] {
+  boost::mutex mutex;
+  for (auto const& t_req : transfer_reqs) {
+    pool.post([&, &t_req = t_req] {
       progress_tracker->increment();
-      // TODO (Carsten) compute and update transfers
+      compute_and_update_nigiri_transfers(rg, tt, t_req, mutex);
     });
   }
   pool.join();
   LOG(info) << "Profilebased transfers precomputed.";
-
-  // routing_query rq = {};
-  // find_routes_v2(rg, rq);
 };
 
 }  // namespace motis::footpaths

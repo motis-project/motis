@@ -209,7 +209,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
         {
           scoped_timer const timer{"transfers: update nigiri transfers"};
-          update_nigiri_transfers(rg, impl_->tt_, transfer_reqs);
+          precompute_nigiri_transfers(rg, impl_->tt_, transfer_reqs);
         }
 
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
@@ -273,8 +273,7 @@ void footpaths::match_locations_and_platforms() {
     bool matched_location{false};
 
     for (auto dist : match_distance) {
-      for (auto* platform :
-           platforms_.get()->get_platforms_in_radius(loc, dist)) {
+      for (auto* platform : platforms_->get_platforms_in_radius(loc, dist)) {
         // only match bus stops with a distance of up to a certain distance
         if (platform->is_bus_stop_ && dist > match_bus_stop_max_distance_) {
           continue;
@@ -291,6 +290,7 @@ void footpaths::match_locations_and_platforms() {
         }
 
         // matched: update osm_id and osm_type of location to match platform
+        // TODO (Carsten) use scoped lock here
         impl_->tt_.locations_.osm_ids_[i] =
             nigiri::osm_node_id_t{platform->osm_id_};
         impl_->tt_.locations_.osm_types_[i] = platform->osm_type_;
