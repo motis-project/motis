@@ -211,7 +211,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
         {
           scoped_timer const timer{"transfers: update nigiri transfers"};
-          precompute_nigiri_transfers(rg, impl_->tt_, transfer_reqs);
+          precompute_nigiri_transfers(rg, impl_->tt_, ppr_profiles_,
+                                      transfer_reqs);
         }
 
         // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths

@@ -76,7 +76,9 @@ input_location pi_to_il(platform_info const& pi) {
  * @param req the transfer-request from which to create a routing query.
  * @return a routing query struct.
  */
-routing_query make_routing_query(transfer_requests const& t_req) {
+routing_query make_routing_query(
+    std::map<std::string, ppr::profile_info> const& ppr_profiles,
+    transfer_requests const& t_req) {
   // query: create start input_location
   auto const& li_start = pi_to_il(*t_req.transfer_start_);
 
@@ -87,7 +89,7 @@ routing_query make_routing_query(transfer_requests const& t_req) {
                  [](auto const& pi) { return pi_to_il(*pi); });
 
   // query: get search profile
-  auto const& profile = t_req.ppr_profile_.profile_;
+  auto const& profile = ppr_profiles.at(t_req.profile_name).profile_;
 
   // query: get search direction (default: FWD)
   auto const& dir = search_direction::FWD;
@@ -95,9 +97,11 @@ routing_query make_routing_query(transfer_requests const& t_req) {
   return routing_query(li_start, ils_dests, profile, dir);
 }
 
-search_result route_ppr_direct(routing_graph const& rg,
-                               transfer_requests const& t_req) {
-  auto const& rq = make_routing_query(t_req);
+search_result route_ppr_direct(
+    routing_graph const& rg,
+    std::map<std::string, ppr::profile_info> const& ppr_profiles,
+    transfer_requests const& t_req) {
+  auto const& rq = make_routing_query(ppr_profiles, t_req);
 
   // route using find_routes_v2
   return find_routes_v2(rg, rq);
@@ -113,11 +117,11 @@ std::vector<std::vector<transfer_edge_info>> to_transfer_edge_info(
   });
 }
 
-void compute_and_update_nigiri_transfers(routing_graph const& rg,
-                                         nigiri::timetable& tt,
-                                         transfer_requests const& t_req,
-                                         boost::mutex& mutex) {
-  auto const& res = route_ppr_direct(rg, t_req);
+void compute_and_update_nigiri_transfers(
+    routing_graph const& rg, nigiri::timetable& tt,
+    std::map<std::string, ppr::profile_info> const& ppr_profiles,
+    transfer_requests const& t_req, boost::mutex& mutex) {
+  auto const& res = route_ppr_direct(rg, ppr_profiles, t_req);
 
   if (res.destinations_reached() == 0) {
     return;
@@ -151,6 +155,7 @@ void compute_and_update_nigiri_transfers(routing_graph const& rg,
 
 void precompute_nigiri_transfers(
     routing_graph const& rg, nigiri::timetable& tt,
+    std::map<std::string, ppr::profile_info> const& ppr_profiles,
     std::vector<transfer_requests> const& transfer_reqs) {
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->reset_bounds().in_high(transfer_reqs.size());
@@ -160,7 +165,7 @@ void precompute_nigiri_transfers(
   for (auto const& t_req : transfer_reqs) {
     pool.post([&, &t_req = t_req] {
       progress_tracker->increment();
-      compute_and_update_nigiri_transfers(rg, tt, t_req, mutex);
+      compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
     });
   }
   pool.join();

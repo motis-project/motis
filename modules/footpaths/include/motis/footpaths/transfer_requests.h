@@ -10,7 +10,6 @@ namespace motis::footpaths {
 struct transfer_requests {
   platform_info* transfer_start_;
   std::vector<platform_info*> transfer_targets_;
-  ppr::profile_info ppr_profile_;  // TODO (Carsten) remove
   std::string profile_name;
 };
 

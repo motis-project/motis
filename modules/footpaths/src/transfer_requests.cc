@@ -37,7 +37,6 @@ std::vector<transfer_requests> build_transfer_requests(
       tmp.transfer_start_ = &platform;
       tmp.transfer_targets_ = transfer_targets;
       tmp.profile_name = profile.first;
-      tmp.ppr_profile_ = profile.second;
 
       result.emplace_back(tmp);
     }

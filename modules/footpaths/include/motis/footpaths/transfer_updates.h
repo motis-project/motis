@@ -13,13 +13,14 @@ using namespace ppr;
 
 namespace motis::footpaths {
 
-void compute_and_update_nigiri_transfers(routing_graph const& rg,
-                                         nigiri::timetable& tt,
-                                         transfer_requests const& req,
-                                         boost::mutex& mutex);
+void compute_and_update_nigiri_transfers(
+    routing_graph const& rg, nigiri::timetable& tt,
+    std::map<std::string, ppr::profile_info> const& ppr_profiles,
+    transfer_requests const& req, boost::mutex& mutex);
 
 void precompute_nigiri_transfers(
     routing_graph const& rg, nigiri::timetable& tt,
+    std::map<std::string, ppr::profile_info> const& ppr_profiles,
     std::vector<transfer_requests> const& transfer_reqs);
 
 }  // namespace motis::footpaths
