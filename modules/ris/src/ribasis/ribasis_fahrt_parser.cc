@@ -172,9 +172,9 @@ void parse_ribasis_fahrt(ris_msg_context& ris_ctx,
   auto const sections_data = get_array(data, "allFahrtabschnitt");
   auto const sections = parse_sections(ctx, sections_data);
   auto const trip_msg = CreateFullTripMessage(ctx.ris_.b_, trp_id, sections);
-  ctx.ris_.b_.Finish(CreateMessage(
+  ctx.ris_.b_.Finish(CreateRISMessage(
       ctx.ris_.b_, ctx.ris_.earliest_, ctx.ris_.latest_, ctx.ris_.timestamp_,
-      MessageUnion_FullTripMessage, trip_msg.Union()));
+      RISMessageUnion_FullTripMessage, trip_msg.Union()));
 }
 
 }  // namespace motis::ris::ribasis::fahrt

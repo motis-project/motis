@@ -210,7 +210,8 @@ void delete_f_equivalences(
   }
 }
 
-void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb) {
+void hrd_parser::parse(parser_options const&, fs::path const& hrd_root,
+                       FlatBufferBuilder& fbb) {
   for (auto const& c : configs) {
     if (applicable(hrd_root, c)) {
       return parse(hrd_root, fbb, c);

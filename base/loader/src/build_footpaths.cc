@@ -19,10 +19,35 @@
 
 #include "motis/schedule-format/Schedule_generated.h"
 
+template <typename T>
+struct fmt::formatter<motis::flat_matrix<std::vector<T>>> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    return ctx.begin();
+  }
+
+  template <typename FormatContext>
+  auto format(motis::flat_matrix<std::vector<T>> const& m,
+              FormatContext& ctx) const -> decltype(ctx.out()) {
+    for (auto i = 0U; i != m.entries_.size() / m.column_count_; ++i) {
+      for (auto j = 0U; j != m.column_count_; ++j) {
+        if (m[i][j] == std::numeric_limits<T>::max()) {
+          fmt::format_to(ctx.out(), "** ");
+        } else {
+          fmt::format_to(ctx.out(), "{:2} ", m[i][j]);
+        }
+      }
+      fmt::format_to(ctx.out(), "\n");
+    }
+    return ctx.out();
+  }
+};
+
 namespace f = flatbuffers64;
 namespace ml = motis::logging;
 
 namespace motis::loader {
+
+constexpr auto const kTracing = false;
 
 constexpr auto const kAdjustedMaxDuration = 15;  // [minutes]
 
@@ -35,6 +60,13 @@ using footgraph = std::vector<std::vector<footpath>>;
 using component_vec = std::vector<std::pair<uint32_t, uint32_t>>;
 using component_it = component_vec::iterator;
 using component_range = std::pair<component_it, component_it>;
+
+template <typename... Args>
+void trace(char const* fmt_str, Args... args) {
+  if constexpr (kTracing) {
+    fmt::print(std::cout, fmt_str, std::forward<Args&&>(args)...);
+  }
+}
 
 struct footpath_builder {
   footpath_builder(
@@ -344,7 +376,57 @@ struct footpath_builder {
       }
     }
 
+    auto dbg = false;
+    auto const print_dbg = [&](auto... args) {
+      if constexpr (kTracing) {
+        if (dbg) {
+          trace(args...);
+        }
+      }
+    };
+
+    if constexpr (kTracing) {
+      auto const id = std::string_view{"berlin_de:11000:900160002:1:50"};
+      auto const needle = sched_.eva_to_station_.find(id);
+
+      if (needle != end(sched_.eva_to_station_)) {
+        auto const needle_l = (*needle).second->index_;
+        for (auto i = 0U; i != size; ++i) {
+          if ((lb + i)->second == needle_l) {
+            if constexpr (kTracing) {
+              std::cout << "FOUND\n";
+            }
+            dbg = true;
+            goto next;
+          }
+          for (auto const& edge : fgraph[(lb + i)->second]) {
+            if (edge.to_station_ == needle_l) {
+              if constexpr (kTracing) {
+                std::cout << "FOUND\n";
+              }
+              dbg = true;
+              goto next;
+            }
+          }
+        }
+      } else {
+        if constexpr (kTracing) {
+          std::cout << "NEEDLE NOT FOUND\n";
+        }
+      }
+    }
+
+  next:
+    print_dbg("MOTIS STATIONS:\n");
+    for (auto i = 0U; i != size; ++i) {
+      print_dbg("{} = {} \n", i, sched_.stations_[(lb + i)->second]->eva_nr_);
+    }
+
+    print_dbg("MOTIS MAT BEFORE\n{}\n", mat);
+
     floyd_warshall(mat);
+
+    print_dbg("MOTIS MAT AFTER\n{}", mat);
 
     for (auto i = 0; i < size; ++i) {
       for (auto j = 0; j < size; ++j) {
@@ -354,6 +436,10 @@ struct footpath_builder {
 
         auto idx_a = std::next(lb, i)->second;
         auto idx_b = std::next(lb, j)->second;
+
+        print_dbg("MOTIS OUTPUT: {} --{}--> {}\n",
+                  sched_.stations_[idx_a]->eva_nr_, mat(i, j),
+                  sched_.stations_[idx_b]->eva_nr_);
 
         // each node only in one cluster -> no sync required
         sched_.stations_[idx_a]->outgoing_footpaths_.emplace_back(idx_a, idx_b,

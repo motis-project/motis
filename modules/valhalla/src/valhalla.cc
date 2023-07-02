@@ -80,6 +80,8 @@ void valhalla::import(mm::import_dispatcher& reg) {
           rapidjson::read_json(ss, pt);
 
           v::mjolnir::build_tile_set(pt, {osm->path()->str()});
+
+          mm::write_ini(dir / "import.ini", state);
         }
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {

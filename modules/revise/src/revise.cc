@@ -4,6 +4,7 @@
 
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "motis/module/event_collector.h"
 #include "motis/revise/update_journey.h"
 
 using namespace motis::module;
@@ -27,6 +28,20 @@ msg_ptr revise::update(msg_ptr const& msg) {
     default: throw std::system_error(error::unexpected_message_type);
   }
 }
+
+void revise::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "revise", reg,
+      [this](event_collector::dependencies_map_t const&,
+             event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool revise::import_successful() const { return import_successful_; }
 
 msg_ptr revise::update(Connection const* con) {
   message_creator fbb;

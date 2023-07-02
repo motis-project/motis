@@ -1,7 +1,5 @@
 #include "motis/loader/loader.h"
 
-#include <fstream>
-#include <istream>
 #include <memory>
 #include <ostream>
 #include <variant>
@@ -10,9 +8,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-#include "cista/serialization.h"
-#include "cista/targets/file.h"
 
 #include <filesystem>
 
@@ -50,7 +45,7 @@ std::vector<std::unique_ptr<format_parser>> parsers() {
 
 using dataset_mem_t = std::variant<cista::mmap, typed_flatbuffer<Schedule>>;
 
-schedule_ptr load_schedule_impl(loader_options const& opt,
+schedule_ptr load_schedule_impl(loader_options const& loader_opt,
                                 cista::memory_holder& schedule_buf,
                                 std::string const& data_dir) {
   ml::scoped_timer const time("loading schedule");
@@ -58,10 +53,10 @@ schedule_ptr load_schedule_impl(loader_options const& opt,
   // ensure there is an active progress tracker (e.g. for test cases)
   utl::get_active_progress_tracker_or_activate("schedule");
 
-  auto const graph_path = opt.graph_path(data_dir);
-  auto enable_read_graph = opt.read_graph_;
-  auto enable_write_graph = opt.write_graph_;
-  if (opt.cache_graph_) {
+  auto const graph_path = loader_opt.graph_path(data_dir);
+  auto enable_read_graph = loader_opt.read_graph_;
+  auto enable_write_graph = loader_opt.write_graph_;
+  if (loader_opt.cache_graph_) {
     enable_read_graph = fs::is_regular_file(graph_path);
     enable_write_graph = true;
   }
@@ -70,9 +65,9 @@ schedule_ptr load_schedule_impl(loader_options const& opt,
                 graph_path);
     LOG(ml::info) << "reading graph: " << graph_path;
     try {
-      return read_graph(graph_path, schedule_buf, opt.read_graph_mmap_);
+      return read_graph(graph_path, schedule_buf, loader_opt.read_graph_mmap_);
     } catch (std::runtime_error const& err) {
-      if (opt.cache_graph_) {
+      if (loader_opt.cache_graph_) {
         LOG(ml::info) << "could not load existing graph, updating cache ("
                       << err.what() << ")";
       } else {
@@ -81,15 +76,17 @@ schedule_ptr load_schedule_impl(loader_options const& opt,
     }
   }
 
-  utl::verify(!opt.dataset_.empty(), "load_schedule: opt.dataset_.empty()");
-  utl::verify(opt.dataset_.size() == 1 ||
-                  opt.dataset_.size() == opt.dataset_prefix_.size(),
-              "load_schedule: dataset/prefix size mismatch");
+  utl::verify(!loader_opt.dataset_.empty(),
+              "load_schedule: loader_opt.dataset_.empty()");
+  utl::verify(
+      loader_opt.dataset_.size() == 1 ||
+          loader_opt.dataset_.size() == loader_opt.dataset_prefix_.size(),
+      "load_schedule: dataset/prefix size mismatch");
 
   std::vector<dataset_mem_t> mem;
-  mem.reserve(opt.dataset_.size());
-  for (auto const& [i, path] : utl::enumerate(opt.dataset_)) {
-    auto const binary_schedule_file = opt.fbs_schedule_path(data_dir, i);
+  mem.reserve(loader_opt.dataset_.size());
+  for (auto const& [i, path] : utl::enumerate(loader_opt.dataset_)) {
+    auto const binary_schedule_file = loader_opt.fbs_schedule_path(data_dir, i);
     if (fs::is_regular_file(binary_schedule_file)) {
       mem.emplace_back(cista::mmap{binary_schedule_file.c_str(),
                                    cista::mmap::protection::READ});
@@ -112,13 +109,14 @@ schedule_ptr load_schedule_impl(loader_options const& opt,
     }
 
     auto progress_tracker = utl::activate_progress_tracker(
-        opt.dataset_prefix_.empty() || opt.dataset_prefix_[i].empty()
+        loader_opt.dataset_prefix_.empty() ||
+                loader_opt.dataset_prefix_[i].empty()
             ? fmt::format("parse {}", i)
-            : fmt::format("parse {}", opt.dataset_prefix_[i]));
+            : fmt::format("parse {}", loader_opt.dataset_prefix_[i]));
 
     flatbuffers64::FlatBufferBuilder builder;
     try {
-      (**it).parse(path, builder);
+      (**it).parse({loader_opt.link_stop_distance_}, path, builder);
       progress_tracker->status("FINISHED").show_progress(false);
     } catch (std::exception const& e) {
       progress_tracker->status(fmt::format("ERROR: {}", e.what()))
@@ -129,7 +127,7 @@ schedule_ptr load_schedule_impl(loader_options const& opt,
       throw;
     }
 
-    if (opt.write_serialized_) {
+    if (loader_opt.write_serialized_) {
       auto const schedule_dir = fs::path{binary_schedule_file}.parent_path();
       if (!schedule_dir.empty()) {
         fs::create_directories(schedule_dir);
@@ -152,7 +150,7 @@ schedule_ptr load_schedule_impl(loader_options const& opt,
   });
 
   utl::activate_progress_tracker("schedule");
-  auto sched = build_graph(datasets, opt);
+  auto sched = build_graph(datasets, loader_opt);
   if (enable_write_graph) {
     LOG(ml::info) << "writing graph: " << graph_path;
     auto const graph_dir = fs::path{graph_path}.parent_path();
@@ -179,23 +177,24 @@ bool load_schedule_checked(loader_options const& opt,
 }
 #endif
 
-schedule_ptr load_schedule(loader_options const& opt,
+schedule_ptr load_schedule(loader_options const& loader_opt,
                            cista::memory_holder& schedule_buf,
                            std::string const& data_dir) {
 #ifdef _WIN32
   auto ptr = schedule_ptr{};
-  utl::verify(load_schedule_checked(opt, schedule_buf, data_dir, ptr),
+  utl::verify(load_schedule_checked(loader_opt, schedule_buf, data_dir, ptr),
               "load_schedule: file access error: EXCEPTION_IN_PAGE_ERROR");
   return ptr;
 #else
-  return load_schedule_impl(opt, schedule_buf, data_dir);
+  return load_schedule_impl(loader_opt, schedule_buf, data_dir);
 #endif
 }
 
-schedule_ptr load_schedule(loader_options const& opt) {
-  utl::verify(!opt.read_graph_, "load_schedule: read_graph requires buffer");
+schedule_ptr load_schedule(loader_options const& loader_opt) {
+  utl::verify(!loader_opt.read_graph_,
+              "load_schedule: read_graph requires buffer");
   cista::memory_holder buf{};
-  return load_schedule(opt, buf, "");
+  return load_schedule(loader_opt, buf, "");
 }
 
 }  // namespace motis::loader

@@ -43,15 +43,13 @@ intermodal::intermodal() : module("Intermodal Options", "intermodal") {
 intermodal::~intermodal() = default;
 
 void intermodal::reg_subc(motis::module::subc_reg& r) {
-  r.register_cmd("intermodal_generate", "generate routing queries",
-                 eval::generate);
-  r.register_cmd("intermodal_compare", "print difference between results",
-                 eval::compare);
+  r.register_cmd("generate", "generate routing queries", eval::generate);
+  r.register_cmd("compare", "print difference between results", eval::compare);
 }
 
 void intermodal::init(motis::module::registry& r) {
   r.register_op("/intermodal", [this](msg_ptr const& m) { return route(m); },
-                {kScheduleReadAccess});
+                {});
   if (router_.empty()) {
     router_ = "/routing";
   } else if (router_[0] != '/') {
@@ -443,9 +441,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   message_creator mc;
   statistics stats{};
 
-  auto const& sched = get_sched();
-  auto const start = parse_query_start(mc, req, sched);
-  auto const dest = parse_query_dest(mc, req, sched);
+  auto const start = parse_query_start(mc, req);
+  auto const dest = parse_query_dest(mc, req);
 
   stats.linear_distance_ =
       static_cast<uint64_t>(distance(start.pos_, dest.pos_));

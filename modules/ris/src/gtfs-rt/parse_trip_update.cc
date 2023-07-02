@@ -392,9 +392,8 @@ void initialize_update_context(knowledge_context const& knowledge,
   } else {
     return;
   }
-
   utl::verify(update_ctx.trip_ != nullptr,
-              "GTFS trip update: unkown trip \"{}\"", update_ctx.trip_id_);
+              "GTFS trip update: unknown trip \"{}\"", update_ctx.trip_id_);
 
   update_ctx.is_stop_skip_new_.resize(
       (update_ctx.is_new_addition_ ||
@@ -415,8 +414,8 @@ void initialize_update_context(knowledge_context const& knowledge,
 void handle_trip_update(
     trip_update_context& update_ctx, knowledge_context& knowledge,
     unixtime const timestamp,
-    std::function<void(message_context&, flatbuffers::Offset<Message>)> const&
-        place_msg,
+    std::function<void(message_context&,
+                       flatbuffers::Offset<RISMessage>)> const& place_msg,
     std::string const& tag) {
   auto& sched = update_ctx.sched_;
   initialize_update_context(knowledge, update_ctx, tag);

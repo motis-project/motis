@@ -39,6 +39,7 @@
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/ris/amqp_buffer_reader.h"
 #include "motis/ris/ris_message.h"
@@ -53,10 +54,6 @@
 
 #include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ribasis/ribasis_receiver.h"
-
-#ifdef GetMessage
-#undef GetMessage
-#endif
 
 namespace fs = std::filesystem;
 namespace db = lmdb;
@@ -382,8 +379,9 @@ struct ris::impl {
 
     if (config_.clear_db_ && fs::exists(config_.db_path_)) {
       LOG(info) << "clearing database path " << config_.db_path_;
-      fs::remove_all(config_.db_path_);
-      fs::remove_all(config_.db_path_ + "-lock");
+      std::error_code ec;
+      fs::remove_all(config_.db_path_, ec);
+      fs::remove_all(config_.db_path_ + "-lock", ec);
     }
 
     env_.set_maxdbs(6);
@@ -601,19 +599,19 @@ struct ris::impl {
     }
 
     void add(uint8_t const* ptr, size_t const size) {
-      max_timestamp_ = std::max(
-          max_timestamp_,
-          static_cast<unixtime>(
-              flatbuffers::GetRoot<Message>(reinterpret_cast<void const*>(ptr))
-                  ->timestamp()));
+      max_timestamp_ =
+          std::max(max_timestamp_,
+                   static_cast<unixtime>(flatbuffers::GetRoot<RISMessage>(
+                                             reinterpret_cast<void const*>(ptr))
+                                             ->timestamp()));
       offsets_.push_back(
-          CreateMessageHolder(fbb_, fbb_.CreateVector(ptr, size)));
+          CreateRISMessageHolder(fbb_, fbb_.CreateVector(ptr, size)));
     }
 
     size_t size() const { return offsets_.size(); }
 
     message_creator fbb_;
-    std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
+    std::vector<flatbuffers::Offset<RISMessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
     bool skip_flush_{false};
     ctx::res_id_t schedule_res_id_{0U};
@@ -689,7 +687,7 @@ struct ris::impl {
 
         utl::verify(ptr + size <= end, "ris: ptr + size > end");
 
-        if (auto const msg = GetMessage(ptr);
+        if (auto const msg = GetRISMessage(ptr);
             msg->timestamp() <= to && msg->timestamp() >= from) {
           pub.add(reinterpret_cast<uint8_t const*>(ptr), size);
         }
@@ -1017,7 +1015,7 @@ struct ris::impl {
     auto min_db = t.dbi_open(MIN_DAY_DB);
     auto max_db = t.dbi_open(MAX_DAY_DB);
 
-    for (auto const [day, min_timestamp] : min) {
+    for (auto const& [day, min_timestamp] : min) {
       auto smallest = min_timestamp;
       if (auto entry = t.get(min_db, day); entry) {
         smallest = std::min(smallest, to_unixtime(*entry));
@@ -1025,7 +1023,7 @@ struct ris::impl {
       t.put(min_db, day, from_unixtime(smallest));
     }
 
-    for (auto const [day, max_timestamp] : max) {
+    for (auto const& [day, max_timestamp] : max) {
       auto largest = max_timestamp;
       if (auto entry = t.get(max_db, day); entry) {
         largest = std::max(largest, to_unixtime(*entry));
@@ -1258,5 +1256,19 @@ void ris::init(motis::module::registry& r) {
   r.register_op("/ris/apply",
                 [this](auto&& m) { return impl_->apply(*this, m); }, {});
 }
+
+void ris::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "ris", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool ris::import_successful() const { return import_successful_; }
 
 }  // namespace motis::ris

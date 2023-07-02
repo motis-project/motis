@@ -77,8 +77,8 @@ TEST(ris_reroute_message, message_1) {
   EXPECT_EQ(1444321500, message.earliest_);
   EXPECT_EQ(1444335660, message.latest_);
 
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_RerouteMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(message.data());
+  ASSERT_EQ(RISMessageUnion_RerouteMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<RerouteMessage const*>(outer_msg->content());
 
@@ -169,8 +169,8 @@ TEST(ris_reroute_message, message_only_new) {
   auto const messages = parse(reroute_fixture_only_new);
   ASSERT_EQ(1, messages.size());
 
-  auto outer_msg = GetMessage(messages[0].data());
-  ASSERT_EQ(MessageUnion_RerouteMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(messages[0].data());
+  ASSERT_EQ(RISMessageUnion_RerouteMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<RerouteMessage const*>(outer_msg->content());
 
@@ -231,8 +231,8 @@ TEST(ris_reroute_message, message_only_cancel) {
   auto const messages = parse(reroute_fixture_only_cancel);
   ASSERT_EQ(1, messages.size());
 
-  auto outer_msg = GetMessage(messages[0].data());
-  ASSERT_EQ(MessageUnion_RerouteMessage, outer_msg->content_type());
+  auto outer_msg = GetRISMessage(messages[0].data());
+  ASSERT_EQ(RISMessageUnion_RerouteMessage, outer_msg->content_type());
   auto inner_msg =
       reinterpret_cast<RerouteMessage const*>(outer_msg->content());
 

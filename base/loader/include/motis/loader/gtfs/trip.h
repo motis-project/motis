@@ -72,7 +72,7 @@ struct trip {
   int distance() const;
 
   void expand_frequencies(
-      std::function<void(trip const&, ScheduleRelationship)> const&) const;
+      std::function<void(trip&, ScheduleRelationship)> const&) const;
 
   void print_stop_times(std::ostream&, unsigned indent = 0) const;
 

@@ -91,20 +91,46 @@ full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
   return id;
 }
 
-merged_trips_idx graph_builder::create_merged_trips(Service const* s,
-                                                    int day_idx) {
-  return static_cast<motis::merged_trips_idx>(
-      push_mem(sched_.merged_trips_,
-               mcd::vector<ptr<trip>>({register_service(s, day_idx)})));
+std::optional<merged_trips_idx> graph_builder::create_merged_trips(
+    Service const* s, int day_idx) {
+  auto const trp = register_service(s, day_idx, false);
+  if (trp != nullptr) {
+    return static_cast<motis::merged_trips_idx>(
+        push_mem(sched_.merged_trips_, mcd::vector<ptr<trip>>({trp})));
+  } else {
+    return {};
+  }
 }
 
-trip* graph_builder::register_service(Service const* s, int day_idx) {
+trip* graph_builder::register_service(Service const* s, int day_idx,
+                                      bool allow_duplicates) {
+  auto const ftid = get_full_trip_id(s, day_idx);
+  if (auto const it = added_full_trip_ids_.find(ftid);
+      it != added_full_trip_ids_.end()) {
+    LOG(warn) << "service with duplicate trip id: "
+              << debug::trip_id{sched_, ftid}
+              << (allow_duplicates ? " - may cause problems!" : " - ignored");
+    if (s->debug() != nullptr) {
+      LOG(warn) << "duplicate service definition: " << s->debug()->file()->str()
+                << " lines " << s->debug()->line_from() << "-"
+                << s->debug()->line_to();
+    }
+    auto const& existing_trp = sched_.trip_mem_.at(it->second);
+    if (existing_trp->dbg_.file_ != nullptr) {
+      LOG(warn) << "existing service definition:  " << *existing_trp->dbg_.file_
+                << " lines " << existing_trp->dbg_.line_from_ << "-"
+                << existing_trp->dbg_.line_to_;
+    }
+    if (!allow_duplicates) {
+      return nullptr;
+    }
+  }
+
   auto const stored =
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip>(
-              get_full_trip_id(s, day_idx),
-              s->trip_id() == nullptr ? "" : s->trip_id()->str(), nullptr, 0U,
-              static_cast<trip_idx_t>(sched_.trip_mem_.size()),
+              ftid, s->trip_id() == nullptr ? "" : s->trip_id()->str(), nullptr,
+              0U, static_cast<trip_idx_t>(sched_.trip_mem_.size()),
               s->debug() == nullptr
                   ? trip_debug{}
                   : trip_debug{utl::get_or_create(
@@ -123,6 +149,7 @@ trip* graph_builder::register_service(Service const* s, int day_idx) {
               s->schedule_relationship() == ScheduleRelationship_UNSCHEDULED))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
+  added_full_trip_ids_[ftid] = stored->trip_idx_;
 
   if (s->trip_id() != nullptr) {
     auto const motis_time = to_motis_time(day_idx - first_day_ - 5, 0);
@@ -227,7 +254,13 @@ void graph_builder::add_route_services(
         continue;
       }
 
-      utl::verify(merged_trips_idx == create_merged_trips(s, day),
+      auto const created_merged_trips_idx = create_merged_trips(s, day);
+      if (!created_merged_trips_idx) {
+        // duplicate trip id
+        continue;
+      }
+
+      utl::verify(merged_trips_idx == *created_merged_trips_idx,
                   "unexpected merged_trips_idx");
       add_to_routes(alt_routes, lcons, stations);
     }
@@ -561,7 +594,7 @@ light_connection graph_builder::section_to_connection(
     LOG(logging::error) << "invalid times: " << *error
                         << ", section_idx=" << section_idx << ", trip="
                         << (ref->trip_id() != nullptr ? ref->trip_id()->str()
-                                                      : "unkown");
+                                                      : "unknown");
   }
 
   // Count events.

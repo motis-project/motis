@@ -8,7 +8,7 @@ struct gtfs_parser : public format_parser {
   bool applicable(std::filesystem::path const&) override;
   std::vector<std::string> missing_files(
       std::filesystem::path const&) const override;
-  void parse(std::filesystem::path const& root,
+  void parse(parser_options const&, std::filesystem::path const& root,
              flatbuffers64::FlatBufferBuilder&) override;
 };
 

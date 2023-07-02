@@ -33,8 +33,7 @@ struct query_start {
 };
 
 query_start parse_query_start(flatbuffers::FlatBufferBuilder&,
-                              IntermodalRoutingRequest const*,
-                              schedule const& sched);
+                              IntermodalRoutingRequest const*);
 
 struct query_dest {
   query_dest(flatbuffers::Offset<routing::InputStation> const station,
@@ -48,7 +47,6 @@ struct query_dest {
 };
 
 query_dest parse_query_dest(flatbuffers::FlatBufferBuilder&,
-                            IntermodalRoutingRequest const*,
-                            schedule const& sched);
+                            IntermodalRoutingRequest const*);
 
 }  // namespace motis::intermodal

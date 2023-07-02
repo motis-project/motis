@@ -1,0 +1,2 @@
+"agency_id","agency_name","agency_url","agency_timezone","agency_lang","agency_phone"
+796,"Berliner Verkehrsbetriebe","http://www.bvg.de","Europe/Berlin","de",""

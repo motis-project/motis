@@ -28,6 +28,7 @@ include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
 include "lookup/LookupStationInfoRequest.fbs";
 include "lookup/LookupStationInfoResponse.fbs";
+include "lookup/LookupStationLocationResponse.fbs";
 include "osrm/OSRMManyToManyRequest.fbs";
 include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
@@ -77,6 +78,8 @@ include "ris/RISSystemTimeChanged.fbs";
 include "routing/RoutingRequest.fbs";
 include "routing/RoutingResponse.fbs";
 include "rt/RtGraphUpdated.fbs";
+include "rt/RtMessageHistoryRequest.fbs";
+include "rt/RtMessageHistoryResponse.fbs";
 include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
@@ -245,7 +248,7 @@ union MsgContent {
   motis.ris.RISBatch                                                      = 077,
   motis.ris.UpdatedEvent                                                  = 078,
   motis.ris.Event                                                         = 079,
-  motis.ris.Message                                                       = 080,
+  motis.ris.RISMessage                                                    = 080,
   motis.ris.RISGTFSRTMapping                                              = 081,
   motis.ris.RISForwardTimeRequest                                         = 082,
   motis.ris.RISPurgeRequest                                               = 083,
@@ -314,7 +317,11 @@ union MsgContent {
   motis.lookup.LookupStationInfoResponse                                  = 146,
   motis.import.NigiriEvent                                                = 147,
   motis.paxmon.PaxMonGetTripCapacityRequest                               = 148,
-  motis.paxmon.PaxMonGetTripCapacityResponse                              = 149
+  motis.paxmon.PaxMonGetTripCapacityResponse                              = 149,
+  motis.rt.RtMessageHistoryRequest                                        = 150,
+  motis.rt.RtMessageHistoryResponse                                       = 151,
+  motis.lookup.LookupStationLocationResponse                              = 152,
+  motis.routing.InputStation                                              = 153
 }
 
 // Destination Examples:

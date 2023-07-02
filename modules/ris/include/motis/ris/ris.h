@@ -40,12 +40,17 @@ struct ris : public motis::module::module {
 
   void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override;
+
   void stop_io() override;
 
 private:
   struct impl;
   std::unique_ptr<impl> impl_;
   config config_;
+
+  bool import_successful_{false};
 };
 
 }  // namespace motis::ris

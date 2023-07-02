@@ -1,0 +1,8 @@
+include "base/TripId.fbs";
+
+namespace motis.rt;
+
+table RtMessageHistoryRequest {
+  schedule: ulong;
+  trip: TripId;
+}

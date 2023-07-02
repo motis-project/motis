@@ -12,6 +12,7 @@
 #include "motis/core/access/edge_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/journeys_to_message.h"
+#include "motis/module/event_collector.h"
 
 #include "motis/routing/additional_edges.h"
 #include "motis/routing/build_query.h"
@@ -39,10 +40,8 @@ routing::~routing() = default;
 
 void routing::reg_subc(motis::module::subc_reg& r) {
   r.register_cmd("print", "prints journeys", eval::print);
-  r.register_cmd("generate", "generate routing queries", eval::generate);
   r.register_cmd("rewrite", "rewrite query targets", eval::rewrite_queries);
   r.register_cmd("analyze", "print result statistics", eval::analyze_results);
-  r.register_cmd("compare", "print difference between results", eval::compare);
   r.register_cmd("xtract", "extract timetable from connections", eval::xtract);
 }
 
@@ -54,6 +53,20 @@ void routing::init(motis::module::registry& reg) {
       [this](msg_ptr const& msg) { return trip_to_connection(msg); },
       {kScheduleReadAccess});
 }
+
+void routing::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<event_collector>(
+      get_data_directory().generic_string(), "routing", reg,
+      [this](event_collector::dependencies_map_t const&,
+             event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool routing::import_successful() const { return import_successful_; }
 
 msg_ptr routing::route(msg_ptr const& msg) {
   auto const req = motis_content(RoutingRequest, msg);

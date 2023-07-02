@@ -33,8 +33,7 @@ waiting_time_rules load_waiting_time_rules(
   std::vector<int> waiting_times;
   if (!wzr_classes_path.empty() && !wzr_matrix_path.empty()) {
     rules.category_map_ =
-        utl::line_range<utl::mmap_reader>{
-            utl::mmap_reader{wzr_classes_path.c_str()}}  //
+        utl::line_range{utl::mmap_reader{wzr_classes_path.c_str()}}  //
         | utl::csv<class_mapping_entry>()  //
         | utl::transform([&](class_mapping_entry const& e) {
             rules.default_group_ =

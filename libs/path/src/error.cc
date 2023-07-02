@@ -12,7 +12,7 @@ std::string error_category_impl::message(int ev) const noexcept {
     case error::unknown_sequence: return "path: unknown sequence";
     case error::database_not_available: return "path: database not available";
     case error::invalid_request: return "path: invalid request";
-    default: return "path: unkown error";
+    default: return "path: unknown error";
   }
 }
 

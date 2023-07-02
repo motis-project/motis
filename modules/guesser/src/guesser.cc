@@ -11,6 +11,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/schedule.h"
+#include "motis/module/event_collector.h"
 #include "motis/protocol/Message_generated.h"
 
 using namespace flatbuffers;
@@ -57,6 +58,20 @@ void guesser::init(motis::module::registry& reg) {
       {kScheduleReadAccess,
        {to_res_id(global_res_id::GUESSER_DATA), ctx::access_t::WRITE}});
 }
+
+void guesser::import(motis::module::import_dispatcher& reg) {
+  std::make_shared<motis::module::event_collector>(
+      get_data_directory().generic_string(), "guesser", reg,
+      [this](motis::module::event_collector::dependencies_map_t const&,
+             motis::module::event_collector::publish_fn_t const&) {
+        import_successful_ = true;
+      })
+      ->require("SCHEDULE", [](motis::module::msg_ptr const& msg) {
+        return msg->get()->content_type() == MsgContent_ScheduleEvent;
+      });
+}
+
+bool guesser::import_successful() const { return import_successful_; }
 
 void guesser::update_stations() {
   auto const& sched = get_sched();

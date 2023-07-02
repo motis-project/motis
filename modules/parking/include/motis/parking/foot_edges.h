@@ -2,6 +2,7 @@
 
 #include <map>
 
+#include "motis/ppr/data.h"
 #include "motis/ppr/profile_info.h"
 
 #include "motis/parking/foot_edge_task.h"
@@ -13,10 +14,9 @@ namespace motis::parking {
 
 void compute_foot_edges_direct(
     database& db, std::vector<foot_edge_task> const& tasks,
+    motis::ppr::ppr_data const& ppr_data,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-    std::string const& ppr_graph, std::size_t edge_rtree_max_size,
-    std::size_t area_rtree_max_size, bool lock_rtrees, int threads,
-    bool ppr_exact);
+    int threads, bool ppr_exact);
 
 void compute_foot_edges_via_module(
     database& db, std::vector<foot_edge_task> const& tasks,

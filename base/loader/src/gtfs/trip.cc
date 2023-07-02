@@ -227,8 +227,7 @@ void trip::print_stop_times(std::ostream& out, unsigned const indent) const {
 }
 
 void trip::expand_frequencies(
-    std::function<void(trip const&, ScheduleRelationship)> const& consumer)
-    const {
+    std::function<void(trip&, ScheduleRelationship)> const& consumer) const {
   utl::verify(frequency_.has_value(), "bad call to trip::expand_frequencies");
 
   // NOLINTNEXTLINE(bugprone-unchecked-optional-access)

@@ -22,6 +22,8 @@ struct routing : public motis::module::module {
 
   void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
+  void import(motis::module::import_dispatcher&) override;
+  bool import_successful() const override;
 
 private:
   motis::module::msg_ptr ontrip_train(motis::module::msg_ptr const&);
@@ -30,6 +32,7 @@ private:
 
   std::mutex mem_pool_mutex_;
   std::vector<std::unique_ptr<memory>> mem_pool_;
+  bool import_successful_{false};
 };
 
 }  // namespace motis::routing

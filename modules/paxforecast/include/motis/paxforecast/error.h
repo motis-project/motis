@@ -26,7 +26,7 @@ public:
       case error::universe_not_found: return "paxforecast: universe not found";
       case error::invalid_rt_update_message:
         return "paxforecast: invalid rt update message";
-      default: return "paxforecast: unkown error";
+      default: return "paxforecast: unknown error";
     }
   }
 };

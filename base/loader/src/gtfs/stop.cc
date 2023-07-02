@@ -17,18 +17,19 @@ using std::get;
 namespace motis::loader::gtfs {
 
 enum { stop_id, stop_name, stop_timezone, parent_station, stop_lat, stop_lon };
-using gtfs_stop = std::tuple<cstr, cstr, cstr, cstr, float, float>;
+using gtfs_stop = std::tuple<cstr, cstr, cstr, cstr, cstr, cstr>;
 static const column_mapping<gtfs_stop> columns = {
     {"stop_id", "stop_name", "stop_timezone", "parent_station", "stop_lat",
      "stop_lon"}};
 
-void stop::compute_close_stations(geo::point_rtree const& stop_rtree) {
+void stop::compute_close_stations(geo::point_rtree const& stop_rtree,
+                                  unsigned const max_meters) {
   if (std::abs(coord_.lat_) < 2.0 && std::abs(coord_.lng_) < 2.0) {
     return;
   }
-  close_ = utl::to_vec(stop_rtree.in_radius(coord_, 100), [](size_t const idx) {
-    return static_cast<unsigned>(idx);
-  });
+  close_ =
+      utl::to_vec(stop_rtree.in_radius(coord_, max_meters),
+                  [](size_t const idx) { return static_cast<unsigned>(idx); });
 }
 
 std::set<stop*> stop::get_metas(std::vector<stop*> const& stops) {
@@ -70,6 +71,15 @@ std::set<stop*> stop::get_metas(std::vector<stop*> const& stops) {
     }
   }
 
+  std::set<stop*> children;
+  for (auto const& d : done) {
+    for (auto const& c : d->children_) {
+      children.emplace(c);
+    }
+  }
+
+  done.insert(begin(children), end(children));
+
   return done;
 }
 
@@ -86,7 +96,8 @@ stop_map read_stops(loaded_file file) {
 
     new_stop->id_ = get<stop_id>(s).to_str();
     new_stop->name_ = get<stop_name>(s).to_str();
-    new_stop->coord_ = {get<stop_lat>(s), get<stop_lon>(s)};
+    new_stop->coord_ = {parse<float>(get<stop_lat>(s).trim()),
+                        parse<float>(get<stop_lon>(s).trim())};
     new_stop->timezone_ = get<stop_timezone>(s).to_str();
 
     if (!get<parent_station>(s).trim().empty()) {

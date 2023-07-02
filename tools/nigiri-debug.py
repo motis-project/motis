@@ -2,14 +2,17 @@
 
 import sys
 import subprocess
+import os
 
+
+current_dir = os.getcwd()
 
 def query_f(id, router):
-    return f"{id}_q_fwd_{router}.json"
+    return f"{id}_q_bwd_iontrip_idest-{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r_fwd_{router}.json"
+    return f"{id}_r_bwd_iontrip_idest-{router}.json"
 
 
 if len(sys.argv) < 3:
@@ -19,34 +22,19 @@ else:
     start_time = sys.argv[2]
     print(f"debug for id={id}, time={start_time}")
 
-    reproduce_dir = f"./reproduce/{id}"
-    data_dir = f"{reproduce_dir}/data"
-    input_dir = f"{reproduce_dir}/input"
+    reproduce_dir = f"{current_dir}/reproduce/{id}"
+    fail_dir = f"{current_dir}/fail"
 
     run_nigiri = [
-        "./motis",
+        f"{current_dir}/motis",
         "-c", "input/config.ini",
-        "--modules", "nigiri", "intermodal", "lookup", "osrm",
-        "--dataset.cache_graph=true",
-        "--dataset.read_graph=false",
-        "--dataset.read_graph_mmap=true",
-        "--nigiri.no_cache=true",
-        "--import.paths", f"schedule-x:{input_dir}/schedule", f"osm:input/osm.pbf",
-        f"--import.data_dir={data_dir}",
-        f"--batch_input_file=fail/{query_f(id, 'nigiri')}",
-        f"--batch_output_file={reproduce_dir}/{result_f(id, 'nigiri')}",
+        f"--batch_input_file={fail_dir}/{query_f(id, 'nigiri')}",
+        f"--batch_output_file={result_f(id, 'nigiri')}",
         "--num_threads", "1"
     ]
-    # run_nigiri = [
-    #     "./motis",
-    #     "--modules", "nigiri", "intermodal", "lookup", "osrm",
-    #     f"--batch_input_file=fail/{query_f(id, 'nigiri')}",
-    #     f"--batch_output_file={result_f(id, 'nigiri')}",
-    #     "--num_threads", "1"
-    # ]
     print("NIGIRI_CMD:", " ".join(run_nigiri))
 
-    out = subprocess.check_output(run_nigiri)
+    out = subprocess.check_output(run_nigiri, cwd=reproduce_dir)
 
     needle = bytes("init: time_at_start={}".format(start_time), encoding='utf8')
     do_print = False

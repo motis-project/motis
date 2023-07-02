@@ -201,7 +201,7 @@ double get_radius_in_m(std::vector<mode> const& modes) {
       r = std::max(r, m.get_param(0, 15) * 60 * max_walk_speed +
                           m.get_param(1, 15) * 60 * max_bike_speed);
     } else {
-      throw utl::fail("unkown mode \"{}\"", m.name_);
+      throw utl::fail("unknown mode \"{}\"", m.name_);
     }
   }
   return r;
@@ -337,7 +337,7 @@ std::vector<fbs::Offset<ModeWrapper>> create_modes(
                      60 * m.get_param(1, 15))
               .Union()));
     } else {
-      throw utl::fail("unkown mode \"{}\"", m.name_);
+      throw utl::fail("unknown mode \"{}\"", m.name_);
     }
   }
   return v;

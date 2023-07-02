@@ -22,7 +22,7 @@ TEST(loader_hrd_fbs_services, repeated_service) {
 
   ASSERT_TRUE(p.applicable(hrd_root));
 
-  p.parse(hrd_root, b);
+  p.parse(parser_options{}, hrd_root, b);
   auto schedule = GetSchedule(b.GetBufferPointer());
 
   ASSERT_EQ(3, schedule->services()->size());
@@ -78,7 +78,7 @@ TEST(loader_hrd_fbs_services, multiple_services) {
 
   ASSERT_TRUE(p.applicable(hrd_root));
 
-  p.parse(hrd_root, b);
+  p.parse(parser_options{}, hrd_root, b);
 }
 
 TEST(loader_hrd_fbs_services, multiple_files) {
@@ -88,7 +88,7 @@ TEST(loader_hrd_fbs_services, multiple_files) {
 
   ASSERT_TRUE(p.applicable(hrd_root));
 
-  p.parse(hrd_root, b);
+  p.parse(parser_options{}, hrd_root, b);
 }
 
 TEST(loader_hrd_fbs_services, directions_and_providers) {
@@ -98,7 +98,7 @@ TEST(loader_hrd_fbs_services, directions_and_providers) {
 
   ASSERT_TRUE(p.applicable(hrd_root));
 
-  p.parse(hrd_root, b);
+  p.parse(parser_options{}, hrd_root, b);
   auto schedule = GetSchedule(b.GetBufferPointer());
 
   ASSERT_EQ(7, schedule->services()->size());

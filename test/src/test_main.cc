@@ -14,6 +14,8 @@
 namespace fs = std::filesystem;
 
 int main(int argc, char** argv) {
+  std::clog.rdbuf(std::cout.rdbuf());
+
   utl::get_active_progress_tracker_or_activate("test");
 
   fs::current_path(MOTIS_TEST_EXECUTION_DIR);
