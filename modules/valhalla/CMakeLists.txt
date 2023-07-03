@@ -7,5 +7,12 @@ file(GLOB_RECURSE motis-valhalla-files src/*.cc)
 add_library(motis-valhalla STATIC ${motis-valhalla-files})
 target_include_directories(motis-valhalla PUBLIC include)
 target_compile_features(motis-valhalla PUBLIC cxx_std_17)
-target_link_libraries(motis-valhalla valhalla valhalla-mjolnir motis-module)
+target_link_libraries(motis-valhalla
+    valhalla
+    valhalla-mjolnir
+    valhalla-baldr
+    valhalla-tyr
+    valhalla-midgard
+    valhalla-odin
+    motis-module)
 target_compile_options(motis-valhalla PRIVATE ${MOTIS_CXX_FLAGS})

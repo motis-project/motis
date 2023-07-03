@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "motis/module/module.h"
 
 namespace motis::valhalla {
@@ -19,6 +21,9 @@ struct valhalla : public motis::module::module {
 
 private:
   motis::module::msg_ptr route(motis::module::msg_ptr const&);
+
+  struct impl;
+  std::unique_ptr<impl> impl_;
 };
 
 }  // namespace motis::valhalla

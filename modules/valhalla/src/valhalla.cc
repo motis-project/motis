@@ -13,6 +13,13 @@
 
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
+#include "baldr/graphreader.h"
+#include "loki/worker.h"
+#include "sif/costfactory.h"
+#include "sif/dynamiccost.h"
+#include "thor/costmatrix.h"
+#include "thor/optimizer.h"
+#include "worker.h"
 
 namespace mm = motis::module;
 namespace fs = std::filesystem;
@@ -20,16 +27,223 @@ namespace v = ::valhalla;
 
 namespace motis::valhalla {
 
-std::string get_config(std::string const& tile_dir) {
-  return fmt::format(R"({
-  "mjolnir": {
+boost::property_tree::ptree get_config(std::string const& tile_dir) {
+  auto const config_json = fmt::format(R"({{
+  "thor": {{
+    "logging": {{
+      "long_request": 110,
+      "type": "std_out",
+      "color": true
+    }}
+  }},
+  "mjolnir": {{
     "tile_dir": "{}",
-    "data_processing": {
+    "data_processing": {{
       "use_admin_db": false
-    }
-  }
-})",
-                     tile_dir);
+    }}
+  }},
+  "loki": {{
+    "actions": [
+      "locate",
+      "route",
+      "height",
+      "sources_to_targets",
+      "optimized_route",
+      "isochrone",
+      "trace_route",
+      "trace_attributes",
+      "transit_available",
+      "expansion",
+      "centroid",
+      "status"
+    ],
+    "use_connectivity": true,
+    "service_defaults": {{
+      "radius": 0,
+      "minimum_reachability": 50,
+      "search_cutoff": 35000,
+      "node_snap_tolerance": 5,
+      "street_side_tolerance": 5,
+      "street_side_max_distance": 1000,
+      "heading_tolerance": 60
+    }},
+    "logging": {{
+      "type": "std_out",
+      "color": true,
+      "file_name": "path_to_some_file.log",
+      "long_request": 100.0
+    }},
+    "service": {{
+      "proxy": "ipc:///tmp/loki"
+    }}
+  }},
+  "meili": {{
+    "mode": "auto",
+    "customizable": [
+      "mode",
+      "search_radius",
+      "turn_penalty_factor",
+      "gps_accuracy",
+      "interpolation_distance",
+      "sigma_z",
+      "beta",
+      "max_route_distance_factor",
+      "max_route_time_factor"
+    ],
+    "verbose": false,
+    "default": {{
+      "sigma_z": 4.07,
+      "gps_accuracy": 5.0,
+      "beta": 3,
+      "max_route_distance_factor": 5,
+      "max_route_time_factor": 5,
+      "max_search_radius": 100,
+      "breakage_distance": 2000,
+      "interpolation_distance": 10,
+      "search_radius": 50,
+      "geometry": false,
+      "route": true,
+      "turn_penalty_factor": 0
+    }},
+    "auto": {{
+      "turn_penalty_factor": 200,
+      "search_radius": 50
+    }},
+    "pedestrian": {{
+      "turn_penalty_factor": 100,
+      "search_radius": 50
+    }},
+    "bicycle": {{
+      "turn_penalty_factor": 140
+    }},
+    "multimodal": {{
+      "turn_penalty_factor": 70
+    }},
+    "logging": {{
+      "type": "std_out",
+      "color": true,
+      "file_name": "path_to_some_file.log"
+    }},
+    "service": {{
+      "proxy": "ipc:///tmp/meili"
+    }},
+    "grid": {{
+      "size": 500,
+      "cache_size": 100240
+    }}
+  }},
+  "service_limits": {{
+    "auto": {{
+      "max_distance": 5000000.0,
+      "max_locations": 20,
+      "max_matrix_distance": 400000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "bus": {{
+      "max_distance": 5000000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 400000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "taxi": {{
+      "max_distance": 5000000.0,
+      "max_locations": 20,
+      "max_matrix_distance": 400000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "pedestrian": {{
+      "max_distance": 250000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 200000.0,
+      "max_matrix_location_pairs": 2500,
+      "min_transit_walking_distance": 1,
+      "max_transit_walking_distance": 10000
+    }},
+    "motor_scooter": {{
+      "max_distance": 500000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 200000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "motorcycle": {{
+      "max_distance": 500000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 200000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "bicycle": {{
+      "max_distance": 500000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 200000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "multimodal": {{
+      "max_distance": 500000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 0.0,
+      "max_matrix_location_pairs": 0
+    }},
+    "status": {{
+      "allow_verbose": false
+    }},
+    "transit": {{
+      "max_distance": 500000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 200000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "truck": {{
+      "max_distance": 5000000.0,
+      "max_locations": 20,
+      "max_matrix_distance": 400000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "skadi": {{
+      "max_shape": 750000,
+      "min_resample": 10.0
+    }},
+    "isochrone": {{
+      "max_contours": 4,
+      "max_time_contour": 120,
+      "max_distance": 25000.0,
+      "max_locations": 1,
+      "max_distance_contour": 200
+    }},
+    "trace": {{
+      "max_alternates": 3,
+      "max_alternates_shape": 100,
+      "max_distance": 200000.0,
+      "max_gps_accuracy": 100.0,
+      "max_search_radius": 100.0,
+      "max_shape": 16000
+    }},
+    "bikeshare": {{
+      "max_distance": 500000.0,
+      "max_locations": 50,
+      "max_matrix_distance": 200000.0,
+      "max_matrix_location_pairs": 2500
+    }},
+    "centroid": {{
+      "max_distance": 200000.0,
+      "max_locations": 5
+    }},
+    "max_exclude_locations": 50,
+    "max_reachability": 100,
+    "max_radius": 200,
+    "max_timedep_distance": 500000,
+    "max_alternates": 2,
+    "max_exclude_polygons_length": 10000
+    }}
+}})",
+                                       tile_dir);
+
+  std::stringstream ss;
+  ss << config_json;
+
+  boost::property_tree::ptree pt;
+  rapidjson::read_json(ss, pt);
+
+  return pt;
 }
 
 struct import_state {
@@ -39,17 +253,159 @@ struct import_state {
   mm::named<size_t, MOTIS_NAME("size")> size_;
 };
 
+struct valhalla::impl {
+  impl(boost::property_tree::ptree const& pt,
+       ::valhalla::sif::mode_costing_t walk,
+       ::valhalla::sif::mode_costing_t bike,
+       ::valhalla::sif::mode_costing_t car)
+      : reader_{std::make_shared<::valhalla::baldr::GraphReader>(
+            pt.get_child("mjolnir"))},
+        walk_{std::move(walk)},
+        bike_{std::move(bike)},
+        car_{std::move(car)},
+        loki_worker_{pt, reader_} {}
+  std::shared_ptr<::valhalla::baldr::GraphReader> reader_;
+  ::valhalla::sif::mode_costing_t walk_;
+  ::valhalla::sif::mode_costing_t bike_;
+  ::valhalla::sif::mode_costing_t car_;
+  ::valhalla::thor::CostMatrix matrix_;
+  ::valhalla::loki::loki_worker_t loki_worker_;
+};
+
 valhalla::valhalla() : module("Valhalla Street Router", "valhalla") {}
 
 valhalla::~valhalla() noexcept = default;
 
 void valhalla::init(mm::registry& reg) {
+  auto const config = get_config(get_data_directory() / "valhalla");
+  auto logging_subtree = config.get_child_optional("thor.logging");
+  if (logging_subtree) {
+    auto logging_config = ::valhalla::midgard::ToMap<
+        const boost::property_tree::ptree&,
+        std::unordered_map<std::string, std::string>>(logging_subtree.get());
+    ::valhalla::midgard::logging::Configure(logging_config);
+  }
+  ::valhalla::sif::CostFactory factory;
+  auto const make_costing = [](auto&& cost) {
+    ::valhalla::sif::mode_costing_t costing;
+    costing[static_cast<std::uint32_t>(cost->travel_mode())] = cost;
+    return costing;
+  };
+  impl_ = std::make_unique<impl>(
+      config, make_costing(factory.Create(::valhalla::Costing::pedestrian)),
+      make_costing(factory.Create(::valhalla::Costing::bicycle)),
+      make_costing(factory.Create(::valhalla::Costing::auto_)));
   reg.register_op("/valhalla",
                   [&](mm::msg_ptr const& msg) { return route(msg); }, {});
 }
 
+// Format the time string
+std::string GetFormattedTime(uint32_t secs) {
+  if (secs == 0) {
+    return "0";
+  }
+  uint32_t hours = secs / 3600;
+  uint32_t minutes = (secs / 60) % 60;
+  uint32_t seconds = secs % 60;
+  return std::to_string(hours) + ":" + std::to_string(minutes) + ":" +
+         std::to_string(seconds);
+}
+
+// Log results
+void LogResults(const bool optimize, const ::valhalla::Options& options,
+                const std::vector<::valhalla::thor::TimeDistance>& res) {
+  LOG_INFO("Results:");
+  uint32_t idx1 = 0;
+  uint32_t idx2 = 0;
+  uint32_t nlocs = options.sources_size();
+  for (auto& td : res) {
+    LOG_INFO(std::to_string(idx1) + "," + std::to_string(idx2) +
+             ": Distance= " + std::to_string(td.dist) + " Time= " +
+             GetFormattedTime(td.time) + " secs = " + std::to_string(td.time));
+    idx2++;
+    if (idx2 == nlocs) {
+      idx2 = 0;
+      idx1++;
+    }
+  }
+  if (optimize) {
+    // Optimize the path
+    auto t10 = std::chrono::high_resolution_clock::now();
+    std::vector<float> costs;
+    costs.reserve(res.size());
+    for (auto& td : res) {
+      costs.push_back(static_cast<float>(td.time));
+    }
+
+    ::valhalla::thor::Optimizer opt;
+    auto tour = opt.Solve(nlocs, costs);
+    LOG_INFO("Optimal Tour:");
+    for (auto& loc : tour) {
+      LOG_INFO("   : " + std::to_string(loc));
+    }
+    auto t11 = std::chrono::high_resolution_clock::now();
+    uint32_t ms1 =
+        std::chrono::duration_cast<std::chrono::milliseconds>(t11 - t10)
+            .count();
+    LOG_INFO("Optimization took " + std::to_string(ms1) + " ms");
+  }
+}
+
 mm::msg_ptr valhalla::route(mm::msg_ptr const& msg) {
-  return mm::make_success_msg();
+  using osrm::OSRMOneToManyRequest;
+  namespace json = rapidjson;
+  auto const req = motis_content(OSRMOneToManyRequest, msg);
+
+  json::Document doc;
+  doc.SetObject();
+
+  auto const encode = [&](Position const* to) {
+    auto coord = json::Value{json::kObjectType};
+    coord.AddMember("lat", json::Value{to->lat()}, doc.GetAllocator());
+    coord.AddMember("lon", json::Value{to->lng()}, doc.GetAllocator());
+    return coord;
+  };
+
+  auto sources = json::Value{json::kArrayType};
+  sources.PushBack(encode(req->one()), doc.GetAllocator());
+
+  auto targets = json::Value{json::kArrayType};
+  for (auto const& to : *req->many()) {
+    targets.PushBack(encode(to), doc.GetAllocator());
+  }
+
+  doc.AddMember("sources", sources, doc.GetAllocator());
+  doc.AddMember("targets", targets, doc.GetAllocator());
+  doc.AddMember("costing", "pedestrian", doc.GetAllocator());
+
+  json::StringBuffer buffer;
+  json::Writer<json::StringBuffer> writer(buffer);
+  doc.Accept(writer);
+
+  std::cout << buffer.GetString() << std::endl;
+
+  ::valhalla::Api api;
+  ::valhalla::from_json(
+      doc, ::valhalla::Options::Action::Options_Action_sources_to_targets, api);
+
+  impl_->loki_worker_.matrix(api);
+
+  auto const max_distance = 4000000.0f;
+  auto const res = impl_->matrix_.SourceToTarget(
+      api.options().sources(), api.options().targets(), *impl_->reader_,
+      impl_->walk_, ::valhalla::sif::TravelMode::kPedestrian, max_distance);
+  LogResults(false, *api.mutable_options(), res);
+  mm::message_creator fbb;
+  fbb.create_and_finish(
+      MsgContent_OSRMOneToManyResponse,
+      CreateOSRMOneToManyResponse(
+          fbb, fbb.CreateVectorOfStructs(utl::to_vec(
+                   res,
+                   [](::valhalla::thor::TimeDistance const& td) {
+                     return motis::osrm::Cost{1.0 * td.time, 1.0 * td.dist};
+                   })))
+          .Union());
+  return make_msg(fbb);
 }
 
 void valhalla::import(mm::import_dispatcher& reg) {
@@ -72,15 +428,7 @@ void valhalla::import(mm::import_dispatcher& reg) {
 
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
           auto const config = get_config(dir);
-
-          std::stringstream ss;
-          ss << config;
-
-          boost::property_tree::ptree pt;
-          rapidjson::read_json(ss, pt);
-
-          v::mjolnir::build_tile_set(pt, {osm->path()->str()});
-
+          v::mjolnir::build_tile_set(config, {osm->path()->str()});
           mm::write_ini(dir / "import.ini", state);
         }
       })
