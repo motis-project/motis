@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=c5364290a80e0644a923f537521d94bf08676895
+  commit=54636f3614baeee298e856860eb93c0011d0efbe
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
@@ -105,4 +105,4 @@
 [valhalla]
   url=git@github.com:motis-project/valhalla.git
   branch=master
-  commit=907347c5713c40d304535d08ea1b45bdd1f48c02
+  commit=b2243bf4767954ffc7a7cef0584f8deb2215c4b6
