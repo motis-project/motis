@@ -254,22 +254,14 @@ struct import_state {
 };
 
 struct valhalla::impl {
-  impl(boost::property_tree::ptree const& pt,
-       ::valhalla::sif::mode_costing_t walk,
-       ::valhalla::sif::mode_costing_t bike,
-       ::valhalla::sif::mode_costing_t car)
-      : reader_{std::make_shared<::valhalla::baldr::GraphReader>(
+  impl(boost::property_tree::ptree const& pt)
+      : reader_{std::make_shared<v::baldr::GraphReader>(
             pt.get_child("mjolnir"))},
-        walk_{std::move(walk)},
-        bike_{std::move(bike)},
-        car_{std::move(car)},
         loki_worker_{pt, reader_} {}
-  std::shared_ptr<::valhalla::baldr::GraphReader> reader_;
-  ::valhalla::sif::mode_costing_t walk_;
-  ::valhalla::sif::mode_costing_t bike_;
-  ::valhalla::sif::mode_costing_t car_;
-  ::valhalla::thor::CostMatrix matrix_;
-  ::valhalla::loki::loki_worker_t loki_worker_;
+  std::shared_ptr<v::baldr::GraphReader> reader_;
+  v::thor::CostMatrix matrix_;
+  v::loki::loki_worker_t loki_worker_;
+  v::sif::CostFactory factory_;
 };
 
 valhalla::valhalla() : module("Valhalla Street Router", "valhalla") {}
@@ -280,75 +272,15 @@ void valhalla::init(mm::registry& reg) {
   auto const config = get_config(get_data_directory() / "valhalla");
   auto logging_subtree = config.get_child_optional("thor.logging");
   if (logging_subtree) {
-    auto logging_config = ::valhalla::midgard::ToMap<
-        const boost::property_tree::ptree&,
-        std::unordered_map<std::string, std::string>>(logging_subtree.get());
-    ::valhalla::midgard::logging::Configure(logging_config);
+    auto logging_config =
+        v::midgard::ToMap<const boost::property_tree::ptree&,
+                          std::unordered_map<std::string, std::string>>(
+            logging_subtree.get());
+    v::midgard::logging::Configure(logging_config);
   }
-  ::valhalla::sif::CostFactory factory;
-  auto const make_costing = [](auto&& cost) {
-    ::valhalla::sif::mode_costing_t costing;
-    costing[static_cast<std::uint32_t>(cost->travel_mode())] = cost;
-    return costing;
-  };
-  impl_ = std::make_unique<impl>(
-      config, make_costing(factory.Create(::valhalla::Costing::pedestrian)),
-      make_costing(factory.Create(::valhalla::Costing::bicycle)),
-      make_costing(factory.Create(::valhalla::Costing::auto_)));
+  impl_ = std::make_unique<impl>(config);
   reg.register_op("/valhalla",
                   [&](mm::msg_ptr const& msg) { return route(msg); }, {});
-}
-
-// Format the time string
-std::string GetFormattedTime(uint32_t secs) {
-  if (secs == 0) {
-    return "0";
-  }
-  uint32_t hours = secs / 3600;
-  uint32_t minutes = (secs / 60) % 60;
-  uint32_t seconds = secs % 60;
-  return std::to_string(hours) + ":" + std::to_string(minutes) + ":" +
-         std::to_string(seconds);
-}
-
-// Log results
-void LogResults(const bool optimize, const ::valhalla::Options& options,
-                const std::vector<::valhalla::thor::TimeDistance>& res) {
-  LOG_INFO("Results:");
-  uint32_t idx1 = 0;
-  uint32_t idx2 = 0;
-  uint32_t nlocs = options.sources_size();
-  for (auto& td : res) {
-    LOG_INFO(std::to_string(idx1) + "," + std::to_string(idx2) +
-             ": Distance= " + std::to_string(td.dist) + " Time= " +
-             GetFormattedTime(td.time) + " secs = " + std::to_string(td.time));
-    idx2++;
-    if (idx2 == nlocs) {
-      idx2 = 0;
-      idx1++;
-    }
-  }
-  if (optimize) {
-    // Optimize the path
-    auto t10 = std::chrono::high_resolution_clock::now();
-    std::vector<float> costs;
-    costs.reserve(res.size());
-    for (auto& td : res) {
-      costs.push_back(static_cast<float>(td.time));
-    }
-
-    ::valhalla::thor::Optimizer opt;
-    auto tour = opt.Solve(nlocs, costs);
-    LOG_INFO("Optimal Tour:");
-    for (auto& loc : tour) {
-      LOG_INFO("   : " + std::to_string(loc));
-    }
-    auto t11 = std::chrono::high_resolution_clock::now();
-    uint32_t ms1 =
-        std::chrono::duration_cast<std::chrono::milliseconds>(t11 - t10)
-            .count();
-    LOG_INFO("Optimization took " + std::to_string(ms1) + " ms");
-  }
 }
 
 mm::msg_ptr valhalla::route(mm::msg_ptr const& msg) {
@@ -356,6 +288,7 @@ mm::msg_ptr valhalla::route(mm::msg_ptr const& msg) {
   namespace json = rapidjson;
   auto const req = motis_content(OSRMOneToManyRequest, msg);
 
+  // Encode request.
   json::Document doc;
   doc.SetObject();
 
@@ -378,30 +311,32 @@ mm::msg_ptr valhalla::route(mm::msg_ptr const& msg) {
   doc.AddMember("targets", targets, doc.GetAllocator());
   doc.AddMember("costing", "pedestrian", doc.GetAllocator());
 
-  json::StringBuffer buffer;
-  json::Writer<json::StringBuffer> writer(buffer);
-  doc.Accept(writer);
+  // Decode request.
+  v::Api request;
+  from_json(doc, v::Options::sources_to_targets, request);
+  auto& options = *request.mutable_options();
 
-  std::cout << buffer.GetString() << std::endl;
+  // Get the costing method - pass the JSON configuration
+  v::sif::TravelMode mode;
+  auto mode_costing = impl_->factory_.CreateModeCosting(options, mode);
 
-  ::valhalla::Api api;
-  ::valhalla::from_json(
-      doc, ::valhalla::Options::Action::Options_Action_sources_to_targets, api);
+  // Find path locations (loki) for sources and targets
+  impl_->loki_worker_.matrix(request);
 
-  impl_->loki_worker_.matrix(api);
-
-  auto const max_distance = 4000000.0f;
+  // Timing with CostMatrix
+  impl_->matrix_.clear();
   auto const res = impl_->matrix_.SourceToTarget(
-      api.options().sources(), api.options().targets(), *impl_->reader_,
-      impl_->walk_, ::valhalla::sif::TravelMode::kPedestrian, max_distance);
-  LogResults(false, *api.mutable_options(), res);
+      options.sources(), options.targets(), *impl_->reader_, mode_costing, mode,
+      4000000.0f);
+
+  // Encode OSRM response.
   mm::message_creator fbb;
   fbb.create_and_finish(
       MsgContent_OSRMOneToManyResponse,
       CreateOSRMOneToManyResponse(
           fbb, fbb.CreateVectorOfStructs(utl::to_vec(
                    res,
-                   [](::valhalla::thor::TimeDistance const& td) {
+                   [](v::thor::TimeDistance const& td) {
                      return motis::osrm::Cost{1.0 * td.time, 1.0 * td.dist};
                    })))
           .Union());
@@ -412,7 +347,7 @@ void valhalla::import(mm::import_dispatcher& reg) {
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "valhalla", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
-             mm::event_collector::publish_fn_t const& publish) {
+             mm::event_collector::publish_fn_t const&) {
         using import::OSMEvent;
 
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
