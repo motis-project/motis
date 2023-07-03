@@ -1427,8 +1427,6 @@ PaxMonVehicleCapacityInfo:
   fields:
     uic:
       description: UIC vehicle number
-    found:
-      description: Whether the vehicle was found in the vehicle database.
     baureihe:
       description: TODO
     type_code:
@@ -1437,15 +1435,11 @@ PaxMonVehicleCapacityInfo:
       description: TODO
     data:
       description: TODO
-    vehicle_groups:
-      description: >
-        A list of vehicle groups that contain this vehicle. The vehicle groups
-        are referenced by their index in the `vehicle_groups` list, e.g. an
-        entry of `0` means that the vehicle is contained in the first vehicle
-        group.
     guessed:
       description: Whether the vehicle capacity was guessed.
     capacity_source:
+      description: TODO
+    uic_found:
       description: TODO
 PaxMonMergedTripCapacityInfo:
   description: TODO
@@ -1470,10 +1464,6 @@ PaxMonMergedTripCapacityInfo:
       description: >
         Whether capacity information for all vehicles in the trip formation was
         found.
-    vehicles:
-      description: >
-        The vehicles according to the trip formation, with capacity information
-        from the vehicle database.
     vehicle_groups:
       description: >
         The vehicle groups according to the trip formation.
@@ -1576,6 +1566,8 @@ PaxMonVehicleGroupInfo:
     primary_trip_id:
       description: TODO
     capacity:
+      description: TODO
+    vehicles:
       description: TODO
 PaxMonCapacityStatusRequest:
   description: TODO

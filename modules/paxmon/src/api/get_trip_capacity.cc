@@ -93,7 +93,6 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
       auto tf_source = capacity_source::FORMATION_VEHICLES;
       auto tf_found = false;
       auto tf_all_vehicles_found = false;
-      auto vehicles = std::vector<Offset<PaxMonVehicleCapacityInfo>>{};
       auto vehicle_groups = std::vector<Offset<PaxMonVehicleGroupInfo>>{};
       auto const* tf_sec =
           get_trip_formation_section(sched, caps, trp, sec.ev_key_from());
@@ -103,11 +102,79 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
 
         vehicle_groups =
             utl::to_vec(tf_sec->vehicle_groups_, [&](vehicle_group const& vg) {
-              auto cap = std::vector<Offset<PaxMonCapacityData>>{};
+              auto vehicle_cap = vehicle_capacity{};
+              auto all_uics_found = true;
+              auto baureihe_used = false;
+              auto gattung_used = false;
+
+              auto const vehicles =
+                  utl::to_vec(vg.vehicles_, [&](vehicle_info const& vi) {
+                    auto cap = vehicle_capacity{};
+                    auto cap_source = capacity_source::SPECIAL;
+                    auto uic_found = false;
+                    auto guessed = false;
+
+                    if (auto const it =
+                            caps.vehicle_capacity_map_.find(vi.uic_);
+                        it != end(caps.vehicle_capacity_map_) && vi.has_uic()) {
+                      cap = it->second;
+                      cap_source = capacity_source::FORMATION_VEHICLES;
+                      uic_found = true;
+                    } else {
+                      all_uics_found = false;
+                      if (auto const it =
+                              caps.baureihe_capacity_map_.find(vi.baureihe_);
+                          it != end(caps.baureihe_capacity_map_)) {
+                        cap = it->second;
+                        cap_source = capacity_source::FORMATION_BAUREIHE;
+                        guessed = true;
+                        baureihe_used = true;
+                      } else if (auto const it =
+                                     caps.gattung_capacity_map_.find(
+                                         vi.type_code_);
+                                 it != end(caps.gattung_capacity_map_)) {
+                        cap = it->second;
+                        cap_source = capacity_source::FORMATION_GATTUNG;
+                        guessed = true;
+                        gattung_used = true;
+                      }
+                    }
+                    vehicle_cap += cap;
+
+                    return CreatePaxMonVehicleCapacityInfo(
+                        mc, vi.uic_, uic_found, guessed,
+                        mc.CreateSharedString(vi.baureihe_.str()),
+                        mc.CreateSharedString(vi.type_code_.str()),
+                        mc.CreateSharedString(vi.order_.str()),
+                        to_fbs_capacity_data(mc, cap),
+                        to_fbs_capacity_source(cap_source));
+                  });
+
+              auto vg_cap = vehicle_capacity{};
+              auto fbs_vg_cap = std::vector<Offset<PaxMonCapacityData>>{};
               if (auto const it =
                       caps.vehicle_group_capacity_map_.find(vg.name_);
                   it != end(caps.vehicle_group_capacity_map_)) {
-                cap.emplace_back(to_fbs_capacity_data(mc, it->second));
+                vg_cap = it->second;
+                fbs_vg_cap.emplace_back(to_fbs_capacity_data(mc, it->second));
+              }
+
+              if (!all_uics_found && vg_cap.seats() != 0) {
+                // if not all vehicle uics were found, but the vehicle group was
+                // found, use the vehicle group info
+                tf_capacity += vg_cap;
+                tf_source = get_worst_source(
+                    tf_source, capacity_source::FORMATION_VEHICLE_GROUPS);
+              } else {
+                tf_capacity += vehicle_cap;
+                if (baureihe_used) {
+                  tf_source = get_worst_source(
+                      tf_source, capacity_source::FORMATION_BAUREIHE);
+                }
+                if (gattung_used) {
+                  tf_source = get_worst_source(
+                      tf_source, capacity_source::FORMATION_GATTUNG);
+                }
               }
 
               return CreatePaxMonVehicleGroupInfo(
@@ -115,71 +182,10 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
                   to_optional_fbs_station(mc, sched, vg.start_eva_),
                   to_optional_fbs_station(mc, sched, vg.destination_eva_),
                   mc.CreateSharedString(boost::uuids::to_string(vg.trip_uuid_)),
-                  to_fbs(mc, vg.primary_trip_id_), mc.CreateVector(cap));
+                  to_fbs(mc, vg.primary_trip_id_), mc.CreateVector(fbs_vg_cap),
+                  mc.CreateVector(vehicles));
             });
 
-        vehicles.reserve(tf_sec->vehicles_.size());
-        auto has_vehicles = false;
-        for (auto const& vi : tf_sec->vehicles_) {
-          auto const vgs = mc.CreateVector(utl::to_vec(
-              vi.vehicle_groups_, [](auto const& vg) { return vg; }));
-          if (vi.uic_ != 0) {
-            has_vehicles = true;
-          }
-          if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
-              it != end(caps.vehicle_capacity_map_)) {
-            auto const& vc = it->second;
-            tf_capacity += vc;
-            vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
-                mc, vi.uic_, true, false,
-                mc.CreateSharedString(vi.baureihe_.str()),
-                mc.CreateSharedString(vi.type_code_.str()),
-                mc.CreateSharedString(vi.order_.str()),
-                to_fbs_capacity_data(mc, vc), vgs,
-                to_fbs_capacity_source(capacity_source::FORMATION_VEHICLES)));
-          } else {
-            tf_all_vehicles_found = false;
-            auto vc = vehicle_capacity{};
-            auto guessed = false;
-            auto cap_source = capacity_source::SPECIAL;
-            if (auto const it = caps.baureihe_capacity_map_.find(vi.baureihe_);
-                it != end(caps.baureihe_capacity_map_)) {
-              vc = it->second;
-              tf_capacity += vc;
-              guessed = true;
-              cap_source = capacity_source::FORMATION_BAUREIHE;
-            } else if (auto const it =
-                           caps.gattung_capacity_map_.find(vi.type_code_);
-                       it != end(caps.gattung_capacity_map_)) {
-              vc = it->second;
-              tf_capacity += vc;
-              guessed = true;
-              cap_source = capacity_source::FORMATION_GATTUNG;
-            }
-            tf_source = get_worst_source(tf_source, cap_source);
-            vehicles.emplace_back(CreatePaxMonVehicleCapacityInfo(
-                mc, vi.uic_, false, guessed,
-                mc.CreateSharedString(vi.baureihe_.str()),
-                mc.CreateSharedString(vi.type_code_.str()),
-                mc.CreateSharedString(vi.order_.str()),
-                to_fbs_capacity_data(mc, vc), vgs,
-                to_fbs_capacity_source(tf_source)));
-          }
-        }
-
-        if (!has_vehicles) {
-          auto vg_cap = vehicle_capacity{};
-          for (auto const& vg : tf_sec->vehicle_groups_) {
-            if (auto const it = caps.vehicle_group_capacity_map_.find(vg.name_);
-                it != end(caps.vehicle_group_capacity_map_)) {
-              vg_cap += it->second;
-            }
-          }
-          if (vg_cap.seats() > 0) {
-            tf_capacity = vg_cap;
-            tf_source = capacity_source::FORMATION_VEHICLE_GROUPS;
-          }
-        }
       } else {
         tf_source = capacity_source::SPECIAL;
       }
@@ -197,8 +203,7 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
           to_fbs_capacity_source(tl_capacity_src),
           to_fbs_capacity_data(mc, tf_capacity),
           to_fbs_capacity_source(tf_source), tf_found, tf_all_vehicles_found,
-          mc.CreateVector(vehicles), mc.CreateVector(vehicle_groups),
-          mc.CreateVector(override)));
+          mc.CreateVector(vehicle_groups), mc.CreateVector(override)));
 
       ci = ci->merged_with_;
     }

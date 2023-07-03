@@ -14,8 +14,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "cista/reflection/comparable.h"
-
 #include "motis/hash_set.h"
 
 #include "motis/core/access/realtime_access.h"
@@ -229,77 +227,86 @@ trip_formation_section const* get_trip_formation_section(
   return best_section_match;
 }
 
-struct vehicle_id {
-  CISTA_COMPARABLE()
-  std::uint64_t uic_{};
-  mcd::string baureihe_;
-  mcd::string type_code_;
-};
-
 std::optional<std::pair<vehicle_capacity, capacity_source>>
 get_section_capacity(schedule const& sched, capacity_maps const& caps,
                      std::uint32_t const merged_trips_idx,
                      ev_key const& ev_key_from) {
-  auto has_vehicles = false;
-  auto vehicles = std::set<vehicle_id>{};
-  auto vehicle_groups = mcd::hash_set<mcd::string>{};
+  auto processed_uics = mcd::hash_set<std::uint64_t>{};
+  auto processed_vehicle_groups = mcd::hash_set<mcd::string>{};
+  auto total_cap = vehicle_capacity{};
+  auto worst_source = capacity_source::FORMATION_VEHICLES;
 
   for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
     auto const* tf_sec =
         get_trip_formation_section(sched, caps, trp, ev_key_from);
-    if (tf_sec != nullptr) {
-      for (auto const& vi : tf_sec->vehicles_) {
-        vehicles.insert(vehicle_id{vi.uic_, vi.baureihe_, vi.type_code_});
+    if (tf_sec == nullptr) {
+      continue;
+    }
+    for (auto const& vg : tf_sec->vehicle_groups_) {
+      if (processed_vehicle_groups.find(vg.name_) !=
+          end(processed_vehicle_groups)) {
+        continue;
       }
-      for (auto const& vg : tf_sec->vehicle_groups_) {
-        vehicle_groups.insert(vg.name_);
+      processed_vehicle_groups.insert(vg.name_);
+
+      auto vg_cap = vehicle_capacity{};
+      if (auto const it = caps.vehicle_group_capacity_map_.find(vg.name_);
+          it != end(caps.vehicle_group_capacity_map_)) {
+        vg_cap = it->second;
+      }
+
+      auto vehicle_cap = vehicle_capacity{};
+      auto all_uics_found = true;
+      auto baureihe_used = false;
+      auto gattung_used = false;
+      for (auto const& vi : vg.vehicles_) {
+        if (vi.has_uic() &&
+            processed_uics.find(vi.uic_) != end(processed_uics)) {
+          continue;
+        } else if (vi.has_uic()) {
+          processed_uics.insert(vi.uic_);
+        }
+
+        if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
+            it != end(caps.vehicle_capacity_map_) && vi.has_uic()) {
+          vehicle_cap += it->second;
+        } else {
+          all_uics_found = false;
+          if (auto const it = caps.baureihe_capacity_map_.find(vi.baureihe_);
+              it != end(caps.baureihe_capacity_map_)) {
+            vehicle_cap += it->second;
+            baureihe_used = true;
+          } else if (auto const it =
+                         caps.gattung_capacity_map_.find(vi.type_code_);
+                     it != end(caps.gattung_capacity_map_)) {
+            vehicle_cap += it->second;
+            gattung_used = true;
+          }
+        }
+      }
+
+      if (!all_uics_found && vg_cap.seats() != 0) {
+        // if not all vehicle uics were found, but the vehicle group was
+        // found, use the vehicle group info
+        total_cap += vg_cap;
+        worst_source = get_worst_source(
+            worst_source, capacity_source::FORMATION_VEHICLE_GROUPS);
+      } else {
+        total_cap += vehicle_cap;
+        if (baureihe_used) {
+          worst_source = get_worst_source(worst_source,
+                                          capacity_source::FORMATION_BAUREIHE);
+        }
+        if (gattung_used) {
+          worst_source = get_worst_source(worst_source,
+                                          capacity_source::FORMATION_GATTUNG);
+        }
       }
     }
   }
 
-  auto v_cap = vehicle_capacity{};
-  auto baureihe_matches = 0;
-  auto gattung_matches = 0;
-  for (auto const& vehicle : vehicles) {
-    if (vehicle.uic_ != 0) {
-      has_vehicles = true;
-    }
-    if (auto const it = caps.vehicle_capacity_map_.find(vehicle.uic_);
-        it != end(caps.vehicle_capacity_map_)) {
-      v_cap += it->second;
-    } else if (auto const it =
-                   caps.baureihe_capacity_map_.find(vehicle.baureihe_);
-               it != end(caps.baureihe_capacity_map_)) {
-      v_cap += it->second;
-      ++baureihe_matches;
-    } else if (auto const it =
-                   caps.gattung_capacity_map_.find(vehicle.type_code_);
-               it != end(caps.gattung_capacity_map_)) {
-      v_cap += it->second;
-      ++gattung_matches;
-    }
-  }
-  auto v_source = capacity_source::FORMATION_VEHICLES;
-  if (gattung_matches > 0) {
-    v_source = capacity_source::FORMATION_GATTUNG;
-  } else if (baureihe_matches > 0) {
-    v_source = capacity_source::FORMATION_BAUREIHE;
-  }
-
-  auto vg_cap = vehicle_capacity{};
-  for (auto const& vg : vehicle_groups) {
-    if (auto const it = caps.vehicle_group_capacity_map_.find(vg);
-        it != end(caps.vehicle_group_capacity_map_)) {
-      vg_cap += it->second;
-    }
-  }
-
-  if (!has_vehicles && vg_cap.seats() > 0) {
-    return {{vg_cap, capacity_source::FORMATION_VEHICLE_GROUPS}};
-  } else if (v_cap.seats() > 0) {
-    return {{v_cap, v_source}};
-  } else if (vg_cap.seats() > 0) {
-    return {{vg_cap, capacity_source::FORMATION_VEHICLE_GROUPS}};
+  if (total_cap.seats() > 0) {
+    return {{total_cap, worst_source}};
   } else {
     return {};
   }

@@ -71,6 +71,8 @@ export function getFormationCapacitySourceShortText(
       return "Baureihe";
     case "FormationGattung":
       return "Fahrzeuggattung";
+    case "Unknown":
+      return "Unbekannt";
     default:
       return "???";
   }

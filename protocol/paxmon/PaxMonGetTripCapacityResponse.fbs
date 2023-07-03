@@ -17,13 +17,12 @@ table PaxMonCapacityData {
 
 table PaxMonVehicleCapacityInfo {
   uic: ulong;
-  found: bool;
+  uic_found: bool;
   guessed: bool;
   baureihe: string;
   type_code: string;
   order: string;
   data: PaxMonCapacityData;
-  vehicle_groups: [ubyte];
   capacity_source: PaxMonCapacitySource;
 }
 
@@ -34,6 +33,7 @@ table PaxMonVehicleGroupInfo {
   trip_uuid: string;
   primary_trip_id: motis.TripId;
   capacity: [PaxMonCapacityData];
+  vehicles: [PaxMonVehicleCapacityInfo];
 }
 
 table PaxMonMergedTripCapacityInfo {
@@ -48,7 +48,6 @@ table PaxMonMergedTripCapacityInfo {
   trip_formation_found: bool;
   trip_formation_all_vehicles_found: bool;
 
-  vehicles: [PaxMonVehicleCapacityInfo];
   vehicle_groups: [PaxMonVehicleGroupInfo];
 
   override: [PaxMonCapacityData];

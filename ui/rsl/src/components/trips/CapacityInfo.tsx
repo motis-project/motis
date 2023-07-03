@@ -7,12 +7,14 @@ import {
   PaxMonMergedTripCapacityInfo,
   PaxMonSectionCapacityInfo,
   PaxMonTripCapacityInfo,
+  PaxMonVehicleGroupInfo,
 } from "@/api/protocol/motis/paxmon";
 
 import { usePaxMonGetTripCapacity } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 
+import { EMTPY_CAPACITY_DATA, addCapacityData } from "@/util/capacity";
 import {
   getCapacitySourceShortText,
   getCapacitySourceTooltip,
@@ -224,7 +226,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
                 )})`}
               </span>
             </div>
-            <SectionVehicles mt={mt} />
+            <SectionVehicleGroups mt={mt} />
           </>
         )}
         {!has_capacity && <div>Keine Kapazitätsinformationen gefunden</div>}
@@ -233,100 +235,15 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
   );
 }
 
-function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
+function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
+  const capacitySum = mt.vehicle_groups.reduce(
+    (sum, vg) =>
+      vg.capacity.length === 1 ? addCapacityData(sum, vg.capacity[0]) : sum,
+    EMTPY_CAPACITY_DATA
+  );
+
   return (
     <div>
-      <table className="mt-2">
-        <thead>
-          <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
-            <td className="px-2">Wagen</td>
-            <td className="px-2">Bauart</td>
-            <td className="px-2">Baureihe</td>
-            <td className="px-2">UIC-Wagennummer</td>
-            <td className="px-2 text-center" title="Sitzplätze insgesamt">
-              Sitze
-            </td>
-            <td className="px-2 text-center" title="Sitzplätze 1. Klasse">
-              1. Kl
-            </td>
-            <td className=" text-center" title="Sitzplätze 2. Klasse">
-              2. Kl
-            </td>
-            <td className="px-2 text-center" title="Stehplätze">
-              Steh.
-            </td>
-            <td
-              className="px-2 text-center"
-              title="Zulässige Gesamtanzahl Reisender"
-            >
-              Zul.
-            </td>
-            <td
-              className="px-2 text-center"
-              title="Maximalkapazität (Zulässige Gesamtanzahl Reisender oder Anzahl Sitzplätze)"
-            >
-              Max.
-            </td>
-            <td className="px-2 text-center">Quelle</td>
-            <td className="px-2">Fahrzeuggruppen</td>
-          </tr>
-        </thead>
-        <tbody>
-          {mt.vehicles.map((v) => (
-            <tr
-              key={v.uic}
-              className={classNames(
-                v.guessed ? "text-fuchsia-500" : !v.found && "text-red-500"
-              )}
-            >
-              <td className="px-2">{v.order}</td>
-              <td className="px-2">{v.type_code}</td>
-              <td className="px-2">
-                <Baureihe baureihe={v.baureihe} />
-              </td>
-              <td className="px-2">{v.uic}</td>
-              <td className="px-2 text-center">{v.data.seats}</td>
-              <td className="px-2 text-center">{v.data.seats_1st}</td>
-              <td className="px-2 text-center">{v.data.seats_2nd}</td>
-              <td className="px-2 text-center">{v.data.standing}</td>
-              <td className="px-2 text-center">{v.data.total_limit}</td>
-              <td className="px-2 text-center">{v.data.limit}</td>
-              <td className="px-2 text-center">
-                {getFormationCapacitySourceShortText(v.capacity_source, true)}
-              </td>
-              <td className="px-2">
-                {v.vehicle_groups
-                  .map((idx) => mt.vehicle_groups[idx].name)
-                  .join(", ")}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="font-semibold border-t-2 border-db-cool-gray-300">
-            <td className="px-2" colSpan={4}></td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.seats}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.seats_1st}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.seats_2nd}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.standing}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.total_limit}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.limit}
-            </td>
-            <td className="px-2"></td>
-          </tr>
-        </tfoot>
-      </table>
       <table className="mt-2">
         <thead>
           <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
@@ -395,6 +312,109 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             </tr>
           ))}
         </tbody>
+        <tfoot>
+          <tr className="font-semibold border-t-2 border-db-cool-gray-300">
+            <td className="px-2" colSpan={4}></td>
+            <td className="px-2 text-center">{capacitySum.seats}</td>
+            <td className="px-2 text-center">{capacitySum.seats_1st}</td>
+            <td className="px-2 text-center">{capacitySum.seats_2nd}</td>
+            <td className="px-2 text-center">{capacitySum.standing}</td>
+            <td className="px-2 text-center">{capacitySum.total_limit}</td>
+            <td className="px-2 text-center">{capacitySum.limit}</td>
+            <td className="px-2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div>
+        {mt.vehicle_groups.map((vg) => (
+          <VehicleGroup key={vg.name} vg={vg} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
+  const capacitySum = vg.vehicles.reduce(
+    (sum, v) => addCapacityData(sum, v.data),
+    EMTPY_CAPACITY_DATA
+  );
+
+  return (
+    <div className="mt-2">
+      <div className="font-semibold">Fahrzeuggruppe {vg.name}:</div>
+      <table className="mt-2">
+        <thead>
+          <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
+            <td className="px-2">Wagen</td>
+            <td className="px-2">Bauart</td>
+            <td className="px-2">Baureihe</td>
+            <td className="px-2">UIC-Wagennummer</td>
+            <td className="px-2 text-center" title="Sitzplätze insgesamt">
+              Sitze
+            </td>
+            <td className="px-2 text-center" title="Sitzplätze 1. Klasse">
+              1. Kl
+            </td>
+            <td className=" text-center" title="Sitzplätze 2. Klasse">
+              2. Kl
+            </td>
+            <td className="px-2 text-center" title="Stehplätze">
+              Steh.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Zulässige Gesamtanzahl Reisender"
+            >
+              Zul.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Maximalkapazität (Zulässige Gesamtanzahl Reisender oder Anzahl Sitzplätze)"
+            >
+              Max.
+            </td>
+            <td className="px-2 text-center">Quelle</td>
+          </tr>
+        </thead>
+        <tbody>
+          {vg.vehicles.map((v) => (
+            <tr
+              key={v.uic}
+              className={classNames(
+                v.guessed ? "text-fuchsia-500" : !v.uic_found && "text-red-500"
+              )}
+            >
+              <td className="px-2">{v.order}</td>
+              <td className="px-2">{v.type_code}</td>
+              <td className="px-2">
+                <Baureihe baureihe={v.baureihe} />
+              </td>
+              <td className="px-2">{v.uic != 0 ? v.uic : ""}</td>
+              <td className="px-2 text-center">{v.data.seats}</td>
+              <td className="px-2 text-center">{v.data.seats_1st}</td>
+              <td className="px-2 text-center">{v.data.seats_2nd}</td>
+              <td className="px-2 text-center">{v.data.standing}</td>
+              <td className="px-2 text-center">{v.data.total_limit}</td>
+              <td className="px-2 text-center">{v.data.limit}</td>
+              <td className="px-2 text-center">
+                {getFormationCapacitySourceShortText(v.capacity_source, true)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-semibold border-t-2 border-db-cool-gray-300">
+            <td className="px-2" colSpan={4}></td>
+            <td className="px-2 text-center">{capacitySum.seats}</td>
+            <td className="px-2 text-center">{capacitySum.seats_1st}</td>
+            <td className="px-2 text-center">{capacitySum.seats_2nd}</td>
+            <td className="px-2 text-center">{capacitySum.standing}</td>
+            <td className="px-2 text-center">{capacitySum.total_limit}</td>
+            <td className="px-2 text-center">{capacitySum.limit}</td>
+            <td className="px-2"></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   );
