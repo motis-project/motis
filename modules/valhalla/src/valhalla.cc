@@ -269,7 +269,8 @@ valhalla::valhalla() : module("Valhalla Street Router", "valhalla") {}
 valhalla::~valhalla() noexcept = default;
 
 void valhalla::init(mm::registry& reg) {
-  auto const config = get_config(get_data_directory() / "valhalla");
+  auto const config =
+      get_config((get_data_directory() / "valhalla").generic_string());
   auto logging_subtree = config.get_child_optional("thor.logging");
   if (logging_subtree) {
     auto logging_config =
@@ -362,7 +363,7 @@ void valhalla::import(mm::import_dispatcher& reg) {
         fs::create_directories(dir);
 
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
-          auto const config = get_config(dir);
+          auto const config = get_config(dir.generic_string());
           v::mjolnir::build_tile_set(config, {osm->path()->str()});
           mm::write_ini(dir / "import.ini", state);
         }
