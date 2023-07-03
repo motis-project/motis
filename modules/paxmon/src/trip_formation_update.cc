@@ -43,18 +43,27 @@ trip_formation_section to_trip_formation_section(
         .primary_trip_id_ = to_extern_trip(vg->trip_id()->id())});
     for (auto const& vi : *vg->vehicles()) {
       auto const uic = vi->uic();
-      if (auto it = std::find_if(begin(sec.vehicles_), end(sec.vehicles_),
-                                 [&](auto const& v) { return v.uic_ == uic; });
-          it == end(sec.vehicles_)) {
+      auto const add_vehicle = [&]() {
         sec.vehicles_.emplace_back(
             vehicle_info{.uic_ = uic,
                          .baureihe_ = fbs_to_mcd_str(vi->baureihe()),
                          .type_code_ = fbs_to_mcd_str(vi->type_code()),
                          .order_ = fbs_to_mcd_str(vi->order()),
                          .vehicle_groups_ = {vg_idx}});
-      } else if (std::find(begin(it->vehicle_groups_), end(it->vehicle_groups_),
-                           vg_idx) == end(it->vehicle_groups_)) {
-        it->vehicle_groups_.emplace_back(vg_idx);
+      };
+      if (uic == 0) {
+        add_vehicle();
+      } else {
+        if (auto it =
+                std::find_if(begin(sec.vehicles_), end(sec.vehicles_),
+                             [&](auto const& v) { return v.uic_ == uic; });
+            it == end(sec.vehicles_)) {
+          add_vehicle();
+        } else if (std::find(begin(it->vehicle_groups_),
+                             end(it->vehicle_groups_),
+                             vg_idx) == end(it->vehicle_groups_)) {
+          it->vehicle_groups_.emplace_back(vg_idx);
+        }
       }
     }
   }
