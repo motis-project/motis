@@ -254,7 +254,7 @@ struct import_state {
 };
 
 struct valhalla::impl {
-  impl(boost::property_tree::ptree const& pt)
+  explicit impl(boost::property_tree::ptree const& pt)
       : reader_{std::make_shared<v::baldr::GraphReader>(
             pt.get_child("mjolnir"))},
         loki_worker_{pt, reader_} {}
@@ -318,7 +318,7 @@ mm::msg_ptr valhalla::route(mm::msg_ptr const& msg) {
   auto& options = *request.mutable_options();
 
   // Get the costing method - pass the JSON configuration
-  v::sif::TravelMode mode;
+  v::sif::TravelMode mode{v::sif::TravelMode::kMaxTravelMode};
   auto mode_costing = impl_->factory_.CreateModeCosting(options, mode);
 
   // Find path locations (loki) for sources and targets
@@ -328,7 +328,7 @@ mm::msg_ptr valhalla::route(mm::msg_ptr const& msg) {
   impl_->matrix_.clear();
   auto const res = impl_->matrix_.SourceToTarget(
       options.sources(), options.targets(), *impl_->reader_, mode_costing, mode,
-      4000000.0f);
+      4000000.0F);
 
   // Encode OSRM response.
   mm::message_creator fbb;
