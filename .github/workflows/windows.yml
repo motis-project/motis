@@ -41,19 +41,16 @@ jobs:
 
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
-        uses: actions/cache/restore@v3
-        id: restore-buildcache
-        with:
-          path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.config.mode }}
+        run: |
+          $buildcachePath = ${{ runner.tool_cache }}\${{ github.event.repository.name }}\buildcache-${{ matrix.config.preset }}
+          New-Item -ItemType Directory -Force -Path $buildcachePath
+          New-Item -Path ${{ github.workspace }}/.buildcache -ItemType SymbolicLink -Value $buildcachePath
 
       - name: Restore Dependencies Cache
-        uses: actions/cache/restore@v3
-        id: restore-deps-cache
-        with:
-          path: ${{ github.workspace }}/deps
-          key: deps
-          enableCrossOsArchive: true
+        run: |
+          $depsPath = "${{ runner.tool_cache }}\${{ github.event.repository.name }}\deps"
+          New-Item -ItemType Directory -Force -Path $depsPath
+          New-Item -Path ${{ github.workspace }}\deps\ -ItemType SymbolicLink -Value $depsPath
 
       # ==== BUILD ====
       - uses: ilammy/msvc-dev-cmd@v1
@@ -78,7 +75,7 @@ jobs:
       # ==== TESTS ====
       - name: Run Test Mode
         run: >
-          .\build\motis
+          .\build\motis.exe
           --mode test
           --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice
           --dataset.begin 20151004
@@ -187,19 +184,3 @@ jobs:
           asset_path: ./motis-windows.zip
           asset_name: motis-windows.zip
           asset_content_type: application/zip
-
-      # ==== SAVE CACHE ====
-      - name: Save buildcache Cache
-        if: always()
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ github.workspace }}/.buildcache
-          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
-
-      - name: Save Dependencies Cache
-        if: always()
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ github.workspace }}/deps
-          key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
-          enableCrossOsArchive: true
