@@ -42,7 +42,7 @@ jobs:
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
         run: |
-          $buildcachePath = ${{ runner.tool_cache }}\${{ github.event.repository.name }}\buildcache-${{ matrix.config.preset }}
+          $buildcachePath = "${{ runner.tool_cache }}\${{ github.event.repository.name }}\buildcache-${{ matrix.config.mode }}"
           New-Item -ItemType Directory -Force -Path $buildcachePath
           New-Item -Path ${{ github.workspace }}/.buildcache -ItemType SymbolicLink -Value $buildcachePath
 
