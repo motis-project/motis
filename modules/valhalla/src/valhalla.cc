@@ -147,7 +147,7 @@ void encode_request(osrm::OSRMViaRouteRequest const* req, j::Document& doc) {
 template <typename Req>
 mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
   // Encode OSRMManyToManyRequest as valhalla request.
-  j::Document doc{};
+  auto doc = j::Document{};
   encode_request(req, doc);
 
   // Decode request.
@@ -199,17 +199,25 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   auto const req = motis_content(OSRMViaRouteRequest, msg);
 
   // Encode OSRMViaRouteRequest as valhalla request.
-  j::Document doc{};
+  auto doc = j::Document{};
   encode_request(req, doc);
+
+  auto buf = j::StringBuffer{};
+  auto w = j::Writer<j::StringBuffer>{buf};
+  doc.Accept(w);
+  std::cout << buf.GetString() << "\n";
 
   // Decode request.
   v::Api request;
   v::from_json(doc, v::Options::route, request);
-  auto& options = *request.mutable_options();
+  auto const& options = *request.mutable_options();
 
   // Get the costing method.
   auto mode = v::sif::TravelMode::kMaxTravelMode;
   auto const mode_costing = impl_->factory_.CreateModeCosting(options, mode);
+
+  // Find path locations (loki) for sources and targets.
+  impl_->loki_worker_.route(request);
 
   // Compute paths.
   for (uint32_t i = 0; i < options.locations().size() - 1U; i++) {
