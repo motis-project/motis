@@ -12,8 +12,10 @@
 #include "midgard/logging.h"
 #include "midgard/util.h"
 #include "mjolnir/util.h"
+#include "odin/directionsbuilder.h"
 #include "sif/costfactory.h"
 #include "sif/dynamiccost.h"
+#include "thor/bidirectional_astar.h"
 #include "thor/costmatrix.h"
 #include "thor/optimizer.h"
 #include "worker.h"
@@ -21,12 +23,11 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 #include "motis/valhalla/config.h"
-#include "thor/bidirectional_astar.h"
 
 namespace mm = motis::module;
 namespace fs = std::filesystem;
-namespace v = ::valhalla;
-namespace json = rapidjson;
+namespace v = valhalla;
+namespace j = rapidjson;
 
 namespace motis::valhalla {
 
@@ -42,12 +43,14 @@ struct valhalla::impl {
       : reader_{std::make_shared<v::baldr::GraphReader>(
             pt.get_child("mjolnir"))},
         loki_worker_{pt, reader_},
-        bd_{pt.get_child("thor")} {}
+        bd_{pt.get_child("thor")},
+        formatter_{pt} {}
   std::shared_ptr<v::baldr::GraphReader> reader_;
   v::thor::CostMatrix matrix_;
   v::loki::loki_worker_t loki_worker_;
   v::sif::CostFactory factory_;
   v::thor::BidirectionalAStar bd_;
+  v::odin::MarkupFormatter formatter_;
 };
 
 valhalla::valhalla() : module("Valhalla Street Router", "valhalla") {}
@@ -75,23 +78,22 @@ std::string_view translate_mode(std::string_view s) {
   }
 }
 
-json::Value encode_pos(Position const* to, json::Document& doc) {
-  auto coord = json::Value{json::kObjectType};
-  coord.AddMember("lat", json::Value{to->lat()}, doc.GetAllocator());
-  coord.AddMember("lon", json::Value{to->lng()}, doc.GetAllocator());
+j::Value encode_pos(Position const* to, j::Document& doc) {
+  auto coord = j::Value{j::kObjectType};
+  coord.AddMember("lat", j::Value{to->lat()}, doc.GetAllocator());
+  coord.AddMember("lon", j::Value{to->lng()}, doc.GetAllocator());
   return coord;
 }
 
-void encode_request(osrm::OSRMManyToManyRequest const* req,
-                    json::Document& doc) {
+void encode_request(osrm::OSRMManyToManyRequest const* req, j::Document& doc) {
   doc.SetObject();
 
-  auto sources = json::Value{json::kArrayType};
+  auto sources = j::Value{j::kArrayType};
   for (auto const& from : *req->from()) {
     sources.PushBack(encode_pos(from, doc), doc.GetAllocator());
   }
 
-  auto targets = json::Value{json::kArrayType};
+  auto targets = j::Value{j::kArrayType};
   for (auto const& to : *req->to()) {
     targets.PushBack(encode_pos(to, doc), doc.GetAllocator());
   }
@@ -100,18 +102,17 @@ void encode_request(osrm::OSRMManyToManyRequest const* req,
   doc.AddMember("targets", targets, doc.GetAllocator());
 
   auto const mode_str = translate_mode(req->profile()->view());
-  doc.AddMember("costing", json::StringRef(mode_str.data(), mode_str.size()),
+  doc.AddMember("costing", j::StringRef(mode_str.data(), mode_str.size()),
                 doc.GetAllocator());
 }
 
-void encode_request(osrm::OSRMOneToManyRequest const* req,
-                    json::Document& doc) {
+void encode_request(osrm::OSRMOneToManyRequest const* req, j::Document& doc) {
   doc.SetObject();
 
-  auto sources = json::Value{json::kArrayType};
+  auto sources = j::Value{j::kArrayType};
   sources.PushBack(encode_pos(req->one(), doc), doc.GetAllocator());
 
-  auto targets = json::Value{json::kArrayType};
+  auto targets = j::Value{j::kArrayType};
   for (auto const& to : *req->many()) {
     targets.PushBack(encode_pos(to, doc), doc.GetAllocator());
   }
@@ -124,14 +125,14 @@ void encode_request(osrm::OSRMOneToManyRequest const* req,
                 doc.GetAllocator());
 
   auto const mode_str = translate_mode(req->profile()->view());
-  doc.AddMember("costing", json::StringRef(mode_str.data(), mode_str.size()),
+  doc.AddMember("costing", j::StringRef(mode_str.data(), mode_str.size()),
                 doc.GetAllocator());
 }
 
-void encode_request(osrm::OSRMViaRouteRequest const* req, json::Document& doc) {
+void encode_request(osrm::OSRMViaRouteRequest const* req, j::Document& doc) {
   doc.SetObject();
 
-  auto locations = json::Value{json::kArrayType};
+  auto locations = j::Value{j::kArrayType};
   for (auto const& to : *req->waypoints()) {
     locations.PushBack(encode_pos(to, doc), doc.GetAllocator());
   }
@@ -139,14 +140,14 @@ void encode_request(osrm::OSRMViaRouteRequest const* req, json::Document& doc) {
   doc.AddMember("locations", locations, doc.GetAllocator());
 
   auto const mode_str = translate_mode(req->profile()->view());
-  doc.AddMember("costing", json::StringRef(mode_str.data(), mode_str.size()),
+  doc.AddMember("costing", j::StringRef(mode_str.data(), mode_str.size()),
                 doc.GetAllocator());
 }
 
 template <typename Req>
 mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
   // Encode OSRMManyToManyRequest as valhalla request.
-  json::Document doc;
+  j::Document doc = 0;
   encode_request(req, doc);
 
   // Decode request.
@@ -181,24 +182,24 @@ mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
   return make_msg(fbb);
 }
 
-mm::msg_ptr valhalla::table(mm::msg_ptr const& msg) {
+mm::msg_ptr valhalla::table(mm::msg_ptr const& msg) const {
   using osrm::OSRMManyToManyRequest;
   auto const req = motis_content(OSRMManyToManyRequest, msg);
   return sources_to_targets(req, impl_.get());
 }
 
-mm::msg_ptr valhalla::one_to_many(mm::msg_ptr const& msg) {
+mm::msg_ptr valhalla::one_to_many(mm::msg_ptr const& msg) const {
   using osrm::OSRMOneToManyRequest;
   auto const req = motis_content(OSRMOneToManyRequest, msg);
   return sources_to_targets(req, impl_.get());
 }
 
-mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) {
+mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   using osrm::OSRMViaRouteRequest;
   auto const req = motis_content(OSRMViaRouteRequest, msg);
 
   // Encode OSRMViaRouteRequest as valhalla request.
-  json::Document doc;
+  j::Document doc = 0;
   encode_request(req, doc);
 
   // Decode request.
@@ -220,13 +221,36 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) {
 
   // Extract result.
   auto polyline = std::vector<PointLL>{};
-  for (auto const& r : request.trip().routes()) {
-    for (auto const& l : r.legs()) {
-      auto const points = v::midgard::decode<std::vector<PointLL>>(
-          l.shape().c_str(), l.shape().length());
-      polyline.insert(end(polyline), begin(points), end(points));
-    }
+  for (auto const& l : request.trip().routes(0).legs()) {
+    auto const points = v::midgard::decode<std::vector<PointLL>>(
+        l.shape().c_str(), l.shape().length());
+    polyline.insert(end(polyline), begin(points), end(points));
   }
+
+  // Get totals.
+  double total_time = 0.0;
+  float total_distance = 0.0F;
+  v::odin::DirectionsBuilder::Build(request, impl_->formatter_);
+  for (auto const& l : request.directions().routes(0).legs()) {
+    total_time += l.summary().time();
+    total_distance = l.summary().length();
+  }
+
+  // Encode OSRM response.
+  std::vector<double> doubles;
+  for (auto const& p : polyline) {
+    doubles.emplace_back(p.lat());
+    doubles.emplace_back(p.lng());
+  }
+  mm::message_creator fbb;
+  fbb.create_and_finish(
+      MsgContent_OSRMViaRouteResponse,
+      osrm::CreateOSRMViaRouteResponse(
+          fbb, static_cast<int>(total_time),
+          static_cast<double>(total_distance),
+          CreatePolyline(fbb, fbb.CreateVector(doubles.data(), doubles.size())))
+          .Union());
+  return make_msg(fbb);
 }
 
 void valhalla::import(mm::import_dispatcher& reg) {
