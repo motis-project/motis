@@ -147,7 +147,7 @@ void encode_request(osrm::OSRMViaRouteRequest const* req, j::Document& doc) {
 template <typename Req>
 mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
   // Encode OSRMManyToManyRequest as valhalla request.
-  j::Document doc = 0;
+  j::Document doc{};
   encode_request(req, doc);
 
   // Decode request.
@@ -199,7 +199,7 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   auto const req = motis_content(OSRMViaRouteRequest, msg);
 
   // Encode OSRMViaRouteRequest as valhalla request.
-  j::Document doc = 0;
+  j::Document doc{};
   encode_request(req, doc);
 
   // Decode request.
