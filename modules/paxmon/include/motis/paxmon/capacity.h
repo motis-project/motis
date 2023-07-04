@@ -114,13 +114,29 @@ struct vehicle_group_capacity {
 };
 
 struct trip_capacity {
-  inline bool has_capacity() const {
-    return source_ != capacity_source::UNKNOWN;
+  inline bool has_trip_lookup_capacity() const {
+    return trip_lookup_source_ != capacity_source::UNKNOWN;
+  }
+
+  inline bool has_formation() const {
+    return formation_ != nullptr && formation_section_ != nullptr;
+  }
+
+  inline bool has_formation_capacity() const {
+    return formation_source_ != capacity_source::UNKNOWN;
   }
 
   trip const* trp_{};
-  detailed_capacity capacity_{};
-  capacity_source source_{capacity_source::UNKNOWN};
+  trip_formation const* formation_{};
+  trip_formation_section const* formation_section_{};
+  connection const* full_con_{};
+  connection_info const* con_info_{};
+
+  detailed_capacity trip_lookup_capacity_{};
+  capacity_source trip_lookup_source_{capacity_source::UNKNOWN};
+
+  detailed_capacity formation_capacity_{};
+  capacity_source formation_source_{capacity_source::UNKNOWN};
 };
 
 struct section_capacity {
@@ -141,10 +157,8 @@ struct section_capacity {
   std::uint16_t num_vehicles_no_info_{};
   std::uint16_t num_vehicle_groups_used_{};
 
-  std::vector<std::pair<trip const*, trip_formation_section const*>>
-      trip_formations_;
-  std::vector<vehicle_group_capacity> vehicle_groups_;
   std::vector<trip_capacity> trips_;
+  std::vector<vehicle_group_capacity> vehicle_groups_;
 };
 
 section_capacity get_capacity(schedule const& sched, light_connection const& lc,

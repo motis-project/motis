@@ -1460,10 +1460,6 @@ PaxMonMergedTripCapacityInfo:
         vehicle information.
     trip_formation_found:
       description: Whether trip formation information was found.
-    trip_formation_all_vehicles_found:
-      description: >
-        Whether capacity information for all vehicles in the trip formation was
-        found.
     vehicle_groups:
       description: >
         The vehicle groups according to the trip formation.

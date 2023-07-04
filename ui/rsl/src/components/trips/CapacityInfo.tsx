@@ -206,7 +206,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         {has_trip_lookup && (
           <div className="flex gap-1 flex-wrap">
             <span className="font-semibold">Zugkapazität:</span>
-            <span>{mt.trip_lookup_capacity}</span>
+            <span>{mt.trip_lookup_capacity.seats}</span>
             <span
               title={getCapacitySourceTooltip(mt.trip_lookup_capacity_source)}
             >

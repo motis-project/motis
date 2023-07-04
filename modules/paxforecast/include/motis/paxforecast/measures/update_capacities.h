@@ -14,6 +14,9 @@ struct update_capacities {
   bool remove_existing_category_capacities_{};
   bool remove_existing_vehicle_capacities_{};
   bool remove_existing_trip_formations_{};
+  bool remove_existing_gattung_capacities_{};
+  bool remove_existing_baureihe_capacities_{};
+  bool remove_existing_overrides_{};
   bool track_trip_updates_{};
 };
 

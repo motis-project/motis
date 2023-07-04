@@ -14,20 +14,9 @@ namespace motis::paxmon {
 trip_formation const* get_trip_formation(capacity_maps const& caps,
                                          trip const* trp);
 
-trip_formation_section const* get_trip_formation_section(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    ev_key const& ev_key_from);
-
-section_capacity get_section_capacity(schedule const& sched,
-                                      capacity_maps const& caps,
-                                      trip const* trp,
-                                      ev_key const& ev_key_from,
-                                      bool const detailed);
-
-trip_capacity get_trip_capacity(schedule const& sched,
-                                capacity_maps const& caps, trip const* trp,
-                                connection_info const* ci,
-                                service_class const clasz);
+std::pair<trip_formation const*, trip_formation_section const*>
+get_trip_formation_section(schedule const& sched, capacity_maps const& caps,
+                           trip const* trp, ev_key const& ev_key_from);
 
 inline capacity_source get_worst_source(capacity_source const a,
                                         capacity_source const b) {

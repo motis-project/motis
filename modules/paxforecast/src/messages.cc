@@ -131,6 +131,9 @@ measures::update_capacities from_fbs(schedule const& sched,
       m->remove_existing_category_capacities(),
       m->remove_existing_vehicle_capacities(),
       m->remove_existing_trip_formations(),
+      m->remove_existing_gattung_capacities(),
+      m->remove_existing_baureihe_capacities(),
+      m->remove_existing_overrides(),
       m->track_trip_updates()};
 }
 

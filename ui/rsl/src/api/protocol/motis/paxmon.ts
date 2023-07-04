@@ -884,12 +884,11 @@ export interface PaxMonVehicleGroupInfo {
 export interface PaxMonMergedTripCapacityInfo {
   trip: TripId;
   service_info: ServiceInfo;
-  trip_lookup_capacity: number;
+  trip_lookup_capacity: PaxMonCapacityData;
   trip_lookup_capacity_source: PaxMonCapacitySource;
   trip_formation_capacity: PaxMonCapacityData;
   trip_formation_capacity_source: PaxMonCapacitySource;
   trip_formation_found: boolean;
-  trip_formation_all_vehicles_found: boolean;
   vehicle_groups: PaxMonVehicleGroupInfo[];
   override: PaxMonCapacityData[];
 }

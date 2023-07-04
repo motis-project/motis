@@ -40,13 +40,12 @@ table PaxMonMergedTripCapacityInfo {
   trip: motis.TripId;
   service_info: motis.ServiceInfo;
 
-  trip_lookup_capacity: uint;
+  trip_lookup_capacity: PaxMonCapacityData;
   trip_lookup_capacity_source: PaxMonCapacitySource;
 
   trip_formation_capacity: PaxMonCapacityData;
   trip_formation_capacity_source: PaxMonCapacitySource;
   trip_formation_found: bool;
-  trip_formation_all_vehicles_found: bool;
 
   vehicle_groups: [PaxMonVehicleGroupInfo];
 
