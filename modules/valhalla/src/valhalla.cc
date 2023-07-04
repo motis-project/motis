@@ -4,6 +4,7 @@
 
 #include "cista/reflection/comparable.h"
 
+#include "baldr/attributes_controller.h"
 #include "baldr/graphreader.h"
 #include "baldr/rapidjson_utils.h"
 #include "config.h"
@@ -18,6 +19,7 @@
 #include "thor/bidirectional_astar.h"
 #include "thor/costmatrix.h"
 #include "thor/optimizer.h"
+#include "thor/triplegbuilder.h"
 #include "worker.h"
 
 #include "motis/module/event_collector.h"
@@ -202,11 +204,6 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   auto doc = j::Document{};
   encode_request(req, doc);
 
-  auto buf = j::StringBuffer{};
-  auto w = j::Writer<j::StringBuffer>{buf};
-  doc.Accept(w);
-  std::cout << buf.GetString() << "\n";
-
   // Decode request.
   v::Api request;
   v::from_json(doc, v::Options::route, request);
@@ -222,9 +219,42 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   // Compute paths.
   for (uint32_t i = 0; i < options.locations().size() - 1U; i++) {
     auto origin = options.locations(i);
-    auto destination = options.locations(i + 1);
-    auto paths = impl_->bd_.GetBestPath(origin, destination, *impl_->reader_,
-                                        mode_costing, mode, options);
+    auto dest = options.locations(i + 1);
+
+    auto paths = impl_->bd_.GetBestPath(origin, dest, *impl_->reader_,
+                                        mode_costing, mode, request.options());
+    auto cost = mode_costing[static_cast<uint32_t>(mode)];
+
+    // If bidirectional A*, disable use of destination only edges on the first
+    // pass. If there is a failure, we allow them on the second pass.
+    cost->set_allow_destination_only(false);
+    cost->set_pass(0);
+    if (paths.empty() ||
+        (mode == v::sif::TravelMode::kPedestrian && impl_->bd_.has_ferry())) {
+      if (cost->AllowMultiPass()) {
+        cost->set_pass(1);
+        impl_->bd_.Clear();
+        cost->RelaxHierarchyLimits(true);
+        cost->set_allow_destination_only(true);
+        paths = impl_->bd_.GetBestPath(origin, dest, *impl_->reader_,
+                                       mode_costing, mode, request.options());
+      }
+    }
+    if (paths.empty()) {
+      return nullptr;
+    }
+
+    // Form trip path
+    AttributesController controller;
+    auto const& pathedges = paths.front();
+    auto& trip_path =
+        *request.mutable_trip()->mutable_routes()->Add()->mutable_legs()->Add();
+    v::thor::TripLegBuilder::Build(request.options(), controller,
+                                   *impl_->reader_, mode_costing,
+                                   pathedges.begin(), pathedges.end(), origin,
+                                   dest, trip_path, {impl_->bd_.name()});
+
+    impl_->bd_.Clear();
   }
 
   // Extract result.
@@ -236,9 +266,9 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   }
 
   // Get totals.
+  v::odin::DirectionsBuilder::Build(request, impl_->formatter_);
   double total_time = 0.0;
   float total_distance = 0.0F;
-  v::odin::DirectionsBuilder::Build(request, impl_->formatter_);
   for (auto const& l : request.directions().routes(0).legs()) {
     total_time += l.summary().time();
     total_distance = l.summary().length();
