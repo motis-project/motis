@@ -177,7 +177,7 @@ edge* connect_nodes(event_node* from, event_node* to,
   auto const edge_cap =
       from->type_ == event_type::DEP ? capacity : UNLIMITED_CAPACITY;
   auto const edge_cap_source =
-      from->type_ == event_type::DEP ? cap_source : capacity_source::SPECIAL;
+      from->type_ == event_type::DEP ? cap_source : capacity_source::UNLIMITED;
   return add_edge(
       uv, make_trip_edge(uv, from->index_, to->index_, type, merged_trips,
                          edge_cap, edge_cap_source,
@@ -343,7 +343,7 @@ void apply_reroute(universe& uv, schedule const& sched, trip const* trp,
     auto const merged_trips = get_merged_trips(trp).value();
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
       auto e = connect_nodes(from, to, merged_trips, UNKNOWN_CAPACITY,
-                             capacity_source::SPECIAL, uv, sched);
+                             capacity_source::UNKNOWN, uv, sched);
       if (e->is_trip()) {
         edges.emplace_back(get_edge_index(uv, e));
       }

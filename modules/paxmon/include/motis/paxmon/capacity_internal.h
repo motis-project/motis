@@ -18,10 +18,11 @@ trip_formation_section const* get_trip_formation_section(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
     ev_key const& ev_key_from);
 
-std::optional<vehicle_capacity> get_section_capacity(schedule const& sched,
-                                                     capacity_maps const& caps,
-                                                     trip const* trp,
-                                                     ev_key const& ev_key_from);
+section_capacity get_section_capacity(schedule const& sched,
+                                      capacity_maps const& caps,
+                                      trip const* trp,
+                                      ev_key const& ev_key_from,
+                                      bool const detailed);
 
 std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
@@ -39,7 +40,7 @@ inline std::uint16_t clamp_capacity(capacity_maps const& caps,
   return std::max(caps.min_capacity_, capacity);
 }
 
-std::optional<vehicle_capacity> get_override_capacity(
+std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
     ev_key const& ev_key_from);
 

@@ -62,7 +62,7 @@ table PaxMonSectionCapacityInfo {
   arrival_current_time: ulong;
 
   capacity_type: PaxMonCapacityType;
-  capacity: uint;
+  capacity: PaxMonCapacityData;
   capacity_source: PaxMonCapacitySource;
 
   merged_trips: [PaxMonMergedTripCapacityInfo];

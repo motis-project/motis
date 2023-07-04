@@ -312,6 +312,7 @@ export type PaxMonCapacitySource =
   | "Category"
   | "Class"
   | "Override"
+  | "Unlimited"
   | "Unknown";
 
 // paxmon/PaxMonCapacityType.fbs
@@ -902,7 +903,7 @@ export interface PaxMonSectionCapacityInfo {
   arrival_schedule_time: number;
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
-  capacity: number;
+  capacity: PaxMonCapacityData;
   capacity_source: PaxMonCapacitySource;
   merged_trips: PaxMonMergedTripCapacityInfo[];
 }

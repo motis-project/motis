@@ -473,7 +473,8 @@ PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
     case capacity_source::CATEGORY: return PaxMonCapacitySource_Category;
     case capacity_source::CLASZ: return PaxMonCapacitySource_Class;
     case capacity_source::OVERRIDE: return PaxMonCapacitySource_Override;
-    case capacity_source::SPECIAL:
+    case capacity_source::UNLIMITED: return PaxMonCapacitySource_Unlimited;
+    case capacity_source::UNKNOWN:
     default: return PaxMonCapacitySource_Unknown;
   }
 }

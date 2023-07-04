@@ -27,7 +27,8 @@ struct trip_section_with_load {
   trip_section_with_load(schedule const& sched, universe const& uv,
                          trip const* trp, trip_data_index const tdi,
                          capacity_info_source const cs, int const idx)
-      : uv_{uv},
+      : sched_{sched},
+        uv_{uv},
         section_{trp, idx},
         edge_{tdi == INVALID_TRIP_DATA_INDEX
                   ? nullptr
@@ -44,11 +45,9 @@ struct trip_section_with_load {
     };
 
     auto const lookup_capacity = [this, &sched, &uv]() {
-      auto const cap =
-          get_capacity(sched, section_.lcon(), section_.ev_key_from(),
-                       section_.ev_key_to(), uv.capacity_maps_);
-      capacity_ = cap.first;
-      capacity_source_ = cap.second;
+      auto const cap = lookup_section_capacity();
+      capacity_ = cap.capacity_.seats();
+      capacity_source_ = cap.source_;
     };
 
     switch (cs) {
@@ -71,6 +70,11 @@ struct trip_section_with_load {
 
   inline capacity_source get_capacity_source() const {
     return capacity_source_;
+  }
+
+  inline section_capacity lookup_section_capacity(bool detailed = false) const {
+    return get_capacity(sched_, section_.lcon(), section_.ev_key_from(),
+                        section_.ev_key_to(), uv_.capacity_maps_, detailed);
   }
 
   std::uint16_t base_load() const {
@@ -110,11 +114,12 @@ struct trip_section_with_load {
 
   edge const* paxmon_edge() const { return edge_; }
 
+  schedule const& sched_;
   universe const& uv_;
   motis::access::trip_section section_;
   edge const* edge_{};
   std::uint16_t capacity_{};
-  capacity_source capacity_source_{capacity_source::SPECIAL};
+  capacity_source capacity_source_{capacity_source::UNKNOWN};
 };
 
 struct trip_section_load_iterator {

@@ -326,6 +326,12 @@ UpdateCapacitiesMeasure:
 
         This should only be set to true if changing the capacity of a
         small number of trips.
+    remove_existing_gattung_capacities:
+      description: TODO
+    remove_existing_baureihe_capacities:
+      description: TODO
+    remove_existing_overrides:
+      description: TODO
 OverrideCapacitySection:
   description: TODO
   fields:

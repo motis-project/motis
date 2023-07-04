@@ -227,14 +227,14 @@ trip_formation_section const* get_trip_formation_section(
   return best_section_match;
 }
 
-std::optional<std::pair<vehicle_capacity, capacity_source>>
-get_section_capacity(schedule const& sched, capacity_maps const& caps,
-                     std::uint32_t const merged_trips_idx,
-                     ev_key const& ev_key_from) {
+section_capacity get_section_capacity(schedule const& sched,
+                                      capacity_maps const& caps,
+                                      std::uint32_t const merged_trips_idx,
+                                      ev_key const& ev_key_from,
+                                      bool const detailed) {
+  auto cap = section_capacity{.source_ = capacity_source::FORMATION_VEHICLES};
   auto processed_uics = mcd::hash_set<std::uint64_t>{};
   auto processed_vehicle_groups = mcd::hash_set<mcd::string>{};
-  auto total_cap = vehicle_capacity{};
-  auto worst_source = capacity_source::FORMATION_VEHICLES;
 
   for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
     auto const* tf_sec =
@@ -242,77 +242,117 @@ get_section_capacity(schedule const& sched, capacity_maps const& caps,
     if (tf_sec == nullptr) {
       continue;
     }
+    if (detailed) {
+      cap.trip_formations_.emplace_back(trp, tf_sec);
+    }
+
     for (auto const& vg : tf_sec->vehicle_groups_) {
-      if (processed_vehicle_groups.find(vg.name_) !=
-          end(processed_vehicle_groups)) {
+      auto const duplicate_group = processed_vehicle_groups.find(vg.name_) !=
+                                   end(processed_vehicle_groups);
+      if (duplicate_group && !detailed) {
         continue;
       }
       processed_vehicle_groups.insert(vg.name_);
 
-      auto vg_cap = vehicle_capacity{};
+      auto vg_cap = vehicle_group_capacity{
+          .group_ = &vg, .trp_ = trp, .duplicate_group_ = duplicate_group};
       if (auto const it = caps.vehicle_group_capacity_map_.find(vg.name_);
           it != end(caps.vehicle_group_capacity_map_)) {
-        vg_cap = it->second;
+        vg_cap.capacity_ = it->second;
+        vg_cap.source_ = capacity_source::FORMATION_VEHICLE_GROUPS;
       }
 
-      auto vehicle_cap = vehicle_capacity{};
+      auto vehicle_cap_sum = detailed_capacity{};
       auto all_uics_found = true;
       auto baureihe_used = false;
       auto gattung_used = false;
       for (auto const& vi : vg.vehicles_) {
-        if (vi.has_uic() &&
-            processed_uics.find(vi.uic_) != end(processed_uics)) {
+        auto const duplicate_vehicle =
+            vi.has_uic() && processed_uics.find(vi.uic_) != end(processed_uics);
+        if (duplicate_vehicle && !detailed) {
           continue;
         } else if (vi.has_uic()) {
           processed_uics.insert(vi.uic_);
         }
 
+        auto vehicle_cap = vehicle_capacity{
+            .vehicle_ = &vi, .duplicate_vehicle_ = duplicate_vehicle};
+
+        if (!duplicate_vehicle) {
+          ++cap.num_vehicles_;
+        }
+
         if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
             it != end(caps.vehicle_capacity_map_) && vi.has_uic()) {
-          vehicle_cap += it->second;
+          vehicle_cap.capacity_ = it->second;
+          vehicle_cap.source_ = capacity_source::FORMATION_VEHICLES;
+          if (!duplicate_vehicle) {
+            ++cap.num_vehicles_uic_found_;
+          }
         } else {
           all_uics_found = false;
           if (auto const it = caps.baureihe_capacity_map_.find(vi.baureihe_);
               it != end(caps.baureihe_capacity_map_)) {
-            vehicle_cap += it->second;
+            vehicle_cap.capacity_ = it->second;
+            vehicle_cap.source_ = capacity_source::FORMATION_BAUREIHE;
             baureihe_used = true;
+            if (!duplicate_vehicle) {
+              ++cap.num_vehicles_baureihe_used_;
+            }
           } else if (auto const it =
                          caps.gattung_capacity_map_.find(vi.type_code_);
                      it != end(caps.gattung_capacity_map_)) {
-            vehicle_cap += it->second;
+            vehicle_cap.capacity_ = it->second;
+            vehicle_cap.source_ = capacity_source::FORMATION_GATTUNG;
             gattung_used = true;
+            if (!duplicate_vehicle) {
+              ++cap.num_vehicles_gattung_used_;
+            }
+          } else {
+            if (!duplicate_vehicle) {
+              ++cap.num_vehicles_no_info_;
+            }
+          }
+        }
+        if (!duplicate_vehicle) {
+          vehicle_cap_sum += vehicle_cap.capacity_;
+        }
+        if (detailed) {
+          vg_cap.vehicles_.emplace_back(vehicle_cap);
+        }
+      }
+
+      if (!duplicate_group) {
+        if (!all_uics_found && vg_cap.capacity_.seats() != 0) {
+          // if not all vehicle uics were found, but the vehicle group was
+          // found, use the vehicle group info
+          cap.capacity_ += vg_cap.capacity_;
+          cap.source_ = get_worst_source(
+              cap.source_, capacity_source::FORMATION_VEHICLE_GROUPS);
+          ++cap.num_vehicle_groups_used_;
+        } else {
+          cap.capacity_ += vehicle_cap_sum;
+          if (baureihe_used) {
+            cap.source_ = get_worst_source(cap.source_,
+                                           capacity_source::FORMATION_BAUREIHE);
+          }
+          if (gattung_used) {
+            cap.source_ = get_worst_source(cap.source_,
+                                           capacity_source::FORMATION_GATTUNG);
           }
         }
       }
 
-      if (!all_uics_found && vg_cap.seats() != 0) {
-        // if not all vehicle uics were found, but the vehicle group was
-        // found, use the vehicle group info
-        total_cap += vg_cap;
-        worst_source = get_worst_source(
-            worst_source, capacity_source::FORMATION_VEHICLE_GROUPS);
-      } else {
-        total_cap += vehicle_cap;
-        if (baureihe_used) {
-          worst_source = get_worst_source(worst_source,
-                                          capacity_source::FORMATION_BAUREIHE);
-        }
-        if (gattung_used) {
-          worst_source = get_worst_source(worst_source,
-                                          capacity_source::FORMATION_GATTUNG);
-        }
+      if (detailed) {
+        cap.vehicle_groups_.emplace_back(std::move(vg_cap));
       }
     }
   }
 
-  if (total_cap.seats() > 0) {
-    return {{total_cap, worst_source}};
-  } else {
-    return {};
-  }
+  return cap;
 }
 
-std::optional<vehicle_capacity> get_override_capacity(
+std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
     ev_key const& ev_key_from) {
   auto const tid = get_cap_trip_id(trp->id_);
@@ -320,7 +360,7 @@ std::optional<vehicle_capacity> get_override_capacity(
       it != end(caps.override_map_)) {
     auto const schedule_departure = get_schedule_time(sched, ev_key_from);
     auto const departure_station = ev_key_from.get_station_idx();
-    auto best_section_capacity = std::optional<vehicle_capacity>{};
+    auto best_section_capacity = std::optional<detailed_capacity>{};
     auto station_found = false;
     for (auto const& sec : it->second) {
       auto const station_match =
@@ -341,7 +381,7 @@ std::optional<vehicle_capacity> get_override_capacity(
   return {};
 }
 
-std::optional<vehicle_capacity> get_override_capacity(
+std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps,
     std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
   for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
@@ -353,27 +393,29 @@ std::optional<vehicle_capacity> get_override_capacity(
   return {};
 }
 
-std::pair<std::uint16_t, capacity_source> get_capacity(
-    schedule const& sched, light_connection const& lc,
-    ev_key const& ev_key_from, ev_key const& /*ev_key_to*/,
-    capacity_maps const& caps) {
-  std::uint16_t capacity = 0;
-  auto worst_source = capacity_source::TRIP_EXACT;
-  auto some_unknown = false;
+section_capacity get_capacity(schedule const& sched, light_connection const& lc,
+                              ev_key const& ev_key_from,
+                              ev_key const& /*ev_key_to*/,
+                              capacity_maps const& caps, bool const detailed) {
+  auto cap =
+      get_section_capacity(sched, caps, lc.trips_, ev_key_from, detailed);
 
   auto const override_capacity =
       get_override_capacity(sched, caps, lc.trips_, ev_key_from);
   if (override_capacity.has_value()) {
-    return {override_capacity->seats(), capacity_source::OVERRIDE};
+    cap.capacity_ = *override_capacity;
+    cap.source_ = capacity_source::OVERRIDE;
+    return cap;
   }
 
-  auto const section_capacity =
-      get_section_capacity(sched, caps, lc.trips_, ev_key_from);
-  if (section_capacity.has_value()) {
-    return {clamp_capacity(caps, section_capacity->first.seats()),
-            section_capacity->second};
+  if (cap.capacity_.seats() > 0) {
+    cap.capacity_.seats_ = clamp_capacity(caps, cap.capacity_.seats());
+    return cap;
   }
 
+  std::uint16_t capacity = 0;
+  auto worst_source = capacity_source::TRIP_EXACT;
+  auto some_unknown = false;
   auto ci = lc.full_con_->con_info_;
   for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
     utl::verify(ci != nullptr, "get_capacity: missing connection_info");
@@ -390,11 +432,13 @@ std::pair<std::uint16_t, capacity_source> get_capacity(
     ci = ci->merged_with_;
   }
 
-  if (some_unknown) {
-    return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
-  } else {
-    return {clamp_capacity(caps, capacity), worst_source};
+  if (!some_unknown) {
+    cap.capacity_ = {.seats_ = capacity};
+    cap.source_ = worst_source;
   }
+
+  cap.capacity_.seats_ = clamp_capacity(caps, cap.capacity_.seats());
+  return cap;
 }
 
 }  // namespace motis::paxmon

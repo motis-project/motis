@@ -84,12 +84,12 @@ struct edge {
 
   inline bool has_unlimited_capacity() const {
     return capacity_ == UNLIMITED_CAPACITY &&
-           capacity_source_ == capacity_source::SPECIAL;
+           capacity_source_ == capacity_source::UNLIMITED;
   }
 
   inline bool has_unknown_capacity() const {
     return capacity_ == UNKNOWN_CAPACITY &&
-           capacity_source_ == capacity_source::SPECIAL;
+           capacity_source_ == capacity_source::UNKNOWN;
   }
 
   inline bool has_capacity() const {

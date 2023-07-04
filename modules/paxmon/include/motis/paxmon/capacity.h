@@ -5,6 +5,8 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "boost/uuid/uuid.hpp"
 
@@ -33,14 +35,14 @@ struct cap_trip_id {
   time arrival_{};
 };
 
-struct vehicle_capacity {
+struct detailed_capacity {
   std::uint16_t seats_{};
   std::uint16_t seats_1st_{};
   std::uint16_t seats_2nd_{};
   std::uint16_t standing_{};
   std::uint16_t total_limit_{};
 
-  vehicle_capacity& operator+=(vehicle_capacity const& o) {
+  detailed_capacity& operator+=(detailed_capacity const& o) {
     seats_ += o.seats_;
     seats_1st_ += o.seats_1st_;
     seats_2nd_ += o.seats_2nd_;
@@ -64,21 +66,21 @@ struct vehicle_capacity {
 struct capacity_override_section {
   std::uint32_t departure_station_idx_{};
   time schedule_departure_time_{INVALID_TIME};
-  vehicle_capacity total_capacity_{};
+  detailed_capacity total_capacity_{};
 };
 
 struct capacity_maps {
   std::map<cap_trip_id, std::uint16_t> trip_capacity_map_;
   mcd::hash_map<mcd::string, std::uint16_t> category_capacity_map_;
 
-  mcd::hash_map<std::uint64_t /* UIC number */, vehicle_capacity>
+  mcd::hash_map<std::uint64_t /* UIC number */, detailed_capacity>
       vehicle_capacity_map_;
   mcd::hash_map<boost::uuids::uuid, trip_formation> trip_formation_map_;
   mcd::hash_map<primary_trip_id, boost::uuids::uuid> trip_uuid_map_;
 
-  mcd::hash_map<mcd::string, vehicle_capacity> vehicle_group_capacity_map_;
-  mcd::hash_map<mcd::string, vehicle_capacity> gattung_capacity_map_;
-  mcd::hash_map<mcd::string, vehicle_capacity> baureihe_capacity_map_;
+  mcd::hash_map<mcd::string, detailed_capacity> vehicle_group_capacity_map_;
+  mcd::hash_map<mcd::string, detailed_capacity> gattung_capacity_map_;
+  mcd::hash_map<mcd::string, detailed_capacity> baureihe_capacity_map_;
 
   mcd::hash_map<cap_trip_id, mcd::vector<capacity_override_section>>
       override_map_;
@@ -95,9 +97,48 @@ inline cap_trip_id get_cap_trip_id(full_trip_id const& id,
                      id.secondary_.target_time_};
 }
 
-std::pair<std::uint16_t, capacity_source> get_capacity(
-    schedule const& sched, light_connection const& lc,
-    ev_key const& ev_key_from, ev_key const& ev_key_to,
-    capacity_maps const& caps);
+struct vehicle_capacity {
+  vehicle_info const* vehicle_{};
+  detailed_capacity capacity_{};
+  capacity_source source_{capacity_source::UNKNOWN};
+  bool duplicate_vehicle_{};
+};
+
+struct vehicle_group_capacity {
+  vehicle_group const* group_{};
+  trip const* trp_{};
+  detailed_capacity capacity_{};
+  capacity_source source_{capacity_source::UNKNOWN};
+  bool duplicate_group_{};
+  std::vector<vehicle_capacity> vehicles_;
+};
+
+struct section_capacity {
+  inline bool has_capacity() const {
+    return source_ != capacity_source::UNKNOWN;
+  }
+
+  detailed_capacity capacity_{};
+  capacity_source source_{capacity_source::UNKNOWN};
+
+  // the following fields are only set if detailed = true is set
+  // during the lookup (-> get_capacity)
+
+  std::uint16_t num_vehicles_{};
+  std::uint16_t num_vehicles_uic_found_{};
+  std::uint16_t num_vehicles_baureihe_used_{};
+  std::uint16_t num_vehicles_gattung_used_{};
+  std::uint16_t num_vehicles_no_info_{};
+  std::uint16_t num_vehicle_groups_used_{};
+
+  std::vector<std::pair<trip const*, trip_formation_section const*>>
+      trip_formations_;
+  std::vector<vehicle_group_capacity> vehicle_groups_;
+};
+
+section_capacity get_capacity(schedule const& sched, light_connection const& lc,
+                              ev_key const& ev_key_from,
+                              ev_key const& ev_key_to,
+                              capacity_maps const& caps, bool detailed = false);
 
 }  // namespace motis::paxmon

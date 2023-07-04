@@ -44,7 +44,7 @@ mcd::hash_set<trip const*> collect_merged_trips(
 }
 
 Offset<PaxMonCapacityData> to_fbs_capacity_data(FlatBufferBuilder& fbb,
-                                                vehicle_capacity const& vc) {
+                                                detailed_capacity const& vc) {
   return CreatePaxMonCapacityData(fbb, vc.limit(), vc.seats_, vc.seats_1st_,
                                   vc.seats_2nd_, vc.standing_, vc.total_limit_);
 }
@@ -81,7 +81,7 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
       utl::verify(ci != nullptr, "get_trip_capacity: missing connection_info");
 
       auto tl_capacity = 0U;
-      auto tl_capacity_src = capacity_source::SPECIAL;
+      auto tl_capacity_src = capacity_source::UNKNOWN;
       auto const trip_capacity =
           get_trip_capacity(sched, caps, trp, ci, lc.full_con_->clasz_);
       if (trip_capacity) {
@@ -89,7 +89,7 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
         tl_capacity_src = trip_capacity->second;
       }
 
-      auto tf_capacity = vehicle_capacity{};
+      auto tf_capacity = detailed_capacity{};
       auto tf_source = capacity_source::FORMATION_VEHICLES;
       auto tf_found = false;
       auto tf_all_vehicles_found = false;
@@ -102,15 +102,15 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
 
         vehicle_groups =
             utl::to_vec(tf_sec->vehicle_groups_, [&](vehicle_group const& vg) {
-              auto vehicle_cap = vehicle_capacity{};
+              auto vehicle_cap = detailed_capacity{};
               auto all_uics_found = true;
               auto baureihe_used = false;
               auto gattung_used = false;
 
               auto const vehicles =
                   utl::to_vec(vg.vehicles_, [&](vehicle_info const& vi) {
-                    auto cap = vehicle_capacity{};
-                    auto cap_source = capacity_source::SPECIAL;
+                    auto cap = detailed_capacity{};
+                    auto cap_source = capacity_source::UNKNOWN;
                     auto uic_found = false;
                     auto guessed = false;
 
@@ -150,7 +150,7 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
                         to_fbs_capacity_source(cap_source));
                   });
 
-              auto vg_cap = vehicle_capacity{};
+              auto vg_cap = detailed_capacity{};
               auto fbs_vg_cap = std::vector<Offset<PaxMonCapacityData>>{};
               if (auto const it =
                       caps.vehicle_group_capacity_map_.find(vg.name_);
@@ -187,7 +187,7 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
             });
 
       } else {
-        tf_source = capacity_source::SPECIAL;
+        tf_source = capacity_source::UNKNOWN;
       }
 
       auto override = std::vector<Offset<PaxMonCapacityData>>{};
@@ -218,9 +218,10 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
         motis_to_unixtime(sched, sec.lcon().d_time_),
         motis_to_unixtime(sched, get_schedule_time(sched, sec.ev_key_to())),
         motis_to_unixtime(sched, sec.lcon().a_time_),
-        lookup_result.first == UNKNOWN_CAPACITY ? PaxMonCapacityType_Unknown
-                                                : PaxMonCapacityType_Known,
-        lookup_result.first, to_fbs_capacity_source(lookup_result.second),
+        lookup_result.has_capacity() ? PaxMonCapacityType_Known
+                                     : PaxMonCapacityType_Unknown,
+        to_fbs_capacity_data(mc, lookup_result.capacity_),
+        to_fbs_capacity_source(lookup_result.source_),
         mc.CreateVector(merged_trip_infos));
   };
 

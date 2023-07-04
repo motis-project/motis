@@ -18,7 +18,8 @@ enum class capacity_source : std::uint8_t {
   CATEGORY,
   CLASZ,
   OVERRIDE,
-  SPECIAL
+  UNLIMITED,
+  UNKNOWN
 };
 
 constexpr const std::uint16_t UNKNOWN_CAPACITY = 0;

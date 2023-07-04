@@ -12,5 +12,6 @@ enum PaxMonCapacitySource : byte {
   Category,
   Class,
   Override,
+  Unlimited,
   Unknown
 }

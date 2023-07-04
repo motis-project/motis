@@ -53,7 +53,8 @@ std::string_view capacity_source_str(capacity_source const src) {
     case capacity_source::CATEGORY: return "category";
     case capacity_source::CLASZ: return "clasz";
     case capacity_source::OVERRIDE: return "override";
-    case capacity_source::SPECIAL: return "special";
+    case capacity_source::UNLIMITED: return "unlimited";
+    case capacity_source::UNKNOWN: return "unknown";
   }
   return "???";
 }
