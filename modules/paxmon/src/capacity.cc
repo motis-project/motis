@@ -352,11 +352,17 @@ section_capacity get_section_capacity(schedule const& sched,
           trp_data_found = true;
         } else {
           update_capacity(vehicle_cap_sum);
+          if (vehicle_cap_sum.seats_ > 0) {
+            vg_cap.capacity_ = vehicle_cap_sum;
+            vg_cap.source_ = capacity_source::FORMATION_VEHICLES;
+          }
           if (baureihe_used) {
             update_source(capacity_source::FORMATION_BAUREIHE);
+            vg_cap.source_ = capacity_source::FORMATION_BAUREIHE;
           }
           if (gattung_used) {
             update_source(capacity_source::FORMATION_GATTUNG);
+            vg_cap.source_ = capacity_source::FORMATION_GATTUNG;
           }
         }
       }
@@ -455,6 +461,9 @@ section_capacity get_capacity(schedule const& sched, light_connection const& lc,
   auto const override_capacity =
       get_override_capacity(sched, caps, lc.trips_, ev_key_from);
   if (override_capacity.has_value()) {
+    cap.original_capacity_ = cap.capacity_;
+    cap.original_source_ = cap.source_;
+
     cap.capacity_ = *override_capacity;
     cap.source_ = capacity_source::OVERRIDE;
   }

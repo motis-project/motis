@@ -3,9 +3,6 @@ namespace motis.paxmon;
 table PaxMonCapacityStatusRequest {
   universe: uint;
 
-  include_trips_without_capacity: bool;
-  include_other_trips_without_capacity: bool;
-
   include_missing_vehicle_infos: bool;
   include_uics_not_found: bool;
 }

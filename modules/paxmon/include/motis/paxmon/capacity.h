@@ -144,8 +144,24 @@ struct section_capacity {
     return source_ != capacity_source::UNKNOWN;
   }
 
+  inline bool is_overridden() const {
+    return source_ == capacity_source::OVERRIDE;
+  }
+
+  inline detailed_capacity const& original_capacity() const {
+    return is_overridden() ? original_capacity_ : capacity_;
+  }
+
+  inline capacity_source original_capacity_source() const {
+    return is_overridden() ? original_source_ : source_;
+  }
+
   detailed_capacity capacity_{};
   capacity_source source_{capacity_source::UNKNOWN};
+
+  // only set if is_overridden()
+  detailed_capacity original_capacity_{};
+  capacity_source original_source_{capacity_source::UNKNOWN};
 
   // the following fields are only set if detailed = true is set
   // during the lookup (-> get_capacity)

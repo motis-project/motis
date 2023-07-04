@@ -1570,10 +1570,6 @@ PaxMonCapacityStatusRequest:
   fields:
     universe:
       description: TODO
-    include_trips_without_capacity:
-      description: TODO
-    include_other_trips_without_capacity:
-      description: TODO
     include_missing_vehicle_infos:
       description: TODO
     include_uics_not_found:
@@ -1582,8 +1578,6 @@ PaxMonTripCapacityStats:
   description: TODO
   fields:
     tracked:
-      description: TODO
-    ok:
       description: TODO
     no_formation_data_at_all:
       description: TODO
@@ -1599,6 +1593,24 @@ PaxMonTripCapacityStats:
       description: TODO
     trip_formation_data_found:
       description: TODO
+    category:
+      description: TODO
+    trips_using_vehicle_groups:
+      description: TODO
+    trips_using_baureihe:
+      description: TODO
+    trips_using_type_code:
+      description: TODO
+    full_data:
+      description: TODO
+    partial_data:
+      description: TODO
+    trips_using_vehicle_uics:
+      description: TODO
+    trips_using_only_vehicle_uics:
+      description: TODO
+    service_class:
+      description: TODO
 PaxMonMissingVehicleInfo:
   description: TODO
   fields:
@@ -1608,37 +1620,16 @@ PaxMonMissingVehicleInfo:
       description: TODO
     count:
       description: TODO
-PaxMonTripCapacityShortInfo:
-  description: TODO
-  fields:
-    tsi:
-      description: TODO
-    sections:
-      description: TODO
-    no_formation_data_all_merged:
-      description: TODO
-    no_formation_data_some_merged:
-      description: TODO
-    no_vehicles_found:
-      description: TODO
-    some_vehicles_not_found:
-      description: TODO
 PaxMonCapacityStatusResponse:
   description: TODO
   fields:
     all_trips:
       description: TODO
-    high_speed_rail_trips:
-      description: TODO
-    long_distance_trips:
-      description: TODO
-    other_trips:
-      description: TODO
-    trips_without_capacity:
-      description: TODO
     missing_vehicle_infos:
       description: TODO
     uics_not_found:
+      description: TODO
+    by_category:
       description: TODO
 PaxMonMetricsRequest:
   description: TODO

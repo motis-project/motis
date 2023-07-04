@@ -30,6 +30,12 @@ inline std::uint16_t clamp_capacity(capacity_maps const& caps,
   return std::max(caps.min_capacity_, capacity);
 }
 
+section_capacity get_section_capacity(schedule const& sched,
+                                      capacity_maps const& caps,
+                                      light_connection const& lc,
+                                      ev_key const& ev_key_from,
+                                      bool const detailed);
+
 std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
     ev_key const& ev_key_from);

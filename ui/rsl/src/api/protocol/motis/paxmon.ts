@@ -931,16 +931,17 @@ export interface PaxMonGetTripCapacityResponse {
 // paxmon/PaxMonCapacityStatusRequest.fbs
 export interface PaxMonCapacityStatusRequest {
   universe: number;
-  include_trips_without_capacity: boolean;
-  include_other_trips_without_capacity: boolean;
   include_missing_vehicle_infos: boolean;
   include_uics_not_found: boolean;
 }
 
 // paxmon/PaxMonCapacityStatusResponse.fbs
 export interface PaxMonTripCapacityStats {
+  category: string; // key
+  service_class: number;
   tracked: number;
-  ok: number;
+  full_data: number;
+  partial_data: number;
   trip_formation_data_found: number;
   no_formation_data_at_all: number;
   no_formation_data_some_sections_some_merged: number;
@@ -948,6 +949,11 @@ export interface PaxMonTripCapacityStats {
   no_vehicles_found_at_all: number;
   no_vehicles_found_some_sections: number;
   some_vehicles_not_found_some_sections: number;
+  trips_using_vehicle_uics: number;
+  trips_using_only_vehicle_uics: number;
+  trips_using_vehicle_groups: number;
+  trips_using_baureihe: number;
+  trips_using_type_code: number;
 }
 
 // paxmon/PaxMonCapacityStatusResponse.fbs
@@ -958,22 +964,9 @@ export interface PaxMonMissingVehicleInfo {
 }
 
 // paxmon/PaxMonCapacityStatusResponse.fbs
-export interface PaxMonTripCapacityShortInfo {
-  tsi: TripServiceInfo;
-  sections: number;
-  no_formation_data_all_merged: number;
-  no_formation_data_some_merged: number;
-  no_vehicles_found: number;
-  some_vehicles_not_found: number;
-}
-
-// paxmon/PaxMonCapacityStatusResponse.fbs
 export interface PaxMonCapacityStatusResponse {
   all_trips: PaxMonTripCapacityStats;
-  high_speed_rail_trips: PaxMonTripCapacityStats;
-  long_distance_trips: PaxMonTripCapacityStats;
-  other_trips: PaxMonTripCapacityStats;
-  trips_without_capacity: PaxMonTripCapacityShortInfo[];
+  by_category: PaxMonTripCapacityStats[];
   missing_vehicle_infos: PaxMonMissingVehicleInfo[];
   uics_not_found: number[];
 }

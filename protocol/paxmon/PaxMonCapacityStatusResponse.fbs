@@ -3,9 +3,13 @@ include "base/TripServiceInfo.fbs";
 namespace motis.paxmon;
 
 table PaxMonTripCapacityStats {
+  category: string (key);
+  service_class: ubyte;
+
   tracked: uint;
 
-  ok: uint;
+  full_data: uint;
+  partial_data: uint;
 
   trip_formation_data_found: uint;
 
@@ -16,6 +20,12 @@ table PaxMonTripCapacityStats {
   no_vehicles_found_at_all: uint;
   no_vehicles_found_some_sections: uint;
   some_vehicles_not_found_some_sections: uint;
+
+  trips_using_vehicle_uics: uint;
+  trips_using_only_vehicle_uics: uint;
+  trips_using_vehicle_groups: uint;
+  trips_using_baureihe: uint;
+  trips_using_type_code: uint;
 }
 
 table PaxMonMissingVehicleInfo {
@@ -24,24 +34,9 @@ table PaxMonMissingVehicleInfo {
   count: uint;
 }
 
-table PaxMonTripCapacityShortInfo {
-  tsi: motis.TripServiceInfo;
-
-  // section counts:
-  sections: uint;
-  no_formation_data_all_merged: uint;
-  no_formation_data_some_merged: uint;
-  no_vehicles_found: uint;
-  some_vehicles_not_found: uint;
-}
-
 table PaxMonCapacityStatusResponse {
   all_trips: PaxMonTripCapacityStats;
-  high_speed_rail_trips: PaxMonTripCapacityStats; // service class 1 (ICE)
-  long_distance_trips: PaxMonTripCapacityStats; // service class 2 (IC)
-  other_trips: PaxMonTripCapacityStats; // other service classes
-
-  trips_without_capacity: [PaxMonTripCapacityShortInfo];
+  by_category: [PaxMonTripCapacityStats];
 
   missing_vehicle_infos: [PaxMonMissingVehicleInfo];
   uics_not_found: [ulong];

@@ -19,8 +19,6 @@ function CapacityStatus(): ReactElement {
   const [universe] = useAtom(universeAtom);
   const { data } = usePaxMonCapacityStatus({
     universe,
-    include_trips_without_capacity: false,
-    include_other_trips_without_capacity: false,
     include_missing_vehicle_infos: true,
     include_uics_not_found: false,
   });
@@ -75,9 +73,11 @@ function CapacityStatusStats({ data }: CapacityStatusDataProps) {
 
   const columns: Column[] = [
     { label: "Alle Züge", stats: data.all_trips },
-    { label: "Hochgeschwindigkeitszüge", stats: data.high_speed_rail_trips },
-    { label: "Fernzüge", stats: data.long_distance_trips },
-    { label: "Sonstige Züge", stats: data.other_trips },
+    ...data.by_category
+      .filter((c) => c.service_class <= 2)
+      .map((c) => {
+        return { label: c.category, stats: c };
+      }),
   ];
 
   const numWithPercent = (c: Column, n: number) =>
@@ -106,9 +106,15 @@ function CapacityStatusStats({ data }: CapacityStatusDataProps) {
             ))}
           </tr>
           <tr>
-            <td className="font-medium">Kapazitätsdaten vorhanden</td>
+            <td className="font-medium">Kapazitätsdaten vollständig</td>
             {columns.map((c) => (
-              <td key={c.label}>{numWithPercent(c, c.stats.ok)}</td>
+              <td key={c.label}>{numWithPercent(c, c.stats.full_data)}</td>
+            ))}
+          </tr>
+          <tr>
+            <td className="font-medium">Kapazitätsdaten teilweise</td>
+            {columns.map((c) => (
+              <td key={c.label}>{numWithPercent(c, c.stats.full_data)}</td>
             ))}
           </tr>
           <tr>
