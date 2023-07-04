@@ -306,10 +306,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 impl_->tt_->get()->locations_.footpaths_out_.size() ||
             no_profiles_ !=
                 impl_->tt_->get()->locations_.footpaths_in_.size()) {
-          utl::verify(impl_->tt_->get()->locations_.footpaths_out_.size() >= 1,
+          utl::verify(!impl_->tt_->get()->locations_.footpaths_out_.empty(),
                       "nigiri timetable footpaths_out: should contain at least "
                       "the default footpaths.");
-          utl::verify(impl_->tt_->get()->locations_.footpaths_in_.size() >= 1,
+          utl::verify(!impl_->tt_->get()->locations_.footpaths_in_.empty(),
                       "nigiri timetable footpaths_in: should contain at least "
                       "the default footpaths.");
 

@@ -267,7 +267,7 @@ void footpaths::match_locations_and_platforms() {
       match_distance_min_, match_distance_max_, match_distance_step_);
 
   // initialize str_a == str_b lambda function
-  auto exact_name_match = [](std::string str_a, std::string_view str_b) {
+  auto exact_name_match = [](const std::string& str_a, std::string_view str_b) {
     return str_a == str_b;
   };
 
@@ -349,8 +349,6 @@ void footpaths::match_locations_and_platforms() {
       match_by_distance(location_idx, exact_first_number_match);
     }
   });
-
-  return;
 }
 
 }  // namespace motis::footpaths
