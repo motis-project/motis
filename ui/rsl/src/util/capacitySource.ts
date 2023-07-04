@@ -24,6 +24,8 @@ export function getCapacitySourceTooltip(cs: PaxMonCapacitySource): string {
       return "Keine zugspezifischen Kapazitätsinformationen vorhanden, Standardwert für Zugklasse";
     case "Override":
       return "Kapazitätsinformationen durch Simulation manuell überschrieben";
+    case "Unlimited":
+      return "Unbegrenzte Kapazität";
     case "Unknown":
       return "Keine Kapazitätsinformationen vorhanden";
   }
@@ -53,6 +55,8 @@ export function getCapacitySourceShortText(cs: PaxMonCapacitySource): string {
       return "Klasse";
     case "Override":
       return "Manuell";
+    case "Unlimited":
+      return "Unbegrenzt";
     case "Unknown":
       return "Unbekannt";
   }

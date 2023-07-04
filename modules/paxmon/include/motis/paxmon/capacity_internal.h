@@ -24,9 +24,10 @@ section_capacity get_section_capacity(schedule const& sched,
                                       ev_key const& ev_key_from,
                                       bool const detailed);
 
-std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    connection_info const* ci, service_class const clasz);
+trip_capacity get_trip_capacity(schedule const& sched,
+                                capacity_maps const& caps, trip const* trp,
+                                connection_info const* ci,
+                                service_class const clasz);
 
 inline capacity_source get_worst_source(capacity_source const a,
                                         capacity_source const b) {

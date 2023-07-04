@@ -82,11 +82,11 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
 
       auto tl_capacity = 0U;
       auto tl_capacity_src = capacity_source::UNKNOWN;
-      auto const trip_capacity =
+      auto const trip_cap =
           get_trip_capacity(sched, caps, trp, ci, lc.full_con_->clasz_);
-      if (trip_capacity) {
-        tl_capacity = trip_capacity->first;
-        tl_capacity_src = trip_capacity->second;
+      if (trip_cap.has_capacity()) {
+        tl_capacity = trip_cap.capacity_.seats();
+        tl_capacity_src = trip_cap.source_;
       }
 
       auto tf_capacity = detailed_capacity{};

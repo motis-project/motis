@@ -163,7 +163,7 @@ function SectionCapacityInfo({
       </div>
       <div className="w-20 flex flex-col items-center">
         <div className="font-semibold">
-          {section.capacity_type === "Known" ? section.capacity : "?"}
+          {section.capacity_type === "Known" ? section.capacity.seats : "?"}
         </div>
         <div
           className="text-xs"

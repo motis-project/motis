@@ -113,6 +113,16 @@ struct vehicle_group_capacity {
   std::vector<vehicle_capacity> vehicles_;
 };
 
+struct trip_capacity {
+  inline bool has_capacity() const {
+    return source_ != capacity_source::UNKNOWN;
+  }
+
+  trip const* trp_{};
+  detailed_capacity capacity_{};
+  capacity_source source_{capacity_source::UNKNOWN};
+};
+
 struct section_capacity {
   inline bool has_capacity() const {
     return source_ != capacity_source::UNKNOWN;
@@ -134,6 +144,7 @@ struct section_capacity {
   std::vector<std::pair<trip const*, trip_formation_section const*>>
       trip_formations_;
   std::vector<vehicle_group_capacity> vehicle_groups_;
+  std::vector<trip_capacity> trips_;
 };
 
 section_capacity get_capacity(schedule const& sched, light_connection const& lc,
