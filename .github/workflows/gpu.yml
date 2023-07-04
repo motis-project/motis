@@ -35,8 +35,8 @@ jobs:
         run: |
           cmake ${{ matrix.config.cross }} \
             -G Ninja -S . -B build \
-            -DCMAKE_C_COMPILER=gcc-11 \
-            -DCMAKE_CXX_COMPILER=g++-11 \
+            -DCMAKE_C_COMPILER=gcc-12 \
+            -DCMAKE_CXX_COMPILER=g++-12 \
             -DCMAKE_BUILD_TYPE=Release \
             -DMOTIS_CUDA=On \
             -DMOTIS_AVX=Off \
@@ -53,6 +53,7 @@ jobs:
           ./build/buildcache/bin/buildcache -s
 
       - name: Save deps
+        if: always()
         run: mv deps ~
 
       - name: Run Tests

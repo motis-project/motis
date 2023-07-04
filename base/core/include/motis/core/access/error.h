@@ -27,7 +27,7 @@ public:
       case error::service_not_found: return "access: service not found";
       case error::timestamp_not_in_schedule:
         return "access: timestamp not in schedule";
-      default: return "access: unkown error";
+      default: return "access: unknown error";
     }
   }
 };

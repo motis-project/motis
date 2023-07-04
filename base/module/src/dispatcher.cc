@@ -20,7 +20,7 @@ namespace motis::module {
 dispatcher* dispatcher::direct_mode_dispatcher_ = nullptr;  // NOLINT
 
 dispatcher::dispatcher(registry& reg,
-                       std::vector<std::unique_ptr<module>>&& modules)
+                       std::vector<std::unique_ptr<module>> modules)
     : ctx::access_scheduler<ctx_data>(
           to_res_id(global_res_id::FIRST_FREE_RES_ID)),
       registry_{reg},

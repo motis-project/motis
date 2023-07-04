@@ -1015,7 +1015,7 @@ struct ris::impl {
     auto min_db = t.dbi_open(MIN_DAY_DB);
     auto max_db = t.dbi_open(MAX_DAY_DB);
 
-    for (auto const [day, min_timestamp] : min) {
+    for (auto const& [day, min_timestamp] : min) {
       auto smallest = min_timestamp;
       if (auto entry = t.get(min_db, day); entry) {
         smallest = std::min(smallest, to_unixtime(*entry));
@@ -1023,7 +1023,7 @@ struct ris::impl {
       t.put(min_db, day, from_unixtime(smallest));
     }
 
-    for (auto const [day, max_timestamp] : max) {
+    for (auto const& [day, max_timestamp] : max) {
       auto largest = max_timestamp;
       if (auto entry = t.get(max_db, day); entry) {
         largest = std::max(largest, to_unixtime(*entry));

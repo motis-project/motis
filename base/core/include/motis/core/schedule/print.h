@@ -84,7 +84,8 @@ inline void print_edge(edge const& edge, std::ostream& out, int indent) {
     case edge::BWD_EDGE: out << "BWD\n"; break;
     case edge::INVALID_EDGE: out << "NO_EDGE\n"; break;
 
-    default: out << "UNKOWN [type=" << static_cast<int>(edge.m_.type_) << "]\n";
+    default:
+      out << "UNKNOWN [type=" << static_cast<int>(edge.m_.type_) << "]\n";
   }
 }
 

@@ -224,17 +224,26 @@ void gtfs_parser::parse(parser_options const& opt, fs::path const& root,
   auto get_or_create_category = [&](trip const* t) {
     auto const* r = t->route_;
     if (auto cat = r->get_category(); cat.has_value()) {
-      if ((cat->output_rule_ & category::output::BASIC_ROUTE_TYPE) ==
-          category::output::BASIC_ROUTE_TYPE) {
-        if (cat->name_ == "DPN") {
-          if (t->avg_speed() > 100) {
-            cat->name_ = "High Speed Rail";
-          } else if (t->distance() > 400) {
-            cat->name_ = "Long Distance Trains";
-          }
-        } else if (cat->name_ == "Bus" && t->distance() > 100) {
-          cat->name_ = "Coach";
+      auto const create = [&]() {
+        return utl::get_or_create(fbs_categories, *cat, [&]() {
+          return CreateCategory(fbb, fbb.CreateString(cat->name_),
+                                cat->output_rule_ & category::output::BASE);
+        });
+      };
+
+      if (cat->name_ == "DPN") {
+        if (t->avg_speed() > 100) {
+          cat->name_ = "High Speed Rail";
+          return create();
+        } else if (t->distance() > 400) {
+          cat->name_ = "Long Distance Trains";
+          return create();
         }
+      } else if (cat->name_ == "Bus" && t->distance() > 100) {
+        cat->output_rule_ =
+            category::output::FORCE_PROVIDER_INSTEAD_OF_CATEGORY;
+        cat->name_ = "Coach";
+        return create();
       }
 
       if ((cat->output_rule_ &
@@ -245,10 +254,7 @@ void gtfs_parser::parse(parser_options const& opt, fs::path const& root,
                         [](auto c) { return std::isdigit(c); });
         cat->name_ = is_number ? cat->name_ : r->short_name_;
       }
-      return utl::get_or_create(fbs_categories, *cat, [&]() {
-        return CreateCategory(fbb, fbb.CreateString(cat->name_),
-                              cat->output_rule_ & category::output::BASE);
-      });
+      return create();
     } else {
       auto desc = r->desc_;
       static auto const short_tags =

@@ -4,6 +4,9 @@
 #include <memory>
 #include <thread>
 
+#include "fmt/core.h"
+#include "fmt/ranges.h"
+
 #include "boost/asio/deadline_timer.hpp"
 #include "boost/asio/io_service.hpp"
 #include "boost/asio/signal_set.hpp"
@@ -82,18 +85,18 @@ int main(int argc, char const** argv) {
     parser.read_command_line_args(argc, argv, false);
 
     if (parser.help()) {
-      std::cout << "\n\tMOTIS " << short_version() << "\n\n";
+      fmt::print("\n\tMOTIS {} \n\n", short_version());
       reg.print_list();
       if (auto const module_names = instance.module_names();
           module_names.empty()) {
-        std::cout << "\nNo modules available.\n";
+        fmt::print("\nNo modules available.\n");
       } else {
-        std::cout << "\nAvailable modules: " << module_names << "\n\n";
+        fmt::print("Available moduels: {}\n\n", module_names);
       }
       parser.print_help(std::cout);
       return 0;
     } else if (parser.version()) {
-      std::cout << "MOTIS " << long_version() << "\n";
+      fmt::print("MOTIS {}", long_version());
       return 0;
     }
 
@@ -139,17 +142,17 @@ int main(int argc, char const** argv) {
 #endif
                     server_opt.log_path_, server_opt.static_path_, ec);
       if (ec) {
-        std::cout << "unable to start server: " << ec.message() << "\n";
+        fmt::print("unable to start server: {}\n", ec.message());
         return 1;
       }
     } else if (launcher_opt.mode_ == launcher_settings::motis_mode_t::INIT) {
       return 0;
     }
   } catch (std::exception const& e) {
-    std::cout << "\ninitialization error: " << e.what() << "\n";
+    fmt::print("\ninitialization error: {}\n", e.what());
     return 1;
   } catch (...) {
-    std::cout << "\ninitialization error\n";
+    fmt::print("unknown initialization error\n");
     return 1;
   }
 

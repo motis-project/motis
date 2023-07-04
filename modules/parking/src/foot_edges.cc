@@ -148,23 +148,10 @@ void compute_edges(
 
 void compute_foot_edges_direct(
     database& db, std::vector<foot_edge_task> const& tasks,
+    motis::ppr::ppr_data const& ppr_data,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-    std::string const& ppr_graph, std::size_t edge_rtree_max_size,
-    std::size_t area_rtree_max_size, bool lock_rtrees, int threads,
-    bool ppr_exact) {
+    int threads, bool ppr_exact) {
   LOG(info) << "Computing foot edges (" << tasks.size() << " tasks)...";
-
-  routing_graph rg;
-  {
-    scoped_timer const ppr_load_timer{"Loading ppr routing graph"};
-    read_routing_graph(rg, ppr_graph);
-  }
-  {
-    scoped_timer const ppr_rtree_timer{"Preparing ppr r-trees"};
-    rg.prepare_for_routing(
-        edge_rtree_max_size, area_rtree_max_size,
-        lock_rtrees ? rtree_options::LOCK : rtree_options::PREFETCH);
-  }
 
   scoped_timer const timer{"Computing foot edges"};
 
@@ -176,7 +163,8 @@ void compute_foot_edges_direct(
                             std::string const& /*profile_name*/,
                             search_profile const& profile,
                             search_direction const dir) {
-    return route_ppr_direct(rg, parking_loc, station_locs, profile, dir);
+    return route_ppr_direct(ppr_data.rg_, parking_loc, station_locs, profile,
+                            dir);
   };
   for (auto const& t : tasks) {
     pool.post([&, &t = t] {

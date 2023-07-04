@@ -100,7 +100,7 @@ struct address::impl {
                       fbb, &pos, fbb.CreateString(context_.get_name(id)),
                       fbb.CreateString(context_.is_place(id)    ? "place"
                                        : context_.is_street(id) ? "street"
-                                                                : "unkown"),
+                                                                : "unknown"),
                       fbb.CreateVector(utl::to_vec(
                           context_.get_area_names(id),
                           [&](std::pair<std::string, uint32_t> const& region) {

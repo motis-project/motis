@@ -25,7 +25,7 @@ public:
       case error::no_guess_for_station:
         return "routing: station could not be guessed";
       case error::parking_edge_error: return "intermodal: parking edge error";
-      default: return "intermodal: unkown error";
+      default: return "intermodal: unknown error";
     }
   }
 };

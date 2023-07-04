@@ -130,10 +130,14 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
     print_event(out, stop.arrival_, local_time, rt_format);
     fmt::print(out, "  d: ");
     print_event(out, stop.departure_, local_time, rt_format);
-    fmt::print(out, stop.exit_ ? "  exit" : "      ");
-    fmt::print(out, stop.enter_ ? " enter" : "      ");
-    out << " " << stop.arrival_.track_;
-    out << " " << stop.departure_.track_;
+    fmt::print(out, stop.exit_ ? "  exit" : stop.enter_ ? "      " : "");
+    fmt::print(out, stop.enter_ ? " enter" : "");
+    if (!stop.arrival_.track_.empty()) {
+      out << " " << stop.arrival_.track_;
+    }
+    if (!stop.departure_.track_.empty()) {
+      out << " " << stop.departure_.track_;
+    }
     out << "\n";
   }
 
@@ -147,8 +151,8 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
       out << "type=" << std::left << std::setw(9) << trans.mumo_type_
           << " id=" << std::left << std::setw(7) << trans.mumo_id_
           << " duration=" << std::left << std::setw(3) << trans.duration_
-          << " accessibility=" << std::left << std::setw(3)
-          << trans.mumo_accessibility_ << std::endl;
+          << " accessibility=" << std::left << trans.mumo_accessibility_
+          << std::endl;
     } else {
       out << std::left << std::setw(10) << trans.name_
           << "                duration=" << trans.duration_ << ", provider=\""
