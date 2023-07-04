@@ -20,7 +20,14 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/core/debug/fbs.h"
+#include "motis/core/debug/trip.h"
+
+#include "motis/module/message.h"
+
 #include "motis/paxmon/capacity.h"
+#include "motis/paxmon/checks.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/reroute.h"
 
@@ -277,14 +284,25 @@ void add_interchange_edges(event_node* evn,
   }
 }
 
-void update_event_times(schedule const& sched, universe& uv,
-                        RtDelayUpdate const* du,
-                        std::vector<edge_index>& updated_interchange_edges) {
+int update_event_times(schedule const& sched, universe& uv,
+                       RtDelayUpdate const* du,
+                       std::vector<edge_index>& updated_interchange_edges) {
+  using namespace motis::logging;
   auto const trp = from_fbs(sched, du->trip());
   auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
-  if (tdi == INVALID_TRIP_DATA_INDEX) {
-    return;
+  auto const debug = false;
+  if (debug) {
+    LOG(info) << "[UET] update_event_times for trip: "
+              << debug::trip{sched, trp} << ":\n"
+              << motis::module::fbs_table_to_json(du, "motis.rt.RtDelayUpdate");
   }
+  if (tdi == INVALID_TRIP_DATA_INDEX) {
+    if (debug) {
+      LOG(info) << "[UET] trip not found: " << debug::trip{sched, trp};
+    }
+    return -1;
+  }
+  auto updated = 0;
   auto trip_edges = uv.trip_data_.edges(tdi);
   ++uv.system_stats_.update_event_times_trip_edges_found_;
   for (auto const& ue : *du->events()) {
@@ -303,6 +321,7 @@ void update_event_times(schedule const& sched, universe& uv,
           from->schedule_time_ == schedule_time) {
         if (from->time_ != new_time) {
           ++uv.system_stats_.update_event_times_dep_updated_;
+          ++updated;
           from->time_ = new_time;
           add_interchange_edges(from, updated_interchange_edges, uv);
           if (uv.graph_log_.enabled_) {
@@ -316,6 +335,7 @@ void update_event_times(schedule const& sched, universe& uv,
                  to->schedule_time_ == schedule_time) {
         if (to->time_ != new_time) {
           ++uv.system_stats_.update_event_times_arr_updated_;
+          ++updated;
           to->time_ = new_time;
           add_interchange_edges(to, updated_interchange_edges, uv);
           if (uv.graph_log_.enabled_) {
@@ -327,6 +347,7 @@ void update_event_times(schedule const& sched, universe& uv,
       }
     }
   }
+  return updated;
 }
 
 void update_trip_route(schedule const& sched, universe& uv,
