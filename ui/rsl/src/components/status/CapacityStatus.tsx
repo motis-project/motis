@@ -10,6 +10,7 @@ import {
   PaxMonTripCapacityStats,
 } from "@/api/protocol/motis/paxmon";
 
+import { ServiceClass } from "@/api/constants";
 import { getApiEndpoint } from "@/api/endpoint";
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { queryKeys, sendPaxMonCapacityStatusRequest } from "@/api/paxmon";
@@ -20,11 +21,16 @@ import { formatNumber, formatPercent } from "@/data/numberFormat";
 import { getScheduleRange } from "@/util/scheduleRange";
 
 import DatePicker from "@/components/inputs/DatePicker";
+import ServiceClassFilter from "@/components/inputs/ServiceClassFilter";
 import Baureihe from "@/components/util/Baureihe";
 
 function CapacityStatus(): ReactElement {
   const [universe] = useAtom(universeAtom);
   const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
+  const [serviceClassFilter, setServiceClassFilter] = useState([
+    ServiceClass.ICE,
+    ServiceClass.IC,
+  ]);
 
   const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
@@ -55,18 +61,30 @@ function CapacityStatus(): ReactElement {
   return (
     <div className="py-3">
       <h2 className="text-lg font-semibold">Kapazitätsdaten</h2>
-      <div className="inline-block">
-        <label>
-          <span className="text-sm">Datum</span>
-          <DatePicker
-            value={selectedDate}
-            onChange={setSelectedDate}
-            min={scheduleRange.firstDay}
-            max={scheduleRange.lastDay}
+      <div className="flex pb-2 gap-1">
+        <div>
+          <label>
+            <span className="text-sm">Datum</span>
+            <DatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
+              min={scheduleRange.firstDay}
+              max={scheduleRange.lastDay}
+            />
+          </label>
+        </div>
+        <div className="flex flex-col justify-end">
+          <ServiceClassFilter
+            selectedServiceClasses={serviceClassFilter}
+            setSelectedServiceClasses={setServiceClassFilter}
+            popupPosition="left-0"
           />
-        </label>
+        </div>
       </div>
-      <CapacityStatusDisplay data={data} />
+      <CapacityStatusDisplay
+        data={data}
+        serviceClassFilter={serviceClassFilter}
+      />
       <div className="flex gap-3 pt-5">
         <a
           href={`${getApiEndpoint()}paxmon/capacity_status/trips.csv`}
@@ -89,32 +107,43 @@ function CapacityStatus(): ReactElement {
 
 type CapacityStatusDisplayProps = {
   data: PaxMonCapacityStatusResponse | undefined;
+  serviceClassFilter: ServiceClass[];
 };
 
 type CapacityStatusDataProps = {
   data: PaxMonCapacityStatusResponse;
+  serviceClassFilter: ServiceClass[];
 };
 
-function CapacityStatusDisplay({ data }: CapacityStatusDisplayProps) {
+function CapacityStatusDisplay({
+  data,
+  serviceClassFilter,
+}: CapacityStatusDisplayProps) {
   if (!data) {
     return <div>Daten werden geladen...</div>;
   }
 
   return (
     <>
-      <CapacityStatusStats data={data} />
+      <CapacityStatusStats
+        data={data}
+        serviceClassFilter={serviceClassFilter}
+      />
       <MissingVehicles data={data} />
     </>
   );
 }
 
-function CapacityStatusStats({ data }: CapacityStatusDataProps) {
+function CapacityStatusStats({
+  data,
+  serviceClassFilter,
+}: CapacityStatusDataProps) {
   type Column = { label: string; stats: PaxMonTripCapacityStats };
 
   const columns: Column[] = [
     { label: "Alle Züge", stats: data.all_trips },
     ...data.by_category
-      .filter((c) => c.service_class <= 2)
+      .filter((c) => serviceClassFilter.includes(c.service_class))
       .map((c) => {
         return { label: c.category, stats: c };
       }),
@@ -238,7 +267,11 @@ function CapacityStatusStats({ data }: CapacityStatusDataProps) {
   );
 }
 
-function MissingVehicles({ data }: CapacityStatusDataProps) {
+type MissingVehiclesProps = {
+  data: PaxMonCapacityStatusResponse;
+};
+
+function MissingVehicles({ data }: MissingVehiclesProps) {
   return (
     <div className="pt-3">
       <details>
