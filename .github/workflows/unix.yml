@@ -111,7 +111,6 @@ jobs:
           - preset: macos-arm64
             cache: macos-arm64
     env:
-      BUILDCACHE_DEBUG: 1
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY
