@@ -2,6 +2,8 @@
 
 #include <filesystem>
 
+#include "boost/thread/tss.hpp"
+
 #include "cista/reflection/comparable.h"
 
 #include "baldr/attributes_controller.h"
@@ -21,6 +23,7 @@
 #include "thor/triplegbuilder.h"
 #include "worker.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 #include "motis/valhalla/config.h"
@@ -40,18 +43,32 @@ struct import_state {
 };
 
 struct valhalla::impl {
+  struct thor {
+    thor(std::shared_ptr<v::baldr::GraphReader> reader,
+         boost::property_tree::ptree const& pt)
+        : loki_worker_{pt, reader}, bd_{pt.get_child("thor")}, formatter_{pt} {}
+    v::thor::CostMatrix matrix_;
+    v::loki::loki_worker_t loki_worker_;
+    v::sif::CostFactory factory_;
+    v::thor::BidirectionalAStar bd_;
+    v::odin::MarkupFormatter formatter_;
+  };
+
   explicit impl(boost::property_tree::ptree const& pt)
       : reader_{std::make_shared<v::baldr::GraphReader>(
             pt.get_child("mjolnir"))},
-        loki_worker_{pt, reader_},
-        bd_{pt.get_child("thor")},
-        formatter_{pt} {}
+        pt_{pt} {}
+
+  thor& get() {
+    if (thor_.get() == nullptr) {
+      thor_.reset(new thor{reader_, pt_});
+    }
+    return *thor_;
+  }
+
   std::shared_ptr<v::baldr::GraphReader> reader_;
-  v::thor::CostMatrix matrix_;
-  v::loki::loki_worker_t loki_worker_;
-  v::sif::CostFactory factory_;
-  v::thor::BidirectionalAStar bd_;
-  v::odin::MarkupFormatter formatter_;
+  boost::property_tree::ptree pt_;
+  boost::thread_specific_ptr<thor> thor_;
 };
 
 valhalla::valhalla() : module("Valhalla Street Router", "valhalla") {}
@@ -68,6 +85,8 @@ void valhalla::init(mm::registry& reg) {
                   [&](mm::msg_ptr const& msg) { return table(msg); }, {});
   reg.register_op("/osrm/via", [&](mm::msg_ptr const& msg) { return via(msg); },
                   {});
+  reg.register_op("/ppr/route",
+                  [&](mm::msg_ptr const& msg) { return ppr(msg); }, {});
 }
 
 std::string_view translate_mode(std::string_view s) {
@@ -147,6 +166,9 @@ void encode_request(osrm::OSRMViaRouteRequest const* req, j::Document& doc) {
 
 template <typename Req>
 mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
+  motis::logging::scoped_timer timer{"matrix"};
+  auto& thor = impl_->get();
+
   // Encode OSRMManyToManyRequest as valhalla request.
   auto doc = j::Document{};
   encode_request(req, doc);
@@ -158,16 +180,16 @@ mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
 
   // Get the costing method.
   auto mode = v::sif::TravelMode::kMaxTravelMode;
-  auto const mode_costing = impl_->factory_.CreateModeCosting(options, mode);
+  auto const mode_costing = thor.factory_.CreateModeCosting(options, mode);
 
   // Find path locations (loki) for sources and targets.
-  impl_->loki_worker_.matrix(request);
+  thor.loki_worker_.matrix(request);
 
   // Run matrix algorithm.
-  impl_->matrix_.clear();
-  auto const res = impl_->matrix_.SourceToTarget(
+  auto const res = thor.matrix_.SourceToTarget(
       options.sources(), options.targets(), *impl_->reader_, mode_costing, mode,
       4000000.0F);
+  thor.matrix_.clear();
 
   // Encode OSRM response.
   mm::message_creator fbb;
@@ -177,7 +199,7 @@ mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
           fbb, fbb.CreateVectorOfStructs(utl::to_vec(
                    res,
                    [](v::thor::TimeDistance const& td) {
-                     return motis::osrm::Cost{1.0 * td.time, 1.0 * td.dist};
+                     return motis::osrm::Cost{td.time / 60.0, 1.0 * td.dist};
                    })))
           .Union());
   return make_msg(fbb);
@@ -198,6 +220,7 @@ mm::msg_ptr valhalla::one_to_many(mm::msg_ptr const& msg) const {
 mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   using osrm::OSRMViaRouteRequest;
   auto const req = motis_content(OSRMViaRouteRequest, msg);
+  auto& thor = impl_->get();
 
   // Encode OSRMViaRouteRequest as valhalla request.
   auto doc = j::Document{};
@@ -210,18 +233,18 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
 
   // Get the costing method.
   auto mode = v::sif::TravelMode::kMaxTravelMode;
-  auto const& mode_costing = impl_->factory_.CreateModeCosting(options, mode);
+  auto const& mode_costing = thor.factory_.CreateModeCosting(options, mode);
 
   // Find path locations (loki) for sources and targets.
-  impl_->loki_worker_.route(request);
+  thor.loki_worker_.route(request);
 
   // Compute paths.
   for (uint32_t i = 0; i < options.locations().size() - 1U; i++) {
     auto origin = options.locations(i);
     auto dest = options.locations(i + 1);
 
-    auto paths = impl_->bd_.GetBestPath(origin, dest, *impl_->reader_,
-                                        mode_costing, mode, request.options());
+    auto paths = thor.bd_.GetBestPath(origin, dest, *impl_->reader_,
+                                      mode_costing, mode, request.options());
     auto cost = mode_costing[static_cast<uint32_t>(mode)];
 
     // If bidirectional A*, disable use of destination only edges on the first
@@ -229,14 +252,14 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
     cost->set_allow_destination_only(false);
     cost->set_pass(0);
     if (paths.empty() ||
-        (mode == v::sif::TravelMode::kPedestrian && impl_->bd_.has_ferry())) {
+        (mode == v::sif::TravelMode::kPedestrian && thor.bd_.has_ferry())) {
       if (cost->AllowMultiPass()) {
         cost->set_pass(1);
-        impl_->bd_.Clear();
+        thor.bd_.Clear();
         cost->RelaxHierarchyLimits(true);
         cost->set_allow_destination_only(true);
-        paths = impl_->bd_.GetBestPath(origin, dest, *impl_->reader_,
-                                       mode_costing, mode, request.options());
+        paths = thor.bd_.GetBestPath(origin, dest, *impl_->reader_,
+                                     mode_costing, mode, request.options());
       }
     }
     if (paths.empty()) {
@@ -251,9 +274,9 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
     v::thor::TripLegBuilder::Build(request.options(), controller,
                                    *impl_->reader_, mode_costing,
                                    pathedges.begin(), pathedges.end(), origin,
-                                   dest, trip_path, {impl_->bd_.name()});
+                                   dest, trip_path, {thor.bd_.name()});
 
-    impl_->bd_.Clear();
+    thor.bd_.Clear();
   }
 
   // Extract result.
@@ -265,7 +288,7 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   }
 
   // Get totals.
-  v::odin::DirectionsBuilder::Build(request, impl_->formatter_);
+  v::odin::DirectionsBuilder::Build(request, thor.formatter_);
   double total_time = 0.0;
   float total_distance = 0.0F;
   for (auto const& l : request.directions().routes(0).legs()) {
@@ -297,7 +320,6 @@ mm::msg_ptr valhalla::ppr(mm::msg_ptr const& msg) const {
   using ppr::FootRoutingResponse;
 
   auto const req = motis_content(FootRoutingRequest, msg);
-
   mm::message_creator fbb;
   if (req->include_path()) {
     fbb.create_and_finish(
@@ -341,13 +363,18 @@ mm::msg_ptr valhalla::ppr(mm::msg_ptr const& msg) const {
             .Union());
   } else {
     mm::message_creator req_fbb;
-    req_fbb.create_and_finish(MsgContent_OSRMOneToManyRequest,
-                              osrm::CreateOSRMOneToManyRequest(
-                                  fbb, fbb.CreateString("foot"),
-                                  req->search_direction(), req->start(),
-                                  fbb.CreateVector(req->destinations()->data(),
-                                                   req->destinations()->size()))
-                                  .Union());
+    auto const start = *req->start();
+    auto const dests =
+        utl::to_vec(*req->destinations(), [](Position const* dest) {
+          return Position{dest->lat(), dest->lng()};
+        });
+    req_fbb.create_and_finish(
+        MsgContent_OSRMOneToManyRequest,
+        osrm::CreateOSRMOneToManyRequest(
+            req_fbb, req_fbb.CreateString("foot"), req->search_direction(),
+            &start, req_fbb.CreateVectorOfStructs(dests.data(), dests.size()))
+            .Union(),
+        "/osrm/one_to_many");
     auto const res_msg = one_to_many(make_msg(req_fbb));
     auto const res = motis_content(OSRMOneToManyResponse, res_msg);
     fbb.create_and_finish(

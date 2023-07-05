@@ -11,11 +11,6 @@ namespace motis::valhalla {
 boost::property_tree::ptree get_config(std::string const& tile_dir) {
   auto const config_json = fmt::format(R"({{
   "thor": {{
-    "logging": {{
-      "long_request": 110,
-      "type": "std_out",
-      "color": true
-    }}
   }},
   "mjolnir": {{
     "tile_dir": "{}",
@@ -50,12 +45,6 @@ boost::property_tree::ptree get_config(std::string const& tile_dir) {
       "street_side_tolerance": 5,
       "street_side_max_distance": 1000,
       "heading_tolerance": 60
-    }},
-    "logging": {{
-      "type": "std_out",
-      "color": true,
-      "file_name": "path_to_some_file.log",
-      "long_request": 100.0
     }},
     "service": {{
       "proxy": "ipc:///tmp/loki"
@@ -102,11 +91,6 @@ boost::property_tree::ptree get_config(std::string const& tile_dir) {
     }},
     "multimodal": {{
       "turn_penalty_factor": 70
-    }},
-    "logging": {{
-      "type": "std_out",
-      "color": true,
-      "file_name": "path_to_some_file.log"
     }},
     "service": {{
       "proxy": "ipc:///tmp/meili"
