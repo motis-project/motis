@@ -76,7 +76,6 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
-        if: matrix.config.noavx2
         run: >
           .\build\motis.exe
           --mode test
@@ -87,11 +86,9 @@ jobs:
           --exclude_modules address osrm parking path ppr tiles gbfs
 
       - name: Run Tests
-        if: matrix.config.noavx2
         run: .\build\motis-test.exe
 
       - name: Run Integration Tests
-        if: matrix.config.noavx2
         run: .\build\motis-itest.exe
 
       # ==== WEB INTERFACE ====

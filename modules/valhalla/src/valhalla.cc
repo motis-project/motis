@@ -211,7 +211,7 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
 
   // Get the costing method.
   auto mode = v::sif::TravelMode::kMaxTravelMode;
-  auto const mode_costing = impl_->factory_.CreateModeCosting(options, mode);
+  auto const& mode_costing = impl_->factory_.CreateModeCosting(options, mode);
 
   // Find path locations (loki) for sources and targets.
   impl_->loki_worker_.route(request);
@@ -245,7 +245,7 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
     }
 
     // Form trip path
-    AttributesController controller;
+    auto const controller = AttributesController{};
     auto const& pathedges = paths.front();
     auto& trip_path =
         *request.mutable_trip()->mutable_routes()->Add()->mutable_legs()->Add();
