@@ -23,8 +23,13 @@ jobs:
         config:
           - mode: Debug
             webui: Off
+            noavx2: On
           - mode: Release
             webui: On
+          - mode: Release
+            webui: On
+            noavx2: On
+            tag: -noavx2
 
     env:
       CXX: cl.exe
@@ -74,6 +79,7 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
+        if: matrix.config.noavx2
         run: >
           .\build\motis.exe
           --mode test
@@ -84,9 +90,11 @@ jobs:
           --exclude_modules address osrm parking path ppr tiles gbfs
 
       - name: Run Tests
+        if: matrix.config.noavx2
         run: .\build\motis-test.exe
 
       - name: Run Integration Tests
+        if: matrix.config.noavx2
         run: .\build\motis-itest.exe
 
       # ==== WEB INTERFACE ====
@@ -159,7 +167,7 @@ jobs:
       - name: Create Distribution
         if: matrix.config.mode == 'Release'
         run: >
-          7z a motis-windows.zip
+          7z a motis-windows${{ matrix.config.tag }}.zip
           .\build\motis.exe
           .\osrm-profiles
           .\ppr-profiles
@@ -170,8 +178,8 @@ jobs:
         if: matrix.config.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
-          name: motis-windows
-          path: motis-windows.zip
+          name: motis-windows${{ matrix.config.tag }}
+          path: motis-windows${{ matrix.config.tag }}.zip
 
       # ==== RELEASE ====
       - name: Upload Release
@@ -181,6 +189,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motis-windows.zip
-          asset_name: motis-windows.zip
+          asset_path: ./motis-windows${{ matrix.config.tag }}.zip
+          asset_name: motis-windows${{ matrix.config.tag }}.zip
           asset_content_type: application/zip
