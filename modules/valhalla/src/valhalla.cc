@@ -291,6 +291,88 @@ mm::msg_ptr valhalla::via(mm::msg_ptr const& msg) const {
   return make_msg(fbb);
 }
 
+mm::msg_ptr valhalla::ppr(mm::msg_ptr const& msg) const {
+  using osrm::OSRMOneToManyResponse;
+  using osrm::OSRMViaRouteResponse;
+  using ppr::FootRoutingRequest;
+  using ppr::FootRoutingResponse;
+
+  auto const req = motis_content(FootRoutingRequest, msg);
+
+  mm::message_creator fbb;
+  if (req->include_path()) {
+    fbb.create_and_finish(
+        MsgContent_FootRoutingResponse,
+        ppr::CreateFootRoutingResponse(
+            fbb,
+            fbb.CreateVector(utl::to_vec(
+                *req->destinations(),
+                [&](Position const* dest) {
+                  mm::message_creator req_fbb;
+                  auto const from_to = std::array<Position, 2>{
+                      req->search_direction() == SearchDir_Forward
+                          ? *req->start()
+                          : *dest,
+                      req->search_direction() == SearchDir_Forward
+                          ? *dest
+                          : *req->start()};
+                  req_fbb.create_and_finish(
+                      MsgContent_OSRMViaRouteRequest,
+                      osrm::CreateOSRMViaRouteRequest(
+                          req_fbb, req_fbb.CreateString("foot"),
+                          req_fbb.CreateVectorOfStructs(from_to.data(), 2U))
+                          .Union());
+                  auto const res_msg = via(make_msg(req_fbb));
+                  auto const res = motis_content(OSRMViaRouteResponse, res_msg);
+                  return ppr::CreateRoutes(
+                      fbb,
+                      fbb.CreateVector(std::vector{ppr::CreateRoute(
+                          fbb, res->distance(), res->time(), res->time(), 0.0,
+                          0U, 0.0, 0.0, req->start(), dest,
+                          fbb.CreateVector(
+                              std::vector<
+                                  flatbuffers::Offset<ppr::RouteStep>>{}),
+                          fbb.CreateVector(
+                              std::vector<flatbuffers::Offset<ppr::Edge>>{}),
+                          motis_copy_table(Polyline, fbb, res->polyline()), 0,
+                          0)}));
+                })))
+            .Union());
+  } else {
+    mm::message_creator req_fbb;
+    req_fbb.create_and_finish(MsgContent_OSRMOneToManyRequest,
+                              osrm::CreateOSRMOneToManyRequest(
+                                  fbb, fbb.CreateString("foot"),
+                                  req->search_direction(), req->start(),
+                                  fbb.CreateVector(req->destinations()->data(),
+                                                   req->destinations()->size()))
+                                  .Union());
+    auto const res_msg = one_to_many(make_msg(req_fbb));
+    auto const res = motis_content(OSRMOneToManyResponse, res_msg);
+    fbb.create_and_finish(
+        MsgContent_FootRoutingResponse,
+        ppr::CreateFootRoutingResponse(
+            fbb,
+            fbb.CreateVector(utl::to_vec(
+                *res->costs(),
+                [&, i = 0](osrm::Cost const* cost) mutable {
+                  auto const vec = std::vector{ppr::CreateRoute(
+                      fbb, cost->distance(), cost->duration(), cost->duration(),
+                      0.0, 0U, 0.0, 0.0, req->start(),
+                      req->destinations()->Get(i++),
+                      fbb.CreateVector(
+                          std::vector<flatbuffers::Offset<ppr::RouteStep>>{}),
+                      fbb.CreateVector(
+                          std::vector<flatbuffers::Offset<ppr::Edge>>{}),
+                      CreatePolyline(fbb,
+                                     fbb.CreateVector(std::vector<double>{})))};
+                  return ppr::CreateRoutes(fbb, fbb.CreateVector(vec));
+                })))
+            .Union());
+  }
+  return make_msg(fbb);
+}
+
 void valhalla::import(mm::import_dispatcher& reg) {
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "valhalla", reg,
@@ -301,10 +383,6 @@ void valhalla::import(mm::import_dispatcher& reg) {
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const state = import_state{data_path(osm->path()->str()),
                                         osm->hash(), osm->size()};
-
-        auto const osm_stem = fs::path{fs::path{osm->path()->str()}.stem()}
-                                  .stem()
-                                  .generic_string();
 
         auto const dir = get_data_directory() / "valhalla";
         fs::create_directories(dir);

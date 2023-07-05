@@ -22,6 +22,7 @@ struct valhalla : public motis::module::module {
   motis::module::msg_ptr one_to_many(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr table(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr via(motis::module::msg_ptr const&) const;
+  motis::module::msg_ptr ppr(motis::module::msg_ptr const&) const;
 
   struct impl;
   std::unique_ptr<impl> impl_;
