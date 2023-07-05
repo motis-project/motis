@@ -6,7 +6,7 @@ import {
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { add, getUnixTime, parseISO } from "date-fns";
+import { add, getUnixTime } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -27,10 +27,11 @@ import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import classNames from "@/util/classNames";
-import { formatISODate, formatTime } from "@/util/dateFormat";
+import { formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
 import { getScheduleRange } from "@/util/scheduleRange";
 
+import DatePicker from "@/components/inputs/DatePicker";
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
 type LabeledFilterOption = {
@@ -232,15 +233,11 @@ function TripList(): JSX.Element {
         <div className="">
           <label>
             <span className="text-sm">Datum</span>
-            <input
-              type="date"
+            <DatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
               min={scheduleRange.firstDay}
               max={scheduleRange.lastDay}
-              value={selectedDate ? formatISODate(selectedDate) : ""}
-              onChange={(e) => {
-                setSelectedDate(parseISO(e.target.value));
-              }}
-              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             />
           </label>
         </div>
