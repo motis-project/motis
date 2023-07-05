@@ -13,6 +13,8 @@
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 
+#include "motis/paxmon/api/util/trip_time_filter.h"
+
 using namespace motis::module;
 using namespace motis::paxmon;
 
@@ -100,22 +102,10 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
         }
       }
 
-      auto const dep = trp->id_.primary_.get_time();
-      auto const arr = trp->id_.secondary_.target_time_;
-      if (filter_by_time == PaxMonFilterTripsTimeFilter_DepartureTime) {
-        if (dep < filter_interval_begin || dep >= filter_interval_end) {
-          continue;
-        }
-      } else if (filter_by_time ==
-                 PaxMonFilterTripsTimeFilter_DepartureOrArrivalTime) {
-        if ((dep < filter_interval_begin || dep >= filter_interval_end) &&
-            (arr < filter_interval_begin || arr >= filter_interval_end)) {
-          continue;
-        }
-      } else if (filter_by_time == PaxMonFilterTripsTimeFilter_ActiveTime) {
-        if (dep > filter_interval_end || arr < filter_interval_begin) {
-          continue;
-        }
+      if (!include_trip_based_on_time_filter(trp, filter_by_time,
+                                             filter_interval_begin,
+                                             filter_interval_end)) {
+        continue;
       }
 
       if (filter_by_service_class) {

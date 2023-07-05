@@ -395,6 +395,13 @@ export interface PaxMonFilterGroupsResponse {
   groups: PaxMonGroupWithStats[];
 }
 
+// paxmon/PaxMonFilterTripsTimeFilter.fbs
+export type PaxMonFilterTripsTimeFilter =
+  | "NoFilter"
+  | "DepartureTime"
+  | "DepartureOrArrivalTime"
+  | "ActiveTime";
+
 // paxmon/PaxMonFilterTripsRequest.fbs
 export type PaxMonFilterTripsSortOrder =
   | "MostCritical"
@@ -406,13 +413,6 @@ export type PaxMonFilterTripsSortOrder =
   | "MaxPaxRange"
   | "MaxPax"
   | "MaxCapacity";
-
-// paxmon/PaxMonFilterTripsRequest.fbs
-export type PaxMonFilterTripsTimeFilter =
-  | "NoFilter"
-  | "DepartureTime"
-  | "DepartureOrArrivalTime"
-  | "ActiveTime";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
@@ -931,6 +931,8 @@ export interface PaxMonGetTripCapacityResponse {
 // paxmon/PaxMonCapacityStatusRequest.fbs
 export interface PaxMonCapacityStatusRequest {
   universe: number;
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
   include_missing_vehicle_infos: boolean;
   include_uics_not_found: boolean;
 }

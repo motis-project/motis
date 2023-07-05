@@ -1574,6 +1574,10 @@ PaxMonCapacityStatusRequest:
       description: TODO
     include_uics_not_found:
       description: TODO
+    filter_by_time:
+      description: TODO
+    filter_interval:
+      description: TODO
 PaxMonTripCapacityStats:
   description: TODO
   fields:

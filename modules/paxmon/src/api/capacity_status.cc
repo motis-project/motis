@@ -25,6 +25,8 @@
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 
+#include "motis/paxmon/api/util/trip_time_filter.h"
+
 using namespace motis::module;
 using namespace motis::logging;
 using namespace motis::paxmon;
@@ -33,8 +35,6 @@ using namespace flatbuffers;
 namespace motis::paxmon::api {
 
 namespace {
-
-// TODO(pablo): filter by day
 
 struct capacity_stats {
   Offset<PaxMonTripCapacityStats> to_fbs(FlatBufferBuilder& fbb) const {
@@ -86,35 +86,46 @@ enum class output_type { DEFAULT, CSV_TRIPS, CSV_FORMATIONS };
 
 msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
   auto out_type = output_type::DEFAULT;
+  auto uv_id = universe_id{};
+  auto filter_by_time = PaxMonFilterTripsTimeFilter_NoFilter;
+  auto filter_interval_begin = INVALID_TIME;
+  auto filter_interval_end = INVALID_TIME;
   auto include_missing_vehicle_infos = false;
   auto include_uics_not_found = false;
-  auto uv_id = universe_id{};
 
   switch (msg->get()->content_type()) {
     case MsgContent_PaxMonCapacityStatusRequest: {
       auto const req = motis_content(PaxMonCapacityStatusRequest, msg);
       uv_id = req->universe();
+      filter_by_time = req->filter_by_time();
       include_missing_vehicle_infos = req->include_missing_vehicle_infos();
       include_uics_not_found = req->include_uics_not_found();
       break;
     }
-    case MsgContent_MotisNoMessage: {
-      auto const target = msg->get()->destination()->target()->view();
-      if (target.contains("trips.csv")) {
-        out_type = output_type::CSV_TRIPS;
-      } else if (target.contains("formations.csv")) {
-        out_type = output_type::CSV_FORMATIONS;
-      }
-      break;
-    }
+    case MsgContent_MotisNoMessage: break;
     default:
       throw std::system_error(motis::module::error::unexpected_message_type);
+  }
+
+  auto const target = msg->get()->destination()->target()->view();
+  if (target.contains("trips.csv")) {
+    out_type = output_type::CSV_TRIPS;
+  } else if (target.contains("formations.csv")) {
+    out_type = output_type::CSV_FORMATIONS;
   }
 
   auto const uv_access = get_universe_and_schedule(data, uv_id);
   auto const& sched = uv_access.sched_;
   auto const& uv = uv_access.uv_;
   auto const& caps = uv.capacity_maps_;
+
+  if (msg->get()->content_type() == MsgContent_PaxMonCapacityStatusRequest) {
+    auto const req = motis_content(PaxMonCapacityStatusRequest, msg);
+    filter_interval_begin = unix_to_motistime(sched.schedule_begin_,
+                                              req->filter_interval()->begin());
+    filter_interval_end =
+        unix_to_motistime(sched.schedule_begin_, req->filter_interval()->end());
+  }
 
   message_creator mc;
   std::stringstream csv;
@@ -136,8 +147,18 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
            "sections_some_missing_uics\n";
   }
 
+  auto const time_filter_active =
+      filter_by_time != PaxMonFilterTripsTimeFilter_NoFilter;
+
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
     auto const* trp = get_trip(sched, trp_idx);
+
+    if (time_filter_active &&
+        !include_trip_based_on_time_filter(
+            trp, filter_by_time, filter_interval_begin, filter_interval_end)) {
+      continue;
+    }
+
     auto sections = access::sections{trp};
     auto const sec_count = sections.size();
     auto categories = mcd::hash_set<std::string_view>{};

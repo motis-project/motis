@@ -1,31 +1,77 @@
 import { ArrowDownTrayIcon } from "@heroicons/react/20/solid";
+import { useQuery } from "@tanstack/react-query";
+import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
 import { useAtom } from "jotai/index";
-import { ReactElement } from "react";
+import React, { ReactElement, useState } from "react";
 
 import {
+  PaxMonCapacityStatusRequest,
   PaxMonCapacityStatusResponse,
   PaxMonTripCapacityStats,
 } from "@/api/protocol/motis/paxmon";
 
 import { getApiEndpoint } from "@/api/endpoint";
-import { usePaxMonCapacityStatus } from "@/api/paxmon";
+import { useLookupScheduleInfoQuery } from "@/api/lookup";
+import { queryKeys, sendPaxMonCapacityStatusRequest } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
+
+import { formatISODate } from "@/util/dateFormat";
 
 import Baureihe from "@/components/util/Baureihe";
 
 function CapacityStatus(): ReactElement {
   const [universe] = useAtom(universeAtom);
-  const { data } = usePaxMonCapacityStatus({
+  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
+
+  const { data: scheduleInfo } = useLookupScheduleInfoQuery();
+
+  const request: PaxMonCapacityStatusRequest = {
     universe,
+    filter_by_time: selectedDate ? "ActiveTime" : "NoFilter",
+    filter_interval: {
+      begin: selectedDate ? getUnixTime(selectedDate) : 0,
+      end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
+    },
     include_missing_vehicle_infos: true,
     include_uics_not_found: false,
-  });
+  };
+
+  const { data } = useQuery(
+    queryKeys.capacityStatus(request),
+    () => sendPaxMonCapacityStatusRequest(request),
+    {
+      enabled: selectedDate !== undefined,
+    }
+  );
+
+  const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
+  const maxDate =
+    scheduleInfo && minDate
+      ? max([minDate, sub(fromUnixTime(scheduleInfo.end), { days: 1 })])
+      : undefined;
+
+  if (selectedDate === undefined && scheduleInfo) {
+    setSelectedDate(fromUnixTime(scheduleInfo.begin));
+  }
 
   return (
     <div className="py-3">
       <h2 className="text-lg font-semibold">Kapazitätsdaten</h2>
+      <div className="inline-block">
+        <label>
+          <span className="text-sm">Datum</span>
+          <input
+            type="date"
+            min={minDate ? formatISODate(minDate) : undefined}
+            max={maxDate ? formatISODate(maxDate) : undefined}
+            value={selectedDate ? formatISODate(selectedDate) : ""}
+            onChange={(e) => setSelectedDate(e.target.valueAsDate)}
+            className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+          />
+        </label>
+      </div>
       <CapacityStatusDisplay data={data} />
       <div className="flex gap-3 pt-5">
         <a
