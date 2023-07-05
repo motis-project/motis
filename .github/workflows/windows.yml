@@ -23,13 +23,8 @@ jobs:
         config:
           - mode: Debug
             webui: Off
-            noavx2: On
           - mode: Release
             webui: On
-          - mode: Release
-            webui: On
-            noavx2: On
-            tag: -noavx2
 
     env:
       CXX: cl.exe
@@ -67,6 +62,8 @@ jobs:
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} `
             -DMOTIS_DEBUG_SYMBOLS=OFF `
+            -DMOTIS_AVX2=OFF `
+            -DMOTIS_AVX=OFF `
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
           .\build\buildcache\bin\buildcache.exe -z
           cmake --build build --target `
@@ -104,15 +101,6 @@ jobs:
           cmake --build build --target motis-web-ui
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
-
-      - name: pnpm Cache
-        if: matrix.config.webui == 'On'
-        uses: actions/cache@v3
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2
