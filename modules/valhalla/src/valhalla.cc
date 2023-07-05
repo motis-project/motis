@@ -10,7 +10,6 @@
 #include "config.h"
 #include "filesystem.h"
 #include "loki/worker.h"
-#include "midgard/logging.h"
 #include "midgard/util.h"
 #include "mjolnir/util.h"
 #include "odin/directionsbuilder.h"

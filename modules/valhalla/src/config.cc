@@ -21,6 +21,9 @@ boost::property_tree::ptree get_config(std::string const& tile_dir) {
     "tile_dir": "{}",
     "data_processing": {{
       "use_admin_db": false
+    }},
+    "logging": {{
+      "type": "std_out"
     }}
   }},
   "loki": {{
