@@ -166,7 +166,7 @@ void encode_request(osrm::OSRMViaRouteRequest const* req, j::Document& doc) {
 
 template <typename Req>
 mm::msg_ptr sources_to_targets(Req const* req, valhalla::impl* impl_) {
-  motis::logging::scoped_timer timer{"matrix"};
+  auto const timer = motis::logging::scoped_timer{"valhalla.matrix"};
   auto& thor = impl_->get();
 
   // Encode OSRMManyToManyRequest as valhalla request.
