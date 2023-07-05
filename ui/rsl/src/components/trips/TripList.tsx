@@ -60,7 +60,7 @@ const sortOptions: Array<LabeledFilterOption> = [
 function getFilterTripsRequest(
   universe: number,
   sortOrder: PaxMonFilterTripsSortOrder,
-  selectedDate: Date | undefined,
+  selectedDate: Date | undefined | null,
   filterTrainNrs: number[],
   pageParam: number,
   serviceClassFilter: number[]
@@ -92,7 +92,7 @@ function TripList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [trainNrFilter, setTrainNrFilter] = useState("");
   const [serviceClassFilter, setServiceClassFilter] = useState([
     ServiceClass.ICE,
@@ -146,6 +146,7 @@ function TripList(): JSX.Element {
       refetchOnWindowFocus: false,
       keepPreviousData: true,
       staleTime: 60000,
+      enabled: selectedDate !== undefined,
     }
   );
 
@@ -167,6 +168,10 @@ function TripList(): JSX.Element {
   const totalNumberOfTrips = data?.pages[0]?.total_matching_trips;
 
   const selectedTripId = params["tripId"];
+
+  if (selectedDate === undefined && scheduleInfo) {
+    setSelectedDate(fromUnixTime(scheduleInfo.begin));
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -236,9 +241,7 @@ function TripList(): JSX.Element {
               min={minDate ? formatISODate(minDate) : undefined}
               max={maxDate ? formatISODate(maxDate) : undefined}
               value={selectedDate ? formatISODate(selectedDate) : ""}
-              onChange={(e) =>
-                setSelectedDate(e.target.valueAsDate ?? undefined)
-              }
+              onChange={(e) => setSelectedDate(e.target.valueAsDate)}
               className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             />
           </label>

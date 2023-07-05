@@ -92,7 +92,7 @@ function getFilterGroupsRequest(
   fromStationFilter: Station | undefined,
   toStationFilter: Station | undefined,
   filterTrainNrs: number[],
-  selectedDate: Date | undefined,
+  selectedDate: Date | undefined | null,
   filterByRerouteReason: boolean,
   rerouteReasonFilter: PaxMonRerouteReason[]
 ): PaxMonFilterGroupsRequest {
@@ -122,7 +122,7 @@ function GroupList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [fromStationFilter, setFromStationFilter] = useState<
     Station | undefined
   >();
@@ -202,6 +202,7 @@ function GroupList(): JSX.Element {
       refetchOnWindowFocus: true,
       keepPreviousData: true,
       staleTime: 60000,
+      enabled: selectedDate !== undefined,
     }
   );
 
@@ -224,6 +225,10 @@ function GroupList(): JSX.Element {
   const totalNumberOfPassengers = data?.pages[0]?.total_matching_passengers;
 
   const selectedGroup = Number.parseInt(params["groupId"] ?? "");
+
+  if (selectedDate === undefined && scheduleInfo) {
+    setSelectedDate(fromUnixTime(scheduleInfo.begin));
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -311,9 +316,7 @@ function GroupList(): JSX.Element {
               min={minDate ? formatISODate(minDate) : undefined}
               max={maxDate ? formatISODate(maxDate) : undefined}
               value={selectedDate ? formatISODate(selectedDate) : ""}
-              onChange={(e) =>
-                setSelectedDate(e.target.valueAsDate ?? undefined)
-              }
+              onChange={(e) => setSelectedDate(e.target.valueAsDate)}
               className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             />
           </label>
