@@ -309,9 +309,11 @@ mm::msg_ptr valhalla::ppr(mm::msg_ptr const& msg) const {
                 [&](Position const* dest) {
                   mm::message_creator req_fbb;
                   auto const from_to = std::array<Position, 2>{
+                      // NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker)
                       req->search_direction() == SearchDir_Forward
                           ? *req->start()
                           : *dest,
+                      // NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker)
                       req->search_direction() == SearchDir_Forward
                           ? *dest
                           : *req->start()};

@@ -111,7 +111,6 @@ jobs:
           - preset: macos-arm64
             cache: macos-arm64
     env:
-      BUILDCACHE_DEBUG: 1
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY
@@ -130,15 +129,21 @@ jobs:
         id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-${{ matrix.config.cache }}
+          key: buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.cache }}-
 
       - name: Restore Dependencies Cache
         uses: actions/cache/restore@v3
         id: restore-deps-cache
         with:
           path: ${{ github.workspace }}/deps
-          key: deps
           enableCrossOsArchive: true
+          key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: |
+            deps-
 
       - name: Install Ninja
         run: brew install ninja
