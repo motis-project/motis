@@ -6,7 +6,7 @@ import {
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
+import { add, getUnixTime, parseISO } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -29,6 +29,7 @@ import { formatNumber, formatPercent } from "@/data/numberFormat";
 import classNames from "@/util/classNames";
 import { formatISODate, formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
+import { getScheduleRange } from "@/util/scheduleRange";
 
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
@@ -150,12 +151,6 @@ function TripList(): JSX.Element {
     }
   );
 
-  const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
-  const maxDate =
-    scheduleInfo && minDate
-      ? max([minDate, sub(fromUnixTime(scheduleInfo.end), { days: 1 })])
-      : undefined;
-
   const loadMore = useCallback(() => {
     if (hasNextPage) {
       return fetchNextPage();
@@ -169,8 +164,9 @@ function TripList(): JSX.Element {
 
   const selectedTripId = params["tripId"];
 
+  const scheduleRange = getScheduleRange(scheduleInfo);
   if (selectedDate === undefined && scheduleInfo) {
-    setSelectedDate(fromUnixTime(scheduleInfo.begin));
+    setSelectedDate(scheduleRange.closestDate);
   }
 
   return (
@@ -238,10 +234,12 @@ function TripList(): JSX.Element {
             <span className="text-sm">Datum</span>
             <input
               type="date"
-              min={minDate ? formatISODate(minDate) : undefined}
-              max={maxDate ? formatISODate(maxDate) : undefined}
+              min={scheduleRange.firstDay}
+              max={scheduleRange.lastDay}
               value={selectedDate ? formatISODate(selectedDate) : ""}
-              onChange={(e) => setSelectedDate(e.target.valueAsDate)}
+              onChange={(e) => {
+                setSelectedDate(parseISO(e.target.value));
+              }}
               className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
             />
           </label>

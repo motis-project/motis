@@ -378,9 +378,9 @@ function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
           </tr>
         </thead>
         <tbody>
-          {vg.vehicles.map((v) => (
+          {vg.vehicles.map((v, idx) => (
             <tr
-              key={v.uic}
+              key={idx}
               className={classNames(
                 v.guessed ? "text-fuchsia-500" : !v.uic_found && "text-red-500"
               )}
