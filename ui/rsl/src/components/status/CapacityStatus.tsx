@@ -14,10 +14,12 @@ import { ServiceClass } from "@/api/constants";
 import { getApiEndpoint } from "@/api/endpoint";
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { queryKeys, sendPaxMonCapacityStatusRequest } from "@/api/paxmon";
+import { useRISStatusRequest } from "@/api/ris";
 
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
+import { formatFileNameTime } from "@/util/dateFormat";
 import { getScheduleRange } from "@/util/scheduleRange";
 
 import DatePicker from "@/components/inputs/DatePicker";
@@ -85,22 +87,7 @@ function CapacityStatus(): ReactElement {
         data={data}
         serviceClassFilter={serviceClassFilter}
       />
-      <div className="flex gap-3 pt-5">
-        <a
-          href={`${getApiEndpoint()}paxmon/capacity_status/trips.csv`}
-          className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
-        >
-          <ArrowDownTrayIcon className="h-5 w-5" />
-          Liste überwachter Züge (CSV)
-        </a>
-        <a
-          href={`${getApiEndpoint()}paxmon/capacity_status/formations.csv`}
-          className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
-        >
-          <ArrowDownTrayIcon className="h-5 w-5" />
-          Wagenreihungen (CSV)
-        </a>
-      </div>
+      <CsvDownloadButtons />
     </div>
   );
 }
@@ -161,7 +148,7 @@ function CapacityStatusStats({
           <tr className="text-left">
             <th className="font-medium"></th>
             {columns.map((c) => (
-              <th key={c.label} className="font-medium">
+              <th key={c.label} className="font-medium text-center p-1">
                 {c.label}
               </th>
             ))}
@@ -171,71 +158,87 @@ function CapacityStatusStats({
           <tr>
             <td className="font-medium">Überwachte Züge</td>
             {columns.map((c) => (
-              <td key={c.label}>{formatNumber(c.stats.tracked)}</td>
-            ))}
-          </tr>
-          <tr>
-            <td className="font-medium">Kapazitätsdaten vollständig</td>
-            {columns.map((c) => (
-              <td key={c.label}>{numWithPercent(c, c.stats.full_data)}</td>
-            ))}
-          </tr>
-          <tr>
-            <td className="font-medium">Kapazitätsdaten teilweise</td>
-            {columns.map((c) => (
-              <td key={c.label}>{numWithPercent(c, c.stats.full_data)}</td>
-            ))}
-          </tr>
-          <tr>
-            <td className="font-medium">Formationsdaten vorhanden</td>
-            {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(c, c.stats.trip_formation_data_found)}
-              </td>
-            ))}
-          </tr>
-          <tr>
-            <td className="font-medium">Keinerlei Formationsdaten</td>
-            {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(c, c.stats.no_formation_data_at_all)}
+              <td key={c.label} className="text-center p-1">
+                {formatNumber(c.stats.tracked)}
               </td>
             ))}
           </tr>
           <tr>
             <td className="font-medium">
-              Keine Formationsdaten auf einigen Abschnitten (alle{" "}
-              <abbr title="vereinigte Züge">V.Z.</abbr>)
+              Kapazitätsdaten vollständig vorhanden
             </td>
             {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(
-                  c,
-                  c.stats.no_formation_data_some_sections_all_merged
-                )}
-              </td>
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.full_data}
+                total={c.stats.tracked}
+              />
+            ))}
+          </tr>
+          <tr>
+            <td className="font-medium">Kapazitätsdaten teilweise vorhanden</td>
+            {columns.map((c) => (
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.partial_data}
+                total={c.stats.tracked}
+              />
+            ))}
+          </tr>
+          <tr>
+            <td className="font-medium">Wagenreihungsdaten vorhanden</td>
+            {columns.map((c) => (
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.trip_formation_data_found}
+                total={c.stats.tracked}
+              />
+            ))}
+          </tr>
+          <tr>
+            <td className="font-medium">Keinerlei Wagenreihungsdaten</td>
+            {columns.map((c) => (
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.no_formation_data_at_all}
+                total={c.stats.tracked}
+              />
             ))}
           </tr>
           <tr>
             <td className="font-medium">
-              Keine Formationsdaten auf einigen Abschnitten (einige{" "}
+              Keine Wagenreihungen auf einigen Abschnitten (alle{" "}
               <abbr title="vereinigte Züge">V.Z.</abbr>)
             </td>
             {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(
-                  c,
-                  c.stats.no_formation_data_some_sections_some_merged
-                )}
-              </td>
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.no_formation_data_some_sections_all_merged}
+                total={c.stats.tracked}
+              />
+            ))}
+          </tr>
+          <tr>
+            <td className="font-medium">
+              Keine Wagenreihungen auf einigen Abschnitten (einige{" "}
+              <abbr title="vereinigte Züge">V.Z.</abbr>)
+            </td>
+            {columns.map((c) => (
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.no_formation_data_some_sections_some_merged}
+                total={c.stats.tracked}
+              />
             ))}
           </tr>
           <tr>
             <td className="font-medium">Keinerlei Wagen gefunden</td>
             {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(c, c.stats.no_vehicles_found_at_all)}
-              </td>
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.no_vehicles_found_at_all}
+                total={c.stats.tracked}
+              />
             ))}
           </tr>
           <tr>
@@ -243,9 +246,11 @@ function CapacityStatusStats({
               Keine Wagen gefunden auf einigen Abschnitten
             </td>
             {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(c, c.stats.no_vehicles_found_some_sections)}
-              </td>
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.no_vehicles_found_some_sections}
+                total={c.stats.tracked}
+              />
             ))}
           </tr>
           <tr>
@@ -253,17 +258,35 @@ function CapacityStatusStats({
               Einige Wagen nicht gefunden auf einigen Abschnitten
             </td>
             {columns.map((c) => (
-              <td key={c.label}>
-                {numWithPercent(
-                  c,
-                  c.stats.some_vehicles_not_found_some_sections
-                )}
-              </td>
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.some_vehicles_not_found_some_sections}
+                total={c.stats.tracked}
+              />
             ))}
           </tr>
         </tbody>
       </table>
     </div>
+  );
+}
+
+type StatsTableCellProps = {
+  value: number;
+  total: number;
+};
+
+function StatsTableCell({ value, total }: StatsTableCellProps) {
+  return (
+    <td
+      className="text-center p-1"
+      title={`${formatNumber(value)} von ${formatNumber(total)}`}
+    >
+      {formatPercent(value / total, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      })}
+    </td>
   );
 }
 
@@ -309,6 +332,33 @@ function MissingVehicles({ data }: MissingVehiclesProps) {
           </tbody>
         </table>
       </details>
+    </div>
+  );
+}
+
+function CsvDownloadButtons() {
+  const { data } = useRISStatusRequest();
+
+  const suffix = data ? "-" + formatFileNameTime(data.system_time) : "";
+
+  return (
+    <div className="flex gap-3 pt-5">
+      <a
+        href={`${getApiEndpoint()}paxmon/capacity_status/trips.csv`}
+        download={`rsl-trips${suffix}.csv`}
+        className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
+      >
+        <ArrowDownTrayIcon className="h-5 w-5" />
+        Liste überwachter Züge (CSV)
+      </a>
+      <a
+        href={`${getApiEndpoint()}paxmon/capacity_status/formations.csv`}
+        download={`rls-formations${suffix}.csv`}
+        className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
+      >
+        <ArrowDownTrayIcon className="h-5 w-5" />
+        Wagenreihungen (CSV)
+      </a>
     </div>
   );
 }
