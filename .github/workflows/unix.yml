@@ -130,8 +130,10 @@ jobs:
         id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-${{ matrix.config.cache }}-${{ github.run_id }}
+          key: buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-
             buildcache-${{ matrix.config.cache }}-
 
       - name: Restore Dependencies Cache
@@ -140,7 +142,7 @@ jobs:
         with:
           path: ${{ github.workspace }}/deps
           enableCrossOsArchive: true
-          key: deps-${{ github.run_id }}
+          key: deps-${{ hashFiles('.pkg') }}
           restore-keys: |
             deps-
 
