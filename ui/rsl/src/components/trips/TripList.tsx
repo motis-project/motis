@@ -86,6 +86,9 @@ function getFilterTripsRequest(
     filter_train_nrs: filterTrainNrs,
     filter_by_service_class: true,
     filter_service_classes: serviceClassFilter,
+    filter_by_capacity_status: false,
+    filter_has_trip_formation: false,
+    filter_has_capacity_for_all_sections: false,
   };
 }
 

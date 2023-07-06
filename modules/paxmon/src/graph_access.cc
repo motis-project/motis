@@ -30,6 +30,7 @@
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/reroute.h"
+#include "motis/paxmon/update_trip_capacity_status.h"
 
 namespace motis::paxmon {
 
@@ -73,6 +74,8 @@ struct rule_trip_adder {
       add_merged_services(section);
       add_through_services(section, dep_node, arr_node);
     }
+
+    update_trip_capacity_status(sched_, uv_, trp, tdi);
 
     return tdi;
   }

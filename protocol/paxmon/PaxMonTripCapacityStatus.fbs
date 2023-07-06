@@ -1,0 +1,10 @@
+include "paxmon/PaxMonCapacitySource.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTripCapacityStatus {
+  has_trip_formation: bool;
+  has_capacity_for_all_sections: bool;
+  has_capacity_for_some_sections: bool;
+  worst_source: PaxMonCapacitySource;
+}

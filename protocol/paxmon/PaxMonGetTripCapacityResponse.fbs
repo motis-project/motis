@@ -3,6 +3,7 @@ include "base/Station.fbs";
 include "base/ServiceInfo.fbs";
 include "paxmon/PaxMonCapacitySource.fbs";
 include "paxmon/PaxMonCapacityType.fbs";
+include "paxmon/PaxMonTripCapacityStatus.fbs";
 
 namespace motis.paxmon;
 
@@ -69,6 +70,7 @@ table PaxMonSectionCapacityInfo {
 
 table PaxMonTripCapacityInfo {
   tsi: motis.TripServiceInfo;
+  status: PaxMonTripCapacityStatus;
   sections: [PaxMonSectionCapacityInfo];
 }
 

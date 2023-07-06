@@ -136,11 +136,6 @@ function CapacityStatusStats({
       }),
   ];
 
-  const numWithPercent = (c: Column, n: number) =>
-    `${formatNumber(n)} (${formatPercent(n / c.stats.tracked, {
-      minimumFractionDigits: 2,
-    })})`;
-
   return (
     <div>
       <table className="border-separate border-spacing-x-2">

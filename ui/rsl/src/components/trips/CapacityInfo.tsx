@@ -13,6 +13,7 @@ import {
 import { usePaxMonGetTripCapacity } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
+import { formatNumber } from "@/data/numberFormat";
 
 import { EMTPY_CAPACITY_DATA, addCapacityData } from "@/util/capacity";
 import {
@@ -77,10 +78,17 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
       <div>
         <div>Verfügbare Kapazitätsdaten:</div>
         <div>
-          {data.vehicle_capacity_map_size} Fahrzeuge,{" "}
-          {data.trip_formation_map_size} Wagenreihungen,{" "}
-          {data.trip_capacity_map_size} Zugkapazitäten,{" "}
-          {data.category_capacity_map_size} Kapazitäten für Zugkategorien
+          Basierend auf Wagenreihungen:{" "}
+          {formatNumber(data.trip_formation_map_size)} Wagenreihungen,{" "}
+          {formatNumber(data.vehicle_capacity_map_size)} Fahrzeuge,{" "}
+          {formatNumber(data.vehicle_group_capacity_map_size)} Fahrzeuggruppen,{" "}
+          {formatNumber(data.gattung_capacity_map_size)} Fahrzeuggattungen,{" "}
+          {formatNumber(data.baureihe_capacity_map_size)} Baureihen
+        </div>
+        <div>
+          Basierend auf Fahrten: {formatNumber(data.trip_capacity_map_size)}{" "}
+          Zugkapazitäten, {formatNumber(data.category_capacity_map_size)}{" "}
+          Kapazitäten für Zugkategorien
         </div>
       </div>
     </div>

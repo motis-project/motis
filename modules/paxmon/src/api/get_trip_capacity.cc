@@ -148,8 +148,12 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
   };
 
   auto const trip_to_fbs = [&](trip const* trp) {
+    auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
     return CreatePaxMonTripCapacityInfo(
         mc, to_fbs_trip_service_info(mc, sched, trp),
+        tdi != INVALID_TRIP_DATA_INDEX
+            ? to_fbs(mc, uv.trip_data_.capacity_status(tdi))
+            : to_fbs(mc, trip_capacity_status{}),
         mc.CreateVector(utl::to_vec(access::sections{trp}, section_to_fbs)));
   };
 

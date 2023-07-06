@@ -555,4 +555,12 @@ Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       })));
 }
 
+Offset<PaxMonTripCapacityStatus> to_fbs(FlatBufferBuilder& fbb,
+                                        trip_capacity_status const& tcs) {
+  return CreatePaxMonTripCapacityStatus(
+      fbb, tcs.has_trip_formation_, tcs.has_capacity_for_all_sections_,
+      tcs.has_capacity_for_some_sections_,
+      to_fbs_capacity_source(tcs.worst_source_));
+}
+
 }  // namespace motis::paxmon

@@ -24,6 +24,7 @@ namespace {
 
 struct trip_info {
   trip_idx_t trip_idx_{};
+  trip_data_index tdi_{};
   time first_departure_{};
 
   unsigned section_count_{};
@@ -74,6 +75,10 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   auto const filter_service_classes = utl::to_vec(
       *req->filter_service_classes(),
       [](auto const& sc) { return static_cast<service_class>(sc); });
+  auto const filter_by_capacity_status = req->filter_by_capacity_status();
+  auto const filter_has_trip_formation = req->filter_has_trip_formation();
+  auto const filter_has_capacity_for_all_sections =
+      req->filter_has_capacity_for_all_sections();
 
   auto const trip_filters_active =
       (filter_by_time != PaxMonFilterTripsTimeFilter_NoFilter) ||
@@ -83,7 +88,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
   std::vector<trip_info> selected_trips;
 
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
-    auto ti = trip_info{trp_idx};
+    auto ti = trip_info{.trip_idx_ = trp_idx, .tdi_ = tdi};
     auto const trip_edges = uv.trip_data_.edges(tdi);
     auto include = false;
 
@@ -115,6 +120,17 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                       trip_class) == end(filter_service_classes)) {
           continue;
         }
+      }
+    }
+
+    if (filter_by_capacity_status) {
+      auto const& tcs = uv.trip_data_.capacity_status(tdi);
+      if (tcs.has_trip_formation_ != filter_has_trip_formation) {
+        continue;
+      }
+      if (tcs.has_capacity_for_all_sections_ !=
+          filter_has_capacity_for_all_sections) {
+        continue;
       }
     }
 
@@ -303,6 +319,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                     ti.crowded_sections_, ti.max_excess_pax_,
                     ti.cumulative_excess_pax_, ti.max_load_,
                     ti.max_expected_pax_,
+                    to_fbs(mc, uv.trip_data_.capacity_status(ti.tdi_)),
                     mc.CreateVector(utl::to_vec(
                         ti.edge_load_infos_, [&](edge_load_info const& eli) {
                           return to_fbs(mc, sched, uv, eli);

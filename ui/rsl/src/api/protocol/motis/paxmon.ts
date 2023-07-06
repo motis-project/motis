@@ -431,6 +431,17 @@ export interface PaxMonFilterTripsRequest {
   filter_train_nrs: number[];
   filter_by_service_class: boolean;
   filter_service_classes: number[];
+  filter_by_capacity_status: boolean;
+  filter_has_trip_formation: boolean;
+  filter_has_capacity_for_all_sections: boolean;
+}
+
+// paxmon/PaxMonTripCapacityStatus.fbs
+export interface PaxMonTripCapacityStatus {
+  has_trip_formation: boolean;
+  has_capacity_for_all_sections: boolean;
+  has_capacity_for_some_sections: boolean;
+  worst_source: PaxMonCapacitySource;
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
@@ -443,6 +454,7 @@ export interface PaxMonFilteredTripInfo {
   cumulative_excess_pax: number;
   max_load: number;
   max_expected_pax: number;
+  capacity_status: PaxMonTripCapacityStatus;
   edges: PaxMonEdgeLoadInfo[];
 }
 
@@ -910,6 +922,7 @@ export interface PaxMonSectionCapacityInfo {
 // paxmon/PaxMonGetTripCapacityResponse.fbs
 export interface PaxMonTripCapacityInfo {
   tsi: TripServiceInfo;
+  status: PaxMonTripCapacityStatus;
   sections: PaxMonSectionCapacityInfo[];
 }
 

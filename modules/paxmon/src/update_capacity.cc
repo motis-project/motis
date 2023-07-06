@@ -3,6 +3,7 @@
 #include "motis/core/access/trip_access.h"
 
 #include "motis/paxmon/trip_section_load_iterator.h"
+#include "motis/paxmon/update_trip_capacity_status.h"
 
 namespace motis::paxmon {
 
@@ -25,6 +26,9 @@ bool update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
     e->capacity_ = sec.capacity();
     e->capacity_source_ = sec.get_capacity_source();
   }
+
+  update_trip_capacity_status(sched, uv, trp, sections.tdi_);
+
   return changed;
 }
 

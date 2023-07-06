@@ -42,4 +42,9 @@ table PaxMonFilterTripsRequest {
   // filter by service class
   filter_by_service_class: bool;
   filter_service_classes: [uint];
+
+  // filter by capacity status
+  filter_by_capacity_status: bool; // enable the following filters
+  filter_has_trip_formation: bool;
+  filter_has_capacity_for_all_sections: bool;
 }
