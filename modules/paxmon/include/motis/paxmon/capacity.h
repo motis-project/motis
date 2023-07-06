@@ -77,6 +77,7 @@ struct capacity_maps {
       vehicle_capacity_map_;
   mcd::hash_map<boost::uuids::uuid, trip_formation> trip_formation_map_;
   mcd::hash_map<primary_trip_id, boost::uuids::uuid> trip_uuid_map_;
+  mcd::hash_map<boost::uuids::uuid, primary_trip_id> uuid_trip_map_;
 
   mcd::hash_map<mcd::string, detailed_capacity> vehicle_group_capacity_map_;
   mcd::hash_map<mcd::string, detailed_capacity> gattung_capacity_map_;

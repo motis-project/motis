@@ -104,14 +104,24 @@ void update_trip_formation(schedule const& sched, universe& uv,
     } else {
       if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
           tf_it != end(uv.capacity_maps_.trip_formation_map_)) {
+        auto const& prev_ptid = uv.capacity_maps_.uuid_trip_map_.at(trip_uuid);
         std::cout << "[UTF-03] trip primary id not found, but uuid found: uuid="
                   << trip_uuid << ", train_nr=" << ptid.get_train_nr()
                   << ", station="
                   << sched.stations_[ptid.get_station_id()]->name_
-                  << ", time=" << format_time(ptid.get_time()) << std::endl;
+                  << ", time=" << format_time(ptid.get_time())
+                  << ", previous trip id: train_nr=" << prev_ptid.get_train_nr()
+                  << ", station="
+                  << sched.stations_[prev_ptid.get_station_id()]->name_
+                  << ", time=" << format_time(prev_ptid.get_time())
+                  << std::endl;
       }
     }
     uv.capacity_maps_.trip_uuid_map_[ptid] = trip_uuid;
+    if (uv.capacity_maps_.uuid_trip_map_.find(trip_uuid) ==
+        end(uv.capacity_maps_.uuid_trip_map_)) {
+      uv.capacity_maps_.uuid_trip_map_[trip_uuid] = ptid;
+    }
   } else {
     auto const& tid = tfm->trip_id()->id();
     std::cout << "[UTF-04] station from trip id not found: {station_id="
@@ -134,6 +144,22 @@ void update_trip_formation(schedule const& sched, universe& uv,
   if (has_ptid) {
     if (auto* trp = find_trip_by_primary_trip_id(sched, ptid, trip_uuid);
         trp != nullptr) {
+      update_trip_capacity(uv, sched, trp);
+      return;
+    }
+  }
+
+  // if the primary trip id in the formation message has changed
+  // (but uuid stayed the same), we won't find the trip using the new primary
+  // trip id lookup (because motis trip ids never change)
+  // maybe store trip <-> formation uuid mapping instead
+
+  if (auto const it = uv.capacity_maps_.uuid_trip_map_.find(trip_uuid);
+      it != end(uv.capacity_maps_.uuid_trip_map_)) {
+    if (auto* trp = find_trip_by_primary_trip_id(sched, it->second, trip_uuid);
+        trp != nullptr) {
+      std::cout << "[UTF-08] found trip by previous primary id: uuid="
+                << trip_uuid << std::endl;
       update_trip_capacity(uv, sched, trp);
     }
   }

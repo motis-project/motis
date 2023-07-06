@@ -32,13 +32,17 @@ bool update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
   return changed;
 }
 
-void update_all_trip_capacities(universe& uv, schedule const& sched,
-                                bool const track_updates) {
+std::uint32_t update_all_trip_capacities(universe& uv, schedule const& sched,
+                                         bool const track_updates) {
+  std::uint32_t updated = 0U;
   for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
     (void)tdi;
     auto const* trp = get_trip(sched, trp_idx);
-    update_trip_capacity(uv, sched, trp, track_updates);
+    if (update_trip_capacity(uv, sched, trp, track_updates)) {
+      ++updated;
+    }
   }
+  return updated;
 }
 
 }  // namespace motis::paxmon
