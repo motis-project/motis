@@ -54,7 +54,7 @@ motis::module::msg_ptr station_location(tag_lookup const& tags,
   auto const l_idx = get_location_idx(tags, tt, req->id()->view());
   auto const pos = to_fbs(tt.locations_.coordinates_.at(l_idx));
   mm::message_creator mc;
-  mc.create_and_finish(MsgContent_LookupGeoStationResponse,
+  mc.create_and_finish(MsgContent_LookupStationLocationResponse,
                        CreateLookupStationLocationResponse(mc, &pos).Union());
   return mm::make_msg(mc);
 }
