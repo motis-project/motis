@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: [ self-hosted, windows, x64 ]
 
     strategy:
       fail-fast: false
@@ -39,24 +39,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install ninja
-        run: choco install ninja
-
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
-        uses: actions/cache/restore@v3
-        id: restore-buildcache
-        with:
-          path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.config.mode }}
+        run: |
+          $buildcachePath = "${{ runner.tool_cache }}\${{ github.event.repository.name }}\buildcache-${{ matrix.config.mode }}"
+          New-Item -ItemType Directory -Force -Path $buildcachePath
+          New-Item -Path ${{ github.workspace }}/.buildcache -ItemType SymbolicLink -Value $buildcachePath
 
       - name: Restore Dependencies Cache
-        uses: actions/cache/restore@v3
-        id: restore-deps-cache
-        with:
-          path: ${{ github.workspace }}/deps
-          key: deps
-          enableCrossOsArchive: true
+        run: |
+          $depsPath = "${{ runner.tool_cache }}\${{ github.event.repository.name }}\deps"
+          New-Item -ItemType Directory -Force -Path $depsPath
+          New-Item -Path ${{ github.workspace }}\deps\ -ItemType SymbolicLink -Value $depsPath
 
       # ==== BUILD ====
       - uses: ilammy/msvc-dev-cmd@v1
@@ -68,6 +62,8 @@ jobs:
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} `
             -DMOTIS_DEBUG_SYMBOLS=OFF `
+            -DMOTIS_AVX2=${{ matrix.config.webui }} `
+            -DMOTIS_AVX=${{ matrix.config.webui }} `
             -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
           .\build\buildcache\bin\buildcache.exe -z
           cmake --build build --target `
@@ -80,8 +76,9 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Test Mode
+        if: matrix.config.webui == 'Off'
         run: >
-          .\build\motis
+          .\build\motis.exe
           --mode test
           --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice
           --dataset.begin 20151004
@@ -90,9 +87,11 @@ jobs:
           --exclude_modules address osrm parking path ppr tiles gbfs
 
       - name: Run Tests
+        if: matrix.config.webui == 'Off'
         run: .\build\motis-test.exe
 
       - name: Run Integration Tests
+        if: matrix.config.webui == 'Off'
         run: .\build\motis-itest.exe
 
       # ==== WEB INTERFACE ====
@@ -102,15 +101,6 @@ jobs:
           cmake --build build --target motis-web-ui
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
-
-      - name: pnpm Cache
-        if: matrix.config.webui == 'On'
-        uses: actions/cache@v3
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
 
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2
@@ -165,7 +155,7 @@ jobs:
       - name: Create Distribution
         if: matrix.config.mode == 'Release'
         run: >
-          7z a motis-windows.zip
+          7z a motis-windows${{ matrix.config.tag }}.zip
           .\build\motis.exe
           .\osrm-profiles
           .\ppr-profiles
@@ -176,8 +166,8 @@ jobs:
         if: matrix.config.mode == 'Release'
         uses: actions/upload-artifact@v1
         with:
-          name: motis-windows
-          path: motis-windows.zip
+          name: motis-windows${{ matrix.config.tag }}
+          path: motis-windows${{ matrix.config.tag }}.zip
 
       # ==== RELEASE ====
       - name: Upload Release
@@ -187,22 +177,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motis-windows.zip
-          asset_name: motis-windows.zip
+          asset_path: ./motis-windows${{ matrix.config.tag }}.zip
+          asset_name: motis-windows${{ matrix.config.tag }}.zip
           asset_content_type: application/zip
-
-      # ==== SAVE CACHE ====
-      - name: Save buildcache Cache
-        if: always()
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ github.workspace }}/.buildcache
-          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
-
-      - name: Save Dependencies Cache
-        if: always()
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ github.workspace }}/deps
-          key: ${{ steps.restore-deps-cache.outputs.cache-primary-key }}
-          enableCrossOsArchive: true

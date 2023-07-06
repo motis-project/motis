@@ -32,6 +32,9 @@ config.ini
 **/.vscode/**
 !**/.vscode/settings.json
 
+# Visual Studio
+/out
+
 # Data files
 /data
 *.mdb
@@ -41,3 +44,4 @@ config.ini
 *.bin
 *.zip
 *.7z
+/pathdb*
