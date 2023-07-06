@@ -30,15 +30,25 @@ std::vector<std::pair<std::string, float>> get_candidates(
   // Mapping: candidate index -> location_idx_t
   // Reverse mapping: location_idx_t -> candidate index
   // candidates[reverse_mapping[location_idx_t]]
-  auto reverse_mapping = n::vector_map<n::location_idx_t, unsigned>{};
+  auto reverse_mapping = n::vector_map<n::location_idx_t, int>{};
   {
-    reverse_mapping.resize(tt.n_locations());
+    reverse_mapping.resize(tt.n_locations(), -1);
     mapping.resize(tt.n_locations());
+
     auto i = 0U;
     for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
-      if (tt.locations_.parents_[l] == n::location_idx_t::invalid()) {
+      if (reverse_mapping[l] == -1 &&
+          tt.locations_.parents_[l] == n::location_idx_t::invalid()) {
         reverse_mapping[l] = i;
         mapping[i] = l;
+
+        auto const name = tt.locations_.names_[l].view();
+        for (auto const eq : tt.locations_.equivalences_[l]) {
+          if (tt.locations_.names_[eq].view() == name) {
+            reverse_mapping[eq] = i;
+          }
+        }
+
         ++i;
       }
     }
@@ -64,11 +74,25 @@ std::vector<std::pair<std::string, float>> get_candidates(
         }
       }
 
+      constexpr auto const prio =
+          std::array<float, kClaszMax>{/* Air */ 20,
+                                       /* HighSpeed */ 20,
+                                       /* LongDistance */ 20,
+                                       /* Coach */ 20,
+                                       /* Night */ 20,
+                                       /* RegionalFast */ 16,
+                                       /* Regional */ 15,
+                                       /* Metro */ 10,
+                                       /* Subway */ 10,
+                                       /* Tram */ 3,
+                                       /* Bus  */ 2,
+                                       /* Ship  */ 10,
+                                       /* Other  */ 1};
       auto const p = tt.locations_.parents_[l];
       auto const x = (p == n::location_idx_t::invalid()) ? l : p;
       auto importance = 0.0F;
       for (auto const [clasz, t_count] : utl::enumerate(transport_counts)) {
-        importance += (kClaszMax - clasz) * t_count;
+        importance += prio[clasz] * t_count;
       }
       candidates[reverse_mapping[x]].second += importance;
     }
@@ -89,7 +113,7 @@ std::vector<std::pair<std::string, float>> get_candidates(
         [](auto&& a, auto&& b) { return a.second < b.second; });
     auto const max_importance = std::max(max_it->second, 1.F);
     for (auto& [name, factor] : candidates) {
-      factor = 1 + (factor / max_importance) * 0.5;
+      factor = 1 + 2 * (factor / max_importance);
     }
   }
 
