@@ -159,10 +159,9 @@ struct railviz::impl {
     auto known_stations = n::hash_set<n::location_idx_t>{};
     auto const add_station =
         [&](n::location_idx_t const l) -> n::location_idx_t {
-      auto const x =
-          tt_.locations_.types_[l] == n::location_type::kGeneratedTrack
-              ? tt_.locations_.parents_[l]
-              : l;
+      auto const x = tt_.locations_.parents_[l] != n::location_idx_t::invalid()
+                         ? tt_.locations_.parents_[l]
+                         : l;
       if (known_stations.insert(x).second) {
         auto const pos = to_fbs(tt_.locations_.coordinates_[x]);
         stations.emplace_back(CreateStation(
@@ -264,7 +263,7 @@ struct railviz::impl {
                              n::interval<n::unixtime_t> const time_interval,
                              n::day_idx_t const start_day,
                              n::day_idx_t const end_day,
-                             n::duration_t const start_mam,
+                             n::duration_t const begin_mam,
                              n::duration_t const end_mam, geo::box const& area,
                              std::vector<n::rt::run>& runs) const {
     auto const is_active = [&](n::transport_idx_t const t,
@@ -275,33 +274,10 @@ struct railviz::impl {
           .test(to_idx(day));
     };
 
-    auto const add_transports =
-        [&](n::interval<n::stop_idx_t> const stop_range,
-            n::interval<std::uint64_t> const transports) -> void {
-      for (auto const idx_in_r : transports) {
-        auto const t = tt_.route_transport_ranges_[r][idx_in_r];
-        auto const ev =
-            tt_.event_mam(r, t, stop_range.from_, n::event_type::kDep);
-        for (auto const day : n::interval{start_day, end_day + 1}) {
-          auto const active = n::interval{
-              tt_.event_time(n::transport{t, day}, stop_range.from_,
-                             n::event_type::kDep),
-              tt_.event_time(n::transport{t, day}, stop_range.from_ + 1U,
-                             n::event_type::kArr) +
-                  n::unixtime_t::duration{1U}};
-          if (time_interval.overlaps(active) && is_active(t, day - ev.days())) {
-            runs.emplace_back(
-                n::rt::run{.t_ = n::transport{t, day - ev.days()},
-                           .stop_range_ = stop_range,
-                           .rt_ = n::rt_transport_idx_t ::invalid()});
-          }
-        }
-      }
-    };
-
     auto const seq = tt_.route_location_seq_[r];
     auto const stop_indices =
         n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
+    auto const route_transport_range = tt_.route_transport_ranges_[r];
     for (auto const [from, to] : utl::pairwise(stop_indices)) {
       auto const stop_range =
           n::interval{from, static_cast<n::stop_idx_t>(to + 1)};
@@ -312,40 +288,36 @@ struct railviz::impl {
         continue;
       }
 
-      // Get first arrival after start_mam.
       auto const arr_times =
           tt_.event_times_at_stop(r, to, n::event_type::kArr);
-      auto const first_arrival_after_start_mam =
-          n::linear_lb(arr_times.begin(), arr_times.end(), start_mam,
-                       [&](n::delta const a, n::duration_t const b) {
-                         return a.mam() < b.count();
-                       });
-      auto const first_arr_after_start_mam_idx = static_cast<unsigned>(
-          &*first_arrival_after_start_mam - &arr_times[0]);
-
-      // Get last departure before end_mam.
       auto const dep_times =
           tt_.event_times_at_stop(r, from, n::event_type::kDep);
-      auto const last_dep_before_end_mam =
-          n::linear_lb(dep_times.rbegin(), dep_times.rend(), end_mam,
-                       [&](n::delta const a, n::duration_t const b) {
-                         return a.mam() > b.count();
-                       });
-      auto const last_dep_before_end_mam_idx =
-          static_cast<unsigned>(&*last_dep_before_end_mam - &dep_times[0]);
+      for (auto day = start_day; day <= end_day; ++day) {
+        for (auto i = 0U; i != arr_times.size(); ++i) {
+          auto const arr_day_offset = arr_times[i].days() - dep_times[i].days();
+          auto const arr = arr_day_offset * 1440 + arr_times[i].mam();
 
-      if (first_arr_after_start_mam_idx <= last_dep_before_end_mam_idx) {
-        // Doesn't go over midnight, add continuous interval.
-        add_transports(stop_range, n::interval{first_arr_after_start_mam_idx,
-                                               last_dep_before_end_mam_idx});
-      } else {
-        // Goes over midnight, add intervals
-        //   - [0, last_dep_before_end + 1[  -> next day
-        //   - [first_arr_after_start, N[
-        add_transports(stop_range,
-                       n::interval{0U, last_dep_before_end_mam_idx + 1U});
-        add_transports(stop_range, n ::interval{first_arr_after_start_mam_idx,
-                                                arr_times.size()});
+          if ((day == start_day && arr < begin_mam.count()) ||
+              (day == end_day && dep_times[i].mam() > end_mam.count())) {
+            // Arrival before BEGIN -> no overlap with search window -> skip.
+            // Departure after END -> no overlap with search window -> skip.
+            continue;
+          }
+
+          auto const t = route_transport_range[i];
+          auto const day_offset = dep_times[i].days();
+          auto const traffic_day = day - day_offset;
+          if (is_active(t, day - traffic_day)) {
+            assert(time_interval.overlaps(
+                {tt_.event_time({t, traffic_day}, from, n::event_type::kDep),
+                 tt_.event_time({t, traffic_day}, to, n::event_type::kArr) +
+                     n::unixtime_t::duration{1}}));
+            runs.emplace_back(
+                n::rt::run{.t_ = n::transport{t, traffic_day},
+                           .stop_range_ = stop_range,
+                           .rt_ = n::rt_transport_idx_t ::invalid()});
+          }
+        }
       }
     }
   }
