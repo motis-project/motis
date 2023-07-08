@@ -24,11 +24,12 @@
 #include "motis/nigiri/geo_station_lookup.h"
 #include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/guesser.h"
+#include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
-namespace n = ::nigiri;
+namespace n = nigiri;
 
 namespace motis::nigiri {
 
@@ -79,6 +80,7 @@ struct nigiri::impl {
   geo::point_rtree station_geo_index_;
   std::vector<gtfsrt> gtfsrt_;
   std::unique_ptr<guesser> guesser_;
+  std::unique_ptr<railviz> railviz_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -86,8 +88,9 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
-  param(geo_lookup_, "geo_lookup", "provide geo station lookup");
+  param(geo_lookup_, "lookup", "provide geo station lookup");
   param(guesser_, "guesser", "station typeahead/autocomplete");
+  param(railviz_, "railviz", "provide railviz functions");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
@@ -125,6 +128,14 @@ void nigiri::init(motis::module::registry& reg) {
         "/guesser",
         [&](mm::msg_ptr const& msg) { return impl_->guesser_->guess(msg); },
         {});
+  }
+
+  if (railviz_) {
+    reg.register_op("/railviz/get_trains",
+                    [&](mm::msg_ptr const& msg) {
+                      return impl_->railviz_->get_trains(msg);
+                    },
+                    {});
   }
 
   reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
@@ -330,6 +341,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         if (guesser_) {
           impl_->guesser_ =
               std::make_unique<guesser>(impl_->tags_, (**impl_->tt_));
+        }
+
+        if (railviz_) {
+          impl_->railviz_ =
+              std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
         }
 
         import_successful_ = true;

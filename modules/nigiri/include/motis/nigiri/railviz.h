@@ -2,6 +2,12 @@
 
 #include <memory>
 
+#include "geo/box.h"
+
+#include "nigiri/types.h"
+
+#include "motis/module/message.h"
+
 namespace nigiri {
 struct timetable;
 struct rt_timetable;
@@ -9,7 +15,15 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
+struct tag_lookup;
+
 struct railviz {
+  railviz(tag_lookup const&, ::nigiri::timetable const&);
+  ~railviz();
+
+  module::msg_ptr get_trains(module::msg_ptr const&);
+
+  void update(std::shared_ptr<::nigiri::rt_timetable> const&);
 
   struct impl;
   std::unique_ptr<impl> impl_;
