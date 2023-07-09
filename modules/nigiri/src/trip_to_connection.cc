@@ -43,7 +43,8 @@ motis::module::msg_ptr trip_to_connection(tag_lookup const& tags,
               n::direction::kForward, from_l.get_location_idx(),
               to_l.get_location_idx(), start_time, dest_time,
               n::routing::journey::run_enter_exit{
-                  fr, r.stop_range_.from_,
+                  fr,  // NOTLINT(cppcoreguidelines-slicing)
+                  r.stop_range_.from_,
                   static_cast<n::stop_idx_t>(r.stop_range_.to_ - 1U)}}},
           .start_time_ = start_time,
           .dest_time_ = dest_time,
