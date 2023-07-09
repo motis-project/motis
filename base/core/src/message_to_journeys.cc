@@ -66,6 +66,7 @@ journey::trip to_trip(Trip const& trip) {
   auto t = journey::trip{};
   t.from_ = trip.range()->from();
   t.to_ = trip.range()->to();
+  t.extern_trip_.id_ = trip.id()->id()->view();
   t.extern_trip_.station_id_ = trip.id()->station_id()->view();
   t.extern_trip_.train_nr_ = trip.id()->train_nr();
   t.extern_trip_.time_ = trip.id()->time();

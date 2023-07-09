@@ -223,11 +223,11 @@ struct railviz::impl {
           to_motis_unixtime(to.time(n::event_type::kArr)),
           to_motis_unixtime(from.scheduled_time(n::event_type::kDep)),
           to_motis_unixtime(to.scheduled_time(n::event_type::kArr)),
-          r.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
-          r.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
+          fr.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
+          fr.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
           mc.CreateVector(std::vector{
               to_fbs(mc, nigiri_trip_to_extern_trip(tags_, tt_, fr.trip_idx(),
-                                                    r.t_.day_))}),
+                                                    fr.t_.day_))}),
           mc.CreateVector(polyline_indices));
     });
 

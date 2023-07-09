@@ -174,16 +174,20 @@ void nigiri::update_gtfsrt() {
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
     auto const tag = impl_->tags_.get_tag(endpoint.src());
+    auto stats = n::rt::statistics{};
     try {
-      statistics.emplace_back(n::rt::gtfsrt_update_buf(
-          **impl_->tt_, *rtt_copy, endpoint.src(), tag, f->val().body));
+      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, endpoint.src(),
+                                       tag, f->val().body);
     } catch (std::exception const& e) {
+      stats.parser_error_ = true;
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
                           << e.what();
     } catch (...) {
+      stats.parser_error_ = true;
       LOG(logging::error) << "Unknown GTFS-RT update error (tag= " << tag
                           << ")";
     }
+    statistics.emplace_back(stats);
   }
   impl_->update_rtt(rtt_copy);
   impl_->railviz_->update(rtt_copy);
