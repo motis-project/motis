@@ -17,14 +17,14 @@ void registry::register_op(std::string const& name, op_fn_t fn,
                      name](msg_ptr const& m) -> msg_ptr { return fn_rec(m); };
   auto const inserted =
       operations_.emplace(name, op{std::move(call), std::move(access)}).second;
-  utl::verify(inserted, "register_op: target {} already registered");
+  utl::verify(inserted, "register_op: target {} already registered", name);
 }
 
 void registry::register_client_handler(
     std::string&& target, std::function<void(client_hdl)>&& handler) {
   auto const inserted =
-      client_handlers_.emplace(std::move(target), std::move(handler)).second;
-  utl::verify(inserted, "client_handler: target {} already registered");
+      client_handlers_.emplace(target, std::move(handler)).second;
+  utl::verify(inserted, "client_handler: target {} already registered", target);
 }
 
 void registry::subscribe(std::string const& topic, op_fn_t fn,

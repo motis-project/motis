@@ -11,7 +11,7 @@ namespace motis::nigiri {
 
 extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
                                        n::timetable const& tt,
-                                       n::trip_idx_t const trip,
+                                       n::trip_idx_t const trip_idx,
                                        n::day_idx_t const day) {
   auto const resolve_id = [&](n::location_idx_t const x) {
     return get_station_id(
@@ -21,7 +21,8 @@ extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
             : x);
   };
 
-  auto const [transport, stop_range] = tt.trip_transport_ranges_[trip].front();
+  auto const [transport, stop_range] =
+      tt.trip_transport_ranges_[trip_idx].front();
   auto const first_location = resolve_id(n::stop{
       tt.route_location_seq_[tt.transport_route_[transport]][stop_range.from_]}
                                              .location_idx());
@@ -38,9 +39,12 @@ extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
                  ? tt.trip_lines_.at(section_lines.front()).view()
                  : tt.trip_lines_.at(section_lines.at(stop_range.from_))
                        .view());
+  auto const x = tt.trip_ids_[trip_idx].at(0);
   return extern_trip{
+      .id_ = fmt::format("{}{}", tags.get_tag(tt.trip_id_src_[x]),
+                         tt.trip_id_strings_[x].view()),
       .station_id_ = first_location,
-      .train_nr_ = tt.trip_train_nr_.at(tt.trip_ids_.at(trip).back()),
+      .train_nr_ = tt.trip_train_nr_.at(tt.trip_ids_.at(trip_idx).back()),
       .time_ = to_motis_unixtime(tt.event_time(
           {transport, day}, stop_range.from_, n::event_type::kDep)),
       .target_station_id_ = last_location,

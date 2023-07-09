@@ -26,6 +26,7 @@
 #include "motis/nigiri/guesser.h"
 #include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
+#include "motis/nigiri/trip_to_connection.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -46,12 +47,12 @@ struct nigiri::impl {
         std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
   }
 
-  void update_rtt(std::shared_ptr<n::rt_timetable>&& rtt) {
+  void update_rtt(std::shared_ptr<n::rt_timetable> rtt) {
 #if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
-    rtt_.store(rtt);
+    rtt_.store(std::move(rtt));
 #else
     auto lock = std::lock_guard{mutex_};
-    rtt_ = rtt;
+    rtt_ = std::move(rtt);
 #endif
   }
 
@@ -91,6 +92,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(geo_lookup_, "lookup", "provide geo station lookup");
   param(guesser_, "guesser", "station typeahead/autocomplete");
   param(railviz_, "railviz", "provide railviz functions");
+  param(routing_, "routing", "provide trip_to_connection");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
@@ -138,6 +140,15 @@ void nigiri::init(motis::module::registry& reg) {
                     {});
   }
 
+  if (routing_) {
+    reg.register_op("/trip_to_connection",
+                    [&](mm::msg_ptr const& msg) {
+                      return trip_to_connection(impl_->tags_, **impl_->tt_,
+                                                impl_->get_rtt().get(), msg);
+                    },
+                    {});
+  }
+
   reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
 }
 
@@ -174,7 +185,8 @@ void nigiri::update_gtfsrt() {
                           << ")";
     }
   }
-  impl_->update_rtt(std::move(rtt_copy));
+  impl_->update_rtt(rtt_copy);
+  impl_->railviz_->update(rtt_copy);
 
   for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
     LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "

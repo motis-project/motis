@@ -118,7 +118,8 @@ type alias Range =
 
 
 type alias TripId =
-    { station_id : String
+    { id : String
+    , station_id : String
     , train_nr : Int
     , time : Int
     , target_station_id : String

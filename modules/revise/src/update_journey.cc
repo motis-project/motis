@@ -207,7 +207,8 @@ journey update_journey(schedule const& sched, journey const& j) {
       updated_journey.trips_.push_back(journey::trip{
           static_cast<unsigned>(range.from_), static_cast<unsigned>(range.to_),
           extern_trip{sched.stations_.at(p.station_id_)->eva_nr_,
-                      p.get_train_nr(), motis_to_unixtime(sched, p.get_time()),
+                      t.first->gtfs_trip_id_, p.get_train_nr(),
+                      motis_to_unixtime(sched, p.get_time()),
                       sched.stations_.at(s.target_station_id_)->eva_nr_,
                       motis_to_unixtime(sched, s.target_time_), s.line_id_},
           t.first->dbg_.str()});
