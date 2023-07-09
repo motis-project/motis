@@ -113,9 +113,9 @@ Transports:
  2: 3  -> 4  TRAIN Bus 2                     duration=20, provider="Deutsche Bahn", direction="", line="2", clasz=3, duration="20"
 
 Trips:
- 0: 0  -> 2  {tag_A  ,      0, 2019-05-01 07:50} -> {  tag_C, 2019-05-01 08:30}, line_id=1
+ 0: 0  -> 2  {tag_A  ,      0, 2019-05-01 07:50} -> {  tag_C, 2019-05-01 08:30}, line_id=1, id=tag_T1
        #/trip/tag_A/0/1556697000/tag_C/1556699400/1  ::memory::/stop_times.txt:2:4
- 1: 3  -> 4  {tag_D  ,      0, 2019-05-01 08:25} -> {  tag_E, 2019-05-01 08:45}, line_id=2
+ 1: 3  -> 4  {tag_D  ,      0, 2019-05-01 08:25} -> {  tag_E, 2019-05-01 08:45}, line_id=2, id=tag_T2
        #/trip/tag_D/0/1556699100/tag_E/1556700300/2  ::memory::/stop_times.txt:5:6
 
 Attributes:
@@ -133,11 +133,11 @@ Transports:
  2: 2  -> 3  TRAIN Bus 4                     duration=10, provider="Deutsche Bahn", direction="", line="4", clasz=3, duration="10"
 
 Trips:
- 0: 0  -> 1  {tag_A  ,      0, 2019-05-01 07:50} -> {  tag_C, 2019-05-01 08:30}, line_id=1
+ 0: 0  -> 1  {tag_A  ,      0, 2019-05-01 07:50} -> {  tag_C, 2019-05-01 08:30}, line_id=1, id=tag_T1
        #/trip/tag_A/0/1556697000/tag_C/1556699400/1  ::memory::/stop_times.txt:2:4
- 1: 1  -> 2  {tag_B  ,      0, 2019-05-01 08:10} -> {  tag_C, 2019-05-01 08:30}, line_id=3
+ 1: 1  -> 2  {tag_B  ,      0, 2019-05-01 08:10} -> {  tag_C, 2019-05-01 08:30}, line_id=3, id=tag_T3
        #/trip/tag_B/0/1556698200/tag_C/1556699400/3  ::memory::/stop_times.txt:7:8
- 2: 2  -> 3  {tag_C  ,      0, 2019-05-01 08:30} -> {  tag_E, 2019-05-01 08:45}, line_id=4
+ 2: 2  -> 3  {tag_C  ,      0, 2019-05-01 08:30} -> {  tag_E, 2019-05-01 08:45}, line_id=4, id=tag_T4
        #/trip/tag_C/0/1556699400/tag_E/1556700300/4  ::memory::/stop_times.txt:9:10
 
 Attributes:
