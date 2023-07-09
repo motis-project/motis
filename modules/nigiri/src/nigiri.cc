@@ -22,6 +22,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/geo_station_lookup.h"
+#include "motis/nigiri/get_station.h"
 #include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/guesser.h"
 #include "motis/nigiri/railviz.h"
@@ -142,6 +143,12 @@ void nigiri::init(motis::module::registry& reg) {
         "/railviz/get_trips",
         [&](mm::msg_ptr const& msg) { return impl_->railviz_->get_trips(msg); },
         {});
+    reg.register_op("/railviz/get_station",
+                    [&](mm::msg_ptr const& msg) {
+                      return get_station(impl_->tags_, **impl_->tt_,
+                                         impl_->get_rtt().get(), msg);
+                    },
+                    {});
   }
 
   if (routing_) {

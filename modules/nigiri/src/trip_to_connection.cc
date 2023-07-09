@@ -48,6 +48,7 @@ motis::module::msg_ptr trip_to_connection(tag_lookup const& tags,
                   static_cast<n::stop_idx_t>(r.stop_range_.to_ - 1U)}}},
           .start_time_ = start_time,
           .dest_time_ = dest_time,
+          .dest_ = to_l.get_location_idx(),
           .transfers_ = 0U});
 
   mm::message_creator fbb;
