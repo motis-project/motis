@@ -242,14 +242,6 @@ struct railviz::impl {
     return mm::make_msg(mc);
   }
 
-  double get_route_distance(n::rt::run const& r) const {
-    if (r.is_rt()) {
-      return 0.0;
-    } else {
-      return 0.0;
-    }
-  }
-
   void add_rt_transports(n::rt_transport_idx_t const rt_t,
                          n::interval<n::unixtime_t> const time_interval,
                          geo::box const& area, std::vector<n::rt::run>& runs) {
@@ -342,11 +334,11 @@ struct railviz::impl {
 railviz::railviz(tag_lookup const& tags, n::timetable const& tt)
     : impl_{std::make_unique<impl>(tags, tt)} {}
 
-mm::msg_ptr railviz::get_trains(mm::msg_ptr const& msg) {
+mm::msg_ptr railviz::get_trains(mm::msg_ptr const& msg) const {
   return impl_->get_trains(msg);
 }
 
-void railviz::update(std::shared_ptr<n::rt_timetable> const& rtt) {
+void railviz::update(std::shared_ptr<n::rt_timetable> const& rtt) const {
   impl_->update(rtt);
 }
 

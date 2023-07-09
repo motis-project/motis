@@ -21,9 +21,9 @@ struct railviz {
   railviz(tag_lookup const&, ::nigiri::timetable const&);
   ~railviz();
 
-  module::msg_ptr get_trains(module::msg_ptr const&);
+  module::msg_ptr get_trains(module::msg_ptr const&) const;
 
-  void update(std::shared_ptr<::nigiri::rt_timetable> const&);
+  void update(std::shared_ptr<::nigiri::rt_timetable> const&) const;
 
   struct impl;
   std::unique_ptr<impl> impl_;
