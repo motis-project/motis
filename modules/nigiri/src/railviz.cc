@@ -22,6 +22,7 @@
 #include "motis/nigiri/location.h"
 #include "motis/nigiri/tag_lookup.h"
 #include "motis/nigiri/unixtime_conv.h"
+#include "motis/path/path_zoom_level.h"
 
 namespace n = nigiri;
 namespace bgi = boost::geometry::index;
@@ -41,20 +42,23 @@ namespace motis::nigiri {
 struct route_geo_index {
   route_geo_index() = default;
 
-  route_geo_index(n::timetable const& tt, n::clasz const clasz) {
+  route_geo_index(n::timetable const& tt, n::clasz const clasz,
+                  n::vector_map<n::route_idx_t, float>& distances) {
     auto values = std::vector<route_box>{};
-    for (auto const [r, claszes] : utl::enumerate(tt.route_section_clasz_)) {
+    for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
+      auto const r = n::route_idx_t{i};
       if (claszes.at(0) != clasz) {
         continue;
       }
 
       auto bounding_box = geo::box{};
-      for (auto const l : tt.route_location_seq_[n::route_idx_t{r}]) {
+      for (auto const l : tt.route_location_seq_[r]) {
         bounding_box.extend(
             tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
       }
 
-      values.emplace_back(bounding_box, n::route_idx_t{r});
+      values.emplace_back(bounding_box, r);
+      distances[r] = geo::distance(bounding_box.max_, bounding_box.min_);
     }
     rtree_ = static_rtree{values};
   }
@@ -74,34 +78,36 @@ struct route_geo_index {
 struct rt_transport_geo_index {
   rt_transport_geo_index() = default;
 
-  rt_transport_geo_index(n::timetable const& tt, n::rt_timetable const& rtt,
-                         n::clasz const clasz) {
+  rt_transport_geo_index(
+      n::timetable const& tt, n::rt_timetable const& rtt, n::clasz const clasz,
+      n::vector_map<n::rt_transport_idx_t, float>& distances) {
     auto values = std::vector<rt_transport_box>{};
-    for (auto const [rt_t, claszes] :
+    for (auto const [i, claszes] :
          utl::enumerate(rtt.rt_transport_section_clasz_)) {
+      auto const rt_t = n::rt_transport_idx_t{i};
       if (claszes.at(0) != clasz) {
         continue;
       }
 
       auto bounding_box = geo::box{};
-      for (auto const l :
-           rtt.rt_transport_location_seq_[n::rt_transport_idx_t{rt_t}]) {
+      for (auto const l : rtt.rt_transport_location_seq_[rt_t]) {
         bounding_box.extend(
             tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
       }
 
-      values.emplace_back(bounding_box, n::rt_transport_idx_t{rt_t});
+      values.emplace_back(bounding_box, rt_t);
+      distances[rt_t] = geo::distance(bounding_box.min_, bounding_box.max_);
     }
   }
 
   std::vector<n::rt_transport_idx_t> get_rt_transports(
       geo::box const& b) const {
-    std::vector<n::rt_transport_idx_t> routes;
+    std::vector<n::rt_transport_idx_t> rt_transports;
     rtree_.query(bgi::intersects(b), boost::make_function_output_iterator(
                                          [&](rt_transport_box const& v) {
-                                           routes.emplace_back(v.second);
+                                           rt_transports.emplace_back(v.second);
                                          }));
-    return routes;
+    return rt_transports;
   }
 
   rt_rtree rtree_;
@@ -109,8 +115,10 @@ struct rt_transport_geo_index {
 
 struct railviz::impl {
   impl(tag_lookup const& tags, n::timetable const& tt) : tags_{tags}, tt_{tt} {
+    static_distances_.resize(tt_.route_location_seq_.size());
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
-      static_geo_indices_[c] = route_geo_index{tt, n::clasz{c}};
+      static_geo_indices_[c] =
+          route_geo_index{tt, n::clasz{c}, static_distances_};
     }
   }
 
@@ -126,25 +134,31 @@ struct railviz::impl {
             std::chrono::seconds{req->end_time()})};
 
     return get_trains(
-        n::interval{start_time, end_time},
+        {start_time, end_time},
         geo::make_box({from_fbs(req->corner1()), from_fbs(req->corner2())}),
-        req->max_trains(), req->zoom_geo());
+        req->zoom_bounds());
   }
 
   mm::msg_ptr get_trains(n::interval<::nigiri::unixtime_t> time_interval,
-                         geo::box const& area, int max_count, int zoom_level) {
-    CISTA_UNUSED_PARAM(max_count)  // TODO(felix)
-    CISTA_UNUSED_PARAM(zoom_level)  // TODO(felix)
-    auto const [start_day, start_mam] = tt_.day_idx_mam(time_interval.from_);
-    auto const [end_day, end_mam] = tt_.day_idx_mam(time_interval.to_);
+                         geo::box const& area, int const zoom_level) {
     auto runs = std::vector<n::rt::run>{};
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
-      for (auto const& rt_t : rt_geo_indices_[c].get_rt_transports(area)) {
-        add_rt_transports(rt_t, time_interval, area, runs);
+      auto const sc = static_cast<service_class>(c);
+      if (!path::should_display(sc, zoom_level,
+                                std::numeric_limits<float>::infinity())) {
+        continue;
       }
+
+      for (auto const& rt_t : rt_geo_indices_[c].get_rt_transports(area)) {
+        if (path::should_display(sc, zoom_level, rt_distances_[rt_t])) {
+          add_rt_transports(rt_t, time_interval, area, runs);
+        }
+      }
+
       for (auto const& r : static_geo_indices_[c].get_routes(area)) {
-        add_static_transports(r, time_interval, start_day, end_day, start_mam,
-                              end_mam, area, runs);
+        if (path::should_display(sc, zoom_level, static_distances_[r])) {
+          add_static_transports(r, time_interval, area, runs);
+        }
       }
     }
     return create_response(runs);
@@ -196,16 +210,18 @@ struct railviz::impl {
                 enc.reset();
                 return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
               }) *
-          (key.first != from.get_location_idx() ? -1 : 1)};
+          (key.first != from_l ? -1 : 1)};
       return motis::railviz::CreateTrain(
           mc, mc.CreateVector(std::vector{mc.CreateString(fr.name())}),
-          static_cast<int>(fr.get_clasz()), get_route_distance(r),
+          static_cast<int>(fr.get_clasz()),
+          fr.is_rt() ? rt_distances_[fr.rt_]
+                     : static_distances_[tt_.transport_route_[fr.t_.t_idx_]],
           mc.CreateString(get_station_id(tags_, tt_, from_l)),
           mc.CreateString(get_station_id(tags_, tt_, to_l)),
           to_motis_unixtime(from.time(n::event_type::kDep)),
-          to_motis_unixtime(from.time(n::event_type::kArr)),
+          to_motis_unixtime(to.time(n::event_type::kArr)),
           to_motis_unixtime(from.scheduled_time(n::event_type::kDep)),
-          to_motis_unixtime(from.scheduled_time(n::event_type::kArr)),
+          to_motis_unixtime(to.scheduled_time(n::event_type::kArr)),
           r.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
           r.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
           mc.CreateVector(std::vector{
@@ -253,34 +269,28 @@ struct railviz::impl {
                       rtt_->unix_event_time(rt_t, to, n::event_type::kArr) +
                           n::unixtime_t::duration{1U}};
       if (active.overlaps(time_interval)) {
-        runs.emplace_back(n::rt::run{
-            .stop_range_ = n::interval<n::stop_idx_t>{from, to}, .rt_ = rt_t});
+        runs.emplace_back(n::rt::run{.stop_range_ = {from, to}, .rt_ = rt_t});
       }
     }
   }
 
-  void add_static_transports(n::route_idx_t const r,  //
+  void add_static_transports(n::route_idx_t const r,
                              n::interval<n::unixtime_t> const time_interval,
-                             n::day_idx_t const start_day,
-                             n::day_idx_t const end_day,
-                             n::duration_t const begin_mam,
-                             n::duration_t const end_mam, geo::box const& area,
+                             geo::box const& area,
                              std::vector<n::rt::run>& runs) const {
-    auto const is_active = [&](n::transport_idx_t const t,
-                               n::day_idx_t const day) -> bool {
+    auto const is_active = [&](n::transport const t) -> bool {
       return (rtt_ == nullptr
-                  ? tt_.bitfields_[tt_.transport_traffic_days_[t]]
-                  : rtt_->bitfields_[rtt_->transport_traffic_days_[t]])
-          .test(to_idx(day));
+                  ? tt_.bitfields_[tt_.transport_traffic_days_[t.t_idx_]]
+                  : rtt_->bitfields_[rtt_->transport_traffic_days_[t.t_idx_]])
+          .test(to_idx(t.day_));
     };
 
     auto const seq = tt_.route_location_seq_[r];
     auto const stop_indices =
         n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
-    auto const route_transport_range = tt_.route_transport_ranges_[r];
+    auto const [start_day, _] = tt_.day_idx_mam(time_interval.from_);
+    auto const [end_day, _1] = tt_.day_idx_mam(time_interval.to_);
     for (auto const [from, to] : utl::pairwise(stop_indices)) {
-      auto const stop_range =
-          n::interval{from, static_cast<n::stop_idx_t>(to + 1)};
       auto const box = geo::box{
           tt_.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
           tt_.locations_.coordinates_[n::stop{seq[to]}.location_idx()]};
@@ -288,34 +298,23 @@ struct railviz::impl {
         continue;
       }
 
-      auto const arr_times =
-          tt_.event_times_at_stop(r, to, n::event_type::kArr);
       auto const dep_times =
           tt_.event_times_at_stop(r, from, n::event_type::kDep);
-      for (auto day = start_day; day <= end_day; ++day) {
-        for (auto i = 0U; i != arr_times.size(); ++i) {
-          auto const arr_day_offset = arr_times[i].days() - dep_times[i].days();
-          auto const arr = arr_day_offset * 1440 + arr_times[i].mam();
-
-          if ((day == start_day && arr < begin_mam.count()) ||
-              (day == end_day && dep_times[i].mam() > end_mam.count())) {
-            // Arrival before BEGIN -> no overlap with search window -> skip.
-            // Departure after END -> no overlap with search window -> skip.
-            continue;
-          }
-
-          auto const t = route_transport_range[i];
-          auto const day_offset = dep_times[i].days();
+      for (auto const [i, t_idx] :
+           utl::enumerate(tt_.route_transport_ranges_[r])) {
+        auto const day_offset = dep_times[i].days();
+        for (auto day = start_day; day <= end_day; ++day) {
           auto const traffic_day = day - day_offset;
-          if (is_active(t, day - traffic_day)) {
-            assert(time_interval.overlaps(
-                {tt_.event_time({t, traffic_day}, from, n::event_type::kDep),
-                 tt_.event_time({t, traffic_day}, to, n::event_type::kArr) +
-                     n::unixtime_t::duration{1}}));
+          auto const t = n::transport{t_idx, traffic_day};
+          if (time_interval.overlaps(
+                  {tt_.event_time(t, from, n::event_type::kDep),
+                   tt_.event_time(t, to, n::event_type::kArr) +
+                       n::unixtime_t::duration{1}}) &&
+              is_active(t)) {
             runs.emplace_back(
-                n::rt::run{.t_ = n::transport{t, traffic_day},
-                           .stop_range_ = stop_range,
-                           .rt_ = n::rt_transport_idx_t ::invalid()});
+                n::rt::run{.t_ = t,
+                           .stop_range_ = {from, to},
+                           .rt_ = n::rt_transport_idx_t::invalid()});
           }
         }
       }
@@ -324,8 +323,10 @@ struct railviz::impl {
 
   void update(std::shared_ptr<n::rt_timetable> const& rtt) {
     rtt_ = rtt;
+    rt_distances_.resize(rtt_->rt_transport_location_seq_.size());
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
-      rt_geo_indices_[c] = rt_transport_geo_index{tt_, *rtt_, n::clasz{c}};
+      rt_geo_indices_[c] =
+          rt_transport_geo_index{tt_, *rtt_, n::clasz{c}, rt_distances_};
     }
   }
 
@@ -334,6 +335,8 @@ struct railviz::impl {
   std::shared_ptr<n::rt_timetable> rtt_;
   std::array<route_geo_index, n::kNumClasses> static_geo_indices_;
   std::array<rt_transport_geo_index, n::kNumClasses> rt_geo_indices_;
+  n::vector_map<n::route_idx_t, float> static_distances_;
+  n::vector_map<n::rt_transport_idx_t, float> rt_distances_;
 };
 
 railviz::railviz(tag_lookup const& tags, n::timetable const& tt)
