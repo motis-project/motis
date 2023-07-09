@@ -1292,6 +1292,7 @@ getPermalink model =
                     urlBase
                         ++ toUrl
                             (TripDetails
+                                tripId.id
                                 tripId.station_id
                                 tripId.train_nr
                                 tripId.time
@@ -1466,9 +1467,10 @@ routeToMsg route =
         ConnectionDetails idx ->
             SelectConnection idx
 
-        TripDetails station trainNr time targetStation targetTime lineId ->
+        TripDetails id station trainNr time targetStation targetTime lineId ->
             LoadTrip
-                { station_id = station
+                { id = id
+                , station_id = station
                 , train_nr = trainNr
                 , time = time
                 , target_station_id = targetStation

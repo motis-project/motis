@@ -37,6 +37,7 @@ private:
   bool geo_lookup_{false};
   bool guesser_{false};
   bool railviz_{false};
+  bool routing_{false};
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;
   unsigned gtfsrt_update_interval_{60U};

@@ -3,6 +3,8 @@ include "base/EventType.fbs";
 namespace motis;
 
 table TripId {
+  id:string;
+
   // primary
   station_id:string;
   train_nr:uint;

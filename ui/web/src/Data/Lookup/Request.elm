@@ -30,7 +30,8 @@ encodeTripToConnection tripId =
 encodeTripId : TripId -> Encode.Value
 encodeTripId tripId =
     Encode.object
-        [ "station_id" => string tripId.station_id
+        [ "id" => string tripId.id
+        , "station_id" => string tripId.station_id
         , "train_nr" => int tripId.train_nr
         , "time" => int tripId.time
         , "target_station_id" => string tripId.target_station_id

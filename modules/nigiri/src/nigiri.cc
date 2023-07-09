@@ -26,6 +26,7 @@
 #include "motis/nigiri/guesser.h"
 #include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
+#include "motis/nigiri/trip_to_connection.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -91,6 +92,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(geo_lookup_, "lookup", "provide geo station lookup");
   param(guesser_, "guesser", "station typeahead/autocomplete");
   param(railviz_, "railviz", "provide railviz functions");
+  param(routing_, "routing", "provide trip_to_connection");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
@@ -134,6 +136,15 @@ void nigiri::init(motis::module::registry& reg) {
     reg.register_op("/railviz/get_trains",
                     [&](mm::msg_ptr const& msg) {
                       return impl_->railviz_->get_trains(msg);
+                    },
+                    {});
+  }
+
+  if (routing_) {
+    reg.register_op("/trip_to_connection",
+                    [&](mm::msg_ptr const& msg) {
+                      return trip_to_connection(impl_->tags_, **impl_->tt_,
+                                                impl_->get_rtt().get(), msg);
                     },
                     {});
   }
