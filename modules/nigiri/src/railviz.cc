@@ -98,6 +98,7 @@ struct rt_transport_geo_index {
       values.emplace_back(bounding_box, rt_t);
       distances[rt_t] = geo::distance(bounding_box.min_, bounding_box.max_);
     }
+    rtree_ = rt_rtree{values};
   }
 
   std::vector<n::rt_transport_idx_t> get_rt_transports(
