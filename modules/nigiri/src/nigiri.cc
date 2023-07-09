@@ -138,6 +138,10 @@ void nigiri::init(motis::module::registry& reg) {
                       return impl_->railviz_->get_trains(msg);
                     },
                     {});
+    reg.register_op(
+        "/railviz/get_trips",
+        [&](mm::msg_ptr const& msg) { return impl_->railviz_->get_trips(msg); },
+        {});
   }
 
   if (routing_) {

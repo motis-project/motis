@@ -22,6 +22,7 @@ struct railviz {
   ~railviz();
 
   module::msg_ptr get_trains(module::msg_ptr const&) const;
+  module::msg_ptr get_trips(module::msg_ptr const&) const;
 
   void update(std::shared_ptr<::nigiri::rt_timetable> const&) const;
 

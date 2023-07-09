@@ -20,6 +20,7 @@
 #include "motis/core/conv/trip_conv.h"
 #include "motis/nigiri/extern_trip.h"
 #include "motis/nigiri/location.h"
+#include "motis/nigiri/resolve_run.h"
 #include "motis/nigiri/tag_lookup.h"
 #include "motis/nigiri/unixtime_conv.h"
 #include "motis/path/path_zoom_level.h"
@@ -123,6 +124,32 @@ struct railviz::impl {
     }
   }
 
+  mm::msg_ptr get_trips(mm::msg_ptr const& msg) {
+    using motis::railviz::RailVizTripsRequest;
+    auto const* req = motis_content(RailVizTripsRequest, msg);
+
+    auto runs = std::vector<n::rt::run>{};
+    for (auto const t : *req->trips()) {
+      auto const et = to_extern_trip(t);
+      auto const r = resolve_run(tags_, tt_, et);
+      if (!r.valid()) {
+        LOG(logging::error) << "unable to find trip " << et.to_str();
+        continue;
+      }
+
+      auto const seq =
+          tt_.route_location_seq_[tt_.transport_route_[r.t_.t_idx_]];
+      auto const stop_range = n::interval{
+          n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
+      for (auto const [from, to] : utl::pairwise(stop_range)) {
+        auto copy = r;
+        copy.stop_range_ = {from, to};
+        runs.emplace_back(copy);
+      }
+    }
+    return create_response(runs, false);
+  }
+
   mm::msg_ptr get_trains(mm::msg_ptr const& msg) {
     using motis::railviz::RailVizTrainsRequest;
     auto const req = motis_content(RailVizTrainsRequest, msg);
@@ -140,7 +167,7 @@ struct railviz::impl {
         req->zoom_bounds());
   }
 
-  mm::msg_ptr get_trains(n::interval<::nigiri::unixtime_t> time_interval,
+  mm::msg_ptr get_trains(n::interval<n::unixtime_t> time_interval,
                          geo::box const& area, int const zoom_level) {
     auto runs = std::vector<n::rt::run>{};
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
@@ -165,7 +192,8 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs) const {
+  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs,
+                              bool const x = true) const {
     geo::polyline_encoder<6> enc;
 
     mm::message_creator mc;
@@ -174,16 +202,19 @@ struct railviz::impl {
     auto known_stations = n::hash_set<n::location_idx_t>{};
     auto const add_station =
         [&](n::location_idx_t const l) -> n::location_idx_t {
-      auto const x = tt_.locations_.parents_[l] != n::location_idx_t::invalid()
+      auto const type = tt_.locations_.types_.at(l);
+      auto const p = tt_.locations_.parents_[l] != n::location_idx_t::invalid()
                          ? tt_.locations_.parents_[l]
                          : l;
-      if (known_stations.insert(x).second) {
-        auto const pos = to_fbs(tt_.locations_.coordinates_[x]);
+      if (known_stations.insert(l).second) {
+        auto const pos = to_fbs(tt_.locations_.coordinates_[l]);
         stations.emplace_back(CreateStation(
-            mc, mc.CreateString(get_station_id(tags_, tt_, x)),
-            mc.CreateString(tt_.locations_.names_[x].view()), &pos));
+            mc,
+            mc.CreateString(get_station_id(
+                tags_, tt_, type == n::location_type::kGeneratedTrack ? p : l)),
+            mc.CreateString(tt_.locations_.names_[p].view()), &pos));
       }
-      return x;
+      return l;
     };
 
     auto polyline_indices_cache =
@@ -231,7 +262,7 @@ struct railviz::impl {
           mc.CreateVector(polyline_indices));
     });
 
-    auto extras = std::vector<std::uint64_t>{fbs_polylines.size() - 1};
+    auto extras = std::vector<std::uint64_t>{x ? fbs_polylines.size() - 1 : 1U};
     std::iota(begin(extras), end(extras), 1U);
 
     mc.create_and_finish(
@@ -337,6 +368,10 @@ railviz::railviz(tag_lookup const& tags, n::timetable const& tt)
 
 mm::msg_ptr railviz::get_trains(mm::msg_ptr const& msg) const {
   return impl_->get_trains(msg);
+}
+
+mm::msg_ptr railviz::get_trips(mm::msg_ptr const& msg) const {
+  return impl_->get_trips(msg);
 }
 
 void railviz::update(std::shared_ptr<n::rt_timetable> const& rtt) const {
