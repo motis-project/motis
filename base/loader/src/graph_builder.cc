@@ -126,11 +126,24 @@ trip* graph_builder::register_service(Service const* s, int day_idx,
     }
   }
 
+  auto const build_id = [&]() {
+    auto const dep_station = s->route()->stations()->Get(0U);
+    auto const arr_station =
+        s->route()->stations()->Get(s->route()->stations()->size() - 1);
+    return fmt::format("{}{}/{}/{}/{}/{}/{}", dataset_prefix_,
+                       ftid.primary_.train_nr_, dep_station->id()->view(),
+                       ftid.primary_.time_ % 1440, arr_station->id()->view(),
+                       ftid.secondary_.target_time_ % 1440,
+                       ftid.secondary_.line_id_);
+  };
+
   auto const stored =
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip>(
-              ftid, s->trip_id() == nullptr ? "" : s->trip_id()->str(), nullptr,
-              0U, static_cast<trip_idx_t>(sched_.trip_mem_.size()),
+              ftid,
+              s->trip_id() == nullptr ? build_id()
+                                      : dataset_prefix_ + s->trip_id()->str(),
+              nullptr, 0U, static_cast<trip_idx_t>(sched_.trip_mem_.size()),
               s->debug() == nullptr
                   ? trip_debug{}
                   : trip_debug{utl::get_or_create(
