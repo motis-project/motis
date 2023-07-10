@@ -14,16 +14,17 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/geo_station_lookup.h"
 #include "motis/nigiri/gtfsrt.h"
+#include "motis/nigiri/guesser.h"
 #include "motis/nigiri/routing.h"
-#include "nigiri/rt/create_rt_timetable.h"
-#include "nigiri/rt/gtfsrt_update.h"
-#include "nigiri/rt/rt_timetable.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -77,6 +78,7 @@ struct nigiri::impl {
   tag_lookup tags_;
   geo::point_rtree station_geo_index_;
   std::vector<gtfsrt> gtfsrt_;
+  std::unique_ptr<guesser> guesser_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -85,6 +87,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
   param(geo_lookup_, "geo_lookup", "provide geo station lookup");
+  param(guesser_, "guesser", "station typeahead/autocomplete");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
@@ -115,6 +118,13 @@ void nigiri::init(motis::module::registry& reg) {
                       return station_location(impl_->tags_, **impl_->tt_, msg);
                     },
                     {});
+  }
+
+  if (guesser_) {
+    reg.register_op(
+        "/guesser",
+        [&](mm::msg_ptr const& msg) { return impl_->guesser_->guess(msg); },
+        {});
   }
 
   reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
@@ -315,6 +325,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         if (geo_lookup_) {
           impl_->station_geo_index_ =
               geo::make_point_rtree((**impl_->tt_).locations_.coordinates_);
+        }
+
+        if (guesser_) {
+          impl_->guesser_ =
+              std::make_unique<guesser>(impl_->tags_, (**impl_->tt_));
         }
 
         import_successful_ = true;

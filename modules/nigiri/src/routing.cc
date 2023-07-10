@@ -142,7 +142,7 @@ auto run_search(n::routing::search_state& search_state,
   }
 }
 
-motis::module::msg_ptr route(tag_lookup const& tags, n::timetable& tt,
+motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                              n::rt_timetable const* rtt,
                              motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
