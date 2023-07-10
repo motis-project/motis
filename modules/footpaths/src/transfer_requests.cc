@@ -1,10 +1,16 @@
 #include "motis/footpaths/transfer_requests.h"
 
+#include "motis/core/common/logging.h"
+
+using namespace motis::logging;
+
 namespace motis::footpaths {
 
 std::vector<transfer_requests> build_transfer_requests(
     platforms* pf, std::map<std::string, ppr::profile_info> const& profiles,
     int const max_walk_duration) {
+  u_int targets = 0, no_targets = 0;
+  u_int stations = 0, tracks = 0;
   std::vector<transfer_requests> result{};
 
   // every platform (or station) can be a start for a transfer: set every
@@ -14,11 +20,14 @@ std::vector<transfer_requests> build_transfer_requests(
     if (platform.idx_ == nigiri::location_idx_t::invalid()) {
       continue;
     }
+    // count stations and tracks
+    platform.osm_id_ == -1 ? ++stations : ++tracks;
 
-    std::vector<platform_info*> transfer_targets{};
     // different profiles result in different transfer_targets: determine for
     // each profile the reachable platforms
     for (auto& profile : profiles) {
+      std::vector<platform_info*> transfer_targets{};
+
       // remark: profile {profile_name -> profile_info}
       // get all valid platforms in radius of current platform
       auto valid_platforms_in_radius = pf->get_valid_platforms_in_radius(
@@ -27,9 +36,11 @@ std::vector<transfer_requests> build_transfer_requests(
       transfer_targets.insert(transfer_targets.end(),
                               valid_platforms_in_radius.begin(),
                               valid_platforms_in_radius.end());
+      targets += valid_platforms_in_radius.size();
 
       // donot create a transfer request if no valid transfer could be found
       if (transfer_targets.empty()) {
+        ++no_targets;
         continue;
       }
 
@@ -41,6 +52,11 @@ std::vector<transfer_requests> build_transfer_requests(
       result.emplace_back(tmp);
     }
   }
+  LOG(info) << "Generated " << result.size() << " transfer requests.";
+  LOG(info) << "Found " << targets << " targets in total.";
+  LOG(info) << "Identified "
+            << (double)((double)targets / (double)result.size())
+            << " targets per source.";
 
   return result;
 }

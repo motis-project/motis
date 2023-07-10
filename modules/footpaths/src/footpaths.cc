@@ -200,8 +200,6 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           scoped_timer const timer{"transfer: build transfer requests."};
           transfer_reqs = build_transfer_requests(
               platforms_.get(), ppr_profiles_, max_walk_duration_);
-          LOG(info) << "Generated " << transfer_reqs.size()
-                    << " transfer requests.";
         }
 
         // 6th get transfer requests result
