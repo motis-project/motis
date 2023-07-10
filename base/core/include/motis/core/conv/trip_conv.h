@@ -54,10 +54,13 @@ inline extern_trip to_extern_trip(schedule const& sched, trip const* t) {
 }
 
 inline extern_trip to_extern_trip(TripId const* trp) {
-  return extern_trip{
-      trp->id()->str(),     trp->station_id()->str(),        trp->train_nr(),
-      trp->time(),          trp->target_station_id()->str(), trp->target_time(),
-      trp->line_id()->str()};
+  return extern_trip{trp->id() == nullptr ? "" : trp->id()->str(),
+                     trp->station_id()->str(),
+                     trp->train_nr(),
+                     trp->time(),
+                     trp->target_station_id()->str(),
+                     trp->target_time(),
+                     trp->line_id()->str()};
 }
 
 }  // namespace motis
