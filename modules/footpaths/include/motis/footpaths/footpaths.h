@@ -1,5 +1,7 @@
 #pragma once
 
+#include "boost/range/irange.hpp"
+
 #include "motis/footpaths/platforms.h"
 #include "motis/ppr/profile_info.h"
 
@@ -39,8 +41,15 @@ private:
    * 1st. for each location exact matches by name are searched.
    * 2nd. (if 1st failed) for each location only match platform number.
    *
+   * @return number of matched platforms
+   *
    */
-  void match_locations_and_platforms();
+  u_int match_locations_and_platforms();
+
+  bool match_by_distance(
+      nigiri::location_idx_t const i,
+      boost::strided_integer_range<int> match_distances,
+      std::function<bool(std::string, std::string_view)> matches);
 
   int max_walk_duration_{15};
 

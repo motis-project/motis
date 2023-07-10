@@ -90,7 +90,7 @@ private:
 std::vector<platform_info> extract_osm_platforms(std::string const& osm_file);
 
 /**
- * Extract all OSM Object Names from a given taglist.
+ * Extracts the OSM Object Names from a given taglist.
  *
  * @param tags a list of key-value pairs that contain at least one name
  * reference.

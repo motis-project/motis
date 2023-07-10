@@ -37,8 +37,8 @@ osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
 
 struct platform_handler : public osmium::handler::Handler {
   explicit platform_handler(std::vector<platform_info>& platforms,
-                            osmium::TagsFilter filter)
-      : platforms_(platforms), filter_(std::move(filter)){};
+                            osmium::TagsFilter const& filter)
+      : platforms_(platforms), filter_(filter){};
 
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
@@ -64,17 +64,24 @@ struct platform_handler : public osmium::handler::Handler {
     }
   }
 
+  u_int unique_platforms_{0};
+
 private:
   void add_platform(nigiri::osm_type const type,
                     osmium::object_id_type const id,
                     osmium::geom::Coordinates const& coord,
                     osmium::TagList const& tags) {
+    // TODO (Carsten) insert "more"/all names
     auto names = extract_platform_names(tags);
-    // TODO (Carsten) Update/Postprocess names;
 
-    platforms_.emplace_back(names.front(), id, type,
-                            geo::latlng{coord.y, coord.x},
-                            platform_is_bus_stop(tags));
+    if (!names.empty()) {
+      ++unique_platforms_;
+    }
+
+    for (auto const& name : names) {
+      platforms_.emplace_back(name, id, type, geo::latlng{coord.y, coord.x},
+                              platform_is_bus_stop(tags));
+    }
   }
 
   std::vector<platform_info>& platforms_;
@@ -97,14 +104,17 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
   filter.add_rule(true, "railway", "platform");
 
   std::clog << "Extract OSM Tracks: Pass 1..." << std::endl;
-  osmium::relations::read_relations(input_file, mp_manager);
+  {
+    ::logging::scoped_timer const timer("Extract OSM tracks: Pass 1...");
+    osmium::relations::read_relations(input_file, mp_manager);
+  }
 
   index_type index;
   location_handler_type location_handler{index};
   std::vector<platform_info> platforms;
   platform_handler data_handler{platforms, filter};
 
-  std::clog << "Extract OSM Tracks: Pass 2...";
+  std::clog << "Extract OSM Tracks: Pass 2..." << std::endl;
   osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
   osmium::apply(reader, location_handler, data_handler,
                 mp_manager.handler(
@@ -114,26 +124,66 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
 
   reader.close();
 
-  std::clog << "Extracted " << platforms.size() << "platforms from OSM."
-            << std::endl;
+  std::clog << "Extracted " << data_handler.unique_platforms_
+            << " unique platforms from OSM." << std::endl;
+  std::clog << "Generated " << platforms.size() << " platform_info structs. "
+            << static_cast<float>(platforms.size()) /
+                   static_cast<float>(data_handler.unique_platforms_)
+            << " entries per platform." << std::endl;
 
   return platforms;
 }
 
 std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
   std::vector<std::string> platform_names;
+
+  auto add_names = [&](std::string name_by_tag) {
+    platform_names.emplace_back(name_by_tag);
+    return;
+    /**
+     * // In case matching is invalid: try to split names; currently not needed
+     *
+     * std::vector<std::string> names{};
+     * boost::split(names, name_by_tag,
+     *              [](char c) { return c == ';' || c == '/'; });
+     *
+     * if (std::any_of(names.begin(), names.end(),
+     *   [&](std::string const& name) -> bool {
+     *     return name.length() > 3;
+     *    })) {
+     *       platform_names.emplace_back(name_by_tag);
+     *       return;
+     *     }
+     *
+     * for (auto const& name : names) {
+     *   platform_names.emplace_back(name);
+     * }
+     */
+  };
+
+  // REMOVE *.clear() to get more names for matching
+  // TODO (Carsten) find a better way of matching
   if (tags.has_key("name")) {
-    platform_names.emplace_back(tags["name"]);
+    platform_names.clear();
+    add_names(tags.get_value_by_key("name"));
+  }
+  if (tags.has_key("description")) {
+    platform_names.clear();
+    add_names(tags.get_value_by_key("description"));
   }
   if (tags.has_key("ref_name")) {
-    platform_names.emplace_back(tags["ref_name"]);
+    platform_names.clear();
+    add_names(tags.get_value_by_key("ref_name"));
   }
   if (tags.has_key("local_ref")) {
-    platform_names.emplace_back(tags["local_ref"]);
+    platform_names.clear();
+    add_names(tags.get_value_by_key("local_ref"));
   }
   if (tags.has_key("ref")) {
-    platform_names.emplace_back(tags["ref"]);
+    platform_names.clear();
+    add_names(tags.get_value_by_key("ref"));
   }
+
   return platform_names;
 }
 
