@@ -57,6 +57,9 @@ std::vector<transfer_requests> build_transfer_requests(
   LOG(info) << "Identified "
             << (double)((double)targets / (double)result.size())
             << " targets per source.";
+  LOG(info) << "Found " << no_targets
+            << " (src, profile)-tuples w/o targets. (not included in transfer "
+               "requests).";
 
   return result;
 }

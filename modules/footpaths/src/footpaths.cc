@@ -166,8 +166,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                                     impl_->tt_.locations_.coordinates_[i]);
             }
           }
-          std::clog << "Found " << stations.size()
-                    << " stations in nigiri graph" << std::endl;
+          LOG(info) << "Found " << stations.size()
+                    << " stations in nigiri graph";
         }
 
         // 3rd combine platforms and stations
@@ -177,8 +177,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           extracted_platforms.insert(extracted_platforms.end(),
                                      stations.begin(), stations.end());
 
-          std::clog << "Added " << stations.size()
-                    << " stations to osm-extracted platforms." << std::endl;
+          LOG(info) << "Added " << stations.size()
+                    << " stations to osm-extracted platforms.";
 
           platforms_ =
               std::make_unique<platforms>(platforms{extracted_platforms});

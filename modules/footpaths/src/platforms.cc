@@ -13,7 +13,7 @@
 
 #include "utl/pipes.h"
 
-namespace logging = motis::logging;
+using namespace motis::logging;
 
 using index_type = osmium::index::map::FlexMem<osmium::unsigned_object_id_type,
                                                osmium::Location>;
@@ -90,7 +90,7 @@ private:
 
 std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
 
-  ::logging::scoped_timer const timer("Extract OSM Tracks from " + osm_file);
+  scoped_timer const timer("Extract OSM Tracks from " + osm_file);
 
   osmium::io::File const input_file{osm_file};
 
@@ -103,9 +103,8 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
   filter.add_rule(true, "public_transport", "platform");
   filter.add_rule(true, "railway", "platform");
 
-  std::clog << "Extract OSM Tracks: Pass 1..." << std::endl;
   {
-    ::logging::scoped_timer const timer("Extract OSM tracks: Pass 1...");
+    scoped_timer const timer("Extract OSM tracks: Pass 1...");
     osmium::relations::read_relations(input_file, mp_manager);
   }
 
@@ -114,22 +113,26 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
   std::vector<platform_info> platforms;
   platform_handler data_handler{platforms, filter};
 
-  std::clog << "Extract OSM Tracks: Pass 2..." << std::endl;
-  osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
-  osmium::apply(reader, location_handler, data_handler,
-                mp_manager.handler(
-                    [&data_handler](const osmium::memory::Buffer& area_buffer) {
-                      osmium::apply(area_buffer, data_handler);
-                    }));
+  {
+    scoped_timer const timer("Extract OSM tracks: Pass 2...");
 
-  reader.close();
+    osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
+    osmium::apply(
+        reader, location_handler, data_handler,
+        mp_manager.handler(
+            [&data_handler](const osmium::memory::Buffer& area_buffer) {
+              osmium::apply(area_buffer, data_handler);
+            }));
 
-  std::clog << "Extracted " << data_handler.unique_platforms_
-            << " unique platforms from OSM." << std::endl;
-  std::clog << "Generated " << platforms.size() << " platform_info structs. "
+    reader.close();
+  }
+
+  LOG(info) << "Extracted " << data_handler.unique_platforms_
+            << " unique platforms from OSM.";
+  LOG(info) << "Generated " << platforms.size() << " platform_info structs. "
             << static_cast<float>(platforms.size()) /
                    static_cast<float>(data_handler.unique_platforms_)
-            << " entries per platform." << std::endl;
+            << " entries per platform.";
 
   return platforms;
 }
