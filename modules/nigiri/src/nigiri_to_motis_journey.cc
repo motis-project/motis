@@ -117,49 +117,64 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     auto const trips_on_section = tt.transport_to_trip_section_.at(t.t_idx_);
     auto const merged_trips_idx =
         trips_on_section.at(trips_on_section.size() == 1U ? 0U : section_idx);
+
+    auto const clasz_sections =
+        tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_));
+    auto const clasz =
+        clasz_sections.at(clasz_sections.size() == 1U ? 0U : section_idx);
+
+    auto const provider_sections = tt.transport_section_providers_.at(t.t_idx_);
+    auto const provider_idx =
+        provider_sections.at(provider_sections.size() == 1U ? 0U : section_idx);
+    auto const provider =
+        std::string{tt.providers_.at(provider_idx).long_name_.view()};
+
+    auto const direction_sections =
+        tt.transport_section_directions_.at(t.t_idx_);
+    std::string direction;
+    if (!direction_sections.empty()) {
+      auto const direction_idx = direction_sections.size() == 1U
+                                     ? direction_sections.at(0)
+                                     : direction_sections.at(section_idx);
+      if (direction_idx != n::trip_direction_idx_t::invalid()) {
+        direction = tt.trip_directions_.at(direction_idx)
+                        .apply(utl::overloaded{
+                            [&](n::trip_direction_string_idx_t const i) {
+                              return tt.trip_direction_strings_.at(i).view();
+                            },
+                            [&](n::location_idx_t const i) {
+                              return tt.locations_.names_.at(i).view();
+                            }});
+      }
+    }
+
+    auto const line_sections = tt.transport_section_lines_.at(t.t_idx_);
+    std::string line;
+    if (!line_sections.empty()) {
+      auto const line_idx = line_sections.size() == 1U
+                                ? line_sections.at(0U)
+                                : line_sections.at(section_idx);
+      if (line_idx != n::trip_line_idx_t::invalid()) {
+        line = tt.trip_lines_.at(line_idx).view();
+      }
+    }
+
+    auto const section_attributes =
+        tt.transport_section_attributes_.at(t.t_idx_);
+    if (!section_attributes.empty()) {
+      auto const attribute_combi = section_attributes.size() == 1U
+                                       ? section_attributes.at(0)
+                                       : section_attributes.at(section_idx);
+
+      for (auto const& attr : tt.attribute_combinations_.at(attribute_combi)) {
+        attributes.add_entry(
+            attribute{.code_ = tt.attributes_.at(attr).code_.view(),
+                      .text_ = tt.attributes_.at(attr).text_.view()},
+            mj.stops_.size() - 1, mj.stops_.size());
+      }
+    }
+
     for (auto const trip : tt.merged_trips_.at(merged_trips_idx)) {
-      auto const clasz_sections =
-          tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_));
-      auto const clasz =
-          clasz_sections.at(clasz_sections.size() == 1U ? 0U : section_idx);
-
-      auto const provider_sections =
-          tt.transport_section_providers_.at(t.t_idx_);
-      auto const provider_idx = provider_sections.at(
-          provider_sections.size() == 1U ? 0U : section_idx);
-      auto const provider =
-          std::string{tt.providers_.at(provider_idx).long_name_.view()};
-
-      auto const direction_sections =
-          tt.transport_section_directions_.at(t.t_idx_);
-      std::string direction;
-      if (!direction_sections.empty()) {
-        auto const direction_idx = direction_sections.size() == 1U
-                                       ? direction_sections.at(0)
-                                       : direction_sections.at(section_idx);
-        if (direction_idx != n::trip_direction_idx_t::invalid()) {
-          direction = tt.trip_directions_.at(direction_idx)
-                          .apply(utl::overloaded{
-                              [&](n::trip_direction_string_idx_t const i) {
-                                return tt.trip_direction_strings_.at(i).view();
-                              },
-                              [&](n::location_idx_t const i) {
-                                return tt.locations_.names_.at(i).view();
-                              }});
-        }
-      }
-
-      auto const line_sections = tt.transport_section_lines_.at(t.t_idx_);
-      std::string line;
-      if (!line_sections.empty()) {
-        auto const line_idx = line_sections.size() == 1U
-                                  ? line_sections.at(0U)
-                                  : line_sections.at(section_idx);
-        if (line_idx != n::trip_line_idx_t::invalid()) {
-          line = tt.trip_lines_.at(line_idx).view();
-        }
-      }
-
       transports.add_entry(
           transport_display_info{
               .duration_ = 0U,
@@ -181,22 +196,6 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                        tt.trip_debug_.at(trip).at(0).line_number_from_,
                        tt.trip_debug_.at(trip).at(0).line_number_to_)},
           mj.stops_.size() - 1, mj.stops_.size());
-
-      auto const section_attributes =
-          tt.transport_section_attributes_.at(t.t_idx_);
-      if (!section_attributes.empty()) {
-        auto const attribute_combi = section_attributes.size() == 1U
-                                         ? section_attributes.at(0)
-                                         : section_attributes.at(section_idx);
-
-        for (auto const& attr :
-             tt.attribute_combinations_.at(attribute_combi)) {
-          attributes.add_entry(
-              attribute{.code_ = tt.attributes_.at(attr).code_.view(),
-                        .text_ = tt.attributes_.at(attr).text_.view()},
-              mj.stops_.size() - 1, mj.stops_.size());
-        }
-      }
     }
   };
 
