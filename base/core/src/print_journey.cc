@@ -172,10 +172,10 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
         << std::right << std::setw(6) << trp.train_nr_ << ", "
         << format_unix_time(trp.time_) << "} -> {" << std::setw(7)
         << trp.target_station_id_ << ", " << format_unix_time(trp.target_time_)
-        << "}, line_id=" << trp.line_id_ << "\n       #/trip/"
-        << trp.station_id_ << "/" << trp.train_nr_ << "/" << trp.time_ << "/"
-        << trp.target_station_id_ << "/" << trp.target_time_ << "/"
-        << trp.line_id_ << "  " << j.trips_[i].debug_ << std::endl;
+        << "}, line_id=" << trp.line_id_ << ", id=" << trp.id_
+        << "\n       #/trip/" << trp.station_id_ << "/" << trp.train_nr_ << "/"
+        << trp.time_ << "/" << trp.target_station_id_ << "/" << trp.target_time_
+        << "/" << trp.line_id_ << "  " << j.trips_[i].debug_ << std::endl;
   }
 
   out << "\nAttributes:" << std::endl;

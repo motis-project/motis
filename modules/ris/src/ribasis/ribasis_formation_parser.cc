@@ -16,7 +16,8 @@ namespace motis::ris::ribasis::formation {
 
 Offset<HalfTripId> parse_half_trip_id(context& ctx,
                                       rapidjson::Value const& fahrt) {
-  auto const uuid = get_optional_str(fahrt, "fahrtID");
+  auto const uuid =
+      ctx.ris_.b_.CreateString(get_optional_str(fahrt, "fahrtID"));
 
   auto const& rel = get_obj(fahrt, "fahrtRelation");
   auto const start_time =
@@ -31,11 +32,11 @@ Offset<HalfTripId> parse_half_trip_id(context& ctx,
   auto const empty_str = ctx.ris_.b_.CreateSharedString("");
   return CreateHalfTripId(
       ctx.ris_.b_,
-      CreateTripId(ctx.ris_.b_,
+      CreateTripId(ctx.ris_.b_, uuid,
                    ctx.ris_.b_.CreateSharedString(start_station_eva.data(),
                                                   start_station_eva.size()),
                    train_nr, start_time, empty_str, 0, empty_str),
-      ctx.ris_.b_.CreateString(uuid));
+      uuid);
 }
 
 Offset<StationInfo> parse_station(context& ctx, rapidjson::Value const& stop) {

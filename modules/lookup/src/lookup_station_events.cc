@@ -26,10 +26,10 @@ std::vector<Offset<TripId>> make_trip_ids(FlatBufferBuilder& fbb,
     auto const& target_timestamp = motis_to_unixtime(sched, sec.target_time_);
     auto const& line_id = sec.line_id_;
 
-    trip_ids.push_back(CreateTripId(fbb, fbb.CreateString(eva_nr), train_nr,
-                                    timestamp, fbb.CreateString(target_eva_nr),
-                                    target_timestamp,
-                                    fbb.CreateString(line_id)));
+    trip_ids.push_back(CreateTripId(
+        fbb, fbb.CreateString(trp->gtfs_trip_id_), fbb.CreateString(eva_nr),
+        train_nr, timestamp, fbb.CreateString(target_eva_nr), target_timestamp,
+        fbb.CreateString(line_id)));
   }
   return trip_ids;
 }

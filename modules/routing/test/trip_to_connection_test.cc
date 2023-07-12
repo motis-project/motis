@@ -22,9 +22,9 @@ TEST_F(routing_trip_to_connection_test, simple) {
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_TripId,
-      CreateTripId(fbb, fbb.CreateString("8000096"), 2292, unix_time(1305),
-                   fbb.CreateString("8000105"), unix_time(1440),
-                   fbb.CreateString("381"))
+      CreateTripId(fbb, fbb.CreateString(""), fbb.CreateString("8000096"), 2292,
+                   unix_time(1305), fbb.CreateString("8000105"),
+                   unix_time(1440), fbb.CreateString("381"))
           .Union(),
       "/trip_to_connection");
   auto const res = call(make_msg(fbb));

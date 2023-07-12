@@ -10,7 +10,6 @@ struct guesser;
 
 namespace nigiri {
 struct timetable;
-struct rt_timetable;
 }  // namespace nigiri
 
 namespace motis::nigiri {

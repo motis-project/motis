@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=8053a1f105e7dbfb250a8e5d249aea565238cf16
+  commit=068906e59b807a3fe1428d056541d6428528607d
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=5bf5179faf5f21d543866cca85fe090fe3664cc5
+  commit=7482578ad2bf1ec236d9ace969d3bbfdcc0ea33a
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=262daa274ac2ccc6f435a9a3dbc7130ab0ee7089
+  commit=898af46ca2080d6bf7b17af4c7d0d1aad4dacdb3
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
@@ -77,7 +77,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=bfee00828c75e740b60ab403202988890b8e3f55
+  commit=bfcae03a9ddf5be7463ab66703298736b13b18a0
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=cf5ad8e8b36dc61e2dd6049ae1c8494dfcfa1719
+  commit=12f43483a39268e5c2f548a39ef64f2cae9ccd47
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
