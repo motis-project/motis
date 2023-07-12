@@ -27,7 +27,12 @@ namespace fbs = flatbuffers;
 namespace motis::nigiri {
 
 struct ev_iterator {
-  virtual ~ev_iterator() {}
+  ev_iterator() = default;
+  ev_iterator(ev_iterator const&) = delete;
+  ev_iterator(ev_iterator&&) = delete;
+  ev_iterator& operator=(ev_iterator const&) = delete;
+  ev_iterator& operator=(ev_iterator&&) = delete;
+  virtual ~ev_iterator() = default;
   virtual bool finished() const = 0;
   virtual n::unixtime_t time() const = 0;
   virtual n::rt::run get() const = 0;
@@ -54,6 +59,11 @@ struct static_ev_iterator : public ev_iterator {
   }
 
   ~static_ev_iterator() override = default;
+
+  static_ev_iterator(static_ev_iterator const&) = delete;
+  static_ev_iterator(static_ev_iterator&&) = delete;
+  static_ev_iterator& operator=(static_ev_iterator const&) = delete;
+  static_ev_iterator& operator=(static_ev_iterator&&) = delete;
 
   void seek_next(std::optional<n::unixtime_t> const start = std::nullopt) {
     if (dir_ == n::direction::kForward) {
@@ -137,6 +147,11 @@ struct rt_ev_iterator : public ev_iterator {
   }
 
   ~rt_ev_iterator() override = default;
+
+  rt_ev_iterator(rt_ev_iterator const&) = delete;
+  rt_ev_iterator(rt_ev_iterator&&) = delete;
+  rt_ev_iterator& operator=(rt_ev_iterator const&) = delete;
+  rt_ev_iterator& operator=(rt_ev_iterator&&) = delete;
 
   bool finished() const override { return finished_; }
 
