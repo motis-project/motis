@@ -51,7 +51,7 @@
   branch=motis
   commit=c4174ff47ea04eee883b5d00b9937fb0fa39a831
 [ppr]
-  url=git@github.com:motis-project/ppr.git
+  url=git@github.com:carstenhagelgans/ppr.git
   branch=master
   commit=262daa274ac2ccc6f435a9a3dbc7130ab0ee7089
 [protobuf]

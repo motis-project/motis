@@ -162,6 +162,13 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             if (impl_->tt_.locations_.types_[i] ==
                 nigiri::location_type::kStation) {
               auto const name = impl_->tt_.locations_.names_[i].view();
+
+              // TODO (Carsten) add stations with nearest edge only
+              if (impl_->tt_.locations_.coordinates_[i].lat_ == 0 ||
+                  impl_->tt_.locations_.coordinates_[i].lng_ == 0) {
+                continue;
+              }
+
               stations.emplace_back(std::string{name}, i,
                                     impl_->tt_.locations_.coordinates_[i]);
             }
