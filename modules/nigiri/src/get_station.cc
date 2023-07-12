@@ -20,6 +20,10 @@
 #include "motis/nigiri/resolve_run.h"
 #include "motis/nigiri/unixtime_conv.h"
 
+#ifdef CreateEvent
+#undef CreateEvent
+#endif
+
 namespace n = nigiri;
 namespace mm = motis::module;
 namespace fbs = flatbuffers;
