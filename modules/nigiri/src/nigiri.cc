@@ -28,6 +28,7 @@
 #include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/trip_to_connection.h"
+#include "motis/nigiri/unixtime_conv.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -90,7 +91,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
-  param(geo_lookup_, "lookup", "provide geo station lookup");
+  param(lookup_, "lookup", "provide geo station lookup");
   param(guesser_, "guesser", "station typeahead/autocomplete");
   param(railviz_, "railviz", "provide railviz functions");
   param(routing_, "routing", "provide trip_to_connection");
@@ -111,7 +112,7 @@ void nigiri::init(motis::module::registry& reg) {
                   },
                   {});
 
-  if (geo_lookup_) {
+  if (lookup_) {
     reg.register_op("/lookup/geo_station",
                     [&](mm::msg_ptr const& msg) {
                       return geo_station_lookup(impl_->tags_, **impl_->tt_,
@@ -122,6 +123,20 @@ void nigiri::init(motis::module::registry& reg) {
     reg.register_op("/lookup/station_location",
                     [&](mm::msg_ptr const& msg) {
                       return station_location(impl_->tags_, **impl_->tt_, msg);
+                    },
+                    {});
+    reg.register_op("/lookup/schedule_info",
+                    [&](mm::msg_ptr const&) {
+                      auto const& tt = (**impl_->tt_);
+                      mm::message_creator b;
+                      b.create_and_finish(
+                          MsgContent_LookupScheduleInfoResponse,
+                          lookup::CreateLookupScheduleInfoResponse(
+                              b, b.CreateString(""),
+                              to_motis_unixtime(tt.external_interval().from_),
+                              to_motis_unixtime(tt.external_interval().to_))
+                              .Union());
+                      return make_msg(b);
                     },
                     {});
   }
@@ -360,7 +375,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
 
-        if (geo_lookup_) {
+        if (lookup_) {
           impl_->station_geo_index_ =
               geo::make_point_rtree((**impl_->tt_).locations_.coordinates_);
         }

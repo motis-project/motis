@@ -31,43 +31,127 @@ struct ev_iterator {
   virtual n::unixtime_t time() const = 0;
   virtual n::rt::run get() const = 0;
   virtual void increment() = 0;
-  virtual void decrement() = 0;
 };
 
 struct static_ev_iterator : public ev_iterator {
   static_ev_iterator(n::timetable const& tt, n::rt_timetable const* rtt,
                      n::route_idx_t const r, n::stop_idx_t const stop_idx,
-                     n::unixtime_t const start, n::event_type const ev_type)
-      : ev_times_{tt.event_times_at_stop(r, stop_idx, ev_type)} {
-    std::tie(day_, mam_) = tt.day_idx_mam(start);
-    auto const end = tt.day_idx(tt.date_range_.to_);
-    while (day_ != end) {
-      for (auto const ev :) ++day_;
+                     n::unixtime_t const start, n::event_type const ev_type,
+                     n::direction const dir)
+      : tt_{tt},
+        rtt_{rtt},
+        day_{tt_.day_idx_mam(start).first},
+        end_{tt.day_idx(tt.date_range_.to_)},
+        i_{0},
+        size_{static_cast<std::int32_t>(
+            to_idx(tt.route_transport_ranges_[r].size()))},
+        r_{r},
+        stop_idx_{stop_idx},
+        ev_type_{ev_type},
+        dir_{dir} {
+    seek_next(start);
+  }
+
+  void seek_next(std::optional<n::unixtime_t> const start = std::nullopt) {
+    if (dir_ == n::direction::kForward) {
+      while (!finished()) {
+        for (; i_ < size_; ++i_) {
+          if (start.has_value() && time() < *start) {
+            continue;
+          }
+          if (is_active(t())) {
+            return;
+          }
+        }
+        ++day_;
+        i_ = 0;
+      }
+    } else {
+      while (!finished()) {
+        for (; i_ > 0; --i_) {
+          if (start.has_value() && time() > *start) {
+            continue;
+          }
+          if (is_active(t())) {
+            return;
+          }
+        }
+        --day_;
+        i_ = size_ - 1;
+      }
     }
   }
 
-  bool finished() const override { return true; }
-  n::unixtime_t time() const override { return {}; }
-  n::rt::run get() const override { return {}; }
-  void increment() override {}
-  void decrement() override {}
+  bool finished() const override {
+    return dir_ == n::direction::kForward ? day_ == end_ : day_ == -1;
+  }
 
-  n::day_idx_t day_;
-  n::minutes_after_midnight_t mam_;
-  bool finished_{false};
-  std::span<n::delta const> ev_times_;
+  n::unixtime_t time() const override {
+    return tt_.event_time(
+        n::transport{tt_.route_transport_ranges_[r_][i_], day_}, stop_idx_,
+        ev_type_);
+  }
+
+  n::rt::run get() const override {
+    return n::rt::run{
+        .t_ = n::transport{tt_.route_transport_ranges_[r_][i_], day_},
+        .stop_range_ = {stop_idx_, static_cast<n::stop_idx_t>(stop_idx_ + 1U)}};
+  }
+
+  void increment() override {
+    dir_ == n::direction::kForward ? ++i_ : --i_;
+    seek_next();
+  }
+
+private:
+  bool is_active(n::transport const t) const {
+    return (rtt_ == nullptr
+                ? tt_.bitfields_[tt_.transport_traffic_days_[t.t_idx_]]
+                : rtt_->bitfields_[rtt_->transport_traffic_days_[t.t_idx_]])
+        .test(to_idx(t.day_));
+  }
+
+  n::transport t() const {
+    return n::transport{tt_.route_transport_ranges_[r_][i_], day_};
+  }
+
+  n::timetable const& tt_;
+  n::rt_timetable const* rtt_;
+  n::day_idx_t day_, end_;
+  std::int32_t i_, size_;
+  n::route_idx_t r_;
+  n::stop_idx_t stop_idx_;
+  n::event_type ev_type_;
+  n::direction dir_;
 };
 
 struct rt_ev_iterator : public ev_iterator {
-  rt_ev_iterator(n::timetable const& tt, n::rt_timetable const& rtt,
+  rt_ev_iterator(n::rt_timetable const& rtt, n::rt_transport_idx_t const rt_t,
                  n::stop_idx_t const stop_idx, n::unixtime_t const start,
-                 n::event_type const ev_type) {}
+                 n::event_type const ev_type, n::direction const dir)
+      : rtt_{rtt}, stop_idx_{stop_idx}, rt_t_{rt_t}, ev_type_{ev_type} {
+    finished_ = dir == n::direction::kForward ? time() < start : time() > start;
+  }
 
-  bool finished() const override { return true; }
-  n::unixtime_t time() const override { return {}; }
-  n::rt::run get() const override { return {}; }
-  void increment() override {}
-  void decrement() override {}
+  bool finished() const override { return finished_; }
+
+  n::unixtime_t time() const override {
+    return rtt_.unix_event_time(rt_t_, stop_idx_, ev_type_);
+  }
+
+  n::rt::run get() const override {
+    return n::rt::run{
+        .stop_range_ = {stop_idx_, static_cast<n::stop_idx_t>(stop_idx_ + 1U)},
+        .rt_ = rt_t_};
+  }
+
+  void increment() override { finished_ = true; }
+
+  n::rt_timetable const& rtt_;
+  bool finished_{false};
+  n::stop_idx_t stop_idx_;
+  n::rt_transport_idx_t rt_t_;
+  n::event_type ev_type_;
 };
 
 std::vector<n::rt::run> get_events(
@@ -84,20 +168,23 @@ std::vector<n::rt::run> get_events(
              utl::enumerate(rtt->rt_transport_location_seq_[rt_t])) {
           if (n::stop{s}.location_idx() == x) {
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
-                tt, *rtt, static_cast<n::stop_idx_t>(stop_idx), time, ev_type));
+                *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
+                dir));
           }
         }
       }
     }
   }
 
+  auto seen = n::hash_set<std::pair<n::route_idx_t, n::stop_idx_t>>{};
   for (auto const x : locations) {
     for (auto const r : tt.location_routes_[x]) {
       for (auto const [stop_idx, s] :
            utl::enumerate(tt.route_location_seq_[r])) {
-        if (n::stop{s}.location_idx() == x) {
+        if (n::stop{s}.location_idx() == x &&
+            seen.emplace(r, stop_idx).second) {
           iterators.emplace_back(std::make_unique<static_ev_iterator>(
-              tt, rtt, r, stop_idx, time, ev_type));
+              tt, rtt, r, stop_idx, time, ev_type, dir));
         }
       }
     }
@@ -110,7 +197,7 @@ std::vector<n::rt::run> get_events(
 
   auto const fwd = dir == n::direction::kForward;
   auto evs = std::vector<n::rt::run>{};
-  while (!all_finished() || evs.size() >= count) {
+  while (!all_finished() && evs.size() < count) {
     auto const it = std::min_element(
         begin(iterators), end(iterators), [&](auto const& a, auto const& b) {
           if (a->finished() || b->finished()) {
@@ -120,7 +207,7 @@ std::vector<n::rt::run> get_events(
         });
     assert(!(*it)->finished());
     evs.emplace_back((*it)->get());
-    fwd ? (*it)->increment() : (*it)->decrement();
+    (*it)->increment();
   }
   return evs;
 }
@@ -145,10 +232,10 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
   auto const dir = req->direction() != railviz::Direction_EARLIER
                        ? n::direction::kForward
                        : n::direction::kBackward;
-  auto const departures = get_events(
-      locations, tt, rtt, time, n::event_type::kDep, dir, req->event_count());
-  auto const arrivals = get_events(
-      locations, tt, rtt, time, n::event_type::kArr, dir, req->event_count());
+  auto const deps = get_events(locations, tt, rtt, time, n::event_type::kDep,
+                               dir, req->event_count());
+  auto const arrs = get_events(locations, tt, rtt, time, n::event_type::kArr,
+                               dir, req->event_count());
 
   mm::message_creator fbb;
 
@@ -180,13 +267,13 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
                      ? l
                      : tt.locations_.parents_[l];
 
-  auto events = std::vector<fbs::Offset<railviz::Event>>{departures.size() +
-                                                         arrivals.size()};
+  auto events =
+      std::vector<fbs::Offset<railviz::Event>>(deps.size() + arrs.size());
   auto i = 0U;
-  for (auto const& dep : departures) {
+  for (auto const& dep : deps) {
     events[i++] = write(dep, n::event_type::kDep);
   }
-  for (auto const& arr : arrivals) {
+  for (auto const& arr : arrs) {
     events[i++] = write(arr, n::event_type::kArr);
   }
   fbb.create_and_finish(

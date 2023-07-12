@@ -34,7 +34,7 @@ private:
   std::string first_day_;
   std::string default_timezone_;
   std::uint16_t num_days_{2U};
-  bool geo_lookup_{false};
+  bool lookup_{false};
   bool guesser_{false};
   bool railviz_{false};
   bool routing_{false};
