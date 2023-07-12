@@ -27,6 +27,7 @@ namespace fbs = flatbuffers;
 namespace motis::nigiri {
 
 struct ev_iterator {
+  virtual ~ev_iterator() {}
   virtual bool finished() const = 0;
   virtual n::unixtime_t time() const = 0;
   virtual n::rt::run get() const = 0;
@@ -51,6 +52,8 @@ struct static_ev_iterator : public ev_iterator {
         dir_{dir} {
     seek_next(start);
   }
+
+  ~static_ev_iterator() override = default;
 
   void seek_next(std::optional<n::unixtime_t> const start = std::nullopt) {
     if (dir_ == n::direction::kForward) {
@@ -132,6 +135,8 @@ struct rt_ev_iterator : public ev_iterator {
       : rtt_{rtt}, stop_idx_{stop_idx}, rt_t_{rt_t}, ev_type_{ev_type} {
     finished_ = dir == n::direction::kForward ? time() < start : time() > start;
   }
+
+  ~rt_ev_iterator() override = default;
 
   bool finished() const override { return finished_; }
 
