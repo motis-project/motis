@@ -37,13 +37,25 @@ struct ev_iterator {
 struct static_ev_iterator : public ev_iterator {
   static_ev_iterator(n::timetable const& tt, n::rt_timetable const* rtt,
                      n::route_idx_t const r, n::stop_idx_t const stop_idx,
-                     n::unixtime_t const start, n::event_type const ev_type) {}
+                     n::unixtime_t const start, n::event_type const ev_type)
+      : ev_times_{tt.event_times_at_stop(r, stop_idx, ev_type)} {
+    std::tie(day_, mam_) = tt.day_idx_mam(start);
+    auto const end = tt.day_idx(tt.date_range_.to_);
+    while (day_ != end) {
+      for (auto const ev :) ++day_;
+    }
+  }
 
   bool finished() const override { return true; }
   n::unixtime_t time() const override { return {}; }
   n::rt::run get() const override { return {}; }
   void increment() override {}
   void decrement() override {}
+
+  n::day_idx_t day_;
+  n::minutes_after_midnight_t mam_;
+  bool finished_{false};
+  std::span<n::delta const> ev_times_;
 };
 
 struct rt_ev_iterator : public ev_iterator {
