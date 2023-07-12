@@ -25,6 +25,7 @@
 #include "motis/nigiri/get_station.h"
 #include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/guesser.h"
+#include "motis/nigiri/initial_permalink.h"
 #include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/trip_to_connection.h"
@@ -84,6 +85,7 @@ struct nigiri::impl {
   std::vector<gtfsrt> gtfsrt_;
   std::unique_ptr<guesser> guesser_;
   std::unique_ptr<railviz> railviz_;
+  std::string initial_permalink_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -149,6 +151,18 @@ void nigiri::init(motis::module::registry& reg) {
   }
 
   if (railviz_) {
+    reg.register_op("/railviz/map_config",
+                    [this](mm::msg_ptr const&) {
+                      mm::message_creator mc;
+                      mc.create_and_finish(
+                          MsgContent_RailVizMapConfigResponse,
+                          motis::railviz::CreateRailVizMapConfigResponse(
+                              mc, mc.CreateString(impl_->initial_permalink_),
+                              mc.CreateString(""))
+                              .Union());
+                      return make_msg(mc);
+                    },
+                    {});
     reg.register_op("/railviz/get_trains",
                     [&](mm::msg_ptr const& msg) {
                       return impl_->railviz_->get_trains(msg);
@@ -386,6 +400,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         }
 
         if (railviz_) {
+          impl_->initial_permalink_ = get_initial_permalink(**impl_->tt_);
           impl_->railviz_ =
               std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
         }
