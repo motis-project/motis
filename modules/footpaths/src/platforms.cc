@@ -1,9 +1,11 @@
 #include <utility>
 
+#include "boost/algorithm/string.hpp"
+
+#include "motis/core/common/logging.h"
+
 #include "motis/footpaths/platforms.h"
 
-#include "boost/algorithm/string.hpp"
-#include "motis/core/common/logging.h"
 #include "osmium/area/assembler.hpp"
 #include "osmium/area/multipolygon_manager.hpp"
 #include "osmium/geom/coordinates.hpp"

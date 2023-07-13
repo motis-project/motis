@@ -20,10 +20,12 @@
 
 #include "motis/ppr/profiles.h"
 
+#include "nigiri/timetable.h"
+
+#include "osmium/io/reader.hpp"
+
 #include "ppr/common/routing_graph.h"
 #include "ppr/serialization/reader.h"
-
-#include "nigiri/timetable.h"
 
 #include "utl/parallel_for.h"
 #include "utl/verify.h"
@@ -31,6 +33,7 @@
 using namespace motis::logging;
 using namespace motis::module;
 using namespace ppr::serialization;
+using namespace ppr::routing;
 
 namespace fs = std::filesystem;
 
@@ -142,10 +145,10 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
 
         // 1st extract all platforms from a given osm file
         std::vector<platform_info> extracted_platforms;
+        auto const osm_file = osm_event->path()->str();
         {
           scoped_timer const timer{
               "transfers: extract all platforms from a given osm file."};
-          auto const osm_file = osm_event->path()->str();
 
           LOG(info) << "Extracting platforms from " << osm_file;
           extracted_platforms = extract_osm_platforms(osm_file);
@@ -157,24 +160,33 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           scoped_timer const timer{
               "transfers: extract stations from nigiri graph."};
 
+          osmium::io::Reader reader{osm_file, osmium::io::read_meta::yes};
+          osmium::io::Header header{reader.header()};
+          assert(header.box());
+          uint16_t not_in_bb = 0;
+
           for (auto i = nigiri::location_idx_t{0U};
                i != impl_->tt_.locations_.ids_.size(); ++i) {
             if (impl_->tt_.locations_.types_[i] ==
                 nigiri::location_type::kStation) {
-              auto const name = impl_->tt_.locations_.names_[i].view();
 
-              // TODO (Carsten) add stations with nearest edge only
-              if (impl_->tt_.locations_.coordinates_[i].lat_ == 0 ||
-                  impl_->tt_.locations_.coordinates_[i].lng_ == 0) {
+              osmium::Location osm_loc{};
+              osm_loc.set_lat(impl_->tt_.locations_.coordinates_[i].lat_);
+              osm_loc.set_lon(impl_->tt_.locations_.coordinates_[i].lng_);
+
+              if (!header.box().contains(osm_loc)) {
+                ++not_in_bb;
                 continue;
               }
 
+              auto const name = impl_->tt_.locations_.names_[i].view();
               stations.emplace_back(std::string{name}, i,
                                     impl_->tt_.locations_.coordinates_[i]);
             }
           }
           LOG(info) << "Found " << stations.size()
-                    << " stations in nigiri graph";
+                    << " stations in nigiri graph. Not in Bounding Box: "
+                    << not_in_bb;
         }
 
         // 3rd combine platforms and stations
@@ -222,6 +234,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
               edge_rtree_max_size_, area_rtree_max_size_,
               lock_rtrees_ ? rtree_options::LOCK : rtree_options::PREFETCH);
         }
+
         {
           scoped_timer const timer{"transfers: delete default transfers."};
           // TODO (Carsten) there must be a better way
@@ -240,13 +253,12 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             }
           }
         }
+
         {
           scoped_timer const timer{"transfers: update nigiri transfers"};
           precompute_nigiri_transfers(rg, impl_->tt_, ppr_profiles_,
                                       transfer_reqs);
         }
-
-        // TODO (Carsten, 1) Use all known ppr-profiles to update footpaths
 
         // TODO (Carsten, 2) Check for existing calculations. if state ==
         // import-state: load existing, otherwise: recalculate

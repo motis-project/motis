@@ -51,7 +51,7 @@ private:
       boost::strided_integer_range<int> match_distances,
       std::function<bool(std::string, std::string_view)> matches);
 
-  int max_walk_duration_{15};
+  int max_walk_duration_{60};
 
   int match_distance_min_{0};
   int match_distance_max_{400};

@@ -10,8 +10,6 @@
 
 #include "motis/footpaths/thread_pool.h"
 
-#include "ppr/routing/search.h"
-
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
@@ -29,10 +27,6 @@ struct transfer_edge_info {
   double distance_{};
 };
 
-inline location to_location(geo::latlng const& pos) {
-  return make_location(pos.lng_, pos.lat_);
-}
-
 inline n::duration_t get_duration(route const& r) {
   return n::duration_t{
       std::min(static_cast<int>(std::round(r.duration_ / 60)),
@@ -43,10 +37,6 @@ inline uint16_t get_accessibility(route const& r) {
   return static_cast<uint16_t>(std::ceil(r.accessibility_));
 }
 
-/**
- * Returns the equivalent OSM_TYPE of PPR.
- * Default: NODE
- */
 osm_namespace to_ppr_osm_type(nigiri::osm_type const& t) {
   switch (t) {
     case nigiri::osm_type::NODE: return osm_namespace::NODE;
@@ -56,12 +46,6 @@ osm_namespace to_ppr_osm_type(nigiri::osm_type const& t) {
   }
 }
 
-/**
- * Creates an input-location struct from a platform-info struct.
- *
- * @param pi the platform-info from which to create an input location.
- * @return an input location struct
- */
 input_location pi_to_il(platform_info const& pi) {
   input_location il;
   // TODO (Carsten) OSM_ELEMENT LEVEL missing
@@ -160,15 +144,15 @@ void precompute_nigiri_transfers(
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->reset_bounds().in_high(transfer_reqs.size());
 
-  thread_pool pool{std::max(1U, std::thread::hardware_concurrency())};
+  // thread_pool pool{std::max(1U, std::thread::hardware_concurrency())};
   boost::mutex mutex;
   for (auto const& t_req : transfer_reqs) {
-    pool.post([&, &t_req = t_req] {
-      progress_tracker->increment();
-      compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
-    });
+    // pool.post([&, &t_req = t_req] {
+    progress_tracker->increment();
+    compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
+    // });
   }
-  pool.join();
+  // pool.join();
   LOG(info) << "Profilebased transfers precomputed.";
 };
 
