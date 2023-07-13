@@ -144,15 +144,15 @@ void precompute_nigiri_transfers(
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->reset_bounds().in_high(transfer_reqs.size());
 
-  // thread_pool pool{std::max(1U, std::thread::hardware_concurrency())};
+  thread_pool pool{std::max(1U, std::thread::hardware_concurrency())};
   boost::mutex mutex;
   for (auto const& t_req : transfer_reqs) {
-    // pool.post([&, &t_req = t_req] {
-    progress_tracker->increment();
-    compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
-    // });
+    pool.post([&, &t_req = t_req] {
+      progress_tracker->increment();
+      compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
+    });
   }
-  // pool.join();
+  pool.join();
   LOG(info) << "Profilebased transfers precomputed.";
 };
 
