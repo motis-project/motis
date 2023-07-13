@@ -281,9 +281,9 @@ struct railviz::impl {
     auto const stop_indices =
         n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
     for (auto const [from, to] : utl::pairwise(stop_indices)) {
-      auto const box = geo::box{
-          tt_.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
-          tt_.locations_.coordinates_[n::stop{seq[to]}.location_idx()]};
+      auto const box = geo::make_box(
+          {tt_.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
+           tt_.locations_.coordinates_[n::stop{seq[to]}.location_idx()]});
       if (!box.overlaps(area)) {
         continue;
       }
@@ -315,9 +315,9 @@ struct railviz::impl {
     auto const [start_day, _] = tt_.day_idx_mam(time_interval.from_);
     auto const [end_day, _1] = tt_.day_idx_mam(time_interval.to_);
     for (auto const [from, to] : utl::pairwise(stop_indices)) {
-      auto const box = geo::box{
-          tt_.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
-          tt_.locations_.coordinates_[n::stop{seq[to]}.location_idx()]};
+      auto const box = geo::make_box(
+          {tt_.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
+           tt_.locations_.coordinates_[n::stop{seq[to]}.location_idx()]});
       if (!box.overlaps(area)) {
         continue;
       }
