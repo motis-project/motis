@@ -31,7 +31,9 @@ motis::module::msg_ptr trip_to_connection(tag_lookup const& tags,
                     et.time_, et.station_id_);
   }
 
-  auto const fr = n::rt::frun{tt, rtt, r};
+  auto fr = n::rt::frun{tt, rtt, r};
+  fr.stop_range_.to_ = fr.size();
+  fr.stop_range_.from_ = 0U;
   auto const from_l = fr[0];
   auto const to_l = fr[fr.size() - 1U];
   auto const start_time = from_l.time(n::event_type::kDep);
