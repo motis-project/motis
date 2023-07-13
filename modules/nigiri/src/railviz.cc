@@ -257,8 +257,8 @@ struct railviz::impl {
           fr.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
           fr.is_rt() ? TimestampReason_FORECAST : TimestampReason_SCHEDULE,
           mc.CreateVector(std::vector{
-              to_fbs(mc, nigiri_trip_to_extern_trip(tags_, tt_, fr.trip_idx(),
-                                                    fr.t_.day_))}),
+              to_fbs(mc, nigiri_trip_to_extern_trip(
+                             tags_, tt_, fr[0].get_trip_idx(), fr.t_.day_))}),
           mc.CreateVector(polyline_indices));
     });
 
