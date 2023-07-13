@@ -76,7 +76,7 @@ struct static_ev_iterator : public ev_iterator {
           if (start.has_value() && time() < *start) {
             continue;
           }
-          if (is_active(t())) {
+          if (is_active()) {
             return;
           }
         }
@@ -89,7 +89,7 @@ struct static_ev_iterator : public ev_iterator {
           if (start.has_value() && time() > *start) {
             continue;
           }
-          if (is_active(t())) {
+          if (is_active()) {
             return;
           }
         }
@@ -121,15 +121,18 @@ struct static_ev_iterator : public ev_iterator {
   }
 
 private:
-  bool is_active(n::transport const t) const {
+  bool is_active() const {
+    auto const x = t();
     return (rtt_ == nullptr
-                ? tt_.bitfields_[tt_.transport_traffic_days_[t.t_idx_]]
-                : rtt_->bitfields_[rtt_->transport_traffic_days_[t.t_idx_]])
-        .test(to_idx(t.day_));
+                ? tt_.bitfields_[tt_.transport_traffic_days_[x.t_idx_]]
+                : rtt_->bitfields_[rtt_->transport_traffic_days_[x.t_idx_]])
+        .test(to_idx(x.day_));
   }
 
   n::transport t() const {
-    return n::transport{tt_.route_transport_ranges_[r_][i_], day_};
+    auto const t = tt_.route_transport_ranges_[r_][i_];
+    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days_;
+    return n::transport{tt_.route_transport_ranges_[r_][i_], day_ - day_offset};
   }
 
   n::timetable const& tt_;
