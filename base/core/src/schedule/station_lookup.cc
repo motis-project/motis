@@ -60,10 +60,12 @@ schedule_station_lookup::~schedule_station_lookup() noexcept = default;
 
 lookup_station schedule_station_lookup::get(std::size_t const idx) const {
   auto const& station = *sched_.stations_.at(idx);
-  return {.tag_ = "",
-          .id_ = station.eva_nr_,
-          .name_ = station.name_,
-          .pos_ = {station.lat(), station.lng()}};
+  auto s = lookup_station{};
+  s.tag_ = "";
+  s.id_ = station.eva_nr_;
+  s.name_ = station.name_;
+  s.pos_ = {station.lat(), station.lng()};
+  return s;
 }
 
 lookup_station schedule_station_lookup::get(std::string_view id) const {
