@@ -477,7 +477,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   CreateOntripTrainStart(
                       fbb,
                       CreateTripId(
-                          fbb, fbb.CreateString(primary_station_eva),
+                          fbb, fbb.CreateString(trip->gtfs_trip_id_),
+                          fbb.CreateString(primary_station_eva),
                           primary.get_train_nr(),
                           motis_to_unixtime(sched, primary.get_time()),
                           fbb.CreateString(target_station_eva),
@@ -574,7 +575,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   CreateOntripTrainStart(
                       fbb,
                       CreateTripId(
-                          fbb, fbb.CreateString(primary_station_eva),
+                          fbb, fbb.CreateString(trip->gtfs_trip_id_),
+                          fbb.CreateString(primary_station_eva),
                           primary.get_train_nr(),
                           motis_to_unixtime(sched, primary.get_time()),
                           fbb.CreateString(target_station_eva),

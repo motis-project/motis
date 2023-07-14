@@ -29,7 +29,8 @@ Offset<StationInfo> parse_station(context& ctx, rapidjson::Value const& stop) {
 }
 
 Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
-  auto const uuid = get_str(data, "fahrtid");
+  auto const uuid = ctx.ris_.b_.CreateString(get_str(data, "fahrtid"));
+
   auto const& rel = get_obj(data, "fahrtrelation");
   auto const& start_stop = get_obj(rel, "starthaltestelle");
   auto const& dest_stop = get_obj(rel, "zielhaltestelle");
@@ -48,14 +49,14 @@ Offset<FullTripId> parse_trip_id(context& ctx, rapidjson::Value const& data) {
   return CreateFullTripId(
       ctx.ris_.b_,
       // NOLINTNEXTLINE(readability-suspicious-call-argument)
-      CreateTripId(ctx.ris_.b_,
+      CreateTripId(ctx.ris_.b_, uuid,
                    ctx.ris_.b_.CreateSharedString(start_station_eva.data(),
                                                   start_station_eva.size()),
                    train_nr, start_time,
                    ctx.ris_.b_.CreateSharedString(dest_station_eva.data(),
                                                   dest_station_eva.size()),
                    target_time, ctx.ris_.b_.CreateString(line)),
-      ctx.ris_.b_.CreateString(uuid), start_si, dest_si);
+      uuid, start_si, dest_si);
 }
 
 void parse_categories(context& ctx, rapidjson::Value const& data) {

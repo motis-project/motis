@@ -129,15 +129,21 @@ jobs:
         id: restore-buildcache
         with:
           path: ${{ github.workspace }}/.buildcache
-          key: buildcache-${{ matrix.config.cache }}
+          key: buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.cache }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.cache }}-
 
       - name: Restore Dependencies Cache
         uses: actions/cache/restore@v3
         id: restore-deps-cache
         with:
           path: ${{ github.workspace }}/deps
-          key: deps
           enableCrossOsArchive: true
+          key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: |
+            deps-
 
       - name: Install Ninja
         run: brew install ninja
@@ -289,7 +295,7 @@ jobs:
     env:
       BUILDCACHE_DIR: /buildcache
       BUILDCACHE_DIRECT_MODE: true
-      BUILDCACHE_MAX_CACHE_SIZE: 1073741824
+      BUILDCACHE_MAX_CACHE_SIZE: 2147483648
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
     steps:
       - uses: actions/checkout@v3

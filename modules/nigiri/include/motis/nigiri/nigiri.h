@@ -35,7 +35,10 @@ private:
   std::string default_timezone_;
   std::uint16_t num_days_{2U};
   std::uint16_t no_profiles_{1U};  // number of used profiles >= 1;
-  bool geo_lookup_{false};
+  bool lookup_{false};
+  bool guesser_{false};
+  bool railviz_{false};
+  bool routing_{false};
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;
   unsigned gtfsrt_update_interval_{60U};
