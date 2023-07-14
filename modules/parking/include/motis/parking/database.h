@@ -18,7 +18,6 @@
 
 #include "motis/parking/foot_edge_task.h"
 #include "motis/parking/parking_lot.h"
-#include "motis/parking/stations.h"
 
 namespace motis::parking {
 
@@ -33,7 +32,7 @@ struct database {
 
   void put_footedges(
       persistable_foot_edges const& fe,
-      std::vector<std::pair<station_info, double>> const& reachable_stations);
+      std::vector<std::pair<lookup_station, double>> const& reachable_stations);
 
   std::optional<persistable_foot_edges> get_footedges(
       int32_t parking_id, std::string const& search_profile);
@@ -44,8 +43,9 @@ struct database {
   std::vector<parking_lot> get_parking_lots();
 
   std::vector<foot_edge_task> get_foot_edge_tasks(
-      stations const& st, std::vector<parking_lot> const& parking_lots,
-      std::map<std::string, motis::ppr::profile_info> const& ppr_profiles);
+      station_lookup const& st, std::vector<parking_lot> const& parking_lots,
+      std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
+      std::string const& osm_file = "");
 
 private:
   static lmdb::txn::dbi parking_lots_dbi(

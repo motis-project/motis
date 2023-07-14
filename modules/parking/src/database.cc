@@ -6,11 +6,13 @@
 
 #include "cista/serialization.h"
 
-#include "utl/enumerate.h"
-
 #include "fmt/core.h"
 
 #include "motis/core/common/logging.h"
+
+#include "osmium/io/reader.hpp"
+
+#include "utl/enumerate.h"
 
 using namespace motis::logging;
 
@@ -56,10 +58,10 @@ inline std::string_view get_parkendd_parking_lot_key(parking_lot const& lot) {
 }
 
 inline std::string serialize_reachable_stations(
-    std::vector<std::pair<station_info, double>> const& st) {
+    std::vector<std::pair<lookup_station, double>> const& st) {
   std::stringstream ss;
   for (auto const& s : st) {
-    ss << s.first.id_ << "|";
+    ss << s.first.tag_ << s.first.id_ << "|";
   }
   return ss.str();
 }
@@ -96,7 +98,7 @@ void database::init() {
 
 void database::put_footedges(
     const persistable_foot_edges& fe,
-    std::vector<std::pair<station_info, double>> const& reachable_stations) {
+    std::vector<std::pair<lookup_station, double>> const& reachable_stations) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto reachable_stations_db = reachable_stations_dbi(txn);
@@ -182,13 +184,17 @@ std::vector<parking_lot> database::get_parking_lots() {
 }
 
 std::vector<foot_edge_task> database::get_foot_edge_tasks(
-    stations const& st, std::vector<parking_lot> const& parking_lots,
-    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles) {
+    station_lookup const& st, std::vector<parking_lot> const& parking_lots,
+    std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
+    std::string const& osm_file) {
   auto tasks = std::vector<foot_edge_task>{};
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
   auto reachable_stations_db = reachable_stations_dbi(txn);
   auto footedges_db = footedges_dbi(txn);
+
+  // INITIALIZE Bounding Box Check
+  bool vrfy_bb = (osm_file != "");
 
   for (auto const& [profile_name, pi] : ppr_profiles) {
     auto const& profile = pi.profile_;
@@ -196,8 +202,36 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
         std::ceil(profile.duration_limit_ * profile.walking_speed_));
     for (auto const& pl : parking_lots) {
       auto const key = get_footedges_db_key(pl.id_, profile_name);
-      auto task = foot_edge_task{
-          &pl, st.get_in_radius(pl.location_, walk_radius), &profile_name};
+
+      // Verify stations if osm_file is given
+      auto stations = st.in_radius(pl.location_, walk_radius);
+      if (vrfy_bb) {
+        std::vector<std::pair<lookup_station, double>> stations_in_osm_bb{};
+
+        osmium::io::Reader reader{osm_file, osmium::io::read_meta::no};
+        osmium::io::Header const header{reader.header()};
+        assert(header.box());
+
+        osmium::Location osm_loc{};
+
+        for (auto const& station : stations) {
+          osm_loc.set_lat(station.first.pos_.lat_);
+          osm_loc.set_lon(station.first.pos_.lng_);
+
+          if (header.box().contains(osm_loc)) {
+            stations_in_osm_bb.emplace_back(station);
+          }
+        }
+
+        LOG(info) << "Use only stations that are within the OSM-Bounding-Box "
+                     "to calculate footpaths. Reduced from "
+                  << stations.size() << " to " << stations_in_osm_bb.size()
+                  << " stations.";
+
+        stations = stations_in_osm_bb;
+      }
+
+      auto task = foot_edge_task{&pl, stations, &profile_name};
       if (auto const sr = txn.get(reachable_stations_db, key); sr.has_value()) {
         auto const reachable_stations =
             serialize_reachable_stations(task.stations_in_radius_);

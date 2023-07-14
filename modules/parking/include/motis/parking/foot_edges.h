@@ -8,7 +8,6 @@
 #include "motis/parking/foot_edge_task.h"
 
 #include "motis/parking/parkings.h"
-#include "motis/parking/stations.h"
 
 namespace motis::parking {
 

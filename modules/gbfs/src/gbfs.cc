@@ -20,7 +20,7 @@
 #include "tiles/parse_tile_url.h"
 
 #include "motis/core/common/logging.h"
-#include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/station_lookup.h"
 #include "motis/core/conv/position_conv.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/module/context/motis_call.h"
@@ -73,8 +73,8 @@ struct journey {
 };
 
 struct gbfs::impl {
-  explicit impl(fs::path data_dir, config const& c, schedule const& sched)
-      : config_{c}, sched_{sched}, data_dir_{std::move(data_dir)} {}
+  explicit impl(fs::path data_dir, config const& c, station_lookup const& st)
+      : config_{c}, st_{st}, data_dir_{std::move(data_dir)} {}
 
   void fetch_stream(std::string url) {
     auto tag = std::string{"default"};
@@ -200,10 +200,6 @@ struct gbfs::impl {
     motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
 
     auto const lock = std::scoped_lock{mutex_};
-    pt_stations_rtree_ =
-        geo::make_point_rtree(sched_.stations_, [](auto const& s) {
-          return geo::latlng{s->lat(), s->lng()};
-        });
     for (auto const& [tag, info] : status_) {
       l(logging::info,
         "GBFS {} (type={}): loaded {} stations, {} free vehicles", tag,
@@ -254,7 +250,7 @@ struct gbfs::impl {
     return make_msg(fbb);
   }
 
-  msg_ptr route(schedule const&, msg_ptr const& m) {
+  msg_ptr route(msg_ptr const& m) {
     using osrm::OSRMManyToManyResponse;
     using osrm::OSRMOneToManyResponse;
 
@@ -288,11 +284,11 @@ struct gbfs::impl {
 
     auto const x = from_fbs(req->x());
 
-    auto const p = pt_stations_rtree_.in_radius(x, max_total_dist);
-    auto p_pos = utl::to_vec(p, [&](auto const idx) {
-      auto const& s = *sched_.stations_.at(idx);
-      return geo::latlng{s.lat(), s.lng()};
-    });
+    auto const p = st_.in_radius(x, max_total_dist);
+    auto p_pos =
+        utl::to_vec(p, [&](std::pair<lookup_station, double> const& el) {
+          return el.first.pos_;
+        });
     utl::concat(p_pos, utl::to_vec(*req->direct(), [](Position const* p) {
                   return from_fbs(p);
                 }));
@@ -615,9 +611,7 @@ struct gbfs::impl {
                         fbb, fbb.CreateString(vehicle_type),
                         free_bike_info.p_ < p.size() ? P_Station : P_Direct,
                         free_bike_info.p_ < p.size()
-                            ? to_fbs(fbb, *sched_.stations_.at(
-                                              p.at(free_bike_info.p_)))
-                                  .Union()
+                            ? p.at(free_bike_info.p_).first.to_fbs(fbb).Union()
                             : CreateDirect(
                                   fbb, req->direct()->Get(p.size() -
                                                           free_bike_info.p_))
@@ -648,8 +642,8 @@ struct gbfs::impl {
                         fbb, fbb.CreateString(vehicle_type),
                         station_bike_info.p_ < p.size() ? P_Station : P_Direct,
                         station_bike_info.p_ < p.size()
-                            ? to_fbs(fbb, *sched_.stations_.at(
-                                              p.at(station_bike_info.p_)))
+                            ? p.at(station_bike_info.p_)
+                                  .first.to_fbs(fbb)
                                   .Union()
                             : CreateDirect(
                                   fbb, req->direct()->Get(p.size() -
@@ -791,10 +785,9 @@ struct gbfs::impl {
   };
 
   config const& config_;
-  schedule const& sched_;
+  station_lookup const& st_;
   std::mutex mutex_;
   std::map<std::string, provider_status> status_;
-  geo::point_rtree pt_stations_rtree_;
   fs::path data_dir_;
 };
 
@@ -815,9 +808,9 @@ void gbfs::import(import_dispatcher& reg) {
              event_collector::publish_fn_t const&) {
         import_successful_ = true;
       })
-      ->require("SCHEDULE",
+      ->require("STATIONS",
                 [](msg_ptr const& msg) {
-                  return msg->get()->content_type() == MsgContent_ScheduleEvent;
+                  return msg->get()->content_type() == MsgContent_StationsEvent;
                 })
       ->require("OSRM_BIKE",
                 [](msg_ptr const& msg) {
@@ -839,12 +832,13 @@ void gbfs::import(import_dispatcher& reg) {
 
 void gbfs::init(motis::module::registry& r) {
   add_shared_data(to_res_id(global_res_id::GBFS_DATA), 0);
-  impl_ = std::make_unique<impl>(get_data_directory() / "gbfs", config_,
-                                 get_sched());
+  auto const st = get_shared_data<std::shared_ptr<station_lookup>>(
+                      to_res_id(global_res_id::STATION_LOOKUP))
+                      .get();
+  impl_ = std::make_unique<impl>(get_data_directory() / "gbfs", config_, *st);
   r.register_op("/gbfs/route",
-                [&](msg_ptr const& m) { return impl_->route(get_sched(), m); },
-                {kScheduleReadAccess,
-                 {to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
+                [&](msg_ptr const& m) { return impl_->route(m); },
+                {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
   r.register_op("/gbfs/info", [&](msg_ptr const&) { return impl_->info(); },
                 {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
   r.register_op("/gbfs/tiles",
@@ -857,8 +851,7 @@ void gbfs::init(motis::module::registry& r) {
             "GBFS Update",
             boost::posix_time::minutes{config_.update_interval_minutes_},
             [&]() { impl_->init(); },
-            {kScheduleReadAccess,
-             {to_res_id(global_res_id::GBFS_DATA), ctx::access_t::WRITE}});
+            {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::WRITE}});
       },
       {});
 }
