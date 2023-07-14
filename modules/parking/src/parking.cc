@@ -30,7 +30,6 @@
 #include "motis/parking/parking_edges.h"
 #include "motis/parking/parkings.h"
 #include "motis/parking/ppr_profiles.h"
-#include "motis/parking/stations.h"
 
 #include "motis/ppr/ppr.h"
 #include "motis/ppr/profiles.h"
@@ -87,16 +86,15 @@ inline Offset<Parking> create_parking(FlatBufferBuilder& fbb,
 }
 
 inline std::vector<Offset<ParkingEdge>> create_parking_edges(
-    schedule const& sched, FlatBufferBuilder& fbb,
+    station_lookup const& stations, FlatBufferBuilder& fbb,
     std::vector<parking_edges> const& pes) {
   std::map<std::string, Offset<Station>> fbs_stations;
   auto const create_costs = [&](std::vector<parking_edge_costs> const& costs) {
     return fbb.CreateVector(
         utl::to_vec(costs, [&](parking_edge_costs const& c) {
-          auto const st =
-              utl::get_or_create(fbs_stations, c.station_id_, [&]() {
-                return to_fbs(fbb, *get_station(sched, c.station_id_));
-              });
+          auto const st = utl::get_or_create(
+              fbs_stations, c.station_id_,
+              [&]() { return stations.get(c.station_id_).to_fbs(fbb); });
           return CreateParkingEdgeCosts(
               fbb, st, c.car_duration_, c.car_distance_, c.foot_duration_,
               c.foot_distance_, c.foot_accessibility_, c.total_duration_);
@@ -180,13 +178,12 @@ Offset<Route> find_matching_ppr_route(FootRoutingResponse const* ppr_resp,
 
 struct parking::impl {
   explicit impl(
-      schedule const& sched, std::string const& db_file,
+      station_lookup const& st, std::string const& db_file,
       std::size_t db_max_size, std::vector<std::string>& parkendd_endpoints,
       unsigned parkendd_update_interval,
       std::map<std::string, ::motis::ppr::profile_info> const& ppr_profiles,
-      stations const& st, bool const ppr_exact)
-      : sched_{sched},
-        db_{db_file, db_max_size},
+      bool const ppr_exact)
+      : db_{db_file, db_max_size},
         parkings_{db_},
         parkendd_endpoints_{parkendd_endpoints},
         parkendd_update_interval_{parkendd_update_interval},
@@ -199,7 +196,7 @@ struct parking::impl {
     if (!parkendd_endpoints_.empty()) {
       d.register_timer("ParkenDD Update",
                        boost::posix_time::seconds{parkendd_update_interval_},
-                       [this]() { update_parkendd(); }, {kScheduleReadAccess});
+                       [this]() { update_parkendd(); }, {});
     }
   }
 
@@ -347,7 +344,7 @@ struct parking::impl {
     }
   }
 
-  msg_ptr parking_edges_req(msg_ptr const& msg, schedule const& sched) {
+  msg_ptr parking_edges_req(msg_ptr const& msg) {
     auto const req = motis_content(ParkingEdgesRequest, msg);
     auto const pos = to_latlng(req->pos());
 
@@ -370,9 +367,9 @@ struct parking::impl {
     auto const walking_speed = ppr_profiles_.get_walking_speed(
         req->ppr_search_options()->profile()->str());
     auto edges = get_parking_edges(
-        sched, parkings, pos, req->filtered_stations(), req->max_car_duration(),
-        req->ppr_search_options(), db_, pe_stats, req->include_outward(),
-        req->include_return(), walking_speed);
+        stations_, parkings, pos, req->filtered_stations(),
+        req->max_car_duration(), req->ppr_search_options(), db_, pe_stats,
+        req->include_outward(), req->include_return(), walking_speed);
     MOTIS_STOP_TIMING(parking_edges_timing);
     parking_edges_duration = MOTIS_TIMING_MS(parking_edges_timing);
     parking_edge_count = edges.size();
@@ -391,7 +388,7 @@ struct parking::impl {
     fbb.create_and_finish(
         MsgContent_ParkingEdgesResponse,
         CreateParkingEdgesResponse(
-            fbb, fbb.CreateVector(create_parking_edges(sched_, fbb, edges)),
+            fbb, fbb.CreateVector(create_parking_edges(stations_, fbb, edges)),
             to_fbs(fbb, "parking.parking_edges",
                    {{"osrm_duration",
                      static_cast<uint64_t>(pe_stats.osrm_duration_)},
@@ -415,14 +412,13 @@ struct parking::impl {
   }
 
 private:
-  schedule const& sched_;
   database db_;
   parkings parkings_;
   ppr_profiles ppr_profiles_;
   std::vector<std::string>& parkendd_endpoints_;
   unsigned parkendd_update_interval_;
   std::map<std::string, ::motis::ppr::profile_info> const& db_ppr_profiles_;
-  stations const& stations_;
+  station_lookup const& stations_;
   bool ppr_exact_;
 };
 
@@ -461,6 +457,10 @@ void parking::import(import_dispatcher& reg) {
         using import::OSMEvent;
         using import::PPREvent;
 
+        stations_ = get_shared_data<std::shared_ptr<station_lookup>>(
+                        to_res_id(global_res_id::STATION_LOOKUP))
+                        .get();
+
         auto const dir = get_data_directory() / "parking";
         auto const osm_ev = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_ev = motis_content(PPREvent, dependencies.at("PPR"));
@@ -472,7 +472,7 @@ void parking::import(import_dispatcher& reg) {
                                         ppr_ev->graph_size(),
                                         ppr_ev->profiles_hash(),
                                         max_walk_duration_,
-                                        get_sched().hash_,
+                                        stations_->hash(),
                                         import_osm_};
 
         ::motis::ppr::read_profile_files(
@@ -483,13 +483,10 @@ void parking::import(import_dispatcher& reg) {
           p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
         }
 
-        stations_ = std::make_unique<stations>(get_sched());
-
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
 
           if (import_osm_) {
-
             auto progress_tracker = utl::get_active_progress_tracker();
             progress_tracker->status("Extract Parking Lots");
 
@@ -533,9 +530,9 @@ void parking::import(import_dispatcher& reg) {
                 [](msg_ptr const& msg) {
                   return msg->get()->content_type() == MsgContent_OSMEvent;
                 })
-      ->require("SCHEDULE",
+      ->require("STATIONS",
                 [](msg_ptr const& msg) {
-                  return msg->get()->content_type() == MsgContent_ScheduleEvent;
+                  return msg->get()->content_type() == MsgContent_StationsEvent;
                 })
       ->require("PPR", [](msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_PPREvent;
@@ -545,8 +542,8 @@ void parking::import(import_dispatcher& reg) {
 void parking::init(motis::module::registry& reg) {
   try {
     impl_ = std::make_unique<impl>(
-        get_sched(), db_file(), db_max_size_, parkendd_endpoints_,
-        parkendd_update_interval_, ppr_profiles_, *stations_, ppr_exact_);
+        *stations_, db_file(), db_max_size_, parkendd_endpoints_,
+        parkendd_update_interval_, ppr_profiles_, ppr_exact_);
 
     reg.register_op("/parking/geo",
                     [this](auto&& m) { return impl_->geo_lookup(m); }, {});
@@ -554,12 +551,10 @@ void parking::init(motis::module::registry& reg) {
                     [this](auto&& m) { return impl_->id_lookup(m); }, {});
     reg.register_op("/parking/edge",
                     [this](auto&& m) { return impl_->parking_edge(m); }, {});
-    reg.register_op(
-        "/parking/edges",
-        [this](auto&& m) { return impl_->parking_edges_req(m, get_sched()); },
-        {kScheduleReadAccess});
-    reg.subscribe("/init", [this]() { impl_->init(*shared_data_); },
-                  {kScheduleReadAccess});
+    reg.register_op("/parking/edges",
+                    [this](auto&& m) { return impl_->parking_edges_req(m); },
+                    {});
+    reg.subscribe("/init", [this]() { impl_->init(*shared_data_); }, {});
   } catch (std::exception const& e) {
     LOG(logging::warn) << "parking module not initialized (" << e.what() << ")";
   }

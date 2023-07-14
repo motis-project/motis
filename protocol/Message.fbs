@@ -321,7 +321,8 @@ union MsgContent {
   motis.rt.RtMessageHistoryRequest                                        = 150,
   motis.rt.RtMessageHistoryResponse                                       = 151,
   motis.lookup.LookupStationLocationResponse                              = 152,
-  motis.routing.InputStation                                              = 153
+  motis.routing.InputStation                                              = 153,
+  motis.import.StationsEvent                                              = 154
 }
 
 // Destination Examples:
