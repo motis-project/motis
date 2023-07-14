@@ -19,12 +19,12 @@ struct transfer_requests {
  * @param pf the struct containing the list of platforms
  * @param profile_info a list of ppr profiles for the creation of transfer
  * requests
- * @param max_walk_duration the maximmum walking duration to identify platforms
- * in range of a given position
+ *
+ * @returns a list of transfer requests (start to all destinations) for the
+ * given profile
  *
  */
 std::vector<transfer_requests> build_transfer_requests(
-    platforms* pf, std::map<std::string, ppr::profile_info> const& profiles,
-    int const max_walk_duration);
+    platforms* pf, std::map<std::string, ppr::profile_info> const& profiles);
 
 }  // namespace motis::footpaths

@@ -7,8 +7,7 @@ using namespace motis::logging;
 namespace motis::footpaths {
 
 std::vector<transfer_requests> build_transfer_requests(
-    platforms* pf, std::map<std::string, ppr::profile_info> const& profiles,
-    int const max_walk_duration) {
+    platforms* pf, std::map<std::string, ppr::profile_info> const& profiles) {
   u_int targets = 0, no_targets = 0;
   u_int stations = 0, tracks = 0;
   std::vector<transfer_requests> result{};
@@ -31,8 +30,8 @@ std::vector<transfer_requests> build_transfer_requests(
       // remark: profile {profile_name -> profile_info}
       // get all valid platforms in radius of current platform
       auto valid_platforms_in_radius = pf->get_valid_platforms_in_radius(
-          &platform,
-          profile.second.profile_.walking_speed_ * max_walk_duration);
+          &platform, profile.second.profile_.walking_speed_ *
+                         profile.second.profile_.duration_limit_);
       transfer_targets.insert(transfer_targets.end(),
                               valid_platforms_in_radius.begin(),
                               valid_platforms_in_radius.end());
@@ -52,6 +51,7 @@ std::vector<transfer_requests> build_transfer_requests(
       result.emplace_back(tmp);
     }
   }
+
   LOG(info) << "Generated " << result.size() << " transfer requests.";
   LOG(info) << "Found " << targets << " targets in total.";
   LOG(info) << "Identified "

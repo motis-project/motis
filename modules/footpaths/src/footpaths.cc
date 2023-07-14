@@ -215,10 +215,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         {
           scoped_timer const timer{
               "transfers: match locations and osm platforms"};
-          // TODO (Carsten) matching doesnot work
-          auto matched_platforms = match_locations_and_platforms();
-          LOG(info) << "Matched " << matched_platforms
-                    << " nigiri::locations to an osm-extracted platform.";
+          match_locations_and_platforms();
         }
 
         // 5th build transfer requests
@@ -226,8 +223,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         std::vector<transfer_requests> transfer_reqs;
         {
           scoped_timer const timer{"transfer: build transfer requests."};
-          transfer_reqs = build_transfer_requests(
-              platforms_.get(), ppr_profiles_, max_walk_duration_);
+          transfer_reqs =
+              build_transfer_requests(platforms_.get(), ppr_profiles_);
         }
 
         // 6th get transfer requests result
@@ -271,20 +268,6 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                                       transfer_reqs);
         }
 
-        // TODO (Carsten, 2) Check for existing calculations. if state ==
-        // import-state: load existing, otherwise: recalculate
-        // ppr-profiles changed? nigiri-graph changed?
-
-        /**
-         * Implement #2 here. Finish #1 first
-        if (read_ini<import_state>(module_data_dir() / "import.ini") != state) {
-          fs::create_directories(module_data_dir());
-
-          std::clog << "Footpaths Import done!" << std::endl;
-          write_ini(module_data_dir() / "import.ini", state);
-        }
-        */
-
         import_successful_ = true;
       })
       ->require("NIGIRI",
@@ -300,14 +283,15 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
       });
 }
 
-u_int footpaths::match_locations_and_platforms() {
+void footpaths::match_locations_and_platforms() {
   // --- initialization:
   // initialize match distance range
   auto const match_distances = boost::irange(
-      match_distance_min_, match_distance_max_, match_distance_step_);
+      match_distance_min_, match_distance_max_ + match_distance_step_,
+      match_distance_step_);
 
   // --- matching:
-  u_int matched_ = 0;
+  u_int matched_ = 0, unmatched_ = 0;
 
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->reset_bounds().in_high(impl_->tt_.locations_.ids_.size());
@@ -330,10 +314,18 @@ u_int footpaths::match_locations_and_platforms() {
 
     if (matched) {
       ++matched_;
+    } else {
+      ++unmatched_;
+      platforms_->platforms_.emplace_back(
+          std::string(impl_->tt_.locations_.names_[idx].view()), idx,
+          impl_->tt_.locations_.coordinates_[idx]);
     }
   }
 
-  return matched_;
+  LOG(info) << "Matched " << matched_
+            << " nigiri::locations to an osm-extracted platform.";
+  LOG(info) << "Did not match " << unmatched_
+            << " nigiri::locations to an osm-extracted platform.";
 }
 
 bool footpaths::match_by_distance(
@@ -349,9 +341,6 @@ bool footpaths::match_by_distance(
       if (platform->is_bus_stop_ && dist > match_bus_stop_max_distance_) {
         continue;
       }
-
-      // std::clog << dist << "m: " << platform->name_ << " - "
-      // << impl_->tt_.locations_.names_[i].view() << std::endl;
 
       // only match platforms with location if they have the same name
       if (!matches(platform->name_, impl_->tt_.locations_.names_[i].view())) {

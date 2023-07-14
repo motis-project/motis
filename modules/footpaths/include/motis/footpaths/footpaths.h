@@ -44,14 +44,14 @@ private:
    * @return number of matched platforms
    *
    */
-  u_int match_locations_and_platforms();
+  void match_locations_and_platforms();
 
   bool match_by_distance(
       nigiri::location_idx_t const i,
       boost::strided_integer_range<int> match_distances,
       std::function<bool(std::string, std::string_view)> matches);
 
-  int max_walk_duration_{30};
+  int max_walk_duration_{10};
 
   int match_distance_min_{0};
   int match_distance_max_{400};
