@@ -194,7 +194,7 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
   auto footedges_db = footedges_dbi(txn);
 
   // INITIALIZE Bounding Box Check
-  bool vrfy_bb = (osm_file != "");
+  bool const vrfy_bb = (!osm_file.empty());
 
   for (auto const& [profile_name, pi] : ppr_profiles) {
     auto const& profile = pi.profile_;
