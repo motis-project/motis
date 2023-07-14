@@ -93,6 +93,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         LOG(info) << "hashes: nigiri=" << nigiri_event->hash();
         auto const osm_event = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_event = motis_content(PPREvent, dependencies.at("PPR"));
+
         auto const state =
             import_state{nigiri_event->hash(),
                          data_path(osm_event->path()->str()),
@@ -103,6 +104,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                          ppr_event->graph_size(),
                          ppr_event->profiles_hash(),
                          max_walk_duration_};
+
+        auto progress_tracker = utl::get_active_progress_tracker();
 
         // verify that data structure in Nigiri was adjusted to necessary number
         // of profiles
@@ -121,6 +124,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                 "/" + std::to_string(no_profiles));
 
         // (profile-name, profile-info)
+        progress_tracker->status("Extract Profile Information.");
         motis::ppr::read_profile_files(
             utl::to_vec(*ppr_event->profiles(),
                         [](auto const& p) { return p->path()->str(); }),
@@ -144,6 +148,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         // Implementation of footpaths is inspired by parking
 
         // 1st extract all platforms from a given osm file
+        progress_tracker->status("Extract Platforms from OSM.");
         std::vector<platform_info> extracted_platforms;
         auto const osm_file = osm_event->path()->str();
         {
@@ -155,6 +160,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 2nd extract all stations from the nigiri graph
+        progress_tracker->status("Extract Stations from Nigiri.");
         std::vector<platform_info> stations{};
         {
           scoped_timer const timer{
@@ -190,6 +196,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 3rd combine platforms and stations
+        progress_tracker->status("Concat. extracted platforms and stations.");
         {
           scoped_timer const timer{
               "transfers: combine single platforms and stations, build rtree."};
@@ -204,6 +211,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 4th update osm_id and location_idx
+        progress_tracker->status("Match Locations and OSM Platforms.");
         {
           scoped_timer const timer{
               "transfers: match locations and osm platforms"};
@@ -214,6 +222,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 5th build transfer requests
+        progress_tracker->status("Generate Transfer Requests.");
         std::vector<transfer_requests> transfer_reqs;
         {
           scoped_timer const timer{"transfer: build transfer requests."};
@@ -222,6 +231,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 6th get transfer requests result
+        progress_tracker->status("Load PPR Routing Graph.");
         ::ppr::routing_graph rg;
         {
           scoped_timer const timer{"transfers: loading ppr routing graph."};
@@ -254,6 +264,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           }
         }
 
+        progress_tracker->status("Compute Transfer Routes.");
         {
           scoped_timer const timer{"transfers: update nigiri transfers"};
           precompute_nigiri_transfers(rg, impl_->tt_, ppr_profiles_,
@@ -298,8 +309,12 @@ u_int footpaths::match_locations_and_platforms() {
   // --- matching:
   u_int matched_ = 0;
 
+  auto progress_tracker = utl::get_active_progress_tracker();
+  progress_tracker->reset_bounds().in_high(impl_->tt_.locations_.ids_.size());
+
   for (auto i = 0U; i < impl_->tt_.locations_.ids_.size(); ++i) {
     auto idx = nigiri::location_idx_t{i};
+    progress_tracker->increment();
     if (impl_->tt_.locations_.types_[idx] == nigiri::location_type::kStation) {
       continue;
     }
