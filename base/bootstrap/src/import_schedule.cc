@@ -54,9 +54,9 @@ void register_import_schedule(motis_instance& instance,
         auto sched = loader::load_schedule(dataset_opt_cpy, memory, data_dir);
         std::shared_ptr<station_lookup> station_lookup =
             std::make_shared<schedule_station_lookup>(*sched);
-        instance.emplace_data(
-            motis::module::to_res_id(motis::module::global_res_id::SCHEDULE),
-            std::move(station_lookup));
+        instance.emplace_data(motis::module::to_res_id(
+                                  motis::module::global_res_id::STATION_LOOKUP),
+                              std::move(station_lookup));
         instance.emplace_data(
             motis::module::to_res_id(motis::module::global_res_id::SCHEDULE),
             schedule_data{std::move(memory), std::move(sched)});
