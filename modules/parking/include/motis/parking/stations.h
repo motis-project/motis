@@ -23,11 +23,14 @@ struct station_info {
 
 struct stations {
   explicit stations(schedule const& sched);
+  explicit stations(std::vector<station_info> const& stations);
 
   std::vector<std::pair<station_info, double>> get_in_radius(
       geo::latlng const& center, double radius) const;
 
   std::size_t size() const { return stations_.size(); }
+
+  std::vector<station_info> get_stations() { return stations_; }
 
 private:
   std::vector<station_info> stations_;

@@ -12,6 +12,13 @@ stations::stations(schedule const& sched) {
       geo::make_point_rtree(stations_, [](auto const& s) { return s.pos_; });
 }
 
+stations::stations(std::vector<station_info> const& stations)
+    : stations_(stations) {
+
+  geo_index_ =
+      geo::make_point_rtree(stations, [](auto const& s) { return s.pos_; });
+}
+
 std::vector<std::pair<station_info, double>> stations::get_in_radius(
     geo::latlng const& center, double radius) const {
   return utl::to_vec(

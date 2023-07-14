@@ -35,6 +35,8 @@
 #include "motis/ppr/ppr.h"
 #include "motis/ppr/profiles.h"
 
+#include "osmium/io/reader.hpp"
+
 using namespace motis::module;
 using namespace motis::logging;
 using namespace motis::osrm;
@@ -484,6 +486,29 @@ void parking::import(import_dispatcher& reg) {
         }
 
         stations_ = std::make_unique<stations>(get_sched());
+        std::vector<station_info> stations_in_bb{};
+
+        osmium::io::Reader reader{osm_ev->path()->str(),
+                                  osmium::io::read_meta::no};
+        osmium::io::Header const header{reader.header()};
+        assert(header.box());
+
+        osmium::Location osm_loc{};
+        for (auto const& station : stations_->get_stations()) {
+          osm_loc.set_lat(station.pos_.lat_);
+          osm_loc.set_lon(station.pos_.lng_);
+
+          if (header.box().contains(osm_loc)) {
+            stations_in_bb.emplace_back(station);
+          }
+        }
+
+        LOG(info) << "Use only stations that are within the OSM-Bounding-Box "
+                     "to calculate footpaths. Reduced from "
+                  << stations_->get_stations().size() << " to "
+                  << stations_in_bb.size() << " stations.";
+
+        stations_ = std::make_unique<stations>(stations{stations_in_bb});
 
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
