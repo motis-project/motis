@@ -50,7 +50,7 @@ private:
   std::unique_ptr<impl> impl_;
   bool import_successful_{false};
   std::map<std::string, ::motis::ppr::profile_info> ppr_profiles_;
-  station_lookup const* stations_;
+  station_lookup const* stations_{nullptr};
 };
 
 }  // namespace motis::parking

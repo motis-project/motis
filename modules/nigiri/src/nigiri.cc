@@ -384,10 +384,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                            << "\n";
 
         if (lookup_) {
-          impl_->station_lookup_ = std::make_unique<nigiri_station_lookup>(
+          impl_->station_lookup_ = std::make_shared<nigiri_station_lookup>(
               impl_->tags_, **impl_->tt_);
+          auto copy = impl_->station_lookup_;
           add_shared_data(to_res_id(mm::global_res_id::STATION_LOOKUP),
-                          std::move(impl_->station_lookup_));
+                          std::move(copy));
         }
 
         if (guesser_) {

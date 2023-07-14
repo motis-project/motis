@@ -224,7 +224,7 @@ std::vector<parking_edges> get_custom_parking_edges(
 }
 
 std::vector<parking_edges> get_cached_parking_edges(
-    schedule const& sched, std::vector<parking_lot> const& parkings,
+    station_lookup const& st, std::vector<parking_lot> const& parkings,
     geo::latlng const& start_pos, Vector<Offset<Station>> const* dest_stations,
     int max_car_duration, motis::ppr::SearchOptions const* ppr_search_options,
     database& db, parking_edge_stats& pe_stats, bool include_outward,
@@ -241,8 +241,7 @@ std::vector<parking_edges> get_cached_parking_edges(
       std::ceil(ppr_search_options->duration_limit() / 60));
   auto const filter_station = [&](FootEdge const* fe) {
     auto const sid = fe->station_id()->str();
-    return fe->duration() > foot_duration_limit ||
-           find_station(sched, sid) == nullptr ||
+    return fe->duration() > foot_duration_limit || !st.get(sid).valid() ||
            std::any_of(dest_stations->begin(), dest_stations->end(),
                        [&](auto const& ds) { return sid == ds->id()->str(); });
   };
@@ -312,12 +311,12 @@ std::vector<parking_edges> get_cached_parking_edges(
 }
 
 std::vector<parking_edges> get_parking_edges(
-    schedule const& sched, std::vector<parking_lot> const& parkings,
+    station_lookup const& st, std::vector<parking_lot> const& parkings,
     geo::latlng const& start_pos, Vector<Offset<Station>> const* dest_stations,
     int max_car_duration, motis::ppr::SearchOptions const* ppr_search_options,
     database& db, parking_edge_stats& pe_stats, bool include_outward,
     bool include_return, double walking_speed) {
-  return get_cached_parking_edges(sched, parkings, start_pos, dest_stations,
+  return get_cached_parking_edges(st, parkings, start_pos, dest_stations,
                                   max_car_duration, ppr_search_options, db,
                                   pe_stats, include_outward, include_return,
                                   walking_speed);

@@ -32,7 +32,11 @@ lookup_station nigiri_station_lookup::get(std::size_t const idx) const {
 }
 
 lookup_station nigiri_station_lookup::get(std::string_view id) const {
-  return get(to_idx(get_location_idx(tags_, tt_, id)));
+  try {
+    return get(to_idx(get_location_idx(tags_, tt_, id)));
+  } catch (...) {
+    return lookup_station{};
+  }
 }
 
 }  // namespace motis::nigiri

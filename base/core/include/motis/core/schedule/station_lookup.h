@@ -4,6 +4,8 @@
 #include <string_view>
 #include <vector>
 
+#include "cista/hash.h"
+
 #include "geo/latlng.h"
 
 #include "motis/protocol/Station_generated.h"
@@ -18,6 +20,7 @@ struct schedule;
 
 struct lookup_station {
   flatbuffers::Offset<Station> to_fbs(flatbuffers::FlatBufferBuilder&) const;
+  bool valid() const { return !id_.empty(); }
   std::string_view tag_;
   std::string_view id_;
   std::string_view name_;
@@ -38,6 +41,8 @@ struct station_lookup {
       geo::latlng center, double max_radius) const;
   std::vector<std::size_t> in_radius(geo::latlng center, double min_radius,
                                      double max_radius) const;
+  cista::hash_t hash() const;
+
   virtual lookup_station get(std::size_t idx) const = 0;
   virtual lookup_station get(std::string_view id) const = 0;
 

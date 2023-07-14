@@ -838,8 +838,7 @@ void gbfs::init(motis::module::registry& r) {
   impl_ = std::make_unique<impl>(get_data_directory() / "gbfs", config_, *st);
   r.register_op("/gbfs/route",
                 [&](msg_ptr const& m) { return impl_->route(m); },
-                {kScheduleReadAccess,
-                 {to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
+                {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
   r.register_op("/gbfs/info", [&](msg_ptr const&) { return impl_->info(); },
                 {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::READ}});
   r.register_op("/gbfs/tiles",
@@ -852,8 +851,7 @@ void gbfs::init(motis::module::registry& r) {
             "GBFS Update",
             boost::posix_time::minutes{config_.update_interval_minutes_},
             [&]() { impl_->init(); },
-            {kScheduleReadAccess,
-             {to_res_id(global_res_id::GBFS_DATA), ctx::access_t::WRITE}});
+            {{to_res_id(global_res_id::GBFS_DATA), ctx::access_t::WRITE}});
       },
       {});
 }

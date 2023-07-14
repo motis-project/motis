@@ -21,6 +21,14 @@ station_lookup::~station_lookup() noexcept = default;
 station_lookup::station_lookup(geo::point_rtree&& rtree)
     : rtree_{std::make_unique<geo::point_rtree>(std::move(rtree))} {}
 
+cista::hash_t station_lookup::hash() const {
+  auto h = cista::BASE_HASH;
+  for (auto i = 0U; i != size(); ++i) {
+    h = cista::hash_combine(h, cista::hashing<lookup_station>{}(get(i)));
+  }
+  return h;
+}
+
 station_lookup::station_lookup(std::vector<geo::latlng> const& coords)
     : rtree_{
           std::make_unique<geo::point_rtree>(geo::make_point_rtree(coords))} {}

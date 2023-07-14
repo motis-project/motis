@@ -196,7 +196,7 @@ struct parking::impl {
     if (!parkendd_endpoints_.empty()) {
       d.register_timer("ParkenDD Update",
                        boost::posix_time::seconds{parkendd_update_interval_},
-                       [this]() { update_parkendd(); }, {kScheduleReadAccess});
+                       [this]() { update_parkendd(); }, {});
     }
   }
 
@@ -344,7 +344,7 @@ struct parking::impl {
     }
   }
 
-  msg_ptr parking_edges_req(msg_ptr const& msg, schedule const& sched) {
+  msg_ptr parking_edges_req(msg_ptr const& msg) {
     auto const req = motis_content(ParkingEdgesRequest, msg);
     auto const pos = to_latlng(req->pos());
 
@@ -367,9 +367,9 @@ struct parking::impl {
     auto const walking_speed = ppr_profiles_.get_walking_speed(
         req->ppr_search_options()->profile()->str());
     auto edges = get_parking_edges(
-        sched, parkings, pos, req->filtered_stations(), req->max_car_duration(),
-        req->ppr_search_options(), db_, pe_stats, req->include_outward(),
-        req->include_return(), walking_speed);
+        stations_, parkings, pos, req->filtered_stations(),
+        req->max_car_duration(), req->ppr_search_options(), db_, pe_stats,
+        req->include_outward(), req->include_return(), walking_speed);
     MOTIS_STOP_TIMING(parking_edges_timing);
     parking_edges_duration = MOTIS_TIMING_MS(parking_edges_timing);
     parking_edge_count = edges.size();
@@ -457,6 +457,10 @@ void parking::import(import_dispatcher& reg) {
         using import::OSMEvent;
         using import::PPREvent;
 
+        stations_ = get_shared_data<std::shared_ptr<station_lookup>>(
+                        to_res_id(global_res_id::STATION_LOOKUP))
+                        .get();
+
         auto const dir = get_data_directory() / "parking";
         auto const osm_ev = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_ev = motis_content(PPREvent, dependencies.at("PPR"));
@@ -468,7 +472,7 @@ void parking::import(import_dispatcher& reg) {
                                         ppr_ev->graph_size(),
                                         ppr_ev->profiles_hash(),
                                         max_walk_duration_,
-                                        get_sched().hash_,
+                                        stations_->hash(),
                                         import_osm_};
 
         ::motis::ppr::read_profile_files(
@@ -479,15 +483,10 @@ void parking::import(import_dispatcher& reg) {
           p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
         }
 
-        stations_ = get_shared_data<std::shared_ptr<station_lookup>>(
-                        to_res_id(global_res_id::STATION_LOOKUP))
-                        .get();
-
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
 
           if (import_osm_) {
-
             auto progress_tracker = utl::get_active_progress_tracker();
             progress_tracker->status("Extract Parking Lots");
 
@@ -552,12 +551,10 @@ void parking::init(motis::module::registry& reg) {
                     [this](auto&& m) { return impl_->id_lookup(m); }, {});
     reg.register_op("/parking/edge",
                     [this](auto&& m) { return impl_->parking_edge(m); }, {});
-    reg.register_op(
-        "/parking/edges",
-        [this](auto&& m) { return impl_->parking_edges_req(m, get_sched()); },
-        {kScheduleReadAccess});
-    reg.subscribe("/init", [this]() { impl_->init(*shared_data_); },
-                  {kScheduleReadAccess});
+    reg.register_op("/parking/edges",
+                    [this](auto&& m) { return impl_->parking_edges_req(m); },
+                    {});
+    reg.subscribe("/init", [this]() { impl_->init(*shared_data_); }, {});
   } catch (std::exception const& e) {
     LOG(logging::warn) << "parking module not initialized (" << e.what() << ")";
   }
