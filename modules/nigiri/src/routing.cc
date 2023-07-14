@@ -153,6 +153,11 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   auto extend_interval_later = false;
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
+  size_t profile_idx = {0};
+  if (tt.locations_.profile_idx_.contains(req->profile()->str())) {
+    profile_idx = tt.locations_.profile_idx_.at(req->profile()->str());
+  }
+
   if (req->start_type() == routing::Start_PretripStart) {
     auto const start =
         reinterpret_cast<routing::PretripStart const*>(req->start());
@@ -246,7 +251,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                                        req->search_dir(), false)
                          : std::vector<n::routing::offset>{
                                {destination_station, n::duration_t{0U}, 0U}};
-  // TODO (Carsten) add profile as a param
+
   auto q = n::routing::query{
       .start_time_ = start_time,
       .start_match_mode_ = is_intermodal_start
@@ -270,7 +275,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .min_connection_count_ = min_connection_count,
       .extend_interval_earlier_ = extend_interval_earlier,
       .extend_interval_later_ = extend_interval_later,
-      .profile_ = 0};
+      .profile_ = profile_idx};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
