@@ -50,11 +50,13 @@ struct static_ev_iterator : public ev_iterator {
                      n::direction const dir)
       : tt_{tt},
         rtt_{rtt},
-        day_{tt_.day_idx_mam(start).first},
-        end_{tt.day_idx(tt.date_range_.to_)},
-        i_{0},
+        day_{to_idx(tt_.day_idx_mam(start).first)},
+        end_day_{dir == n::direction::kForward
+                     ? to_idx(tt.day_idx(tt.date_range_.to_))
+                     : -1},
         size_{static_cast<std::int32_t>(
             to_idx(tt.route_transport_ranges_[r].size()))},
+        i_{dir == n::direction::kForward ? 0 : size_ - 1},
         r_{r},
         stop_idx_{stop_idx},
         ev_type_{ev_type},
@@ -99,19 +101,19 @@ struct static_ev_iterator : public ev_iterator {
     }
   }
 
-  bool finished() const override {
-    return dir_ == n::direction::kForward ? day_ == end_ : day_ == -1;
-  }
+  bool finished() const override { return day_ == end_day_; }
 
   n::unixtime_t time() const override {
     return tt_.event_time(
-        n::transport{tt_.route_transport_ranges_[r_][i_], day_}, stop_idx_,
-        ev_type_);
+        n::transport{tt_.route_transport_ranges_[r_][i_], n::day_idx_t{day_}},
+        stop_idx_, ev_type_);
   }
 
   n::rt::run get() const override {
+    assert(is_active());
     return n::rt::run{
-        .t_ = n::transport{tt_.route_transport_ranges_[r_][i_], day_},
+        .t_ = n::transport{tt_.route_transport_ranges_[r_][i_],
+                           n::day_idx_t{day_}},
         .stop_range_ = {stop_idx_, static_cast<n::stop_idx_t>(stop_idx_ + 1U)}};
   }
 
@@ -131,14 +133,14 @@ private:
 
   n::transport t() const {
     auto const t = tt_.route_transport_ranges_[r_][i_];
-    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days_;
-    return n::transport{tt_.route_transport_ranges_[r_][i_], day_ - day_offset};
+    auto const day_offset = tt_.event_mam(r_, t, stop_idx_, ev_type_).days();
+    return n::transport{tt_.route_transport_ranges_[r_][i_],
+                        n::day_idx_t{day_ - day_offset}};
   }
 
   n::timetable const& tt_;
   n::rt_timetable const* rtt_;
-  n::day_idx_t day_, end_;
-  std::int32_t i_, size_;
+  std::int32_t day_, end_day_, size_, i_;
   n::route_idx_t r_;
   n::stop_idx_t stop_idx_;
   n::event_type ev_type_;
@@ -191,9 +193,12 @@ std::vector<n::rt::run> get_events(
   if (rtt != nullptr) {
     for (auto const x : locations) {
       for (auto const rt_t : rtt->location_rt_transports_[x]) {
-        for (auto const [stop_idx, s] :
-             utl::enumerate(rtt->rt_transport_location_seq_[rt_t])) {
-          if (n::stop{s}.location_idx() == x) {
+        auto const location_seq = rtt->rt_transport_location_seq_[rt_t];
+        for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
+          if (n::stop{s}.location_idx() == x &&
+              ((ev_type == n::event_type::kDep &&
+                stop_idx != location_seq.size() - 1U) ||
+               (ev_type == n::event_type::kArr && stop_idx != 0U))) {
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
                 *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
                 dir));
@@ -206,9 +211,12 @@ std::vector<n::rt::run> get_events(
   auto seen = n::hash_set<std::pair<n::route_idx_t, n::stop_idx_t>>{};
   for (auto const x : locations) {
     for (auto const r : tt.location_routes_[x]) {
-      for (auto const [stop_idx, s] :
-           utl::enumerate(tt.route_location_seq_[r])) {
+      auto const location_seq = tt.route_location_seq_[r];
+      for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
         if (n::stop{s}.location_idx() == x &&
+            ((ev_type == n::event_type::kDep &&
+              stop_idx != location_seq.size() - 1U) ||
+             (ev_type == n::event_type::kArr && stop_idx != 0U)) &&
             seen.emplace(r, stop_idx).second) {
           iterators.emplace_back(std::make_unique<static_ev_iterator>(
               tt, rtt, r, stop_idx, time, ev_type, dir));
@@ -273,13 +281,14 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
         fbb,
         fbb.CreateVector(std::vector{CreateTripInfo(
             fbb,
-            to_fbs(fbb, nigiri_trip_to_extern_trip(tags, tt, fr.trip_idx(),
-                                                   fr.t_.day_)),
+            to_fbs(fbb, nigiri_trip_to_extern_trip(
+                            tags, tt, fr[0].get_trip_idx(ev_type), fr.t_.day_)),
             CreateTransport(
                 fbb, &range, static_cast<std::uint32_t>(fr[0].get_clasz()),
-                fbb.CreateString(fr[0].line()), fbb.CreateString(fr.name()),
-                fbb.CreateString(fr[0].get_provider().long_name_),
-                fbb.CreateString(fr[0].direction())))}),
+                fbb.CreateString(fr[0].line(ev_type)),
+                fbb.CreateString(fr.name()),
+                fbb.CreateString(fr[0].get_provider(ev_type).long_name_),
+                fbb.CreateString(fr[0].direction(ev_type))))}),
         ev_type == n::event_type::kDep ? EventType_DEP : EventType_ARR,
         CreateEventInfo(
             fbb, to_motis_unixtime(fr[0].time(ev_type)),
