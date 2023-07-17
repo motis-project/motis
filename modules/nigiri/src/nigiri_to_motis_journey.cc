@@ -191,7 +191,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               .at(tt.trip_debug_.at(trip).front().source_file_idx_)
               .view();
       extern_trips.add_entry(
-          {nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
+          {nigiri_trip_to_extern_trip(tags, tt, trip, t),
            fmt::format("{}:{}:{}", src_file,
                        tt.trip_debug_.at(trip).at(0).line_number_from_,
                        tt.trip_debug_.at(trip).at(0).line_number_to_)},

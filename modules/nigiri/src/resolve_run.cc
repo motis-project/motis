@@ -42,19 +42,12 @@ n::rt::run resolve_run(tag_lookup const& tags, n::timetable const& tt,
           tt.event_mam(t_idx, stop_range.from_, n::event_type::kDep).days();
       auto const t = n::transport{t_idx, day_idx - day_offset};
       if (dep_time != tt.event_time(t, stop_range.from_, n::event_type::kDep)) {
-        std::cout << "dep time no match: " << dep_time << ", "
-                  << tt.event_time(t, stop_range.from_, n::event_type::kDep)
-                  << "\n";
         continue;
       }
 
       auto const& traffic_days =
           tt.bitfields_[tt.transport_traffic_days_[t_idx]];
       if (!traffic_days.test(to_idx(day_idx - day_offset))) {
-        std::cout << "traffic day not active: "
-                  << tt.internal_interval_days().from_ +
-                         to_idx(day_idx) * date::days{1}
-                  << "\n";
         continue;
       }
 

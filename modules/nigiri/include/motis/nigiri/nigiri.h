@@ -40,6 +40,7 @@ private:
   bool routing_{false};
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;
+  std::vector<std::string> gtfsrt_paths_;
   unsigned gtfsrt_update_interval_{60U};
 };
 

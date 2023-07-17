@@ -12,7 +12,7 @@ namespace motis::nigiri {
 extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
                                        n::timetable const& tt,
                                        n::trip_idx_t const trip_idx,
-                                       n::day_idx_t const day) {
+                                       n::transport const t) {
   auto const resolve_id = [&](n::location_idx_t const x) {
     return get_station_id(
         tags, tt,
@@ -45,11 +45,11 @@ extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
                          tt.trip_id_strings_[x].view()),
       .station_id_ = first_location,
       .train_nr_ = tt.trip_train_nr_.at(tt.trip_ids_.at(trip_idx).back()),
-      .time_ = to_motis_unixtime(tt.event_time(
-          {transport, day}, stop_range.from_, n::event_type::kDep)),
+      .time_ = to_motis_unixtime(
+          tt.event_time(t, stop_range.from_, n::event_type::kDep)),
       .target_station_id_ = last_location,
-      .target_time_ = to_motis_unixtime(tt.event_time(
-          {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
+      .target_time_ = to_motis_unixtime(
+          tt.event_time(t, stop_range.to_ - 1, n::event_type::kArr)),
       .line_id_ = std::string{line}};
 }
 

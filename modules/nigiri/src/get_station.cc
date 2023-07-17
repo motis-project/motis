@@ -153,6 +153,9 @@ struct rt_ev_iterator : public ev_iterator {
                  n::event_type const ev_type, n::direction const dir)
       : rtt_{rtt}, stop_idx_{stop_idx}, rt_t_{rt_t}, ev_type_{ev_type} {
     finished_ = dir == n::direction::kForward ? time() < start : time() > start;
+    assert(ev_type == n::event_type::kDep &&
+               stop_idx_ < rtt.rt_transport_location_seq_[rt_t].size() - 1U ||
+           ev_type == n::event_type::kArr && stop_idx_ > 0U);
   }
 
   ~rt_ev_iterator() override = default;
@@ -282,7 +285,7 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
         fbb.CreateVector(std::vector{CreateTripInfo(
             fbb,
             to_fbs(fbb, nigiri_trip_to_extern_trip(
-                            tags, tt, fr[0].get_trip_idx(ev_type), fr.t_.day_)),
+                            tags, tt, fr[0].get_trip_idx(ev_type), fr.t_)),
             CreateTransport(
                 fbb, &range, static_cast<std::uint32_t>(fr[0].get_clasz()),
                 fbb.CreateString(fr[0].line(ev_type)),

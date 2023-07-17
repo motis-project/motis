@@ -15,6 +15,6 @@ struct tag_lookup;
 extern_trip nigiri_trip_to_extern_trip(tag_lookup const&,
                                        ::nigiri::timetable const&,
                                        ::nigiri::trip_idx_t,
-                                       ::nigiri::day_idx_t);
+                                       ::nigiri::transport);
 
 }  // namespace motis::nigiri
