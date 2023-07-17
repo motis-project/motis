@@ -20,7 +20,6 @@ using namespace date;
 using namespace std::chrono_literals;
 namespace n = nigiri;
 namespace mn = motis::nigiri;
-namespace mm = motis::module;
 
 namespace {
 
