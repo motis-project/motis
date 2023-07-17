@@ -112,42 +112,46 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
 nigiri::~nigiri() = default;
 
 void nigiri::init(motis::module::registry& reg) {
-  auto statistics = std::vector<n::rt::statistics>{};
-  auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
-  for (auto const& p : gtfsrt_paths_) {
-    auto const [tag, path] = utl::split<'|', utl::cstr, utl::cstr>(p);
-    if (path.empty()) {
-      throw utl::fail("bad GTFS-RT path: {} (required: tag|path/to/file)", p);
+
+  if (!gtfsrt_paths_.empty()) {
+    auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
+    auto statistics = std::vector<n::rt::statistics>{};
+    for (auto const& p : gtfsrt_paths_) {
+      auto const [tag, path] = utl::split<'|', utl::cstr, utl::cstr>(p);
+      if (path.empty()) {
+        throw utl::fail("bad GTFS-RT path: {} (required: tag|path/to/file)", p);
+      }
+      auto const src = impl_->tags_.get_src(tag.to_str() + '_');
+      if (src == n::source_idx_t::invalid()) {
+        throw utl::fail("bad GTFS-RT path: tag {} not found", tag.view());
+      }
+      auto const file =
+          cista::mmap{path.c_str(), cista::mmap::protection::READ};
+      auto stats = n::rt::statistics{};
+      try {
+        stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, src,
+                                         tag.view(), file.view());
+      } catch (std::exception const& e) {
+        stats.parser_error_ = true;
+        LOG(logging::error)
+            << "GTFS-RT update error (tag=" << tag.view() << ") " << e.what();
+      } catch (...) {
+        stats.parser_error_ = true;
+        LOG(logging::error)
+            << "Unknown GTFS-RT update error (tag= " << tag.view() << ")";
+      }
+      statistics.emplace_back(stats);
     }
-    auto const src = impl_->tags_.get_src(tag.to_str() + '_');
-    if (src == n::source_idx_t::invalid()) {
-      throw utl::fail("bad GTFS-RT path: tag {} not found", tag.view());
+    impl_->update_rtt(rtt_copy);
+    impl_->railviz_->update(rtt_copy);
+    for (auto const [path, stats] : utl::zip(gtfsrt_paths_, statistics)) {
+      LOG(logging::info) << "init " << path << ": "
+                         << stats.total_entities_success_ << "/"
+                         << stats.total_entities_ << " ("
+                         << static_cast<double>(stats.total_entities_success_) /
+                                stats.total_entities_ * 100
+                         << "%)";
     }
-    auto const file = cista::mmap{path.c_str(), cista::mmap::protection::READ};
-    auto stats = n::rt::statistics{};
-    try {
-      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, src, tag.view(),
-                                       file.view());
-    } catch (std::exception const& e) {
-      stats.parser_error_ = true;
-      LOG(logging::error) << "GTFS-RT update error (tag=" << tag.view() << ") "
-                          << e.what();
-    } catch (...) {
-      stats.parser_error_ = true;
-      LOG(logging::error) << "Unknown GTFS-RT update error (tag= " << tag.view()
-                          << ")";
-    }
-    statistics.emplace_back(stats);
-  }
-  impl_->update_rtt(rtt_copy);
-  impl_->railviz_->update(rtt_copy);
-  for (auto const [path, stats] : utl::zip(gtfsrt_paths_, statistics)) {
-    LOG(logging::info) << "init " << path << ": "
-                       << stats.total_entities_success_ << "/"
-                       << stats.total_entities_ << " ("
-                       << static_cast<double>(stats.total_entities_success_) /
-                              stats.total_entities_ * 100
-                       << "%)";
   }
 
   reg.register_op("/nigiri",

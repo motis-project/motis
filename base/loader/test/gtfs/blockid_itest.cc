@@ -29,7 +29,8 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
             {"--tripbased.use_data_file=false",
              fmt::format(
                  "--nigiri.first_day={}-{}-{}", schedule_begin.substr(0, 4),
-                 schedule_begin.substr(4, 2), schedule_begin.substr(6, 2))}) {}
+                 schedule_begin.substr(4, 2), schedule_begin.substr(6, 2)),
+             "--nigiri.num_days", "10"}) {}
 
   msg_ptr routing_query(std::string_view from, std::string_view to,
                         std::string_view start_time, std::string_view target) {
@@ -153,14 +154,14 @@ TEST_F(loader_graph_builder_gtfs_block_id_once, search_s2_s1) {
   ASSERT_EQ(0, conns->size());
 }
 
-TEST_F(loader_graph_builder_gtfs_block_id_saturday, search_s2_s3) {
+TEST_F(loader_graph_builder_gtfs_block_id_friday, search_s2_s3) {
   auto res = routing_query("S2", "S3", "2006-07-08 00:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
   expect_no_transfers(conns->Get(0));
 }
 
-TEST_F(loader_graph_builder_gtfs_block_id_saturday, search_s2_s7) {
+TEST_F(loader_graph_builder_gtfs_block_id_friday, search_s2_s7) {
   auto res = routing_query("S2", "S7", "2006-07-08 00:00 Europe/Berlin");
   auto conns = motis_content(RoutingResponse, res)->connections();
   ASSERT_EQ(1, conns->size());
