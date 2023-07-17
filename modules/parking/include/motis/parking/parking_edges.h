@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/schedule/station_lookup.h"
 #include "motis/core/schedule/time.h"
 #include "motis/module/message.h"
 #include "motis/parking/parking_lot.h"
@@ -96,7 +97,7 @@ struct parking_edge_stats {
 struct database;
 
 std::vector<parking_edges> get_parking_edges(
-    schedule const& sched, std::vector<parking_lot> const& parkings,
+    station_lookup const&, std::vector<parking_lot> const& parkings,
     geo::latlng const& start_pos,
     flatbuffers::Vector<flatbuffers::Offset<Station>> const* dest_stations,
     int max_car_duration, motis::ppr::SearchOptions const* ppr_search_options,

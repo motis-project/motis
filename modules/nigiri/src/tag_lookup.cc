@@ -19,7 +19,7 @@ n::source_idx_t tag_lookup::get_src(std::string_view tag) const {
 }
 
 std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {
-  return src_to_tag_.at(src).view();
+  return src == n::source_idx_t::invalid() ? "" : src_to_tag_.at(src).view();
 }
 
 std::ostream& operator<<(std::ostream& out, tag_lookup const& tags) {

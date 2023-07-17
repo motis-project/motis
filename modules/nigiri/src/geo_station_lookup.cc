@@ -8,13 +8,10 @@
 #include "motis/nigiri/location.h"
 
 namespace mm = motis::module;
-namespace n = ::nigiri;
 
 namespace motis::nigiri {
 
-motis::module::msg_ptr geo_station_lookup(tag_lookup const& tags,
-                                          ::nigiri::timetable const& tt,
-                                          geo::point_rtree const& index,
+motis::module::msg_ptr geo_station_lookup(station_lookup const& index,
                                           motis::module::msg_ptr const& msg) {
   using motis::lookup::CreateLookupGeoStationRequest;
   using motis::lookup::CreateLookupGeoStationResponse;
@@ -24,22 +21,18 @@ motis::module::msg_ptr geo_station_lookup(tag_lookup const& tags,
   mc.create_and_finish(
       MsgContent_LookupGeoStationResponse,
       CreateLookupGeoStationResponse(
-          mc,
-          mc.CreateVector(utl::to_vec(
-              index.in_radius({req->pos()->lat(), req->pos()->lng()},
-                              req->min_radius(), req->max_radius()),
-              [&](auto const idx) {
-                auto const l = n::location_idx_t{idx};
-                auto const& locations = tt.locations_;
-                auto const coord = locations.coordinates_.at(l);
-                auto const pos = Position(coord.lat_, coord.lng_);
-                auto const src = locations.src_.at(l);
-                return CreateStation(
-                    mc,
-                    mc.CreateString(fmt::format("{}{}", tags.get_tag(src),
-                                                locations.ids_.at(l).view())),
-                    mc.CreateString(locations.names_.at(l).view()), &pos);
-              })))
+          mc, mc.CreateVector(utl::to_vec(
+                  index.in_radius({req->pos()->lat(), req->pos()->lng()},
+                                  req->min_radius(), req->max_radius()),
+                  [&](auto const idx) {
+                    auto const station = index.get(idx);
+                    auto const pos = to_fbs(station.pos_);
+                    return CreateStation(
+                        mc,
+                        mc.CreateString(
+                            fmt::format("{}{}", station.tag_, station.id_)),
+                        mc.CreateString(station.id_), &pos);
+                  })))
           .Union());
   return mm::make_msg(mc);
 }

@@ -56,10 +56,10 @@ inline std::string_view get_parkendd_parking_lot_key(parking_lot const& lot) {
 }
 
 inline std::string serialize_reachable_stations(
-    std::vector<std::pair<station_info, double>> const& st) {
+    std::vector<std::pair<lookup_station, double>> const& st) {
   std::stringstream ss;
   for (auto const& s : st) {
-    ss << s.first.id_ << "|";
+    ss << s.first.tag_ << s.first.id_ << "|";
   }
   return ss.str();
 }
@@ -96,7 +96,7 @@ void database::init() {
 
 void database::put_footedges(
     const persistable_foot_edges& fe,
-    std::vector<std::pair<station_info, double>> const& reachable_stations) {
+    std::vector<std::pair<lookup_station, double>> const& reachable_stations) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto reachable_stations_db = reachable_stations_dbi(txn);
@@ -182,7 +182,7 @@ std::vector<parking_lot> database::get_parking_lots() {
 }
 
 std::vector<foot_edge_task> database::get_foot_edge_tasks(
-    stations const& st, std::vector<parking_lot> const& parking_lots,
+    station_lookup const& st, std::vector<parking_lot> const& parking_lots,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles) {
   auto tasks = std::vector<foot_edge_task>{};
   auto lock = std::lock_guard{mutex_};
@@ -196,8 +196,8 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
         std::ceil(profile.duration_limit_ * profile.walking_speed_));
     for (auto const& pl : parking_lots) {
       auto const key = get_footedges_db_key(pl.id_, profile_name);
-      auto task = foot_edge_task{
-          &pl, st.get_in_radius(pl.location_, walk_radius), &profile_name};
+      auto task = foot_edge_task{&pl, st.in_radius(pl.location_, walk_radius),
+                                 &profile_name};
       if (auto const sr = txn.get(reachable_stations_db, key); sr.has_value()) {
         auto const reachable_stations =
             serialize_reachable_stations(task.stations_in_radius_);

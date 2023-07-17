@@ -5,3 +5,5 @@ table ScheduleEvent {
   prefixes: [string];
   hash: ulong;
 }
+
+table StationsEvent {}

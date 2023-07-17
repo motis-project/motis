@@ -7,6 +7,7 @@
 
 #include "motis/ppr/profile_info.h"
 
+#include "motis/core/schedule/station_lookup.h"
 #include "motis/module/module.h"
 
 namespace motis::parking {
@@ -49,7 +50,7 @@ private:
   std::unique_ptr<impl> impl_;
   bool import_successful_{false};
   std::map<std::string, ::motis::ppr::profile_info> ppr_profiles_;
-  std::unique_ptr<stations> stations_;
+  station_lookup const* stations_{nullptr};
 };
 
 }  // namespace motis::parking

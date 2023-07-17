@@ -28,6 +28,7 @@
 #include "motis/nigiri/initial_permalink.h"
 #include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
+#include "motis/nigiri/station_lookup.h"
 #include "motis/nigiri/trip_to_connection.h"
 #include "motis/nigiri/unixtime_conv.h"
 
@@ -81,7 +82,7 @@ struct nigiri::impl {
   std::mutex mutex_;
 #endif
   tag_lookup tags_;
-  geo::point_rtree station_geo_index_;
+  std::shared_ptr<station_lookup> station_lookup_;
   std::vector<gtfsrt> gtfsrt_;
   std::unique_ptr<guesser> guesser_;
   std::unique_ptr<railviz> railviz_;
@@ -119,11 +120,9 @@ void nigiri::init(motis::module::registry& reg) {
   if (lookup_) {
     reg.register_op("/lookup/geo_station",
                     [&](mm::msg_ptr const& msg) {
-                      return geo_station_lookup(impl_->tags_, **impl_->tt_,
-                                                impl_->station_geo_index_, msg);
+                      return geo_station_lookup(*impl_->station_lookup_, msg);
                     },
                     {});
-
     reg.register_op("/lookup/station_location",
                     [&](mm::msg_ptr const& msg) {
                       return station_location(impl_->tags_, **impl_->tt_, msg);
@@ -402,19 +401,17 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         utl::verify(loaded, "loading failed");
 
-        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
-                        impl_->tt_->get());
-        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TAGS),
-                        &impl_->tags_);
-
         LOG(logging::info) << "nigiri timetable: stations="
                            << (*impl_->tt_)->locations_.names_.size()
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
 
         if (lookup_) {
-          impl_->station_geo_index_ =
-              geo::make_point_rtree((**impl_->tt_).locations_.coordinates_);
+          impl_->station_lookup_ = std::make_shared<nigiri_station_lookup>(
+              impl_->tags_, **impl_->tt_);
+          auto copy = impl_->station_lookup_;
+          add_shared_data(to_res_id(mm::global_res_id::STATION_LOOKUP),
+                          std::move(copy));
         }
 
         if (guesser_) {
@@ -428,13 +425,26 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
         }
 
-        import_successful_ = true;
+        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
+                        impl_->tt_->get());
+        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TAGS),
+                        &impl_->tags_);
 
-        mm::message_creator fbb;
-        fbb.create_and_finish(MsgContent_NigiriEvent,
-                              motis::import::CreateNigiriEvent(fbb, h).Union(),
-                              "/import", DestinationType_Topic);
-        publish(make_msg(fbb));
+        import_successful_ = true;
+        {
+          mm::message_creator fbb;
+          fbb.create_and_finish(MsgContent_NigiriEvent,
+                                motis::import::CreateNigiriEvent(fbb).Union(),
+                                "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
+        {
+          mm::message_creator fbb;
+          fbb.create_and_finish(MsgContent_StationsEvent,
+                                motis::import::CreateStationsEvent(fbb).Union(),
+                                "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
       })
       ->require("SCHEDULE", [this](mm::msg_ptr const& msg) {
         if (msg->get()->content_type() != MsgContent_FileEvent) {

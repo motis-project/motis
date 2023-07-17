@@ -29,7 +29,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=7482578ad2bf1ec236d9ace969d3bbfdcc0ea33a
+  commit=98e98acce0b4ea56260b6f458c20a0209c6ea213
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
