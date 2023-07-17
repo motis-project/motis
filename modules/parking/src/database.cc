@@ -6,15 +6,17 @@
 
 #include "cista/serialization.h"
 
+#include "utl/enumerate.h"
+
 #include "fmt/core.h"
 
 #include "motis/core/common/logging.h"
 
-#include "osmium/io/reader.hpp"
-
-#include "utl/enumerate.h"
+#include "ppr/routing/input_location.h"
+#include "ppr/routing/input_pt.h"
 
 using namespace motis::logging;
+using namespace ppr::routing;
 
 namespace motis::parking {
 
@@ -186,39 +188,31 @@ std::vector<parking_lot> database::get_parking_lots() {
 std::vector<foot_edge_task> database::get_foot_edge_tasks(
     station_lookup const& st, std::vector<parking_lot> const& parking_lots,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-    std::string const& osm_file) {
+    bool vrfy, routing_graph const& rg) {
   auto tasks = std::vector<foot_edge_task>{};
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
   auto reachable_stations_db = reachable_stations_dbi(txn);
   auto footedges_db = footedges_dbi(txn);
 
-  // INITIALIZE Bounding Box Check
-  bool const vrfy_bb = (!osm_file.empty());
-
   for (auto const& [profile_name, pi] : ppr_profiles) {
     auto const& profile = pi.profile_;
     auto const walk_radius = static_cast<int>(
         std::ceil(profile.duration_limit_ * profile.walking_speed_));
     for (auto const& pl : parking_lots) {
-      auto const key = get_footedges_db_key(pl.id_, profile_name);
-
-      // Verify stations if osm_file is given
       auto stations = st.in_radius(pl.location_, walk_radius);
-      if (vrfy_bb) {
-        std::vector<std::pair<lookup_station, double>> stations_in_osm_bb{};
+      std::vector<std::pair<lookup_station, double>> stations_in_osm_bb{};
 
-        osmium::io::Reader reader{osm_file, osmium::io::read_meta::no};
-        osmium::io::Header const header{reader.header()};
-        assert(header.box());
-
-        osmium::Location osm_loc{};
-
+      input_location il;
+      routing_options ro{};
+      if (vrfy) {
         for (auto const& station : stations) {
-          osm_loc.set_lat(station.first.pos_.lat_);
-          osm_loc.set_lon(station.first.pos_.lng_);
+          location lo{};
+          lo.set_lat(station.first.pos_.lat_);
+          lo.set_lon(station.first.pos_.lng_);
+          il.location_ = lo;
 
-          if (header.box().contains(osm_loc)) {
+          if (has_nearest_edge(rg, il, ro, false)) {
             stations_in_osm_bb.emplace_back(station);
           }
         }
@@ -231,6 +225,7 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
         stations = stations_in_osm_bb;
       }
 
+      auto const key = get_footedges_db_key(pl.id_, profile_name);
       auto task = foot_edge_task{&pl, stations, &profile_name};
       if (auto const sr = txn.get(reachable_stations_db, key); sr.has_value()) {
         auto const reachable_stations =

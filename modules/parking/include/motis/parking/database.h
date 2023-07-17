@@ -19,6 +19,10 @@
 #include "motis/parking/foot_edge_task.h"
 #include "motis/parking/parking_lot.h"
 
+#include "ppr/common/routing_graph.h"
+
+using namespace ppr;
+
 namespace motis::parking {
 
 using persistable_foot_edges = typed_flatbuffer<FootEdges>;
@@ -42,10 +46,11 @@ struct database {
 
   std::vector<parking_lot> get_parking_lots();
 
+  // TODO (Carsten) improve -> no defaults
   std::vector<foot_edge_task> get_foot_edge_tasks(
       station_lookup const& st, std::vector<parking_lot> const& parking_lots,
       std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-      std::string const& osm_file = "");
+      bool const vrfy = false, routing_graph const& rg = {});
 
 private:
   static lmdb::txn::dbi parking_lots_dbi(

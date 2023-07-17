@@ -483,10 +483,6 @@ void parking::import(import_dispatcher& reg) {
           p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
         }
 
-        stations_ = get_shared_data<std::shared_ptr<station_lookup>>(
-                        to_res_id(global_res_id::STATION_LOOKUP))
-                        .get();
-
         if (read_ini<import_state>(dir / "import.ini") != state) {
           fs::create_directories(dir);
 
@@ -504,19 +500,20 @@ void parking::import(import_dispatcher& reg) {
             db.add_parking_lots(osm_parking_lots);
 
             LOG(info) << "Creating foot edge tasks...";
+            auto const& ppr_data =
+                *get_shared_data<motis::ppr::ppr_data const*>(
+                    to_res_id(global_res_id::PPR_DATA));
+
             progress_tracker->status("Check Foot Edges");
             auto foot_edge_tasks =
                 db.get_foot_edge_tasks(*stations_, osm_parking_lots,
-                                       ppr_profiles_, osm_ev->path()->str());
+                                       ppr_profiles_, true, ppr_data.rg_);
             LOG(info) << "Created " << foot_edge_tasks.size()
                       << " foot edge tasks (" << osm_parking_lots.size()
                       << " parking lots, " << ppr_profiles_.size()
                       << " ppr profiles, " << stations_->size() << " stations)";
 
             progress_tracker->status("Compute Foot Edges");
-            auto const& ppr_data =
-                *get_shared_data<motis::ppr::ppr_data const*>(
-                    to_res_id(global_res_id::PPR_DATA));
             compute_foot_edges_direct(
                 db, foot_edge_tasks, ppr_data, ppr_profiles_,
                 std::thread::hardware_concurrency(), ppr_exact_);
