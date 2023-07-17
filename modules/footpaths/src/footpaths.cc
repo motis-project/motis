@@ -25,6 +25,7 @@
 #include "osmium/io/reader.hpp"
 
 #include "ppr/common/routing_graph.h"
+#include "ppr/routing/input_pt.h"
 #include "ppr/serialization/reader.h"
 
 #include "utl/parallel_for.h"
@@ -159,6 +160,20 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           extracted_platforms = extract_osm_platforms(osm_file);
         }
 
+        progress_tracker->status("Load PPR Routing Graph.");
+        ::ppr::routing_graph rg;
+        {
+          scoped_timer const timer{"transfers: loading ppr routing graph."};
+          read_routing_graph(rg, ppr_event->graph_path()->str());
+        }
+
+        {
+          scoped_timer const timer{"transfers: preparing ppr rtrees."};
+          rg.prepare_for_routing(
+              edge_rtree_max_size_, area_rtree_max_size_,
+              lock_rtrees_ ? rtree_options::LOCK : rtree_options::PREFETCH);
+        }
+
         // 2nd extract all stations from the nigiri graph
         progress_tracker->status("Extract Stations from Nigiri.");
         std::vector<platform_info> stations{};
@@ -166,21 +181,20 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           scoped_timer const timer{
               "transfers: extract stations from nigiri graph."};
 
-          osmium::io::Reader reader{osm_file, osmium::io::read_meta::yes};
-          osmium::io::Header header{reader.header()};
-          assert(header.box());
           uint16_t not_in_bb = 0;
+          routing_options const ro{};
 
           for (auto i = nigiri::location_idx_t{0U};
                i != impl_->tt_.locations_.ids_.size(); ++i) {
             if (impl_->tt_.locations_.types_[i] ==
                 nigiri::location_type::kStation) {
+              input_location il;
+              location lo{};
+              lo.set_lat(impl_->tt_.locations_.coordinates_[i].lat_);
+              lo.set_lon(impl_->tt_.locations_.coordinates_[i].lng_);
+              il.location_ = lo;
 
-              osmium::Location osm_loc{};
-              osm_loc.set_lat(impl_->tt_.locations_.coordinates_[i].lat_);
-              osm_loc.set_lon(impl_->tt_.locations_.coordinates_[i].lng_);
-
-              if (!header.box().contains(osm_loc)) {
+              if (!has_nearest_edge(rg, il, ro, false)) {
                 ++not_in_bb;
                 continue;
               }
@@ -228,19 +242,6 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 6th get transfer requests result
-        progress_tracker->status("Load PPR Routing Graph.");
-        ::ppr::routing_graph rg;
-        {
-          scoped_timer const timer{"transfers: loading ppr routing graph."};
-          read_routing_graph(rg, ppr_event->graph_path()->str());
-        }
-
-        {
-          scoped_timer const timer{"transfers: preparing ppr rtrees."};
-          rg.prepare_for_routing(
-              edge_rtree_max_size_, area_rtree_max_size_,
-              lock_rtrees_ ? rtree_options::LOCK : rtree_options::PREFETCH);
-        }
 
         {
           scoped_timer const timer{"transfers: delete default transfers."};

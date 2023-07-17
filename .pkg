@@ -52,8 +52,8 @@
   commit=c4174ff47ea04eee883b5d00b9937fb0fa39a831
 [ppr]
   url=git@github.com:carstenhagelgans/ppr.git
-  branch=master
-  commit=898af46ca2080d6bf7b17af4c7d0d1aad4dacdb3
+  branch=nearest_edge
+  commit=86d53e6d97eda49b217511746539e542bd64f838
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=master
