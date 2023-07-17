@@ -204,7 +204,7 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
       std::vector<std::pair<lookup_station, double>> stations_in_osm_bb{};
 
       input_location il;
-      routing_options ro{};
+      routing_options const ro{};
       if (vrfy) {
         for (auto const& station : stations) {
           location lo{};
