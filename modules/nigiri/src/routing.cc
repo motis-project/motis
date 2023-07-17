@@ -153,7 +153,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   auto extend_interval_later = false;
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
-  size_t profile_idx = {0};
+  uint profile_idx = {0};
   if (tt.locations_.profile_idx_.contains(req->profile()->str())) {
     profile_idx = tt.locations_.profile_idx_.at(req->profile()->str());
   }
