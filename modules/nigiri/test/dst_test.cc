@@ -62,54 +62,14 @@ service_id,date,exception_type
 "TA+xce80","20231101","2"
 )"sv;
 
-n::loader::mem_dir to_dir(std::string_view s) {
-  std::string_view file_name;
-  char const* file_content_begin = nullptr;
-  auto dir = n::loader::mem_dir::dir_t{};
-  utl::for_each_line(s, [&](utl::cstr const line) {
-    if (line.starts_with("#")) {
-      if (file_content_begin != nullptr) {
-        auto const length =
-            static_cast<std::size_t>(line.begin() - file_content_begin - 1);
-        dir.emplace(file_name, std::string{file_content_begin, length});
-      }
-      file_name = line.substr(1).trim();
-      file_content_begin = line.end() + 1;
-    }
-  });
-  if (file_content_begin != nullptr) {
-    auto const length =
-        static_cast<std::size_t>(s.data() + s.size() - file_content_begin);
-    dir.emplace(file_name, std::string{file_content_begin, length});
-  }
-  return {dir};
-}
-
-TEST(nigiri, to_dir) {
-  auto const dir = to_dir(gtfs);
-  EXPECT_EQ(
-      dir.get_file(n::loader::gtfs::kAgencyFile).data(),
-      R"(agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone
-"11","Schweizerische Bundesbahnen SBB","http://www.sbb.ch/","Europe/Berlin","DE","0848 44 66 88"
-)"sv);
-  EXPECT_EQ(dir.get_file(n::loader::gtfs::kCalendarDatesFile).data(),
-            R"(service_id,date,exception_type
-"TA+xce80","20231028","1"
-"TA+xce80","20231029","1"
-"TA+xce80","20231030","2"
-"TA+xce80","20231031","2"
-"TA+xce80","20231101","2"
-)"sv);
-}
-
 TEST(nigiri, dst_test) {
   auto tt = n::timetable{};
   tt.date_range_ = {date::sys_days{2023_y / October / 28},
                     date::sys_days{2023_y / November / 1}};
   n::loader::register_special_stations(tt);
   n::loader::gtfs::load_timetable(
-      {.link_stop_distance_ = 0U, .default_tz_ = "Berlin/"}, n::source_idx_t{0},
-      to_dir(gtfs), tt);
+      {.link_stop_distance_ = 0U, .default_tz_ = "Europe/Berlin"},
+      n::source_idx_t{0}, n::loader::mem_dir::mem_dir::read(gtfs), tt);
   n::loader::finalize(tt);
 
   auto tags = mn::tag_lookup{};
