@@ -285,7 +285,7 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
         fbb.CreateVector(std::vector{CreateTripInfo(
             fbb,
             to_fbs(fbb, nigiri_trip_to_extern_trip(
-                            tags, tt, fr[0].get_trip_idx(ev_type), fr.t_.day_)),
+                            tags, tt, fr[0].get_trip_idx(ev_type), fr.t_)),
             CreateTransport(
                 fbb, &range, static_cast<std::uint32_t>(fr[0].get_clasz()),
                 fbb.CreateString(fr[0].line(ev_type)),

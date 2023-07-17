@@ -14,6 +14,8 @@
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/tag_lookup.h"
 
+#include "./utils.h"
+
 using namespace date;
 using namespace std::chrono_literals;
 namespace n = nigiri;
@@ -145,81 +147,6 @@ Attributes:
 
 }  // namespace
 
-struct trip {
-  struct delay {
-    std::string stop_id_;
-    n::event_type ev_type_;
-    unsigned delay_minutes_{0U};
-  };
-  std::string trip_id_;
-  std::vector<delay> delays_;
-};
-
-template <typename T>
-std::int64_t to_unix(T&& x) {
-  return std::chrono::time_point_cast<std::chrono::seconds>(x)
-      .time_since_epoch()
-      .count();
-};
-
-transit_realtime::FeedMessage to_feed_msg(std::vector<trip> const& trip_delays,
-                                          date::sys_seconds const msg_time) {
-  transit_realtime::FeedMessage msg;
-
-  auto const hdr = msg.mutable_header();
-  hdr->set_gtfs_realtime_version("2.0");
-  hdr->set_incrementality(
-      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
-  hdr->set_timestamp(to_unix(msg_time));
-
-  auto id = 0U;
-  for (auto const& trip : trip_delays) {
-    auto const e = msg.add_entity();
-    e->set_id(fmt::format("{}", ++id));
-    e->set_is_deleted(false);
-
-    auto const td = e->mutable_trip_update()->mutable_trip();
-    td->set_trip_id(trip.trip_id_);
-
-    for (auto const& stop_delay : trip.delays_) {
-      auto* const upd = e->mutable_trip_update()->add_stop_time_update();
-      *upd->mutable_stop_id() = stop_delay.stop_id_;
-      stop_delay.ev_type_ == nigiri::event_type::kDep
-          ? upd->mutable_departure()->set_delay(stop_delay.delay_minutes_ * 60)
-          : upd->mutable_arrival()->set_delay(stop_delay.delay_minutes_ * 60);
-    }
-  }
-
-  return msg;
-}
-
-mm::msg_ptr make_routing_msg(std::string_view from, std::string_view to,
-                             std::int64_t const start) {
-  using namespace motis;
-  using flatbuffers::Offset;
-
-  mm::message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_RoutingRequest,
-      CreateRoutingRequest(
-          fbb, motis::routing::Start_OntripStationStart,
-          CreateOntripStationStart(
-              fbb,
-              routing::CreateInputStation(fbb, fbb.CreateString(from),
-                                          fbb.CreateString("")),
-              start)
-              .Union(),
-          routing::CreateInputStation(fbb, fbb.CreateString(to),
-                                      fbb.CreateString("")),
-          routing::SearchType_Default, SearchDir_Forward,
-          fbb.CreateVector(std::vector<Offset<routing::Via>>()),
-          fbb.CreateVector(
-              std::vector<Offset<routing::AdditionalEdgeWrapper>>()))
-          .Union(),
-      "/nigiri");
-  return make_msg(fbb);
-}
-
 TEST(nigiri, rt_test) {
   auto tt = n::timetable{};
   tt.date_range_ = {date::sys_days{2019_y / March / 25},
@@ -232,32 +159,36 @@ TEST(nigiri, rt_test) {
 
   auto const stats = n::rt::gtfsrt_update_msg(
       tt, rtt, n::source_idx_t{0}, "tag",
-      to_feed_msg(
-          {trip{.trip_id_ = "T1",
-                .delays_ = {trip::delay{.stop_id_ = "A",
-                                        .ev_type_ = nigiri::event_type::kDep,
-                                        .delay_minutes_ = 10},
-                            trip::delay{.stop_id_ = "B",
-                                        .ev_type_ = nigiri::event_type::kDep,
-                                        .delay_minutes_ = 5}}},
-           trip{.trip_id_ = "T2",
-                .delays_ = {trip::delay{.stop_id_ = "D",
-                                        .ev_type_ = nigiri::event_type::kDep,
-                                        .delay_minutes_ = 15}}},
-           trip{.trip_id_ = "T3",
-                .delays_ = {trip::delay{.stop_id_ = "B",
-                                        .ev_type_ = nigiri::event_type::kDep,
-                                        .delay_minutes_ = 10},
-                            trip::delay{.stop_id_ = "C",
-                                        .ev_type_ = nigiri::event_type::kArr,
-                                        .delay_minutes_ = 0}}},
-           trip{.trip_id_ = "T4",
-                .delays_ = {trip::delay{.stop_id_ = "C",
-                                        .ev_type_ = nigiri::event_type::kDep,
-                                        .delay_minutes_ = 5},
-                            trip::delay{.stop_id_ = "E",
-                                        .ev_type_ = nigiri::event_type::kArr,
-                                        .delay_minutes_ = 0}}}},
+      mn::to_feed_msg(
+          {mn::trip{
+               .trip_id_ = "T1",
+               .delays_ = {mn::trip::delay{.stop_id_ = "A",
+                                           .ev_type_ = nigiri::event_type::kDep,
+                                           .delay_minutes_ = 10},
+                           mn::trip::delay{.stop_id_ = "B",
+                                           .ev_type_ = nigiri::event_type::kDep,
+                                           .delay_minutes_ = 5}}},
+           mn::trip{
+               .trip_id_ = "T2",
+               .delays_ = {mn::trip::delay{.stop_id_ = "D",
+                                           .ev_type_ = nigiri::event_type::kDep,
+                                           .delay_minutes_ = 15}}},
+           mn::trip{
+               .trip_id_ = "T3",
+               .delays_ = {mn::trip::delay{.stop_id_ = "B",
+                                           .ev_type_ = nigiri::event_type::kDep,
+                                           .delay_minutes_ = 10},
+                           mn::trip::delay{.stop_id_ = "C",
+                                           .ev_type_ = nigiri::event_type::kArr,
+                                           .delay_minutes_ = 0}}},
+           mn::trip{
+               .trip_id_ = "T4",
+               .delays_ = {mn::trip::delay{.stop_id_ = "C",
+                                           .ev_type_ = nigiri::event_type::kDep,
+                                           .delay_minutes_ = 5},
+                           mn::trip::delay{.stop_id_ = "E",
+                                           .ev_type_ = nigiri::event_type::kArr,
+                                           .delay_minutes_ = 0}}}},
           date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(stats.total_entities_success_, 4U);
 
@@ -266,8 +197,8 @@ TEST(nigiri, rt_test) {
 
   auto const routing_response = mn::route(
       tags, tt, &rtt,
-      make_routing_msg("tag_A", "tag_E",
-                       to_unix(date::sys_days{2019_y / May / 1} + 8h)));
+      mn::make_routing_msg("tag_A", "tag_E",
+                           mn::to_unix(date::sys_days{2019_y / May / 1} + 8h)));
 
   using namespace motis;
   using motis::routing::RoutingResponse;
