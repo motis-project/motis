@@ -14,13 +14,13 @@ struct trip_update {
   struct stop_time_update {
     std::string stop_id_;
     std::optional<std::size_t> seq_{std::nullopt};
-    ::nigiri::event_type ev_type_;
+    ::nigiri::event_type ev_type_{::nigiri::event_type::kDep};
     unsigned delay_minutes_{0U};
     bool skip_{false};
     std::optional<std::string> stop_assignment_{std::nullopt};
   };
   std::string trip_id_;
-  std::vector<stop_time_update> stop_updates_;
+  std::vector<stop_time_update> stop_updates_{};
   bool cancelled_{false};
 };
 
@@ -58,21 +58,21 @@ inline transit_realtime::FeedMessage to_feed_msg(
 
     for (auto const& stop_upd : trip.stop_updates_) {
       auto* const upd = e->mutable_trip_update()->add_stop_time_update();
-      if (stop_upd.skip_) {
-        upd->set_schedule_relationship(
-            transit_realtime::
-                TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
-        continue;
-      }
-      if (stop_upd.stop_assignment_.has_value()) {
-        upd->mutable_stop_time_properties()->set_assigned_stop_id(
-            stop_upd.stop_assignment_.value());
-      }
       if (!stop_upd.stop_id_.empty()) {
         *upd->mutable_stop_id() = stop_upd.stop_id_;
       }
       if (stop_upd.seq_.has_value()) {
         upd->set_stop_sequence(*stop_upd.seq_);
+      }
+      if (stop_upd.stop_assignment_.has_value()) {
+        upd->mutable_stop_time_properties()->set_assigned_stop_id(
+            stop_upd.stop_assignment_.value());
+      }
+      if (stop_upd.skip_) {
+        upd->set_schedule_relationship(
+            transit_realtime::
+                TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
+        continue;
       }
       stop_upd.ev_type_ == ::nigiri::event_type::kDep
           ? upd->mutable_departure()->set_delay(stop_upd.delay_minutes_ * 60)
