@@ -242,22 +242,20 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         // 6th get transfer requests result
-
         {
           scoped_timer const timer{"transfers: delete default transfers."};
-          // TODO (Carsten) there must be a better way
-          impl_->tt_.locations_.footpaths_out_.clear();
           impl_->tt_.locations_.footpaths_in_.clear();
-          for (size_t p_idx = 0; p_idx < ppr_profiles_.size(); ++p_idx) {
-            impl_->tt_.locations_.footpaths_out_.emplace_back();
-            impl_->tt_.locations_.footpaths_in_.emplace_back();
+          impl_->tt_.locations_.footpaths_out_.clear();
 
-            for (size_t l_idx = 0; l_idx < impl_->tt_.locations_.src_.size();
-                 ++l_idx) {
+          for (uint p_idx = 0; p_idx < ppr_profiles_.size(); ++p_idx) {
+            impl_->tt_.locations_.footpaths_in_.emplace_back();
+            impl_->tt_.locations_.footpaths_out_.emplace_back();
+
+            for (uint i = 0; i < impl_->tt_.locations_.src_.size(); ++i) {
               impl_->tt_.locations_.footpaths_out_[p_idx].emplace_back(
-                  std::vector<nigiri::footpath>{});
+                  nigiri::vector<nigiri::footpath>());
               impl_->tt_.locations_.footpaths_in_[p_idx].emplace_back(
-                  std::vector<nigiri::footpath>{});
+                  nigiri::vector<nigiri::footpath>());
             }
           }
         }

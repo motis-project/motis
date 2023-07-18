@@ -130,8 +130,8 @@ void compute_and_update_nigiri_transfers(
           .push_back(n::footpath{t_req.transfer_targets_[platform_idx]->idx_,
                                  r.duration_});
       tt.locations_
-          .footpaths_out_[profile_idx]
-                         [t_req.transfer_targets_[platform_idx]->idx_]
+          .footpaths_in_[profile_idx]
+                        [t_req.transfer_targets_[platform_idx]->idx_]
           .push_back(n::footpath{t_req.transfer_start_->idx_, r.duration_});
     }
   }
