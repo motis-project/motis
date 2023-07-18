@@ -49,7 +49,7 @@ private:
   bool match_by_distance(
       nigiri::location_idx_t const i,
       boost::strided_integer_range<int> match_distances,
-      std::function<bool(std::string, std::string_view)> matches);
+      std::function<bool(std::string, std::string_view)> const& matches);
 
   int max_walk_duration_{10};
 

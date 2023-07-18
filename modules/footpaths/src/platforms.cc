@@ -39,8 +39,8 @@ osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
 
 struct platform_handler : public osmium::handler::Handler {
   explicit platform_handler(std::vector<platform_info>& platforms,
-                            osmium::TagsFilter const& filter)
-      : platforms_(platforms), filter_(filter){};
+                            osmium::TagsFilter filter)
+      : platforms_(platforms), filter_(std::move(filter)){};
 
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
@@ -142,7 +142,7 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
 std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
   std::vector<std::string> platform_names;
 
-  auto add_names = [&](std::string name_by_tag) {
+  auto add_names = [&](const std::string& name_by_tag) {
     platform_names.emplace_back(name_by_tag);
     return;
     /**

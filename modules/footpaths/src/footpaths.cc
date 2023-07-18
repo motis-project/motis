@@ -330,7 +330,7 @@ void footpaths::match_locations_and_platforms() {
 bool footpaths::match_by_distance(
     nigiri::location_idx_t const i,
     boost::strided_integer_range<int> match_distances,
-    std::function<bool(std::string, std::string_view)> matches) {
+    std::function<bool(std::string, std::string_view)> const& matches) {
   auto loc = impl_->tt_.locations_.coordinates_[i];
   bool matched_location{false};
 
