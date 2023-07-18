@@ -206,6 +206,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               auto const fr = n::rt::frun{tt, rtt, t.r_};
               for (auto const& stop_idx : t.stop_range_) {
                 auto const stp = fr[stop_idx];
+                if (stp.is_canceled()) {
+                  continue;
+                }
+
                 auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
                 auto const enter = (stop_idx == t.stop_range_.from_);
 
