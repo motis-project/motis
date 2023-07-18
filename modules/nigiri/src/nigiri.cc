@@ -92,6 +92,8 @@ struct nigiri::impl {
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(no_cache_, "no_cache", "disable timetable caching");
+  param(adjust_footpaths_, "adjust_footpaths",
+        "adjust footpaths if they are too fast for the distance");
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
@@ -324,7 +326,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             cista::hash_combine(cista::BASE_HASH,
                                 interval.from_.time_since_epoch().count(),  //
                                 interval.to_.time_since_epoch().count(),  //
-                                link_stop_distance_);
+                                adjust_footpaths_, link_stop_distance_,
+                                cista::hash(default_timezone_));
 
         auto datasets =
             std::vector<std::tuple<n::source_idx_t,
@@ -386,7 +389,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               }
             }
 
-            n::loader::finalize(**impl_->tt_);
+            n::loader::finalize(**impl_->tt_, adjust_footpaths_);
 
             if (no_cache_) {
               loaded = true;
