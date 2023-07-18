@@ -60,7 +60,9 @@ struct import_state {
 };
 
 struct footpaths::impl {
-  nigiri::timetable tt_;
+  explicit impl(nigiri::timetable& tt) : tt_(tt){};
+
+  nigiri::timetable& tt_;
 };
 
 footpaths::footpaths() : module("Footpaths", "footpaths") {
@@ -85,9 +87,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         using import::OSMEvent;
         using import::PPREvent;
 
-        impl_ = std::make_unique<impl>();
-        impl_->tt_ = *get_shared_data<nigiri::timetable*>(
-            to_res_id(global_res_id::NIGIRI_TIMETABLE));
+        impl_ = std::make_unique<impl>(*get_shared_data<nigiri::timetable*>(
+            to_res_id(global_res_id::NIGIRI_TIMETABLE)));
 
         auto const nigiri_event =
             motis_content(NigiriEvent, dependencies.at("NIGIRI"));
@@ -144,6 +145,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
           // build list of profile infos
           profiles_.emplace_back(p.second);
         }
+        std::clog << impl_->tt_.locations_.profile_idx_.size() << std::endl;
         assert(impl_->tt_.locations_.profile_idx_.size() == profiles_.size());
 
         // Implementation of footpaths is inspired by parking
