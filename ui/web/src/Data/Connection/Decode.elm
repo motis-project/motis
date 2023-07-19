@@ -159,6 +159,7 @@ decodeTrip =
 decodeTripId : Decode.Decoder TripId
 decodeTripId =
     decode TripId
+        |> required "id" string
         |> required "station_id" string
         |> optional "train_nr" int 0
         |> required "time" int

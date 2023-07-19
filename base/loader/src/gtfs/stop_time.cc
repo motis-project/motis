@@ -77,8 +77,8 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
           hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) != 1,
           hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) != 1);
     } catch (...) {
-      LOG(logging::warn) << "unkown stop " << get<stop_id>(s).to_str() << " at "
-                         << file.name() << ":" << i;
+      LOG(logging::warn) << "unknown stop " << get<stop_id>(s).to_str()
+                         << " at " << file.name() << ":" << i;
     }
   }
 

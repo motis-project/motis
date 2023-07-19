@@ -111,7 +111,8 @@
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON",
         "MOTIS_AVX": "OFF",
-        "MOTIS_AVX2": "OFF"
+        "MOTIS_AVX2": "OFF",
+        "LUAJIT_DISABLE_JIT": "ON"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -149,8 +150,8 @@
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "CXX": "/usr/bin/g++-11",
-        "CC": "/usr/bin/gcc-11"
+        "CXX": "/usr/bin/g++-12",
+        "CC": "/usr/bin/gcc-12"
       }
     },
     {
@@ -165,8 +166,8 @@
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "CXX": "/usr/bin/g++-11",
-        "CC": "/usr/bin/gcc-11"
+        "CXX": "/usr/bin/g++-12",
+        "CC": "/usr/bin/gcc-12"
       }
     },
     {
@@ -180,8 +181,8 @@
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "CXX": "/usr/bin/g++-11",
-        "CC": "/usr/bin/gcc-11"
+        "CXX": "/usr/bin/g++-12",
+        "CC": "/usr/bin/gcc-12"
       }
     },
     {

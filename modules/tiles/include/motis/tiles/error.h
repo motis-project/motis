@@ -22,7 +22,7 @@ public:
       case error::database_not_available:
         return "tiles: database not available";
       case error::invalid_request: return "tiles: invalid request";
-      default: return "tiles: unkown error";
+      default: return "tiles: unknown error";
     }
   }
 };

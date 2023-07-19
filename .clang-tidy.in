@@ -73,7 +73,12 @@ Checks: "*,\
 -cppcoreguidelines-avoid-const-or-ref-data-members,\
 -cppcoreguidelines-avoid-do-while,\
 -altera-struct-pack-align,\
--bugprone-unchecked-optional-access"
+-bugprone-unchecked-optional-access,\
+-readability-identifier-naming,\
+-cert-dcl37-c,\
+-bugprone-reserved-identifier,\
+-cert-dcl51-cpp,\
+-misc-confusable-identifiers"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false

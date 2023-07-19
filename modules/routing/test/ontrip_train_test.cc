@@ -26,9 +26,10 @@ TEST_F(routing_ontrip_train, stay_in_train) {
           fbb, Start_OntripTrainStart,
           CreateOntripTrainStart(
               fbb,
-              CreateTripId(fbb, fbb.CreateString("8000096"), 2292,
-                           unix_time(1305), fbb.CreateString("8000105"),
-                           unix_time(1440), fbb.CreateString("381")),
+              CreateTripId(fbb, fbb.CreateString(""),
+                           fbb.CreateString("8000096"), 2292, unix_time(1305),
+                           fbb.CreateString("8000105"), unix_time(1440),
+                           fbb.CreateString("381")),
               CreateInputStation(fbb, fbb.CreateString("8000031"),
                                  fbb.CreateString("")),
               unix_time(1408))
@@ -53,9 +54,10 @@ TEST_F(routing_ontrip_train, stay_in_train_single_leg) {
           fbb, Start_OntripTrainStart,
           CreateOntripTrainStart(
               fbb,
-              CreateTripId(fbb, fbb.CreateString("8000096"), 2292,
-                           unix_time(1305), fbb.CreateString("8000105"),
-                           unix_time(1440), fbb.CreateString("381")),
+              CreateTripId(fbb, fbb.CreateString(""),
+                           fbb.CreateString("8000096"), 2292, unix_time(1305),
+                           fbb.CreateString("8000105"), unix_time(1440),
+                           fbb.CreateString("381")),
               CreateInputStation(fbb, fbb.CreateString("8000068"),
                                  fbb.CreateString("")),
               unix_time(1422))
@@ -80,9 +82,10 @@ TEST_F(routing_ontrip_train, stay_in_train_with_interchange) {
           fbb, Start_OntripTrainStart,
           CreateOntripTrainStart(
               fbb,
-              CreateTripId(fbb, fbb.CreateString("8000096"), 2292,
-                           unix_time(1305), fbb.CreateString("8000105"),
-                           unix_time(1440), fbb.CreateString("381")),
+              CreateTripId(fbb, fbb.CreateString(""),
+                           fbb.CreateString("8000096"), 2292, unix_time(1305),
+                           fbb.CreateString("8000105"), unix_time(1440),
+                           fbb.CreateString("381")),
               CreateInputStation(fbb, fbb.CreateString("8000068"),
                                  fbb.CreateString("")),
               unix_time(1422))
@@ -107,9 +110,10 @@ TEST_F(routing_ontrip_train, immediate_exit_with_interchange) {
           fbb, Start_OntripTrainStart,
           CreateOntripTrainStart(
               fbb,
-              CreateTripId(fbb, fbb.CreateString("8000096"), 2292,
-                           unix_time(1305), fbb.CreateString("8000105"),
-                           unix_time(1440), fbb.CreateString("381")),
+              CreateTripId(fbb, fbb.CreateString(""),
+                           fbb.CreateString("8000096"), 2292, unix_time(1305),
+                           fbb.CreateString("8000105"), unix_time(1440),
+                           fbb.CreateString("381")),
               CreateInputStation(fbb, fbb.CreateString("8000105"),
                                  fbb.CreateString("")),
               unix_time(1440))
@@ -134,9 +138,10 @@ TEST_F(routing_ontrip_train, immediate_exit_with_walk) {
           fbb, Start_OntripTrainStart,
           CreateOntripTrainStart(
               fbb,
-              CreateTripId(fbb, fbb.CreateString("8000261"), 628,
-                           unix_time(1154), fbb.CreateString("8000080"),
-                           unix_time(1726), fbb.CreateString("")),
+              CreateTripId(fbb, fbb.CreateString(""),
+                           fbb.CreateString("8000261"), 628, unix_time(1154),
+                           fbb.CreateString("8000080"), unix_time(1726),
+                           fbb.CreateString("")),
               CreateInputStation(fbb, fbb.CreateString("8073368"),
                                  fbb.CreateString("")),
               unix_time(1614))

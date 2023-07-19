@@ -19,6 +19,7 @@ constexpr auto kIdTrainICERequest = R""(
   "content_type": "LookupIdTrainRequest",
   "content": {
     "trip_id": {
+      "id": "",
       "station_id": "8000261",
       "train_nr": 628,
       "time": 1448362440,

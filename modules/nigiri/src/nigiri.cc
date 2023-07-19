@@ -14,17 +14,28 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
-#include "nigiri/print_transport.h"
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/gtfsrt_update.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/geo_station_lookup.h"
+#include "motis/nigiri/get_station.h"
+#include "motis/nigiri/gtfsrt.h"
+#include "motis/nigiri/guesser.h"
+#include "motis/nigiri/initial_permalink.h"
+#include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
+#include "motis/nigiri/station_lookup.h"
+#include "motis/nigiri/trip_to_connection.h"
+#include "motis/nigiri/unixtime_conv.h"
+#include "utl/parser/split.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
-namespace n = ::nigiri;
+namespace n = nigiri;
 
 namespace motis::nigiri {
 
@@ -40,39 +51,241 @@ struct nigiri::impl {
     loaders_.emplace_back(
         std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
   }
+
+  void update_rtt(std::shared_ptr<n::rt_timetable> rtt) {
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+    rtt_.store(std::move(rtt));
+#else
+    auto lock = std::lock_guard{mutex_};
+    rtt_ = std::move(rtt);
+#endif
+  }
+
+  std::shared_ptr<n::rt_timetable> get_rtt() {
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+    return rtt_.load();
+#else
+    std::shared_ptr<n::rt_timetable> copy;
+    {
+      auto const lock = std::lock_guard{mutex_};
+      copy = rtt_;
+    }
+    return copy;
+#endif
+  }
+
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
-  std::vector<std::string> tags_;
-  geo::point_rtree station_geo_index_;
+#if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
+  std::atomic<std::shared_ptr<n::rt_timetable>> rtt_;
+#else
+  std::shared_ptr<n::rt_timetable> rtt_;
+  std::mutex mutex_;
+#endif
+  tag_lookup tags_;
+  std::shared_ptr<station_lookup> station_lookup_;
+  std::vector<gtfsrt> gtfsrt_;
+  std::unique_ptr<guesser> guesser_;
+  std::unique_ptr<railviz> railviz_;
+  std::string initial_permalink_;
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(no_cache_, "no_cache", "disable timetable caching");
+  param(adjust_footpaths_, "adjust_footpaths",
+        "adjust footpaths if they are too fast for the distance");
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
-  param(geo_lookup_, "geo_lookup", "provide geo station lookup");
+  param(lookup_, "lookup", "provide geo station lookup");
+  param(guesser_, "guesser", "station typeahead/autocomplete");
+  param(railviz_, "railviz", "provide railviz functions");
+  param(routing_, "routing", "provide trip_to_connection");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
   param(use_stationfilter_, "use_stationfilter", "filter stations in intermodal routing");
+  param(default_timezone_, "default_timezone",
+        "tz for agencies w/o tz or routes w/o agency");
+  param(gtfsrt_urls_, "gtfsrt",
+        "list of GTFS-RT endpoints, format: tag|url|authorization");
+  param(gtfsrt_paths_, "gtfsrt_paths",
+        "list of GTFS-RT, format: tag|/path/to/file.pb");
 }
 
 nigiri::~nigiri() = default;
 
 void nigiri::init(motis::module::registry& reg) {
+  if (!gtfsrt_paths_.empty()) {
+    auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
+    auto statistics = std::vector<n::rt::statistics>{};
+    for (auto const& p : gtfsrt_paths_) {
+      auto const [tag, path] = utl::split<'|', utl::cstr, utl::cstr>(p);
+      if (path.empty()) {
+        throw utl::fail("bad GTFS-RT path: {} (required: tag|path/to/file)", p);
+      }
+      auto const src = impl_->tags_.get_src(tag.to_str() + '_');
+      if (src == n::source_idx_t::invalid()) {
+        throw utl::fail("bad GTFS-RT path: tag {} not found", tag.view());
+      }
+      auto const file =
+          cista::mmap{path.c_str(), cista::mmap::protection::READ};
+      auto stats = n::rt::statistics{};
+      try {
+        stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, src,
+                                         tag.view(), file.view());
+      } catch (std::exception const& e) {
+        stats.parser_error_ = true;
+        LOG(logging::error)
+            << "GTFS-RT update error (tag=" << tag.view() << ") " << e.what();
+      } catch (...) {
+        stats.parser_error_ = true;
+        LOG(logging::error)
+            << "Unknown GTFS-RT update error (tag= " << tag.view() << ")";
+      }
+      statistics.emplace_back(stats);
+    }
+    impl_->update_rtt(rtt_copy);
+    impl_->railviz_->update(rtt_copy);
+    for (auto const [path, stats] : utl::zip(gtfsrt_paths_, statistics)) {
+      LOG(logging::info) << "init " << path << ": "
+                         << stats.total_entities_success_ << "/"
+                         << stats.total_entities_ << " ("
+                         << static_cast<double>(stats.total_entities_success_) /
+                                stats.total_entities_ * 100
+                         << "%)";
+    }
+  }
+
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
-                    return route(impl_->tags_, **impl_->tt_, msg);
+                    return route(impl_->tags_, **impl_->tt_,
+                                 impl_->get_rtt().get(), msg);
                   },
                   {});
 
-  if (geo_lookup_) {
+  if (lookup_) {
     reg.register_op("/lookup/geo_station",
                     [&](mm::msg_ptr const& msg) {
-                      return geo_station_lookup(impl_->tags_, **impl_->tt_,
-                                                impl_->station_geo_index_, msg);
+                      return geo_station_lookup(*impl_->station_lookup_, msg);
                     },
                     {});
+    reg.register_op("/lookup/station_location",
+                    [&](mm::msg_ptr const& msg) {
+                      return station_location(impl_->tags_, **impl_->tt_, msg);
+                    },
+                    {});
+    reg.register_op("/lookup/schedule_info",
+                    [&](mm::msg_ptr const&) {
+                      auto const& tt = (**impl_->tt_);
+                      mm::message_creator b;
+                      b.create_and_finish(
+                          MsgContent_LookupScheduleInfoResponse,
+                          lookup::CreateLookupScheduleInfoResponse(
+                              b, b.CreateString(""),
+                              to_motis_unixtime(tt.external_interval().from_),
+                              to_motis_unixtime(tt.external_interval().to_))
+                              .Union());
+                      return make_msg(b);
+                    },
+                    {});
+  }
+
+  if (guesser_) {
+    reg.register_op(
+        "/guesser",
+        [&](mm::msg_ptr const& msg) { return impl_->guesser_->guess(msg); },
+        {});
+  }
+
+  if (railviz_) {
+    reg.register_op("/railviz/map_config",
+                    [this](mm::msg_ptr const&) {
+                      mm::message_creator mc;
+                      mc.create_and_finish(
+                          MsgContent_RailVizMapConfigResponse,
+                          motis::railviz::CreateRailVizMapConfigResponse(
+                              mc, mc.CreateString(impl_->initial_permalink_),
+                              mc.CreateString(""))
+                              .Union());
+                      return make_msg(mc);
+                    },
+                    {});
+    reg.register_op("/railviz/get_trains",
+                    [&](mm::msg_ptr const& msg) {
+                      return impl_->railviz_->get_trains(msg);
+                    },
+                    {});
+    reg.register_op(
+        "/railviz/get_trips",
+        [&](mm::msg_ptr const& msg) { return impl_->railviz_->get_trips(msg); },
+        {});
+    reg.register_op("/railviz/get_station",
+                    [&](mm::msg_ptr const& msg) {
+                      return get_station(impl_->tags_, **impl_->tt_,
+                                         impl_->get_rtt().get(), msg);
+                    },
+                    {});
+  }
+
+  if (routing_) {
+    reg.register_op("/trip_to_connection",
+                    [&](mm::msg_ptr const& msg) {
+                      return trip_to_connection(impl_->tags_, **impl_->tt_,
+                                                impl_->get_rtt().get(), msg);
+                    },
+                    {});
+  }
+
+  reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
+}
+
+void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
+  if (!gtfsrt_urls_.empty()) {
+    impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](auto&& config) {
+      return gtfsrt{impl_->tags_, config};
+    });
+    d.register_timer("RIS GTFS-RT Update",
+                     boost::posix_time::seconds{gtfsrt_update_interval_},
+                     [&]() { update_gtfsrt(); }, {});
+    update_gtfsrt();
+  }
+}
+
+void nigiri::update_gtfsrt() {
+  LOG(logging::info) << "Starting GTFS-RT update: fetch URLs";
+
+  auto const futures = utl::to_vec(
+      impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
+  auto rtt_copy =
+      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->get_rtt()});
+  auto statistics = std::vector<n::rt::statistics>{};
+  for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
+    auto const tag = impl_->tags_.get_tag(endpoint.src());
+    auto stats = n::rt::statistics{};
+    try {
+      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, endpoint.src(),
+                                       tag, f->val().body);
+    } catch (std::exception const& e) {
+      stats.parser_error_ = true;
+      LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
+                          << e.what();
+    } catch (...) {
+      stats.parser_error_ = true;
+      LOG(logging::error) << "Unknown GTFS-RT update error (tag= " << tag
+                          << ")";
+    }
+    statistics.emplace_back(stats);
+  }
+  impl_->update_rtt(rtt_copy);
+  impl_->railviz_->update(rtt_copy);
+
+  for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
+    LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "
+                       << stats.total_entities_success_ << "/"
+                       << stats.total_entities_ << " ("
+                       << static_cast<double>(stats.total_entities_success_) /
+                              stats.total_entities_ * 100
+                       << "%)";
   }
 }
 
@@ -94,10 +307,16 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                         }),
             "all schedules require a name tag, even with only one schedule");
 
-        std::stringstream ss;
-        ss << first_day_;
         date::sys_days begin;
-        ss >> date::parse("%F", begin);
+        auto const today = std::chrono::time_point_cast<date::days>(
+            std::chrono::system_clock::now());
+        if (first_day_ == "TODAY") {
+          begin = today;
+        } else {
+          std::stringstream ss;
+          ss << first_day_;
+          ss >> date::parse("%F", begin);
+        }
 
         auto const interval = n::interval<date::sys_days>{
             begin, begin + std::chrono::days{num_days_}};
@@ -108,14 +327,15 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             cista::hash_combine(cista::BASE_HASH,
                                 interval.from_.time_since_epoch().count(),  //
                                 interval.to_.time_since_epoch().count(),  //
-                                link_stop_distance_);
+                                adjust_footpaths_, link_stop_distance_,
+                                cista::hash(default_timezone_));
 
         auto datasets =
             std::vector<std::tuple<n::source_idx_t,
                                    decltype(impl_->loaders_)::const_iterator,
                                    std::unique_ptr<n::loader::dir>>>{};
-        for (auto const [i, p] :
-             utl::enumerate(*motis_content(FileEvent, msg)->paths())) {
+        auto i = 0U;
+        for (auto const p : *motis_content(FileEvent, msg)->paths()) {
           if (p->tag()->str() != "schedule") {
             continue;
           }
@@ -127,10 +347,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       path);
           h = cista::hash_combine(h, (*c)->hash(*d));
 
-          datasets.emplace_back(n::source_idx_t{i}, c, std::move(d));
-
-          auto const tag = p->options()->str();
-          impl_->tags_.emplace_back(tag + (tag.empty() ? "default_" : "_"));
+          auto const src = n::source_idx_t{i++};
+          datasets.emplace_back(src, c, std::move(d));
+          impl_->tags_.add(src, p->options()->str() + "_");
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
@@ -149,14 +368,15 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
-                  fmt::format("{}nigiri", impl_->tags_[to_idx(src)]));
+                  fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
 
               LOG(logging::info)
                   << "loading nigiri timetable with configuration "
                   << (*loader)->name();
 
               try {
-                (*loader)->load({.link_stop_distance_ = link_stop_distance_},
+                (*loader)->load({.link_stop_distance_ = link_stop_distance_,
+                                 .default_tz_ = default_timezone_},
                                 src, *dir, **impl_->tt_);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
@@ -170,7 +390,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               }
             }
 
-            n::loader::finalize(**impl_->tt_);
+            n::loader::finalize(**impl_->tt_, adjust_footpaths_);
 
             if (no_cache_) {
               loaded = true;
@@ -190,6 +410,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       cista::file{dump_file_path.string().c_str(), "r"}
                           .content()}));
               (**impl_->tt_).locations_.resolve_timezones();
+              if (!gtfsrt_urls_.empty() || !gtfsrt_paths_.empty()) {
+                impl_->update_rtt(std::make_shared<n::rt_timetable>(
+                    n::rt::create_rt_timetable(**impl_->tt_, today)));
+              }
               loaded = true;
               break;
             } catch (std::exception const& e) {
@@ -203,28 +427,50 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         utl::verify(loaded, "loading failed");
 
-        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
-                        impl_->tt_->get());
-        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TAGS),
-                        &impl_->tags_);
-
         LOG(logging::info) << "nigiri timetable: stations="
                            << (*impl_->tt_)->locations_.names_.size()
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
 
-        if (geo_lookup_) {
-          impl_->station_geo_index_ =
-              geo::make_point_rtree((**impl_->tt_).locations_.coordinates_);
+        if (lookup_) {
+          impl_->station_lookup_ = std::make_shared<nigiri_station_lookup>(
+              impl_->tags_, **impl_->tt_);
+          auto copy = impl_->station_lookup_;
+          add_shared_data(to_res_id(mm::global_res_id::STATION_LOOKUP),
+                          std::move(copy));
         }
 
-        import_successful_ = true;
+        if (guesser_) {
+          impl_->guesser_ =
+              std::make_unique<guesser>(impl_->tags_, (**impl_->tt_));
+        }
 
-        mm::message_creator fbb;
-        fbb.create_and_finish(MsgContent_NigiriEvent,
-                              motis::import::CreateNigiriEvent(fbb).Union(),
-                              "/import", DestinationType_Topic);
-        publish(make_msg(fbb));
+        if (railviz_) {
+          impl_->initial_permalink_ = get_initial_permalink(**impl_->tt_);
+          impl_->railviz_ =
+              std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
+        }
+
+        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
+                        impl_->tt_->get());
+        add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TAGS),
+                        &impl_->tags_);
+
+        import_successful_ = true;
+        {
+          mm::message_creator fbb;
+          fbb.create_and_finish(MsgContent_NigiriEvent,
+                                motis::import::CreateNigiriEvent(fbb).Union(),
+                                "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
+        {
+          mm::message_creator fbb;
+          fbb.create_and_finish(MsgContent_StationsEvent,
+                                motis::import::CreateStationsEvent(fbb).Union(),
+                                "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
       })
       ->require("SCHEDULE", [this](mm::msg_ptr const& msg) {
         if (msg->get()->content_type() != MsgContent_FileEvent) {

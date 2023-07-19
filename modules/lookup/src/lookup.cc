@@ -6,6 +6,7 @@
 
 #include "motis/module/event_collector.h"
 
+#include "motis/core/access/station_access.h"
 #include "motis/lookup/error.h"
 #include "motis/lookup/lookup_geo_station.h"
 #include "motis/lookup/lookup_id_train.h"
@@ -57,6 +58,9 @@ void lookup::init(registry& r) {
                 [&](msg_ptr const& m) { return lookup_ribasis(m); }, {});
   r.register_op("/lookup/station_info",
                 [&](msg_ptr const& m) { return lookup_station_info(m); }, {});
+  r.register_op("/lookup/station_location",
+                [&](msg_ptr const& m) { return lookup_station_location(m); },
+                {kScheduleReadAccess});
 }
 
 void lookup::import(motis::module::import_dispatcher& reg) {
@@ -177,6 +181,20 @@ msg_ptr lookup::lookup_schedule_info() {
                                        external_schedule_begin(sched),
                                        external_schedule_end(sched))
           .Union());
+  return make_msg(b);
+}
+
+msg_ptr lookup::lookup_station_location(msg_ptr const& msg) {
+  using namespace motis::routing;
+  auto const req = motis_content(InputStation, msg);
+
+  auto const& sched = get_sched();
+  auto const station = get_station(sched, req->id()->str());
+  auto const pos = Position{station->lat(), station->lng()};
+
+  message_creator b;
+  b.create_and_finish(MsgContent_LookupStationLocationResponse,
+                      CreateLookupStationLocationResponse(b, &pos).Union());
   return make_msg(b);
 }
 

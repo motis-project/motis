@@ -14,6 +14,7 @@
 
 #include "motis/core/common/typed_flatbuffer.h"
 
+#include "motis/core/common/logging.h"
 #include "motis/module/error.h"
 #include "motis/module/json_format.h"
 
@@ -89,6 +90,9 @@ inline T const* motis_content_impl(msg_ptr const& msg,
     assert(false);
     throw std::system_error(error::null_message_content_access);
   } else if (msg->get()->content_type() != content_type) {
+    LOG(logging::error) << "expected " << EnumNameMsgContent(content_type)
+                        << ", got "
+                        << EnumNameMsgContent(msg->get()->content_type());
     throw std::system_error(error::unexpected_message_type);
   }
   return reinterpret_cast<T const*>(msg->get()->content());

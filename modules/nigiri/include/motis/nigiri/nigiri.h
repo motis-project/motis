@@ -23,16 +23,27 @@ struct nigiri : public motis::module::module {
   bool import_successful() const override { return import_successful_; }
 
 private:
+  void register_gtfsrt_timer(motis::module::dispatcher&);
+  void update_gtfsrt();
+
   bool import_successful_{false};
 
   struct impl;
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
+  bool adjust_footpaths_{true};
   std::string first_day_;
+  std::string default_timezone_;
   std::uint16_t num_days_{2U};
-  bool geo_lookup_{false};
+  bool lookup_{false};
+  bool guesser_{false};
+  bool railviz_{false};
+  bool routing_{false};
   unsigned link_stop_distance_{100U};
   bool use_stationfilter_{true};
+  std::vector<std::string> gtfsrt_urls_;
+  std::vector<std::string> gtfsrt_paths_;
+  unsigned gtfsrt_update_interval_{60U};
 };
 
 }  // namespace motis::nigiri
