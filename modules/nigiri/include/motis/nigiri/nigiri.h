@@ -32,6 +32,7 @@ private:
   std::uint16_t num_days_{2U};
   bool geo_lookup_{false};
   unsigned link_stop_distance_{100U};
+  bool use_stationfilter_{true};
 };
 
 }  // namespace motis::nigiri

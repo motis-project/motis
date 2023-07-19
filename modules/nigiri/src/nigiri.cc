@@ -54,6 +54,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(geo_lookup_, "geo_lookup", "provide geo station lookup");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
+  param(use_stationfilter_, "use_stationfilter", "filter stations in intermodal routing");
 }
 
 nigiri::~nigiri() = default;
