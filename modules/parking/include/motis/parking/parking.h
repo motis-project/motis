@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "motis/ppr/data.h"
 #include "motis/ppr/profile_info.h"
 
 #include "motis/core/schedule/station_lookup.h"
@@ -50,6 +51,7 @@ private:
   std::unique_ptr<impl> impl_;
   bool import_successful_{false};
   std::map<std::string, ::motis::ppr::profile_info> ppr_profiles_;
+  motis::ppr::ppr_data const* ppr_data_{nullptr};
   station_lookup const* stations_{nullptr};
 };
 

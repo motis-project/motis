@@ -188,7 +188,7 @@ std::vector<parking_lot> database::get_parking_lots() {
 std::vector<foot_edge_task> database::get_foot_edge_tasks(
     station_lookup const& st, std::vector<parking_lot> const& parking_lots,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-    bool vrfy, routing_graph const& rg) {
+    routing_graph const& rg) {
   auto tasks = std::vector<foot_edge_task>{};
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -205,25 +205,17 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
 
       input_location il;
       routing_options const ro{};
-      if (vrfy) {
-        for (auto const& station : stations) {
-          location lo{};
-          lo.set_lat(station.first.pos_.lat_);
-          lo.set_lon(station.first.pos_.lng_);
-          il.location_ = lo;
+      for (auto const& station : stations) {
+        location lo{};
+        lo.set_lat(station.first.pos_.lat_);
+        lo.set_lon(station.first.pos_.lng_);
+        il.location_ = lo;
 
-          if (has_nearest_edge(rg, il, ro, false)) {
-            stations_in_osm_bb.emplace_back(station);
-          }
+        if (has_nearest_edge(rg, il, ro, false)) {
+          stations_in_osm_bb.emplace_back(station);
         }
-
-        LOG(info) << "Use only stations that are within the OSM-Bounding-Box "
-                     "to calculate footpaths. Reduced from "
-                  << stations.size() << " to " << stations_in_osm_bb.size()
-                  << " stations.";
-
-        stations = stations_in_osm_bb;
       }
+      stations = stations_in_osm_bb;
 
       auto const key = get_footedges_db_key(pl.id_, profile_name);
       auto task = foot_edge_task{&pl, stations, &profile_name};
