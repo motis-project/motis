@@ -7,6 +7,7 @@
 #include "cista/serialization.h"
 
 #include "utl/enumerate.h"
+#include "utl/pipes.h"
 
 #include "fmt/core.h"
 
@@ -196,26 +197,33 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
   auto footedges_db = footedges_dbi(txn);
 
   for (auto const& [profile_name, pi] : ppr_profiles) {
+    int reduced_station_lists =
+        0;  // ctr for lots w stations w/o graph representation
     auto const& profile = pi.profile_;
     auto const walk_radius = static_cast<int>(
         std::ceil(profile.duration_limit_ * profile.walking_speed_));
+
     for (auto const& pl : parking_lots) {
       auto stations = st.in_radius(pl.location_, walk_radius);
-      std::vector<std::pair<lookup_station, double>> stations_in_osm_bb{};
-
+      int const was_stations_size = stations.size();
       input_location il;
       routing_options const ro{};
-      for (auto const& station : stations) {
-        location lo{};
-        lo.set_lat(station.first.pos_.lat_);
-        lo.set_lon(station.first.pos_.lng_);
-        il.location_ = lo;
 
-        if (has_nearest_edge(rg, il, ro, false)) {
-          stations_in_osm_bb.emplace_back(station);
-        }
+      stations =
+          utl::all(stations) |
+          utl::remove_if([&](std::pair<lookup_station, double> const& s) {
+            location loc;
+            loc.set_lat(s.first.pos_.lat_);
+            loc.set_lon(s.first.pos_.lng_);
+            il.location_ = loc;
+
+            return !has_nearest_edge(rg, il, ro, false);
+          }) |
+          utl::vec();
+
+      if (stations.size() < was_stations_size) {
+        ++reduced_station_lists;
       }
-      stations = stations_in_osm_bb;
 
       auto const key = get_footedges_db_key(pl.id_, profile_name);
       auto task = foot_edge_task{&pl, stations, &profile_name};
@@ -231,6 +239,10 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
       }
       tasks.emplace_back(std::move(task));
     }
+
+    LOG(info) << "Reduced stations for profile '" << profile_name << "' for "
+              << reduced_station_lists << " of " << parking_lots.size()
+              << " parking lots.";
   }
 
   return tasks;

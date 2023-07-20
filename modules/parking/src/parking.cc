@@ -506,6 +506,8 @@ void parking::import(import_dispatcher& reg) {
             LOG(info) << "Writing OSM parking lots to DB...";
             db.add_parking_lots(osm_parking_lots);
 
+            // TODO (Carsten, anyone) use reduced station_lookup. Only stations
+            // with graph representation.
             LOG(info) << "Creating foot edge tasks...";
             progress_tracker->status("Check Foot Edges");
             auto foot_edge_tasks = db.get_foot_edge_tasks(
