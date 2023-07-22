@@ -46,7 +46,6 @@ struct database {
 
   std::vector<parking_lot> get_parking_lots();
 
-  // TODO (Carsten) improve -> no defaults
   std::vector<foot_edge_task> get_foot_edge_tasks(
       station_lookup const& st, std::vector<parking_lot> const& parking_lots,
       std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
