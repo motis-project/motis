@@ -74,8 +74,8 @@ msg_ptr ontrip_train_query(universe const& uv, schedule const& sched,
           SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<Via>>()),
           fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()),
-          allow_start_metas, allow_dest_metas, USE_START_FOOTPATHS,
-          get_schedule_id(uv))
+          fbb.CreateString("default"), allow_start_metas, allow_dest_metas,
+          USE_START_FOOTPATHS, get_schedule_id(uv))
           .Union(),
       "/routing");
   return make_msg(fbb);
@@ -109,8 +109,8 @@ msg_ptr ontrip_station_query(universe const& uv, schedule const& sched,
           SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<Via>>()),
           fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()),
-          allow_start_metas, allow_dest_metas, USE_START_FOOTPATHS,
-          get_schedule_id(uv))
+          fbb.CreateString("default"), allow_start_metas, allow_dest_metas,
+          USE_START_FOOTPATHS, get_schedule_id(uv))
           .Union(),
       "/routing");
   return make_msg(fbb);
@@ -148,8 +148,8 @@ msg_ptr pretrip_station_query(universe const& uv, schedule const& sched,
           SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<Via>>()),
           fbb.CreateVector(std::vector<Offset<AdditionalEdgeWrapper>>()),
-          allow_start_metas, allow_dest_metas, USE_START_FOOTPATHS,
-          get_schedule_id(uv))
+          fbb.CreateString("default"), allow_start_metas, allow_dest_metas,
+          USE_START_FOOTPATHS, get_schedule_id(uv))
           .Union(),
       "/routing");
   return make_msg(fbb);
