@@ -31,6 +31,8 @@ private:
   struct impl;
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
+  bool adjust_footpaths_{true};
+  bool merge_duplicates_{false};
   std::string first_day_;
   std::string default_timezone_;
   std::uint16_t num_days_{2U};
@@ -41,6 +43,7 @@ private:
   bool routing_{false};
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;
+  std::vector<std::string> gtfsrt_paths_;
   unsigned gtfsrt_update_interval_{60U};
 };
 

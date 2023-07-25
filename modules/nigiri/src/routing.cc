@@ -15,6 +15,7 @@
 #include "nigiri/special_stations.h"
 
 #include "motis/core/common/timing.h"
+#include "motis/core/access/error.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/nigiri/location.h"
 #include "motis/nigiri/nigiri_to_motis_journey.h"
@@ -83,7 +84,7 @@ mm::msg_ptr to_routing_response(
           fbb, fbb.CreateVectorOfSortedTables(&statistics),
           fbb.CreateVector(connections),
           to_motis_unixtime(search_interval.from_),
-          to_motis_unixtime(search_interval.to_ - std::chrono::minutes{1}),
+          to_motis_unixtime(search_interval.to_),
           fbb.CreateVector(std::vector<fbs::Offset<DirectConnection>>{}))
           .Union());
   return make_msg(fbb);
@@ -180,6 +181,23 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   }
   auto const destination_station =
       get_location_idx(tags, tt, req->destination()->id()->str());
+
+  std::visit(
+      utl::overloaded{
+          [&](n::unixtime_t const t) {
+            if (!tt.external_interval().contains(t)) {
+              throw std::system_error(access::error::timestamp_not_in_schedule);
+            }
+          },
+          [&](n::interval<n::unixtime_t>& interval) {
+            auto const tt_interval = tt.external_interval();
+            if (!interval.overlaps(tt_interval)) {
+              throw std::system_error(access::error::timestamp_not_in_schedule);
+            }
+            interval.from_ = tt_interval.clamp(interval.from_);
+            interval.to_ = tt_interval.clamp(interval.to_);
+          }},
+      start_time);
 
   auto const is_intermodal_start =
       start_station == n::get_special_station(n::special_station::kStart);
