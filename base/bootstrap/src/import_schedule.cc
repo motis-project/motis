@@ -3,6 +3,7 @@
 #include "utl/pipes.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/schedule/station_lookup.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
@@ -51,29 +52,43 @@ void register_import_schedule(motis_instance& instance,
 
         cista::memory_holder memory;
         auto sched = loader::load_schedule(dataset_opt_cpy, memory, data_dir);
+        std::shared_ptr<station_lookup> station_lookup =
+            std::make_shared<schedule_station_lookup>(*sched);
+        instance.emplace_data(motis::module::to_res_id(
+                                  motis::module::global_res_id::STATION_LOOKUP),
+                              std::move(station_lookup));
         instance.emplace_data(
             motis::module::to_res_id(motis::module::global_res_id::SCHEDULE),
             schedule_data{std::move(memory), std::move(sched)});
-
-        mm::message_creator fbb;
-        fbb.create_and_finish(
-            MsgContent_ScheduleEvent,
-            import::CreateScheduleEvent(
-                fbb,
-                fbb.CreateVector(utl::to_vec(
-                    dataset_opt_cpy.dataset_,
-                    [&, i = 0](auto const&) mutable {
-                      return fbb.CreateString(
-                          dataset_opt_cpy.fbs_schedule_path(data_dir, i++));
-                    })),
-                fbb.CreateVector(utl::to_vec(dataset_opt_cpy.dataset_prefix_,
-                                             [&](auto const& prefix) {
-                                               return fbb.CreateString(prefix);
-                                             })),
-                instance.sched().hash_)
-                .Union(),
-            "/import", DestinationType_Topic);
-        publish(make_msg(fbb));
+        {
+          mm::message_creator fbb;
+          fbb.create_and_finish(
+              MsgContent_ScheduleEvent,
+              import::CreateScheduleEvent(
+                  fbb,
+                  fbb.CreateVector(utl::to_vec(
+                      dataset_opt_cpy.dataset_,
+                      [&, i = 0](auto const&) mutable {
+                        return fbb.CreateString(
+                            dataset_opt_cpy.fbs_schedule_path(data_dir, i++));
+                      })),
+                  fbb.CreateVector(utl::to_vec(dataset_opt_cpy.dataset_prefix_,
+                                               [&](auto const& prefix) {
+                                                 return fbb.CreateString(
+                                                     prefix);
+                                               })),
+                  instance.sched().hash_)
+                  .Union(),
+              "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
+        {
+          mm::message_creator fbb;
+          fbb.create_and_finish(MsgContent_StationsEvent,
+                                motis::import::CreateStationsEvent(fbb).Union(),
+                                "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
         return nullptr;
       })
       ->require("SCHEDULE", [](mm::msg_ptr const& msg) {

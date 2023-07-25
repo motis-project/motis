@@ -6,6 +6,7 @@
 #include "utl/parser/split.h"
 
 #include "nigiri/routing/journey.h"
+#include "nigiri/rt/frun.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
@@ -13,11 +14,11 @@
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/journey/print_journey.h"
+#include "motis/nigiri/extern_trip.h"
 #include "motis/nigiri/location.h"
 #include "motis/nigiri/unixtime_conv.h"
-#include "nigiri/rt/frun.h"
 
-namespace n = ::nigiri;
+namespace n = nigiri;
 
 namespace motis::nigiri {
 
@@ -30,46 +31,6 @@ struct transport_display_info {
   std::string provider_;
   std::string line_;
 };
-
-extern_trip nigiri_trip_to_extern_trip(tag_lookup const& tags,
-                                       n::timetable const& tt,
-                                       n::trip_idx_t const trip,
-                                       n::day_idx_t const day) {
-  auto const resolve_id = [&](n::location_idx_t const x) {
-    return get_station_id(
-        tags, tt,
-        tt.locations_.types_.at(x) == n::location_type::kGeneratedTrack
-            ? tt.locations_.parents_.at(x)
-            : x);
-  };
-
-  auto const [transport, stop_range] = tt.trip_transport_ranges_[trip].front();
-  auto const first_location = resolve_id(n::stop{
-      tt.route_location_seq_[tt.transport_route_[transport]][stop_range.from_]}
-                                             .location_idx());
-  auto const last_location =
-      resolve_id(n::stop{tt.route_location_seq_[tt.transport_route_[transport]]
-                                               [stop_range.to_ - 1]}
-                     .location_idx());
-  auto const section_lines = tt.transport_section_lines_.at(transport);
-  auto const line =
-      section_lines.empty() ||
-              section_lines.front() == n::trip_line_idx_t::invalid()
-          ? ""
-          : (section_lines.size() == 1
-                 ? tt.trip_lines_.at(section_lines.front()).view()
-                 : tt.trip_lines_.at(section_lines.at(stop_range.from_))
-                       .view());
-  return extern_trip{
-      .station_id_ = first_location,
-      .train_nr_ = tt.trip_train_nr_.at(tt.trip_ids_.at(trip).back()),
-      .time_ = to_motis_unixtime(tt.event_time(
-          {transport, day}, stop_range.from_, n::event_type::kDep)),
-      .target_station_id_ = last_location,
-      .target_time_ = to_motis_unixtime(tt.event_time(
-          {transport, day}, stop_range.to_ - 1, n::event_type::kArr)),
-      .line_id_ = std::string{line}};
-}
 
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                                        n::rt_timetable const* rtt,
@@ -156,49 +117,64 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     auto const trips_on_section = tt.transport_to_trip_section_.at(t.t_idx_);
     auto const merged_trips_idx =
         trips_on_section.at(trips_on_section.size() == 1U ? 0U : section_idx);
+
+    auto const clasz_sections =
+        tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_));
+    auto const clasz =
+        clasz_sections.at(clasz_sections.size() == 1U ? 0U : section_idx);
+
+    auto const provider_sections = tt.transport_section_providers_.at(t.t_idx_);
+    auto const provider_idx =
+        provider_sections.at(provider_sections.size() == 1U ? 0U : section_idx);
+    auto const provider =
+        std::string{tt.providers_.at(provider_idx).long_name_.view()};
+
+    auto const direction_sections =
+        tt.transport_section_directions_.at(t.t_idx_);
+    std::string direction;
+    if (!direction_sections.empty()) {
+      auto const direction_idx = direction_sections.size() == 1U
+                                     ? direction_sections.at(0)
+                                     : direction_sections.at(section_idx);
+      if (direction_idx != n::trip_direction_idx_t::invalid()) {
+        direction = tt.trip_directions_.at(direction_idx)
+                        .apply(utl::overloaded{
+                            [&](n::trip_direction_string_idx_t const i) {
+                              return tt.trip_direction_strings_.at(i).view();
+                            },
+                            [&](n::location_idx_t const i) {
+                              return tt.locations_.names_.at(i).view();
+                            }});
+      }
+    }
+
+    auto const line_sections = tt.transport_section_lines_.at(t.t_idx_);
+    std::string line;
+    if (!line_sections.empty()) {
+      auto const line_idx = line_sections.size() == 1U
+                                ? line_sections.at(0U)
+                                : line_sections.at(section_idx);
+      if (line_idx != n::trip_line_idx_t::invalid()) {
+        line = tt.trip_lines_.at(line_idx).view();
+      }
+    }
+
+    auto const section_attributes =
+        tt.transport_section_attributes_.at(t.t_idx_);
+    if (!section_attributes.empty()) {
+      auto const attribute_combi = section_attributes.size() == 1U
+                                       ? section_attributes.at(0)
+                                       : section_attributes.at(section_idx);
+
+      for (auto const& attr : tt.attribute_combinations_.at(attribute_combi)) {
+        attributes.add_entry(
+            attribute{.code_ = tt.attributes_.at(attr).code_.view(),
+                      .text_ = tt.attributes_.at(attr).text_.view()},
+            mj.stops_.size() - 1, mj.stops_.size());
+      }
+    }
+
     for (auto const trip : tt.merged_trips_.at(merged_trips_idx)) {
-      auto const clasz_sections =
-          tt.route_section_clasz_.at(tt.transport_route_.at(t.t_idx_));
-      auto const clasz =
-          clasz_sections.at(clasz_sections.size() == 1U ? 0U : section_idx);
-
-      auto const provider_sections =
-          tt.transport_section_providers_.at(t.t_idx_);
-      auto const provider_idx = provider_sections.at(
-          provider_sections.size() == 1U ? 0U : section_idx);
-      auto const provider =
-          std::string{tt.providers_.at(provider_idx).long_name_.view()};
-
-      auto const direction_sections =
-          tt.transport_section_directions_.at(t.t_idx_);
-      std::string direction;
-      if (!direction_sections.empty()) {
-        auto const direction_idx = direction_sections.size() == 1U
-                                       ? direction_sections.at(0)
-                                       : direction_sections.at(section_idx);
-        if (direction_idx != n::trip_direction_idx_t::invalid()) {
-          direction = tt.trip_directions_.at(direction_idx)
-                          .apply(utl::overloaded{
-                              [&](n::trip_direction_string_idx_t const i) {
-                                return tt.trip_direction_strings_.at(i).view();
-                              },
-                              [&](n::location_idx_t const i) {
-                                return tt.locations_.names_.at(i).view();
-                              }});
-        }
-      }
-
-      auto const line_sections = tt.transport_section_lines_.at(t.t_idx_);
-      std::string line;
-      if (!line_sections.empty()) {
-        auto const line_idx = line_sections.size() == 1U
-                                  ? line_sections.at(0U)
-                                  : line_sections.at(section_idx);
-        if (line_idx != n::trip_line_idx_t::invalid()) {
-          line = tt.trip_lines_.at(line_idx).view();
-        }
-      }
-
       transports.add_entry(
           transport_display_info{
               .duration_ = 0U,
@@ -215,27 +191,11 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               .at(tt.trip_debug_.at(trip).front().source_file_idx_)
               .view();
       extern_trips.add_entry(
-          {nigiri_trip_to_extern_trip(tags, tt, trip, t.day_),
+          {nigiri_trip_to_extern_trip(tags, tt, trip, t),
            fmt::format("{}:{}:{}", src_file,
                        tt.trip_debug_.at(trip).at(0).line_number_from_,
                        tt.trip_debug_.at(trip).at(0).line_number_to_)},
           mj.stops_.size() - 1, mj.stops_.size());
-
-      auto const section_attributes =
-          tt.transport_section_attributes_.at(t.t_idx_);
-      if (!section_attributes.empty()) {
-        auto const attribute_combi = section_attributes.size() == 1U
-                                         ? section_attributes.at(0)
-                                         : section_attributes.at(section_idx);
-
-        for (auto const& attr :
-             tt.attribute_combinations_.at(attribute_combi)) {
-          attributes.add_entry(
-              attribute{.code_ = tt.attributes_.at(attr).code_.view(),
-                        .text_ = tt.attributes_.at(attr).text_.view()},
-              mj.stops_.size() - 1, mj.stops_.size());
-        }
-      }
     }
   };
 
@@ -246,6 +206,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               auto const fr = n::rt::frun{tt, rtt, t.r_};
               for (auto const& stop_idx : t.stop_range_) {
                 auto const stp = fr[stop_idx];
+                if (stp.is_canceled()) {
+                  continue;
+                }
+
                 auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
                 auto const enter = (stop_idx == t.stop_range_.from_);
 

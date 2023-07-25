@@ -72,6 +72,10 @@ struct generator_settings : public conf::configuration {
     param(dest_type_, "dest_type", "destination type: coordinate|station");
     param(routers_, "routers", "routing targets");
     param(search_dir_, "search_dir", "search direction forward/backward");
+    param(extend_earlier_, "extend_earlier", "extend search interval earlier");
+    param(extend_later_, "extend_later", "extend search interval later");
+    param(min_connection_count_, "min_connection_count",
+          "min. number of connections (otherwise interval will be extended)");
   }
 
   MsgContent get_message_type() const {
@@ -127,6 +131,9 @@ struct generator_settings : public conf::configuration {
   bool large_stations_{false};
   std::vector<std::string> routers_{"/routing"};
   std::string search_dir_{"forward"};
+  bool extend_earlier_{false};
+  bool extend_later_{false};
+  unsigned min_connection_count_{0U};
 };
 
 std::string replace_target_escape(std::string const& str,
@@ -386,6 +393,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                  double const dest_radius, MsgContent const message_type,
                  IntermodalStart const start_type,
                  IntermodalDestination const destination_type, SearchDir dir,
+                 bool const extend_earlier, bool const extend_later,
+                 unsigned const min_connection_count,
                  std::vector<std::string> const& routers,
                  std::vector<std::ofstream>& out_files) {
   auto fbbs = utl::to_vec(
@@ -414,8 +423,9 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
               MsgContent_IntermodalRoutingRequest,
               CreateIntermodalRoutingRequest(
                   fbb, start_type,
-                  CreateIntermodalPretripStart(fbb, &start_pt, &interval, 0,
-                                               false, false)
+                  CreateIntermodalPretripStart(fbb, &start_pt, &interval,
+                                               min_connection_count,
+                                               extend_earlier, extend_later)
                       .Union(),
                   fbb.CreateVector(create_modes(fbb, start_modes)),
                   destination_type, get_destination(fbb),
@@ -477,7 +487,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   CreateOntripTrainStart(
                       fbb,
                       CreateTripId(
-                          fbb, fbb.CreateString(primary_station_eva),
+                          fbb, fbb.CreateString(trip->gtfs_trip_id_),
+                          fbb.CreateString(primary_station_eva),
                           primary.get_train_nr(),
                           motis_to_unixtime(sched, primary.get_time()),
                           fbb.CreateString(target_station_eva),
@@ -534,7 +545,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                       fbb,
                       CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
                                          fbb.CreateString("")),
-                      &interval)
+                      &interval, min_connection_count, extend_earlier,
+                      extend_later)
                       .Union(),
                   fbb.CreateVector(create_modes(fbb, start_modes)),
                   destination_type, get_destination(fbb),
@@ -574,7 +586,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   CreateOntripTrainStart(
                       fbb,
                       CreateTripId(
-                          fbb, fbb.CreateString(primary_station_eva),
+                          fbb, fbb.CreateString(trip->gtfs_trip_id_),
+                          fbb.CreateString(primary_station_eva),
                           primary.get_train_nr(),
                           motis_to_unixtime(sched, primary.get_time()),
                           fbb.CreateString(target_station_eva),
@@ -635,7 +648,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                       fbb,
                       CreateInputStation(fbb, fbb.CreateString(from->eva_nr_),
                                          fbb.CreateString("")),
-                      &interval)
+                      &interval, min_connection_count, extend_earlier,
+                      extend_later)
                       .Union(),
                   CreateInputStation(fbb, fbb.CreateString(to->eva_nr_),
                                      fbb.CreateString("")),
@@ -847,7 +861,9 @@ int generate(int argc, char const** argv) {
     write_query(sched, point_gen, i, interval, from, to, start_modes,
                 dest_modes, start_radius, dest_radius, message_type, start_type,
                 dest_type, generator_opt.get_search_dir(),
-                generator_opt.routers_, of_streams);
+                generator_opt.extend_earlier_, generator_opt.extend_later_,
+                generator_opt.min_connection_count_, generator_opt.routers_,
+                of_streams);
   }
 
   return 0;

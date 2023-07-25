@@ -64,14 +64,14 @@ TEST_F(routing_itest, all_routings_deliver_equal_journey) {
     EXPECT_NO_THROW(testee = message_to_journeys(motis_content(
                         RoutingResponse, call(make_routing_request(target)))));
     if (reference != testee) {
-      std::cerr << "REF\n";
+      std::cout << "REF\n";
       for (auto const& x : reference) {
-        print_journey(x, std::cerr);
+        print_journey(x, std::cout);
       }
 
-      std::cerr << "TESTEE\n";
+      std::cout << "TESTEE\n";
       for (auto const& x : testee) {
-        print_journey(x, std::cerr);
+        print_journey(x, std::cout);
       }
     }
     EXPECT_EQ(reference, testee);

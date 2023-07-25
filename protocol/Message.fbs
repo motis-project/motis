@@ -331,15 +331,16 @@ union MsgContent {
   motis.rt.RtMessageHistoryResponse                                       = 151,
   motis.lookup.LookupStationLocationResponse                              = 152,
   motis.routing.InputStation                                              = 153,
-  motis.ris.RISStatusResponse                                             = 154,
-  motis.rt.RtMetricsRequest                                               = 155,
-  motis.rt.RtMetricsResponse                                              = 156,
-  motis.paxmon.PaxMonCapacityStatusRequest                                = 157,
-  motis.paxmon.PaxMonCapacityStatusResponse                               = 158,
-  motis.paxmon.PaxMonMetricsRequest                                       = 159,
-  motis.paxmon.PaxMonMetricsResponse                                      = 160,
-  motis.paxforecast.PaxForecastMetricsRequest                             = 161,
-  motis.paxforecast.PaxForecastMetricsResponse                            = 162
+  motis.import.StationsEvent                                              = 154,
+  motis.ris.RISStatusResponse                                             = 155,
+  motis.rt.RtMetricsRequest                                               = 156,
+  motis.rt.RtMetricsResponse                                              = 157,
+  motis.paxmon.PaxMonCapacityStatusRequest                                = 158,
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 159,
+  motis.paxmon.PaxMonMetricsRequest                                       = 160,
+  motis.paxmon.PaxMonMetricsResponse                                      = 161,
+  motis.paxforecast.PaxForecastMetricsRequest                             = 162,
+  motis.paxforecast.PaxForecastMetricsResponse                            = 163
 }
 
 // Destination Examples:

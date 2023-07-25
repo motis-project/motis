@@ -21,17 +21,19 @@ inline flatbuffers::Offset<TripId> to_fbs(schedule const& sched,
   auto const& p = trp->id_.primary_;
   auto const& s = trp->id_.secondary_;
   return CreateTripId(
-      fbb, fbb.CreateString(sched.stations_.at(p.station_id_)->eva_nr_),
-      p.train_nr_, motis_to_unixtime(sched, p.time_),
+      fbb, fbb.CreateString(trp->gtfs_trip_id_.str()),
+      fbb.CreateString(sched.stations_.at(p.station_id_)->eva_nr_), p.train_nr_,
+      motis_to_unixtime(sched, p.time_),
       fbb.CreateString(sched.stations_.at(s.target_station_id_)->eva_nr_),
       motis_to_unixtime(sched, s.target_time_), fbb.CreateString(s.line_id_));
 }
 
 inline flatbuffers::Offset<TripId> to_fbs(flatbuffers::FlatBufferBuilder& fbb,
                                           extern_trip const& t) {
-  return CreateTripId(fbb, fbb.CreateString(t.station_id_), t.train_nr_,
-                      t.time_, fbb.CreateString(t.target_station_id_),
-                      t.target_time_, fbb.CreateString(t.line_id_));
+  return CreateTripId(fbb, fbb.CreateString(t.id_),
+                      fbb.CreateString(t.station_id_), t.train_nr_, t.time_,
+                      fbb.CreateString(t.target_station_id_), t.target_time_,
+                      fbb.CreateString(t.line_id_));
 }
 
 inline trip const* from_extern_trip(schedule const& sched,
@@ -42,6 +44,7 @@ inline trip const* from_extern_trip(schedule const& sched,
 
 inline extern_trip to_extern_trip(schedule const& sched, trip const* t) {
   return extern_trip{
+      t->gtfs_trip_id_,
       sched.stations_.at(t->id_.primary_.station_id_)->eva_nr_,
       t->id_.primary_.get_train_nr(),
       motis_to_unixtime(sched, t->id_.primary_.time_),
@@ -51,7 +54,8 @@ inline extern_trip to_extern_trip(schedule const& sched, trip const* t) {
 }
 
 inline extern_trip to_extern_trip(TripId const* trp) {
-  return extern_trip{trp->station_id()->str(),
+  return extern_trip{trp->id() == nullptr ? "" : trp->id()->str(),
+                     trp->station_id()->str(),
                      trp->train_nr(),
                      trp->time(),
                      trp->target_station_id()->str(),

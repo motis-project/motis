@@ -16,7 +16,7 @@ import Util.Date exposing (unixTime)
 type Route
     = Connections
     | ConnectionDetails Int
-    | TripDetails String Int Int String Int String
+    | TripDetails String String Int Int String Int String
     | StationEvents String
     | StationEventsAt String Date
     | SimulationTime Date
@@ -29,7 +29,7 @@ urlParser =
     oneOf
         [ map Connections top
         , map ConnectionDetails (s "connection" </> int)
-        , map TripDetails (s "trip" </> encodedString </> int </> int </> encodedString </> int </> encodedString)
+        , map TripDetails (s "trip" </> encodedString </> encodedString </> int </> int </> encodedString </> int </> encodedString)
         , map StationEvents (s "station" </> encodedString)
         , map StationEventsAt (s "station" </> encodedString </> date)
         , map SimulationTime (s "time" </> date)
@@ -80,8 +80,10 @@ toUrl route =
         ConnectionDetails idx ->
             "#/connection/" ++ toString idx
 
-        TripDetails station trainNr time targetStation targetTime lineId ->
+        TripDetails id station trainNr time targetStation targetTime lineId ->
             "#/trip/"
+                ++ Http.encodeUri id
+                ++ "/"
                 ++ Http.encodeUri station
                 ++ "/"
                 ++ toString trainNr
@@ -124,6 +126,7 @@ toUrl route =
 tripDetailsRoute : TripId -> Route
 tripDetailsRoute trip =
     TripDetails
+        trip.id
         trip.station_id
         trip.train_nr
         trip.time
@@ -135,9 +138,10 @@ tripDetailsRoute trip =
 routeToTripId : Route -> Maybe TripId
 routeToTripId route =
     case route of
-        TripDetails station trainNr time targetStation targetTime lineId ->
+        TripDetails id station trainNr time targetStation targetTime lineId ->
             Just
-                { station_id = station
+                { id = id
+                , station_id = station
                 , train_nr = trainNr
                 , time = time
                 , target_station_id = targetStation

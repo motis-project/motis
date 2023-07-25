@@ -14,5 +14,6 @@ target_link_libraries(motis-valhalla
     valhalla-baldr
     valhalla-tyr
     valhalla-midgard
-    motis-module)
+    motis-module
+    boost-thread)
 target_compile_options(motis-valhalla PRIVATE ${MOTIS_CXX_FLAGS})

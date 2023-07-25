@@ -17,6 +17,7 @@ enum class global_res_id {
   NIGIRI_TIMETABLE,
   NIGIRI_TAGS,
   PPR_DATA,
+  STATION_LOOKUP,
   FIRST_FREE_RES_ID
 };
 
