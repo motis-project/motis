@@ -87,7 +87,7 @@ void paxforecast::init(motis::module::registry& reg) {
                   LOG(info)
                       << "paxforecast: /paxmon/universe_forked: new="
                       << ev->new_universe() << ", base=" << ev->base_universe();
-                  universe_storage_.universe_created(ev->new_schedule());
+                  universe_storage_.universe_created(ev->new_universe());
                   return nullptr;
                 },
                 {});
