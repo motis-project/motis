@@ -189,7 +189,7 @@ std::vector<parking_lot> database::get_parking_lots() {
 std::vector<foot_edge_task> database::get_foot_edge_tasks(
     station_lookup const& st, std::vector<parking_lot> const& parking_lots,
     std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-    routing_graph const& rg) {
+    ::ppr::routing_graph const& rg) {
   auto tasks = std::vector<foot_edge_task>{};
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -206,16 +206,13 @@ std::vector<foot_edge_task> database::get_foot_edge_tasks(
     for (auto const& pl : parking_lots) {
       auto stations = st.in_radius(pl.location_, walk_radius);
       int const was_stations_size = stations.size();
-      input_location il;
       routing_options const ro{};
 
       stations =
           utl::all(stations) |
           utl::remove_if([&](std::pair<lookup_station, double> const& s) {
-            location loc;
-            loc.set_lat(s.first.pos_.lat_);
-            loc.set_lon(s.first.pos_.lng_);
-            il.location_ = loc;
+            auto const& il = make_input_location(
+                ::ppr::make_location(s.first.pos_.lat_, s.first.pos_.lng_));
 
             return !has_nearest_edge(rg, il, ro, false);
           }) |

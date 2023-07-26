@@ -21,7 +21,6 @@
 
 #include "ppr/common/routing_graph.h"
 
-using namespace ppr;
 
 namespace motis::parking {
 
@@ -49,7 +48,7 @@ struct database {
   std::vector<foot_edge_task> get_foot_edge_tasks(
       station_lookup const& st, std::vector<parking_lot> const& parking_lots,
       std::map<std::string, motis::ppr::profile_info> const& ppr_profiles,
-      routing_graph const& rg);
+      ::ppr::routing_graph const& rg);
 
 private:
   static lmdb::txn::dbi parking_lots_dbi(
