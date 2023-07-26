@@ -938,8 +938,8 @@ int generate(int argc, char const** argv) {
                 dest_modes, start_radius, dest_radius, message_type, start_type,
                 dest_type, generator_opt.get_search_dir(),
                 generator_opt.extend_earlier_, generator_opt.extend_later_,
-                generator_opt.min_connection_count_, generator_opt.routers_, generator_opt.profiles_,
-                of_streams);
+                generator_opt.min_connection_count_, generator_opt.routers_,
+                generator_opt.profiles_, of_streams);
   }
 
   return 0;
