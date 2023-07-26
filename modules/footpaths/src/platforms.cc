@@ -73,7 +73,6 @@ private:
                     osmium::object_id_type const id,
                     osmium::geom::Coordinates const& coord,
                     osmium::TagList const& tags) {
-    // TODO (Carsten) insert "more"/all names
     auto names = extract_platform_names(tags);
 
     if (!names.empty()) {

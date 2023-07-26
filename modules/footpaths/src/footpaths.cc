@@ -171,9 +171,9 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
 
         {
           scoped_timer const timer{"transfers: preparing ppr rtrees."};
-          rg.prepare_for_routing(
-              edge_rtree_max_size_, area_rtree_max_size_,
-              lock_rtrees_ ? rtree_options::LOCK : rtree_options::PREFETCH);
+          rg.prepare_for_routing(edge_rtree_max_size_, area_rtree_max_size_,
+                                 lock_rtrees_ ? ::ppr::rtree_options::LOCK
+                                              : ::ppr::rtree_options::PREFETCH);
         }
 
         // 2nd extract all stations from the nigiri graph
@@ -190,11 +190,10 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                i != impl_->tt_.locations_.ids_.size(); ++i) {
             if (impl_->tt_.locations_.types_[i] ==
                 nigiri::location_type::kStation) {
-              input_location il;
-              location lo{};
-              lo.set_lat(impl_->tt_.locations_.coordinates_[i].lat_);
-              lo.set_lon(impl_->tt_.locations_.coordinates_[i].lng_);
-              il.location_ = lo;
+              auto const il =
+                  ::ppr::routing::make_input_location(::ppr::make_location(
+                      impl_->tt_.locations_.coordinates_[i].lng_,
+                      impl_->tt_.locations_.coordinates_[i].lat_));
 
               if (!has_nearest_edge(rg, il, ro, false)) {
                 ++not_in_bb;

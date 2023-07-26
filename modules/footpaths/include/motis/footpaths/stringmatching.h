@@ -27,6 +27,4 @@ bool exact_first_number_match(std::string str_a, std::string_view strv_b) {
   return str_a == strv_b;
 }
 
-// -- location and platform matching
-
 }  // namespace motis::footpaths

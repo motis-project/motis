@@ -50,7 +50,7 @@ input_location pi_to_il(platform_info const& pi) {
   input_location il;
   // TODO (Carsten) OSM_ELEMENT LEVEL missing
   il.osm_element_ = {pi.osm_id_, to_ppr_osm_type(pi.osm_type_)};
-  il.location_ = to_location(pi.pos_);
+  il.location_ = ::ppr::make_location(pi.pos_.lng_, pi.pos_.lat_);
   return il;
 }
 
