@@ -39,9 +39,9 @@ import { formatDateTime, formatTime } from "@/util/dateFormat";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import Delay from "@/components/util/Delay";
 
-type GroupDetailsProps = {
+interface GroupDetailsProps {
   groupId: number;
-};
+}
 
 function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
@@ -137,9 +137,9 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   );
 }
 
-type GroupRouteProps = {
+interface GroupRouteProps {
   route: PaxMonGroupRoute;
-};
+}
 
 function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   return (
@@ -205,10 +205,10 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   );
 }
 
-type JourneyLegProps = {
+interface JourneyLegProps {
   leg: PaxMonCompactJourneyLeg;
   index: number;
-};
+}
 
 function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
   return (
@@ -238,9 +238,9 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
   );
 }
 
-type FinalFootpathProps = {
+interface FinalFootpathProps {
   journey: PaxMonCompactJourney;
-};
+}
 
 function FinalFootpath({ journey }: FinalFootpathProps) {
   if (journey.final_footpath.length === 1 && journey.legs.length > 0) {
@@ -308,11 +308,11 @@ function rerouteReasonText(reason: PaxMonRerouteReason): string {
   }
 }
 
-type RerouteLogEntryProps = {
+interface RerouteLogEntryProps {
   log: PaxMonRerouteLogEntry;
   logIndex: number;
   group: PaxMonGroup;
-};
+}
 
 function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   const broken_transfer =
@@ -404,9 +404,9 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   );
 }
 
-type RerouteLogEntryLocalizationProps = {
+interface RerouteLogEntryLocalizationProps {
   log: PaxMonRerouteLogEntry;
-};
+}
 
 function RerouteLogEntryLocalization({
   log,
@@ -434,10 +434,10 @@ function RerouteLogEntryLocalization({
   }
 }
 
-type RerouteReasonIcon = {
+interface RerouteReasonIcon {
   icon: JSX.Element;
   bgColor: string;
-};
+}
 
 function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
   const style = "w-6 h-6";
@@ -485,13 +485,13 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
   }
 }
 
-type RerouteLogTableProps = {
+interface RerouteLogTableProps {
   group: PaxMonGroup;
-};
+}
 
 function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
   const probs = [group.routes.map((r) => r.probability)];
-  const diffs: Array<Array<number>> = [];
+  const diffs: number[][] = [];
 
   for (let i = group.reroute_log.length - 1; i >= 0; --i) {
     const le = group.reroute_log[i];

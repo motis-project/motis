@@ -34,9 +34,9 @@ import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
 import TripOptimization from "@/components/trips/TripOptimization";
 import TripSectionDetails from "@/components/trips/TripSectionDetails";
 
-type TripRouteProps = {
+interface TripRouteProps {
   tripId: TripId;
-};
+}
 
 function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
@@ -137,14 +137,14 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   );
 }
 
-type TripSectionProps = {
+interface TripSectionProps {
   tripId: TripId;
   section: PaxMonEdgeLoadInfo;
   index: number;
   sectionCount: number;
   maxVal: number;
   showCapacitySource: boolean;
-};
+}
 
 function TripSection({
   tripId,

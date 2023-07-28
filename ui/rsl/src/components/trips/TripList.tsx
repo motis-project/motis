@@ -34,12 +34,12 @@ import DatePicker from "@/components/inputs/DatePicker";
 import ServiceClassFilter from "@/components/inputs/ServiceClassFilter";
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
-type LabeledFilterOption = {
+interface LabeledFilterOption {
   option: PaxMonFilterTripsSortOrder;
   label: string;
-};
+}
 
-const sortOptions: Array<LabeledFilterOption> = [
+const sortOptions: LabeledFilterOption[] = [
   { option: "MaxLoad", label: "Züge sortiert nach Auslastung (prozentual)" },
   {
     option: "MostCritical",
@@ -296,10 +296,10 @@ function TripList(): JSX.Element {
   );
 }
 
-type TripListEntryProps = {
+interface TripListEntryProps {
   ti: PaxMonFilteredTripInfo;
   selectedTripId: string | undefined;
-};
+}
 
 function TripListEntry({
   ti,
@@ -377,17 +377,17 @@ function TripListEntry({
   );
 }
 
-type SectionOverCapInfo = {
+interface SectionOverCapInfo {
   edge: PaxMonEdgeLoadInfo;
   maxPax: number;
   maxPercent: number;
   maxOverCap: number;
-};
+}
 
-type SectionOverCapProps = {
+interface SectionOverCapProps {
   label: string;
   section: SectionOverCapInfo;
-};
+}
 
 function SectionOverCap({ label, section }: SectionOverCapProps) {
   return (

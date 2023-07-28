@@ -11,9 +11,9 @@ import StationPicker from "@/components/inputs/StationPicker";
 import TimeInput from "@/components/inputs/TimeInput";
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type SharedDataEditorProps = {
+export interface SharedDataEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
-};
+}
 
 const labelClass = "font-semibold";
 

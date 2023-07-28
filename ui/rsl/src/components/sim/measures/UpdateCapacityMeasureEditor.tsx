@@ -8,11 +8,11 @@ import { MeasureUnion, isUpdateCapacitiesMeasureU } from "@/data/measures";
 
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type UpdateCapacityMeasureEditorProps = {
+export interface UpdateCapacityMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
-};
+}
 
 const labelClass = "font-semibold";
 

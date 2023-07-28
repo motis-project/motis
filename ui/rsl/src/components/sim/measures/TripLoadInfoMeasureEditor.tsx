@@ -10,10 +10,10 @@ import { MeasureUnion, isTripLoadInfoMeasureU } from "@/data/measures";
 import { knownLoadLevels } from "@/components/inputs/LoadInput";
 import TripAndLoadInput from "@/components/sim/measures/TripAndLoadInput";
 
-export type TripLoadInfoMeasureEditorProps = {
+export interface TripLoadInfoMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
-};
+}
 
 const labelClass = "font-semibold";
 

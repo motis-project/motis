@@ -2,9 +2,9 @@ import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
 import { SectionLoadColors } from "@/util/colors";
 
-export type MiniTripLoadGraphProps = {
+export interface MiniTripLoadGraphProps {
   edges: PaxMonEdgeLoadInfo[];
-};
+}
 
 interface SectionGeometry {
   x: number;

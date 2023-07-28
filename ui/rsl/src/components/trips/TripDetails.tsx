@@ -12,9 +12,9 @@ import CapacityInfo from "@/components/trips/CapacityInfo";
 import TripLoadForecastChart from "@/components/trips/TripLoadForecastChart";
 import TripRoute from "@/components/trips/TripRoute";
 
-type TripDetailsProps = {
+interface TripDetailsProps {
   tripId: TripId;
-};
+}
 
 function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
   const [showLegacyLoadForecastChart] = useAtom(

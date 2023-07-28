@@ -29,16 +29,16 @@ function isSameSection(
   );
 }
 
-const groupFilters: Array<{ filter: PaxMonGroupFilter; label: string }> = [
+const groupFilters: { filter: PaxMonGroupFilter; label: string }[] = [
   { filter: "All", label: "Alle" },
   { filter: "Entering", label: "Nur Einsteiger" },
   { filter: "Exiting", label: "Nur Aussteiger" },
 ];
 
-const groupByStationOptions: Array<{
+const groupByStationOptions: {
   groupBy: PaxMonGroupByStation;
   label: string;
-}> = [
+}[] = [
   { groupBy: "None", label: "Keine" },
   { groupBy: "Last", label: "Letzter Halt" },
   //{ groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
@@ -47,10 +47,10 @@ const groupByStationOptions: Array<{
   { groupBy: "EntryAndLast", label: "Einstiegshalt und Ziel" },
 ];
 
-type TripSectionDetailsProps = {
+interface TripSectionDetailsProps {
   tripId: TripId;
   selectedSection: PaxMonEdgeLoadInfo | undefined;
-};
+}
 
 function TripSectionDetails({
   tripId,

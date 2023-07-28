@@ -26,9 +26,9 @@ import { formatDateTime } from "@/util/dateFormat";
 
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
-type SimResultsListEntryProps = {
+interface SimResultsListEntryProps {
   simResultAtom: PrimitiveAtom<SimulationResult>;
-};
+}
 
 function SimResultsListEntry({
   simResultAtom,
@@ -124,9 +124,9 @@ function hasCritChange(ut: PaxMonUpdatedTrip): boolean {
   return ut.newly_critical_sections > 0 || ut.no_longer_critical_sections > 0;
 }
 
-type SimResultDetailsProps = {
+interface SimResultDetailsProps {
   simResultAtom: PrimitiveAtom<SimulationResult>;
-};
+}
 
 function SimResultDetails({
   simResultAtom,
@@ -229,9 +229,9 @@ function SimResultDetails({
   );
 }
 
-type UpdatedTripProps = {
+interface UpdatedTripProps {
   ut: PaxMonUpdatedTrip;
-};
+}
 
 function UpdatedTrip({ ut }: UpdatedTripProps) {
   const category = ut.tsi.service_infos[0]?.category ?? "";

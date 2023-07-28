@@ -10,13 +10,13 @@ import MeasurePanel from "@/components/sim/measures/MeasurePanel";
 
 type TabId = "measures" | "results";
 
-type TabProps = {
+interface TabProps {
   id: TabId;
   label: string;
   selectedTab: TabId;
   setSelectedTab: (id: TabId) => void;
   disabled?: boolean;
-};
+}
 
 function Tab({
   id,

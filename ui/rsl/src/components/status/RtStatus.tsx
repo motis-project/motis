@@ -17,9 +17,9 @@ function RtStatus(): ReactElement {
   );
 }
 
-type RtMetricsDisplayProps = {
+interface RtMetricsDisplayProps {
   metrics: RtMetrics | undefined;
-};
+}
 
 function RtMetricsDisplay({ metrics }: RtMetricsDisplayProps): ReactElement {
   if (!metrics) {

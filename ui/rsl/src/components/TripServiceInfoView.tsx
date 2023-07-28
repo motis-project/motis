@@ -2,10 +2,10 @@ import { TripServiceInfo } from "@/api/protocol/motis";
 
 import { formatDateTime } from "@/util/dateFormat";
 
-type TripServiceInfoViewProps = {
+interface TripServiceInfoViewProps {
   tsi: TripServiceInfo;
   format: "Short" | "ShortAll" | "Long";
-};
+}
 
 function TripServiceInfoView({
   tsi,

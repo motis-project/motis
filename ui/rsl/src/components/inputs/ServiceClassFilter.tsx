@@ -6,12 +6,12 @@ import { ServiceClass } from "@/api/constants";
 
 import classNames from "@/util/classNames";
 
-type LabeledServiceClass = {
+interface LabeledServiceClass {
   sc: ServiceClass;
   label: string;
-};
+}
 
-const serviceClassOptions: Array<LabeledServiceClass> = [
+const serviceClassOptions: LabeledServiceClass[] = [
   {
     sc: ServiceClass.ICE,
     label: "Hochgeschwindigkeitszüge",

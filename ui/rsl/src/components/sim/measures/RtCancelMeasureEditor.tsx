@@ -27,11 +27,11 @@ import classNames from "@/util/classNames";
 
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type RtCancelMeasureEditorProps = {
+export interface RtCancelMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
-};
+}
 
 const labelClass = "font-semibold";
 
@@ -154,13 +154,13 @@ function getStops(ribasis: RiBasisFahrtData | undefined): StopInfo[] {
   return stops;
 }
 
-type StopListEditorProps = {
+interface StopListEditorProps {
   data: RtCancelMeasureData;
   setData: React.Dispatch<React.SetStateAction<RtCancelMeasureData>>;
   closeEditor: () => void;
   measureAtom: PrimitiveAtom<MeasureUnion>;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
-};
+}
 
 function StopListEditor({
   data,

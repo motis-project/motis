@@ -12,12 +12,12 @@ import { RtMetrics } from "@/api/protocol/motis/rt";
 
 import { formatTime } from "@/util/dateFormat";
 
-export type RtMetricsChartProps = {
+export interface RtMetricsChartProps {
   metrics: RtMetrics;
   width: number;
   height: number;
   margin?: { top: number; right: number; bottom: number; left: number };
-};
+}
 
 const dataColor1 = "#090062";
 const dataColor2 = "#6c5efb";

@@ -85,12 +85,12 @@ function RISStatusDisplay({
   );
 }
 
-type SourceStatusProps = {
+interface SourceStatusProps {
   name: string;
   status: RISSourceStatus;
   hideIfDisabled: boolean;
   checkDelay: boolean;
-};
+}
 
 function SourceStatus({
   name,

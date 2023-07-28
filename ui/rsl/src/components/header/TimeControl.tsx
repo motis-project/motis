@@ -37,9 +37,9 @@ async function forwardTimeByStepped(
   return currentTime;
 }
 
-type TimeControlProps = {
+interface TimeControlProps {
   allowForwarding: boolean;
-};
+}
 
 function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   const queryClient = useQueryClient();

@@ -6,11 +6,11 @@ import { showSimPanelAtom } from "@/data/views";
 
 import classNames from "@/util/classNames";
 
-type PageLinkProps = {
+interface PageLinkProps {
   active?: boolean;
   onClick?: () => void;
   children: ReactNode;
-};
+}
 
 function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
   return (
@@ -29,10 +29,10 @@ function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
   );
 }
 
-type MainPageLinkProps = {
+interface MainPageLinkProps {
   to: string;
   children: ReactNode;
-};
+}
 
 const MainPageLink = forwardRef<HTMLAnchorElement, MainPageLinkProps>(
   ({ to, children }, ref) => {

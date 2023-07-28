@@ -12,9 +12,9 @@ import { formatDateTime } from "@/util/dateFormat";
 
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
-export type TripTooltipProps = {
+export interface TripTooltipProps {
   tripId: TripId;
-};
+}
 
 export function TripTooltip({ tripId }: TripTooltipProps): JSX.Element | null {
   const [universe] = useAtom(universeAtom);

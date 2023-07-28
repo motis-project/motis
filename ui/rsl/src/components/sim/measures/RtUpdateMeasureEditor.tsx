@@ -41,14 +41,14 @@ import StationPicker from "@/components/inputs/StationPicker";
 import TimeInput from "@/components/inputs/TimeInput";
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type RtUpdateMeasureEditorProps = {
+export interface RtUpdateMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
-};
+}
 
 const labelClass = "font-semibold";
 
-const rtReasons: Array<{ reason: RiBasisZeitstatus; label: string }> = [
+const rtReasons: { reason: RiBasisZeitstatus; label: string }[] = [
   { reason: "FAHRPLAN", label: "Planmäßig" },
   { reason: "MELDUNG", label: "Ist-Meldung" },
   { reason: "PROGNOSE", label: "Prognose" },
@@ -150,14 +150,14 @@ function RtUpdateMeasureEditor({
   );
 }
 
-type TripSectionEditorProps = {
+interface TripSectionEditorProps {
   ribasis: RiBasisFahrtData;
   onSetData: (data: RiBasisFahrtData) => void;
   allowReroute: boolean;
   closeEditor: () => void;
-};
+}
 
-type FormInputs = { stops: StopFormData[] };
+interface FormInputs { stops: StopFormData[] }
 
 function TripSectionEditor({
   ribasis,
@@ -394,13 +394,13 @@ function TripSectionEditor({
   );
 }
 
-type EventEditorProps = {
+interface EventEditorProps {
   register: UseFormRegister<FormInputs>;
   control: Control<FormInputs>;
   index: number;
   eventType: "arrival" | "departure";
   allowReroute: boolean;
-};
+}
 
 function EventEditor({
   register,

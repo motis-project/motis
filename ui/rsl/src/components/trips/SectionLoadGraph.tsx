@@ -22,14 +22,14 @@ const defaultMargin = {
   left: 10,
 };
 
-type SectionLoadGraphProps = {
+interface SectionLoadGraphProps {
   section: PaxMonEdgeLoadInfo;
   width: number;
   height: number;
   maxVal?: number | undefined;
   margin?: typeof defaultMargin;
   plotType?: SectionLoadGraphPlotType;
-};
+}
 
 function SectionLoadGraph({
   section,

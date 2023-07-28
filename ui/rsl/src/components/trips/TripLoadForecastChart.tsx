@@ -149,11 +149,11 @@ function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
   return parts.join("_");
 }
 
-type TripLoadForecastChartProps = {
+interface TripLoadForecastChartProps {
   tripId: TripId;
   mode: "Interactive" | "Tooltip";
   onSectionClick?: (e: PaxMonEdgeLoadInfo) => void;
-};
+}
 
 function TripLoadForecastChart({
   tripId,

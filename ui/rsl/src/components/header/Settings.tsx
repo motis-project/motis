@@ -15,10 +15,10 @@ import classNames from "@/util/classNames";
 
 import { SectionLoadGraphPlotType } from "@/components/trips/SectionLoadGraph";
 
-const sectionGraphPlotTypes: Array<{
+const sectionGraphPlotTypes: {
   plotType: SectionLoadGraphPlotType;
   label: string;
-}> = [
+}[] = [
   { plotType: "SimpleBox", label: "Vereinfachter Box-Plot" },
   { plotType: "Box", label: "Box-Plot" },
   { plotType: "Violin", label: "Violin-Plot" },

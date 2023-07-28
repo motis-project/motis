@@ -9,10 +9,10 @@ import { MeasureUnion, isTripRecommendationMeasureU } from "@/data/measures";
 import StationPicker from "@/components/inputs/StationPicker";
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type TripRecommendationMeasureEditorProps = {
+export interface TripRecommendationMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
-};
+}
 
 const labelClass = "font-semibold";
 

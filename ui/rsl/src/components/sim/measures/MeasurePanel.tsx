@@ -10,9 +10,9 @@ import {
 import MeasureEditor from "@/components/sim/measures/MeasureEditor";
 import MeasureList from "@/components/sim/measures/MeasureList";
 
-export type MeasurePanelProps = {
+export interface MeasurePanelProps {
   onSimulationFinished: () => void;
-};
+}
 
 function MeasurePanel({
   onSimulationFinished,

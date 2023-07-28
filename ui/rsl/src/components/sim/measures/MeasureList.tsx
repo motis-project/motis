@@ -154,11 +154,11 @@ function MeasureTypeDetail({
   }
 }
 
-type TripWithLoadLevelProps = {
+interface TripWithLoadLevelProps {
   tsi: TripServiceInfo | undefined;
   level: LoadLevel;
   placeholder?: string | undefined;
-};
+}
 
 function TripWithLoadLevel({
   tsi,
@@ -184,11 +184,11 @@ function TripWithLoadLevel({
   );
 }
 
-type MeasureListEntryProps = {
+interface MeasureListEntryProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   remove: RemoveFn;
   select: SelectFn;
-};
+}
 
 function MeasureListEntry({
   measureAtom,
@@ -247,9 +247,9 @@ function MeasureListEntry({
   );
 }
 
-export type MeasureListProps = {
+export interface MeasureListProps {
   onSimulationFinished: () => void;
-};
+}
 
 function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const queryClient = useQueryClient();

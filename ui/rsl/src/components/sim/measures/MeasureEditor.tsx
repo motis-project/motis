@@ -15,11 +15,11 @@ import TripRecommendationMeasureEditor from "@/components/sim/measures/TripRecom
 import UpdateCapacityMeasureEditor from "@/components/sim/measures/UpdateCapacityMeasureEditor";
 import ModalDialog from "@/components/util/ModalDialog";
 
-export type MeasureEditorProps = {
+export interface MeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
   closeEditor: () => void;
-};
+}
 
 function MeasureEditor({
   measureAtom,

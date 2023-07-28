@@ -25,13 +25,13 @@ import { TripTooltip } from "@/components/trips/TripTooltip";
 
 export type GroupByDirection = "Origin" | "Destination" | "None";
 
-export type CombinedGroupProps = {
+export interface CombinedGroupProps {
   plannedTrip: TripId;
   combinedGroup: GroupedPassengerGroups;
   startStation: Station;
   earliestDeparture: number;
   groupByDirection: GroupByDirection;
-};
+}
 
 const SEARCH_INTERVAL = 61;
 

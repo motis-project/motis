@@ -18,10 +18,10 @@ import {
 import StationPicker from "@/components/inputs/StationPicker";
 import TripAndLoadInput from "@/components/sim/measures/TripAndLoadInput";
 
-export type TripLoadRecommendationMeasureEditorProps = {
+export interface TripLoadRecommendationMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
-};
+}
 
 const labelClass = "font-semibold";
 

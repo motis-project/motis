@@ -92,15 +92,15 @@ function CapacityStatus(): ReactElement {
   );
 }
 
-type CapacityStatusDisplayProps = {
+interface CapacityStatusDisplayProps {
   data: PaxMonCapacityStatusResponse | undefined;
   serviceClassFilter: ServiceClass[];
-};
+}
 
-type CapacityStatusDataProps = {
+interface CapacityStatusDataProps {
   data: PaxMonCapacityStatusResponse;
   serviceClassFilter: ServiceClass[];
-};
+}
 
 function CapacityStatusDisplay({
   data,
@@ -125,7 +125,7 @@ function CapacityStatusStats({
   data,
   serviceClassFilter,
 }: CapacityStatusDataProps) {
-  type Column = { label: string; stats: PaxMonTripCapacityStats };
+  interface Column { label: string; stats: PaxMonTripCapacityStats }
 
   const columns: Column[] = [
     { label: "Alle Züge", stats: data.all_trips },
@@ -266,10 +266,10 @@ function CapacityStatusStats({
   );
 }
 
-type StatsTableCellProps = {
+interface StatsTableCellProps {
   value: number;
   total: number;
-};
+}
 
 function StatsTableCell({ value, total }: StatsTableCellProps) {
   return (
@@ -285,9 +285,9 @@ function StatsTableCell({ value, total }: StatsTableCellProps) {
   );
 }
 
-type MissingVehiclesProps = {
+interface MissingVehiclesProps {
   data: PaxMonCapacityStatusResponse;
-};
+}
 
 function MissingVehicles({ data }: MissingVehiclesProps) {
   return (

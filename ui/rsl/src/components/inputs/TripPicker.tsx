@@ -33,13 +33,13 @@ function shortTripName(tsi: TripServiceInfo) {
   return names[0] ?? "?";
 }
 
-type TripPickerProps = {
+interface TripPickerProps {
   onTripPicked: (trip: TripServiceInfo | undefined) => void;
   clearOnPick: boolean;
   longDistanceOnly: boolean;
   className?: string;
   initialTrip?: TripServiceInfo | undefined;
-};
+}
 
 function TripPicker({
   onTripPicked,

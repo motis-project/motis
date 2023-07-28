@@ -27,9 +27,9 @@ import { formatDate, formatTime } from "@/util/dateFormat";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import Baureihe from "@/components/util/Baureihe";
 
-type CapacityInfoProps = {
+interface CapacityInfoProps {
   tripId: TripId;
-};
+}
 
 function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
   const [universe] = useAtom(universeAtom);

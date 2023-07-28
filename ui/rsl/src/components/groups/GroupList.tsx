@@ -38,12 +38,12 @@ import DatePicker from "@/components/inputs/DatePicker";
 import StationPicker from "@/components/inputs/StationPicker";
 import Delay from "@/components/util/Delay";
 
-type LabeledSortOrder = {
+interface LabeledSortOrder {
   option: PaxMonFilterGroupsSortOrder;
   label: string;
-};
+}
 
-const sortOptions: Array<LabeledSortOrder> = [
+const sortOptions: LabeledSortOrder[] = [
   { option: "GroupId", label: "Gruppen sortiert nach ID" },
   {
     option: "ExpectedEstimatedDelay",
@@ -69,12 +69,12 @@ const sortOptions: Array<LabeledSortOrder> = [
 
 type GroupIdType = "internal" | "source";
 
-type LabeledRerouteReason = {
+interface LabeledRerouteReason {
   reason: PaxMonRerouteReason;
   label: string;
-};
+}
 
-const rerouteReasonOptions: Array<LabeledRerouteReason> = [
+const rerouteReasonOptions: LabeledRerouteReason[] = [
   { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
   { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
   { reason: "Simulation", label: "Simulation" },
@@ -414,12 +414,12 @@ function GroupList(): JSX.Element {
   );
 }
 
-type RerouteReasonOptionsProps = {
+interface RerouteReasonOptionsProps {
   rerouteReasonFilter: PaxMonRerouteReason[];
   setRerouteReasonFilter: React.Dispatch<
     React.SetStateAction<PaxMonRerouteReason[]>
   >;
-};
+}
 
 function RerouteReasonOptions({
   rerouteReasonFilter,
@@ -484,9 +484,9 @@ function RerouteReasonOptions({
   );
 }
 
-type GroupRouteInfoProps = {
+interface GroupRouteInfoProps {
   route: PaxMonGroupRoute;
-};
+}
 
 function GroupRouteInfo({ route }: GroupRouteInfoProps): JSX.Element {
   const firstLeg = route.journey.legs[0];
@@ -505,11 +505,11 @@ function GroupRouteInfo({ route }: GroupRouteInfoProps): JSX.Element {
   );
 }
 
-type GroupListEntryProps = {
+interface GroupListEntryProps {
   groupWithStats: PaxMonGroupWithStats;
   idType: GroupIdType;
   selectedGroup: number | undefined;
-};
+}
 
 function GroupListEntry({
   groupWithStats,

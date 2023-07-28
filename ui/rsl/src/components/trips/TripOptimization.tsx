@@ -16,10 +16,10 @@ import classNames from "@/util/classNames";
 import OptimizationWorker from "@/optimization/worker?worker";
 import { WorkerRequest, WorkerUpdate } from "@/optimization/workerMessages";
 
-export type TripOptimizationProps = {
+export interface TripOptimizationProps {
   tripId: TripId;
   optimizationAvailable: boolean;
-};
+}
 
 function TripOptimization({
   tripId,

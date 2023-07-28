@@ -22,10 +22,10 @@ export interface MeasureRecipientsData {
   stations: Station[];
 }
 
-export type SharedMeasureData = {
+export interface SharedMeasureData {
   recipients: MeasureRecipientsData;
   time: Date;
-};
+}
 
 export interface TripLoadInfoMeasureData {
   trip: TripServiceInfo | undefined;
@@ -62,43 +62,43 @@ export interface UpdateCapacityMeasureData {
 
 export type UiMeasureType = MeasureType | "Empty" | "RtCancelMeasure";
 
-export type EmptyMeasureU = { type: "Empty"; shared: SharedMeasureData };
+export interface EmptyMeasureU { type: "Empty"; shared: SharedMeasureData }
 
-export type TripLoadInfoMeasureU = {
+export interface TripLoadInfoMeasureU {
   type: "TripLoadInfoMeasure";
   shared: SharedMeasureData;
   data: TripLoadInfoMeasureData;
-};
+}
 
-export type TripRecommendationMeasureU = {
+export interface TripRecommendationMeasureU {
   type: "TripRecommendationMeasure";
   shared: SharedMeasureData;
   data: TripRecommendationMeasureData;
-};
+}
 
-export type TripLoadRecommendationMeasureU = {
+export interface TripLoadRecommendationMeasureU {
   type: "TripLoadRecommendationMeasure";
   shared: SharedMeasureData;
   data: TripLoadRecommendationMeasureData;
-};
+}
 
-export type RtUpdateMeasureU = {
+export interface RtUpdateMeasureU {
   type: "RtUpdateMeasure";
   shared: SharedMeasureData;
   data: RtUpdateMeasureData;
-};
+}
 
-export type RtCancelMeasureU = {
+export interface RtCancelMeasureU {
   type: "RtCancelMeasure";
   shared: SharedMeasureData;
   data: RtCancelMeasureData;
-};
+}
 
-export type UpdateCapacitiesMeasureU = {
+export interface UpdateCapacitiesMeasureU {
   type: "UpdateCapacitiesMeasure";
   shared: SharedMeasureData;
   data: UpdateCapacityMeasureData;
-};
+}
 
 export type MeasureUnion =
   | EmptyMeasureU

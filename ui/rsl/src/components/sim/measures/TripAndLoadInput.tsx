@@ -6,14 +6,14 @@ import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 import LoadInput, { allLoadLevels } from "@/components/inputs/LoadInput";
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type TripAndLoadInputProps = {
+export interface TripAndLoadInputProps {
   selectedTrip: TripServiceInfo | undefined;
   selectedLevel: LoadLevel;
   onTripSelected: (tsi: TripServiceInfo | undefined) => void;
   onLevelSelected: (level: LoadLevel) => void;
   loadLevels?: LoadLevel[];
   children?: ReactNode;
-};
+}
 
 function TripAndLoadInput({
   selectedTrip,

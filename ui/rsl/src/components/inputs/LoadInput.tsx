@@ -17,12 +17,12 @@ export const lowOrUnknownLoadLevels: LoadLevel[] = [
   "NoSeats",
 ];
 
-export type LoadInputProps = {
+export interface LoadInputProps {
   loadLevels?: LoadLevel[];
   selectedLevel: LoadLevel;
   onLevelSelected: (level: LoadLevel) => void;
   className?: string;
-};
+}
 
 function LoadInput({
   loadLevels = allLoadLevels,
@@ -93,9 +93,9 @@ function LoadInput({
   );
 }
 
-type LoadLevelLabelProps = {
+interface LoadLevelLabelProps {
   level: LoadLevel;
-};
+}
 
 function LoadLevelLabel({ level }: LoadLevelLabelProps) {
   const lli = loadLevelInfos[level];
