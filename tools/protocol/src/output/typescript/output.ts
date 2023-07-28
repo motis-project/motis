@@ -8,6 +8,7 @@ import { getFilename } from "@/output/typescript/filenames";
 import { TSInclude, collectIncludes } from "@/output/typescript/includes";
 import { getUnionTagTypeName } from "@/output/typescript/util";
 import { FieldType, SchemaTypes, TableType, UnionValue } from "@/schema/types";
+import { isRequired } from "@/util/required";
 
 export async function writeTypeScriptOutput(
   schema: SchemaTypes,
@@ -197,6 +198,8 @@ function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
     out += `export interface ${type.name} {`;
     for (const f of type.fields) {
       const typeName = getTSTypeName(ctx, file, f.type);
+      const requiredField = isRequired(f.metadata);
+      const typeSuffix = requiredField ? "" : "?";
       if (f.type.c === "custom") {
         const fqtn = f.type.type.resolvedFqtn.join(".");
         const resolvedType = ctx.schema.types.get(fqtn);
@@ -204,12 +207,12 @@ function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
           throw new Error(`unknown type ${fqtn}`);
         }
         if (resolvedType.type === "union") {
-          out += `\n  ${f.name}_type: ${getUnionTagTypeName(
+          out += `\n  ${f.name}_type${typeSuffix}: ${getUnionTagTypeName(
             resolvedType.name,
           )};`;
         }
       }
-      out += `\n  ${f.name}: ${typeName};`;
+      out += `\n  ${f.name}${typeSuffix}: ${typeName};`;
 
       const comments: string[] = [];
       if (f.defaultValue !== null) {
@@ -217,6 +220,9 @@ function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
       }
       if (f.metadata !== null) {
         for (const attr of f.metadata) {
+          if (attr.id === "optional" || attr.id === "required") {
+            continue;
+          }
           let comment = `${attr.id}`;
           if (attr.value) {
             comment += `: ${attr.value.value}`;

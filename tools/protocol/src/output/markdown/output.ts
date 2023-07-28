@@ -6,6 +6,7 @@ import { TypeFilter, includeType } from "@/filter/type-filter";
 import { MarkdownContext, MarkdownFile } from "@/output/markdown/context";
 import { getFilename, getTypeLink, toSingleLine } from "@/output/markdown/util";
 import { FieldType, SchemaTypes } from "@/schema/types";
+import { isRequired } from "@/util/required";
 
 export function writeMarkdownOutput(
   schema: SchemaTypes,
@@ -109,6 +110,9 @@ function writeType(
         const fieldDoc = typeDoc?.fields?.get(f.name);
         const fieldTypeMd = fieldTypeToMarkdown(ctx, file, f.type);
         out.write(`- \`${f.name}\` (${fieldTypeMd})`);
+        if (!isRequired(f.metadata)) {
+          out.write(" (optional)");
+        }
         f.type;
         if (fieldDoc?.description) {
           out.write(": ");

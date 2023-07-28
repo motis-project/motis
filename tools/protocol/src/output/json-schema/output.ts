@@ -12,6 +12,7 @@ import {
   TableType,
   TypeBase,
 } from "@/schema/types";
+import { isRequired } from "@/util/required";
 
 const JSON_SCHEMA_URL = "https://json-schema.org/draft/2020-12/schema";
 
@@ -273,6 +274,7 @@ function addTableProperties(
   }
 
   for (const field of type.fields) {
+    const requiredField = isRequired(field.metadata);
     if (field.type.c === "custom") {
       const fqtn = field.type.type.resolvedFqtn.join(".");
       const resolvedType = ctx.schema.types.get(fqtn);
@@ -285,9 +287,13 @@ function addTableProperties(
       }
       if (resolvedType.type === "union" && !ctx.typesInUnions) {
         const tagName = `${field.name}_type`;
-        required.push(tagName);
+        if (requiredField) {
+          required.push(tagName);
+        }
         if (ctx.strictUnions) {
-          required.push(field.name);
+          if (requiredField) {
+            required.push(field.name);
+          }
           for (const value of resolvedType.values) {
             const fqtn = value.typeRef.resolvedFqtn;
             const fqtnStr = fqtn.join(".");
@@ -315,7 +321,9 @@ function addTableProperties(
       }
     }
     props[field.name] = fieldTypeToJS(ctx, field.type);
-    required.push(field.name);
+    if (requiredField) {
+      required.push(field.name);
+    }
   }
   if (Object.keys(props).length > 0) {
     js.properties = props;
