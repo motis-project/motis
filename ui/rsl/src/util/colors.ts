@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-duplicate-enum-values */
 export enum SectionLoadColors {
   Bg_0_80 = "#63A615",
   Bg_80_100 = "#FFD800",
@@ -19,3 +20,4 @@ export enum SectionLoadColors {
   Fg_200_plus = Bg_200_plus,
   Fg_unknown = Bg_unknown,
 }
+/* eslint-enable */
