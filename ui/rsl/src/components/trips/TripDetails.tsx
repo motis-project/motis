@@ -18,7 +18,7 @@ interface TripDetailsProps {
 
 function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
   const [showLegacyLoadForecastChart] = useAtom(
-    showLegacyLoadForecastChartAtom
+    showLegacyLoadForecastChartAtom,
   );
   const [showCapacityInfo] = useAtom(showCapacityInfoAtom);
 

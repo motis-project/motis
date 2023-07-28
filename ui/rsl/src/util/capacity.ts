@@ -11,7 +11,7 @@ export const EMTPY_CAPACITY_DATA: PaxMonCapacityData = {
 
 export function addCapacityData(
   a: PaxMonCapacityData,
-  b: PaxMonCapacityData
+  b: PaxMonCapacityData,
 ): PaxMonCapacityData {
   return {
     limit: a.limit + b.limit,

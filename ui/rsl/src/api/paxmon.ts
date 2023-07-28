@@ -44,48 +44,48 @@ import {
 import { sendRequest } from "@/api/request";
 
 export async function sendPaxMonStatusRequest(
-  content: PaxMonStatusRequest
+  content: PaxMonStatusRequest,
 ): Promise<PaxMonStatusResponse> {
   const msg = await sendRequest(
     "/paxmon/status",
     "PaxMonStatusRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonStatusResponse");
   return msg.content as PaxMonStatusResponse;
 }
 
 export function usePaxMonStatusQuery(
-  universe: number
+  universe: number,
 ): UseQueryResult<PaxMonStatusResponse> {
   return useQuery(
     queryKeys.status(universe),
     () => sendPaxMonStatusRequest({ universe }),
     {
       staleTime: 0,
-    }
+    },
   );
 }
 
 export async function sendPaxMonGetTripLoadInfosRequest(
-  content: PaxMonGetTripLoadInfosRequest
+  content: PaxMonGetTripLoadInfosRequest,
 ): Promise<PaxMonGetTripLoadInfosResponse> {
   const msg = await sendRequest(
     "/paxmon/trip_load_info",
     "PaxMonGetTripLoadInfosRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGetTripLoadInfosResponse");
   return msg.content as PaxMonGetTripLoadInfosResponse;
 }
 
 export async function sendPaxMonFindTripsRequest(
-  content: PaxMonFindTripsRequest
+  content: PaxMonFindTripsRequest,
 ): Promise<PaxMonFindTripsResponse> {
   const msg = await sendRequest(
     "/paxmon/find_trips",
     "PaxMonFindTripsRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonFindTripsResponse");
   return msg.content as PaxMonFindTripsResponse;
@@ -94,7 +94,7 @@ export async function sendPaxMonFindTripsRequest(
 export function usePaxMonFindTripsQuery(
   universe: number,
   trainNr: number | undefined,
-  options?: Pick<UseQueryOptions, "keepPreviousData">
+  options?: Pick<UseQueryOptions, "keepPreviousData">,
 ): UseQueryResult<PaxMonFindTripsResponse> {
   return useQuery(
     queryKeys.findTrips(universe, trainNr),
@@ -106,193 +106,193 @@ export function usePaxMonFindTripsQuery(
         filter_class: false,
         max_class: 0,
       }),
-    { ...options, enabled: trainNr != undefined && !isNaN(trainNr) }
+    { ...options, enabled: trainNr != undefined && !isNaN(trainNr) },
   );
 }
 
 export async function sendPaxMonGroupsInTripRequest(
-  content: PaxMonGetGroupsInTripRequest
+  content: PaxMonGetGroupsInTripRequest,
 ): Promise<PaxMonGetGroupsInTripResponse> {
   const msg = await sendRequest(
     "/paxmon/groups_in_trip",
     "PaxMonGetGroupsInTripRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGetGroupsInTripResponse");
   return msg.content as PaxMonGetGroupsInTripResponse;
 }
 
 export function usePaxMonGroupsInTripQuery(
-  content: PaxMonGetGroupsInTripRequest
+  content: PaxMonGetGroupsInTripRequest,
 ): UseQueryResult<PaxMonGetGroupsInTripResponse> {
   return useQuery(queryKeys.tripGroups(content), () =>
-    sendPaxMonGroupsInTripRequest(content)
+    sendPaxMonGroupsInTripRequest(content),
   );
 }
 
 export async function sendPaxMonAddressableGroupsRequest(
-  content: PaxMonGetAddressableGroupsRequest
+  content: PaxMonGetAddressableGroupsRequest,
 ): Promise<PaxMonGetAddressableGroupsResponse> {
   const msg = await sendRequest(
     "/paxmon/addressable_groups",
     "PaxMonGetAddressableGroupsRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGetAddressableGroupsResponse");
   return msg.content as PaxMonGetAddressableGroupsResponse;
 }
 
 export function usePaxMonAddressableGroupsQuery(
-  content: PaxMonGetAddressableGroupsRequest
+  content: PaxMonGetAddressableGroupsRequest,
 ): UseQueryResult<PaxMonGetAddressableGroupsResponse> {
   return useQuery(queryKeys.addressableGroups(content), () =>
-    sendPaxMonAddressableGroupsRequest(content)
+    sendPaxMonAddressableGroupsRequest(content),
   );
 }
 
 export async function sendPaxMonForkUniverseRequest(
-  content: PaxMonForkUniverseRequest
+  content: PaxMonForkUniverseRequest,
 ): Promise<PaxMonForkUniverseResponse> {
   const msg = await sendRequest(
     "/paxmon/fork_universe",
     "PaxMonForkUniverseRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonForkUniverseResponse");
   return msg.content as PaxMonForkUniverseResponse;
 }
 
 export async function sendPaxMonDestroyUniverseRequest(
-  content: PaxMonDestroyUniverseRequest
+  content: PaxMonDestroyUniverseRequest,
 ): Promise<MotisSuccess> {
   const msg = await sendRequest(
     "/paxmon/destroy_universe",
     "PaxMonDestroyUniverseRequest",
-    content
+    content,
   );
   verifyContentType(msg, "MotisSuccess");
   return msg.content as MotisSuccess;
 }
 
 export async function sendPaxMonGetInterchangesRequest(
-  content: PaxMonGetInterchangesRequest
+  content: PaxMonGetInterchangesRequest,
 ): Promise<PaxMonGetInterchangesResponse> {
   const msg = await sendRequest(
     "/paxmon/get_interchanges",
     "PaxMonGetInterchangesRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGetInterchangesResponse");
   return msg.content as PaxMonGetInterchangesResponse;
 }
 
 export function usePaxMonGetInterchangesQuery(
-  content: PaxMonGetInterchangesRequest
+  content: PaxMonGetInterchangesRequest,
 ): UseQueryResult<PaxMonGetInterchangesResponse> {
   return useQuery(queryKeys.interchanges(content), () =>
-    sendPaxMonGetInterchangesRequest(content)
+    sendPaxMonGetInterchangesRequest(content),
   );
 }
 
 export async function sendPaxMonFilterTripsRequest(
-  content: PaxMonFilterTripsRequest
+  content: PaxMonFilterTripsRequest,
 ): Promise<PaxMonFilterTripsResponse> {
   const msg = await sendRequest(
     "/paxmon/filter_trips",
     "PaxMonFilterTripsRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonFilterTripsResponse");
   return msg.content as PaxMonFilterTripsResponse;
 }
 
 export function usePaxMonFilterTripsRequest(
-  content: PaxMonFilterTripsRequest
+  content: PaxMonFilterTripsRequest,
 ): UseQueryResult<PaxMonFilterTripsResponse> {
   return useQuery(queryKeys.filterTrips(content), () =>
-    sendPaxMonFilterTripsRequest(content)
+    sendPaxMonFilterTripsRequest(content),
   );
 }
 
 export async function sendPaxMonFilterGroupsRequest(
-  content: PaxMonFilterGroupsRequest
+  content: PaxMonFilterGroupsRequest,
 ): Promise<PaxMonFilterGroupsResponse> {
   const msg = await sendRequest(
     "/paxmon/filter_groups",
     "PaxMonFilterGroupsRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonFilterGroupsResponse");
   return msg.content as PaxMonFilterGroupsResponse;
 }
 
 export function usePaxMonFilterGroupsRequest(
-  content: PaxMonFilterGroupsRequest
+  content: PaxMonFilterGroupsRequest,
 ): UseQueryResult<PaxMonFilterGroupsResponse> {
   return useQuery(queryKeys.filterGroups(content), () =>
-    sendPaxMonFilterGroupsRequest(content)
+    sendPaxMonFilterGroupsRequest(content),
   );
 }
 
 export async function sendPaxMonGetGroupsRequest(
-  content: PaxMonGetGroupsRequest
+  content: PaxMonGetGroupsRequest,
 ): Promise<PaxMonGetGroupsResponse> {
   const msg = await sendRequest(
     "/paxmon/get_groups",
     "PaxMonGetGroupsRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGetGroupsResponse");
   return msg.content as PaxMonGetGroupsResponse;
 }
 
 export function usePaxMonGetGroupsRequest(
-  content: PaxMonGetGroupsRequest
+  content: PaxMonGetGroupsRequest,
 ): UseQueryResult<PaxMonGetGroupsResponse> {
   return useQuery(queryKeys.getGroups(content), () =>
-    sendPaxMonGetGroupsRequest(content)
+    sendPaxMonGetGroupsRequest(content),
   );
 }
 
 export async function sendPaxMonKeepAliveRequest(
-  content: PaxMonKeepAliveRequest
+  content: PaxMonKeepAliveRequest,
 ): Promise<PaxMonKeepAliveResponse> {
   const msg = await sendRequest(
     "/paxmon/keep_alive",
     "PaxMonKeepAliveRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonKeepAliveResponse");
   return msg.content as PaxMonKeepAliveResponse;
 }
 
 export async function sendPaxMonGroupStatisticsRequest(
-  content: PaxMonGroupStatisticsRequest
+  content: PaxMonGroupStatisticsRequest,
 ): Promise<PaxMonGroupStatisticsResponse> {
   const msg = await sendRequest(
     "/paxmon/group_statistics",
     "PaxMonGroupStatisticsRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGroupStatisticsResponse");
   return msg.content as PaxMonGroupStatisticsResponse;
 }
 
 export function usePaxMonGroupStatisticsQuery(
-  content: PaxMonGroupStatisticsRequest
+  content: PaxMonGroupStatisticsRequest,
 ): UseQueryResult<PaxMonGroupStatisticsResponse> {
   return useQuery(queryKeys.groupStatistics(content), () =>
-    sendPaxMonGroupStatisticsRequest(content)
+    sendPaxMonGroupStatisticsRequest(content),
   );
 }
 
 export async function sendPaxMonDebugGraphRequest(
-  content: PaxMonDebugGraphRequest
+  content: PaxMonDebugGraphRequest,
 ): Promise<PaxMonDebugGraphResponse> {
   const msg = await sendRequest(
     "/paxmon/debug_graph",
     "PaxMonDebugGraphRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonDebugGraphResponse");
   return msg.content as PaxMonDebugGraphResponse;
@@ -305,42 +305,42 @@ export async function sendPaxMonGetUniversesRequest(): Promise<PaxMonGetUniverse
 }
 
 export async function sendPaxMonGetTripCapacityRequest(
-  content: PaxMonGetTripCapacityRequest
+  content: PaxMonGetTripCapacityRequest,
 ): Promise<PaxMonGetTripCapacityResponse> {
   const msg = await sendRequest(
     "/paxmon/trip_capacity",
     "PaxMonGetTripCapacityRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonGetTripCapacityResponse");
   return msg.content as PaxMonGetTripCapacityResponse;
 }
 
 export function usePaxMonGetTripCapacity(
-  content: PaxMonGetTripCapacityRequest
+  content: PaxMonGetTripCapacityRequest,
 ): UseQueryResult<PaxMonGetTripCapacityResponse> {
   return useQuery(queryKeys.tripCapacity(content), () =>
-    sendPaxMonGetTripCapacityRequest(content)
+    sendPaxMonGetTripCapacityRequest(content),
   );
 }
 
 export async function sendPaxMonCapacityStatusRequest(
-  content: PaxMonCapacityStatusRequest
+  content: PaxMonCapacityStatusRequest,
 ): Promise<PaxMonCapacityStatusResponse> {
   const msg = await sendRequest(
     "/paxmon/capacity_status",
     "PaxMonCapacityStatusRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxMonCapacityStatusResponse");
   return msg.content as PaxMonCapacityStatusResponse;
 }
 
 export function usePaxMonCapacityStatus(
-  content: PaxMonCapacityStatusRequest
+  content: PaxMonCapacityStatusRequest,
 ): UseQueryResult<PaxMonCapacityStatusResponse> {
   return useQuery(queryKeys.capacityStatus(content), () =>
-    sendPaxMonCapacityStatusRequest(content)
+    sendPaxMonCapacityStatusRequest(content),
   );
 }
 

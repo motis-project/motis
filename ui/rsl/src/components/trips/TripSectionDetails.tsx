@@ -18,7 +18,7 @@ import CombinedGroup from "@/components/trips/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,
-  selected: PaxMonEdgeLoadInfo | undefined
+  selected: PaxMonEdgeLoadInfo | undefined,
 ) {
   return (
     selected != undefined &&
@@ -105,7 +105,7 @@ function TripSectionDetails({
             </div>
             <div>
               {`${sec.groups.length} Gruppen (${getMinPaxInSection(
-                sec
+                sec,
               )} - ${getMaxPaxInSection(sec)} Reisende)`}
               {groupFilter == "All" && " in dem Fahrtabschnitt"}
               {groupFilter == "Entering" && ` mit Einstieg in ${sec.from.name}`}
@@ -122,7 +122,7 @@ function TripSectionDetails({
                       startStation={getAlternativeFromStation(sec, gg)}
                       earliestDeparture={getAlternativeEarliestDeparture(
                         sec,
-                        gg
+                        gg,
                       )}
                       groupByDirection={groupByDirection}
                     />
@@ -190,7 +190,7 @@ function TripSectionDetails({
 
 function getAlternativeFromStation(
   sec: GroupsInTripSection,
-  gg: GroupedPassengerGroups
+  gg: GroupedPassengerGroups,
 ): Station {
   if (gg.entry_station.length === 1) {
     return gg.entry_station[0];
@@ -201,7 +201,7 @@ function getAlternativeFromStation(
 
 function getAlternativeEarliestDeparture(
   sec: GroupsInTripSection,
-  gg: GroupedPassengerGroups
+  gg: GroupedPassengerGroups,
 ): number {
   if (gg.entry_station.length === 1) {
     return gg.entry_time;

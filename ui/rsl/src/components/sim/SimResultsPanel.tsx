@@ -46,7 +46,7 @@ function SimResultsListEntry({
 function SimResultsList(): JSX.Element {
   const [simResultsList] = useAtom(simResultsAtom);
   const [selectedSimResult, setSelectedSimResult] = useAtom(
-    selectedSimResultAtom
+    selectedSimResultAtom,
   );
 
   return (
@@ -83,7 +83,7 @@ function SimResultsList(): JSX.Element {
                   className={({ active }) =>
                     classNames(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
                   }
                   value={resultAtom}
@@ -93,7 +93,7 @@ function SimResultsList(): JSX.Element {
                       <span
                         className={classNames(
                           "block truncate",
-                          selected ? "font-medium" : "font-normal"
+                          selected ? "font-medium" : "font-normal",
                         )}
                       >
                         <SimResultsListEntry simResultAtom={resultAtom} />
@@ -102,7 +102,7 @@ function SimResultsList(): JSX.Element {
                         <span
                           className={classNames(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
-                            active ? "text-amber-600" : "text-amber-600"
+                            active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
                           <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -137,7 +137,7 @@ function SimResultDetails({
   const r = simResult.response;
   const duration = differenceInMilliseconds(
     simResult.finishedAt,
-    simResult.startedAt
+    simResult.startedAt,
   );
 
   const trips = critChangeOnly
@@ -173,7 +173,7 @@ function SimResultDetails({
         </div>
         <div
           title={`Betroffene Reisendengruppen: ${formatNumber(
-            r.updates.updated_group_count
+            r.updates.updated_group_count,
           )} (${formatNumber(r.updates.updated_group_route_count)} Routen)`}
         >
           Betroffende Reisende: {formatNumber(r.updates.updated_pax_count)}
@@ -199,7 +199,7 @@ function SimResultDetails({
           </div>
           <div className="ml-3">
             {`Gebrochene Reiseketten: ${formatNumber(
-              r.stats.group_routes_broken
+              r.stats.group_routes_broken,
             )}`}
           </div>
         </div>

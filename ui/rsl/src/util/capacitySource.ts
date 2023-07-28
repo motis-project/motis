@@ -64,7 +64,7 @@ export function getCapacitySourceShortText(cs: PaxMonCapacitySource): string {
 
 export function getFormationCapacitySourceShortText(
   cs: PaxMonCapacitySource,
-  single: boolean
+  single: boolean,
 ): string {
   switch (cs) {
     case "FormationVehicles":

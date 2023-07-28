@@ -140,7 +140,7 @@ function SectionCapacityInfo({
             <span
               className={classNames(
                 "w-1/2",
-                departureDelayed ? "text-red-600" : "text-green-600"
+                departureDelayed ? "text-red-600" : "text-green-600",
               )}
             >
               {formatTime(section.departure_current_time)}
@@ -158,7 +158,7 @@ function SectionCapacityInfo({
             <span
               className={classNames(
                 "w-1/2",
-                arrivalDelayed ? "text-red-600" : "text-green-600"
+                arrivalDelayed ? "text-red-600" : "text-green-600",
               )}
             >
               {formatTime(section.arrival_current_time)}
@@ -230,7 +230,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
               <span>
                 {`(Kapazitätsdaten: ${getFormationCapacitySourceShortText(
                   mt.trip_formation_capacity_source,
-                  false
+                  false,
                 )})`}
               </span>
             </div>
@@ -247,7 +247,7 @@ function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
   const capacitySum = mt.vehicle_groups.reduce(
     (sum, vg) =>
       vg.capacity.length === 1 ? addCapacityData(sum, vg.capacity[0]) : sum,
-    EMTPY_CAPACITY_DATA
+    EMTPY_CAPACITY_DATA,
   );
 
   return (
@@ -292,7 +292,7 @@ function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
               className={classNames(
                 vg.capacity.length === 1
                   ? "text-green-600"
-                  : "text-db-cool-gray-500"
+                  : "text-db-cool-gray-500",
               )}
             >
               <td className="px-2">{vg.name}</td>
@@ -345,7 +345,7 @@ function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
 function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
   const capacitySum = vg.vehicles.reduce(
     (sum, v) => addCapacityData(sum, v.data),
-    EMTPY_CAPACITY_DATA
+    EMTPY_CAPACITY_DATA,
   );
 
   return (
@@ -390,7 +390,7 @@ function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
             <tr
               key={idx}
               className={classNames(
-                v.guessed ? "text-fuchsia-500" : !v.uic_found && "text-red-500"
+                v.guessed ? "text-fuchsia-500" : !v.uic_found && "text-red-500",
               )}
             >
               <td className="px-2">{v.order}</td>

@@ -20,7 +20,7 @@ function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
         "px-3 py-2 rounded-md text-sm font-medium cursor-pointer",
         active
           ? "bg-db-cool-gray-700 text-white"
-          : "hover:bg-db-cool-gray-300 text-black"
+          : "hover:bg-db-cool-gray-300 text-black",
       )}
       onClick={onClick}
     >
@@ -45,14 +45,14 @@ const MainPageLink = forwardRef<HTMLAnchorElement, MainPageLinkProps>(
             "px-3 py-2 rounded-md text-sm font-medium cursor-pointer",
             isActive
               ? "bg-db-cool-gray-700 text-white"
-              : "hover:bg-db-cool-gray-300 text-black"
+              : "hover:bg-db-cool-gray-300 text-black",
           )
         }
       >
         {children}
       </NavLink>
     );
-  }
+  },
 );
 MainPageLink.displayName = "MainPageLink";
 

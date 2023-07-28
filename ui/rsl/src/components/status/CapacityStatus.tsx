@@ -52,7 +52,7 @@ function CapacityStatus(): ReactElement {
     () => sendPaxMonCapacityStatusRequest(request),
     {
       enabled: selectedDate !== undefined,
-    }
+    },
   );
 
   const scheduleRange = getScheduleRange(scheduleInfo);

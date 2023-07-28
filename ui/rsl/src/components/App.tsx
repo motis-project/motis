@@ -36,7 +36,7 @@ function MainContent(): JSX.Element {
       <div
         className={classNames(
           "bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0",
-          showSimPanel ? "block" : "hidden"
+          showSimPanel ? "block" : "hidden",
         )}
       >
         <SimPanel />

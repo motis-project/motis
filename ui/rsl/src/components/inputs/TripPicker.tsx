@@ -23,8 +23,8 @@ function filterTrips(trips: PaxMonTripInfo[]) {
         (si) =>
           si.clasz === ServiceClass.ICE ||
           si.clasz === ServiceClass.IC ||
-          si.clasz === ServiceClass.OTHER
-      )
+          si.clasz === ServiceClass.OTHER,
+      ),
     /* eslint-enable */
   );
 }

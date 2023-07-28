@@ -26,7 +26,7 @@ async function forwardTimeByStepped(
   schedule: number,
   currentTime: number,
   forwardBy: number,
-  stepSize = 60
+  stepSize = 60,
 ) {
   const endTime = currentTime + forwardBy;
   while (currentTime < endTime) {
@@ -54,14 +54,14 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
         if (currentMultiverseId != 0) {
           // multiverse id changed = server restarted -> reset universes
           console.log(
-            `multiverse id changed: ${currentMultiverseId} -> ${arg}`
+            `multiverse id changed: ${currentMultiverseId} -> ${arg}`,
           );
           set(universeAtom, 0);
           set(scheduleAtom, 0);
           set(universesAtom, [defaultUniverse]);
         }
       }
-    }, [])
+    }, []),
   );
   const {
     data: status,
@@ -77,7 +77,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
       onSuccess: (data) => {
         updateMultiverseId(data.multiverse_id);
       },
-    }
+    },
   );
 
   const forwardMutation = useMutation((forwardBy: number) => {
@@ -85,7 +85,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
       queryClient,
       schedule,
       status?.system_time ?? 0,
-      forwardBy
+      forwardBy,
     );
   });
 

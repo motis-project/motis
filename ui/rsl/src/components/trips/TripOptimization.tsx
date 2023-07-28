@@ -62,7 +62,7 @@ function TripOptimization({
           }
           case "UniverseDestroyed": {
             simUniverses.current = simUniverses.current.filter(
-              (u) => u != update.universe
+              (u) => u != update.universe,
             );
             break;
           }
@@ -98,11 +98,11 @@ function TripOptimization({
     const universesToDestroy = simUniverses.current;
     if (universesToDestroy.length > 0) {
       textAreaRef.current.value += `Universen werden freigegeben: ${universesToDestroy.join(
-        ", "
+        ", ",
       )}\n`;
       simUniverses.current = [];
       const destructionCalls = universesToDestroy.map((u) =>
-        sendPaxMonDestroyUniverseRequest({ universe: u })
+        sendPaxMonDestroyUniverseRequest({ universe: u }),
       );
       await Promise.allSettled(destructionCalls);
       textAreaRef.current.value += "Universen freigegeben.\n";
@@ -128,7 +128,7 @@ function TripOptimization({
     <div
       className={classNames(
         "max-w-7xl mx-auto pb-2",
-        optimizationAvailable ? "visible" : "invisible"
+        optimizationAvailable ? "visible" : "invisible",
       )}
     >
       <div className="flex justify-center my-2 gap-2">
@@ -139,7 +139,7 @@ function TripOptimization({
             "flex justify-center items-center gap-1 px-3 py-1 rounded text-sm",
             running
               ? "bg-db-red-300 text-db-red-100 cursor-wait"
-              : "bg-db-red-500 hover:bg-db-red-600 text-white"
+              : "bg-db-red-500 hover:bg-db-red-600 text-white",
           )}
         >
           <SparklesIcon className="w-5 h-5" aria-hidden="true" />

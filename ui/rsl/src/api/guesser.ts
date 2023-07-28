@@ -13,7 +13,7 @@ import {
 import { sendRequest } from "@/api/request";
 
 export async function sendStationGuesserRequest(
-  content: StationGuesserRequest
+  content: StationGuesserRequest,
 ): Promise<StationGuesserResponse> {
   const msg = await sendRequest("/guesser", "StationGuesserRequest", content);
   verifyContentType(msg, "StationGuesserResponse");
@@ -22,12 +22,12 @@ export async function sendStationGuesserRequest(
 
 export function useStationGuesserQuery(
   content: StationGuesserRequest,
-  options?: Pick<UseQueryOptions, "keepPreviousData">
+  options?: Pick<UseQueryOptions, "keepPreviousData">,
 ): UseQueryResult<StationGuesserResponse> {
   return useQuery(
     queryKeys.stationGuess(content),
     () => sendStationGuesserRequest(content),
-    { ...options, enabled: content.input.length >= 3 }
+    { ...options, enabled: content.input.length >= 3 },
   );
 }
 

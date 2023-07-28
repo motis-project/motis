@@ -81,13 +81,13 @@ function CombinedGroup({
         use_start_footpaths: true,
         schedule,
       }),
-    { enabled: findAlternatives }
+    { enabled: findAlternatives },
   );
 
   const plannedTripId = JSON.stringify(plannedTrip);
   const containsCurrentTrip = (j: Journey) =>
     j.tripLegs.find((leg) =>
-      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId)
+      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId),
     ) !== undefined;
 
   // TODO: group in 2 levels: destination, origin trip (?)
@@ -144,7 +144,7 @@ function CombinedGroup({
                     <Tooltip.Trigger asChild={true}>
                       <Link
                         to={`/trips/${encodeURIComponent(
-                          JSON.stringify(leg.trips[0].trip.id)
+                          JSON.stringify(leg.trips[0].trip.id),
                         )}`}
                       >
                         <JourneyTripNameView jt={leg.trips[0]} />

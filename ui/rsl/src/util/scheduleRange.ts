@@ -16,7 +16,7 @@ export interface ScheduleRange {
 }
 
 export function getScheduleRange(
-  scheduleInfo: LookupScheduleInfoResponse | undefined
+  scheduleInfo: LookupScheduleInfoResponse | undefined,
 ): ScheduleRange {
   if (scheduleInfo == undefined) {
     return {

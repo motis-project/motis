@@ -53,7 +53,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
           : undefined;
       },
-    }
+    },
   );
 
   const setMostRecentlySelectedTrip = useSetAtom(mostRecentlySelectedTripAtom);
@@ -74,15 +74,15 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
   const maxExpected = edges.reduce(
     (max, ef) => Math.max(max, ef.expected_passengers),
-    0
+    0,
   );
   const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
-    0
+    0,
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
   const missingExactCapacityInfo = edges.some(
-    (eli) => !isExactCapacitySource(eli.capacity_source)
+    (eli) => !isExactCapacitySource(eli.capacity_source),
   );
 
   const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
@@ -180,7 +180,7 @@ function TripSection({
               <span
                 className={classNames(
                   "w-1/2",
-                  departureDelayed ? "text-red-600" : "text-green-600"
+                  departureDelayed ? "text-red-600" : "text-green-600",
                 )}
               >
                 {formatTime(section.departure_current_time)}
@@ -198,7 +198,7 @@ function TripSection({
               <span
                 className={classNames(
                   "w-1/2",
-                  arrivalDelayed ? "text-red-600" : "text-green-600"
+                  arrivalDelayed ? "text-red-600" : "text-green-600",
                 )}
               >
                 {formatTime(section.arrival_current_time)}
@@ -212,7 +212,7 @@ function TripSection({
         <div
           className="w-10 pt-1 flex flex-col items-center"
           title={`Überlastungswahrscheinlichkeit: ${formatPercent(
-            section.prob_over_capacity
+            section.prob_over_capacity,
           )}`}
         >
           {section.prob_over_capacity >= 0.01 ? (

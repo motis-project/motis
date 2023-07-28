@@ -23,9 +23,9 @@ function TripRecommendationMeasureEditor({
   const dataAtom = useMemo(
     () =>
       focusAtom(measureAtom, (optic) =>
-        optic.guard(isTripRecommendationMeasureU).prop("data")
+        optic.guard(isTripRecommendationMeasureU).prop("data"),
       ),
-    [measureAtom]
+    [measureAtom],
   );
   const [data, setData] = useAtom(dataAtom);
 

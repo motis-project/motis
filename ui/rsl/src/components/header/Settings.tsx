@@ -26,10 +26,10 @@ const sectionGraphPlotTypes: {
 
 function SectionGraphPlotSettings() {
   const [selectedPlotType, setSelectedPlotType] = useAtom(
-    sectionGraphPlotTypeAtom
+    sectionGraphPlotTypeAtom,
   );
   const [showLegacyLoadForecastChart, setShowLegacyLoadForecastChart] = useAtom(
-    showLegacyLoadForecastChartAtom
+    showLegacyLoadForecastChartAtom,
   );
 
   return (
@@ -85,7 +85,7 @@ function CapacitySettings() {
 
 function MeasureSettings() {
   const [showLegacyMeasureTypes, setShowLegacyMeasureTypes] = useAtom(
-    showLegacyMeasureTypesAtom
+    showLegacyMeasureTypesAtom,
   );
 
   return (
@@ -108,7 +108,7 @@ function MeasureSettings() {
 
 function OptimizationSettings() {
   const [showOptimizationDebugLog, setShowOptimizationDebugLog] = useAtom(
-    showOptimizationDebugLogAtom
+    showOptimizationDebugLogAtom,
   );
 
   return (
@@ -138,7 +138,7 @@ function Settings(): JSX.Element {
             <Popover.Button
               className={classNames(
                 open ? "opacity-100" : "opacity-30 hover:opacity-100",
-                "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
+                "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0",
               )}
             >
               <Cog6ToothIcon className="w-5 h-5" aria-hidden="true" />

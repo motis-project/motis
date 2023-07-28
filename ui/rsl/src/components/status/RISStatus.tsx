@@ -128,7 +128,7 @@ function SourceStatus({
 function formatTS(
   timestamp: number,
   colored: boolean,
-  maxDelay = 120
+  maxDelay = 120,
 ): ReactElement {
   if (timestamp === 0) {
     return <>—</>;

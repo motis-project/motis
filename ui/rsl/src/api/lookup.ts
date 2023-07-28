@@ -20,22 +20,22 @@ export function useLookupScheduleInfoQuery(): UseQueryResult<LookupScheduleInfoR
 }
 
 export async function sendLookupRiBasisRequest(
-  content: LookupRiBasisRequest
+  content: LookupRiBasisRequest,
 ): Promise<LookupRiBasisResponse> {
   const msg = await sendRequest(
     "/lookup/ribasis",
     "LookupRiBasisRequest",
-    content
+    content,
   );
   verifyContentType(msg, "LookupRiBasisResponse");
   return msg.content as LookupRiBasisResponse;
 }
 
 export function useLookupRiBasisQuery(
-  content: LookupRiBasisRequest
+  content: LookupRiBasisRequest,
 ): UseQueryResult<LookupRiBasisResponse> {
   return useQuery(queryKeys.riBasis(content), () =>
-    sendLookupRiBasisRequest(content)
+    sendLookupRiBasisRequest(content),
   );
 }
 

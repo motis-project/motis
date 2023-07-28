@@ -25,7 +25,7 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   const [shared, setShared] = useAtom(sharedAtom);
   const typeAtom = useMemo(
     () => focusAtom(measureAtom, (optic) => optic.prop("type")),
-    [measureAtom]
+    [measureAtom],
   );
   const [measureType] = useAtom(typeAtom);
 

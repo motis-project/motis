@@ -15,7 +15,7 @@ export interface DatePickerProps
 const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
   function datePicker(
     componentProps: DatePickerProps,
-    ref: ForwardedRef<HTMLInputElement>
+    ref: ForwardedRef<HTMLInputElement>,
   ): ReactElement {
     const { value, onChange, ...restProps } = componentProps;
     return (
@@ -41,7 +41,7 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
         className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
       />
     );
-  }
+  },
 );
 
 function isValidDate(d: Date | undefined | null): boolean {

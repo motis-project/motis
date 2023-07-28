@@ -18,7 +18,7 @@ const dateTimeFormat = "yyyy-MM-dd'T'HH:mm";
 const TimeInput = forwardRef<HTMLInputElement, TimeInputProps>(
   function timeInput(
     componentProps: TimeInputProps,
-    ref: ForwardedRef<HTMLInputElement>
+    ref: ForwardedRef<HTMLInputElement>,
   ): ReactElement {
     // https://github.com/yannickcr/eslint-plugin-react/issues/3140
     const { value, onChange, ...restProps } = componentProps;
@@ -44,7 +44,7 @@ const TimeInput = forwardRef<HTMLInputElement, TimeInputProps>(
         }}
       />
     );
-  }
+  },
 );
 
 export default TimeInput;

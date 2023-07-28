@@ -85,7 +85,7 @@ function MeasureTypeDetail({
           <div
             className={classNames(
               "truncate",
-              !measure.data.planned_destination && "text-db-red-500"
+              !measure.data.planned_destination && "text-db-red-500",
             )}
           >
             {measure.data.planned_destination
@@ -256,7 +256,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [measureAtoms, setMeasureAtoms] = useAtom(measuresAtom);
   const [selectedMeasure, setSelectedMeasure] = useAtom(
-    currentEditorMeasureAtom
+    currentEditorMeasureAtom,
   );
   const setSimResults = useSetAtom(simResultsAtom);
   const setSelectedSimResult = useSetAtom(selectedSimResultAtom);
@@ -295,7 +295,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         onSimulationFinished();
       },
       retry: false,
-    }
+    },
   );
 
   const applyMeasures = useAtomCallback(
@@ -312,13 +312,13 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         console.log(JSON.stringify(measureWrappers, null, 2));
         applyMeasuresMutation.mutate(measureWrappers);
       },
-      [applyMeasuresMutation]
-    )
+      [applyMeasuresMutation],
+    ),
   );
 
   const add = () => {
     const systemTime = queryClient.getQueryData<PaxMonStatusResponse>(
-      queryKeys.status(universe)
+      queryKeys.status(universe),
     )?.system_time;
     const currentTime = systemTime ? new Date(systemTime * 1000) : new Date();
     const newMeasure = atom<MeasureUnion>(newEmptyMeasure(currentTime));
@@ -347,7 +347,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
     <div
       className={classNames(
         "flex flex-col gap-2 h-full overflow-hidden",
-        applyMeasuresMutation.isLoading && "cursor-wait"
+        applyMeasuresMutation.isLoading && "cursor-wait",
       )}
     >
       <div className="flex justify-between">

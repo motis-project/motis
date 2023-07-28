@@ -53,7 +53,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   });
 
   const setMostRecentlySelectedGroup = useSetAtom(
-    mostRecentlySelectedGroupAtom
+    mostRecentlySelectedGroupAtom,
   );
   useEffect(() => {
     setMostRecentlySelectedGroup(groupId);
@@ -147,7 +147,7 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
       <div
         className={classNames(
           "grid grid-cols-3 gap-1 rounded-t p-2 bg-db-cool-gray-200 border-b-4",
-          route.broken ? "border-red-300" : "border-green-300"
+          route.broken ? "border-red-300" : "border-green-300",
         )}
       >
         <div className="text-lg flex items-center gap-4">
@@ -174,7 +174,7 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
             ? "bg-red-50"
             : route.probability > 0
             ? "bg-green-50"
-            : "bg-amber-50"
+            : "bg-amber-50",
         )}
       >
         <table>
@@ -325,7 +325,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
       <div
         className={classNames(
           "absolute w-8 h-8 rounded-full inline-flex items-center justify-center text-white",
-          bgColor
+          bgColor,
         )}
       >
         {icon}
@@ -537,10 +537,10 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
                     ? "text-green-600"
                     : diffs[rowIdx][colIdx] < 0
                     ? "text-yellow-500"
-                    : "text-black"
+                    : "text-black",
                 )}
                 title={`Exakter Wert: ${p}, Änderung: ${formatPercent(
-                  diffs[rowIdx][colIdx]
+                  diffs[rowIdx][colIdx],
                 )} (${diffs[rowIdx][colIdx]})`}
               >
                 {formatPercent(p)}

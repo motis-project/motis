@@ -25,7 +25,7 @@ function TripLoadInfoMeasureEditor({
   const dataAtom = useMemo(() => {
     console.log("TripLoadInfoMeasureEditor: creating dataAtom");
     return focusAtom(measureAtom, (optic) =>
-      optic.guard(isTripLoadInfoMeasureU).prop("data")
+      optic.guard(isTripLoadInfoMeasureU).prop("data"),
     );
   }, [measureAtom]);
   const [data, setData] = useAtom(dataAtom);
@@ -39,7 +39,7 @@ function TripLoadInfoMeasureEditor({
       setData((d) => {
         return { ...d, trip: tsi };
       }),
-    [setData]
+    [setData],
   );
 
   const setLoadInfoLevel = useCallback(
@@ -47,7 +47,7 @@ function TripLoadInfoMeasureEditor({
       setData((d) => {
         return { ...d, level };
       }),
-    [setData]
+    [setData],
   );
 
   return (

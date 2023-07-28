@@ -19,7 +19,7 @@ function MeasurePanel({
 }: MeasurePanelProps): JSX.Element {
   const setMeasureAtoms = useSetAtom(measuresAtom);
   const [currentMeasureAtom, setCurrentMeasureAtom] = useAtom(
-    currentEditorMeasureAtom
+    currentEditorMeasureAtom,
   );
 
   const deleteMeasure = useCallback(
@@ -27,12 +27,12 @@ function MeasurePanel({
       setMeasureAtoms((prev) => prev.filter((e) => e !== measureAtom));
       setCurrentMeasureAtom((ma) => (ma === measureAtom ? null : ma));
     },
-    [setMeasureAtoms, setCurrentMeasureAtom]
+    [setMeasureAtoms, setCurrentMeasureAtom],
   );
 
   const closeEditor = useCallback(
     () => setCurrentMeasureAtom(null),
-    [setCurrentMeasureAtom]
+    [setCurrentMeasureAtom],
   );
 
   return (

@@ -96,7 +96,7 @@ function getFilterGroupsRequest(
   filterTrainNrs: number[],
   selectedDate: Date | undefined | null,
   filterByRerouteReason: boolean,
-  rerouteReasonFilter: PaxMonRerouteReason[]
+  rerouteReasonFilter: PaxMonRerouteReason[],
 ): PaxMonFilterGroupsRequest {
   return {
     universe,
@@ -194,7 +194,7 @@ function GroupList(): JSX.Element {
         filterTrainNrs,
         selectedDate,
         filterByRerouteReason,
-        rerouteReasonFilter
+        rerouteReasonFilter,
       );
       return sendPaxMonFilterGroupsRequest(req);
     },
@@ -205,7 +205,7 @@ function GroupList(): JSX.Element {
       keepPreviousData: true,
       staleTime: 60000,
       enabled: selectedDate !== undefined,
-    }
+    },
   );
 
   const loadMore = useCallback(async () => {
@@ -254,7 +254,7 @@ function GroupList(): JSX.Element {
                   className={({ active }) =>
                     classNames(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
                   }
                 >
@@ -263,7 +263,7 @@ function GroupList(): JSX.Element {
                       <span
                         className={classNames(
                           "block truncate",
-                          selected ? "font-medium" : "font-normal"
+                          selected ? "font-medium" : "font-normal",
                         )}
                       >
                         {opt.label}
@@ -272,7 +272,7 @@ function GroupList(): JSX.Element {
                         <span
                           className={classNames(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
-                            active ? "text-amber-600" : "text-amber-600"
+                            active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
                           <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -449,7 +449,7 @@ function RerouteReasonOptions({
                 className={({ active }) =>
                   classNames(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
                 }
               >
@@ -458,7 +458,7 @@ function RerouteReasonOptions({
                     <span
                       className={classNames(
                         "block truncate",
-                        selected ? "font-medium" : "font-normal"
+                        selected ? "font-medium" : "font-normal",
                       )}
                     >
                       {opt.label}
@@ -467,7 +467,7 @@ function RerouteReasonOptions({
                       <span
                         className={classNames(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
-                          active ? "text-amber-600" : "text-amber-600"
+                          active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
                         <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -530,7 +530,7 @@ function GroupListEntry({
           "block p-2 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
-            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
+            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
         <div className="flex justify-between">

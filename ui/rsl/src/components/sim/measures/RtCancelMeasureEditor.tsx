@@ -43,9 +43,9 @@ function RtCancelMeasureEditor({
   const dataAtom = useMemo(
     () =>
       focusAtom(measureAtom, (optic) =>
-        optic.guard(isRtCancelMeasureU).prop("data")
+        optic.guard(isRtCancelMeasureU).prop("data"),
       ),
-    [measureAtom]
+    [measureAtom],
   );
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
@@ -58,7 +58,7 @@ function RtCancelMeasureEditor({
   const getSchedule = useAtomCallback(
     useCallback((get) => {
       return get(scheduleAtom);
-    }, [])
+    }, []),
   );
 
   const setTrip = async (tsi: TripServiceInfo | undefined) => {
@@ -71,12 +71,12 @@ function RtCancelMeasureEditor({
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
         () => sendLookupRiBasisRequest(lookupReq),
-        { staleTime: 1000 }
+        { staleTime: 1000 },
       );
       console.log(`received ri basis: ${data.trips.length} trips`);
       const requestedTripId = JSON.stringify(tsi.trip);
       const tripData = data.trips.filter(
-        (t) => JSON.stringify(t.trip_id) === requestedTripId
+        (t) => JSON.stringify(t.trip_id) === requestedTripId,
       );
       if (tripData.length === 1) {
         setSelectedTrip(requestedTripId);
@@ -86,7 +86,7 @@ function RtCancelMeasureEditor({
             ...d,
             original_ribasis: fahrtData,
             canceled_stops: Array<boolean>(
-              fahrtData.allFahrtabschnitt.length + 1
+              fahrtData.allFahrtabschnitt.length + 1,
             ).fill(false),
             allow_reroute: data.trips.length === 1,
           };
@@ -100,7 +100,7 @@ function RtCancelMeasureEditor({
   useEffect(() => {
     if (!data.original_ribasis && data.trip) {
       setTrip(data.trip).catch((err) =>
-        console.log("RtCancelMeasureEditor init failed:", err)
+        console.log("RtCancelMeasureEditor init failed:", err),
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -171,7 +171,7 @@ function StopListEditor({
 }: StopListEditorProps): JSX.Element {
   const stops = useMemo(
     () => getStops(data.original_ribasis),
-    [data.original_ribasis]
+    [data.original_ribasis],
   );
 
   const allCanceled = data.canceled_stops.every((c) => c);
@@ -184,7 +184,7 @@ function StopListEditor({
         return { ...d, canceled_stops: cs };
       });
     },
-    [setData]
+    [setData],
   );
 
   const toggleAll = useCallback(() => {

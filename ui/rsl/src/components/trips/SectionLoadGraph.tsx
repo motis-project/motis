@@ -99,7 +99,7 @@ function SectionLoadGraph({
         width={x200 - x120}
         height={h}
         fill={SectionLoadColors.Bg_120_200}
-      />
+      />,
     );
     if (x200 < width) {
       bgSections.push(
@@ -110,7 +110,7 @@ function SectionLoadGraph({
           width={Math.max(0, margin.left + innerWidth - x200)}
           height={h}
           fill={SectionLoadColors.Bg_200_plus}
-        />
+        />,
       );
     }
   } else {
@@ -122,7 +122,7 @@ function SectionLoadGraph({
         width={innerWidth}
         height={innerHeight}
         fill={SectionLoadColors.Bg_unknown}
-      />
+      />,
     );
   }
 
@@ -346,7 +346,7 @@ function getTooltipTextClass(pax: number, section: PaxMonEdgeLoadInfo): string {
 }
 
 function ResponsiveSectionLoadGraph(
-  props: Omit<SectionLoadGraphProps, "width" | "height">
+  props: Omit<SectionLoadGraphProps, "width" | "height">,
 ): JSX.Element {
   return (
     <ParentSize>

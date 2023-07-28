@@ -22,7 +22,7 @@ function StationPicker({
   const [input, setInput] = useState("");
   const { data } = useStationGuesserQuery(
     { input, guess_count: 10 },
-    { keepPreviousData: true }
+    { keepPreviousData: true },
   );
   const stationList = data?.guesses ?? [];
 

@@ -65,7 +65,7 @@ function getFilterTripsRequest(
   selectedDate: Date | undefined | null,
   filterTrainNrs: number[],
   pageParam: number,
-  serviceClassFilter: number[]
+  serviceClassFilter: number[],
 ): PaxMonFilterTripsRequest {
   return {
     universe,
@@ -141,7 +141,7 @@ function TripList(): JSX.Element {
         selectedDate,
         filterTrainNrs,
         pageParam as number,
-        serviceClassFilter
+        serviceClassFilter,
       );
       return sendPaxMonFilterTripsRequest(req);
     },
@@ -152,7 +152,7 @@ function TripList(): JSX.Element {
       keepPreviousData: true,
       staleTime: 60000,
       enabled: selectedDate !== undefined,
-    }
+    },
   );
 
   const loadMore = useCallback(() => {
@@ -200,7 +200,7 @@ function TripList(): JSX.Element {
                   className={({ active }) =>
                     classNames(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
                   }
                 >
@@ -209,7 +209,7 @@ function TripList(): JSX.Element {
                       <span
                         className={classNames(
                           "block truncate",
-                          selected ? "font-medium" : "font-normal"
+                          selected ? "font-medium" : "font-normal",
                         )}
                       >
                         {opt.label}
@@ -218,7 +218,7 @@ function TripList(): JSX.Element {
                         <span
                           className={classNames(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
-                            active ? "text-amber-600" : "text-amber-600"
+                            active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
                           <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -325,7 +325,7 @@ function TripListEntry({
   if (critSections.length > 0) {
     const firstCritSection = critSections[0];
     const mostCritSection = critSections.sort(
-      (a, b) => b.maxPercent - a.maxPercent
+      (a, b) => b.maxPercent - a.maxPercent,
     )[0];
 
     criticalInfo = (
@@ -349,7 +349,7 @@ function TripListEntry({
           "block p-1 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
-            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
+            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
         <div className="flex gap-4 pb-1">

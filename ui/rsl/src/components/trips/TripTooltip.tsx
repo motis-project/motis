@@ -29,7 +29,7 @@ export function TripTooltip({ tripId }: TripTooltipProps): JSX.Element | null {
           ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
           : undefined;
       },
-    }
+    },
   );
 
   if (!data || data.load_infos.length === 0) {

@@ -60,7 +60,7 @@ function ServiceClassFilter({
           <Listbox.Options
             className={classNames(
               "absolute z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm",
-              popupPosition
+              popupPosition,
             )}
           >
             {serviceClassOptions.map((opt) => (
@@ -70,7 +70,7 @@ function ServiceClassFilter({
                 className={({ active }) =>
                   classNames(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
                 }
               >
@@ -79,7 +79,7 @@ function ServiceClassFilter({
                     <span
                       className={classNames(
                         "block truncate",
-                        selected ? "font-medium" : "font-normal"
+                        selected ? "font-medium" : "font-normal",
                       )}
                     >
                       {opt.label}
@@ -88,7 +88,7 @@ function ServiceClassFilter({
                       <span
                         className={classNames(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
-                          active ? "text-amber-600" : "text-amber-600"
+                          active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
                         <CheckIcon className="w-5 h-5" aria-hidden="true" />

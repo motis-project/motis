@@ -130,7 +130,7 @@ function RtMetricsChart({
                     width={bar.width}
                     fill={bar.color}
                   />
-                ))
+                )),
               )
             }
           </BarStack>
@@ -175,7 +175,7 @@ export type ResponsiveRtMetricsChartProps = Omit<
 >;
 
 function ResponsiveRtMetricsChart(
-  props: ResponsiveRtMetricsChartProps
+  props: ResponsiveRtMetricsChartProps,
 ): ReactElement {
   return (
     <ParentSize>

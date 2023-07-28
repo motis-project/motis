@@ -7,12 +7,12 @@ import {
 import { sendRequest } from "@/api/request";
 
 export async function sendPaxForecastApplyMeasuresRequest(
-  content: PaxForecastApplyMeasuresRequest
+  content: PaxForecastApplyMeasuresRequest,
 ): Promise<PaxForecastApplyMeasuresResponse> {
   const msg = await sendRequest(
     "/paxforecast/apply_measures",
     "PaxForecastApplyMeasuresRequest",
-    content
+    content,
   );
   verifyContentType(msg, "PaxForecastApplyMeasuresResponse");
   return msg.content as PaxForecastApplyMeasuresResponse;

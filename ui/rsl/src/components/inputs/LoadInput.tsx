@@ -58,7 +58,7 @@ function LoadInput({
                 className={({ active }) =>
                   classNames(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
                 }
               >
@@ -67,7 +67,7 @@ function LoadInput({
                     <span
                       className={classNames(
                         "block truncate",
-                        selected ? "font-medium" : "font-normal"
+                        selected ? "font-medium" : "font-normal",
                       )}
                     >
                       <LoadLevelLabel level={level} />
@@ -76,7 +76,7 @@ function LoadInput({
                       <span
                         className={classNames(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
-                          active ? "text-amber-600" : "text-amber-600"
+                          active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
                         <CheckIcon className="w-5 h-5" aria-hidden="true" />
