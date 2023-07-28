@@ -22,6 +22,7 @@
 #include "motis/core/access/trip_iterator.h"
 
 #include "motis/paxmon/capacity_internal.h"
+#include "motis/paxmon/csv_writer.h"
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 
@@ -40,8 +41,9 @@ struct capacity_stats {
   Offset<PaxMonTripCapacityStats> to_fbs(FlatBufferBuilder& fbb) const {
     return CreatePaxMonTripCapacityStats(
         fbb, fbb.CreateString(category_), static_cast<std::uint8_t>(clasz_),
-        tracked_, full_data_, partial_data_, trip_formation_data_found_,
-        no_formation_data_at_all_, no_formation_data_some_sections_some_merged_,
+        tracked_, full_data_, partial_data_, capacity_for_all_sections_,
+        trip_formation_data_found_, no_formation_data_at_all_,
+        no_formation_data_some_sections_some_merged_,
         no_formation_data_some_sections_all_merged_, no_vehicles_found_at_all_,
         no_vehicles_found_some_sections_,
         some_vehicles_not_found_some_sections_, trips_using_vehicle_uics_,
@@ -56,6 +58,7 @@ struct capacity_stats {
 
   std::uint32_t full_data_{};
   std::uint32_t partial_data_{};
+  std::uint32_t capacity_for_all_sections_{};
 
   std::uint32_t trip_formation_data_found_{};
 
@@ -128,7 +131,7 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
   }
 
   message_creator mc;
-  std::stringstream csv;
+  string_csv_writer csv;
 
   auto all_trips = capacity_stats{};
   auto by_category = mcd::hash_map<mcd::string, capacity_stats>{};
@@ -140,11 +143,26 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
   auto used_tfs = mcd::hash_set<trip_formation const*>{};
 
   if (out_type == output_type::CSV_TRIPS) {
-    csv << "category,train_nr,start_station_eva,start_station_name,start_time,"
-           "end_station_eva,end_station_name,end_time,full_data,partial_data,"
-           "has_formation,trip_sections,formation_sections,sections_all_"
-           "missing_tfs,sections_some_missing_tfs,sections_all_missing_uics,"
-           "sections_some_missing_uics\n";
+    csv << "category"
+        << "train_nr"
+        << "start_station_eva"
+        << "start_station_name"
+        << "start_time"
+        << "end_station_eva"
+        << "end_station_name"
+        << "end_time"
+        << "provider"
+        << "full_data"
+        << "partial_data"
+        << "has_formation"
+        << "cap_all_sections"
+        << "cap_some_sections"
+        << "trip_sections"
+        << "formation_sections"
+        << "sections_all_missing_tfs"
+        << "sections_some_missing_tfs"
+        << "sections_all_missing_uics"
+        << "sections_some_missing_uics" << end_row;
   }
 
   auto const time_filter_active =
@@ -159,6 +177,7 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
       continue;
     }
 
+    auto const& tcs = uv.trip_data_.capacity_status(tdi);
     auto sections = access::sections{trp};
     auto const sec_count = sections.size();
     auto categories = mcd::hash_set<std::string_view>{};
@@ -166,6 +185,7 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
 
     auto full_data = true;
     auto partial_data = false;
+    auto cap_for_all_sections = true;
     auto secs_with_all_missing_tfs = 0U;
     auto secs_with_some_missing_tfs = 0U;
     auto secs_with_all_missing_uics = 0U;
@@ -187,6 +207,10 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
 
       auto const cap = get_capacity(sched, lc, sec.ev_key_from(),
                                     sec.ev_key_to(), caps, true);
+
+      if (!cap.has_capacity()) {
+        cap_for_all_sections = false;
+      }
 
       auto mt_tf_found_count = 0U;
       auto uics_found_count = 0U;
@@ -268,18 +292,21 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
                                                 trp->id_.primary_.get_time());
       auto const end_time = motis_to_unixtime(sched.schedule_begin_,
                                               trp->id_.secondary_.target_time_);
-      csv << std::quoted(category) << "," << train_nr << ","
-          << std::quoted(start_st->eva_nr_.view()) << ","
-          << std::quoted(start_st->name_.view()) << ","
-          << format_unix_time(start_time) << ","
-          << std::quoted(end_st->eva_nr_.view()) << ","
-          << std::quoted(end_st->name_.view()) << ","
-          << format_unix_time(end_time) << "," << full_data << ","
-          << partial_data << "," << (tf != nullptr) << "," << sec_count << ","
-          << (tf != nullptr ? tf->sections_.size() : 0U) << ","
-          << secs_with_all_missing_tfs << "," << secs_with_some_missing_tfs
-          << "," << secs_with_all_missing_uics << ","
-          << secs_with_some_missing_uics << "\n";
+      auto const provider =
+          con_info != nullptr && con_info->provider_ != nullptr
+              ? con_info->provider_->long_name_.view()
+              : std::string_view{};
+
+      csv << category << train_nr << start_st->eva_nr_.view()
+          << start_st->name_.view() << format_unix_time(start_time)
+          << end_st->eva_nr_.view() << end_st->name_.view()
+          << format_unix_time(end_time) << provider << full_data << partial_data
+          << (tf != nullptr) << tcs.has_capacity_for_all_sections_
+          << tcs.has_capacity_for_some_sections_ << sec_count
+          << (tf != nullptr ? tf->sections_.size() : 0U)
+          << secs_with_all_missing_tfs << secs_with_some_missing_tfs
+          << secs_with_all_missing_uics << secs_with_some_missing_uics
+          << end_row;
     }
 
     auto const count = [&](auto const& fn) {
@@ -297,6 +324,10 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
 
     if (partial_data) {
       count([](capacity_stats& stats) { ++stats.partial_data_; });
+    }
+
+    if (cap_for_all_sections) {
+      count([](capacity_stats& stats) { ++stats.capacity_for_all_sections_; });
     }
 
     if (tf != nullptr) {
@@ -374,9 +405,19 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
 
     if (out_type == output_type::CSV_FORMATIONS) {
       // TODO(pablo): update to include vehicle groups + gattung/baureihe lookup
-      csv << "rbf_uuid,used,category,train_nr,start_station_eva,start_station_"
-             "name,start_time,sections,vehicles,vehicles_found,all_vehicles_"
-             "found,vehicle_groups\n";
+      csv << "rbf_uuid"
+          << "used"
+          << "category"
+          << "train_nr"
+          << "start_station_eva"
+          << "start_station_name"
+          << "start_time"
+          << "sections"
+          << "vehicles"
+          << "vehicles_found"
+          << "all_vehicles_found"
+          << "vehicle_groups" << end_row;
+
       for (auto const& [trip_uuid, tf] :
            uv.capacity_maps_.trip_formation_map_) {
         auto const is_used = used_tfs.find(&tf) != end(used_tfs);
@@ -413,14 +454,11 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
           }
         }
 
-        csv << trip_uuid << "," << is_used << ","
-            << std::quoted(tf.category_.view()) << ","
-            << tf.ptid_.get_train_nr() << "," << std::quoted(st->eva_nr_.view())
-            << "," << std::quoted(st->name_.view()) << ","
-            << format_unix_time(dep_time) << "," << tf.sections_.size() << ","
-            << uics.size() << "," << vehicles_found << ","
-            << (uics.size() == vehicles_found) << ","
-            << std::quoted(vehicle_groups_str) << "\n";
+        csv << trip_uuid << is_used << tf.category_.view()
+            << tf.ptid_.get_train_nr() << st->eva_nr_.view() << st->name_.view()
+            << format_unix_time(dep_time) << tf.sections_.size() << uics.size()
+            << vehicles_found << (uics.size() == vehicles_found)
+            << vehicle_groups_str;
       }
     }
 

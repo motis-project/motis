@@ -162,6 +162,16 @@ function CapacityStatusStats({
             ))}
           </tr>
           <tr>
+            <td className="font-medium">Kapazitätsdaten für alle Abschnitte</td>
+            {columns.map((c) => (
+              <StatsTableCell
+                key={c.label}
+                value={c.stats.capacity_for_all_sections}
+                total={c.stats.tracked}
+              />
+            ))}
+          </tr>
+          <tr>
             <td className="font-medium">
               Kapazitätsdaten vollständig vorhanden
             </td>

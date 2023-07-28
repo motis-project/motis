@@ -957,6 +957,7 @@ export interface PaxMonTripCapacityStats {
   tracked: number;
   full_data: number;
   partial_data: number;
+  capacity_for_all_sections: number;
   trip_formation_data_found: number;
   no_formation_data_at_all: number;
   no_formation_data_some_sections_some_merged: number;

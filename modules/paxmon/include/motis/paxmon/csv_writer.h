@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -12,52 +13,48 @@ namespace motis::paxmon {
 static constexpr struct end_row_t {
 } end_row{};
 
-struct csv_writer {
-  explicit csv_writer(std::string const& filename) : first_col_{true} {
-    if (!filename.empty()) {
-      ofs_.open(filename);
-    }
-  }
+struct basic_csv_writer {
+  virtual ~basic_csv_writer() = default;
 
-  explicit operator bool() const { return static_cast<bool>(ofs_); }
-  bool operator!() const { return !ofs_; }
+  explicit operator bool() { return static_cast<bool>(stream()); }
+  bool operator!() { return !stream(); }
 
-  inline bool is_open() const { return ofs_.is_open(); }
+  virtual bool is_open() const = 0;
 
   template <typename T>
-  csv_writer& operator<<(T val) {
+  basic_csv_writer& operator<<(T val) {
     if (is_open()) {
       start_col();
-      ofs_ << val;
+      stream() << val;
     }
     return *this;
   }
 
-  csv_writer& operator<<(std::string const& str) {
+  basic_csv_writer& operator<<(std::string const& str) {
     if (is_open()) {
       start_col();
-      ofs_ << std::quoted(str, '"', '"');
+      stream() << std::quoted(str, '"', '"');
     }
     return *this;
   }
 
-  csv_writer& operator<<(std::string_view str) {
+  basic_csv_writer& operator<<(std::string_view str) {
     if (is_open()) {
       start_col();
-      ofs_ << std::quoted(str, '"', '"');
+      stream() << std::quoted(str, '"', '"');
     }
     return *this;
   }
 
-  csv_writer& operator<<(char const* str) {
+  basic_csv_writer& operator<<(char const* str) {
     if (is_open()) {
       start_col();
-      ofs_ << std::quoted(str, '"', '"');
+      stream() << std::quoted(str, '"', '"');
     }
     return *this;
   }
 
-  csv_writer& operator<<(end_row_t const&) {
+  basic_csv_writer& operator<<(end_row_t const&) {
     if (is_open()) {
       end_row();
     }
@@ -66,34 +63,59 @@ struct csv_writer {
 
   void end_row() {
     if (is_open()) {
-      ofs_ << "\n";
+      stream() << "\n";
       first_col_ = true;
     }
   }
 
   void flush() {
     if (is_open()) {
-      ofs_.flush();
+      stream().flush();
     }
   }
 
   void enable_exceptions() {
-    ofs_.exceptions(std::ofstream::failbit | std::ofstream::badbit);
+    stream().exceptions(std::ofstream::failbit | std::ofstream::badbit);
   }
 
-  std::ofstream& stream() { return ofs_; }
+  virtual std::ostream& stream() = 0;
 
 private:
   void start_col() {
     if (first_col_) {
       first_col_ = false;
     } else {
-      ofs_ << ",";
+      stream() << separator_;
     }
   }
 
+  bool first_col_{true};
+
+public:
+  char separator_{','};
+};
+
+struct file_csv_writer : public basic_csv_writer {
+  explicit file_csv_writer(std::string const& filename) : basic_csv_writer{} {
+    if (!filename.empty()) {
+      ofs_.open(filename);
+    }
+  }
+
+  bool is_open() const override { return ofs_.is_open(); }
+  std::ostream& stream() override { return ofs_; }
+
+private:
   std::ofstream ofs_;
-  bool first_col_;
+};
+
+struct string_csv_writer : public basic_csv_writer {
+  bool is_open() const override { return true; }
+  std::ostream& stream() override { return stream_; }
+  std::string str() const { return stream_.str(); }
+
+private:
+  std::stringstream stream_;
 };
 
 }  // namespace motis::paxmon

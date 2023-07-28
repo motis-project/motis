@@ -53,6 +53,7 @@ void apply_update_capacities_measure(universe& uv, schedule const& sched,
   if (m.remove_existing_trip_formations_) {
     caps.trip_formation_map_.clear();
     caps.trip_uuid_map_.clear();
+    caps.uuid_trip_map_.clear();
   }
   if (m.remove_existing_gattung_capacities_) {
     caps.gattung_capacity_map_.clear();

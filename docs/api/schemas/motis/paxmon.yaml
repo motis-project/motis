@@ -1625,6 +1625,8 @@ PaxMonTripCapacityStats:
       description: TODO
     service_class:
       description: TODO
+    capacity_for_all_sections:
+      description: TODO
 PaxMonMissingVehicleInfo:
   description: TODO
   fields:

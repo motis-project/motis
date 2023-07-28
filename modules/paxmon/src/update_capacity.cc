@@ -11,7 +11,7 @@ bool update_trip_capacity(universe& uv, schedule const& sched, trip const* trp,
                           bool const track_updates) {
   auto const sections =
       sections_with_load{sched, uv, trp, capacity_info_source::LOOKUP};
-  if (!sections.has_paxmon_data() || sections.empty()) {
+  if (!sections.has_paxmon_data()) {
     return false;
   }
   auto changed = false;

@@ -10,6 +10,7 @@ table PaxMonTripCapacityStats {
 
   full_data: uint;
   partial_data: uint;
+  capacity_for_all_sections: uint;
 
   trip_formation_data_found: uint;
 
