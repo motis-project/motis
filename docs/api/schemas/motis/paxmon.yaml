@@ -630,6 +630,12 @@ PaxMonFilterTripsRequest:
       description: TODO
     filter_service_classes:
       description: TODO
+    filter_by_capacity_status:
+      description: TODO
+    filter_has_trip_formation:
+      description: TODO
+    filter_has_capacity_for_all_sections:
+      description: TODO
 PaxMonFilteredTripInfo:
   description: TODO
   fields:
@@ -650,6 +656,8 @@ PaxMonFilteredTripInfo:
     max_expected_pax:
       description: TODO
     edges:
+      description: TODO
+    capacity_status:
       description: TODO
 PaxMonFilterTripsResponse:
   description: TODO
@@ -1499,6 +1507,8 @@ PaxMonTripCapacityInfo:
       description: TODO
     sections:
       description: TODO
+    status:
+      description: TODO
 PaxMonGetTripCapacityResponse:
   description: TODO
   fields:
@@ -1663,4 +1673,15 @@ PaxMonMetricsResponse:
     by_system_time:
       description: TODO
     by_processing_time:
+      description: TODO
+PaxMonTripCapacityStatus:
+  description: TODO
+  fields:
+    has_trip_formation:
+      description: TODO
+    has_capacity_for_all_sections:
+      description: TODO
+    has_capacity_for_some_sections:
+      description: TODO
+    worst_source:
       description: TODO

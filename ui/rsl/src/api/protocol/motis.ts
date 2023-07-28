@@ -115,6 +115,7 @@ export type EventType = "DEP" | "ARR";
 
 // base/TripId.fbs
 export interface TripId {
+  id?: string;
   station_id: string;
   train_nr: number;
   time: number;
