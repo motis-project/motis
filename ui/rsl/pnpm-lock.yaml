@@ -9,8 +9,8 @@ dependencies:
     specifier: ^1.7.16
     version: 1.7.16(react-dom@18.2.0)(react@18.2.0)
   '@headlessui/tailwindcss':
-    specifier: ^0.1.3
-    version: 0.1.3(tailwindcss@3.3.3)
+    specifier: ^0.2.0
+    version: 0.2.0(tailwindcss@3.3.3)
   '@heroicons/react':
     specifier: ^2.0.18
     version: 2.0.18(react@18.2.0)
@@ -54,8 +54,8 @@ dependencies:
     specifier: ^2.30.0
     version: 2.30.0
   downshift:
-    specifier: ^7.6.2
-    version: 7.6.2(react@18.2.0)
+    specifier: ^8.0.0
+    version: 8.0.0(react@18.2.0)
   jotai:
     specifier: ^2.2.2
     version: 2.2.2(react@18.2.0)
@@ -702,8 +702,8 @@ packages:
       react-dom: 18.2.0(react@18.2.0)
     dev: false
 
-  /@headlessui/tailwindcss@0.1.3(tailwindcss@3.3.3):
-    resolution: {integrity: sha512-3aMdDyYZx9A15euRehpppSyQnb2gIw2s/Uccn2ELIoLQ9oDy0+9oRygNWNjXCD5Dt+w1pxo7C+XoiYvGcqA4Kg==}
+  /@headlessui/tailwindcss@0.2.0(tailwindcss@3.3.3):
+    resolution: {integrity: sha512-fpL830Fln1SykOCboExsWr3JIVeQKieLJ3XytLe/tt1A0XzqUthOftDmjcCYLW62w7mQI7wXcoPXr3tZ9QfGxw==}
     engines: {node: '>=10'}
     peerDependencies:
       tailwindcss: ^3.0
@@ -2062,8 +2062,8 @@ packages:
       esutils: 2.0.3
     dev: true
 
-  /downshift@7.6.2(react@18.2.0):
-    resolution: {integrity: sha512-iOv+E1Hyt3JDdL9yYcOgW7nZ7GQ2Uz6YbggwXvKUSleetYhU2nXD482Rz6CzvM4lvI1At34BYruKAL4swRGxaA==}
+  /downshift@8.0.0(react@18.2.0):
+    resolution: {integrity: sha512-VKO6qjV9OfhhTb0HPLgXANKnRrpLYgmJSwKu0JhlQF/SYl9q/1cYbrBdGGC5BsdRSr95o90m+oa2Ya8w13njvg==}
     peerDependencies:
       react: '>=16.12.0'
     dependencies:
