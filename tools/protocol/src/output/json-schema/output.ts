@@ -20,7 +20,7 @@ export function writeJsonSchemaOutput(
   typeFilter: TypeFilter,
   baseDir: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  config: any
+  config: any,
 ) {
   if (typeof config["base-uri"] !== "string") {
     throw new Error("missing base-uri property in config");
@@ -51,7 +51,7 @@ export function writeJsonSchemaOutput(
     false,
     false,
     !!config["explicit-additional-properties"],
-    config["tagged-type-suffix"] || "T"
+    config["tagged-type-suffix"] || "T",
   );
 
   const { types: defs } = getJSONSchemaTypes(ctx);
@@ -70,8 +70,8 @@ export function writeJsonSchemaOutput(
             ...defs[fqtn],
           },
           null,
-          2
-        )
+          2,
+        ),
       );
       out.end();
     }
@@ -105,7 +105,7 @@ export function createJSContext(
   constAsEnum = false,
   explicitAdditionalProperties = false,
   taggedTypeFnOrSuffix: ((fqtn: string[]) => string[]) | string = "T",
-  typeKey = "_type"
+  typeKey = "_type",
 ): JSContext {
   const ctx: JSContext = {
     schema,
@@ -217,8 +217,8 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
               ...base,
               type: "object",
             },
-            false
-          )
+            false,
+          ),
         );
       }
       if (tagged) {
@@ -234,8 +234,8 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
               ...taggedBase,
               type: "object",
             },
-            true
-          )
+            true,
+          ),
         );
         ctx.taggedToUntaggedType.set(taggedTypeStr, fqtn);
         ctx.untaggedToTaggedType.set(fqtn, taggedTypeStr);
@@ -261,9 +261,9 @@ function addTableProperties(
   ctx: JSContext,
   type: TableType,
   js: JSONSchema,
-  tagged: boolean
+  tagged: boolean,
 ) {
-  const props: { [name: string]: JSONSchema } = {};
+  const props: Record<string, JSONSchema> = {};
   const unionCases: JSONSchema[] = [];
   const required: string[] = [];
 
@@ -280,7 +280,7 @@ function addTableProperties(
         throw new Error(
           `unknown type ${fqtn} (${[...type.ns, type.name].join(".")}#${
             field.name
-          })`
+          })`,
         );
       }
       if (resolvedType.type === "union" && !ctx.typesInUnions) {

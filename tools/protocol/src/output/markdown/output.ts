@@ -12,7 +12,7 @@ export function writeMarkdownOutput(
   typeFilter: TypeFilter,
   doc: Documentation,
   baseDir: string,
-  config: object
+  config: object,
 ) {
   if (!("dir" in config) || typeof config.dir !== "string") {
     throw new Error("missing dir property in config");
@@ -70,7 +70,7 @@ function writeType(
   ctx: MarkdownContext,
   file: MarkdownFile,
   out: fs.WriteStream,
-  fqtn: string
+  fqtn: string,
 ) {
   const type = ctx.schema.types.get(fqtn);
   if (!type) {
@@ -81,7 +81,7 @@ function writeType(
 
   out.write(`## ${type.name}\n\n`);
 
-  if (typeDoc && typeDoc.description) {
+  if (typeDoc?.description) {
     out.write(typeDoc.description.trim());
     out.write("\n\n");
   }
@@ -110,7 +110,7 @@ function writeType(
         const fieldTypeMd = fieldTypeToMarkdown(ctx, file, f.type);
         out.write(`- \`${f.name}\` (${fieldTypeMd})`);
         f.type;
-        if (fieldDoc && fieldDoc.description) {
+        if (fieldDoc?.description) {
           out.write(": ");
           out.write(toSingleLine(fieldDoc.description));
         }
@@ -125,7 +125,7 @@ function writeType(
 function fieldTypeToMarkdown(
   ctx: MarkdownContext,
   file: MarkdownFile,
-  fieldType: FieldType
+  fieldType: FieldType,
 ): string {
   switch (fieldType.c) {
     case "basic":
@@ -183,7 +183,7 @@ function writePathsFile(ctx: MarkdownContext) {
         `Type: ${getTypeLink(ctx, [
           "motis",
           "MotisNoMessage",
-        ])} (or HTTP GET request)\n\n`
+        ])} (or HTTP GET request)\n\n`,
       );
     }
 

@@ -13,7 +13,7 @@ export async function writeTypeScriptOutput(
   schema: SchemaTypes,
   typeFilter: TypeFilter,
   baseDir: string,
-  config: object
+  config: object,
 ) {
   if (!("dir" in config) || typeof config.dir !== "string") {
     throw new Error("missing dir property in config");
@@ -42,7 +42,7 @@ export async function writeTypeScriptOutput(
     ctx.importBase = config["import-base"];
   }
 
-  if ("prettier" in config && config["prettier"] === true) {
+  if ("prettier" in config && config.prettier === true) {
     ctx.usePrettier = true;
     const resolvedOptions = await prettier.resolveConfig(ctx.outputDir);
     if (resolvedOptions != null) {
@@ -70,7 +70,7 @@ export async function writeTypeScriptOutput(
   }
 
   for (const file of files.values()) {
-    writeFile(ctx, file);
+    await writeFile(ctx, file);
   }
 }
 
@@ -95,7 +95,7 @@ function getImportPath(ctx: TSContext, file: TSFile, include: TSInclude) {
   }
 }
 
-function writeFile(ctx: TSContext, file: TSFile) {
+async function writeFile(ctx: TSContext, file: TSFile) {
   console.log(`writing ${file.path}: ${file.types.length} types`);
   fs.mkdirSync(path.dirname(file.path), { recursive: true });
   let out = ctx.header;
@@ -104,7 +104,7 @@ function writeFile(ctx: TSContext, file: TSFile) {
   for (const include of includes.values()) {
     const importPath = getImportPath(ctx, file, include);
     out += `import {\n  ${[...include.types.values()].join(
-      ",\n  "
+      ",\n  ",
     )}\n} from "${importPath}";\n`;
   }
 
@@ -117,7 +117,7 @@ function writeFile(ctx: TSContext, file: TSFile) {
   }
 
   if (ctx.usePrettier) {
-    out = prettier.format(out, ctx.prettierOptions);
+    out = await prettier.format(out, ctx.prettierOptions);
   }
 
   const stream = fs.createWriteStream(file.path);
@@ -128,7 +128,7 @@ function writeFile(ctx: TSContext, file: TSFile) {
 function getTSTypeName(
   ctx: TSContext,
   file: TSFile,
-  fieldType: FieldType
+  fieldType: FieldType,
 ): string {
   switch (fieldType.c) {
     case "basic":
@@ -161,7 +161,7 @@ function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
   function writeEnum<T>(
     name: string,
     values: T[],
-    valueFormatter: (value: T) => string | null
+    valueFormatter: (value: T) => string | null,
   ) {
     const formattedValues = values.map(valueFormatter).filter(Boolean);
     if (formattedValues.length === 0) {
@@ -205,7 +205,7 @@ function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
         }
         if (resolvedType.type === "union") {
           out += `\n  ${f.name}_type: ${getUnionTagTypeName(
-            resolvedType.name
+            resolvedType.name,
           )};`;
         }
       }
@@ -240,7 +240,7 @@ function writeType(ctx: TSContext, file: TSFile, fqtn: string): string {
       writeEnum(
         getUnionTagTypeName(type.name),
         type.values,
-        unionTagValueFormatter
+        unionTagValueFormatter,
       );
       break;
     case "table":
