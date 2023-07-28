@@ -101,7 +101,7 @@ export function usePaxMonFindTripsQuery(
     () =>
       sendPaxMonFindTripsRequest({
         universe,
-        train_nr: trainNr || 0,
+        train_nr: trainNr ?? 0,
         only_trips_with_paxmon_data: true,
         filter_class: false,
         max_class: 0,

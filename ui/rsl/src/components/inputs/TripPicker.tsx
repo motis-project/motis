@@ -16,13 +16,16 @@ import classNames from "@/util/classNames";
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
-  return trips.filter((trip) =>
-    trip.tsi.service_infos.some(
-      (si) =>
-        si.clasz === ServiceClass.ICE ||
-        si.clasz === ServiceClass.IC ||
-        si.clasz === ServiceClass.OTHER
-    )
+  return trips.filter(
+    (trip) =>
+      /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+      trip.tsi.service_infos.some(
+        (si) =>
+          si.clasz === ServiceClass.ICE ||
+          si.clasz === ServiceClass.IC ||
+          si.clasz === ServiceClass.OTHER
+      )
+    /* eslint-enable */
   );
 }
 
@@ -54,8 +57,8 @@ function TripPicker({
     keepPreviousData: true,
   });
   const tripList = longDistanceOnly
-    ? filterTrips(data?.trips || [])
-    : data?.trips || [];
+    ? filterTrips(data?.trips ?? [])
+    : data?.trips ?? [];
 
   const initialSelectedItem = initialTrip
     ? {

@@ -84,7 +84,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
     return forwardTimeByStepped(
       queryClient,
       schedule,
-      status?.system_time || 0,
+      status?.system_time ?? 0,
       forwardBy
     );
   });
@@ -139,7 +139,12 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
       ) : isLoading ? (
         <div>Verbindung zu MOTIS wird aufgebaut...</div>
       ) : (
-        <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
+        <div>
+          Fehler:{" "}
+          {error instanceof Error
+            ? error.message
+            : `Verbindung zu MOTIS fehlgeschlagen.`}
+        </div>
       )}
     </div>
   );

@@ -165,7 +165,9 @@ function CombinedGroup({
   ) : isLoading ? (
     <div>Suche nach Alternativverbindungen...</div>
   ) : (
-    <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
+    <div>
+      Fehler: {error instanceof Error ? error.message : `Unbekannter Fehler`}
+    </div>
   );
 
   // TODO: group by group id (gr.g)

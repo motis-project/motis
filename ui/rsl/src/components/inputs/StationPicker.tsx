@@ -24,7 +24,7 @@ function StationPicker({
     { input, guess_count: 10 },
     { keepPreviousData: true }
   );
-  const stationList = data?.guesses || [];
+  const stationList = data?.guesses ?? [];
 
   const {
     isOpen,

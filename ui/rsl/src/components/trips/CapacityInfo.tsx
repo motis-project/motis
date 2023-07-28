@@ -45,7 +45,7 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
       return (
         <div>
           Fehler beim Laden der Kapazitätsinformationen:{" "}
-          {error instanceof Error ? error.message : `${error}`}
+          {error instanceof Error ? error.message : `Unbekannter Fehler`}
         </div>
       );
     }

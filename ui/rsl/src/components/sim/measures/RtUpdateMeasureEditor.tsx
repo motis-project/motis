@@ -90,7 +90,7 @@ function RtUpdateMeasureEditor({
       return { ...d, trip: tsi };
     });
     if (tsi) {
-      const schedule = await getSchedule();
+      const schedule = getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
@@ -157,7 +157,9 @@ interface TripSectionEditorProps {
   closeEditor: () => void;
 }
 
-interface FormInputs { stops: StopFormData[] }
+interface FormInputs {
+  stops: StopFormData[];
+}
 
 function TripSectionEditor({
   ribasis,

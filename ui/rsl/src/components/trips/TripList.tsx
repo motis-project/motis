@@ -140,7 +140,7 @@ function TripList(): JSX.Element {
         selectedSort.option,
         selectedDate,
         filterTrainNrs,
-        pageParam,
+        pageParam as number,
         serviceClassFilter
       );
       return sendPaxMonFilterTripsRequest(req);
@@ -166,7 +166,7 @@ function TripList(): JSX.Element {
     : [];
   const totalNumberOfTrips = data?.pages[0]?.total_matching_trips;
 
-  const selectedTripId = params["tripId"];
+  const selectedTripId = params.tripId;
 
   const scheduleRange = getScheduleRange(scheduleInfo);
   if (selectedDate === undefined && scheduleInfo) {

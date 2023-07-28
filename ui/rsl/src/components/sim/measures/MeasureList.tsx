@@ -374,9 +374,9 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
       <div className="overflow-y-auto grow pr-2">
         {measureAtoms.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {measureAtoms.map((ma) => (
+            {measureAtoms.map((ma, idx) => (
               <MeasureListEntry
-                key={`${ma}`}
+                key={idx}
                 measureAtom={ma}
                 remove={remove}
                 select={setSelectedMeasure}

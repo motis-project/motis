@@ -66,7 +66,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
       return (
         <div>
           Fehler beim Laden der Gruppeninformationen:{" "}
-          {error instanceof Error ? error.message : `${error}`}
+          {error instanceof Error ? error.message : `Unbekannter Fehler`}
         </div>
       );
     }

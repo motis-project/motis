@@ -66,7 +66,7 @@ function RtCancelMeasureEditor({
       return { ...d, trip: tsi };
     });
     if (tsi) {
-      const schedule = await getSchedule();
+      const schedule = getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
@@ -85,9 +85,9 @@ function RtCancelMeasureEditor({
           return {
             ...d,
             original_ribasis: fahrtData,
-            canceled_stops: Array(fahrtData.allFahrtabschnitt.length + 1).fill(
-              false
-            ),
+            canceled_stops: Array<boolean>(
+              fahrtData.allFahrtabschnitt.length + 1
+            ).fill(false),
             allow_reroute: data.trips.length === 1,
           };
         });
@@ -192,7 +192,7 @@ function StopListEditor({
       const current = d.canceled_stops.every((c) => c);
       return {
         ...d,
-        canceled_stops: Array(d.canceled_stops.length).fill(!current),
+        canceled_stops: Array<boolean>(d.canceled_stops.length).fill(!current),
       };
     });
   }, [setData]);

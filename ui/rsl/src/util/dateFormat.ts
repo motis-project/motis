@@ -50,5 +50,5 @@ export function formatRiBasisDateTime(ts: Date): string {
 }
 
 export function parseRiBasisDateTime(str: string, referenceDate?: Date): Date {
-  return parse(str, RI_BASIS_TIMESTAMP_FORMAT, referenceDate || new Date());
+  return parse(str, RI_BASIS_TIMESTAMP_FORMAT, referenceDate ?? new Date());
 }

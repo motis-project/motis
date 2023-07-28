@@ -125,7 +125,10 @@ function CapacityStatusStats({
   data,
   serviceClassFilter,
 }: CapacityStatusDataProps) {
-  interface Column { label: string; stats: PaxMonTripCapacityStats }
+  interface Column {
+    label: string;
+    stats: PaxMonTripCapacityStats;
+  }
 
   const columns: Column[] = [
     { label: "Alle Züge", stats: data.all_trips },

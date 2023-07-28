@@ -92,7 +92,7 @@ function TripSectionDetails({
   ) : error || !groupsInTrip ? (
     <div>
       Error loading trip section data:{" "}
-      {error instanceof Error ? error.message : `${error}`}
+      {error instanceof Error ? error.message : `Unbekannter Fehler`}
     </div>
   ) : (
     <div>

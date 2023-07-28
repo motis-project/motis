@@ -353,7 +353,7 @@ async function optimizeTrip(
   }
 }
 
-onmessage = (msg) => {
+onmessage = async (msg) => {
   const req = msg.data as WorkerRequest;
 
   switch (req.action) {
@@ -362,7 +362,7 @@ onmessage = (msg) => {
       break;
     }
     case "Start": {
-      optimizeTrip(req.universe, req.schedule, req.tripId, req.optType);
+      await optimizeTrip(req.universe, req.schedule, req.tripId, req.optType);
       break;
     }
   }

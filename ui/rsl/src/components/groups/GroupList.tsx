@@ -184,7 +184,7 @@ function GroupList(): JSX.Element {
     ],
     ({ pageParam = 0 }) => {
       const req = getFilterGroupsRequest(
-        pageParam,
+        pageParam as number,
         universe,
         selectedSort.option,
         filterGroupIds,
@@ -208,9 +208,9 @@ function GroupList(): JSX.Element {
     }
   );
 
-  const loadMore = useCallback(() => {
+  const loadMore = useCallback(async () => {
     if (hasNextPage) {
-      return fetchNextPage();
+      return await fetchNextPage();
     }
   }, [fetchNextPage, hasNextPage]);
 
@@ -220,7 +220,7 @@ function GroupList(): JSX.Element {
   const totalNumberOfGroups = data?.pages[0]?.total_matching_groups;
   const totalNumberOfPassengers = data?.pages[0]?.total_matching_passengers;
 
-  const selectedGroup = Number.parseInt(params["groupId"] ?? "");
+  const selectedGroup = Number.parseInt(params.groupId ?? "");
 
   const scheduleRange = getScheduleRange(scheduleInfo);
   if (selectedDate === undefined && scheduleInfo) {
@@ -381,7 +381,7 @@ function GroupList(): JSX.Element {
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfGroups)}{" "}
             {totalNumberOfGroups === 1 ? "Gruppe" : "Gruppen"}
-            {` (${formatNumber(totalNumberOfPassengers || 0)} Reisende)`}
+            {` (${formatNumber(totalNumberOfPassengers ?? 0)} Reisende)`}
           </div>
           <div>
             {!isFetching && (

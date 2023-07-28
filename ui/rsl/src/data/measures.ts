@@ -62,7 +62,10 @@ export interface UpdateCapacityMeasureData {
 
 export type UiMeasureType = MeasureType | "Empty" | "RtCancelMeasure";
 
-export interface EmptyMeasureU { type: "Empty"; shared: SharedMeasureData }
+export interface EmptyMeasureU {
+  type: "Empty";
+  shared: SharedMeasureData;
+}
 
 export interface TripLoadInfoMeasureU {
   type: "TripLoadInfoMeasure";
