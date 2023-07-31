@@ -1,4 +1,5 @@
-import { AxisBottom } from "@visx/axis";
+import { AxisBottom, AxisLeft } from "@visx/axis";
+import getTickFormatter from "@visx/axis/lib/utils/getTickFormatter";
 import { Grid } from "@visx/grid";
 import { Group } from "@visx/group";
 import { LegendOrdinal } from "@visx/legend";
@@ -42,6 +43,8 @@ const keys: MetricName[] = [
 
 const getIndex = (d: MinuteMetrics) => d.index;
 
+const yAxisWidth = 50;
+
 function RtMetricsChart({
   metrics,
   width,
@@ -52,7 +55,7 @@ function RtMetricsChart({
 
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
-  const xMax = innerWidth;
+  const xMax = innerWidth - yAxisWidth;
   const yMax = innerHeight - margin.top;
 
   const data = useMemo(() => {
@@ -73,7 +76,6 @@ function RtMetricsChart({
   const timeScale = scaleBand<number>({
     domain: range(0, metrics.entries),
     range: [0, xMax],
-    paddingInner: 0.1,
   });
   const countScale = scaleLinear<number>({
     domain: [0, Math.max(...metrics.messages)],
@@ -88,6 +90,19 @@ function RtMetricsChart({
   const formatIndexDate = (index: number) =>
     formatTime(metrics.start_time + index * 60);
 
+  // x-axis ticks for each full hour
+  const firstFullHour = Math.ceil(metrics.start_time / 3600) * 3600;
+  const timeTicks: number[] = [];
+  for (
+    let i = (firstFullHour - metrics.start_time) / 60;
+    i < metrics.entries;
+    i += 60
+  ) {
+    timeTicks.push(i);
+  }
+
+  const yTickFormat = getTickFormatter(countScale);
+
   return (
     <div style={{ position: "relative" }}>
       <svg width={width} height={height}>
@@ -99,18 +114,18 @@ function RtMetricsChart({
           fill={background}
           rx={14}
         />
-        <Grid
-          top={margin.top}
-          left={margin.left}
-          xScale={timeScale}
-          yScale={countScale}
-          width={xMax}
-          height={yMax}
-          stroke="black"
-          strokeOpacity={0.1}
-          xOffset={timeScale.bandwidth() / 2}
-        />
-        <Group top={margin.top} left={margin.left}>
+        <Group top={margin.top} left={margin.left + yAxisWidth}>
+          <Grid
+            top={0}
+            left={0}
+            xScale={timeScale}
+            yScale={countScale}
+            width={xMax}
+            height={yMax}
+            stroke="black"
+            strokeOpacity={0.1}
+            columnTickValues={timeTicks}
+          />
           <BarStack<MinuteMetrics, MetricName>
             data={data}
             keys={keys}
@@ -134,20 +149,33 @@ function RtMetricsChart({
               )
             }
           </BarStack>
+          <AxisLeft
+            scale={countScale}
+            top={0}
+            left={0}
+            tickFormat={yTickFormat}
+            stroke={axisColor}
+            tickStroke={axisColor}
+            tickLabelProps={{
+              fill: axisColor,
+              fontSize: 11,
+            }}
+          />
+          <AxisBottom
+            top={yMax}
+            left={0}
+            scale={timeScale}
+            tickFormat={formatIndexDate}
+            stroke={axisColor}
+            tickStroke={axisColor}
+            tickLabelProps={{
+              fill: axisColor,
+              fontSize: 11,
+              textAnchor: "middle",
+            }}
+            tickValues={timeTicks}
+          />
         </Group>
-        <AxisBottom
-          top={yMax + margin.top}
-          left={margin.left}
-          scale={timeScale}
-          tickFormat={formatIndexDate}
-          stroke={axisColor}
-          tickStroke={axisColor}
-          tickLabelProps={{
-            fill: axisColor,
-            fontSize: 11,
-            textAnchor: "middle",
-          }}
-        />
       </svg>
       <div
         style={{
