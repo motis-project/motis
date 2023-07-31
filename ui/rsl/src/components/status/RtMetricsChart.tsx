@@ -7,50 +7,47 @@ import { ParentSize } from "@visx/responsive";
 import { scaleBand, scaleLinear, scaleOrdinal } from "@visx/scale";
 import { BarStack } from "@visx/shape";
 import { range } from "d3-array";
-import { ReactElement, useMemo } from "react";
+import { ReactElement } from "react";
 
 import { RtMetrics } from "@/api/protocol/motis/rt";
 
 import { formatTime } from "@/util/dateFormat";
 
-export interface RtMetricsChartProps {
-  metrics: RtMetrics;
+export type MetricsKeyBase = keyof Omit<RtMetrics, "start_time" | "entries">;
+
+export interface MetricInfo {
+  label: string;
+  color: string;
+}
+
+export interface RtMetricsChartProps<MetricsKey extends MetricsKeyBase> {
+  metricsData: RtMetrics;
+  metricsInfo: Record<MetricsKey, MetricInfo>;
+
   width: number;
   height: number;
   margin?: { top: number; right: number; bottom: number; left: number };
+  axisColor?: string;
+  backgroundColor?: string;
 }
 
-const dataColor1 = "#090062";
-const dataColor2 = "#6c5efb";
-const dataColor3 = "#f8a041";
-const axisColor = "#a44afe";
-const background = "#eaedff";
+const defaultAxisColor = "#000000";
+const defaultBackgroundColor = "#F0F3F5";
 const defaultMargin = { top: 40, right: 20, bottom: 0, left: 20 };
 
-interface MinuteMetrics {
-  index: number;
-  Sollfahrten: number;
-  "Fahrt Updates": number;
-  "Formation Updates": number;
-}
-
-type MetricName = "Sollfahrten" | "Fahrt Updates" | "Formation Updates";
-const keys: MetricName[] = [
-  "Sollfahrten",
-  "Fahrt Updates",
-  "Formation Updates",
-];
-
-const getIndex = (d: MinuteMetrics) => d.index;
+const getIndex = (i: number) => i;
 
 const yAxisWidth = 50;
 
-function RtMetricsChart({
-  metrics,
+function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
+  metricsData,
+  metricsInfo,
   width,
   height,
   margin = defaultMargin,
-}: RtMetricsChartProps) {
+  axisColor = defaultAxisColor,
+  backgroundColor = defaultBackgroundColor,
+}: RtMetricsChartProps<MetricsKey>) {
   margin ??= defaultMargin;
 
   const innerWidth = width - margin.left - margin.right;
@@ -58,44 +55,45 @@ function RtMetricsChart({
   const xMax = innerWidth - yAxisWidth;
   const yMax = innerHeight - margin.top;
 
-  const data = useMemo(() => {
-    const data: MinuteMetrics[] = [];
-    for (let i = 0; i < metrics.entries; i++) {
-      data.push({
-        index: i,
-        Sollfahrten: metrics.full_trip_schedule_messages[i],
-        "Fahrt Updates": metrics.full_trip_update_messages[i],
-        "Formation Updates": metrics.trip_formation_messages[i],
-      });
-    }
-    return data;
-  }, [metrics]);
-
   if (xMax < 50 || yMax < 50) return null;
 
+  const keys = Object.keys(metricsInfo) as MetricsKey[];
+  const indices = metricsData.messages.map((_, i) => i);
+
+  const maxNumberOfMessagesPerMinute = indices.reduce(
+    (max, idx) =>
+      Math.max(
+        max,
+        keys
+          .map((key) => metricsData[key][idx])
+          .reduce((sum, val) => sum + val, 0),
+      ),
+    0,
+  );
+
   const timeScale = scaleBand<number>({
-    domain: range(0, metrics.entries),
+    domain: range(0, metricsData.entries),
     range: [0, xMax],
   });
   const countScale = scaleLinear<number>({
-    domain: [0, Math.max(...metrics.messages)],
+    domain: [0, maxNumberOfMessagesPerMinute],
     range: [yMax, 0],
     nice: true,
   });
-  const colorScale = scaleOrdinal<MetricName, string>({
+  const colorScale = scaleOrdinal<MetricsKey, string>({
     domain: keys,
-    range: [dataColor1, dataColor2, dataColor3],
+    range: Object.values<MetricInfo>(metricsInfo).map((m) => m.color),
   });
 
   const formatIndexDate = (index: number) =>
-    formatTime(metrics.start_time + index * 60);
+    formatTime(metricsData.start_time + index * 60);
 
   // x-axis ticks for each full hour
-  const firstFullHour = Math.ceil(metrics.start_time / 3600) * 3600;
+  const firstFullHour = Math.ceil(metricsData.start_time / 3600) * 3600;
   const timeTicks: number[] = [];
   for (
-    let i = (firstFullHour - metrics.start_time) / 60;
-    i < metrics.entries;
+    let i = (firstFullHour - metricsData.start_time) / 60;
+    i < metricsData.entries;
     i += 60
   ) {
     timeTicks.push(i);
@@ -111,7 +109,7 @@ function RtMetricsChart({
           y={0}
           width={width}
           height={height}
-          fill={background}
+          fill={backgroundColor}
           rx={14}
         />
         <Group top={margin.top} left={margin.left + yAxisWidth}>
@@ -126,9 +124,10 @@ function RtMetricsChart({
             strokeOpacity={0.1}
             columnTickValues={timeTicks}
           />
-          <BarStack<MinuteMetrics, MetricName>
-            data={data}
+          <BarStack<number, MetricsKey>
+            data={indices}
             keys={keys}
+            value={(idx, key) => metricsData[key][idx]}
             x={getIndex}
             xScale={timeScale}
             yScale={countScale}
@@ -191,19 +190,18 @@ function RtMetricsChart({
           scale={colorScale}
           direction="row"
           labelMargin="0 15px 0 0"
+          labelFormat={(k) => metricsInfo[k].label}
         />
       </div>
     </div>
   );
 }
 
-export type ResponsiveRtMetricsChartProps = Omit<
-  RtMetricsChartProps,
-  "width" | "height"
->;
+export type ResponsiveRtMetricsChartProps<MetricsKey extends MetricsKeyBase> =
+  Omit<RtMetricsChartProps<MetricsKey>, "width" | "height">;
 
-function ResponsiveRtMetricsChart(
-  props: ResponsiveRtMetricsChartProps,
+function ResponsiveRtMetricsChart<MetricsKey extends MetricsKeyBase>(
+  props: ResponsiveRtMetricsChartProps<MetricsKey>,
 ): ReactElement {
   return (
     <ParentSize>
