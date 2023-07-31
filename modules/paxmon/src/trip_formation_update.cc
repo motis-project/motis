@@ -84,7 +84,7 @@ void update_trip_formation(schedule const& sched, universe& uv,
   primary_trip_id ptid;
   auto const has_ptid = get_primary_trip_id(sched, tfm->trip_id(), ptid);
   if (has_ptid) {
-    if (auto it = uv.capacity_maps_.trip_uuid_map_.find(ptid);
+    if (auto const it = uv.capacity_maps_.trip_uuid_map_.find(ptid);
         it != end(uv.capacity_maps_.trip_uuid_map_)) {
       if (it->second != trip_uuid) {
         std::cout << "[UTF-01] trip uuid CHANGED: " << it->second << " -> "
@@ -93,7 +93,8 @@ void update_trip_formation(schedule const& sched, universe& uv,
                   << sched.stations_[ptid.get_station_id()]->name_
                   << ", time=" << format_time(ptid.get_time()) << std::endl;
       }
-      if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
+      if (auto const tf_it =
+              uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
           tf_it == end(uv.capacity_maps_.trip_formation_map_)) {
         std::cout << "[UTF-02] trip primary id found, but uuid not found: uuid="
                   << trip_uuid << ", train_nr=" << ptid.get_train_nr()
@@ -102,19 +103,26 @@ void update_trip_formation(schedule const& sched, universe& uv,
                   << ", time=" << format_time(ptid.get_time()) << std::endl;
       }
     } else {
-      if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
+      if (auto const tf_it =
+              uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
           tf_it != end(uv.capacity_maps_.trip_formation_map_)) {
-        auto const& prev_ptid = uv.capacity_maps_.uuid_trip_map_.at(trip_uuid);
         std::cout << "[UTF-03] trip primary id not found, but uuid found: uuid="
                   << trip_uuid << ", train_nr=" << ptid.get_train_nr()
                   << ", station="
                   << sched.stations_[ptid.get_station_id()]->name_
-                  << ", time=" << format_time(ptid.get_time())
-                  << ", previous trip id: train_nr=" << prev_ptid.get_train_nr()
-                  << ", station="
-                  << sched.stations_[prev_ptid.get_station_id()]->name_
-                  << ", time=" << format_time(prev_ptid.get_time())
-                  << std::endl;
+                  << ", time=" << format_time(ptid.get_time()) << std::endl;
+        if (auto const prev_ptid_it =
+                uv.capacity_maps_.uuid_trip_map_.find(trip_uuid);
+            prev_ptid_it != end(uv.capacity_maps_.uuid_trip_map_)) {
+          auto const& prev_ptid = prev_ptid_it->second;
+          std::cout << "  previous trip id: train_nr="
+                    << prev_ptid.get_train_nr() << ", station="
+                    << sched.stations_[prev_ptid.get_station_id()]->name_
+                    << ", time=" << format_time(prev_ptid.get_time())
+                    << std::endl;
+        } else {
+          std::cout << "  previous trip id not found" << std::endl;
+        }
       }
     }
     uv.capacity_maps_.trip_uuid_map_[ptid] = trip_uuid;
