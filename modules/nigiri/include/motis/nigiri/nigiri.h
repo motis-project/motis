@@ -40,6 +40,7 @@ private:
   bool guesser_{false};
   bool railviz_{false};
   bool routing_{false};
+  unsigned reach_queries_{0U};
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;
   std::vector<std::string> gtfsrt_paths_;

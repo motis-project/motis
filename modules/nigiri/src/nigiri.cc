@@ -1,11 +1,14 @@
 #include "motis/nigiri/nigiri.h"
 
+#include <random>
+
 #include "cista/memory_holder.h"
 
 #include "conf/date_time.h"
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
+#include "utl/parser/split.h"
 #include "utl/verify.h"
 
 #include "geo/point_rtree.h"
@@ -14,6 +17,7 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
+#include "nigiri/routing/reach.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
@@ -31,7 +35,6 @@
 #include "motis/nigiri/station_lookup.h"
 #include "motis/nigiri/trip_to_connection.h"
 #include "motis/nigiri/unixtime_conv.h"
-#include "utl/parser/split.h"
 
 namespace fs = std::filesystem;
 namespace mm = motis::module;
@@ -82,7 +85,11 @@ struct nigiri::impl {
   std::shared_ptr<n::rt_timetable> rtt_;
   std::mutex mutex_;
 #endif
+
+  n::timetable const& tt() const { return **tt_; }
+
   tag_lookup tags_;
+  n::vector_map<n::route_idx_t, std::uint32_t> reachs_;
   std::shared_ptr<station_lookup> station_lookup_;
   std::vector<gtfsrt> gtfsrt_;
   std::unique_ptr<guesser> guesser_;
@@ -103,6 +110,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(guesser_, "guesser", "station typeahead/autocomplete");
   param(railviz_, "railviz", "provide railviz functions");
   param(routing_, "routing", "provide trip_to_connection");
+  param(reach_queries_, "reach_queries", "0=disabled, N=number of one-to-all");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
   param(default_timezone_, "default_timezone",
@@ -115,7 +123,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
 
 nigiri::~nigiri() = default;
 
-void nigiri::init(motis::module::registry& reg) {
+void nigiri::init(mm::registry& reg) {
   if (!gtfsrt_paths_.empty()) {
     auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
     auto statistics = std::vector<n::rt::statistics>{};
@@ -160,7 +168,7 @@ void nigiri::init(motis::module::registry& reg) {
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
                     return route(impl_->tags_, **impl_->tt_,
-                                 impl_->get_rtt().get(), msg);
+                                 impl_->get_rtt().get(), impl_->reachs_, msg);
                   },
                   {});
 
@@ -290,7 +298,7 @@ void nigiri::update_gtfsrt() {
   }
 }
 
-void nigiri::import(motis::module::import_dispatcher& reg) {
+void nigiri::import(mm::import_dispatcher& reg) {
   impl_ = std::make_unique<impl>();
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "nigiri", reg,
@@ -308,19 +316,19 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                         }),
             "all schedules require a name tag, even with only one schedule");
 
-        date::sys_days begin;
+        date::sys_days start;
         auto const today = std::chrono::time_point_cast<date::days>(
             std::chrono::system_clock::now());
         if (first_day_ == "TODAY") {
-          begin = today;
+          start = today;
         } else {
           std::stringstream ss;
           ss << first_day_;
-          ss >> date::parse("%F", begin);
+          ss >> date::parse("%F", start);
         }
 
         auto const interval = n::interval<date::sys_days>{
-            begin, begin + std::chrono::days{num_days_}};
+            start, start + std::chrono::days{num_days_}};
         LOG(logging::info) << "interval: " << interval.from_ << " - "
                            << interval.to_;
 
@@ -433,6 +441,64 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                            << (*impl_->tt_)->locations_.names_.size()
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
+
+        auto const& tt = **impl_->tt_;
+        auto const reachs_path = dump_file_path.string() + "_reachs";
+        if (!fs::is_regular_file(reachs_path) && reach_queries_ != 0U) {
+          auto source_locations = std::vector<n::location_idx_t>{};
+          source_locations.resize(tt.n_locations());
+          std::generate(begin(source_locations), end(source_locations),
+                        [i = n::location_idx_t{0U}]() mutable { return i++; });
+
+          auto rd = std::random_device{};
+          auto g = std::mt19937{rd()};
+          std::shuffle(begin(source_locations), end(source_locations), g);
+          source_locations.resize(reach_queries_);
+
+          auto const x_slope = .8F;
+          auto const route_reachs = n::routing::compute_reach_values(
+              (**impl_->tt_), source_locations, interval);
+          auto const [perm, y] =
+              n::routing::get_separation_fn(tt, route_reachs, x_slope, 0.08);
+          n::routing::write_reach_values(tt, y, x_slope, route_reachs,
+                                         reachs_path);
+        }
+
+        if (reach_queries_ != 0U) {
+          impl_->reachs_ = *n::routing::read_reach_values(cista::memory_holder{
+              cista::file{reachs_path.c_str(), "r"}.content()});
+          auto const connecting_routes =
+              n::routing::get_big_station_connection_routes(tt);
+          for (auto const r : connecting_routes) {
+            impl_->reachs_[r] = 1'000'000;
+          }
+          LOG(logging::info)
+              << "relabeled " << connecting_routes.size()
+              << " connecting routes (total=" << tt.n_routes() << ")";
+
+          //          auto const connecting_routes =
+          //              n::routing::get_big_station_connection_routes(tt);
+          //          LOG(logging::info) << "connecting routes:\n";
+          //          for (auto const idx : connecting_routes) {
+          //            auto const t =
+          //            tt.route_transport_ranges_[n::route_idx_t{idx}][0]; for
+          //            (auto const& stp :
+          //            tt.route_location_seq_[n::route_idx_t{idx}]) {
+          //              auto const l = n::stop{stp}.location_idx();
+          //              auto const p = tt.locations_.parents_[l];
+          //              if (p == n::location_idx_t::invalid()) {
+          //                LOG(logging::info) << tt.locations_.names_[l].view()
+          //                << "  "
+          //                                   << tt.transport_name(t);
+          //              } else {
+          //                LOG(logging::info) << tt.locations_.names_[p].view()
+          //                << "  "
+          //                                   << tt.transport_name(t);
+          //              }
+          //            }
+          //          }
+          //          LOG(logging::info) << "---\n";
+        }
 
         if (lookup_) {
           impl_->station_lookup_ = std::make_shared<nigiri_station_lookup>(

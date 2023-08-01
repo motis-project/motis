@@ -49,10 +49,11 @@ mm::msg_ptr to_routing_response(
   MOTIS_STOP_TIMING(conversion);
 
   auto entries = std::vector<fbs::Offset<StatisticsEntry>>{
-      CreateStatisticsEntry(fbb, fbb.CreateString("routing_time_ms"),
-                            routing_time),
-      CreateStatisticsEntry(fbb, fbb.CreateString("lower_bounds_time_ms"),
-                            search_stats.lb_time_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("routing"), routing_time),
+      CreateStatisticsEntry(fbb, fbb.CreateString("tt_lb"),
+                            search_stats.travel_time_lb_time_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("ic_lb"),
+                            search_stats.travel_time_lb_time_),
       CreateStatisticsEntry(fbb, fbb.CreateString("fastest_direct"),
                             search_stats.fastest_direct_),
       CreateStatisticsEntry(fbb, fbb.CreateString("footpaths_visited"),
@@ -74,7 +75,11 @@ mm::msg_ptr to_routing_response(
           fbb, fbb.CreateString("route_update_prevented_by_lower_bound"),
           raptor_stats.route_update_prevented_by_lower_bound_),
       CreateStatisticsEntry(fbb, fbb.CreateString("conversion"),
-                            MOTIS_TIMING_MS(conversion))};
+                            MOTIS_TIMING_MS(conversion)),
+      CreateStatisticsEntry(fbb, fbb.CreateString("reach_filtered"),
+                            raptor_stats.reach_filtered_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("reach_time"),
+                            search_stats.reach_time_)};
   auto statistics = std::vector<fbs::Offset<Statistics>>{
       CreateStatistics(fbb, fbb.CreateString("nigiri.raptor"),
                        fbb.CreateVectorOfSortedTables(&entries))};
@@ -129,23 +134,40 @@ std::vector<n::routing::offset> get_offsets(
 template <n::direction SearchDir>
 auto run_search(n::routing::search_state& search_state,
                 n::routing::raptor_state& raptor_state, n::timetable const& tt,
-                n::rt_timetable const* rtt, n::routing::query&& q) {
-  if (rtt == nullptr) {
-    using algo_t = n::routing::raptor<SearchDir, false>;
-    return n::routing::search<SearchDir, algo_t>{tt, nullptr, search_state,
-                                                 raptor_state, std::move(q)}
-        .execute();
+                n::rt_timetable const* rtt,
+                n::vector_map<n::route_idx_t, std::uint32_t> const& reachs,
+                n::routing::query&& q) {
+  if (reachs.empty()) {
+    if (rtt == nullptr) {
+      using algo_t = n::routing::raptor<SearchDir, false, false, false>;
+      return n::routing::search<SearchDir, algo_t>{
+          tt, nullptr, reachs, search_state, raptor_state, std::move(q)}
+          .execute();
+    } else {
+      using algo_t = n::routing::raptor<SearchDir, true, false, false>;
+      return n::routing::search<SearchDir, algo_t>{
+          tt, rtt, reachs, search_state, raptor_state, std::move(q)}
+          .execute();
+    }
   } else {
-    using algo_t = n::routing::raptor<SearchDir, true>;
-    return n::routing::search<SearchDir, algo_t>{tt, rtt, search_state,
-                                                 raptor_state, std::move(q)}
-        .execute();
+    if (rtt == nullptr) {
+      using algo_t = n::routing::raptor<SearchDir, false, false, true>;
+      return n::routing::search<SearchDir, algo_t>{
+          tt, nullptr, reachs, search_state, raptor_state, std::move(q)}
+          .execute();
+    } else {
+      using algo_t = n::routing::raptor<SearchDir, true, false, true>;
+      return n::routing::search<SearchDir, algo_t>{
+          tt, rtt, reachs, search_state, raptor_state, std::move(q)}
+          .execute();
+    }
   }
 }
 
-motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
-                             n::rt_timetable const* rtt,
-                             motis::module::msg_ptr const& msg) {
+motis::module::msg_ptr route(
+    tag_lookup const& tags, n::timetable const& tt, n::rt_timetable const* rtt,
+    n::vector_map<n::route_idx_t, std::uint32_t> const& reachs,
+    motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
 
@@ -305,14 +327,14 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   n::routing::raptor_stats raptor_stats;
   if (req->search_dir() == SearchDir_Forward) {
     auto const r = run_search<n::direction::kForward>(
-        *search_state, *raptor_state, tt, rtt, std::move(q));
+        *search_state, *raptor_state, tt, rtt, reachs, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
     search_interval = r.interval_;
   } else {
     auto const r = run_search<n::direction::kBackward>(
-        *search_state, *raptor_state, tt, rtt, std::move(q));
+        *search_state, *raptor_state, tt, rtt, reachs, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
