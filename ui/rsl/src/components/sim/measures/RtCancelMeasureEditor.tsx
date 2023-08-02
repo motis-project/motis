@@ -23,9 +23,9 @@ import {
 } from "@/data/measures";
 import { scheduleAtom } from "@/data/multiverse";
 
-import classNames from "@/util/classNames";
-
 import TripPicker from "@/components/inputs/TripPicker";
+
+import { cn } from "@/lib/utils";
 
 export interface RtCancelMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
@@ -227,9 +227,7 @@ function StopListEditor({
             onChange={toggleAll}
             className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
           />
-          <span className={classNames(allCanceled && "line-through")}>
-            Alle Halte
-          </span>
+          <span className={cn(allCanceled && "line-through")}>Alle Halte</span>
         </label>
       </div>
       <div className="flex flex-col gap-2">
@@ -242,7 +240,7 @@ function StopListEditor({
                 onChange={() => toggleStop(idx)}
                 className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
               />
-              <span className={classNames(canceled && "line-through")}>
+              <span className={cn(canceled && "line-through")}>
                 {stop?.stop?.bezeichnung}
               </span>
             </label>

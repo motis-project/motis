@@ -11,9 +11,9 @@ import {
   showOptimizationDebugLogAtom,
 } from "@/data/settings";
 
-import classNames from "@/util/classNames";
-
 import { SectionLoadGraphPlotType } from "@/components/trips/SectionLoadGraph";
+
+import { cn } from "@/lib/utils";
 
 const sectionGraphPlotTypes: {
   plotType: SectionLoadGraphPlotType;
@@ -136,7 +136,7 @@ function Settings(): JSX.Element {
         {({ open }) => (
           <>
             <Popover.Button
-              className={classNames(
+              className={cn(
                 open ? "opacity-100" : "opacity-30 hover:opacity-100",
                 "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0",
               )}

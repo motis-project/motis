@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 
 import { showSimPanelAtom } from "@/data/views";
 
-import classNames from "@/util/classNames";
+import { cn } from "@/lib/utils";
 
 interface PageLinkProps {
   active?: boolean;
@@ -16,7 +16,7 @@ function PageLink({ active, onClick, children }: PageLinkProps): JSX.Element {
   return (
     <button
       type="button"
-      className={classNames(
+      className={cn(
         "px-3 py-2 rounded-md text-sm font-medium cursor-pointer",
         active
           ? "bg-db-cool-gray-700 text-white"
@@ -41,7 +41,7 @@ const MainPageLink = forwardRef<HTMLAnchorElement, MainPageLinkProps>(
         ref={ref}
         to={to}
         className={({ isActive }) =>
-          classNames(
+          cn(
             "px-3 py-2 rounded-md text-sm font-medium cursor-pointer",
             isActive
               ? "bg-db-cool-gray-700 text-white"

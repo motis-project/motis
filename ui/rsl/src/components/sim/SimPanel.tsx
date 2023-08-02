@@ -3,10 +3,10 @@ import { useCallback, useState } from "react";
 
 import { hasSimResultsAtom } from "@/data/simulation";
 
-import classNames from "@/util/classNames";
-
 import SimResultsPanel from "@/components/sim/SimResultsPanel";
 import MeasurePanel from "@/components/sim/measures/MeasurePanel";
+
+import { cn } from "@/lib/utils";
 
 type TabId = "measures" | "results";
 
@@ -27,7 +27,7 @@ function Tab({
 }: TabProps): JSX.Element {
   return (
     <button
-      className={classNames(
+      className={cn(
         "w-full py-2.5 text-sm leading-5 font-medium rounded-lg",
         "focus:outline-none focus:ring-2 ring-db-red-800",
         selectedTab === id
@@ -70,7 +70,7 @@ function SimPanel(): JSX.Element {
         />
       </div>
       <div
-        className={classNames(
+        className={cn(
           selectedTab === "measures" ? "block" : "hidden",
           "grow overflow-y-auto",
         )}
@@ -78,7 +78,7 @@ function SimPanel(): JSX.Element {
         <MeasurePanel onSimulationFinished={onSimulationFinished} />
       </div>
       <div
-        className={classNames(
+        className={cn(
           selectedTab === "results" ? "block" : "hidden",
           "grow overflow-y-auto",
         )}

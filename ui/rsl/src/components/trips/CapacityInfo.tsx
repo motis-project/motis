@@ -21,11 +21,12 @@ import {
   getCapacitySourceTooltip,
   getFormationCapacitySourceShortText,
 } from "@/util/capacitySource";
-import classNames from "@/util/classNames";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import Baureihe from "@/components/util/Baureihe";
+
+import { cn } from "@/lib/utils";
 
 interface CapacityInfoProps {
   tripId: TripId;
@@ -138,7 +139,7 @@ function SectionCapacityInfo({
               {formatTime(section.departure_schedule_time)}
             </span>
             <span
-              className={classNames(
+              className={cn(
                 "w-1/2",
                 departureDelayed ? "text-red-600" : "text-green-600",
               )}
@@ -156,7 +157,7 @@ function SectionCapacityInfo({
               {formatTime(section.arrival_schedule_time)}
             </span>
             <span
-              className={classNames(
+              className={cn(
                 "w-1/2",
                 arrivalDelayed ? "text-red-600" : "text-green-600",
               )}
@@ -289,7 +290,7 @@ function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
           {mt.vehicle_groups.map((vg) => (
             <tr
               key={vg.name}
-              className={classNames(
+              className={cn(
                 vg.capacity.length === 1
                   ? "text-green-600"
                   : "text-db-cool-gray-500",
@@ -389,7 +390,7 @@ function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
           {vg.vehicles.map((v, idx) => (
             <tr
               key={idx}
-              className={classNames(
+              className={cn(
                 v.guessed ? "text-fuchsia-500" : !v.uic_found && "text-red-500",
               )}
             >

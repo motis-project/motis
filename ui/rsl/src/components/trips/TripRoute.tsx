@@ -26,13 +26,14 @@ import {
   getCapacitySourceTooltip,
   isExactCapacitySource,
 } from "@/util/capacitySource";
-import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
 import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
 import TripOptimization from "@/components/trips/TripOptimization";
 import TripSectionDetails from "@/components/trips/TripSectionDetails";
+
+import { cn } from "@/lib/utils";
 
 interface TripRouteProps {
   tripId: TripId;
@@ -178,7 +179,7 @@ function TripSection({
                 {formatTime(section.departure_schedule_time)}
               </span>
               <span
-                className={classNames(
+                className={cn(
                   "w-1/2",
                   departureDelayed ? "text-red-600" : "text-green-600",
                 )}
@@ -196,7 +197,7 @@ function TripSection({
                 {formatTime(section.arrival_schedule_time)}
               </span>
               <span
-                className={classNames(
+                className={cn(
                   "w-1/2",
                   arrivalDelayed ? "text-red-600" : "text-green-600",
                 )}

@@ -29,7 +29,6 @@ import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
 import { formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
 import { getScheduleRange } from "@/util/scheduleRange";
@@ -37,6 +36,8 @@ import { getScheduleRange } from "@/util/scheduleRange";
 import DatePicker from "@/components/inputs/DatePicker";
 import StationPicker from "@/components/inputs/StationPicker";
 import Delay from "@/components/util/Delay";
+
+import { cn } from "@/lib/utils";
 
 interface LabeledSortOrder {
   option: PaxMonFilterGroupsSortOrder;
@@ -252,7 +253,7 @@ function GroupList(): JSX.Element {
                   key={opt.option}
                   value={opt}
                   className={({ active }) =>
-                    classNames(
+                    cn(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
                       active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
@@ -261,7 +262,7 @@ function GroupList(): JSX.Element {
                   {({ selected, active }) => (
                     <>
                       <span
-                        className={classNames(
+                        className={cn(
                           "block truncate",
                           selected ? "font-medium" : "font-normal",
                         )}
@@ -270,7 +271,7 @@ function GroupList(): JSX.Element {
                       </span>
                       {selected ? (
                         <span
-                          className={classNames(
+                          className={cn(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
                             active ? "text-amber-600" : "text-amber-600",
                           )}
@@ -447,7 +448,7 @@ function RerouteReasonOptions({
                 key={opt.reason}
                 value={opt.reason}
                 className={({ active }) =>
-                  classNames(
+                  cn(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
                     active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
@@ -456,7 +457,7 @@ function RerouteReasonOptions({
                 {({ selected, active }) => (
                   <>
                     <span
-                      className={classNames(
+                      className={cn(
                         "block truncate",
                         selected ? "font-medium" : "font-normal",
                       )}
@@ -465,7 +466,7 @@ function RerouteReasonOptions({
                     </span>
                     {selected ? (
                       <span
-                        className={classNames(
+                        className={cn(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
                           active ? "text-amber-600" : "text-amber-600",
                         )}
@@ -526,7 +527,7 @@ function GroupListEntry({
     <div className="pr-1 pb-3">
       <Link
         to={`/groups/${group.id}`}
-        className={classNames(
+        className={cn(
           "block p-2 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"

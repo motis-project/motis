@@ -25,7 +25,6 @@ import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
 import { formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
 import { getScheduleRange } from "@/util/scheduleRange";
@@ -33,6 +32,8 @@ import { getScheduleRange } from "@/util/scheduleRange";
 import DatePicker from "@/components/inputs/DatePicker";
 import ServiceClassFilter from "@/components/inputs/ServiceClassFilter";
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
+
+import { cn } from "@/lib/utils";
 
 interface LabeledFilterOption {
   option: PaxMonFilterTripsSortOrder;
@@ -198,7 +199,7 @@ function TripList(): JSX.Element {
                   key={opt.option}
                   value={opt}
                   className={({ active }) =>
-                    classNames(
+                    cn(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
                       active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
@@ -207,7 +208,7 @@ function TripList(): JSX.Element {
                   {({ selected, active }) => (
                     <>
                       <span
-                        className={classNames(
+                        className={cn(
                           "block truncate",
                           selected ? "font-medium" : "font-normal",
                         )}
@@ -216,7 +217,7 @@ function TripList(): JSX.Element {
                       </span>
                       {selected ? (
                         <span
-                          className={classNames(
+                          className={cn(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
                             active ? "text-amber-600" : "text-amber-600",
                           )}
@@ -345,7 +346,7 @@ function TripListEntry({
     <div className="pr-1 pb-3">
       <Link
         to={`/trips/${encodeURIComponent(JSON.stringify(ti.tsi.trip))}`}
-        className={classNames(
+        className={cn(
           "block p-1 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"

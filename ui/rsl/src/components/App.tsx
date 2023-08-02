@@ -10,8 +10,6 @@ import {
 
 import { showSimPanelAtom } from "@/data/views";
 
-import classNames from "@/util/classNames";
-
 import { GroupDetailsFromRoute } from "@/components/groups/GroupDetails";
 import GroupsMainSection from "@/components/groups/GroupsMainSection";
 import Header from "@/components/header/Header";
@@ -21,6 +19,8 @@ import GroupStatistics from "@/components/stats/GroupStatistics";
 import StatusOverview from "@/components/status/StatusOverview";
 import { TripDetailsFromRoute } from "@/components/trips/TripDetails";
 import TripsMainSection from "@/components/trips/TripsMainSection";
+
+import { cn } from "@/lib/utils";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,7 +34,7 @@ function MainContent(): JSX.Element {
     <div className="flex justify-between items-stretch overflow-y-auto grow">
       <Outlet />
       <div
-        className={classNames(
+        className={cn(
           "bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0",
           showSimPanel ? "block" : "hidden",
         )}

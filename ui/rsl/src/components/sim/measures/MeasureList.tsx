@@ -27,12 +27,13 @@ import {
   simResultsAtom,
 } from "@/data/simulation";
 
-import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 import { loadLevelInfos } from "@/util/loadLevelInfos";
 import { isNonNull } from "@/util/typeGuards";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+
+import { cn } from "@/lib/utils";
 
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
@@ -83,7 +84,7 @@ function MeasureTypeDetail({
       return (
         <div className="text-sm text-gray-800">
           <div
-            className={classNames(
+            className={cn(
               "truncate",
               !measure.data.planned_destination && "text-db-red-500",
             )}
@@ -345,7 +346,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
 
   return (
     <div
-      className={classNames(
+      className={cn(
         "flex flex-col gap-2 h-full overflow-hidden",
         applyMeasuresMutation.isLoading && "cursor-wait",
       )}

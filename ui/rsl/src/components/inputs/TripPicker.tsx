@@ -11,9 +11,9 @@ import { usePaxMonFindTripsQuery } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 
-import classNames from "@/util/classNames";
-
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+
+import { cn } from "@/lib/utils";
 
 function filterTrips(trips: PaxMonTripInfo[]) {
   return trips.filter(
@@ -102,7 +102,7 @@ function TripPicker({
   });
 
   return (
-    <div className={classNames("relative flex", className)}>
+    <div className={cn("relative flex", className)}>
       {/* <label {...getLabelProps()}>Trip:</label> */}
       <div className="relative w-full">
         <input

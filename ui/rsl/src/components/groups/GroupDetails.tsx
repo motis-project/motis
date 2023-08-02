@@ -33,11 +33,12 @@ import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
-import classNames from "@/util/classNames";
 import { formatDateTime, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 import Delay from "@/components/util/Delay";
+
+import { cn } from "@/lib/utils";
 
 interface GroupDetailsProps {
   groupId: number;
@@ -145,7 +146,7 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   return (
     <div className="flex flex-col bg-db-cool-gray-200 rounded drop-shadow-md">
       <div
-        className={classNames(
+        className={cn(
           "grid grid-cols-3 gap-1 rounded-t p-2 bg-db-cool-gray-200 border-b-4",
           route.broken ? "border-red-300" : "border-green-300",
         )}
@@ -168,7 +169,7 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
         </div>
       </div>
       <div
-        className={classNames(
+        className={cn(
           "rounded-b p-2",
           route.broken
             ? "bg-red-50"
@@ -323,7 +324,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
   return (
     <div className="relative">
       <div
-        className={classNames(
+        className={cn(
           "absolute w-8 h-8 rounded-full inline-flex items-center justify-center text-white",
           bgColor,
         )}
@@ -527,7 +528,7 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
             {row.map((p, colIdx) => (
               <td
                 key={colIdx}
-                className={classNames(
+                className={cn(
                   "pr-4 text-center",
                   p === 0
                     ? diffs[rowIdx][colIdx] < 0

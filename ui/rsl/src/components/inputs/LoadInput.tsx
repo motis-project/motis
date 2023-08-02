@@ -4,8 +4,9 @@ import React, { Fragment } from "react";
 
 import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
-import classNames from "@/util/classNames";
 import { loadLevelInfos } from "@/util/loadLevelInfos";
+
+import { cn } from "@/lib/utils";
 
 export const allLoadLevels: LoadLevel[] = ["Unknown", "Low", "NoSeats", "Full"];
 export const knownLoadLevels: LoadLevel[] = ["Low", "NoSeats", "Full"];
@@ -32,7 +33,7 @@ function LoadInput({
 }: LoadInputProps) {
   return (
     <Listbox value={selectedLevel} onChange={onLevelSelected}>
-      <div className={classNames("relative w-full h-full", className)}>
+      <div className={cn("relative w-full h-full", className)}>
         <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white dark:bg-gray-700 rounded-lg shadow-sm cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500">
           <span className="block truncate">
             <LoadLevelLabel level={selectedLevel} />
@@ -56,7 +57,7 @@ function LoadInput({
                 key={level}
                 value={level}
                 className={({ active }) =>
-                  classNames(
+                  cn(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
                     active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
@@ -65,7 +66,7 @@ function LoadInput({
                 {({ selected, active }) => (
                   <>
                     <span
-                      className={classNames(
+                      className={cn(
                         "block truncate",
                         selected ? "font-medium" : "font-normal",
                       )}
@@ -74,7 +75,7 @@ function LoadInput({
                     </span>
                     {selected ? (
                       <span
-                        className={classNames(
+                        className={cn(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
                           active ? "text-amber-600" : "text-amber-600",
                         )}

@@ -17,11 +17,12 @@ import {
 import { scheduleAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
 import { TripTooltip } from "@/components/trips/TripTooltip";
+
+import { cn } from "@/lib/utils";
 
 export type GroupByDirection = "Origin" | "Destination" | "None";
 
@@ -178,7 +179,7 @@ function CombinedGroup({
           <Link
             key={idx}
             to={`/groups/${gr.g}`}
-            className={classNames("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
+            className={cn("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
           >
             <div className="flex justify-between">
               <div>{formatPercent(gr.p)}</div>

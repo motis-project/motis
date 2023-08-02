@@ -11,8 +11,7 @@ import { measuresAtom } from "@/data/measures";
 import { scheduleAtom, universeAtom } from "@/data/multiverse";
 import { showOptimizationDebugLogAtom } from "@/data/settings";
 
-import classNames from "@/util/classNames";
-
+import { cn } from "@/lib/utils";
 import OptimizationWorker from "@/optimization/worker?worker";
 import { WorkerRequest, WorkerUpdate } from "@/optimization/workerMessages";
 
@@ -126,7 +125,7 @@ function TripOptimization({
 
   return (
     <div
-      className={classNames(
+      className={cn(
         "max-w-7xl mx-auto pb-2",
         optimizationAvailable ? "visible" : "invisible",
       )}
@@ -135,7 +134,7 @@ function TripOptimization({
         <button
           type="button"
           onClick={toggleOptimization}
-          className={classNames(
+          className={cn(
             "flex justify-center items-center gap-1 px-3 py-1 rounded text-sm",
             running
               ? "bg-db-red-300 text-db-red-100 cursor-wait"
@@ -146,9 +145,7 @@ function TripOptimization({
           Maßnahmen zur Auslastungsreduktion ermitteln
         </button>
       </div>
-      <div
-        className={classNames(showOptimizationDebugLog ? "block" : "hidden")}
-      >
+      <div className={cn(showOptimizationDebugLog ? "block" : "hidden")}>
         <textarea
           ref={textAreaRef}
           rows={10}

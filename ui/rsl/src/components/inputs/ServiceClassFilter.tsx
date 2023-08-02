@@ -4,7 +4,7 @@ import React, { Fragment } from "react";
 
 import { ServiceClass } from "@/api/constants";
 
-import classNames from "@/util/classNames";
+import { cn } from "@/lib/utils";
 
 interface LabeledServiceClass {
   sc: ServiceClass;
@@ -58,7 +58,7 @@ function ServiceClassFilter({
           leaveTo="opacity-0"
         >
           <Listbox.Options
-            className={classNames(
+            className={cn(
               "absolute z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm",
               popupPosition,
             )}
@@ -68,7 +68,7 @@ function ServiceClassFilter({
                 key={opt.sc}
                 value={opt.sc}
                 className={({ active }) =>
-                  classNames(
+                  cn(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
                     active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
@@ -77,7 +77,7 @@ function ServiceClassFilter({
                 {({ selected, active }) => (
                   <>
                     <span
-                      className={classNames(
+                      className={cn(
                         "block truncate",
                         selected ? "font-medium" : "font-normal",
                       )}
@@ -86,7 +86,7 @@ function ServiceClassFilter({
                     </span>
                     {selected ? (
                       <span
-                        className={classNames(
+                        className={cn(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
                           active ? "text-amber-600" : "text-amber-600",
                         )}

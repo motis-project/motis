@@ -10,8 +10,9 @@ import {
   PaxMonPdfEntry,
 } from "@/api/protocol/motis/paxmon";
 
-import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
+
+import { cn } from "@/lib/utils";
 
 export type SectionLoadGraphPlotType = "SimpleBox" | "Violin" | "Box";
 
@@ -317,9 +318,7 @@ function TooltipRow({ pax, section, children, ...rest }: TooltipRowProps) {
   return (
     <tr {...rest}>
       <td>{children}</td>
-      <td
-        className={classNames("text-right", getTooltipTextClass(pax, section))}
-      >
+      <td className={cn("text-right", getTooltipTextClass(pax, section))}>
         {pax}
       </td>
     </tr>
