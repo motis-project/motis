@@ -1,4 +1,4 @@
-#include "motis/paxmon/api/capacity_status.h"
+#include "motis/paxmon/api/detailed_capacity_status.h"
 
 #include <cstdint>
 #include <algorithm>
@@ -15,8 +15,6 @@
 #include "motis/hash_set.h"
 #include "motis/pair.h"
 #include "motis/string.h"
-
-#include "motis/core/common/logging.h"
 
 #include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
@@ -38,8 +36,8 @@ namespace motis::paxmon::api {
 namespace {
 
 struct capacity_stats {
-  Offset<PaxMonTripCapacityStats> to_fbs(FlatBufferBuilder& fbb) const {
-    return CreatePaxMonTripCapacityStats(
+  Offset<PaxMonDetailedTripCapacityStats> to_fbs(FlatBufferBuilder& fbb) const {
+    return CreatePaxMonDetailedTripCapacityStats(
         fbb, fbb.CreateString(category_), static_cast<std::uint8_t>(clasz_),
         tracked_, full_data_, partial_data_, capacity_for_all_sections_,
         trip_formation_data_found_, no_formation_data_at_all_,
@@ -87,7 +85,7 @@ enum class output_type { DEFAULT, CSV_TRIPS, CSV_FORMATIONS };
 
 }  // namespace
 
-msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
+msg_ptr detailed_capacity_status(paxmon_data& data, msg_ptr const& msg) {
   auto out_type = output_type::DEFAULT;
   auto uv_id = universe_id{};
   auto filter_by_time = PaxMonFilterTripsTimeFilter_NoFilter;
@@ -97,8 +95,8 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
   auto include_uics_not_found = false;
 
   switch (msg->get()->content_type()) {
-    case MsgContent_PaxMonCapacityStatusRequest: {
-      auto const req = motis_content(PaxMonCapacityStatusRequest, msg);
+    case MsgContent_PaxMonDetailedCapacityStatusRequest: {
+      auto const req = motis_content(PaxMonDetailedCapacityStatusRequest, msg);
       uv_id = req->universe();
       filter_by_time = req->filter_by_time();
       include_missing_vehicle_infos = req->include_missing_vehicle_infos();
@@ -122,8 +120,9 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
   auto const& uv = uv_access.uv_;
   auto const& caps = uv.capacity_maps_;
 
-  if (msg->get()->content_type() == MsgContent_PaxMonCapacityStatusRequest) {
-    auto const req = motis_content(PaxMonCapacityStatusRequest, msg);
+  if (msg->get()->content_type() ==
+      MsgContent_PaxMonDetailedCapacityStatusRequest) {
+    auto const req = motis_content(PaxMonDetailedCapacityStatusRequest, msg);
     filter_interval_begin = unix_to_motistime(sched.schedule_begin_,
                                               req->filter_interval()->begin());
     filter_interval_end =
@@ -394,8 +393,8 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
       return stats.to_fbs(mc);
     });
 
-    mc.create_and_finish(MsgContent_PaxMonCapacityStatusResponse,
-                         CreatePaxMonCapacityStatusResponse(
+    mc.create_and_finish(MsgContent_PaxMonDetailedCapacityStatusResponse,
+                         CreatePaxMonDetailedCapacityStatusResponse(
                              mc, all_trips.to_fbs(mc),
                              mc.CreateVectorOfSortedTables(&by_category_fbs),
                              mc.CreateVector(fbs_missing_vehicle_infos),

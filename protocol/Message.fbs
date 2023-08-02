@@ -126,8 +126,8 @@ include "paxmon/PaxMonDebugGraphResponse.fbs";
 include "paxmon/PaxMonGetUniversesResponse.fbs";
 include "paxmon/PaxMonGetTripCapacityRequest.fbs";
 include "paxmon/PaxMonGetTripCapacityResponse.fbs";
-include "paxmon/PaxMonCapacityStatusRequest.fbs";
-include "paxmon/PaxMonCapacityStatusResponse.fbs";
+include "paxmon/PaxMonDetailedCapacityStatusRequest.fbs";
+include "paxmon/PaxMonDetailedCapacityStatusResponse.fbs";
 include "paxmon/PaxMonMetricsRequest.fbs";
 include "paxmon/PaxMonMetricsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
@@ -335,8 +335,8 @@ union MsgContent {
   motis.ris.RISStatusResponse                                             = 155,
   motis.rt.RtMetricsRequest                                               = 156,
   motis.rt.RtMetricsResponse                                              = 157,
-  motis.paxmon.PaxMonCapacityStatusRequest                                = 158,
-  motis.paxmon.PaxMonCapacityStatusResponse                               = 159,
+  motis.paxmon.PaxMonDetailedCapacityStatusRequest                        = 158,
+  motis.paxmon.PaxMonDetailedCapacityStatusResponse                       = 159,
   motis.paxmon.PaxMonMetricsRequest                                       = 160,
   motis.paxmon.PaxMonMetricsResponse                                      = 161,
   motis.paxforecast.PaxForecastMetricsRequest                             = 162,

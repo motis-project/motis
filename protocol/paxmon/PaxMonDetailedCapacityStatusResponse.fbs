@@ -2,7 +2,7 @@ include "base/TripServiceInfo.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonTripCapacityStats {
+table PaxMonDetailedTripCapacityStats {
   category: string (key);
   service_class: ubyte;
 
@@ -35,9 +35,9 @@ table PaxMonMissingVehicleInfo {
   count: uint;
 }
 
-table PaxMonCapacityStatusResponse {
-  all_trips: PaxMonTripCapacityStats;
-  by_category: [PaxMonTripCapacityStats];
+table PaxMonDetailedCapacityStatusResponse {
+  all_trips: PaxMonDetailedTripCapacityStats;
+  by_category: [PaxMonDetailedTripCapacityStats];
 
   missing_vehicle_infos: [PaxMonMissingVehicleInfo];
   uics_not_found: [ulong];

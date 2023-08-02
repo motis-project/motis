@@ -7,11 +7,11 @@ import {
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
-  PaxMonCapacityStatusRequest,
-  PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
+  PaxMonDetailedCapacityStatusRequest,
+  PaxMonDetailedCapacityStatusResponse,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
@@ -324,24 +324,16 @@ export function usePaxMonGetTripCapacity(
   );
 }
 
-export async function sendPaxMonCapacityStatusRequest(
-  content: PaxMonCapacityStatusRequest,
-): Promise<PaxMonCapacityStatusResponse> {
+export async function sendPaxMonDetailedCapacityStatusRequest(
+  content: PaxMonDetailedCapacityStatusRequest,
+): Promise<PaxMonDetailedCapacityStatusResponse> {
   const msg = await sendRequest(
-    "/paxmon/capacity_status",
-    "PaxMonCapacityStatusRequest",
+    "/paxmon/detailed_capacity_status",
+    "PaxMonDetailedCapacityStatusRequest",
     content,
   );
-  verifyContentType(msg, "PaxMonCapacityStatusResponse");
-  return msg.content as PaxMonCapacityStatusResponse;
-}
-
-export function usePaxMonCapacityStatus(
-  content: PaxMonCapacityStatusRequest,
-): UseQueryResult<PaxMonCapacityStatusResponse> {
-  return useQuery(queryKeys.capacityStatus(content), () =>
-    sendPaxMonCapacityStatusRequest(content),
-  );
+  verifyContentType(msg, "PaxMonDetailedCapacityStatusResponse");
+  return msg.content as PaxMonDetailedCapacityStatusResponse;
 }
 
 export const queryKeys = {
@@ -372,6 +364,6 @@ export const queryKeys = {
     [...queryKeys.all, "debug_graph", req] as const,
   tripCapacity: (req: PaxMonGetTripCapacityRequest) =>
     [...queryKeys.all, "trip_capacity", req] as const,
-  capacityStatus: (req: PaxMonCapacityStatusRequest) =>
-    [...queryKeys.all, "capacity_status", req] as const,
+  detailedCapacityStatus: (req: PaxMonDetailedCapacityStatusRequest) =>
+    [...queryKeys.all, "detailed_capacity_status", req] as const,
 };

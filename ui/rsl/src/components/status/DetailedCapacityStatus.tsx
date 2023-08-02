@@ -5,15 +5,18 @@ import { useAtom } from "jotai/index";
 import React, { ReactElement, useState } from "react";
 
 import {
-  PaxMonCapacityStatusRequest,
-  PaxMonCapacityStatusResponse,
-  PaxMonTripCapacityStats,
+  PaxMonDetailedCapacityStatusRequest,
+  PaxMonDetailedCapacityStatusResponse,
+  PaxMonDetailedTripCapacityStats,
 } from "@/api/protocol/motis/paxmon";
 
 import { ServiceClass } from "@/api/constants";
 import { getApiEndpoint } from "@/api/endpoint";
 import { useLookupScheduleInfoQuery } from "@/api/lookup";
-import { queryKeys, sendPaxMonCapacityStatusRequest } from "@/api/paxmon";
+import {
+  queryKeys,
+  sendPaxMonDetailedCapacityStatusRequest,
+} from "@/api/paxmon";
 import { useRISStatusRequest } from "@/api/ris";
 
 import { universeAtom } from "@/data/multiverse";
@@ -26,7 +29,7 @@ import DatePicker from "@/components/inputs/DatePicker";
 import ServiceClassFilter from "@/components/inputs/ServiceClassFilter";
 import Baureihe from "@/components/util/Baureihe";
 
-function CapacityStatus(): ReactElement {
+function DetailedCapacityStatus(): ReactElement {
   const [universe] = useAtom(universeAtom);
   const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [serviceClassFilter, setServiceClassFilter] = useState([
@@ -36,7 +39,7 @@ function CapacityStatus(): ReactElement {
 
   const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
-  const request: PaxMonCapacityStatusRequest = {
+  const request: PaxMonDetailedCapacityStatusRequest = {
     universe,
     filter_by_time: selectedDate ? "ActiveTime" : "NoFilter",
     filter_interval: {
@@ -48,8 +51,8 @@ function CapacityStatus(): ReactElement {
   };
 
   const { data } = useQuery(
-    queryKeys.capacityStatus(request),
-    () => sendPaxMonCapacityStatusRequest(request),
+    queryKeys.detailedCapacityStatus(request),
+    () => sendPaxMonDetailedCapacityStatusRequest(request),
     {
       enabled: selectedDate !== undefined,
     },
@@ -93,12 +96,12 @@ function CapacityStatus(): ReactElement {
 }
 
 interface CapacityStatusDisplayProps {
-  data: PaxMonCapacityStatusResponse | undefined;
+  data: PaxMonDetailedCapacityStatusResponse | undefined;
   serviceClassFilter: ServiceClass[];
 }
 
 interface CapacityStatusDataProps {
-  data: PaxMonCapacityStatusResponse;
+  data: PaxMonDetailedCapacityStatusResponse;
   serviceClassFilter: ServiceClass[];
 }
 
@@ -127,7 +130,7 @@ function CapacityStatusStats({
 }: CapacityStatusDataProps) {
   interface Column {
     label: string;
-    stats: PaxMonTripCapacityStats;
+    stats: PaxMonDetailedTripCapacityStats;
   }
 
   const columns: Column[] = [
@@ -299,7 +302,7 @@ function StatsTableCell({ value, total }: StatsTableCellProps) {
 }
 
 interface MissingVehiclesProps {
-  data: PaxMonCapacityStatusResponse;
+  data: PaxMonDetailedCapacityStatusResponse;
 }
 
 function MissingVehicles({ data }: MissingVehiclesProps) {
@@ -371,4 +374,4 @@ function CsvDownloadButtons() {
   );
 }
 
-export default CapacityStatus;
+export default DetailedCapacityStatus;

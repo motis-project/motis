@@ -23,9 +23,9 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/api/add_groups.h"
-#include "motis/paxmon/api/capacity_status.h"
 #include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
+#include "motis/paxmon/api/detailed_capacity_status.h"
 #include "motis/paxmon/api/filter_groups.h"
 #include "motis/paxmon/api/filter_trips.h"
 #include "motis/paxmon/api/find_trips.h"
@@ -430,9 +430,9 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
-  reg.register_op("/paxmon/capacity_status",
+  reg.register_op("/paxmon/detailed_capacity_status",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::capacity_status(data_, msg);
+                    return api::detailed_capacity_status(data_, msg);
                   },
                   {});
 

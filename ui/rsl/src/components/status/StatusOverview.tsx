@@ -1,6 +1,6 @@
 import { ReactElement } from "react";
 
-import CapacityStatus from "@/components/status/CapacityStatus";
+import DetailedCapacityStatus from "@/components/status/DetailedCapacityStatus";
 import RISStatus from "@/components/status/RISStatus";
 import RtStatus from "@/components/status/RtStatus";
 
@@ -10,7 +10,7 @@ function StatusOverview(): ReactElement {
       <h1 className="text-xl font-semibold">MOTIS RSL Status</h1>
       <RISStatus />
       <RtStatus />
-      <CapacityStatus />
+      <DetailedCapacityStatus />
     </div>
   );
 }

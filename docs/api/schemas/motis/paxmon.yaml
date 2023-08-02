@@ -1575,58 +1575,6 @@ PaxMonVehicleGroupInfo:
       description: TODO
     vehicles:
       description: TODO
-PaxMonCapacityStatusRequest:
-  description: TODO
-  fields:
-    universe:
-      description: TODO
-    include_missing_vehicle_infos:
-      description: TODO
-    include_uics_not_found:
-      description: TODO
-    filter_by_time:
-      description: TODO
-    filter_interval:
-      description: TODO
-PaxMonTripCapacityStats:
-  description: TODO
-  fields:
-    tracked:
-      description: TODO
-    no_formation_data_at_all:
-      description: TODO
-    no_formation_data_some_sections_some_merged:
-      description: TODO
-    no_formation_data_some_sections_all_merged:
-      description: TODO
-    no_vehicles_found_at_all:
-      description: TODO
-    no_vehicles_found_some_sections:
-      description: TODO
-    some_vehicles_not_found_some_sections:
-      description: TODO
-    trip_formation_data_found:
-      description: TODO
-    category:
-      description: TODO
-    trips_using_vehicle_groups:
-      description: TODO
-    trips_using_baureihe:
-      description: TODO
-    trips_using_type_code:
-      description: TODO
-    full_data:
-      description: TODO
-    partial_data:
-      description: TODO
-    trips_using_vehicle_uics:
-      description: TODO
-    trips_using_only_vehicle_uics:
-      description: TODO
-    service_class:
-      description: TODO
-    capacity_for_all_sections:
-      description: TODO
 PaxMonMissingVehicleInfo:
   description: TODO
   fields:
@@ -1635,17 +1583,6 @@ PaxMonMissingVehicleInfo:
     type_code:
       description: TODO
     count:
-      description: TODO
-PaxMonCapacityStatusResponse:
-  description: TODO
-  fields:
-    all_trips:
-      description: TODO
-    missing_vehicle_infos:
-      description: TODO
-    uics_not_found:
-      description: TODO
-    by_category:
       description: TODO
 PaxMonMetricsRequest:
   description: TODO
@@ -1686,4 +1623,67 @@ PaxMonTripCapacityStatus:
     has_capacity_for_some_sections:
       description: TODO
     worst_source:
+      description: TODO
+PaxMonDetailedCapacityStatusRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    filter_by_time:
+      description: TODO
+    filter_interval:
+      description: TODO
+    include_missing_vehicle_infos:
+      description: TODO
+    include_uics_not_found:
+      description: TODO
+PaxMonDetailedTripCapacityStats:
+  description: TODO
+  fields:
+    category:
+      description: TODO
+    service_class:
+      description: TODO
+    tracked:
+      description: TODO
+    full_data:
+      description: TODO
+    partial_data:
+      description: TODO
+    capacity_for_all_sections:
+      description: TODO
+    trip_formation_data_found:
+      description: TODO
+    no_formation_data_at_all:
+      description: TODO
+    no_formation_data_some_sections_some_merged:
+      description: TODO
+    no_formation_data_some_sections_all_merged:
+      description: TODO
+    no_vehicles_found_at_all:
+      description: TODO
+    no_vehicles_found_some_sections:
+      description: TODO
+    some_vehicles_not_found_some_sections:
+      description: TODO
+    trips_using_vehicle_uics:
+      description: TODO
+    trips_using_only_vehicle_uics:
+      description: TODO
+    trips_using_vehicle_groups:
+      description: TODO
+    trips_using_baureihe:
+      description: TODO
+    trips_using_type_code:
+      description: TODO
+PaxMonDetailedCapacityStatusResponse:
+  description: TODO
+  fields:
+    all_trips:
+      description: TODO
+    by_category:
+      description: TODO
+    missing_vehicle_infos:
+      description: TODO
+    uics_not_found:
       description: TODO

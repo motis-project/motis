@@ -455,8 +455,8 @@
     type: motis.paxmon.PaxMonGetUniversesResponse
     description: A list of paxmon universes
 
-/paxmon/capacity_status:
-  summary: Capacity status information
+/paxmon/detailed_capacity_status:
+  summary: Detailed capacity status information
   description: >
     Returns information about the available capacity information
     for tracked trips for debugging purposes.
@@ -468,9 +468,9 @@
     information for all sections for all trips is looked up.
   tags:
     - rsl
-  input: motis.paxmon.PaxMonCapacityStatusRequest
+  input: motis.paxmon.PaxMonDetailedCapacityStatusRequest
   output:
-    type: motis.paxmon.PaxMonCapacityStatusResponse
+    type: motis.paxmon.PaxMonDetailedCapacityStatusResponse
     description: Information about capacity data
 
 /paxmon/add_groups:

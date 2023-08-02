@@ -35,11 +35,11 @@ import {
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
-  PaxMonCapacityStatusRequest,
-  PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
+  PaxMonDetailedCapacityStatusRequest,
+  PaxMonDetailedCapacityStatusResponse,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
@@ -387,8 +387,8 @@ export type MsgContent =
   | RISStatusResponse
   | RtMetricsRequest
   | RtMetricsResponse
-  | PaxMonCapacityStatusRequest
-  | PaxMonCapacityStatusResponse
+  | PaxMonDetailedCapacityStatusRequest
+  | PaxMonDetailedCapacityStatusResponse
   | PaxMonMetricsRequest
   | PaxMonMetricsResponse
   | PaxForecastMetricsRequest
@@ -471,8 +471,8 @@ export type MsgContentType =
   | "RISStatusResponse"
   | "RtMetricsRequest"
   | "RtMetricsResponse"
-  | "PaxMonCapacityStatusRequest"
-  | "PaxMonCapacityStatusResponse"
+  | "PaxMonDetailedCapacityStatusRequest"
+  | "PaxMonDetailedCapacityStatusResponse"
   | "PaxMonMetricsRequest"
   | "PaxMonMetricsResponse"
   | "PaxForecastMetricsRequest"
