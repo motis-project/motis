@@ -941,6 +941,41 @@ export interface PaxMonGetTripCapacityResponse {
   vehicle_group_capacity_map_size: number;
 }
 
+// paxmon/PaxMonCapacityStatusRequest.fbs
+export interface PaxMonCapacityStatusRequest {
+  universe: number;
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCapacityStats {
+  tracked: number;
+  trip_formation: number;
+  capacity_for_all_sections: number;
+  capacity_for_some_sections: number;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCategoryCapacityStats {
+  category: string; // key
+  service_class: number;
+  stats: PaxMonCapacityStats;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonProviderCapacityStats {
+  provider: string; // key
+  stats: PaxMonCapacityStats;
+  by_category: PaxMonCategoryCapacityStats[];
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCapacityStatusResponse {
+  all_trips: PaxMonCapacityStats;
+  by_provider: PaxMonProviderCapacityStats[];
+}
+
 // paxmon/PaxMonDetailedCapacityStatusRequest.fbs
 export interface PaxMonDetailedCapacityStatusRequest {
   universe: number;

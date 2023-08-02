@@ -1687,3 +1687,48 @@ PaxMonDetailedCapacityStatusResponse:
       description: TODO
     uics_not_found:
       description: TODO
+PaxMonCapacityStatusRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    filter_by_time:
+      description: TODO
+    filter_interval:
+      description: TODO
+PaxMonCapacityStats:
+  description: TODO
+  fields:
+    tracked:
+      description: TODO
+    trip_formation:
+      description: TODO
+    capacity_for_all_sections:
+      description: TODO
+    capacity_for_some_sections:
+      description: TODO
+PaxMonCategoryCapacityStats:
+  description: TODO
+  fields:
+    category:
+      description: TODO
+    service_class:
+      description: TODO
+    stats:
+      description: TODO
+PaxMonProviderCapacityStats:
+  description: TODO
+  fields:
+    provider:
+      description: TODO
+    stats:
+      description: TODO
+    by_category:
+      description: TODO
+PaxMonCapacityStatusResponse:
+  description: TODO
+  fields:
+    all_trips:
+      description: TODO
+    by_provider:
+      description: TODO
