@@ -1,7 +1,7 @@
 import { ArrowDownTrayIcon } from "@heroicons/react/20/solid";
 import { useQuery } from "@tanstack/react-query";
 import { add, getUnixTime } from "date-fns";
-import { useAtom } from "jotai/index";
+import { useAtom } from "jotai";
 import React, { ReactElement, useState } from "react";
 
 import {
@@ -12,7 +12,6 @@ import {
 
 import { ServiceClass } from "@/api/constants";
 import { getApiEndpoint } from "@/api/endpoint";
-import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import {
   queryKeys,
   sendPaxMonDetailedCapacityStatusRequest,
@@ -23,21 +22,22 @@ import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import { formatFileNameTime } from "@/util/dateFormat";
-import { getScheduleRange } from "@/util/scheduleRange";
 
-import DatePicker from "@/components/inputs/DatePicker";
 import ServiceClassFilter from "@/components/inputs/ServiceClassFilter";
 import Baureihe from "@/components/util/Baureihe";
 
-function DetailedCapacityStatus(): ReactElement {
+export interface DetailedCapacityStatusProps {
+  selectedDate: Date | undefined | null;
+}
+
+function DetailedCapacityStatus({
+  selectedDate,
+}: DetailedCapacityStatusProps): ReactElement {
   const [universe] = useAtom(universeAtom);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [serviceClassFilter, setServiceClassFilter] = useState([
     ServiceClass.ICE,
     ServiceClass.IC,
   ]);
-
-  const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
   const request: PaxMonDetailedCapacityStatusRequest = {
     universe,
@@ -58,26 +58,9 @@ function DetailedCapacityStatus(): ReactElement {
     },
   );
 
-  const scheduleRange = getScheduleRange(scheduleInfo);
-  if (selectedDate === undefined && scheduleInfo) {
-    setSelectedDate(scheduleRange.closestDate);
-  }
-
   return (
     <div className="py-3">
-      <h2 className="text-lg font-semibold">Kapazitätsdaten</h2>
       <div className="flex pb-2 gap-1">
-        <div>
-          <label>
-            <span className="text-sm">Datum</span>
-            <DatePicker
-              value={selectedDate}
-              onChange={setSelectedDate}
-              min={scheduleRange.firstDay}
-              max={scheduleRange.lastDay}
-            />
-          </label>
-        </div>
         <div className="flex flex-col justify-end">
           <ServiceClassFilter
             selectedServiceClasses={serviceClassFilter}

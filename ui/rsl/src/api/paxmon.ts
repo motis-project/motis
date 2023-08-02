@@ -7,6 +7,8 @@ import {
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
+  PaxMonCapacityStatusRequest,
+  PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
@@ -324,6 +326,18 @@ export function usePaxMonGetTripCapacity(
   );
 }
 
+export async function sendPaxMonCapacityStatusRequest(
+  content: PaxMonCapacityStatusRequest,
+): Promise<PaxMonCapacityStatusResponse> {
+  const msg = await sendRequest(
+    "/paxmon/capacity_status",
+    "PaxMonCapacityStatusRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonCapacityStatusResponse");
+  return msg.content as PaxMonCapacityStatusResponse;
+}
+
 export async function sendPaxMonDetailedCapacityStatusRequest(
   content: PaxMonDetailedCapacityStatusRequest,
 ): Promise<PaxMonDetailedCapacityStatusResponse> {
@@ -364,6 +378,8 @@ export const queryKeys = {
     [...queryKeys.all, "debug_graph", req] as const,
   tripCapacity: (req: PaxMonGetTripCapacityRequest) =>
     [...queryKeys.all, "trip_capacity", req] as const,
+  capacityStatus: (req: PaxMonCapacityStatusRequest) =>
+    [...queryKeys.all, "capacity_status", req] as const,
   detailedCapacityStatus: (req: PaxMonDetailedCapacityStatusRequest) =>
     [...queryKeys.all, "detailed_capacity_status", req] as const,
 };
