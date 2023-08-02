@@ -14,8 +14,15 @@ table PaxMonCategoryCapacityStats {
   stats: PaxMonCapacityStats;
 }
 
+table PaxMonProviderInfo {
+  short_name: string;
+  long_name: string;
+  full_name: string;
+}
+
 table PaxMonProviderCapacityStats {
   provider: string (key);
+  provider_info: PaxMonProviderInfo;
 
   stats: PaxMonCapacityStats;
   by_category: [PaxMonCategoryCapacityStats];

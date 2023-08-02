@@ -964,8 +964,16 @@ export interface PaxMonCategoryCapacityStats {
 }
 
 // paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonProviderInfo {
+  short_name: string;
+  long_name: string;
+  full_name: string;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
 export interface PaxMonProviderCapacityStats {
   provider: string; // key
+  provider_info: PaxMonProviderInfo;
   stats: PaxMonCapacityStats;
   by_category: PaxMonCategoryCapacityStats[];
 }

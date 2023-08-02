@@ -69,10 +69,20 @@ struct provider_stats {
                                                stats.to_fbs(fbb));
     });
     return CreatePaxMonProviderCapacityStats(
-        fbb, fbb.CreateString(provider_name), stats_.to_fbs(fbb),
-        fbb.CreateVectorOfSortedTables(&vec));
+        fbb, fbb.CreateString(provider_name),
+        CreatePaxMonProviderInfo(
+            fbb,
+            fbb.CreateString(provider_ != nullptr
+                                 ? provider_->short_name_.view()
+                                 : std::string_view{}),
+            fbb.CreateString(provider_ != nullptr ? provider_->long_name_.view()
+                                                  : std::string_view{}),
+            fbb.CreateString(provider_ != nullptr ? provider_->full_name_.view()
+                                                  : std::string_view{})),
+        stats_.to_fbs(fbb), fbb.CreateVectorOfSortedTables(&vec));
   }
 
+  provider const* provider_{};
   capacity_stats stats_{};
   mcd::hash_map<std::string_view, capacity_stats> by_category_;
 };
@@ -117,12 +127,15 @@ msg_ptr capacity_status(paxmon_data& data, msg_ptr const& msg) {
     auto const category_name =
         sched.categories_.at(con_info->family_)->name_.view();
     auto const provider_name = con_info->provider_ != nullptr
-                                   ? con_info->provider_->long_name_.view()
+                                   ? con_info->provider_->full_name_.view()
                                    : std::string_view{};
 
     all_trips.add(tcs);
 
     auto& provider = by_provider[provider_name];
+    if (provider.provider_ == nullptr && con_info->provider_ != nullptr) {
+      provider.provider_ = con_info->provider_;
+    }
     provider.stats_.add(tcs);
     provider.by_category_[category_name].add(tcs);
   }

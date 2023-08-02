@@ -293,7 +293,7 @@ msg_ptr detailed_capacity_status(paxmon_data& data, msg_ptr const& msg) {
                                               trp->id_.secondary_.target_time_);
       auto const provider =
           con_info != nullptr && con_info->provider_ != nullptr
-              ? con_info->provider_->long_name_.view()
+              ? con_info->provider_->full_name_.view()
               : std::string_view{};
 
       csv << category << train_nr << start_st->eva_nr_.view()
