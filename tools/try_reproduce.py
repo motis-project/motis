@@ -10,19 +10,20 @@ import sys
 current_dir = os.getcwd()
 
 binaries = [
-    f"{current_dir}/motis-0.9.2/motis",
+    f"{current_dir}/motis",
     f"{current_dir}/motis"
 ]
-routers = ["nigiri-0.9.2", "nigiri-perf-trlb"]
-queries = ["nigiri", "nigiri"]
+routers = ["routing", "nigiri"]
+queries = ["routing", "nigiri"]
+options = [["--modules", "routing"], ["--dataset.no_schedule", "true"]]
 
 
 def query_f(id, router):
-    return f"{id}_q_fwd_{router}.json"
+    return f"{id}_q_{router}.json"
 
 
 def result_f(id, router):
-    return f"{id}_r_fwd_{router}.json"
+    return f"{id}_r_{router}.json"
 
 
 def reproduce(filepath, verbose=False):
@@ -92,6 +93,7 @@ def reproduce(filepath, verbose=False):
             f"--batch_output_file={result_f(id, routers[0])}",
             "--num_threads", "1"
         ]
+        run_routing.extend(options[0])
         if verbose:
             print("###", "cd", reproduce_dir, "&&", " ".join(run_routing))
             subprocess.run(run_routing, check=True, cwd=reproduce_dir)
@@ -109,6 +111,7 @@ def reproduce(filepath, verbose=False):
             f"--batch_output_file={result_f(id, routers[1])}",
             "--num_threads", "1"
         ]
+        run_nigiri.extend(options[1])
         if verbose:
             print("###", "cd", reproduce_dir, "&&", " ".join(run_nigiri))
             subprocess.run(run_nigiri, check=True, cwd=reproduce_dir)
@@ -180,6 +183,7 @@ def reproduce(filepath, verbose=False):
                 "--mode", "init",
                 "--init", f"./check_{result_f(id, routers[0])}"
             ]
+            run_check.extend(options[0])
             print("###", " ".join(run_check))
             subprocess.run(run_check, check=False, cwd=reproduce_dir)
 
@@ -190,6 +194,7 @@ def reproduce(filepath, verbose=False):
                 "--mode", "init",
                 "--init", f"./check_{result_f(id, routers[1])}"
             ]
+            run_check.extend(options[0])
             print("###", " ".join(run_check))
             subprocess.run(run_check, check=False, cwd=reproduce_dir)
 

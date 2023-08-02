@@ -51,9 +51,7 @@ mm::msg_ptr to_routing_response(
   auto entries = std::vector<fbs::Offset<StatisticsEntry>>{
       CreateStatisticsEntry(fbb, fbb.CreateString("routing"), routing_time),
       CreateStatisticsEntry(fbb, fbb.CreateString("tt_lb"),
-                            search_stats.travel_time_lb_time_),
-      CreateStatisticsEntry(fbb, fbb.CreateString("ic_lb"),
-                            search_stats.travel_time_lb_time_),
+                            search_stats.lb_time_),
       CreateStatisticsEntry(fbb, fbb.CreateString("fastest_direct"),
                             search_stats.fastest_direct_),
       CreateStatisticsEntry(fbb, fbb.CreateString("footpaths_visited"),
