@@ -482,10 +482,10 @@ private:
       lc.valid_ = 1U;
       lc.d_time_ = sec.dep_.schedule_time_;
       lc.a_time_ = sec.arr_.schedule_time_;
-      // TODO(pablo): dir_/provider_; reuse existing
-      auto const con_info =
-          get_con_info(sched_, con_infos_, ts->category()->code()->str(),
-                       ts->line_id()->str(), ts->train_nr());
+      auto const con_info = get_con_info_with_provider(
+          sched_, con_infos_, ts->category()->code()->view(),
+          ts->line_id()->view(), ts->train_nr(), ts->provider()->code()->view(),
+          ts->provider()->name()->view());
       // NOTE: connections are always created with track=schedule_track first.
       // if a different current_track is supplied, it will be updated in
       // update_event (so that both schedule + current track information is
