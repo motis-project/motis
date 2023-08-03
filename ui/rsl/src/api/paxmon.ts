@@ -39,6 +39,8 @@ import {
   PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
+  PaxMonMetricsRequest,
+  PaxMonMetricsResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
 } from "@/api/protocol/motis/paxmon";
@@ -350,6 +352,18 @@ export async function sendPaxMonDetailedCapacityStatusRequest(
   return msg.content as PaxMonDetailedCapacityStatusResponse;
 }
 
+export async function sendPaxMonMetricsRequest(
+  content: PaxMonMetricsRequest,
+): Promise<PaxMonMetricsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/metrics",
+    "PaxMonMetricsRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonMetricsResponse");
+  return msg.content as PaxMonMetricsResponse;
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -382,4 +396,6 @@ export const queryKeys = {
     [...queryKeys.all, "capacity_status", req] as const,
   detailedCapacityStatus: (req: PaxMonDetailedCapacityStatusRequest) =>
     [...queryKeys.all, "detailed_capacity_status", req] as const,
+  metrics: (req: PaxMonMetricsRequest) =>
+    [...queryKeys.all, "metrics", req] as const,
 };

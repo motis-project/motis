@@ -9,20 +9,31 @@ import { BarStack } from "@visx/shape";
 import { range } from "d3-array";
 import { ReactElement } from "react";
 
-import { RtMetrics } from "@/api/protocol/motis/rt";
-
 import { formatTime } from "@/util/dateFormat";
 
-export type MetricsKeyBase = keyof Omit<RtMetrics, "start_time" | "entries">;
+export interface MetricsTypeBase {
+  start_time: number;
+  entries: number;
+}
+
+export type MetricsKeyBase<MetricsType> = keyof Omit<
+  MetricsType,
+  "start_time" | "entries"
+> &
+  string;
 
 export interface MetricInfo {
   label: string;
   color: string;
 }
 
-export interface RtMetricsChartProps<MetricsKey extends MetricsKeyBase> {
-  metricsData: RtMetrics;
-  metricsInfo: Record<MetricsKey, MetricInfo>;
+export interface MetricsChartProps<
+  MetricsType extends MetricsTypeBase,
+  MetricsKey extends MetricsKeyBase<MetricsType>,
+> {
+  metricsData: MetricsType;
+  metricsInfo: Partial<Record<MetricsKey, MetricInfo>>;
+  // metricsInfo: { [K in MetricsKey]?: MetricInfo };
 
   width: number;
   height: number;
@@ -39,7 +50,10 @@ const getIndex = (i: number) => i;
 
 const yAxisWidth = 50;
 
-function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
+function MetricsChart<
+  MetricsType extends MetricsTypeBase,
+  MetricsKey extends MetricsKeyBase<MetricsType>,
+>({
   metricsData,
   metricsInfo,
   width,
@@ -47,7 +61,7 @@ function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
   margin = defaultMargin,
   axisColor = defaultAxisColor,
   backgroundColor = defaultBackgroundColor,
-}: RtMetricsChartProps<MetricsKey>) {
+}: MetricsChartProps<MetricsType, MetricsKey>) {
   margin ??= defaultMargin;
 
   const innerWidth = width - margin.left - margin.right;
@@ -55,17 +69,18 @@ function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
   const xMax = innerWidth - yAxisWidth;
   const yMax = innerHeight - margin.top;
 
-  if (xMax < 50 || yMax < 50) return null;
-
   const keys = Object.keys(metricsInfo) as MetricsKey[];
-  const indices = metricsData.messages.map((_, i) => i);
+
+  if (xMax < 50 || yMax < 50 || keys.length === 0) return null;
+
+  const indices = (metricsData[keys[0]] as number[]).map((_, i) => i);
 
   const maxNumberOfMessagesPerMinute = indices.reduce(
     (max, idx) =>
       Math.max(
         max,
         keys
-          .map((key) => metricsData[key][idx])
+          .map((key) => (metricsData[key] as number[])[idx])
           .reduce((sum, val) => sum + val, 0),
       ),
     0,
@@ -82,7 +97,7 @@ function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
   });
   const colorScale = scaleOrdinal<MetricsKey, string>({
     domain: keys,
-    range: Object.values<MetricInfo>(metricsInfo).map((m) => m.color),
+    range: Object.values(metricsInfo).map((m) => (m as MetricInfo).color),
   });
 
   const formatIndexDate = (index: number) =>
@@ -127,7 +142,7 @@ function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
           <BarStack<number, MetricsKey>
             data={indices}
             keys={keys}
-            value={(idx, key) => metricsData[key][idx]}
+            value={(idx, key) => (metricsData[key] as number[])[idx]}
             x={getIndex}
             xScale={timeScale}
             yScale={countScale}
@@ -190,26 +205,29 @@ function RtMetricsChart<MetricsKey extends MetricsKeyBase>({
           scale={colorScale}
           direction="row"
           labelMargin="0 15px 0 0"
-          labelFormat={(k) => metricsInfo[k].label}
+          labelFormat={(k) => metricsInfo[k]?.label ?? ""}
         />
       </div>
     </div>
   );
 }
 
-export type ResponsiveRtMetricsChartProps<MetricsKey extends MetricsKeyBase> =
-  Omit<RtMetricsChartProps<MetricsKey>, "width" | "height">;
+export type ResponsiveMetricsChartProps<
+  MetricsType extends MetricsTypeBase,
+  MetricsKey extends MetricsKeyBase<MetricsType>,
+> = Omit<MetricsChartProps<MetricsType, MetricsKey>, "width" | "height">;
 
-function ResponsiveRtMetricsChart<MetricsKey extends MetricsKeyBase>(
-  props: ResponsiveRtMetricsChartProps<MetricsKey>,
-): ReactElement {
+function ResponsiveMetricsChart<
+  MetricsType extends MetricsTypeBase,
+  MetricsKey extends MetricsKeyBase<MetricsType>,
+>(props: ResponsiveMetricsChartProps<MetricsType, MetricsKey>): ReactElement {
   return (
     <ParentSize>
       {({ width, height }) => (
-        <RtMetricsChart width={width} height={height} {...props} />
+        <MetricsChart width={width} height={height} {...props} />
       )}
     </ParentSize>
   );
 }
 
-export default ResponsiveRtMetricsChart;
+export default ResponsiveMetricsChart;

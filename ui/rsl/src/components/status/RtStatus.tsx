@@ -4,7 +4,7 @@ import { RtMetrics } from "@/api/protocol/motis/rt";
 
 import { useRtMetricsRequest } from "@/api/rt";
 
-import RtMetricsChart from "@/components/status/RtMetricsChart";
+import MetricsChart from "@/components/status/MetricsChart";
 import {
   Select,
   SelectContent,
@@ -66,7 +66,7 @@ function RtMetricsDisplay({ metrics }: RtMetricsDisplayProps): ReactElement {
 
   return (
     <div className="h-72">
-      <RtMetricsChart
+      <MetricsChart
         metricsData={metrics}
         metricsInfo={{
           full_trip_schedule_messages: {
@@ -92,7 +92,7 @@ function FormationMetricsDisplay({
 
   return (
     <div className="h-72">
-      <RtMetricsChart
+      <MetricsChart
         metricsData={metrics}
         metricsInfo={{
           formation_schedule_messages: {
