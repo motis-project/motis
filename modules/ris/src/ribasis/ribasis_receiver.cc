@@ -24,6 +24,7 @@ receiver::receiver(rabbitmq_config config, source_status& status,
       queue_id_{get_queue_id(config_.login_)},
       status_{status} {
   status_.enabled_ = true;
+  status_.update_interval_ = config.update_interval_;
   connection_.run([this](amqp::msg const& m) { on_msg(m); });
 }
 

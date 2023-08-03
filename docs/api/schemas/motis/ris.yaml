@@ -381,6 +381,8 @@ RISSourceStatus:
       description: Total number of updates since the last MOTIS restart
     total_messages:
       description: Total number of messages since the last MOTIS restart
+    update_interval:
+      description: Interval between scheduled updates in seconds
 RISStatusResponse:
   description: |
     Contains information about real-time feeds.

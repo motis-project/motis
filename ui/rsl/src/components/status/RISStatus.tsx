@@ -112,12 +112,16 @@ function SourceStatus({
       );
     }
   }
+
+  const maxDelay =
+    status.update_interval !== 0 ? status.update_interval * 2 : 120;
+
   return (
     <tr>
       <td className="font-medium">{name}</td>
-      <td>{formatTS(status.last_message_time, checkDelay)}</td>
+      <td>{formatTS(status.last_message_time, checkDelay, maxDelay)}</td>
       <td>
-        {formatTS(status.last_update_time, checkDelay)} (
+        {formatTS(status.last_update_time, checkDelay, maxDelay)} (
         {formatNumber(status.last_update_messages)} Nachrichten)
       </td>
       <td>{formatNumber(status.total_messages)}</td>

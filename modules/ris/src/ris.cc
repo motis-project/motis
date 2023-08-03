@@ -452,6 +452,7 @@ struct ris::impl {
         begin(inputs_), end(inputs_),
         [](auto&& in) { return in.source_type() == input::source_type::url; });
     gtfs_rt_status_.enabled_ = has_urls;
+    gtfs_rt_status_.update_interval_ = config_.gtfs_rt_update_interval_;
     if (has_urls) {
       d.register_timer(
           "RIS GTFS-RT Update",
@@ -1147,9 +1148,10 @@ struct ris::impl {
 
     auto const status_to_fbs = [&](source_status const& status) {
       return CreateRISSourceStatus(
-          mc, status.enabled_, status.last_update_time_,
-          status.last_update_messages_, status.last_message_time_,
-          status.total_updates_, status.total_messages_);
+          mc, status.enabled_, status.update_interval_,
+          status.last_update_time_, status.last_update_messages_,
+          status.last_message_time_, status.total_updates_,
+          status.total_messages_);
     };
 
     mc.create_and_finish(

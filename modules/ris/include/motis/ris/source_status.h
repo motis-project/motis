@@ -9,6 +9,7 @@ namespace motis::ris {
 
 struct source_status {
   bool enabled_{};
+  std::uint32_t update_interval_{};  // seconds
 
   void add_update(std::uint64_t const messages,
                   unixtime const last_message_time) {

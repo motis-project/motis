@@ -13,6 +13,7 @@ export interface RISForwardTimeRequest {
 // ris/RISStatusResponse.fbs
 export interface RISSourceStatus {
   enabled: boolean;
+  update_interval: number;
   last_update_time: number;
   last_update_messages: number;
   last_message_time: number;

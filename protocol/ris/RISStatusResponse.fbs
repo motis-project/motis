@@ -2,6 +2,7 @@ namespace motis.ris;
 
 table RISSourceStatus {
   enabled: bool;
+  update_interval: uint; // seconds
   last_update_time: ulong; // unix timestamp (last time data was received)
   last_update_messages: ulong; // number of messages in last update/tick
   last_message_time: ulong; // unix timestamp (timestamp of latest message)
