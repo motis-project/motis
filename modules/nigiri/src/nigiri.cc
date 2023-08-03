@@ -17,6 +17,7 @@
 #include "nigiri/loader/gtfs/loader.h"
 #include "nigiri/loader/hrd/loader.h"
 #include "nigiri/loader/init_finish.h"
+#include "nigiri/routing/hmetis.h"
 #include "nigiri/routing/reach.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
@@ -402,6 +403,8 @@ void nigiri::import(mm::import_dispatcher& reg) {
             n::loader::finalize(**impl_->tt_, adjust_footpaths_,
                                 merge_duplicates_);
 
+            n::routing::compute_arc_flags(**impl_->tt_);
+
             if (no_cache_) {
               loaded = true;
               break;
@@ -475,29 +478,6 @@ void nigiri::import(mm::import_dispatcher& reg) {
           LOG(logging::info)
               << "relabeled " << connecting_routes.size()
               << " connecting routes (total=" << tt.n_routes() << ")";
-
-          //          auto const connecting_routes =
-          //              n::routing::get_big_station_connection_routes(tt);
-          //          LOG(logging::info) << "connecting routes:\n";
-          //          for (auto const idx : connecting_routes) {
-          //            auto const t =
-          //            tt.route_transport_ranges_[n::route_idx_t{idx}][0]; for
-          //            (auto const& stp :
-          //            tt.route_location_seq_[n::route_idx_t{idx}]) {
-          //              auto const l = n::stop{stp}.location_idx();
-          //              auto const p = tt.locations_.parents_[l];
-          //              if (p == n::location_idx_t::invalid()) {
-          //                LOG(logging::info) << tt.locations_.names_[l].view()
-          //                << "  "
-          //                                   << tt.transport_name(t);
-          //              } else {
-          //                LOG(logging::info) << tt.locations_.names_[p].view()
-          //                << "  "
-          //                                   << tt.transport_name(t);
-          //              }
-          //            }
-          //          }
-          //          LOG(logging::info) << "---\n";
         }
 
         if (lookup_) {
