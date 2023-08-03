@@ -1,26 +1,57 @@
-import { ReactElement } from "react";
+import { ReactElement, useState } from "react";
 
 import { RtMetrics } from "@/api/protocol/motis/rt";
 
 import { useRtMetricsRequest } from "@/api/rt";
 
 import RtMetricsChart from "@/components/status/RtMetricsChart";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type MetricsGrouping = "by_msg_timestamp" | "by_processing_time";
 
 function RtStatus(): ReactElement {
-  // TODO: if no rt messages have been processed, the api will return an error (rt::error::schedule_not_found)
-  const { data } = useRtMetricsRequest();
+  const [grouping, setGrouping] = useState<MetricsGrouping>("by_msg_timestamp");
+  const { data, isError } = useRtMetricsRequest();
+
+  if (isError) {
+    return <div>Keine Echtzeitdaten vorhanden.</div>;
+  }
 
   return (
-    <>
+    <div>
+      <div className="flex justify-end">
+        <Select
+          value={grouping}
+          onValueChange={(v) => setGrouping(v as MetricsGrouping)}
+        >
+          <SelectTrigger className="w-[300px]">
+            <SelectValue placeholder="Statistiken gruppieren nach..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="by_msg_timestamp">
+              Nach Nachrichtenzeitstempel
+            </SelectItem>
+            <SelectItem value="by_processing_time">
+              Nach Verarbeitungszeit
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="py-3">
         <h2 className="text-lg font-semibold">Echtzeitmeldungen</h2>
-        <RtMetricsDisplay metrics={data?.by_msg_timestamp} />
+        <RtMetricsDisplay metrics={data ? data[grouping] : undefined} />
       </div>
       <div className="py-3">
         <h2 className="text-lg font-semibold">Wagenreihungsmeldungen</h2>
-        <FormationMetricsDisplay metrics={data?.by_msg_timestamp} />
+        <FormationMetricsDisplay metrics={data ? data[grouping] : undefined} />
       </div>
-    </>
+    </div>
   );
 }
 
