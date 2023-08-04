@@ -56,7 +56,6 @@ struct import_state {
   mm::named<cista::hash_t, MOTIS_NAME("ppr_graph_hash")> ppr_graph_hash_;
   mm::named<std::size_t, MOTIS_NAME("ppr_graph_size")> ppr_graph_size_;
   mm::named<cista::hash_t, MOTIS_NAME("ppr_profiles_hash")> ppr_profiles_hash_;
-  mm::named<int, MOTIS_NAME("max_walk_duration")> max_walk_duration_;
 };
 
 struct footpaths::impl {
@@ -114,9 +113,13 @@ struct footpaths::impl {
 
   nigiri::timetable& tt_;
 
+  // initialize footpaths limits
+  int max_walk_duration_{10};
+
 private:
   database db_;
 
+  // initialize matching limits
   int match_distance_min_{0};
   int match_distance_max_{400};
   int match_distance_step_{40};
@@ -128,10 +131,7 @@ private:
   std::unique_ptr<platforms_index> pfs_idx_;
 };
 
-footpaths::footpaths() : module("Footpaths", "footpaths") {
-  param(max_walk_duration_, "max_walk_duration",
-        "Maximum walking time per path in minutes.");
-}
+footpaths::footpaths() : module("Footpaths", "footpaths") {}
 
 footpaths::~footpaths() = default;
 
@@ -165,8 +165,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                          data_path(ppr_event->graph_path()->str()),
                          ppr_event->graph_hash(),
                          ppr_event->graph_size(),
-                         ppr_event->profiles_hash(),
-                         max_walk_duration_};
+                         ppr_event->profiles_hash()};
 
         auto progress_tracker = utl::get_active_progress_tracker();
 
@@ -197,7 +196,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         // REMARK: there is no need to use the default profile
         for (auto& p : ppr_profiles_) {
           // convert walk_duration from minutes to seconds
-          p.second.profile_.duration_limit_ = max_walk_duration_ * 60;
+          p.second.profile_.duration_limit_ = impl_->max_walk_duration_ * 60;
 
           // build profile_name to idx map in nigiri::tt
           impl_->tt_.locations_.profile_idx_.insert(

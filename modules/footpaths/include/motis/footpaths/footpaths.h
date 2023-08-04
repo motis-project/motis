@@ -26,16 +26,7 @@ private:
   std::filesystem::path module_data_dir() const;
   std::string db_file() const;
 
-  // initialize footpaths limits
-  int max_walk_duration_{10};
-
-  // initialize matching limits
-  int match_distance_min_{0};
-  int match_distance_max_{400};
-  int match_distance_step_{40};
-  int match_bus_stop_max_distance_{120};
-
-  // initialize ppr routing data
+    // initialize ppr routing data
   std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};
   std::size_t area_rtree_max_size_{1024UL * 1024 * 1024};
   bool lock_rtrees_{false};
