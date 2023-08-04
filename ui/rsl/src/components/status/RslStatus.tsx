@@ -18,6 +18,7 @@ import {
   queryKeys as paxmonQueryKeys,
   sendPaxMonMetricsRequest,
 } from "@/api/paxmon";
+import { useRISStatusRequest } from "@/api/ris";
 
 import MetricsChart from "@/components/status/MetricsChart";
 import {
@@ -104,6 +105,12 @@ function RslStatus(): ReactElement {
     },
   );
 
+  const { data: risStatus } = useRISStatusRequest();
+  const hideUntil =
+    grouping === "by_processing_time"
+      ? risStatus?.init_status?.last_update_time ?? 0
+      : 0;
+
   return (
     <div className="py-3">
       <h2 className="text-lg font-semibold">RSL</h2>
@@ -151,6 +158,7 @@ function RslStatus(): ReactElement {
           paxforecastData={paxforecastData}
           grouping={grouping}
           option={selectedMetric}
+          hideUntil={hideUntil}
         />
       </div>
     </div>
@@ -162,6 +170,7 @@ interface RslMetricsDisplayProps {
   paxforecastData: PaxForecastMetricsResponse | undefined;
   grouping: MetricsGrouping;
   option: MetricsOption;
+  hideUntil: number;
 }
 
 function RslMetricsDisplay({
@@ -169,6 +178,7 @@ function RslMetricsDisplay({
   paxforecastData,
   grouping,
   option,
+  hideUntil,
 }: RslMetricsDisplayProps): ReactElement {
   const data = option.api === "paxmon" ? paxmonData : paxforecastData;
 
@@ -188,6 +198,7 @@ function RslMetricsDisplay({
             color: "#1e40af",
           },
         }}
+        hideUntil={hideUntil}
       />
     </div>
   );

@@ -33,7 +33,7 @@ export interface MetricsChartProps<
 > {
   metricsData: MetricsType;
   metricsInfo: Partial<Record<MetricsKey, MetricInfo>>;
-  // metricsInfo: { [K in MetricsKey]?: MetricInfo };
+  hideUntil?: number;
 
   width: number;
   height: number;
@@ -56,6 +56,7 @@ function MetricsChart<
 >({
   metricsData,
   metricsInfo,
+  hideUntil = 0,
   width,
   height,
   margin = defaultMargin,
@@ -75,12 +76,20 @@ function MetricsChart<
 
   const indices = (metricsData[keys[0]] as number[]).map((_, i) => i);
 
+  const hideUntilIndex =
+    hideUntil >= metricsData.start_time
+      ? (hideUntil - metricsData.start_time) / 60
+      : -1;
+
+  const getValue = (idx: number, key: MetricsKey) =>
+    idx > hideUntilIndex ? (metricsData[key] as number[])[idx] : 0;
+
   const maxNumberOfMessagesPerMinute = indices.reduce(
     (max, idx) =>
       Math.max(
         max,
         keys
-          .map((key) => (metricsData[key] as number[])[idx])
+          .map((key) => getValue(idx, key))
           .reduce((sum, val) => sum + val, 0),
       ),
     0,
@@ -142,7 +151,7 @@ function MetricsChart<
           <BarStack<number, MetricsKey>
             data={indices}
             keys={keys}
-            value={(idx, key) => (metricsData[key] as number[])[idx]}
+            value={getValue}
             x={getIndex}
             xScale={timeScale}
             yScale={countScale}

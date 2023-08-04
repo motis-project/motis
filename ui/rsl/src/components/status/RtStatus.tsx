@@ -2,6 +2,7 @@ import { ReactElement, useState } from "react";
 
 import { RtMetrics } from "@/api/protocol/motis/rt";
 
+import { useRISStatusRequest } from "@/api/ris";
 import { useRtMetricsRequest } from "@/api/rt";
 
 import MetricsChart from "@/components/status/MetricsChart";
@@ -18,6 +19,12 @@ type MetricsGrouping = "by_msg_timestamp" | "by_processing_time";
 function RtStatus(): ReactElement {
   const [grouping, setGrouping] = useState<MetricsGrouping>("by_msg_timestamp");
   const { data, isError } = useRtMetricsRequest();
+
+  const { data: risStatus } = useRISStatusRequest();
+  const hideUntil =
+    grouping === "by_processing_time"
+      ? risStatus?.init_status?.last_update_time ?? 0
+      : 0;
 
   if (isError) {
     return <div>Keine Echtzeitdaten vorhanden.</div>;
@@ -45,11 +52,17 @@ function RtStatus(): ReactElement {
       </div>
       <div className="py-3">
         <h2 className="text-lg font-semibold">Echtzeitmeldungen</h2>
-        <RtMetricsDisplay metrics={data ? data[grouping] : undefined} />
+        <RtMetricsDisplay
+          metrics={data ? data[grouping] : undefined}
+          hideUntil={hideUntil}
+        />
       </div>
       <div className="py-3">
         <h2 className="text-lg font-semibold">Wagenreihungsmeldungen</h2>
-        <FormationMetricsDisplay metrics={data ? data[grouping] : undefined} />
+        <FormationMetricsDisplay
+          metrics={data ? data[grouping] : undefined}
+          hideUntil={hideUntil}
+        />
       </div>
     </div>
   );
@@ -57,9 +70,13 @@ function RtStatus(): ReactElement {
 
 interface RtMetricsDisplayProps {
   metrics: RtMetrics | undefined;
+  hideUntil: number;
 }
 
-function RtMetricsDisplay({ metrics }: RtMetricsDisplayProps): ReactElement {
+function RtMetricsDisplay({
+  metrics,
+  hideUntil,
+}: RtMetricsDisplayProps): ReactElement {
   if (!metrics) {
     return <div>Statistiken werden geladen...</div>;
   }
@@ -78,6 +95,7 @@ function RtMetricsDisplay({ metrics }: RtMetricsDisplayProps): ReactElement {
             color: "#c2410c",
           },
         }}
+        hideUntil={hideUntil}
       />
     </div>
   );
@@ -85,6 +103,7 @@ function RtMetricsDisplay({ metrics }: RtMetricsDisplayProps): ReactElement {
 
 function FormationMetricsDisplay({
   metrics,
+  hideUntil,
 }: RtMetricsDisplayProps): ReactElement {
   if (!metrics) {
     return <div>Statistiken werden geladen...</div>;
@@ -104,6 +123,7 @@ function FormationMetricsDisplay({
             color: "#c2410c",
           },
         }}
+        hideUntil={hideUntil}
       />
     </div>
   );
