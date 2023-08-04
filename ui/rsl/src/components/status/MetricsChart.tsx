@@ -86,12 +86,14 @@ function MetricsChart<
 
   const maxNumberOfMessagesPerMinute = indices.reduce(
     (max, idx) =>
-      Math.max(
-        max,
-        keys
-          .map((key) => getValue(idx, key))
-          .reduce((sum, val) => sum + val, 0),
-      ),
+      idx > hideUntilIndex
+        ? Math.max(
+            max,
+            keys
+              .map((key) => getValue(idx, key))
+              .reduce((sum, val) => sum + val, 0),
+          )
+        : max,
     0,
   );
 

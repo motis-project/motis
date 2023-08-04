@@ -106,10 +106,7 @@ function RslStatus(): ReactElement {
   );
 
   const { data: risStatus } = useRISStatusRequest();
-  const hideUntil =
-    grouping === "by_processing_time"
-      ? risStatus?.init_status?.last_update_time ?? 0
-      : 0;
+  const hideUntil = risStatus?.init_status?.last_update_time ?? 0;
 
   return (
     <div className="py-3">
