@@ -17,6 +17,8 @@
 
 using namespace motis::logging;
 
+namespace pprr = ppr::routing;
+
 using index_type = osmium::index::map::FlexMem<osmium::unsigned_object_id_type,
                                                osmium::Location>;
 using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
@@ -38,39 +40,38 @@ osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
 }
 
 struct platform_handler : public osmium::handler::Handler {
-  explicit platform_handler(std::vector<platform_info>& platforms,
+  explicit platform_handler(std::vector<platform>& platforms,
                             osmium::TagsFilter filter)
       : platforms_(platforms), filter_(std::move(filter)){};
 
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_platform(nigiri::osm_type::NODE, node.id(), node.location(), tags);
+      add_platform(osm_type::kNode, node.id(), node.location(), tags);
     }
   }
 
   void way(osmium::Way const& way) {
     auto const& tags = way.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_platform(nigiri::osm_type::WAY, way.id(),
-                   way.envelope().bottom_left(), tags);
+      add_platform(osm_type::kWay, way.id(), way.envelope().bottom_left(),
+                   tags);
     }
   }
 
   void area(osmium::Area const& area) {
     auto const& tags = area.tags();
     if (osmium::tags::match_any_of(tags, filter_)) {
-      add_platform(
-          area.from_way() ? nigiri::osm_type::WAY : nigiri::osm_type::RELATION,
-          area.orig_id(), calc_center(*area.cbegin<osmium::OuterRing>()), tags);
+      add_platform(area.from_way() ? osm_type::kWay : osm_type::kRelation,
+                   area.orig_id(),
+                   calc_center(*area.cbegin<osmium::OuterRing>()), tags);
     }
   }
 
-  u_int unique_platforms_{0};
+  unsigned int unique_platforms_{0};
 
 private:
-  void add_platform(nigiri::osm_type const type,
-                    osmium::object_id_type const id,
+  void add_platform(osm_type const type, osmium::object_id_type const id,
                     osmium::geom::Coordinates const& coord,
                     osmium::TagList const& tags) {
     auto names = extract_platform_names(tags);
@@ -80,16 +81,18 @@ private:
     }
 
     for (auto const& name : names) {
-      platforms_.emplace_back(name, id, type, geo::latlng{coord.y, coord.x},
-                              platform_is_bus_stop(tags));
+      platforms_.emplace_back(
+          platform{0, geo::latlng{coord.y, coord.x},
+                   platform_info{name, id, nigiri::location_idx_t::invalid(),
+                                 type, platform_is_bus_stop(tags)}});
     }
   }
 
-  std::vector<platform_info>& platforms_;
+  std::vector<platform>& platforms_;
   osmium::TagsFilter filter_;
 };
 
-std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
+std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
 
   scoped_timer const timer("Extract OSM Tracks from " + osm_file);
 
@@ -111,7 +114,7 @@ std::vector<platform_info> extract_osm_platforms(std::string const& osm_file) {
 
   index_type index;
   location_handler_type location_handler{index};
-  std::vector<platform_info> platforms;
+  std::vector<platform> platforms;
   platform_handler data_handler{platforms, filter};
 
   {
@@ -196,23 +199,39 @@ bool platform_is_bus_stop(osmium::TagList const& tags) {
           strcmp(tags.get_value_by_key("highway"), "bus_stop") == 0);
 }
 
-std::vector<platform_info*> platforms::get_valid_platforms_in_radius(
-    platform_info* platform, double radius) {
-  return utl::all(platform_index_.in_radius(platform->pos_, radius)) |
-         utl::transform(
-             [this](std::size_t i) { return get_platform_info(i); }) |
+pprr::osm_namespace to_ppr_osm_type(osm_type const& t) {
+  switch (t) {
+    case osm_type::kNode: return pprr::osm_namespace::NODE;
+    case osm_type::kWay: return pprr::osm_namespace::WAY;
+    case osm_type::kRelation: return pprr::osm_namespace::RELATION;
+    default: return pprr::osm_namespace::NODE;
+  }
+}
+
+pprr::input_location to_input_location(platform const& pf) {
+  pprr::input_location il;
+  // TODO (Carsten) OSM_ELEMENT LEVEL missing
+  il.osm_element_ = {pf.info_.osm_id_, to_ppr_osm_type(pf.info_.osm_type_)};
+  il.location_ = ::ppr::make_location(pf.loc_.lng_, pf.loc_.lat_);
+  return il;
+}
+
+std::vector<platform*> platforms_index::get_valid_platforms_in_radius(
+    platform const* pf, double const r) {
+  return utl::all(platform_index_.in_radius(pf->loc_, r)) |
+         utl::transform([this](std::size_t i) { return get_platform(i); }) |
          utl::remove_if([&](auto* target_platform) {
-           return target_platform->idx_ == nigiri::location_idx_t::invalid() ||
-                  target_platform->idx_ == platform->idx_;
+           return target_platform->info_.idx_ ==
+                      nigiri::location_idx_t::invalid() ||
+                  target_platform->info_.idx_ == pf->info_.idx_;
          }) |
          utl::vec();
 }
 
-std::vector<platform_info*> platforms::get_platforms_in_radius(
-    geo::latlng loc, double const radius) {
-  return utl::all(platform_index_.in_radius(loc, radius)) |
-         utl::transform(
-             [this](std::size_t i) { return get_platform_info(i); }) |
+std::vector<platform*> platforms_index::get_platforms_in_radius(
+    geo::latlng const loc, double const r) {
+  return utl::all(platform_index_.in_radius(loc, r)) |
+         utl::transform([this](std::size_t i) { return get_platform(i); }) |
          utl::vec();
 }
 

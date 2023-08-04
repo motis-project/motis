@@ -3,13 +3,13 @@
 #include <cmath>
 
 #include "cista/containers/vector.h"
-#include "cista/containers/vecvec.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
 
-#include "motis/footpaths/thread_pool.h"
+#include "motis/footpaths/platforms.h"
 
+#include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
@@ -37,23 +37,6 @@ inline uint16_t get_accessibility(route const& r) {
   return static_cast<uint16_t>(std::ceil(r.accessibility_));
 }
 
-osm_namespace to_ppr_osm_type(nigiri::osm_type const& t) {
-  switch (t) {
-    case nigiri::osm_type::NODE: return osm_namespace::NODE;
-    case nigiri::osm_type::WAY: return osm_namespace::WAY;
-    case nigiri::osm_type::RELATION: return osm_namespace::RELATION;
-    default: return osm_namespace::NODE;
-  }
-}
-
-input_location pi_to_il(platform_info const& pi) {
-  input_location il;
-  // TODO (Carsten) OSM_ELEMENT LEVEL missing
-  il.osm_element_ = {pi.osm_id_, to_ppr_osm_type(pi.osm_type_)};
-  il.location_ = ::ppr::make_location(pi.pos_.lng_, pi.pos_.lat_);
-  return il;
-}
-
 /**
  * Creates a routing_query from a transfer_request.
  *
@@ -64,13 +47,13 @@ routing_query make_routing_query(
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
     transfer_requests const& t_req) {
   // query: create start input_location
-  auto const& li_start = pi_to_il(*t_req.transfer_start_);
+  auto const& li_start = to_input_location(*t_req.transfer_start_);
 
   // query: create dest input_locations
   std::vector<input_location> ils_dests;
   std::transform(t_req.transfer_targets_.cbegin(),
                  t_req.transfer_targets_.cend(), std::back_inserter(ils_dests),
-                 [](auto const& pi) { return pi_to_il(*pi); });
+                 [](auto const& pf) { return to_input_location(*pf); });
 
   // query: get search profile
   auto const& profile = ppr_profiles.at(t_req.profile_name).profile_;
@@ -126,13 +109,15 @@ void compute_and_update_nigiri_transfers(
 
       auto const& profile_idx = tt.locations_.profile_idx_[t_req.profile_name];
 
-      tt.locations_.footpaths_out_[profile_idx][t_req.transfer_start_->idx_]
-          .push_back(n::footpath{t_req.transfer_targets_[platform_idx]->idx_,
-                                 r.duration_});
+      tt.locations_
+          .footpaths_out_[profile_idx][t_req.transfer_start_->info_.idx_]
+          .push_back(n::footpath{
+              t_req.transfer_targets_[platform_idx]->info_.idx_, r.duration_});
       tt.locations_
           .footpaths_in_[profile_idx]
-                        [t_req.transfer_targets_[platform_idx]->idx_]
-          .push_back(n::footpath{t_req.transfer_start_->idx_, r.duration_});
+                        [t_req.transfer_targets_[platform_idx]->info_.idx_]
+          .push_back(
+              n::footpath{t_req.transfer_start_->info_.idx_, r.duration_});
     }
   }
 }
@@ -142,17 +127,14 @@ void precompute_nigiri_transfers(
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
     std::vector<transfer_requests> const& transfer_reqs) {
   auto progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker->reset_bounds().in_high(transfer_reqs.size());
+  progress_tracker->increment(transfer_reqs.size());
 
-  thread_pool pool{std::max(1U, std::thread::hardware_concurrency())};
   boost::mutex mutex;
-  for (auto const& t_req : transfer_reqs) {
-    pool.post([&, &t_req = t_req] {
-      progress_tracker->increment();
-      compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
-    });
-  }
-  pool.join();
+  utl::parallel_for(transfer_reqs, [&](auto const& t_req){
+    compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
+    progress_tracker->increment();
+  });
+
   LOG(info) << "Profilebased transfers precomputed.";
 };
 

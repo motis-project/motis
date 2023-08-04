@@ -13,20 +13,6 @@
 
 namespace motis::footpaths {
 
-/**
- * Returns the equivalent OSM_TYPE of PPR.
- * Default: NODE
- */
-::ppr::routing::osm_namespace to_ppr_osm_type(nigiri::osm_type const& t);
-
-/**
- * Creates an input-location struct from a platform-info struct.
- *
- * @param pi the platform-info from which to create an input location.
- * @return an input location struct
- */
-::ppr::routing::input_location pi_to_il(platform_info const& pi);
-
 void compute_and_update_nigiri_transfers(
     ::ppr::routing_graph const& rg, nigiri::timetable& tt,
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
