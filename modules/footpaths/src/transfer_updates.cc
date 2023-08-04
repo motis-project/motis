@@ -2,8 +2,6 @@
 
 #include <cmath>
 
-#include "cista/containers/vector.h"
-
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
 
