@@ -1,8 +1,8 @@
 #include "motis/footpaths/footpaths.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
-#include <iostream>
 #include <regex>
 
 #include "boost/range/irange.hpp"
@@ -30,14 +30,13 @@
 #include "utl/parallel_for.h"
 #include "utl/verify.h"
 
-using namespace motis::module;
-using namespace ppr::serialization;
-using namespace ppr::routing;
-
+namespace cr = cista::raw;
 namespace fs = std::filesystem;
 namespace ml = motis::logging;
+namespace mm = motis::module;
 namespace n = nigiri;
-namespace cr = cista::raw;
+namespace pr = ppr::routing;
+namespace ps = ppr::serialization;
 
 namespace motis::footpaths {
 
@@ -45,19 +44,19 @@ namespace motis::footpaths {
 struct import_state {
   CISTA_COMPARABLE();
   // import nigiri state
-  named<cista::hash_t, MOTIS_NAME("nigiri_hash")> nigiri_hash_;
+  mm::named<cista::hash_t, MOTIS_NAME("nigiri_hash")> nigiri_hash_;
 
   // import osm state
-  named<std::string, MOTIS_NAME("osm_path")> osm_path_;
-  named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
-  named<size_t, MOTIS_NAME("osm_size")> osm_size_;
+  mm::named<std::string, MOTIS_NAME("osm_path")> osm_path_;
+  mm::named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
+  mm::named<std::size_t, MOTIS_NAME("osm_size")> osm_size_;
 
   // import ppr state
-  named<std::string, MOTIS_NAME("ppr_graph_path")> ppr_graph_path_;
-  named<cista::hash_t, MOTIS_NAME("ppr_graph_hash")> ppr_graph_hash_;
-  named<size_t, MOTIS_NAME("ppr_graph_size")> ppr_graph_size_;
-  named<cista::hash_t, MOTIS_NAME("ppr_profiles_hash")> ppr_profiles_hash_;
-  named<int, MOTIS_NAME("max_walk_duration")> max_walk_duration_;
+  mm::named<std::string, MOTIS_NAME("ppr_graph_path")> ppr_graph_path_;
+  mm::named<cista::hash_t, MOTIS_NAME("ppr_graph_hash")> ppr_graph_hash_;
+  mm::named<std::size_t, MOTIS_NAME("ppr_graph_size")> ppr_graph_size_;
+  mm::named<cista::hash_t, MOTIS_NAME("ppr_profiles_hash")> ppr_profiles_hash_;
+  mm::named<int, MOTIS_NAME("max_walk_duration")> max_walk_duration_;
 };
 
 struct footpaths::impl {
@@ -145,10 +144,10 @@ std::string footpaths::db_file() const {
 }
 
 void footpaths::import(motis::module::import_dispatcher& reg) {
-  std::make_shared<event_collector>(
+  std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "footpaths", reg,
-      [this](event_collector::dependencies_map_t const& dependencies,
-             event_collector::publish_fn_t const&) {
+      [this](mm::event_collector::dependencies_map_t const& dependencies,
+             mm::event_collector::publish_fn_t const&) {
         using import::NigiriEvent;
         using import::OSMEvent;
         using import::PPREvent;
@@ -173,7 +172,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
 
         // verify that data structure in Nigiri was adjusted to necessary number
         // of profiles
-        uint16_t const& no_profiles = ppr_event->profiles()->size();
+        auto const& no_profiles = ppr_event->profiles()->size();
         utl::verify(
             no_profiles == impl_->tt_.locations_.footpaths_out_.size(),
             "[footpath_out_] Profiles are not fully initialized. "
@@ -225,7 +224,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         ::ppr::routing_graph rg;
         {
           ml::scoped_timer const timer{"transfers: loading ppr routing graph."};
-          read_routing_graph(rg, ppr_event->graph_path()->str());
+          ps::read_routing_graph(rg, ppr_event->graph_path()->str());
         }
 
         {
@@ -243,7 +242,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
               "transfers: extract stations from nigiri graph."};
 
           uint16_t not_in_bb = 0;
-          routing_options const ro{};
+          pr::routing_options const ro{};
 
           for (auto i = nigiri::location_idx_t{0U};
                i != impl_->tt_.locations_.ids_.size(); ++i) {
@@ -329,19 +328,19 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         }
 
         LOG(ml::info) << "Footpath Import done!";
-        write_ini(dir / "import.ini", state);
+        mm::write_ini(dir / "import.ini", state);
 
         import_successful_ = true;
       })
       ->require("NIGIRI",
-                [](msg_ptr const& msg) {
+                [](mm::msg_ptr const& msg) {
                   return msg->get()->content_type() == MsgContent_NigiriEvent;
                 })
       ->require("OSM",
-                [](msg_ptr const& msg) {
+                [](mm::msg_ptr const& msg) {
                   return msg->get()->content_type() == MsgContent_OSMEvent;
                 })
-      ->require("PPR", [](msg_ptr const& msg) {
+      ->require("PPR", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_PPREvent;
       });
 }
@@ -350,10 +349,10 @@ void footpaths::init(motis::module::registry& reg) {
   std::ignore = reg;
 
   try {
-    impl_ =
-        std::make_unique<impl>(*get_shared_data<nigiri::timetable*>(
-                                   to_res_id(global_res_id::NIGIRI_TIMETABLE)),
-                               db_file(), db_max_size_);
+    impl_ = std::make_unique<impl>(
+        *get_shared_data<nigiri::timetable*>(
+            to_res_id(mm::global_res_id::NIGIRI_TIMETABLE)),
+        db_file(), db_max_size_);
   } catch (std::exception const& e) {
     LOG(ml::warn) << "footpaths module not initialized: " << e.what();
   }

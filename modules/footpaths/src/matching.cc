@@ -1,7 +1,5 @@
 #include "motis/footpaths/matching.h"
 
-#include <algorithm>
-
 namespace n = nigiri;
 
 namespace motis::footpaths {

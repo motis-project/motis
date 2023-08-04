@@ -5,8 +5,6 @@
 
 #include "motis/module/module.h"
 
-namespace fs = std::filesystem;
-
 namespace motis::footpaths {
 
 struct footpaths : public motis::module::module {
@@ -25,7 +23,7 @@ struct footpaths : public motis::module::module {
 
 private:
   // directories
-  fs::path module_data_dir() const;
+  std::filesystem::path module_data_dir() const;
   std::string db_file() const;
 
   // initialize footpaths limits

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include "motis/footpaths/platforms.h"
 #include "motis/ppr/profiles.h"
-
-#include <vector>
 
 namespace motis::footpaths {
 

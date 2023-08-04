@@ -15,9 +15,8 @@
 
 #include "utl/pipes.h"
 
-using namespace motis::logging;
-
-namespace pprr = ppr::routing;
+namespace ml = motis::logging;
+namespace pr = ppr::routing;
 
 using index_type = osmium::index::map::FlexMem<osmium::unsigned_object_id_type,
                                                osmium::Location>;
@@ -94,7 +93,7 @@ private:
 
 std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
 
-  scoped_timer const timer("Extract OSM Tracks from " + osm_file);
+  ml::scoped_timer const timer("Extract OSM Tracks from " + osm_file);
 
   osmium::io::File const input_file{osm_file};
 
@@ -108,7 +107,7 @@ std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
   filter.add_rule(true, "railway", "platform");
 
   {
-    scoped_timer const timer("Extract OSM tracks: Pass 1...");
+    ml::scoped_timer const timer("Extract OSM tracks: Pass 1...");
     osmium::relations::read_relations(input_file, mp_manager);
   }
 
@@ -118,7 +117,7 @@ std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
   platform_handler data_handler{platforms, filter};
 
   {
-    scoped_timer const timer("Extract OSM tracks: Pass 2...");
+    ml::scoped_timer const timer("Extract OSM tracks: Pass 2...");
 
     osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
     osmium::apply(
@@ -131,12 +130,13 @@ std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
     reader.close();
   }
 
-  LOG(info) << "Extracted " << data_handler.unique_platforms_
-            << " unique platforms from OSM.";
-  LOG(info) << "Generated " << platforms.size() << " platform_info structs. "
-            << static_cast<float>(platforms.size()) /
-                   static_cast<float>(data_handler.unique_platforms_)
-            << " entries per platform.";
+  LOG(ml::info) << "Extracted " << data_handler.unique_platforms_
+                << " unique platforms from OSM.";
+  LOG(ml::info) << "Generated " << platforms.size()
+                << " platform_info structs. "
+                << static_cast<float>(platforms.size()) /
+                       static_cast<float>(data_handler.unique_platforms_)
+                << " entries per platform.";
 
   return platforms;
 }
@@ -199,17 +199,17 @@ bool platform_is_bus_stop(osmium::TagList const& tags) {
           strcmp(tags.get_value_by_key("highway"), "bus_stop") == 0);
 }
 
-pprr::osm_namespace to_ppr_osm_type(osm_type const& t) {
+pr::osm_namespace to_ppr_osm_type(osm_type const& t) {
   switch (t) {
-    case osm_type::kNode: return pprr::osm_namespace::NODE;
-    case osm_type::kWay: return pprr::osm_namespace::WAY;
-    case osm_type::kRelation: return pprr::osm_namespace::RELATION;
-    default: return pprr::osm_namespace::NODE;
+    case osm_type::kNode: return pr::osm_namespace::NODE;
+    case osm_type::kWay: return pr::osm_namespace::WAY;
+    case osm_type::kRelation: return pr::osm_namespace::RELATION;
+    default: return pr::osm_namespace::NODE;
   }
 }
 
-pprr::input_location to_input_location(platform const& pf) {
-  pprr::input_location il;
+pr::input_location to_input_location(platform const& pf) {
+  pr::input_location il;
   // TODO (Carsten) OSM_ELEMENT LEVEL missing
   il.osm_element_ = {pf.info_.osm_id_, to_ppr_osm_type(pf.info_.osm_type_)};
   il.location_ = ::ppr::make_location(pf.loc_.lng_, pf.loc_.lat_);

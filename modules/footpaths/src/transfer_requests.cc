@@ -2,7 +2,7 @@
 
 #include "motis/core/common/logging.h"
 
-using namespace motis::logging;
+namespace ml = motis::logging;
 
 namespace motis::footpaths {
 
@@ -53,15 +53,16 @@ std::vector<transfer_requests> build_transfer_requests(
     }
   }
 
-  LOG(info) << "Generated " << result.size() << " transfer requests.";
-  LOG(info) << "Found " << targets << " targets in total.";
-  LOG(info) << "Identified "
-            << (static_cast<double>(targets) /
-                static_cast<double>(result.size()))
-            << " targets per source.";
-  LOG(info) << "Found " << no_targets
-            << " (src, profile)-tuples w/o targets. (not included in transfer "
-               "requests).";
+  LOG(ml::info) << "Generated " << result.size() << " transfer requests.";
+  LOG(ml::info) << "Found " << targets << " targets in total.";
+  LOG(ml::info) << "Identified "
+                << (static_cast<double>(targets) /
+                    static_cast<double>(result.size()))
+                << " targets per source.";
+  LOG(ml::info)
+      << "Found " << no_targets
+      << " (src, profile)-tuples w/o targets. (not included in transfer "
+         "requests).";
 
   return result;
 }

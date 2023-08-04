@@ -1,13 +1,10 @@
 #include "gtest/gtest.h"
 
 #include <string>
-#include <string_view>
 
 #include "geo/latlng.h"
 
 #include "motis/footpaths/matching.h"
-
-// TODO (Carsten) dummy nigiri location
 
 TEST(footpaths, remove_special_characters) {
   using namespace motis::footpaths;

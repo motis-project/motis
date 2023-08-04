@@ -11,11 +11,10 @@
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
-using namespace motis::logging;
-using namespace ppr;
-using namespace ppr::routing;
-
+namespace ml = motis::logging;
 namespace n = nigiri;
+namespace p = ppr;
+namespace pr = ppr::routing;
 
 namespace motis::footpaths {
 
@@ -25,13 +24,13 @@ struct transfer_edge_info {
   double distance_{};
 };
 
-inline n::duration_t get_duration(route const& r) {
+inline n::duration_t get_duration(pr::route const& r) {
   return n::duration_t{
       std::min(static_cast<int>(std::round(r.duration_ / 60)),
                static_cast<int>(std::numeric_limits<duration>::max()))};
 }
 
-inline uint16_t get_accessibility(route const& r) {
+inline uint16_t get_accessibility(pr::route const& r) {
   return static_cast<uint16_t>(std::ceil(r.accessibility_));
 }
 
@@ -41,14 +40,14 @@ inline uint16_t get_accessibility(route const& r) {
  * @param req the transfer-request from which to create a routing query.
  * @return a routing query struct.
  */
-routing_query make_routing_query(
+pr::routing_query make_routing_query(
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
     transfer_requests const& t_req) {
   // query: create start input_location
   auto const& li_start = to_input_location(*t_req.transfer_start_);
 
   // query: create dest input_locations
-  std::vector<input_location> ils_dests;
+  std::vector<pr::input_location> ils_dests;
   std::transform(t_req.transfer_targets_.cbegin(),
                  t_req.transfer_targets_.cend(), std::back_inserter(ils_dests),
                  [](auto const& pf) { return to_input_location(*pf); });
@@ -57,13 +56,13 @@ routing_query make_routing_query(
   auto const& profile = ppr_profiles.at(t_req.profile_name).profile_;
 
   // query: get search direction (default: FWD)
-  auto const& dir = search_direction::FWD;
+  auto const& dir = pr::search_direction::FWD;
 
-  return routing_query(li_start, ils_dests, profile, dir);
+  return pr::routing_query(li_start, ils_dests, profile, dir);
 }
 
-search_result route_ppr_direct(
-    routing_graph const& rg,
+pr::search_result route_ppr_direct(
+    p::routing_graph const& rg,
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
     transfer_requests const& t_req) {
   auto const& rq = make_routing_query(ppr_profiles, t_req);
@@ -73,7 +72,7 @@ search_result route_ppr_direct(
 }
 
 std::vector<std::vector<transfer_edge_info>> to_transfer_edge_info(
-    search_result const& res) {
+    pr::search_result const& res) {
   return utl::to_vec(res.routes_, [&](auto const& routes) {
     return utl::to_vec(routes, [&](auto const& r) {
       return transfer_edge_info{get_duration(r), get_accessibility(r),
@@ -83,7 +82,7 @@ std::vector<std::vector<transfer_edge_info>> to_transfer_edge_info(
 }
 
 void compute_and_update_nigiri_transfers(
-    routing_graph const& rg, nigiri::timetable& tt,
+    p::routing_graph const& rg, nigiri::timetable& tt,
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
     transfer_requests const& t_req, boost::mutex& mutex) {
   auto const& res = route_ppr_direct(rg, ppr_profiles, t_req);
@@ -121,19 +120,19 @@ void compute_and_update_nigiri_transfers(
 }
 
 void precompute_nigiri_transfers(
-    routing_graph const& rg, nigiri::timetable& tt,
+    p::routing_graph const& rg, nigiri::timetable& tt,
     std::map<std::string, ppr::profile_info> const& ppr_profiles,
     std::vector<transfer_requests> const& transfer_reqs) {
   auto progress_tracker = utl::get_active_progress_tracker();
   progress_tracker->increment(transfer_reqs.size());
 
   boost::mutex mutex;
-  utl::parallel_for(transfer_reqs, [&](auto const& t_req){
+  utl::parallel_for(transfer_reqs, [&](auto const& t_req) {
     compute_and_update_nigiri_transfers(rg, tt, ppr_profiles, t_req, mutex);
     progress_tracker->increment();
   });
 
-  LOG(info) << "Profilebased transfers precomputed.";
+  LOG(ml::info) << "Profilebased transfers precomputed.";
 };
 
 }  // namespace motis::footpaths
