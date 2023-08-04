@@ -105,8 +105,6 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(routing_, "routing", "provide trip_to_connection");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
-  param(no_profiles_, "no_profiles",
-        "number of used profiles in module 'footpath'. Default: 1.");
   param(default_timezone_, "default_timezone",
         "tz for agencies w/o tz or routes w/o agency");
   param(gtfsrt_urls_, "gtfsrt",
@@ -393,7 +391,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               }
             }
 
-            n::loader::finalize(**impl_->tt_, no_profiles_, adjust_footpaths_,
+            n::loader::finalize(**impl_->tt_, adjust_footpaths_,
                                 merge_duplicates_);
 
             if (no_cache_) {
@@ -427,22 +425,6 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               continue;
             }
           }
-        }
-
-        if (no_profiles_ !=
-                impl_->tt_->get()->locations_.footpaths_out_.size() ||
-            no_profiles_ !=
-                impl_->tt_->get()->locations_.footpaths_in_.size()) {
-          utl::verify(!impl_->tt_->get()->locations_.footpaths_out_.empty(),
-                      "nigiri timetable footpaths_out: should contain at least "
-                      "the default footpaths.");
-          utl::verify(!impl_->tt_->get()->locations_.footpaths_in_.empty(),
-                      "nigiri timetable footpaths_in: should contain at least "
-                      "the default footpaths.");
-
-          // reinitialize profile-based footpaths
-          n::loader::reinitialize_footpaths(**impl_->tt_, no_profiles_);
-          loaded = true;
         }
 
         LOG(logging::info)

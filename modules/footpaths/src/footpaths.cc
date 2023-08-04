@@ -303,17 +303,15 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         // 6th get transfer requests result
         {
           ml::scoped_timer const timer{"transfers: delete default transfers."};
-          impl_->tt_.locations_.footpaths_in_.clear();
-          impl_->tt_.locations_.footpaths_out_.clear();
 
-          for (uint p_idx = 0; p_idx < ppr_profiles_.size(); ++p_idx) {
-            impl_->tt_.locations_.footpaths_in_.emplace_back();
-            impl_->tt_.locations_.footpaths_out_.emplace_back();
+          for (auto prf_idx = 0; prf_idx < ppr_profiles_.size(); ++prf_idx) {
+            impl_->tt_.locations_.footpaths_out_[prf_idx] = {};
+            impl_->tt_.locations_.footpaths_in_[prf_idx] = {};
 
-            for (uint i = 0; i < impl_->tt_.locations_.src_.size(); ++i) {
-              impl_->tt_.locations_.footpaths_out_[p_idx].emplace_back(
+            for (auto i = 0; i < impl_->tt_.locations_.src_.size(); ++i) {
+              impl_->tt_.locations_.footpaths_out_[prf_idx].emplace_back(
                   nigiri::vector<nigiri::footpath>());
-              impl_->tt_.locations_.footpaths_in_[p_idx].emplace_back(
+              impl_->tt_.locations_.footpaths_in_[prf_idx].emplace_back(
                   nigiri::vector<nigiri::footpath>());
             }
           }

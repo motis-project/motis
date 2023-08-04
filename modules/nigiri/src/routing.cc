@@ -154,7 +154,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   auto extend_interval_later = false;
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
-  uint profile_idx = {0};
+  n::profile_idx_t profile_idx{0};
   if (tt.locations_.profile_idx_.contains(req->profile()->str())) {
     profile_idx = tt.locations_.profile_idx_.at(req->profile()->str());
   }
@@ -293,7 +293,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .min_connection_count_ = min_connection_count,
       .extend_interval_earlier_ = extend_interval_earlier,
       .extend_interval_later_ = extend_interval_later,
-      .profile_ = profile_idx};
+      .prf_idx_ = profile_idx};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
