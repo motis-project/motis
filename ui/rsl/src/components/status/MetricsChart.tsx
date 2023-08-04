@@ -7,6 +7,7 @@ import { ParentSize } from "@visx/responsive";
 import { scaleBand, scaleLinear, scaleOrdinal } from "@visx/scale";
 import { BarStack } from "@visx/shape";
 import { range } from "d3-array";
+import { fromUnixTime } from "date-fns";
 import { ReactElement } from "react";
 
 import { formatTime } from "@/util/dateFormat";
@@ -111,8 +112,12 @@ function MetricsChart<
     range: Object.values(metricsInfo).map((m) => (m as MetricInfo).color),
   });
 
-  const formatIndexDate = (index: number) =>
-    formatTime(metricsData.start_time + index * 60);
+  const formatIndexDate = (index: number) => {
+    const ts = metricsData.start_time + index * 60;
+    const date = new Date(fromUnixTime(ts));
+    const str = formatTime(date);
+    return str !== "00:00" ? str : formatTime(date, "eeeeee HH:mm");
+  };
 
   // x-axis ticks for each full hour
   const firstFullHour = Math.ceil(metricsData.start_time / 3600) * 3600;
