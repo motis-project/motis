@@ -57,6 +57,16 @@ const metricsOptions: MetricsOption[] = [
   },
   {
     api: "paxforecast",
+    key: "major_delay_group_routes_with_alternatives",
+    label: "Reisendengruppen mit hoher Zielverspätung und Alternativen",
+  },
+  {
+    api: "paxforecast",
+    key: "rerouted_group_routes",
+    label: "Umgeleitete Reisendengruppen",
+  },
+  {
+    api: "paxforecast",
     key: "routing_requests",
     label: "Routing-Anfragen",
   },
@@ -64,11 +74,6 @@ const metricsOptions: MetricsOption[] = [
     api: "paxforecast",
     key: "alternatives_found",
     label: "Gefundene Alternativen",
-  },
-  {
-    api: "paxforecast",
-    key: "rerouted_group_routes",
-    label: "Umgeleitete Reisendengruppen",
   },
   {
     api: "paxmon",
@@ -123,7 +128,7 @@ function RslStatus(): ReactElement {
             }
           }}
         >
-          <SelectTrigger className="w-[400px]">
+          <SelectTrigger className="w-[450px]">
             <SelectValue placeholder="Metrik wählen..." />
           </SelectTrigger>
           <SelectContent>
