@@ -147,7 +147,7 @@ struct railviz::impl {
         runs.emplace_back(copy);
       }
     }
-    return create_response(runs, false);
+    return create_response(runs);
   }
 
   mm::msg_ptr get_trains(mm::msg_ptr const& msg) {
@@ -192,8 +192,7 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs,
-                              bool const x = true) const {
+  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs) const {
     geo::polyline_encoder<6> enc;
 
     mm::message_creator mc;
