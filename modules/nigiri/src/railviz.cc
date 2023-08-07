@@ -147,7 +147,7 @@ struct railviz::impl {
         runs.emplace_back(copy);
       }
     }
-    return create_response(runs, false);
+    return create_response(runs);
   }
 
   mm::msg_ptr get_trains(mm::msg_ptr const& msg) {
@@ -192,8 +192,7 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs,
-                              bool const x = true) const {
+  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs) const {
     geo::polyline_encoder<6> enc;
 
     mm::message_creator mc;
@@ -262,14 +261,12 @@ struct railviz::impl {
           mc.CreateVector(polyline_indices));
     });
 
-    auto extras = std::vector<std::uint64_t>{x ? fbs_polylines.size() - 1 : 1U};
-    std::iota(begin(extras), end(extras), 1U);
-
     mc.create_and_finish(
         MsgContent_RailVizTrainsResponse,
         motis::railviz::CreateRailVizTrainsResponse(
             mc, mc.CreateVector(stations), mc.CreateVector(trains),
-            mc.CreateVector(fbs_polylines), mc.CreateVector(extras))
+            mc.CreateVector(fbs_polylines),
+            mc.CreateVector(std::vector<std::uint64_t>{}))
             .Union());
     return mm::make_msg(mc);
   }
