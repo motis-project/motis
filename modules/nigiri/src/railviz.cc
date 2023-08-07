@@ -262,14 +262,12 @@ struct railviz::impl {
           mc.CreateVector(polyline_indices));
     });
 
-    auto extras = std::vector<std::uint64_t>{x ? fbs_polylines.size() - 1 : 1U};
-    std::iota(begin(extras), end(extras), 1U);
-
     mc.create_and_finish(
         MsgContent_RailVizTrainsResponse,
         motis::railviz::CreateRailVizTrainsResponse(
             mc, mc.CreateVector(stations), mc.CreateVector(trains),
-            mc.CreateVector(fbs_polylines), mc.CreateVector(extras))
+            mc.CreateVector(fbs_polylines),
+            mc.CreateVector(std::vector<std::uint64_t>{}))
             .Union());
     return mm::make_msg(mc);
   }
