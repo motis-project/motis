@@ -104,7 +104,7 @@ void compute_and_update_nigiri_transfers(
     for (auto const& r : fwd_routes) {
       boost::unique_lock<boost::mutex> const scoped_lock(mutex);
 
-      auto const& profile_idx = tt.locations_.profile_idx_[t_req.profile_name];
+      auto const& profile_idx = tt.profiles_[t_req.profile_name];
 
       tt.locations_
           .footpaths_out_[profile_idx][t_req.transfer_start_->info_.idx_]

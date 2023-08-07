@@ -155,8 +155,9 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
   n::profile_idx_t profile_idx{0};
-  if (tt.locations_.profile_idx_.contains(req->profile()->str())) {
-    profile_idx = tt.locations_.profile_idx_.at(req->profile()->str());
+  auto const prf_it = tt.profiles_.find(req->profile()->str());
+  if (prf_it != tt.profiles_.end()) {
+    profile_idx = prf_it->second;  // second: profile_idx_t
   }
 
   if (req->start_type() == routing::Start_PretripStart) {

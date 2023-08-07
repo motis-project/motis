@@ -194,18 +194,17 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
 
         // generate (profile_name, profile position in footpath)
         // REMARK: there is no need to use the default profile
-        for (auto& p : ppr_profiles_) {
+        for (auto& [pname, pinfo] : ppr_profiles_) {
           // convert walk_duration from minutes to seconds
-          p.second.profile_.duration_limit_ = impl_->max_walk_duration_ * 60;
+          pinfo.profile_.duration_limit_ = impl_->max_walk_duration_ * 60;
 
           // build profile_name to idx map in nigiri::tt
-          impl_->tt_.locations_.profile_idx_.insert(
-              {p.first, impl_->tt_.locations_.profile_idx_.size()});
+          impl_->tt_.profiles_.insert({pname, impl_->tt_.profiles_.size()});
 
           // build list of profile infos
-          profiles_.emplace_back(p.second);
+          profiles_.emplace_back(pinfo);
         }
-        assert(impl_->tt_.locations_.profile_idx_.size() == profiles_.size());
+        assert(impl_->tt_.profiles_.size() == profiles_.size());
 
         // 1st extract all platforms from a given osm file
         progress_tracker->status("Extract Platforms from OSM.");
