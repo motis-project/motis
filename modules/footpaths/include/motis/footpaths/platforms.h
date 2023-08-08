@@ -16,10 +16,19 @@
 #include "ppr/routing/input_location.h"
 
 namespace motis::footpaths {
-enum class osm_type { kNode, kWay, kRelation };
+enum class osm_type { kNode, kWay, kRelation, kUnknown };
+
+inline char get_osm_str_type(osm_type const ot) {
+  switch (ot) {
+    case osm_type::kNode: return 'n';
+    case osm_type::kWay: return 'w';
+    case osm_type::kRelation: return 'r';
+    default: return '_';
+  }
+}
 
 struct platform_info {
-  cista::offset::string_view name_;
+  cista::raw::string_view name_;
   std::int64_t osm_id_{-1};
   nigiri::location_idx_t idx_{nigiri::location_idx_t::invalid()};
   osm_type osm_type_{osm_type::kNode};
