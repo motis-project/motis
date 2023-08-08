@@ -1,5 +1,9 @@
 #include "motis/footpaths/matching.h"
 
+#include <limits>
+
+#include "geo/latlng.h"
+
 namespace n = nigiri;
 
 namespace motis::footpaths {
@@ -25,11 +29,9 @@ std::pair<bool, matching_result> matching(
       if (!matches(pf, nloc)) {
         continue;
       }
-
       // it's a match
       result.pf_ = pf;
       result.loc_idx_ = nloc.l_;
-
       return {true, result};
     }
   }
@@ -37,21 +39,51 @@ std::pair<bool, matching_result> matching(
   return {false, result};
 }
 
+// -- match function --
 std::pair<bool, matching_result> match_by_name(
     n::location const& nloc, motis::footpaths::platforms_index* pfs_idx,
     boost::strided_integer_range<int> const& dists,
-    int const match_bus_stop_max_distance) {
+    int const match_bus_stop_max_dist) {
   assert(nloc.type_ != n::location_type::kStation);
 
   auto [found_match, match_result] =
-      matching(nloc, pfs_idx, dists, match_bus_stop_max_distance, name_match);
+      matching(nloc, pfs_idx, dists, match_bus_stop_max_dist, name_match);
 
   if (found_match) {
     return {found_match, match_result};
   }
 
-  return matching(nloc, pfs_idx, dists, match_bus_stop_max_distance,
+  return matching(nloc, pfs_idx, dists, match_bus_stop_max_dist,
                   first_number_match);
+}
+
+std::pair<bool, matching_result> match_by_distance(
+    nigiri::location const& nloc, motis::footpaths::platforms_index* pfs_idx,
+    int const r, int const match_bus_stop_max_dist) {
+  assert(nloc.type_ != n::location_type::kStation);
+  matching_result result{};
+  result.loc_idx_ = nloc.l_;
+  auto matched{false};
+
+  auto const pfs = pfs_idx->get_platforms_in_radius(nloc.pos_, r);
+  auto shortest_dist{std::numeric_limits<double>::max()};
+
+  for (auto* pf : pfs) {
+    auto dist = geo::distance(nloc.pos_, pf->loc_);
+
+    // only match bus stops with a distance of up to a certain distance
+    if (pf->info_.is_bus_stop_ && dist > match_bus_stop_max_dist) {
+      continue;
+    }
+
+    if (dist < shortest_dist) {
+      result.pf_ = pf;
+      shortest_dist = dist;
+      matched = true;
+    }
+  }
+
+  return {matched, result};
 }
 
 // -- helper functions --
