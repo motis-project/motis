@@ -15,7 +15,8 @@ namespace motis::footpaths {
 
 struct matching_result {
   platform* pf_;
-  nigiri::location_idx_t loc_idx_;
+  nigiri::location_idx_t nloc_idx_;
+  geo::latlng nloc_pos_;
 };
 
 // -- matching helper --

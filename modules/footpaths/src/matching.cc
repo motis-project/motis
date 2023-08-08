@@ -31,7 +31,8 @@ std::pair<bool, matching_result> matching(
       }
       // it's a match
       result.pf_ = pf;
-      result.loc_idx_ = nloc.l_;
+      result.nloc_idx_ = nloc.l_;
+      result.nloc_pos_ = nloc.pos_;
       return {true, result};
     }
   }
@@ -62,7 +63,8 @@ std::pair<bool, matching_result> match_by_distance(
     int const r, int const match_bus_stop_max_dist) {
   assert(nloc.type_ != n::location_type::kStation);
   matching_result result{};
-  result.loc_idx_ = nloc.l_;
+  result.nloc_idx_ = nloc.l_;
+  result.nloc_pos_ = nloc.pos_;
   auto matched{false};
 
   auto const pfs = pfs_idx->get_platforms_in_radius(nloc.pos_, r);
