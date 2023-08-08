@@ -410,6 +410,18 @@ PaxMonStatusResponse:
         The number of passenger groups currently being tracked in this universe.
     trip_count:
       description: The number of trips currently being tracked in this universe.
+    primary_system_time:
+      description: >
+        The current system time of the primary universe (id 0) as a unix
+        timestamp.
+    current_time:
+      description: >
+        The current time as a unix timestamp. This timestamp is used to check if
+        the real-time feeds are up-to-date.
+    ribasis_fahrt_status:
+      description: Status of the RiBasisFahrt stream.
+    ribasis_formation_status:
+      description: STatus of the RiBasisFormation stream.
 PaxMonPdfEntry:
   description: TODO
   fields:
@@ -1743,3 +1755,22 @@ PaxMonProviderInfo:
       description: TODO
     full_name:
       description: TODO
+PaxMonFeedStatus:
+  description: Provides basic status information for a real-time feed.
+  fields:
+    enabled:
+      description: Whether this real-time feed is configured and enabled.
+    receiving:
+      description: Whether this real-time feed has recently received data.
+    up_to_date:
+      description: >
+        Whether the most recent real-time updates (based on the current time)
+        have been received and processed.
+    last_update_time:
+      description: >
+        The last time an update was received from this real-time feed (unix
+        timestamp).
+    last_message_time:
+      description: >
+        The creation time of the latest real-time updated received from this
+        real-time feed (unix timestamp).

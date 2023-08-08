@@ -270,11 +270,24 @@ export interface PaxMonStatusRequest {
 }
 
 // paxmon/PaxMonStatusResponse.fbs
+export interface PaxMonFeedStatus {
+  enabled: boolean;
+  receiving: boolean;
+  up_to_date: boolean;
+  last_update_time: number;
+  last_message_time: number;
+}
+
+// paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
   multiverse_id: number;
   active_groups: number;
   trip_count: number;
+  primary_system_time: number;
+  current_time: number;
+  ribasis_fahrt_status: PaxMonFeedStatus;
+  ribasis_formation_status: PaxMonFeedStatus;
 }
 
 // paxmon/PaxMonDistribution.fbs
