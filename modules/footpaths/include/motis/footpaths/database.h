@@ -7,6 +7,7 @@
 
 #include "lmdb/lmdb.hpp"
 
+#include "motis/footpaths/matching.h"
 #include "motis/footpaths/platforms.h"
 
 namespace motis::footpaths {
@@ -17,8 +18,12 @@ struct database {
   std::vector<std::size_t> put_platforms(std::vector<platform>&);
   std::vector<platform> get_platforms();
 
+  std::vector<std::size_t> put_matching_results(std::vector<matching_result>&);
+
 private:
   static lmdb::txn::dbi platforms_dbi(
+      lmdb::txn&, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
+  static lmdb::txn::dbi matchings_dbi(
       lmdb::txn&, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
 
   void init();
