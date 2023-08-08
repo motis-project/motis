@@ -1,7 +1,5 @@
 #include <utility>
 
-#include "boost/algorithm/string.hpp"
-
 #include "motis/core/common/logging.h"
 
 #include "motis/footpaths/platforms.h"
@@ -147,29 +145,9 @@ std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
   auto add_names = [&](const std::string& name_by_tag) {
     platform_names.emplace_back(name_by_tag);
     return;
-    /**
-     * // In case matching is invalid: try to split names; currently not needed
-     *
-     * std::vector<std::string> names{};
-     * boost::split(names, name_by_tag,
-     *              [](char c) { return c == ';' || c == '/'; });
-     *
-     * if (std::any_of(names.begin(), names.end(),
-     *   [&](std::string const& name) -> bool {
-     *     return name.length() > 3;
-     *    })) {
-     *       platform_names.emplace_back(name_by_tag);
-     *       return;
-     *     }
-     *
-     * for (auto const& name : names) {
-     *   platform_names.emplace_back(name);
-     * }
-     */
   };
 
   // REMOVE *.clear() to get more names for matching
-  // TODO (Carsten) find a better way of matching
   if (tags.has_key("name")) {
     platform_names.clear();
     add_names(tags.get_value_by_key("name"));
