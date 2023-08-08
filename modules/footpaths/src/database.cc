@@ -1,5 +1,7 @@
 #include "motis/footpaths/database.h"
 
+#include "fmt/core.h"
+
 #include "utl/enumerate.h"
 
 namespace motis::footpaths {
@@ -8,6 +10,11 @@ constexpr auto const kPlatformsDB = "platforms";
 
 inline std::string_view view(cista::byte_buf const& b) {
   return std::string_view{reinterpret_cast<char const*>(b.data()), b.size()};
+}
+
+inline std::string get_platform_key(platform const& pf) {
+  return fmt::format("{}:{}", get_osm_str_type(pf.info_.osm_type_),
+                     pf.info_.osm_id_);
 }
 
 database::database(std::string const& path, std::size_t const max_size) {
@@ -41,11 +48,19 @@ std::vector<std::size_t> database::put_platforms(std::vector<platform>& pfs) {
   auto txn = lmdb::txn{env_};
   auto platforms_db = platforms_dbi(txn);
 
-  for (auto const& [idx, pi] : utl::enumerate(pfs)) {
-    pi.id_ = ++highest_platform_id_;
-    auto const serialized_pi = cista::serialize(pi);
-    txn.put(platforms_db, pi.id_, view(serialized_pi));
+  for (auto const& [idx, pf] : utl::enumerate(pfs)) {
+    auto const osm_key = get_platform_key(pf);
+    if (auto const r = txn.get(platforms_db, osm_key); r.has_value()) {
+      continue;  // platform already in db
+    }
+
+    pf.id_ = ++highest_platform_id_;
+    auto const serialized_pf = cista::serialize(pf);
+    txn.put(platforms_db, osm_key, view(serialized_pf));
+    added_indices.emplace_back(idx);
   }
+
+  txn.commit();
   return added_indices;
 }
 
@@ -70,7 +85,7 @@ std::vector<platform> database::get_platforms() {
 
 lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,
                                        lmdb::dbi_flags const flags) {
-  return txn.dbi_open(kPlatformsDB, flags | lmdb::dbi_flags::INTEGERKEY);
+  return txn.dbi_open(kPlatformsDB, flags);
 }
 
 }  // namespace motis::footpaths
