@@ -45,6 +45,7 @@ private:
   std::vector<std::string> gtfsrt_urls_;
   std::vector<std::string> gtfsrt_paths_;
   unsigned gtfsrt_update_interval_{60U};
+  bool arcflags_{false};
 };
 
 }  // namespace motis::nigiri

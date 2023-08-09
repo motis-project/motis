@@ -1,7 +1,5 @@
 #include "motis/nigiri/nigiri.h"
 
-#include <random>
-
 #include "cista/memory_holder.h"
 
 #include "conf/date_time.h"
@@ -90,7 +88,6 @@ struct nigiri::impl {
   n::timetable const& tt() const { return **tt_; }
 
   tag_lookup tags_;
-  n::vector_map<n::route_idx_t, std::uint32_t> reachs_;
   std::shared_ptr<station_lookup> station_lookup_;
   std::vector<gtfsrt> gtfsrt_;
   std::unique_ptr<guesser> guesser_;
@@ -120,6 +117,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "list of GTFS-RT endpoints, format: tag|url|authorization");
   param(gtfsrt_paths_, "gtfsrt_paths",
         "list of GTFS-RT, format: tag|/path/to/file.pb");
+  param(arcflags_, "arcflags", "arcflags speedup");
 }
 
 nigiri::~nigiri() = default;
@@ -169,7 +167,7 @@ void nigiri::init(mm::registry& reg) {
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
                     return route(impl_->tags_, **impl_->tt_,
-                                 impl_->get_rtt().get(), impl_->reachs_, msg);
+                                 impl_->get_rtt().get(), msg);
                   },
                   {});
 
@@ -333,12 +331,12 @@ void nigiri::import(mm::import_dispatcher& reg) {
         LOG(logging::info) << "interval: " << interval.from_ << " - "
                            << interval.to_;
 
-        auto h =
-            cista::hash_combine(cista::BASE_HASH,
-                                interval.from_.time_since_epoch().count(),  //
-                                interval.to_.time_since_epoch().count(),  //
-                                adjust_footpaths_, link_stop_distance_,
-                                cista::hash(default_timezone_));
+        auto h = cista::hash_combine(
+            cista::BASE_HASH,
+            interval.from_.time_since_epoch().count(),  //
+            interval.to_.time_since_epoch().count(),  //
+            adjust_footpaths_, link_stop_distance_, arcflags_, reach_queries_,
+            cista::hash(default_timezone_));
 
         auto datasets =
             std::vector<std::tuple<n::source_idx_t,
@@ -403,7 +401,13 @@ void nigiri::import(mm::import_dispatcher& reg) {
             n::loader::finalize(**impl_->tt_, adjust_footpaths_,
                                 merge_duplicates_);
 
-            n::routing::compute_arc_flags(**impl_->tt_);
+            if (arcflags_) {
+              n::routing::compute_arc_flags(**impl_->tt_);
+            }
+
+            if (reach_queries_ != 0U) {
+              n::routing::compute_reach_values(**impl_->tt_, reach_queries_);
+            }
 
             if (no_cache_) {
               loaded = true;
@@ -444,41 +448,6 @@ void nigiri::import(mm::import_dispatcher& reg) {
                            << (*impl_->tt_)->locations_.names_.size()
                            << ", trips=" << (*impl_->tt_)->trip_debug_.size()
                            << "\n";
-
-        auto const& tt = **impl_->tt_;
-        auto const reachs_path = dump_file_path.string() + "_reachs";
-        if (!fs::is_regular_file(reachs_path) && reach_queries_ != 0U) {
-          auto source_locations = std::vector<n::location_idx_t>{};
-          source_locations.resize(tt.n_locations());
-          std::generate(begin(source_locations), end(source_locations),
-                        [i = n::location_idx_t{0U}]() mutable { return i++; });
-
-          auto rd = std::random_device{};
-          auto g = std::mt19937{rd()};
-          std::shuffle(begin(source_locations), end(source_locations), g);
-          source_locations.resize(reach_queries_);
-
-          auto const x_slope = .8F;
-          auto const route_reachs = n::routing::compute_reach_values(
-              (**impl_->tt_), source_locations, interval);
-          auto const [perm, y] =
-              n::routing::get_separation_fn(tt, route_reachs, x_slope, 0.08);
-          n::routing::write_reach_values(tt, y, x_slope, route_reachs,
-                                         reachs_path);
-        }
-
-        if (reach_queries_ != 0U) {
-          impl_->reachs_ = *n::routing::read_reach_values(cista::memory_holder{
-              cista::file{reachs_path.c_str(), "r"}.content()});
-          auto const connecting_routes =
-              n::routing::get_big_station_connection_routes(tt);
-          for (auto const r : connecting_routes) {
-            impl_->reachs_[r] = 1'000'000;
-          }
-          LOG(logging::info)
-              << "relabeled " << connecting_routes.size()
-              << " connecting routes (total=" << tt.n_routes() << ")";
-        }
 
         if (lookup_) {
           impl_->station_lookup_ = std::make_shared<nigiri_station_lookup>(

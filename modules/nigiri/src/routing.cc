@@ -7,10 +7,13 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "nigiri/routing/arcflag_filter.h"
 #include "nigiri/routing/limits.h"
+#include "nigiri/routing/no_route_filter.h"
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/raptor/raptor.h"
 #include "nigiri/routing/raptor/raptor_state.h"
+#include "nigiri/routing/reach_filter.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/special_stations.h"
 
@@ -26,10 +29,18 @@ namespace mm = motis::module;
 namespace fbs = flatbuffers;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::search_state> search_state;
+static boost::thread_specific_ptr<n::routing::search_state> search_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
+static boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static boost::thread_specific_ptr<n::routing::reach_filter> reach_filter;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static boost::thread_specific_ptr<n::routing::arcflag_filter> arcflag_filter;
+
+static const n::routing::no_route_filter no_filter;
 
 namespace motis::nigiri {
 
@@ -74,8 +85,8 @@ mm::msg_ptr to_routing_response(
           raptor_stats.route_update_prevented_by_lower_bound_),
       CreateStatisticsEntry(fbb, fbb.CreateString("conversion"),
                             MOTIS_TIMING_MS(conversion)),
-      CreateStatisticsEntry(fbb, fbb.CreateString("reach_filtered"),
-                            raptor_stats.reach_filtered_),
+      CreateStatisticsEntry(fbb, fbb.CreateString("routes_filtered"),
+                            raptor_stats.routes_filtered_),
       CreateStatisticsEntry(fbb, fbb.CreateString("reach_time"),
                             search_stats.reach_time_)};
   auto statistics = std::vector<fbs::Offset<Statistics>>{
@@ -129,43 +140,56 @@ std::vector<n::routing::offset> get_offsets(
          | utl::vec();
 }
 
-template <n::direction SearchDir>
-auto run_search(n::routing::search_state& search_state,
-                n::routing::raptor_state& raptor_state, n::timetable const& tt,
-                n::rt_timetable const* rtt,
-                n::vector_map<n::route_idx_t, std::uint32_t> const& reachs,
-                n::routing::query&& q) {
-  if (reachs.empty()) {
-    if (rtt == nullptr) {
-      using algo_t = n::routing::raptor<SearchDir, false, false, false>;
-      return n::routing::search<SearchDir, algo_t>{
-          tt, nullptr, reachs, search_state, raptor_state, std::move(q)}
-          .execute();
-    } else {
-      using algo_t = n::routing::raptor<SearchDir, true, false, false>;
-      return n::routing::search<SearchDir, algo_t>{
-          tt, rtt, reachs, search_state, raptor_state, std::move(q)}
-          .execute();
-    }
+template <n::direction SearchDir, typename Filter>
+n::routing::routing_result<n::routing::raptor_stats> run_search_rt(
+    n::routing::search_state& search_state,
+    n::routing::raptor_state& raptor_state, Filter const& filter,
+    n::timetable const& tt, n::rt_timetable const* rtt, n::routing::query&& q) {
+  if (rtt == nullptr) {
+    using algo_t = n::routing::raptor<Filter, SearchDir, false, false>;
+    return n::routing::search<SearchDir, algo_t>{
+        tt, nullptr, search_state, raptor_state, filter, std::move(q)}
+        .execute();
   } else {
-    if (rtt == nullptr) {
-      using algo_t = n::routing::raptor<SearchDir, false, false, true>;
-      return n::routing::search<SearchDir, algo_t>{
-          tt, nullptr, reachs, search_state, raptor_state, std::move(q)}
-          .execute();
-    } else {
-      using algo_t = n::routing::raptor<SearchDir, true, false, true>;
-      return n::routing::search<SearchDir, algo_t>{
-          tt, rtt, reachs, search_state, raptor_state, std::move(q)}
-          .execute();
-    }
+    using algo_t = n::routing::raptor<Filter, SearchDir, true, false>;
+    return n::routing::search<SearchDir, algo_t>{
+        tt, rtt, search_state, raptor_state, filter, std::move(q)}
+        .execute();
   }
 }
 
-motis::module::msg_ptr route(
-    tag_lookup const& tags, n::timetable const& tt, n::rt_timetable const* rtt,
-    n::vector_map<n::route_idx_t, std::uint32_t> const& reachs,
-    motis::module::msg_ptr const& msg) {
+template <n::direction SearchDir>
+n::routing::routing_result<n::routing::raptor_stats> run_search(
+    n::routing::search_state& search_state,
+    n::routing::raptor_state& raptor_state, n::timetable const& tt,
+    n::rt_timetable const* rtt, n::routing::query&& q) {
+  if (!tt.route_reachs_.empty()) {
+    if (reach_filter.get() == nullptr) {
+      reach_filter.reset(new n::routing::reach_filter{});
+    }
+
+    reach_filter->init(tt, q);
+
+    return run_search_rt<SearchDir>(search_state, raptor_state, *reach_filter,
+                                    tt, rtt, std::move(q));
+  } else if (!tt.arc_flags_.empty()) {
+    if (arcflag_filter.get() == nullptr) {
+      arcflag_filter.reset(new n::routing::arcflag_filter{});
+    }
+
+    arcflag_filter->init(tt, q);
+
+    return run_search_rt<SearchDir>(search_state, raptor_state, *arcflag_filter,
+                                    tt, rtt, std::move(q));
+  } else {
+    return run_search_rt<SearchDir>(search_state, raptor_state, no_filter, tt,
+                                    rtt, std::move(q));
+  }
+}
+
+motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
+                             n::rt_timetable const* rtt,
+                             motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
 
@@ -325,14 +349,14 @@ motis::module::msg_ptr route(
   n::routing::raptor_stats raptor_stats;
   if (req->search_dir() == SearchDir_Forward) {
     auto const r = run_search<n::direction::kForward>(
-        *search_state, *raptor_state, tt, rtt, reachs, std::move(q));
+        *search_state, *raptor_state, tt, rtt, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
     search_interval = r.interval_;
   } else {
     auto const r = run_search<n::direction::kBackward>(
-        *search_state, *raptor_state, tt, rtt, reachs, std::move(q));
+        *search_state, *raptor_state, tt, rtt, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;

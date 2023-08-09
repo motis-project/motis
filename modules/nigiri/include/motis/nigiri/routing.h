@@ -13,10 +13,8 @@ namespace motis::nigiri {
 
 struct tag_lookup;
 
-motis::module::msg_ptr route(
-    tag_lookup const&, ::nigiri::timetable const&,
-    ::nigiri::rt_timetable const*,
-    ::nigiri::vector_map<::nigiri::route_idx_t, std::uint32_t> const&,
-    motis::module::msg_ptr const&);
+motis::module::msg_ptr route(tag_lookup const&, ::nigiri::timetable const&,
+                             ::nigiri::rt_timetable const*,
+                             motis::module::msg_ptr const&);
 
 }  // namespace motis::nigiri
