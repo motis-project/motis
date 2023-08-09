@@ -13,15 +13,6 @@ inline std::string_view view(cista::byte_buf const& b) {
   return std::string_view{reinterpret_cast<char const*>(b.data()), b.size()};
 }
 
-inline std::string get_platform_key(platform const& pf) {
-  return fmt::format("{}:{}", get_osm_str_type(pf.info_.osm_type_),
-                     pf.info_.osm_id_);
-}
-
-inline std::string to_string(geo::latlng const& pos) {
-  return fmt::format("{}:{}", pos.lat_, pos.lng_);
-}
-
 database::database(std::string const& path, std::size_t const max_size) {
   env_.set_maxdbs(1);
   env_.set_mapsize(max_size);
@@ -56,7 +47,7 @@ std::vector<std::size_t> database::put_platforms(std::vector<platform>& pfs) {
   auto platforms_db = platforms_dbi(txn);
 
   for (auto const& [idx, pf] : utl::enumerate(pfs)) {
-    auto const osm_key = get_platform_key(pf);
+    auto const osm_key = to_key(pf);
     if (auto const r = txn.get(platforms_db, osm_key); r.has_value()) {
       continue;  // platform already in db
     }
@@ -90,6 +81,20 @@ std::vector<platform> database::get_platforms() {
   return platforms;
 }
 
+std::optional<platform> database::get_platform(std::string const& osm_key) {
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto platforms_db = platforms_dbi(txn);
+
+  auto entry = txn.get(platforms_db, osm_key);
+
+  if (entry.has_value()) {
+    return cista::copy_from_potentially_unaligned<platform>(entry.value());
+  }
+
+  return {};
+}
+
 std::vector<size_t> database::put_matching_results(
     std::vector<matching_result>& mrs) {
   auto added_indices = std::vector<std::size_t>{};
@@ -97,16 +102,16 @@ std::vector<size_t> database::put_matching_results(
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto matchings_db = matchings_dbi(txn);
-  auto platform_db = platforms_dbi(txn);
+  auto platforms_db = platforms_dbi(txn);
 
   for (auto const& [idx, mr] : utl::enumerate(mrs)) {
-    auto const nloc_key = to_string(mr.nloc_pos_);
-    auto const osm_key = get_platform_key(*mr.pf_);
+    auto const nloc_key = to_key(mr.nloc_pos_);
+    auto const osm_key = to_key(*mr.pf_);
 
     if (auto const r = txn.get(matchings_db, nloc_key); r.has_value()) {
       continue;  // nloc already matched in db
     }
-    if (auto const r = txn.get(platform_db, osm_key); !r.has_value()) {
+    if (auto const r = txn.get(platforms_db, osm_key); !r.has_value()) {
       continue;  // osm platform not in platform_db
     }
 
@@ -116,6 +121,41 @@ std::vector<size_t> database::put_matching_results(
 
   txn.commit();
   return added_indices;
+}
+
+std::vector<std::pair<std::string, std::string>> database::get_matchings() {
+  auto matchings = std::vector<std::pair<std::string, std::string>>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto matchings_db = matchings_dbi(txn);
+  auto cur = lmdb::cursor{txn, matchings_db};
+  auto entry = cur.get(lmdb::cursor_op::FIRST);
+
+  while (entry.has_value()) {
+    matchings.emplace_back(
+        cista::copy_from_potentially_unaligned<std::string>(entry->first),
+        cista::copy_from_potentially_unaligned<std::string>(entry->second));
+    entry = cur.get(lmdb::cursor_op::NEXT);
+  }
+
+  cur.reset();
+  return matchings;
+}
+
+hash_map<std::string, platform> database::get_loc_to_pf_matchings() {
+  auto loc_pf_matchings = hash_map<std::string, platform>{};
+
+  for (auto& [location, osm_key] : get_matchings()) {
+    auto const pf = get_platform(osm_key);
+
+    if (pf.has_value()) {
+      loc_pf_matchings.insert(
+          std::pair<std::string, platform>(location, pf.value()));
+    }
+  }
+
+  return loc_pf_matchings;
 }
 
 lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,
