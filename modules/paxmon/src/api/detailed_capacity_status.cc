@@ -403,7 +403,6 @@ msg_ptr detailed_capacity_status(paxmon_data& data, msg_ptr const& msg) {
   } else {
 
     if (out_type == output_type::CSV_FORMATIONS) {
-      // TODO(pablo): update to include vehicle groups + gattung/baureihe lookup
       csv << "rbf_uuid"
           << "used"
           << "category"
