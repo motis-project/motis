@@ -293,16 +293,7 @@ int update_event_times(schedule const& sched, universe& uv,
   using namespace motis::logging;
   auto const trp = from_fbs(sched, du->trip());
   auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
-  auto const debug = false;
-  if (debug) {
-    LOG(info) << "[UET] update_event_times for trip: "
-              << debug::trip{sched, trp} << ":\n"
-              << motis::module::fbs_table_to_json(du, "motis.rt.RtDelayUpdate");
-  }
   if (tdi == INVALID_TRIP_DATA_INDEX) {
-    if (debug) {
-      LOG(info) << "[UET] trip not found: " << debug::trip{sched, trp};
-    }
     return -1;
   }
   auto updated = 0;
