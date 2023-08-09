@@ -118,19 +118,27 @@ RtMessageHistoryResponse:
     messages:
       description: TODO
 RtMetricsRequest:
-  description: TODO
+  description: Request metrics for the given schedule.
   fields:
     schedule:
-      description: TODO
+      description: |
+        The ID of the schedule.
+
+        Use `0` for the default schedule.
 RtMetrics:
-  description: TODO
+  description: |
+    Contains metrics for `entries` minutes.
+
+    Each metrics field is an array with length = `entries`. The first entry
+    of each array is the value at time `start_time`. The second entry is
+    the value at time `start_time + 1 minute` etc.
   fields:
     start_time:
-      description: TODO
+      description: Time of the first entry in the metrics arrays (unix timestamp)
     entries:
-      description: TODO
+      description: Number of entries for each metrics array
     messages:
-      description: TODO
+      description: The total number of real-time messages
     delay_messages:
       description: TODO
     cancel_messages:
@@ -180,7 +188,14 @@ RtMetrics:
     formation_is_messages:
       description: TODO
 RtMetricsResponse:
-  description: TODO
+  description: |
+    Contains metrics for the requested schedule.
+
+    The metrics are offered in two variants:
+    - `by_msg_timestamp`: Grouped by the creation time of the real-time
+      message
+    - `by_processing_time`: Grouped by the time a message was processed
+      (server time)
   fields:
     by_msg_timestamp:
       description: TODO

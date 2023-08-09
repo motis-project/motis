@@ -623,31 +623,54 @@ PaxMonFilterTripsRequest:
         result. Setting this value to 0.8 would count all sections with a load
         of 80% or higher as crowded.
     include_edges:
-      description: TODO
+      description: Whether edge load information should be included in the response.
     sort_by:
       description: TODO
     max_results:
-      description: TODO
+      description: The maximum number of trips to return.
     skip_first:
-      description: TODO
+      description: |
+        Set to `0` if not using pagination.
+
+        To use pagination:
+        - For the first request, set `skip_first` to `0` and `max_results`
+          to the desired page size (e.g. `100`).
+        - For the next requests, set `skip_first` to the `next_skip` value
+          of the previous response.
     filter_by_time:
       description: TODO
     filter_interval:
       description: TODO
     filter_by_train_nr:
-      description: TODO
+      description: >
+        Set to true to only include trips matching one of the train numbers in
+        `filter_train_nrs`.
     filter_train_nrs:
       description: TODO
     filter_by_service_class:
-      description: TODO
+      description: >
+        Set to true to only include trips matching one of the service classes in
+        `filter_service_classes`.
     filter_service_classes:
       description: TODO
     filter_by_capacity_status:
-      description: TODO
+      description: >
+        Set to true to activate the `filter_has_trip_formation` and
+        `filter_has_capacity_for_all_sections` filters.
     filter_has_trip_formation:
-      description: TODO
+      description: |
+        Only active if `filter_by_capacity_status` is set to true.
+
+        - If true, only trips that have formation information are included.
+        - If false, only trips that don't have formation information are included.
     filter_has_capacity_for_all_sections:
-      description: TODO
+      description: |
+        Only active if `filter_by_capacity_status` is set to true.
+
+        - If true, only trips that have capacity information for all sections
+          are included.
+        - If false, only trips that don't have capacity information for all
+          sections are included.
 PaxMonFilteredTripInfo:
   description: TODO
   fields:
@@ -1557,11 +1580,16 @@ PaxMonGetTripCapacityResponse:
         The number of trips for which capacity information was manually
         overriden.
     baureihe_capacity_map_size:
-      description: TODO
+      description: >
+        The number of vehicle type codes for which capacity information is
+        available.
     gattung_capacity_map_size:
-      description: TODO
+      description: >
+        The number of UIC classifcations for which capacity information is
+        available.
     vehicle_group_capacity_map_size:
-      description: TODO
+      description: >
+        The number of vehicle groups for which capacity information is avaialble.
 PaxMonVehicleGroupInfo:
   description: |
     Information about a vehicle group.
@@ -1597,29 +1625,49 @@ PaxMonMissingVehicleInfo:
     count:
       description: TODO
 PaxMonMetricsRequest:
-  description: TODO
+  description: Request metrics for the given universe.
   fields:
     universe:
-      description: TODO
+      description: The ID of the universe.
 PaxMonMetrics:
-  description: TODO
+  description: |
+    Contains metrics for `entries` minutes.
+
+    Each metrics field is an array with length = `entries`. The first entry
+    of each array is the value at time `start_time`. The second entry is
+    the value at time `start_time + 1 minute` etc.
   fields:
     start_time:
-      description: TODO
+      description: Time of the first entry in the metrics arrays (unix timestamp)
     entries:
-      description: TODO
+      description: Number of entries for each metrics array
     affected_group_routes:
-      description: TODO
+      description: Number of passenger group routes affected by a real-time update
     ok_group_routes:
-      description: TODO
+      description: >
+        Number of passenger group routes that were affected by a real-time
+        update and are neither broken nor have a major expected delay at the
+        destination
     broken_group_routes:
-      description: TODO
+      description: >
+        Number of passenger group routes that were affected by a real-time
+        update and are broken
     major_delay_group_routes:
-      description: TODO
+      description: >
+        Number of passenger group routes that were affected by a real-time
+        update and have an expected major delay at their destination
     total_timing:
-      description: TODO
+      description: >
+        Total time spent by passenger monitoring and forecast in milliseconds
 PaxMonMetricsResponse:
-  description: TODO
+  description: |
+    Contains metrics for the requested universe.
+
+    The metrics are offered in two variants:
+    - `by_system_time`: Grouped by universe time (i.e. the creation time
+      of the latest real-time message that was processed)
+    - `by_processing_time`: Grouped by the time a message was processed
+      (server time)
   fields:
     by_system_time:
       description: TODO
