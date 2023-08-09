@@ -61,12 +61,15 @@ void apply_update_capacities_measure(universe& uv, schedule const& sched,
   if (m.remove_existing_baureihe_capacities_) {
     caps.baureihe_capacity_map_.clear();
   }
+  if (m.remove_existing_vehicle_group_capacities_) {
+    caps.vehicle_group_capacity_map_.clear();
+  }
   if (m.remove_existing_overrides_) {
     caps.override_map_.clear();
   }
 
   // load new capacity data
-  for (auto const& file_content : m.file_contents) {
+  for (auto const& file_content : m.file_contents_) {
     paxmon::loader::capacities::load_capacities(sched, caps, file_content);
   }
 

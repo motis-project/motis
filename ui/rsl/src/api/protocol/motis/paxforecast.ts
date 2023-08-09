@@ -92,6 +92,7 @@ export interface UpdateCapacitiesMeasure {
   remove_existing_trip_formations: boolean;
   remove_existing_gattung_capacities: boolean;
   remove_existing_baureihe_capacities: boolean;
+  remove_existing_vehicle_group_capacities: boolean;
   remove_existing_overrides: boolean;
   track_trip_updates: boolean;
 }
