@@ -43,7 +43,7 @@ struct intermodal_itest
             add_tag(dataset_opt),
             {"intermodal", "routing", "tripbased", "nigiri", "lookup"},
             {"--tripbased.use_data_file=false", "--nigiri.lookup=false",
-             "--nigiri.first_day=2015-11-24"}) {
+             "--nigiri.routing=false", "--nigiri.first_day=2015-11-24"}) {
     instance_->register_op(
         "/osrm/one_to_many",
         [](msg_ptr const& msg) {
