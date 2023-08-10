@@ -270,11 +270,24 @@ export interface PaxMonStatusRequest {
 }
 
 // paxmon/PaxMonStatusResponse.fbs
+export interface PaxMonFeedStatus {
+  enabled: boolean;
+  receiving: boolean;
+  up_to_date: boolean;
+  last_update_time: number;
+  last_message_time: number;
+}
+
+// paxmon/PaxMonStatusResponse.fbs
 export interface PaxMonStatusResponse {
   system_time: number;
   multiverse_id: number;
   active_groups: number;
   trip_count: number;
+  primary_system_time: number;
+  current_time: number;
+  ribasis_fahrt_status: PaxMonFeedStatus;
+  ribasis_formation_status: PaxMonFeedStatus;
 }
 
 // paxmon/PaxMonDistribution.fbs
@@ -301,12 +314,18 @@ export interface PaxMonDistribution {
 
 // paxmon/PaxMonCapacitySource.fbs
 export type PaxMonCapacitySource =
+  | "FormationVehicles"
+  | "FormationVehicleGroups"
+  | "FormationBaureihe"
+  | "FormationGattung"
   | "TripExactMatch"
   | "TripPrimaryIdMatch"
   | "TrainNrAndStations"
   | "TrainNr"
   | "Category"
   | "Class"
+  | "Override"
+  | "Unlimited"
   | "Unknown";
 
 // paxmon/PaxMonCapacityType.fbs
@@ -389,6 +408,13 @@ export interface PaxMonFilterGroupsResponse {
   groups: PaxMonGroupWithStats[];
 }
 
+// paxmon/PaxMonFilterTripsTimeFilter.fbs
+export type PaxMonFilterTripsTimeFilter =
+  | "NoFilter"
+  | "DepartureTime"
+  | "DepartureOrArrivalTime"
+  | "ActiveTime";
+
 // paxmon/PaxMonFilterTripsRequest.fbs
 export type PaxMonFilterTripsSortOrder =
   | "MostCritical"
@@ -400,13 +426,6 @@ export type PaxMonFilterTripsSortOrder =
   | "MaxPaxRange"
   | "MaxPax"
   | "MaxCapacity";
-
-// paxmon/PaxMonFilterTripsRequest.fbs
-export type PaxMonFilterTripsTimeFilter =
-  | "NoFilter"
-  | "DepartureTime"
-  | "DepartureOrArrivalTime"
-  | "ActiveTime";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
@@ -425,6 +444,17 @@ export interface PaxMonFilterTripsRequest {
   filter_train_nrs: number[];
   filter_by_service_class: boolean;
   filter_service_classes: number[];
+  filter_by_capacity_status: boolean;
+  filter_has_trip_formation: boolean;
+  filter_has_capacity_for_all_sections: boolean;
+}
+
+// paxmon/PaxMonTripCapacityStatus.fbs
+export interface PaxMonTripCapacityStatus {
+  has_trip_formation: boolean;
+  has_capacity_for_all_sections: boolean;
+  has_capacity_for_some_sections: boolean;
+  worst_source: PaxMonCapacitySource;
 }
 
 // paxmon/PaxMonFilterTripsResponse.fbs
@@ -437,6 +467,7 @@ export interface PaxMonFilteredTripInfo {
   cumulative_excess_pax: number;
   max_load: number;
   max_expected_pax: number;
+  capacity_status: PaxMonTripCapacityStatus;
   edges: PaxMonEdgeLoadInfo[];
 }
 
@@ -854,12 +885,13 @@ export interface PaxMonCapacityData {
 // paxmon/PaxMonGetTripCapacityResponse.fbs
 export interface PaxMonVehicleCapacityInfo {
   uic: number;
-  found: boolean;
+  uic_found: boolean;
+  guessed: boolean;
   baureihe: string;
   type_code: string;
   order: string;
   data: PaxMonCapacityData;
-  vehicle_groups: number[];
+  capacity_source: PaxMonCapacitySource;
 }
 
 // paxmon/PaxMonGetTripCapacityResponse.fbs
@@ -869,18 +901,19 @@ export interface PaxMonVehicleGroupInfo {
   destination: Station;
   trip_uuid: string;
   primary_trip_id: TripId;
+  capacity: PaxMonCapacityData[];
+  vehicles: PaxMonVehicleCapacityInfo[];
 }
 
 // paxmon/PaxMonGetTripCapacityResponse.fbs
 export interface PaxMonMergedTripCapacityInfo {
   trip: TripId;
   service_info: ServiceInfo;
-  trip_lookup_capacity: number;
+  trip_lookup_capacity: PaxMonCapacityData;
   trip_lookup_capacity_source: PaxMonCapacitySource;
   trip_formation_capacity: PaxMonCapacityData;
+  trip_formation_capacity_source: PaxMonCapacitySource;
   trip_formation_found: boolean;
-  trip_formation_all_vehicles_found: boolean;
-  vehicles: PaxMonVehicleCapacityInfo[];
   vehicle_groups: PaxMonVehicleGroupInfo[];
   override: PaxMonCapacityData[];
 }
@@ -894,7 +927,7 @@ export interface PaxMonSectionCapacityInfo {
   arrival_schedule_time: number;
   arrival_current_time: number;
   capacity_type: PaxMonCapacityType;
-  capacity: number;
+  capacity: PaxMonCapacityData;
   capacity_source: PaxMonCapacitySource;
   merged_trips: PaxMonMergedTripCapacityInfo[];
 }
@@ -902,6 +935,7 @@ export interface PaxMonSectionCapacityInfo {
 // paxmon/PaxMonGetTripCapacityResponse.fbs
 export interface PaxMonTripCapacityInfo {
   tsi: TripServiceInfo;
+  status: PaxMonTripCapacityStatus;
   sections: PaxMonSectionCapacityInfo[];
 }
 
@@ -915,6 +949,120 @@ export interface PaxMonGetTripCapacityResponse {
   vehicle_capacity_map_size: number;
   trip_formation_map_size: number;
   capacity_override_map_size: number;
+  baureihe_capacity_map_size: number;
+  gattung_capacity_map_size: number;
+  vehicle_group_capacity_map_size: number;
+}
+
+// paxmon/PaxMonCapacityStatusRequest.fbs
+export interface PaxMonCapacityStatusRequest {
+  universe: number;
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCapacityStats {
+  tracked: number;
+  trip_formation: number;
+  capacity_for_all_sections: number;
+  capacity_for_some_sections: number;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCategoryCapacityStats {
+  category: string; // key
+  service_class: number;
+  stats: PaxMonCapacityStats;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonProviderInfo {
+  short_name: string;
+  long_name: string;
+  full_name: string;
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonProviderCapacityStats {
+  provider: string; // key
+  provider_info: PaxMonProviderInfo;
+  stats: PaxMonCapacityStats;
+  by_category: PaxMonCategoryCapacityStats[];
+}
+
+// paxmon/PaxMonCapacityStatusResponse.fbs
+export interface PaxMonCapacityStatusResponse {
+  all_trips: PaxMonCapacityStats;
+  by_provider: PaxMonProviderCapacityStats[];
+}
+
+// paxmon/PaxMonDetailedCapacityStatusRequest.fbs
+export interface PaxMonDetailedCapacityStatusRequest {
+  universe: number;
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
+  include_missing_vehicle_infos: boolean;
+  include_uics_not_found: boolean;
+}
+
+// paxmon/PaxMonDetailedCapacityStatusResponse.fbs
+export interface PaxMonDetailedTripCapacityStats {
+  category: string; // key
+  service_class: number;
+  tracked: number;
+  full_data: number;
+  partial_data: number;
+  capacity_for_all_sections: number;
+  trip_formation_data_found: number;
+  no_formation_data_at_all: number;
+  no_formation_data_some_sections_some_merged: number;
+  no_formation_data_some_sections_all_merged: number;
+  no_vehicles_found_at_all: number;
+  no_vehicles_found_some_sections: number;
+  some_vehicles_not_found_some_sections: number;
+  trips_using_vehicle_uics: number;
+  trips_using_only_vehicle_uics: number;
+  trips_using_vehicle_groups: number;
+  trips_using_baureihe: number;
+  trips_using_type_code: number;
+}
+
+// paxmon/PaxMonDetailedCapacityStatusResponse.fbs
+export interface PaxMonMissingVehicleInfo {
+  baureihe: string;
+  type_code: string;
+  count: number;
+}
+
+// paxmon/PaxMonDetailedCapacityStatusResponse.fbs
+export interface PaxMonDetailedCapacityStatusResponse {
+  all_trips: PaxMonDetailedTripCapacityStats;
+  by_category: PaxMonDetailedTripCapacityStats[];
+  missing_vehicle_infos: PaxMonMissingVehicleInfo[];
+  uics_not_found: number[];
+}
+
+// paxmon/PaxMonMetricsRequest.fbs
+export interface PaxMonMetricsRequest {
+  universe: number;
+}
+
+// paxmon/PaxMonMetricsResponse.fbs
+export interface PaxMonMetrics {
+  start_time: number;
+  entries: number;
+  affected_group_routes: number[];
+  ok_group_routes: number[];
+  broken_group_routes: number[];
+  major_delay_group_routes: number[];
+  total_timing: number[];
+}
+
+// paxmon/PaxMonMetricsResponse.fbs
+export interface PaxMonMetricsResponse {
+  by_system_time: PaxMonMetrics;
+  by_processing_time: PaxMonMetrics;
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs

@@ -20,7 +20,7 @@ export function writeOpenAPIOutput(
   doc: Documentation,
   baseDir: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  config: any
+  config: any,
 ) {
   if (typeof config.file !== "string") {
     throw new Error("missing file property in config");
@@ -62,7 +62,7 @@ export function writeOpenAPIOutput(
     typesInUnions,
     typesInUnions,
     true,
-    explicitAdditionalProperties
+    explicitAdditionalProperties,
   );
   const jsonSchema = getJSONSchemaTypes(jsCtx);
 
@@ -76,7 +76,7 @@ export function writeOpenAPIOutput(
     jsonSchema,
     doc,
     yd,
-    includeIds: config["ids"] !== false,
+    includeIds: config.ids !== false,
     typesInUnions,
     msgContentOnly,
   };
@@ -112,7 +112,7 @@ export function writeOpenAPIOutput(
       jsonSchema.types[fqtn],
       typeDoc,
       undefined,
-      fqtn
+      fqtn,
     );
   }
 
@@ -122,7 +122,7 @@ export function writeOpenAPIOutput(
     isScalar(b.key) &&
     typeof b.key.value === "string"
       ? compareFqtns(a.key.value, b.key.value)
-      : 0
+      : 0,
   );
 
   console.log(`writing open api specification: ${openApiFile}`);
@@ -149,7 +149,7 @@ function writeResponse(
   oaResponses: YAMLMap,
   code: string,
   fqtn: string,
-  description: string
+  description: string,
 ) {
   const resType = fqtn.split(".");
   const resTypeName = resType[resType.length - 1];
@@ -267,7 +267,7 @@ function writePaths(ctx: OpenApiContext) {
       oaResponses,
       "200",
       path.output?.type ?? "motis.MotisSuccess",
-      path.output?.description ?? "Empty response"
+      path.output?.description ?? "Empty response",
     );
 
     writeResponse(ctx, oaResponses, "500", "motis.MotisError", "Error");
@@ -280,7 +280,7 @@ function writeSchema(
   jsonSchema: JSONSchema,
   typeDoc?: DocType | undefined,
   fieldDoc?: DocField | undefined,
-  fqtn?: string | undefined
+  fqtn?: string | undefined,
 ) {
   function setKey(key: keyof JSONSchema) {
     if (key in jsonSchema) {

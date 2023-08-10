@@ -246,6 +246,15 @@
     type: motis.paxforecast.PaxForecastApplyMeasuresResponse
     description: Information about the simulation result
 
+/paxforecast/metrics:
+  summary: /paxforecast/metrics
+  tags:
+    - internal
+  input: motis.paxforecast.PaxForecastMetricsRequest
+  output:
+    type: motis.paxforecast.PaxForecastMetricsResponse
+    description: Metrics
+
 /paxmon/destroy_universe:
   summary: Destroy a paxmon universe
   description: |
@@ -446,6 +455,41 @@
     type: motis.paxmon.PaxMonGetUniversesResponse
     description: A list of paxmon universes
 
+/paxmon/capacity_status:
+  summary: Capacity status information
+  description: >
+    Returns information about the available capacity information
+    for tracked trips for debugging purposes.
+
+    This API only supports trip formation and vehicle capacity data
+    (i.e. RiBasisFormation).
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonCapacityStatusRequest
+  output:
+    type: motis.paxmon.PaxMonCapacityStatusResponse
+    description: Information about capacity data
+
+/paxmon/detailed_capacity_status:
+  summary: Detailed capacity status information
+  description: >
+    Returns information about the available capacity information
+    for tracked trips for debugging purposes.
+
+    This API only supports trip formation and vehicle capacity data
+    (i.e. RiBasisFormation).
+
+    This is a computationally expensive operation because capacity
+    information for all sections for all trips is looked up.
+
+    Prefer the faster and simpler `/paxmon/capacity_status` API if possible.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonDetailedCapacityStatusRequest
+  output:
+    type: motis.paxmon.PaxMonDetailedCapacityStatusResponse
+    description: Information about capacity data
+
 /paxmon/add_groups:
   summary: /paxmon/add_groups
   description: Deprecated. DO NOT USE.
@@ -482,6 +526,15 @@
   output:
     type: motis.paxmon.PaxMonDebugGraphResponse
     description: Response
+
+/paxmon/metrics:
+  summary: /paxmon/metrics
+  tags:
+    - internal
+  input: motis.paxmon.PaxMonMetricsRequest
+  output:
+    type: motis.paxmon.PaxMonMetricsResponse
+    description: Metrics
 
 /ppr/profiles:
   summary: List available pedestrian routing profiles
@@ -588,6 +641,14 @@
   tags:
     - internal
 
+/ris/status:
+  summary: Real-time feed status
+  tags:
+    - rt
+  output:
+    type: motis.ris.RISStatusResponse
+    description: Status of real-time feeds
+
 # Custom HTTP requests are not supported by the protocol tool.
 #/ris/upload:
 
@@ -645,3 +706,11 @@
   output:
     type: motis.rt.RtMessageHistoryResponse
     description: Response
+
+/rt/metrics:
+  summary: /rt/metrics
+  tags:
+    - internal
+  output:
+    type: motis.rt.RtMetricsResponse
+    description: Metrics

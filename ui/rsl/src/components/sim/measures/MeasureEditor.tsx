@@ -15,11 +15,11 @@ import TripRecommendationMeasureEditor from "@/components/sim/measures/TripRecom
 import UpdateCapacityMeasureEditor from "@/components/sim/measures/UpdateCapacityMeasureEditor";
 import ModalDialog from "@/components/util/ModalDialog";
 
-export type MeasureEditorProps = {
+export interface MeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
   closeEditor: () => void;
-};
+}
 
 function MeasureEditor({
   measureAtom,
@@ -28,7 +28,7 @@ function MeasureEditor({
 }: MeasureEditorProps): JSX.Element {
   const typeAtom = useMemo(
     () => focusAtom(measureAtom, (optic) => optic.prop("type")),
-    [measureAtom]
+    [measureAtom],
   );
   const [measureType] = useAtom(typeAtom);
   const setMeasure = useSetAtom(measureAtom);
@@ -85,7 +85,7 @@ function MeasureEditor({
           measureAtom={measureAtom}
           closeEditor={closeEditor}
           key={measureAtom.toString()}
-        />
+        />,
       );
     case "TripRecommendationMeasure":
       return measureEditor(
@@ -93,7 +93,7 @@ function MeasureEditor({
           measureAtom={measureAtom}
           closeEditor={closeEditor}
           key={measureAtom.toString()}
-        />
+        />,
       );
     case "TripLoadRecommendationMeasure":
       return measureEditor(
@@ -101,7 +101,7 @@ function MeasureEditor({
           measureAtom={measureAtom}
           closeEditor={closeEditor}
           key={measureAtom.toString()}
-        />
+        />,
       );
     case "RtUpdateMeasure":
       return measureEditor(
@@ -109,7 +109,7 @@ function MeasureEditor({
           measureAtom={measureAtom}
           closeEditor={closeEditor}
           key={measureAtom.toString()}
-        />
+        />,
       );
     case "RtCancelMeasure":
       return measureEditor(
@@ -118,7 +118,7 @@ function MeasureEditor({
           closeEditor={closeEditor}
           deleteMeasure={deleteMeasure}
           key={measureAtom.toString()}
-        />
+        />,
       );
     case "UpdateCapacitiesMeasure":
       return measureEditor(
@@ -127,7 +127,7 @@ function MeasureEditor({
           closeEditor={closeEditor}
           deleteMeasure={deleteMeasure}
           key={measureAtom.toString()}
-        />
+        />,
       );
   }
 }

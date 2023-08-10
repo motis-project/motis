@@ -23,18 +23,25 @@ import {
   LookupStationEventsResponse,
   LookupStationInfoRequest,
   LookupStationInfoResponse,
+  LookupStationLocationResponse,
 } from "@/api/protocol/motis/lookup";
 import {
   PaxForecastApplyMeasuresRequest,
   PaxForecastApplyMeasuresResponse,
+  PaxForecastMetricsRequest,
+  PaxForecastMetricsResponse,
   PaxForecastUpdate,
 } from "@/api/protocol/motis/paxforecast";
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
+  PaxMonCapacityStatusRequest,
+  PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
+  PaxMonDetailedCapacityStatusRequest,
+  PaxMonDetailedCapacityStatusResponse,
   PaxMonFilterGroupsRequest,
   PaxMonFilterGroupsResponse,
   PaxMonFilterTripsRequest,
@@ -60,6 +67,8 @@ import {
   PaxMonGroupStatisticsResponse,
   PaxMonKeepAliveRequest,
   PaxMonKeepAliveResponse,
+  PaxMonMetricsRequest,
+  PaxMonMetricsResponse,
   PaxMonRemoveGroupsRequest,
   PaxMonRerouteGroupsRequest,
   PaxMonRerouteGroupsResponse,
@@ -70,8 +79,16 @@ import {
   PaxMonUniverseForked,
   PaxMonUpdate,
 } from "@/api/protocol/motis/paxmon";
-import { RISForwardTimeRequest } from "@/api/protocol/motis/ris";
-import { RoutingRequest, RoutingResponse } from "@/api/protocol/motis/routing";
+import {
+  RISForwardTimeRequest,
+  RISStatusResponse,
+} from "@/api/protocol/motis/ris";
+import {
+  InputStation,
+  RoutingRequest,
+  RoutingResponse,
+} from "@/api/protocol/motis/routing";
+import { RtMetricsRequest, RtMetricsResponse } from "@/api/protocol/motis/rt";
 
 // base/Position.fbs
 export interface Position {
@@ -100,6 +117,7 @@ export type EventType = "DEP" | "ARR";
 
 // base/TripId.fbs
 export interface TripId {
+  id?: string;
   station_id: string;
   train_nr: number;
   time: number;
@@ -365,7 +383,20 @@ export type MsgContent =
   | LookupStationInfoRequest
   | LookupStationInfoResponse
   | PaxMonGetTripCapacityRequest
-  | PaxMonGetTripCapacityResponse;
+  | PaxMonGetTripCapacityResponse
+  | LookupStationLocationResponse
+  | InputStation
+  | RISStatusResponse
+  | RtMetricsRequest
+  | RtMetricsResponse
+  | PaxMonDetailedCapacityStatusRequest
+  | PaxMonDetailedCapacityStatusResponse
+  | PaxMonMetricsRequest
+  | PaxMonMetricsResponse
+  | PaxForecastMetricsRequest
+  | PaxForecastMetricsResponse
+  | PaxMonCapacityStatusRequest
+  | PaxMonCapacityStatusResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -438,7 +469,20 @@ export type MsgContentType =
   | "LookupStationInfoRequest"
   | "LookupStationInfoResponse"
   | "PaxMonGetTripCapacityRequest"
-  | "PaxMonGetTripCapacityResponse";
+  | "PaxMonGetTripCapacityResponse"
+  | "LookupStationLocationResponse"
+  | "InputStation"
+  | "RISStatusResponse"
+  | "RtMetricsRequest"
+  | "RtMetricsResponse"
+  | "PaxMonDetailedCapacityStatusRequest"
+  | "PaxMonDetailedCapacityStatusResponse"
+  | "PaxMonMetricsRequest"
+  | "PaxMonMetricsResponse"
+  | "PaxForecastMetricsRequest"
+  | "PaxForecastMetricsResponse"
+  | "PaxMonCapacityStatusRequest"
+  | "PaxMonCapacityStatusResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

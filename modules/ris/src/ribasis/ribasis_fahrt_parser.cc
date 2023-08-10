@@ -7,6 +7,7 @@
 #include "motis/json/json.h"
 
 #include "motis/core/common/date_time_util.h"
+#include "motis/core/common/logging.h"
 #include "motis/core/schedule/event_type.h"
 
 #include "motis/ris/ribasis/common.h"
@@ -163,16 +164,30 @@ Offset<Vector<Offset<TripSection>>> parse_sections(
       }));
 }
 
+FullTripMessageType parse_message_type(rapidjson::Value const& data) {
+  auto const s = get_str(data, "kategorie");
+  if (s == "SOLL") {
+    return FullTripMessageType_Schedule;
+  } else if (s == "VORSCHAU") {
+    return FullTripMessageType_Update;
+  } else {
+    LOG(logging::warn) << "unknown ri basis fahrt kategorie: " << s;
+    return FullTripMessageType_Update;
+  }
+}
+
 void parse_ribasis_fahrt(ris_msg_context& ris_ctx,
                          rapidjson::Value const& data) {
   auto ctx = context{ris_ctx};
+  auto const message_type = parse_message_type(data);
   auto const trp_id = parse_trip_id(ctx, data);
   parse_categories(ctx, data);
   parse_lines(ctx, data);
   parse_providers(ctx, data);
   auto const sections_data = get_array(data, "allFahrtabschnitt");
   auto const sections = parse_sections(ctx, sections_data);
-  auto const trip_msg = CreateFullTripMessage(ctx.ris_.b_, trp_id, sections);
+  auto const trip_msg =
+      CreateFullTripMessage(ctx.ris_.b_, trp_id, message_type, sections);
   ctx.ris_.b_.Finish(CreateRISMessage(
       ctx.ris_.b_, ctx.ris_.earliest_, ctx.ris_.latest_, ctx.ris_.timestamp_,
       RISMessageUnion_FullTripMessage, trip_msg.Union()));

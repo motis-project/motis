@@ -10,16 +10,16 @@ import {
 import MeasureEditor from "@/components/sim/measures/MeasureEditor";
 import MeasureList from "@/components/sim/measures/MeasureList";
 
-export type MeasurePanelProps = {
+export interface MeasurePanelProps {
   onSimulationFinished: () => void;
-};
+}
 
 function MeasurePanel({
   onSimulationFinished,
 }: MeasurePanelProps): JSX.Element {
   const setMeasureAtoms = useSetAtom(measuresAtom);
   const [currentMeasureAtom, setCurrentMeasureAtom] = useAtom(
-    currentEditorMeasureAtom
+    currentEditorMeasureAtom,
   );
 
   const deleteMeasure = useCallback(
@@ -27,12 +27,12 @@ function MeasurePanel({
       setMeasureAtoms((prev) => prev.filter((e) => e !== measureAtom));
       setCurrentMeasureAtom((ma) => (ma === measureAtom ? null : ma));
     },
-    [setMeasureAtoms, setCurrentMeasureAtom]
+    [setMeasureAtoms, setCurrentMeasureAtom],
   );
 
   const closeEditor = useCallback(
     () => setCurrentMeasureAtom(null),
-    [setCurrentMeasureAtom]
+    [setCurrentMeasureAtom],
   );
 
   return (

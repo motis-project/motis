@@ -1,0 +1,5 @@
+namespace motis.paxforecast;
+
+table PaxForecastMetricsRequest {
+  universe: uint;
+}

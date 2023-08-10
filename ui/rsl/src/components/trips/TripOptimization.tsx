@@ -11,15 +11,14 @@ import { measuresAtom } from "@/data/measures";
 import { scheduleAtom, universeAtom } from "@/data/multiverse";
 import { showOptimizationDebugLogAtom } from "@/data/settings";
 
-import classNames from "@/util/classNames";
-
+import { cn } from "@/lib/utils";
 import OptimizationWorker from "@/optimization/worker?worker";
 import { WorkerRequest, WorkerUpdate } from "@/optimization/workerMessages";
 
-export type TripOptimizationProps = {
+export interface TripOptimizationProps {
   tripId: TripId;
   optimizationAvailable: boolean;
-};
+}
 
 function TripOptimization({
   tripId,
@@ -62,7 +61,7 @@ function TripOptimization({
           }
           case "UniverseDestroyed": {
             simUniverses.current = simUniverses.current.filter(
-              (u) => u != update.universe
+              (u) => u != update.universe,
             );
             break;
           }
@@ -98,11 +97,11 @@ function TripOptimization({
     const universesToDestroy = simUniverses.current;
     if (universesToDestroy.length > 0) {
       textAreaRef.current.value += `Universen werden freigegeben: ${universesToDestroy.join(
-        ", "
+        ", ",
       )}\n`;
       simUniverses.current = [];
       const destructionCalls = universesToDestroy.map((u) =>
-        sendPaxMonDestroyUniverseRequest({ universe: u })
+        sendPaxMonDestroyUniverseRequest({ universe: u }),
       );
       await Promise.allSettled(destructionCalls);
       textAreaRef.current.value += "Universen freigegeben.\n";
@@ -126,29 +125,27 @@ function TripOptimization({
 
   return (
     <div
-      className={classNames(
+      className={cn(
         "max-w-7xl mx-auto pb-2",
-        optimizationAvailable ? "visible" : "invisible"
+        optimizationAvailable ? "visible" : "invisible",
       )}
     >
       <div className="flex justify-center my-2 gap-2">
         <button
           type="button"
           onClick={toggleOptimization}
-          className={classNames(
+          className={cn(
             "flex justify-center items-center gap-1 px-3 py-1 rounded text-sm",
             running
               ? "bg-db-red-300 text-db-red-100 cursor-wait"
-              : "bg-db-red-500 hover:bg-db-red-600 text-white"
+              : "bg-db-red-500 hover:bg-db-red-600 text-white",
           )}
         >
           <SparklesIcon className="w-5 h-5" aria-hidden="true" />
           Maßnahmen zur Auslastungsreduktion ermitteln
         </button>
       </div>
-      <div
-        className={classNames(showOptimizationDebugLog ? "block" : "hidden")}
-      >
+      <div className={cn(showOptimizationDebugLog ? "block" : "hidden")}>
         <textarea
           ref={textAreaRef}
           rows={10}

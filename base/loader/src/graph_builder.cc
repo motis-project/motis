@@ -709,10 +709,13 @@ provider const* graph_builder::get_or_create_provider(Provider const* p) {
     return nullptr;
   } else {
     return utl::get_or_create(providers_, p, [&]() {
-      sched_.providers_.emplace_back(mcd::make_unique<provider>(
-          p->short_name()->str(), p->long_name()->str(),
-          p->full_name()->str()));
-      return sched_.providers_.back().get();
+      auto const ptr = sched_.providers_
+                           .emplace_back(mcd::make_unique<provider>(
+                               p->short_name()->str(), p->long_name()->str(),
+                               p->full_name()->str()))
+                           .get();
+      sched_.provider_by_full_name_[ptr->full_name_] = ptr;
+      return ptr;
     });
   }
 }

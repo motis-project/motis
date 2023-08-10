@@ -33,8 +33,8 @@ export function formatISODate(ts: Date | number): string {
   return formatISO(getDate(ts), { representation: "date" });
 }
 
-export function formatTime(ts: Date | number): string {
-  return format(getDate(ts), "HH:mm", {
+export function formatTime(ts: Date | number, fmt = "HH:mm"): string {
+  return format(getDate(ts), fmt, {
     locale: de,
   });
 }
@@ -50,5 +50,5 @@ export function formatRiBasisDateTime(ts: Date): string {
 }
 
 export function parseRiBasisDateTime(str: string, referenceDate?: Date): Date {
-  return parse(str, RI_BASIS_TIMESTAMP_FORMAT, referenceDate || new Date());
+  return parse(str, RI_BASIS_TIMESTAMP_FORMAT, referenceDate ?? new Date());
 }

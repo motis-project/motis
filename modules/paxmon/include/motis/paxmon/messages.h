@@ -165,4 +165,7 @@ flatbuffers::Offset<PaxMonTripLoadInfo> to_fbs(
 
 PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs);
 
+flatbuffers::Offset<PaxMonTripCapacityStatus> to_fbs(
+    flatbuffers::FlatBufferBuilder& fbb, trip_capacity_status const& tcs);
+
 }  // namespace motis::paxmon

@@ -7,10 +7,11 @@
 
 #include "motis/paxmon/paxmon_data.h"
 
-#include "motis/paxforecast/apply_measures.h"
+#include "motis/paxforecast/api/apply_measures.h"
+#include "motis/paxforecast/api/metrics.h"
 #include "motis/paxforecast/monitoring_update.h"
 
-#include "motis/paxforecast/measures/storage.h"
+#include "motis/paxforecast/universe_data.h"
 
 using namespace motis::module;
 using namespace motis::logging;
@@ -18,9 +19,7 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast {
 
-paxforecast::paxforecast()
-    : module("Passenger Forecast", "paxforecast"),
-      measures_storage_(std::make_unique<measures::storage>()) {
+paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
   param(forecast_filename_, "forecast_results",
         "output file for forecast messages");
   param(behavior_stats_filename_, "behavior_stats",
@@ -88,7 +87,7 @@ void paxforecast::init(motis::module::registry& reg) {
                   LOG(info)
                       << "paxforecast: /paxmon/universe_forked: new="
                       << ev->new_universe() << ", base=" << ev->base_universe();
-                  measures_storage_->universe_created(ev->new_universe());
+                  universe_storage_.universe_created(ev->new_universe());
                   return nullptr;
                 },
                 {});
@@ -98,7 +97,7 @@ void paxforecast::init(motis::module::registry& reg) {
                   auto const ev = motis_content(PaxMonUniverseDestroyed, msg);
                   LOG(info) << "paxforecast: /paxmon/universe_destroyed: "
                             << ev->universe();
-                  measures_storage_->universe_destroyed(ev->universe());
+                  universe_storage_.universe_destroyed(ev->universe());
                   return nullptr;
                 },
                 {});
@@ -107,7 +106,13 @@ void paxforecast::init(motis::module::registry& reg) {
                   [&, this](msg_ptr const& msg) -> msg_ptr {
                     auto& data = *get_shared_data<paxmon_data*>(
                         to_res_id(global_res_id::PAX_DATA));
-                    return apply_measures(*this, data, msg);
+                    return api::apply_measures(*this, data, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxforecast/metrics",
+                  [&, this](msg_ptr const& msg) -> msg_ptr {
+                    return api::metrics(*this, msg);
                   },
                   {});
 }

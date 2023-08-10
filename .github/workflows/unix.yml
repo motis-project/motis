@@ -51,7 +51,7 @@ jobs:
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2
         with:
-          version: ^8.3.1
+          version: ^8.6.12
           run_install: |
             - cwd: ui/rsl
 
@@ -83,7 +83,7 @@ jobs:
       - name: Install Protocol Tool Dependencies
         uses: pnpm/action-setup@v2
         with:
-          version: ^8.3.1
+          version: ^8.6.12
           run_install: |
             - cwd: tools/protocol
 
@@ -193,7 +193,7 @@ jobs:
       - name: Install RSL Web Interface Dependencies
         uses: pnpm/action-setup@v2
         with:
-          version: ^8.3.1
+          version: ^8.6.12
           run_install: |
             - cwd: ./ui/rsl
 
@@ -344,7 +344,7 @@ jobs:
         uses: pnpm/action-setup@v2
         if: ${{ !matrix.config.skipui }}
         with:
-          version: ^8.3.1
+          version: ^8.6.12
           run_install: |
             - cwd: ./ui/rsl
 

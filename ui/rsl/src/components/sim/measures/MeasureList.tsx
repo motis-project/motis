@@ -27,12 +27,13 @@ import {
   simResultsAtom,
 } from "@/data/simulation";
 
-import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 import { loadLevelInfos } from "@/util/loadLevelInfos";
 import { isNonNull } from "@/util/typeGuards";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+
+import { cn } from "@/lib/utils";
 
 type RemoveFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
 type SelectFn = (ma: PrimitiveAtom<MeasureUnion>) => void;
@@ -83,9 +84,9 @@ function MeasureTypeDetail({
       return (
         <div className="text-sm text-gray-800">
           <div
-            className={classNames(
+            className={cn(
               "truncate",
-              !measure.data.planned_destination && "text-db-red-500"
+              !measure.data.planned_destination && "text-db-red-500",
             )}
           >
             {measure.data.planned_destination
@@ -154,11 +155,11 @@ function MeasureTypeDetail({
   }
 }
 
-type TripWithLoadLevelProps = {
+interface TripWithLoadLevelProps {
   tsi: TripServiceInfo | undefined;
   level: LoadLevel;
   placeholder?: string | undefined;
-};
+}
 
 function TripWithLoadLevel({
   tsi,
@@ -184,11 +185,11 @@ function TripWithLoadLevel({
   );
 }
 
-type MeasureListEntryProps = {
+interface MeasureListEntryProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   remove: RemoveFn;
   select: SelectFn;
-};
+}
 
 function MeasureListEntry({
   measureAtom,
@@ -247,16 +248,16 @@ function MeasureListEntry({
   );
 }
 
-export type MeasureListProps = {
+export interface MeasureListProps {
   onSimulationFinished: () => void;
-};
+}
 
 function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const queryClient = useQueryClient();
   const [universe] = useAtom(universeAtom);
   const [measureAtoms, setMeasureAtoms] = useAtom(measuresAtom);
   const [selectedMeasure, setSelectedMeasure] = useAtom(
-    currentEditorMeasureAtom
+    currentEditorMeasureAtom,
   );
   const setSimResults = useSetAtom(simResultsAtom);
   const setSelectedSimResult = useSetAtom(selectedSimResultAtom);
@@ -295,7 +296,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         onSimulationFinished();
       },
       retry: false,
-    }
+    },
   );
 
   const applyMeasures = useAtomCallback(
@@ -312,13 +313,13 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         console.log(JSON.stringify(measureWrappers, null, 2));
         applyMeasuresMutation.mutate(measureWrappers);
       },
-      [applyMeasuresMutation]
-    )
+      [applyMeasuresMutation],
+    ),
   );
 
   const add = () => {
     const systemTime = queryClient.getQueryData<PaxMonStatusResponse>(
-      queryKeys.status(universe)
+      queryKeys.status(universe),
     )?.system_time;
     const currentTime = systemTime ? new Date(systemTime * 1000) : new Date();
     const newMeasure = atom<MeasureUnion>(newEmptyMeasure(currentTime));
@@ -345,9 +346,9 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
 
   return (
     <div
-      className={classNames(
+      className={cn(
         "flex flex-col gap-2 h-full overflow-hidden",
-        applyMeasuresMutation.isLoading && "cursor-wait"
+        applyMeasuresMutation.isLoading && "cursor-wait",
       )}
     >
       <div className="flex justify-between">
@@ -374,9 +375,9 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
       <div className="overflow-y-auto grow pr-2">
         {measureAtoms.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {measureAtoms.map((ma) => (
+            {measureAtoms.map((ma, idx) => (
               <MeasureListEntry
-                key={`${ma}`}
+                key={idx}
                 measureAtom={ma}
                 remove={remove}
                 select={setSelectedMeasure}

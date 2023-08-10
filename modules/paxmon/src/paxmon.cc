@@ -23,8 +23,10 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/api/add_groups.h"
+#include "motis/paxmon/api/capacity_status.h"
 #include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
+#include "motis/paxmon/api/detailed_capacity_status.h"
 #include "motis/paxmon/api/filter_groups.h"
 #include "motis/paxmon/api/filter_trips.h"
 #include "motis/paxmon/api/find_trips.h"
@@ -39,6 +41,7 @@
 #include "motis/paxmon/api/get_universes.h"
 #include "motis/paxmon/api/group_statistics.h"
 #include "motis/paxmon/api/keep_alive.h"
+#include "motis/paxmon/api/metrics.h"
 #include "motis/paxmon/api/remove_groups.h"
 #include "motis/paxmon/api/reroute_groups.h"
 
@@ -428,6 +431,23 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
+  reg.register_op("/paxmon/capacity_status",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::capacity_status(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/detailed_capacity_status",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::detailed_capacity_status(data_, msg);
+                  },
+                  {});
+
+  reg.register_op(
+      "/paxmon/metrics",
+      [&](msg_ptr const& msg) -> msg_ptr { return api::metrics(data_, msg); },
+      {});
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -702,12 +722,12 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
   uv.tick_stats_.t_rt_updates_applied_total_ =
       static_cast<std::uint64_t>(MOTIS_TIMING_MS(total));
 
+  uv.metrics_.add(sched.system_time_, now(), uv.tick_stats_);
   uv.update_tracker_.rt_updates_applied(uv.tick_stats_);
   if (uv.id_ == 0) {
     stats_writer_->write_tick(uv.tick_stats_);
     stats_writer_->flush();
   }
-  uv.last_tick_stats_ = uv.tick_stats_;
   uv.tick_stats_ = {};
 
   if (check_graph_integrity_) {

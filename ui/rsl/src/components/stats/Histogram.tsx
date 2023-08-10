@@ -27,7 +27,7 @@ const defaultMargin = {
 
 type ScaleType = "linear" | "log";
 
-export type HistogramProps = {
+export interface HistogramProps {
   data: PaxMonHistogram;
   width: number;
   height: number;
@@ -38,7 +38,7 @@ export type HistogramProps = {
   xTickFormat?: TickFormatter<number>;
   xTickValues?: number[];
   xNumTicks?: number;
-};
+}
 
 const xAxisHeight = 25;
 const yAxisWidth = 50;

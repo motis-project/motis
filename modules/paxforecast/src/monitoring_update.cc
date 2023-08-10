@@ -10,6 +10,7 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
 
@@ -30,6 +31,7 @@
 #include "motis/paxforecast/paxforecast.h"
 #include "motis/paxforecast/revert_forecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
+#include "motis/paxforecast/universe_data.h"
 #include "motis/paxforecast/update_tracked_groups.h"
 
 #include "motis/paxforecast/behavior/default_behavior.h"
@@ -207,6 +209,12 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
         from_fbs(sched, event->reachability()->broken_transfer());
 
     auto& destination_groups = combined_groups[destination_station_id];
+    // TODO(pablo): localization includes the scheduled arrival time, which
+    // is needed later (journey prefix calculation). to make sure this works,
+    // the scheduled time is currently included in the comparison.
+    // it might be better to only check the current arrival time
+    // and store the scheduled arrival time / localization per group
+    // instead of per combined group.
     auto cpg = std::find_if(
         begin(destination_groups), end(destination_groups),
         [&](auto const& g) { return g.localization_ == localization; });
@@ -468,6 +476,9 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
     mod.stats_writer_->write_tick(tick_stats);
     mod.stats_writer_->flush();
   }
+
+  auto& metrics = mod.universe_storage_.get(uv.id_).metrics_;
+  metrics.add(sched.system_time_, now(), tick_stats);
 }
 
 }  // namespace motis::paxforecast

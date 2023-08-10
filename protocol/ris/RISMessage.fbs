@@ -157,8 +157,11 @@ table TripSection {
   arrival:TripEvent;
 }
 
+enum FullTripMessageType : byte {Schedule, Update}
+
 table FullTripMessage {
   trip_id:FullTripId;
+  message_type: FullTripMessageType;
   sections:[TripSection];
 }
 

@@ -2,9 +2,9 @@ import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
 
 import { SectionLoadColors } from "@/util/colors";
 
-export type MiniTripLoadGraphProps = {
+export interface MiniTripLoadGraphProps {
   edges: PaxMonEdgeLoadInfo[];
-};
+}
 
 interface SectionGeometry {
   x: number;
@@ -42,18 +42,18 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
 
   const maxCapacity = edges.reduce(
     (max, eli) => (eli.capacity ? Math.max(max, eli.capacity) : max),
-    0
+    0,
   );
   const totalMaxPax = edges.reduce(
     (max, eli) => Math.max(max, maxEdgeLoad(eli)),
-    0
+    0,
   );
   const totalMaxLoad = Math.max(maxCapacity, totalMaxPax, 1);
 
   const loadHeight = (load: number) => (load / totalMaxLoad) * graphHeight;
 
   const sectionDurations = edges.map((e) =>
-    Math.max(300, e.arrival_schedule_time - e.departure_schedule_time)
+    Math.max(300, e.arrival_schedule_time - e.departure_schedule_time),
   );
   const totalDuration = sectionDurations.reduce((sum, v) => sum + v, 0);
   const sectionGeometry = edges.reduce(
@@ -70,7 +70,7 @@ function MiniTripLoadGraph({ edges }: MiniTripLoadGraphProps): JSX.Element {
       };
       return { x: sg.x + sg.width, sections: [...a.sections, sg] };
     },
-    { x: 0, sections: [] as SectionGeometry[] }
+    { x: 0, sections: [] as SectionGeometry[] },
   ).sections;
 
   return (

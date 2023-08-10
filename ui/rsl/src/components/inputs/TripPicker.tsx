@@ -11,18 +11,21 @@ import { usePaxMonFindTripsQuery } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
 
-import classNames from "@/util/classNames";
-
 import TripServiceInfoView from "@/components/TripServiceInfoView";
 
+import { cn } from "@/lib/utils";
+
 function filterTrips(trips: PaxMonTripInfo[]) {
-  return trips.filter((trip) =>
-    trip.tsi.service_infos.some(
-      (si) =>
-        si.clasz === ServiceClass.ICE ||
-        si.clasz === ServiceClass.IC ||
-        si.clasz === ServiceClass.OTHER
-    )
+  return trips.filter(
+    (trip) =>
+      /* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
+      trip.tsi.service_infos.some(
+        (si) =>
+          si.clasz === ServiceClass.ICE ||
+          si.clasz === ServiceClass.IC ||
+          si.clasz === ServiceClass.OTHER,
+      ),
+    /* eslint-enable */
   );
 }
 
@@ -33,13 +36,13 @@ function shortTripName(tsi: TripServiceInfo) {
   return names[0] ?? "?";
 }
 
-type TripPickerProps = {
+interface TripPickerProps {
   onTripPicked: (trip: TripServiceInfo | undefined) => void;
   clearOnPick: boolean;
   longDistanceOnly: boolean;
   className?: string;
   initialTrip?: TripServiceInfo | undefined;
-};
+}
 
 function TripPicker({
   onTripPicked,
@@ -54,8 +57,8 @@ function TripPicker({
     keepPreviousData: true,
   });
   const tripList = longDistanceOnly
-    ? filterTrips(data?.trips || [])
-    : data?.trips || [];
+    ? filterTrips(data?.trips ?? [])
+    : data?.trips ?? [];
 
   const initialSelectedItem = initialTrip
     ? {
@@ -99,7 +102,7 @@ function TripPicker({
   });
 
   return (
-    <div className={classNames("relative flex", className)}>
+    <div className={cn("relative flex", className)}>
       {/* <label {...getLabelProps()}>Trip:</label> */}
       <div className="relative w-full">
         <input

@@ -18,10 +18,10 @@ import {
 import StationPicker from "@/components/inputs/StationPicker";
 import TripAndLoadInput from "@/components/sim/measures/TripAndLoadInput";
 
-export type TripLoadRecommendationMeasureEditorProps = {
+export interface TripLoadRecommendationMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
-};
+}
 
 const labelClass = "font-semibold";
 
@@ -32,7 +32,7 @@ function TripLoadRecommendationMeasureEditor({
   const dataAtom = useMemo(() => {
     console.log("TripLoadInfoMeasureEditor: creating dataAtom");
     return focusAtom(measureAtom, (optic) =>
-      optic.guard(isTripLoadRecommendationMeasureU).prop("data")
+      optic.guard(isTripLoadRecommendationMeasureU).prop("data"),
     );
   }, [measureAtom]);
   const [data, setData] = useAtom(dataAtom);
@@ -46,7 +46,7 @@ function TripLoadRecommendationMeasureEditor({
       setData((d) => {
         return { ...d, planned_destination: station };
       }),
-    [setData]
+    [setData],
   );
 
   const setFullTrip = useCallback(
@@ -54,7 +54,7 @@ function TripLoadRecommendationMeasureEditor({
       setData((d) => {
         return { ...d, full_trip: { ...d.full_trip, trip: tsi } };
       }),
-    [setData]
+    [setData],
   );
 
   const setFullTripLevel = useCallback(
@@ -62,7 +62,7 @@ function TripLoadRecommendationMeasureEditor({
       setData((d) => {
         return { ...d, full_trip: { ...d.full_trip, level } };
       }),
-    [setData]
+    [setData],
   );
 
   const setAlternativeTrip = useCallback(
@@ -72,7 +72,7 @@ function TripLoadRecommendationMeasureEditor({
         newTrips[idx] = { ...newTrips[idx], trip: tsi };
         return { ...d, recommended_trips: newTrips };
       }),
-    [setData]
+    [setData],
   );
 
   const setAlternativeTripLevel = useCallback(
@@ -82,7 +82,7 @@ function TripLoadRecommendationMeasureEditor({
         newTrips[idx] = { ...newTrips[idx], level };
         return { ...d, recommended_trips: newTrips };
       }),
-    [setData]
+    [setData],
   );
 
   const removeAlternative = useCallback(
@@ -92,7 +92,7 @@ function TripLoadRecommendationMeasureEditor({
         newTrips.splice(idx, 1);
         return { ...d, recommended_trips: newTrips };
       }),
-    [setData]
+    [setData],
   );
 
   const addAlternative = useCallback(
@@ -106,7 +106,7 @@ function TripLoadRecommendationMeasureEditor({
           ],
         };
       }),
-    [setData]
+    [setData],
   );
 
   return (

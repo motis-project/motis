@@ -9,6 +9,7 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/global_res_ids.h"
 
+#include "motis/rt/error.h"
 #include "motis/rt/rt_handler.h"
 
 using namespace motis::ris;
@@ -127,6 +128,27 @@ void rt::init(motis::module::registry& reg) {
         return get_trip_history(sched, get_rt_handler(schedule_res_id), req);
       },
       {});
+
+  reg.register_op("/rt/metrics",
+                  [this](msg_ptr const& msg) -> msg_ptr {
+                    auto schedule_res_id = DEFAULT_SCHEDULE_RES_ID;
+                    switch (msg->get()->content_type()) {
+                      case MsgContent_RtMetricsRequest:
+                        schedule_res_id = get_schedule_res_id(
+                            motis_content(RtMetricsRequest, msg));
+                        break;
+                      case MsgContent_MotisNoMessage: break;
+                      default:
+                        throw std::system_error{
+                            motis::module::error::unexpected_message_type};
+                    }
+                    auto const* handler = get_rt_handler(schedule_res_id);
+                    if (handler == nullptr) {
+                      throw std::system_error{error::schedule_not_found};
+                    }
+                    return get_metrics_api(handler->metrics_);
+                  },
+                  {});
 }
 
 void rt::import(motis::module::import_dispatcher& reg) {

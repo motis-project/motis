@@ -80,3 +80,6 @@ ScheduleEvent:
 NigiriEvent:
   description: TODO
   fields: {}
+StationsEvent:
+  description: TODO
+  fields: {}

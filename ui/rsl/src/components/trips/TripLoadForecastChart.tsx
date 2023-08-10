@@ -26,7 +26,7 @@ import {
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfo[],
   maxVal: number,
-  getProp: (ef: PaxMonEdgeLoadInfo) => number
+  getProp: (ef: PaxMonEdgeLoadInfo) => number,
 ) {
   const points = [];
   let x = 0;
@@ -70,7 +70,7 @@ function getYLabels(maxVal: number) {
 
 function getCurrentTimePosition(
   edges: PaxMonEdgeLoadInfo[],
-  currentTime: number
+  currentTime: number,
 ) {
   if (currentTime < edges[0].departure_current_time) {
     return -5;
@@ -149,11 +149,11 @@ function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
   return parts.join("_");
 }
 
-type TripLoadForecastChartProps = {
+interface TripLoadForecastChartProps {
   tripId: TripId;
   mode: "Interactive" | "Tooltip";
   onSectionClick?: (e: PaxMonEdgeLoadInfo) => void;
-};
+}
 
 function TripLoadForecastChart({
   tripId,
@@ -174,7 +174,7 @@ function TripLoadForecastChart({
           ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
           : undefined;
       },
-    }
+    },
   );
 
   const svgEl = useRef<SVGSVGElement>(null);
@@ -191,7 +191,7 @@ function TripLoadForecastChart({
   const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
   const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
-    0
+    0,
   );
   const maxVal = Math.max(maxPax, maxCapacity) * 1.1;
 
@@ -294,12 +294,12 @@ function TripLoadForecastChart({
       tripData.tsi.service_infos.map(
         (si) =>
           `${si.category} ${si.train_nr}` +
-          (si.line ? ` [Linie ${si.line}]` : "")
-      )
+          (si.line ? ` [Linie ${si.line}]` : ""),
+      ),
     ),
   ];
   const title = `${names.join(", ")}, Vorhersage vom ${formatLongDateTime(
-    systemTime
+    systemTime,
   )}`;
 
   const baseFileName = getBaseFileName(tripData, systemTime);
@@ -384,7 +384,7 @@ function TripLoadForecastChart({
       >
         {station.name}
         <title>{station.id}</title>
-      </text>
+      </text>,
     );
 
     if (arrivalScheduleTime && arrivalCurrentTime) {
@@ -398,7 +398,7 @@ function TripLoadForecastChart({
             key={`${idx}.sched.arr`}
           >
             {formatTime(arrivalScheduleTime)}
-          </text>
+          </text>,
         );
       }
       currentTimeLabels.push(
@@ -413,7 +413,7 @@ function TripLoadForecastChart({
           key={`${idx}.curr.arr`}
         >
           {formatTime(arrivalCurrentTime)}
-        </text>
+        </text>,
       );
     }
     if (departureScheduleTime && departureCurrentTime) {
@@ -427,7 +427,7 @@ function TripLoadForecastChart({
             key={`${idx}.sched.dep`}
           >
             {formatTime(departureScheduleTime)}
-          </text>
+          </text>,
         );
       }
       currentTimeLabels.push(
@@ -442,7 +442,7 @@ function TripLoadForecastChart({
           key={`${idx}.curr.dep`}
         >
           {formatTime(departureCurrentTime)}
-        </text>
+        </text>,
       );
     }
   }

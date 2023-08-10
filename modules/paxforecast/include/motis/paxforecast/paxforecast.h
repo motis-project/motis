@@ -12,12 +12,11 @@
 
 #include "motis/paxforecast/routing_cache.h"
 #include "motis/paxforecast/stats_writer.h"
+#include "motis/paxforecast/universe_storage.h"
 
 namespace motis::paxforecast {
 
-namespace measures {
-struct storage;
-}  // namespace measures
+struct universe_data;
 
 struct paxforecast : public motis::module::module {
   paxforecast();
@@ -53,7 +52,7 @@ struct paxforecast : public motis::module::module {
 
   std::string stats_file_;
   std::unique_ptr<stats_writer> stats_writer_;
-  std::unique_ptr<measures::storage> measures_storage_;
+  universe_storage<universe_data> universe_storage_;
 };
 
 }  // namespace motis::paxforecast

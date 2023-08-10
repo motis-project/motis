@@ -125,13 +125,23 @@ measures::rt_update from_fbs(schedule const& sched, RtUpdateMeasure const* m) {
 measures::update_capacities from_fbs(schedule const& sched,
                                      UpdateCapacitiesMeasure const* m) {
   return {
-      unix_to_motistime(sched.schedule_begin_, m->time()),
-      utl::to_vec(*m->file_contents(), [](auto const& s) { return s->str(); }),
-      m->remove_existing_trip_capacities(),
-      m->remove_existing_category_capacities(),
-      m->remove_existing_vehicle_capacities(),
-      m->remove_existing_trip_formations(),
-      m->track_trip_updates()};
+      .time_ = unix_to_motistime(sched.schedule_begin_, m->time()),
+      .file_contents_ = utl::to_vec(*m->file_contents(),
+                                    [](auto const& s) { return s->str(); }),
+      .remove_existing_trip_capacities_ = m->remove_existing_trip_capacities(),
+      .remove_existing_category_capacities_ =
+          m->remove_existing_category_capacities(),
+      .remove_existing_vehicle_capacities_ =
+          m->remove_existing_vehicle_capacities(),
+      .remove_existing_trip_formations_ = m->remove_existing_trip_formations(),
+      .remove_existing_gattung_capacities_ =
+          m->remove_existing_gattung_capacities(),
+      .remove_existing_baureihe_capacities_ =
+          m->remove_existing_baureihe_capacities(),
+      .remove_existing_vehicle_group_capacities_ =
+          m->remove_existing_vehicle_group_capacities(),
+      .remove_existing_overrides_ = m->remove_existing_overrides(),
+      .track_trip_updates_ = m->track_trip_updates()};
 }
 
 measures::override_capacity from_fbs(schedule const& sched,

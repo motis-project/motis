@@ -1,5 +1,6 @@
-#include "motis/paxforecast/apply_measures.h"
+#include "motis/paxforecast/api/apply_measures.h"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/raii.h"
 
@@ -20,19 +21,20 @@
 #include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/paxforecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
+#include "motis/paxforecast/universe_data.h"
 #include "motis/paxforecast/update_tracked_groups.h"
 
 #include "motis/paxforecast/measures/affected_groups.h"
 #include "motis/paxforecast/measures/measures.h"
-#include "motis/paxforecast/measures/storage.h"
 
 #include "motis/paxforecast/behavior/default_behavior.h"
 
 using namespace motis::module;
 using namespace motis::logging;
 using namespace motis::paxmon;
+using namespace motis::paxforecast;
 
-namespace motis::paxforecast {
+namespace motis::paxforecast::api {
 
 void apply_update_capacities_measure(universe& uv, schedule const& sched,
                                      measures::update_capacities const& m) {
@@ -51,10 +53,23 @@ void apply_update_capacities_measure(universe& uv, schedule const& sched,
   if (m.remove_existing_trip_formations_) {
     caps.trip_formation_map_.clear();
     caps.trip_uuid_map_.clear();
+    caps.uuid_trip_map_.clear();
+  }
+  if (m.remove_existing_gattung_capacities_) {
+    caps.gattung_capacity_map_.clear();
+  }
+  if (m.remove_existing_baureihe_capacities_) {
+    caps.baureihe_capacity_map_.clear();
+  }
+  if (m.remove_existing_vehicle_group_capacities_) {
+    caps.vehicle_group_capacity_map_.clear();
+  }
+  if (m.remove_existing_overrides_) {
+    caps.override_map_.clear();
   }
 
   // load new capacity data
-  for (auto const& file_content : m.file_contents) {
+  for (auto const& file_content : m.file_contents_) {
     paxmon::loader::capacities::load_capacities(sched, caps, file_content);
   }
 
@@ -91,7 +106,8 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
   LOG(info) << "parse measures";
   auto const new_ms = from_fbs(sched, req->measures());
   LOG(info) << "get measure storage for universe " << req->universe();
-  auto& measures = mod.measures_storage_->get(req->universe());
+  auto& uv_storage = mod.universe_storage_.get(req->universe());
+  auto& measures = uv_storage.measures_;
   if (req->replace_existing()) {
     measures.clear();
   }
@@ -275,6 +291,7 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
                           tick_stats, reroute_reason_t::SIMULATION);
     update_groups_timer.stop_and_print();
     t_update_groups += update_groups_timer.duration_ms();
+    uv_storage.metrics_.add(sched.system_time_, now(), tick_stats);
   }
 
   manual_timer update_tracker_timer{"update tracker"};
@@ -307,4 +324,4 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
   return make_msg(mc);
 }
 
-}  // namespace motis::paxforecast
+}  // namespace motis::paxforecast::api
