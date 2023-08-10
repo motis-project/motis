@@ -6,7 +6,7 @@ export function makeMessage(
   target: string,
   contentType: MsgContentType,
   content: MsgContent,
-  id = 0
+  id = 0,
 ): Message {
   return {
     destination: { type: "Module", target },
@@ -45,7 +45,7 @@ export function sendRequest(
   target: string,
   contentType: MsgContentType = "MotisNoMessage",
   content: MsgContent = {},
-  id = 0
+  id = 0,
 ): Promise<Message> {
   return sendMessage(makeMessage(target, contentType, content, id));
 }

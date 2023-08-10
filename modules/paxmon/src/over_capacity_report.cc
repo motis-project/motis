@@ -41,13 +41,20 @@ std::set<std::uint32_t> get_train_nrs(trip const* trp) {
 
 std::string_view capacity_source_str(capacity_source const src) {
   switch (src) {
+    case capacity_source::FORMATION_VEHICLES: return "formation_vehicles";
+    case capacity_source::FORMATION_VEHICLE_GROUPS:
+      return "formation_vehicle_groups";
+    case capacity_source::FORMATION_BAUREIHE: return "formation_baureihe";
+    case capacity_source::FORMATION_GATTUNG: return "formation_gattung";
     case capacity_source::TRIP_EXACT: return "trip_exact";
     case capacity_source::TRIP_PRIMARY: return "trip_primary_id";
     case capacity_source::TRAIN_NR_AND_STATIONS: return "train_nr_and_stations";
     case capacity_source::TRAIN_NR: return "train_nr";
     case capacity_source::CATEGORY: return "category";
     case capacity_source::CLASZ: return "clasz";
-    case capacity_source::SPECIAL: return "special";
+    case capacity_source::OVERRIDE: return "override";
+    case capacity_source::UNLIMITED: return "unlimited";
+    case capacity_source::UNKNOWN: return "unknown";
   }
   return "???";
 }

@@ -31,6 +31,9 @@ struct dynamic_fws_multimap_base {
   static SizeType const MAX_ENTRIES_PER_BUCKET =
       static_cast<SizeType>(1ULL << Log2MaxEntriesPerBucket);
 
+  static_assert(std::is_trivially_destructible_v<T>,
+                "dynamic_fws_multimap: type must be trivially destructible");
+
   struct index_type {
     size_type begin_{};
     size_type size_{};
@@ -182,9 +185,6 @@ struct dynamic_fws_multimap_base {
       auto& index = get_index();
       auto& data = mutable_mm().data_;
       if (new_size < old_size) {
-        for (auto i = new_size; i < old_size; ++i) {
-          data[index.begin_ + i].~T();
-        }
         mutable_mm().element_count_ -= old_size - new_size;
       } else if (new_size > old_size) {
         for (auto i = old_size; i < new_size; ++i) {
@@ -205,10 +205,6 @@ struct dynamic_fws_multimap_base {
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     void clear() {
       auto& index = get_index();
-      auto& data = mutable_mm().data_;
-      for (auto i = index.begin_; i < index.begin_ + index.size_; ++i) {
-        data[i].~T();
-      }
       mutable_mm().element_count_ -= index.size_;
       index.size_ = 0;
     }
@@ -221,7 +217,6 @@ struct dynamic_fws_multimap_base {
         std::swap(*pos, *std::next(pos));
         pos = std::next(pos);
       }
-      (*pos).~T();
       get_index().size_--;
       mutable_mm().element_count_--;
       return idx < size() ? std::next(begin(), idx) : end();
@@ -231,9 +226,6 @@ struct dynamic_fws_multimap_base {
     iterator erase(iterator first, iterator last) {
       if (first != last) {
         auto const new_end = std::move(last, end(), first);
-        for (auto it = new_end; it != end(); it = std::next(it)) {
-          (*it).~T();
-        }
         auto const count = std::distance(new_end, end());
         get_index().size_ -= count;
         mutable_mm().element_count_ -= count;
@@ -577,7 +569,6 @@ protected:
       for (auto i = static_cast<size_type>(0); i < count;
            ++i, ++old_data, ++new_data) {
         new (new_data) T(std::move(*old_data));
-        old_data->~T();
       }
     }
     static_cast<Derived&>(*this).entries_moved(map_index, old_data_index,

@@ -455,6 +455,14 @@ PaxMonCapacityType get_capacity_type(motis::paxmon::edge const* e) {
 
 PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
   switch (cs) {
+    case capacity_source::FORMATION_VEHICLES:
+      return PaxMonCapacitySource_FormationVehicles;
+    case capacity_source::FORMATION_VEHICLE_GROUPS:
+      return PaxMonCapacitySource_FormationVehicleGroups;
+    case capacity_source::FORMATION_BAUREIHE:
+      return PaxMonCapacitySource_FormationBaureihe;
+    case capacity_source::FORMATION_GATTUNG:
+      return PaxMonCapacitySource_FormationGattung;
     case capacity_source::TRIP_EXACT:
       return PaxMonCapacitySource_TripExactMatch;
     case capacity_source::TRIP_PRIMARY:
@@ -464,7 +472,9 @@ PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs) {
     case capacity_source::TRAIN_NR: return PaxMonCapacitySource_TrainNr;
     case capacity_source::CATEGORY: return PaxMonCapacitySource_Category;
     case capacity_source::CLASZ: return PaxMonCapacitySource_Class;
-    case capacity_source::SPECIAL:
+    case capacity_source::OVERRIDE: return PaxMonCapacitySource_Override;
+    case capacity_source::UNLIMITED: return PaxMonCapacitySource_Unlimited;
+    case capacity_source::UNKNOWN:
     default: return PaxMonCapacitySource_Unknown;
   }
 }
@@ -543,6 +553,14 @@ Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       fbb.CreateVector(utl::to_vec(tli.edges_, [&](auto const& efc) {
         return to_fbs(fbb, sched, uv, efc);
       })));
+}
+
+Offset<PaxMonTripCapacityStatus> to_fbs(FlatBufferBuilder& fbb,
+                                        trip_capacity_status const& tcs) {
+  return CreatePaxMonTripCapacityStatus(
+      fbb, tcs.has_trip_formation_, tcs.has_capacity_for_all_sections_,
+      tcs.has_capacity_for_some_sections_,
+      to_fbs_capacity_source(tcs.worst_source_));
 }
 
 }  // namespace motis::paxmon

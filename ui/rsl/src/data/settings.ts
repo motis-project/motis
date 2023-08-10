@@ -5,22 +5,22 @@ import { SectionLoadGraphPlotType } from "@/components/trips/SectionLoadGraph";
 export const sectionGraphPlotTypeAtom =
   atomWithStorage<SectionLoadGraphPlotType>(
     "sectionLoadGraphPlotType",
-    "SimpleBox"
+    "SimpleBox",
   );
 
 export const showLegacyLoadForecastChartAtom = atomWithStorage(
   "showLegacyLoadForecastChart",
-  false
+  false,
 );
 
 export const showLegacyMeasureTypesAtom = atomWithStorage(
   "showLegacyMeasureTypes",
-  false
+  false,
 );
 
 export const showOptimizationDebugLogAtom = atomWithStorage(
   "showOptimizationDebugLog",
-  false
+  false,
 );
 
 export const showCapacityInfoAtom = atomWithStorage("showCapacityInfo", false);

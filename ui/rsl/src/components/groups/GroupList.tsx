@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { MapIcon, UsersIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
+import { add, getUnixTime } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -29,19 +29,22 @@ import { sendPaxMonFilterGroupsRequest } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
-import { formatISODate, formatTime } from "@/util/dateFormat";
+import { formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
+import { getScheduleRange } from "@/util/scheduleRange";
 
+import DatePicker from "@/components/inputs/DatePicker";
 import StationPicker from "@/components/inputs/StationPicker";
 import Delay from "@/components/util/Delay";
 
-type LabeledSortOrder = {
+import { cn } from "@/lib/utils";
+
+interface LabeledSortOrder {
   option: PaxMonFilterGroupsSortOrder;
   label: string;
-};
+}
 
-const sortOptions: Array<LabeledSortOrder> = [
+const sortOptions: LabeledSortOrder[] = [
   { option: "GroupId", label: "Gruppen sortiert nach ID" },
   {
     option: "ExpectedEstimatedDelay",
@@ -67,12 +70,12 @@ const sortOptions: Array<LabeledSortOrder> = [
 
 type GroupIdType = "internal" | "source";
 
-type LabeledRerouteReason = {
+interface LabeledRerouteReason {
   reason: PaxMonRerouteReason;
   label: string;
-};
+}
 
-const rerouteReasonOptions: Array<LabeledRerouteReason> = [
+const rerouteReasonOptions: LabeledRerouteReason[] = [
   { reason: "BrokenTransfer", label: "Gebrochener Umstieg" },
   { reason: "MajorDelayExpected", label: "Hohe erwartete Zielverspätung" },
   { reason: "Simulation", label: "Simulation" },
@@ -92,9 +95,9 @@ function getFilterGroupsRequest(
   fromStationFilter: Station | undefined,
   toStationFilter: Station | undefined,
   filterTrainNrs: number[],
-  selectedDate: Date | undefined,
+  selectedDate: Date | undefined | null,
   filterByRerouteReason: boolean,
-  rerouteReasonFilter: PaxMonRerouteReason[]
+  rerouteReasonFilter: PaxMonRerouteReason[],
 ): PaxMonFilterGroupsRequest {
   return {
     universe,
@@ -122,7 +125,7 @@ function GroupList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [fromStationFilter, setFromStationFilter] = useState<
     Station | undefined
   >();
@@ -182,7 +185,7 @@ function GroupList(): JSX.Element {
     ],
     ({ pageParam = 0 }) => {
       const req = getFilterGroupsRequest(
-        pageParam,
+        pageParam as number,
         universe,
         selectedSort.option,
         filterGroupIds,
@@ -192,7 +195,7 @@ function GroupList(): JSX.Element {
         filterTrainNrs,
         selectedDate,
         filterByRerouteReason,
-        rerouteReasonFilter
+        rerouteReasonFilter,
       );
       return sendPaxMonFilterGroupsRequest(req);
     },
@@ -202,18 +205,13 @@ function GroupList(): JSX.Element {
       refetchOnWindowFocus: true,
       keepPreviousData: true,
       staleTime: 60000,
-    }
+      enabled: selectedDate !== undefined,
+    },
   );
 
-  const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
-  const maxDate =
-    scheduleInfo && minDate
-      ? max([minDate, sub(fromUnixTime(scheduleInfo.end), { days: 1 })])
-      : undefined;
-
-  const loadMore = useCallback(() => {
+  const loadMore = useCallback(async () => {
     if (hasNextPage) {
-      return fetchNextPage();
+      return await fetchNextPage();
     }
   }, [fetchNextPage, hasNextPage]);
 
@@ -223,7 +221,12 @@ function GroupList(): JSX.Element {
   const totalNumberOfGroups = data?.pages[0]?.total_matching_groups;
   const totalNumberOfPassengers = data?.pages[0]?.total_matching_passengers;
 
-  const selectedGroup = Number.parseInt(params["groupId"] ?? "");
+  const selectedGroup = Number.parseInt(params.groupId ?? "");
+
+  const scheduleRange = getScheduleRange(scheduleInfo);
+  if (selectedDate === undefined && scheduleInfo) {
+    setSelectedDate(scheduleRange.closestDate);
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -250,27 +253,27 @@ function GroupList(): JSX.Element {
                   key={opt.option}
                   value={opt}
                   className={({ active }) =>
-                    classNames(
+                    cn(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
                   }
                 >
                   {({ selected, active }) => (
                     <>
                       <span
-                        className={classNames(
+                        className={cn(
                           "block truncate",
-                          selected ? "font-medium" : "font-normal"
+                          selected ? "font-medium" : "font-normal",
                         )}
                       >
                         {opt.label}
                       </span>
                       {selected ? (
                         <span
-                          className={classNames(
+                          className={cn(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
-                            active ? "text-amber-600" : "text-amber-600"
+                            active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
                           <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -306,15 +309,11 @@ function GroupList(): JSX.Element {
         <div className="">
           <label>
             <span className="text-sm">Datum</span>
-            <input
-              type="date"
-              min={minDate ? formatISODate(minDate) : undefined}
-              max={maxDate ? formatISODate(maxDate) : undefined}
-              value={selectedDate ? formatISODate(selectedDate) : ""}
-              onChange={(e) =>
-                setSelectedDate(e.target.valueAsDate ?? undefined)
-              }
-              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            <DatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
+              min={scheduleRange.firstDay}
+              max={scheduleRange.lastDay}
             />
           </label>
         </div>
@@ -383,7 +382,7 @@ function GroupList(): JSX.Element {
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfGroups)}{" "}
             {totalNumberOfGroups === 1 ? "Gruppe" : "Gruppen"}
-            {` (${formatNumber(totalNumberOfPassengers || 0)} Reisende)`}
+            {` (${formatNumber(totalNumberOfPassengers ?? 0)} Reisende)`}
           </div>
           <div>
             {!isFetching && (
@@ -416,12 +415,12 @@ function GroupList(): JSX.Element {
   );
 }
 
-type RerouteReasonOptionsProps = {
+interface RerouteReasonOptionsProps {
   rerouteReasonFilter: PaxMonRerouteReason[];
   setRerouteReasonFilter: React.Dispatch<
     React.SetStateAction<PaxMonRerouteReason[]>
   >;
-};
+}
 
 function RerouteReasonOptions({
   rerouteReasonFilter,
@@ -449,27 +448,27 @@ function RerouteReasonOptions({
                 key={opt.reason}
                 value={opt.reason}
                 className={({ active }) =>
-                  classNames(
+                  cn(
                     "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                   )
                 }
               >
                 {({ selected, active }) => (
                   <>
                     <span
-                      className={classNames(
+                      className={cn(
                         "block truncate",
-                        selected ? "font-medium" : "font-normal"
+                        selected ? "font-medium" : "font-normal",
                       )}
                     >
                       {opt.label}
                     </span>
                     {selected ? (
                       <span
-                        className={classNames(
+                        className={cn(
                           "absolute inset-y-0 left-0 flex items-center pl-3",
-                          active ? "text-amber-600" : "text-amber-600"
+                          active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
                         <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -486,9 +485,9 @@ function RerouteReasonOptions({
   );
 }
 
-type GroupRouteInfoProps = {
+interface GroupRouteInfoProps {
   route: PaxMonGroupRoute;
-};
+}
 
 function GroupRouteInfo({ route }: GroupRouteInfoProps): JSX.Element {
   const firstLeg = route.journey.legs[0];
@@ -507,11 +506,11 @@ function GroupRouteInfo({ route }: GroupRouteInfoProps): JSX.Element {
   );
 }
 
-type GroupListEntryProps = {
+interface GroupListEntryProps {
   groupWithStats: PaxMonGroupWithStats;
   idType: GroupIdType;
   selectedGroup: number | undefined;
-};
+}
 
 function GroupListEntry({
   groupWithStats,
@@ -528,11 +527,11 @@ function GroupListEntry({
     <div className="pr-1 pb-3">
       <Link
         to={`/groups/${group.id}`}
-        className={classNames(
+        className={cn(
           "block p-2 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
-            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
+            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
         <div className="flex justify-between">

@@ -25,7 +25,7 @@ function getRelativeFbsFile(ctx: ResolverContext, fbsFile: string): string {
 
 export function resolveSchemaTypes(
   rootDir: string,
-  rootFile: string
+  rootFile: string,
 ): SchemaTypes {
   const schema: SchemaTypes = {
     types: new Map<string, SchemaType>(),
@@ -94,7 +94,7 @@ function extractType(currentNamespace: string[], id: string): TypeRef {
 function extractFieldType(
   ctx: ResolverContext,
   currentNamespace: string[],
-  aft: AstFieldType
+  aft: AstFieldType,
 ): FieldType {
   switch (aft.c) {
     case "basic":
@@ -115,7 +115,7 @@ function extractFieldType(
 function extractTypes(
   ctx: ResolverContext,
   fbsFile: string,
-  ast: AstTopLevel[]
+  ast: AstTopLevel[],
 ) {
   const relativeFbsFile = getRelativeFbsFile(ctx, fbsFile);
   let currentNamespace: string[] = [];
@@ -209,7 +209,7 @@ function resolveType(ctx: ResolverContext, ref: TypeRef) {
       prefix.pop();
     } else {
       throw new Error(
-        `unknown type: ${ref.input}, referenced in ${ctx.currentFile}`
+        `unknown type: ${ref.input}, referenced in ${ctx.currentFile}`,
       );
     }
   }
@@ -218,7 +218,7 @@ function resolveType(ctx: ResolverContext, ref: TypeRef) {
 function markResolvedType(
   ctx: ResolverContext,
   ref: TypeRef,
-  fn: (resolved: TableType) => void
+  fn: (resolved: TableType) => void,
 ) {
   const resolved = ctx.schema.types.get(ref.resolvedFqtn.join("."));
   if (resolved && resolved.type === "table") {
@@ -238,7 +238,7 @@ function resolveFieldType(ctx: ResolverContext, ft: FieldType) {
       markResolvedType(
         ctx,
         ft.type,
-        (resolved) => (resolved.usedInTable = true)
+        (resolved) => (resolved.usedInTable = true),
       );
       break;
     }
@@ -256,7 +256,7 @@ function resolveTypes(ctx: ResolverContext) {
           markResolvedType(
             ctx,
             uv.typeRef,
-            (resolved) => (resolved.usedInUnion = true)
+            (resolved) => (resolved.usedInUnion = true),
           );
         }
         break;
@@ -272,7 +272,7 @@ function resolveTypes(ctx: ResolverContext) {
     markResolvedType(
       ctx,
       ctx.schema.rootType,
-      (resolved) => (resolved.usedInTable = true)
+      (resolved) => (resolved.usedInTable = true),
     );
   }
 }

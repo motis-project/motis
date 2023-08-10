@@ -17,7 +17,7 @@ export function getGFMHeadingAnchor(heading: string) {
 export function getTypeHref(
   ctx: MarkdownContext,
   fqtn: string[],
-  currentNamespace: string | undefined = undefined
+  currentNamespace: string | undefined = undefined,
 ): string | null {
   const refFqtn = fqtn.join(".");
   if (!ctx.types.has(refFqtn)) {
@@ -37,7 +37,7 @@ export function getTypeHref(
 export function getTypeLink(
   ctx: MarkdownContext,
   fqtn: string[],
-  currentNamespace: string | undefined = undefined
+  currentNamespace: string | undefined = undefined,
 ) {
   const typeHref = getTypeHref(ctx, fqtn, currentNamespace);
   if (typeHref) {

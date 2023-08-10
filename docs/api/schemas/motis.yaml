@@ -40,6 +40,8 @@ TripId:
       description: The scheduled arrival time at the destination (unix timestamp).
     line_id:
       description: The line name.
+    id:
+      description: TODO
 TimestampReason:
   description: |
     The information source for the real-time timestamp. The system is

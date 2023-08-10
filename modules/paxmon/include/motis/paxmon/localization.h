@@ -23,10 +23,10 @@ struct passenger_localization {
 
   inline friend bool operator==(passenger_localization const& lhs,
                                 passenger_localization const& rhs) {
-    return std::tie(lhs.in_trip_, lhs.at_station_, lhs.current_arrival_time_,
-                    lhs.first_station_) ==
-           std::tie(rhs.in_trip_, rhs.at_station_, rhs.current_arrival_time_,
-                    rhs.first_station_);
+    return std::tie(lhs.in_trip_, lhs.at_station_, lhs.schedule_arrival_time_,
+                    lhs.current_arrival_time_, lhs.first_station_) ==
+           std::tie(rhs.in_trip_, rhs.at_station_, rhs.schedule_arrival_time_,
+                    rhs.current_arrival_time_, rhs.first_station_);
   }
 
   inline friend bool operator!=(passenger_localization const& lhs,

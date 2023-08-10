@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <string_view>
@@ -12,16 +13,18 @@
 
 namespace motis::rt {
 
-inline size_t get_family(schedule& sched, std::string const& cat_name) {
+inline std::uint32_t get_family(schedule& sched,
+                                std::string_view const cat_name) {
   auto const it = std::find_if(
       begin(sched.categories_), end(sched.categories_),
       [&cat_name](auto const& cat) { return cat->name_ == cat_name; });
   if (it == end(sched.categories_)) {
     sched.categories_.emplace_back(mcd::make_unique<category>(
         mcd::string{cat_name}, static_cast<uint8_t>(0U)));
-    return sched.categories_.size() - 1;
+    return static_cast<std::uint32_t>(sched.categories_.size() - 1);
   } else {
-    return static_cast<size_t>(std::distance(begin(sched.categories_), it));
+    return static_cast<std::uint32_t>(
+        std::distance(begin(sched.categories_), it));
   }
 }
 
@@ -33,6 +36,43 @@ inline connection_info const* get_con_info(
   con_info.family_ = get_family(sched, category);
   con_info.line_identifier_ = line_id;
   con_info.train_nr_ = train_nr;
+
+  return utl::get_or_create(con_infos, con_info, [&sched, &con_info]() {
+    sched.connection_infos_.emplace_back(
+        mcd::make_unique<connection_info>(con_info));
+    return sched.connection_infos_.back().get();
+  });
+}
+
+inline provider const* get_or_insert_provider(
+    schedule& sched, std::string_view const provider_short_name,
+    std::string_view const provider_full_name) {
+  if (auto const it = sched.provider_by_full_name_.find(provider_full_name);
+      it != end(sched.provider_by_full_name_)) {
+    return it->second;
+  } else {
+    auto const ptr =
+        sched.providers_
+            .emplace_back(mcd::make_unique<provider>(
+                provider_short_name, provider_full_name, provider_full_name))
+            .get();
+    sched.provider_by_full_name_[ptr->full_name_] = ptr;
+    return ptr;
+  }
+}
+
+inline connection_info const* get_con_info_with_provider(
+    schedule& sched,
+    std::map<connection_info, connection_info const*>& con_infos,
+    std::string_view const category, std::string_view const line_id,
+    std::uint32_t train_nr, std::string_view const provider_short_name,
+    std::string_view const provider_full_name) {
+  auto const con_info =
+      connection_info{.line_identifier_ = line_id,
+                      .provider_ = get_or_insert_provider(
+                          sched, provider_short_name, provider_full_name),
+                      .family_ = get_family(sched, category),
+                      .train_nr_ = train_nr};
 
   return utl::get_or_create(con_infos, con_info, [&sched, &con_info]() {
     sched.connection_infos_.emplace_back(

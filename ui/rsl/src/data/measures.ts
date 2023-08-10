@@ -22,10 +22,10 @@ export interface MeasureRecipientsData {
   stations: Station[];
 }
 
-export type SharedMeasureData = {
+export interface SharedMeasureData {
   recipients: MeasureRecipientsData;
   time: Date;
-};
+}
 
 export interface TripLoadInfoMeasureData {
   trip: TripServiceInfo | undefined;
@@ -62,43 +62,46 @@ export interface UpdateCapacityMeasureData {
 
 export type UiMeasureType = MeasureType | "Empty" | "RtCancelMeasure";
 
-export type EmptyMeasureU = { type: "Empty"; shared: SharedMeasureData };
+export interface EmptyMeasureU {
+  type: "Empty";
+  shared: SharedMeasureData;
+}
 
-export type TripLoadInfoMeasureU = {
+export interface TripLoadInfoMeasureU {
   type: "TripLoadInfoMeasure";
   shared: SharedMeasureData;
   data: TripLoadInfoMeasureData;
-};
+}
 
-export type TripRecommendationMeasureU = {
+export interface TripRecommendationMeasureU {
   type: "TripRecommendationMeasure";
   shared: SharedMeasureData;
   data: TripRecommendationMeasureData;
-};
+}
 
-export type TripLoadRecommendationMeasureU = {
+export interface TripLoadRecommendationMeasureU {
   type: "TripLoadRecommendationMeasure";
   shared: SharedMeasureData;
   data: TripLoadRecommendationMeasureData;
-};
+}
 
-export type RtUpdateMeasureU = {
+export interface RtUpdateMeasureU {
   type: "RtUpdateMeasure";
   shared: SharedMeasureData;
   data: RtUpdateMeasureData;
-};
+}
 
-export type RtCancelMeasureU = {
+export interface RtCancelMeasureU {
   type: "RtCancelMeasure";
   shared: SharedMeasureData;
   data: RtCancelMeasureData;
-};
+}
 
-export type UpdateCapacitiesMeasureU = {
+export interface UpdateCapacitiesMeasureU {
   type: "UpdateCapacitiesMeasure";
   shared: SharedMeasureData;
   data: UpdateCapacityMeasureData;
-};
+}
 
 export type MeasureUnion =
   | EmptyMeasureU
@@ -114,19 +117,19 @@ export function isEmptyMeasureU(mu: MeasureUnion): mu is EmptyMeasureU {
 }
 
 export function isTripLoadInfoMeasureU(
-  mu: MeasureUnion
+  mu: MeasureUnion,
 ): mu is TripLoadInfoMeasureU {
   return mu.type === "TripLoadInfoMeasure";
 }
 
 export function isTripRecommendationMeasureU(
-  mu: MeasureUnion
+  mu: MeasureUnion,
 ): mu is TripRecommendationMeasureU {
   return mu.type === "TripRecommendationMeasure";
 }
 
 export function isTripLoadRecommendationMeasureU(
-  mu: MeasureUnion
+  mu: MeasureUnion,
 ): mu is TripLoadRecommendationMeasureU {
   return mu.type === "TripLoadRecommendationMeasure";
 }
@@ -148,7 +151,7 @@ export function measureNeedsRecipients(mu: MeasureUnion): boolean {
 }
 
 export function measureTypeNeedsRecipients(
-  type: MeasureUnion["type"]
+  type: MeasureUnion["type"],
 ): boolean {
   return (
     type !== "RtUpdateMeasure" &&
@@ -158,7 +161,7 @@ export function measureTypeNeedsRecipients(
 }
 
 export function isUpdateCapacitiesMeasureU(
-  mu: MeasureUnion
+  mu: MeasureUnion,
 ): mu is UpdateCapacitiesMeasureU {
   return mu.type === "UpdateCapacitiesMeasure";
 }
@@ -205,7 +208,7 @@ export function toMeasureWrapper(mu: MeasureUnion): MeasureWrapper | null {
       const recommendedTrips = d.recommended_trips
         .filter(
           (tll): tll is { trip: TripServiceInfo; level: LoadLevel } =>
-            tll.trip != undefined
+            tll.trip != undefined,
         )
         .map((tll) => {
           return { trip: tll.trip.trip, level: tll.level };
@@ -288,7 +291,7 @@ function makeRiBasisFahrt(data: RiBasisFahrtData, time: Date): RiBasisFahrt {
 
 function makeRtUpdateMeasure(
   shared: { recipients: MeasureRecipients; time: number },
-  ribasis: RiBasisFahrt
+  ribasis: RiBasisFahrt,
 ): MeasureWrapper {
   return {
     measure_type: "RtUpdateMeasure",
@@ -302,7 +305,7 @@ function makeRtUpdateMeasure(
 
 function cancelStops(
   original: RiBasisFahrtData,
-  canceledStops: boolean[]
+  canceledStops: boolean[],
 ): RiBasisFahrtData {
   const sections: RiBasisFahrtAbschnitt[] = [];
   let lastDeparture: RiBasisFahrtAbschnitt | null = null;

@@ -19,7 +19,7 @@ import { getOrCreateMap, removeUnknownKeys } from "@/util/yaml";
 export function readAndUpdateDoc(
   schema: SchemaTypes,
   baseDir: string,
-  config: object
+  config: object,
 ): Documentation {
   if (!("schemas" in config) || typeof config.schemas !== "string") {
     throw new Error("missing doc.schemas property in config");
@@ -80,7 +80,7 @@ function readAndUpdateSchemaFile(ctx: DocContext, file: DocSchemaFile) {
   const root = getOrCreateMap(yd, yd, []);
   const hasExistingTypes = root.items.length > 0;
   const removedTypes = removeUnknownKeys(root, (key) =>
-    ctx.schema.types.has(getFqtn(file, key))
+    ctx.schema.types.has(getFqtn(file, key)),
   );
   if (removedTypes.length > 0) {
     console.log("removed unknown types:");
@@ -113,7 +113,7 @@ function readAndUpdateType(
   file: DocSchemaFile,
   yd: Document,
   yt: YAMLMap,
-  schemaType: SchemaType
+  schemaType: SchemaType,
 ) {
   const getOptStr = (map: YAMLMap, key: string) => {
     const val = map.get(key);
@@ -148,7 +148,7 @@ function readAndUpdateType(
     docType.fields = new Map();
     const fields = getOrCreateMap(yd, yt, ["fields"]);
     removeUnknownKeys(fields, (key) =>
-      schemaType.fields.some((f) => f.name === key)
+      schemaType.fields.some((f) => f.name === key),
     );
     for (const field of schemaType.fields) {
       const yf = getOrCreateMap(yd, fields, [field.name]);
@@ -198,7 +198,7 @@ function readPaths(ctx: DocContext) {
     if (dp.input) {
       if (!ctx.schema.types.has(dp.input)) {
         throw new Error(
-          `unknown type referenced in docs: ${dp.input} (${path})`
+          `unknown type referenced in docs: ${dp.input} (${path})`,
         );
       }
     }

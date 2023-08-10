@@ -2,10 +2,24 @@ include "base/TripServiceInfo.fbs";
 
 namespace motis.paxmon;
 
+table PaxMonFeedStatus {
+  enabled: bool;
+  receiving: bool;
+  up_to_date: bool;
+
+  last_update_time: ulong; // unix timestamp (last time data was received)
+  last_message_time: ulong; // unix timestamp (timestamp of latest message)
+}
+
 table PaxMonStatusResponse {
-  system_time: ulong;
+  system_time: ulong; // for the requested universe
   multiverse_id: long;
 
   active_groups: ulong;
   trip_count: ulong;
+
+  primary_system_time: ulong; // for the primary universe
+  current_time: ulong; // used to check if feeds are up-to-date
+  ribasis_fahrt_status: PaxMonFeedStatus;
+  ribasis_formation_status: PaxMonFeedStatus;
 }

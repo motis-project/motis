@@ -1,0 +1,18 @@
+namespace motis.paxmon;
+
+table PaxMonMetrics {
+  start_time: ulong; // unix timestamp
+  entries: ulong; // number of entries (minutes)
+
+  affected_group_routes: [ulong];
+  ok_group_routes: [ulong];
+  broken_group_routes: [ulong];
+  major_delay_group_routes: [ulong];
+
+  total_timing: [ulong]; // ms
+}
+
+table PaxMonMetricsResponse {
+  by_system_time: PaxMonMetrics;
+  by_processing_time: PaxMonMetrics;
+}

@@ -45,7 +45,7 @@ export interface SectionFormData {
 
 function getArrivalEvent(
   ribasis: RiBasisFahrtData,
-  stopIdx: number
+  stopIdx: number,
 ): EventFormData {
   if (stopIdx > 0) {
     const sec = ribasis.allFahrtabschnitt[stopIdx - 1];
@@ -68,7 +68,7 @@ function getArrivalEvent(
 
 function getDepartureEvent(
   ribasis: RiBasisFahrtData,
-  stopIdx: number
+  stopIdx: number,
 ): EventFormData {
   if (stopIdx < ribasis.allFahrtabschnitt.length) {
     const sec = ribasis.allFahrtabschnitt[stopIdx];
@@ -91,7 +91,7 @@ function getDepartureEvent(
 
 function getStation(
   ribasis: RiBasisFahrtData,
-  stopIdx: number
+  stopIdx: number,
 ): RiBasisHaltestelle {
   if (stopIdx > 0) {
     return ribasis.allFahrtabschnitt[stopIdx - 1].ankunft.haltestelle;
@@ -102,7 +102,7 @@ function getStation(
 
 function getSection(
   ribasis: RiBasisFahrtData,
-  stopIdx: number
+  stopIdx: number,
 ): RiBasisFahrtAbschnitt {
   if (stopIdx < ribasis.allFahrtabschnitt.length) {
     return ribasis.allFahrtabschnitt[stopIdx];
@@ -164,7 +164,7 @@ export function getEmptyStopFormData(time: Date): StopFormData {
 
 export function getNewEventFormData(
   scheduleTime: Date,
-  currentTime: Date
+  currentTime: Date,
 ): EventFormData {
   return {
     scheduleTime,
@@ -179,7 +179,7 @@ export function getNewEventFormData(
 export function getNewStopTimes(
   previousStop: StopFormData | undefined,
   nextStop: StopFormData | undefined,
-  fallbackTime: Date
+  fallbackTime: Date,
 ): {
   currentArrival: Date;
   scheduleArrival: Date;
@@ -194,19 +194,19 @@ export function getNewStopTimes(
   if (previousStop && nextStop) {
     const scheduleDiff = differenceInMinutes(
       nextStop.arrival.scheduleTime,
-      previousStop.departure.scheduleTime
+      previousStop.departure.scheduleTime,
     );
     const currentDiff = differenceInMinutes(
       nextStop.arrival.currentTime,
-      previousStop.departure.currentTime
+      previousStop.departure.currentTime,
     );
     const scheduleMid = addMinutes(
       previousStop.departure.scheduleTime,
-      scheduleDiff / 2
+      scheduleDiff / 2,
     );
     const currentMid = addMinutes(
       previousStop.departure.currentTime,
-      currentDiff / 2
+      currentDiff / 2,
     );
     scheduleArrival =
       scheduleDiff > 4 ? subMinutes(scheduleMid, 1) : scheduleMid;
@@ -236,7 +236,7 @@ export function getNewStopTimes(
 
 export function toRiBasis(
   original: RiBasisFahrtData,
-  stops: StopFormData[]
+  stops: StopFormData[],
 ): RiBasisFahrtData {
   const data: RiBasisFahrtData = {
     ...original,

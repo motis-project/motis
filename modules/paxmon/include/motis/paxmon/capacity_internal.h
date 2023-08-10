@@ -14,18 +14,9 @@ namespace motis::paxmon {
 trip_formation const* get_trip_formation(capacity_maps const& caps,
                                          trip const* trp);
 
-trip_formation_section const* get_trip_formation_section(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    ev_key const& ev_key_from);
-
-std::optional<vehicle_capacity> get_section_capacity(schedule const& sched,
-                                                     capacity_maps const& caps,
-                                                     trip const* trp,
-                                                     ev_key const& ev_key_from);
-
-std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    connection_info const* ci, service_class const clasz);
+std::pair<trip_formation const*, trip_formation_section const*>
+get_trip_formation_section(schedule const& sched, capacity_maps const& caps,
+                           trip const* trp, ev_key const& ev_key_from);
 
 inline capacity_source get_worst_source(capacity_source const a,
                                         capacity_source const b) {
@@ -39,7 +30,13 @@ inline std::uint16_t clamp_capacity(capacity_maps const& caps,
   return std::max(caps.min_capacity_, capacity);
 }
 
-std::optional<vehicle_capacity> get_override_capacity(
+section_capacity get_section_capacity(schedule const& sched,
+                                      capacity_maps const& caps,
+                                      light_connection const& lc,
+                                      ev_key const& ev_key_from,
+                                      bool const detailed);
+
+std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
     ev_key const& ev_key_from);
 

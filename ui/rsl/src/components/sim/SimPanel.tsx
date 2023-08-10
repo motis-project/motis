@@ -3,20 +3,20 @@ import { useCallback, useState } from "react";
 
 import { hasSimResultsAtom } from "@/data/simulation";
 
-import classNames from "@/util/classNames";
-
 import SimResultsPanel from "@/components/sim/SimResultsPanel";
 import MeasurePanel from "@/components/sim/measures/MeasurePanel";
 
+import { cn } from "@/lib/utils";
+
 type TabId = "measures" | "results";
 
-type TabProps = {
+interface TabProps {
   id: TabId;
   label: string;
   selectedTab: TabId;
   setSelectedTab: (id: TabId) => void;
   disabled?: boolean;
-};
+}
 
 function Tab({
   id,
@@ -27,14 +27,14 @@ function Tab({
 }: TabProps): JSX.Element {
   return (
     <button
-      className={classNames(
+      className={cn(
         "w-full py-2.5 text-sm leading-5 font-medium rounded-lg",
         "focus:outline-none focus:ring-2 ring-db-red-800",
         selectedTab === id
           ? "bg-db-red-500 text-white shadow"
           : disabled
           ? "text-db-cool-gray-200"
-          : "text-db-cool-gray-100 hover:bg-white/[0.2] hover:text-white"
+          : "text-db-cool-gray-100 hover:bg-white/[0.2] hover:text-white",
       )}
       onClick={() => setSelectedTab(id)}
       disabled={disabled}
@@ -70,17 +70,17 @@ function SimPanel(): JSX.Element {
         />
       </div>
       <div
-        className={classNames(
+        className={cn(
           selectedTab === "measures" ? "block" : "hidden",
-          "grow overflow-y-auto"
+          "grow overflow-y-auto",
         )}
       >
         <MeasurePanel onSimulationFinished={onSimulationFinished} />
       </div>
       <div
-        className={classNames(
+        className={cn(
           selectedTab === "results" ? "block" : "hidden",
-          "grow overflow-y-auto"
+          "grow overflow-y-auto",
         )}
       >
         <SimResultsPanel />

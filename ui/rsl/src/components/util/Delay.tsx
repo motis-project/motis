@@ -1,10 +1,10 @@
 import { formatShortDuration } from "@/data/durationFormat";
 
-type DelayProps = {
+interface DelayProps {
   minutes: number;
   colored?: boolean;
   forceSign?: boolean;
-};
+}
 
 function getDelayColor(mins: number): string {
   if (mins < 6) {

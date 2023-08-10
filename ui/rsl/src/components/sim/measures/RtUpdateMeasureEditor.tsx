@@ -41,14 +41,14 @@ import StationPicker from "@/components/inputs/StationPicker";
 import TimeInput from "@/components/inputs/TimeInput";
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type RtUpdateMeasureEditorProps = {
+export interface RtUpdateMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
-};
+}
 
 const labelClass = "font-semibold";
 
-const rtReasons: Array<{ reason: RiBasisZeitstatus; label: string }> = [
+const rtReasons: { reason: RiBasisZeitstatus; label: string }[] = [
   { reason: "FAHRPLAN", label: "Planmäßig" },
   { reason: "MELDUNG", label: "Ist-Meldung" },
   { reason: "PROGNOSE", label: "Prognose" },
@@ -61,9 +61,9 @@ function RtUpdateMeasureEditor({
   const dataAtom = useMemo(
     () =>
       focusAtom(measureAtom, (optic) =>
-        optic.guard(isRtUpdateMeasureU).prop("data")
+        optic.guard(isRtUpdateMeasureU).prop("data"),
       ),
-    [measureAtom]
+    [measureAtom],
   );
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
@@ -82,7 +82,7 @@ function RtUpdateMeasureEditor({
   const getSchedule = useAtomCallback(
     useCallback((get) => {
       return get(scheduleAtom);
-    }, [])
+    }, []),
   );
 
   const setTrip = async (tsi: TripServiceInfo | undefined) => {
@@ -90,17 +90,17 @@ function RtUpdateMeasureEditor({
       return { ...d, trip: tsi };
     });
     if (tsi) {
-      const schedule = await getSchedule();
+      const schedule = getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
         () => sendLookupRiBasisRequest(lookupReq),
-        { staleTime: 1000 }
+        { staleTime: 1000 },
       );
       console.log(`received ri basis: ${data.trips.length} trips`);
       const requestedTripId = JSON.stringify(tsi.trip);
       const tripData = data.trips.filter(
-        (t) => JSON.stringify(t.trip_id) === requestedTripId
+        (t) => JSON.stringify(t.trip_id) === requestedTripId,
       );
       if (tripData.length === 1) {
         setData((d) => {
@@ -117,7 +117,7 @@ function RtUpdateMeasureEditor({
   useEffect(() => {
     if (!data.ribasis && data.trip) {
       setTrip(data.trip).catch((err) =>
-        console.log("RtUpdateMeasureEditor init failed:", err)
+        console.log("RtUpdateMeasureEditor init failed:", err),
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -150,14 +150,16 @@ function RtUpdateMeasureEditor({
   );
 }
 
-type TripSectionEditorProps = {
+interface TripSectionEditorProps {
   ribasis: RiBasisFahrtData;
   onSetData: (data: RiBasisFahrtData) => void;
   allowReroute: boolean;
   closeEditor: () => void;
-};
+}
 
-type FormInputs = { stops: StopFormData[] };
+interface FormInputs {
+  stops: StopFormData[];
+}
 
 function TripSectionEditor({
   ribasis,
@@ -187,7 +189,7 @@ function TripSectionEditor({
 
   const insertStop = (index: number) => {
     const systemTime = queryClient.getQueryData<PaxMonStatusResponse>(
-      queryKeys.status(0)
+      queryKeys.status(0),
     )?.system_time;
     const fallbackTime = systemTime ? new Date(systemTime * 1000) : new Date();
     const previousStop =
@@ -280,7 +282,7 @@ function TripSectionEditor({
                       type="checkbox"
                       className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
                       {...register(
-                        `stops.${index}.arrival.interchange` as const
+                        `stops.${index}.arrival.interchange` as const,
                       )}
                     />
                     <span className="ml-2">Ausstieg möglich</span>
@@ -292,7 +294,7 @@ function TripSectionEditor({
                       type="checkbox"
                       className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
                       {...register(
-                        `stops.${index}.departure.interchange` as const
+                        `stops.${index}.departure.interchange` as const,
                       )}
                     />
                     <span className="ml-2">Einstieg möglich</span>
@@ -394,13 +396,13 @@ function TripSectionEditor({
   );
 }
 
-type EventEditorProps = {
+interface EventEditorProps {
   register: UseFormRegister<FormInputs>;
   control: Control<FormInputs>;
   index: number;
   eventType: "arrival" | "departure";
   allowReroute: boolean;
-};
+}
 
 function EventEditor({
   register,
@@ -437,7 +439,7 @@ function EventEditor({
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
               readOnly={!allowReroute}
               {...register(
-                `stops.${index}.${eventType}.scheduleTrack` as const
+                `stops.${index}.${eventType}.scheduleTrack` as const,
               )}
             />
           </label>
@@ -484,7 +486,7 @@ function EventEditor({
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                 readOnly={!allowReroute}
                 {...register(
-                  `stops.${index}.${eventType}.currentTrack` as const
+                  `stops.${index}.${eventType}.currentTrack` as const,
                 )}
               />
             </label>

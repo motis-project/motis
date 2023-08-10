@@ -24,8 +24,8 @@ struct config {
   bool gtfs_is_addition_skip_allowed_{true};
   unsigned gtfs_rt_update_interval_{60};
   std::string http_proxy_;
-  rabbitmq_config rabbitmq1_;
-  rabbitmq_config rabbitmq2_;
+  rabbitmq_config ribasis_fahrt_;
+  rabbitmq_config ribasis_formation_;
 };
 
 struct ris : public motis::module::module {

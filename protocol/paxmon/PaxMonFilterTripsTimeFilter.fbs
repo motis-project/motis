@@ -1,0 +1,8 @@
+namespace motis.paxmon;
+
+enum PaxMonFilterTripsTimeFilter : byte {
+  NoFilter, // don't filter based on time
+  DepartureTime, // trip id departure must be in interval
+  DepartureOrArrivalTime, // trip id departure or arrival must be in interval
+  ActiveTime // trip must be active in interval according to trip id times
+}

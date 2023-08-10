@@ -19,7 +19,10 @@ export const INT_TYPES = [
 
 export type IntTypeName = (typeof INT_TYPES)[number];
 
-export type IntTypeProperties = { bits: 8 | 16 | 32 | 64; unsigned: boolean };
+export interface IntTypeProperties {
+  bits: 8 | 16 | 32 | 64;
+  unsigned: boolean;
+}
 
 export const INT_TYPE_PROPERTIES: Record<IntTypeName, IntTypeProperties> = {
   byte: { bits: 8, unsigned: false },
@@ -44,7 +47,9 @@ export const FLOAT_TYPES = ["float", "double", "float32", "float64"] as const;
 
 export type FloatTypeName = (typeof FLOAT_TYPES)[number];
 
-export type FloatTypeProperties = { bits: 32 | 64 };
+export interface FloatTypeProperties {
+  bits: 32 | 64;
+}
 
 export const FLOAT_TYPE_PROPERTIES: Record<FloatTypeName, FloatTypeProperties> =
   {

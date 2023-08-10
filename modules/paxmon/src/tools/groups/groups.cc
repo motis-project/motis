@@ -121,7 +121,7 @@ int gen_groups(int argc, char const** argv) {
   auto total_output_groups = 0ULL;
   auto total_output_pax = 0ULL;
 
-  auto writer = csv_writer{opt.out_path_};
+  auto writer = file_csv_writer{opt.out_path_};
   writer << "id"
          << "secondary_id"
          << "leg_idx"
