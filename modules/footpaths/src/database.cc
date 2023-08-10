@@ -14,7 +14,7 @@ inline std::string_view view(cista::byte_buf const& b) {
 }
 
 database::database(std::string const& path, std::size_t const max_size) {
-  env_.set_maxdbs(1);
+  env_.set_maxdbs(2);
   env_.set_mapsize(max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   env_.open(path.c_str(), flags);

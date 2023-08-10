@@ -102,7 +102,9 @@ std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
 
   osmium::TagsFilter filter{false};
   filter.add_rule(true, "public_transport", "platform");
+  filter.add_rule(true, "public_transport", "stop_position");
   filter.add_rule(true, "railway", "platform");
+  filter.add_rule(true, "railway", "tram_stop");
 
   {
     ml::scoped_timer const timer("Extract OSM tracks: Pass 1...");
@@ -194,8 +196,8 @@ pr::input_location to_input_location(platform const& pf) {
   return il;
 }
 
-std::vector<platform*> platforms_index::get_valid_platforms_in_radius(
-    platform const* pf, double const r) {
+std::vector<platform*> platforms_index::valid_in_radius(platform const* pf,
+                                                        double const r) {
   return utl::all(platform_index_.in_radius(pf->loc_, r)) |
          utl::transform([this](std::size_t i) { return get_platform(i); }) |
          utl::remove_if([&](auto* target_platform) {
@@ -206,10 +208,21 @@ std::vector<platform*> platforms_index::get_valid_platforms_in_radius(
          utl::vec();
 }
 
-std::vector<platform*> platforms_index::get_platforms_in_radius(
-    geo::latlng const loc, double const r) {
+std::vector<platform*> platforms_index::in_radius(geo::latlng const loc,
+                                                  double const r) {
   return utl::all(platform_index_.in_radius(loc, r)) |
          utl::transform([this](std::size_t i) { return get_platform(i); }) |
+         utl::vec();
+}
+
+std::vector<std::pair<double, platform*>>
+platforms_index::in_radius_with_distance(geo::latlng const loc,
+                                         double const r) {
+  return utl::all(platform_index_.in_radius_with_distance(loc, r)) |
+         utl::transform([this](std::pair<double, std::size_t> res) {
+           return std::pair<double, platform*>(res.first,
+                                               get_platform(res.second));
+         }) |
          utl::vec();
 }
 

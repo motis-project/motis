@@ -30,13 +30,14 @@ std::vector<transfer_requests> build_transfer_requests(
 
       // remark: profile {profile_name -> profile_info}
       // get all valid platforms in radius of current platform
-      auto valid_platforms_in_radius = pfs_idx->get_valid_platforms_in_radius(
+
+      auto valid_pfs_in_radius = pfs_idx->valid_in_radius(
           &pf, profile.second.profile_.walking_speed_ *
                    profile.second.profile_.duration_limit_);
       transfer_targets.insert(transfer_targets.end(),
-                              valid_platforms_in_radius.begin(),
-                              valid_platforms_in_radius.end());
-      targets += valid_platforms_in_radius.size();
+                              valid_pfs_in_radius.begin(),
+                              valid_pfs_in_radius.end());
+      targets += valid_pfs_in_radius.size();
 
       // donot create a transfer request if no valid transfer could be found
       if (transfer_targets.empty()) {

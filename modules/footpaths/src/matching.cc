@@ -15,7 +15,7 @@ std::pair<bool, matching_result> matching(
   matching_result result{};
 
   for (auto dist : dists) {
-    for (auto* pf : pfs_idx->get_platforms_in_radius(nloc.pos_, dist)) {
+    for (auto* pf : pfs_idx->in_radius(nloc.pos_, dist)) {
       // only match bus stops with a distance of up to a certain distance
       if (pf->info_.is_bus_stop_ && dist > match_bus_stop_max_distance) {
         continue;
@@ -67,12 +67,10 @@ std::pair<bool, matching_result> match_by_distance(
   result.nloc_pos_ = nloc.pos_;
   auto matched{false};
 
-  auto const pfs = pfs_idx->get_platforms_in_radius(nloc.pos_, r);
+  auto const pfs = pfs_idx->in_radius_with_distance(nloc.pos_, r);
   auto shortest_dist{std::numeric_limits<double>::max()};
 
-  for (auto* pf : pfs) {
-    auto dist = geo::distance(nloc.pos_, pf->loc_);
-
+  for (auto [dist, pf] : pfs) {
     // only match bus stops with a distance of up to a certain distance
     if (pf->info_.is_bus_stop_ && dist > match_bus_stop_max_dist) {
       continue;

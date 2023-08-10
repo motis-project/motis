@@ -51,11 +51,11 @@ struct platforms_index {
         platforms_, [](auto const& pf) { return pf.loc_; });
   }
 
-  std::vector<platform*> get_valid_platforms_in_radius(platform const*,
-                                                       double const);
+  std::vector<platform*> valid_in_radius(platform const*, double const);
 
-  std::vector<platform*> get_platforms_in_radius(geo::latlng const,
-                                                 double const);
+  std::vector<platform*> in_radius(geo::latlng const, double const);
+  std::vector<std::pair<double, platform*>> in_radius_with_distance(
+      geo::latlng const, double const);
 
   std::size_t size() const { return platforms_.size(); }
 
