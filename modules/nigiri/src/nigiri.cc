@@ -259,15 +259,13 @@ void nigiri::update_gtfsrt() {
 
   auto const futures = utl::to_vec(
       impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
-  auto rtt = std::make_shared<n::rt_timetable>();
-  if (gtfsrt_incremental_) {
-    rtt = std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->get_rtt()});
-  } else {
-    auto const today = std::chrono::time_point_cast<date::days>(
-        std::chrono::system_clock::now());
-    rtt = std::make_shared<n::rt_timetable>(
-        n::rt::create_rt_timetable(**impl_->tt_, today));
-  }
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  auto const rtt = gtfsrt_incremental_
+                       ? std::make_shared<n::rt_timetable>(
+                             n::rt_timetable{*impl_->get_rtt()})
+                       : std::make_shared<n::rt_timetable>(
+                             n::rt::create_rt_timetable(**impl_->tt_, today));
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
     auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
