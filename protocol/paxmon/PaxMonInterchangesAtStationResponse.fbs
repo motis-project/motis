@@ -21,7 +21,7 @@ table PaxMonInterchangeInfo {
   broken: bool;
 }
 
-table PaxMonGetInterchangesResponse {
+table PaxMonInterchangesAtStationResponse {
   station: motis.Station;
   interchanges: [PaxMonInterchangeInfo];
   max_count_reached: bool;

@@ -6,7 +6,7 @@
 
 namespace motis::paxmon::api {
 
-motis::module::msg_ptr get_interchanges(paxmon_data& data,
-                                        motis::module::msg_ptr const& msg);
+motis::module::msg_ptr interchanges_at_station(
+    paxmon_data& data, motis::module::msg_ptr const& msg);
 
 }  // namespace motis::paxmon::api

@@ -34,12 +34,12 @@
 #include "motis/paxmon/api/get_addressable_groups.h"
 #include "motis/paxmon/api/get_groups.h"
 #include "motis/paxmon/api/get_groups_in_trip.h"
-#include "motis/paxmon/api/get_interchanges.h"
 #include "motis/paxmon/api/get_status.h"
 #include "motis/paxmon/api/get_trip_capacity.h"
 #include "motis/paxmon/api/get_trip_load_info.h"
 #include "motis/paxmon/api/get_universes.h"
 #include "motis/paxmon/api/group_statistics.h"
+#include "motis/paxmon/api/interchanges_at_station.h"
 #include "motis/paxmon/api/keep_alive.h"
 #include "motis/paxmon/api/metrics.h"
 #include "motis/paxmon/api/remove_groups.h"
@@ -401,9 +401,9 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
-  reg.register_op("/paxmon/get_interchanges",
+  reg.register_op("/paxmon/interchanges_at_station",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::get_interchanges(data_, msg);
+                    return api::interchanges_at_station(data_, msg);
                   },
                   {});
 

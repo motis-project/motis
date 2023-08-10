@@ -1,6 +1,6 @@
 namespace motis.paxmon;
 
-table PaxMonGetInterchangesRequest {
+table PaxMonInterchangesAtStationRequest {
   universe: uint;
 
   station: string; // station id

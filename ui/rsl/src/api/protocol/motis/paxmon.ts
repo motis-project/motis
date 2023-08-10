@@ -583,8 +583,8 @@ export interface PaxMonUniverseDestroyed {
   universe: number;
 }
 
-// paxmon/PaxMonGetInterchangesRequest.fbs
-export interface PaxMonGetInterchangesRequest {
+// paxmon/PaxMonInterchangesAtStationRequest.fbs
+export interface PaxMonInterchangesAtStationRequest {
   universe: number;
   station: string;
   start_time: number;
@@ -596,7 +596,7 @@ export interface PaxMonGetInterchangesRequest {
   include_disabled_group_routes: boolean;
 }
 
-// paxmon/PaxMonGetInterchangesResponse.fbs
+// paxmon/PaxMonInterchangesAtStationResponse.fbs
 export interface PaxMonTripStopInfo {
   schedule_time: number;
   current_time: number;
@@ -604,7 +604,7 @@ export interface PaxMonTripStopInfo {
   station: Station;
 }
 
-// paxmon/PaxMonGetInterchangesResponse.fbs
+// paxmon/PaxMonInterchangesAtStationResponse.fbs
 export interface PaxMonInterchangeInfo {
   arrival: PaxMonTripStopInfo[];
   departure: PaxMonTripStopInfo[];
@@ -615,8 +615,8 @@ export interface PaxMonInterchangeInfo {
   broken: boolean;
 }
 
-// paxmon/PaxMonGetInterchangesResponse.fbs
-export interface PaxMonGetInterchangesResponse {
+// paxmon/PaxMonInterchangesAtStationResponse.fbs
+export interface PaxMonInterchangesAtStationResponse {
   station: Station;
   interchanges: PaxMonInterchangeInfo[];
   max_count_reached: boolean;

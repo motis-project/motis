@@ -1,4 +1,4 @@
-#include "motis/paxmon/api/get_interchanges.h"
+#include "motis/paxmon/api/interchanges_at_station.h"
 
 #include <algorithm>
 #include <utility>
@@ -16,8 +16,8 @@ using namespace motis::paxmon;
 
 namespace motis::paxmon::api {
 
-msg_ptr get_interchanges(paxmon_data& data, msg_ptr const& msg) {
-  auto const req = motis_content(PaxMonGetInterchangesRequest, msg);
+msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonInterchangesAtStationRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
   auto& uv = uv_access.uv_;
@@ -145,10 +145,10 @@ msg_ptr get_interchanges(paxmon_data& data, msg_ptr const& msg) {
   }
 
   mc.create_and_finish(
-      MsgContent_PaxMonGetInterchangesResponse,
-      CreatePaxMonGetInterchangesResponse(mc, to_fbs(mc, ic_station),
-                                          mc.CreateVector(interchange_infos),
-                                          max_count_reached)
+      MsgContent_PaxMonInterchangesAtStationResponse,
+      CreatePaxMonInterchangesAtStationResponse(
+          mc, to_fbs(mc, ic_station), mc.CreateVector(interchange_infos),
+          max_count_reached)
           .Union());
   return make_msg(mc);
 }

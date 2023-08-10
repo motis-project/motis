@@ -875,7 +875,7 @@ PaxMonUniverseDestroyed:
   fields:
     universe:
       description: TODO
-PaxMonGetInterchangesRequest:
+PaxMonInterchangesAtStationRequest:
   description: TODO
   fields:
     universe:
@@ -924,7 +924,7 @@ PaxMonInterchangeInfo:
       description: TODO
     broken:
       description: TODO
-PaxMonGetInterchangesResponse:
+PaxMonInterchangesAtStationResponse:
   description: TODO
   fields:
     station:
