@@ -29,7 +29,8 @@ struct loader_graph_builder_gtfs_berlin_min : public motis_instance_test {
                 .schedule_begin_ = std::string{schedule_begin},
                 .num_days_ = 2},
             {"routing", "nigiri"},
-            {"--nigiri.num_days=2",
+            {"--nigiri.num_days=2", "--nigiri.routing=false",
+             "--nigiri.lookup=false",
              fmt::format(
                  "--nigiri.first_day={}-{}-{}", schedule_begin.substr(0, 4),
                  schedule_begin.substr(4, 2), schedule_begin.substr(6, 2))}) {}
