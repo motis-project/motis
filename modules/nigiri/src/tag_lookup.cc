@@ -22,6 +22,11 @@ std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {
   return src == n::source_idx_t::invalid() ? "" : src_to_tag_.at(src).view();
 }
 
+std::string_view tag_lookup::get_tag_clean(n::source_idx_t const src) const {
+  auto const tag = get_tag(src);
+  return tag.empty() ? tag : tag.substr(0, tag.size() - 1);
+}
+
 std::ostream& operator<<(std::ostream& out, tag_lookup const& tags) {
   auto first = true;
   for (auto const [src, tag] : utl::enumerate(tags.src_to_tag_)) {
