@@ -149,12 +149,10 @@ std::vector<std::pair<std::string, std::string>> database::get_matchings() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    matchings.emplace_back(
-        cista::copy_from_potentially_unaligned<std::string>(entry->first),
-        cista::copy_from_potentially_unaligned<std::string>(entry->second));
+    matchings.emplace_back(std::string{entry->first},
+                           std::string{entry->second});
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
-
   cur.reset();
   return matchings;
 }
