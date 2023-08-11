@@ -43,7 +43,6 @@ struct platform {
 };
 
 struct platforms_index {
-  std::vector<platform> platforms_;
 
   explicit platforms_index(std::vector<platform>& pfs)
       : platforms_(std::move(pfs)) {
@@ -60,6 +59,8 @@ struct platforms_index {
   std::size_t size() const { return platforms_.size(); }
 
   platform* get_platform(std::size_t const i) { return &platforms_.at(i); };
+
+  std::vector<platform> platforms_;
 
 private:
   geo::point_rtree platform_index_;

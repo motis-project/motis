@@ -9,15 +9,26 @@ namespace n = nigiri;
 namespace motis::footpaths {
 
 std::pair<bool, matching_result> matching(
-    n::location const& nloc, motis::footpaths::platforms_index* pfs_idx,
+    n::location const& nloc, state const& old_state, state const& update_state,
     boost::strided_integer_range<int> const& dists,
     int const match_bus_stop_max_distance, matches_func const& matches) {
   auto mr = matching_result{};
+  mr.nloc_idx_ = nloc.l_;
+  mr.nloc_pos_ = nloc.pos_;
 
-  for (auto dist : dists) {
-    for (auto* pf : pfs_idx->in_radius(nloc.pos_, dist)) {
+  auto matched{false};
+  auto shortest_dist{std::numeric_limits<double>::max()};
+
+  for (auto r : dists) {
+    // use update_state and old_state
+    auto pfs = update_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
+    auto const old_pfs =
+        old_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
+    pfs.insert(pfs.end(), old_pfs.begin(), old_pfs.end());
+
+    for (auto [dist, pf] : pfs) {
       // only match bus stops with a distance of up to a certain distance
-      if (pf->info_.is_bus_stop_ && dist > match_bus_stop_max_distance) {
+      if (pf->info_.is_bus_stop_ && r > match_bus_stop_max_distance) {
         continue;
       }
 
@@ -29,46 +40,52 @@ std::pair<bool, matching_result> matching(
       if (!matches(pf, nloc)) {
         continue;
       }
-      // it's a match
-      mr.pf_ = pf;
-      mr.nloc_idx_ = nloc.l_;
-      mr.nloc_pos_ = nloc.pos_;
-      return {true, mr};
+
+      if (dist < shortest_dist) {
+        mr.pf_ = pf;
+        shortest_dist = dist;
+        matched = true;
+      }
     }
   }
 
-  return {false, mr};
+  return {matched, mr};
 }
 
 // -- match function --
 std::pair<bool, matching_result> match_by_name(
-    n::location const& nloc, motis::footpaths::platforms_index* pfs_idx,
+    n::location const& nloc, state const& old_state, state const& update_state,
     boost::strided_integer_range<int> const& dists,
     int const match_bus_stop_max_dist) {
   assert(nloc.type_ != n::location_type::kStation);
 
-  auto [has_match, mr] =
-      matching(nloc, pfs_idx, dists, match_bus_stop_max_dist, name_match);
+  auto [has_match, mr] = matching(nloc, old_state, update_state, dists,
+                                  match_bus_stop_max_dist, name_match);
 
   if (has_match) {
     return {has_match, mr};
   }
 
-  return matching(nloc, pfs_idx, dists, match_bus_stop_max_dist,
+  return matching(nloc, old_state, update_state, dists, match_bus_stop_max_dist,
                   first_number_match);
 }
 
 std::pair<bool, matching_result> match_by_distance(
-    nigiri::location const& nloc, motis::footpaths::platforms_index* pfs_idx,
-    int const r, int const match_bus_stop_max_dist) {
+    nigiri::location const& nloc, state const& old_state,
+    state const& update_state, int const r, int const match_bus_stop_max_dist) {
   assert(nloc.type_ != n::location_type::kStation);
   auto mr = matching_result{};
   mr.nloc_idx_ = nloc.l_;
   mr.nloc_pos_ = nloc.pos_;
-  auto matched{false};
 
-  auto const pfs = pfs_idx->in_radius_with_distance(nloc.pos_, r);
+  auto matched{false};
   auto shortest_dist{std::numeric_limits<double>::max()};
+
+  // use update_state and old_state
+  auto pfs = update_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
+  auto const old_pfs =
+      old_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
+  pfs.insert(pfs.end(), old_pfs.begin(), old_pfs.end());
 
   for (auto [dist, pf] : pfs) {
     // only match bus stops with a distance of up to a certain distance
