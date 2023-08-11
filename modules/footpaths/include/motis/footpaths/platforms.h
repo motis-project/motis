@@ -6,6 +6,8 @@
 #include <utility>
 #include <vector>
 
+#include "cista/containers/string.h"
+
 #include "osmium/tags/taglist.hpp"
 
 #include "geo/latlng.h"

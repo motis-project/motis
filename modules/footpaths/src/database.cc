@@ -8,13 +8,14 @@ namespace motis::footpaths {
 
 constexpr auto const kPlatformsDB = "platforms";
 constexpr auto const kMatchingsDB = "matchings";
+constexpr auto const kTransfersDB = "transfers";
 
 inline std::string_view view(cista::byte_buf const& b) {
   return std::string_view{reinterpret_cast<char const*>(b.data()), b.size()};
 }
 
 database::database(std::string const& path, std::size_t const max_size) {
-  env_.set_maxdbs(2);
+  env_.set_maxdbs(3);
   env_.set_mapsize(max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   env_.open(path.c_str(), flags);
@@ -26,6 +27,7 @@ void database::init() {
   auto txn = lmdb::txn{env_};
   auto platforms_db = platforms_dbi(txn, lmdb::dbi_flags::CREATE);
   matchings_dbi(txn, lmdb::dbi_flags::CREATE);
+  transfers_dbi(txn, lmdb::dbi_flags::CREATE);
 
   // find highest platform id in db
   auto cur = lmdb::cursor{txn, platforms_db};
@@ -110,7 +112,7 @@ std::optional<platform> database::get_platform(std::string const& osm_key) {
 }
 
 std::vector<size_t> database::put_matching_results(
-    std::vector<matching_result> const& mrs) {
+    matching_results const& mrs) {
   auto added_indices = std::vector<std::size_t>{};
 
   auto lock = std::lock_guard{mutex_};
@@ -172,6 +174,51 @@ hash_map<std::string, platform> database::get_loc_to_pf_matchings() {
   return loc_pf_matchings;
 }
 
+std::vector<std::size_t> database::put_transfer_results(
+    transfer_results const& trs) {
+  auto added_indices = std::vector<std::size_t>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_};
+  auto transfers_db = transfers_dbi(txn);
+
+  for (auto const& [idx, tr] : utl::enumerate(trs)) {
+    auto const tr_key = to_key(tr);
+
+    if (auto const r = txn.get(transfers_db, tr_key); r.has_value()) {
+      continue;  // transfer already in db
+    }
+
+    auto const serialized_tr = cista::serialize(tr);
+    txn.put(transfers_db, tr_key, view(serialized_tr));
+    added_indices.emplace_back(idx);
+  }
+
+  txn.commit();
+  return added_indices;
+}
+
+hash_map<std::string, transfer_result> database::get_trs_with_key() {
+  auto trs_w_key = hash_map<std::string, transfer_result>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto transfers_db = transfers_dbi(txn);
+  auto cur = lmdb::cursor{txn, transfers_db};
+  auto entry = cur.get(lmdb::cursor_op::FIRST);
+
+  while (entry.has_value()) {
+    trs_w_key.insert(std::pair<std::string, transfer_result>(
+        std::string{entry->first},
+        cista::copy_from_potentially_unaligned<transfer_result>(
+            entry->second)));
+    entry = cur.get(lmdb::cursor_op::NEXT);
+  }
+
+  cur.reset();
+  return trs_w_key;
+}
+
 lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,
                                        lmdb::dbi_flags const flags) {
   return txn.dbi_open(kPlatformsDB, flags);
@@ -180,6 +227,11 @@ lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,
 lmdb::txn::dbi database::matchings_dbi(lmdb::txn& txn,
                                        lmdb::dbi_flags const flags) {
   return txn.dbi_open(kMatchingsDB, flags);
+}
+
+lmdb::txn::dbi database::transfers_dbi(lmdb::txn& txn,
+                                       lmdb::dbi_flags const flags) {
+  return txn.dbi_open(kTransfersDB, flags);
 }
 
 }  // namespace motis::footpaths
