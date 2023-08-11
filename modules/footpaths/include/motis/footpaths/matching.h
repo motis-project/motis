@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <string>
+#include <vector>
 
 #include "boost/range/irange.hpp"
 
@@ -18,6 +19,7 @@ struct matching_result {
   nigiri::location_idx_t nloc_idx_;
   geo::latlng nloc_pos_;
 };
+using matching_results = std::vector<matching_result>;
 
 // -- matching helper --
 using matches_func =

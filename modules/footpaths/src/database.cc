@@ -81,6 +81,20 @@ std::vector<platform> database::get_platforms() {
   return platforms;
 }
 
+std::vector<platform> database::get_matched_platforms() {
+  auto pfs = std::vector<platform>{};
+  auto const matchings = get_matchings();
+
+  for (auto const& [nloc_key, osm_key] : matchings) {
+    auto pf = get_platform(osm_key);
+    if (pf.has_value()) {
+      pfs.emplace_back(pf.value());
+    }
+  }
+
+  return pfs;
+}
+
 std::optional<platform> database::get_platform(std::string const& osm_key) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};

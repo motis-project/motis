@@ -29,6 +29,7 @@ struct database {
 
   std::vector<std::size_t> put_platforms(std::vector<platform>&);
   std::vector<platform> get_platforms();
+  std::vector<platform> get_matched_platforms();
 
   std::vector<std::size_t> put_matching_results(std::vector<matching_result>&);
 
@@ -43,7 +44,7 @@ private:
   void init();
 
   std::vector<std::pair<std::string, std::string>> get_matchings();
-  std::optional<platform> get_platform(std::string const&);
+  std::optional<platform> get_platform(std::string const& /* osm_key */);
 
   lmdb::env mutable env_;
   std::mutex mutex_;
