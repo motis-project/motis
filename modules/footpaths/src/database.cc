@@ -46,7 +46,7 @@ std::vector<std::size_t> database::put_platforms(std::vector<platform>& pfs) {
   auto txn = lmdb::txn{env_};
   auto platforms_db = platforms_dbi(txn);
 
-  for (auto const& [idx, pf] : utl::enumerate(pfs)) {
+  for (auto [idx, pf] : utl::enumerate(pfs)) {
     auto const osm_key = to_key(pf);
     if (auto const r = txn.get(platforms_db, osm_key); r.has_value()) {
       continue;  // platform already in db
@@ -110,7 +110,7 @@ std::optional<platform> database::get_platform(std::string const& osm_key) {
 }
 
 std::vector<size_t> database::put_matching_results(
-    std::vector<matching_result>& mrs) {
+    std::vector<matching_result> const& mrs) {
   auto added_indices = std::vector<std::size_t>{};
 
   auto lock = std::lock_guard{mutex_};
