@@ -2,26 +2,36 @@
 
 #include <vector>
 
+#include "cista/containers/string.h"
+
 #include "geo/latlng.h"
 
 #include "motis/footpaths/platforms.h"
+
+#include "nigiri/types.h"
 
 namespace motis::footpaths {
 
 struct transfer_request {
   platform transfer_start_;
-  std::vector<platform> transfer_targets_;
+  std::string from_nloc_key;
+
+  platforms transfer_targets_;
+  std::vector<std::string> to_nloc_keys;
+
   std::string profile_name;
 };
 using transfer_requests = std::vector<transfer_request>;
 
 struct transfer_info {
-  double duration_;
+  nigiri::duration_t duration_{};
+  double distance_{};
 };
+using transfer_infos = std::vector<transfer_info>;
 
 struct transfer_result {
-  geo::latlng from_;
-  geo::latlng to_;
+  cista::raw::string from_nloc_key;
+  cista::raw::string to_nloc_key;
   cista::raw::string profile_;
 
   transfer_info info_;

@@ -199,12 +199,10 @@ pr::input_location to_input_location(platform const& pf) {
   return il;
 }
 
-platforms platforms_index::valid_in_radius(platform const& pf, double const r) {
+std::vector<size_t> platforms_index::valid_in_radius(platform const& pf,
+                                                     double const r) {
   return utl::all(platform_index_.in_radius(pf.loc_, r)) |
-         utl::transform([this](std::size_t i) { return get_platform(i); }) |
-         utl::remove_if([&](auto const& target_platform) {
-           return target_platform == pf;
-         }) |
+         utl::remove_if([&](auto const& i) { return get_platform(i) == pf; }) |
          utl::vec();
 }
 

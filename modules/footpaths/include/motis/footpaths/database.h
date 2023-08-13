@@ -27,7 +27,7 @@ inline std::string to_key(geo::latlng const& pos) {
 }
 
 inline std::string to_key(transfer_result const& tr) {
-  return fmt::format("{}::{}::{}", to_key(tr.from_), to_key(tr.to_),
+  return fmt::format("{}::{}::{}", tr.from_nloc_key, tr.to_nloc_key,
                      tr.profile_);
 }
 

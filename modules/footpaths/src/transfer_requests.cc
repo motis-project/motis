@@ -7,24 +7,39 @@ transfer_requests generate_new_all_reachable_pairs_requests(
     std::map<std::string, ppr::profile_info> const& profiles) {
   auto result = transfer_requests{};
 
-  auto const all_pairs_trs = [&](platforms_index* from, platforms_index* to,
+  auto const all_pairs_trs = [&](state const& from_state, state const& to_state,
                                  std::string const& profile) {
     auto from_to_trs = transfer_requests{};
     auto const& pi = profiles.at(profile);
     auto prf_dist = pi.profile_.walking_speed_ * pi.profile_.duration_limit_;
 
-    for (auto i = std::size_t{0}; i < from->size(); ++i) {
-      auto tmp = transfer_request{};
+    for (auto i = std::size_t{0}; i < from_state.matched_pfs_idx_->size();
+         ++i) {
 
-      auto start = from->get_platform(i);
-      auto targets = to->valid_in_radius(start, prf_dist);
+      auto start = from_state.matched_pfs_idx_->get_platform(i);
+      auto target_ids =
+          to_state.matched_pfs_idx_->valid_in_radius(start, prf_dist);
 
-      if (targets.empty()) {
+      if (target_ids.empty()) {
         continue;
       }
 
+      auto tmp = transfer_request{};
+      auto target_pfs = platforms{};
+      auto target_nloc_keys = std::vector<std::string>{};
+
+      for (auto i : target_ids) {
+        target_pfs.emplace_back(to_state.matched_pfs_idx_->get_platform(i));
+      }
+
+      for (auto i : target_ids) {
+        target_nloc_keys.emplace_back(to_state.nloc_keys[i]);
+      }
+
       tmp.transfer_start_ = start;
-      tmp.transfer_targets_ = targets;
+      tmp.from_nloc_key = to_state.nloc_keys[i];
+      tmp.transfer_targets_ = target_pfs;
+      tmp.to_nloc_keys = target_nloc_keys;
       tmp.profile_name = profile;
 
       from_to_trs.emplace_back(tmp);
@@ -36,14 +51,11 @@ transfer_requests generate_new_all_reachable_pairs_requests(
   // new possible transfers: 1 -> 2, 2 -> 1, 2 -> 2
   for (auto const& [prf_name, prf_info] : profiles) {
     // new transfers from old to update (1 -> 2)
-    auto trs12 = all_pairs_trs(old_state.matched_pfs_idx_.get(),
-                               update_state.matched_pfs_idx_.get(), prf_name);
+    auto trs12 = all_pairs_trs(old_state, update_state, prf_name);
     // new transfers from update to old (2 -> 1)
-    auto trs21 = all_pairs_trs(update_state.matched_pfs_idx_.get(),
-                               old_state.matched_pfs_idx_.get(), prf_name);
+    auto trs21 = all_pairs_trs(update_state, old_state, prf_name);
     // new transfers from update to update (2 -> 2)
-    auto trs22 = all_pairs_trs(update_state.matched_pfs_idx_.get(),
-                               update_state.matched_pfs_idx_.get(), prf_name);
+    auto trs22 = all_pairs_trs(update_state, update_state, prf_name);
 
     result.insert(result.end(), trs12.begin(), trs12.end());
     result.insert(result.end(), trs21.begin(), trs21.end());
