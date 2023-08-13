@@ -64,8 +64,8 @@ std::vector<std::size_t> database::put_platforms(std::vector<platform>& pfs) {
   return added_indices;
 }
 
-std::vector<platform> database::get_platforms() {
-  auto platforms = std::vector<platform>{};
+platforms database::get_platforms() {
+  auto pfs = platforms{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -74,17 +74,17 @@ std::vector<platform> database::get_platforms() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    platforms.emplace_back(
+    pfs.emplace_back(
         cista::copy_from_potentially_unaligned<platform>(entry->second));
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
 
   cur.reset();
-  return platforms;
+  return pfs;
 }
 
-std::vector<platform> database::get_matched_platforms() {
-  auto pfs = std::vector<platform>{};
+platforms database::get_matched_platforms() {
+  auto pfs = platforms{};
   auto const matchings = get_matchings();
 
   for (auto const& [nloc_key, osm_key] : matchings) {
@@ -122,7 +122,7 @@ std::vector<size_t> database::put_matching_results(
 
   for (auto const& [idx, mr] : utl::enumerate(mrs)) {
     auto const nloc_key = to_key(mr.nloc_pos_);
-    auto const osm_key = to_key(*mr.pf_);
+    auto const osm_key = to_key(mr.pf_);
 
     if (auto const r = txn.get(matchings_db, nloc_key); r.has_value()) {
       continue;  // nloc already matched in db

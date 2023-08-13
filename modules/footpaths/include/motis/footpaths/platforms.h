@@ -43,6 +43,9 @@ struct platform {
 
   platform_info info_;
 };
+using platforms = std::vector<platform>;
+
+bool operator==(platform const& a, platform const& b);
 
 struct platforms_index {
 
@@ -52,23 +55,23 @@ struct platforms_index {
         platforms_, [](auto const& pf) { return pf.loc_; });
   }
 
-  std::vector<platform*> valid_in_radius(platform const*, double const);
+  platforms valid_in_radius(platform const&, double const);
 
-  std::vector<platform*> in_radius(geo::latlng const, double const);
-  std::vector<std::pair<double, platform*>> in_radius_with_distance(
+  platforms in_radius(geo::latlng const, double const);
+  std::vector<std::pair<double, platform>> in_radius_with_distance(
       geo::latlng const, double const);
 
   std::size_t size() const { return platforms_.size(); }
 
-  platform* get_platform(std::size_t const i) { return &platforms_.at(i); };
+  platform get_platform(std::size_t const i) { return platforms_.at(i); };
 
-  std::vector<platform> platforms_;
+  platforms platforms_;
 
 private:
   geo::point_rtree platform_index_;
 };
 
-std::vector<platform> extract_osm_platforms(std::string const& osm_file);
+platforms extract_osm_platforms(std::string const& osm_file);
 
 std::vector<std::string> extract_platform_names(osmium::TagList const& tags);
 

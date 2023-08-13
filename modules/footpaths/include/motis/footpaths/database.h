@@ -11,7 +11,7 @@
 
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platforms.h"
-#include "motis/footpaths/transfer_updates.h"
+#include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
 
 namespace motis::footpaths {
@@ -34,9 +34,9 @@ inline std::string to_key(transfer_result const& tr) {
 struct database {
   explicit database(std::string const& path, std::size_t const max_size);
 
-  std::vector<std::size_t> put_platforms(std::vector<platform>&);
-  std::vector<platform> get_platforms();
-  std::vector<platform> get_matched_platforms();
+  std::vector<std::size_t> put_platforms(platforms&);
+  platforms get_platforms();
+  platforms get_matched_platforms();
 
   std::vector<std::size_t> put_matching_results(matching_results const&);
 

@@ -22,6 +22,11 @@ using location_handler_type = osmium::handler::NodeLocationsForWays<index_type>;
 
 namespace motis::footpaths {
 
+bool operator==(platform const& a, platform const& b) {
+  return a.info_.osm_id_ == b.info_.osm_id_ &&
+         a.info_.osm_type_ == b.info_.osm_type_;
+};
+
 osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
   osmium::geom::Coordinates c{0.0, 0.0};
 
@@ -37,9 +42,8 @@ osmium::geom::Coordinates calc_center(osmium::NodeRefList const& nr_list) {
 }
 
 struct platform_handler : public osmium::handler::Handler {
-  explicit platform_handler(std::vector<platform>& platforms,
-                            osmium::TagsFilter filter)
-      : platforms_(platforms), filter_(std::move(filter)){};
+  explicit platform_handler(platforms& pfs, osmium::TagsFilter filter)
+      : pfs_(std::move(pfs)), filter_(std::move(filter)){};
 
   void node(osmium::Node const& node) {
     auto const& tags = node.tags();
@@ -66,6 +70,7 @@ struct platform_handler : public osmium::handler::Handler {
   }
 
   unsigned int unique_platforms_{0};
+  platforms pfs_;
 
 private:
   void add_platform(osm_type const type, osmium::object_id_type const id,
@@ -78,19 +83,17 @@ private:
     }
 
     for (auto const& name : names) {
-      platforms_.emplace_back(
+      pfs_.emplace_back(
           platform{0, geo::latlng{coord.y, coord.x},
                    platform_info{name, id, nigiri::location_idx_t::invalid(),
                                  type, platform_is_bus_stop(tags)}});
     }
   }
 
-  std::vector<platform>& platforms_;
   osmium::TagsFilter filter_;
 };
 
-std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
-
+platforms extract_osm_platforms(std::string const& osm_file) {
   ml::scoped_timer const timer("Extract OSM Tracks from " + osm_file);
 
   osmium::io::File const input_file{osm_file};
@@ -113,8 +116,8 @@ std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
 
   index_type index;
   location_handler_type location_handler{index};
-  std::vector<platform> platforms;
-  platform_handler data_handler{platforms, filter};
+  auto pfs = platforms{};
+  platform_handler data_handler{pfs, filter};
 
   {
     ml::scoped_timer const timer("Extract OSM tracks: Pass 2...");
@@ -132,17 +135,17 @@ std::vector<platform> extract_osm_platforms(std::string const& osm_file) {
 
   LOG(ml::info) << "Extracted " << data_handler.unique_platforms_
                 << " unique platforms from OSM.";
-  LOG(ml::info) << "Generated " << platforms.size()
+  LOG(ml::info) << "Generated " << data_handler.pfs_.size()
                 << " platform_info structs. "
-                << static_cast<float>(platforms.size()) /
+                << static_cast<float>(data_handler.pfs_.size()) /
                        static_cast<float>(data_handler.unique_platforms_)
                 << " entries per platform.";
 
-  return platforms;
+  return data_handler.pfs_;
 }
 
 std::vector<std::string> extract_platform_names(osmium::TagList const& tags) {
-  std::vector<std::string> platform_names;
+  auto platform_names = std::vector<std::string>{};
 
   auto add_names = [&](const std::string& name_by_tag) {
     platform_names.emplace_back(name_by_tag);
@@ -196,32 +199,28 @@ pr::input_location to_input_location(platform const& pf) {
   return il;
 }
 
-std::vector<platform*> platforms_index::valid_in_radius(platform const* pf,
-                                                        double const r) {
-  return utl::all(platform_index_.in_radius(pf->loc_, r)) |
+platforms platforms_index::valid_in_radius(platform const& pf, double const r) {
+  return utl::all(platform_index_.in_radius(pf.loc_, r)) |
          utl::transform([this](std::size_t i) { return get_platform(i); }) |
-         utl::remove_if([&](auto* target_platform) {
-           return target_platform->info_.idx_ ==
-                      nigiri::location_idx_t::invalid() ||
-                  target_platform->info_.idx_ == pf->info_.idx_;
+         utl::remove_if([&](auto const& target_platform) {
+           return target_platform == pf;
          }) |
          utl::vec();
 }
 
-std::vector<platform*> platforms_index::in_radius(geo::latlng const loc,
-                                                  double const r) {
+platforms platforms_index::in_radius(geo::latlng const loc, double const r) {
   return utl::all(platform_index_.in_radius(loc, r)) |
          utl::transform([this](std::size_t i) { return get_platform(i); }) |
          utl::vec();
 }
 
-std::vector<std::pair<double, platform*>>
+std::vector<std::pair<double, platform>>
 platforms_index::in_radius_with_distance(geo::latlng const loc,
                                          double const r) {
   return utl::all(platform_index_.in_radius_with_distance(loc, r)) |
          utl::transform([this](std::pair<double, std::size_t> res) {
-           return std::pair<double, platform*>(res.first,
-                                               get_platform(res.second));
+           return std::pair<double, platform>(res.first,
+                                              get_platform(res.second));
          }) |
          utl::vec();
 }

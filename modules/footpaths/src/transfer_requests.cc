@@ -1,69 +1,54 @@
 #include "motis/footpaths/transfer_requests.h"
 
-#include "motis/core/common/logging.h"
-
-namespace ml = motis::logging;
-
 namespace motis::footpaths {
 
-std::vector<transfer_requests> build_transfer_requests(
-    platforms_index* pfs_idx,
+transfer_requests generate_new_all_reachable_pairs_requests(
+    state const& old_state, state const& update_state,
     std::map<std::string, ppr::profile_info> const& profiles) {
-  u_int targets = 0, no_targets = 0;
-  u_int stations = 0, tracks = 0;
-  std::vector<transfer_requests> result{};
+  auto result = transfer_requests{};
 
-  // every platform (or station) can be a start for a transfer: set every
-  // platform as start
-  for (auto& pf : pfs_idx->platforms_) {
-    // create transfer requests for platforms with a valid location idx only
-    if (pf.info_.idx_ == nigiri::location_idx_t::invalid()) {
-      continue;
-    }
-    // count stations and tracks
-    pf.info_.osm_id_ == -1 ? ++stations : ++tracks;
+  auto const all_pairs_trs = [&](platforms_index* from, platforms_index* to,
+                                 std::string const& profile) {
+    auto from_to_trs = transfer_requests{};
+    auto const& pi = profiles.at(profile);
+    auto prf_dist = pi.profile_.walking_speed_ * pi.profile_.duration_limit_;
 
-    // different profiles result in different transfer_targets: determine for
-    // each profile the reachable platforms
-    for (auto const& profile : profiles) {
-      std::vector<platform*> transfer_targets{};
+    for (auto i = std::size_t{0}; i < from->size(); ++i) {
+      auto tmp = transfer_request{};
 
-      // remark: profile {profile_name -> profile_info}
-      // get all valid platforms in radius of current platform
+      auto start = from->get_platform(i);
+      auto targets = to->valid_in_radius(start, prf_dist);
 
-      auto valid_pfs_in_radius = pfs_idx->valid_in_radius(
-          &pf, profile.second.profile_.walking_speed_ *
-                   profile.second.profile_.duration_limit_);
-      transfer_targets.insert(transfer_targets.end(),
-                              valid_pfs_in_radius.begin(),
-                              valid_pfs_in_radius.end());
-      targets += valid_pfs_in_radius.size();
-
-      // donot create a transfer request if no valid transfer could be found
-      if (transfer_targets.empty()) {
-        ++no_targets;
+      if (targets.empty()) {
         continue;
       }
 
-      transfer_requests tmp{};
-      tmp.transfer_start_ = &pf;
-      tmp.transfer_targets_ = transfer_targets;
-      tmp.profile_name = profile.first;
+      tmp.transfer_start_ = start;
+      tmp.transfer_targets_ = targets;
+      tmp.profile_name = profile;
 
-      result.emplace_back(tmp);
+      from_to_trs.emplace_back(tmp);
     }
-  }
 
-  LOG(ml::info) << "Generated " << result.size() << " transfer requests.";
-  LOG(ml::info) << "Found " << targets << " targets in total.";
-  LOG(ml::info) << "Identified "
-                << (static_cast<double>(targets) /
-                    static_cast<double>(result.size()))
-                << " targets per source.";
-  LOG(ml::info)
-      << "Found " << no_targets
-      << " (src, profile)-tuples w/o targets. (not included in transfer "
-         "requests).";
+    return from_to_trs;
+  };
+
+  // new possible transfers: 1 -> 2, 2 -> 1, 2 -> 2
+  for (auto const& [prf_name, prf_info] : profiles) {
+    // new transfers from old to update (1 -> 2)
+    auto trs12 = all_pairs_trs(old_state.matched_pfs_idx_.get(),
+                               update_state.matched_pfs_idx_.get(), prf_name);
+    // new transfers from update to old (2 -> 1)
+    auto trs21 = all_pairs_trs(update_state.matched_pfs_idx_.get(),
+                               old_state.matched_pfs_idx_.get(), prf_name);
+    // new transfers from update to update (2 -> 2)
+    auto trs22 = all_pairs_trs(update_state.matched_pfs_idx_.get(),
+                               update_state.matched_pfs_idx_.get(), prf_name);
+
+    result.insert(result.end(), trs12.begin(), trs12.end());
+    result.insert(result.end(), trs21.begin(), trs21.end());
+    result.insert(result.end(), trs22.begin(), trs22.end());
+  }
 
   return result;
 }

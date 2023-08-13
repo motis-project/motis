@@ -28,12 +28,12 @@ std::pair<bool, matching_result> matching(
 
     for (auto [dist, pf] : pfs) {
       // only match bus stops with a distance of up to a certain distance
-      if (pf->info_.is_bus_stop_ && r > match_bus_stop_max_distance) {
+      if (pf.info_.is_bus_stop_ && r > match_bus_stop_max_distance) {
         continue;
       }
 
       // only math platfoorms with a valid osm_id
-      if (pf->info_.osm_id_ == -1) {
+      if (pf.info_.osm_id_ == -1) {
         continue;
       }
 
@@ -57,8 +57,6 @@ std::pair<bool, matching_result> match_by_name(
     n::location const& nloc, state const& old_state, state const& update_state,
     boost::strided_integer_range<int> const& dists,
     int const match_bus_stop_max_dist) {
-  assert(nloc.type_ != n::location_type::kStation);
-
   auto [has_match, mr] = matching(nloc, old_state, update_state, dists,
                                   match_bus_stop_max_dist, name_match);
 
@@ -73,7 +71,6 @@ std::pair<bool, matching_result> match_by_name(
 std::pair<bool, matching_result> match_by_distance(
     nigiri::location const& nloc, state const& old_state,
     state const& update_state, int const r, int const match_bus_stop_max_dist) {
-  assert(nloc.type_ != n::location_type::kStation);
   auto mr = matching_result{};
   mr.nloc_idx_ = nloc.l_;
   mr.nloc_pos_ = nloc.pos_;
@@ -89,7 +86,7 @@ std::pair<bool, matching_result> match_by_distance(
 
   for (auto [dist, pf] : pfs) {
     // only match bus stops with a distance of up to a certain distance
-    if (pf->info_.is_bus_stop_ && dist > match_bus_stop_max_dist) {
+    if (pf.info_.is_bus_stop_ && dist > match_bus_stop_max_dist) {
       continue;
     }
 
@@ -145,8 +142,8 @@ std::string get_first_number_sequence(std::string const& str) {
 }
 
 // -- string matcher --
-bool name_match(platform const* pf, nigiri::location const& nloc) {
-  auto str_a = std::string{pf->info_.name_};
+bool name_match(platform const& pf, nigiri::location const& nloc) {
+  auto str_a = std::string{pf.info_.name_};
   auto str_b = std::string{nloc.name_};
   return exact_str_match(str_a, str_b);
 }
@@ -174,8 +171,8 @@ bool exact_str_match(std::string& str_a, std::string& str_b) {
   return str_a == str_b;
 }
 
-bool first_number_match(platform const* pf, nigiri::location const& nloc) {
-  auto str_a = std::string{pf->info_.name_};
+bool first_number_match(platform const& pf, nigiri::location const& nloc) {
+  auto str_a = std::string{pf.info_.name_};
   auto str_b = std::string{nloc.name_};
   return exact_first_number_match(str_a, str_b);
 }
