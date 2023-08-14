@@ -3,11 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <regex>
 
 #include "boost/range/irange.hpp"
-
-#include "cista/containers/vector.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
@@ -16,26 +15,28 @@
 #include "motis/footpaths/database.h"
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platforms.h"
+#include "motis/footpaths/state.h"
 #include "motis/footpaths/transfer_requests.h"
-#include "motis/footpaths/transfer_updates.h"
+#include "motis/footpaths/transfer_results.h"
+#include "motis/footpaths/transfers.h"
+#include "motis/footpaths/types.h"
 
 #include "motis/ppr/profiles.h"
 
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "ppr/common/routing_graph.h"
 #include "ppr/routing/input_pt.h"
 #include "ppr/serialization/reader.h"
 
 #include "utl/parallel_for.h"
-#include "utl/verify.h"
+#include "utl/pipes.h"
 
-namespace cr = cista::raw;
 namespace fs = std::filesystem;
 namespace ml = motis::logging;
 namespace mm = motis::module;
 namespace n = nigiri;
-namespace pr = ppr::routing;
 namespace ps = ppr::serialization;
 
 namespace motis::footpaths {
@@ -59,18 +60,164 @@ struct import_state {
 };
 
 struct footpaths::impl {
-  explicit impl(nigiri::timetable& tt, std::string const& db_file,
+  explicit impl(n::timetable& tt, std::string const& db_file,
                 std::size_t db_max_size)
-      : tt_(tt), db_{db_file, db_max_size} {};
+      : tt_(tt), db_{db_file, db_max_size} {
+    auto pfs = db_.get_platforms();
+    old_state_.pfs_idx_ =
+        std::make_unique<platforms_index>(platforms_index{pfs});
+    old_state_.matches_ = db_.get_loc_to_pf_matchings();
+    old_state_.transfer_results_ = db_.get_transfer_results();
 
-  void match_locations_and_platforms() {
+    auto matched_pfs = platforms{};
+    auto matched_nloc_keys = std::vector<string>{};
+    for (auto const& [k, pf] : old_state_.matches_) {
+      matched_nloc_keys.emplace_back(k);
+      matched_pfs.emplace_back(pf);
+    }
+    old_state_.nloc_keys = matched_nloc_keys;
+    old_state_.matched_pfs_idx_ =
+        std::make_unique<platforms_index>(platforms_index{matched_pfs});
+  };
+
+  void full_import() {
+    // 1st extract all platforms from a given osm file
+    get_and_save_osm_platforms();
+
+    // 2nd update osm_id and location_idx
+    match_and_save_matches();
+
+    // 3rd build transfer requests
+    auto const treqs = get_new_trs();
+
+    // 4th precompute profilebased transfers
+    auto rg = get_routing_ready_ppr_graph();
+    route_and_save_result(rg, treqs);
+
+    // 5th update timetable
+    update_timetable();
+  }
+
+  void maybe_partial_import(import_state const& old_state,
+                            import_state const& new_state) {
+    if (old_state.osm_hash_ != new_state.osm_hash_) {
+      // 1st extract all platforms from a given osm file
+      get_and_save_osm_platforms();
+
+      // 2nd update osm_id and location_idx
+      match_and_save_matches();
+
+      // 3rd build transfer requests
+      auto const treqs = get_new_trs();
+
+      // 4th precompute profilebased transfers
+      auto rg = get_routing_ready_ppr_graph();
+      route_and_save_result(rg, treqs);
+    }
+
+    // update timetable
+    update_timetable();
+  }
+
+  void load_ppr_profiles() {
+    for (auto& [pname, pinfo] : ppr_profiles_) {
+      // convert walk_duration from minutes to seconds
+      pinfo.profile_.duration_limit_ = max_walk_duration_ * 60;
+
+      // build profile_name to idx map in nigiri::tt
+      tt_.profiles_.insert({pname, tt_.profiles_.size()});
+
+      // build list of profile infos
+      profiles_.emplace_back(pinfo);
+    }
+    assert(tt_.profiles_.size() == profiles_.size());
+  }
+
+  n::timetable& tt_;
+  database db_;
+
+  state old_state_;  // state before init/import
+  state update_state_;  // update state with new platforms/new matches
+
+  std::map<std::string, ppr::profile_info> ppr_profiles_;
+
+  std::string osm_path_;
+  std::string ppr_rg_path_;
+
+  // initialize footpaths limits
+  int max_walk_duration_{10};
+
+private:
+  void get_and_save_osm_platforms() {
+    progress_tracker_->status("Extract Platforms from OSM.");
+    LOG(ml::info) << "Extracting platforms from " << osm_path_;
+    auto osm_extracted_platforms = extract_osm_platforms(osm_path_);
+
+    LOG(ml::info) << "Writing OSM Platforms to DB.";
+    put_platforms(osm_extracted_platforms);
+  }
+
+  void match_and_save_matches() {
+    progress_tracker_->status("Match Locations and OSM Platforms");
+    ml::scoped_timer const timer{
+        "Matching timetable locations and osm platforms."};
+
+    LOG(ml::info) << "Matching Locations to OSM Platforms.";
+    auto mrs = match_locations_and_platforms();
+
+    LOG(ml::info) << "Writing Matchings to DB.";
+    put_matching_results(mrs);
+  }
+
+  transfer_requests get_new_trs() {
+    progress_tracker_->status("Generate Transfer Requests.");
+    ml::scoped_timer const timer{"transfer: build transfer requests."};
+    return new_all_reachable_pairs_requests();
+  }
+
+  void route_and_save_result(::ppr::routing_graph const& rg,
+                             transfer_requests const& treqs) {
+    progress_tracker_->status("(Pre)Computing Profilebased Transfers.");
+    ml::scoped_timer const timer{"(Pre)Computing Profilebased Transfers."};
+    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
+    put_transfer_results(trs);
+  }
+
+  ::ppr::routing_graph get_routing_ready_ppr_graph() {
+    ::ppr::routing_graph result;
+    progress_tracker_->status("Loading PPR Routing Graph.");
+    ml::scoped_timer const timer{"Loading PPR Routing Graph."};
+    ps::read_routing_graph(result, ppr_rg_path_);
+    result.prepare_for_routing(edge_rtree_max_size_, area_rtree_max_size_,
+                               lock_rtree_ ? ::ppr::rtree_options::LOCK
+                                           : ::ppr::rtree_options::PREFETCH);
+    return result;
+  }
+
+  platforms extract_tt_platforms() {
+    auto result = platforms{};
+
+    for (auto i = n::location_idx_t{0U}; i < tt_.locations_.ids_.size(); ++i) {
+      if (tt_.locations_.types_[i] == n::location_type::kStation) {
+        result.emplace_back(
+            platform{0, tt_.locations_.coordinates_[i],
+                     platform_info{tt_.locations_.names_[i].view(), -1, i,
+                                   osm_type::kNode, false}});
+      }
+    }
+
+    return result;
+  }
+
+  matching_results match_locations_and_platforms() {
     // --- initialization: initialize match distance range
-    auto const dists = boost::irange(match_distance_min_,
-                                     match_distance_max_ + match_distance_step_,
-                                     match_distance_step_);
+    [[maybe_unused]] auto const dists = boost::irange(
+        match_distance_min_, match_distance_max_ + match_distance_step_,
+        match_distance_step_);
 
     // --- matching:
-    unsigned int matched_ = 0, unmatched_ = 0;
+    unsigned int matched_ = 0;
+    auto matches = matching_results{};
 
     auto progress_tracker = utl::get_active_progress_tracker();
     progress_tracker->reset_bounds().in_high(tt_.locations_.ids_.size());
@@ -79,45 +226,141 @@ struct footpaths::impl {
       progress_tracker->increment();
 
       auto nloc = tt_.locations_.get(n::location_idx_t{i});
-      if (nloc.type_ == n::location_type::kStation) {
+      /*if (nloc.type_ == n::location_type::kStation) {
         continue;
-      }
+      }*/
 
       // match location and platform using exact name match
-      auto [has_match, match_res] = match_by_name(nloc, pfs_idx_.get(), dists,
-                                                  match_bus_stop_max_distance_);
+      auto [has_match_up, match_res] = match_by_distance(
+          nloc, old_state_, update_state_, 20, match_bus_stop_max_distance_);
 
-      if (has_match) {
-        ++matched_;
-        loc_osm_ids_[match_res.loc_idx_] = match_res.pf_->info_.osm_id_;
-        loc_osm_types_[match_res.loc_idx_] = match_res.pf_->info_.osm_type_;
-
-        if (match_res.pf_->info_.idx_ == n::location_idx_t::invalid()) {
-          // TODO (Carsten) allow multiple loc_idxs per platform;
-          match_res.pf_->info_.idx_ = match_res.loc_idx_;
-        }
+      if (!has_match_up) {
         continue;
-      } else {
-        ++unmatched_;
-        pfs_idx_->platforms_.emplace_back(platform{
-            0, nloc.pos_,
-            platform_info{nloc.name_, -1, nloc.l_, osm_type::kNode, false}});
       }
+
+      ++matched_;
+      matches.emplace_back(match_res);
     }
 
     LOG(ml::info) << "Matched " << matched_
                   << " nigiri::locations to an osm-extracted platform.";
-    LOG(ml::info) << "Did not match " << unmatched_
-                  << " nigiri::locations to an osm-extracted platform.";
+    return matches;
   }
 
-  nigiri::timetable& tt_;
+  transfer_requests new_all_reachable_pairs_requests() const {
+    return generate_new_all_reachable_pairs_requests(old_state_, update_state_,
+                                                     ppr_profiles_);
+  }
 
-  // initialize footpaths limits
-  int max_walk_duration_{10};
+  void reset_timetable() {
+    for (auto prf_idx = n::profile_idx_t{0}; prf_idx < n::kMaxProfiles;
+         ++prf_idx) {
+      tt_.locations_.footpaths_out_[prf_idx] = {};
+      tt_.locations_.footpaths_in_[prf_idx] = {};
 
-private:
-  database db_;
+      for (auto i = 0; i < tt_.locations_.ids_.size(); ++i) {
+        tt_.locations_.footpaths_out_[prf_idx].emplace_back(
+            n::vector<n::footpath>());
+        tt_.locations_.footpaths_in_[prf_idx].emplace_back(
+            n::vector<n::footpath>());
+      }
+    }
+  }
+
+  void update_timetable() {
+    progress_tracker_->status("Updating Timetable.");
+    ml::scoped_timer const timer{"Updating Timetable."};
+
+    reset_timetable();
+    unsigned int ctr_start = 0;
+    unsigned int ctr_end = 0;
+
+    progress_tracker_->in_high(old_state_.transfer_results_.size() +
+                               update_state_.transfer_results_.size());
+
+    auto const& single_update = [&](transfer_result const& tr) {
+      ++ctr_start;
+      progress_tracker_->increment();
+      if (tt_.profiles_.count(tr.profile_) == 0 ||
+          tt_.locations_.location_key_to_idx_.count(tr.from_nloc_key) == 0 ||
+          tt_.locations_.location_key_to_idx_.count(tr.to_nloc_key) == 0) {
+        return;
+      }
+
+      auto const prf_idx = tt_.profiles_.at(tr.profile_);
+      auto const from_idx =
+          tt_.locations_.location_key_to_idx_.at(tr.from_nloc_key);
+      auto const to_idx =
+          tt_.locations_.location_key_to_idx_.at(tr.to_nloc_key);
+
+      tt_.locations_.footpaths_out_[prf_idx][from_idx].push_back(
+          n::footpath{to_idx, tr.info_.duration_});
+      tt_.locations_.footpaths_in_[prf_idx][to_idx].push_back(
+          n::footpath{from_idx, tr.info_.duration_});
+
+      ++ctr_end;
+    };
+
+    for (auto const& tr : old_state_.transfer_results_) {
+      single_update(tr);
+    }
+
+    for (auto const& tr : update_state_.transfer_results_) {
+      single_update(tr);
+    }
+
+    LOG(ml::info) << "Added " << ctr_end << " of " << ctr_start
+                  << " transfers.";
+  }
+
+  // -- db calls --
+  void put_platforms(platforms& pfs) {
+    auto added_to_db = db_.put_platforms(pfs);
+    auto new_pfs = utl::all(added_to_db) |
+                   utl::transform([&](std::size_t i) { return pfs[i]; }) |
+                   utl::vec();
+    LOG(ml::info) << "Added " << added_to_db.size() << " new platforms to db.";
+
+    assert(new_pfs.size() == added_to_db.size());
+
+    LOG(ml::info) << "Building Update-State R.Tree.";
+    update_state_.pfs_idx_ =
+        std::make_unique<platforms_index>(platforms_index{new_pfs});
+  }
+
+  std::vector<std::size_t> put_matching_results(matching_results const& mrs) {
+    auto added_to_db = db_.put_matching_results(mrs);
+    auto new_mrs = utl::all(added_to_db) |
+                   utl::transform([&](std::size_t i) { return mrs[i]; }) |
+                   utl::vec();
+    LOG(ml::info) << "Added " << added_to_db.size()
+                  << " new matching results to db.";
+
+    assert(new_mrs.size() == added_to_db.size());
+
+    auto matched_pfs = platforms{};
+    for (auto const& mr : new_mrs) {
+      update_state_.matches_.insert(
+          std::pair<std::string, platform>(to_key(mr.nloc_pos_), mr.pf_));
+      update_state_.nloc_keys.emplace_back(to_key(mr.nloc_pos_));
+      matched_pfs.emplace_back(mr.pf_);
+    }
+    update_state_.matched_pfs_idx_ =
+        std::make_unique<platforms_index>(platforms_index{matched_pfs});
+
+    return added_to_db;
+  }
+
+  void put_transfer_results(transfer_results const& trs) {
+    auto added_to_db = db_.put_transfer_results(trs);
+    assert(trs.size() == added_to_db.size());
+    LOG(ml::info) << "Added " << added_to_db.size() << " of " << trs.size()
+                  << " new transfers to db.";
+
+    update_state_.transfer_results_ = trs;
+  }
+
+  std::vector<ppr::profile_info> profiles_;
 
   // initialize matching limits
   int match_distance_min_{0};
@@ -125,11 +368,9 @@ private:
   int match_distance_step_{40};
   int match_bus_stop_max_distance_{120};
 
-  cr::vector_map<n::location_idx_t, std::int64_t> loc_osm_ids_;
-  cr::vector_map<n::location_idx_t, osm_type> loc_osm_types_;
-
-  std::unique_ptr<platforms_index> pfs_idx_;
-};
+  utl::progress_tracker_ptr progress_tracker_{
+      utl::get_active_progress_tracker()};
+};  // namespace motis::footpaths
 
 footpaths::footpaths() : module("Footpaths", "footpaths") {}
 
@@ -157,7 +398,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             motis_content(NigiriEvent, dependencies.at("NIGIRI"));
         auto const osm_event = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_event = motis_content(PPREvent, dependencies.at("PPR"));
-        auto const state =
+        auto const new_state =
             import_state{nigiri_event->hash(),
                          data_path(osm_event->path()->str()),
                          osm_event->hash(),
@@ -167,164 +408,39 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
                          ppr_event->graph_size(),
                          ppr_event->profiles_hash()};
 
+        fs::create_directories(dir);
+        impl_ = std::make_unique<impl>(
+            *get_shared_data<n::timetable*>(
+                to_res_id(mm::global_res_id::NIGIRI_TIMETABLE)),
+            db_file(), db_max_size_);
+
         auto progress_tracker = utl::get_active_progress_tracker();
 
-        // verify that data structure in Nigiri was adjusted to necessary number
-        // of profiles
-        auto const& no_profiles = ppr_event->profiles()->size();
-        utl::verify(
-            no_profiles == impl_->tt_.locations_.footpaths_out_.size(),
-            "[footpath_out_] Profiles are not fully initialized. "
-            "(IS/SHOULD): " +
-                std::to_string(impl_->tt_.locations_.footpaths_out_.size()) +
-                "/" + std::to_string(no_profiles));
-        utl::verify(
-            no_profiles == impl_->tt_.locations_.footpaths_in_.size(),
-            "[footpath_in_] Profiles are not fully initialized. "
-            "(IS/SHOULD): " +
-                std::to_string(impl_->tt_.locations_.footpaths_out_.size()) +
-                "/" + std::to_string(no_profiles));
-
-        // (profile-name, profile-info)
-        progress_tracker->status("Extract Profile Information.");
-        ::motis::ppr::read_profile_files(
-            utl::to_vec(*ppr_event->profiles(),
-                        [](auto const& p) { return p->path()->str(); }),
-            ppr_profiles_);
-
-        // generate (profile_name, profile position in footpath)
-        // REMARK: there is no need to use the default profile
-        for (auto& [pname, pinfo] : ppr_profiles_) {
-          // convert walk_duration from minutes to seconds
-          pinfo.profile_.duration_limit_ = impl_->max_walk_duration_ * 60;
-
-          // build profile_name to idx map in nigiri::tt
-          impl_->tt_.profiles_.insert({pname, impl_->tt_.profiles_.size()});
-
-          // build list of profile infos
-          profiles_.emplace_back(pinfo);
-        }
-        assert(impl_->tt_.profiles_.size() == profiles_.size());
-
-        // 1st extract all platforms from a given osm file
-        progress_tracker->status("Extract Platforms from OSM.");
-        std::vector<platform> extracted_platforms;
-        auto const osm_file = osm_event->path()->str();
         {
-          ml::scoped_timer const timer{
-              "transfers: extract all platforms from a given osm file."};
+          ml::scoped_timer const timer{"Reading PPR Profile Information"};
+          progress_tracker->status("Reading PPR Profiles Information.");
 
-          LOG(ml::info) << "Extracting platforms from " << osm_file;
-          extracted_platforms = extract_osm_platforms(osm_file);
+          ::motis::ppr::read_profile_files(
+              utl::to_vec(*ppr_event->profiles(),
+                          [](auto const& p) { return p->path()->str(); }),
+              impl_->ppr_profiles_);
+          impl_->load_ppr_profiles();
         }
 
-        progress_tracker->status("Load PPR Routing Graph.");
-        ::ppr::routing_graph rg;
-        {
-          ml::scoped_timer const timer{"transfers: loading ppr routing graph."};
-          ps::read_routing_graph(rg, ppr_event->graph_path()->str());
-        }
+        impl_->osm_path_ = osm_event->path()->str();
+        impl_->ppr_rg_path_ = ppr_event->graph_path()->str();
 
-        {
-          ml::scoped_timer const timer{"transfers: preparing ppr rtrees."};
-          rg.prepare_for_routing(edge_rtree_max_size_, area_rtree_max_size_,
-                                 lock_rtrees_ ? ::ppr::rtree_options::LOCK
-                                              : ::ppr::rtree_options::PREFETCH);
-        }
-
-        // 2nd extract all stations from the nigiri graph
-        progress_tracker->status("Extract Stations from Nigiri.");
-        std::vector<platform> stations{};
-        {
-          ml::scoped_timer const timer{
-              "transfers: extract stations from nigiri graph."};
-
-          uint16_t not_in_bb = 0;
-          pr::routing_options const ro{};
-
-          for (auto i = nigiri::location_idx_t{0U};
-               i != impl_->tt_.locations_.ids_.size(); ++i) {
-            if (impl_->tt_.locations_.types_[i] ==
-                nigiri::location_type::kStation) {
-              auto const il =
-                  ::ppr::routing::make_input_location(::ppr::make_location(
-                      impl_->tt_.locations_.coordinates_[i].lng_,
-                      impl_->tt_.locations_.coordinates_[i].lat_));
-
-              if (!has_nearest_edge(rg, il, ro, false)) {
-                ++not_in_bb;
-                continue;
-              }
-
-              stations.emplace_back(
-                  platform{0, impl_->tt_.locations_.coordinates_[i],
-                           platform_info{impl_->tt_.locations_.names_[i].view(),
-                                         -1, i, osm_type::kNode, false}});
-            }
-          }
-          LOG(ml::info) << "Found " << stations.size()
-                        << " stations in nigiri graph. Not in Bounding Box: "
-                        << not_in_bb;
-        }
-
-        // 3rd combine platforms and stations
-        progress_tracker->status("Concat. extracted platforms and stations.");
-        {
-          ml::scoped_timer const timer{
-              "transfers: combine single platforms and stations, build rtree."};
-          extracted_platforms.insert(extracted_platforms.end(),
-                                     stations.begin(), stations.end());
-
-          LOG(ml::info) << "Added " << stations.size()
-                        << " stations to osm-extracted platforms.";
-
-          // platforms_ =
-          //     std::make_unique<platforms>(platforms{extracted_platforms});
-        }
-
-        // 4th update osm_id and location_idx
-        progress_tracker->status("Match Locations and OSM Platforms.");
-        {
-          ml::scoped_timer const timer{
-              "transfers: match locations and osm platforms"};
-          // match_locations_and_platforms();
-        }
-
-        // 5th build transfer requests
-        progress_tracker->status("Generate Transfer Requests.");
-        std::vector<transfer_requests> const transfer_reqs;
-        {
-          ml::scoped_timer const timer{"transfer: build transfer requests."};
-          // transfer_reqs =
-          //    build_transfer_requests(platforms_.get(), ppr_profiles_);
-        }
-
-        // 6th get transfer requests result
-        {
-          ml::scoped_timer const timer{"transfers: delete default transfers."};
-
-          for (auto prf_idx = 0; prf_idx < ppr_profiles_.size(); ++prf_idx) {
-            impl_->tt_.locations_.footpaths_out_[prf_idx] = {};
-            impl_->tt_.locations_.footpaths_in_[prf_idx] = {};
-
-            for (auto i = 0; i < impl_->tt_.locations_.src_.size(); ++i) {
-              impl_->tt_.locations_.footpaths_out_[prf_idx].emplace_back(
-                  nigiri::vector<nigiri::footpath>());
-              impl_->tt_.locations_.footpaths_in_[prf_idx].emplace_back(
-                  nigiri::vector<nigiri::footpath>());
-            }
-          }
-        }
-
-        progress_tracker->status("Compute Transfer Routes.");
-        {
-          ml::scoped_timer const timer{"transfers: update nigiri transfers"};
-          precompute_nigiri_transfers(rg, impl_->tt_, ppr_profiles_,
-                                      transfer_reqs);
+        if (!fs::exists(dir / "import.ini")) {
+          LOG(ml::info) << "Footpaths: Full Import.";
+          impl_->full_import();
+        } else {
+          LOG(ml::info) << "Footpaths: Maybe Partial Import.";
+          auto old_state = mm::read_ini<import_state>(dir / "import.ini");
+          impl_->maybe_partial_import(old_state, new_state);
         }
 
         LOG(ml::info) << "Footpath Import done!";
-        mm::write_ini(dir / "import.ini", state);
+        mm::write_ini(dir / "import.ini", new_state);
 
         import_successful_ = true;
       })
@@ -341,17 +457,6 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
       });
 }
 
-void footpaths::init(motis::module::registry& reg) {
-  std::ignore = reg;
-
-  try {
-    impl_ = std::make_unique<impl>(
-        *get_shared_data<nigiri::timetable*>(
-            to_res_id(mm::global_res_id::NIGIRI_TIMETABLE)),
-        db_file(), db_max_size_);
-  } catch (std::exception const& e) {
-    LOG(ml::warn) << "footpaths module not initialized: " << e.what();
-  }
-}
+void footpaths::init(motis::module::registry& reg) { std::ignore = reg; }
 
 }  // namespace motis::footpaths
