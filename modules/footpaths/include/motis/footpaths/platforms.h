@@ -49,8 +49,7 @@ bool operator==(platform const& a, platform const& b);
 
 struct platforms_index {
 
-  explicit platforms_index(std::vector<platform>& pfs)
-      : platforms_(std::move(pfs)) {
+  explicit platforms_index(platforms const& pfs) : platforms_(std::move(pfs)) {
     platform_index_ = geo::make_point_rtree(
         platforms_, [](auto const& pf) { return pf.loc_; });
   }

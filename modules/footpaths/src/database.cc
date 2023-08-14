@@ -39,7 +39,7 @@ void database::init() {
   txn.commit();
 }
 
-std::vector<std::size_t> database::put_platforms(std::vector<platform>& pfs) {
+std::vector<std::size_t> database::put_platforms(platforms& pfs) {
   auto added_indices = std::vector<std::size_t>{};
 
   auto lock = std::lock_guard{mutex_};
