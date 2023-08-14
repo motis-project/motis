@@ -7,6 +7,10 @@
 #include <utility>
 #include <vector>
 
+#include "cista/containers/string.h"
+
+#include "fmt/core.h"
+
 #include "lmdb/lmdb.hpp"
 
 #include "motis/footpaths/matching.h"
@@ -14,21 +18,22 @@
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
 
+#include "nigiri/keys.h"
+
 namespace motis::footpaths {
 
-inline std::string to_key(platform const& pf) {
-  return fmt::format("{}:{}", std::to_string(pf.info_.osm_id_),
-                     get_osm_str_type(pf.info_.osm_type_));
+inline string to_key(platform const& pf) {
+  return {fmt::format("{}:{}", std::to_string(pf.info_.osm_id_),
+                      get_osm_str_type(pf.info_.osm_type_))};
 }
 
-inline std::string to_key(geo::latlng const& pos) {
-  return fmt::format("{}:{}", std::to_string(pos.lat_),
-                     std::to_string(pos.lng_));
+inline string to_key(geo::latlng const& coord) {
+  return nigiri::to_location_key(coord);
 }
 
-inline std::string to_key(transfer_result const& tr) {
-  return fmt::format("{}::{}::{}", tr.from_nloc_key, tr.to_nloc_key,
-                     tr.profile_);
+inline string to_key(transfer_result const& tr) {
+  return {
+      fmt::format("{}::{}::{}", tr.from_nloc_key, tr.to_nloc_key, tr.profile_)};
 }
 
 struct database {
@@ -40,7 +45,7 @@ struct database {
 
   std::vector<std::size_t> put_matching_results(matching_results const&);
 
-  hash_map<std::string, platform> get_loc_to_pf_matchings();
+  hash_map<string, platform> get_loc_to_pf_matchings();
 
   std::vector<std::size_t> put_transfer_results(transfer_results const&);
   transfer_results get_transfer_results();
@@ -55,8 +60,8 @@ private:
 
   void init();
 
-  std::vector<std::pair<std::string, std::string>> get_matchings();
-  std::optional<platform> get_platform(std::string const& /* osm_key */);
+  std::vector<std::pair<string, string>> get_matchings();
+  std::optional<platform> get_platform(string const& /* osm_key */);
 
   lmdb::env mutable env_;
   std::mutex mutex_;

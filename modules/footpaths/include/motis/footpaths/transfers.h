@@ -7,6 +7,7 @@
 #include "geo/latlng.h"
 
 #include "motis/footpaths/platforms.h"
+#include "motis/footpaths/types.h"
 
 #include "nigiri/types.h"
 
@@ -14,10 +15,10 @@ namespace motis::footpaths {
 
 struct transfer_request {
   platform transfer_start_;
-  std::string from_nloc_key;
+  string from_nloc_key;
 
   platforms transfer_targets_;
-  std::vector<std::string> to_nloc_keys;
+  std::vector<string> to_nloc_keys;
 
   std::string profile_name;
 };
@@ -30,9 +31,9 @@ struct transfer_info {
 using transfer_infos = std::vector<transfer_info>;
 
 struct transfer_result {
-  cista::raw::string from_nloc_key;
-  cista::raw::string to_nloc_key;
-  cista::raw::string profile_;
+  string from_nloc_key;
+  string to_nloc_key;
+  string profile_;
 
   transfer_info info_;
 };

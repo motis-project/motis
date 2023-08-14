@@ -1,5 +1,7 @@
 #include "motis/footpaths/transfer_requests.h"
 
+#include "motis/footpaths/types.h"
+
 namespace motis::footpaths {
 
 transfer_requests generate_new_all_reachable_pairs_requests(
@@ -26,7 +28,7 @@ transfer_requests generate_new_all_reachable_pairs_requests(
 
       auto tmp = transfer_request{};
       auto target_pfs = platforms{};
-      auto target_nloc_keys = std::vector<std::string>{};
+      auto target_nloc_keys = std::vector<string>{};
 
       for (auto i : target_ids) {
         target_pfs.emplace_back(to_state.matched_pfs_idx_->get_platform(i));

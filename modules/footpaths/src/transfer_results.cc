@@ -104,8 +104,6 @@ transfer_results route_multiple_requests(
     progress_tracker->increment();
   });
 
-  LOG(ml::info) << treqs.size() << "/" << result.size() << "\n";
-
   return result;
 }
 

@@ -10,6 +10,6 @@ namespace motis::footpaths {
 
 transfer_results route_multiple_requests(
     transfer_requests const&, ::ppr::routing_graph const&,
-    std::map<std::string, ppr::profile_info> const& profiles);
+    std::map<std::string, ppr::profile_info> const&);
 
 }  // namespace motis::footpaths

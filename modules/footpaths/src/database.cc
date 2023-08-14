@@ -1,7 +1,5 @@
 #include "motis/footpaths/database.h"
 
-#include "fmt/core.h"
-
 #include "utl/enumerate.h"
 
 namespace motis::footpaths {
@@ -97,7 +95,7 @@ platforms database::get_matched_platforms() {
   return pfs;
 }
 
-std::optional<platform> database::get_platform(std::string const& osm_key) {
+std::optional<platform> database::get_platform(string const& osm_key) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
   auto platforms_db = platforms_dbi(txn);
@@ -139,8 +137,8 @@ std::vector<size_t> database::put_matching_results(
   return added_indices;
 }
 
-std::vector<std::pair<std::string, std::string>> database::get_matchings() {
-  auto matchings = std::vector<std::pair<std::string, std::string>>{};
+std::vector<std::pair<string, string>> database::get_matchings() {
+  auto matchings = std::vector<std::pair<string, string>>{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -149,23 +147,22 @@ std::vector<std::pair<std::string, std::string>> database::get_matchings() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    matchings.emplace_back(std::string{entry->first},
-                           std::string{entry->second});
+    matchings.emplace_back(string{entry->first}, string{entry->second});
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
   cur.reset();
   return matchings;
 }
 
-hash_map<std::string, platform> database::get_loc_to_pf_matchings() {
-  auto loc_pf_matchings = hash_map<std::string, platform>{};
+hash_map<string, platform> database::get_loc_to_pf_matchings() {
+  auto loc_pf_matchings = hash_map<string, platform>{};
 
   for (auto& [location, osm_key] : get_matchings()) {
     auto const pf = get_platform(osm_key);
 
     if (pf.has_value()) {
       loc_pf_matchings.insert(
-          std::pair<std::string, platform>(location, pf.value()));
+          std::pair<string, platform>(location, pf.value()));
     }
   }
 
