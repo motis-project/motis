@@ -1,10 +1,7 @@
 #pragma once
 
+#include <string>
 #include <vector>
-
-#include "cista/containers/string.h"
-
-#include "geo/latlng.h"
 
 #include "motis/footpaths/platforms.h"
 #include "motis/footpaths/types.h"

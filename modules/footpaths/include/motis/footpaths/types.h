@@ -1,9 +1,9 @@
 #pragma once
 
+#include "ankerl/cista_adapter.h"
+
 #include "cista/containers/hash_map.h"
 #include "cista/containers/string.h"
-
-#include "nigiri/types.h"
 
 namespace motis::footpaths {
 

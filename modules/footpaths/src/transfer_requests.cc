@@ -1,5 +1,10 @@
 #include "motis/footpaths/transfer_requests.h"
 
+#include <cstddef>
+#include <vector>
+
+#include "motis/footpaths/platforms.h"
+
 #include "motis/footpaths/types.h"
 
 namespace motis::footpaths {

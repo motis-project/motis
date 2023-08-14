@@ -1,5 +1,8 @@
 #pragma once
 
+#include <map>
+#include <string>
+
 #include "motis/footpaths/transfers.h"
 
 #include "motis/ppr/profile_info.h"

@@ -1,5 +1,10 @@
 #include "motis/footpaths/database.h"
 
+#include <string_view>
+
+#include "cista/serialization.h"
+#include "cista/targets/buf.h"
+
 #include "utl/enumerate.h"
 
 namespace motis::footpaths {

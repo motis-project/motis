@@ -1,8 +1,7 @@
 #include "motis/footpaths/matching.h"
 
+#include <algorithm>
 #include <limits>
-
-#include "geo/latlng.h"
 
 namespace n = nigiri;
 

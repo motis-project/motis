@@ -1,12 +1,13 @@
 #pragma once
 
-#include <cstdint>
 #include <functional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "boost/range/irange.hpp"
+
+#include "geo/latlng.h"
 
 #include "motis/footpaths/platforms.h"
 #include "motis/footpaths/state.h"

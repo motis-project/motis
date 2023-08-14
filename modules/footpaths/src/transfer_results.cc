@@ -1,18 +1,26 @@
 #include "motis/footpaths/transfer_results.h"
 
-#include "boost/thread/mutex.hpp"
+#include <cmath>
+#include <cstddef>
+#include <algorithm>
+#include <iterator>
 
-#include "motis/core/common/logging.h"
+#include "boost/thread/lock_types.hpp"
+#include "boost/thread/mutex.hpp"
 
 #include "motis/footpaths/platforms.h"
 
+#include "nigiri/types.h"
+
+#include "ppr/routing/input_location.h"
+#include "ppr/routing/route.h"
+#include "ppr/routing/routing_query.h"
 #include "ppr/routing/search.h"
 
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
-namespace ml = motis::logging;
 namespace n = nigiri;
 namespace pr = ppr::routing;
 
@@ -58,7 +66,7 @@ transfer_results route_single_request(
   auto const& rq = make_routing_query(profiles, treq);
 
   // route using find_routes_v2
-  auto const& search_res = find_routes_v2(rg, rq);
+  auto const& search_res = pr::find_routes_v2(rg, rq);
 
   if (search_res.destinations_reached() == 0) {
     return {};

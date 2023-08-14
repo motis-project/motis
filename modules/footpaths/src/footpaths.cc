@@ -209,7 +209,7 @@ private:
     return result;
   }
 
-  matching_results match_locations_and_platforms() {
+  matching_results match_locations_and_platforms() const {
     // --- initialization: initialize match distance range
     [[maybe_unused]] auto const dists = boost::irange(
         match_distance_min_, match_distance_max_ + match_distance_step_,

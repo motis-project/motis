@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <optional>
@@ -7,9 +8,9 @@
 #include <utility>
 #include <vector>
 
-#include "cista/containers/string.h"
-
 #include "fmt/core.h"
+
+#include "geo/latlng.h"
 
 #include "lmdb/lmdb.hpp"
 

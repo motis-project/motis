@@ -1,7 +1,9 @@
 #pragma once
 
-#include "motis/footpaths/platforms.h"
-#include "motis/ppr/profile_info.h"
+#include <cstddef>
+#include <filesystem>
+#include <memory>
+#include <string>
 
 #include "motis/module/module.h"
 
