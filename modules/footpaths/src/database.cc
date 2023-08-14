@@ -196,25 +196,23 @@ std::vector<std::size_t> database::put_transfer_results(
   return added_indices;
 }
 
-hash_map<std::string, transfer_result> database::get_trs_with_key() {
-  auto trs_w_key = hash_map<std::string, transfer_result>{};
+transfer_results database::get_transfer_results() {
+  auto trs = transfer_results{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
   auto transfers_db = transfers_dbi(txn);
-  auto cur = lmdb::cursor{txn, transfers_db};
+  auto cur = lmdb::cursor(txn, transfers_db);
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    trs_w_key.insert(std::pair<std::string, transfer_result>(
-        std::string{entry->first},
-        cista::copy_from_potentially_unaligned<transfer_result>(
-            entry->second)));
+    trs.emplace_back(
+        cista::copy_from_potentially_unaligned<transfer_result>(entry->second));
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
 
   cur.reset();
-  return trs_w_key;
+  return trs;
 }
 
 lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,

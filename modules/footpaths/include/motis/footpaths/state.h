@@ -13,8 +13,7 @@ struct state {
   std::unique_ptr<platforms_index> matched_pfs_idx_;
   std::vector<std::string> nloc_keys;
   hash_map<std::string /* nloc key */, platform> matches_;
-  hash_map<std::string /* from::to::profile */, transfer_result>
-      transfer_results_;
+  transfer_results transfer_results_;
 };
 
 }  // namespace motis::footpaths

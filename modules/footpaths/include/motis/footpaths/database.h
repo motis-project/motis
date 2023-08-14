@@ -43,7 +43,7 @@ struct database {
   hash_map<std::string, platform> get_loc_to_pf_matchings();
 
   std::vector<std::size_t> put_transfer_results(transfer_results const&);
-  hash_map<std::string, transfer_result> get_trs_with_key();
+  transfer_results get_transfer_results();
 
 private:
   static lmdb::txn::dbi platforms_dbi(
