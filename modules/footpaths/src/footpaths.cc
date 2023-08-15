@@ -48,14 +48,10 @@ struct import_state {
   mm::named<cista::hash_t, MOTIS_NAME("nigiri_hash")> nigiri_hash_;
 
   // import osm state
-  mm::named<std::string, MOTIS_NAME("osm_path")> osm_path_;
   mm::named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
-  mm::named<std::size_t, MOTIS_NAME("osm_size")> osm_size_;
 
   // import ppr state
-  mm::named<std::string, MOTIS_NAME("ppr_graph_path")> ppr_graph_path_;
   mm::named<cista::hash_t, MOTIS_NAME("ppr_graph_hash")> ppr_graph_hash_;
-  mm::named<std::size_t, MOTIS_NAME("ppr_graph_size")> ppr_graph_size_;
   mm::named<cista::hash_t, MOTIS_NAME("ppr_profiles_hash")> ppr_profiles_hash_;
 };
 
@@ -401,14 +397,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         auto const osm_event = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const ppr_event = motis_content(PPREvent, dependencies.at("PPR"));
         auto const new_state =
-            import_state{nigiri_event->hash(),
-                         data_path(osm_event->path()->str()),
-                         osm_event->hash(),
-                         osm_event->size(),
-                         data_path(ppr_event->graph_path()->str()),
-                         ppr_event->graph_hash(),
-                         ppr_event->graph_size(),
-                         ppr_event->profiles_hash()};
+            import_state{nigiri_event->hash(), osm_event->hash(),
+                         ppr_event->graph_hash(), ppr_event->profiles_hash()};
 
         fs::create_directories(dir);
         impl_ = std::make_unique<impl>(
