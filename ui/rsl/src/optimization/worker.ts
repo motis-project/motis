@@ -43,7 +43,7 @@ function log(msg: string) {
 async function optimizeTripV1(
   baseUniverse: number,
   schedule: number,
-  tripId: TripId
+  tripId: TripId,
 ) {
   const forkResponse = await sendPaxMonForkUniverseRequest({
     universe: baseUniverse,
@@ -52,7 +52,7 @@ async function optimizeTripV1(
   });
   const simUniverse = forkResponse.universe;
   log(
-    `Neues Universum ${simUniverse} für Optimierung erstellt (basierend auf ${baseUniverse}).`
+    `Neues Universum ${simUniverse} für Optimierung erstellt (basierend auf ${baseUniverse}).`,
   );
   postMessage({
     type: "UniverseForked",
@@ -89,11 +89,11 @@ async function optimizeTripV1(
           tripLoadData,
           groupsInTrip,
           sectionIdx,
-          edge
+          edge,
         );
         if (sectionMeasures.length > 0) {
           log(
-            `Optimierung für den Abschnitt: ${sectionMeasures.length} Maßnahmen`
+            `Optimierung für den Abschnitt: ${sectionMeasures.length} Maßnahmen`,
           );
           postMessage({
             type: "MeasuresAdded",
@@ -127,7 +127,7 @@ async function optimizeTripEdgeV1(
   tripLoadData: PaxMonTripLoadInfo,
   groupsInTrip: PaxMonGetGroupsInTripResponse,
   sectionIdx: number,
-  edge: PaxMonEdgeLoadInfo
+  edge: PaxMonEdgeLoadInfo,
 ): Promise<MeasureUnion[]> {
   if (!edge.possibly_over_capacity || edge.prob_over_capacity < 0.01) {
     return [];
@@ -137,14 +137,14 @@ async function optimizeTripEdgeV1(
   const maxPax = edge.dist.max;
   let overCap = edge.dist.q95 - edge.capacity;
   log(
-    `Kritischer Abschnitt ${sectionIdx}: ${edge.from.name} -> ${edge.to.name}: Kapazität ${edge.capacity}, Reisende: ${minPax}-${maxPax} (Q.95: ${edge.dist.q95}), ${overCap} über Kapazität`
+    `Kritischer Abschnitt ${sectionIdx}: ${edge.from.name} -> ${edge.to.name}: Kapazität ${edge.capacity}, Reisende: ${minPax}-${maxPax} (Q.95: ${edge.dist.q95}), ${overCap} über Kapazität`,
   );
 
   const optimizedTsi = tripLoadData.tsi;
   const plannedTripId = JSON.stringify(tripId);
   const containsCurrentTrip = (j: Journey) =>
     j.tripLegs.find((leg) =>
-      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId)
+      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId),
     ) !== undefined;
 
   const sectionMeasures: MeasureUnion[] = [];
@@ -189,7 +189,7 @@ async function optimizeTripEdgeV1(
 
     const [currentJourneys, alternativeJourneys] = partition(
       journeys,
-      containsCurrentTrip
+      containsCurrentTrip,
     );
 
     if (alternativeJourneys.length === 0) {
@@ -197,7 +197,7 @@ async function optimizeTripEdgeV1(
     }
 
     const altFirstTrips = alternativeJourneys.map(
-      (j) => j.tripLegs[0].trips[0].trip.id
+      (j) => j.tripLegs[0].trips[0].trip.id,
     );
     const altTripLoadInfos = (
       await sendPaxMonGetTripLoadInfosRequest({
@@ -223,10 +223,10 @@ async function optimizeTripEdgeV1(
           tsi: tripLoadInfo.tsi,
           estAcceptance: estimateAcceptanceProbability(
             bestCurrentRating,
-            rating
+            rating,
           ),
         };
-      }
+      },
     ).filter((a) => a.loadLevel !== "Full");
 
     if (alternatives.length === 0) {
@@ -239,7 +239,7 @@ async function optimizeTripEdgeV1(
 
     const estAcceptance = estimateAcceptanceProbability(
       bestCurrentRating,
-      bestAlternative.rating
+      bestAlternative.rating,
     );
 
     if (estAcceptance == 0) {
@@ -276,8 +276,8 @@ async function optimizeTripEdgeV1(
       } / ${alternativeJourneys.length}), Ratings: ${bestCurrentRating} / ${
         bestAlternative.rating
       } => Accept: ${estAcceptance.toFixed(2)}, Over Cap: ${Math.round(
-        overCap
-      )}`
+        overCap,
+      )}`,
     );
 
     if (overCap <= 0) {
@@ -290,7 +290,7 @@ async function optimizeTripEdgeV1(
 
 function estimateAcceptanceProbability(
   bestCurrentRating: number,
-  bestAlternativeRating: number
+  bestAlternativeRating: number,
 ): number {
   if (bestAlternativeRating === Infinity) {
     return 0;
@@ -309,7 +309,7 @@ const LOAD_LEVEL_MAPPING: LoadLevel[] = ["Low", "NoSeats", "Full"];
 
 function getLoadLevel(
   tripLoadInfo: PaxMonTripLoadInfo,
-  tripLeg: TripLeg
+  tripLeg: TripLeg,
 ): LoadLevel {
   let level = 0;
   let inTrip = false;
@@ -345,7 +345,7 @@ async function optimizeTrip(
   baseUniverse: number,
   schedule: number,
   tripId: TripId,
-  optType: OptimizationType
+  optType: OptimizationType,
 ) {
   switch (optType) {
     case "V1":
@@ -353,7 +353,7 @@ async function optimizeTrip(
   }
 }
 
-onmessage = (msg) => {
+onmessage = async (msg) => {
   const req = msg.data as WorkerRequest;
 
   switch (req.action) {
@@ -362,7 +362,7 @@ onmessage = (msg) => {
       break;
     }
     case "Start": {
-      optimizeTrip(req.universe, req.schedule, req.tripId, req.optType);
+      await optimizeTrip(req.universe, req.schedule, req.tripId, req.optType);
       break;
     }
   }

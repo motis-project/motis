@@ -27,38 +27,28 @@ inline mcd::string fbs_to_mcd_str(flatbuffers::String const* s) {
 
 trip_formation_section to_trip_formation_section(
     schedule const& sched, motis::ris::TripFormationSection const* tfs) {
-  auto sec = trip_formation_section{
+  return trip_formation_section{
       .departure_eva_ = view(tfs->departure_station()->eva()),
       .schedule_departure_time_ = unix_to_motistime(
           sched.schedule_begin_, tfs->schedule_departure_time()),
-      .vehicles_ = {},
-      .vehicle_groups_ = {}};
-  for (auto const& vg : *tfs->vehicle_groups()) {
-    auto const vg_idx = static_cast<std::uint8_t>(sec.vehicle_groups_.size());
-    sec.vehicle_groups_.emplace_back(vehicle_group{
-        .name_ = fbs_to_mcd_str(vg->name()),
-        .start_eva_ = fbs_to_mcd_str(vg->start_station()->eva()),
-        .destination_eva_ = fbs_to_mcd_str(vg->destination_station()->eva()),
-        .trip_uuid_ = parse_uuid(view(vg->trip_id()->uuid())),
-        .primary_trip_id_ = to_extern_trip(vg->trip_id()->id())});
-    for (auto const& vi : *vg->vehicles()) {
-      auto const uic = vi->uic();
-      if (auto it = std::find_if(begin(sec.vehicles_), end(sec.vehicles_),
-                                 [&](auto const& v) { return v.uic_ == uic; });
-          it == end(sec.vehicles_)) {
-        sec.vehicles_.emplace_back(
-            vehicle_info{.uic_ = uic,
-                         .baureihe_ = fbs_to_mcd_str(vi->baureihe()),
-                         .type_code_ = fbs_to_mcd_str(vi->type_code()),
-                         .order_ = fbs_to_mcd_str(vi->order()),
-                         .vehicle_groups_ = {vg_idx}});
-      } else if (std::find(begin(it->vehicle_groups_), end(it->vehicle_groups_),
-                           vg_idx) == end(it->vehicle_groups_)) {
-        it->vehicle_groups_.emplace_back(vg_idx);
-      }
-    }
-  }
-  return sec;
+      .vehicle_groups_ =
+          mcd::to_vec(*tfs->vehicle_groups(), [](VehicleGroup const* fbs_vg) {
+            return vehicle_group{
+                .name_ = fbs_to_mcd_str(fbs_vg->name()),
+                .start_eva_ = fbs_to_mcd_str(fbs_vg->start_station()->eva()),
+                .destination_eva_ =
+                    fbs_to_mcd_str(fbs_vg->destination_station()->eva()),
+                .trip_uuid_ = parse_uuid(view(fbs_vg->trip_id()->uuid())),
+                .primary_trip_id_ = to_extern_trip(fbs_vg->trip_id()->id()),
+                .vehicles_ =
+                    mcd::to_vec(*fbs_vg->vehicles(), [](VehicleInfo const* vi) {
+                      return vehicle_info{
+                          .uic_ = vi->uic(),
+                          .baureihe_ = fbs_to_mcd_str(vi->baureihe()),
+                          .type_code_ = fbs_to_mcd_str(vi->type_code()),
+                          .order_ = fbs_to_mcd_str(vi->order())};
+                    })};
+          })};
 }
 
 trip* find_trip_by_primary_trip_id(schedule const& sched,
@@ -94,7 +84,7 @@ void update_trip_formation(schedule const& sched, universe& uv,
   primary_trip_id ptid;
   auto const has_ptid = get_primary_trip_id(sched, tfm->trip_id(), ptid);
   if (has_ptid) {
-    if (auto it = uv.capacity_maps_.trip_uuid_map_.find(ptid);
+    if (auto const it = uv.capacity_maps_.trip_uuid_map_.find(ptid);
         it != end(uv.capacity_maps_.trip_uuid_map_)) {
       if (it->second != trip_uuid) {
         std::cout << "[UTF-01] trip uuid CHANGED: " << it->second << " -> "
@@ -103,7 +93,8 @@ void update_trip_formation(schedule const& sched, universe& uv,
                   << sched.stations_[ptid.get_station_id()]->name_
                   << ", time=" << format_time(ptid.get_time()) << std::endl;
       }
-      if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
+      if (auto const tf_it =
+              uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
           tf_it == end(uv.capacity_maps_.trip_formation_map_)) {
         std::cout << "[UTF-02] trip primary id found, but uuid not found: uuid="
                   << trip_uuid << ", train_nr=" << ptid.get_train_nr()
@@ -112,16 +103,33 @@ void update_trip_formation(schedule const& sched, universe& uv,
                   << ", time=" << format_time(ptid.get_time()) << std::endl;
       }
     } else {
-      if (auto tf_it = uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
+      if (auto const tf_it =
+              uv.capacity_maps_.trip_formation_map_.find(trip_uuid);
           tf_it != end(uv.capacity_maps_.trip_formation_map_)) {
         std::cout << "[UTF-03] trip primary id not found, but uuid found: uuid="
                   << trip_uuid << ", train_nr=" << ptid.get_train_nr()
                   << ", station="
                   << sched.stations_[ptid.get_station_id()]->name_
                   << ", time=" << format_time(ptid.get_time()) << std::endl;
+        if (auto const prev_ptid_it =
+                uv.capacity_maps_.uuid_trip_map_.find(trip_uuid);
+            prev_ptid_it != end(uv.capacity_maps_.uuid_trip_map_)) {
+          auto const& prev_ptid = prev_ptid_it->second;
+          std::cout << "  previous trip id: train_nr="
+                    << prev_ptid.get_train_nr() << ", station="
+                    << sched.stations_[prev_ptid.get_station_id()]->name_
+                    << ", time=" << format_time(prev_ptid.get_time())
+                    << std::endl;
+        } else {
+          std::cout << "  previous trip id not found" << std::endl;
+        }
       }
     }
     uv.capacity_maps_.trip_uuid_map_[ptid] = trip_uuid;
+    if (uv.capacity_maps_.uuid_trip_map_.find(trip_uuid) ==
+        end(uv.capacity_maps_.uuid_trip_map_)) {
+      uv.capacity_maps_.uuid_trip_map_[trip_uuid] = ptid;
+    }
   } else {
     auto const& tid = tfm->trip_id()->id();
     std::cout << "[UTF-04] station from trip id not found: {station_id="
@@ -133,6 +141,9 @@ void update_trip_formation(schedule const& sched, universe& uv,
   }
 
   auto& formation = uv.capacity_maps_.trip_formation_map_[trip_uuid];
+  formation.ptid_ = ptid;
+  formation.uuid_ = trip_uuid;
+  formation.category_ = fbs_to_mcd_str(tfm->trip_id()->category());
   formation.sections_ =
       mcd::to_vec(*tfm->sections(), [&](TripFormationSection const* sec) {
         return to_trip_formation_section(sched, sec);
@@ -141,6 +152,22 @@ void update_trip_formation(schedule const& sched, universe& uv,
   if (has_ptid) {
     if (auto* trp = find_trip_by_primary_trip_id(sched, ptid, trip_uuid);
         trp != nullptr) {
+      update_trip_capacity(uv, sched, trp);
+      return;
+    }
+  }
+
+  // if the primary trip id in the formation message has changed
+  // (but uuid stayed the same), we won't find the trip using the new primary
+  // trip id lookup (because motis trip ids never change)
+  // maybe store trip <-> formation uuid mapping instead
+
+  if (auto const it = uv.capacity_maps_.uuid_trip_map_.find(trip_uuid);
+      it != end(uv.capacity_maps_.uuid_trip_map_)) {
+    if (auto* trp = find_trip_by_primary_trip_id(sched, it->second, trip_uuid);
+        trp != nullptr) {
+      std::cout << "[UTF-08] found trip by previous primary id: uuid="
+                << trip_uuid << std::endl;
       update_trip_capacity(uv, sched, trp);
     }
   }

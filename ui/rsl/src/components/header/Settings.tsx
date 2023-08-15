@@ -11,14 +11,14 @@ import {
   showOptimizationDebugLogAtom,
 } from "@/data/settings";
 
-import classNames from "@/util/classNames";
-
 import { SectionLoadGraphPlotType } from "@/components/trips/SectionLoadGraph";
 
-const sectionGraphPlotTypes: Array<{
+import { cn } from "@/lib/utils";
+
+const sectionGraphPlotTypes: {
   plotType: SectionLoadGraphPlotType;
   label: string;
-}> = [
+}[] = [
   { plotType: "SimpleBox", label: "Vereinfachter Box-Plot" },
   { plotType: "Box", label: "Box-Plot" },
   { plotType: "Violin", label: "Violin-Plot" },
@@ -26,10 +26,10 @@ const sectionGraphPlotTypes: Array<{
 
 function SectionGraphPlotSettings() {
   const [selectedPlotType, setSelectedPlotType] = useAtom(
-    sectionGraphPlotTypeAtom
+    sectionGraphPlotTypeAtom,
   );
   const [showLegacyLoadForecastChart, setShowLegacyLoadForecastChart] = useAtom(
-    showLegacyLoadForecastChartAtom
+    showLegacyLoadForecastChartAtom,
   );
 
   return (
@@ -85,7 +85,7 @@ function CapacitySettings() {
 
 function MeasureSettings() {
   const [showLegacyMeasureTypes, setShowLegacyMeasureTypes] = useAtom(
-    showLegacyMeasureTypesAtom
+    showLegacyMeasureTypesAtom,
   );
 
   return (
@@ -108,7 +108,7 @@ function MeasureSettings() {
 
 function OptimizationSettings() {
   const [showOptimizationDebugLog, setShowOptimizationDebugLog] = useAtom(
-    showOptimizationDebugLogAtom
+    showOptimizationDebugLogAtom,
   );
 
   return (
@@ -136,9 +136,9 @@ function Settings(): JSX.Element {
         {({ open }) => (
           <>
             <Popover.Button
-              className={classNames(
+              className={cn(
                 open ? "opacity-100" : "opacity-30 hover:opacity-100",
-                "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0"
+                "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0",
               )}
             >
               <Cog6ToothIcon className="w-5 h-5" aria-hidden="true" />

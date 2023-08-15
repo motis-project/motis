@@ -57,6 +57,8 @@ struct update_msg_builder {
 
   motis::module::msg_ptr finish();
 
+  bool should_finish() const;
+
   std::size_t delay_count() const { return delay_count_; }
   std::size_t reroute_count() const { return reroute_count_; }
 

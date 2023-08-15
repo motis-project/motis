@@ -30,6 +30,7 @@
 
 #include "rabbitmq/amqp.hpp"
 
+#include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/time_access.h"
@@ -54,6 +55,7 @@
 
 #include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ribasis/ribasis_receiver.h"
+#include "motis/ris/source_status.h"
 
 namespace fs = std::filesystem;
 namespace db = lmdb;
@@ -151,10 +153,11 @@ inline void update_system_time(schedule& sched, Publisher const& pub) {
 
 template <typename Fn>
 inline void for_each_rabbitmq_config(config& ris_config, Fn&& fn) {
-  for (auto& [config, prefix] : {std::pair<rabbitmq_config&, std::string>{
-                                     ris_config.rabbitmq1_, "rabbitmq1"},
-                                 std::pair<rabbitmq_config&, std::string>{
-                                     ris_config.rabbitmq2_, "rabbitmq2"}}) {
+  for (auto& [config, prefix] :
+       {std::pair<rabbitmq_config&, std::string>{ris_config.ribasis_fahrt_,
+                                                 "ribasis_fahrt"},
+        std::pair<rabbitmq_config&, std::string>{ris_config.ribasis_formation_,
+                                                 "ribasis_formation"}}) {
     fn(config, prefix);
   }
 }
@@ -301,8 +304,9 @@ struct ris::impl {
       }
 
       ribasis_receivers_.emplace_back(std::make_unique<ribasis::receiver>(
-          config, [this, d, sched](ribasis::receiver& rec,
-                                   std::vector<amqp::msg>&& msgs) {
+          config, get_ribasis_status(prefix),
+          [this, d, sched](ribasis::receiver& rec,
+                           std::vector<amqp::msg>&& msgs) {
             d->enqueue(
                 ctx_data{d},
                 [this, &rec, sched, msgs = std::move(msgs)]() {
@@ -332,8 +336,10 @@ struct ris::impl {
                             << format_unix_time(sched->system_time_)
                             << ", max=" << format_unix_time(pub.max_timestamp_);
 
-                  update_system_time(*sched, pub);
+                  rec.status_.add_update(pub.message_count_,
+                                         pub.max_timestamp_);
 
+                  update_system_time(*sched, pub);
                   publish_system_time_changed(pub.schedule_res_id_);
                 },
                 ctx::op_id{"ribasis_receive_" + rec.name(), CTX_LOCATION, 0U},
@@ -343,6 +349,16 @@ struct ris::impl {
                     ctx::access_t::WRITE}});
           }));
     });
+  }
+
+  source_status& get_ribasis_status(std::string const& name) {
+    if (name == "ribasis_fahrt") {
+      return ribasis_fahrt_status_;
+    } else if (name == "ribasis_formation") {
+      return ribasis_formation_status_;
+    } else {
+      throw utl::fail("unknown ri basis receiver: {}", name);
+    }
   }
 
   void update_gtfs_rt(schedule& sched) {
@@ -366,6 +382,8 @@ struct ris::impl {
             << "input source \"" << in->str() << "\": " << e.what();
       }
     }
+
+    gtfs_rt_status_.add_update(pub.message_count_, pub.max_timestamp_);
 
     update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
@@ -433,6 +451,8 @@ struct ris::impl {
     auto const has_urls = std::any_of(
         begin(inputs_), end(inputs_),
         [](auto&& in) { return in.source_type() == input::source_type::url; });
+    gtfs_rt_status_.enabled_ = has_urls;
+    gtfs_rt_status_.update_interval_ = config_.gtfs_rt_update_interval_;
     if (has_urls) {
       d.register_timer(
           "RIS GTFS-RT Update",
@@ -444,7 +464,7 @@ struct ris::impl {
     }
 
     if (config_.init_time_.unix_time_ != 0) {
-      forward(sched, 0U, config_.init_time_.unix_time_, true);
+      forward(sched, 0U, config_.init_time_.unix_time_, true, true);
     }
 
     init_ribasis_receivers(&d, &sched);
@@ -471,6 +491,9 @@ struct ris::impl {
     parse_str_and_write_to_db(*file_upload_,
                               {content->c_str(), content->size()}, ft, pub);
 
+    upload_status_.enabled_ = true;
+    upload_status_.add_update(pub.message_count_, pub.max_timestamp_);
+
     update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
     return {};
@@ -483,6 +506,8 @@ struct ris::impl {
         parse_sequential(sched, in, pub);
       }
     }
+    read_status_.enabled_ = true;
+    read_status_.add_update(pub.message_count_, pub.max_timestamp_);
     update_system_time(sched, pub);
     publish_system_time_changed(pub.schedule_res_id_);
     return {};
@@ -604,6 +629,7 @@ struct ris::impl {
                    static_cast<unixtime>(flatbuffers::GetRoot<RISMessage>(
                                              reinterpret_cast<void const*>(ptr))
                                              ->timestamp()));
+      ++message_count_;
       offsets_.push_back(
           CreateRISMessageHolder(fbb_, fbb_.CreateVector(ptr, size)));
     }
@@ -615,6 +641,7 @@ struct ris::impl {
     unixtime max_timestamp_ = 0;
     bool skip_flush_{false};
     ctx::res_id_t schedule_res_id_{0U};
+    std::uint64_t message_count_{};
   };
 
   struct null_publisher {
@@ -626,7 +653,8 @@ struct ris::impl {
   } null_pub_;
 
   void forward(schedule& sched, ctx::res_id_t schedule_res_id,
-               unixtime const to, bool force_update_system_time = false) {
+               unixtime const to, bool force_update_system_time = false,
+               bool init_forward = false) {
     auto const first_schedule_event_day =
         sched.first_event_schedule_time_ != std::numeric_limits<unixtime>::max()
             ? floor(sched.first_event_schedule_time_,
@@ -641,7 +669,8 @@ struct ris::impl {
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
     if (min_timestamp) {
       forward(sched, schedule_res_id,
-              std::max(*min_timestamp, sched.system_time_ + 1), to);
+              std::max(*min_timestamp, sched.system_time_ + 1), to,
+              init_forward);
     } else {
       LOG(info) << "ris database has no relevant data";
       if (force_update_system_time) {
@@ -653,7 +682,8 @@ struct ris::impl {
   }
 
   void forward(schedule& sched, ctx::res_id_t schedule_res_id,
-               unixtime const from, unixtime const to) {
+               unixtime const from, unixtime const to,
+               bool init_forward = false) {
     LOG(info) << "forwarding from " << logging::time(from) << " to "
               << logging::time(to) << " [schedule " << schedule_res_id << "]";
 
@@ -708,6 +738,10 @@ struct ris::impl {
 
     pub.flush();
     sched.system_time_ = to;
+    if (init_forward) {
+      init_status_.enabled_ = true;
+      init_status_.add_update(pub.message_count_, pub.max_timestamp_);
+    }
     publish_system_time_changed(pub.schedule_res_id_);
   }
 
@@ -1109,6 +1143,30 @@ struct ris::impl {
     }
   }
 
+  msg_ptr status(schedule const& sched) const {
+    message_creator mc;
+
+    auto const status_to_fbs = [&](source_status const& status) {
+      return CreateRISSourceStatus(
+          mc, status.enabled_, status.update_interval_,
+          status.last_update_time_, status.last_update_messages_,
+          status.last_message_time_, status.total_updates_,
+          status.total_messages_);
+    };
+
+    mc.create_and_finish(
+        MsgContent_RISStatusResponse,
+        CreateRISStatusResponse(
+            mc, sched.system_time_, sched.last_update_timestamp_,
+            status_to_fbs(gtfs_rt_status_),
+            status_to_fbs(ribasis_fahrt_status_),
+            status_to_fbs(ribasis_formation_status_),
+            status_to_fbs(upload_status_), status_to_fbs(read_status_),
+            status_to_fbs(init_status_))
+            .Union());
+    return make_msg(mc);
+  }
+
   db::env env_;
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
@@ -1119,6 +1177,13 @@ struct ris::impl {
   std::vector<input> inputs_;
 
   std::vector<std::unique_ptr<ribasis::receiver>> ribasis_receivers_;
+
+  source_status gtfs_rt_status_;
+  source_status ribasis_fahrt_status_;
+  source_status ribasis_formation_status_;
+  source_status upload_status_;
+  source_status read_status_;
+  source_status init_status_;
 };
 
 ris::ris() : module("RIS", "ris") {
@@ -1255,6 +1320,9 @@ void ris::init(motis::module::registry& r) {
           ctx::access_t::WRITE}});
   r.register_op("/ris/apply",
                 [this](auto&& m) { return impl_->apply(*this, m); }, {});
+  r.register_op("/ris/status",
+                [this](auto&& /*m*/) { return impl_->status(get_sched()); },
+                {kScheduleReadAccess});
 }
 
 void ris::import(motis::module::import_dispatcher& reg) {

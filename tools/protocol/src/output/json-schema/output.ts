@@ -12,6 +12,7 @@ import {
   TableType,
   TypeBase,
 } from "@/schema/types";
+import { isRequired } from "@/util/required";
 
 const JSON_SCHEMA_URL = "https://json-schema.org/draft/2020-12/schema";
 
@@ -20,7 +21,7 @@ export function writeJsonSchemaOutput(
   typeFilter: TypeFilter,
   baseDir: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  config: any
+  config: any,
 ) {
   if (typeof config["base-uri"] !== "string") {
     throw new Error("missing base-uri property in config");
@@ -51,7 +52,7 @@ export function writeJsonSchemaOutput(
     false,
     false,
     !!config["explicit-additional-properties"],
-    config["tagged-type-suffix"] || "T"
+    config["tagged-type-suffix"] || "T",
   );
 
   const { types: defs } = getJSONSchemaTypes(ctx);
@@ -70,8 +71,8 @@ export function writeJsonSchemaOutput(
             ...defs[fqtn],
           },
           null,
-          2
-        )
+          2,
+        ),
       );
       out.end();
     }
@@ -105,7 +106,7 @@ export function createJSContext(
   constAsEnum = false,
   explicitAdditionalProperties = false,
   taggedTypeFnOrSuffix: ((fqtn: string[]) => string[]) | string = "T",
-  typeKey = "_type"
+  typeKey = "_type",
 ): JSContext {
   const ctx: JSContext = {
     schema,
@@ -217,8 +218,8 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
               ...base,
               type: "object",
             },
-            false
-          )
+            false,
+          ),
         );
       }
       if (tagged) {
@@ -234,8 +235,8 @@ function convertSchemaType(ctx: JSContext, fqtn: string, type: SchemaType) {
               ...taggedBase,
               type: "object",
             },
-            true
-          )
+            true,
+          ),
         );
         ctx.taggedToUntaggedType.set(taggedTypeStr, fqtn);
         ctx.untaggedToTaggedType.set(fqtn, taggedTypeStr);
@@ -261,9 +262,9 @@ function addTableProperties(
   ctx: JSContext,
   type: TableType,
   js: JSONSchema,
-  tagged: boolean
+  tagged: boolean,
 ) {
-  const props: { [name: string]: JSONSchema } = {};
+  const props: Record<string, JSONSchema> = {};
   const unionCases: JSONSchema[] = [];
   const required: string[] = [];
 
@@ -273,6 +274,7 @@ function addTableProperties(
   }
 
   for (const field of type.fields) {
+    const requiredField = isRequired(field.metadata);
     if (field.type.c === "custom") {
       const fqtn = field.type.type.resolvedFqtn.join(".");
       const resolvedType = ctx.schema.types.get(fqtn);
@@ -280,14 +282,18 @@ function addTableProperties(
         throw new Error(
           `unknown type ${fqtn} (${[...type.ns, type.name].join(".")}#${
             field.name
-          })`
+          })`,
         );
       }
       if (resolvedType.type === "union" && !ctx.typesInUnions) {
         const tagName = `${field.name}_type`;
-        required.push(tagName);
+        if (requiredField) {
+          required.push(tagName);
+        }
         if (ctx.strictUnions) {
-          required.push(field.name);
+          if (requiredField) {
+            required.push(field.name);
+          }
           for (const value of resolvedType.values) {
             const fqtn = value.typeRef.resolvedFqtn;
             const fqtnStr = fqtn.join(".");
@@ -315,7 +321,9 @@ function addTableProperties(
       }
     }
     props[field.name] = fieldTypeToJS(ctx, field.type);
-    required.push(field.name);
+    if (requiredField) {
+      required.push(field.name);
+    }
   }
   if (Object.keys(props).length > 0) {
     js.properties = props;

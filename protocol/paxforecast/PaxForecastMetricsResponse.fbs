@@ -1,0 +1,24 @@
+namespace motis.paxforecast;
+
+table PaxForecastMetrics {
+  start_time: ulong; // unix timestamp
+  entries: ulong; // number of entries (minutes)
+
+  monitoring_events: [ulong];
+  group_routes: [ulong];
+  major_delay_group_routes: [ulong];
+
+  routing_requests: [ulong];
+  alternatives_found: [ulong];
+
+  rerouted_group_routes: [ulong];
+  removed_group_routes: [ulong];
+  major_delay_group_routes_with_alternatives: [ulong];
+
+  total_timing: [ulong]; // ms
+}
+
+table PaxForecastMetricsResponse {
+  by_system_time: PaxForecastMetrics;
+  by_processing_time: PaxForecastMetrics;
+}

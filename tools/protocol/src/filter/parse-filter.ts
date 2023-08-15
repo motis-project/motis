@@ -12,13 +12,13 @@ function parseTypePattern(pattern: string): RegExp {
         }
         if (part.includes("*")) {
           return part.replace(/\*+/, (match) =>
-            match.length === 1 ? "[^.]*" : ".*"
+            match.length === 1 ? "[^.]*" : ".*",
           );
         } else {
           return part;
         }
       })
-      .join("\\.")}$`
+      .join("\\.")}$`,
   );
 }
 

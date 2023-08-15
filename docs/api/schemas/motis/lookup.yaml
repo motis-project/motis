@@ -143,12 +143,12 @@ LookupStationInfoRequest:
       description: Station IDs to look up.
     include_meta_stations:
       description: >
-        Whether stations that are marked as equivalent should be included
-        in the response as well (recursively).
+        Whether stations that are marked as equivalent should be included in the
+        response as well (recursively).
     include_stations_reachable_via_footpaths:
       description: >
-        Whether stations that are reachable via footpaths should be
-        included in the response as well (recursively).
+        Whether stations that are reachable via footpaths should be included in
+        the response as well (recursively).
 LookupFootpathInfo:
   description: TODO
   fields:
@@ -179,3 +179,8 @@ LookupStationInfoResponse:
         reachable via footpaths.
 
         The order of the stations is unspecified.
+LookupStationLocationResponse:
+  description: TODO
+  fields:
+    position:
+      description: TODO

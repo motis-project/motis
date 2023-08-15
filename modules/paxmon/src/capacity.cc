@@ -55,33 +55,47 @@ bool stations_match(cap_trip_id const& a, cap_trip_id const& b) {
          a.to_station_idx_ == b.to_station_idx_;
 }
 
-std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    schedule const& /*sched*/, capacity_maps const& caps, trip const* trp,
-    std::uint32_t train_nr) {
-  auto const tid = get_cap_trip_id(trp->id_, train_nr);
+std::optional<std::uint32_t> get_line_nr(mcd::string const& line_id) {
+  std::uint32_t line_nr = 0;
+  auto const result =
+      std::from_chars(line_id.data(), line_id.data() + line_id.size(), line_nr);
+  if (result.ec == std::errc{} &&
+      result.ptr == line_id.data() + line_id.size()) {
+    return {line_nr};
+  } else {
+    return {};
+  }
+}
+
+bool fill_trip_capacity(capacity_maps const& caps, trip_capacity& cap,
+                        std::uint32_t train_nr) {
+  auto const tid = get_cap_trip_id(cap.trp_->id_, train_nr);
+  cap.trip_lookup_source_ = capacity_source::UNKNOWN;
+
   // try to match full trip id or primary trip id
   if (auto const lb = caps.trip_capacity_map_.lower_bound(tid);
       lb != end(caps.trip_capacity_map_)) {
     if (lb->first == tid) {
-      return {{lb->second, capacity_source::TRIP_EXACT}};
-    }
-    if (primary_trip_id_matches(lb->first, tid)) {
-      return {{lb->second, capacity_source::TRIP_PRIMARY}};
+      cap.trip_lookup_capacity_.seats_ = lb->second;
+      cap.trip_lookup_source_ = capacity_source::TRIP_EXACT;
+    } else if (primary_trip_id_matches(lb->first, tid)) {
+      cap.trip_lookup_capacity_.seats_ = lb->second;
+      cap.trip_lookup_source_ = capacity_source::TRIP_PRIMARY;
     } else if (lb != begin(caps.trip_capacity_map_)) {
       if (auto const prev = std::prev(lb);
           primary_trip_id_matches(prev->first, tid)) {
-        return {{prev->second, capacity_source::TRIP_PRIMARY}};
+        cap.trip_lookup_capacity_.seats_ = prev->second;
+        cap.trip_lookup_source_ = capacity_source::TRIP_PRIMARY;
       }
     }
   }
 
-  if (caps.fuzzy_match_max_time_diff_ == 0) {
-    return {};
+  if (cap.has_trip_lookup_capacity() || caps.fuzzy_match_max_time_diff_ == 0) {
+    return cap.has_trip_lookup_capacity();
   }
 
   // find the best possible match where train number matches
   auto const tid_train_nr_only = cap_trip_id{train_nr};
-  auto best_result = std::optional<std::pair<std::uint16_t, capacity_source>>{};
   auto best_station_matches = 0;
   auto best_diff = std::numeric_limits<int>::max();
   for (auto it = caps.trip_capacity_map_.lower_bound(tid_train_nr_only);
@@ -111,77 +125,61 @@ std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
         (cur_station_matches == best_station_matches && cur_diff < best_diff);
 
     if (better) {
-      best_result = {{it->second, stations_match(tid, cid)
-                                      ? capacity_source::TRAIN_NR_AND_STATIONS
-                                      : capacity_source::TRAIN_NR}};
+      cap.trip_lookup_capacity_.seats_ = it->second;
+      cap.trip_lookup_source_ = stations_match(tid, cid)
+                                    ? capacity_source::TRAIN_NR_AND_STATIONS
+                                    : capacity_source::TRAIN_NR;
       best_station_matches = cur_station_matches;
       best_diff = cur_diff;
     }
   }
 
-  return best_result;
+  return cap.has_trip_lookup_capacity();
 }
 
-std::optional<std::uint32_t> get_line_nr(mcd::string const& line_id) {
-  std::uint32_t line_nr = 0;
-  auto const result =
-      std::from_chars(line_id.data(), line_id.data() + line_id.size(), line_nr);
-  if (result.ec == std::errc{} &&
-      result.ptr == line_id.data() + line_id.size()) {
-    return {line_nr};
-  } else {
-    return {};
-  }
-}
+bool fill_trip_capacity(schedule const& sched, capacity_maps const& caps,
+                        trip_capacity& cap) {
 
-std::optional<std::pair<std::uint16_t, capacity_source>> get_trip_capacity(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    connection_info const* ci, service_class const clasz) {
-
-  auto const trp_train_nr = trp->id_.primary_.get_train_nr();
-  if (auto const trip_capacity =
-          get_trip_capacity(sched, caps, trp, trp_train_nr);
-      trip_capacity) {
-    return trip_capacity;
+  auto const trp_train_nr = cap.trp_->id_.primary_.get_train_nr();
+  if (fill_trip_capacity(caps, cap, trp_train_nr)) {
+    return true;
   }
 
-  if (ci->train_nr_ != trp_train_nr) {
-    if (auto const trip_capacity =
-            get_trip_capacity(sched, caps, trp, ci->train_nr_);
-        trip_capacity) {
-      return trip_capacity;
+  if (cap.con_info_->train_nr_ != trp_train_nr) {
+    if (fill_trip_capacity(caps, cap, cap.con_info_->train_nr_)) {
+      return true;
     }
   }
 
-  auto const trp_line_nr = get_line_nr(trp->id_.secondary_.line_id_);
+  auto const trp_line_nr = get_line_nr(cap.trp_->id_.secondary_.line_id_);
   if (trp_line_nr && *trp_line_nr != trp_train_nr) {
-    if (auto const trip_capacity =
-            get_trip_capacity(sched, caps, trp, *trp_line_nr);
-        trip_capacity) {
-      return trip_capacity;
+    if (fill_trip_capacity(caps, cap, *trp_line_nr)) {
+      return true;
     }
   }
 
-  auto const ci_line_nr = get_line_nr(ci->line_identifier_);
+  auto const ci_line_nr = get_line_nr(cap.con_info_->line_identifier_);
   if (ci_line_nr && ci_line_nr != trp_line_nr && *ci_line_nr != trp_train_nr) {
-    if (auto const trip_capacity =
-            get_trip_capacity(sched, caps, trp, *ci_line_nr);
-        trip_capacity) {
-      return trip_capacity;
+    if (fill_trip_capacity(caps, cap, *ci_line_nr)) {
+      return true;
     }
   }
 
-  auto const& category = sched.categories_[ci->family_]->name_;
+  auto const& category = sched.categories_[cap.con_info_->family_]->name_;
   if (auto const it = caps.category_capacity_map_.find(category);
       it != end(caps.category_capacity_map_)) {
-    return {{it->second, capacity_source::CATEGORY}};
-  } else if (auto const it = caps.category_capacity_map_.find(
-                 std::to_string(static_cast<service_class_t>(clasz)));
+    cap.trip_lookup_capacity_.seats_ = it->second;
+    cap.trip_lookup_source_ = capacity_source::CATEGORY;
+    return true;
+  } else if (auto const it = caps.category_capacity_map_.find(std::to_string(
+                 static_cast<service_class_t>(cap.full_con_->clasz_)));
              it != end(caps.category_capacity_map_)) {
-    return {{it->second, capacity_source::CLASZ}};
+    cap.trip_lookup_capacity_.seats_ = it->second;
+    cap.trip_lookup_source_ = capacity_source::CLASZ;
+    return true;
   }
 
-  return {};
+  return false;
 }
 
 trip_formation const* get_trip_formation(capacity_maps const& caps,
@@ -200,12 +198,12 @@ trip_formation const* get_trip_formation(capacity_maps const& caps,
   }
 }
 
-trip_formation_section const* get_trip_formation_section(
-    schedule const& sched, capacity_maps const& caps, trip const* trp,
-    ev_key const& ev_key_from) {
+std::pair<trip_formation const*, trip_formation_section const*>
+get_trip_formation_section(schedule const& sched, capacity_maps const& caps,
+                           trip const* trp, ev_key const& ev_key_from) {
   auto const* formation = get_trip_formation(caps, trp);
   if (formation == nullptr || formation->sections_.empty()) {
-    return nullptr;
+    return {nullptr, nullptr};
   }
   auto const schedule_departure = get_schedule_time(sched, ev_key_from);
   auto const& station_eva =
@@ -215,7 +213,7 @@ trip_formation_section const* get_trip_formation_section(
   for (auto const& sec : formation->sections_) {
     auto const station_match = sec.departure_eva_ == station_eva;
     if (station_match && sec.schedule_departure_time_ == schedule_departure) {
-      return &sec;
+      return {formation, &sec};
     }
     if (!station_found) {
       station_found = station_match;
@@ -224,38 +222,171 @@ trip_formation_section const* get_trip_formation_section(
       }
     }
   }
-  return best_section_match;
+  return {formation, best_section_match};
 }
 
-std::optional<vehicle_capacity> get_section_capacity(
-    schedule const& sched, capacity_maps const& caps,
-    std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
-  auto uics = mcd::hash_set<std::uint64_t>{};
-  for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
-    auto const* tf_sec =
+section_capacity get_section_capacity(schedule const& sched,
+                                      capacity_maps const& caps,
+                                      light_connection const& lc,
+                                      ev_key const& ev_key_from,
+                                      bool const detailed) {
+  auto cap = section_capacity{.source_ = capacity_source::FORMATION_VEHICLES};
+  auto processed_uics = mcd::hash_set<std::uint64_t>{};
+  auto processed_vehicle_groups = mcd::hash_set<mcd::string>{};
+  auto data_found = false;
+  auto ci = lc.full_con_->con_info_;
+
+  for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
+    auto const [tf, tf_sec] =
         get_trip_formation_section(sched, caps, trp, ev_key_from);
-    if (tf_sec != nullptr) {
-      for (auto const& vi : tf_sec->vehicles_) {
-        uics.insert(vi.uic_);
+    auto& trp_cap =
+        cap.trips_.emplace_back(trip_capacity{.trp_ = trp,
+                                              .formation_ = tf,
+                                              .formation_section_ = tf_sec,
+                                              .full_con_ = lc.full_con_,
+                                              .con_info_ = ci});
+    ci = ci->merged_with_;
+    if (tf_sec == nullptr) {
+      continue;
+    }
+
+    auto trp_data_found = false;
+    trp_cap.formation_source_ = capacity_source::FORMATION_VEHICLES;
+
+    for (auto const& vg : tf_sec->vehicle_groups_) {
+      auto const duplicate_group = processed_vehicle_groups.find(vg.name_) !=
+                                   end(processed_vehicle_groups);
+      if (duplicate_group && !detailed) {
+        continue;
+      }
+      processed_vehicle_groups.insert(vg.name_);
+
+      auto vg_cap = vehicle_group_capacity{
+          .group_ = &vg, .trp_ = trp, .duplicate_group_ = duplicate_group};
+      if (auto const it = caps.vehicle_group_capacity_map_.find(vg.name_);
+          it != end(caps.vehicle_group_capacity_map_)) {
+        vg_cap.capacity_ = it->second;
+        vg_cap.source_ = capacity_source::FORMATION_VEHICLE_GROUPS;
+      }
+
+      auto vehicle_cap_sum = detailed_capacity{};
+      auto all_uics_found = true;
+      auto baureihe_used = false;
+      auto gattung_used = false;
+      for (auto const& vi : vg.vehicles_) {
+        auto const duplicate_vehicle =
+            vi.has_uic() && processed_uics.find(vi.uic_) != end(processed_uics);
+        if (duplicate_vehicle && !detailed) {
+          continue;
+        } else if (vi.has_uic()) {
+          processed_uics.insert(vi.uic_);
+        }
+
+        auto vehicle_cap = vehicle_capacity{
+            .vehicle_ = &vi, .duplicate_vehicle_ = duplicate_vehicle};
+
+        if (!duplicate_vehicle) {
+          ++cap.num_vehicles_;
+        }
+
+        if (auto const it = caps.vehicle_capacity_map_.find(vi.uic_);
+            it != end(caps.vehicle_capacity_map_) && vi.has_uic()) {
+          vehicle_cap.capacity_ = it->second;
+          vehicle_cap.source_ = capacity_source::FORMATION_VEHICLES;
+          trp_data_found = true;
+          if (!duplicate_vehicle) {
+            ++cap.num_vehicles_uic_found_;
+          }
+        } else {
+          all_uics_found = false;
+          if (auto const it = caps.baureihe_capacity_map_.find(vi.baureihe_);
+              it != end(caps.baureihe_capacity_map_)) {
+            vehicle_cap.capacity_ = it->second;
+            vehicle_cap.source_ = capacity_source::FORMATION_BAUREIHE;
+            trp_data_found = true;
+            baureihe_used = true;
+            if (!duplicate_vehicle) {
+              ++cap.num_vehicles_baureihe_used_;
+            }
+          } else if (auto const it =
+                         caps.gattung_capacity_map_.find(vi.type_code_);
+                     it != end(caps.gattung_capacity_map_)) {
+            vehicle_cap.capacity_ = it->second;
+            vehicle_cap.source_ = capacity_source::FORMATION_GATTUNG;
+            trp_data_found = true;
+            gattung_used = true;
+            if (!duplicate_vehicle) {
+              ++cap.num_vehicles_gattung_used_;
+            }
+          } else {
+            if (!duplicate_vehicle) {
+              ++cap.num_vehicles_no_info_;
+            }
+          }
+        }
+        if (!duplicate_vehicle) {
+          vehicle_cap_sum += vehicle_cap.capacity_;
+        }
+        if (detailed) {
+          vg_cap.vehicles_.emplace_back(vehicle_cap);
+        }
+      }
+
+      if (!duplicate_group) {
+        auto const update_capacity = [&](detailed_capacity const& c) {
+          cap.capacity_ += c;
+          trp_cap.formation_capacity_ += c;
+        };
+        auto const update_source = [&](capacity_source const src) {
+          cap.source_ = get_worst_source(cap.source_, src);
+          trp_cap.formation_source_ =
+              get_worst_source(trp_cap.formation_source_, src);
+        };
+
+        if (!all_uics_found && vg_cap.capacity_.seats() != 0) {
+          // if not all vehicle uics were found, but the vehicle group was
+          // found, use the vehicle group info
+          update_capacity(vg_cap.capacity_);
+          update_source(capacity_source::FORMATION_VEHICLE_GROUPS);
+          ++cap.num_vehicle_groups_used_;
+          trp_data_found = true;
+        } else {
+          update_capacity(vehicle_cap_sum);
+          if (vehicle_cap_sum.seats_ > 0) {
+            vg_cap.capacity_ = vehicle_cap_sum;
+            vg_cap.source_ = capacity_source::FORMATION_VEHICLES;
+          }
+          if (baureihe_used) {
+            update_source(capacity_source::FORMATION_BAUREIHE);
+            vg_cap.source_ = capacity_source::FORMATION_BAUREIHE;
+          }
+          if (gattung_used) {
+            update_source(capacity_source::FORMATION_GATTUNG);
+            vg_cap.source_ = capacity_source::FORMATION_GATTUNG;
+          }
+        }
+      }
+
+      if (detailed) {
+        cap.vehicle_groups_.emplace_back(std::move(vg_cap));
       }
     }
-  }
 
-  auto cap = vehicle_capacity{};
-  for (auto const& uic : uics) {
-    if (auto const it = caps.vehicle_capacity_map_.find(uic);
-        it != end(caps.vehicle_capacity_map_)) {
-      cap += it->second;
+    if (trp_data_found) {
+      data_found = true;
+    } else {
+      trp_cap.formation_source_ = capacity_source::UNKNOWN;
     }
   }
-  if (cap.seats() > 0) {
-    return cap;
-  } else {
-    return {};
+
+  if (!data_found) {
+    cap.source_ = capacity_source::UNKNOWN;
   }
+
+  return cap;
 }
 
-std::optional<vehicle_capacity> get_override_capacity(
+std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps, trip const* trp,
     ev_key const& ev_key_from) {
   auto const tid = get_cap_trip_id(trp->id_);
@@ -263,7 +394,7 @@ std::optional<vehicle_capacity> get_override_capacity(
       it != end(caps.override_map_)) {
     auto const schedule_departure = get_schedule_time(sched, ev_key_from);
     auto const departure_station = ev_key_from.get_station_idx();
-    auto best_section_capacity = std::optional<vehicle_capacity>{};
+    auto best_section_capacity = std::optional<detailed_capacity>{};
     auto station_found = false;
     for (auto const& sec : it->second) {
       auto const station_match =
@@ -284,7 +415,7 @@ std::optional<vehicle_capacity> get_override_capacity(
   return {};
 }
 
-std::optional<vehicle_capacity> get_override_capacity(
+std::optional<detailed_capacity> get_override_capacity(
     schedule const& sched, capacity_maps const& caps,
     std::uint32_t const merged_trips_idx, ev_key const& ev_key_from) {
   for (auto const& trp : *sched.merged_trips_.at(merged_trips_idx)) {
@@ -296,48 +427,48 @@ std::optional<vehicle_capacity> get_override_capacity(
   return {};
 }
 
-std::pair<std::uint16_t, capacity_source> get_capacity(
-    schedule const& sched, light_connection const& lc,
-    ev_key const& ev_key_from, ev_key const& /*ev_key_to*/,
-    capacity_maps const& caps) {
-  std::uint16_t capacity = 0;
-  auto worst_source = capacity_source::TRIP_EXACT;
-  auto some_unknown = false;
+section_capacity get_capacity(schedule const& sched, light_connection const& lc,
+                              ev_key const& ev_key_from,
+                              ev_key const& /*ev_key_to*/,
+                              capacity_maps const& caps, bool const detailed) {
+  auto cap = get_section_capacity(sched, caps, lc, ev_key_from, detailed);
+
+  if (!cap.has_capacity() || detailed) {
+    auto capacity = detailed_capacity{};
+    auto worst_source = capacity_source::TRIP_EXACT;
+    auto some_unknown = false;
+
+    for (auto& trp_cap : cap.trips_) {
+      if (fill_trip_capacity(sched, caps, trp_cap)) {
+        capacity += trp_cap.trip_lookup_capacity_;
+        worst_source =
+            get_worst_source(worst_source, trp_cap.trip_lookup_source_);
+      } else {
+        some_unknown = true;
+      }
+    }
+
+    if (!cap.has_capacity() && !some_unknown) {
+      cap.capacity_ = capacity;
+      cap.source_ = worst_source;
+    }
+  }
+
+  if (cap.has_capacity()) {
+    cap.capacity_.seats_ = clamp_capacity(caps, cap.capacity_.seats());
+  }
 
   auto const override_capacity =
       get_override_capacity(sched, caps, lc.trips_, ev_key_from);
   if (override_capacity.has_value()) {
-    return {override_capacity->seats(), capacity_source::TRIP_EXACT};
+    cap.original_capacity_ = cap.capacity_;
+    cap.original_source_ = cap.source_;
+
+    cap.capacity_ = *override_capacity;
+    cap.source_ = capacity_source::OVERRIDE;
   }
 
-  auto const section_capacity =
-      get_section_capacity(sched, caps, lc.trips_, ev_key_from);
-  if (section_capacity.has_value()) {
-    return {clamp_capacity(caps, section_capacity->seats()),
-            capacity_source::TRIP_EXACT};
-  }
-
-  auto ci = lc.full_con_->con_info_;
-  for (auto const& trp : *sched.merged_trips_.at(lc.trips_)) {
-    utl::verify(ci != nullptr, "get_capacity: missing connection_info");
-
-    auto const trip_capacity =
-        get_trip_capacity(sched, caps, trp, ci, lc.full_con_->clasz_);
-    if (trip_capacity.has_value()) {
-      capacity += trip_capacity->first;
-      worst_source = get_worst_source(worst_source, trip_capacity->second);
-    } else {
-      some_unknown = true;
-    }
-
-    ci = ci->merged_with_;
-  }
-
-  if (some_unknown) {
-    return {UNKNOWN_CAPACITY, capacity_source::SPECIAL};
-  } else {
-    return {clamp_capacity(caps, capacity), worst_source};
-  }
+  return cap;
 }
 
 }  // namespace motis::paxmon

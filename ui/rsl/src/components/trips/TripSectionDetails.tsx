@@ -18,7 +18,7 @@ import CombinedGroup from "@/components/trips/CombinedGroup";
 
 function isSameSection(
   sec: GroupsInTripSection,
-  selected: PaxMonEdgeLoadInfo | undefined
+  selected: PaxMonEdgeLoadInfo | undefined,
 ) {
   return (
     selected != undefined &&
@@ -29,16 +29,16 @@ function isSameSection(
   );
 }
 
-const groupFilters: Array<{ filter: PaxMonGroupFilter; label: string }> = [
+const groupFilters: { filter: PaxMonGroupFilter; label: string }[] = [
   { filter: "All", label: "Alle" },
   { filter: "Entering", label: "Nur Einsteiger" },
   { filter: "Exiting", label: "Nur Aussteiger" },
 ];
 
-const groupByStationOptions: Array<{
+const groupByStationOptions: {
   groupBy: PaxMonGroupByStation;
   label: string;
-}> = [
+}[] = [
   { groupBy: "None", label: "Keine" },
   { groupBy: "Last", label: "Letzter Halt" },
   //{ groupBy: "LastLongDistance", label: "Letzter FV-Halt" },
@@ -47,10 +47,10 @@ const groupByStationOptions: Array<{
   { groupBy: "EntryAndLast", label: "Einstiegshalt und Ziel" },
 ];
 
-type TripSectionDetailsProps = {
+interface TripSectionDetailsProps {
   tripId: TripId;
   selectedSection: PaxMonEdgeLoadInfo | undefined;
-};
+}
 
 function TripSectionDetails({
   tripId,
@@ -92,7 +92,7 @@ function TripSectionDetails({
   ) : error || !groupsInTrip ? (
     <div>
       Error loading trip section data:{" "}
-      {error instanceof Error ? error.message : `${error}`}
+      {error instanceof Error ? error.message : `Unbekannter Fehler`}
     </div>
   ) : (
     <div>
@@ -105,7 +105,7 @@ function TripSectionDetails({
             </div>
             <div>
               {`${sec.groups.length} Gruppen (${getMinPaxInSection(
-                sec
+                sec,
               )} - ${getMaxPaxInSection(sec)} Reisende)`}
               {groupFilter == "All" && " in dem Fahrtabschnitt"}
               {groupFilter == "Entering" && ` mit Einstieg in ${sec.from.name}`}
@@ -122,7 +122,7 @@ function TripSectionDetails({
                       startStation={getAlternativeFromStation(sec, gg)}
                       earliestDeparture={getAlternativeEarliestDeparture(
                         sec,
-                        gg
+                        gg,
                       )}
                       groupByDirection={groupByDirection}
                     />
@@ -190,7 +190,7 @@ function TripSectionDetails({
 
 function getAlternativeFromStation(
   sec: GroupsInTripSection,
-  gg: GroupedPassengerGroups
+  gg: GroupedPassengerGroups,
 ): Station {
   if (gg.entry_station.length === 1) {
     return gg.entry_station[0];
@@ -201,7 +201,7 @@ function getAlternativeFromStation(
 
 function getAlternativeEarliestDeparture(
   sec: GroupsInTripSection,
-  gg: GroupedPassengerGroups
+  gg: GroupedPassengerGroups,
 ): number {
   if (gg.entry_station.length === 1) {
     return gg.entry_time;

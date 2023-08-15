@@ -8,11 +8,11 @@ import { MeasureUnion, isUpdateCapacitiesMeasureU } from "@/data/measures";
 
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type UpdateCapacityMeasureEditorProps = {
+export interface UpdateCapacityMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
-};
+}
 
 const labelClass = "font-semibold";
 
@@ -23,9 +23,9 @@ function UpdateCapacityMeasureEditor({
   const dataAtom = useMemo(
     () =>
       focusAtom(measureAtom, (optic) =>
-        optic.guard(isUpdateCapacitiesMeasureU).prop("data")
+        optic.guard(isUpdateCapacitiesMeasureU).prop("data"),
       ),
-    [measureAtom]
+    [measureAtom],
   );
   const [data, setData] = useAtom(dataAtom);
 
@@ -39,7 +39,7 @@ function UpdateCapacityMeasureEditor({
         return { ...d, trip: tsi };
       });
     },
-    [setData]
+    [setData],
   );
 
   const setSeats = useCallback(
@@ -48,7 +48,7 @@ function UpdateCapacityMeasureEditor({
         return { ...d, seats: e.target.valueAsNumber };
       });
     },
-    [setData]
+    [setData],
   );
 
   return (

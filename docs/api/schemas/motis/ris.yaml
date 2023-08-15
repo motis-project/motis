@@ -239,6 +239,8 @@ FullTripMessage:
       description: TODO
     sections:
       description: TODO
+    message_type:
+      description: TODO
 RISBatch:
   description: TODO
   fields:
@@ -284,6 +286,8 @@ HalfTripId:
       description: TODO
     uuid:
       description: TODO
+    category:
+      description: TODO
 VehicleInfo:
   description: TODO
   fields:
@@ -328,6 +332,8 @@ TripFormationMessage:
       description: TODO
     sections:
       description: TODO
+    message_type:
+      description: TODO
 RISApplyResponse:
   description: TODO
   fields:
@@ -355,3 +361,61 @@ RISMessageHolder:
   fields:
     message:
       description: TODO
+RISSourceStatus:
+  description: |
+    Describes the status of a real-time feed.
+
+    Updates may be buffered and processed in batches. In this case,
+    updates are only applied after a configured time interval and
+    all messages received up to this point are included in the update.
+  fields:
+    enabled:
+      description: Whether the feed is enabled/active
+    last_update_time:
+      description: When the last update was received (unix timestamp)
+    last_update_messages:
+      description: Number of messages in the last update
+    last_message_time:
+      description: Timestamp of the last received message (unix timestamp)
+    total_updates:
+      description: Total number of updates since the last MOTIS restart
+    total_messages:
+      description: Total number of messages since the last MOTIS restart
+    update_interval:
+      description: Interval between scheduled updates in seconds
+RISStatusResponse:
+  description: |
+    Contains information about real-time feeds.
+
+    The following feeds are available:
+    - `gtfs_rt_status`: GTFS-RT
+    - `ribasis_fahrt_status`: RiBasisFahrt via RabbitMQ
+    - `ribasis_formation_status`: RiBasisFormation via RabbitMQ
+    - `upload_status`: Updates supplied via HTTP upload
+    - `read_status`: Updates supplied via the filesystem and `/ris/read`
+    - `init_status`: Updates loaded from the database during startup
+  fields:
+    system_time:
+      description: |
+        Current system time of the default schedule, i.e. the timestamp
+        of the latest real-time message received (unix timestamp).
+    last_update_time:
+      description: |
+        Timestamp of the last real-time message received from any feed
+        (unix timestamp).
+    gtfs_rt_status:
+      description: TODO
+    ribasis_fahrt_status:
+      description: TODO
+    ribasis_formation_status:
+      description: TODO
+    upload_status:
+      description: TODO
+    read_status:
+      description: TODO
+    init_status:
+      description: TODO
+FullTripMessageType:
+  description: TODO
+TripFormationMessageType:
+  description: TODO

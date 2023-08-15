@@ -20,9 +20,17 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/core/common/logging.h"
+#include "motis/core/debug/fbs.h"
+#include "motis/core/debug/trip.h"
+
+#include "motis/module/message.h"
+
 #include "motis/paxmon/capacity.h"
+#include "motis/paxmon/checks.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/reroute.h"
+#include "motis/paxmon/update_trip_capacity_status.h"
 
 namespace motis::paxmon {
 
@@ -66,6 +74,8 @@ struct rule_trip_adder {
       add_merged_services(section);
       add_through_services(section, dep_node, arr_node);
     }
+
+    update_trip_capacity_status(sched_, uv_, trp, tdi);
 
     return tdi;
   }
@@ -172,13 +182,13 @@ struct rule_trip_adder {
                                      event_node_index dep_node,
                                      event_node_index arr_node) {
     return utl::get_or_create(trip_edges_, &section.lcon(), [&]() {
-      auto const encoded_capacity = encode_capacity(
+      auto const sec_cap =
           get_capacity(sched_, section.lcon(), section.ev_key_from(),
-                       section.ev_key_to(), uv_.capacity_maps_));
-      auto const* e =
-          add_edge(uv_, make_trip_edge(uv_, dep_node, arr_node, edge_type::TRIP,
-                                       section.lcon().trips_, encoded_capacity,
-                                       section.fcon().clasz_));
+                       section.ev_key_to(), uv_.capacity_maps_);
+      auto const* e = add_edge(
+          uv_, make_trip_edge(uv_, dep_node, arr_node, edge_type::TRIP,
+                              section.lcon().trips_, sec_cap.capacity_.seats(),
+                              sec_cap.source_, section.fcon().clasz_));
       return get_edge_index(uv_, e);
     });
   }
@@ -189,10 +199,10 @@ struct rule_trip_adder {
     return utl::get_or_create(
         wait_edges_, std::make_pair(prev_node, dep_node), [&]() {
           auto const* e = add_edge(
-              uv_,
-              make_trip_edge(uv_, prev_node, dep_node, edge_type::WAIT,
-                             section.lcon().trips_, UNLIMITED_ENCODED_CAPACITY,
-                             section.fcon().clasz_));
+              uv_, make_trip_edge(uv_, prev_node, dep_node, edge_type::WAIT,
+                                  section.lcon().trips_, UNLIMITED_CAPACITY,
+                                  capacity_source::UNLIMITED,
+                                  section.fcon().clasz_));
           return get_edge_index(uv_, e);
         });
   }
@@ -277,14 +287,16 @@ void add_interchange_edges(event_node* evn,
   }
 }
 
-void update_event_times(schedule const& sched, universe& uv,
-                        RtDelayUpdate const* du,
-                        std::vector<edge_index>& updated_interchange_edges) {
+int update_event_times(schedule const& sched, universe& uv,
+                       RtDelayUpdate const* du,
+                       std::vector<edge_index>& updated_interchange_edges) {
+  using namespace motis::logging;
   auto const trp = from_fbs(sched, du->trip());
   auto const tdi = uv.trip_data_.find_index(trp->trip_idx_);
   if (tdi == INVALID_TRIP_DATA_INDEX) {
-    return;
+    return -1;
   }
+  auto updated = 0;
   auto trip_edges = uv.trip_data_.edges(tdi);
   ++uv.system_stats_.update_event_times_trip_edges_found_;
   for (auto const& ue : *du->events()) {
@@ -303,6 +315,7 @@ void update_event_times(schedule const& sched, universe& uv,
           from->schedule_time_ == schedule_time) {
         if (from->time_ != new_time) {
           ++uv.system_stats_.update_event_times_dep_updated_;
+          ++updated;
           from->time_ = new_time;
           add_interchange_edges(from, updated_interchange_edges, uv);
           if (uv.graph_log_.enabled_) {
@@ -316,6 +329,7 @@ void update_event_times(schedule const& sched, universe& uv,
                  to->schedule_time_ == schedule_time) {
         if (to->time_ != new_time) {
           ++uv.system_stats_.update_event_times_arr_updated_;
+          ++updated;
           to->time_ = new_time;
           add_interchange_edges(to, updated_interchange_edges, uv);
           if (uv.graph_log_.enabled_) {
@@ -327,6 +341,7 @@ void update_event_times(schedule const& sched, universe& uv,
       }
     }
   }
+  return updated;
 }
 
 void update_trip_route(schedule const& sched, universe& uv,

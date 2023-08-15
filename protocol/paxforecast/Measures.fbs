@@ -52,6 +52,10 @@ table UpdateCapacitiesMeasure {
   remove_existing_category_capacities: bool;
   remove_existing_vehicle_capacities: bool;
   remove_existing_trip_formations: bool;
+  remove_existing_gattung_capacities: bool;
+  remove_existing_baureihe_capacities: bool;
+  remove_existing_vehicle_group_capacities: bool;
+  remove_existing_overrides: bool;
   track_trip_updates: bool;
 }
 

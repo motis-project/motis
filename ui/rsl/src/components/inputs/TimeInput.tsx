@@ -1,8 +1,11 @@
 import { format, parse } from "date-fns";
-import React, { ForwardedRef, forwardRef } from "react";
+import React, { ForwardedRef, ReactElement, forwardRef } from "react";
 
 export interface TimeInputProps
-  extends Omit<React.ComponentPropsWithoutRef<"input">, "value" | "onChange"> {
+  extends Omit<
+    React.ComponentPropsWithoutRef<"input">,
+    "type" | "value" | "onChange"
+  > {
   value: Date;
   onChange: (date: Date) => void;
 }
@@ -15,8 +18,8 @@ const dateTimeFormat = "yyyy-MM-dd'T'HH:mm";
 const TimeInput = forwardRef<HTMLInputElement, TimeInputProps>(
   function timeInput(
     componentProps: TimeInputProps,
-    ref: ForwardedRef<HTMLInputElement>
-  ): JSX.Element {
+    ref: ForwardedRef<HTMLInputElement>,
+  ): ReactElement {
     // https://github.com/yannickcr/eslint-plugin-react/issues/3140
     const { value, onChange, ...restProps } = componentProps;
     let textValue = "";
@@ -41,7 +44,7 @@ const TimeInput = forwardRef<HTMLInputElement, TimeInputProps>(
         }}
       />
     );
-  }
+  },
 );
 
 export default TimeInput;

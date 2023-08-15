@@ -296,4 +296,8 @@ msg_ptr update_msg_builder::finish() {
   return msg;
 }
 
+bool update_msg_builder::should_finish() const {
+  return updates_.size() + delays_.size() + expanded_trips_.size() > 5000;
+}
+
 }  // namespace motis::rt

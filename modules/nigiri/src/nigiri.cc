@@ -111,6 +111,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "list of GTFS-RT endpoints, format: tag|url|authorization");
   param(gtfsrt_paths_, "gtfsrt_paths",
         "list of GTFS-RT, format: tag|/path/to/file.pb");
+  param(gtfsrt_incremental_, "gtfsrt_incremental",
+        "true=incremental updates, false=forget all prev. RT updates");
 }
 
 nigiri::~nigiri() = default;
@@ -246,7 +248,7 @@ void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
       return gtfsrt{impl_->tags_, config};
     });
     d.register_timer("RIS GTFS-RT Update",
-                     boost::posix_time::seconds{gtfsrt_update_interval_},
+                     boost::posix_time::seconds{gtfsrt_update_interval_sec_},
                      [&]() { update_gtfsrt(); }, {});
     update_gtfsrt();
   }
@@ -257,15 +259,20 @@ void nigiri::update_gtfsrt() {
 
   auto const futures = utl::to_vec(
       impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
-  auto rtt_copy =
-      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->get_rtt()});
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  auto const rtt = gtfsrt_incremental_
+                       ? std::make_shared<n::rt_timetable>(
+                             n::rt_timetable{*impl_->get_rtt()})
+                       : std::make_shared<n::rt_timetable>(
+                             n::rt::create_rt_timetable(**impl_->tt_, today));
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
-    auto const tag = impl_->tags_.get_tag(endpoint.src());
+    auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
     auto stats = n::rt::statistics{};
     try {
-      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, endpoint.src(),
-                                       tag, f->val().body);
+      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
+                                       f->val().body);
     } catch (std::exception const& e) {
       stats.parser_error_ = true;
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
@@ -277,16 +284,12 @@ void nigiri::update_gtfsrt() {
     }
     statistics.emplace_back(stats);
   }
-  impl_->update_rtt(rtt_copy);
-  impl_->railviz_->update(rtt_copy);
+  impl_->update_rtt(rtt);
+  impl_->railviz_->update(rtt);
 
   for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
-    LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "
-                       << stats.total_entities_success_ << "/"
-                       << stats.total_entities_ << " ("
-                       << static_cast<double>(stats.total_entities_success_) /
-                              stats.total_entities_ * 100
-                       << "%)";
+    LOG(logging::info) << impl_->tags_.get_tag_clean(endpoint.src()) << ": "
+                       << stats;
   }
 }
 

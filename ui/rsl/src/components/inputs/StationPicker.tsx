@@ -6,12 +6,12 @@ import { Station } from "@/api/protocol/motis";
 
 import { useStationGuesserQuery } from "@/api/guesser";
 
-type StationPickerProps = {
+interface StationPickerProps {
   onStationPicked: (station: Station | undefined) => void;
   clearOnPick: boolean;
   clearButton: boolean;
   initialStation?: Station | undefined;
-};
+}
 
 function StationPicker({
   onStationPicked,
@@ -22,9 +22,9 @@ function StationPicker({
   const [input, setInput] = useState("");
   const { data } = useStationGuesserQuery(
     { input, guess_count: 10 },
-    { keepPreviousData: true }
+    { keepPreviousData: true },
   );
-  const stationList = data?.guesses || [];
+  const stationList = data?.guesses ?? [];
 
   const {
     isOpen,

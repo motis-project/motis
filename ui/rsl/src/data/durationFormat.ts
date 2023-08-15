@@ -1,6 +1,6 @@
 export function formatShortDuration(
   minutes: number,
-  forceSign = false
+  forceSign = false,
 ): string {
   let mins = Math.round(minutes);
   let text = "";

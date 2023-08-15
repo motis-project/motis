@@ -38,7 +38,7 @@ public:
     try {
       out_.exceptions(std::ifstream::failbit | std::ifstream::badbit);
     } catch (std::exception const& e) {
-      LOG(logging::error) << "unable to open file " << input_file_path << ": "
+      LOG(logging::error) << "unable to open file " << output_file_path << ": "
                           << e.what();
       throw;
     }

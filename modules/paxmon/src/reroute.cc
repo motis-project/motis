@@ -151,8 +151,8 @@ void disable_incoming_edges(universe& uv, schedule const& sched,
 }
 
 edge* connect_nodes(event_node* from, event_node* to,
-                    merged_trips_idx merged_trips,
-                    std::uint16_t encoded_capacity, universe& uv,
+                    merged_trips_idx merged_trips, std::uint16_t capacity,
+                    capacity_source cap_source, universe& uv,
                     schedule const& sched) {
   if (from == nullptr || to == nullptr) {
     return nullptr;
@@ -174,10 +174,13 @@ edge* connect_nodes(event_node* from, event_node* to,
   }
   disable_outgoing_edges(uv, sched, from);
   disable_incoming_edges(uv, sched, to);
-  auto const cap = from->type_ == event_type::DEP ? encoded_capacity
-                                                  : UNLIMITED_ENCODED_CAPACITY;
+  auto const edge_cap =
+      from->type_ == event_type::DEP ? capacity : UNLIMITED_CAPACITY;
+  auto const edge_cap_source =
+      from->type_ == event_type::DEP ? cap_source : capacity_source::UNLIMITED;
   return add_edge(
-      uv, make_trip_edge(uv, from->index_, to->index_, type, merged_trips, cap,
+      uv, make_trip_edge(uv, from->index_, to->index_, type, merged_trips,
+                         edge_cap, edge_cap_source,
                          service_class::OTHER));  // TODO(pablo): service class
 }
 
@@ -298,8 +301,6 @@ void apply_reroute(universe& uv, schedule const& sched, trip const* trp,
                    std::vector<trip_ev_key> const& old_route,
                    std::vector<trip_ev_key> const& new_route,
                    std::vector<edge_index>& updated_interchange_edges) {
-  auto const unknown_capacity =
-      encode_capacity({UNKNOWN_CAPACITY, capacity_source::SPECIAL});
   auto const affected_group_routes =
       collect_and_remove_group_routes(uv, sched, tdi);
   auto diff = diff_route(old_route, new_route);
@@ -341,8 +342,8 @@ void apply_reroute(universe& uv, schedule const& sched, trip const* trp,
   if (!new_nodes.empty()) {
     auto const merged_trips = get_merged_trips(trp).value();
     for (auto const& [from, to] : utl::pairwise(new_nodes)) {
-      auto e =
-          connect_nodes(from, to, merged_trips, unknown_capacity, uv, sched);
+      auto e = connect_nodes(from, to, merged_trips, UNKNOWN_CAPACITY,
+                             capacity_source::UNKNOWN, uv, sched);
       if (e->is_trip()) {
         edges.emplace_back(get_edge_index(uv, e));
       }

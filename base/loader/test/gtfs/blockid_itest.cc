@@ -26,7 +26,8 @@ struct loader_graph_builder_gtfs_block_id : public motis_instance_test {
                 .schedule_begin_ = schedule_begin,
                 .num_days_ = 2},
             {"routing", "csa", "raptor", "tripbased", "nigiri"},
-            {"--tripbased.use_data_file=false",
+            {"--tripbased.use_data_file=false", "--nigiri.lookup=false",
+             "--nigiri.routing=false",
              fmt::format(
                  "--nigiri.first_day={}-{}-{}", schedule_begin.substr(0, 4),
                  schedule_begin.substr(4, 2), schedule_begin.substr(6, 2)),

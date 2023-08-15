@@ -12,6 +12,7 @@ struct tag_lookup {
 
   ::nigiri::source_idx_t get_src(std::string_view tag) const;
   std::string_view get_tag(::nigiri::source_idx_t const src) const;
+  std::string_view get_tag_clean(::nigiri::source_idx_t const src) const;
 
   friend std::ostream& operator<<(std::ostream& out, tag_lookup const& tags);
 

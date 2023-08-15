@@ -60,6 +60,7 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<attribute>> attributes_;
   mcd::vector<mcd::unique_ptr<category>> categories_;
   mcd::vector<mcd::unique_ptr<provider>> providers_;
+  mcd::hash_map<mcd::string, ptr<provider>> provider_by_full_name_;
   mcd::vector<mcd::unique_ptr<mcd::string>> directions_;
   mcd::vector<mcd::unique_ptr<timezone>> timezones_;
 

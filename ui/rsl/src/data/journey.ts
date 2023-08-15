@@ -75,7 +75,7 @@ function getTrips(con: Connection, fromIdx: number, toIdx: number): Trip[] {
 function getTransports(
   con: Connection,
   fromIdx: number,
-  toIdx: number
+  toIdx: number,
 ): Transport[] {
   return con.transports
     .filter((mw) => {
@@ -92,7 +92,7 @@ function getTransports(
 function getJourneyTransports(
   con: Connection,
   fromIdx: number,
-  toIdx: number
+  toIdx: number,
 ): JourneyTransport[] {
   const res: JourneyTransport[] = [];
   for (const mw of con.transports) {
@@ -112,7 +112,7 @@ function getJourneyTransports(
 function getJourneyTrips(
   con: Connection,
   fromIdx: number,
-  toIdx: number
+  toIdx: number,
 ): JourneyTrip[] {
   return con.trips
     .filter((t) => overlapsRange(t.range, fromIdx, toIdx))

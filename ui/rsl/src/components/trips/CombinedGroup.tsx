@@ -17,21 +17,22 @@ import {
 import { scheduleAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
 import { formatTime } from "@/util/dateFormat";
 
 import JourneyTripNameView from "@/components/JourneyTripNameView";
 import { TripTooltip } from "@/components/trips/TripTooltip";
 
+import { cn } from "@/lib/utils";
+
 export type GroupByDirection = "Origin" | "Destination" | "None";
 
-export type CombinedGroupProps = {
+export interface CombinedGroupProps {
   plannedTrip: TripId;
   combinedGroup: GroupedPassengerGroups;
   startStation: Station;
   earliestDeparture: number;
   groupByDirection: GroupByDirection;
-};
+}
 
 const SEARCH_INTERVAL = 61;
 
@@ -81,13 +82,13 @@ function CombinedGroup({
         use_start_footpaths: true,
         schedule,
       }),
-    { enabled: findAlternatives }
+    { enabled: findAlternatives },
   );
 
   const plannedTripId = JSON.stringify(plannedTrip);
   const containsCurrentTrip = (j: Journey) =>
     j.tripLegs.find((leg) =>
-      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId)
+      leg.trips.find((t) => JSON.stringify(t.trip.id) === plannedTripId),
     ) !== undefined;
 
   // TODO: group in 2 levels: destination, origin trip (?)
@@ -144,7 +145,7 @@ function CombinedGroup({
                     <Tooltip.Trigger asChild={true}>
                       <Link
                         to={`/trips/${encodeURIComponent(
-                          JSON.stringify(leg.trips[0].trip.id)
+                          JSON.stringify(leg.trips[0].trip.id),
                         )}`}
                       >
                         <JourneyTripNameView jt={leg.trips[0]} />
@@ -165,7 +166,9 @@ function CombinedGroup({
   ) : isLoading ? (
     <div>Suche nach Alternativverbindungen...</div>
   ) : (
-    <div>Fehler: {error instanceof Error ? error.message : `${error}`}</div>
+    <div>
+      Fehler: {error instanceof Error ? error.message : `Unbekannter Fehler`}
+    </div>
   );
 
   // TODO: group by group id (gr.g)
@@ -176,7 +179,7 @@ function CombinedGroup({
           <Link
             key={idx}
             to={`/groups/${gr.g}`}
-            className={classNames("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
+            className={cn("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
           >
             <div className="flex justify-between">
               <div>{formatPercent(gr.p)}</div>

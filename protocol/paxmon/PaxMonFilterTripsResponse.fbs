@@ -1,5 +1,6 @@
 include "base/TripServiceInfo.fbs";
 include "paxmon/PaxMonTripLoadInfo.fbs";
+include "paxmon/PaxMonTripCapacityStatus.fbs";
 
 namespace motis.paxmon;
 
@@ -15,6 +16,8 @@ table PaxMonFilteredTripInfo {
   max_load: float;
 
   max_expected_pax: uint;
+
+  capacity_status: PaxMonTripCapacityStatus;
 
   edges: [PaxMonEdgeLoadInfo]; // only if include_edges
 }

@@ -11,7 +11,7 @@ import {
 
 export function getRiBasisGattung(
   data: RiBasisFahrtData,
-  id: string
+  id: string,
 ): RiBasisGattung | undefined {
   for (const g of data.allGattung) {
     if (g.gattungid === id) {
@@ -23,7 +23,7 @@ export function getRiBasisGattung(
 
 export function getOrAddRiBasisGattung(
   data: RiBasisFahrtData,
-  name: string
+  name: string,
 ): RiBasisGattung {
   for (const g of data.allGattung) {
     if (g.name === name) {
@@ -37,7 +37,7 @@ export function getOrAddRiBasisGattung(
 
 export function getRiBasisLinie(
   data: RiBasisFahrtData,
-  id: string
+  id: string,
 ): RiBasisLinie | undefined {
   for (const l of data.allLinie) {
     if (l.linieid === id) {
@@ -49,7 +49,7 @@ export function getRiBasisLinie(
 
 export function getOrAddRiBasisLinie(
   data: RiBasisFahrtData,
-  name: string
+  name: string,
 ): RiBasisLinie {
   for (const l of data.allLinie) {
     if (l.name === name) {
@@ -63,7 +63,7 @@ export function getOrAddRiBasisLinie(
 
 export function getRiBasisVerwaltung(
   data: RiBasisFahrtData,
-  id: string
+  id: string,
 ): RiBasisVerwaltung | undefined {
   for (const v of data.allVerwaltung) {
     if (v.verwaltungid === id) {
@@ -75,7 +75,7 @@ export function getRiBasisVerwaltung(
 
 export function getOrAddRiBasisVerwaltung(
   data: RiBasisFahrtData,
-  name: string
+  name: string,
 ): RiBasisVerwaltung {
   for (const v of data.allVerwaltung) {
     if (v.betreiber.name === name) {
@@ -88,13 +88,13 @@ export function getOrAddRiBasisVerwaltung(
 }
 
 export function riBasisHaltestelleToMotisStation(
-  s: RiBasisHaltestelle
+  s: RiBasisHaltestelle,
 ): Station {
   return { id: s.evanummer, name: s.bezeichnung, pos: { lat: 0, lng: 0 } };
 }
 
 export function motisStationToRiBasisHaltestelle(
-  s: Station
+  s: Station,
 ): RiBasisHaltestelle {
   return {
     haltestelleid: uuidv4(),

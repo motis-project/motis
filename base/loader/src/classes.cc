@@ -29,6 +29,7 @@ mcd::hash_map<mcd::string, service_class> const& class_mapping() {
       {"TGV", service_class::ICE},
       {"RJ", service_class::ICE},
       {"RJX", service_class::ICE},
+      {"ECE", service_class::ICE},  // EuroCity-Express
 
       // long range rail
       {"Long Distance Trains", service_class::IC},
@@ -78,6 +79,9 @@ mcd::hash_map<mcd::string, service_class> const& class_mapping() {
       {"TER", service_class::RE},  // Transport express regional
       {"TE2", service_class::RE},  // Transport express regional
       {"Cross-Country Rail", service_class::RE},
+      {"CJX", service_class::RE},  // Cityjet xpress
+      {"MEX", service_class::RE},  // Metropolexpress
+      {"FEX", service_class::RE},  // Flughafen-Express
 
       // local trains
       {"Railway Service", service_class::RB},

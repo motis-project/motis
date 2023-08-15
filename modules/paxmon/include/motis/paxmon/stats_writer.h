@@ -23,7 +23,7 @@ struct stats_writer {
 private:
   void write_header();
 
-  csv_writer csv_;
+  file_csv_writer csv_;
 };
 
 }  // namespace motis::paxmon
