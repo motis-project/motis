@@ -10,6 +10,17 @@
 
 namespace motis::footpaths {
 
+struct transfer_request_keys {
+  string from_pf_key_;
+  string from_nloc_key_;
+
+  strings to_pf_keys_;
+  strings to_nloc_keys_;
+
+  string profile_;
+};
+using transfer_requests_keys = std::vector<transfer_request_keys>;
+
 struct transfer_request {
   platform transfer_start_;
   string from_nloc_key;

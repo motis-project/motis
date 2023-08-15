@@ -29,7 +29,11 @@ inline string to_key(platform const& pf) {
 }
 
 inline string to_key(geo::latlng const& coord) {
-  return nigiri::to_location_key(coord);
+  return {nigiri::to_location_key(coord)};
+}
+
+inline string to_key(transfer_request_keys const& treq_k) {
+  return {fmt::format("{}::{}", treq_k.from_nloc_key_, treq_k.profile_)};
 }
 
 inline string to_key(transfer_result const& tr) {
@@ -42,11 +46,15 @@ struct database {
 
   std::vector<std::size_t> put_platforms(platforms&);
   platforms get_platforms();
+  hash_map<string, platform> get_platforms_with_key();
   platforms get_matched_platforms();
 
   std::vector<std::size_t> put_matching_results(matching_results const&);
-
   hash_map<string, platform> get_loc_to_pf_matchings();
+
+  std::vector<std::size_t> put_transfer_requests_keys(
+      transfer_requests_keys const&);
+  transfer_requests_keys get_transfer_requests_keys();
 
   std::vector<std::size_t> put_transfer_results(transfer_results const&);
   transfer_results get_transfer_results();
@@ -55,6 +63,8 @@ private:
   static lmdb::txn::dbi platforms_dbi(
       lmdb::txn&, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
   static lmdb::txn::dbi matchings_dbi(
+      lmdb::txn&, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
+  static lmdb::txn::dbi transreqs_dbi(
       lmdb::txn&, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);
   static lmdb::txn::dbi transfers_dbi(
       lmdb::txn&, lmdb::dbi_flags flags = lmdb::dbi_flags::NONE);

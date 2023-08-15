@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "motis/core/common/logging.h"
 #include "cista/serialization.h"
 #include "cista/targets/buf.h"
 
@@ -11,6 +12,7 @@ namespace motis::footpaths {
 
 constexpr auto const kPlatformsDB = "platforms";
 constexpr auto const kMatchingsDB = "matchings";
+constexpr auto const kTransReqsDB = "transreqs";
 constexpr auto const kTransfersDB = "transfers";
 
 inline std::string_view view(cista::byte_buf const& b) {
@@ -18,7 +20,7 @@ inline std::string_view view(cista::byte_buf const& b) {
 }
 
 database::database(std::string const& path, std::size_t const max_size) {
-  env_.set_maxdbs(3);
+  env_.set_maxdbs(4);
   env_.set_mapsize(max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   env_.open(path.c_str(), flags);
@@ -30,6 +32,7 @@ void database::init() {
   auto txn = lmdb::txn{env_};
   auto platforms_db = platforms_dbi(txn, lmdb::dbi_flags::CREATE);
   matchings_dbi(txn, lmdb::dbi_flags::CREATE);
+  transreqs_dbi(txn, lmdb::dbi_flags::CREATE);
   transfers_dbi(txn, lmdb::dbi_flags::CREATE);
 
   // find highest platform id in db
@@ -84,6 +87,26 @@ platforms database::get_platforms() {
 
   cur.reset();
   return pfs;
+}
+
+hash_map<string, platform> database::get_platforms_with_key() {
+  auto pfs_with_key = hash_map<string, platform>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto platforms_db = platforms_dbi(txn);
+  auto cur = lmdb::cursor{txn, platforms_db};
+  auto entry = cur.get(lmdb::cursor_op::FIRST);
+
+  while (entry.has_value()) {
+    pfs_with_key.insert(std::pair<string, platform>(
+        string{entry->first},
+        cista::copy_from_potentially_unaligned<platform>(entry->second)));
+    entry = cur.get(lmdb::cursor_op::NEXT);
+  }
+
+  cur.reset();
+  return pfs_with_key;
 }
 
 platforms database::get_matched_platforms() {
@@ -174,6 +197,50 @@ hash_map<string, platform> database::get_loc_to_pf_matchings() {
   return loc_pf_matchings;
 }
 
+std::vector<std::size_t> database::put_transfer_requests_keys(
+    transfer_requests_keys const& treqs_k) {
+  auto added_indices = std::vector<std::size_t>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_};
+  auto transreqs_db = transreqs_dbi(txn);
+
+  for (auto const& [idx, treq_k] : utl::enumerate(treqs_k)) {
+    auto const treq_key = to_key(treq_k);
+
+    if (auto const r = txn.get(transreqs_db, treq_key); r.has_value()) {
+      continue;  // transfer request already in db
+    }
+
+    auto const serialized_treq = cista::serialize(treq_k);
+    txn.put(transreqs_db, treq_key, view(serialized_treq));
+    added_indices.emplace_back(idx);
+  }
+
+  txn.commit();
+  return added_indices;
+}
+
+transfer_requests_keys database::get_transfer_requests_keys() {
+  auto treqs_k = transfer_requests_keys{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto transreqs_db = transreqs_dbi(txn);
+  auto cur = lmdb::cursor{txn, transreqs_db};
+  auto entry = cur.get(lmdb::cursor_op::FIRST);
+
+  while (entry.has_value()) {
+      treqs_k.emplace_back(
+          cista::copy_from_potentially_unaligned<transfer_request_keys>(
+              entry->second));
+    entry = cur.get(lmdb::cursor_op::NEXT);
+  }
+
+  cur.reset();
+  return treqs_k;
+}
+
 std::vector<std::size_t> database::put_transfer_results(
     transfer_results const& trs) {
   auto added_indices = std::vector<std::size_t>{};
@@ -225,6 +292,11 @@ lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,
 lmdb::txn::dbi database::matchings_dbi(lmdb::txn& txn,
                                        lmdb::dbi_flags const flags) {
   return txn.dbi_open(kMatchingsDB, flags);
+}
+
+lmdb::txn::dbi database::transreqs_dbi(lmdb::txn& txn,
+                                       lmdb::dbi_flags const flags) {
+  return txn.dbi_open(kTransReqsDB, flags);
 }
 
 lmdb::txn::dbi database::transfers_dbi(lmdb::txn& txn,

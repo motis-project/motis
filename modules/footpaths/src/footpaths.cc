@@ -67,6 +67,7 @@ struct footpaths::impl {
     old_state_.pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{pfs});
     old_state_.matches_ = db_.get_loc_to_pf_matchings();
+    old_state_.transfer_requests_keys_ = db_.get_transfer_requests_keys();
     old_state_.transfer_results_ = db_.get_transfer_results();
 
     auto matched_pfs = platforms{};
@@ -88,11 +89,11 @@ struct footpaths::impl {
     match_and_save_matches();
 
     // 3rd build transfer requests
-    auto const treqs = get_new_trs();
+    build_and_save_transfer_requests();
 
     // 4th precompute profilebased transfers
     auto rg = get_routing_ready_ppr_graph();
-    route_and_save_result(rg, treqs);
+    route_and_save_result(rg, update_state_.transfer_requests_keys_);
 
     // 5th update timetable
     update_timetable();
@@ -108,11 +109,11 @@ struct footpaths::impl {
       match_and_save_matches();
 
       // 3rd build transfer requests
-      auto const treqs = get_new_trs();
+      build_and_save_transfer_requests();
 
       // 4th precompute profilebased transfers
       auto rg = get_routing_ready_ppr_graph();
-      route_and_save_result(rg, treqs);
+      route_and_save_result(rg, update_state_.transfer_requests_keys_);
     }
 
     // update timetable
@@ -169,16 +170,22 @@ private:
     put_matching_results(mrs);
   }
 
-  transfer_requests get_new_trs() {
-    progress_tracker_->status("Generate Transfer Requests.");
-    ml::scoped_timer const timer{"transfer: build transfer requests."};
-    return new_all_reachable_pairs_requests();
+  void build_and_save_transfer_requests() {
+    progress_tracker_->status("Generating Transfer Requests.");
+    ml::scoped_timer const timer{"Generating Transfer Requests."};
+
+    auto treqs_k = generate_transfer_requests_keys(old_state_, update_state_,
+                                                   ppr_profiles_);
+
+    LOG(ml::info) << "Writing Transfer Requests (Keys) to DB.";
+    put_transfer_requests_keys(treqs_k);
   }
 
   void route_and_save_result(::ppr::routing_graph const& rg,
-                             transfer_requests const& treqs) {
-    progress_tracker_->status("(Pre)Computing Profilebased Transfers.");
-    ml::scoped_timer const timer{"(Pre)Computing Profilebased Transfers."};
+                             transfer_requests_keys const& treqs_k) {
+    progress_tracker_->status("Precomputing Profilebased Transfers.");
+    ml::scoped_timer const timer{"Precomputing Profilebased Transfers."};
+    auto treqs = to_transfer_requests(treqs_k, db_);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
     put_transfer_results(trs);
   }
@@ -191,21 +198,6 @@ private:
     result.prepare_for_routing(edge_rtree_max_size_, area_rtree_max_size_,
                                lock_rtree_ ? ::ppr::rtree_options::LOCK
                                            : ::ppr::rtree_options::PREFETCH);
-    return result;
-  }
-
-  platforms extract_tt_platforms() {
-    auto result = platforms{};
-
-    for (auto i = n::location_idx_t{0U}; i < tt_.locations_.ids_.size(); ++i) {
-      if (tt_.locations_.types_[i] == n::location_type::kStation) {
-        result.emplace_back(
-            platform{0, tt_.locations_.coordinates_[i],
-                     platform_info{tt_.locations_.names_[i].view(), -1, i,
-                                   osm_type::kNode, false}});
-      }
-    }
-
     return result;
   }
 
@@ -224,8 +216,12 @@ private:
 
     for (auto i = 0U; i < tt_.locations_.ids_.size(); ++i) {
       progress_tracker->increment();
-
       auto nloc = tt_.locations_.get(n::location_idx_t{i});
+
+      if (old_state_.matches_.count(to_key(nloc.pos_)) == 1) {
+        continue;
+      }
+
       /*if (nloc.type_ == n::location_type::kStation) {
         continue;
       }*/
@@ -245,11 +241,6 @@ private:
     LOG(ml::info) << "Matched " << matched_
                   << " nigiri::locations to an osm-extracted platform.";
     return matches;
-  }
-
-  transfer_requests new_all_reachable_pairs_requests() const {
-    return generate_new_all_reachable_pairs_requests(old_state_, update_state_,
-                                                     ppr_profiles_);
   }
 
   void reset_timetable() {
@@ -328,7 +319,7 @@ private:
         std::make_unique<platforms_index>(platforms_index{new_pfs});
   }
 
-  std::vector<std::size_t> put_matching_results(matching_results const& mrs) {
+  void put_matching_results(matching_results const& mrs) {
     auto added_to_db = db_.put_matching_results(mrs);
     auto new_mrs = utl::all(added_to_db) |
                    utl::transform([&](std::size_t i) { return mrs[i]; }) |
@@ -347,8 +338,19 @@ private:
     }
     update_state_.matched_pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{matched_pfs});
+  }
 
-    return added_to_db;
+  void put_transfer_requests_keys(transfer_requests_keys const treqs_k) {
+    auto added_to_db = db_.put_transfer_requests_keys(treqs_k);
+    auto new_treqs_k =
+        utl::all(added_to_db) |
+        utl::transform([&](std::size_t i) { return treqs_k[i]; }) | utl::vec();
+    LOG(ml::info) << "Added " << added_to_db.size()
+                  << " new transfer requests to db.";
+
+    assert(new_treqs_k.size() == added_to_db.size());
+
+    update_state_.transfer_requests_keys_ = new_treqs_k;
   }
 
   void put_transfer_results(transfer_results const& trs) {

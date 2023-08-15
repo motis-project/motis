@@ -97,7 +97,7 @@
 [nigiri]
   url=git@github.com:carstenhagelgans/nigiri.git
   branch=profiles
-  commit=434a81cb44316c7e3aa29e19046a6131da0a8b8d
+  commit=ea8e30925cf1b5a79af30bda48e5996a7a89ae82
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
