@@ -218,10 +218,6 @@ private:
         continue;
       }
 
-      /*if (nloc.type_ == n::location_type::kStation) {
-        continue;
-      }*/
-
       // match location and platform using exact name match
       auto [has_match_up, match_res] = match_by_distance(
           nloc, old_state_, update_state_, 20, match_bus_stop_max_distance_);
@@ -399,6 +395,8 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         auto const new_state =
             import_state{nigiri_event->hash(), osm_event->hash(),
                          ppr_event->graph_hash(), ppr_event->profiles_hash()};
+
+        LOG(ml::info) << nigiri_event->hash();
 
         fs::create_directories(dir);
         impl_ = std::make_unique<impl>(

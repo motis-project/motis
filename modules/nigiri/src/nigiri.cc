@@ -469,9 +469,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         import_successful_ = true;
         {
           mm::message_creator fbb;
-          fbb.create_and_finish(MsgContent_NigiriEvent,
-                                motis::import::CreateNigiriEvent(fbb).Union(),
-                                "/import", DestinationType_Topic);
+          fbb.create_and_finish(
+              MsgContent_NigiriEvent,
+              motis::import::CreateNigiriEvent(fbb, h).Union(), "/import",
+              DestinationType_Topic);
           publish(make_msg(fbb));
         }
         {
