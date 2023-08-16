@@ -37,8 +37,12 @@ inline string to_key(transfer_request_keys const& treq_k) {
 }
 
 inline string to_key(transfer_result const& tr) {
-  return {
-      fmt::format("{}::{}::{}", tr.from_nloc_key, tr.to_nloc_key, tr.profile_)};
+  return {fmt::format("{}::{}::{}", tr.from_nloc_key_, tr.to_nloc_key_,
+                      tr.profile_)};
+}
+
+inline string to_key(transfer_request const& treq) {
+  return {fmt::format("{}::{}", treq.from_nloc_key_, treq.profile_)};
 }
 
 struct database {

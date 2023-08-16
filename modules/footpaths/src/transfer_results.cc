@@ -51,7 +51,7 @@ pr::routing_query make_routing_query(
                  [](auto const& pf) { return to_input_location(pf); });
 
   // query: get search profile
-  auto const& profile = ppr_profiles.at(tr.profile_name).profile_;
+  auto const& profile = ppr_profiles.at(tr.profile_).profile_;
 
   // query: get search direction (default: FWD)
   auto const& dir = pr::search_direction::FWD;
@@ -83,9 +83,9 @@ transfer_results route_single_request(
       continue;
     }
 
-    result.from_nloc_key = treq.from_nloc_key;
-    result.to_nloc_key = treq.to_nloc_keys[i];
-    result.profile_ = treq.profile_name;
+    result.from_nloc_key_ = treq.from_nloc_key_;
+    result.to_nloc_key_ = treq.to_nloc_keys_[i];
+    result.profile_ = treq.profile_;
     result.info_ = fwd_routes.front();
 
     tress.emplace_back(result);

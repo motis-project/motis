@@ -293,16 +293,16 @@ private:
       ++ctr_start;
       progress_tracker_->increment();
       if (tt_.profiles_.count(tr.profile_) == 0 ||
-          tt_.locations_.location_key_to_idx_.count(tr.from_nloc_key) == 0 ||
-          tt_.locations_.location_key_to_idx_.count(tr.to_nloc_key) == 0) {
+          tt_.locations_.location_key_to_idx_.count(tr.from_nloc_key_) == 0 ||
+          tt_.locations_.location_key_to_idx_.count(tr.to_nloc_key_) == 0) {
         return;
       }
 
       auto const prf_idx = tt_.profiles_.at(tr.profile_);
       auto const from_idx =
-          tt_.locations_.location_key_to_idx_.at(tr.from_nloc_key);
+          tt_.locations_.location_key_to_idx_.at(tr.from_nloc_key_);
       auto const to_idx =
-          tt_.locations_.location_key_to_idx_.at(tr.to_nloc_key);
+          tt_.locations_.location_key_to_idx_.at(tr.to_nloc_key_);
 
       tt_.locations_.footpaths_out_[prf_idx][from_idx].push_back(
           n::footpath{to_idx, tr.info_.duration_});

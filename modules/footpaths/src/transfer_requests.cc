@@ -22,8 +22,8 @@ transfer_requests to_transfer_requests(transfer_requests_keys const& treqs_k,
     auto not_found = 0U;
     auto treq = transfer_request{};
 
-    treq.from_nloc_key = treq_k.from_nloc_key_;
-    treq.profile_name = treq_k.profile_;
+    treq.from_nloc_key_ = treq_k.from_nloc_key_;
+    treq.profile_ = treq_k.profile_;
 
     assert(treq_k.to_nloc_keys_.size() == treq_k.to_pf_keys_.size());
 
@@ -41,7 +41,7 @@ transfer_requests to_transfer_requests(transfer_requests_keys const& treqs_k,
 
       if (has_pf_key(to_pf_key)) {
         treq.transfer_targets_.emplace_back(pfs_with_key.at(to_pf_key));
-        treq.to_nloc_keys.emplace_back(to_nloc_key);
+        treq.to_nloc_keys_.emplace_back(to_nloc_key);
       } else {
         ++not_found;
       }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -23,12 +24,12 @@ using transfer_requests_keys = std::vector<transfer_request_keys>;
 
 struct transfer_request {
   platform transfer_start_;
-  string from_nloc_key;
+  string from_nloc_key_;
 
   platforms transfer_targets_;
-  std::vector<string> to_nloc_keys;
+  std::vector<string> to_nloc_keys_;
 
-  std::string profile_name;
+  std::string profile_;
 };
 using transfer_requests = std::vector<transfer_request>;
 
@@ -39,12 +40,18 @@ struct transfer_info {
 using transfer_infos = std::vector<transfer_info>;
 
 struct transfer_result {
-  string from_nloc_key;
-  string to_nloc_key;
+  string from_nloc_key_;
+  string to_nloc_key_;
   string profile_;
 
   transfer_info info_;
 };
 using transfer_results = std::vector<transfer_result>;
+
+// ostreams
+std::ostream& operator<<(std::ostream&, transfer_info const&);
+std::ostream& operator<<(std::ostream&, transfer_result const&);
+std::ostream& operator<<(std::ostream&, transfer_request const&);
+std::ostream& operator<<(std::ostream&, transfer_request_keys const&);
 
 }  // namespace motis::footpaths
