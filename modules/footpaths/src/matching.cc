@@ -77,8 +77,12 @@ std::pair<bool, matching_result> match_by_distance(
   auto matched{false};
   auto shortest_dist{std::numeric_limits<double>::max()};
 
+  auto pfs = std::vector<std::pair<double, motis::footpaths::platform>>{};
   // use update_state and old_state
-  auto pfs = update_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
+  if (update_state.set_pfs_idx_) {
+    auto new_pfs = update_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
+    pfs.insert(pfs.end(), new_pfs.begin(), new_pfs.end());
+  }
   auto const old_pfs =
       old_state.pfs_idx_->in_radius_with_distance(nloc.pos_, r);
   pfs.insert(pfs.end(), old_pfs.begin(), old_pfs.end());

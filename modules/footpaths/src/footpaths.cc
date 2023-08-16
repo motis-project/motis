@@ -62,6 +62,7 @@ struct footpaths::impl {
     auto pfs = db_.get_platforms();
     old_state_.pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{pfs});
+    old_state_.set_pfs_idx_ = true;
     old_state_.matches_ = db_.get_loc_to_pf_matchings();
     old_state_.transfer_requests_keys_ = db_.get_transfer_requests_keys();
     old_state_.transfer_results_ = db_.get_transfer_results();
@@ -75,6 +76,7 @@ struct footpaths::impl {
     old_state_.nloc_keys = matched_nloc_keys;
     old_state_.matched_pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{matched_pfs});
+    old_state_.set_matched_pfs_idx_ = true;
   };
 
   void full_import() {
@@ -89,7 +91,7 @@ struct footpaths::impl {
 
     // 4th precompute profilebased transfers
     auto rg = get_routing_ready_ppr_graph();
-    route_and_save_result(rg, update_state_.transfer_requests_keys_);
+    route_and_save_results(rg, update_state_.transfer_requests_keys_);
 
     // 5th update timetable
     update_timetable();
@@ -97,19 +99,35 @@ struct footpaths::impl {
 
   void maybe_partial_import(import_state const& old_state,
                             import_state const& new_state) {
-    if (old_state.osm_hash_ != new_state.osm_hash_) {
-      // 1st extract all platforms from a given osm file
+    auto new_osm = (old_state.osm_hash_ != new_state.osm_hash_);
+    auto new_tt = (old_state.nigiri_hash_ != new_state.nigiri_hash_);
+    auto rerouting = (old_state.ppr_graph_hash_ != new_state.ppr_graph_hash_);
+
+    // extract all platforms from a given osm_file
+    if (new_osm) {
       get_and_save_osm_platforms();
+    }
 
-      // 2nd update osm_id and location_idx
+    // matching and rematching
+    if (new_osm || new_tt) {
       match_and_save_matches();
+    }
 
-      // 3rd build transfer requests
+    // transfer requests
+    if (new_osm || new_tt) {
       build_and_save_transfer_requests();
+    }
 
-      // 4th precompute profilebased transfers
+    // routing and rerouting
+    if (rerouting) {
       auto rg = get_routing_ready_ppr_graph();
-      route_and_save_result(rg, update_state_.transfer_requests_keys_);
+      route_and_update_results(rg, old_state_.transfer_requests_keys_);
+      route_and_save_results(rg, update_state_.transfer_requests_keys_);
+    }
+
+    if (!rerouting && (new_osm || new_tt)) {
+      auto rg = get_routing_ready_ppr_graph();
+      route_and_save_results(rg, update_state_.transfer_requests_keys_);
     }
 
     // update timetable
@@ -177,13 +195,23 @@ private:
     put_transfer_requests_keys(treqs_k);
   }
 
-  void route_and_save_result(::ppr::routing_graph const& rg,
-                             transfer_requests_keys const& treqs_k) {
+  void route_and_save_results(::ppr::routing_graph const& rg,
+                              transfer_requests_keys const& treqs_k) {
     progress_tracker_->status("Precomputing Profilebased Transfers.");
     ml::scoped_timer const timer{"Precomputing Profilebased Transfers."};
     auto treqs = to_transfer_requests(treqs_k, db_);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
     put_transfer_results(trs);
+  }
+
+  void route_and_update_results(::ppr::routing_graph const& rg,
+                                transfer_requests_keys const& treqs_k) {
+    progress_tracker_->status("Updating Profilebased Transfers.");
+    ml::scoped_timer const timer{"Updating Profilebased Transfers."};
+    auto treqs = to_transfer_requests(treqs_k, db_);
+    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
+    update_transfer_results(trs);
+    old_state_.transfer_results_ = db_.get_transfer_results();
   }
 
   ::ppr::routing_graph get_routing_ready_ppr_graph() {
@@ -309,6 +337,7 @@ private:
     LOG(ml::info) << "Building Update-State R.Tree.";
     update_state_.pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{new_pfs});
+    update_state_.set_pfs_idx_ = true;
   }
 
   void put_matching_results(matching_results const& mrs) {
@@ -330,6 +359,7 @@ private:
     }
     update_state_.matched_pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{matched_pfs});
+    update_state_.set_matched_pfs_idx_ = true;
   }
 
   void put_transfer_requests_keys(transfer_requests_keys const treqs_k) {
@@ -352,6 +382,13 @@ private:
                   << " new transfers to db.";
 
     update_state_.transfer_results_ = trs;
+  }
+
+  void update_transfer_results(transfer_results const& trs) {
+    auto updated_in_db = db_.update_transfer_results(trs);
+    assert(trs.size() == updated_in_db.size());
+    LOG(ml::info) << "Updated " << updated_in_db.size() << " of " << trs.size()
+                  << " transfers in db.";
   }
 
   std::vector<ppr::profile_info> profiles_;
@@ -395,8 +432,6 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         auto const new_state =
             import_state{nigiri_event->hash(), osm_event->hash(),
                          ppr_event->graph_hash(), ppr_event->profiles_hash()};
-
-        LOG(ml::info) << nigiri_event->hash();
 
         fs::create_directories(dir);
         impl_ = std::make_unique<impl>(

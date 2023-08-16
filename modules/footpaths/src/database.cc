@@ -231,9 +231,9 @@ transfer_requests_keys database::get_transfer_requests_keys() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-      treqs_k.emplace_back(
-          cista::copy_from_potentially_unaligned<transfer_request_keys>(
-              entry->second));
+    treqs_k.emplace_back(
+        cista::copy_from_potentially_unaligned<transfer_request_keys>(
+            entry->second));
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
 
@@ -263,6 +263,33 @@ std::vector<std::size_t> database::put_transfer_results(
 
   txn.commit();
   return added_indices;
+}
+
+std::vector<std::size_t> database::update_transfer_results(
+    transfer_results const& trs) {
+  auto updated_indices = std::vector<std::size_t>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_};
+  auto transfers_db = transfers_dbi(txn);
+
+  for (auto const& [idx, tr] : utl::enumerate(trs)) {
+    auto const tr_key = to_key(tr);
+
+    if (auto const r = txn.get(transfers_db, tr_key); !r.has_value()) {
+      continue;  // transfer not in db
+    }
+
+    auto const serialized_tr = cista::serialize(tr);
+    if (txn.del(transfers_db, tr_key)) {
+      txn.put(transfers_db, tr_key, view(serialized_tr));
+    }
+
+    updated_indices.emplace_back(idx);
+  }
+
+  txn.commit();
+  return updated_indices;
 }
 
 transfer_results database::get_transfer_results() {
