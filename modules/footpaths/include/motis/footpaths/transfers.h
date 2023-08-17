@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "fmt/core.h"
+
 #include "motis/footpaths/platforms.h"
 #include "motis/footpaths/types.h"
 
@@ -47,6 +49,20 @@ struct transfer_result {
   transfer_info info_;
 };
 using transfer_results = std::vector<transfer_result>;
+
+// keys :: ids
+inline string to_key(transfer_request_keys const& treq_k) {
+  return {fmt::format("{}::{}", treq_k.from_nloc_key_, treq_k.profile_)};
+}
+
+inline string to_key(transfer_request const& treq) {
+  return {fmt::format("{}::{}", treq.from_nloc_key_, treq.profile_)};
+}
+
+inline string to_key(transfer_result const& tr) {
+  return {fmt::format("{}::{}::{}", tr.from_nloc_key_, tr.to_nloc_key_,
+                      tr.profile_)};
+}
 
 // ostreams
 std::ostream& operator<<(std::ostream&, transfer_info const&);

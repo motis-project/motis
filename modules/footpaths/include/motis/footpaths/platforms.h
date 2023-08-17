@@ -8,10 +8,14 @@
 
 #include "cista/containers/string.h"
 
+#include "fmt/core.h"
+
 #include "osmium/tags/taglist.hpp"
 
 #include "geo/latlng.h"
 #include "geo/point_rtree.h"
+
+#include "motis/footpaths/types.h"
 
 #include "nigiri/types.h"
 
@@ -83,5 +87,11 @@ bool platform_is_bus_stop(osmium::TagList const& tags);
 ::ppr::routing::osm_namespace to_ppr_osm_type(osm_type const&);
 
 ::ppr::routing::input_location to_input_location(platform const&);
+
+// keys :: ids
+inline string to_key(platform const& pf) {
+  return {fmt::format("{}:{}", std::to_string(pf.info_.osm_id_),
+                      get_osm_str_type(pf.info_.osm_type_))};
+}
 
 }  // namespace motis::footpaths

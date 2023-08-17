@@ -8,8 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include "fmt/core.h"
-
 #include "geo/latlng.h"
 
 #include "lmdb/lmdb.hpp"
@@ -23,26 +21,8 @@
 
 namespace motis::footpaths {
 
-inline string to_key(platform const& pf) {
-  return {fmt::format("{}:{}", std::to_string(pf.info_.osm_id_),
-                      get_osm_str_type(pf.info_.osm_type_))};
-}
-
 inline string to_key(geo::latlng const& coord) {
   return {nigiri::to_location_key(coord)};
-}
-
-inline string to_key(transfer_request_keys const& treq_k) {
-  return {fmt::format("{}::{}", treq_k.from_nloc_key_, treq_k.profile_)};
-}
-
-inline string to_key(transfer_result const& tr) {
-  return {fmt::format("{}::{}::{}", tr.from_nloc_key_, tr.to_nloc_key_,
-                      tr.profile_)};
-}
-
-inline string to_key(transfer_request const& treq) {
-  return {fmt::format("{}::{}", treq.from_nloc_key_, treq.profile_)};
 }
 
 struct database {
