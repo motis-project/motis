@@ -14,6 +14,7 @@
 namespace motis::footpaths {
 
 struct transfer_request_keys {
+  CISTA_COMPARABLE();
   string from_pf_key_;
   string from_nloc_key_;
 
@@ -49,6 +50,9 @@ struct transfer_result {
   transfer_info info_;
 };
 using transfer_results = std::vector<transfer_result>;
+
+transfer_request_keys merge(transfer_request_keys const&,
+                            transfer_request_keys const&);
 
 // keys :: ids
 inline string to_key(transfer_request_keys const& treq_k) {
