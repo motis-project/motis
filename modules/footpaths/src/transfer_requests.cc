@@ -57,9 +57,14 @@ transfer_requests to_transfer_requests(transfer_requests_keys const& treqs_k,
   return treqs;
 }
 
+/**
+ * old_to_old: build transfer requests from already processed (matched
+ * platforms) in old_state; use if profiles_hash has been changed
+ */
 transfer_requests_keys generate_transfer_requests_keys(
     state const& old_state, state const& update_state,
-    std::map<std::string, ppr::profile_info> const& profiles) {
+    std::map<std::string, ppr::profile_info> const& profiles,
+    bool const old_to_old) {
   auto result = transfer_requests_keys{};
 
   auto const all_pairs_trs = [&](state const& from_state, state const& to_state,
@@ -108,6 +113,15 @@ transfer_requests_keys generate_transfer_requests_keys(
 
   // new possible transfers: 1 -> 2, 2 -> 1, 2 -> 2
   for (auto const& [prf_name, prf_info] : profiles) {
+    if (old_to_old) {
+      auto trs11 = all_pairs_trs(old_state, old_state, prf_name);
+      result.insert(result.end(), trs11.begin(), trs11.end());
+    }
+
+    if (!update_state.set_matched_pfs_idx_) {
+      continue;
+    }
+
     // new transfers from old to update (1 -> 2)
     auto trs12 = all_pairs_trs(old_state, update_state, prf_name);
     // new transfers from update to old (2 -> 1)

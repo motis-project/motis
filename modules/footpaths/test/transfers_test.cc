@@ -78,6 +78,35 @@ TEST(footpaths, merge_transfer_request_keys) {
   ASSERT_EQ(is_trek_k, should_treq_k);
 }
 
+TEST(footpaths, merge_id_transfer_request_keys) {
+  using namespace motis::footpaths;
+
+  auto treq_k_a = transfer_request_keys{};
+  treq_k_a.from_nloc_key_ = "z";
+  treq_k_a.from_pf_key_ = "z";
+  treq_k_a.profile_ = "p";
+  treq_k_a.to_nloc_keys_ = {"a", "b", "c", "e"};
+  treq_k_a.to_pf_keys_ = {"1", "2", "3", "4"};
+
+  auto treq_k_b = transfer_request_keys{};
+  treq_k_b.from_nloc_key_ = "z";
+  treq_k_b.from_pf_key_ = "z";
+  treq_k_b.profile_ = "p";
+  treq_k_b.to_nloc_keys_ = {"a", "b", "c", "e"};
+  treq_k_b.to_pf_keys_ = {"1", "2", "3", "4"};
+
+  auto should_treq_k = transfer_request_keys{};
+  should_treq_k.from_nloc_key_ = "z";
+  should_treq_k.from_pf_key_ = "z";
+  should_treq_k.profile_ = "p";
+  should_treq_k.to_nloc_keys_ = {"a", "b", "c", "e"};
+  should_treq_k.to_pf_keys_ = {"1", "2", "3", "4"};
+
+  auto is_treq_k = merge(treq_k_a, treq_k_b);
+
+  ASSERT_EQ(is_treq_k, should_treq_k);
+}
+
 TEST(footpaths, merge_different_from_nloc_keys) {
   using namespace motis::footpaths;
 

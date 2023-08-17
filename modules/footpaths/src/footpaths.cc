@@ -99,37 +99,57 @@ struct footpaths::impl {
 
   void maybe_partial_import(import_state const& old_import_state,
                             import_state const& new_import_state) {
-    auto new_osm = (old_import_state.osm_hash_ != new_import_state.osm_hash_);
-    auto new_tt =
-        (old_import_state.nigiri_hash_ != new_import_state.nigiri_hash_);
-    auto rerouting =
-        (old_import_state.ppr_graph_hash_ != new_import_state.ppr_graph_hash_);
 
-    // extract all platforms from a given osm_file
-    if (new_osm) {
-      get_and_save_osm_platforms();
+    auto rt = routing_type::kNoRouting;
+    // define routing type
+    if (old_import_state.ppr_graph_hash_ != new_import_state.ppr_graph_hash_) {
+      rt = routing_type::kFullRouting;
     }
 
-    // matching and rematching
-    if (new_osm || new_tt) {
-      match_and_save_matches();
+    // define first update
+    auto fup = first_update::kNoUpdate;
+    if (old_import_state.ppr_profiles_hash_ !=
+        new_import_state.ppr_profiles_hash_) {
+      fup = first_update::kProfiles;
     }
 
-    // transfer requests
-    if (new_osm || new_tt) {
-      build_and_save_transfer_requests();
+    if (old_import_state.nigiri_hash_ != new_import_state.nigiri_hash_) {
+      fup = first_update::kTimetable;
     }
 
-    // routing and rerouting
-    if (rerouting) {
-      auto rg = get_routing_ready_ppr_graph();
-      route_and_update_results(rg, old_state_.transfer_requests_keys_);
-      route_and_save_results(rg, update_state_.transfer_requests_keys_);
+    if (old_import_state.osm_hash_ != new_import_state.osm_hash_) {
+      fup = first_update::kOSM;
     }
 
-    if (!rerouting && (new_osm || new_tt)) {
-      auto rg = get_routing_ready_ppr_graph();
-      route_and_save_results(rg, update_state_.transfer_requests_keys_);
+    // check whether routing must be partial or not
+    if (fup != first_update::kNoUpdate && rt == routing_type::kNoRouting) {
+      rt = routing_type::kPartialRouting;
+    }
+
+    switch (fup) {
+      case first_update::kNoUpdate: break;
+      case first_update::kOSM: get_and_save_osm_platforms();
+      case first_update::kTimetable:
+        match_and_save_matches();
+        build_and_save_transfer_requests();
+        break;
+      case first_update::kProfiles:
+        build_and_save_transfer_requests(true);
+        break;
+    }
+
+    ::ppr::routing_graph rg;
+    switch (rt) {
+      case routing_type::kNoRouting: break;
+      case routing_type::kPartialRouting:
+        rg = get_routing_ready_ppr_graph();
+        route_and_save_results(rg, update_state_.transfer_requests_keys_);
+        break;
+      case routing_type::kFullRouting:
+        rg = get_routing_ready_ppr_graph();
+        route_and_update_results(rg, old_state_.transfer_requests_keys_);
+        route_and_save_results(rg, update_state_.transfer_requests_keys_);
+        break;
     }
 
     // update timetable
@@ -186,12 +206,12 @@ private:
     put_matching_results(mrs);
   }
 
-  void build_and_save_transfer_requests() {
+  void build_and_save_transfer_requests(bool const old_to_old = false) {
     progress_tracker_->status("Generating Transfer Requests.");
     ml::scoped_timer const timer{"Generating Transfer Requests."};
 
     auto treqs_k = generate_transfer_requests_keys(old_state_, update_state_,
-                                                   ppr_profiles_);
+                                                   ppr_profiles_, old_to_old);
 
     LOG(ml::info) << "Writing Transfer Requests (Keys) to DB.";
     put_transfer_requests_keys(treqs_k);
@@ -334,8 +354,6 @@ private:
                    utl::vec();
     LOG(ml::info) << "Added " << added_to_db.size() << " new platforms to db.";
 
-    assert(new_pfs.size() == added_to_db.size());
-
     LOG(ml::info) << "Building Update-State R.Tree.";
     update_state_.pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{new_pfs});
@@ -350,8 +368,6 @@ private:
     LOG(ml::info) << "Added " << added_to_db.size()
                   << " new matching results to db.";
 
-    assert(new_mrs.size() == added_to_db.size());
-
     auto matched_pfs = platforms{};
     for (auto const& mr : new_mrs) {
       update_state_.matches_.insert(
@@ -364,15 +380,23 @@ private:
     update_state_.set_matched_pfs_idx_ = true;
   }
 
+  /**
+   * save new or update old transfer requests
+   */
   void put_transfer_requests_keys(transfer_requests_keys const treqs_k) {
+    auto updated_in_db = db_.update_transfer_requests_keys(treqs_k);
     auto added_to_db = db_.put_transfer_requests_keys(treqs_k);
+    auto updated_treqs_k =
+        utl::all(updated_in_db) |
+        utl::transform([&](std::size_t i) { return treqs_k[i]; }) | utl::vec();
     auto new_treqs_k =
         utl::all(added_to_db) |
         utl::transform([&](std::size_t i) { return treqs_k[i]; }) | utl::vec();
+
     LOG(ml::info) << "Added " << added_to_db.size()
                   << " new transfer requests to db.";
-
-    assert(new_treqs_k.size() == added_to_db.size());
+    LOG(ml::info) << "Updated " << updated_in_db.size()
+                  << " transfer requests in db.";
 
     update_state_.transfer_requests_keys_ = new_treqs_k;
   }

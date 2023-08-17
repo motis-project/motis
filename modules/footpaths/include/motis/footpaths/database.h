@@ -38,6 +38,8 @@ struct database {
 
   std::vector<std::size_t> put_transfer_requests_keys(
       transfer_requests_keys const&);
+  std::vector<std::size_t> update_transfer_requests_keys(
+      transfer_requests_keys const&);
   transfer_requests_keys get_transfer_requests_keys();
 
   std::vector<std::size_t> put_transfer_results(transfer_results const&);

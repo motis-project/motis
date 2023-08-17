@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "motis/core/common/logging.h"
+#include "cista/hashing.h"
 #include "cista/serialization.h"
 #include "cista/targets/buf.h"
 
@@ -221,6 +221,48 @@ std::vector<std::size_t> database::put_transfer_requests_keys(
   return added_indices;
 }
 
+/**
+ * merge and update: transfer_request_keys in db
+ */
+std::vector<std::size_t> database::update_transfer_requests_keys(
+    transfer_requests_keys const& treqs_k) {
+  auto updated_indices = std::vector<std::size_t>{};
+  auto treq_chashing = cista::hashing<transfer_request_keys>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_};
+  auto transreqs_db = transreqs_dbi(txn);
+
+  for (auto [idx, treq] : utl::enumerate(treqs_k)) {
+    auto treq_key = to_key(treq);
+
+    if (auto const r = txn.get(transreqs_db, treq_key); !r.has_value()) {
+      continue;  // transfer request not in db
+    }
+
+    auto entry = txn.get(transreqs_db, treq_key);
+    auto treq_from_db =
+        cista::copy_from_potentially_unaligned<transfer_request_keys>(
+            entry.value());
+    auto merged = merge(treq_from_db, treq);
+
+    // update entry only in case of changes
+    if (treq_chashing(treq_from_db) == treq_chashing(merged)) {
+      continue;
+    }
+
+    auto const serialized_treq = cista::serialize(merged);
+    if (txn.del(transreqs_db, treq_key)) {
+      txn.put(transreqs_db, treq_key, view(serialized_treq));
+    }
+
+    updated_indices.emplace_back(idx);
+  }
+
+  txn.commit();
+  return updated_indices;
+}
+
 transfer_requests_keys database::get_transfer_requests_keys() {
   auto treqs_k = transfer_requests_keys{};
 
@@ -268,21 +310,31 @@ std::vector<std::size_t> database::put_transfer_results(
 std::vector<std::size_t> database::update_transfer_results(
     transfer_results const& trs) {
   auto updated_indices = std::vector<std::size_t>{};
+  auto tres_chashing = cista::hashing<transfer_result>{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_};
   auto transfers_db = transfers_dbi(txn);
 
-  for (auto const& [idx, tr] : utl::enumerate(trs)) {
-    auto const tr_key = to_key(tr);
+  for (auto const& [idx, tres] : utl::enumerate(trs)) {
+    auto const tres_key = to_key(tres);
 
-    if (auto const r = txn.get(transfers_db, tr_key); !r.has_value()) {
+    if (auto const r = txn.get(transfers_db, tres_key); !r.has_value()) {
       continue;  // transfer not in db
     }
 
-    auto const serialized_tr = cista::serialize(tr);
-    if (txn.del(transfers_db, tr_key)) {
-      txn.put(transfers_db, tr_key, view(serialized_tr));
+    auto entry = txn.get(transfers_db, tres_key);
+    auto tres_from_db =
+        cista::copy_from_potentially_unaligned<transfer_result>(entry.value());
+
+    // update entry only in case of changes
+    if (tres_chashing(tres_from_db) == tres_chashing(tres)) {
+      continue;
+    }
+
+    auto const serialized_tr = cista::serialize(tres);
+    if (txn.del(transfers_db, tres_key)) {
+      txn.put(transfers_db, tres_key, view(serialized_tr));
     }
 
     updated_indices.emplace_back(idx);

@@ -9,6 +9,9 @@
 
 namespace motis::footpaths {
 
+enum class first_update { kNoUpdate, kProfiles, kTimetable, kOSM };
+enum class routing_type { kNoRouting, kPartialRouting, kFullRouting };
+
 struct state {
   std::unique_ptr<platforms_index> pfs_idx_;
   std::unique_ptr<platforms_index> matched_pfs_idx_;
