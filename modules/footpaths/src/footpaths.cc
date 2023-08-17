@@ -97,11 +97,13 @@ struct footpaths::impl {
     update_timetable();
   }
 
-  void maybe_partial_import(import_state const& old_state,
-                            import_state const& new_state) {
-    auto new_osm = (old_state.osm_hash_ != new_state.osm_hash_);
-    auto new_tt = (old_state.nigiri_hash_ != new_state.nigiri_hash_);
-    auto rerouting = (old_state.ppr_graph_hash_ != new_state.ppr_graph_hash_);
+  void maybe_partial_import(import_state const& old_import_state,
+                            import_state const& new_import_state) {
+    auto new_osm = (old_import_state.osm_hash_ != new_import_state.osm_hash_);
+    auto new_tt =
+        (old_import_state.nigiri_hash_ != new_import_state.nigiri_hash_);
+    auto rerouting =
+        (old_import_state.ppr_graph_hash_ != new_import_state.ppr_graph_hash_);
 
     // extract all platforms from a given osm_file
     if (new_osm) {

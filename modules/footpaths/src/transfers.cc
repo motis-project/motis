@@ -15,7 +15,7 @@ std::ostream& operator<<(std::ostream& out, transfer_info const& tinfo) {
 
 std::ostream& operator<<(std::ostream& out, transfer_result const& tres) {
   std::stringstream tres_repr;
-  tres_repr << to_key(tres) << ": " << tres.info_;
+  tres_repr << "[transfer result] " << to_key(tres) << ": " << tres.info_;
   return out << tres_repr.str();
 }
 
