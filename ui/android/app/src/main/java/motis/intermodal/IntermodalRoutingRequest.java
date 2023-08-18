@@ -25,6 +25,8 @@ public final class IntermodalRoutingRequest extends Table {
   public int destinationModesLength() { int o = __offset(14); return o != 0 ? __vector_len(o) : 0; }
   public byte searchType() { int o = __offset(16); return o != 0 ? bb.get(o + bb_pos) : 0; }
   public byte searchDir() { int o = __offset(18); return o != 0 ? bb.get(o + bb_pos) : 0; }
+  public String router() { int o = __offset(20); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer routerAsByteBuffer() { return __vector_as_bytebuffer(20, 1); }
 
   public static int createIntermodalRoutingRequest(FlatBufferBuilder builder,
       byte start_type,
@@ -34,8 +36,10 @@ public final class IntermodalRoutingRequest extends Table {
       int destinationOffset,
       int destination_modesOffset,
       byte search_type,
-      byte search_dir) {
-    builder.startObject(8);
+      byte search_dir,
+      int routerOffset) {
+    builder.startObject(9);
+    IntermodalRoutingRequest.addRouter(builder, routerOffset);
     IntermodalRoutingRequest.addDestinationModes(builder, destination_modesOffset);
     IntermodalRoutingRequest.addDestination(builder, destinationOffset);
     IntermodalRoutingRequest.addStartModes(builder, start_modesOffset);
@@ -47,7 +51,7 @@ public final class IntermodalRoutingRequest extends Table {
     return IntermodalRoutingRequest.endIntermodalRoutingRequest(builder);
   }
 
-  public static void startIntermodalRoutingRequest(FlatBufferBuilder builder) { builder.startObject(8); }
+  public static void startIntermodalRoutingRequest(FlatBufferBuilder builder) { builder.startObject(9); }
   public static void addStartType(FlatBufferBuilder builder, byte startType) { builder.addByte(0, startType, 0); }
   public static void addStart(FlatBufferBuilder builder, int startOffset) { builder.addOffset(1, startOffset, 0); }
   public static void addStartModes(FlatBufferBuilder builder, int startModesOffset) { builder.addOffset(2, startModesOffset, 0); }
@@ -60,6 +64,7 @@ public final class IntermodalRoutingRequest extends Table {
   public static void startDestinationModesVector(FlatBufferBuilder builder, int numElems) { builder.startVector(4, numElems, 4); }
   public static void addSearchType(FlatBufferBuilder builder, byte searchType) { builder.addByte(6, searchType, 0); }
   public static void addSearchDir(FlatBufferBuilder builder, byte searchDir) { builder.addByte(7, searchDir, 0); }
+  public static void addRouter(FlatBufferBuilder builder, int routerOffset) { builder.addOffset(8, routerOffset, 0); }
   public static int endIntermodalRoutingRequest(FlatBufferBuilder builder) {
     int o = builder.endObject();
     return o;

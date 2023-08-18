@@ -1,14 +1,15 @@
 package de.motis_project.app2.detail;
 
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Window;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -23,8 +24,6 @@ import de.motis_project.app2.TimeUtil;
 import de.motis_project.app2.io.Status;
 import de.motis_project.app2.journey.ConnectionWrapper;
 import de.motis_project.app2.journey.CopyConnection;
-import de.motis_project.app2.ppr.profiles.PprSearchOptions;
-import de.motis_project.app2.ppr.route.StepInfo;
 import motis.Stop;
 
 public class DetailActivity extends AppCompatActivity implements DetailClickHandler {
@@ -32,7 +31,6 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
 
     private ConnectionWrapper con;
     private HashSet<JourneyUtil.Section> expandedSections = new HashSet<>();
-    private PprSearchOptions pprSearchOptions;
 
     @BindString(R.string.transfer)
     String transfer;
@@ -65,7 +63,6 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         con = Status.get().getConnection();
-        pprSearchOptions = Status.get().getPprSearchOptions();
 
         String formattedDate = SimpleDateFormat
                 .getDateInstance(java.text.DateFormat.SHORT)
@@ -79,7 +76,7 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
 
     void create() {
         TransportBuilder.setConnection(getLayoutInflater(),
-                journeyDetails, con, pprSearchOptions, expandedSections);
+                journeyDetails, con, expandedSections);
     }
 
     @Override
@@ -141,11 +138,6 @@ public class DetailActivity extends AppCompatActivity implements DetailClickHand
 
     @Override
     public void transportStopClicked(Stop stop) {
-
-    }
-
-    @Override
-    public void walkStepClicked(StepInfo stepInfo) {
 
     }
 }

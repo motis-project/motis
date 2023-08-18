@@ -1,12 +1,11 @@
 package de.motis_project.app2.query;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import java.util.Date;
 
 import de.motis_project.app2.io.Status;
 import de.motis_project.app2.journey.ConnectionLoader;
-import de.motis_project.app2.ppr.profiles.PprSearchOptions;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
@@ -38,11 +37,5 @@ public class RoutingConnectionLoader extends ConnectionLoader<Query> {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(action, errorAction);
         subscriptions.add(sub);
-    }
-
-    @Nullable
-    @Override
-    protected PprSearchOptions getPprSearchOptions() {
-        return null;
     }
 }

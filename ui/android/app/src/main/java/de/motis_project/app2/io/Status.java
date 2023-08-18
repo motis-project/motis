@@ -9,10 +9,7 @@ import android.util.Log;
 import java.io.IOException;
 
 import de.motis_project.app2.journey.ConnectionWrapper;
-import de.motis_project.app2.ppr.profiles.PprSearchOptions;
-import de.motis_project.app2.ppr.route.RouteWrapper;
 import de.motis_project.app2.query.guesser.FavoritesDataSource;
-import de.motis_project.app2.saved.SavedConnectionsDataSource;
 
 public class Status {
     private static final boolean SERVER_SWITCH_AVAILABLE = false;
@@ -31,14 +28,10 @@ public class Status {
 
     private static Status SINGLETON;
     private final MotisServer server;
-    private SavedConnectionsDataSource savedConnectionsDb;
     private FavoritesDataSource favoritesDb;
     private ConnectionWrapper connection;
-    private RouteWrapper pprRoute;
-    private PprSearchOptions pprSearchOptions;
 
     private Status(Context ctx, Handler handler) {
-        savedConnectionsDb = new SavedConnectionsDataSource(ctx);
         favoritesDb = new FavoritesDataSource(ctx);
 
         final String serverUrl = getServerUrl(usingRtServer(ctx));
@@ -78,28 +71,8 @@ public class Status {
         this.connection = connection;
     }
 
-    public SavedConnectionsDataSource getSavedConnectionsDb() {
-        return savedConnectionsDb;
-    }
-
     public FavoritesDataSource getFavoritesDb() {
         return favoritesDb;
-    }
-
-    public RouteWrapper getPprRoute() {
-        return pprRoute;
-    }
-
-    public void setPprRoute(RouteWrapper pprRoute) {
-        this.pprRoute = pprRoute;
-    }
-
-    public PprSearchOptions getPprSearchOptions() {
-        return pprSearchOptions;
-    }
-
-    public void setPprSearchOptions(PprSearchOptions pprSearchOptions) {
-        this.pprSearchOptions = pprSearchOptions;
     }
 
     public void switchServer(Context ctx, boolean useRt) {

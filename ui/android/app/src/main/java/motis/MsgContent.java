@@ -22,10 +22,8 @@ public final class MsgContent {
   public static final byte TripId = 15;
   public static final byte AddressRequest = 16;
   public static final byte AddressResponse = 17;
-  public static final byte BikesharingRequest = 18;
-  public static final byte BikesharingResponse = 19;
-  public static final byte BikesharingGeoTerminalsRequest = 20;
-  public static final byte BikesharingGeoTerminalsResponse = 22;
+  public static final byte GBFSRoutingRequest = 18;
+  public static final byte GBFSRoutingResponse = 19;
   public static final byte StationGuesserRequest = 23;
   public static final byte StationGuesserResponse = 24;
   public static final byte IntermodalRoutingRequest = 25;
@@ -83,7 +81,7 @@ public final class MsgContent {
   public static final byte RISBatch = 77;
   public static final byte UpdatedEvent = 78;
   public static final byte Event = 79;
-  public static final byte Message = 80;
+  public static final byte RISMessage = 80;
   public static final byte RISGTFSRTMapping = 81;
   public static final byte RISForwardTimeRequest = 82;
   public static final byte RISPurgeRequest = 83;
@@ -99,8 +97,40 @@ public final class MsgContent {
   public static final byte RtWriteGraphRequest = 93;
   public static final byte TripBasedTripDebugRequest = 94;
   public static final byte TripBasedTripDebugResponse = 95;
+  public static final byte PaxMonUpdate = 96;
+  public static final byte PaxForecastUpdate = 97;
+  public static final byte PaxMonAddGroupsRequest = 98;
+  public static final byte PaxMonAddGroupsResponse = 99;
+  public static final byte PaxMonRemoveGroupsRequest = 100;
+  public static final byte PaxMonTripLoadInfo = 101;
+  public static final byte PaxMonFindTripsRequest = 102;
+  public static final byte PaxMonFindTripsResponse = 103;
+  public static final byte PaxMonStatusResponse = 104;
+  public static final byte PaxMonGetGroupsRequest = 105;
+  public static final byte PaxMonGetGroupsResponse = 106;
+  public static final byte PaxMonFilterGroupsRequest = 107;
+  public static final byte PaxMonFilterGroupsResponse = 108;
+  public static final byte PaxMonFilterTripsRequest = 109;
+  public static final byte PaxMonFilterTripsResponse = 110;
+  public static final byte PaxMonGetTripLoadInfosRequest = 111;
+  public static final byte PaxMonGetTripLoadInfosResponse = 112;
+  public static final byte PaxMonForkUniverseRequest = 113;
+  public static final byte PaxMonForkUniverseResponse = 114;
+  public static final byte PaxMonDestroyUniverseRequest = 115;
+  public static final byte PaxMonGetGroupsInTripRequest = 116;
+  public static final byte PaxMonGetGroupsInTripResponse = 117;
+  public static final byte PaxForecastApplyMeasuresRequest = 118;
+  public static final byte PaxMonUniverseForked = 119;
+  public static final byte PaxMonUniverseDestroyed = 120;
+  public static final byte PaxMonGetInterchangesRequest = 121;
+  public static final byte PaxMonGetInterchangesResponse = 122;
+  public static final byte PaxMonStatusRequest = 123;
+  public static final byte RISApplyRequest = 124;
+  public static final byte RISSystemTimeChanged = 125;
+  public static final byte RtGraphUpdated = 126;
+  public static final byte LookupRiBasisRequest = 127;
 
-  private static final String[] names = { "NONE", "MotisNoMessage", "MotisError", "MotisSuccess", "HTTPRequest", "HTTPResponse", "ApiDescription", "FileEvent", "OSMEvent", "ScheduleEvent", "DEMEvent", "PPREvent", "OSRMEvent", "CoastlineEvent", "Connection", "TripId", "AddressRequest", "AddressResponse", "BikesharingRequest", "BikesharingResponse", "BikesharingGeoTerminalsRequest", "", "BikesharingGeoTerminalsResponse", "StationGuesserRequest", "StationGuesserResponse", "IntermodalRoutingRequest", "LookupGeoStationIdRequest", "LookupGeoStationRequest", "LookupGeoStationResponse", "LookupBatchGeoStationRequest", "LookupBatchGeoStationResponse", "LookupStationEventsRequest", "LookupStationEventsResponse", "LookupScheduleInfoResponse", "LookupMetaStationRequest", "LookupMetaStationResponse", "LookupBatchMetaStationRequest", "LookupBatchMetaStationResponse", "LookupIdTrainRequest", "LookupIdTrainResponse", "OSRMOneToManyRequest", "OSRMOneToManyResponse", "OSRMViaRouteRequest", "OSRMViaRouteResponse", "OSRMSmoothViaRouteRequest", "OSRMSmoothViaRouteResponse", "ParkingGeoRequest", "ParkingGeoResponse", "ParkingLookupRequest", "ParkingLookupResponse", "ParkingEdgeRequest", "ParkingEdgeResponse", "ParkingEdgesRequest", "ParkingEdgesResponse", "PathBoxesResponse", "PathByTripIdRequest", "PathSeqResponse", "PathByStationSeqRequest", "PathByTileFeatureRequest", "MultiPathSeqResponse", "PathByTripIdBatchRequest", "PathByTripIdBatchResponse", "FootRoutingRequest", "FootRoutingResponse", "FootRoutingSimpleRequest", "FootRoutingSimpleResponse", "FootRoutingProfilesResponse", "RailVizMapConfigResponse", "RailVizTrainsRequest", "RailVizTrainsResponse", "RailVizTripsRequest", "RailVizStationRequest", "RailVizStationResponse", "RailVizTripGuessRequest", "RailVizTripGuessResponse", "ReviseRequest", "ReviseResponse", "RISBatch", "UpdatedEvent", "Event", "Message", "RISGTFSRTMapping", "RISForwardTimeRequest", "RISPurgeRequest", "RoutingRequest", "RoutingResponse", "RtEventInfo", "RtDelayUpdate", "RtTrackUpdate", "RtFreeTextUpdate", "RtRerouteUpdate", "RtUpdate", "RtUpdates", "RtWriteGraphRequest", "TripBasedTripDebugRequest", "TripBasedTripDebugResponse", };
+  private static final String[] names = { "NONE", "MotisNoMessage", "MotisError", "MotisSuccess", "HTTPRequest", "HTTPResponse", "ApiDescription", "FileEvent", "OSMEvent", "ScheduleEvent", "DEMEvent", "PPREvent", "OSRMEvent", "CoastlineEvent", "Connection", "TripId", "AddressRequest", "AddressResponse", "GBFSRoutingRequest", "GBFSRoutingResponse", "", "", "", "StationGuesserRequest", "StationGuesserResponse", "IntermodalRoutingRequest", "LookupGeoStationIdRequest", "LookupGeoStationRequest", "LookupGeoStationResponse", "LookupBatchGeoStationRequest", "LookupBatchGeoStationResponse", "LookupStationEventsRequest", "LookupStationEventsResponse", "LookupScheduleInfoResponse", "LookupMetaStationRequest", "LookupMetaStationResponse", "LookupBatchMetaStationRequest", "LookupBatchMetaStationResponse", "LookupIdTrainRequest", "LookupIdTrainResponse", "OSRMOneToManyRequest", "OSRMOneToManyResponse", "OSRMViaRouteRequest", "OSRMViaRouteResponse", "OSRMSmoothViaRouteRequest", "OSRMSmoothViaRouteResponse", "ParkingGeoRequest", "ParkingGeoResponse", "ParkingLookupRequest", "ParkingLookupResponse", "ParkingEdgeRequest", "ParkingEdgeResponse", "ParkingEdgesRequest", "ParkingEdgesResponse", "PathBoxesResponse", "PathByTripIdRequest", "PathSeqResponse", "PathByStationSeqRequest", "PathByTileFeatureRequest", "MultiPathSeqResponse", "PathByTripIdBatchRequest", "PathByTripIdBatchResponse", "FootRoutingRequest", "FootRoutingResponse", "FootRoutingSimpleRequest", "FootRoutingSimpleResponse", "FootRoutingProfilesResponse", "RailVizMapConfigResponse", "RailVizTrainsRequest", "RailVizTrainsResponse", "RailVizTripsRequest", "RailVizStationRequest", "RailVizStationResponse", "RailVizTripGuessRequest", "RailVizTripGuessResponse", "ReviseRequest", "ReviseResponse", "RISBatch", "UpdatedEvent", "Event", "RISMessage", "RISGTFSRTMapping", "RISForwardTimeRequest", "RISPurgeRequest", "RoutingRequest", "RoutingResponse", "RtEventInfo", "RtDelayUpdate", "RtTrackUpdate", "RtFreeTextUpdate", "RtRerouteUpdate", "RtUpdate", "RtUpdates", "RtWriteGraphRequest", "TripBasedTripDebugRequest", "TripBasedTripDebugResponse", "PaxMonUpdate", "PaxForecastUpdate", "PaxMonAddGroupsRequest", "PaxMonAddGroupsResponse", "PaxMonRemoveGroupsRequest", "PaxMonTripLoadInfo", "PaxMonFindTripsRequest", "PaxMonFindTripsResponse", "PaxMonStatusResponse", "PaxMonGetGroupsRequest", "PaxMonGetGroupsResponse", "PaxMonFilterGroupsRequest", "PaxMonFilterGroupsResponse", "PaxMonFilterTripsRequest", "PaxMonFilterTripsResponse", "PaxMonGetTripLoadInfosRequest", "PaxMonGetTripLoadInfosResponse", "PaxMonForkUniverseRequest", "PaxMonForkUniverseResponse", "PaxMonDestroyUniverseRequest", "PaxMonGetGroupsInTripRequest", "PaxMonGetGroupsInTripResponse", "PaxForecastApplyMeasuresRequest", "PaxMonUniverseForked", "PaxMonUniverseDestroyed", "PaxMonGetInterchangesRequest", "PaxMonGetInterchangesResponse", "PaxMonStatusRequest", "RISApplyRequest", "RISSystemTimeChanged", "RtGraphUpdated", "LookupRiBasisRequest", "LookupRiBasisResponse", "PaxForecastApplyMeasuresResponse", "PaxMonGetAddressableGroupsRequest", "PaxMonGetAddressableGroupsResponse", "OSRMManyToManyRequest", "OSRMManyToManyResponse", "GBFSProvidersResponse", "PaxMonKeepAliveRequest", "PaxMonKeepAliveResponse", "PaxMonRerouteGroupsRequest", "PaxMonRerouteGroupsResponse", "PaxMonGroupStatisticsRequest", "PaxMonGroupStatisticsResponse", "PaxMonDebugGraphRequest", "PaxMonDebugGraphResponse", "PaxMonGetUniversesResponse", "RISApplyResponse", "LookupStationInfoRequest", "LookupStationInfoResponse", "NigiriEvent", "PaxMonGetTripCapacityRequest", "PaxMonGetTripCapacityResponse", "RtMessageHistoryRequest", "RtMessageHistoryResponse", "LookupStationLocationResponse", "InputStation", "StationsEvent", };
 
   public static String name(int e) { return names[e]; }
 };

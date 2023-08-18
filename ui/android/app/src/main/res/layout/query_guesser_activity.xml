@@ -6,7 +6,7 @@
     android:orientation="vertical"
     tools:context=".query.guesser.GuesserActivity">
 
-    <android.support.design.widget.AppBarLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="55dp"
         android:background="@color/colorPrimary"
@@ -55,7 +55,7 @@
                 android:src="@drawable/ic_close_black_24dp"
                 android:tint="@android:color/white" />
         </LinearLayout>
-    </android.support.design.widget.AppBarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <ListView
         android:id="@+id/suggestionslist"
