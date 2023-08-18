@@ -40,7 +40,7 @@ transfer_request_keys merge(transfer_request_keys const& treq_k_a,
   merged.to_pf_keys_ = treq_k_a.to_pf_keys_;
 
   // build added_keys hash_map
-  for (auto nloc_key : merged.to_nloc_keys_) {
+  for (const auto& nloc_key : merged.to_nloc_keys_) {
     added_keys.insert(nloc_key);
   }
 

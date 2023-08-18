@@ -263,7 +263,8 @@ std::vector<std::size_t> database::update_transfer_requests_keys(
   return updated_indices;
 }
 
-transfer_requests_keys database::get_transfer_requests_keys() {
+transfer_requests_keys database::get_transfer_requests_keys(
+    set<std::string> const& ppr_profile_names) {
   auto treqs_k = transfer_requests_keys{};
 
   auto lock = std::lock_guard{mutex_};
@@ -273,9 +274,15 @@ transfer_requests_keys database::get_transfer_requests_keys() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    treqs_k.emplace_back(
+    auto const db_treq_k =
         cista::copy_from_potentially_unaligned<transfer_request_keys>(
-            entry->second));
+            entry->second);
+
+    // extract only transfer_requests with requested profiles
+    if (ppr_profile_names.count(db_treq_k.profile_) == 1) {
+      treqs_k.emplace_back(db_treq_k);
+    }
+
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
 
@@ -344,7 +351,8 @@ std::vector<std::size_t> database::update_transfer_results(
   return updated_indices;
 }
 
-transfer_results database::get_transfer_results() {
+transfer_results database::get_transfer_results(
+    set<std::string> const& ppr_profile_names) {
   auto trs = transfer_results{};
 
   auto lock = std::lock_guard{mutex_};
@@ -354,8 +362,14 @@ transfer_results database::get_transfer_results() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    trs.emplace_back(
-        cista::copy_from_potentially_unaligned<transfer_result>(entry->second));
+    auto const db_tr =
+        cista::copy_from_potentially_unaligned<transfer_result>(entry->second);
+
+    // extract only transfer_results with requested profiles
+    if (ppr_profile_names.count(db_tr.profile_) == 1) {
+      trs.emplace_back(db_tr);
+    }
+
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
 

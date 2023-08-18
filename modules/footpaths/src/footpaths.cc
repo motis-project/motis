@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <map>
 #include <regex>
+#include <utility>
 
 #include "boost/range/irange.hpp"
 
@@ -56,16 +57,20 @@ struct import_state {
 };
 
 struct footpaths::impl {
-  explicit impl(n::timetable& tt, std::string const& db_file,
-                std::size_t db_max_size)
-      : tt_(tt), db_{db_file, db_max_size} {
+  explicit impl(n::timetable& tt,
+                std::map<std::string, ppr::profile_info> const& ppr_profiles_,
+                std::string const& db_file, std::size_t db_max_size)
+      : tt_(tt), ppr_profiles_{ppr_profiles_}, db_{db_file, db_max_size} {
+    load_ppr_profiles();
+
     auto pfs = db_.get_platforms();
     old_state_.pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{pfs});
     old_state_.set_pfs_idx_ = true;
     old_state_.matches_ = db_.get_loc_to_pf_matchings();
-    old_state_.transfer_requests_keys_ = db_.get_transfer_requests_keys();
-    old_state_.transfer_results_ = db_.get_transfer_results();
+    old_state_.transfer_requests_keys_ =
+        db_.get_transfer_requests_keys(ppr_profile_names_);
+    old_state_.transfer_results_ = db_.get_transfer_results(ppr_profile_names_);
 
     auto matched_pfs = platforms{};
     auto matched_nloc_keys = std::vector<string>{};
@@ -166,17 +171,19 @@ struct footpaths::impl {
 
       // build list of profile infos
       profiles_.emplace_back(pinfo);
+      ppr_profile_names_.insert(pname);
     }
     assert(tt_.profiles_.size() == profiles_.size());
   }
 
   n::timetable& tt_;
+  std::map<std::string, ppr::profile_info> ppr_profiles_;
   database db_;
 
   state old_state_;  // state before init/import
   state update_state_;  // update state with new platforms/new matches
 
-  std::map<std::string, ppr::profile_info> ppr_profiles_;
+  set<std::string> ppr_profile_names_;
 
   std::string osm_path_;
   std::string ppr_rg_path_;
@@ -233,7 +240,7 @@ private:
     auto treqs = to_transfer_requests(treqs_k, db_);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
     update_transfer_results(trs);
-    old_state_.transfer_results_ = db_.get_transfer_results();
+    old_state_.transfer_results_ = db_.get_transfer_results(ppr_profile_names_);
   }
 
   ::ppr::routing_graph get_routing_ready_ppr_graph() {
@@ -459,25 +466,19 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             import_state{nigiri_event->hash(), osm_event->hash(),
                          ppr_event->graph_hash(), ppr_event->profiles_hash()};
 
+        auto ppr_profiles = std::map<std::string, ppr::profile_info>{};
+        ::motis::ppr::read_profile_files(
+            utl::to_vec(*ppr_event->profiles(),
+                        [](auto const& p) { return p->path()->str(); }),
+            ppr_profiles);
+
         fs::create_directories(dir);
         impl_ = std::make_unique<impl>(
             *get_shared_data<n::timetable*>(
                 to_res_id(mm::global_res_id::NIGIRI_TIMETABLE)),
-            db_file(), db_max_size_);
+            ppr_profiles, db_file(), db_max_size_);
 
         auto progress_tracker = utl::get_active_progress_tracker();
-
-        {
-          ml::scoped_timer const timer{"Reading PPR Profile Information"};
-          progress_tracker->status("Reading PPR Profiles Information.");
-
-          ::motis::ppr::read_profile_files(
-              utl::to_vec(*ppr_event->profiles(),
-                          [](auto const& p) { return p->path()->str(); }),
-              impl_->ppr_profiles_);
-          impl_->load_ppr_profiles();
-        }
-
         impl_->osm_path_ = osm_event->path()->str();
         impl_->ppr_rg_path_ = ppr_event->graph_path()->str();
 
