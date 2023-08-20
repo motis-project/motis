@@ -13,40 +13,45 @@ public final class TripId extends Table {
   public static TripId getRootAsTripId(ByteBuffer _bb, TripId obj) { _bb.order(ByteOrder.LITTLE_ENDIAN); return (obj.__init(_bb.getInt(_bb.position()) + _bb.position(), _bb)); }
   public TripId __init(int _i, ByteBuffer _bb) { bb_pos = _i; bb = _bb; return this; }
 
-  public String stationId() { int o = __offset(4); return o != 0 ? __string(o + bb_pos) : null; }
-  public ByteBuffer stationIdAsByteBuffer() { return __vector_as_bytebuffer(4, 1); }
-  public long trainNr() { int o = __offset(6); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0; }
-  public long time() { int o = __offset(8); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
-  public String targetStationId() { int o = __offset(10); return o != 0 ? __string(o + bb_pos) : null; }
-  public ByteBuffer targetStationIdAsByteBuffer() { return __vector_as_bytebuffer(10, 1); }
-  public long targetTime() { int o = __offset(12); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
-  public String lineId() { int o = __offset(14); return o != 0 ? __string(o + bb_pos) : null; }
-  public ByteBuffer lineIdAsByteBuffer() { return __vector_as_bytebuffer(14, 1); }
+  public String id() { int o = __offset(4); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer idAsByteBuffer() { return __vector_as_bytebuffer(4, 1); }
+  public String stationId() { int o = __offset(6); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer stationIdAsByteBuffer() { return __vector_as_bytebuffer(6, 1); }
+  public long trainNr() { int o = __offset(8); return o != 0 ? (long)bb.getInt(o + bb_pos) & 0xFFFFFFFFL : 0; }
+  public long time() { int o = __offset(10); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
+  public String targetStationId() { int o = __offset(12); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer targetStationIdAsByteBuffer() { return __vector_as_bytebuffer(12, 1); }
+  public long targetTime() { int o = __offset(14); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
+  public String lineId() { int o = __offset(16); return o != 0 ? __string(o + bb_pos) : null; }
+  public ByteBuffer lineIdAsByteBuffer() { return __vector_as_bytebuffer(16, 1); }
 
   public static int createTripId(FlatBufferBuilder builder,
+      int idOffset,
       int station_idOffset,
       long train_nr,
       long time,
       int target_station_idOffset,
       long target_time,
       int line_idOffset) {
-    builder.startObject(6);
+    builder.startObject(7);
     TripId.addTargetTime(builder, target_time);
     TripId.addTime(builder, time);
     TripId.addLineId(builder, line_idOffset);
     TripId.addTargetStationId(builder, target_station_idOffset);
     TripId.addTrainNr(builder, train_nr);
     TripId.addStationId(builder, station_idOffset);
+    TripId.addId(builder, idOffset);
     return TripId.endTripId(builder);
   }
 
-  public static void startTripId(FlatBufferBuilder builder) { builder.startObject(6); }
-  public static void addStationId(FlatBufferBuilder builder, int stationIdOffset) { builder.addOffset(0, stationIdOffset, 0); }
-  public static void addTrainNr(FlatBufferBuilder builder, long trainNr) { builder.addInt(1, (int)trainNr, 0); }
-  public static void addTime(FlatBufferBuilder builder, long time) { builder.addLong(2, time, 0); }
-  public static void addTargetStationId(FlatBufferBuilder builder, int targetStationIdOffset) { builder.addOffset(3, targetStationIdOffset, 0); }
-  public static void addTargetTime(FlatBufferBuilder builder, long targetTime) { builder.addLong(4, targetTime, 0); }
-  public static void addLineId(FlatBufferBuilder builder, int lineIdOffset) { builder.addOffset(5, lineIdOffset, 0); }
+  public static void startTripId(FlatBufferBuilder builder) { builder.startObject(7); }
+  public static void addId(FlatBufferBuilder builder, int idOffset) { builder.addOffset(0, idOffset, 0); }
+  public static void addStationId(FlatBufferBuilder builder, int stationIdOffset) { builder.addOffset(1, stationIdOffset, 0); }
+  public static void addTrainNr(FlatBufferBuilder builder, long trainNr) { builder.addInt(2, (int)trainNr, 0); }
+  public static void addTime(FlatBufferBuilder builder, long time) { builder.addLong(3, time, 0); }
+  public static void addTargetStationId(FlatBufferBuilder builder, int targetStationIdOffset) { builder.addOffset(4, targetStationIdOffset, 0); }
+  public static void addTargetTime(FlatBufferBuilder builder, long targetTime) { builder.addLong(5, targetTime, 0); }
+  public static void addLineId(FlatBufferBuilder builder, int lineIdOffset) { builder.addOffset(6, lineIdOffset, 0); }
   public static int endTripId(FlatBufferBuilder builder) {
     int o = builder.endObject();
     return o;

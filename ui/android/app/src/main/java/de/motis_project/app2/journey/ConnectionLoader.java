@@ -1,8 +1,9 @@
 package de.motis_project.app2.journey;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,7 +12,6 @@ import java.util.List;
 
 import de.motis_project.app2.JourneyUtil;
 import de.motis_project.app2.TimeUtil;
-import de.motis_project.app2.ppr.profiles.PprSearchOptions;
 import motis.Connection;
 import motis.ProblemType;
 import motis.routing.RoutingResponse;
@@ -204,9 +204,6 @@ public abstract class ConnectionLoader<Q> {
                                   Action1 action, Action1<Throwable> errorAction);
 
     @Nullable
-    protected abstract PprSearchOptions getPprSearchOptions();
-
-    @Nullable
     protected String getStartNameOverride() {
         return null;
     }
@@ -217,7 +214,7 @@ public abstract class ConnectionLoader<Q> {
     }
 
     protected ConnectionWrapper wrapConnection(Connection connection, int id) {
-        ConnectionWrapper wrapper = new ConnectionWrapper(connection, id, getPprSearchOptions());
+        ConnectionWrapper wrapper = new ConnectionWrapper(connection, id);
         wrapper.setStartNameOverride(getStartNameOverride());
         wrapper.setDestinationNameOverride(getDestinationNameOverride());
         return wrapper;

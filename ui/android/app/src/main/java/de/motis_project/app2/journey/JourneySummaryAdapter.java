@@ -2,11 +2,12 @@ package de.motis_project.app2.journey;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -17,7 +18,6 @@ import java.util.Map;
 import de.motis_project.app2.R;
 import de.motis_project.app2.TimeUtil;
 import de.motis_project.app2.detail.DetailActivity;
-import de.motis_project.app2.detail.IntermodalDetailActivity;
 import de.motis_project.app2.io.Status;
 import de.motis_project.app2.io.error.MotisErrorException;
 import de.motis_project.app2.lib.StickyHeaderAdapter;
@@ -168,11 +168,7 @@ public class JourneySummaryAdapter
             public void onClick(View view) {
                 System.out.println("Connection clicked: " + con);
                 Status.get().setConnection(con);
-                if (con.isIntermodal()) {
-                    view.getContext().startActivity(new Intent(view.getContext(), IntermodalDetailActivity.class));
-                } else {
-                    view.getContext().startActivity(new Intent(view.getContext(), DetailActivity.class));
-                }
+                view.getContext().startActivity(new Intent(view.getContext(), DetailActivity.class));
             }
         });
     }

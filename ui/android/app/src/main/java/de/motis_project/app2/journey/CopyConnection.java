@@ -44,11 +44,12 @@ public class CopyConnection {
             Trip trip = c.trips(i);
             TripId id = trip.id();
 
+            int x = fbb.createString(id.id());
             int stationId = fbb.createString(id.stationId());
             int targetStationId = fbb.createString(id.targetStationId());
             int lineId = fbb.createString(id.lineId());
             int tripId = TripId.createTripId(
-                    fbb,
+                    fbb, x,
                     stationId, id.trainNr(), id.time(),
                     targetStationId, id.targetTime(), lineId);
 
@@ -137,7 +138,6 @@ public class CopyConnection {
                 move.move(t);
 
                 int name = fbb.createString(t.name());
-                int categoryName = fbb.createString(t.categoryName());
                 int direction = fbb.createString(t.direction());
                 int lineId = fbb.createString(t.lineId());
                 int provider = fbb.createString(t.provider());
@@ -145,12 +145,9 @@ public class CopyConnection {
                 Transport.startTransport(fbb);
                 Transport.addRange(fbb, Range.createRange(fbb, t.range().from(), t.range().to()));
                 Transport.addName(fbb, name);
-                Transport.addCategoryId(fbb, t.categoryId());
-                Transport.addCategoryName(fbb, categoryName);
                 Transport.addClasz(fbb, t.clasz());
                 Transport.addDirection(fbb, direction);
                 Transport.addLineId(fbb, lineId);
-                Transport.addTrainNr(fbb, t.trainNr());
                 Transport.addProvider(fbb, provider);
                 moveCopy = Transport.endTransport(fbb);
 
