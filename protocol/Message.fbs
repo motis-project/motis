@@ -74,12 +74,15 @@ include "ris/RISForwardTimeRequest.fbs";
 include "ris/RISGTFSRTMapping.fbs";
 include "ris/RISMessage.fbs";
 include "ris/RISPurgeRequest.fbs";
+include "ris/RISStatusResponse.fbs";
 include "ris/RISSystemTimeChanged.fbs";
 include "routing/RoutingRequest.fbs";
 include "routing/RoutingResponse.fbs";
 include "rt/RtGraphUpdated.fbs";
 include "rt/RtMessageHistoryRequest.fbs";
 include "rt/RtMessageHistoryResponse.fbs";
+include "rt/RtMetricsRequest.fbs";
+include "rt/RtMetricsResponse.fbs";
 include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
@@ -123,9 +126,17 @@ include "paxmon/PaxMonDebugGraphResponse.fbs";
 include "paxmon/PaxMonGetUniversesResponse.fbs";
 include "paxmon/PaxMonGetTripCapacityRequest.fbs";
 include "paxmon/PaxMonGetTripCapacityResponse.fbs";
+include "paxmon/PaxMonCapacityStatusRequest.fbs";
+include "paxmon/PaxMonCapacityStatusResponse.fbs";
+include "paxmon/PaxMonDetailedCapacityStatusRequest.fbs";
+include "paxmon/PaxMonDetailedCapacityStatusResponse.fbs";
+include "paxmon/PaxMonMetricsRequest.fbs";
+include "paxmon/PaxMonMetricsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
+include "paxforecast/PaxForecastMetricsRequest.fbs";
+include "paxforecast/PaxForecastMetricsResponse.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -168,6 +179,7 @@ table MotisNoMessage {
 }
 
 table ApiDescription {
+  version:string;
   methods:[string];
 }
 
@@ -322,7 +334,18 @@ union MsgContent {
   motis.rt.RtMessageHistoryResponse                                       = 151,
   motis.lookup.LookupStationLocationResponse                              = 152,
   motis.routing.InputStation                                              = 153,
-  motis.import.StationsEvent                                              = 154
+  motis.import.StationsEvent                                              = 154,
+  motis.ris.RISStatusResponse                                             = 155,
+  motis.rt.RtMetricsRequest                                               = 156,
+  motis.rt.RtMetricsResponse                                              = 157,
+  motis.paxmon.PaxMonDetailedCapacityStatusRequest                        = 158,
+  motis.paxmon.PaxMonDetailedCapacityStatusResponse                       = 159,
+  motis.paxmon.PaxMonMetricsRequest                                       = 160,
+  motis.paxmon.PaxMonMetricsResponse                                      = 161,
+  motis.paxforecast.PaxForecastMetricsRequest                             = 162,
+  motis.paxforecast.PaxForecastMetricsResponse                            = 163,
+  motis.paxmon.PaxMonCapacityStatusRequest                                = 164,
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 165
 }
 
 // Destination Examples:

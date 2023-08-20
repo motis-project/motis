@@ -117,3 +117,87 @@ RtMessageHistoryResponse:
   fields:
     messages:
       description: TODO
+RtMetricsRequest:
+  description: Request metrics for the given schedule.
+  fields:
+    schedule:
+      description: |
+        The ID of the schedule.
+
+        Use `0` for the default schedule.
+RtMetrics:
+  description: |
+    Contains metrics for `entries` minutes.
+
+    Each metrics field is an array with length = `entries`. The first entry
+    of each array is the value at time `start_time`. The second entry is
+    the value at time `start_time + 1 minute` etc.
+  fields:
+    start_time:
+      description: Time of the first entry in the metrics arrays (unix timestamp)
+    entries:
+      description: Number of entries for each metrics array
+    messages:
+      description: The total number of real-time messages
+    delay_messages:
+      description: TODO
+    cancel_messages:
+      description: TODO
+    additional_messages:
+      description: TODO
+    reroute_messages:
+      description: TODO
+    track_messages:
+      description: TODO
+    full_trip_messages:
+      description: TODO
+    trip_formation_messages:
+      description: TODO
+    new_trips:
+      description: TODO
+    cancellations:
+      description: TODO
+    reroutes:
+      description: TODO
+    trip_delay_updates:
+      description: TODO
+    event_delay_updates:
+      description: TODO
+    trip_track_updates:
+      description: TODO
+    trip_id_not_found:
+      description: TODO
+    trip_id_ambiguous:
+      description: TODO
+    rule_service_reroutes:
+      description: TODO
+    formation_invalid_trip_id:
+      description: TODO
+    formation_trip_id_not_found:
+      description: TODO
+    formation_trip_id_ambiguous:
+      description: TODO
+    full_trip_schedule_messages:
+      description: TODO
+    full_trip_update_messages:
+      description: TODO
+    formation_schedule_messages:
+      description: TODO
+    formation_preview_messages:
+      description: TODO
+    formation_is_messages:
+      description: TODO
+RtMetricsResponse:
+  description: |
+    Contains metrics for the requested schedule.
+
+    The metrics are offered in two variants:
+    - `by_msg_timestamp`: Grouped by the creation time of the real-time
+      message
+    - `by_processing_time`: Grouped by the time a message was processed
+      (server time)
+  fields:
+    by_msg_timestamp:
+      description: TODO
+    by_processing_time:
+      description: TODO

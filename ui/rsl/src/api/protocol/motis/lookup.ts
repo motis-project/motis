@@ -148,3 +148,8 @@ export interface LookupStationInfo {
 export interface LookupStationInfoResponse {
   station_infos: LookupStationInfo[];
 }
+
+// lookup/LookupStationLocationResponse.fbs
+export interface LookupStationLocationResponse {
+  position: Position;
+}

@@ -41,9 +41,9 @@ function GroupStatistics(): JSX.Element {
   );
 }
 
-type GroupHistogramsProps = {
+interface GroupHistogramsProps {
   data: PaxMonGroupStatisticsResponse;
-};
+}
 
 function GroupHistograms({ data }: GroupHistogramsProps): JSX.Element {
   return (

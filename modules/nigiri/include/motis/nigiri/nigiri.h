@@ -32,18 +32,20 @@ private:
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
   bool adjust_footpaths_{true};
+  bool merge_duplicates_{false};
   std::string first_day_;
   std::string default_timezone_;
   std::uint16_t num_days_{2U};
-  bool lookup_{false};
-  bool guesser_{false};
-  bool railviz_{false};
-  bool routing_{false};
+  bool lookup_{true};
+  bool guesser_{true};
+  bool railviz_{true};
+  bool routing_{true};
   unsigned link_stop_distance_{100U};
   bool use_stationfilter_{true};
   std::vector<std::string> gtfsrt_urls_;
   std::vector<std::string> gtfsrt_paths_;
-  unsigned gtfsrt_update_interval_{60U};
+  unsigned gtfsrt_update_interval_sec_{60U};
+  bool gtfsrt_incremental_{false};
 };
 
 }  // namespace motis::nigiri

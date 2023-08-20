@@ -8,8 +8,12 @@
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
+#include "motis/core/debug/trip.h"
+
 #include "motis/paxmon/compact_journey_util.h"
+#include "motis/paxmon/localization.h"
 #include "motis/paxmon/messages.h"
+#include "motis/paxmon/reachability.h"
 #include "motis/paxmon/temp_passenger_group.h"
 
 using namespace motis::paxmon;
@@ -103,19 +107,85 @@ void update_tracked_groups(
       } catch (std::runtime_error const& e) {
         std::cout << "\noriginal planned journey:\n";
         print_compact_journey(sched, old_journey);
-        std::cout << "\nlocalization: in_trip="
-                  << result.localization_->in_trip()
-                  << ", first_station=" << result.localization_->first_station_
-                  << ", station="
-                  << result.localization_->at_station_->name_.str()
-                  << ", schedule_arrival_time="
-                  << format_time(result.localization_->schedule_arrival_time_)
-                  << ", current_arrival_time="
-                  << format_time(result.localization_->current_arrival_time_)
-                  << "\n";
-        if (result.localization_->in_trip()) {
-          print_trip(sched, result.localization_->in_trip_);
+
+        auto const print_localization = [&](passenger_localization const& loc) {
+          std::cout << "localization: in_trip=" << loc.in_trip()
+                    << ", first_station=" << loc.first_station_
+                    << ", station=" << loc.at_station_->name_.str()
+                    << ", schedule_arrival_time="
+                    << format_time(loc.schedule_arrival_time_)
+                    << ", current_arrival_time="
+                    << format_time(loc.current_arrival_time_) << "\n";
+          if (loc.in_trip()) {
+            std::cout << "in trip:\n";
+            print_trip(sched, loc.in_trip_);
+          }
+        };
+
+        print_localization(*result.localization_);
+
+        std::cout << "\ntrying to merge journeys:\nprefix:\n";
+        print_compact_journey(sched, journey_prefix);
+        std::cout << "\nsuffix:\n";
+        print_compact_journey(sched, alt->compact_journey_);
+
+        std::cout << "\ntrips:" << std::endl;
+        for (auto const& leg : old_journey.legs()) {
+          std::cout << motis::debug::trip_with_sections{sched,
+                                                        get_trip(sched,
+                                                                 leg.trip_idx_)}
+                    << std::endl;
         }
+
+        auto const current_time =
+            unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+        auto const search_time = static_cast<time>(current_time + 15);
+
+        auto const reachability = get_reachability(uv, old_journey);
+        std::cout << "reachability: ok=" << reachability.ok_
+                  << ", status=" << reachability.status_ << "\n";
+        for (auto const& rt : reachability.reachable_trips_) {
+          std::cout << "  trip: "
+                    << motis::debug::trip{sched, get_trip(sched, rt.trip_idx_)}
+                    << "\n"
+                    << "    enter: sched="
+                    << format_time(rt.enter_schedule_time_)
+                    << ", real=" << format_time(rt.enter_real_time_)
+                    << ", edge_idx=" << rt.enter_edge_idx_
+                    << "\n    exit: sched="
+                    << format_time(rt.exit_schedule_time_)
+                    << ", real=" << format_time(rt.exit_real_time_)
+                    << ", edge_idx=" << rt.exit_edge_idx_ << "\n";
+        }
+        for (auto const& rs : reachability.reachable_interchange_stations_) {
+          std::cout << "  station: " << sched.stations_.at(rs.station_)->name_
+                    << ", sched=" << format_time(rs.schedule_time_)
+                    << ", real=" << format_time(rs.real_time_) << std::endl;
+        }
+        if (reachability.first_unreachable_transfer_) {
+          auto const& bt = *reachability.first_unreachable_transfer_;
+          std::cout << "  first unreachable transfer: leg=" << bt.leg_index_
+                    << ", direction="
+                    << (bt.direction_ == transfer_direction_t::ENTER ? "ENTER"
+                                                                     : "EXIT")
+                    << ", curr_arr=" << format_time(bt.current_arrival_time_)
+                    << ", curr_dep=" << format_time(bt.current_departure_time_)
+                    << ", transfer_time=" << bt.required_transfer_time_
+                    << ", arr_canceled=" << bt.arrival_canceled_
+                    << ", dep_canceled=" << bt.departure_canceled_ << std::endl;
+        }
+
+        auto const loc_now = localize(sched, reachability, current_time);
+        auto const loc_prep = localize(sched, reachability, search_time);
+
+        std::cout << "\nlocalization @current_time "
+                  << format_time(current_time) << ":\n";
+        print_localization(loc_now);
+        std::cout << "\nlocalization @search_time " << format_time(search_time)
+                  << ":\n";
+        print_localization(loc_prep);
+        std::cout << std::endl;
+
         throw e;
       }
 

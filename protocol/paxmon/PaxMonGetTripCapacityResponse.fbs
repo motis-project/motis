@@ -3,6 +3,7 @@ include "base/Station.fbs";
 include "base/ServiceInfo.fbs";
 include "paxmon/PaxMonCapacitySource.fbs";
 include "paxmon/PaxMonCapacityType.fbs";
+include "paxmon/PaxMonTripCapacityStatus.fbs";
 
 namespace motis.paxmon;
 
@@ -17,12 +18,13 @@ table PaxMonCapacityData {
 
 table PaxMonVehicleCapacityInfo {
   uic: ulong;
-  found: bool;
+  uic_found: bool;
+  guessed: bool;
   baureihe: string;
   type_code: string;
   order: string;
   data: PaxMonCapacityData;
-  vehicle_groups: [ubyte];
+  capacity_source: PaxMonCapacitySource;
 }
 
 table PaxMonVehicleGroupInfo {
@@ -31,20 +33,21 @@ table PaxMonVehicleGroupInfo {
   destination: motis.Station;
   trip_uuid: string;
   primary_trip_id: motis.TripId;
+  capacity: [PaxMonCapacityData];
+  vehicles: [PaxMonVehicleCapacityInfo];
 }
 
 table PaxMonMergedTripCapacityInfo {
   trip: motis.TripId;
   service_info: motis.ServiceInfo;
 
-  trip_lookup_capacity: uint;
+  trip_lookup_capacity: PaxMonCapacityData;
   trip_lookup_capacity_source: PaxMonCapacitySource;
 
   trip_formation_capacity: PaxMonCapacityData;
+  trip_formation_capacity_source: PaxMonCapacitySource;
   trip_formation_found: bool;
-  trip_formation_all_vehicles_found: bool;
 
-  vehicles: [PaxMonVehicleCapacityInfo];
   vehicle_groups: [PaxMonVehicleGroupInfo];
 
   override: [PaxMonCapacityData];
@@ -59,7 +62,7 @@ table PaxMonSectionCapacityInfo {
   arrival_current_time: ulong;
 
   capacity_type: PaxMonCapacityType;
-  capacity: uint;
+  capacity: PaxMonCapacityData;
   capacity_source: PaxMonCapacitySource;
 
   merged_trips: [PaxMonMergedTripCapacityInfo];
@@ -67,6 +70,7 @@ table PaxMonSectionCapacityInfo {
 
 table PaxMonTripCapacityInfo {
   tsi: motis.TripServiceInfo;
+  status: PaxMonTripCapacityStatus;
   sections: [PaxMonSectionCapacityInfo];
 }
 
@@ -81,4 +85,7 @@ table PaxMonGetTripCapacityResponse {
   vehicle_capacity_map_size: ulong;
   trip_formation_map_size: ulong;
   capacity_override_map_size: ulong;
+  baureihe_capacity_map_size: ulong;
+  gattung_capacity_map_size: ulong;
+  vehicle_group_capacity_map_size: ulong;
 }

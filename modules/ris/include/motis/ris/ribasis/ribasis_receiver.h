@@ -8,6 +8,7 @@
 #include "motis/core/common/unixtime.h"
 
 #include "motis/ris/rabbitmq_config.h"
+#include "motis/ris/source_status.h"
 
 namespace motis::ris::ribasis {
 
@@ -17,7 +18,8 @@ struct receiver {
   using msg_handler_fn =
       std::function<void(receiver&, std::vector<amqp::msg>&&)>;
 
-  receiver(rabbitmq_config config, msg_handler_fn msg_handler);
+  receiver(rabbitmq_config config, source_status& status,
+           msg_handler_fn msg_handler);
 
   void stop();
 
@@ -34,6 +36,9 @@ private:
   std::vector<amqp::msg> buffer_;
   msg_handler_fn msg_handler_;
   std::string queue_id_;
+
+public:
+  source_status& status_;
 };
 
 }  // namespace motis::ris::ribasis

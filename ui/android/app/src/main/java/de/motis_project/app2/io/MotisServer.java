@@ -6,11 +6,9 @@ import com.google.flatbuffers.Table;
 
 import java.util.Date;
 
-import de.motis_project.app2.intermodal.IntermodalQuery;
 import de.motis_project.app2.io.error.DisconnectedException;
 import de.motis_project.app2.io.error.MotisErrorException;
 import de.motis_project.app2.io.error.UnexpectedMessageTypeException;
-import de.motis_project.app2.ppr.query.PPRQuery;
 import motis.Message;
 import motis.MotisError;
 import motis.MsgContent;
@@ -160,30 +158,5 @@ public class MotisServer extends Server {
                 MessageBuilder.scheduleInfo(id),
                 MsgContent.LookupScheduleInfoResponse,
                 new LookupScheduleInfoResponse(), id));
-    }
-
-    public Observable<FootRoutingResponse> pprRoute(PPRQuery query) {
-        final int id = ++nextMsgId;
-        return Observable.create(new ResponseSubscription<>(
-                MessageBuilder.pprRoute(
-                        id, query),
-                MsgContent.FootRoutingResponse,
-                new FootRoutingResponse(),
-                id));
-    }
-
-    public Observable<RoutingResponse> intermodalRoute(IntermodalQuery query,
-                                                       Date intervalBegin, Date intervalEnd,
-                                                       boolean extendIntervalEarlier,
-                                                       boolean extendIntervalLater,
-                                                       int minConnectionCount) {
-        final int id = ++nextMsgId;
-        return Observable.create(new ResponseSubscription<>(
-                MessageBuilder.intermodalRoute(
-                        id, query, intervalBegin, intervalEnd,
-                        extendIntervalEarlier, extendIntervalLater, minConnectionCount),
-                MsgContent.RoutingResponse,
-                new RoutingResponse(),
-                id));
     }
 }

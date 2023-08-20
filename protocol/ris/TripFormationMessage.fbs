@@ -6,6 +6,7 @@ namespace motis.ris;
 table HalfTripId {
   id: TripId; // secondary values not set/ignored
   uuid: string;
+  category: string;
 }
 
 table VehicleInfo {
@@ -31,7 +32,10 @@ table TripFormationSection {
   vehicle_groups: [VehicleGroup];
 }
 
+enum TripFormationMessageType : byte {Schedule, Preview, Is}
+
 table TripFormationMessage {
   trip_id: HalfTripId;
+  message_type: TripFormationMessageType;
   sections: [TripFormationSection];
 }

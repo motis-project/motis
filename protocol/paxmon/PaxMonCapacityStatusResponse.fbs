@@ -1,0 +1,34 @@
+namespace motis.paxmon;
+
+table PaxMonCapacityStats {
+  tracked: uint;
+  trip_formation: uint;
+  capacity_for_all_sections: uint;
+  capacity_for_some_sections: uint;
+}
+
+table PaxMonCategoryCapacityStats {
+  category: string (key);
+  service_class: ubyte;
+
+  stats: PaxMonCapacityStats;
+}
+
+table PaxMonProviderInfo {
+  short_name: string;
+  long_name: string;
+  full_name: string;
+}
+
+table PaxMonProviderCapacityStats {
+  provider: string (key);
+  provider_info: PaxMonProviderInfo;
+
+  stats: PaxMonCapacityStats;
+  by_category: [PaxMonCategoryCapacityStats];
+}
+
+table PaxMonCapacityStatusResponse {
+  all_trips: PaxMonCapacityStats;
+  by_provider: [PaxMonProviderCapacityStats];
+}

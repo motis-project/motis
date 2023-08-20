@@ -23,15 +23,15 @@ import {
 } from "@/data/measures";
 import { scheduleAtom } from "@/data/multiverse";
 
-import classNames from "@/util/classNames";
-
 import TripPicker from "@/components/inputs/TripPicker";
 
-export type RtCancelMeasureEditorProps = {
+import { cn } from "@/lib/utils";
+
+export interface RtCancelMeasureEditorProps {
   measureAtom: PrimitiveAtom<MeasureUnion>;
   closeEditor: () => void;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
-};
+}
 
 const labelClass = "font-semibold";
 
@@ -43,9 +43,9 @@ function RtCancelMeasureEditor({
   const dataAtom = useMemo(
     () =>
       focusAtom(measureAtom, (optic) =>
-        optic.guard(isRtCancelMeasureU).prop("data")
+        optic.guard(isRtCancelMeasureU).prop("data"),
       ),
-    [measureAtom]
+    [measureAtom],
   );
   const [data, setData] = useAtom(dataAtom);
   const queryClient = useQueryClient();
@@ -58,7 +58,7 @@ function RtCancelMeasureEditor({
   const getSchedule = useAtomCallback(
     useCallback((get) => {
       return get(scheduleAtom);
-    }, [])
+    }, []),
   );
 
   const setTrip = async (tsi: TripServiceInfo | undefined) => {
@@ -66,17 +66,17 @@ function RtCancelMeasureEditor({
       return { ...d, trip: tsi };
     });
     if (tsi) {
-      const schedule = await getSchedule();
+      const schedule = getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
       const data = await queryClient.fetchQuery(
         lookupQueryKeys.riBasis(lookupReq),
         () => sendLookupRiBasisRequest(lookupReq),
-        { staleTime: 1000 }
+        { staleTime: 1000 },
       );
       console.log(`received ri basis: ${data.trips.length} trips`);
       const requestedTripId = JSON.stringify(tsi.trip);
       const tripData = data.trips.filter(
-        (t) => JSON.stringify(t.trip_id) === requestedTripId
+        (t) => JSON.stringify(t.trip_id) === requestedTripId,
       );
       if (tripData.length === 1) {
         setSelectedTrip(requestedTripId);
@@ -85,9 +85,9 @@ function RtCancelMeasureEditor({
           return {
             ...d,
             original_ribasis: fahrtData,
-            canceled_stops: Array(fahrtData.allFahrtabschnitt.length + 1).fill(
-              false
-            ),
+            canceled_stops: Array<boolean>(
+              fahrtData.allFahrtabschnitt.length + 1,
+            ).fill(false),
             allow_reroute: data.trips.length === 1,
           };
         });
@@ -100,7 +100,7 @@ function RtCancelMeasureEditor({
   useEffect(() => {
     if (!data.original_ribasis && data.trip) {
       setTrip(data.trip).catch((err) =>
-        console.log("RtCancelMeasureEditor init failed:", err)
+        console.log("RtCancelMeasureEditor init failed:", err),
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -154,13 +154,13 @@ function getStops(ribasis: RiBasisFahrtData | undefined): StopInfo[] {
   return stops;
 }
 
-type StopListEditorProps = {
+interface StopListEditorProps {
   data: RtCancelMeasureData;
   setData: React.Dispatch<React.SetStateAction<RtCancelMeasureData>>;
   closeEditor: () => void;
   measureAtom: PrimitiveAtom<MeasureUnion>;
   deleteMeasure: (measureAtom: PrimitiveAtom<MeasureUnion>) => void;
-};
+}
 
 function StopListEditor({
   data,
@@ -171,7 +171,7 @@ function StopListEditor({
 }: StopListEditorProps): JSX.Element {
   const stops = useMemo(
     () => getStops(data.original_ribasis),
-    [data.original_ribasis]
+    [data.original_ribasis],
   );
 
   const allCanceled = data.canceled_stops.every((c) => c);
@@ -184,7 +184,7 @@ function StopListEditor({
         return { ...d, canceled_stops: cs };
       });
     },
-    [setData]
+    [setData],
   );
 
   const toggleAll = useCallback(() => {
@@ -192,7 +192,7 @@ function StopListEditor({
       const current = d.canceled_stops.every((c) => c);
       return {
         ...d,
-        canceled_stops: Array(d.canceled_stops.length).fill(!current),
+        canceled_stops: Array<boolean>(d.canceled_stops.length).fill(!current),
       };
     });
   }, [setData]);
@@ -227,9 +227,7 @@ function StopListEditor({
             onChange={toggleAll}
             className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
           />
-          <span className={classNames(allCanceled && "line-through")}>
-            Alle Halte
-          </span>
+          <span className={cn(allCanceled && "line-through")}>Alle Halte</span>
         </label>
       </div>
       <div className="flex flex-col gap-2">
@@ -242,7 +240,7 @@ function StopListEditor({
                 onChange={() => toggleStop(idx)}
                 className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
               />
-              <span className={classNames(canceled && "line-through")}>
+              <span className={cn(canceled && "line-through")}>
                 {stop?.stop?.bezeichnung}
               </span>
             </label>

@@ -1,0 +1,42 @@
+namespace motis.paxmon;
+
+table PaxMonDetailedTripCapacityStats {
+  category: string (key);
+  service_class: ubyte;
+
+  tracked: uint;
+
+  full_data: uint;
+  partial_data: uint;
+  capacity_for_all_sections: uint;
+
+  trip_formation_data_found: uint;
+
+  no_formation_data_at_all: uint;
+  no_formation_data_some_sections_some_merged: uint;
+  no_formation_data_some_sections_all_merged: uint;
+
+  no_vehicles_found_at_all: uint;
+  no_vehicles_found_some_sections: uint;
+  some_vehicles_not_found_some_sections: uint;
+
+  trips_using_vehicle_uics: uint;
+  trips_using_only_vehicle_uics: uint;
+  trips_using_vehicle_groups: uint;
+  trips_using_baureihe: uint;
+  trips_using_type_code: uint;
+}
+
+table PaxMonMissingVehicleInfo {
+  baureihe: string;
+  type_code: string;
+  count: uint;
+}
+
+table PaxMonDetailedCapacityStatusResponse {
+  all_trips: PaxMonDetailedTripCapacityStats;
+  by_category: [PaxMonDetailedTripCapacityStats];
+
+  missing_vehicle_infos: [PaxMonMissingVehicleInfo];
+  uics_not_found: [ulong];
+}

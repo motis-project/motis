@@ -1,6 +1,6 @@
 package de.motis_project.app2;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

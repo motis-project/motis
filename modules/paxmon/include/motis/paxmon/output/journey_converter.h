@@ -15,7 +15,7 @@ struct journey_converter {
   void write_journey(journey const& j, std::uint64_t primary_id,
                      std::uint64_t secondary_id = 0, std::uint16_t pax = 1);
 
-  csv_writer writer_;
+  file_csv_writer writer_;
 };
 
 void for_each_leg(journey const& j,

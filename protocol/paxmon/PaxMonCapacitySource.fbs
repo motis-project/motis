@@ -1,11 +1,17 @@
 namespace motis.paxmon;
 
 enum PaxMonCapacitySource : byte {
+  FormationVehicles,
+  FormationVehicleGroups,
+  FormationBaureihe,
+  FormationGattung,
   TripExactMatch,
   TripPrimaryIdMatch,
   TrainNrAndStations,
   TrainNr,
   Category,
   Class,
+  Override,
+  Unlimited,
   Unknown
 }

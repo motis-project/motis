@@ -22,8 +22,10 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
-import { getCapacitySourceTooltip } from "@/util/capacitySource";
-import classNames from "@/util/classNames";
+import {
+  getCapacitySourceTooltip,
+  isExactCapacitySource,
+} from "@/util/capacitySource";
 import { SectionLoadColors } from "@/util/colors";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
@@ -31,9 +33,11 @@ import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
 import TripOptimization from "@/components/trips/TripOptimization";
 import TripSectionDetails from "@/components/trips/TripSectionDetails";
 
-type TripRouteProps = {
+import { cn } from "@/lib/utils";
+
+interface TripRouteProps {
   tripId: TripId;
-};
+}
 
 function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
@@ -50,7 +54,7 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
           : undefined;
       },
-    }
+    },
   );
 
   const setMostRecentlySelectedTrip = useSetAtom(mostRecentlySelectedTripAtom);
@@ -71,15 +75,15 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   const maxPax = edges.reduce((max, ef) => Math.max(max, ef.dist.max), 0);
   const maxExpected = edges.reduce(
     (max, ef) => Math.max(max, ef.expected_passengers),
-    0
+    0,
   );
   const maxCapacity = edges.reduce(
     (max, ef) => (ef.capacity ? Math.max(max, ef.capacity) : max),
-    0
+    0,
   );
   const maxVal = Math.max(maxPax, maxExpected, maxCapacity);
   const missingExactCapacityInfo = edges.some(
-    (eli) => eli.capacity_source !== "TripExactMatch"
+    (eli) => !isExactCapacitySource(eli.capacity_source),
   );
 
   const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
@@ -134,14 +138,14 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   );
 }
 
-type TripSectionProps = {
+interface TripSectionProps {
   tripId: TripId;
   section: PaxMonEdgeLoadInfo;
   index: number;
   sectionCount: number;
   maxVal: number;
   showCapacitySource: boolean;
-};
+}
 
 function TripSection({
   tripId,
@@ -175,9 +179,9 @@ function TripSection({
                 {formatTime(section.departure_schedule_time)}
               </span>
               <span
-                className={classNames(
+                className={cn(
                   "w-1/2",
-                  departureDelayed ? "text-red-600" : "text-green-600"
+                  departureDelayed ? "text-red-600" : "text-green-600",
                 )}
               >
                 {formatTime(section.departure_current_time)}
@@ -193,9 +197,9 @@ function TripSection({
                 {formatTime(section.arrival_schedule_time)}
               </span>
               <span
-                className={classNames(
+                className={cn(
                   "w-1/2",
-                  arrivalDelayed ? "text-red-600" : "text-green-600"
+                  arrivalDelayed ? "text-red-600" : "text-green-600",
                 )}
               >
                 {formatTime(section.arrival_current_time)}
@@ -209,7 +213,7 @@ function TripSection({
         <div
           className="w-10 pt-1 flex flex-col items-center"
           title={`Überlastungswahrscheinlichkeit: ${formatPercent(
-            section.prob_over_capacity
+            section.prob_over_capacity,
           )}`}
         >
           {section.prob_over_capacity >= 0.01 ? (
@@ -237,7 +241,7 @@ function TripSection({
             className="w-7 pt-3 flex justify-center"
             title={getCapacitySourceTooltip(section.capacity_source)}
           >
-            {section.capacity_source !== "TripExactMatch" ? (
+            {!isExactCapacitySource(section.capacity_source) ? (
               <QuestionMarkCircleIcon className="w-5 h-5 fill-db-cool-gray-500" />
             ) : null}
           </div>

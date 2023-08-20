@@ -10,8 +10,9 @@ import {
   PaxMonPdfEntry,
 } from "@/api/protocol/motis/paxmon";
 
-import classNames from "@/util/classNames";
 import { SectionLoadColors } from "@/util/colors";
+
+import { cn } from "@/lib/utils";
 
 export type SectionLoadGraphPlotType = "SimpleBox" | "Violin" | "Box";
 
@@ -22,14 +23,14 @@ const defaultMargin = {
   left: 10,
 };
 
-type SectionLoadGraphProps = {
+interface SectionLoadGraphProps {
   section: PaxMonEdgeLoadInfo;
   width: number;
   height: number;
   maxVal?: number | undefined;
   margin?: typeof defaultMargin;
   plotType?: SectionLoadGraphPlotType;
-};
+}
 
 function SectionLoadGraph({
   section,
@@ -99,7 +100,7 @@ function SectionLoadGraph({
         width={x200 - x120}
         height={h}
         fill={SectionLoadColors.Bg_120_200}
-      />
+      />,
     );
     if (x200 < width) {
       bgSections.push(
@@ -110,7 +111,7 @@ function SectionLoadGraph({
           width={Math.max(0, margin.left + innerWidth - x200)}
           height={h}
           fill={SectionLoadColors.Bg_200_plus}
-        />
+        />,
       );
     }
   } else {
@@ -122,7 +123,7 @@ function SectionLoadGraph({
         width={innerWidth}
         height={innerHeight}
         fill={SectionLoadColors.Bg_unknown}
-      />
+      />,
     );
   }
 
@@ -317,9 +318,7 @@ function TooltipRow({ pax, section, children, ...rest }: TooltipRowProps) {
   return (
     <tr {...rest}>
       <td>{children}</td>
-      <td
-        className={classNames("text-right", getTooltipTextClass(pax, section))}
-      >
+      <td className={cn("text-right", getTooltipTextClass(pax, section))}>
         {pax}
       </td>
     </tr>
@@ -346,7 +345,7 @@ function getTooltipTextClass(pax: number, section: PaxMonEdgeLoadInfo): string {
 }
 
 function ResponsiveSectionLoadGraph(
-  props: Omit<SectionLoadGraphProps, "width" | "height">
+  props: Omit<SectionLoadGraphProps, "width" | "height">,
 ): JSX.Element {
   return (
     <ParentSize>

@@ -1,12 +1,11 @@
 import { Listbox, Transition } from "@headlessui/react";
 import {
-  AdjustmentsVerticalIcon,
   ArrowPathIcon,
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { add, fromUnixTime, getUnixTime, max, sub } from "date-fns";
+import { add, getUnixTime } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -26,18 +25,22 @@ import { sendPaxMonFilterTripsRequest } from "@/api/paxmon";
 import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
-import classNames from "@/util/classNames";
-import { formatISODate, formatTime } from "@/util/dateFormat";
+import { formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
+import { getScheduleRange } from "@/util/scheduleRange";
 
+import DatePicker from "@/components/inputs/DatePicker";
+import ServiceClassFilter from "@/components/inputs/ServiceClassFilter";
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
-type LabeledFilterOption = {
+import { cn } from "@/lib/utils";
+
+interface LabeledFilterOption {
   option: PaxMonFilterTripsSortOrder;
   label: string;
-};
+}
 
-const sortOptions: Array<LabeledFilterOption> = [
+const sortOptions: LabeledFilterOption[] = [
   { option: "MaxLoad", label: "Züge sortiert nach Auslastung (prozentual)" },
   {
     option: "MostCritical",
@@ -60,10 +63,10 @@ const sortOptions: Array<LabeledFilterOption> = [
 function getFilterTripsRequest(
   universe: number,
   sortOrder: PaxMonFilterTripsSortOrder,
-  selectedDate: Date | undefined,
+  selectedDate: Date | undefined | null,
   filterTrainNrs: number[],
   pageParam: number,
-  serviceClassFilter: number[]
+  serviceClassFilter: number[],
 ): PaxMonFilterTripsRequest {
   return {
     universe,
@@ -84,6 +87,9 @@ function getFilterTripsRequest(
     filter_train_nrs: filterTrainNrs,
     filter_by_service_class: true,
     filter_service_classes: serviceClassFilter,
+    filter_by_capacity_status: false,
+    filter_has_trip_formation: false,
+    filter_has_capacity_for_all_sections: false,
   };
 }
 
@@ -92,7 +98,7 @@ function TripList(): JSX.Element {
   const [universe] = useAtom(universeAtom);
 
   const [selectedSort, setSelectedSort] = useState(sortOptions[0]);
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [trainNrFilter, setTrainNrFilter] = useState("");
   const [serviceClassFilter, setServiceClassFilter] = useState([
     ServiceClass.ICE,
@@ -135,8 +141,8 @@ function TripList(): JSX.Element {
         selectedSort.option,
         selectedDate,
         filterTrainNrs,
-        pageParam,
-        serviceClassFilter
+        pageParam as number,
+        serviceClassFilter,
       );
       return sendPaxMonFilterTripsRequest(req);
     },
@@ -146,14 +152,9 @@ function TripList(): JSX.Element {
       refetchOnWindowFocus: false,
       keepPreviousData: true,
       staleTime: 60000,
-    }
+      enabled: selectedDate !== undefined,
+    },
   );
-
-  const minDate = scheduleInfo ? fromUnixTime(scheduleInfo.begin) : undefined;
-  const maxDate =
-    scheduleInfo && minDate
-      ? max([minDate, sub(fromUnixTime(scheduleInfo.end), { days: 1 })])
-      : undefined;
 
   const loadMore = useCallback(() => {
     if (hasNextPage) {
@@ -166,7 +167,12 @@ function TripList(): JSX.Element {
     : [];
   const totalNumberOfTrips = data?.pages[0]?.total_matching_trips;
 
-  const selectedTripId = params["tripId"];
+  const selectedTripId = params.tripId;
+
+  const scheduleRange = getScheduleRange(scheduleInfo);
+  if (selectedDate === undefined && scheduleInfo) {
+    setSelectedDate(scheduleRange.closestDate);
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -193,27 +199,27 @@ function TripList(): JSX.Element {
                   key={opt.option}
                   value={opt}
                   className={({ active }) =>
-                    classNames(
+                    cn(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
                   }
                 >
                   {({ selected, active }) => (
                     <>
                       <span
-                        className={classNames(
+                        className={cn(
                           "block truncate",
-                          selected ? "font-medium" : "font-normal"
+                          selected ? "font-medium" : "font-normal",
                         )}
                       >
                         {opt.label}
                       </span>
                       {selected ? (
                         <span
-                          className={classNames(
+                          className={cn(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
-                            active ? "text-amber-600" : "text-amber-600"
+                            active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
                           <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -231,15 +237,11 @@ function TripList(): JSX.Element {
         <div className="">
           <label>
             <span className="text-sm">Datum</span>
-            <input
-              type="date"
-              min={minDate ? formatISODate(minDate) : undefined}
-              max={maxDate ? formatISODate(maxDate) : undefined}
-              value={selectedDate ? formatISODate(selectedDate) : ""}
-              onChange={(e) =>
-                setSelectedDate(e.target.valueAsDate ?? undefined)
-              }
-              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            <DatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
+              min={scheduleRange.firstDay}
+              max={scheduleRange.lastDay}
             />
           </label>
         </div>
@@ -255,9 +257,10 @@ function TripList(): JSX.Element {
           </label>
         </div>
         <div className="flex flex-col justify-end">
-          <TripListOptions
-            serviceClassFilter={serviceClassFilter}
-            setServiceClassFilter={setServiceClassFilter}
+          <ServiceClassFilter
+            selectedServiceClasses={serviceClassFilter}
+            setSelectedServiceClasses={setServiceClassFilter}
+            popupPosition="right-0"
           />
         </div>
       </div>
@@ -294,102 +297,10 @@ function TripList(): JSX.Element {
   );
 }
 
-type LabeledServiceClass = {
-  sc: ServiceClass;
-  label: string;
-};
-
-const serviceClassOptions: Array<LabeledServiceClass> = [
-  {
-    sc: ServiceClass.ICE,
-    label: "Hochgeschwindigkeitszüge",
-  },
-  { sc: ServiceClass.IC, label: "Fernzüge" },
-  { sc: ServiceClass.COACH, label: "Fernbusse" },
-  { sc: ServiceClass.N, label: "Nachtzüge" },
-  { sc: ServiceClass.RE, label: "Regional-Express" },
-  { sc: ServiceClass.RB, label: "Regionalbahnen" },
-  { sc: ServiceClass.S, label: "S-Bahnen" },
-  { sc: ServiceClass.U, label: "U-Bahnen" },
-  { sc: ServiceClass.STR, label: "Straßenbahnen" },
-  { sc: ServiceClass.BUS, label: "Busse" },
-  { sc: ServiceClass.SHIP, label: "Schiffe" },
-  { sc: ServiceClass.AIR, label: "Flugzeuge" },
-  { sc: ServiceClass.OTHER, label: "Sonstige" },
-];
-
-type TripListOptionsProps = {
-  serviceClassFilter: number[];
-  setServiceClassFilter: React.Dispatch<React.SetStateAction<number[]>>;
-};
-
-function TripListOptions({
-  serviceClassFilter,
-  setServiceClassFilter,
-}: TripListOptionsProps) {
-  return (
-    <Listbox
-      value={serviceClassFilter}
-      onChange={setServiceClassFilter}
-      multiple
-    >
-      <div className="relative">
-        <Listbox.Button className="p-2 mb-0.5 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
-          <AdjustmentsVerticalIcon className="w-5 h-5" aria-hidden="true" />
-        </Listbox.Button>
-        <Transition
-          as={Fragment}
-          leave="transition ease-in duration-100"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <Listbox.Options className="absolute right-0 z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-            {serviceClassOptions.map((opt) => (
-              <Listbox.Option
-                key={opt.sc}
-                value={opt.sc}
-                className={({ active }) =>
-                  classNames(
-                    "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900"
-                  )
-                }
-              >
-                {({ selected, active }) => (
-                  <>
-                    <span
-                      className={classNames(
-                        "block truncate",
-                        selected ? "font-medium" : "font-normal"
-                      )}
-                    >
-                      {opt.label}
-                    </span>
-                    {selected ? (
-                      <span
-                        className={classNames(
-                          "absolute inset-y-0 left-0 flex items-center pl-3",
-                          active ? "text-amber-600" : "text-amber-600"
-                        )}
-                      >
-                        <CheckIcon className="w-5 h-5" aria-hidden="true" />
-                      </span>
-                    ) : null}
-                  </>
-                )}
-              </Listbox.Option>
-            ))}
-          </Listbox.Options>
-        </Transition>
-      </div>
-    </Listbox>
-  );
-}
-
-type TripListEntryProps = {
+interface TripListEntryProps {
   ti: PaxMonFilteredTripInfo;
   selectedTripId: string | undefined;
-};
+}
 
 function TripListEntry({
   ti,
@@ -415,7 +326,7 @@ function TripListEntry({
   if (critSections.length > 0) {
     const firstCritSection = critSections[0];
     const mostCritSection = critSections.sort(
-      (a, b) => b.maxPercent - a.maxPercent
+      (a, b) => b.maxPercent - a.maxPercent,
     )[0];
 
     criticalInfo = (
@@ -435,11 +346,11 @@ function TripListEntry({
     <div className="pr-1 pb-3">
       <Link
         to={`/trips/${encodeURIComponent(JSON.stringify(ti.tsi.trip))}`}
-        className={classNames(
+        className={cn(
           "block p-1 rounded",
           isSelected
             ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
-            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300"
+            : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
         <div className="flex gap-4 pb-1">
@@ -467,17 +378,17 @@ function TripListEntry({
   );
 }
 
-type SectionOverCapInfo = {
+interface SectionOverCapInfo {
   edge: PaxMonEdgeLoadInfo;
   maxPax: number;
   maxPercent: number;
   maxOverCap: number;
-};
+}
 
-type SectionOverCapProps = {
+interface SectionOverCapProps {
   label: string;
   section: SectionOverCapInfo;
-};
+}
 
 function SectionOverCap({ label, section }: SectionOverCapProps) {
   return (

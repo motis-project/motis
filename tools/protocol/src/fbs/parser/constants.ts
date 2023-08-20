@@ -21,14 +21,14 @@ import {
 export const ident: Parser<string> = regex(/^[a-zA-Z_][a-zA-Z0-9_]*/);
 
 export const identWithOptionalNamespace: Parser<string> = sepBy1(char("."))(
-  ident
+  ident,
 ).map((x) => x.join("."));
 
 const booleanConstant = choice([str("true"), str("false")]);
 export const booleanLiteral: Parser<AstBooleanLiteral> = booleanConstant.map(
   (x) => {
     return { t: "boolean", value: x === "true" };
-  }
+  },
 );
 
 const sign = regex(/^[-+]?/);
@@ -36,11 +36,11 @@ const sign = regex(/^[-+]?/);
 const decIntegerConstant = regex(/^[-+]?[0-9]+/).map(Number.parseInt);
 
 const hexIntegerConstant = regex(/^[-+]?0[xX][0-9a-fA-F]+/).map(
-  Number.parseInt
+  Number.parseInt,
 );
 
 const decFloatConstant = regex(
-  /^[-+]?((\.\d+)|(\d+\.\d*)|(\d+))([eE][-+]?\d+)?/
+  /^[-+]?((\.\d+)|(\d+\.\d*)|(\d+))([eE][-+]?\d+)?/,
 ).map(Number.parseFloat);
 
 const specialFloatConstant = sequenceOf([
@@ -61,7 +61,7 @@ export const numericConstant = choice([floatConstant, integerConstant]);
 export const numericLiteral: Parser<AstNumericLiteral> = numericConstant.map(
   (x) => {
     return { t: "numeric", value: x };
-  }
+  },
 );
 
 export const scalar: Parser<AstScalarLiteral> = choice([
@@ -73,7 +73,7 @@ export const scalarOrRefLiteral: Parser<AstScalarLiteral | AstRefLiteral> =
   choice([
     scalar,
     ident.map((x) => {
-      return { t: "ref", value: x };
+      return { t: "ref" as const, value: x };
     }),
   ]);
 
@@ -88,7 +88,7 @@ export const stringConstant = sequenceOf([
 export const stringLiteral: Parser<AstStringLiteral> = stringConstant.map(
   (x) => {
     return { t: "string", value: x };
-  }
+  },
 );
 
 export const literal: Parser<AstLiteral> = choice([scalar, stringLiteral]);

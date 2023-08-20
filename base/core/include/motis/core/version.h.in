@@ -10,11 +10,11 @@
 
 namespace motis {
 
-static std::string short_version() {
+inline std::string short_version() {
   return MOTIS_GIT_TAG;
 }
 
-static std::string long_version() {
+inline std::string long_version() {
   std::stringstream ss;
   ss << MOTIS_GIT_TAG
      <<" (git-ref: " << MOTIS_GIT_REF

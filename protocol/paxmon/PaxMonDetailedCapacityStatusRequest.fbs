@@ -1,0 +1,15 @@
+include "base/Interval.fbs";
+include "paxmon/PaxMonFilterTripsTimeFilter.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonDetailedCapacityStatusRequest {
+  universe: uint;
+
+  // filter trips by time
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
+
+  include_missing_vehicle_infos: bool;
+  include_uics_not_found: bool;
+}

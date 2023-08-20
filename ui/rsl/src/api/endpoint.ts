@@ -22,11 +22,14 @@ function getApiEndpointFromUrl(params: URLSearchParams) {
     } else {
       apiEndpoint = motisParam;
     }
+  } else if (apiEndpoint.endsWith("/rsl/")) {
+    apiEndpoint = apiEndpoint.replace(/rsl\/$/, "");
   }
 
   if (!apiEndpoint.endsWith("/")) {
     apiEndpoint += "/";
   }
+
   return apiEndpoint;
 }
 

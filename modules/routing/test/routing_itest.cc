@@ -26,8 +26,8 @@ struct routing_itest : public motis_instance_test {
       : motis::test::motis_instance_test(
             add_tag(dataset_opt),
             {"routing", "csa", "raptor", "tripbased", "nigiri"},
-            {"--tripbased.use_data_file=false",
-             "--nigiri.first_day=2015-11-24"}) {}
+            {"--tripbased.use_data_file=false", "--nigiri.lookup=false",
+             "--nigiri.routing=false", "--nigiri.first_day=2015-11-24"}) {}
 
   msg_ptr make_routing_request(std::string const& target) {
     message_creator fbb;

@@ -38,7 +38,7 @@ function UniverseControl(): JSX.Element {
       setUniverse(uv.id);
       setSchedule(uv.schedule);
     },
-    [setUniverse, setSchedule]
+    [setUniverse, setSchedule],
   );
 
   const keepAliveRequest: PaxMonKeepAliveRequest = {
@@ -51,7 +51,7 @@ function UniverseControl(): JSX.Element {
         console.log(`universes expired: ${data.expired.join(", ")}`);
         const currentUniverse = get(universeAtom);
         const newUniverses = get(universesAtom).filter(
-          (uv) => uv.id === 0 || !data.expired.includes(uv.id)
+          (uv) => uv.id === 0 || !data.expired.includes(uv.id),
         );
         if (currentUniverse !== 0 && data.expired.includes(currentUniverse)) {
           set(universeAtom, 0);
@@ -59,7 +59,7 @@ function UniverseControl(): JSX.Element {
         }
         set(universesAtom, newUniverses);
       }
-    }, [])
+    }, []),
   );
   useQuery(
     queryKeys.keepAlive(keepAliveRequest),
@@ -70,7 +70,7 @@ function UniverseControl(): JSX.Element {
       refetchIntervalInBackground: true,
       notifyOnChangeProps: [],
       onSuccess: keepAliveHandler,
-    }
+    },
   );
 
   const forkMutation = useMutation(
@@ -93,7 +93,7 @@ function UniverseControl(): JSX.Element {
         ]);
         switchTo(newUv);
       },
-    }
+    },
   );
 
   const destroyMutation = useMutation(
@@ -103,13 +103,13 @@ function UniverseControl(): JSX.Element {
         if (error) {
           console.log(
             `error while trying to destroy universe ${variables}:`,
-            error
+            error,
           );
         }
         setUniverses(universes.filter((u) => u.id != variables));
         switchTo(universes[0]);
       },
-    }
+    },
   );
 
   const requestFromServerHandler = useAtomCallback(
@@ -128,7 +128,7 @@ function UniverseControl(): JSX.Element {
         set(universeAtom, newUniverses[0].id);
         set(scheduleAtom, newUniverses[0].schedule);
       }
-    }, [])
+    }, []),
   );
 
   const requestFromServerMutation = useMutation(sendPaxMonGetUniversesRequest, {
@@ -136,7 +136,7 @@ function UniverseControl(): JSX.Element {
       if (error) {
         console.log(
           "error while trying to load list of universes from server:",
-          error
+          error,
         );
       } else if (data) {
         requestFromServerHandler(data);

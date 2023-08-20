@@ -13,19 +13,24 @@ import {
 import { usePaxMonGetTripCapacity } from "@/api/paxmon";
 
 import { universeAtom } from "@/data/multiverse";
+import { formatNumber } from "@/data/numberFormat";
 
+import { EMTPY_CAPACITY_DATA, addCapacityData } from "@/util/capacity";
 import {
   getCapacitySourceShortText,
   getCapacitySourceTooltip,
+  getFormationCapacitySourceShortText,
 } from "@/util/capacitySource";
-import classNames from "@/util/classNames";
 import { formatDate, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import Baureihe from "@/components/util/Baureihe";
 
-type CapacityInfoProps = {
+import { cn } from "@/lib/utils";
+
+interface CapacityInfoProps {
   tripId: TripId;
-};
+}
 
 function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
@@ -41,7 +46,7 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
       return (
         <div>
           Fehler beim Laden der Kapazitätsinformationen:{" "}
-          {error instanceof Error ? error.message : `${error}`}
+          {error instanceof Error ? error.message : `Unbekannter Fehler`}
         </div>
       );
     }
@@ -74,10 +79,17 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
       <div>
         <div>Verfügbare Kapazitätsdaten:</div>
         <div>
-          {data.vehicle_capacity_map_size} Fahrzeuge,{" "}
-          {data.trip_formation_map_size} Wagenreihungen,{" "}
-          {data.trip_capacity_map_size} Zugkapazitäten,{" "}
-          {data.category_capacity_map_size} Kapazitäten für Zugkategorien
+          Basierend auf Wagenreihungen:{" "}
+          {formatNumber(data.trip_formation_map_size)} Wagenreihungen,{" "}
+          {formatNumber(data.vehicle_capacity_map_size)} Fahrzeuge,{" "}
+          {formatNumber(data.vehicle_group_capacity_map_size)} Fahrzeuggruppen,{" "}
+          {formatNumber(data.gattung_capacity_map_size)} Fahrzeuggattungen,{" "}
+          {formatNumber(data.baureihe_capacity_map_size)} Baureihen
+        </div>
+        <div>
+          Basierend auf Fahrten: {formatNumber(data.trip_capacity_map_size)}{" "}
+          Zugkapazitäten, {formatNumber(data.category_capacity_map_size)}{" "}
+          Kapazitäten für Zugkategorien
         </div>
       </div>
     </div>
@@ -127,9 +139,9 @@ function SectionCapacityInfo({
               {formatTime(section.departure_schedule_time)}
             </span>
             <span
-              className={classNames(
+              className={cn(
                 "w-1/2",
-                departureDelayed ? "text-red-600" : "text-green-600"
+                departureDelayed ? "text-red-600" : "text-green-600",
               )}
             >
               {formatTime(section.departure_current_time)}
@@ -145,9 +157,9 @@ function SectionCapacityInfo({
               {formatTime(section.arrival_schedule_time)}
             </span>
             <span
-              className={classNames(
+              className={cn(
                 "w-1/2",
-                arrivalDelayed ? "text-red-600" : "text-green-600"
+                arrivalDelayed ? "text-red-600" : "text-green-600",
               )}
             >
               {formatTime(section.arrival_current_time)}
@@ -160,7 +172,7 @@ function SectionCapacityInfo({
       </div>
       <div className="w-20 flex flex-col items-center">
         <div className="font-semibold">
-          {section.capacity_type === "Known" ? section.capacity : "?"}
+          {section.capacity_type === "Known" ? section.capacity.seats : "?"}
         </div>
         <div
           className="text-xs"
@@ -203,7 +215,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         {has_trip_lookup && (
           <div className="flex gap-1 flex-wrap">
             <span className="font-semibold">Zugkapazität:</span>
-            <span>{mt.trip_lookup_capacity}</span>
+            <span>{mt.trip_lookup_capacity.seats}</span>
             <span
               title={getCapacitySourceTooltip(mt.trip_lookup_capacity_source)}
             >
@@ -216,8 +228,14 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             <div className="flex gap-1 flex-wrap">
               <span className="font-semibold">Kapazität aus Wagenreihung:</span>
               <span>{mt.trip_formation_capacity.seats}</span>
+              <span>
+                {`(Kapazitätsdaten: ${getFormationCapacitySourceShortText(
+                  mt.trip_formation_capacity_source,
+                  false,
+                )})`}
+              </span>
             </div>
-            <SectionVehicles mt={mt} />
+            <SectionVehicleGroups mt={mt} />
           </>
         )}
         {!has_capacity && <div>Keine Kapazitätsinformationen gefunden</div>}
@@ -226,10 +244,115 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
   );
 }
 
-function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
+function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
+  const capacitySum = mt.vehicle_groups.reduce(
+    (sum, vg) =>
+      vg.capacity.length === 1 ? addCapacityData(sum, vg.capacity[0]) : sum,
+    EMTPY_CAPACITY_DATA,
+  );
+
   return (
     <div>
-      <table>
+      <table className="mt-2">
+        <thead>
+          <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
+            <td className="px-2">Fahrzeuggruppe</td>
+            <td className="px-2">Zugnummer</td>
+            <td className="px-2">von</td>
+            <td className="px-2">bis</td>
+            <td className="px-2 text-center" title="Sitzplätze insgesamt">
+              Sitze
+            </td>
+            <td className="px-2 text-center" title="Sitzplätze 1. Klasse">
+              1. Kl
+            </td>
+            <td className=" text-center" title="Sitzplätze 2. Klasse">
+              2. Kl
+            </td>
+            <td className="px-2 text-center" title="Stehplätze">
+              Steh.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Zulässige Gesamtanzahl Reisender"
+            >
+              Zul.
+            </td>
+            <td
+              className="px-2 text-center"
+              title="Maximalkapazität (Zulässige Gesamtanzahl Reisender oder Anzahl Sitzplätze)"
+            >
+              Max.
+            </td>
+          </tr>
+        </thead>
+        <tbody>
+          {mt.vehicle_groups.map((vg) => (
+            <tr
+              key={vg.name}
+              className={cn(
+                vg.capacity.length === 1
+                  ? "text-green-600"
+                  : "text-db-cool-gray-500",
+              )}
+            >
+              <td className="px-2">{vg.name}</td>
+              <td className="px-2">{vg.primary_trip_id.train_nr}</td>
+              <td className="px-2">{vg.start.name}</td>
+              <td className="px-2">{vg.destination.name}</td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].seats : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].seats_1st : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].seats_2nd : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].standing : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].total_limit : 0}
+              </td>
+              <td className="px-2 text-center">
+                {vg.capacity.length === 1 ? vg.capacity[0].limit : 0}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-semibold border-t-2 border-db-cool-gray-300">
+            <td className="px-2" colSpan={4}></td>
+            <td className="px-2 text-center">{capacitySum.seats}</td>
+            <td className="px-2 text-center">{capacitySum.seats_1st}</td>
+            <td className="px-2 text-center">{capacitySum.seats_2nd}</td>
+            <td className="px-2 text-center">{capacitySum.standing}</td>
+            <td className="px-2 text-center">{capacitySum.total_limit}</td>
+            <td className="px-2 text-center">{capacitySum.limit}</td>
+            <td className="px-2"></td>
+          </tr>
+        </tfoot>
+      </table>
+      <div>
+        {mt.vehicle_groups.map((vg) => (
+          <VehicleGroup key={vg.name} vg={vg} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
+  const capacitySum = vg.vehicles.reduce(
+    (sum, v) => addCapacityData(sum, v.data),
+    EMTPY_CAPACITY_DATA,
+  );
+
+  return (
+    <div className="mt-2">
+      <div className="font-semibold">Fahrzeuggruppe {vg.name}:</div>
+      <table className="mt-2">
         <thead>
           <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
             <td className="px-2">Wagen</td>
@@ -260,28 +383,31 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
             >
               Max.
             </td>
-            <td className="px-2">Wagengruppen</td>
+            <td className="px-2 text-center">Quelle</td>
           </tr>
         </thead>
         <tbody>
-          {mt.vehicles.map((v) => (
-            <tr key={v.uic} className={classNames(!v.found && "text-red-500")}>
+          {vg.vehicles.map((v, idx) => (
+            <tr
+              key={idx}
+              className={cn(
+                v.guessed ? "text-fuchsia-500" : !v.uic_found && "text-red-500",
+              )}
+            >
               <td className="px-2">{v.order}</td>
               <td className="px-2">{v.type_code}</td>
               <td className="px-2">
                 <Baureihe baureihe={v.baureihe} />
               </td>
-              <td className="px-2">{v.uic}</td>
+              <td className="px-2">{v.uic != 0 ? v.uic : ""}</td>
               <td className="px-2 text-center">{v.data.seats}</td>
               <td className="px-2 text-center">{v.data.seats_1st}</td>
               <td className="px-2 text-center">{v.data.seats_2nd}</td>
               <td className="px-2 text-center">{v.data.standing}</td>
               <td className="px-2 text-center">{v.data.total_limit}</td>
               <td className="px-2 text-center">{v.data.limit}</td>
-              <td className="px-2">
-                {v.vehicle_groups
-                  .map((idx) => mt.vehicle_groups[idx].name)
-                  .join(", ")}
+              <td className="px-2 text-center">
+                {getFormationCapacitySourceShortText(v.capacity_source, true)}
               </td>
             </tr>
           ))}
@@ -289,57 +415,18 @@ function SectionVehicles({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         <tfoot>
           <tr className="font-semibold border-t-2 border-db-cool-gray-300">
             <td className="px-2" colSpan={4}></td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.seats}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.seats_1st}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.seats_2nd}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.standing}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.total_limit}
-            </td>
-            <td className="px-2 text-center">
-              {mt.trip_formation_capacity.limit}
-            </td>
+            <td className="px-2 text-center">{capacitySum.seats}</td>
+            <td className="px-2 text-center">{capacitySum.seats_1st}</td>
+            <td className="px-2 text-center">{capacitySum.seats_2nd}</td>
+            <td className="px-2 text-center">{capacitySum.standing}</td>
+            <td className="px-2 text-center">{capacitySum.total_limit}</td>
+            <td className="px-2 text-center">{capacitySum.limit}</td>
             <td className="px-2"></td>
           </tr>
         </tfoot>
       </table>
-      <div className="flex flex-col gap-2">
-        {mt.vehicle_groups.map((vg) => (
-          <VehicleGroup vg={vg} key={vg.name} />
-        ))}
-      </div>
     </div>
   );
-}
-
-function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
-  return (
-    <div>
-      Wagengruppe {vg.name}: Zug {vg.primary_trip_id.train_nr}, von{" "}
-      {vg.start.name} bis {vg.destination.name}
-    </div>
-  );
-}
-
-function Baureihe({ baureihe }: { baureihe: string }) {
-  const m = /^[ITR](\d{3})([0-9A-Z])$/.exec(baureihe);
-  if (m) {
-    return (
-      <span title={baureihe}>
-        {m[1]}.{m[2]}
-      </span>
-    );
-  } else {
-    return <span>{baureihe}</span>;
-  }
 }
 
 export default CapacityInfo;

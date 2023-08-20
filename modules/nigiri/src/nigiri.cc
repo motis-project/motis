@@ -1,5 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
+#include "boost/filesystem.hpp"
+
 #include "cista/memory_holder.h"
 
 #include "conf/date_time.h"
@@ -33,11 +35,31 @@
 #include "motis/nigiri/unixtime_conv.h"
 #include "utl/parser/split.h"
 
+namespace fbs = flatbuffers;
 namespace fs = std::filesystem;
 namespace mm = motis::module;
 namespace n = nigiri;
 
 namespace motis::nigiri {
+
+struct schedule_info {
+  schedule_info(std::string tag, cista::hash_t const hash, fs::path const& path)
+      : tag_{std::move(tag)}, sha1sum_{hash}, created_{get_created(path)} {}
+
+  static std::time_t get_created(fs::path const& p) {
+    return boost::filesystem::creation_time(p.string());
+  }
+
+  fbs::Offset<motis::lookup::LookupSchedule> to_fbs(
+      fbs::FlatBufferBuilder& fbb) const {
+    return lookup::CreateLookupSchedule(fbb, fbb.CreateString(tag_), sha1sum_,
+                                        created_);
+  }
+
+  std::string tag_;
+  cista::hash_t sha1sum_;
+  std::time_t created_;
+};
 
 struct nigiri::impl {
   impl() {
@@ -88,12 +110,16 @@ struct nigiri::impl {
   std::unique_ptr<guesser> guesser_;
   std::unique_ptr<railviz> railviz_;
   std::string initial_permalink_;
+  std::vector<schedule_info> schedules_;
+  cista::hash_t hash_{0U};
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(no_cache_, "no_cache", "disable timetable caching");
   param(adjust_footpaths_, "adjust_footpaths",
         "adjust footpaths if they are too fast for the distance");
+  param(merge_duplicates_, "match_duplicates",
+        "match and merge duplicate trips");
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
@@ -110,6 +136,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "list of GTFS-RT endpoints, format: tag|url|authorization");
   param(gtfsrt_paths_, "gtfsrt_paths",
         "list of GTFS-RT, format: tag|/path/to/file.pb");
+  param(gtfsrt_incremental_, "gtfsrt_incremental",
+        "true=incremental updates, false=forget all prev. RT updates");
 }
 
 nigiri::~nigiri() = default;
@@ -181,9 +209,12 @@ void nigiri::init(motis::module::registry& reg) {
                       b.create_and_finish(
                           MsgContent_LookupScheduleInfoResponse,
                           lookup::CreateLookupScheduleInfoResponse(
-                              b, b.CreateString(""),
+                              b, b.CreateString(fmt::to_string(impl_->hash_)),
                               to_motis_unixtime(tt.external_interval().from_),
-                              to_motis_unixtime(tt.external_interval().to_))
+                              to_motis_unixtime(tt.external_interval().to_),
+                              b.CreateVector(utl::to_vec(
+                                  impl_->schedules_,
+                                  [&](auto const& s) { return s.to_fbs(b); })))
                               .Union());
                       return make_msg(b);
                     },
@@ -245,7 +276,7 @@ void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
       return gtfsrt{impl_->tags_, config};
     });
     d.register_timer("RIS GTFS-RT Update",
-                     boost::posix_time::seconds{gtfsrt_update_interval_},
+                     boost::posix_time::seconds{gtfsrt_update_interval_sec_},
                      [&]() { update_gtfsrt(); }, {});
     update_gtfsrt();
   }
@@ -256,15 +287,20 @@ void nigiri::update_gtfsrt() {
 
   auto const futures = utl::to_vec(
       impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
-  auto rtt_copy =
-      std::make_shared<n::rt_timetable>(n::rt_timetable{*impl_->get_rtt()});
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  auto const rtt = gtfsrt_incremental_
+                       ? std::make_shared<n::rt_timetable>(
+                             n::rt_timetable{*impl_->get_rtt()})
+                       : std::make_shared<n::rt_timetable>(
+                             n::rt::create_rt_timetable(**impl_->tt_, today));
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
-    auto const tag = impl_->tags_.get_tag(endpoint.src());
+    auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
     auto stats = n::rt::statistics{};
     try {
-      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, endpoint.src(),
-                                       tag, f->val().body);
+      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
+                                       f->val().body);
     } catch (std::exception const& e) {
       stats.parser_error_ = true;
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
@@ -276,16 +312,12 @@ void nigiri::update_gtfsrt() {
     }
     statistics.emplace_back(stats);
   }
-  impl_->update_rtt(rtt_copy);
-  impl_->railviz_->update(rtt_copy);
+  impl_->update_rtt(rtt);
+  impl_->railviz_->update(rtt);
 
   for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
-    LOG(logging::info) << impl_->tags_.get_tag(endpoint.src()) << ": "
-                       << stats.total_entities_success_ << "/"
-                       << stats.total_entities_ << " ("
-                       << static_cast<double>(stats.total_entities_success_) /
-                              stats.total_entities_ * 100
-                       << "%)";
+    LOG(logging::info) << impl_->tags_.get_tag_clean(endpoint.src()) << ": "
+                       << stats;
   }
 }
 
@@ -345,11 +377,14 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               impl_->loaders_, [&](auto&& c) { return c->applicable(*d); });
           utl::verify(c != end(impl_->loaders_), "no loader applicable to {}",
                       path);
-          h = cista::hash_combine(h, (*c)->hash(*d));
+          auto const hash = (*c)->hash(*d);
+          h = cista::hash_combine(h, hash);
 
           auto const src = n::source_idx_t{i++};
           datasets.emplace_back(src, c, std::move(d));
           impl_->tags_.add(src, p->options()->str() + "_");
+
+          impl_->schedules_.emplace_back(p->options()->str(), hash, path);
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
@@ -390,7 +425,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               }
             }
 
-            n::loader::finalize(**impl_->tt_, adjust_footpaths_);
+            n::loader::finalize(**impl_->tt_, adjust_footpaths_,
+                                merge_duplicates_);
 
             if (no_cache_) {
               loaded = true;
@@ -403,6 +439,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
 
           // Read memory image from disk.
+          impl_->hash_ = h;
           if (!no_cache_) {
             try {
               impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(

@@ -1,0 +1,23 @@
+namespace motis.ris;
+
+table RISSourceStatus {
+  enabled: bool;
+  update_interval: uint; // seconds
+  last_update_time: ulong; // unix timestamp (last time data was received)
+  last_update_messages: ulong; // number of messages in last update/tick
+  last_message_time: ulong; // unix timestamp (timestamp of latest message)
+  total_updates: ulong; // number of ticks
+  total_messages: ulong; // number of messages
+}
+
+table RISStatusResponse {
+  system_time: ulong; // unix timestamp
+  last_update_time: ulong; // unix timestamp (last time data was received)
+
+  gtfs_rt_status: RISSourceStatus;
+  ribasis_fahrt_status: RISSourceStatus;
+  ribasis_formation_status: RISSourceStatus;
+  upload_status: RISSourceStatus;
+  read_status: RISSourceStatus;
+  init_status: RISSourceStatus;
+}

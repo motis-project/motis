@@ -10,6 +10,7 @@
 #include "motis/core/schedule/trip.h"
 
 #include "motis/paxmon/graph_index.h"
+#include "motis/paxmon/trip_capacity_status.h"
 
 namespace motis::paxmon {
 
@@ -40,6 +41,9 @@ struct trip_data_container {
     utl::verify(enter_exit_nodes_.size() == idx,
                 "insert_trip: invalid enter_exit_nodes size");
     enter_exit_nodes_.emplace_back(enter_exit_node);
+    utl::verify(capacity_status_.size() == idx,
+                "insert_trip: invalid capacity_status_ size");
+    capacity_status_.resize(idx + 1);
     return idx;
   }
 
@@ -88,11 +92,20 @@ struct trip_data_container {
     return enter_exit_nodes_[tdi];
   }
 
+  trip_capacity_status const& capacity_status(trip_data_index tdi) const {
+    return capacity_status_[tdi];
+  }
+
+  trip_capacity_status& capacity_status(trip_data_index tdi) {
+    return capacity_status_[tdi];
+  }
+
   std::uint32_t size() const { return mapping_.size(); }
 
   dynamic_fws_multimap<edge_index> edges_;
   dynamic_fws_multimap<event_node_index> canceled_nodes_;
   mcd::vector<event_node_index> enter_exit_nodes_;
+  mcd::vector<trip_capacity_status> capacity_status_;
   mcd::hash_map<trip_idx_t, trip_data_index> mapping_;
 };
 

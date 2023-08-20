@@ -21,14 +21,15 @@ import {
   simResultsAtom,
 } from "@/data/simulation";
 
-import classNames from "@/util/classNames";
 import { formatDateTime } from "@/util/dateFormat";
 
 import MiniTripLoadGraph from "@/components/trips/MiniTripLoadGraph";
 
-type SimResultsListEntryProps = {
+import { cn } from "@/lib/utils";
+
+interface SimResultsListEntryProps {
   simResultAtom: PrimitiveAtom<SimulationResult>;
-};
+}
 
 function SimResultsListEntry({
   simResultAtom,
@@ -46,7 +47,7 @@ function SimResultsListEntry({
 function SimResultsList(): JSX.Element {
   const [simResultsList] = useAtom(simResultsAtom);
   const [selectedSimResult, setSelectedSimResult] = useAtom(
-    selectedSimResultAtom
+    selectedSimResultAtom,
   );
 
   return (
@@ -81,9 +82,9 @@ function SimResultsList(): JSX.Element {
                 <Listbox.Option
                   key={resultIdx}
                   className={({ active }) =>
-                    classNames(
+                    cn(
                       "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900"
+                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
                     )
                   }
                   value={resultAtom}
@@ -91,18 +92,18 @@ function SimResultsList(): JSX.Element {
                   {({ selected, active }) => (
                     <>
                       <span
-                        className={classNames(
+                        className={cn(
                           "block truncate",
-                          selected ? "font-medium" : "font-normal"
+                          selected ? "font-medium" : "font-normal",
                         )}
                       >
                         <SimResultsListEntry simResultAtom={resultAtom} />
                       </span>
                       {selected ? (
                         <span
-                          className={classNames(
+                          className={cn(
                             "absolute inset-y-0 left-0 flex items-center pl-3",
-                            active ? "text-amber-600" : "text-amber-600"
+                            active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
                           <CheckIcon className="w-5 h-5" aria-hidden="true" />
@@ -124,9 +125,9 @@ function hasCritChange(ut: PaxMonUpdatedTrip): boolean {
   return ut.newly_critical_sections > 0 || ut.no_longer_critical_sections > 0;
 }
 
-type SimResultDetailsProps = {
+interface SimResultDetailsProps {
   simResultAtom: PrimitiveAtom<SimulationResult>;
-};
+}
 
 function SimResultDetails({
   simResultAtom,
@@ -137,7 +138,7 @@ function SimResultDetails({
   const r = simResult.response;
   const duration = differenceInMilliseconds(
     simResult.finishedAt,
-    simResult.startedAt
+    simResult.startedAt,
   );
 
   const trips = critChangeOnly
@@ -173,7 +174,7 @@ function SimResultDetails({
         </div>
         <div
           title={`Betroffene Reisendengruppen: ${formatNumber(
-            r.updates.updated_group_count
+            r.updates.updated_group_count,
           )} (${formatNumber(r.updates.updated_group_route_count)} Routen)`}
         >
           Betroffende Reisende: {formatNumber(r.updates.updated_pax_count)}
@@ -199,7 +200,7 @@ function SimResultDetails({
           </div>
           <div className="ml-3">
             {`Gebrochene Reiseketten: ${formatNumber(
-              r.stats.group_routes_broken
+              r.stats.group_routes_broken,
             )}`}
           </div>
         </div>
@@ -229,9 +230,9 @@ function SimResultDetails({
   );
 }
 
-type UpdatedTripProps = {
+interface UpdatedTripProps {
   ut: PaxMonUpdatedTrip;
-};
+}
 
 function UpdatedTrip({ ut }: UpdatedTripProps) {
   const category = ut.tsi.service_infos[0]?.category ?? "";

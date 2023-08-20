@@ -2,12 +2,13 @@ package de.motis_project.app2;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.graphics.drawable.DrawableCompat;
-import android.support.v4.util.LongSparseArray;
+import android.util.LongSparseArray;
 import android.view.View;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -130,15 +131,12 @@ public class JourneyUtil {
         }
 
         private static String getShortName(Transport t) {
-            if (t.name().length() < 7) {
-                return t.name();
-            } else if (t.lineId().isEmpty() && t.trainNr() == 0) {
+            if (t.name().length() < 7 || t.lineId().isEmpty()) {
                 return t.name();
             } else if (t.lineId().isEmpty()) {
-                return Long.toString(t.trainNr());
-            } else {
-                return t.lineId();
+                return t.name();
             }
+            return "";
         }
 
         private static boolean useLineId(Transport t) {

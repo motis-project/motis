@@ -14,13 +14,17 @@ std::string get_queue_id(amqp::login const& login) {
                      login.queue_);
 }
 
-receiver::receiver(rabbitmq_config config, msg_handler_fn msg_handler)
+receiver::receiver(rabbitmq_config config, source_status& status,
+                   msg_handler_fn msg_handler)
     : config_{std::move(config)},
       connection_{&config_.login_,
                   [this](std::string const& log_msg) { log(log_msg); }},
       last_update_{now()},
       msg_handler_{std::move(msg_handler)},
-      queue_id_{get_queue_id(config_.login_)} {
+      queue_id_{get_queue_id(config_.login_)},
+      status_{status} {
+  status_.enabled_ = true;
+  status_.update_interval_ = config_.update_interval_;
   connection_.run([this](amqp::msg const& m) { on_msg(m); });
 }
 

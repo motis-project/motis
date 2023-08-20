@@ -26,9 +26,9 @@ trip_data_index get_or_add_trip(schedule const& sched, universe& uv,
 
 trip_data_index get_trip(universe const& uv, trip_idx_t trip_idx);
 
-void update_event_times(schedule const& sched, universe& uv,
-                        motis::rt::RtDelayUpdate const* du,
-                        std::vector<edge_index>& updated_interchange_edges);
+int update_event_times(schedule const& sched, universe& uv,
+                       motis::rt::RtDelayUpdate const* du,
+                       std::vector<edge_index>& updated_interchange_edges);
 
 void update_trip_route(schedule const& sched, universe& uv,
                        motis::rt::RtRerouteUpdate const* ru,
@@ -41,14 +41,15 @@ inline edge* add_edge(universe& uv, edge&& e) {
 inline edge make_trip_edge(universe& uv, event_node_index from,
                            event_node_index to, edge_type type,
                            merged_trips_idx merged_trips,
-                           std::uint16_t encoded_capacity,
+                           std::uint16_t capacity, capacity_source cap_source,
                            service_class clasz) {
   return edge{from,
               to,
               type,
               false,
               0,
-              encoded_capacity,
+              capacity,
+              cap_source,
               clasz,
               merged_trips,
               uv.pax_connection_info_.insert()};
@@ -61,7 +62,8 @@ inline edge make_interchange_edge(event_node_index from, event_node_index to,
               edge_type::INTERCHANGE,
               false,
               transfer_time,
-              UNLIMITED_ENCODED_CAPACITY,
+              UNLIMITED_CAPACITY,
+              capacity_source::UNLIMITED,
               service_class::OTHER,
               0,
               pci};
@@ -74,7 +76,8 @@ inline edge make_through_edge(universe& uv, event_node_index from,
               edge_type::THROUGH,
               false,
               0,
-              UNLIMITED_ENCODED_CAPACITY,
+              UNLIMITED_CAPACITY,
+              capacity_source::UNLIMITED,
               service_class::OTHER,
               0,
               uv.pax_connection_info_.insert()};

@@ -28,6 +28,7 @@
 #include "motis/paxmon/edge_type.h"
 #include "motis/paxmon/graph_index.h"
 #include "motis/paxmon/graph_log.h"
+#include "motis/paxmon/metrics.h"
 #include "motis/paxmon/passenger_group_container.h"
 #include "motis/paxmon/pci_container.h"
 #include "motis/paxmon/rt_update_context.h"
@@ -38,8 +39,77 @@
 
 namespace motis::paxmon {
 
-struct edge;
+struct event_node;
 struct universe;
+
+struct edge {
+  bool is_valid(universe const& u) const;
+
+  bool is_canceled(universe const& u) const;
+
+  inline bool is_trip() const { return type() == edge_type::TRIP; }
+
+  inline bool is_interchange() const {
+    return type() == edge_type::INTERCHANGE;
+  }
+
+  inline bool is_wait() const { return type() == edge_type::WAIT; }
+
+  inline bool is_disabled() const { return type() == edge_type::DISABLED; }
+
+  event_node const* from(universe const&) const;
+  event_node* from(universe&) const;
+
+  event_node const* to(universe const&) const;
+  event_node* to(universe&) const;
+
+  inline edge_type type() const { return type_; }
+
+  inline bool has_trips() const { return is_trip() || is_wait(); }
+
+  inline merged_trips_idx get_merged_trips_idx() const { return trips_; }
+
+  inline mcd::vector<ptr<trip>> const& get_trips(schedule const& sched) const {
+    assert(has_trips());
+    return *sched.merged_trips_.at(trips_);
+  }
+
+  inline duration transfer_time() const { return transfer_time_; }
+
+  inline std::uint16_t capacity() const { return capacity_; }
+
+  inline capacity_source get_capacity_source() const {
+    return capacity_source_;
+  }
+
+  inline bool has_unlimited_capacity() const {
+    return capacity_ == UNLIMITED_CAPACITY &&
+           capacity_source_ == capacity_source::UNLIMITED;
+  }
+
+  inline bool has_unknown_capacity() const {
+    return capacity_ == UNKNOWN_CAPACITY &&
+           capacity_source_ == capacity_source::UNKNOWN;
+  }
+
+  inline bool has_capacity() const {
+    return !has_unknown_capacity() && !has_unlimited_capacity() &&
+           capacity() != 0;
+  }
+
+  inline bool is_broken() const { return broken_; }
+
+  event_node_index from_{};
+  event_node_index to_{};
+  edge_type type_{};
+  bool broken_{false};
+  duration transfer_time_{};
+  std::uint16_t capacity_{};
+  capacity_source capacity_source_{};
+  service_class clasz_{service_class::OTHER};
+  merged_trips_idx trips_{};
+  pci_index pci_{};
+};
 
 struct event_node {
   using mutable_outgoing_edge_bucket =
@@ -79,78 +149,6 @@ struct event_node {
   std::uint32_t station_{0};
 };
 
-struct edge {
-  inline bool is_valid(universe const& u) const {
-    return !is_disabled() && from(u)->is_valid() && to(u)->is_valid();
-  }
-
-  inline bool is_canceled(universe const& u) const {
-    return is_disabled() || from(u)->is_canceled() || to(u)->is_canceled();
-  }
-
-  inline bool is_trip() const { return type() == edge_type::TRIP; }
-
-  inline bool is_interchange() const {
-    return type() == edge_type::INTERCHANGE;
-  }
-
-  inline bool is_wait() const { return type() == edge_type::WAIT; }
-
-  inline bool is_disabled() const { return type() == edge_type::DISABLED; }
-
-  event_node const* from(universe const&) const;
-  event_node* from(universe&) const;
-
-  event_node const* to(universe const&) const;
-  event_node* to(universe&) const;
-
-  inline edge_type type() const { return type_; }
-
-  inline bool has_trips() const { return is_trip() || is_wait(); }
-
-  inline merged_trips_idx get_merged_trips_idx() const { return trips_; }
-
-  inline mcd::vector<ptr<trip>> const& get_trips(schedule const& sched) const {
-    assert(has_trips());
-    return *sched.merged_trips_.at(trips_);
-  }
-
-  inline duration transfer_time() const { return transfer_time_; }
-
-  inline std::uint16_t capacity() const {
-    return get_capacity(encoded_capacity_);
-  }
-
-  inline capacity_source get_capacity_source() const {
-    return ::motis::paxmon::get_capacity_source(encoded_capacity_);
-  }
-
-  inline bool has_unlimited_capacity() const {
-    return encoded_capacity_ == UNLIMITED_ENCODED_CAPACITY;
-  }
-
-  inline bool has_unknown_capacity() const {
-    return encoded_capacity_ == UNKNOWN_ENCODED_CAPACITY;
-  }
-
-  inline bool has_capacity() const {
-    return !has_unknown_capacity() && !has_unlimited_capacity() &&
-           capacity() != 0;
-  }
-
-  inline bool is_broken() const { return broken_; }
-
-  event_node_index from_{};
-  event_node_index to_{};
-  edge_type type_{};
-  bool broken_{false};
-  duration transfer_time_{};
-  std::uint16_t encoded_capacity_{};
-  service_class clasz_{service_class::OTHER};
-  merged_trips_idx trips_{};
-  pci_index pci_{};
-};
-
 struct universe {
   bool uses_default_schedule() const {
     return schedule_res_id_ ==
@@ -171,7 +169,7 @@ struct universe {
   rt_update_context rt_update_ctx_;
   system_statistics system_stats_;
   tick_statistics tick_stats_;
-  tick_statistics last_tick_stats_;
+  metrics<tick_statistics> metrics_;
   update_tracker update_tracker_;
 };
 

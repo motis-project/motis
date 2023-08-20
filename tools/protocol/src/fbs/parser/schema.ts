@@ -55,14 +55,14 @@ export const metadata: Parser<AstMetadata> = possibly(
               char(":"),
               optionalWhitespaceOrComments,
               literal,
-            ]).map((x) => x[3])
+            ]).map((x) => x[3]),
           ),
         ]).map(([id, value]): AstAttribute => {
           return { id, value };
-        })
-      )
+        }),
+      ),
     ),
-  ]).map(([_, x]) => x)
+  ]).map(([_, x]) => x),
 ).map((x) => x as AstMetadata);
 
 export const include: Parser<AstInclude> = sequenceOf([
@@ -158,7 +158,7 @@ export const fieldDecl: Parser<AstField> = sequenceOf([
       optionalWhitespaceOrComments,
       scalarOrRefLiteral,
       optionalWhitespaceOrComments,
-    ]).map((x) => x[2])
+    ]).map((x) => x[2]),
   ),
   metadata,
   char(";"),
@@ -214,8 +214,8 @@ export const schema: Parser<AstTopLevel[]> = sequenceOf([
         typeDecl,
         rootTypeDecl,
         attributeDecl,
-      ])
-    )
+      ]),
+    ),
   ),
   endOfInput,
 ]).map((x) => x[0] as AstTopLevel[]);

@@ -27,18 +27,18 @@ PaxForecastUpdate:
       description: TODO
 MeasureRecipients:
   description: >
-    Select a subset of passengers that is made aware of the measure
-    (e.g. using an announcement)
+    Select a subset of passengers that is made aware of the measure (e.g. using
+    an announcement)
   fields:
     trips:
       description: >
-        Select passengers that are in one of the listed trip (at the
-        measure `time`).
+        Select passengers that are in one of the listed trip (at the measure
+        `time`).
     stations:
       description: >
-        Select passengers that are at one of the listed stations (at the
-        measure `time`). Does not include passengers in a trip that is currently
-        waiting at the station.
+        Select passengers that are at one of the listed stations (at the measure
+        `time`). Does not include passengers in a trip that is currently waiting
+        at the station.
 LoadLevel:
   description: TODO
 TripLoadInfoMeasure:
@@ -319,6 +319,31 @@ UpdateCapacitiesMeasure:
         information received via RiBasisFormation messages)
         is reset before loading the new capacity data supplied in this
         measure.
+    remove_existing_gattung_capacities:
+      description: |
+        If set to true, existing UIC classification capacity information (i.e.
+        capacity information loaded from CSV files mapping UIC classifications
+        to capacities) is reset before loading the new capacity data supplied in
+        this measure.
+
+        For more information see:
+        https://de.wikipedia.org/wiki/UIC-Bauart-Bezeichnungssystem_f%C3%BCr_Reisezugwagen
+    remove_existing_baureihe_capacities:
+      description: |
+        If set to true, existing type code capacity information (i.e.
+        capacity information loaded from CSV files mapping vehicle type codes
+        to capacities) is reset before loading the new capacity data supplied in
+        this measure.
+    remove_existing_vehicle_group_capacities:
+      description: |
+        If set to true, existing vehicle group capacity information (i.e.
+        capacity information loaded from CSV files mapping vehicle group
+        names to capacities) is reset before loading the new capacity data
+        supplied in this measure.
+    remove_existing_overrides:
+      description: |
+        If set to true, existing capacity overrides are reset before loading
+        the new capacity data supplied in this measure.
     track_trip_updates:
       description: |
         If set to true, changing the capacity of a trip causes it to be
@@ -363,3 +388,55 @@ OverrideCapacityMeasure:
 
         If this list is empty, the override is removed and the original
         capacity for the trip is restored.
+PaxForecastMetricsRequest:
+  description: Request metrics for the given universe.
+  fields:
+    universe:
+      description: The ID of the universe.
+PaxForecastMetrics:
+  description: |
+    Contains metrics for `entries` minutes.
+
+    Each metrics field is an array with length = `entries`. The first entry
+    of each array is the value at time `start_time`. The second entry is
+    the value at time `start_time + 1 minute` etc.
+  fields:
+    start_time:
+      description: Time of the first entry in the metrics arrays (unix timestamp)
+    entries:
+      description: Number of entries for each metrics array
+    monitoring_events:
+      description: Number of monitoring events
+    group_routes:
+      description: Number of passenger group routes affected by a real-time update
+    major_delay_group_routes:
+      description: Number of affected passenger group routes with a major delay at
+        their final destination
+    routing_requests:
+      description: Number of routing requests executed while searching for alternatives
+    alternatives_found:
+      description: Number of alternative routes found
+    rerouted_group_routes:
+      description: Number of passenger group routes that were rerouted
+    removed_group_routes:
+      description: Deprecated
+    major_delay_group_routes_with_alternatives:
+      description: >
+        Number of affected passenger group routes with a major delay at their
+        final destination for which an alternative was found
+    total_timing:
+      description: Total time spent by the passenger forecast module in milliseconds
+PaxForecastMetricsResponse:
+  description: |
+    Contains metrics for the requested universe.
+
+    The metrics are offered in two variants:
+    - `by_system_time`: Grouped by universe time (i.e. the creation time
+      of the latest real-time message that was processed)
+    - `by_processing_time`: Grouped by the time a message was processed
+      (server time)
+  fields:
+    by_system_time:
+      description: TODO
+    by_processing_time:
+      description: TODO

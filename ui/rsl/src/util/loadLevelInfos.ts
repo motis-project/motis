@@ -1,9 +1,9 @@
 import { LoadLevel } from "@/api/protocol/motis/paxforecast";
 
-export type LoadLevelInfo = {
+export interface LoadLevelInfo {
   label: string;
   bgColor: string;
-};
+}
 
 export const loadLevelInfos: Record<LoadLevel, LoadLevelInfo> = {
   Unknown: {

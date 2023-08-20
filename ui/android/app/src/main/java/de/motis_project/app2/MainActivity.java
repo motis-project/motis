@@ -1,54 +1,35 @@
 package de.motis_project.app2;
 
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.NavigationView;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.FrameLayout;
-import android.widget.RelativeLayout;
-import android.widget.Switch;
+import android.widget.LinearLayout;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import de.motis_project.app2.intermodal.IntermodalFragment;
-import de.motis_project.app2.io.Status;
-import de.motis_project.app2.ppr.PPRFragment;
 import de.motis_project.app2.query.QueryFragment;
-import de.motis_project.app2.saved.SavedConnectionsFragment;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    private static final int PLAY_SERVICES_RESOLUTION_REQUEST = 9000;
 
     @BindView(R.id.drawer_layout)
-    DrawerLayout drawerLayout;
+    LinearLayout drawerLayout;
 
     @BindView(R.id.content_frame)
     FrameLayout contentFrame;
 
-    @BindView(R.id.navigation)
-    NavigationView navigationView;
-
-    @BindView(R.id.main_toolbar)
-    Toolbar mainToolbar;
-
-    Switch fastSwitch;
-
     protected QueryFragment queryFragment;
-    protected SavedConnectionsFragment savedConnectionsFragment;
-    protected PPRFragment pprFragment;
-    protected IntermodalFragment intermodalFragment;
 
     protected ServerChangeListener serverChangeListener;
 
@@ -59,98 +40,54 @@ public class MainActivity extends AppCompatActivity {
         Log.i(TAG, "onCreate");
         ButterKnife.bind(this);
 
-        setSupportActionBar(mainToolbar);
-        if (mainToolbar != null) {
-            mainToolbar.setTitleTextColor(getResources().getColor(R.color.md_white));
+        if (queryFragment == null) {
+            queryFragment = new QueryFragment();
         }
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null && drawerLayout != null) {
-            ActionBarDrawerToggle drawerToggle = new ActionBarDrawerToggle(this, drawerLayout,
-                mainToolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
-            drawerLayout.addDrawerListener(drawerToggle);
-            drawerToggle.syncState();
-            drawerToggle.getDrawerArrowDrawable().setColor(getResources().getColor(R.color.md_white));
-        }
-
-        fastSwitch = (Switch) ((RelativeLayout) navigationView.getMenu()
-            .findItem(R.id.nav_fast_switch).getActionView())
-            .getChildAt(0);
-        fastSwitch.setChecked(!Status.get().usingRtServer(this));
-        fastSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            boolean useRt = !isChecked;
-            Log.i(TAG, "Switching server: rt=" + useRt);
-            Status.get().switchServer(this, useRt);
-            Log.d(TAG, "Notifying server change listener");
-            ServerChangeListener scl = serverChangeListener;
-            if (scl != null) {
-                scl.serverChanged();
-            }
-        });
-        if (!Status.get().supportsServerSwitch()) {
-            navigationView.getMenu().setGroupVisible(R.id.nav_server_grp, false);
-        }
-
-        navigationView.setNavigationItemSelectedListener(item -> {
-            item.setChecked(true);
-            boolean selected = showTab(item.getItemId());
-            if (selected) {
-                drawerLayout.closeDrawers();
-            }
-            return selected;
-        });
-
-        setSelectedNavItem(R.id.nav_search);
-    }
-
-    protected void setSelectedNavItem(int id) {
-        navigationView.setCheckedItem(id);
-        showTab(id);
-    }
-
-    protected boolean showTab(int itemId) {
-        Fragment selectedFragment = null;
-        switch (itemId) {
-            case R.id.nav_search:
-                if (queryFragment == null) {
-                    queryFragment = new QueryFragment();
-                }
-                selectedFragment = queryFragment;
-                setTitle(getResources().getString(R.string.search));
-                break;
-            /*
-            case R.id.nav_connections:
-                if (savedConnectionsFragment == null) {
-                    savedConnectionsFragment = new SavedConnectionsFragment();
-                }
-                selectedFragment = savedConnectionsFragment;
-                break;
-            */
-            case R.id.nav_ppr:
-                if (pprFragment == null) {
-                    pprFragment = new PPRFragment();
-                }
-                selectedFragment = pprFragment;
-                setTitle(getResources().getString(R.string.ppr_tab));
-                break;
-            case R.id.nav_intermodal:
-                if (intermodalFragment == null) {
-                    intermodalFragment = new IntermodalFragment();
-                }
-                selectedFragment = intermodalFragment;
-                setTitle(getResources().getString(R.string.intermodal_tab));
-                break;
-            case R.id.nav_fast_switch:
-                fastSwitch.toggle();
-                return false;
-            default:
-                Log.e(TAG, "Unknown navigation item selected: " + itemId);
-                return false;
-        }
+        setTitle(getResources().getString(R.string.search));
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction()
-            .replace(R.id.content_frame, selectedFragment)
+            .replace(R.id.content_frame, queryFragment)
             .commit();
-        return true;
+
+        showPrivacyDialog();
+    }
+
+    void showPrivacyDialog() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        if (!prefs.getBoolean("show_privacy", true)) {
+            return;
+        }
+
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setTitle(R.string.data_protection_headline);
+        alertDialog.setMessage(R.string.data_protection);
+        alertDialog.setPositiveButton(R.string.read,
+            new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    startActivity(new Intent(
+                        Intent.ACTION_VIEW, Uri
+                        .parse("https://motis-project.de/privacy")));
+                    prefs.edit().putBoolean("show_privacy", false).commit();
+                    dialog.dismiss();
+                }
+            });
+
+        alertDialog.setNeutralButton(R.string.dont_show_again,
+            new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    prefs.edit().putBoolean("show_privacy", false).commit();
+                    dialog.dismiss();
+                }
+            });
+
+        alertDialog.setNegativeButton(R.string.show_again_later,
+            new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+
+        alertDialog.show();
     }
 
     @Override
@@ -161,40 +98,5 @@ public class MainActivity extends AppCompatActivity {
         } else {
             serverChangeListener = null;
         }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        boolean playServices = checkGooglePlayServices();
-        Log.i(TAG, "Goole Play Services available: " + playServices);
-    }
-
-    protected boolean checkGooglePlayServices() {
-        GoogleApiAvailability api = GoogleApiAvailability.getInstance();
-        int code = api.isGooglePlayServicesAvailable(this);
-        if (code == ConnectionResult.SUCCESS) {
-            return true;
-        }
-        Log.w(TAG, "Google Play Services not available: " + code);
-        if (api.isUserResolvableError(code)) {
-            Log.w(TAG, "Google Play Services error is user resolvable, showing dialog");
-            api.getErrorDialog(this, code, PLAY_SERVICES_RESOLUTION_REQUEST).show();
-        } else {
-            Log.e(TAG, "Device not supported by Google Play Services");
-        }
-        return false;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        switch (requestCode) {
-            case PLAY_SERVICES_RESOLUTION_REQUEST:
-                Log.i(TAG, "Google Play Services resolution request returned: " + resultCode);
-                boolean playServices = checkGooglePlayServices();
-                Log.i(TAG, "Google Play Services available: " + playServices);
-                break;
-        }
-        super.onActivityResult(requestCode, resultCode, data);
     }
 }
