@@ -24,6 +24,7 @@
 
 #include "motis/paxmon/api/add_groups.h"
 #include "motis/paxmon/api/capacity_status.h"
+#include "motis/paxmon/api/critical_interchanges.h"
 #include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
 #include "motis/paxmon/api/detailed_capacity_status.h"
@@ -39,6 +40,7 @@
 #include "motis/paxmon/api/get_trip_load_info.h"
 #include "motis/paxmon/api/get_universes.h"
 #include "motis/paxmon/api/group_statistics.h"
+#include "motis/paxmon/api/interchange_details.h"
 #include "motis/paxmon/api/interchanges_at_station.h"
 #include "motis/paxmon/api/keep_alive.h"
 #include "motis/paxmon/api/metrics.h"
@@ -404,6 +406,18 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/interchanges_at_station",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::interchanges_at_station(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/critical_interchanges",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::critical_interchanges(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/interchange_details",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::interchange_details(data_, msg);
                   },
                   {});
 

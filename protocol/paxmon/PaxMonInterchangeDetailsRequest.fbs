@@ -1,0 +1,8 @@
+include "paxmon/PaxMonInterchangeId.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonInterchangeDetailsRequest {
+  universe: uint;
+  id: PaxMonInterchangeId;
+}

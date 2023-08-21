@@ -1,0 +1,10 @@
+include "paxmon/PaxMonInterchangeInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonInterchangeDetailsResponse {
+  info: PaxMonInterchangeInfo;
+
+  normal_routes: uint;
+  broken_routes: uint;
+}

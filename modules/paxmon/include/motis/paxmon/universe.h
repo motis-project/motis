@@ -65,7 +65,9 @@ struct edge {
 
   inline edge_type type() const { return type_; }
 
-  inline bool has_trips() const { return is_trip() || is_wait(); }
+  inline bool has_trips() const {
+    return is_trip() || is_wait() || is_disabled();
+  }
 
   inline merged_trips_idx get_merged_trips_idx() const { return trips_; }
 

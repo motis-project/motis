@@ -132,6 +132,10 @@ include "paxmon/PaxMonDetailedCapacityStatusRequest.fbs";
 include "paxmon/PaxMonDetailedCapacityStatusResponse.fbs";
 include "paxmon/PaxMonMetricsRequest.fbs";
 include "paxmon/PaxMonMetricsResponse.fbs";
+include "paxmon/PaxMonCriticalInterchangesRequest.fbs";
+include "paxmon/PaxMonCriticalInterchangesResponse.fbs";
+include "paxmon/PaxMonInterchangeDetailsRequest.fbs";
+include "paxmon/PaxMonInterchangeDetailsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -345,7 +349,11 @@ union MsgContent {
   motis.paxforecast.PaxForecastMetricsRequest                             = 162,
   motis.paxforecast.PaxForecastMetricsResponse                            = 163,
   motis.paxmon.PaxMonCapacityStatusRequest                                = 164,
-  motis.paxmon.PaxMonCapacityStatusResponse                               = 165
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 165,
+  motis.paxmon.PaxMonCriticalInterchangesRequest                          = 166,
+  motis.paxmon.PaxMonCriticalInterchangesResponse                         = 167,
+  motis.paxmon.PaxMonInterchangeDetailsRequest                            = 168,
+  motis.paxmon.PaxMonInterchangeDetailsResponse                           = 169
 }
 
 // Destination Examples:

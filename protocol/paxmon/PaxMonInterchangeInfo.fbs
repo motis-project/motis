@@ -1,0 +1,40 @@
+include "base/Station.fbs";
+include "base/TripServiceInfo.fbs";
+include "paxmon/PaxMonCombinedGroups.fbs";
+include "paxmon/PaxMonInterchangeId.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTripStopInfo {
+  schedule_time: ulong;
+  current_time: ulong;
+  canceled: bool;
+  trips: [TripServiceInfo];
+  station: Station;
+}
+
+table PaxMonInterchangeDelayInfo {
+  min_delay_increase: int;
+  max_delay_increase: int;
+  total_delay_increase: long;
+  squared_total_delay_increase: ulong;
+  unreachable_pax: uint;
+}
+
+table PaxMonInterchangeInfo {
+  id: PaxMonInterchangeId;
+  arrival: [PaxMonTripStopInfo]; // length 0 if initial transfer, else 1
+  departure: [PaxMonTripStopInfo]; // length 0 if final transfer, else 1
+
+  groups: PaxMonCombinedGroupRoutes (optional);
+  group_count: uint;
+  pax_count: uint;
+
+  transfer_time: uint; // minutes
+  valid: bool;
+  disabled: bool;
+  broken: bool;
+  canceled: bool;
+
+  delay: PaxMonInterchangeDelayInfo (optional);
+}

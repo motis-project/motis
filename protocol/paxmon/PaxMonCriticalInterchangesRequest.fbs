@@ -1,0 +1,30 @@
+include "base/Interval.fbs";
+
+namespace motis.paxmon;
+
+enum PaxMonCriticalInterchangesSortOrder : byte {
+ AffectedPax,
+ TotalDelayIncrease,
+ SquaredTotalDelayIncrease,
+ MinDelayIncrease,
+ MaxDelayIncrease,
+ UnreachablePax
+}
+
+table PaxMonCriticalInterchangesRequest {
+  universe: uint;
+
+  filter_interval: Interval;
+
+  include_insufficient_transfer_time: bool = true;
+  include_missed_initial_departure: bool = true;
+  include_canceled_transfer: bool = true;
+  include_canceled_initial_departure: bool = true;
+  include_canceled_final_arrival: bool = true;
+  only_planned_routes: bool;
+
+  sort_by: PaxMonCriticalInterchangesSortOrder;
+
+  max_results: uint; // 0 = unlimited
+  skip_first: uint; // skip the first x results (for subsequent calls)
+}
