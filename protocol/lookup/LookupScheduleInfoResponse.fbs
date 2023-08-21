@@ -1,7 +1,14 @@
 namespace motis.lookup;
 
+table LookupSchedule {
+  tag:string;
+  hash:ulong;
+  created:ulong;
+}
+
 table LookupScheduleInfoResponse {
   name:string;
   begin:ulong;
   end:ulong;
+  schedules:[LookupSchedule];
 }

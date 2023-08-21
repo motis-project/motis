@@ -68,7 +68,7 @@ public class FavoritesDataSource {
             cv.put(Table.COL_STATION_ID, eva);
             cv.put(Table.COL_STATION_NAME, stationName);
             cv.put(Table.COL_SELECTED_COUNT, 0);
-            db.insert(Table.TABLE, cv);
+            db.insert(Table.TABLE, cv, SQLiteDatabase.CONFLICT_IGNORE);
             cv.clear();
             db.execute(
                 "UPDATE " + Table.TABLE +

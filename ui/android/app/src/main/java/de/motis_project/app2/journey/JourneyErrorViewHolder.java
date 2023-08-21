@@ -1,10 +1,11 @@
 package de.motis_project.app2.journey;
 
-import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
 
 import butterknife.BindString;
 import butterknife.BindView;

@@ -10,8 +10,9 @@ public final class Mode {
   public static final byte Car = 3;
   public static final byte FootPPR = 4;
   public static final byte CarParking = 5;
+  public static final byte GBFS = 6;
 
-  private static final String[] names = { "NONE", "Foot", "Bike", "Car", "FootPPR", "CarParking", };
+  private static final String[] names = { "NONE", "Foot", "Bike", "Car", "FootPPR", "CarParking", "GBFS", };
 
   public static String name(int e) { return names[e]; }
 };

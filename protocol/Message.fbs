@@ -179,6 +179,7 @@ table MotisNoMessage {
 }
 
 table ApiDescription {
+  version:string;
   methods:[string];
 }
 

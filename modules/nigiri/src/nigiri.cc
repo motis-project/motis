@@ -1,5 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
+#include "boost/filesystem.hpp"
+
 #include "cista/memory_holder.h"
 
 #include "conf/date_time.h"
@@ -33,11 +35,31 @@
 #include "motis/nigiri/unixtime_conv.h"
 #include "utl/parser/split.h"
 
+namespace fbs = flatbuffers;
 namespace fs = std::filesystem;
 namespace mm = motis::module;
 namespace n = nigiri;
 
 namespace motis::nigiri {
+
+struct schedule_info {
+  schedule_info(std::string tag, cista::hash_t const hash, fs::path const& path)
+      : tag_{std::move(tag)}, sha1sum_{hash}, created_{get_created(path)} {}
+
+  static std::time_t get_created(fs::path const& p) {
+    return boost::filesystem::creation_time(p.string());
+  }
+
+  fbs::Offset<motis::lookup::LookupSchedule> to_fbs(
+      fbs::FlatBufferBuilder& fbb) const {
+    return lookup::CreateLookupSchedule(fbb, fbb.CreateString(tag_), sha1sum_,
+                                        created_);
+  }
+
+  std::string tag_;
+  cista::hash_t sha1sum_;
+  std::time_t created_;
+};
 
 struct nigiri::impl {
   impl() {
@@ -88,6 +110,8 @@ struct nigiri::impl {
   std::unique_ptr<guesser> guesser_;
   std::unique_ptr<railviz> railviz_;
   std::string initial_permalink_;
+  std::vector<schedule_info> schedules_;
+  cista::hash_t hash_{0U};
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -184,9 +208,12 @@ void nigiri::init(motis::module::registry& reg) {
                       b.create_and_finish(
                           MsgContent_LookupScheduleInfoResponse,
                           lookup::CreateLookupScheduleInfoResponse(
-                              b, b.CreateString(""),
+                              b, b.CreateString(fmt::to_string(impl_->hash_)),
                               to_motis_unixtime(tt.external_interval().from_),
-                              to_motis_unixtime(tt.external_interval().to_))
+                              to_motis_unixtime(tt.external_interval().to_),
+                              b.CreateVector(utl::to_vec(
+                                  impl_->schedules_,
+                                  [&](auto const& s) { return s.to_fbs(b); })))
                               .Union());
                       return make_msg(b);
                     },
@@ -349,11 +376,14 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               impl_->loaders_, [&](auto&& c) { return c->applicable(*d); });
           utl::verify(c != end(impl_->loaders_), "no loader applicable to {}",
                       path);
-          h = cista::hash_combine(h, (*c)->hash(*d));
+          auto const hash = (*c)->hash(*d);
+          h = cista::hash_combine(h, hash);
 
           auto const src = n::source_idx_t{i++};
           datasets.emplace_back(src, c, std::move(d));
           impl_->tags_.add(src, p->options()->str() + "_");
+
+          impl_->schedules_.emplace_back(p->options()->str(), hash, path);
         }
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
@@ -408,6 +438,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
 
           // Read memory image from disk.
+          impl_->hash_ = h;
           if (!no_cache_) {
             try {
               impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(

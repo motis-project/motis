@@ -8,6 +8,12 @@
     <string name="arrival_short">Ank.</string>
     <string name="departure_short">Abf.</string>
 
+    <string name="dont_show_again">nicht mehr anzeigen</string>
+    <string name="read">Datenschutzerklärung lesen</string>
+    <string name="show_again_later">beim nächsten Start wieder anzeigen</string>
+    <string name="data_protection_headline">Datenschutzerklärung</string>
+    <string name="data_protection">Die MOTIS App wird von der Technischen Universität Darmstadt zur Verfügung gestellt. MOTIS speichert persönliche Daten nur lokal auf deinem Gerät.</string>
+
     <string name="transfer">%d Umstieg</string>
     <string name="transfers">%d Umstiege</string>
     <string name="track">Gleis %s</string>
