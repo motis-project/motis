@@ -28,6 +28,7 @@ public final class RoutingRequest extends Table {
   public boolean useStartMetas() { int o = __offset(18); return o != 0 ? 0!=bb.get(o + bb_pos) : true; }
   public boolean useDestMetas() { int o = __offset(20); return o != 0 ? 0!=bb.get(o + bb_pos) : true; }
   public boolean useStartFootpaths() { int o = __offset(22); return o != 0 ? 0!=bb.get(o + bb_pos) : true; }
+  public long schedule() { int o = __offset(24); return o != 0 ? bb.getLong(o + bb_pos) : 0; }
 
   public static int createRoutingRequest(FlatBufferBuilder builder,
       byte start_type,
@@ -39,8 +40,10 @@ public final class RoutingRequest extends Table {
       int additional_edgesOffset,
       boolean use_start_metas,
       boolean use_dest_metas,
-      boolean use_start_footpaths) {
-    builder.startObject(10);
+      boolean use_start_footpaths,
+      long schedule) {
+    builder.startObject(11);
+    RoutingRequest.addSchedule(builder, schedule);
     RoutingRequest.addAdditionalEdges(builder, additional_edgesOffset);
     RoutingRequest.addVia(builder, viaOffset);
     RoutingRequest.addDestination(builder, destinationOffset);
@@ -54,7 +57,7 @@ public final class RoutingRequest extends Table {
     return RoutingRequest.endRoutingRequest(builder);
   }
 
-  public static void startRoutingRequest(FlatBufferBuilder builder) { builder.startObject(10); }
+  public static void startRoutingRequest(FlatBufferBuilder builder) { builder.startObject(11); }
   public static void addStartType(FlatBufferBuilder builder, byte startType) { builder.addByte(0, startType, 0); }
   public static void addStart(FlatBufferBuilder builder, int startOffset) { builder.addOffset(1, startOffset, 0); }
   public static void addDestination(FlatBufferBuilder builder, int destinationOffset) { builder.addOffset(2, destinationOffset, 0); }
@@ -69,6 +72,7 @@ public final class RoutingRequest extends Table {
   public static void addUseStartMetas(FlatBufferBuilder builder, boolean useStartMetas) { builder.addBoolean(7, useStartMetas, true); }
   public static void addUseDestMetas(FlatBufferBuilder builder, boolean useDestMetas) { builder.addBoolean(8, useDestMetas, true); }
   public static void addUseStartFootpaths(FlatBufferBuilder builder, boolean useStartFootpaths) { builder.addBoolean(9, useStartFootpaths, true); }
+  public static void addSchedule(FlatBufferBuilder builder, long schedule) { builder.addLong(10, schedule, 0); }
   public static int endRoutingRequest(FlatBufferBuilder builder) {
     int o = builder.endObject();
     return o;

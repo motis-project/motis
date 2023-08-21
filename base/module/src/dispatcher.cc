@@ -14,6 +14,7 @@
 #include "motis/module/error.h"
 #include "motis/module/global_res_ids.h"
 #include "motis/module/module.h"
+#include "version.h"
 
 namespace motis::module {
 
@@ -151,9 +152,10 @@ msg_ptr dispatcher::api_desc(int const id) const {
   fbb.create_and_finish(
       MsgContent_ApiDescription,
       CreateApiDescription(
-          fbb, fbb.CreateVector(utl::to_vec(
-                   registry_.operations_,
-                   [&](auto&& op) { return fbb.CreateString(op.first); })))
+          fbb, fbb.CreateString(MOTIS_GIT_TAG),
+          fbb.CreateVector(utl::to_vec(
+              registry_.operations_,
+              [&](auto&& op) { return fbb.CreateString(op.first); })))
           .Union(),
       "", DestinationType_Module, id);
   return make_msg(fbb);

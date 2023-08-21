@@ -1,20 +1,12 @@
 package de.motis_project.app2.journey;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
 
-import com.google.android.gms.maps.model.LatLng;
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 
 import de.motis_project.app2.R;
-import de.motis_project.app2.intermodal.journey.WalkCache;
-import de.motis_project.app2.intermodal.journey.WalkKey;
-import de.motis_project.app2.intermodal.journey.WalkUtil;
-import de.motis_project.app2.ppr.MapUtil;
-import de.motis_project.app2.ppr.profiles.PprSearchOptions;
-import de.motis_project.app2.ppr.route.RouteWrapper;
 import motis.Connection;
 import motis.Stop;
 
@@ -36,16 +28,13 @@ public class ConnectionWrapper {
 
     private final Connection connection;
     private final int id;
-    private final PprSearchOptions pprSearchOptions;
     private String startNameOverride;
     private String destinationNameOverride;
     private boolean intermodal;
 
-    public ConnectionWrapper(Connection connection, int id, PprSearchOptions pprSearchOptions) {
+    public ConnectionWrapper(Connection connection, int id) {
         this.connection = connection;
         this.id = id;
-        this.pprSearchOptions = pprSearchOptions;
-        this.intermodal = (pprSearchOptions != null);
     }
 
     public Connection getConnection() {
@@ -89,14 +78,6 @@ public class ConnectionWrapper {
         }
     }
 
-    public LatLng getStartLatLng() {
-        return MapUtil.toLatLng(getFirstStop().station().pos());
-    }
-
-    public LatLng getDestinationLatLng() {
-        return MapUtil.toLatLng(getLastStop().station().pos());
-    }
-
     public boolean isIntermodal() {
         return intermodal;
     }
@@ -107,45 +88,6 @@ public class ConnectionWrapper {
 
     public void setDestinationNameOverride(String destinationNameOverride) {
         this.destinationNameOverride = destinationNameOverride;
-    }
-
-    @Nullable
-    public RouteWrapper getLeadingWalkRoute() {
-        WalkKey leadingWalkKey = getLeadingWalkKey();
-        return (leadingWalkKey != null) ? WalkCache.getInstance().get(leadingWalkKey) : null;
-    }
-
-    public WalkKey getLeadingWalkKey() {
-        return WalkUtil.getLeadingWalkKey(connection, pprSearchOptions);
-    }
-
-    @Nullable
-    public RouteWrapper getTrailingWalkRoute() {
-        WalkKey trailingWalkKey = getTrailingWalkKey();
-        return (trailingWalkKey != null) ? WalkCache.getInstance().get(trailingWalkKey) : null;
-    }
-
-    public WalkKey getTrailingWalkKey() {
-        return WalkUtil.getTrailingWalkKey(connection, pprSearchOptions);
-    }
-
-    public Iterable<LatLng> getPath() {
-        RouteWrapper leadingWalk = getLeadingWalkRoute();
-        RouteWrapper trailingWalk = getTrailingWalkRoute();
-
-        ArrayList<LatLng> path = new ArrayList<>(connection.stopsLength());
-        int start = (leadingWalk == null) ? 0 : 1;
-        int end = (trailingWalk == null) ? connection.stopsLength() : connection.stopsLength() - 1;
-        if (leadingWalk != null) {
-            path.addAll(leadingWalk.getPath());
-        }
-        for (int i = start; i < end; i++) {
-            path.add(MapUtil.toLatLng(connection.stops(i).station().pos()));
-        }
-        if (trailingWalk != null) {
-            path.addAll(trailingWalk.getPath());
-        }
-        return path;
     }
 
     public int getNumberOfTransfers() {
@@ -163,7 +105,6 @@ public class ConnectionWrapper {
         return "ConnectionWrapper{" +
                 "connection=" + connection +
                 ", id=" + id +
-                ", pprSearchOptions=" + pprSearchOptions +
                 ", startNameOverride='" + startNameOverride + '\'' +
                 ", destinationNameOverride='" + destinationNameOverride + '\'' +
                 '}';

@@ -2,12 +2,13 @@ package de.motis_project.app2.journey;
 
 import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.support.v4.graphics.drawable.DrawableCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.core.graphics.drawable.DrawableCompat;
 
 import butterknife.BindColor;
 import butterknife.BindView;

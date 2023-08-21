@@ -1,18 +1,19 @@
-<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:layout_gravity="left|top"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    tools:ignore="RtlHardcoded">
 
-    <android.support.design.widget.AppBarLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/query_appbar_layout"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@color/primary_material_light">
+        android:background="@color/md_white">
 
-        <android.support.design.widget.CoordinatorLayout
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:minHeight="20dp"
@@ -28,7 +29,7 @@
                     style="@style/FullWidthEditText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginRight="30dp"
+                    android:layout_marginEnd="30dp"
                     android:cursorVisible="false"
                     android:editable="false"
                     android:ellipsize="end"
@@ -65,7 +66,7 @@
                     android:background="#D0D0D0" />
             </LinearLayout>
 
-            <android.support.design.widget.FloatingActionButton
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/switch_stations_btn"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -75,7 +76,7 @@
                 android:tint="@android:color/white"
                 app:fabSize="mini" />
 
-        </android.support.design.widget.CoordinatorLayout>
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -104,7 +105,7 @@
                     android:layout_gravity="center"
                     android:scaleType="fitXY"
                     android:src="@drawable/ic_date_range_black_24dp"
-                    android:tint="@color/colorPrimaryDark" />
+                    app:tint="@color/colorPrimaryDark" />
 
                 <TextView
                     android:id="@+id/date_text"
@@ -125,7 +126,9 @@
                 android:layout_weight="0.5"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
-                android:gravity="left|center">
+                android:gravity="left|center"
+                android:focusable="true"
+                tools:ignore="RtlHardcoded">
 
                 <ImageView
                     android:layout_width="24dp"
@@ -133,7 +136,7 @@
                     android:layout_gravity="center"
                     android:scaleType="fitXY"
                     android:src="@drawable/ic_query_build_black_24"
-                    android:tint="@color/colorPrimaryDark" />
+                    app:tint="@color/colorPrimaryDark" />
 
                 <TextView
                     android:id="@+id/time_text"
@@ -143,11 +146,12 @@
                     android:freezesText="true"
                     android:gravity="center_vertical"
                     android:paddingLeft="15dp"
-                    android:textColor="@color/colorPrimaryDark" />
+                    android:textColor="@color/colorPrimaryDark"
+                    tools:ignore="RtlSymmetry" />
 
             </LinearLayout>
         </LinearLayout>
-    </android.support.design.widget.AppBarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -189,4 +193,4 @@
     </FrameLayout>
 
 
-</android.support.design.widget.CoordinatorLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
