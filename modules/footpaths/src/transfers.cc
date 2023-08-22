@@ -4,6 +4,7 @@
 
 #include "fmt/core.h"
 
+#include "motis/footpaths/keys.h"
 #include "motis/footpaths/types.h"
 
 #include "utl/verify.h"
@@ -14,7 +15,7 @@ namespace motis::footpaths {
 transfer_request_keys merge(transfer_request_keys const& treq_k_a,
                             transfer_request_keys const& treq_k_b) {
   auto merged = transfer_request_keys{};
-  auto added_keys = set<string>{};
+  auto added_keys = set<key64_t>{};
 
   utl::verify(
       treq_k_a.from_nloc_key_ == treq_k_b.from_nloc_key_,

@@ -4,7 +4,8 @@
 
 #include "cista/hashing.h"
 #include "cista/serialization.h"
-#include "cista/targets/buf.h"
+
+#include "motis/footpaths/keys.h"
 
 #include "utl/enumerate.h"
 
@@ -165,8 +166,8 @@ std::vector<size_t> database::put_matching_results(
   return added_indices;
 }
 
-std::vector<std::pair<string, string>> database::get_matchings() {
-  auto matchings = std::vector<std::pair<string, string>>{};
+std::vector<std::pair<key64_t, string>> database::get_matchings() {
+  auto matchings = std::vector<std::pair<key64_t, string>>{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -175,22 +176,24 @@ std::vector<std::pair<string, string>> database::get_matchings() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    matchings.emplace_back(string{entry->first}, string{entry->second});
+    matchings.emplace_back(
+        cista::copy_from_potentially_unaligned<key64_t>(entry->first),
+        string{entry->second});
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
   cur.reset();
   return matchings;
 }
 
-hash_map<string, platform> database::get_loc_to_pf_matchings() {
-  auto loc_pf_matchings = hash_map<string, platform>{};
+hash_map<key64_t, platform> database::get_loc_to_pf_matchings() {
+  auto loc_pf_matchings = hash_map<key64_t, platform>{};
 
   for (auto& [location, osm_key] : get_matchings()) {
     auto const pf = get_platform(osm_key);
 
     if (pf.has_value()) {
       loc_pf_matchings.insert(
-          std::pair<string, platform>(location, pf.value()));
+          std::pair<key64_t, platform>(location, pf.value()));
     }
   }
 

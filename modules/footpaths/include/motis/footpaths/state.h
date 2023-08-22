@@ -19,8 +19,8 @@ struct state {
   bool set_matched_pfs_idx_{false};
   bool set_pfs_idx_{false};
 
-  std::vector<string> nloc_keys;
-  hash_map<string /* nloc key */, platform> matches_;
+  vector<key64_t> nloc_keys_;
+  hash_map<key64_t /* nloc key */, platform> matches_;
   transfer_requests_keys transfer_requests_keys_;
   transfer_results transfer_results_;
 };

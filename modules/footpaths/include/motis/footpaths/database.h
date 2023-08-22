@@ -21,10 +21,6 @@
 
 namespace motis::footpaths {
 
-inline string to_key(geo::latlng const& coord) {
-  return {nigiri::to_location_key(coord)};
-}
-
 struct database {
   explicit database(std::string const& path, std::size_t const max_size);
 
@@ -34,7 +30,7 @@ struct database {
   platforms get_matched_platforms();
 
   std::vector<std::size_t> put_matching_results(matching_results const&);
-  hash_map<string, platform> get_loc_to_pf_matchings();
+  hash_map<key64_t, platform> get_loc_to_pf_matchings();
 
   std::vector<std::size_t> put_transfer_requests_keys(
       transfer_requests_keys const&);
@@ -58,7 +54,7 @@ private:
 
   void init();
 
-  std::vector<std::pair<string, string>> get_matchings();
+  std::vector<std::pair<key64_t, string>> get_matchings();
   std::optional<platform> get_platform(string const& /* osm_key */);
 
   lmdb::env mutable env_;

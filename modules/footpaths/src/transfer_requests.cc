@@ -5,6 +5,7 @@
 
 #include "motis/footpaths/platforms.h"
 
+#include "motis/footpaths/keys.h"
 #include "motis/footpaths/types.h"
 
 namespace motis::footpaths {
@@ -80,7 +81,7 @@ transfer_requests_keys generate_transfer_requests_keys(
       auto from_pf_key = to_key(from_pf);
       auto target_ids =
           to_state.matched_pfs_idx_->valid_in_radius(from_pf, prf_dist);
-      auto from_nloc_key = from_state.nloc_keys[i];
+      auto from_nloc_key = from_state.nloc_keys_[i];
 
       if (target_ids.empty()) {
         continue;
@@ -88,7 +89,7 @@ transfer_requests_keys generate_transfer_requests_keys(
 
       auto tmp = transfer_request_keys{};
       auto to_pf_keys = strings{};
-      auto to_nloc_keys = strings{};
+      auto to_nloc_keys = vector<key64_t>{};
 
       for (auto t_id : target_ids) {
         to_pf_keys.emplace_back(
@@ -96,7 +97,7 @@ transfer_requests_keys generate_transfer_requests_keys(
       }
 
       for (auto t_id : target_ids) {
-        to_nloc_keys.emplace_back(to_state.nloc_keys[t_id]);
+        to_nloc_keys.emplace_back(to_state.nloc_keys_[t_id]);
       }
 
       tmp.from_pf_key_ = from_pf_key;

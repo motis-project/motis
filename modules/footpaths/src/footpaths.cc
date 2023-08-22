@@ -14,6 +14,7 @@
 #include "motis/module/ini_io.h"
 
 #include "motis/footpaths/database.h"
+#include "motis/footpaths/keys.h"
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platforms.h"
 #include "motis/footpaths/state.h"
@@ -73,12 +74,12 @@ struct footpaths::impl {
     old_state_.transfer_results_ = db_.get_transfer_results(ppr_profile_names_);
 
     auto matched_pfs = platforms{};
-    auto matched_nloc_keys = std::vector<string>{};
+    auto matched_nloc_keys = vector<key64_t>{};
     for (auto const& [k, pf] : old_state_.matches_) {
       matched_nloc_keys.emplace_back(k);
       matched_pfs.emplace_back(pf);
     }
-    old_state_.nloc_keys = matched_nloc_keys;
+    old_state_.nloc_keys_ = matched_nloc_keys;
     old_state_.matched_pfs_idx_ =
         std::make_unique<platforms_index>(platforms_index{matched_pfs});
     old_state_.set_matched_pfs_idx_ = true;
@@ -99,6 +100,9 @@ struct footpaths::impl {
     route_and_save_results(rg, update_state_.transfer_requests_keys_);
 
     // 5th update timetable
+    build_key_to_idx_map();
+    LOG(ml::info) << tt_.locations_.ids_.size() << " / "
+                  << location_key_to_idx_.size();
     update_timetable();
   }
 
@@ -158,6 +162,7 @@ struct footpaths::impl {
     }
 
     // update timetable
+    build_key_to_idx_map();
     update_timetable();
   }
 
@@ -192,6 +197,15 @@ struct footpaths::impl {
   int max_walk_duration_{10};
 
 private:
+  void build_key_to_idx_map() {
+    progress_tracker_->status("Build Location-Key to Location-Idx Mapping.");
+    for (auto i = nigiri::location_idx_t{0U}; i < tt_.locations_.ids_.size();
+         ++i) {
+      location_key_to_idx_.insert(std::pair<key64_t, nigiri::location_idx_t>(
+          to_key(tt_.locations_.coordinates_[i]), i));
+    }
+  }
+
   void get_and_save_osm_platforms() {
     progress_tracker_->status("Extract Platforms from OSM.");
     LOG(ml::info) << "Extracting platforms from " << osm_path_;
@@ -322,16 +336,14 @@ private:
       ++ctr_start;
       progress_tracker_->increment();
       if (tt_.profiles_.count(tr.profile_) == 0 ||
-          tt_.locations_.location_key_to_idx_.count(tr.from_nloc_key_) == 0 ||
-          tt_.locations_.location_key_to_idx_.count(tr.to_nloc_key_) == 0) {
+          location_key_to_idx_.count(tr.from_nloc_key_) == 0 ||
+          location_key_to_idx_.count(tr.to_nloc_key_) == 0) {
         return;
       }
 
       auto const prf_idx = tt_.profiles_.at(tr.profile_);
-      auto const from_idx =
-          tt_.locations_.location_key_to_idx_.at(tr.from_nloc_key_);
-      auto const to_idx =
-          tt_.locations_.location_key_to_idx_.at(tr.to_nloc_key_);
+      auto const from_idx = location_key_to_idx_.at(tr.from_nloc_key_);
+      auto const to_idx = location_key_to_idx_.at(tr.to_nloc_key_);
 
       tt_.locations_.footpaths_out_[prf_idx][from_idx].push_back(
           n::footpath{to_idx, tr.info_.duration_});
@@ -378,8 +390,8 @@ private:
     auto matched_pfs = platforms{};
     for (auto const& mr : new_mrs) {
       update_state_.matches_.insert(
-          std::pair<std::string, platform>(to_key(mr.nloc_pos_), mr.pf_));
-      update_state_.nloc_keys.emplace_back(to_key(mr.nloc_pos_));
+          std::pair<key64_t, platform>(to_key(mr.nloc_pos_), mr.pf_));
+      update_state_.nloc_keys_.emplace_back(to_key(mr.nloc_pos_));
       matched_pfs.emplace_back(mr.pf_);
     }
     update_state_.matched_pfs_idx_ =
@@ -425,6 +437,8 @@ private:
   }
 
   std::vector<ppr::profile_info> profiles_;
+
+  hash_map<key64_t, nigiri::location_idx_t> location_key_to_idx_;
 
   // initialize matching limits
   int match_distance_min_{0};

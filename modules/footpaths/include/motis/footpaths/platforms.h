@@ -88,10 +88,4 @@ bool platform_is_bus_stop(osmium::TagList const& tags);
 
 ::ppr::routing::input_location to_input_location(platform const&);
 
-// keys :: ids
-inline string to_key(platform const& pf) {
-  return {fmt::format("{}:{}", std::to_string(pf.info_.osm_id_),
-                      get_osm_str_type(pf.info_.osm_type_))};
-}
-
 }  // namespace motis::footpaths
