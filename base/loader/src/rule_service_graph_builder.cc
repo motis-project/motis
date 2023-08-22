@@ -11,6 +11,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/price.h"
 #include "motis/core/schedule/trip.h"
+#include "motis/core/access/connection_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/loader/util.h"
 
@@ -496,6 +497,13 @@ struct rule_service_route_builder {
         auto trp = single_trips_.at(std::make_pair(s, day_idx));
         trp->edges_ = edges;
         trp->lcon_idx_ = lcon_idx;
+        if (!edges->empty()) {
+          auto const& first_lcon =
+              edges->front()->m_.route_edge_.conns_.at(lcon_idx);
+          trp->original_first_connection_info_ =
+              &access::get_connection_info(gb_.sched_, first_lcon, trp);
+          trp->original_first_clasz_ = first_lcon.full_con_->clasz_;
+        }
         ++lcon_idx;
       }
     }
@@ -636,7 +644,14 @@ struct rule_service_route_builder {
       push_mem(gb_.sched_.trip_mem_, ftid, "", edges_ptr, lcon_idx,
                static_cast<trip_idx_t>(gb_.sched_.trip_mem_.size()),
                trip_debug{}, mcd::vector<uint32_t>{});
-      auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
+      auto trip_ptr = gb_.sched_.trip_mem_.back().get();
+
+      auto const& first_lcon =
+          route_edges.front()->m_.route_edge_.conns_.at(lcon_idx);
+      trip_ptr->original_first_connection_info_ =
+          first_lcon.full_con_->con_info_;
+      trip_ptr->original_first_clasz_ = first_lcon.full_con_->clasz_;
+
       if (gb_.check_trip(trip_ptr)) {
         route_trips.push_back(trip_ptr);
       }

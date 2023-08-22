@@ -136,8 +136,8 @@ struct graph_builder {
 
   full_trip_id get_full_trip_id(Service const* s, int day, int section_idx = 0);
 
-  std::optional<merged_trips_idx> create_merged_trips(Service const* s,
-                                                      int day_idx);
+  std::optional<merged_trips_idx> create_merged_trips(
+      Service const* s, int day_idx, light_connection const* first_lcon);
 
   trip* register_service(Service const* s, int day_idx, bool allow_duplicates);
 
