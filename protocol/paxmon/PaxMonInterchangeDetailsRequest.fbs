@@ -5,4 +5,6 @@ namespace motis.paxmon;
 table PaxMonInterchangeDetailsRequest {
   universe: uint;
   id: PaxMonInterchangeId;
+
+  include_disabled_group_routes: bool;
 }

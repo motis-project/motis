@@ -26,6 +26,9 @@ msg_ptr interchange_details(paxmon_data& data, msg_ptr const& msg) {
   auto const ei =
       edge_index{static_cast<event_node_index>(req->id()->n()), req->id()->e()};
 
+  auto const include_disabled_group_routes =
+      req->include_disabled_group_routes();
+
   auto const* e = ei.get(uv);
   utl::verify(e->is_interchange(), "interchange_details: invalid id");
 
@@ -33,9 +36,10 @@ msg_ptr interchange_details(paxmon_data& data, msg_ptr const& msg) {
 
   auto const info = get_interchange_info(
       uv, sched, ei, mc,
-      get_interchange_info_options{.include_group_infos_ = true,
-                                   .include_disabled_group_routes_ = true,
-                                   .include_delay_info_ = true});
+      get_interchange_info_options{
+          .include_group_infos_ = true,
+          .include_disabled_group_routes_ = include_disabled_group_routes,
+          .include_delay_info_ = true});
 
   mc.create_and_finish(
       MsgContent_PaxMonInterchangeDetailsResponse,

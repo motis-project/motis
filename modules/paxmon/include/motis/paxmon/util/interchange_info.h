@@ -120,6 +120,10 @@ inline interchange_info get_interchange_info(
       info.pax_count_ += pg->passengers_;
     }
 
+    if (!options.include_disabled_group_routes_ && gr.probability_ == 0.0F) {
+      return;
+    }
+
     if (options.include_delay_info_) {
       auto const current_group_delay_info =
           get_current_estimated_delay(uv, pgwr.pg_);
@@ -151,9 +155,7 @@ inline interchange_info get_interchange_info(
     }
 
     if (options.include_group_infos_) {
-      if (options.include_disabled_group_routes_ || gr.probability_ != 0.0F) {
-        group_route_infos.emplace_back(to_fbs_base_info(fbb, *pg, gr));
-      }
+      group_route_infos.emplace_back(to_fbs_base_info(fbb, *pg, gr));
     }
   };
 

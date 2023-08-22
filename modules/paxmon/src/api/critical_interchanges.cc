@@ -66,8 +66,10 @@ msg_ptr critical_interchanges(paxmon_data& data, msg_ptr const& msg) {
   auto interchanges = std::vector<interchange_info>{};
   auto broken_interchanges = 0U;
 
-  auto const gii_options = get_interchange_info_options{
-      .include_delay_info_ = true, .only_planned_routes_ = only_planned_routes};
+  auto const gii_options =
+      get_interchange_info_options{.include_disabled_group_routes_ = true,
+                                   .include_delay_info_ = true,
+                                   .only_planned_routes_ = only_planned_routes};
 
   for (auto const& bucket : uv.interchanges_at_station_) {
     auto const station_idx = bucket.index();
