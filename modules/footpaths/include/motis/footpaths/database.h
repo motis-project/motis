@@ -69,7 +69,6 @@ private:
 
   lmdb::env mutable env_;
   std::mutex mutex_;
-  std::int32_t highest_platform_id_{};
   key8_t highest_profile_id_{};
 };
 

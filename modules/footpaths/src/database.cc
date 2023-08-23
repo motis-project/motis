@@ -32,24 +32,15 @@ database::database(std::string const& path, std::size_t const max_size) {
 void database::init() {
   // create database
   auto txn = lmdb::txn{env_};
-  auto platforms_db = platforms_dbi(txn, lmdb::dbi_flags::CREATE);
   auto profiles_db = profiles_dbi(txn, lmdb::dbi_flags::CREATE);
+  platforms_dbi(txn, lmdb::dbi_flags::CREATE);
   matchings_dbi(txn, lmdb::dbi_flags::CREATE);
   transreqs_dbi(txn, lmdb::dbi_flags::CREATE);
   transfers_dbi(txn, lmdb::dbi_flags::CREATE);
 
-  // find highest platform id in db
-  auto cur = lmdb::cursor{txn, platforms_db};
-  auto entry = cur.get(lmdb::cursor_op::LAST);
-  highest_platform_id_ = 0;
-  if (entry.has_value()) {
-    highest_platform_id_ = lmdb::as_int(entry->first);
-  }
-  cur.reset();
-
   // find highes profiles id in db
-  cur = lmdb::cursor{txn, profiles_db};
-  entry = cur.get(lmdb::cursor_op::LAST);
+  auto cur = lmdb::cursor{txn, profiles_db};
+  auto entry = cur.get(lmdb::cursor_op::LAST);
   highest_profile_id_ = key8_t{0};
   if (entry.has_value()) {
     highest_profile_id_ =
@@ -115,7 +106,6 @@ std::vector<std::size_t> database::put_platforms(platforms& pfs) {
       continue;  // platform already in db
     }
 
-    pf.id_ = ++highest_platform_id_;
     auto const serialized_pf = cista::serialize(pf);
     txn.put(platforms_db, osm_key, view(serialized_pf));
     added_indices.emplace_back(idx);

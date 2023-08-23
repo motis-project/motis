@@ -42,7 +42,6 @@ struct platform_info {
 };
 
 struct platform {
-  std::int64_t id_{-1};
   geo::latlng loc_;
 
   platform_info info_;

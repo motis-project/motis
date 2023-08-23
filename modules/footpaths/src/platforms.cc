@@ -84,7 +84,7 @@ private:
 
     for (auto const& name : names) {
       pfs_.emplace_back(
-          platform{0, geo::latlng{coord.y, coord.x},
+          platform{{geo::latlng{coord.y, coord.x}},
                    platform_info{name, id, nigiri::location_idx_t::invalid(),
                                  type, platform_is_bus_stop(tags)}});
     }
