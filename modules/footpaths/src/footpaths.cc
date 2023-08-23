@@ -34,6 +34,7 @@
 
 #include "utl/parallel_for.h"
 #include "utl/pipes.h"
+#include "utl/zip.h"
 
 namespace fs = std::filesystem;
 namespace ml = motis::logging;
@@ -332,25 +333,28 @@ private:
     progress_tracker_->in_high(old_state_.transfer_results_.size() +
                                update_state_.transfer_results_.size());
 
-    auto const& single_update = [&](transfer_result const& tr) {
-      ++ctr_start;
+    auto const& single_update = [&](transfer_result const& tres) {
       progress_tracker_->increment();
-      if (tt_.profiles_.count(tr.profile_) == 0 ||
-          location_key_to_idx_.count(tr.from_nloc_key_) == 0 ||
-          location_key_to_idx_.count(tr.to_nloc_key_) == 0) {
-        return;
+
+      for (auto [to_nloc, info] : utl::zip(tres.to_nloc_keys_, tres.infos_)) {
+        ++ctr_start;
+        if (tt_.profiles_.count(tres.profile_) == 0 ||
+            location_key_to_idx_.count(tres.from_nloc_key_) == 0 ||
+            location_key_to_idx_.count(to_nloc) == 0) {
+          continue;
+        }
+
+        auto const prf_idx = tt_.profiles_.at(tres.profile_);
+        auto const from_idx = location_key_to_idx_.at(tres.from_nloc_key_);
+        auto const to_idx = location_key_to_idx_.at(to_nloc);
+
+        tt_.locations_.footpaths_out_[prf_idx][from_idx].push_back(
+            n::footpath{to_idx, info.duration_});
+        tt_.locations_.footpaths_in_[prf_idx][to_idx].push_back(
+            n::footpath{from_idx, info.duration_});
+
+        ++ctr_end;
       }
-
-      auto const prf_idx = tt_.profiles_.at(tr.profile_);
-      auto const from_idx = location_key_to_idx_.at(tr.from_nloc_key_);
-      auto const to_idx = location_key_to_idx_.at(tr.to_nloc_key_);
-
-      tt_.locations_.footpaths_out_[prf_idx][from_idx].push_back(
-          n::footpath{to_idx, tr.info_.duration_});
-      tt_.locations_.footpaths_in_[prf_idx][to_idx].push_back(
-          n::footpath{from_idx, tr.info_.duration_});
-
-      ++ctr_end;
     };
 
     for (auto const& tr : old_state_.transfer_results_) {

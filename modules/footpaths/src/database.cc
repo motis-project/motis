@@ -317,6 +317,9 @@ std::vector<std::size_t> database::put_transfer_results(
   return added_indices;
 }
 
+/**
+ * merge and update: transfer_results in db
+ */
 std::vector<std::size_t> database::update_transfer_results(
     transfer_results const& trs) {
   auto updated_indices = std::vector<std::size_t>{};
@@ -336,13 +339,14 @@ std::vector<std::size_t> database::update_transfer_results(
     auto entry = txn.get(transfers_db, tres_key);
     auto tres_from_db =
         cista::copy_from_potentially_unaligned<transfer_result>(entry.value());
+    auto merged = merge(tres_from_db, tres);
 
     // update entry only in case of changes
-    if (tres_chashing(tres_from_db) == tres_chashing(tres)) {
+    if (tres_chashing(tres_from_db) == tres_chashing(merged)) {
       continue;
     }
 
-    auto const serialized_tr = cista::serialize(tres);
+    auto const serialized_tr = cista::serialize(merged);
     if (txn.del(transfers_db, tres_key)) {
       txn.put(transfers_db, tres_key, view(serialized_tr));
     }

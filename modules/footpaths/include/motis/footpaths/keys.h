@@ -30,9 +30,8 @@ inline string to_key(transfer_request const& treq) {
   return {fmt::format("{}::{}", treq.from_nloc_key_, treq.profile_)};
 }
 
-inline string to_key(transfer_result const& tr) {
-  return {fmt::format("{}::{}::{}", tr.from_nloc_key_, tr.to_nloc_key_,
-                      tr.profile_)};
+inline string to_key(transfer_result const& tres) {
+  return {fmt::format("{}::{}", tres.from_nloc_key_, tres.profile_)};
 }
 
 }  // namespace motis::footpaths

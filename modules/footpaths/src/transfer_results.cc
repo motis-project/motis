@@ -59,10 +59,13 @@ pr::routing_query make_routing_query(
   return pr::routing_query(li_start, ils_dests, profile, dir);
 }
 
-transfer_results route_single_request(
+transfer_result route_single_request(
     transfer_request const& treq, ::ppr::routing_graph const& rg,
     std::map<std::string, ppr::profile_info> const& profiles) {
-  auto tress = transfer_results{};
+  auto tres = transfer_result{};
+  tres.from_nloc_key_ = treq.from_nloc_key_;
+  tres.profile_ = treq.profile_;
+
   auto const& rq = make_routing_query(profiles, treq);
 
   // route using find_routes_v2
@@ -77,21 +80,16 @@ transfer_results route_single_request(
 
   for (auto i = std::size_t{0}; i < treq.transfer_targets_.size(); ++i) {
     auto const& fwd_routes = fwd_result[i];
-    auto result = transfer_result{};
 
     if (fwd_routes.empty()) {
       continue;
     }
 
-    result.from_nloc_key_ = treq.from_nloc_key_;
-    result.to_nloc_key_ = treq.to_nloc_keys_[i];
-    result.profile_ = treq.profile_;
-    result.info_ = fwd_routes.front();
-
-    tress.emplace_back(result);
+    tres.to_nloc_keys_.emplace_back(treq.to_nloc_keys_[i]);
+    tres.infos_.emplace_back(fwd_routes.front());
   }
 
-  return tress;
+  return tres;
 }
 
 transfer_results route_multiple_requests(
@@ -107,7 +105,7 @@ transfer_results route_multiple_requests(
     auto single_result = route_single_request(treq, rg, profiles);
     {
       boost::unique_lock<boost::mutex> const scoped_lock(mutex);
-      result.insert(result.end(), single_result.begin(), single_result.end());
+      result.emplace_back(single_result);
     }
     progress_tracker->increment();
   });

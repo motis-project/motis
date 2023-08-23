@@ -37,22 +37,25 @@ struct transfer_request {
 using transfer_requests = std::vector<transfer_request>;
 
 struct transfer_info {
+  CISTA_COMPARABLE();
   nigiri::duration_t duration_{};
   double distance_{};
 };
 using transfer_infos = std::vector<transfer_info>;
 
 struct transfer_result {
+  CISTA_COMPARABLE();
   key64_t from_nloc_key_;
-  key64_t to_nloc_key_;
+  vector<key64_t> to_nloc_keys_;
   string profile_;
 
-  transfer_info info_;
+  vector<transfer_info> infos_;
 };
 using transfer_results = std::vector<transfer_result>;
 
 transfer_request_keys merge(transfer_request_keys const&,
                             transfer_request_keys const&);
+transfer_result merge(transfer_result const&, transfer_result const&);
 
 // ostreams
 std::ostream& operator<<(std::ostream&, transfer_info const&);
