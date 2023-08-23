@@ -15,12 +15,8 @@ namespace motis::footpaths {
 
 struct transfer_request_keys {
   CISTA_COMPARABLE();
-  string from_pf_key_;
   key64_t from_nloc_key_;
-
-  strings to_pf_keys_;
   vector<key64_t> to_nloc_keys_;
-
   key8_t profile_;
 };
 using transfer_requests_keys = std::vector<transfer_request_keys>;

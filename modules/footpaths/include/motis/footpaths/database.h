@@ -31,8 +31,6 @@ struct database {
   // platforms
   std::vector<std::size_t> put_platforms(platforms&);
   platforms get_platforms();
-  hash_map<string, platform> get_platforms_with_key();
-  platforms get_matched_platforms();
 
   // matchings
   std::vector<std::size_t> put_matching_results(matching_results const&);

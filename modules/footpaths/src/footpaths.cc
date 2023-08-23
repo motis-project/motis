@@ -255,7 +255,12 @@ private:
                               transfer_requests_keys const& treqs_k) {
     progress_tracker_->status("Precomputing Profilebased Transfers.");
     ml::scoped_timer const timer{"Precomputing Profilebased Transfers."};
-    auto treqs = to_transfer_requests(treqs_k, db_);
+
+    auto matches = old_state_.matches_;
+    matches.insert(update_state_.matches_.begin(),
+                   update_state_.matches_.end());
+
+    auto treqs = to_transfer_requests(treqs_k, matches);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
     put_transfer_results(trs);
   }
@@ -264,7 +269,12 @@ private:
                                 transfer_requests_keys const& treqs_k) {
     progress_tracker_->status("Updating Profilebased Transfers.");
     ml::scoped_timer const timer{"Updating Profilebased Transfers."};
-    auto treqs = to_transfer_requests(treqs_k, db_);
+
+    auto matches = old_state_.matches_;
+    matches.insert(update_state_.matches_.begin(),
+                   update_state_.matches_.end());
+
+    auto treqs = to_transfer_requests(treqs_k, matches);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
     update_transfer_results(trs);
     old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);

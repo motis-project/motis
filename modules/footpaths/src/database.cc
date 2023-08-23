@@ -134,40 +134,6 @@ platforms database::get_platforms() {
   return pfs;
 }
 
-hash_map<string, platform> database::get_platforms_with_key() {
-  auto pfs_with_key = hash_map<string, platform>{};
-
-  auto lock = std::lock_guard{mutex_};
-  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
-  auto platforms_db = platforms_dbi(txn);
-  auto cur = lmdb::cursor{txn, platforms_db};
-  auto entry = cur.get(lmdb::cursor_op::FIRST);
-
-  while (entry.has_value()) {
-    pfs_with_key.insert(std::pair<string, platform>(
-        string{entry->first},
-        cista::copy_from_potentially_unaligned<platform>(entry->second)));
-    entry = cur.get(lmdb::cursor_op::NEXT);
-  }
-
-  cur.reset();
-  return pfs_with_key;
-}
-
-platforms database::get_matched_platforms() {
-  auto pfs = platforms{};
-  auto const matchings = get_matchings();
-
-  for (auto const& [nloc_key, osm_key] : matchings) {
-    auto pf = get_platform(osm_key);
-    if (pf.has_value()) {
-      pfs.emplace_back(pf.value());
-    }
-  }
-
-  return pfs;
-}
-
 std::optional<platform> database::get_platform(string const& osm_key) {
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
