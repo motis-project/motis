@@ -20,10 +20,8 @@ transfer_requests to_transfer_requests(
     treq.transfer_start_ = matches.at(treq_k.from_nloc_key_);
 
     // extract to_pfs
-    for (auto i = 0; i < treq_k.to_nloc_keys_.size(); ++i) {
-      auto to_nloc_key = treq_k.to_nloc_keys_[i];
-
-      treq.transfer_targets_.emplace_back(matches.at(treq_k.to_nloc_keys_[i]));
+    for (auto to_nloc_key : treq_k.to_nloc_keys_) {
+      treq.transfer_targets_.emplace_back(matches.at(to_nloc_key));
       treq.to_nloc_keys_.emplace_back(to_nloc_key);
     }
 
