@@ -1,10 +1,5 @@
 #include "motis/footpaths/transfer_requests.h"
 
-#include <cstddef>
-#include <vector>
-
-#include "motis/footpaths/platforms.h"
-
 #include "motis/footpaths/keys.h"
 #include "motis/footpaths/types.h"
 
@@ -64,14 +59,14 @@ transfer_requests to_transfer_requests(transfer_requests_keys const& treqs_k,
  */
 transfer_requests_keys generate_transfer_requests_keys(
     state const& old_state, state const& update_state,
-    std::map<std::string, ppr::profile_info> const& profiles,
+    hash_map<key8_t, ppr::profile_info> const& profiles,
     bool const old_to_old) {
   auto result = transfer_requests_keys{};
 
   auto const all_pairs_trs = [&](state const& from_state, state const& to_state,
-                                 std::string const& profile) {
+                                 key8_t const& prf_key) {
     auto from_to_trs = transfer_requests_keys{};
-    auto const& pi = profiles.at(profile);
+    auto const& pi = profiles.at(prf_key);
     auto prf_dist = pi.profile_.walking_speed_ * pi.profile_.duration_limit_;
 
     for (auto i = std::size_t{0}; i < from_state.matched_pfs_idx_->size();
@@ -104,7 +99,7 @@ transfer_requests_keys generate_transfer_requests_keys(
       tmp.from_nloc_key_ = from_nloc_key;
       tmp.to_pf_keys_ = to_pf_keys;
       tmp.to_nloc_keys_ = to_nloc_keys;
-      tmp.profile_ = string{profile};
+      tmp.profile_ = prf_key;
 
       from_to_trs.emplace_back(tmp);
     }
@@ -113,9 +108,9 @@ transfer_requests_keys generate_transfer_requests_keys(
   };
 
   // new possible transfers: 1 -> 2, 2 -> 1, 2 -> 2
-  for (auto const& [prf_name, prf_info] : profiles) {
+  for (auto const& [prf_key, prf_info] : profiles) {
     if (old_to_old) {
-      auto trs11 = all_pairs_trs(old_state, old_state, prf_name);
+      auto trs11 = all_pairs_trs(old_state, old_state, prf_key);
       result.insert(result.end(), trs11.begin(), trs11.end());
     }
 
@@ -124,11 +119,11 @@ transfer_requests_keys generate_transfer_requests_keys(
     }
 
     // new transfers from old to update (1 -> 2)
-    auto trs12 = all_pairs_trs(old_state, update_state, prf_name);
+    auto trs12 = all_pairs_trs(old_state, update_state, prf_key);
     // new transfers from update to old (2 -> 1)
-    auto trs21 = all_pairs_trs(update_state, old_state, prf_name);
+    auto trs21 = all_pairs_trs(update_state, old_state, prf_key);
     // new transfers from update to update (2 -> 2)
-    auto trs22 = all_pairs_trs(update_state, update_state, prf_name);
+    auto trs22 = all_pairs_trs(update_state, update_state, prf_key);
 
     result.insert(result.end(), trs12.begin(), trs12.end());
     result.insert(result.end(), trs21.begin(), trs21.end());

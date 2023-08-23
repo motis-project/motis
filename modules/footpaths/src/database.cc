@@ -11,6 +11,7 @@
 
 namespace motis::footpaths {
 
+constexpr auto const kProfilesDB = "profiles";
 constexpr auto const kPlatformsDB = "platforms";
 constexpr auto const kMatchingsDB = "matchings";
 constexpr auto const kTransReqsDB = "transreqs";
@@ -21,7 +22,7 @@ inline std::string_view view(cista::byte_buf const& b) {
 }
 
 database::database(std::string const& path, std::size_t const max_size) {
-  env_.set_maxdbs(4);
+  env_.set_maxdbs(5);
   env_.set_mapsize(max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
   env_.open(path.c_str(), flags);
@@ -32,20 +33,73 @@ void database::init() {
   // create database
   auto txn = lmdb::txn{env_};
   auto platforms_db = platforms_dbi(txn, lmdb::dbi_flags::CREATE);
+  auto profiles_db = profiles_dbi(txn, lmdb::dbi_flags::CREATE);
   matchings_dbi(txn, lmdb::dbi_flags::CREATE);
   transreqs_dbi(txn, lmdb::dbi_flags::CREATE);
   transfers_dbi(txn, lmdb::dbi_flags::CREATE);
 
   // find highest platform id in db
   auto cur = lmdb::cursor{txn, platforms_db};
-  auto const entry = cur.get(lmdb::cursor_op::LAST);
+  auto entry = cur.get(lmdb::cursor_op::LAST);
   highest_platform_id_ = 0;
   if (entry.has_value()) {
     highest_platform_id_ = lmdb::as_int(entry->first);
   }
+  cur.reset();
+
+  // find highes profiles id in db
+  cur = lmdb::cursor{txn, profiles_db};
+  entry = cur.get(lmdb::cursor_op::LAST);
+  highest_profile_id_ = key8_t{0};
+  if (entry.has_value()) {
+    highest_profile_id_ =
+        cista::copy_from_potentially_unaligned<key8_t>(entry->second);
+  }
 
   cur.reset();
   txn.commit();
+}
+
+std::vector<std::size_t> database::put_profiles(
+    std::vector<string> const& prf_names) {
+  auto added_indices = std::vector<std::size_t>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_};
+  auto profiles_db = profiles_dbi(txn);
+
+  for (auto [idx, name] : utl::enumerate(prf_names)) {
+    if (auto const r = txn.get(profiles_db, name); r.has_value()) {
+      continue;  // profile already in db
+    }
+    ++highest_profile_id_;
+    auto const serialized_key = cista::serialize(highest_profile_id_);
+    txn.put(profiles_db, name, view(serialized_key));
+    added_indices.emplace_back(idx);
+  }
+
+  txn.commit();
+  return added_indices;
+}
+
+hash_map<string, key8_t> database::get_profile_keys() {
+  auto keys_with_name = hash_map<string, key8_t>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto profiles_db = profiles_dbi(txn);
+  auto cur = lmdb::cursor{txn, profiles_db};
+  auto entry = cur.get(lmdb::cursor_op::FIRST);
+
+  while (entry.has_value()) {
+    keys_with_name.insert(std::pair<string, key8_t>(
+        string{entry->first},
+        cista::copy_from_potentially_unaligned<key8_t>(entry->second)));
+    entry = cur.get(lmdb::cursor_op::NEXT);
+  }
+
+  cur.reset();
+  return keys_with_name;
 }
 
 std::vector<std::size_t> database::put_platforms(platforms& pfs) {
@@ -267,7 +321,7 @@ std::vector<std::size_t> database::update_transfer_requests_keys(
 }
 
 transfer_requests_keys database::get_transfer_requests_keys(
-    set<std::string> const& ppr_profile_names) {
+    set<key8_t> const& ppr_profile_names) {
   auto treqs_k = transfer_requests_keys{};
 
   auto lock = std::lock_guard{mutex_};
@@ -359,7 +413,7 @@ std::vector<std::size_t> database::update_transfer_results(
 }
 
 transfer_results database::get_transfer_results(
-    set<std::string> const& ppr_profile_names) {
+    set<key8_t> const& ppr_profile_names) {
   auto trs = transfer_results{};
 
   auto lock = std::lock_guard{mutex_};
@@ -382,6 +436,10 @@ transfer_results database::get_transfer_results(
 
   cur.reset();
   return trs;
+}
+
+lmdb::txn::dbi database::profiles_dbi(lmdb::txn& txn, lmdb::dbi_flags flags) {
+  return txn.dbi_open(kProfilesDB, flags);
 }
 
 lmdb::txn::dbi database::platforms_dbi(lmdb::txn& txn,

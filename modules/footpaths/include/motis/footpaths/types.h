@@ -21,6 +21,7 @@ template <typename V>
 using vector = cista::offset::vector<V>;
 
 using key64_t = std::uint64_t;
+using key8_t = std::uint8_t;
 
 using string = cista::offset::string;
 using strings = cista::offset::vector<string>;

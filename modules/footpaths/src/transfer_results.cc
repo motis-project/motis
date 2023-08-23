@@ -1,9 +1,7 @@
 #include "motis/footpaths/transfer_results.h"
 
 #include <cmath>
-#include <cstddef>
 #include <algorithm>
-#include <iterator>
 
 #include "boost/thread/lock_types.hpp"
 #include "boost/thread/mutex.hpp"
@@ -39,19 +37,19 @@ std::vector<transfer_infos> to_transfer_infos(pr::search_result const& res) {
 }
 
 pr::routing_query make_routing_query(
-    std::map<std::string, ppr::profile_info> const& ppr_profiles,
-    transfer_request const& tr) {
+    hash_map<key8_t, ppr::profile_info> const& profiles,
+    transfer_request const& treq) {
   // query: create start input_location
-  auto const& li_start = to_input_location(tr.transfer_start_);
+  auto const& li_start = to_input_location(treq.transfer_start_);
 
   // query: create dest input_locations
   std::vector<pr::input_location> ils_dests;
-  std::transform(tr.transfer_targets_.cbegin(), tr.transfer_targets_.cend(),
+  std::transform(treq.transfer_targets_.cbegin(), treq.transfer_targets_.cend(),
                  std::back_inserter(ils_dests),
                  [](auto const& pf) { return to_input_location(pf); });
 
   // query: get search profile
-  auto const& profile = ppr_profiles.at(tr.profile_).profile_;
+  auto const& profile = profiles.at(treq.profile_).profile_;
 
   // query: get search direction (default: FWD)
   auto const& dir = pr::search_direction::FWD;
@@ -61,7 +59,7 @@ pr::routing_query make_routing_query(
 
 transfer_result route_single_request(
     transfer_request const& treq, ::ppr::routing_graph const& rg,
-    std::map<std::string, ppr::profile_info> const& profiles) {
+    hash_map<key8_t, ppr::profile_info> const& profiles) {
   auto tres = transfer_result{};
   tres.from_nloc_key_ = treq.from_nloc_key_;
   tres.profile_ = treq.profile_;
@@ -94,7 +92,7 @@ transfer_result route_single_request(
 
 transfer_results route_multiple_requests(
     transfer_requests const& treqs, ::ppr::routing_graph const& rg,
-    std::map<std::string, ppr::profile_info> const& profiles) {
+    hash_map<key8_t, ppr::profile_info> const& profiles) {
   auto result = transfer_results{};
 
   auto progress_tracker = utl::get_active_progress_tracker();

@@ -60,10 +60,10 @@ struct import_state {
 
 struct footpaths::impl {
   explicit impl(n::timetable& tt,
-                std::map<std::string, ppr::profile_info> const& ppr_profiles_,
+                std::map<std::string, ppr::profile_info> const& ppr_profiles,
                 std::string const& db_file, std::size_t db_max_size)
-      : tt_(tt), ppr_profiles_{ppr_profiles_}, db_{db_file, db_max_size} {
-    load_ppr_profiles();
+      : tt_(tt), db_{db_file, db_max_size} {
+    load_ppr_profiles(ppr_profiles);
 
     auto pfs = db_.get_platforms();
     old_state_.pfs_idx_ =
@@ -71,8 +71,8 @@ struct footpaths::impl {
     old_state_.set_pfs_idx_ = true;
     old_state_.matches_ = db_.get_loc_to_pf_matchings();
     old_state_.transfer_requests_keys_ =
-        db_.get_transfer_requests_keys(ppr_profile_names_);
-    old_state_.transfer_results_ = db_.get_transfer_results(ppr_profile_names_);
+        db_.get_transfer_requests_keys(used_profiles_);
+    old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
 
     auto matched_pfs = platforms{};
     auto matched_nloc_keys = vector<key64_t>{};
@@ -167,29 +167,41 @@ struct footpaths::impl {
     update_timetable();
   }
 
-  void load_ppr_profiles() {
-    for (auto& [pname, pinfo] : ppr_profiles_) {
+  void load_ppr_profiles(
+      std::map<std::string, ppr::profile_info> const& ppr_profiles_by_name) {
+    auto profile_names = std::vector<string>{};
+
+    for (auto const& [pname, pinfo] : ppr_profiles_by_name) {
+      profile_names.emplace_back(pname);
+    }
+
+    db_.put_profiles(profile_names);
+    ppr_profile_keys_ = db_.get_profile_keys();
+
+    for (auto& [pname, pinfo] : ppr_profiles_by_name) {
+      auto pkey = ppr_profile_keys_.at(pname);
+      used_profiles_.insert(pkey);
+
       // convert walk_duration from minutes to seconds
-      pinfo.profile_.duration_limit_ = max_walk_duration_ * 60;
+      ppr_profiles_.insert(std::pair<key8_t, ppr::profile_info>(
+          pkey, ppr_profiles_by_name.at(pname)));
+      ppr_profiles_.at(pkey).profile_.duration_limit_ = max_walk_duration_ * 60;
 
       // build profile_name to idx map in nigiri::tt
-      tt_.profiles_.insert({pname, tt_.profiles_.size()});
-
-      // build list of profile infos
-      profiles_.emplace_back(pinfo);
-      ppr_profile_names_.insert(pname);
+      tt_.profiles_.insert({pkey, tt_.profiles_.size()});
     }
-    assert(tt_.profiles_.size() == profiles_.size());
+    LOG(ml::info) << "loaded " << used_profiles_.size() << " profiles";
+    assert(tt_.profiles_.size() == used_profiles_.size());
   }
 
   n::timetable& tt_;
-  std::map<std::string, ppr::profile_info> ppr_profiles_;
+  hash_map<string, key8_t> ppr_profile_keys_;
+  hash_map<key8_t, ppr::profile_info> ppr_profiles_;
+  set<key8_t> used_profiles_;
   database db_;
 
   state old_state_;  // state before init/import
   state update_state_;  // update state with new platforms/new matches
-
-  set<std::string> ppr_profile_names_;
 
   std::string osm_path_;
   std::string ppr_rg_path_;
@@ -255,7 +267,7 @@ private:
     auto treqs = to_transfer_requests(treqs_k, db_);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
     update_transfer_results(trs);
-    old_state_.transfer_results_ = db_.get_transfer_results(ppr_profile_names_);
+    old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
   }
 
   ::ppr::routing_graph get_routing_ready_ppr_graph() {
@@ -439,8 +451,6 @@ private:
     LOG(ml::info) << "Updated " << updated_in_db.size() << " of " << trs.size()
                   << " transfers in db.";
   }
-
-  std::vector<ppr::profile_info> profiles_;
 
   hash_map<key64_t, nigiri::location_idx_t> location_key_to_idx_;
 

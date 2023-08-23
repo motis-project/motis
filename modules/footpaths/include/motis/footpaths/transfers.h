@@ -21,7 +21,7 @@ struct transfer_request_keys {
   strings to_pf_keys_;
   vector<key64_t> to_nloc_keys_;
 
-  string profile_;
+  key8_t profile_;
 };
 using transfer_requests_keys = std::vector<transfer_request_keys>;
 
@@ -32,7 +32,7 @@ struct transfer_request {
   platforms transfer_targets_;
   vector<key64_t> to_nloc_keys_;
 
-  std::string profile_;
+  key8_t profile_;
 };
 using transfer_requests = std::vector<transfer_request>;
 
@@ -47,7 +47,7 @@ struct transfer_result {
   CISTA_COMPARABLE();
   key64_t from_nloc_key_;
   vector<key64_t> to_nloc_keys_;
-  string profile_;
+  key8_t profile_;
 
   vector<transfer_info> infos_;
 };
