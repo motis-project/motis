@@ -86,7 +86,7 @@ struct footpaths::impl {
     old_state_.set_matched_pfs_idx_ = true;
   };
 
-  void full_import() {
+  void full_import(fs::path const& nigiri_dump_file_path) {
     // 1st extract all platforms from a given osm file
     get_and_save_osm_platforms();
 
@@ -104,11 +104,12 @@ struct footpaths::impl {
     build_key_to_idx_map();
     LOG(ml::info) << tt_.locations_.ids_.size() << " / "
                   << location_key_to_idx_.size();
-    update_timetable();
+    update_timetable(nigiri_dump_file_path);
   }
 
   void maybe_partial_import(import_state const& old_import_state,
-                            import_state const& new_import_state) {
+                            import_state const& new_import_state,
+                            fs::path const& nigiri_dump_file_path) {
 
     auto rt = routing_type::kNoRouting;
     // define routing type
@@ -134,6 +135,10 @@ struct footpaths::impl {
     // check whether routing must be partial or not
     if (fup != first_update::kNoUpdate && rt == routing_type::kNoRouting) {
       rt = routing_type::kPartialRouting;
+    }
+
+    if (fup == first_update::kNoUpdate && rt == routing_type::kNoRouting) {
+      return;
     }
 
     switch (fup) {
@@ -164,7 +169,7 @@ struct footpaths::impl {
 
     // update timetable
     build_key_to_idx_map();
-    update_timetable();
+    update_timetable(nigiri_dump_file_path);
   }
 
   void load_ppr_profiles(
@@ -190,7 +195,6 @@ struct footpaths::impl {
       // build profile_name to idx map in nigiri::tt
       tt_.profiles_.insert({pkey, tt_.profiles_.size()});
     }
-    LOG(ml::info) << "loaded " << used_profiles_.size() << " profiles";
     assert(tt_.profiles_.size() == used_profiles_.size());
   }
 
@@ -344,7 +348,7 @@ private:
     }
   }
 
-  void update_timetable() {
+  void update_timetable(fs::path const& dir) {
     progress_tracker_->status("Updating Timetable.");
     ml::scoped_timer const timer{"Updating Timetable."};
 
@@ -389,6 +393,7 @@ private:
 
     LOG(ml::info) << "Added " << ctr_end << " of " << ctr_start
                   << " transfers.";
+    tt_.write(dir);
   }
 
   // -- db calls --
@@ -520,16 +525,24 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         impl_->osm_path_ = osm_event->path()->str();
         impl_->ppr_rg_path_ = ppr_event->graph_path()->str();
 
-        if (!fs::exists(dir / "import.ini")) {
-          LOG(ml::info) << "Footpaths: Full Import.";
-          impl_->full_import();
-        } else {
-          LOG(ml::info) << "Footpaths: Maybe Partial Import.";
-          auto old_state = mm::read_ini<import_state>(dir / "import.ini");
-          impl_->maybe_partial_import(old_state, new_state);
+        {
+          ml::scoped_timer const timer{"Footpath Import"};
+
+          auto const nigiri_dump_file_path =
+              get_data_directory() / "nigiri" /
+              fmt::to_string(nigiri_event->hash());
+
+          if (!fs::exists(dir / "import.ini")) {
+            LOG(ml::info) << "Footpaths: Full Import.";
+            impl_->full_import(nigiri_dump_file_path);
+          } else {
+            LOG(ml::info) << "Footpaths: Maybe Partial Import.";
+            auto old_state = mm::read_ini<import_state>(dir / "import.ini");
+            impl_->maybe_partial_import(old_state, new_state,
+                                        nigiri_dump_file_path);
+          }
         }
 
-        LOG(ml::info) << "Footpath Import done!";
         mm::write_ini(dir / "import.ini", new_state);
 
         import_successful_ = true;
