@@ -23,15 +23,15 @@ inline string to_key(platform const& pf) {
 }
 
 inline string to_key(transfer_request_keys const& treq_k) {
-  return {fmt::format("{}::{}", treq_k.from_nloc_key_, treq_k.profile_)};
+  return {fmt::format("{}{}", treq_k.from_nloc_key_, treq_k.profile_)};
 }
 
 inline string to_key(transfer_request const& treq) {
-  return {fmt::format("{}::{}", treq.from_nloc_key_, treq.profile_)};
+  return {fmt::format("{}{}", treq.from_nloc_key_, treq.profile_)};
 }
 
 inline string to_key(transfer_result const& tres) {
-  return {fmt::format("{}::{}", tres.from_nloc_key_, tres.profile_)};
+  return {fmt::format("{}{}", tres.from_nloc_key_, tres.profile_)};
 }
 
 }  // namespace motis::footpaths

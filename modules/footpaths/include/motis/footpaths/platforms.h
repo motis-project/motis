@@ -36,7 +36,6 @@ inline char get_osm_str_type(osm_type const ot) {
 struct platform_info {
   cista::offset::string_view name_;
   std::int64_t osm_id_{-1};
-  nigiri::location_idx_t idx_{nigiri::location_idx_t::invalid()};
   osm_type osm_type_{osm_type::kNode};
   bool is_bus_stop_{false};
 };
