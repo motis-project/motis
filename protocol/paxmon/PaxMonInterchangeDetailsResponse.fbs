@@ -1,4 +1,5 @@
 include "paxmon/PaxMonInterchangeInfo.fbs";
+include "paxmon/PaxMonGroup.fbs";
 
 namespace motis.paxmon;
 
@@ -7,4 +8,6 @@ table PaxMonInterchangeDetailsResponse {
 
   normal_routes: uint;
   broken_routes: uint;
+
+  groups: [PaxMonGroup]; // if include_full_groups
 }

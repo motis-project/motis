@@ -7,4 +7,6 @@ table PaxMonInterchangeDetailsRequest {
   id: PaxMonInterchangeId;
 
   include_disabled_group_routes: bool;
+  include_full_groups: bool;
+  include_reroute_log: bool;
 }
