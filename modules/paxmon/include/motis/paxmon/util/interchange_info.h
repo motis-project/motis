@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <limits>
 
+#include "boost/range/join.hpp"
+
 #include "flatbuffers/flatbuffers.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -171,8 +173,10 @@ inline interchange_info get_interchange_info(
     handle_pgwr(pgwr);
   }
 
-  for (auto const& pgwr : broken_routes) {
-    handle_pgwr(pgwr);
+  if (options.include_disabled_group_routes_) {
+    for (auto const& pgwr : broken_routes) {
+      handle_pgwr(pgwr);
+    }
   }
 
   if (options.include_group_infos_) {
@@ -183,12 +187,16 @@ inline interchange_info get_interchange_info(
                        std::make_pair(b.g(), b.r());
               });
     auto const pdf =
-        get_load_pdf(uv.passenger_groups_,
-                     uv.pax_connection_info_.group_routes(ic_edge->pci_));
+        options.include_disabled_group_routes_
+            ? get_load_pdf(uv.passenger_groups_,
+                           boost::join(normal_routes, broken_routes))
+            : get_load_pdf(uv.passenger_groups_, normal_routes);
     auto const cdf = get_cdf(pdf);
+    auto stats = get_pax_stats(cdf);
+    stats.limits_.max_ = info.pax_count_;
     info.groups_ = CreatePaxMonCombinedGroupRoutes(
         fbb, fbb.CreateVectorOfStructs(group_route_infos),
-        to_fbs_distribution(fbb, pdf, cdf));
+        to_fbs_distribution(fbb, pdf, stats));
   }
 
   return info;
