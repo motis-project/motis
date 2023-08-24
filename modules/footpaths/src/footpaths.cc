@@ -51,7 +51,7 @@ struct import_state {
   mm::named<cista::hash_t, MOTIS_NAME("nigiri_hash")> nigiri_hash_;
 
   // import osm state
-  mm::named<cista::hash_t, MOTIS_NAME("osm_hash")> osm_hash_;
+  mm::named<std::string, MOTIS_NAME("osm_path")> osm_path_;
 
   // import ppr state
   mm::named<cista::hash_t, MOTIS_NAME("ppr_graph_hash")> ppr_graph_hash_;
@@ -128,7 +128,7 @@ struct footpaths::impl {
       fup = first_update::kTimetable;
     }
 
-    if (old_import_state.osm_hash_ != new_import_state.osm_hash_) {
+    if (old_import_state.osm_path_ != new_import_state.osm_path_) {
       fup = first_update::kOSM;
     }
 
@@ -193,19 +193,10 @@ struct footpaths::impl {
       ppr_profiles_.at(pkey).profile_.duration_limit_ = max_walk_duration_ * 60;
 
       // build profile_name to idx map in nigiri::tt
-      tt_.profiles_.insert({pkey, tt_.profiles_.size()});
+      tt_.profiles_.insert({pname, tt_.profiles_.size()});
     }
     assert(tt_.profiles_.size() == used_profiles_.size());
   }
-
-  n::timetable& tt_;
-  hash_map<string, key8_t> ppr_profile_keys_;
-  hash_map<key8_t, ppr::profile_info> ppr_profiles_;
-  set<key8_t> used_profiles_;
-  database db_;
-
-  state old_state_;  // state before init/import
-  state update_state_;  // update state with new platforms/new matches
 
   std::string osm_path_;
   std::string ppr_rg_path_;
@@ -352,6 +343,8 @@ private:
     progress_tracker_->status("Updating Timetable.");
     ml::scoped_timer const timer{"Updating Timetable."};
 
+    auto key_to_name = db_.get_profile_key_to_name();
+
     reset_timetable();
     unsigned int ctr_start = 0;
     unsigned int ctr_end = 0;
@@ -364,13 +357,13 @@ private:
 
       for (auto [to_nloc, info] : utl::zip(tres.to_nloc_keys_, tres.infos_)) {
         ++ctr_start;
-        if (tt_.profiles_.count(tres.profile_) == 0 ||
+        if (tt_.profiles_.count(key_to_name.at(tres.profile_)) == 0 ||
             location_key_to_idx_.count(tres.from_nloc_key_) == 0 ||
             location_key_to_idx_.count(to_nloc) == 0) {
           continue;
         }
 
-        auto const prf_idx = tt_.profiles_.at(tres.profile_);
+        auto const prf_idx = tt_.profiles_.at(key_to_name.at(tres.profile_));
         auto const from_idx = location_key_to_idx_.at(tres.from_nloc_key_);
         auto const to_idx = location_key_to_idx_.at(to_nloc);
 
@@ -467,7 +460,17 @@ private:
                   << " transfers in db.";
   }
 
+  n::timetable& tt_;
+  database db_;
+
   hash_map<key64_t, nigiri::location_idx_t> location_key_to_idx_;
+
+  hash_map<string, key8_t> ppr_profile_keys_;
+  hash_map<key8_t, ppr::profile_info> ppr_profiles_;
+  set<key8_t> used_profiles_;
+
+  state old_state_;  // state before init/import
+  state update_state_;  // update state with new platforms/new matches
 
   // initialize matching limits
   int match_distance_min_{0};
@@ -496,17 +499,28 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
       get_data_directory().generic_string(), "footpaths", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
              mm::event_collector::publish_fn_t const&) {
+        using import::FileEvent;
         using import::NigiriEvent;
-        using import::OSMEvent;
         using import::PPREvent;
 
         auto const dir = get_data_directory() / "footpaths";
         auto const nigiri_event =
             motis_content(NigiriEvent, dependencies.at("NIGIRI"));
-        auto const osm_event = motis_content(OSMEvent, dependencies.at("OSM"));
+        auto const files = motis_content(FileEvent, dependencies.at("FILES"));
         auto const ppr_event = motis_content(PPREvent, dependencies.at("PPR"));
+
+        // extract osm path from files
+        std::string osm_path;
+        for (auto const& p : *files->paths()) {
+          if (p->tag()->str() == "osm") {
+            osm_path = p->path()->str();
+            break;
+          }
+        }
+        utl::verify(!osm_path.empty(), "no osm file given.");
+
         auto const new_state =
-            import_state{nigiri_event->hash(), osm_event->hash(),
+            import_state{nigiri_event->hash(), osm_path,
                          ppr_event->graph_hash(), ppr_event->profiles_hash()};
 
         auto ppr_profiles = std::map<std::string, ppr::profile_info>{};
@@ -522,7 +536,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             ppr_profiles, db_file(), db_max_size_);
 
         auto progress_tracker = utl::get_active_progress_tracker();
-        impl_->osm_path_ = osm_event->path()->str();
+        impl_->osm_path_ = osm_path;
         impl_->ppr_rg_path_ = ppr_event->graph_path()->str();
 
         {
@@ -547,13 +561,13 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
 
         import_successful_ = true;
       })
+      ->require("FILES",
+                [](mm::msg_ptr const& msg) {
+                  return msg->get()->content_type() == MsgContent_FileEvent;
+                })
       ->require("NIGIRI",
                 [](mm::msg_ptr const& msg) {
                   return msg->get()->content_type() == MsgContent_NigiriEvent;
-                })
-      ->require("OSM",
-                [](mm::msg_ptr const& msg) {
-                  return msg->get()->content_type() == MsgContent_OSMEvent;
                 })
       ->require("PPR", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_PPREvent;

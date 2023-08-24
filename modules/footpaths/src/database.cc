@@ -93,6 +93,26 @@ hash_map<string, key8_t> database::get_profile_keys() {
   return keys_with_name;
 }
 
+hash_map<key8_t, string> database::get_profile_key_to_name() {
+  auto keys_with_name = hash_map<key8_t, string>{};
+
+  auto lock = std::lock_guard{mutex_};
+  auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
+  auto profiles_db = profiles_dbi(txn);
+  auto cur = lmdb::cursor{txn, profiles_db};
+  auto entry = cur.get(lmdb::cursor_op::FIRST);
+
+  while (entry.has_value()) {
+    keys_with_name.insert(std::pair<key8_t, string>(
+        cista::copy_from_potentially_unaligned<key8_t>(entry->second),
+        string{entry->first}));
+    entry = cur.get(lmdb::cursor_op::NEXT);
+  }
+
+  cur.reset();
+  return keys_with_name;
+}
+
 std::vector<std::size_t> database::put_platforms(platforms& pfs) {
   auto added_indices = std::vector<std::size_t>{};
 

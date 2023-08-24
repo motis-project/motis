@@ -27,6 +27,7 @@ struct database {
   // profiles
   std::vector<std::size_t> put_profiles(std::vector<string> const&);
   hash_map<string, key8_t> get_profile_keys();
+  hash_map<key8_t, string> get_profile_key_to_name();
 
   // platforms
   std::vector<std::size_t> put_platforms(platforms&);
