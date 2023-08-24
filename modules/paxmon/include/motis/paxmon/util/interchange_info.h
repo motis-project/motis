@@ -7,6 +7,10 @@
 
 #include "flatbuffers/flatbuffers.h"
 
+#include "utl/to_vec.h"
+
+#include "motis/hash_set.h"
+
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/conv/station_conv.h"
 
@@ -25,16 +29,15 @@ struct interchange_info {
     auto const* e = ei_.get(uv);
 
     auto const make_fbs_event = [&](event_node const* ev, bool const arrival) {
-      std::vector<flatbuffers::Offset<PaxMonTripStopInfo>> res;
+      auto res = std::vector<flatbuffers::Offset<PaxMonTripStopInfo>>{};
       if (!ev->is_enter_exit_node()) {
-        std::vector<flatbuffers::Offset<TripServiceInfo>> fbs_trips;
+        auto trips = mcd::hash_set<trip const*>{};
         // TODO(pablo): service infos only for arriving trip section
         if (arrival) {
           for (auto const& trp_edge : ev->incoming_edges(uv)) {
             if (trp_edge.is_trip() || trp_edge.is_disabled()) {
               for (auto const& trp : trp_edge.get_trips(sched)) {
-                fbs_trips.emplace_back(
-                    to_fbs_trip_service_info(fbb, sched, trp));
+                trips.insert(trp);
               }
             }
           }
@@ -42,12 +45,14 @@ struct interchange_info {
           for (auto const& trp_edge : ev->outgoing_edges(uv)) {
             if (trp_edge.is_trip() || trp_edge.is_disabled()) {
               for (auto const& trp : trp_edge.get_trips(sched)) {
-                fbs_trips.emplace_back(
-                    to_fbs_trip_service_info(fbb, sched, trp));
+                trips.insert(trp);
               }
             }
           }
         }
+        auto const fbs_trips = utl::to_vec(trips, [&](trip const* trp) {
+          return to_fbs_trip_service_info(fbb, sched, trp);
+        });
         res.emplace_back(CreatePaxMonTripStopInfo(
             fbb, motis_to_unixtime(sched, ev->schedule_time()),
             motis_to_unixtime(sched, ev->current_time()), ev->is_canceled(),
