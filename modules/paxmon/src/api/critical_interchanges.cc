@@ -51,8 +51,16 @@ msg_ptr critical_interchanges(paxmon_data& data, msg_ptr const& msg) {
       req->include_canceled_final_arrival();
   auto const only_planned_routes = req->only_planned_routes();
 
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+  auto const ignore_past_transfers =
+      req->ignore_past_transfers() && current_time != INVALID_TIME;
+
   auto const include_event = [&](event_node const* ev) {
     if (ev->is_enter_exit_node()) {
+      return false;
+    }
+    if (ignore_past_transfers && ev->current_time() < current_time) {
       return false;
     }
     return (ev->schedule_time() >= filter_interval_begin &&

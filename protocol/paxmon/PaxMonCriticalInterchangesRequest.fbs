@@ -15,6 +15,7 @@ table PaxMonCriticalInterchangesRequest {
   universe: uint;
 
   filter_interval: Interval;
+  ignore_past_transfers: bool;
 
   include_insufficient_transfer_time: bool = true;
   include_missed_initial_departure: bool = true;
