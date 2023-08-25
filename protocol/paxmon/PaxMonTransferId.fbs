@@ -1,6 +1,6 @@
 namespace motis.paxmon;
 
-struct PaxMonInterchangeId {
+struct PaxMonTransferId {
   n: uint;
   e: uint;
 }

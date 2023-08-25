@@ -2,7 +2,7 @@ include "base/Interval.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonInterchangesAtStationRequest {
+table PaxMonTransfersAtStationRequest {
   universe: uint;
 
   station: string; // station id
@@ -12,7 +12,7 @@ table PaxMonInterchangesAtStationRequest {
 
   include_meta_stations: bool;
   include_group_infos: bool;
-  include_broken_interchanges: bool;
+  include_broken_transfers: bool;
   include_disabled_group_routes: bool;
 
   max_results: uint; // 0 = unlimited

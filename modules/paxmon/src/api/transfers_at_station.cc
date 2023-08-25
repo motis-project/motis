@@ -1,4 +1,4 @@
-#include "motis/paxmon/api/interchanges_at_station.h"
+#include "motis/paxmon/api/transfers_at_station.h"
 
 #include <algorithm>
 #include <utility>
@@ -9,7 +9,7 @@
 
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
-#include "motis/paxmon/util/interchange_info.h"
+#include "motis/paxmon/util/detailed_transfer_info.h"
 
 using namespace motis::module;
 using namespace motis::paxmon;
@@ -17,8 +17,8 @@ using namespace motis::paxmon::util;
 
 namespace motis::paxmon::api {
 
-msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
-  auto const req = motis_content(PaxMonInterchangesAtStationRequest, msg);
+msg_ptr transfers_at_station(paxmon_data& data, msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonTransfersAtStationRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
   auto const& uv = uv_access.uv_;
@@ -44,15 +44,15 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
                             end_time != std::numeric_limits<time>::max() ||
                             ignore_past_transfers;
   auto const include_group_infos = req->include_group_infos();
-  auto const include_broken_interchanges = req->include_broken_interchanges();
+  auto const include_broken_transfers = req->include_broken_transfers();
   auto const include_disabled_group_routes =
       req->include_disabled_group_routes();
 
   auto const max_results = req->max_results();
 
   message_creator mc;
-  auto interchange_infos =
-      std::vector<flatbuffers::Offset<PaxMonInterchangeInfo>>{};
+  auto transfer_infos =
+      std::vector<flatbuffers::Offset<PaxMonDetailedTransferInfo>>{};
   auto max_count_reached = false;
 
   auto const include_event = [&](event_node const* ev) {
@@ -70,7 +70,7 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
            (ev->current_time() >= start_time && ev->current_time() <= end_time);
   };
 
-  auto const gii_options = get_interchange_info_options{
+  auto const gii_options = get_detailed_transfer_info_options{
       .include_group_infos_ = include_group_infos,
       .include_disabled_group_routes_ = include_disabled_group_routes,
   };
@@ -85,17 +85,17 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
     }
     for (auto const& ei : uv.interchanges_at_station_.at(station_idx)) {
       auto const* ic_edge = ei.get(uv);
-      if ((!include_broken_interchanges && !ic_edge->is_valid(uv)) ||
+      if ((!include_broken_transfers && !ic_edge->is_valid(uv)) ||
           (!include_event(ic_edge->from(uv)) &&
            !include_event(ic_edge->to(uv)))) {
         continue;
       }
 
-      interchange_infos.emplace_back(
-          get_interchange_info(uv, sched, ei, mc, gii_options)
-              .to_fbs_interchange_info(mc, uv, sched, false));
+      transfer_infos.emplace_back(
+          get_detailed_transfer_info(uv, sched, ei, mc, gii_options)
+              .to_fbs_transfer_info(mc, uv, sched, false));
 
-      if (max_results != 0 && interchange_infos.size() >= max_results) {
+      if (max_results != 0 && transfer_infos.size() >= max_results) {
         max_count_reached = true;
         break;
       }
@@ -109,12 +109,11 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
     }
   }
 
-  mc.create_and_finish(
-      MsgContent_PaxMonInterchangesAtStationResponse,
-      CreatePaxMonInterchangesAtStationResponse(
-          mc, to_fbs(mc, ic_station), mc.CreateVector(interchange_infos),
-          max_count_reached)
-          .Union());
+  mc.create_and_finish(MsgContent_PaxMonTransfersAtStationResponse,
+                       CreatePaxMonTransfersAtStationResponse(
+                           mc, to_fbs(mc, ic_station),
+                           mc.CreateVector(transfer_infos), max_count_reached)
+                           .Union());
   return make_msg(mc);
 }
 

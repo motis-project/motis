@@ -1,4 +1,4 @@
-#include "motis/paxmon/api/interchange_details.h"
+#include "motis/paxmon/api/transfer_details.h"
 
 #include <limits>
 #include <vector>
@@ -11,7 +11,7 @@
 
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
-#include "motis/paxmon/util/interchange_info.h"
+#include "motis/paxmon/util/detailed_transfer_info.h"
 
 using namespace motis::module;
 using namespace motis::paxmon;
@@ -20,8 +20,8 @@ using namespace flatbuffers;
 
 namespace motis::paxmon::api {
 
-msg_ptr interchange_details(paxmon_data& data, msg_ptr const& msg) {
-  auto const req = motis_content(PaxMonInterchangeDetailsRequest, msg);
+msg_ptr transfer_details(paxmon_data& data, msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonTransferDetailsRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
   auto const& uv = uv_access.uv_;
@@ -35,7 +35,7 @@ msg_ptr interchange_details(paxmon_data& data, msg_ptr const& msg) {
   auto const include_reroute_log = req->include_reroute_log();
 
   auto const* e = ei.get(uv);
-  utl::verify(e->is_interchange(), "interchange_details: invalid id");
+  utl::verify(e->is_interchange(), "transfer_details: invalid id");
 
   message_creator mc;
 
@@ -43,9 +43,9 @@ msg_ptr interchange_details(paxmon_data& data, msg_ptr const& msg) {
   auto const broken_routes =
       uv.pax_connection_info_.broken_group_routes(e->pci_);
 
-  auto const info = get_interchange_info(
+  auto const info = get_detailed_transfer_info(
       uv, sched, ei, mc,
-      get_interchange_info_options{
+      get_detailed_transfer_info_options{
           .include_group_infos_ = true,
           .include_disabled_group_routes_ = include_disabled_group_routes,
           .include_delay_info_ = true});
@@ -75,9 +75,9 @@ msg_ptr interchange_details(paxmon_data& data, msg_ptr const& msg) {
   }
 
   mc.create_and_finish(
-      MsgContent_PaxMonInterchangeDetailsResponse,
-      CreatePaxMonInterchangeDetailsResponse(
-          mc, info.to_fbs_interchange_info(mc, uv, sched, true),
+      MsgContent_PaxMonTransferDetailsResponse,
+      CreatePaxMonTransferDetailsResponse(
+          mc, info.to_fbs_transfer_info(mc, uv, sched, true),
           info.normal_routes_, info.broken_routes_, mc.CreateVector(fbs_groups))
           .Union());
   return make_msg(mc);

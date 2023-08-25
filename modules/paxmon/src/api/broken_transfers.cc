@@ -1,4 +1,4 @@
-#include "motis/paxmon/api/critical_interchanges.h"
+#include "motis/paxmon/api/broken_transfers.h"
 
 #include <algorithm>
 #include <iterator>
@@ -11,7 +11,7 @@
 
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
-#include "motis/paxmon/util/interchange_info.h"
+#include "motis/paxmon/util/detailed_transfer_info.h"
 
 using namespace motis::module;
 using namespace motis::paxmon;
@@ -20,8 +20,8 @@ using namespace flatbuffers;
 
 namespace motis::paxmon::api {
 
-msg_ptr critical_interchanges(paxmon_data& data, msg_ptr const& msg) {
-  auto const req = motis_content(PaxMonCriticalInterchangesRequest, msg);
+msg_ptr broken_transfers(paxmon_data& data, msg_ptr const& msg) {
+  auto const req = motis_content(PaxMonBrokenTransfersRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
   auto const& uv = uv_access.uv_;
@@ -71,13 +71,13 @@ msg_ptr critical_interchanges(paxmon_data& data, msg_ptr const& msg) {
 
   message_creator mc;
 
-  auto interchanges = std::vector<interchange_info>{};
-  auto broken_interchanges = 0U;
+  auto transfers = std::vector<detailed_transfer_info>{};
+  auto broken_transfers = 0U;
 
-  auto const gii_options =
-      get_interchange_info_options{.include_disabled_group_routes_ = true,
-                                   .include_delay_info_ = true,
-                                   .only_planned_routes_ = only_planned_routes};
+  auto const gdti_options = get_detailed_transfer_info_options{
+      .include_disabled_group_routes_ = true,
+      .include_delay_info_ = true,
+      .only_planned_routes_ = only_planned_routes};
 
   for (auto const& bucket : uv.interchanges_at_station_) {
     auto const station_idx = bucket.index();
@@ -90,7 +90,7 @@ msg_ptr critical_interchanges(paxmon_data& data, msg_ptr const& msg) {
 
       auto const* from = ic_edge->from(uv);
       if (from->station_idx() != station_idx) {
-        // interchanges are included in from and to station buckets,
+        // transfers are included in from and to station buckets,
         // only process them once (as outgoing edges)
         continue;
       }
@@ -117,92 +117,97 @@ msg_ptr critical_interchanges(paxmon_data& data, msg_ptr const& msg) {
         continue;
       }
 
-      ++broken_interchanges;
+      ++broken_transfers;
 
-      auto& info = interchanges.emplace_back(
-          get_interchange_info(uv, sched, ei, mc, gii_options));
+      auto& info = transfers.emplace_back(
+          get_detailed_transfer_info(uv, sched, ei, mc, gdti_options));
 
       if (info.group_count_ == 0) {
-        interchanges.pop_back();
+        transfers.pop_back();
       }
     }
   }
 
   switch (req->sort_by()) {
-    case PaxMonCriticalInterchangesSortOrder_AffectedPax:
+    case PaxMonBrokenTransfersSortOrder_AffectedPax:
       std::stable_sort(
-          begin(interchanges), end(interchanges),
-          [](interchange_info const& lhs, interchange_info const& rhs) {
+          begin(transfers), end(transfers),
+          [](detailed_transfer_info const& lhs,
+             detailed_transfer_info const& rhs) {
             return std::tie(lhs.pax_count_, lhs.total_delay_increase_) >
                    std::tie(rhs.pax_count_, rhs.total_delay_increase_);
           });
       break;
-    case PaxMonCriticalInterchangesSortOrder_TotalDelayIncrease:
-      std::stable_sort(
-          begin(interchanges), end(interchanges),
-          [](interchange_info const& lhs, interchange_info const& rhs) {
-            return lhs.total_delay_increase_ > rhs.total_delay_increase_;
-          });
+    case PaxMonBrokenTransfersSortOrder_TotalDelayIncrease:
+      std::stable_sort(begin(transfers), end(transfers),
+                       [](detailed_transfer_info const& lhs,
+                          detailed_transfer_info const& rhs) {
+                         return lhs.total_delay_increase_ >
+                                rhs.total_delay_increase_;
+                       });
       break;
-    case PaxMonCriticalInterchangesSortOrder_SquaredTotalDelayIncrease:
-      std::stable_sort(
-          begin(interchanges), end(interchanges),
-          [](interchange_info const& lhs, interchange_info const& rhs) {
-            return lhs.squared_total_delay_increase_ >
-                   rhs.squared_total_delay_increase_;
-          });
+    case PaxMonBrokenTransfersSortOrder_SquaredTotalDelayIncrease:
+      std::stable_sort(begin(transfers), end(transfers),
+                       [](detailed_transfer_info const& lhs,
+                          detailed_transfer_info const& rhs) {
+                         return lhs.squared_total_delay_increase_ >
+                                rhs.squared_total_delay_increase_;
+                       });
       break;
-    case PaxMonCriticalInterchangesSortOrder_MinDelayIncrease:
-      std::stable_sort(
-          begin(interchanges), end(interchanges),
-          [](interchange_info const& lhs, interchange_info const& rhs) {
-            return std::tie(lhs.min_delay_increase_,
-                            lhs.total_delay_increase_) >
-                   std::tie(rhs.min_delay_increase_, rhs.total_delay_increase_);
-          });
+    case PaxMonBrokenTransfersSortOrder_MinDelayIncrease:
+      std::stable_sort(begin(transfers), end(transfers),
+                       [](detailed_transfer_info const& lhs,
+                          detailed_transfer_info const& rhs) {
+                         return std::tie(lhs.min_delay_increase_,
+                                         lhs.total_delay_increase_) >
+                                std::tie(rhs.min_delay_increase_,
+                                         rhs.total_delay_increase_);
+                       });
       break;
-    case PaxMonCriticalInterchangesSortOrder_MaxDelayIncrease:
-      std::stable_sort(
-          begin(interchanges), end(interchanges),
-          [](interchange_info const& lhs, interchange_info const& rhs) {
-            return std::tie(lhs.max_delay_increase_,
-                            lhs.total_delay_increase_) >
-                   std::tie(rhs.max_delay_increase_, rhs.total_delay_increase_);
-          });
+    case PaxMonBrokenTransfersSortOrder_MaxDelayIncrease:
+      std::stable_sort(begin(transfers), end(transfers),
+                       [](detailed_transfer_info const& lhs,
+                          detailed_transfer_info const& rhs) {
+                         return std::tie(lhs.max_delay_increase_,
+                                         lhs.total_delay_increase_) >
+                                std::tie(rhs.max_delay_increase_,
+                                         rhs.total_delay_increase_);
+                       });
       break;
-    case PaxMonCriticalInterchangesSortOrder_UnreachablePax:
+    case PaxMonBrokenTransfersSortOrder_UnreachablePax:
       std::stable_sort(
-          begin(interchanges), end(interchanges),
-          [](interchange_info const& lhs, interchange_info const& rhs) {
+          begin(transfers), end(transfers),
+          [](detailed_transfer_info const& lhs,
+             detailed_transfer_info const& rhs) {
             return std::tie(lhs.unreachable_pax_, lhs.total_delay_increase_) >
                    std::tie(rhs.unreachable_pax_, rhs.total_delay_increase_);
           });
       break;
   }
 
-  auto const total_matching_interchanges = interchanges.size();
+  auto const total_matching_transfers = transfers.size();
 
   if (skip_first > 0) {
-    interchanges.erase(begin(interchanges),
-                       std::next(begin(interchanges),
-                                 std::min(static_cast<std::size_t>(skip_first),
-                                          interchanges.size())));
+    transfers.erase(begin(transfers),
+                    std::next(begin(transfers),
+                              std::min(static_cast<std::size_t>(skip_first),
+                                       transfers.size())));
   }
 
   auto remaining = 0ULL;
-  if (max_results != 0 && interchanges.size() > max_results) {
-    remaining = interchanges.size() - max_results;
-    interchanges.resize(max_results);
+  if (max_results != 0 && transfers.size() > max_results) {
+    remaining = transfers.size() - max_results;
+    transfers.resize(max_results);
   }
 
   mc.create_and_finish(
-      MsgContent_PaxMonCriticalInterchangesResponse,
-      CreatePaxMonCriticalInterchangesResponse(
-          mc, total_matching_interchanges, interchanges.size(), remaining,
-          skip_first + interchanges.size(),
-          mc.CreateVector(utl::to_vec(interchanges,
+      MsgContent_PaxMonBrokenTransfersResponse,
+      CreatePaxMonBrokenTransfersResponse(
+          mc, total_matching_transfers, transfers.size(), remaining,
+          skip_first + transfers.size(),
+          mc.CreateVector(utl::to_vec(transfers,
                                       [&](auto const& info) {
-                                        return info.to_fbs_interchange_info(
+                                        return info.to_fbs_transfer_info(
                                             mc, uv, sched, true);
                                       })))
           .Union());

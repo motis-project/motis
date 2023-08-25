@@ -2,7 +2,7 @@ include "base/Interval.fbs";
 
 namespace motis.paxmon;
 
-enum PaxMonCriticalInterchangesSortOrder : byte {
+enum PaxMonBrokenTransfersSortOrder : byte {
  AffectedPax,
  TotalDelayIncrease,
  SquaredTotalDelayIncrease,
@@ -11,7 +11,7 @@ enum PaxMonCriticalInterchangesSortOrder : byte {
  UnreachablePax
 }
 
-table PaxMonCriticalInterchangesRequest {
+table PaxMonBrokenTransfersRequest {
   universe: uint;
 
   filter_interval: Interval;
@@ -24,7 +24,7 @@ table PaxMonCriticalInterchangesRequest {
   include_canceled_final_arrival: bool = true;
   only_planned_routes: bool;
 
-  sort_by: PaxMonCriticalInterchangesSortOrder;
+  sort_by: PaxMonBrokenTransfersSortOrder;
 
   max_results: uint; // 0 = unlimited
   skip_first: uint; // skip the first x results (for subsequent calls)

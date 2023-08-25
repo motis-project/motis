@@ -21,11 +21,11 @@
 
 namespace motis::paxmon::util {
 
-struct interchange_info {
-  flatbuffers::Offset<PaxMonInterchangeInfo> to_fbs_interchange_info(
+struct detailed_transfer_info {
+  flatbuffers::Offset<PaxMonDetailedTransferInfo> to_fbs_transfer_info(
       flatbuffers::FlatBufferBuilder& fbb, universe const& uv,
       schedule const& sched, bool const include_delay_info) const {
-    auto const id = PaxMonInterchangeId{ei_.node_, ei_.out_edge_idx_};
+    auto const id = PaxMonTransferId{ei_.node_, ei_.out_edge_idx_};
     auto const* e = ei_.get(uv);
 
     auto const make_fbs_event = [&](event_node const* ev, bool const arrival) {
@@ -62,12 +62,12 @@ struct interchange_info {
       return fbb.CreateVector(res);
     };
 
-    return CreatePaxMonInterchangeInfo(
+    return CreatePaxMonDetailedTransferInfo(
         fbb, &id, make_fbs_event(from_, true), make_fbs_event(to_, false),
         groups_, group_count_, pax_count_, e->transfer_time(), e->is_valid(uv),
         e->is_disabled(), e->is_broken(), e->is_canceled(uv),
         include_delay_info
-            ? CreatePaxMonInterchangeDelayInfo(
+            ? CreatePaxMonTransferDelayInfo(
                   fbb, min_delay_increase_, max_delay_increase_,
                   total_delay_increase_, squared_total_delay_increase_,
                   unreachable_pax_)
@@ -94,19 +94,19 @@ struct interchange_info {
   flatbuffers::Offset<PaxMonCombinedGroupRoutes> groups_{};
 };
 
-struct get_interchange_info_options {
+struct get_detailed_transfer_info_options {
   bool include_group_infos_{};
   bool include_disabled_group_routes_{};
   bool include_delay_info_{};
   bool only_planned_routes_{};
 };
 
-inline interchange_info get_interchange_info(
+inline detailed_transfer_info get_detailed_transfer_info(
     universe const& uv, schedule const& sched, edge_index const ei,
     flatbuffers::FlatBufferBuilder& fbb,
-    get_interchange_info_options const& options) {
+    get_detailed_transfer_info_options const& options) {
   auto const* ic_edge = ei.get(uv);
-  auto info = interchange_info{
+  auto info = detailed_transfer_info{
       .ei_ = ei, .from_ = ic_edge->from(uv), .to_ = ic_edge->to(uv)};
 
   auto group_route_infos = std::vector<PaxMonGroupRouteBaseInfo>{};

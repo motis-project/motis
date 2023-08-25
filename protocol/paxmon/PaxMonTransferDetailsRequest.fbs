@@ -1,10 +1,10 @@
-include "paxmon/PaxMonInterchangeId.fbs";
+include "paxmon/PaxMonTransferId.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonInterchangeDetailsRequest {
+table PaxMonTransferDetailsRequest {
   universe: uint;
-  id: PaxMonInterchangeId;
+  id: PaxMonTransferId;
 
   include_disabled_group_routes: bool;
   include_full_groups: bool;

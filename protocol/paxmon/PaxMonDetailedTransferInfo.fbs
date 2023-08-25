@@ -1,7 +1,7 @@
 include "base/Station.fbs";
 include "base/TripServiceInfo.fbs";
 include "paxmon/PaxMonCombinedGroups.fbs";
-include "paxmon/PaxMonInterchangeId.fbs";
+include "paxmon/PaxMonTransferId.fbs";
 
 namespace motis.paxmon;
 
@@ -13,7 +13,7 @@ table PaxMonTripStopInfo {
   station: Station;
 }
 
-table PaxMonInterchangeDelayInfo {
+table PaxMonTransferDelayInfo {
   min_delay_increase: int;
   max_delay_increase: int;
   total_delay_increase: long;
@@ -21,8 +21,8 @@ table PaxMonInterchangeDelayInfo {
   unreachable_pax: uint;
 }
 
-table PaxMonInterchangeInfo {
-  id: PaxMonInterchangeId;
+table PaxMonDetailedTransferInfo {
+  id: PaxMonTransferId;
   arrival: [PaxMonTripStopInfo]; // length 0 if initial transfer, else 1
   departure: [PaxMonTripStopInfo]; // length 0 if final transfer, else 1
 
@@ -36,5 +36,5 @@ table PaxMonInterchangeInfo {
   broken: bool;
   canceled: bool;
 
-  delay: PaxMonInterchangeDelayInfo (optional);
+  delay: PaxMonTransferDelayInfo (optional);
 }

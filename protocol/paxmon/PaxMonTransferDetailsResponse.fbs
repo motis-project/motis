@@ -1,10 +1,10 @@
-include "paxmon/PaxMonInterchangeInfo.fbs";
+include "paxmon/PaxMonDetailedTransferInfo.fbs";
 include "paxmon/PaxMonGroup.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonInterchangeDetailsResponse {
-  info: PaxMonInterchangeInfo;
+table PaxMonTransferDetailsResponse {
+  info: PaxMonDetailedTransferInfo;
 
   normal_routes: uint;
   broken_routes: uint;
