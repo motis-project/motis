@@ -94,6 +94,8 @@ LookupScheduleInfoResponse:
       description: First loaded day (unix timestamp)
     end:
       description: Last loaded day (unix timestamp)
+    schedules:
+      description: TODO
 TableType:
   description: TODO
 LookupStationEventsRequest:
@@ -183,4 +185,13 @@ LookupStationLocationResponse:
   description: TODO
   fields:
     position:
+      description: TODO
+LookupSchedule:
+  description: TODO
+  fields:
+    tag:
+      description: TODO
+    hash:
+      description: TODO
+    created:
       description: TODO

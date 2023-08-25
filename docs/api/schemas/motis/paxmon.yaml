@@ -875,27 +875,6 @@ PaxMonUniverseDestroyed:
   fields:
     universe:
       description: TODO
-PaxMonInterchangesAtStationRequest:
-  description: TODO
-  fields:
-    universe:
-      description: TODO
-    station:
-      description: TODO
-    start_time:
-      description: TODO
-    end_time:
-      description: TODO
-    max_count:
-      description: TODO
-    include_meta_stations:
-      description: TODO
-    include_group_infos:
-      description: TODO
-    include_broken_interchanges:
-      description: TODO
-    include_disabled_group_routes:
-      description: TODO
 PaxMonTripStopInfo:
   description: TODO
   fields:
@@ -907,31 +886,7 @@ PaxMonTripStopInfo:
       description: TODO
     station:
       description: TODO
-PaxMonInterchangeInfo:
-  description: TODO
-  fields:
-    arrival:
-      description: TODO
-    departure:
-      description: TODO
-    groups:
-      description: TODO
-    transfer_time:
-      description: TODO
-    valid:
-      description: TODO
-    disabled:
-      description: TODO
-    broken:
-      description: TODO
-PaxMonInterchangesAtStationResponse:
-  description: TODO
-  fields:
-    station:
-      description: TODO
-    interchanges:
-      description: TODO
-    max_count_reached:
+    canceled:
       description: TODO
 PaxMonGetAddressableGroupsRequest:
   description: TODO
@@ -1822,3 +1777,146 @@ PaxMonFeedStatus:
       description: >
         The creation time of the latest real-time updated received from this
         real-time feed (unix timestamp).
+PaxMonTransfersAtStationRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    station:
+      description: TODO
+    filter_interval:
+      description: TODO
+    ignore_past_transfers:
+      description: TODO
+    include_meta_stations:
+      description: TODO
+    include_group_infos:
+      description: TODO
+    include_broken_transfers:
+      description: TODO
+    include_disabled_group_routes:
+      description: TODO
+    max_results:
+      description: TODO
+PaxMonTransferId:
+  description: TODO
+  fields:
+    n:
+      description: TODO
+    e:
+      description: TODO
+PaxMonTransferDelayInfo:
+  description: TODO
+  fields:
+    min_delay_increase:
+      description: TODO
+    max_delay_increase:
+      description: TODO
+    total_delay_increase:
+      description: TODO
+    squared_total_delay_increase:
+      description: TODO
+    unreachable_pax:
+      description: TODO
+PaxMonDetailedTransferInfo:
+  description: TODO
+  fields:
+    id:
+      description: TODO
+    arrival:
+      description: TODO
+    departure:
+      description: TODO
+    groups:
+      description: TODO
+    group_count:
+      description: TODO
+    pax_count:
+      description: TODO
+    transfer_time:
+      description: TODO
+    valid:
+      description: TODO
+    disabled:
+      description: TODO
+    broken:
+      description: TODO
+    canceled:
+      description: TODO
+    delay:
+      description: TODO
+PaxMonTransfersAtStationResponse:
+  description: TODO
+  fields:
+    station:
+      description: TODO
+    transfers:
+      description: TODO
+    max_count_reached:
+      description: TODO
+PaxMonBrokenTransfersSortOrder:
+  description: TODO
+PaxMonBrokenTransfersRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    filter_interval:
+      description: TODO
+    ignore_past_transfers:
+      description: TODO
+    include_insufficient_transfer_time:
+      description: TODO
+    include_missed_initial_departure:
+      description: TODO
+    include_canceled_transfer:
+      description: TODO
+    include_canceled_initial_departure:
+      description: TODO
+    include_canceled_final_arrival:
+      description: TODO
+    only_planned_routes:
+      description: TODO
+    sort_by:
+      description: TODO
+    max_results:
+      description: TODO
+    skip_first:
+      description: TODO
+PaxMonBrokenTransfersResponse:
+  description: TODO
+  fields:
+    total_matching_transfers:
+      description: TODO
+    transfers_in_this_response:
+      description: TODO
+    remaining_transfers:
+      description: TODO
+    next_skip:
+      description: TODO
+    transfers:
+      description: TODO
+PaxMonTransferDetailsRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    id:
+      description: TODO
+    include_disabled_group_routes:
+      description: TODO
+    include_full_groups:
+      description: TODO
+    include_reroute_log:
+      description: TODO
+PaxMonTransferDetailsResponse:
+  description: TODO
+  fields:
+    info:
+      description: TODO
+    normal_routes:
+      description: TODO
+    broken_routes:
+      description: TODO
+    groups:
+      description: TODO

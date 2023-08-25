@@ -352,14 +352,14 @@
     type: motis.paxmon.PaxMonGetGroupsResponse
     description: Information about the requested passenger groups
 
-/paxmon/interchanges_at_station:
-  summary: List monitored interchanges at a station
+/paxmon/transfers_at_station:
+  summary: List monitored transfers at a station
   tags:
     - rsl
-  input: motis.paxmon.PaxMonInterchangesAtStationRequest
+  input: motis.paxmon.PaxMonTransfersAtStationRequest
   output:
-    type: motis.paxmon.PaxMonInterchangesAtStationResponse
-    description: Information about the requested interchanges
+    type: motis.paxmon.PaxMonTransfersAtStationResponse
+    description: Information about the requested transfers
 
 /paxmon/group_statistics:
   summary: Passenger group statistics
