@@ -41,7 +41,11 @@ private:
   bool railviz_{true};
   bool routing_{true};
   unsigned link_stop_distance_{100U};
-  bool use_stationfilter_{true};
+  bool use_stationfilter_{false};
+  bool percentage_filter_{false};
+  double percent_for_filter_{0.2};
+  bool weighted_filter_{false};
+  bool line_filter_{false};
   std::vector<std::string> gtfsrt_urls_;
   std::vector<std::string> gtfsrt_paths_;
   unsigned gtfsrt_update_interval_sec_{60U};
