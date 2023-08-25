@@ -26,16 +26,29 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
 
   // filters
   auto const start_time =
-      req->start_time() != 0 ? unix_to_motistime(sched, req->start_time()) : 0;
-  auto const end_time = req->end_time() != 0
-                            ? unix_to_motistime(sched, req->end_time())
+      req->filter_interval()->begin() != 0
+          ? unix_to_motistime(sched.schedule_begin_,
+                              req->filter_interval()->begin())
+          : 0;
+  auto const end_time = req->filter_interval()->end() != 0
+                            ? unix_to_motistime(sched.schedule_begin_,
+                                                req->filter_interval()->end())
                             : std::numeric_limits<time>::max();
-  auto const filter_times = req->start_time() != 0 || req->end_time() != 0;
-  auto const max_count = req->max_count();
+
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+  auto const ignore_past_transfers =
+      req->ignore_past_transfers() && current_time != INVALID_TIME;
+
+  auto const filter_times = start_time != 0 ||
+                            end_time != std::numeric_limits<time>::max() ||
+                            ignore_past_transfers;
   auto const include_group_infos = req->include_group_infos();
   auto const include_broken_interchanges = req->include_broken_interchanges();
   auto const include_disabled_group_routes =
       req->include_disabled_group_routes();
+
+  auto const max_results = req->max_results();
 
   message_creator mc;
   auto interchange_infos =
@@ -47,6 +60,9 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
       return true;
     }
     if (ev->is_enter_exit_node()) {
+      return false;
+    }
+    if (ignore_past_transfers && ev->current_time() < current_time) {
       return false;
     }
     return (ev->schedule_time() >= start_time &&
@@ -79,7 +95,7 @@ msg_ptr interchanges_at_station(paxmon_data& data, msg_ptr const& msg) {
           get_interchange_info(uv, sched, ei, mc, gii_options)
               .to_fbs_interchange_info(mc, uv, sched, false));
 
-      if (max_count != 0 && interchange_infos.size() >= max_count) {
+      if (max_results != 0 && interchange_infos.size() >= max_results) {
         max_count_reached = true;
         break;
       }
