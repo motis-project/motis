@@ -361,6 +361,24 @@
     type: motis.paxmon.PaxMonTransfersAtStationResponse
     description: Information about the requested transfers
 
+/paxmon/broken_transfers:
+  summary: List broken transfers
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonBrokenTransfersRequest
+  output:
+    type: motis.paxmon.PaxMonBrokenTransfersResponse
+    description: A list of monitored broken transfers
+
+/paxmon/transfer_details:
+  summary: Transfer information
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonTransferDetailsRequest
+  output:
+    type: motis.paxmon.PaxMonTransferDetailsResponse
+    description: Information about the transfer
+
 /paxmon/group_statistics:
   summary: Passenger group statistics
   tags:
