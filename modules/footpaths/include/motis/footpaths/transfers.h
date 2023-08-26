@@ -15,20 +15,20 @@ namespace motis::footpaths {
 
 struct transfer_request_keys {
   CISTA_COMPARABLE();
-  key64_t from_nloc_key_;
-  vector<key64_t> to_nloc_keys_;
-  key8_t profile_;
+  nlocation_key_t from_nloc_key_;
+  vector<nlocation_key_t> to_nloc_keys_;
+  profile_key_t profile_;
 };
 using transfer_requests_keys = std::vector<transfer_request_keys>;
 
 struct transfer_request {
   platform transfer_start_;
-  key64_t from_nloc_key_;
+  nlocation_key_t from_nloc_key_;
 
   platforms transfer_targets_;
-  vector<key64_t> to_nloc_keys_;
+  vector<nlocation_key_t> to_nloc_keys_;
 
-  key8_t profile_;
+  profile_key_t profile_;
 };
 using transfer_requests = std::vector<transfer_request>;
 
@@ -41,9 +41,9 @@ using transfer_infos = std::vector<transfer_info>;
 
 struct transfer_result {
   CISTA_COMPARABLE();
-  key64_t from_nloc_key_;
-  vector<key64_t> to_nloc_keys_;
-  key8_t profile_;
+  nlocation_key_t from_nloc_key_;
+  vector<nlocation_key_t> to_nloc_keys_;
+  profile_key_t profile_;
 
   vector<transfer_info> infos_;
 };

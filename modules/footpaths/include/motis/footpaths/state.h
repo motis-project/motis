@@ -20,8 +20,8 @@ struct state {
   bool set_pfs_idx_{false};
 
   // nloc_keys_.size() == matches_.size()
-  vector<key64_t> nloc_keys_;  // matched nigiri location keys
-  hash_map<key64_t /* nloc key */, platform>
+  vector<nlocation_key_t> nloc_keys_;  // matched nigiri location keys
+  hash_map<nlocation_key_t /* nloc key */, platform>
       matches_;  // mapping matched nloc to pf
   transfer_requests_keys transfer_requests_keys_;
   transfer_results transfer_results_;

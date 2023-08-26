@@ -15,7 +15,7 @@ namespace motis::footpaths {
 transfer_request_keys merge(transfer_request_keys const& treq_k_a,
                             transfer_request_keys const& treq_k_b) {
   auto merged = transfer_request_keys{};
-  auto added_to_nlocs = set<key64_t>{};
+  auto added_to_nlocs = set<nlocation_key_t>{};
 
   utl::verify(
       treq_k_a.from_nloc_key_ == treq_k_b.from_nloc_key_,
@@ -49,7 +49,7 @@ transfer_request_keys merge(transfer_request_keys const& treq_k_a,
 transfer_result merge(transfer_result const& tres_a,
                       transfer_result const& tres_b) {
   auto merged = transfer_result{};
-  auto added_to_nlocs = set<key64_t>{};
+  auto added_to_nlocs = set<nlocation_key_t>{};
 
   utl::verify(tres_a.from_nloc_key_ == tres_b.from_nloc_key_,
               "Cannot merge two transfer results from different locations.");

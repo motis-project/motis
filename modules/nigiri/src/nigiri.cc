@@ -461,11 +461,6 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           }
         }
 
-        LOG(logging::info)
-            << "nigiri profile-based footpaths: initialized "
-            << impl_->tt_->get()->locations_.footpaths_out_.size()
-            << " profile(s).";
-
         utl::verify(loaded, "loading failed");
 
         LOG(logging::info) << "nigiri timetable: stations="

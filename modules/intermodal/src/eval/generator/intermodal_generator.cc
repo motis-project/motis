@@ -51,7 +51,6 @@ namespace fbs = flatbuffers;
 namespace motis::intermodal::eval {
 
 constexpr auto const kTargetEscape = std::string_view{"TARGET"};
-constexpr auto const kProfileEscape = std::string_view{"PROFILE"};
 
 struct generator_settings : public conf::configuration {
   generator_settings() : configuration("Generator Options", "") {
@@ -72,8 +71,6 @@ struct generator_settings : public conf::configuration {
           "  intermodal_ontrip = start time at station");
     param(dest_type_, "dest_type", "destination type: coordinate|station");
     param(routers_, "routers", "routing targets");
-    param(profiles_, "profiles",
-          "profilebased transfers: default|wheelchair|...");
     param(search_dir_, "search_dir", "search direction forward/backward");
     param(extend_earlier_, "extend_earlier", "extend search interval earlier");
     param(extend_later_, "extend_later", "extend search interval later");
@@ -133,59 +130,28 @@ struct generator_settings : public conf::configuration {
   std::string dest_type_{"coordinate"};
   bool large_stations_{false};
   std::vector<std::string> routers_{"/routing"};
-  std::vector<std::string> profiles_{"default"};
   std::string search_dir_{"forward"};
   bool extend_earlier_{false};
   bool extend_later_{false};
   unsigned min_connection_count_{0U};
 };
 
-/**
- * Repeats a list of strings several times by repeatedly concatenating them.
- *
- * @example: alos: (1, 2, 3); n : 2 -> (1, 2, 3, 1, 2, 3)
- *
- * @param alos: a list of strings to be concatenated several times in a row.
- * @param n: the number of concatenations.
- *
- * @return a list of strings: n * alos = [alos, alos, ...]
- *
- */
-std::vector<std::string> expand_string_vector(std::vector<std::string> alos,
-                                              int n) {
-  std::vector<std::string> expanded{};
-  for (auto i = 0; i < n; ++i) {
-    expanded.insert(expanded.end(), alos.begin(), alos.end());
+std::string replace_target_escape(std::string const& str,
+                                  std::string const& target) {
+  auto const esc_pos = str.find(kTargetEscape);
+  utl::verify(esc_pos != std::string::npos, "target escape {} not found in {}",
+              kTargetEscape, str);
+
+  auto clean_target = target;
+  if (clean_target[0] == '/') {
+    clean_target.erase(clean_target.begin());
   }
-  return expanded;
-}
+  std::replace(clean_target.begin(), clean_target.end(), '/', '_');
 
-/**
- * Replaces a keyword in a string with another string.
- *
- * @param str: The string in which a keyword should be replaced.
- * @param esc: The keyword.
- * @param replace_by: The string to be inserted.
- *
- * @returns Modified string. esc replaced by replace_by.
- */
-std::string replace_escape(std::string const& str, std::string_view const& esc,
-                           std::string const& replace_by) {
-  auto const esc_pos = str.find(esc);
-  utl::verify(esc_pos != std::string::npos, "escape {} not found in {}", esc,
-              str);
-  auto clean_replace_by = replace_by;
+  auto target_str = str;
+  target_str.replace(esc_pos, kTargetEscape.size(), clean_target);
 
-  if (clean_replace_by[0] == '/') {
-    clean_replace_by.erase(clean_replace_by.begin());
-  }
-
-  std::replace(clean_replace_by.begin(), clean_replace_by.end(), '/', '_');
-
-  auto result = str;
-  result.replace(esc_pos, esc.size(), clean_replace_by);
-
-  return result;
+  return target_str;
 }
 
 struct mode {
@@ -429,19 +395,8 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                  IntermodalDestination const destination_type, SearchDir dir,
                  bool const extend_earlier, bool const extend_later,
                  unsigned const min_connection_count,
-                 std::vector<std::string> const& init_routers,
-                 std::vector<std::string> const& init_profiles,
+                 std::vector<std::string> const& routers,
                  std::vector<std::ofstream>& out_files) {
-
-  // TODO (anyone) use permutation
-  auto const& routers =
-      expand_string_vector(init_routers, init_profiles.size());
-  auto const& profiles =
-      expand_string_vector(init_profiles, init_routers.size());
-
-  assert(routers.size() == init_routers.size() * init_profiles.size());
-  assert(routers.size() == profiles.size());
-
   auto fbbs = utl::to_vec(
       routers, [](auto&&) { return std::make_unique<message_creator>(); });
 
@@ -462,8 +417,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
         auto const start_pt = point_gen.random_point_near(
             {from->lat(), from->lng()}, start_radius);
 
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_IntermodalRoutingRequest,
@@ -476,8 +430,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   fbb.CreateVector(create_modes(fbb, start_modes)),
                   destination_type, get_destination(fbb),
                   fbb.CreateVector(create_modes(fbb, dest_modes)),
-                  SearchType_Default, dir, fbb.CreateString(router),
-                  fbb.CreateString("default"))
+                  SearchType_Default, dir, fbb.CreateString(router))
                   .Union(),
               "/intermodal", DestinationType_Module, id);
         }
@@ -489,8 +442,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
         auto const start_pt = point_gen.random_point_near(
             {from->lat(), from->lng()}, start_radius);
 
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_IntermodalRoutingRequest,
@@ -507,8 +459,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                                            fbb.CreateString(""))
                             .Union(),
                   fbb.CreateVector(create_modes(fbb, dest_modes)),
-                  SearchType_Default, dir, fbb.CreateString(router),
-                  fbb.CreateString("default"))
+                  SearchType_Default, dir, fbb.CreateString(router))
                   .Union(),
               "/intermodal", DestinationType_Module, id);
         }
@@ -527,8 +478,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
         auto const& target_station_eva =
             sched.stations_[secondary.target_station_id_]->eva_nr_;
 
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_IntermodalRoutingRequest,
@@ -554,8 +504,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   fbb.CreateVector(create_modes(fbb, start_modes)),
                   destination_type, get_destination(fbb),
                   fbb.CreateVector(create_modes(fbb, dest_modes)),
-                  SearchType_Default, dir, fbb.CreateString(router),
-                  fbb.CreateString(profile))
+                  SearchType_Default, dir, fbb.CreateString(router))
                   .Union(),
               "/intermodal", DestinationType_Module, id);
         }
@@ -564,8 +513,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
       }
 
       case IntermodalStart_OntripStationStart:
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_IntermodalRoutingRequest,
@@ -580,16 +528,14 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   fbb.CreateVector(create_modes(fbb, start_modes)),
                   destination_type, get_destination(fbb),
                   fbb.CreateVector(create_modes(fbb, dest_modes)),
-                  SearchType_Default, dir, fbb.CreateString(router),
-                  fbb.CreateString(profile))
+                  SearchType_Default, dir, fbb.CreateString(router))
                   .Union(),
               "/intermodal", DestinationType_Module, id);
         }
         break;
 
       case IntermodalStart_PretripStart:
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_IntermodalRoutingRequest,
@@ -605,8 +551,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   fbb.CreateVector(create_modes(fbb, start_modes)),
                   destination_type, get_destination(fbb),
                   fbb.CreateVector(create_modes(fbb, dest_modes)),
-                  SearchType_Default, dir, fbb.CreateString(router),
-                  fbb.CreateString(profile))
+                  SearchType_Default, dir, fbb.CreateString(router))
                   .Union(),
               "/intermodal", DestinationType_Module, id);
         }
@@ -632,8 +577,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
         auto const& target_station_eva =
             sched.stations_[secondary.target_station_id_]->eva_nr_;
 
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_RoutingRequest,
@@ -661,8 +605,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   SearchType_Default, dir,
                   fbb.CreateVector(std::vector<fbs::Offset<Via>>()),
                   fbb.CreateVector(
-                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()),
-                  fbb.CreateString(profile))
+                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()))
                   .Union(),
               router, DestinationType_Module, id);
         }
@@ -671,8 +614,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
       }
 
       case IntermodalStart_OntripStationStart:
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_RoutingRequest,
@@ -689,16 +631,14 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   SearchType_Default, dir,
                   fbb.CreateVector(std::vector<fbs::Offset<Via>>()),
                   fbb.CreateVector(
-                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()),
-                  fbb.CreateString(profile))
+                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()))
                   .Union(),
               router, DestinationType_Module, id);
         }
         break;
 
       case IntermodalStart_PretripStart:
-        for (auto const& [fbbp, router, profile] :
-             utl::zip(fbbs, routers, profiles)) {
+        for (auto const& [fbbp, router] : utl::zip(fbbs, routers)) {
           auto& fbb = *fbbp;
           fbb.create_and_finish(
               MsgContent_RoutingRequest,
@@ -716,8 +656,7 @@ void write_query(schedule const& sched, point_generator& point_gen, int id,
                   SearchType_Default, dir,
                   fbb.CreateVector(std::vector<fbs::Offset<Via>>()),
                   fbb.CreateVector(
-                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()),
-                  fbb.CreateString(profile))
+                      std::vector<fbs::Offset<AdditionalEdgeWrapper>>()))
                   .Union(),
               router, DestinationType_Module, id);
         }
@@ -848,25 +787,10 @@ int generate(int argc, char const** argv) {
       EnumNameIntermodalDestination(dest_type));
 
   auto bds = parse_bounds(generator_opt);
-
-  // TODO (anyone) use permutation
-  auto const& routers = expand_string_vector(generator_opt.routers_,
-                                             generator_opt.profiles_.size());
-  auto const& profiles = expand_string_vector(generator_opt.profiles_,
-                                              generator_opt.routers_.size());
-
-  assert(routers.size() ==
-         generator_opt.routers_.size() * generator_opt.profiles_.size());
-  assert(routers.size() == profiles.size());
-
-  std::vector<std::ofstream> of_streams{};
-  for (auto const& [router, profile] : utl::zip(routers, profiles)) {
-    std::string filename =
-        replace_escape(generator_opt.out_, kTargetEscape, router);
-    filename = replace_escape(filename, kProfileEscape, profile);
-
-    of_streams.emplace_back(filename);
-  }
+  auto of_streams =
+      utl::to_vec(generator_opt.routers_, [&](std::string const& router) {
+        return std::ofstream{replace_target_escape(generator_opt.out_, router)};
+      });
 
   motis_instance instance;
   instance.import(module_settings{}, dataset_opt, import_opt);
@@ -939,7 +863,7 @@ int generate(int argc, char const** argv) {
                 dest_type, generator_opt.get_search_dir(),
                 generator_opt.extend_earlier_, generator_opt.extend_later_,
                 generator_opt.min_connection_count_, generator_opt.routers_,
-                generator_opt.profiles_, of_streams);
+                of_streams);
   }
 
   return 0;

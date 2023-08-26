@@ -2,19 +2,22 @@
 
 #include "geo/latlng.h"
 
+#include "cista/hashing.h"
+
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
+#include "nigiri/location.h"
 
 namespace motis::footpaths {
 
-inline key64_t to_key(geo::latlng const& coord) {
+inline nlocation_key_t to_key(geo::latlng const& coord) {
   auto latf = static_cast<float>(coord.lat_);
   auto lngf = static_cast<float>(coord.lng_);
 
   auto latb = (*reinterpret_cast<std::uint32_t*>(&latf));
   auto lngb = (*reinterpret_cast<std::uint32_t*>(&lngf));
 
-  return key64_t{static_cast<std::uint64_t>(latb) << 32 | lngb};
+  return nlocation_key_t{static_cast<std::uint64_t>(latb) << 32 | lngb};
 }
 
 inline string to_key(platform const& pf) {

@@ -129,5 +129,4 @@ table IntermodalRoutingRequest {
   search_type: routing.SearchType;
   search_dir: motis.SearchDir;
   router: string;
-  profile: string;
 }

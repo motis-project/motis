@@ -11,6 +11,6 @@ namespace motis::footpaths {
 
 transfer_results route_multiple_requests(
     transfer_requests const&, ::ppr::routing_graph const&,
-    hash_map<key8_t, ppr::profile_info> const&);
+    hash_map<profile_key_t, ppr::profile_info> const&);
 
 }  // namespace motis::footpaths

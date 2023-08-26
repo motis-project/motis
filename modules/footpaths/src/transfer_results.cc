@@ -37,7 +37,7 @@ std::vector<transfer_infos> to_transfer_infos(pr::search_result const& res) {
 }
 
 pr::routing_query make_routing_query(
-    hash_map<key8_t, ppr::profile_info> const& profiles,
+    hash_map<profile_key_t, ppr::profile_info> const& profiles,
     transfer_request const& treq) {
   // query: create start input_location
   auto const& li_start = to_input_location(treq.transfer_start_);
@@ -59,7 +59,7 @@ pr::routing_query make_routing_query(
 
 transfer_result route_single_request(
     transfer_request const& treq, ::ppr::routing_graph const& rg,
-    hash_map<key8_t, ppr::profile_info> const& profiles) {
+    hash_map<profile_key_t, ppr::profile_info> const& profiles) {
   auto tres = transfer_result{};
   tres.from_nloc_key_ = treq.from_nloc_key_;
   tres.profile_ = treq.profile_;
@@ -92,7 +92,7 @@ transfer_result route_single_request(
 
 transfer_results route_multiple_requests(
     transfer_requests const& treqs, ::ppr::routing_graph const& rg,
-    hash_map<key8_t, ppr::profile_info> const& profiles) {
+    hash_map<profile_key_t, ppr::profile_info> const& profiles) {
   auto result = transfer_results{};
 
   auto progress_tracker = utl::get_active_progress_tracker();

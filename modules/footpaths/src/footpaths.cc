@@ -75,7 +75,7 @@ struct footpaths::impl {
     old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
 
     auto matched_pfs = platforms{};
-    auto matched_nloc_keys = vector<key64_t>{};
+    auto matched_nloc_keys = vector<nlocation_key_t>{};
     for (auto const& [k, pf] : old_state_.matches_) {
       matched_nloc_keys.emplace_back(k);
       matched_pfs.emplace_back(pf);
@@ -188,7 +188,7 @@ struct footpaths::impl {
       used_profiles_.insert(pkey);
 
       // convert walk_duration from minutes to seconds
-      ppr_profiles_.insert(std::pair<key8_t, ppr::profile_info>(
+      ppr_profiles_.insert(std::pair<profile_key_t, ppr::profile_info>(
           pkey, ppr_profiles_by_name.at(pname)));
       ppr_profiles_.at(pkey).profile_.duration_limit_ = max_walk_duration_ * 60;
 
@@ -209,8 +209,9 @@ private:
     progress_tracker_->status("Build Location-Key to Location-Idx Mapping.");
     for (auto i = nigiri::location_idx_t{0U}; i < tt_.locations_.ids_.size();
          ++i) {
-      location_key_to_idx_.insert(std::pair<key64_t, nigiri::location_idx_t>(
-          to_key(tt_.locations_.coordinates_[i]), i));
+      location_key_to_idx_.insert(
+          std::pair<nlocation_key_t, nigiri::location_idx_t>(
+              to_key(tt_.locations_.coordinates_[i]), i));
     }
   }
 
@@ -349,8 +350,10 @@ private:
     unsigned int ctr_start = 0;
     unsigned int ctr_end = 0;
 
-    progress_tracker_->in_high(old_state_.transfer_results_.size() +
-                               update_state_.transfer_results_.size());
+    auto progress_tracker = utl::get_active_progress_tracker();
+    progress_tracker->reset_bounds().in_high(
+        old_state_.transfer_results_.size() +
+        update_state_.transfer_results_.size());
 
     auto const& single_update = [&](transfer_result const& tres) {
       progress_tracker_->increment();
@@ -414,7 +417,7 @@ private:
     auto matched_pfs = platforms{};
     for (auto const& mr : new_mrs) {
       update_state_.matches_.insert(
-          std::pair<key64_t, platform>(to_key(mr.nloc_pos_), mr.pf_));
+          std::pair<nlocation_key_t, platform>(to_key(mr.nloc_pos_), mr.pf_));
       update_state_.nloc_keys_.emplace_back(to_key(mr.nloc_pos_));
       matched_pfs.emplace_back(mr.pf_);
     }
@@ -463,11 +466,11 @@ private:
   n::timetable& tt_;
   database db_;
 
-  hash_map<key64_t, nigiri::location_idx_t> location_key_to_idx_;
+  hash_map<nlocation_key_t, nigiri::location_idx_t> location_key_to_idx_;
 
-  hash_map<string, key8_t> ppr_profile_keys_;
-  hash_map<key8_t, ppr::profile_info> ppr_profiles_;
-  set<key8_t> used_profiles_;
+  hash_map<string, profile_key_t> ppr_profile_keys_;
+  hash_map<profile_key_t, ppr::profile_info> ppr_profiles_;
+  set<profile_key_t> used_profiles_;
 
   state old_state_;  // state before init/import
   state update_state_;  // update state with new platforms/new matches

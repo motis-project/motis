@@ -41,10 +41,10 @@ void database::init() {
   // find highes profiles id in db
   auto cur = lmdb::cursor{txn, profiles_db};
   auto entry = cur.get(lmdb::cursor_op::LAST);
-  highest_profile_id_ = key8_t{0};
+  highest_profile_id_ = profile_key_t{0};
   if (entry.has_value()) {
     highest_profile_id_ =
-        cista::copy_from_potentially_unaligned<key8_t>(entry->second);
+        cista::copy_from_potentially_unaligned<profile_key_t>(entry->second);
   }
 
   cur.reset();
@@ -73,8 +73,8 @@ std::vector<std::size_t> database::put_profiles(
   return added_indices;
 }
 
-hash_map<string, key8_t> database::get_profile_keys() {
-  auto keys_with_name = hash_map<string, key8_t>{};
+hash_map<string, profile_key_t> database::get_profile_keys() {
+  auto keys_with_name = hash_map<string, profile_key_t>{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -83,9 +83,9 @@ hash_map<string, key8_t> database::get_profile_keys() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    keys_with_name.insert(std::pair<string, key8_t>(
+    keys_with_name.insert(std::pair<string, profile_key_t>(
         string{entry->first},
-        cista::copy_from_potentially_unaligned<key8_t>(entry->second)));
+        cista::copy_from_potentially_unaligned<profile_key_t>(entry->second)));
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
 
@@ -93,8 +93,8 @@ hash_map<string, key8_t> database::get_profile_keys() {
   return keys_with_name;
 }
 
-hash_map<key8_t, string> database::get_profile_key_to_name() {
-  auto keys_with_name = hash_map<key8_t, string>{};
+hash_map<profile_key_t, string> database::get_profile_key_to_name() {
+  auto keys_with_name = hash_map<profile_key_t, string>{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -103,8 +103,8 @@ hash_map<key8_t, string> database::get_profile_key_to_name() {
   auto entry = cur.get(lmdb::cursor_op::FIRST);
 
   while (entry.has_value()) {
-    keys_with_name.insert(std::pair<key8_t, string>(
-        cista::copy_from_potentially_unaligned<key8_t>(entry->second),
+    keys_with_name.insert(std::pair<profile_key_t, string>(
+        cista::copy_from_potentially_unaligned<profile_key_t>(entry->second),
         string{entry->first}));
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
@@ -196,8 +196,8 @@ std::vector<size_t> database::put_matching_results(
   return added_indices;
 }
 
-std::vector<std::pair<key64_t, string>> database::get_matchings() {
-  auto matchings = std::vector<std::pair<key64_t, string>>{};
+std::vector<std::pair<nlocation_key_t, string>> database::get_matchings() {
+  auto matchings = std::vector<std::pair<nlocation_key_t, string>>{};
 
   auto lock = std::lock_guard{mutex_};
   auto txn = lmdb::txn{env_, lmdb::txn_flags::RDONLY};
@@ -207,7 +207,7 @@ std::vector<std::pair<key64_t, string>> database::get_matchings() {
 
   while (entry.has_value()) {
     matchings.emplace_back(
-        cista::copy_from_potentially_unaligned<key64_t>(entry->first),
+        cista::copy_from_potentially_unaligned<nlocation_key_t>(entry->first),
         string{entry->second});
     entry = cur.get(lmdb::cursor_op::NEXT);
   }
@@ -215,15 +215,15 @@ std::vector<std::pair<key64_t, string>> database::get_matchings() {
   return matchings;
 }
 
-hash_map<key64_t, platform> database::get_loc_to_pf_matchings() {
-  auto loc_pf_matchings = hash_map<key64_t, platform>{};
+hash_map<nlocation_key_t, platform> database::get_loc_to_pf_matchings() {
+  auto loc_pf_matchings = hash_map<nlocation_key_t, platform>{};
 
   for (auto& [location, osm_key] : get_matchings()) {
     auto const pf = get_platform(osm_key);
 
     if (pf.has_value()) {
       loc_pf_matchings.insert(
-          std::pair<key64_t, platform>(location, pf.value()));
+          std::pair<nlocation_key_t, platform>(location, pf.value()));
     }
   }
 
@@ -297,7 +297,7 @@ std::vector<std::size_t> database::update_transfer_requests_keys(
 }
 
 transfer_requests_keys database::get_transfer_requests_keys(
-    set<key8_t> const& ppr_profile_names) {
+    set<profile_key_t> const& ppr_profile_names) {
   auto treqs_k = transfer_requests_keys{};
 
   auto lock = std::lock_guard{mutex_};
@@ -389,7 +389,7 @@ std::vector<std::size_t> database::update_transfer_results(
 }
 
 transfer_results database::get_transfer_results(
-    set<key8_t> const& ppr_profile_names) {
+    set<profile_key_t> const& ppr_profile_names) {
   auto trs = transfer_results{};
 
   auto lock = std::lock_guard{mutex_};

@@ -7,7 +7,7 @@ namespace motis::footpaths {
 
 transfer_requests to_transfer_requests(
     transfer_requests_keys const& treqs_k,
-    hash_map<key64_t, platform> const& matches) {
+    hash_map<nlocation_key_t, platform> const& matches) {
   auto treqs = transfer_requests{};
 
   for (auto const& treq_k : treqs_k) {
@@ -37,12 +37,12 @@ transfer_requests to_transfer_requests(
  */
 transfer_requests_keys generate_transfer_requests_keys(
     state const& old_state, state const& update_state,
-    hash_map<key8_t, ppr::profile_info> const& profiles,
+    hash_map<profile_key_t, ppr::profile_info> const& profiles,
     bool const old_to_old) {
   auto result = transfer_requests_keys{};
 
   auto const all_pairs_trs = [&](state const& from_state, state const& to_state,
-                                 key8_t const& prf_key) {
+                                 profile_key_t const& prf_key) {
     auto from_to_trs = transfer_requests_keys{};
     auto const& pi = profiles.at(prf_key);
     auto prf_dist = pi.profile_.walking_speed_ * pi.profile_.duration_limit_;
@@ -60,7 +60,7 @@ transfer_requests_keys generate_transfer_requests_keys(
       }
 
       auto tmp = transfer_request_keys{};
-      auto to_nloc_keys = vector<key64_t>{};
+      auto to_nloc_keys = vector<nlocation_key_t>{};
 
       for (auto t_id : target_ids) {
         to_nloc_keys.emplace_back(to_state.nloc_keys_[t_id]);

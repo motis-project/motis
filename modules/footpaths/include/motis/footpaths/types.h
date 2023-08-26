@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "cista/hash.h"
+
 #include "ankerl/cista_adapter.h"
 
 #include "cista/containers/string.h"
@@ -20,8 +22,8 @@ using set = cista::raw::ankerl_set<K, Hash, Equality>;
 template <typename V>
 using vector = cista::offset::vector<V>;
 
-using key64_t = std::uint64_t;
-using key8_t = std::uint8_t;
+using nlocation_key_t = std::uint64_t;
+using profile_key_t = std::uint8_t;
 
 using string = cista::offset::string;
 using strings = cista::offset::vector<string>;

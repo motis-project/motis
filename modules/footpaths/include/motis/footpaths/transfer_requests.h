@@ -10,10 +10,10 @@
 namespace motis::footpaths {
 
 transfer_requests to_transfer_requests(transfer_requests_keys const&,
-                                       hash_map<key64_t, platform> const&);
+                                       hash_map<nlocation_key_t, platform> const&);
 
 transfer_requests_keys generate_transfer_requests_keys(
-    state const&, state const&, hash_map<key8_t, ppr::profile_info> const&,
+    state const&, state const&, hash_map<profile_key_t, ppr::profile_info> const&,
     bool const /* old_to_old */);
 
 }  // namespace motis::footpaths

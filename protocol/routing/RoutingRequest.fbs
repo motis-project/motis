@@ -110,7 +110,6 @@ table RoutingRequest {
   search_dir:motis.SearchDir;
   via:[Via];
   additional_edges:[AdditionalEdgeWrapper];
-  profile: string;
   use_start_metas: bool = true;
   use_dest_metas: bool = true;
   use_start_footpaths: bool = true;
