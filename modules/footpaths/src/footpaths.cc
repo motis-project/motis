@@ -1,7 +1,5 @@
 #include "motis/footpaths/footpaths.h"
 
-#include <cstddef>
-#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <regex>
@@ -29,7 +27,6 @@
 #include "nigiri/types.h"
 
 #include "ppr/common/routing_graph.h"
-#include "ppr/routing/input_pt.h"
 #include "ppr/serialization/reader.h"
 
 #include "utl/parallel_for.h"
@@ -102,8 +99,6 @@ struct footpaths::impl {
 
     // 5th update timetable
     build_key_to_idx_map();
-    LOG(ml::info) << tt_.locations_.ids_.size() << " / "
-                  << location_key_to_idx_.size();
     update_timetable(nigiri_dump_file_path);
   }
 
@@ -207,11 +202,9 @@ struct footpaths::impl {
 private:
   void build_key_to_idx_map() {
     progress_tracker_->status("Build Location-Key to Location-Idx Mapping.");
-    for (auto i = nigiri::location_idx_t{0U}; i < tt_.locations_.ids_.size();
-         ++i) {
-      location_key_to_idx_.insert(
-          std::pair<nlocation_key_t, nigiri::location_idx_t>(
-              to_key(tt_.locations_.coordinates_[i]), i));
+    for (auto i = n::location_idx_t{0U}; i < tt_.locations_.ids_.size(); ++i) {
+      location_key_to_idx_.insert(std::pair<nlocation_key_t, n::location_idx_t>(
+          to_key(tt_.locations_.coordinates_[i]), i));
     }
   }
 
@@ -328,20 +321,15 @@ private:
   void reset_timetable() {
     for (auto prf_idx = n::profile_idx_t{0}; prf_idx < n::kMaxProfiles;
          ++prf_idx) {
-      tt_.locations_.footpaths_out_[prf_idx] = {};
-      tt_.locations_.footpaths_in_[prf_idx] = {};
-
-      for (auto i = 0; i < tt_.locations_.ids_.size(); ++i) {
-        tt_.locations_.footpaths_out_[prf_idx].emplace_back(
-            n::vector<n::footpath>());
-        tt_.locations_.footpaths_in_[prf_idx].emplace_back(
-            n::vector<n::footpath>());
-      }
+      tt_.locations_.footpaths_out_[prf_idx] =
+          n::vecvec<n::location_idx_t, n::footpath>{};
+      tt_.locations_.footpaths_in_[prf_idx] =
+          n::vecvec<n::location_idx_t, n::footpath>{};
     }
   }
 
   void update_timetable(fs::path const& dir) {
-    progress_tracker_->status("Updating Timetable.");
+    progress_tracker_->status("Preprocessing Footpaths.");
     ml::scoped_timer const timer{"Updating Timetable."};
 
     auto key_to_name = db_.get_profile_key_to_name();
@@ -349,6 +337,29 @@ private:
     reset_timetable();
     unsigned int ctr_start = 0;
     unsigned int ctr_end = 0;
+
+    auto preprocessing_footpaths_in =
+        array<mutable_fws_multimap<n::location_idx_t, n::footpath>,
+              n::kMaxProfiles>{};
+    auto preprocessing_footpaths_out =
+        array<mutable_fws_multimap<n::location_idx_t, n::footpath>,
+              n::kMaxProfiles>{};
+
+    for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+         ++prf_idx) {
+      for (auto loc_idx = n::location_idx_t{0U}; loc_idx < tt_.n_locations();
+           ++loc_idx) {
+        preprocessing_footpaths_out[prf_idx].emplace_back();
+      }
+    }
+
+    for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+         ++prf_idx) {
+      for (auto loc_idx = n::location_idx_t{0U}; loc_idx < tt_.n_locations();
+           ++loc_idx) {
+        preprocessing_footpaths_in[prf_idx].emplace_back();
+      }
+    }
 
     auto progress_tracker = utl::get_active_progress_tracker();
     progress_tracker->reset_bounds().in_high(
@@ -370,9 +381,9 @@ private:
         auto const from_idx = location_key_to_idx_.at(tres.from_nloc_key_);
         auto const to_idx = location_key_to_idx_.at(to_nloc);
 
-        tt_.locations_.footpaths_out_[prf_idx][from_idx].push_back(
+        preprocessing_footpaths_out[prf_idx][from_idx].emplace_back(
             n::footpath{to_idx, info.duration_});
-        tt_.locations_.footpaths_in_[prf_idx][to_idx].push_back(
+        preprocessing_footpaths_in[prf_idx][to_idx].emplace_back(
             n::footpath{from_idx, info.duration_});
 
         ++ctr_end;
@@ -385,6 +396,27 @@ private:
 
     for (auto const& tr : update_state_.transfer_results_) {
       single_update(tr);
+    }
+
+    progress_tracker_->status("Updating Timetable.");
+
+    // transfer footpaths from mutable_fws_multimap to timetable vecvec
+    for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+         ++prf_idx) {
+      for (auto loc_idx = n::location_idx_t{0U}; loc_idx < tt_.n_locations();
+           ++loc_idx) {
+        tt_.locations_.footpaths_out_[prf_idx].emplace_back(
+            preprocessing_footpaths_out[prf_idx][loc_idx]);
+      }
+    }
+
+    for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+         ++prf_idx) {
+      for (auto loc_idx = n::location_idx_t{0U}; loc_idx < tt_.n_locations();
+           ++loc_idx) {
+        tt_.locations_.footpaths_in_[prf_idx].emplace_back(
+            preprocessing_footpaths_in[prf_idx][loc_idx]);
+      }
     }
 
     LOG(ml::info) << "Added " << ctr_end << " of " << ctr_start
@@ -466,7 +498,7 @@ private:
   n::timetable& tt_;
   database db_;
 
-  hash_map<nlocation_key_t, nigiri::location_idx_t> location_key_to_idx_;
+  hash_map<nlocation_key_t, n::location_idx_t> location_key_to_idx_;
 
   hash_map<string, profile_key_t> ppr_profile_keys_;
   hash_map<profile_key_t, ppr::profile_info> ppr_profiles_;
