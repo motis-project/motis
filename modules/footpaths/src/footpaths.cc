@@ -152,6 +152,10 @@ struct footpaths::impl {
     switch (rt) {
       case routing_type::kNoRouting: break;
       case routing_type::kPartialRouting:
+        // do not load ppr graph if there are no routing requests
+        if (update_state_.transfer_requests_keys_.empty()) {
+          break;
+        }
         rg = get_routing_ready_ppr_graph();
         route_and_save_results(rg, update_state_.transfer_requests_keys_);
         break;
