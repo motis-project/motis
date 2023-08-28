@@ -167,6 +167,14 @@ struct footpaths::impl {
     update_timetable(nigiri_dump_file_path);
   }
 
+  std::string osm_path_;
+  std::string ppr_rg_path_;
+
+  // initialize footpaths limits
+  int max_walk_duration_{10};
+
+private:
+  // -- helper --
   void load_ppr_profiles(
       std::map<std::string, ppr::profile_info> const& ppr_profiles_by_name) {
     auto profile_names = std::vector<string>{};
@@ -193,13 +201,6 @@ struct footpaths::impl {
     assert(tt_.profiles_.size() == used_profiles_.size());
   }
 
-  std::string osm_path_;
-  std::string ppr_rg_path_;
-
-  // initialize footpaths limits
-  int max_walk_duration_{10};
-
-private:
   void build_key_to_idx_map() {
     progress_tracker_->status("Build Location-Key to Location-Idx Mapping.");
     for (auto i = n::location_idx_t{0U}; i < tt_.locations_.ids_.size(); ++i) {
@@ -208,6 +209,7 @@ private:
     }
   }
 
+  // -- osm platform/stop extraction --
   void get_and_save_osm_platforms() {
     progress_tracker_->status("Extract Platforms from OSM.");
     LOG(ml::info) << "Extracting platforms from " << osm_path_;
@@ -217,69 +219,7 @@ private:
     put_platforms(osm_extracted_platforms);
   }
 
-  void match_and_save_matches() {
-    progress_tracker_->status("Match Locations and OSM Platforms");
-    ml::scoped_timer const timer{
-        "Matching timetable locations and osm platforms."};
-
-    LOG(ml::info) << "Matching Locations to OSM Platforms.";
-    auto mrs = match_locations_and_platforms();
-
-    LOG(ml::info) << "Writing Matchings to DB.";
-    put_matching_results(mrs);
-  }
-
-  void build_and_save_transfer_requests(bool const old_to_old = false) {
-    progress_tracker_->status("Generating Transfer Requests.");
-    ml::scoped_timer const timer{"Generating Transfer Requests."};
-
-    auto treqs_k = generate_transfer_requests_keys(old_state_, update_state_,
-                                                   ppr_profiles_, old_to_old);
-
-    LOG(ml::info) << "Writing Transfer Requests (Keys) to DB.";
-    put_transfer_requests_keys(treqs_k);
-  }
-
-  void route_and_save_results(::ppr::routing_graph const& rg,
-                              transfer_requests_keys const& treqs_k) {
-    progress_tracker_->status("Precomputing Profilebased Transfers.");
-    ml::scoped_timer const timer{"Precomputing Profilebased Transfers."};
-
-    auto matches = old_state_.matches_;
-    matches.insert(update_state_.matches_.begin(),
-                   update_state_.matches_.end());
-
-    auto treqs = to_transfer_requests(treqs_k, matches);
-    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
-    put_transfer_results(trs);
-  }
-
-  void route_and_update_results(::ppr::routing_graph const& rg,
-                                transfer_requests_keys const& treqs_k) {
-    progress_tracker_->status("Updating Profilebased Transfers.");
-    ml::scoped_timer const timer{"Updating Profilebased Transfers."};
-
-    auto matches = old_state_.matches_;
-    matches.insert(update_state_.matches_.begin(),
-                   update_state_.matches_.end());
-
-    auto treqs = to_transfer_requests(treqs_k, matches);
-    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
-    update_transfer_results(trs);
-    old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
-  }
-
-  ::ppr::routing_graph get_routing_ready_ppr_graph() {
-    ::ppr::routing_graph result;
-    progress_tracker_->status("Loading PPR Routing Graph.");
-    ml::scoped_timer const timer{"Loading PPR Routing Graph."};
-    ps::read_routing_graph(result, ppr_rg_path_);
-    result.prepare_for_routing(edge_rtree_max_size_, area_rtree_max_size_,
-                               lock_rtree_ ? ::ppr::rtree_options::LOCK
-                                           : ::ppr::rtree_options::PREFETCH);
-    return result;
-  }
-
+  // -- location to osm matching --
   matching_results match_locations_and_platforms() const {
     // --- initialization: initialize match distance range
     [[maybe_unused]] auto const dists = boost::irange(
@@ -318,6 +258,72 @@ private:
     return matches;
   }
 
+  void match_and_save_matches() {
+    progress_tracker_->status("Match Locations and OSM Platforms");
+    ml::scoped_timer const timer{
+        "Matching timetable locations and osm platforms."};
+
+    LOG(ml::info) << "Matching Locations to OSM Platforms.";
+    auto mrs = match_locations_and_platforms();
+
+    LOG(ml::info) << "Writing Matchings to DB.";
+    put_matching_results(mrs);
+  }
+
+  // -- build transfer requests --
+  void build_and_save_transfer_requests(bool const old_to_old = false) {
+    progress_tracker_->status("Generating Transfer Requests.");
+    ml::scoped_timer const timer{"Generating Transfer Requests."};
+
+    auto treqs_k = generate_transfer_requests_keys(old_state_, update_state_,
+                                                   ppr_profiles_, old_to_old);
+
+    LOG(ml::info) << "Writing Transfer Requests (Keys) to DB.";
+    put_transfer_requests_keys(treqs_k);
+  }
+
+  // -- build transfer results --
+  ::ppr::routing_graph get_routing_ready_ppr_graph() {
+    ::ppr::routing_graph result;
+    progress_tracker_->status("Loading PPR Routing Graph.");
+    ml::scoped_timer const timer{"Loading PPR Routing Graph."};
+    ps::read_routing_graph(result, ppr_rg_path_);
+    result.prepare_for_routing(edge_rtree_max_size_, area_rtree_max_size_,
+                               lock_rtree_ ? ::ppr::rtree_options::LOCK
+                                           : ::ppr::rtree_options::PREFETCH);
+    return result;
+  }
+
+  void route_and_save_results(::ppr::routing_graph const& rg,
+                              transfer_requests_keys const& treqs_k) {
+    progress_tracker_->status("Precomputing Profilebased Transfers.");
+    ml::scoped_timer const timer{"Precomputing Profilebased Transfers."};
+
+    auto matches = old_state_.matches_;
+    matches.insert(update_state_.matches_.begin(),
+                   update_state_.matches_.end());
+
+    auto treqs = to_transfer_requests(treqs_k, matches);
+    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
+    put_transfer_results(trs);
+  }
+
+  void route_and_update_results(::ppr::routing_graph const& rg,
+                                transfer_requests_keys const& treqs_k) {
+    progress_tracker_->status("Updating Profilebased Transfers.");
+    ml::scoped_timer const timer{"Updating Profilebased Transfers."};
+
+    auto matches = old_state_.matches_;
+    matches.insert(update_state_.matches_.begin(),
+                   update_state_.matches_.end());
+
+    auto treqs = to_transfer_requests(treqs_k, matches);
+    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
+    update_transfer_results(trs);
+    old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
+  }
+
+  // -- update timetable --
   void reset_timetable() {
     for (auto prf_idx = n::profile_idx_t{0}; prf_idx < n::kMaxProfiles;
          ++prf_idx) {
