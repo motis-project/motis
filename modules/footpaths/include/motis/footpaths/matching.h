@@ -1,11 +1,7 @@
 #pragma once
 
-#include <functional>
-#include <string>
 #include <utility>
 #include <vector>
-
-#include "boost/range/irange.hpp"
 
 #include "geo/latlng.h"
 
@@ -13,9 +9,22 @@
 #include "motis/footpaths/state.h"
 
 #include "nigiri/location.h"
+#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 namespace motis::footpaths {
+
+struct matching_data {
+  nigiri::timetable::locations const& locations_;
+
+  state const& old_state_;
+  state const& update_state_;
+};
+
+struct matching_options {
+  double max_matching_dist_;
+  double max_bus_stop_matching_dist_;
+};
 
 struct matching_result {
   platform pf_;
@@ -24,43 +33,12 @@ struct matching_result {
 };
 using matching_results = std::vector<matching_result>;
 
-// -- matching helper --
-using matches_func =
-    std::function<bool(platform const&, nigiri::location const&)>;
-std::pair<bool, matching_result> matching(
-    nigiri::location const&, state const& /* old_state */,
-    state const& /* update_state */, boost::strided_integer_range<int> const&,
-    int const match_bus_stop_max_distance, matches_func const&);
+matching_results match_locations_and_platforms(matching_data const&,
+                                               matching_options const&);
 
 // -- match functions --
-std::pair<bool, matching_result> match_by_name(
-    nigiri::location const&, state const& /* old_state */,
-    state const& /* update_state */, boost::strided_integer_range<int> const&,
-    int const match_bus_stop_max_distance);
-
 std::pair<bool, matching_result> match_by_distance(
-    nigiri::location const&, state const& /* old_state */,
-    state const& /* update_state */, int const r,
-    int const match_bus_stop_max_distance);
-
-// -- helper functions --
-std::string remove_special_characters(std::string const&);
-
-/**
- * Searches the first consecutive sequence of numbers in a string.
- */
-std::string get_first_number_sequence(std::string const&);
-
-std::string get_all_numbers(std::string const&);
-
-// -- platform/location name matcher --
-bool name_match(platform const&, nigiri::location const&);
-bool exact_str_match(std::string&, std::string&);
-
-bool first_number_match(platform const&, nigiri::location const&);
-bool exact_first_number_match(std::string&, std::string&);
-
-bool number_match(platform const&, nigiri::location const&);
-bool exact_number_match(std::string&, std::string&);
+    nigiri::location const& /*nloc*/, state const& /* old_state */,
+    state const& /* update_state */, matching_options const&);
 
 }  // namespace motis::footpaths
