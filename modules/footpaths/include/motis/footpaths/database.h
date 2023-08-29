@@ -17,8 +17,6 @@
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
 
-#include "nigiri/keys.h"
-
 namespace motis::footpaths {
 
 struct database {
