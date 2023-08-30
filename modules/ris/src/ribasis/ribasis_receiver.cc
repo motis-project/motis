@@ -15,10 +15,12 @@ std::string get_queue_id(amqp::login const& login) {
 }
 
 receiver::receiver(rabbitmq_config config, source_status& status,
-                   msg_handler_fn msg_handler)
+                   msg_handler_fn msg_handler,
+                   amqp::get_stream_options_fn_t get_stream_options)
     : config_{std::move(config)},
       connection_{&config_.login_,
-                  [this](std::string const& log_msg) { log(log_msg); }},
+                  [this](std::string const& log_msg) { log(log_msg); },
+                  std::move(get_stream_options)},
       last_update_{now()},
       msg_handler_{std::move(msg_handler)},
       queue_id_{get_queue_id(config_.login_)},
