@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "rabbitmq/amqp.hpp"
+#include "rabbitmq/stream.hpp"
 
 #include "motis/core/common/unixtime.h"
 
@@ -19,7 +20,8 @@ struct receiver {
       std::function<void(receiver&, std::vector<amqp::msg>&&)>;
 
   receiver(rabbitmq_config config, source_status& status,
-           msg_handler_fn msg_handler);
+           msg_handler_fn msg_handler,
+           amqp::get_stream_options_fn_t get_stream_options);
 
   void stop();
 
