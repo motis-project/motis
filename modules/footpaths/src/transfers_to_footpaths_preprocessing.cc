@@ -35,14 +35,16 @@ preprocessed_footpaths to_preprocessed_footpaths(
   // initialize out/in multimap
   for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
        ++prf_idx) {
-    for (auto const& c : data.coords_) {
+    for (auto loc_idx = n::location_idx_t{0U}; loc_idx < data.coords_.size();
+         ++loc_idx) {
       fp.out_[prf_idx].emplace_back();
     }
   }
 
   for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
        ++prf_idx) {
-    for (auto const& c : data.coords_) {
+    for (auto loc_idx = n::location_idx_t{0U}; loc_idx < data.coords_.size();
+         ++loc_idx) {
       fp.in_[prf_idx].emplace_back();
     }
   }

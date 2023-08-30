@@ -5,6 +5,7 @@
 #include <regex>
 #include <utility>
 
+#include "motis/core/common/constants.h"
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
@@ -164,7 +165,7 @@ private:
       // convert walk_duration from minutes to seconds
       ppr_profiles_.insert(std::pair<profile_key_t, ppr::profile_info>(
           pkey, ppr_profiles_by_name.at(pname)));
-      ppr_profiles_.at(pkey).profile_.duration_limit_ = max_walk_duration_ * 60;
+      ppr_profiles_.at(pkey).profile_.duration_limit_ = ::motis::MAX_WALK_TIME;
 
       // build profile_name to idx map in nigiri::tt
       tt_.profiles_.insert({pname, tt_.profiles_.size()});
@@ -408,9 +409,6 @@ private:
   // initialize matching limits
   double max_matching_dist_{20};
   double max_bus_stop_matching_dist_{120};
-
-  // initialize footpaths limits
-  int max_walk_duration_{10};
 
   // initialize progress tracker (ptr)
   utl::progress_tracker_ptr progress_tracker_{

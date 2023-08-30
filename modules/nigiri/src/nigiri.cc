@@ -183,12 +183,24 @@ void nigiri::init(motis::module::registry& reg) {
     }
   }
 
-  reg.register_op("/nigiri",
-                  [&](mm::msg_ptr const& msg) {
-                    return route(impl_->tags_, **impl_->tt_,
-                                 impl_->get_rtt().get(), msg);
-                  },
-                  {});
+  if (impl_->tt_->get()->profiles_.empty()) {
+    reg.register_op("/nigiri",
+                    [&](mm::msg_ptr const& msg) {
+                      return route(impl_->tags_, **impl_->tt_,
+                                   impl_->get_rtt().get(), n::profile_idx_t{0U},
+                                   msg);
+                    },
+                    {});
+  } else {
+    for (auto const& [prf_name, prf_idx] : impl_->tt_->get()->profiles_) {
+      reg.register_op(fmt::format("/nigiri/{}", prf_name),
+                      [&](mm::msg_ptr const& msg) {
+                        return route(impl_->tags_, **impl_->tt_,
+                                     impl_->get_rtt().get(), prf_idx, msg);
+                      },
+                      {});
+    }
+  }
 
   if (lookup_) {
     reg.register_op("/lookup/geo_station",

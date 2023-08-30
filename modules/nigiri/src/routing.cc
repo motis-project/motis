@@ -145,6 +145,7 @@ auto run_search(n::routing::search_state& search_state,
 
 motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                              n::rt_timetable const* rtt,
+                             n::profile_idx_t const prf_idx,
                              motis::module::msg_ptr const& msg) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
@@ -154,7 +155,6 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   auto extend_interval_later = false;
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
-  n::profile_idx_t const profile_idx{0};
 
   if (req->start_type() == routing::Start_PretripStart) {
     auto const start =
@@ -290,7 +290,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .min_connection_count_ = min_connection_count,
       .extend_interval_earlier_ = extend_interval_earlier,
       .extend_interval_later_ = extend_interval_later,
-      .prf_idx_ = profile_idx};
+      .prf_idx_ = prf_idx};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
