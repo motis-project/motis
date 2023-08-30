@@ -17,6 +17,8 @@ import IndexPage from "@/components/index/IndexPage";
 import SimPanel from "@/components/sim/SimPanel";
 import GroupStatistics from "@/components/stats/GroupStatistics";
 import StatusOverview from "@/components/status/StatusOverview";
+import { TransferDetailsFromRoute } from "@/components/transfers/TransferDetails";
+import TransfersMainSection from "@/components/transfers/TransfersMainSection";
 import { TripDetailsFromRoute } from "@/components/trips/TripDetails";
 import TripsMainSection from "@/components/trips/TripsMainSection";
 
@@ -70,6 +72,11 @@ const router = createHashRouter([
         path: "trips",
         element: <TripsMainSection />,
         children: [{ path: ":tripId", element: <TripDetailsFromRoute /> }],
+      },
+      {
+        path: "transfers",
+        element: <TransfersMainSection />,
+        children: [{ path: ":n/:e", element: <TransferDetailsFromRoute /> }],
       },
       {
         path: "groups",

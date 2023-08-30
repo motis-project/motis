@@ -100,12 +100,12 @@ function TripCapacityInfo({ data }: { data: PaxMonTripCapacityInfo }) {
   return (
     <div className="mb-16">
       <div className="flex gap-4 items-center sticky -top-2 bg-db-cool-gray-100">
-        <Link
-          to={`/trips/${encodeURIComponent(JSON.stringify(data.tsi.trip))}`}
+        <TripServiceInfoView
+          tsi={data.tsi}
+          format={"Short"}
+          link={true}
           className="text-xl"
-        >
-          <TripServiceInfoView tsi={data.tsi} format={"Short"} />
-        </Link>
+        />
         <span>{formatDate(data.tsi.trip.time)}</span>
         <span>
           {data.tsi.primary_station.name} → {data.tsi.secondary_station.name}

@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAtom, useSetAtom } from "jotai";
 import React, { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import {
   PaxMonAtStation,
@@ -216,11 +216,7 @@ function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
     <tr>
       <td className="pr-2">{index + 1}.</td>
       <td className="pr-2">
-        <Link
-          to={`/trips/${encodeURIComponent(JSON.stringify(leg.trip.trip))}`}
-        >
-          <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} />
-        </Link>
+        <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} link={true} />
       </td>
       <td className="pr-2" title={transferTypeText(leg.enter_transfer)}>
         {requiresTransfer(leg.enter_transfer)
