@@ -16,7 +16,6 @@
 #include "motis/footpaths/state.h"
 #include "motis/footpaths/transfer_requests.h"
 #include "motis/footpaths/transfer_results.h"
-#include "motis/footpaths/transfers.h"
 #include "motis/footpaths/transfers_to_footpaths_preprocessing.h"
 #include "motis/footpaths/types.h"
 
@@ -505,7 +504,5 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
         return msg->get()->content_type() == MsgContent_PPREvent;
       });
 }
-
-void footpaths::init(motis::module::registry& reg) { std::ignore = reg; }
 
 }  // namespace motis::footpaths

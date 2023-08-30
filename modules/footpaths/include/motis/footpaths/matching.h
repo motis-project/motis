@@ -15,7 +15,7 @@
 namespace motis::footpaths {
 
 struct matching_data {
-  nigiri::timetable::locations const& locations_;
+  ::nigiri::timetable::locations const& locations_;
 
   state const& old_state_;
   state const& update_state_;
@@ -28,7 +28,7 @@ struct matching_options {
 
 struct matching_result {
   platform pf_;
-  nigiri::location_idx_t nloc_idx_;
+  ::nigiri::location_idx_t nloc_idx_;
   geo::latlng nloc_pos_;
 };
 using matching_results = std::vector<matching_result>;
@@ -38,7 +38,7 @@ matching_results match_locations_and_platforms(matching_data const&,
 
 // -- match functions --
 std::pair<bool, matching_result> match_by_distance(
-    nigiri::location const& /*nloc*/, state const& /* old_state */,
+    ::nigiri::location const& /*nloc*/, state const& /* old_state */,
     state const& /* update_state */, matching_options const&);
 
 }  // namespace motis::footpaths

@@ -19,7 +19,7 @@
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
 
-namespace n = nigiri;
+namespace n = ::nigiri;
 namespace pr = ppr::routing;
 
 namespace motis::footpaths {

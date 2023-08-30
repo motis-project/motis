@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -16,8 +15,6 @@
 #include "geo/point_rtree.h"
 
 #include "motis/footpaths/types.h"
-
-#include "nigiri/types.h"
 
 #include "ppr/routing/input_location.h"
 

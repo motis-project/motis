@@ -6,7 +6,7 @@
 
 #include <limits>
 
-namespace n = nigiri;
+namespace n = ::nigiri;
 
 namespace motis::footpaths {
 
@@ -76,7 +76,5 @@ std::pair<bool, matching_result> match_by_distance(
 
   return {matched, mr};
 }
-
-// -- string matcher --
 
 }  // namespace motis::footpaths

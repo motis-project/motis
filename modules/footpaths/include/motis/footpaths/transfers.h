@@ -34,7 +34,7 @@ using transfer_requests = std::vector<transfer_request>;
 
 struct transfer_info {
   CISTA_COMPARABLE();
-  nigiri::duration_t duration_{};
+  ::nigiri::duration_t duration_{};
   double distance_{};
 };
 using transfer_infos = std::vector<transfer_info>;

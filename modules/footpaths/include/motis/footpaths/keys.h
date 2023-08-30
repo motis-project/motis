@@ -6,7 +6,6 @@
 
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
-#include "nigiri/location.h"
 
 namespace motis::footpaths {
 

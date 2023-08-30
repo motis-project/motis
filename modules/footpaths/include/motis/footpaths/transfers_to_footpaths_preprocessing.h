@@ -12,8 +12,9 @@ namespace motis::footpaths {
 
 struct preprocessing_data {
   // tt data
-  nigiri::vector_map<nigiri::location_idx_t, geo::latlng> const& coords_;
-  nigiri::hash_map<nigiri::string, nigiri::profile_idx_t> const& profiles_;
+  ::nigiri::vector_map<::nigiri::location_idx_t, geo::latlng> const& coords_;
+  ::nigiri::hash_map<::nigiri::string, ::nigiri::profile_idx_t> const&
+      profiles_;
 
   // db data
   hash_map<profile_key_t, string> const& key_to_name_;
@@ -24,8 +25,8 @@ struct preprocessing_data {
 };
 
 struct preprocessed_footpaths {
-  array<mutable_fws_multimap<nigiri::location_idx_t, nigiri::footpath>,
-        nigiri::kMaxProfiles>
+  array<mutable_fws_multimap<::nigiri::location_idx_t, ::nigiri::footpath>,
+        ::nigiri::kMaxProfiles>
       out_{}, in_{};
 };
 

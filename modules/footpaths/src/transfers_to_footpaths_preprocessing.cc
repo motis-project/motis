@@ -5,7 +5,7 @@
 
 #include "motis/footpaths/keys.h"
 
-namespace n = nigiri;
+namespace n = ::nigiri;
 
 namespace motis::footpaths {
 
