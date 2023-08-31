@@ -1,30 +1,20 @@
 #include "motis/intermodal/eval/commands.h"
 
-#include <cstring>
-#include <ctime>
-#include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <memory>
-#include <random>
-#include <set>
 #include <sstream>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
-
+#include "float.h"
 #include "boost/program_options.hpp"
-
 #include "utl/to_vec.h"
-
 #include "geo/latlng.h"
 #include "geo/webmercator.h"
-
 #include "motis/core/common/unixtime.h"
-#include "motis/core/schedule/time.h"
 #include "motis/core/access/time_access.h"
-#include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/check_journey.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
@@ -43,44 +33,57 @@ using namespace flatbuffers;
 
 namespace motis::intermodal::eval {
 
+#define PI 3.141592653589793238462643383279
+
 struct mins {
-  int min_improvement;
-  journey min;
+  double min_improvement_;
+  journey min_;
 };
 
-/*function getImprovement(a: Connection, b: Connection, weights: number[]) {
-  const criteriaA = a.getCriteria3();
-  const criteriaB = b.getCriteria3();
+double get_improvement(journey a, journey b, std::vector<int> weights) {
+  // criteria 1 dep_time
+  unixtime criteria1_a = a.stops_.at(0).departure_.timestamp_;
+  unixtime criteria1_b = b.stops_.at(0).departure_.timestamp_;
+  // criteria 2 arr_time
+  unixtime criteria2_a = a.stops_.at(a.stops_.size()-1).arrival_.timestamp_;
+  unixtime criteria2_b = b.stops_.at(b.stops_.size()-1).arrival_.timestamp_;
+  // criteria 3 transfers
+  int64_t citeria3_a = a.transfers_;
+  int64_t citeria3_b = b.transfers_;
+  // all critera
+  std::vector<unixtime> all_criteria_a = {criteria1_a, criteria2_a, citeria3_a};
+  std::vector<unixtime> all_criteria_b = {criteria1_b, criteria2_b, citeria3_b};
+  double dist = 0.0;
+  double improvement = 0.0;
 
-  let dist = 0.0;
-  let improvement = 0.0;
+  for(int i = 0; i != weights.size(); ++i) {
+    auto const weighted_a = all_criteria_a.at(i) * weights.at(i);
+    auto const weighted_b = all_criteria_b.at(i) * weights.at(i);
+    auto const criterion_dist = weighted_a - weighted_b;
 
-  for (let i = 0; i != weights.length; ++i) {
-    const weightedA = criteriaA[i] * weights[i];
-    const weightedB = criteriaB[i] * weights[i];
-    const criterionDist = weightedA - weightedB;
-
-    dist += Math.pow(criterionDist, 2);
-    if (criterionDist < 0) {
-      improvement += Math.pow(criterionDist, 2);
+    dist += std::pow(criterion_dist, 2);
+    if(criterion_dist < 0) {
+      improvement += std::pow(criterion_dist, 2);
     }
   }
 
-  dist = Math.sqrt(dist);
-  improvement = Math.sqrt(improvement);
+  dist = std::sqrt(dist);
+  improvement = std::sqrt(improvement);
 
   if (improvement == 0) {
-    return 0;
+    return 0.0;
   }
 
-  const p = 30.0;
-  const q = 0.1;
+  double const p = 30.0;
+  double const q = 0.1;
+  //(log2(std::pow(improvement, 2) / dist) * ((atan(p * (dist - q)) + PI) / 2.0));
+  double value1 = log2(std::pow(improvement, 2) / dist);
+  double value2 = (atan(p * (dist - q)) + PI) / 2.0;
+  return value1 * value2;
+}
 
-  return Math.log2(Math.pow(improvement, 2) / dist) * (Math.atan(p * (dist - q)) + Math.PI / 2.0);
-}*/
-
-mins getMinImprovement(journey conn, std::vector<journey> x_cons, int[] weights) {
-  auto min_improvement = 100;//Number.MAX_VALUE;
+mins get_min_improvement(journey conn, std::vector<journey> x_cons, std::vector<int> weights) {
+  auto min_improvement = DBL_MAX;
   journey min;
 
   for(auto const x : x_cons) {
@@ -94,43 +97,39 @@ mins getMinImprovement(journey conn, std::vector<journey> x_cons, int[] weights)
   return all_min_vals;
 }
 
-double get_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b, int[] weights, bool lr) {//weights: number[]) {
+double get_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b, std::vector<int> weights) {
   if(cons_a.size() == 0 && cons_b.size() == 0) {
     return 0.0;
   } else if (cons_a.size() == 0) {
-    return 1;//Number.MIN_VALUE;
+    return DBL_MIN;
   } else if (cons_b.size() == 0) {
-    return 1;//Number.MAX_VALUE;
+    return DBL_MAX;
   }
 
-  if(lr) {
-    std::vector<journey> a_copy(cons_a);
-    std::vector<journey> b_copy(cons_b);
-  }
-  else {
-    std::vector<journey> a_copy(cons_b);
-    std::vector<journey> b_copy(cons_a);
-  }
+  std::vector<journey> a_copy(cons_a);
+  std::vector<journey> b_copy(cons_b);
   double improvement = 0.0;
 
   while(!a_copy.empty()) {
-    auto max_improvement_a = -1.0;//Number.MAX_VALUE;
-    auto a_max = 0
-    auto b_min = 0;
+    double max_improvement_a = DBL_MIN;
+    journey a_max;
+    journey b_min;
+    int ix_a_max = 0;
 
-    for(auto const a : a_copy) {
-      // let {minImprovement, min} = get_min_improvement(a, b_copy, weights);
-      // if(minImprovement > max_improvement_a) {
-      // max_improvement_a = minImprovement;
-      // a_max = a;
-      // b_min = min;
-      //}
-      //});
+    for(int i = 0; i != a_copy.size(); ++i) {
+      journey a = a_copy.at(i);
+      mins min_values = get_min_improvement(a, b_copy, weights);
+      if(min_values.min_improvement_ > max_improvement_a) {
+        max_improvement_a = min_values.min_improvement_;
+        a_max = a;
+        ix_a_max = i;
+        b_min = min_values.min_;
+      }
     }
 
     improvement += max_improvement_a;
-    //aCopy.splice(aCopy.indexOf(maxA), 1);
-    //bCopy.push(maxA);
+    a_copy.erase(a_copy.begin() + ix_a_max);
+    b_copy.emplace_back(a_max);
   }
  return improvement;
 }
@@ -169,12 +168,13 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   check_journeys(0, refcons_without_filter);
   check_journeys(1, cons_with_filter);
 
-  auto con_size_without = refcons_without_filter.size();
-  auto con_size_with = cons_with_filter.size();
+  //auto con_size_without = refcons_without_filter.size();
+  //auto con_size_with = cons_with_filter.size();
 
-  int[] weights = {1, 1, 30};
-  const l_r_impro = get_improvement(refcons_without_filter, cons_with_filter, weights, true);
-  const r_l_impro = get_improvement(refcons_without_filter, cons_with_filter, weights, false);
+  //int weights[] = {1, 1, 30};
+  std::vector<int> weights = {1, 1, 30};
+  auto const l_r_impro = get_improvement(refcons_without_filter, cons_with_filter, weights);
+  auto const r_l_impro = get_improvement(cons_with_filter, refcons_without_filter, weights);
   improvement = l_r_impro - r_l_impro;
 
   return improvement;
@@ -229,10 +229,8 @@ int filter_compare(int argc, char const** argv) {
   //                 mit: Message bzw journey mit id 1 aus File B
 
   // TODO:
-  // 1. queued msgs von File A und von File B mit ids speichern
-  // 2. Dann Funktion aufrufen die jeweils die Message mit id 1 aus den queues nimmt
-  // 3. Dort zu journeys und connection sets umbauen, Felix Tool -> Wert
   // 4. Wert printen, jeweils für alle ids
+  // 5. Fehler abfangen?
 
   auto msg_count = 0;
   auto non_empty_msg_count = 0;
