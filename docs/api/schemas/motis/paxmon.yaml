@@ -1920,3 +1920,15 @@ PaxMonTransferDetailsResponse:
       description: TODO
     groups:
       description: TODO
+PaxMonReviseCompactJourneyRequest:
+  description: TODO
+  fields:
+    universe:
+      description: TODO
+    journeys:
+      description: TODO
+PaxMonReviseCompactJourneyResponse:
+  description: TODO
+  fields:
+    connections:
+      description: TODO

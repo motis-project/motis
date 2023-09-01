@@ -52,6 +52,12 @@ msg_ptr revise::update(Connection const* con) {
 }
 
 msg_ptr revise::update(ReviseRequest const* req) {
+  auto const schedule_res_id =
+      req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                            : static_cast<ctx::res_id_t>(req->schedule());
+  auto res_lock = lock_resources({{schedule_res_id, ctx::access_t::READ}});
+  auto const& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+
   message_creator fbb;
   fbb.create_and_finish(
       MsgContent_ReviseResponse,
@@ -59,8 +65,8 @@ msg_ptr revise::update(ReviseRequest const* req) {
                                     *req->connections(),
                                     [&](Connection const* con) {
                                       return to_connection(
-                                          fbb, update_journey(get_sched(),
-                                                              convert(con)));
+                                          fbb,
+                                          update_journey(sched, convert(con)));
                                     })))
           .Union());
   return make_msg(fbb);

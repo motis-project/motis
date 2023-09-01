@@ -44,6 +44,7 @@
 #include "motis/paxmon/api/metrics.h"
 #include "motis/paxmon/api/remove_groups.h"
 #include "motis/paxmon/api/reroute_groups.h"
+#include "motis/paxmon/api/revise_compact_journey.h"
 #include "motis/paxmon/api/transfer_details.h"
 #include "motis/paxmon/api/transfers_at_station.h"
 
@@ -464,6 +465,12 @@ void paxmon::init(motis::module::registry& reg) {
       "/paxmon/metrics",
       [&](msg_ptr const& msg) -> msg_ptr { return api::metrics(data_, msg); },
       {});
+
+  reg.register_op("/paxmon/revise_compact_journey",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::revise_compact_journey(data_, msg);
+                  },
+                  {});
 
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {

@@ -136,6 +136,8 @@ include "paxmon/PaxMonBrokenTransfersRequest.fbs";
 include "paxmon/PaxMonBrokenTransfersResponse.fbs";
 include "paxmon/PaxMonTransferDetailsRequest.fbs";
 include "paxmon/PaxMonTransferDetailsResponse.fbs";
+include "paxmon/PaxMonReviseCompactJourneyRequest.fbs";
+include "paxmon/PaxMonReviseCompactJourneyResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -353,7 +355,9 @@ union MsgContent {
   motis.paxmon.PaxMonBrokenTransfersRequest                               = 166,
   motis.paxmon.PaxMonBrokenTransfersResponse                              = 167,
   motis.paxmon.PaxMonTransferDetailsRequest                               = 168,
-  motis.paxmon.PaxMonTransferDetailsResponse                              = 169
+  motis.paxmon.PaxMonTransferDetailsResponse                              = 169,
+  motis.paxmon.PaxMonReviseCompactJourneyRequest                          = 170,
+  motis.paxmon.PaxMonReviseCompactJourneyResponse                         = 171
 }
 
 // Destination Examples:

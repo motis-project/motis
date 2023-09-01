@@ -554,6 +554,20 @@
     type: motis.paxmon.PaxMonMetricsResponse
     description: Metrics
 
+/paxmon/revise_compact_journey:
+  summary: Compact journey to real-time connection
+  description: |
+    Convert compact journeys into connections (`motis.Connection`),
+    updated with real-time information.
+
+    Requires the `revise` module.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonReviseCompactJourneyRequest
+  output:
+    type: motis.paxmon.PaxMonReviseCompactJourneyResponse
+    description: Connections with real-time information
+
 /ppr/profiles:
   summary: List available pedestrian routing profiles
   tags:

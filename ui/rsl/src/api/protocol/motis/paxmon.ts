@@ -1,6 +1,7 @@
 // GENERATED FILE - DO NOT MODIFY
 // -> see /tools/protocol for information on how to update this file
 import {
+  Connection,
   Interval,
   ServiceInfo,
   Station,
@@ -1135,6 +1136,17 @@ export interface PaxMonTransferDetailsResponse {
   normal_routes: number;
   broken_routes: number;
   groups: PaxMonGroup[];
+}
+
+// paxmon/PaxMonReviseCompactJourneyRequest.fbs
+export interface PaxMonReviseCompactJourneyRequest {
+  universe: number;
+  journeys: PaxMonCompactJourney[];
+}
+
+// paxmon/PaxMonReviseCompactJourneyResponse.fbs
+export interface PaxMonReviseCompactJourneyResponse {
+  connections: Connection[];
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs
