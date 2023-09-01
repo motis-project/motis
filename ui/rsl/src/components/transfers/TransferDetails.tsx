@@ -4,7 +4,7 @@ import { ArrowRight, ChevronRight, Clock, Users, XCircle } from "lucide-react";
 import React, { ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { TripServiceInfo } from "@/api/protocol/motis";
+import { Station, TripServiceInfo } from "@/api/protocol/motis";
 import {
   PaxMonGroup,
   PaxMonTransferDetailsRequest,
@@ -15,15 +15,23 @@ import { queryKeys, sendPaxMonTransferDetailsRequest } from "@/api/paxmon";
 
 import { formatShortDuration } from "@/data/durationFormat";
 import { universeAtom } from "@/data/multiverse";
+import { formatPercent } from "@/data/numberFormat";
 
 import { formatDateTime } from "@/util/dateFormat";
 import {
   getDestinationStation,
+  getJourneyLegAfterTransfer,
   getTotalPaxCount,
   groupHasActiveUnreachableRoutes,
 } from "@/util/groups";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import Delay from "@/components/util/Delay";
 
 import { cn } from "@/lib/utils";
 
@@ -225,16 +233,12 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
       <h2 className="text-lg mt-6 mb-2">Betroffene Reisendengruppen</h2>
       <div className="flex flex-wrap gap-1">
         {data.groups.map((g) => (
-          <Link
+          <GroupButton
+            group={g}
             key={g.id}
-            to={`/groups/${g.id}`}
-            className={cn(
-              "w-24 px-2 py-1 rounded text-center",
-              groupHasActiveUnreachableRoutes(g) ? "bg-red-200" : "bg-gray-200",
-            )}
-          >
-            {g.id}
-          </Link>
+            transferArrivalStation={arrival?.station}
+            transferDepartureStation={departure?.station}
+          />
         ))}
       </div>
     </div>
@@ -278,6 +282,104 @@ function GroupsByStation({ groups }: GroupsByStationProps) {
         {station.name}
       </div>
     </div>
+  );
+}
+
+interface GroupButtonProps {
+  group: PaxMonGroup;
+  transferArrivalStation: Station | undefined;
+  transferDepartureStation: Station | undefined;
+}
+
+function GroupButton({
+  group,
+  transferArrivalStation,
+  transferDepartureStation,
+}: GroupButtonProps) {
+  const plannedRoute = group.routes[0];
+  const plannedDeparture = plannedRoute.journey.legs[0];
+  const plannedArrival =
+    plannedRoute.journey.legs[plannedRoute.journey.legs.length - 1];
+
+  const activeRoutes = group.routes
+    .filter((r) => r.probability > 0)
+    .sort((a, b) => b.probability - a.probability)
+    .map((r) => {
+      return {
+        ...r,
+        alternativeLeg: getJourneyLegAfterTransfer(
+          r.journey,
+          transferArrivalStation,
+          transferDepartureStation,
+        ),
+      };
+    });
+
+  return (
+    <HoverCard openDelay={200}>
+      <HoverCardTrigger asChild>
+        <Link
+          to={`/groups/${group.id}`}
+          className={cn(
+            "w-24 px-2 py-1 rounded text-center",
+            groupHasActiveUnreachableRoutes(group)
+              ? "bg-red-200"
+              : "bg-gray-200",
+          )}
+        >
+          {group.id}
+        </Link>
+      </HoverCardTrigger>
+      <HoverCardContent className="w-96">
+        <div className="flex justify-end items-center gap-1">
+          <Users className="w-4 h-4" aria-hidden="true" />
+          {group.passenger_count}
+        </div>
+        <div className="font-semibold">Planmäßige Verbindung:</div>
+        <div className="flex gap-2 items-center">
+          <div className="w-5"></div>
+          <div>{formatDateTime(plannedDeparture.enter_time)}</div>
+          <div>{plannedDeparture.enter_station.name}</div>
+        </div>
+        <div className="flex gap-2 items-center">
+          <div className="w-5">
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </div>
+          <div>{formatDateTime(plannedArrival.exit_time)}</div>
+          <div>{plannedArrival.exit_station.name}</div>
+        </div>
+        <div className="font-semibold mt-4">
+          Zielverspätung mit aktuellen Alternativen:
+        </div>
+        <table>
+          <tbody>
+            {activeRoutes.map((route) => (
+              <tr key={route.index}>
+                <td className="pr-4">{formatPercent(route.probability)}</td>
+                <td className="pr-4">
+                  {route.broken ? (
+                    <span className="text-red-600">Ziel nicht erreichbar</span>
+                  ) : (
+                    <Delay minutes={route.estimated_delay} forceSign={true} />
+                  )}
+                </td>
+                <td>
+                  {route.alternativeLeg && (
+                    <>
+                      via{" "}
+                      <TripServiceInfoView
+                        tsi={route.alternativeLeg.trip}
+                        format="Short"
+                      />
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </HoverCardContent>
+    </HoverCard>
   );
 }
 

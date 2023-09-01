@@ -10,7 +10,7 @@ import {
   Users,
   XCircle,
 } from "lucide-react";
-import React, { ReactElement, useCallback } from "react";
+import React, { ReactElement, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Virtuoso } from "react-virtuoso";
 
@@ -19,6 +19,7 @@ import {
   PaxMonDetailedTransferInfo,
 } from "@/api/protocol/motis/paxmon";
 
+import { useLookupScheduleInfoQuery } from "@/api/lookup";
 import { queryKeys, sendPaxMonBrokenTransfersRequest } from "@/api/paxmon";
 
 import { formatShortDuration } from "@/data/durationFormat";
@@ -26,8 +27,13 @@ import { universeAtom } from "@/data/multiverse";
 import { formatNumber } from "@/data/numberFormat";
 
 import { formatDateTime, formatTime } from "@/util/dateFormat";
+import { getDayInterval } from "@/util/interval";
+import { getScheduleRange } from "@/util/scheduleRange";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import DatePicker from "@/components/inputs/DatePicker";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 import { cn } from "@/lib/utils";
 
@@ -35,10 +41,15 @@ function BrokenTransfersList(): ReactElement {
   const params = useParams();
   const [universe] = useAtom(universeAtom);
 
+  const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
+  const [onlyFutureTransfers, setOnlyFutureTransfers] = useState(false);
+
+  const { data: scheduleInfo } = useLookupScheduleInfoQuery();
+
   const baseRequest: PaxMonBrokenTransfersRequest = {
     universe,
-    filter_interval: { begin: 0, end: 0 },
-    ignore_past_transfers: false,
+    filter_interval: getDayInterval(selectedDate),
+    ignore_past_transfers: onlyFutureTransfers,
     include_insufficient_transfer_time: true,
     include_missed_initial_departure: true,
     include_canceled_transfer: true,
@@ -95,10 +106,37 @@ function BrokenTransfersList(): ReactElement {
   const selectedTransferN = Number.parseInt(params.n ?? "");
   const selectedTransferE = Number.parseInt(params.e ?? "");
 
+  const scheduleRange = getScheduleRange(scheduleInfo);
+  if (selectedDate === undefined && scheduleInfo) {
+    setSelectedDate(scheduleRange.closestDate);
+  }
+
   return (
     <div className="h-full flex flex-col">
+      <div className="flex justify-between pb-2 gap-1">
+        <div>
+          <Label htmlFor="transfersDatePicker">Datum</Label>
+          <DatePicker
+            id="transfersDatePicker"
+            value={selectedDate}
+            onChange={setSelectedDate}
+            min={scheduleRange.firstDay}
+            max={scheduleRange.lastDay}
+          />
+        </div>
+        <div className="flex justify-end items-center gap-2 grow pt-6">
+          <Switch
+            id="onlyFutureTransfers"
+            checked={onlyFutureTransfers}
+            onCheckedChange={() => setOnlyFutureTransfers((v) => !v)}
+          />
+          <Label htmlFor="onlyFutureTransfers">
+            Nur Umstiege in der Zukunft
+          </Label>
+        </div>
+      </div>
       {totalNumberOfBrokenTransfers !== undefined && (
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center my-2">
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfBrokenTransfers)}{" "}
             {totalNumberOfBrokenTransfers === 1
