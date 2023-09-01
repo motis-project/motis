@@ -23,8 +23,8 @@
 #include "motis/module/message.h"
 
 #include "motis/paxmon/api/add_groups.h"
+#include "motis/paxmon/api/broken_transfers.h"
 #include "motis/paxmon/api/capacity_status.h"
-#include "motis/paxmon/api/critical_interchanges.h"
 #include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
 #include "motis/paxmon/api/detailed_capacity_status.h"
@@ -40,12 +40,12 @@
 #include "motis/paxmon/api/get_trip_load_info.h"
 #include "motis/paxmon/api/get_universes.h"
 #include "motis/paxmon/api/group_statistics.h"
-#include "motis/paxmon/api/interchange_details.h"
-#include "motis/paxmon/api/interchanges_at_station.h"
 #include "motis/paxmon/api/keep_alive.h"
 #include "motis/paxmon/api/metrics.h"
 #include "motis/paxmon/api/remove_groups.h"
 #include "motis/paxmon/api/reroute_groups.h"
+#include "motis/paxmon/api/transfer_details.h"
+#include "motis/paxmon/api/transfers_at_station.h"
 
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/checks.h"
@@ -117,6 +117,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
         "disable)");
   param(preparation_time_, "preparation_time",
         "preparation time for localization (minutes)");
+  param(early_departure_tolerance_, "early_departure_tolerance",
+        "maximum allowed early trip departure (minutes)");
   param(check_graph_times_, "check_graph_times",
         "check graph timestamps after each update");
   param(check_graph_integrity_, "check_graph_integrity",
@@ -152,6 +154,7 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
   uv->capacity_maps_.fuzzy_match_max_time_diff_ =
       capacity_fuzzy_match_max_time_diff_;
   uv->capacity_maps_.min_capacity_ = min_capacity_;
+  uv->early_departure_tolerance_ = std::max(early_departure_tolerance_, 0);
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
@@ -403,21 +406,21 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
-  reg.register_op("/paxmon/interchanges_at_station",
+  reg.register_op("/paxmon/transfers_at_station",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::interchanges_at_station(data_, msg);
+                    return api::transfers_at_station(data_, msg);
                   },
                   {});
 
-  reg.register_op("/paxmon/critical_interchanges",
+  reg.register_op("/paxmon/broken_transfers",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::critical_interchanges(data_, msg);
+                    return api::broken_transfers(data_, msg);
                   },
                   {});
 
-  reg.register_op("/paxmon/interchange_details",
+  reg.register_op("/paxmon/transfer_details",
                   [&](msg_ptr const& msg) -> msg_ptr {
-                    return api::interchange_details(data_, msg);
+                    return api::transfer_details(data_, msg);
                   },
                   {});
 

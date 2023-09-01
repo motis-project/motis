@@ -173,6 +173,8 @@ struct universe {
   tick_statistics tick_stats_;
   metrics<tick_statistics> metrics_;
   update_tracker update_tracker_;
+
+  int early_departure_tolerance_{0};  // minutes
 };
 
 }  // namespace motis::paxmon
