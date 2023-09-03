@@ -9,10 +9,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include "float.h"
+
 #include "boost/program_options.hpp"
 #include "utl/to_vec.h"
 #include "geo/latlng.h"
 #include "geo/webmercator.h"
+
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/check_journey.h"
@@ -39,6 +41,36 @@ struct mins {
   double min_improvement_;
   journey min_;
 };
+
+struct improv_pair {
+  double improvement_;
+  int id_;
+};
+
+std::vector<improv_pair> normalize(std::vector<improv_pair> to_normalize) {
+  std::vector<improv_pair> normalized;
+  improv_pair norm;
+  double max = -DBL_MAX;
+  double min = DBL_MAX;
+  for(auto const v : to_normalize) {
+    if(v.improvement_ > max) {
+      max = v.improvement_;
+    }
+    if(v.improvement_ < min) {
+      min = v.improvement_;
+    }
+  }
+  double denominator = max - min;
+  if(denominator == 0) {
+    denominator = 1;
+  }
+  for(auto const impr : to_normalize) {
+    double impr_norm = (impr.improvement_ - min) / denominator;
+    norm = {impr_norm, impr.id_};
+    normalized.emplace_back(norm);
+  }
+  return normalized;
+}
 
 double get_improvement(journey a, journey b, std::vector<int> weights) {
   // criteria 1 dep_time
@@ -97,11 +129,11 @@ mins get_min_improvement(journey conn, std::vector<journey> x_cons, std::vector<
   return all_min_vals;
 }
 
-double get_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b, std::vector<int> weights) {
+double eval_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b, std::vector<int> weights) {
   if(cons_a.size() == 0 && cons_b.size() == 0) {
     return 0.0;
   } else if (cons_a.size() == 0) {
-    return DBL_MIN;
+    return -DBL_MAX;
   } else if (cons_b.size() == 0) {
     return DBL_MAX;
   }
@@ -111,7 +143,7 @@ double get_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b,
   double improvement = 0.0;
 
   while(!a_copy.empty()) {
-    double max_improvement_a = DBL_MIN;
+    double max_improvement_a = -DBL_MAX;
     journey a_max;
     journey b_min;
     int ix_a_max = 0;
@@ -136,8 +168,7 @@ double get_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b,
 
 
 double improvement_check(int id, std::vector<msg_ptr> const& responses,
-                       std::vector<std::string> const& files,
-                       bool local, bool pretty_print) {
+                       std::vector<std::string> const& files) {
   assert(responses.size() == files.size());
   assert(responses.size() > 1);
   auto const file_count = files.size();
@@ -150,7 +181,6 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   auto const refcons_without_filter = message_to_journeys(res[0]);
   auto const cons_with_filter = message_to_journeys(res[1]);
 
-  // Hilfsfunktionen
   std::ostringstream journey_errors;
   auto const report_journey_error = [&](bool) -> std::ostream& {
     return journey_errors;
@@ -168,13 +198,17 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   check_journeys(0, refcons_without_filter);
   check_journeys(1, cons_with_filter);
 
-  //auto con_size_without = refcons_without_filter.size();
-  //auto con_size_with = cons_with_filter.size();
+  auto con_size_without = refcons_without_filter.size();
+  auto con_size_with = cons_with_filter.size();
+  std::cout << "There are " << con_size_without << " journeys in File " << files.at(0) << std::endl;
+  std::cout << "There are " << con_size_with << " journeys in File " << files.at(1) << std::endl;
+  if(con_size_with != con_size_without) {
+    std::cout << "Not all journeys have a counterpart!" << std::endl;
+  }
 
-  //int weights[] = {1, 1, 30};
   std::vector<int> weights = {1, 1, 30};
-  auto const l_r_impro = get_improvement(refcons_without_filter, cons_with_filter, weights);
-  auto const r_l_impro = get_improvement(cons_with_filter, refcons_without_filter, weights);
+  auto const l_r_impro = eval_improvement(refcons_without_filter, cons_with_filter, weights);
+  auto const r_l_impro = eval_improvement(cons_with_filter, refcons_without_filter, weights);
   improvement = l_r_impro - r_l_impro;
 
   return improvement;
@@ -182,20 +216,13 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
 
 int filter_compare(int argc, char const** argv) {
   using namespace motis::intermodal::eval;
-
   bool help = false;
-  bool utc = false;
-  bool local = true;
-  bool pretty_print = false;
   std::vector<std::string> filenames;
   po::options_description desc("Filter Comparator");
   // clang-format off
   desc.add_options()
       ("help,h", po::bool_switch(&help), "show help")
-      ("utc,u", po::bool_switch(&utc), "print timestamps in UTC")
-      ("local,l", po::bool_switch(&local), "print timestamps in local time")
-      ("pretty,p", po::bool_switch(&pretty_print), "pretty-print json files")
-      ("responses", po::value<std::vector<std::string>>(&filenames)->multitoken(), "response files");
+      ("files,f", po::value<std::vector<std::string>>(&filenames)->multitoken(), "files to compare");
   // clang-format on
 
   po::variables_map vm;
@@ -204,38 +231,28 @@ int filter_compare(int argc, char const** argv) {
 
   if (help || filenames.size() != 2) {
     fmt::print("{}\n", desc);
+    fmt::print(" This comparator takes two files. The first file should consist of reference journeys.\n "
+        "The second file should consist of results, which used the station filter or other aspects one wants to check against.\n "
+        "The comparator will compare each journey and and compute an \"improvement\". \n\n");
     if (filenames.size() != 2) {
-      fmt::print("only {} filenames given, ==2 required: {}\n",
+      fmt::print("only {} file(s) given, ==2 required: {}\n",
                  filenames.size(), filenames);
     }
     return 0;
   }
 
-  if (utc) {
-    local = false;
-  }
-
   auto in_files = utl::to_vec(filenames, [](std::string const& filename) {
     return std::ifstream{filename};
   });
-  auto const file_count = in_files.size(); // 2
+  auto const file_count = in_files.size();
   std::vector<std::unordered_map<int, msg_ptr>> queued_queries(file_count);
   std::vector<std::unordered_map<int, msg_ptr>> queued_msgs(file_count);
-
-  // Zwei Files:
-  // Jeweils mehrere Lines = Messages
-  // Messages sind dann journeys mit mehreren Connections.
-  // Jeweils vergleichen: Message bzw journey mit id 1 aus File A
-  //                 mit: Message bzw journey mit id 1 aus File B
-
-  // TODO:
-  // 4. Wert printen, jeweils für alle ids
-  // 5. Fehler abfangen?
 
   auto msg_count = 0;
   auto non_empty_msg_count = 0;
   auto errors = 0;
   auto done = false;
+  std::vector<improv_pair> all_improvements;
   std::unordered_set<int> read_id;
   read_id.reserve(file_count);
   while(!done) {
@@ -268,8 +285,10 @@ int filter_compare(int argc, char const** argv) {
       }
       if(msgs.size() == file_count) {
         ++msg_count;
-        auto improvement = improvement_check(id, msgs, filenames, local, pretty_print);
-        if(improvement == -1.0) {
+        auto improvement = improvement_check(id, msgs, filenames);
+        improv_pair improv = {improvement, id};
+        all_improvements.emplace_back(improv);
+        if(improvement < 0.0) {
           ++errors;
         }
         if(motis_content(RoutingResponse, msgs[0])->connections()->size() == 0U) {
@@ -278,10 +297,22 @@ int filter_compare(int argc, char const** argv) {
         for(auto& q : queued_msgs) {
           q.erase(id);
         }
+      } else {
+        ++errors;
+        std::cout << "This journey with id: " << id << " does not have a counterpart!" << std::endl;
       }
     }
   }
 
+  // normalize and print results
+  std::vector<improv_pair> normalized_improv = normalize(all_improvements);
+  std::cout << "[---Results:---]" << std::endl;
+  std::cout << "non-emtpy-msg-count: " << non_empty_msg_count << std::endl;
+  std::cout << "msg-count: " << msg_count << std::endl;
+  std::cout << "errors: " << errors << std::endl;
+  for(auto const p : normalized_improv) {
+    std::cout << "ID: " << p.id_ << "\t Improvement: " << p.improvement_ << std::endl;
+  }
 
   return errors;
 }
