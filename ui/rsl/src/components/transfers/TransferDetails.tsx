@@ -270,6 +270,10 @@ function GroupsByStation({ groups }: GroupsByStationProps) {
   const station = getDestinationStation(groups[0]);
   const totalPax = getTotalPaxCount(groups);
 
+  const maybeUnreachable = groups.some((g) =>
+    g.routes.some((r) => r.destination_unreachable && r.probability !== 0),
+  );
+
   return (
     <div className="flex items-center gap-1">
       <Users className="w-4 h-4" aria-hidden="true" />
@@ -281,6 +285,17 @@ function GroupsByStation({ groups }: GroupsByStationProps) {
         <span className="sr-only">mit Ziel </span>
         {station.name}
       </div>
+      {maybeUnreachable && (
+        <>
+          <XCircle
+            className="w-4 h-4 text-db-cool-gray-500 ml-4"
+            aria-hidden="true"
+          />
+          <div className="text-red-600">
+            Ziel möglicherweise nicht erreichbar
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -331,11 +346,13 @@ function GroupButton({
         </Link>
       </HoverCardTrigger>
       <HoverCardContent className="w-96">
-        <div className="flex justify-end items-center gap-1">
-          <Users className="w-4 h-4" aria-hidden="true" />
-          {group.passenger_count}
+        <div className="flex justify-between gap-1">
+          <div className="font-semibold">Planmäßige Verbindung:</div>
+          <div className="flex justify-end items-center gap-1">
+            <Users className="w-4 h-4" aria-hidden="true" />
+            {group.passenger_count}
+          </div>
         </div>
-        <div className="font-semibold">Planmäßige Verbindung:</div>
         <div className="flex gap-2 items-center">
           <div className="w-5"></div>
           <div>{formatDateTime(plannedDeparture.enter_time)}</div>
