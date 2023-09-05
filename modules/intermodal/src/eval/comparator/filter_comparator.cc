@@ -76,12 +76,18 @@ double get_improvement(journey a, journey b, std::vector<int> weights) {
   // criteria 1 dep_time
   unixtime criteria1_a = a.stops_.at(0).departure_.timestamp_;
   unixtime criteria1_b = b.stops_.at(0).departure_.timestamp_;
+  printf("DEBUG: A Criteria 1: Depature: %lld \n", criteria1_a);
+  printf("DEBUG: B Criteria 1: Depature: %lld \n", criteria1_b);
   // criteria 2 arr_time
   unixtime criteria2_a = a.stops_.at(a.stops_.size()-1).arrival_.timestamp_;
   unixtime criteria2_b = b.stops_.at(b.stops_.size()-1).arrival_.timestamp_;
+  printf("DEBUG: A Criteria 2: Arrival: %lld \n", criteria2_a);
+  printf("DEBUG: B Criteria 2: Arrival: %lld \n", criteria2_b);
   // criteria 3 transfers
   int64_t citeria3_a = a.transfers_;
   int64_t citeria3_b = b.transfers_;
+  printf("DEBUG: A Criteria 3: Transfers: %lld \n", citeria3_a);
+  printf("DEBUG: B Criteria 3: Transfers: %lld \n", citeria3_b);
   // all critera
   std::vector<unixtime> all_criteria_a = {criteria1_a, criteria2_a, citeria3_a};
   std::vector<unixtime> all_criteria_b = {criteria1_b, criteria2_b, citeria3_b};
@@ -198,13 +204,10 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   check_journeys(0, refcons_without_filter);
   check_journeys(1, cons_with_filter);
 
-  auto con_size_without = refcons_without_filter.size();
-  auto con_size_with = cons_with_filter.size();
-  std::cout << "There are " << con_size_without << " journeys in File " << files.at(0) << std::endl;
-  std::cout << "There are " << con_size_with << " journeys in File " << files.at(1) << std::endl;
-  if(con_size_with != con_size_without) {
-    std::cout << "Not all journeys have a counterpart!" << std::endl;
-  }
+  //auto con_size_without = refcons_without_filter.size();
+  //auto con_size_with = cons_with_filter.size();
+  //std::cout << "There are " << con_size_without << " journeys from File " << files.at(0) << std::endl;
+  //std::cout << "There are " << con_size_with << " journeys from File " << files.at(1) << std::endl;
 
   std::vector<int> weights = {1, 1, 30};
   auto const l_r_impro = eval_improvement(refcons_without_filter, cons_with_filter, weights);
@@ -251,6 +254,7 @@ int filter_compare(int argc, char const** argv) {
   auto msg_count = 0;
   auto non_empty_msg_count = 0;
   auto errors = 0;
+  auto without_partner = 0;
   auto done = false;
   std::vector<improv_pair> all_improvements;
   std::unordered_set<int> read_id;
@@ -298,8 +302,8 @@ int filter_compare(int argc, char const** argv) {
           q.erase(id);
         }
       } else {
-        ++errors;
-        std::cout << "This journey with id: " << id << " does not have a counterpart!" << std::endl;
+        ++without_partner;
+        std::cout << "The journey with id " << id << " does not have a counterpart!" << std::endl;
       }
     }
   }
@@ -309,9 +313,15 @@ int filter_compare(int argc, char const** argv) {
   std::cout << "[---Results:---]" << std::endl;
   std::cout << "non-emtpy-msg-count: " << non_empty_msg_count << std::endl;
   std::cout << "msg-count: " << msg_count << std::endl;
+  std::cout << "journeys without counterpart: " << without_partner << std::endl;
   std::cout << "errors: " << errors << std::endl;
-  for(auto const p : normalized_improv) {
+  std::cout << "Not normalized results: " << std::endl;
+  for(auto const p : all_improvements) {
     std::cout << "ID: " << p.id_ << "\t Improvement: " << p.improvement_ << std::endl;
+  }
+  std::cout << "Normalized results: " << std::endl;
+  for(auto const pn : normalized_improv) {
+    std::cout << "ID: " << pn.id_ << "\t Improvement: " << pn.improvement_ << std::endl;
   }
 
   return errors;
