@@ -72,7 +72,6 @@ msg_ptr broken_transfers(paxmon_data& data, msg_ptr const& msg) {
   message_creator mc;
 
   auto transfers = std::vector<detailed_transfer_info>{};
-  auto broken_transfers = 0U;
 
   auto const gdti_options = get_detailed_transfer_info_options{
       .include_disabled_group_routes_ = true,
@@ -116,8 +115,6 @@ msg_ptr broken_transfers(paxmon_data& data, msg_ptr const& msg) {
       } else if (!include_insufficient_transfer_time) {
         continue;
       }
-
-      ++broken_transfers;
 
       auto& info = transfers.emplace_back(
           get_detailed_transfer_info(uv, sched, ei, mc, gdti_options));
