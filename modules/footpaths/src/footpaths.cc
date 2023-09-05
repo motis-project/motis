@@ -480,10 +480,12 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             impl_->full_import();
             import_successful_ = true;
           } else {
-            LOG(ml::info) << "Footpaths: Maybe Partial Import.";
             impl_->old_import_state_ =
                 mm::read_ini<import_state>(dir / "import.ini");
-            impl_->maybe_partial_import();
+            if (impl_->old_import_state_.value() != impl_->new_import_state_) {
+              LOG(ml::info) << "Footpaths: Maybe Partial Import.";
+              impl_->maybe_partial_import();
+            }
             import_successful_ = true;
           }
         }

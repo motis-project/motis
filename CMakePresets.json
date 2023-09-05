@@ -138,7 +138,7 @@
     },
     {
       "name": "linux-sanitizer",
-      "displayName": "Linux Debug",
+      "displayName": "Linux Sanitizer",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/sanitizer",
       "cacheVariables": {
