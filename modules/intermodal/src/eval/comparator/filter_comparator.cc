@@ -8,7 +8,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
-#include "float.h"
+#include <cfloat>
 
 #include "boost/program_options.hpp"
 #include "utl/to_vec.h"
@@ -47,9 +47,9 @@ struct improv_pair {
   int id_;
 };
 
-std::vector<improv_pair> normalize(std::vector<improv_pair> to_normalize) {
+std::vector<improv_pair> normalize(const std::vector<improv_pair>& to_normalize) {
   std::vector<improv_pair> normalized;
-  improv_pair norm;
+  improv_pair norm{};
   double max = -DBL_MAX;
   double min = DBL_MAX;
   for(auto const v : to_normalize) {
@@ -76,18 +76,18 @@ double get_improvement(journey a, journey b, std::vector<int> weights) {
   // criteria 1 dep_time
   unixtime criteria1_a = a.stops_.at(0).departure_.timestamp_;
   unixtime criteria1_b = b.stops_.at(0).departure_.timestamp_;
-  printf("DEBUG: A Criteria 1: Depature: %lld \n", criteria1_a);
-  printf("DEBUG: B Criteria 1: Depature: %lld \n", criteria1_b);
+  //printf("DEBUG: A Criteria 1: Depature: %lld \n", criteria1_a);
+  //printf("DEBUG: B Criteria 1: Depature: %lld \n", criteria1_b);
   // criteria 2 arr_time
   unixtime criteria2_a = a.stops_.at(a.stops_.size()-1).arrival_.timestamp_;
   unixtime criteria2_b = b.stops_.at(b.stops_.size()-1).arrival_.timestamp_;
-  printf("DEBUG: A Criteria 2: Arrival: %lld \n", criteria2_a);
-  printf("DEBUG: B Criteria 2: Arrival: %lld \n", criteria2_b);
+  //printf("DEBUG: A Criteria 2: Arrival: %lld \n", criteria2_a);
+  //printf("DEBUG: B Criteria 2: Arrival: %lld \n", criteria2_b);
   // criteria 3 transfers
   int64_t citeria3_a = a.transfers_;
   int64_t citeria3_b = b.transfers_;
-  printf("DEBUG: A Criteria 3: Transfers: %lld \n", citeria3_a);
-  printf("DEBUG: B Criteria 3: Transfers: %lld \n", citeria3_b);
+  //printf("DEBUG: A Criteria 3: Transfers: %lld \n", citeria3_a);
+  //printf("DEBUG: B Criteria 3: Transfers: %lld \n", citeria3_b);
   // all critera
   std::vector<unixtime> all_criteria_a = {criteria1_a, criteria2_a, citeria3_a};
   std::vector<unixtime> all_criteria_b = {criteria1_b, criteria2_b, citeria3_b};
@@ -120,11 +120,11 @@ double get_improvement(journey a, journey b, std::vector<int> weights) {
   return value1 * value2;
 }
 
-mins get_min_improvement(journey conn, std::vector<journey> x_cons, std::vector<int> weights) {
+mins get_min_improvement(const journey& conn, const std::vector<journey>& x_cons, const std::vector<int>& weights) {
   auto min_improvement = DBL_MAX;
   journey min;
 
-  for(auto const x : x_cons) {
+  for(auto const& x : x_cons) {
     auto improvement = get_improvement(conn, x, weights);
     if(improvement < min_improvement) {
       min_improvement = improvement;
@@ -135,12 +135,12 @@ mins get_min_improvement(journey conn, std::vector<journey> x_cons, std::vector<
   return all_min_vals;
 }
 
-double eval_improvement(std::vector<journey> cons_a, std::vector<journey> cons_b, std::vector<int> weights) {
-  if(cons_a.size() == 0 && cons_b.size() == 0) {
+double eval_improvement(const std::vector<journey>& cons_a, const std::vector<journey>& cons_b, const std::vector<int>& weights) {
+  if(cons_a.empty() && cons_b.empty()) {
     return 0.0;
-  } else if (cons_a.size() == 0) {
+  } else if (cons_a.empty()) {
     return -DBL_MAX;
-  } else if (cons_b.size() == 0) {
+  } else if (cons_b.empty()) {
     return DBL_MAX;
   }
 
