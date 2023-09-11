@@ -1,4 +1,4 @@
-#include "motis/footpaths/database.h"
+#include "motis/footpaths/storage/database.h"
 
 #include <string_view>
 
@@ -8,6 +8,8 @@
 #include "motis/footpaths/keys.h"
 
 #include "utl/enumerate.h"
+
+namespace fs = std::filesystem;
 
 namespace motis::footpaths {
 
@@ -21,11 +23,12 @@ inline std::string_view view(cista::byte_buf const& b) {
   return std::string_view{reinterpret_cast<char const*>(b.data()), b.size()};
 }
 
-database::database(std::string const& path, std::size_t const max_size) {
+database::database(fs::path const& db_file_path,
+                   std::size_t const db_max_size) {
   env_.set_maxdbs(5);
-  env_.set_mapsize(max_size);
+  env_.set_mapsize(db_max_size);
   auto flags = lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOSYNC;
-  env_.open(path.c_str(), flags);
+  env_.open(db_file_path.c_str(), flags);
   init();
 }
 

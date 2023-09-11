@@ -25,7 +25,7 @@ struct footpaths : public motis::module::module {
 private:
   // directories
   std::filesystem::path module_data_dir() const;
-  std::string db_file() const;
+  std::filesystem::path db_file() const;
 
   // initialize ppr routing data
   static const std::size_t edge_rtree_max_size_{1024UL * 1024 * 1024 * 3};

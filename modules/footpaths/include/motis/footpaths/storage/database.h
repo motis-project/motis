@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -20,7 +21,8 @@
 namespace motis::footpaths {
 
 struct database {
-  explicit database(std::string const& path, std::size_t const max_size);
+  explicit database(std::filesystem::path const& db_file_path,
+                    std::size_t const db_max_size);
 
   // profiles
   std::vector<std::size_t> put_profiles(std::vector<string> const&);

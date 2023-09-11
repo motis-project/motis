@@ -36,64 +36,69 @@ transfer_requests to_transfer_requests(
  * platforms) in old_state; use if profiles_hash has been changed
  */
 transfer_requests_keys generate_transfer_requests_keys(
-    state const& old_state, state const& update_state,
-    hash_map<profile_key_t, ppr::profile_info> const& profiles,
-    bool const old_to_old) {
+    treq_k_generation_data const& data, transfer_request_options const& opts) {
   auto result = transfer_requests_keys{};
+  auto const profiles = data.profile_key_to_profile_info_;
 
-  auto const all_pairs_trs = [&](state const& from_state, state const& to_state,
-                                 profile_key_t const& prf_key) {
-    auto from_to_trs = transfer_requests_keys{};
-    auto const& pi = profiles.at(prf_key);
-    auto prf_dist = pi.profile_.walking_speed_ * pi.profile_.duration_limit_;
+  auto const all_pairs_trs =
+      [&profiles](treq_k_generation_data::matched_nloc_pf_data const& from,
+                  treq_k_generation_data::matched_nloc_pf_data const& to,
+                  profile_key_t const& prf_key) {
+        auto from_to_trs = transfer_requests_keys{};
+        auto const& pi = profiles.at(prf_key);
+        auto prf_dist =
+            pi.profile_.walking_speed_ * pi.profile_.duration_limit_;
 
-    for (auto i = std::size_t{0}; i < from_state.matched_pfs_idx_->size();
-         ++i) {
+        if (from.matched_pfs_idx_.size() == 0 ||
+            to.matched_pfs_idx_.size() == 0) {
+          return from_to_trs;
+        }
 
-      auto from_pf = from_state.matched_pfs_idx_->get_platform(i);
-      auto target_ids =
-          to_state.matched_pfs_idx_->get_other_platforms_in_radius(from_pf,
-                                                                   prf_dist);
-      auto from_nloc_key = from_state.nloc_keys_[i];
+        for (auto i = std::size_t{0}; i < from.matched_pfs_idx_.size(); ++i) {
 
-      if (target_ids.empty()) {
-        continue;
-      }
+          auto from_pf = from.matched_pfs_idx_.get_platform(i);
+          auto target_ids = to.matched_pfs_idx_.get_other_platforms_in_radius(
+              from_pf, prf_dist);
+          auto from_nloc_key = from.nloc_keys_[i];
 
-      auto tmp = transfer_request_keys{};
-      auto to_nloc_keys = vector<nlocation_key_t>{};
+          if (target_ids.empty()) {
+            continue;
+          }
 
-      for (auto t_id : target_ids) {
-        to_nloc_keys.emplace_back(to_state.nloc_keys_[t_id]);
-      }
+          auto tmp = transfer_request_keys{};
+          auto to_nloc_keys = vector<nlocation_key_t>{};
 
-      tmp.from_nloc_key_ = from_nloc_key;
-      tmp.to_nloc_keys_ = to_nloc_keys;
-      tmp.profile_ = prf_key;
+          for (auto t_id : target_ids) {
+            to_nloc_keys.emplace_back(to.nloc_keys_[t_id]);
+          }
 
-      from_to_trs.emplace_back(tmp);
-    }
+          tmp.from_nloc_key_ = from_nloc_key;
+          tmp.to_nloc_keys_ = to_nloc_keys;
+          tmp.profile_ = prf_key;
 
-    return from_to_trs;
-  };
+          from_to_trs.emplace_back(tmp);
+        }
+
+        return from_to_trs;
+      };
 
   // new possible transfers: 1 -> 2, 2 -> 1, 2 -> 2
   for (auto const& [prf_key, prf_info] : profiles) {
-    if (old_to_old) {
-      auto trs11 = all_pairs_trs(old_state, old_state, prf_key);
+    if (opts.old_to_old_) {
+      auto trs11 = all_pairs_trs(data.old_, data.old_, prf_key);
       result.insert(result.end(), trs11.begin(), trs11.end());
     }
 
-    if (!update_state.set_matched_pfs_idx_) {
+    if (!data.update_.set_matched_pfs_idx_) {
       continue;
     }
 
     // new transfers from old to update (1 -> 2)
-    auto trs12 = all_pairs_trs(old_state, update_state, prf_key);
+    auto trs12 = all_pairs_trs(data.old_, data.update_, prf_key);
     // new transfers from update to old (2 -> 1)
-    auto trs21 = all_pairs_trs(update_state, old_state, prf_key);
+    auto trs21 = all_pairs_trs(data.update_, data.old_, prf_key);
     // new transfers from update to update (2 -> 2)
-    auto trs22 = all_pairs_trs(update_state, update_state, prf_key);
+    auto trs22 = all_pairs_trs(data.update_, data.update_, prf_key);
 
     result.insert(result.end(), trs12.begin(), trs12.end());
     result.insert(result.end(), trs21.begin(), trs21.end());

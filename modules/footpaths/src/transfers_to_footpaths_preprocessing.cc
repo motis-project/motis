@@ -20,17 +20,15 @@ hash_map<nlocation_key_t, n::location_idx_t> to_location_key_to_idx_(
   return res;
 }
 
-preprocessed_footpaths to_preprocessed_footpaths(
-    preprocessing_data const& data) {
-  auto fp = preprocessed_footpaths{};
+preprocessed_transfers to_preprocessed_footpaths(
+    transfer_preprocessing_data const& data) {
+  auto fp = preprocessed_transfers{};
 
   auto const location_key_to_idx = to_location_key_to_idx_(data.coords_);
 
   // update progress tracker
   auto const progress_tracker = utl::get_active_progress_tracker();
-  progress_tracker->reset_bounds().in_high(
-      data.old_state_.transfer_results_.size() +
-      data.update_state_.transfer_results_.size());
+  progress_tracker->reset_bounds().in_high(data.transfer_results_.size());
 
   // initialize out/in multimap
   for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
@@ -53,14 +51,15 @@ preprocessed_footpaths to_preprocessed_footpaths(
     progress_tracker->increment();
 
     for (auto [to_nloc, info] : utl::zip(tres.to_nloc_keys_, tres.infos_)) {
-      if (data.profiles_.count(data.key_to_name_.at(tres.profile_)) == 0 ||
+      if (data.profiles_.count(
+              data.profile_key_to_profile_name.at(tres.profile_)) == 0 ||
           location_key_to_idx.count(tres.from_nloc_key_) == 0 ||
           location_key_to_idx.count(to_nloc) == 0) {
         continue;
       }
 
       auto const prf_idx =
-          data.profiles_.at(data.key_to_name_.at(tres.profile_));
+          data.profiles_.at(data.profile_key_to_profile_name.at(tres.profile_));
       auto const from_idx = location_key_to_idx.at(tres.from_nloc_key_);
       auto const to_idx = location_key_to_idx.at(to_nloc);
 
@@ -71,11 +70,7 @@ preprocessed_footpaths to_preprocessed_footpaths(
     }
   };
 
-  for (auto const& tr : data.old_state_.transfer_results_) {
-    single_update(tr);
-  }
-
-  for (auto const& tr : data.update_state_.transfer_results_) {
+  for (auto const& tr : data.transfer_results_) {
     single_update(tr);
   }
 

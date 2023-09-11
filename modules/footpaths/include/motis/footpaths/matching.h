@@ -6,7 +6,7 @@
 #include "geo/latlng.h"
 
 #include "motis/footpaths/platform/platform.h"
-#include "motis/footpaths/state.h"
+#include "motis/footpaths/platform/platform_index.h"
 
 #include "nigiri/location.h"
 #include "nigiri/timetable.h"
@@ -15,10 +15,14 @@
 namespace motis::footpaths {
 
 struct matching_data {
-  ::nigiri::timetable::locations const& locations_;
+  ::nigiri::timetable::locations const& locations_to_match_;
 
-  state const& old_state_;
-  state const& update_state_;
+  hash_map<nlocation_key_t, platform> const& already_matched_nloc_keys_;
+
+  platform_index const& old_state_pf_idx_;
+  platform_index const& update_state_pf_idx_;
+
+  bool has_update_state_pf_idx_;
 };
 
 struct matching_options {
@@ -28,7 +32,6 @@ struct matching_options {
 
 struct matching_result {
   platform pf_;
-  ::nigiri::location_idx_t nloc_idx_;
   geo::latlng nloc_pos_;
 };
 using matching_results = std::vector<matching_result>;
@@ -38,7 +41,7 @@ matching_results match_locations_and_platforms(matching_data const&,
 
 // -- match functions --
 std::pair<bool, matching_result> match_by_distance(
-    ::nigiri::location const& /*nloc*/, state const& /* old_state */,
-    state const& /* update_state */, matching_options const&);
+    ::nigiri::location const& /*nloc*/, matching_data const&,
+    matching_options const&);
 
 }  // namespace motis::footpaths

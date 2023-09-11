@@ -1,6 +1,5 @@
 #include "motis/footpaths/footpaths.h"
 
-#include <filesystem>
 #include <map>
 #include <utility>
 
@@ -9,13 +8,10 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
-#include "motis/footpaths/database.h"
 #include "motis/footpaths/keys.h"
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platform/extract.h"
-#include "motis/footpaths/platform/platform.h"
-#include "motis/footpaths/platform/platform_index.h"
-#include "motis/footpaths/state.h"
+#include "motis/footpaths/storage/storage.h"
 #include "motis/footpaths/transfer_requests.h"
 #include "motis/footpaths/transfer_results.h"
 #include "motis/footpaths/transfers_to_footpaths_preprocessing.h"
@@ -41,6 +37,9 @@ namespace ps = ppr::serialization;
 
 namespace motis::footpaths {
 
+enum class first_update { kNoUpdate, kProfiles, kTimetable, kOSM };
+enum class routing_type { kNoRouting, kPartialRouting, kFullRouting };
+
 // load already known/stored data
 struct import_state {
   CISTA_COMPARABLE();
@@ -58,28 +57,10 @@ struct import_state {
 struct footpaths::impl {
   explicit impl(n::timetable& tt,
                 std::map<std::string, ppr::profile_info> const& ppr_profiles,
-                std::string const& db_file, std::size_t db_max_size)
-      : tt_(tt), db_{db_file, db_max_size} {
+                fs::path const& db_file_path, std::size_t db_max_size)
+      : tt_(tt), storage_{db_file_path, db_max_size} {
     load_ppr_profiles(ppr_profiles);
-
-    auto pfs = db_.get_platforms();
-    old_state_.pfs_idx_ = std::make_unique<platform_index>(platform_index{pfs});
-    old_state_.set_pfs_idx_ = true;
-    old_state_.matches_ = db_.get_loc_to_pf_matchings();
-    old_state_.transfer_requests_keys_ =
-        db_.get_transfer_requests_keys(used_profiles_);
-    old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
-
-    auto matched_pfs = platforms{};
-    auto matched_nloc_keys = vector<nlocation_key_t>{};
-    for (auto const& [k, pf] : old_state_.matches_) {
-      matched_nloc_keys.emplace_back(k);
-      matched_pfs.emplace_back(pf);
-    }
-    old_state_.nloc_keys_ = matched_nloc_keys;
-    old_state_.matched_pfs_idx_ =
-        std::make_unique<platform_index>(platform_index{matched_pfs});
-    old_state_.set_matched_pfs_idx_ = true;
+    storage_.initialize(used_profiles_, ppr_profiles_);
   };
 
   void full_import() {
@@ -94,7 +75,8 @@ struct footpaths::impl {
 
     // 4th precompute profilebased transfers
     auto rg = get_routing_ready_ppr_graph();
-    route_and_save_results(rg, update_state_.transfer_requests_keys_);
+    route_and_save_results(rg, storage_.get_transfer_requests_keys(
+                                   data_request_type::kPartialUpdate));
 
     // 5th update timetable
     update_timetable(nigiri_dump_path_);
@@ -121,16 +103,20 @@ struct footpaths::impl {
       case routing_type::kNoRouting: break;
       case routing_type::kPartialRouting:
         // do not load ppr graph if there are no routing requests
-        if (update_state_.transfer_requests_keys_.empty()) {
+        if (storage_.has_transfer_requests_keys(
+                data_request_type::kPartialUpdate)) {
           break;
         }
         rg = get_routing_ready_ppr_graph();
-        route_and_save_results(rg, update_state_.transfer_requests_keys_);
+        route_and_save_results(rg, storage_.get_transfer_requests_keys(
+                                       data_request_type::kPartialUpdate));
         break;
       case routing_type::kFullRouting:
         rg = get_routing_ready_ppr_graph();
-        route_and_update_results(rg, old_state_.transfer_requests_keys_);
-        route_and_save_results(rg, update_state_.transfer_requests_keys_);
+        route_and_update_results(rg, storage_.get_transfer_requests_keys(
+                                         data_request_type::kPartialOld));
+        route_and_save_results(rg, storage_.get_transfer_requests_keys(
+                                       data_request_type::kPartialUpdate));
         break;
     }
 
@@ -155,11 +141,10 @@ private:
       profile_names.emplace_back(pname);
     }
 
-    db_.put_profiles(profile_names);
-    ppr_profile_keys_ = db_.get_profile_keys();
+    storage_.add_new_profiles(profile_names);
 
     for (auto& [pname, pinfo] : ppr_profiles_by_name) {
-      auto pkey = ppr_profile_keys_.at(pname);
+      auto pkey = storage_.profile_name_to_profile_key_.at(pname);
       used_profiles_.insert(pkey);
 
       // convert walk_duration from minutes to seconds
@@ -218,7 +203,7 @@ private:
     auto osm_extracted_platforms = extract_platforms_from_osm_file(osm_path_);
 
     LOG(ml::info) << "Writing OSM Platforms to DB.";
-    put_platforms(osm_extracted_platforms);
+    storage_.add_new_platforms(osm_extracted_platforms);
   }
 
   // -- location to osm matching --
@@ -228,11 +213,11 @@ private:
         "Matching timetable locations and osm platforms."};
 
     auto mrs = match_locations_and_platforms(
-        {tt_.locations_, old_state_, update_state_},
+        storage_.get_matching_data(tt_),
         {max_matching_dist_, max_bus_stop_matching_dist_});
 
     LOG(ml::info) << "Writing Matchings to DB.";
-    put_matching_results(mrs);
+    storage_.add_new_matching_results(mrs);
   }
 
   // -- build transfer requests --
@@ -240,11 +225,11 @@ private:
     progress_tracker_->status("Generating Transfer Requests.");
     ml::scoped_timer const timer{"Generating Transfer Requests."};
 
-    auto treqs_k = generate_transfer_requests_keys(old_state_, update_state_,
-                                                   ppr_profiles_, old_to_old);
+    auto treqs_k = generate_transfer_requests_keys(
+        storage_.get_transfer_request_keys_generation_data(), {old_to_old});
 
     LOG(ml::info) << "Writing Transfer Requests (Keys) to DB.";
-    put_transfer_requests_keys(treqs_k);
+    storage_.add_new_transfer_requests_keys(treqs_k);
   }
 
   // -- build transfer results --
@@ -264,28 +249,24 @@ private:
     progress_tracker_->status("Precomputing Profilebased Transfers.");
     ml::scoped_timer const timer{"Precomputing Profilebased Transfers."};
 
-    auto matches = old_state_.matches_;
-    matches.insert(update_state_.matches_.begin(),
-                   update_state_.matches_.end());
+    auto matches = storage_.get_all_matchings();
 
     auto treqs = to_transfer_requests(treqs_k, matches);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
-    put_transfer_results(trs);
+    storage_.add_new_transfer_results(trs);
   }
 
+  // TODO (CARSTEN) route_and_update equals route_and_save
   void route_and_update_results(::ppr::routing_graph const& rg,
                                 transfer_requests_keys const& treqs_k) {
     progress_tracker_->status("Updating Profilebased Transfers.");
     ml::scoped_timer const timer{"Updating Profilebased Transfers."};
 
-    auto matches = old_state_.matches_;
-    matches.insert(update_state_.matches_.begin(),
-                   update_state_.matches_.end());
+    auto matches = storage_.get_all_matchings();
 
     auto treqs = to_transfer_requests(treqs_k, matches);
     auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
-    update_transfer_results(trs);
-    old_state_.transfer_results_ = db_.get_transfer_results(used_profiles_);
+    storage_.add_new_transfer_results(trs);
   }
 
   // -- update timetable --
@@ -303,12 +284,11 @@ private:
     progress_tracker_->status("Preprocessing Footpaths.");
     ml::scoped_timer const timer{"Updating Timetable."};
 
-    auto key_to_name = db_.get_profile_key_to_name();
+    auto key_to_name = storage_.profile_key_to_profile_name_;
 
     reset_timetable();
-    auto pp_fps =
-        to_preprocessed_footpaths({tt_.locations_.coordinates_, tt_.profiles_,
-                                   key_to_name, old_state_, update_state_});
+    auto pp_fps = to_preprocessed_footpaths(
+        storage_.get_transfer_preprocessing_data(tt_));
 
     progress_tracker_->status("Updating Timetable.");
 
@@ -334,76 +314,14 @@ private:
     tt_.write(dir);
   }
 
-  // -- db calls --
-  void put_platforms(platforms& pfs) {
-    auto added_to_db = db_.put_platforms(pfs);
-    auto new_pfs = utl::all(added_to_db) |
-                   utl::transform([&](std::size_t i) { return pfs[i]; }) |
-                   utl::vec();
-
-    LOG(ml::info) << "Building Update-State R.Tree.";
-    update_state_.pfs_idx_ =
-        std::make_unique<platform_index>(platform_index{new_pfs});
-    update_state_.set_pfs_idx_ = true;
-  }
-
-  void put_matching_results(matching_results const& mrs) {
-    auto added_to_db = db_.put_matching_results(mrs);
-    auto new_mrs = utl::all(added_to_db) |
-                   utl::transform([&](std::size_t i) { return mrs[i]; }) |
-                   utl::vec();
-
-    auto matched_pfs = platforms{};
-    for (auto const& mr : new_mrs) {
-      update_state_.matches_.insert(
-          std::pair<nlocation_key_t, platform>(to_key(mr.nloc_pos_), mr.pf_));
-      update_state_.nloc_keys_.emplace_back(to_key(mr.nloc_pos_));
-      matched_pfs.emplace_back(mr.pf_);
-    }
-
-    update_state_.matched_pfs_idx_ =
-        std::make_unique<platform_index>(platform_index{matched_pfs});
-    update_state_.set_matched_pfs_idx_ = true;
-  }
-
-  /**
-   * save new or update old transfer requests
-   */
-  void put_transfer_requests_keys(transfer_requests_keys const treqs_k) {
-    auto updated_in_db = db_.update_transfer_requests_keys(treqs_k);
-    auto added_to_db = db_.put_transfer_requests_keys(treqs_k);
-    auto updated_treqs_k =
-        utl::all(updated_in_db) |
-        utl::transform([&](std::size_t i) { return treqs_k[i]; }) | utl::vec();
-    auto new_treqs_k =
-        utl::all(added_to_db) |
-        utl::transform([&](std::size_t i) { return treqs_k[i]; }) | utl::vec();
-
-    update_state_.transfer_requests_keys_ = new_treqs_k;
-  }
-
-  void put_transfer_results(transfer_results const& trs) {
-    auto added_to_db = db_.put_transfer_results(trs);
-    assert(trs.size() == added_to_db.size());
-    update_state_.transfer_results_ = trs;
-  }
-
-  void update_transfer_results(transfer_results const& trs) {
-    auto updated_in_db = db_.update_transfer_results(trs);
-    assert(trs.size() == updated_in_db.size());
-  }
-
   n::timetable& tt_;
-  database db_;
+  storage storage_;
 
   hash_map<nlocation_key_t, n::location_idx_t> location_key_to_idx_;
 
   hash_map<string, profile_key_t> ppr_profile_keys_;
   hash_map<profile_key_t, ppr::profile_info> ppr_profiles_;
   set<profile_key_t> used_profiles_;
-
-  state old_state_;  // state before init/import
-  state update_state_;  // update state with new platforms/new matches
 
   // initialize matching limits
   double max_matching_dist_{400};
@@ -422,8 +340,8 @@ fs::path footpaths::module_data_dir() const {
   return get_data_directory() / "footpaths";
 }
 
-std::string footpaths::db_file() const {
-  return (module_data_dir() / "footpaths.db").generic_string();
+fs::path footpaths::db_file() const {
+  return module_data_dir() / "footpaths.db";
 }
 
 void footpaths::import(motis::module::import_dispatcher& reg) {

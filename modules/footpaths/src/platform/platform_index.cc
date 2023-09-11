@@ -13,7 +13,7 @@ void platform_index::make_point_rtree() {
 }
 
 [[maybe_unused]] platforms platform_index::get_platforms_in_radius(
-    geo::latlng const& coord, double const radius) {
+    geo::latlng const& coord, double const radius) const {
   return utl::all(platform_index_.in_radius(coord, radius)) |
          utl::transform([this](std::size_t i) { return get_platform(i); }) |
          utl::vec();
@@ -21,7 +21,7 @@ void platform_index::make_point_rtree() {
 
 std::vector<std::pair<double, platform>>
 platform_index::get_platforms_in_radius_with_distance_info(
-    geo::latlng const& coord, double const radius) {
+    geo::latlng const& coord, double const radius) const {
   return utl::all(platform_index_.in_radius_with_distance(coord, radius)) |
          utl::transform([this](std::pair<double, std::size_t> res) {
            return std::pair<double, platform>(res.first,
@@ -31,7 +31,7 @@ platform_index::get_platforms_in_radius_with_distance_info(
 }
 
 std::vector<size_t> platform_index::get_other_platforms_in_radius(
-    platform const& pf, double const radius) {
+    platform const& pf, double const radius) const {
   return utl::all(platform_index_.in_radius(pf.loc_, radius)) |
          utl::remove_if(
              [this, &pf](std::size_t i) { return get_platform(i) == pf; }) |
