@@ -4,6 +4,7 @@
 
 #include "cista/hashing.h"
 
+#include "motis/footpaths/platform/platform.h"
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
 
@@ -20,8 +21,8 @@ inline nlocation_key_t to_key(geo::latlng const& coord) {
 }
 
 inline string to_key(platform const& pf) {
-  return {fmt::format("{}:{}", std::to_string(pf.info_.osm_id_),
-                      get_osm_str_type(pf.info_.osm_type_))};
+  return {fmt::format("{}:{}", std::to_string(pf.osm_id_),
+                      get_osm_type_as_char(pf.osm_type_))};
 }
 
 inline string to_key(transfer_request_keys const& treq_k) {

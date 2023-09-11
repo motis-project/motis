@@ -13,7 +13,7 @@
 #include "lmdb/lmdb.hpp"
 
 #include "motis/footpaths/matching.h"
-#include "motis/footpaths/platforms.h"
+#include "motis/footpaths/platform/platform.h"
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
 

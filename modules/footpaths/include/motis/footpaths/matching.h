@@ -5,7 +5,7 @@
 
 #include "geo/latlng.h"
 
-#include "motis/footpaths/platforms.h"
+#include "motis/footpaths/platform/platform.h"
 #include "motis/footpaths/state.h"
 
 #include "nigiri/location.h"

@@ -52,7 +52,8 @@ transfer_requests_keys generate_transfer_requests_keys(
 
       auto from_pf = from_state.matched_pfs_idx_->get_platform(i);
       auto target_ids =
-          to_state.matched_pfs_idx_->valid_in_radius(from_pf, prf_dist);
+          to_state.matched_pfs_idx_->get_other_platforms_in_radius(from_pf,
+                                                                   prf_dist);
       auto from_nloc_key = from_state.nloc_keys_[i];
 
       if (target_ids.empty()) {

@@ -6,7 +6,7 @@
 #include "boost/thread/lock_types.hpp"
 #include "boost/thread/mutex.hpp"
 
-#include "motis/footpaths/platforms.h"
+#include "motis/footpaths/platform/to_ppr.h"
 
 #include "nigiri/types.h"
 
@@ -20,7 +20,7 @@
 #include "utl/to_vec.h"
 
 namespace n = ::nigiri;
-namespace pr = ppr::routing;
+namespace pr = ::ppr::routing;
 
 namespace motis::footpaths {
 

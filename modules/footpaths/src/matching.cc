@@ -53,17 +53,19 @@ std::pair<bool, matching_result> match_by_distance(
   auto pfs = std::vector<std::pair<double, motis::footpaths::platform>>{};
   // use update_state and old_state
   if (update_state.set_pfs_idx_) {
-    auto new_pfs = update_state.pfs_idx_->in_radius_with_distance(
-        nloc.pos_, opts.max_matching_dist_);
+    auto new_pfs =
+        update_state.pfs_idx_->get_platforms_in_radius_with_distance_info(
+            nloc.pos_, opts.max_matching_dist_);
     pfs.insert(pfs.end(), new_pfs.begin(), new_pfs.end());
   }
-  auto const old_pfs = old_state.pfs_idx_->in_radius_with_distance(
-      nloc.pos_, opts.max_matching_dist_);
+  auto const old_pfs =
+      old_state.pfs_idx_->get_platforms_in_radius_with_distance_info(
+          nloc.pos_, opts.max_matching_dist_);
   pfs.insert(pfs.end(), old_pfs.begin(), old_pfs.end());
 
   for (auto [dist, pf] : pfs) {
     // only match bus stops with a distance of up to a certain distance
-    if (pf.info_.is_bus_stop_ && dist > opts.max_bus_stop_matching_dist_) {
+    if (pf.is_bus_stop_ && dist > opts.max_bus_stop_matching_dist_) {
       continue;
     }
 

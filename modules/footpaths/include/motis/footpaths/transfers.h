@@ -6,7 +6,7 @@
 
 #include "fmt/core.h"
 
-#include "motis/footpaths/platforms.h"
+#include "motis/footpaths/platform/platform.h"
 #include "motis/footpaths/types.h"
 
 #include "nigiri/types.h"

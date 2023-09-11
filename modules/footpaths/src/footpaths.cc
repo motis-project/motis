@@ -2,7 +2,6 @@
 
 #include <filesystem>
 #include <map>
-#include <regex>
 #include <utility>
 
 #include "motis/core/common/constants.h"
@@ -13,7 +12,9 @@
 #include "motis/footpaths/database.h"
 #include "motis/footpaths/keys.h"
 #include "motis/footpaths/matching.h"
-#include "motis/footpaths/platforms.h"
+#include "motis/footpaths/platform/extract.h"
+#include "motis/footpaths/platform/platform.h"
+#include "motis/footpaths/platform/platform_index.h"
 #include "motis/footpaths/state.h"
 #include "motis/footpaths/transfer_requests.h"
 #include "motis/footpaths/transfer_results.h"
@@ -61,9 +62,8 @@ struct footpaths::impl {
       : tt_(tt), db_{db_file, db_max_size} {
     load_ppr_profiles(ppr_profiles);
 
-    auto const pfs = db_.get_platforms();
-    old_state_.pfs_idx_ =
-        std::make_unique<platforms_index>(platforms_index{pfs});
+    auto pfs = db_.get_platforms();
+    old_state_.pfs_idx_ = std::make_unique<platform_index>(platform_index{pfs});
     old_state_.set_pfs_idx_ = true;
     old_state_.matches_ = db_.get_loc_to_pf_matchings();
     old_state_.transfer_requests_keys_ =
@@ -78,7 +78,7 @@ struct footpaths::impl {
     }
     old_state_.nloc_keys_ = matched_nloc_keys;
     old_state_.matched_pfs_idx_ =
-        std::make_unique<platforms_index>(platforms_index{matched_pfs});
+        std::make_unique<platform_index>(platform_index{matched_pfs});
     old_state_.set_matched_pfs_idx_ = true;
   };
 
@@ -138,7 +138,7 @@ struct footpaths::impl {
     update_timetable(nigiri_dump_path_);
   }
 
-  std::string osm_path_;
+  fs::path osm_path_;
   std::string ppr_rg_path_;
   fs::path nigiri_dump_path_;
 
@@ -215,7 +215,7 @@ private:
   void get_and_save_osm_platforms() {
     progress_tracker_->status("Extract Platforms from OSM.");
     LOG(ml::info) << "Extracting platforms from " << osm_path_;
-    auto osm_extracted_platforms = extract_osm_platforms(osm_path_);
+    auto osm_extracted_platforms = extract_platforms_from_osm_file(osm_path_);
 
     LOG(ml::info) << "Writing OSM Platforms to DB.";
     put_platforms(osm_extracted_platforms);
@@ -340,11 +340,10 @@ private:
     auto new_pfs = utl::all(added_to_db) |
                    utl::transform([&](std::size_t i) { return pfs[i]; }) |
                    utl::vec();
-    LOG(ml::info) << "Added " << added_to_db.size() << " new platforms to db.";
 
     LOG(ml::info) << "Building Update-State R.Tree.";
     update_state_.pfs_idx_ =
-        std::make_unique<platforms_index>(platforms_index{new_pfs});
+        std::make_unique<platform_index>(platform_index{new_pfs});
     update_state_.set_pfs_idx_ = true;
   }
 
@@ -363,7 +362,7 @@ private:
     }
 
     update_state_.matched_pfs_idx_ =
-        std::make_unique<platforms_index>(platforms_index{matched_pfs});
+        std::make_unique<platform_index>(platform_index{matched_pfs});
     update_state_.set_matched_pfs_idx_ = true;
   }
 
@@ -407,7 +406,7 @@ private:
   state update_state_;  // update state with new platforms/new matches
 
   // initialize matching limits
-  double max_matching_dist_{20};
+  double max_matching_dist_{400};
   double max_bus_stop_matching_dist_{120};
 
   // initialize progress tracker (ptr)
@@ -468,7 +467,7 @@ void footpaths::import(motis::module::import_dispatcher& reg) {
             ppr_profiles, db_file(), db_max_size_);
 
         impl_->new_import_state_ = new_import_state;
-        impl_->osm_path_ = osm_path;
+        impl_->osm_path_ = fs::path{osm_path};
         impl_->ppr_rg_path_ = ppr->graph_path()->str();
         impl_->nigiri_dump_path_ =
             get_data_directory() / "nigiri" / fmt::to_string(nigiri->hash());

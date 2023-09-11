@@ -1,5 +1,6 @@
 #pragma once
 
+#include "motis/footpaths/platform/platform.h"
 #include "motis/footpaths/state.h"
 #include "motis/footpaths/transfers.h"
 #include "motis/footpaths/types.h"
