@@ -5,8 +5,6 @@
 #include "cista/hashing.h"
 #include "cista/serialization.h"
 
-#include "motis/footpaths/keys.h"
-
 #include "utl/enumerate.h"
 
 namespace fs = std::filesystem;

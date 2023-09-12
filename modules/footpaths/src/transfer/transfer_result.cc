@@ -1,14 +1,14 @@
-#include "motis/footpaths/transfer_results.h"
+#include "motis/footpaths/transfer/transfer_result.h"
 
 #include <cmath>
 #include <algorithm>
 
+#include "motis/footpaths/platform/to_ppr.h"
+
 #include "boost/thread/lock_types.hpp"
 #include "boost/thread/mutex.hpp"
 
-#include "motis/footpaths/platform/to_ppr.h"
-
-#include "nigiri/types.h"
+#include "fmt/core.h"
 
 #include "ppr/routing/input_location.h"
 #include "ppr/routing/route.h"
@@ -18,16 +18,21 @@
 #include "utl/parallel_for.h"
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
+#include "utl/zip.h"
 
 namespace n = ::nigiri;
 namespace pr = ::ppr::routing;
 
 namespace motis::footpaths {
 
+// Returns the duration of a given ppr::route.
 inline n::duration_t get_duration(pr::route const& r) {
   return n::duration_t{static_cast<int>(std::round(r.duration_ / 60))};
 }
 
+// Generates and Returns a list auf `transfer_infos` build from the given
+// ppr::search_result.
 std::vector<transfer_infos> to_transfer_infos(pr::search_result const& res) {
   return utl::to_vec(res.routes_, [&](auto const& routes) {
     return utl::to_vec(routes, [&](auto const& r) {
@@ -36,6 +41,9 @@ std::vector<transfer_infos> to_transfer_infos(pr::search_result const& res) {
   });
 }
 
+// Builds a ppr::routing_query using the given `transfer_request` and a map of
+// `profile_keys_t` to `profile_info` to get the search profile of the
+// `transfer_request`.
 pr::routing_query make_routing_query(
     hash_map<profile_key_t, ppr::profile_info> const& profiles,
     transfer_request const& treq) {
@@ -109,6 +117,63 @@ transfer_results route_multiple_requests(
   });
 
   return result;
+}
+
+transfer_result merge(transfer_result const& tres_a,
+                      transfer_result const& tres_b) {
+  auto merged = transfer_result{};
+  auto added_to_nlocs = set<nlocation_key_t>{};
+
+  utl::verify(tres_a.from_nloc_key_ == tres_b.from_nloc_key_,
+              "Cannot merge two transfer results from different locations.");
+  utl::verify(tres_a.profile_ == tres_b.profile_,
+              "Cannot merge two transfer results with different profiles.");
+  utl::verify(tres_a.to_nloc_keys_.size() == tres_a.infos_.size(),
+              "(A) Cannot merge transfer results with invalid target and info "
+              "matching.");
+  utl::verify(tres_b.to_nloc_keys_.size() == tres_b.infos_.size(),
+              "(B) Cannot merge transfer results with invalid target and info "
+              "matching.");
+
+  merged.from_nloc_key_ = tres_a.from_nloc_key_;
+  merged.profile_ = tres_a.profile_;
+
+  merged.to_nloc_keys_ = tres_a.to_nloc_keys_;
+  merged.infos_ = tres_a.infos_;
+
+  // build added_to_nlocs set
+  for (auto const& nloc_key : merged.to_nloc_keys_) {
+    added_to_nlocs.insert(nloc_key);
+  }
+
+  // insert new and unique nloc/info keys
+  for (auto const [nloc_key, info] :
+       utl::zip(tres_b.to_nloc_keys_, tres_b.infos_)) {
+    if (added_to_nlocs.count(nloc_key) == 1) {
+      continue;
+    }
+
+    merged.to_nloc_keys_.emplace_back(nloc_key);
+    merged.infos_.emplace_back(info);
+    added_to_nlocs.insert(nloc_key);
+  }
+
+  return merged;
+}
+
+string to_key(transfer_result const& tres) {
+  return {fmt::format("{}{}", tres.from_nloc_key_, tres.profile_)};
+}
+
+std::ostream& operator<<(std::ostream& out, transfer_info const& tinfo) {
+  return out << "dur: " << tinfo.duration_ << ", dist: " << tinfo.distance_;
+}
+
+std::ostream& operator<<(std::ostream& out, transfer_result const& tres) {
+  std::stringstream tres_repr;
+  tres_repr << "[transfer result] " << to_key(tres) << ": #results - "
+            << tres.infos_.size();
+  return out << tres_repr.str();
 }
 
 }  // namespace motis::footpaths

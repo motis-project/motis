@@ -15,7 +15,8 @@
 
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platform/platform.h"
-#include "motis/footpaths/transfers.h"
+#include "motis/footpaths/transfer/transfer_request.h"
+#include "motis/footpaths/transfer/transfer_result.h"
 #include "motis/footpaths/types.h"
 
 namespace motis::footpaths {

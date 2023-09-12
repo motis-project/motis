@@ -8,12 +8,11 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
-#include "motis/footpaths/keys.h"
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platform/extract.h"
 #include "motis/footpaths/storage/storage.h"
-#include "motis/footpaths/transfer_requests.h"
-#include "motis/footpaths/transfer_results.h"
+#include "motis/footpaths/transfer/transfer_request.h"
+#include "motis/footpaths/transfer/transfer_result.h"
 #include "motis/footpaths/transfers_to_footpaths_preprocessing.h"
 #include "motis/footpaths/types.h"
 

@@ -2,8 +2,6 @@
 
 #include "utl/progress_tracker.h"
 
-#include "motis/footpaths/keys.h"
-
 #include <limits>
 
 namespace n = ::nigiri;

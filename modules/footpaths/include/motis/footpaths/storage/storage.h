@@ -7,8 +7,8 @@
 #include "motis/footpaths/matching.h"
 #include "motis/footpaths/platform/platform_index.h"
 #include "motis/footpaths/storage/database.h"
-#include "motis/footpaths/transfer_requests.h"
-#include "motis/footpaths/transfers.h"
+#include "motis/footpaths/transfer/transfer_request.h"
+#include "motis/footpaths/transfer/transfer_result.h"
 #include "motis/footpaths/transfers_to_footpaths_preprocessing.h"
 #include "motis/footpaths/types.h"
 

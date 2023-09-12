@@ -2,8 +2,6 @@
 
 #include <utility>
 
-#include "motis/footpaths/keys.h"
-
 #include "utl/pipes/all.h"
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"

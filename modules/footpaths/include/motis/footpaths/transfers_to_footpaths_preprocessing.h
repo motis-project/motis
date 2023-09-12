@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "motis/footpaths/transfer_results.h"
+#include "motis/footpaths/transfer/transfer_result.h"
 #include "motis/footpaths/types.h"
 
 #include "nigiri/timetable.h"

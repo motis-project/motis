@@ -16,7 +16,7 @@ namespace motis::footpaths {
 enum class osm_type { kNode, kWay, kRelation, kUnknown };
 
 // Returns the char representation of the given `osm_type`.
-// n: kNode, w: kWay, a: kArea, u: kUnknown
+// n: kNode, w: kWay, r: kRelation, u: kUnknown
 char get_osm_type_as_char(osm_type const);
 
 struct platform {
@@ -27,6 +27,9 @@ struct platform {
   bool is_bus_stop_{false};
 };
 using platforms = std::vector<platform>;
+
+// Returns a string representation of the given platform.
+string to_key(platform const&);
 
 // platform equal operator
 bool operator==(platform const& a, platform const& b);

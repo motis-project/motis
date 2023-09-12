@@ -3,8 +3,6 @@
 #include "utl/enumerate.h"
 #include "utl/progress_tracker.h"
 
-#include "motis/footpaths/keys.h"
-
 namespace n = ::nigiri;
 
 namespace motis::footpaths {

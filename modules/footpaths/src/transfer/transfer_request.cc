@@ -1,7 +1,10 @@
-#include "motis/footpaths/transfer_requests.h"
+#include "motis/footpaths/transfer/transfer_request.h"
 
-#include "motis/footpaths/keys.h"
 #include "motis/footpaths/types.h"
+
+#include "fmt/core.h"
+
+#include "utl/verify.h"
 
 namespace motis::footpaths {
 
@@ -31,10 +34,6 @@ transfer_requests to_transfer_requests(
   return treqs;
 }
 
-/**
- * old_to_old: build transfer requests from already processed (matched
- * platforms) in old_state; use if profiles_hash has been changed
- */
 transfer_requests_keys generate_transfer_requests_keys(
     treq_k_generation_data const& data, transfer_request_options const& opts) {
   auto result = transfer_requests_keys{};
@@ -106,6 +105,61 @@ transfer_requests_keys generate_transfer_requests_keys(
   }
 
   return result;
+}
+
+transfer_request_keys merge(transfer_request_keys const& lhs,
+                            transfer_request_keys const& rhs) {
+  auto merged = transfer_request_keys{};
+  auto added_to_nlocs = set<nlocation_key_t>{};
+
+  utl::verify(
+      lhs.from_nloc_key_ == rhs.from_nloc_key_,
+      "Cannot merge two transfer requests from different nigiri locations.");
+  utl::verify(lhs.profile_ == rhs.profile_,
+              "Cannot merge two transfer requests with different profiles");
+
+  merged.from_nloc_key_ = lhs.from_nloc_key_;
+  merged.profile_ = lhs.profile_;
+
+  merged.to_nloc_keys_ = lhs.to_nloc_keys_;
+
+  // build added_keys set
+  for (auto const& nloc_key : merged.to_nloc_keys_) {
+    added_to_nlocs.insert(nloc_key);
+  }
+
+  // insert new and unique nloc/pf keys
+  for (auto nloc_key : rhs.to_nloc_keys_) {
+    if (added_to_nlocs.count(nloc_key) == 1) {
+      continue;
+    }
+
+    merged.to_nloc_keys_.emplace_back(nloc_key);
+    added_to_nlocs.insert(nloc_key);
+  }
+
+  return merged;
+}
+
+string to_key(transfer_request_keys const& treq_k) {
+  return {fmt::format("{}{}", treq_k.from_nloc_key_, treq_k.profile_)};
+}
+
+string to_key(transfer_request const& treq) {
+  return {fmt::format("{}{}", treq.from_nloc_key_, treq.profile_)};
+}
+
+std::ostream& operator<<(std::ostream& out, transfer_request const& treq) {
+  auto treq_repr = fmt::format("[transfer request] {} has {} locations.",
+                               to_key(treq), treq.to_nloc_keys_.size());
+  return out << treq_repr;
+}
+
+std::ostream& operator<<(std::ostream& out,
+                         transfer_request_keys const& treq_k) {
+  auto treq_k_repr = fmt::format("[transfer request keys] {} has {} locations.",
+                                 to_key(treq_k), treq_k.to_nloc_keys_.size());
+  return out << treq_k_repr;
 }
 
 }  // namespace motis::footpaths

@@ -7,6 +7,7 @@
 
 #include "motis/footpaths/platform/platform.h"
 #include "motis/footpaths/platform/platform_index.h"
+#include "motis/footpaths/types.h"
 
 #include "nigiri/location.h"
 #include "nigiri/timetable.h"
