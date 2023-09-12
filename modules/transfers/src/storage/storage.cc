@@ -2,9 +2,17 @@
 
 #include <utility>
 
+#include "motis/transfers/storage/to_nigiri.h"
+
+#include "nigiri/footpath.h"
+#include "nigiri/types.h"
+
 #include "utl/pipes/all.h"
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"
+
+namespace n = ::nigiri;
+namespace fs = std::filesystem;
 
 namespace motis::transfers {
 
@@ -17,8 +25,18 @@ void storage::initialize(set<profile_key_t> const& used_profiles,
                                       profile_key_to_profile_info.end());
 }
 
-matching_data storage::get_matching_data(::nigiri::timetable const& tt) {
-  return {tt.locations_, old_state_.matches_, *(old_state_.pfs_idx_),
+void storage::save_tt(fs::path const& save_to) { tt_.write(save_to); }
+
+void storage::update_tt(fs::path const& save_to) {
+  auto const to_nigiri_transfer_data = get_to_nigiri_data();
+  auto const nigiri_transfers_data =
+      build_nigiri_transfers(to_nigiri_transfer_data);
+  set_new_timetable_transfers(nigiri_transfers_data);
+  save_tt(save_to);
+}
+
+matching_data storage::get_matching_data() {
+  return {tt_.locations_, old_state_.matches_, *(old_state_.pfs_idx_),
           *(update_state_.pfs_idx_), update_state_.set_pfs_idx_};
 }
 
@@ -54,13 +72,6 @@ treq_k_generation_data storage::get_transfer_request_keys_generation_data() {
           {*(update_state_.matched_pfs_idx_), update_state_.nloc_keys_,
            update_state_.set_matched_pfs_idx_},
           profile_key_to_profile_info_};
-}
-
-transfer_preprocessing_data storage::get_transfer_preprocessing_data(
-    ::nigiri::timetable const& tt) {
-  auto tress = db_.get_transfer_results(used_profiles_);
-  return {tt.locations_.coordinates_, tt.profiles_,
-          profile_key_to_profile_name_, tress};
 }
 
 void storage::add_new_profiles(std::vector<string> const& profile_names) {
@@ -158,6 +169,44 @@ void storage::load_old_state_from_db(set<profile_key_t> const& profile_keys) {
   old_state_.matched_pfs_idx_ =
       std::make_unique<platform_index>(platform_index{matched_pfs});
   old_state_.set_matched_pfs_idx_ = true;
+}
+
+to_nigiri_data storage::get_to_nigiri_data() {
+  auto tress = db_.get_transfer_results(used_profiles_);
+  return {tt_.locations_.coordinates_, tt_.profiles_,
+          profile_key_to_profile_name_, tress};
+}
+
+void storage::reset_timetable_transfers() {
+  for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+       ++prf_idx) {
+    tt_.locations_.footpaths_out_[prf_idx] =
+        n::vecvec<n::location_idx_t, n::footpath>{};
+    tt_.locations_.footpaths_in_[prf_idx] =
+        n::vecvec<n::location_idx_t, n::footpath>{};
+  }
+}
+
+void storage::set_new_timetable_transfers(nigiri_transfers const& ntransfers) {
+  reset_timetable_transfers();
+
+  for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+       ++prf_idx) {
+    for (auto loc_idx = n::location_idx_t{0U};
+         loc_idx < tt_.locations_.names_.size(); ++loc_idx) {
+      tt_.locations_.footpaths_out_[prf_idx].emplace_back(
+          ntransfers.out_[prf_idx][loc_idx]);
+    }
+  }
+
+  for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
+       ++prf_idx) {
+    for (auto loc_idx = n::location_idx_t{0U};
+         loc_idx < tt_.locations_.names_.size(); ++loc_idx) {
+      tt_.locations_.footpaths_in_[prf_idx].emplace_back(
+          ntransfers.in_[prf_idx][loc_idx]);
+    }
+  }
 }
 
 }  // namespace motis::transfers

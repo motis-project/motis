@@ -1,9 +1,7 @@
 #pragma once
 
 #include <filesystem>
-#include <set>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "motis/transfers/platform/platform.h"
@@ -14,16 +12,19 @@
 #include "osmium/geom/coordinates.hpp"
 #include "osmium/handler.hpp"
 #include "osmium/io/file.hpp"
+#include "osmium/osm/area.hpp"
+#include "osmium/osm/node.hpp"
 #include "osmium/osm/node_ref_list.hpp"
-#include "osmium/tags/taglist.hpp"
-#include "osmium/tags/tags_filter.hpp"
+#include "osmium/osm/tag.hpp"
+#include "osmium/osm/types.hpp"
+#include "osmium/osm/way.hpp"
+#include "osmium/relations/manager_util.hpp"
 
 namespace motis::transfers {
 
 struct osm_platform_extractor {
   explicit osm_platform_extractor(std::filesystem::path const& osm_file_path)
       : osm_file_{osm_file_path.c_str()} {
-    assembler_config_.create_empty_areas = false;
     osmium::relations::read_relations(osm_file_, mp_manager_);
   }
 
@@ -48,7 +49,7 @@ private:
   // - y = mean(sum(nodes.lat));
   static osmium::geom::Coordinates calc_center(osmium::NodeRefList const&);
 
-  struct platform_handler : public ::osmium::handler::Handler {
+  struct platform_handler : public osmium::handler::Handler {
     platforms platforms_;
     osmium::TagsFilter filter_{false};
     std::vector<std::string> osm_name_tag_keys_;

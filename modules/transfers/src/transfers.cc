@@ -13,7 +13,6 @@
 #include "motis/transfers/storage/storage.h"
 #include "motis/transfers/transfer/transfer_request.h"
 #include "motis/transfers/transfer/transfer_result.h"
-#include "motis/transfers/transfers_to_footpaths_preprocessing.h"
 #include "motis/transfers/types.h"
 
 #include "motis/ppr/profiles.h"
@@ -31,8 +30,8 @@
 namespace fs = std::filesystem;
 namespace ml = motis::logging;
 namespace mm = motis::module;
-namespace n = nigiri;
-namespace ps = ppr::serialization;
+namespace n = ::nigiri;
+namespace ps = ::ppr::serialization;
 
 namespace motis::transfers {
 
@@ -57,7 +56,7 @@ struct transfers::impl {
   explicit impl(n::timetable& tt,
                 std::map<std::string, ppr::profile_info> const& ppr_profiles,
                 fs::path const& db_file_path, std::size_t db_max_size)
-      : tt_(tt), storage_{db_file_path, db_max_size} {
+      : storage_{db_file_path, db_max_size, tt} {
     load_ppr_profiles(ppr_profiles);
     storage_.initialize(used_profiles_, ppr_profiles_);
   };
@@ -78,7 +77,7 @@ struct transfers::impl {
                                    data_request_type::kPartialUpdate));
 
     // 5th update timetable
-    update_timetable(nigiri_dump_path_);
+    storage_.update_tt(nigiri_dump_path_);
   }
 
   void maybe_partial_import() {
@@ -120,7 +119,7 @@ struct transfers::impl {
     }
 
     // update timetable
-    update_timetable(nigiri_dump_path_);
+    storage_.update_tt(nigiri_dump_path_);
   }
 
   fs::path osm_path_;
@@ -152,9 +151,9 @@ private:
       ppr_profiles_.at(pkey).profile_.duration_limit_ = ::motis::MAX_WALK_TIME;
 
       // build profile_name to idx map in nigiri::tt
-      tt_.profiles_.insert({pname, tt_.profiles_.size()});
+      storage_.tt_.profiles_.insert({pname, storage_.tt_.profiles_.size()});
     }
-    assert(tt_.profiles_.size() == used_profiles_.size());
+    assert(storage.tt_.profiles_.size() == used_profiles_.size());
   }
 
   first_update get_first_update() {
@@ -212,7 +211,7 @@ private:
         "Matching timetable locations and osm platforms."};
 
     auto mrs = match_locations_and_platforms(
-        storage_.get_matching_data(tt_),
+        storage_.get_matching_data(),
         {max_matching_dist_, max_bus_stop_matching_dist_});
 
     LOG(ml::info) << "Writing Matchings to DB.";
@@ -268,52 +267,6 @@ private:
     storage_.add_new_transfer_results(trs);
   }
 
-  // -- update timetable --
-  void reset_timetable() {
-    for (auto prf_idx = n::profile_idx_t{0}; prf_idx < n::kMaxProfiles;
-         ++prf_idx) {
-      tt_.locations_.footpaths_out_[prf_idx] =
-          n::vecvec<n::location_idx_t, n::footpath>{};
-      tt_.locations_.footpaths_in_[prf_idx] =
-          n::vecvec<n::location_idx_t, n::footpath>{};
-    }
-  }
-
-  void update_timetable(fs::path const& dir) {
-    progress_tracker_->status("Preprocessing Transfers.");
-    ml::scoped_timer const timer{"Updating Timetable."};
-
-    auto key_to_name = storage_.profile_key_to_profile_name_;
-
-    reset_timetable();
-    auto pp_fps = to_preprocessed_footpaths(
-        storage_.get_transfer_preprocessing_data(tt_));
-
-    progress_tracker_->status("Updating Timetable.");
-
-    // copy transfers from mutable_fws_multimap to timetable vecvec
-    for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
-         ++prf_idx) {
-      for (auto loc_idx = n::location_idx_t{0U}; loc_idx < tt_.n_locations();
-           ++loc_idx) {
-        tt_.locations_.footpaths_out_[prf_idx].emplace_back(
-            pp_fps.out_[prf_idx][loc_idx]);
-      }
-    }
-
-    for (auto prf_idx = n::profile_idx_t{0U}; prf_idx < n::kMaxProfiles;
-         ++prf_idx) {
-      for (auto loc_idx = n::location_idx_t{0U}; loc_idx < tt_.n_locations();
-           ++loc_idx) {
-        tt_.locations_.footpaths_in_[prf_idx].emplace_back(
-            pp_fps.in_[prf_idx][loc_idx]);
-      }
-    }
-
-    tt_.write(dir);
-  }
-
-  n::timetable& tt_;
   storage storage_;
 
   hash_map<nlocation_key_t, n::location_idx_t> location_key_to_idx_;

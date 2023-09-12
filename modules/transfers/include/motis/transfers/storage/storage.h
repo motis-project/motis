@@ -7,12 +7,14 @@
 #include "motis/transfers/matching.h"
 #include "motis/transfers/platform/platform_index.h"
 #include "motis/transfers/storage/database.h"
+#include "motis/transfers/storage/to_nigiri.h"
 #include "motis/transfers/transfer/transfer_request.h"
 #include "motis/transfers/transfer/transfer_result.h"
-#include "motis/transfers/transfers_to_footpaths_preprocessing.h"
 #include "motis/transfers/types.h"
 
 #include "motis/ppr/profile_info.h"
+
+#include "nigiri/timetable.h"
 
 namespace motis::transfers {
 
@@ -21,16 +23,23 @@ enum class data_request_type { kPartialOld, kPartialUpdate, kFull };
 struct storage {
 
   storage(std::filesystem::path const& db_file_path,
-          std::size_t const db_max_size)
-      : db_{db_file_path, db_max_size} {}
+          std::size_t const db_max_size, ::nigiri::timetable& tt)
+      : tt_(tt), db_{db_file_path, db_max_size} {}
 
   // Initializes the storage for the footpath module.
   void initialize(set<profile_key_t> const&,
                   hash_map<profile_key_t, ppr::profile_info> const&);
 
+  // Saves the current timetable in the specified file path.
+  void save_tt(std::filesystem::path const&);
+
+  // Updates the `nigiri::timetable` with the transfer results stored in the
+  // storage. (considers `old_state_` data and `update_state_` data).
+  void update_tt(std::filesystem::path const&);
+
   // Returns a `matching_data` struct containing all the data used during
   // matching nigiri locations and osm extracted platforms.
-  matching_data get_matching_data(::nigiri::timetable const&);
+  matching_data get_matching_data();
 
   // Returns a map of all known matchings of nigiri locations to osm extracted
   // platforms. Combines old and new matchings.
@@ -47,11 +56,6 @@ struct storage {
   // Returns a `treq_k_generation_data` struct containing all the data used
   // during the generation of `transfer_request_keys`.
   treq_k_generation_data get_transfer_request_keys_generation_data();
-
-  // Returns a `transfer_preprocessing_data` struct containing all the data used
-  // during the transfer preprocessing of `transfer_results`.
-  transfer_preprocessing_data get_transfer_preprocessing_data(
-      ::nigiri::timetable const&);
 
   // --- public db api ---
 
@@ -84,6 +88,8 @@ struct storage {
   // Update merges the old transfer result with the new one.
   void add_new_transfer_results(transfer_results const&);
 
+  ::nigiri::timetable& tt_;
+
   hash_map<string, profile_key_t> profile_name_to_profile_key_;
   hash_map<profile_key_t, string> profile_key_to_profile_name_;
 
@@ -91,6 +97,18 @@ private:
   // Loads all transfers data from the database and stores it in the
   // `old_state_` state struct.
   void load_old_state_from_db(set<profile_key_t> const&);
+
+  // Returns a `to_nigiri_data` struct containing all the data used
+  // during the transfer preprocessing of `transfer_results`.
+  to_nigiri_data get_to_nigiri_data();
+
+  // Deletes all transfers from the timetable.
+  void reset_timetable_transfers();
+
+  // Adds the given transfers to the `nigiri::timetable` and removes currently
+  // existing transfers (in a `nigiri_transfers` struct) from the
+  // `nigiri::timetable` for this purpose.
+  void set_new_timetable_transfers(nigiri_transfers const&);
 
   struct state {
     std::unique_ptr<platform_index> pfs_idx_;
