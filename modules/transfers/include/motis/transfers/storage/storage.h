@@ -31,7 +31,7 @@ struct storage {
                   hash_map<profile_key_t, ppr::profile_info> const&);
 
   // Saves the current timetable in the specified file path.
-  void save_tt(std::filesystem::path const&);
+  void save_tt(std::filesystem::path const&) const;
 
   // Updates the `nigiri::timetable` with the transfer results stored in the
   // storage. (considers `old_state_` data and `update_state_` data).

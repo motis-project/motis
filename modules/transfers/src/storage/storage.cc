@@ -25,7 +25,7 @@ void storage::initialize(set<profile_key_t> const& used_profiles,
                                       profile_key_to_profile_info.end());
 }
 
-void storage::save_tt(fs::path const& save_to) { tt_.write(save_to); }
+void storage::save_tt(fs::path const& save_to) const { tt_.write(save_to); }
 
 void storage::update_tt(fs::path const& save_to) {
   auto const to_nigiri_transfer_data = get_to_nigiri_data();
