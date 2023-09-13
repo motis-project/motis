@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "geo/latlng.h"
 #include "geo/point_rtree.h"
 
 #include "motis/transfers/platform/platform.h"

@@ -71,7 +71,7 @@ private:
                       osmium::geom::Coordinates const&,
                       strings const& /* names */, bool /* is_bus_stop */);
 
-    // Checks wether the given tag lists describes a platform or not.
+    // Checks whether the given tag lists describes a platform or not.
     // Equivalent to: osmium::tags::match_any_of(tags, filter);
     bool is_platform(osmium::TagList const&) const;
 

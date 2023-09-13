@@ -8,7 +8,7 @@
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
-#include "motis/transfers/matching.h"
+#include "motis/transfers/matching/by_distance.h"
 #include "motis/transfers/platform/extract.h"
 #include "motis/transfers/storage/storage.h"
 #include "motis/transfers/transfer/transfer_request.h"
@@ -22,10 +22,6 @@
 
 #include "ppr/common/routing_graph.h"
 #include "ppr/serialization/reader.h"
-
-#include "utl/parallel_for.h"
-#include "utl/pipes.h"
-#include "utl/zip.h"
 
 namespace fs = std::filesystem;
 namespace ml = motis::logging;
@@ -153,7 +149,7 @@ private:
       // build profile_name to idx map in nigiri::tt
       storage_.tt_.profiles_.insert({pname, storage_.tt_.profiles_.size()});
     }
-    assert(storage.tt_.profiles_.size() == used_profiles_.size());
+    assert(storage_.tt_.profiles_.size() == used_profiles_.size());
   }
 
   first_update get_first_update() {
@@ -210,9 +206,10 @@ private:
     ml::scoped_timer const timer{
         "Matching timetable locations and osm platforms."};
 
-    auto mrs = match_locations_and_platforms(
-        storage_.get_matching_data(),
-        {max_matching_dist_, max_bus_stop_matching_dist_});
+    auto matcher =
+        distance_matcher(storage_.get_matching_data(),
+                         {max_matching_dist_, max_bus_stop_matching_dist_});
+    auto mrs = matcher.matching();
 
     LOG(ml::info) << "Writing Matchings to DB.";
     storage_.add_new_matching_results(mrs);

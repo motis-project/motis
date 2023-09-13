@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
-#include <string>
 
 #include "motis/module/module.h"
 

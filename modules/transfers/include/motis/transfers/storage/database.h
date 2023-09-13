@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <mutex>
 #include <optional>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -13,7 +12,7 @@
 
 #include "lmdb/lmdb.hpp"
 
-#include "motis/transfers/matching.h"
+#include "motis/transfers/matching/matcher.h"
 #include "motis/transfers/platform/platform.h"
 #include "motis/transfers/transfer/transfer_request.h"
 #include "motis/transfers/transfer/transfer_result.h"

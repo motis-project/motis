@@ -3,8 +3,10 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <vector>
 
-#include "motis/transfers/matching.h"
+#include "motis/transfers/matching/matcher.h"
+#include "motis/transfers/platform/platform.h"
 #include "motis/transfers/platform/platform_index.h"
 #include "motis/transfers/storage/database.h"
 #include "motis/transfers/storage/to_nigiri.h"

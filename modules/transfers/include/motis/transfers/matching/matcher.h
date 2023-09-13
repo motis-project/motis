@@ -1,17 +1,12 @@
 #pragma once
 
-#include <utility>
 #include <vector>
-
-#include "geo/latlng.h"
 
 #include "motis/transfers/platform/platform.h"
 #include "motis/transfers/platform/platform_index.h"
 #include "motis/transfers/types.h"
 
-#include "nigiri/location.h"
 #include "nigiri/timetable.h"
-#include "nigiri/types.h"
 
 namespace motis::transfers {
 
@@ -37,12 +32,25 @@ struct matching_result {
 };
 using matching_results = std::vector<matching_result>;
 
-matching_results match_locations_and_platforms(matching_data const&,
-                                               matching_options const&);
+struct matcher {
 
-// -- match functions --
-std::pair<bool, matching_result> match_by_distance(
-    ::nigiri::location const& /*nloc*/, matching_data const&,
-    matching_options const&);
+  explicit matcher(matching_data const& data, matching_options const& options)
+      : data_(data), options_(options) {}
+
+  virtual ~matcher() = default;
+
+  matcher(const matcher&) = delete;
+  matcher& operator=(const matcher&) = delete;
+
+  matcher(matcher&&) = delete;
+  matcher& operator=(matcher&&) = delete;
+
+  // Matches `nigiri::location`s with `platform`s extracted from OSM data and
+  // returns a list of valid matches.
+  virtual matching_results matching() = 0;
+
+  matching_data const data_;
+  matching_options const options_;
+};
 
 }  // namespace motis::transfers

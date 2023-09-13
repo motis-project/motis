@@ -7,8 +7,6 @@
 
 #include "geo/latlng.h"
 
-#include "cista/containers/string.h"
-
 #include "ppr/routing/input_location.h"
 
 namespace motis::transfers {
