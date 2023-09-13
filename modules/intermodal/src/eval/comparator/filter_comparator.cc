@@ -36,6 +36,7 @@ using namespace flatbuffers;
 namespace motis::intermodal::eval {
 
 #define PI 3.141592653589793238462643383279
+#define neg_inf -999999.9
 
 struct mins {
   double min_improvement_;
@@ -178,7 +179,6 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   assert(responses.size() == files.size());
   assert(responses.size() > 1);
   auto const file_count = files.size();
-  double improvement = 0.0;
 
   auto const res = utl::to_vec(responses, [](auto const& m) {
     return motis_content(RoutingResponse, m);
@@ -193,6 +193,9 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   };
   auto const check_journeys = [&](auto const file_idx,
                                   std::vector<journey> const& journeys) {
+    if(journeys.empty()) {
+      std::cout << "Empty Journeys - something went wrong here (id: " << id  << ")" << std::endl;
+    }
     for (auto const& j : journeys) {
       if (!check_journey(j, report_journey_error)) {
         std::cout << "Broken journey (id: " << id  << "): " << journey_errors.str() << std::endl;
@@ -204,17 +207,10 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   check_journeys(0, refcons_without_filter);
   check_journeys(1, cons_with_filter);
 
-  //auto con_size_without = refcons_without_filter.size();
-  //auto con_size_with = cons_with_filter.size();
-  //std::cout << "There are " << con_size_without << " journeys from File " << files.at(0) << std::endl;
-  //std::cout << "There are " << con_size_with << " journeys from File " << files.at(1) << std::endl;
-
   std::vector<int> weights = {1, 1, 30};
   auto const l_r_impro = eval_improvement(refcons_without_filter, cons_with_filter, weights);
   auto const r_l_impro = eval_improvement(cons_with_filter, refcons_without_filter, weights);
-  improvement = l_r_impro - r_l_impro;
-
-  return improvement;
+  return l_r_impro - r_l_impro;
 }
 
 int filter_compare(int argc, char const** argv) {
@@ -247,71 +243,68 @@ int filter_compare(int argc, char const** argv) {
   auto in_files = utl::to_vec(filenames, [](std::string const& filename) {
     return std::ifstream{filename};
   });
-  auto const file_count = in_files.size();
-  std::vector<std::unordered_map<int, msg_ptr>> queued_queries(file_count);
-  std::vector<std::unordered_map<int, msg_ptr>> queued_msgs(file_count);
+
+  std::vector<std::pair<int, msg_ptr>> queue_one;
+  std::vector<std::pair<int, msg_ptr>> queue_two;
 
   auto msg_count = 0;
-  auto non_empty_msg_count = 0;
   auto errors = 0;
   auto without_partner = 0;
-  auto done = false;
   std::vector<improv_pair> all_improvements;
-  std::unordered_set<int> read_id;
-  read_id.reserve(file_count);
-  while(!done) {
-    read_id.clear();
-    done = true;
-    for(auto i = 0UL; i < file_count; ++i) {
-      auto& in = in_files[i];
-      if (in.peek() != EOF && !in.eof()) {
-        std::string line;
-        std::getline(in, line);
-        auto const m = make_msg(line);
-        if(m->get()->content_type() == MsgContent_RoutingResponse) {
-          queued_msgs[i][m->id()] = m;
-          read_id.insert(m->id());
-          done = false;
+  auto& in_one = in_files[0];
+  while(in_one.peek() != EOF && !in_one.eof()) {
+    std::string line;
+    std::getline(in_one, line);
+    auto const m = make_msg(line);
+    if (m->get()->content_type() == MsgContent_RoutingResponse) {
+      std::pair<int, msg_ptr> temp_pair = {m->id(), m};
+      queue_one.emplace_back(temp_pair);
+    }
+  }
+  auto& in_two = in_files[1];
+  while(in_two.peek() != EOF && !in_two.eof()) {
+    std::string line;
+    std::getline(in_two, line);
+    auto const m = make_msg(line);
+    if (m->get()->content_type() == MsgContent_RoutingResponse) {
+      std::pair<int, msg_ptr> temp_pair = {m->id(), m};
+      queue_two.emplace_back(temp_pair);
+    }
+  }
+  if(queue_one.size() != queue_two.size()) {
+    ++errors;
+  }
+  bool found_counterpart = false;
+  for(auto const& q_1 : queue_one) {
+    std::vector<msg_ptr> msgs;
+    int current_id = q_1.first;
+    for(auto const& q_2 : queue_two) {
+      if(current_id == q_2.first) {
+        found_counterpart = true;
+        msgs.emplace_back(q_1.second);
+        msgs.emplace_back(q_2.second);
+        ++msg_count;
+        auto improvement = improvement_check(current_id, msgs, filenames);
+        if(improvement < neg_inf) {
+          ++errors;
+          msgs.clear();
+          continue;
         }
+        improv_pair improv = {improvement, current_id};
+        all_improvements.emplace_back(improv);
+        msgs.clear();
+        continue;
       }
     }
-    for(auto const& id : read_id) {
-      std::vector<msg_ptr> msgs;
-      msgs.reserve(file_count);
-      for(auto i = 0UL; i < file_count; ++i) {
-        auto const& q_responses = queued_msgs[i];
-        auto it = q_responses.find(id);
-        if (it == end(q_responses)) {
-          break;
-        } else {
-          msgs.emplace_back(it->second);
-        }
-      }
-      if(msgs.size() == file_count) {
-        ++msg_count;
-        auto improvement = improvement_check(id, msgs, filenames);
-        improv_pair improv = {improvement, id};
-        all_improvements.emplace_back(improv);
-        if(improvement < 0.0) {
-          ++errors;
-        }
-        if(motis_content(RoutingResponse, msgs[0])->connections()->size() == 0U) {
-          ++non_empty_msg_count;
-        }
-        for(auto& q : queued_msgs) {
-          q.erase(id);
-        }
-      } else {
-        ++without_partner;
-        std::cout << "The journey with id " << id << " does not have a counterpart!" << std::endl;
-      }
+    if(!found_counterpart) {
+      ++without_partner;
+      std::cout << "The journey with id " << current_id << " does not have a counterpart!" << std::endl;
     }
   }
 
   // normalize and print results
   std::vector<improv_pair> normalized_improv = normalize(all_improvements);
   std::cout << "[---Results:---]" << std::endl;
-  std::cout << "non-emtpy-msg-count: " << non_empty_msg_count << std::endl;
   std::cout << "msg-count: " << msg_count << std::endl;
   std::cout << "journeys without counterpart: " << without_partner << std::endl;
   std::cout << "errors: " << errors << std::endl;
