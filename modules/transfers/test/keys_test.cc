@@ -1,6 +1,10 @@
 #include "gtest/gtest.h"
 
-#include "motis/transfers/keys.h"
+#include "motis/transfers/platform/platform.h"
+#include "motis/transfers/transfer/transfer_request.h"
+#include "motis/transfers/transfer/transfer_result.h"
+#include "motis/transfers/types.h"
+
 #include "geo/latlng.h"
 
 TEST(keys, zerocoord) {

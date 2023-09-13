@@ -76,7 +76,7 @@ TEST(nigiri, dst_test) {
   tags.add(n::source_idx_t{0U}, "swiss_");
 
   auto const routing_response = mn::route(
-      tags, tt, nullptr,
+      tags, tt, nullptr, n::profile_idx_t{0U},
       mn::make_routing_msg(
           "swiss_8101236", "swiss_8503000:0:9",
           mn::to_unix(date::sys_days{2023_y / October / 29} + 14h + 48min)));

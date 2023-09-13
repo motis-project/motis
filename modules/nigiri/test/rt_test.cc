@@ -170,7 +170,7 @@ TEST(nigiri, rt_test) {
 
   /*** BASE LINE:  A@09:00 -> E@09:55 direct via T1 ***/
   auto const r0 = mn::route(
-      tags, tt, &rtt,
+      tags, tt, &rtt, n::profile_idx_t{0U},
       mn::make_routing_msg(
           "tag_A", "tag_E",
           mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
@@ -187,7 +187,7 @@ TEST(nigiri, rt_test) {
                       date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats0.total_entities_success_);
   auto const r1 = mn::route(
-      tags, tt, &rtt,
+      tags, tt, &rtt, n::profile_idx_t{0U},
       mn::make_routing_msg(
           "tag_A", "tag_E",
           mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
@@ -236,7 +236,7 @@ TEST(nigiri, rt_test) {
   EXPECT_EQ(stats.total_entities_success_, 5U);
 
   auto const routing_response = mn::route(
-      tags, tt, &rtt,
+      tags, tt, &rtt, n::profile_idx_t{0U},
       mn::make_routing_msg("tag_A", "tag_E",
                            mn::to_unix(date::sys_days{2019_y / May / 1} + 8h)));
 
@@ -256,7 +256,7 @@ TEST(nigiri, rt_test) {
                       date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats2.total_entities_success_);
   auto const r2 = mn::route(
-      tags, tt, &rtt,
+      tags, tt, &rtt, n::profile_idx_t{0U},
       mn::make_routing_msg(
           "tag_A", "tag_E",
           mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
@@ -276,7 +276,7 @@ TEST(nigiri, rt_test) {
           date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats3.total_entities_success_);
   auto const r3 = mn::route(
-      tags, tt, &rtt,
+      tags, tt, &rtt, n::profile_idx_t{0U},
       mn::make_routing_msg(
           "tag_A", "tag_E",
           mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
