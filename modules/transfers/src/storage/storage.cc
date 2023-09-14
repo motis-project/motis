@@ -16,14 +16,7 @@ namespace fs = std::filesystem;
 
 namespace motis::transfers {
 
-void storage::initialize(set<profile_key_t> const& used_profiles,
-                         hash_map<profile_key_t, ppr::profile_info> const&
-                             profile_key_to_profile_info) {
-  used_profiles_ = used_profiles;
-  load_old_state_from_db(used_profiles_);
-  profile_key_to_profile_info_.insert(profile_key_to_profile_info.begin(),
-                                      profile_key_to_profile_info.end());
-}
+void storage::initialize() { load_old_state_from_db(used_profiles_); }
 
 void storage::save_tt(fs::path const& save_to) const { tt_.write(save_to); }
 

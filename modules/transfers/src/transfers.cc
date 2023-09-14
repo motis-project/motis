@@ -54,7 +54,7 @@ struct transfers::impl {
                 fs::path const& db_file_path, std::size_t db_max_size)
       : storage_{db_file_path, db_max_size, tt} {
     load_ppr_profiles(ppr_profiles);
-    storage_.initialize(used_profiles_, ppr_profiles_);
+    storage_.initialize();
   };
 
   void full_import() {
@@ -102,13 +102,16 @@ struct transfers::impl {
           break;
         }
         rg = get_routing_ready_ppr_graph();
+        // route "new" transfer requests
         route_and_save_results(rg, storage_.get_transfer_requests_keys(
                                        data_request_type::kPartialUpdate));
         break;
       case routing_type::kFullRouting:
         rg = get_routing_ready_ppr_graph();
-        route_and_update_results(rg, storage_.get_transfer_requests_keys(
-                                         data_request_type::kPartialOld));
+        // reroute "old" transfer requests
+        route_and_save_results(rg, storage_.get_transfer_requests_keys(
+                                       data_request_type::kPartialOld));
+        // route "new" transfer requests
         route_and_save_results(rg, storage_.get_transfer_requests_keys(
                                        data_request_type::kPartialUpdate));
         break;
@@ -139,12 +142,14 @@ private:
 
     for (auto& [pname, pinfo] : ppr_profiles_by_name) {
       auto pkey = storage_.profile_name_to_profile_key_.at(pname);
-      used_profiles_.insert(pkey);
+      storage_.used_profiles_.insert(pkey);
 
       // convert walk_duration from minutes to seconds
-      ppr_profiles_.insert(std::pair<profile_key_t, ppr::profile_info>(
-          pkey, ppr_profiles_by_name.at(pname)));
-      ppr_profiles_.at(pkey).profile_.duration_limit_ = ::motis::MAX_WALK_TIME;
+      storage_.profile_key_to_profile_info_.insert(
+          std::pair<profile_key_t, ppr::profile_info>(
+              pkey, ppr_profiles_by_name.at(pname)));
+      storage_.profile_key_to_profile_info_.at(pkey).profile_.duration_limit_ =
+          ::motis::MAX_WALK_TIME;
 
       // build profile_name to idx map in nigiri::tt
       storage_.tt_.profiles_.insert({pname, storage_.tt_.profiles_.size()});
@@ -247,30 +252,12 @@ private:
     auto matches = storage_.get_all_matchings();
 
     auto treqs = to_transfer_requests(treqs_k, matches);
-    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
-    storage_.add_new_transfer_results(trs);
-  }
-
-  // TODO (CARSTEN) route_and_update equals route_and_save
-  void route_and_update_results(::ppr::routing_graph const& rg,
-                                transfer_requests_keys const& treqs_k) {
-    progress_tracker_->status("Updating Profilebased Transfers.");
-    ml::scoped_timer const timer{"Updating Profilebased Transfers."};
-
-    auto matches = storage_.get_all_matchings();
-
-    auto treqs = to_transfer_requests(treqs_k, matches);
-    auto trs = route_multiple_requests(treqs, rg, ppr_profiles_);
+    auto trs = route_multiple_requests(treqs, rg,
+                                       storage_.profile_key_to_profile_info_);
     storage_.add_new_transfer_results(trs);
   }
 
   storage storage_;
-
-  hash_map<nlocation_key_t, n::location_idx_t> location_key_to_idx_;
-
-  hash_map<string, profile_key_t> ppr_profile_keys_;
-  hash_map<profile_key_t, ppr::profile_info> ppr_profiles_;
-  set<profile_key_t> used_profiles_;
 
   // initialize matching limits
   double max_matching_dist_{400};

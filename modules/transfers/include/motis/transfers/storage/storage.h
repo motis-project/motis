@@ -29,8 +29,9 @@ struct storage {
       : tt_(tt), db_{db_file_path, db_max_size} {}
 
   // Initializes the storage for the footpath module.
-  void initialize(set<profile_key_t> const&,
-                  hash_map<profile_key_t, ppr::profile_info> const&);
+  // Prerequisites:
+  // - used_profiles_ must already be set.
+  void initialize();
 
   // Saves the current timetable in the specified file path.
   void save_tt(std::filesystem::path const&) const;
@@ -94,6 +95,8 @@ struct storage {
 
   hash_map<string, profile_key_t> profile_name_to_profile_key_;
   hash_map<profile_key_t, string> profile_key_to_profile_name_;
+  hash_map<profile_key_t, ppr::profile_info> profile_key_to_profile_info_;
+  set<profile_key_t> used_profiles_;
 
 private:
   // Loads all transfers data from the database and stores it in the
@@ -128,8 +131,6 @@ private:
     transfer_results transfer_results_;
   } old_state_, update_state_;
 
-  set<profile_key_t> used_profiles_;
-  hash_map<profile_key_t, ppr::profile_info> profile_key_to_profile_info_;
   database db_;
 };
 
