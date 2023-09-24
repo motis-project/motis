@@ -36,7 +36,7 @@ using namespace flatbuffers;
 namespace motis::intermodal::eval {
 
 #define PI 3.141592653589793238462643383279
-#define neg_inf -999999.9
+#define neg_inf (-999999.9)
 
 struct mins {
   double min_improvement_;
@@ -48,7 +48,7 @@ struct improv_pair {
   int id_;
 };
 
-std::vector<improv_pair> normalize(const std::vector<improv_pair>& to_normalize) {
+/*std::vector<improv_pair> normalize(const std::vector<improv_pair>& to_normalize) {
   std::vector<improv_pair> normalized;
   improv_pair norm{};
   double max = -DBL_MAX;
@@ -71,24 +71,18 @@ std::vector<improv_pair> normalize(const std::vector<improv_pair>& to_normalize)
     normalized.emplace_back(norm);
   }
   return normalized;
-}
+}*/
 
 double get_improvement(journey a, journey b, std::vector<int> weights) {
   // criteria 1 dep_time
   unixtime criteria1_a = a.stops_.at(0).departure_.timestamp_;
   unixtime criteria1_b = b.stops_.at(0).departure_.timestamp_;
-  //printf("DEBUG: A Criteria 1: Depature: %lld \n", criteria1_a);
-  //printf("DEBUG: B Criteria 1: Depature: %lld \n", criteria1_b);
   // criteria 2 arr_time
   unixtime criteria2_a = a.stops_.at(a.stops_.size()-1).arrival_.timestamp_;
   unixtime criteria2_b = b.stops_.at(b.stops_.size()-1).arrival_.timestamp_;
-  //printf("DEBUG: A Criteria 2: Arrival: %lld \n", criteria2_a);
-  //printf("DEBUG: B Criteria 2: Arrival: %lld \n", criteria2_b);
   // criteria 3 transfers
   int64_t citeria3_a = a.transfers_;
   int64_t citeria3_b = b.transfers_;
-  //printf("DEBUG: A Criteria 3: Transfers: %lld \n", citeria3_a);
-  //printf("DEBUG: B Criteria 3: Transfers: %lld \n", citeria3_b);
   // all critera
   std::vector<unixtime> all_criteria_a = {criteria1_a, criteria2_a, citeria3_a};
   std::vector<unixtime> all_criteria_b = {criteria1_b, criteria2_b, citeria3_b};
@@ -115,7 +109,7 @@ double get_improvement(journey a, journey b, std::vector<int> weights) {
 
   double const p = 30.0;
   double const q = 0.1;
-  //(log2(std::pow(improvement, 2) / dist) * ((atan(p * (dist - q)) + PI) / 2.0));
+  //return (log2(std::pow(improvement, 2) / dist) * ((atan(p * (dist - q)) + PI) / 2.0));
   double value1 = log2(std::pow(improvement, 2) / dist);
   double value2 = (atan(p * (dist - q)) + PI) / 2.0;
   return value1 * value2;
@@ -194,7 +188,7 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   auto const check_journeys = [&](auto const file_idx,
                                   std::vector<journey> const& journeys) {
     if(journeys.empty()) {
-      std::cout << "Empty Journeys - something went wrong here (id: " << id  << ")" << std::endl;
+      std::cout << "Empty journeys - something went wrong here (id: " << id  << ")" << std::endl;
     }
     for (auto const& j : journeys) {
       if (!check_journey(j, report_journey_error)) {
@@ -204,8 +198,12 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
     }
   };
 
+  std::cout << "Check if journeys are broken..." << std::endl;
   check_journeys(0, refcons_without_filter);
   check_journeys(1, cons_with_filter);
+  std::cout << "result journeys without filter: " << refcons_without_filter.size() << std::endl;
+  std::cout << "result journeys with filter: " << cons_with_filter.size() << std::endl;
+  std::cout << "Computing improvement... " << std::endl;
 
   std::vector<int> weights = {1, 1, 30};
   auto const l_r_impro = eval_improvement(refcons_without_filter, cons_with_filter, weights);
@@ -232,7 +230,7 @@ int filter_compare(int argc, char const** argv) {
     fmt::print("{}\n", desc);
     fmt::print(" This comparator takes two files. The first file should consist of reference journeys.\n "
         "The second file should consist of results, which used the station filter or other aspects one wants to check against.\n "
-        "The comparator will compare each journey and and compute an \"improvement\". \n\n");
+        "The comparator will compare each journey and compute an \"improvement\". \n\n");
     if (filenames.size() != 2) {
       fmt::print("only {} file(s) given, ==2 required: {}\n",
                  filenames.size(), filenames);
@@ -272,6 +270,8 @@ int filter_compare(int argc, char const** argv) {
     }
   }
   if(queue_one.size() != queue_two.size()) {
+    std::cout << "The files contain different amounts of messages; "
+                 "this will lead to missing counterparts" << std::endl;
     ++errors;
   }
   bool found_counterpart = false;
@@ -303,7 +303,8 @@ int filter_compare(int argc, char const** argv) {
   }
 
   // normalize and print results
-  std::vector<improv_pair> normalized_improv = normalize(all_improvements);
+  //std::vector<improv_pair> normalized_improv = normalize(all_improvements);
+  std::cout << "\n" << std::endl;
   std::cout << "[---Results:---]" << std::endl;
   std::cout << "msg-count: " << msg_count << std::endl;
   std::cout << "journeys without counterpart: " << without_partner << std::endl;
@@ -312,10 +313,10 @@ int filter_compare(int argc, char const** argv) {
   for(auto const p : all_improvements) {
     std::cout << "ID: " << p.id_ << "\t Improvement: " << p.improvement_ << std::endl;
   }
-  std::cout << "Normalized results: " << std::endl;
-  for(auto const pn : normalized_improv) {
-    std::cout << "ID: " << pn.id_ << "\t Improvement: " << pn.improvement_ << std::endl;
-  }
+  //std::cout << "Normalized results: " << std::endl;
+  //for(auto const pn : normalized_improv) {
+    //std::cout << "ID: " << pn.id_ << "\t Improvement: " << pn.improvement_ << std::endl;
+  //}
 
   return errors;
 }

@@ -42,8 +42,9 @@ private:
   bool routing_{true};
   unsigned link_stop_distance_{100U};
   bool use_stationfilter_{false};
+  bool time_consistency_{false};
   bool percentage_filter_{false};
-  double percent_for_filter_{0.2};
+  double percent_for_filter_{0.1};
   bool weighted_filter_{false};
   bool line_filter_{false};
   std::vector<std::string> gtfsrt_urls_;
