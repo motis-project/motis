@@ -57,6 +57,8 @@ transfer_requests_keys storage::get_transfer_requests_keys(
                   update_state_.transfer_requests_keys_.end());
       return full;
   }
+
+  return {};
 }
 
 treq_k_generation_data storage::get_transfer_request_keys_generation_data() {

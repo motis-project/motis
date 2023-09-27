@@ -154,7 +154,7 @@ private:
       // build profile_name to idx map in nigiri::tt
       storage_.tt_.profiles_.insert({pname, storage_.tt_.profiles_.size()});
     }
-    assert(storage_.tt_.profiles_.size() == used_profiles_.size());
+    assert(storage_.tt_.profiles_.size() == storage_.used_profiles_.size());
   }
 
   first_update get_first_update() {
