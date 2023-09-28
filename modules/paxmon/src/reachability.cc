@@ -14,7 +14,8 @@ reachability_info get_reachability(universe const& uv,
   auto const legs = j.legs();
   utl::verify(!legs.empty(), "empty journey");
   auto const& first_leg = legs.front();
-  auto station_arrival_time = first_leg.enter_time_;
+  auto station_arrival_time =
+      static_cast<time>(first_leg.enter_time_ - uv.early_departure_tolerance_);
   auto current_transfer_departure_time = INVALID_TIME;
   auto current_transfer_arrival_time = INVALID_TIME;
   auto arrival_canceled = false;

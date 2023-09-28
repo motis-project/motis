@@ -1,7 +1,7 @@
 import { format, formatISO, fromUnixTime, parse } from "date-fns";
 import { de } from "date-fns/locale";
 
-function getDate(ts: Date | number): Date {
+export function getDate(ts: Date | number): Date {
   return typeof ts === "number" ? fromUnixTime(ts) : ts;
 }
 

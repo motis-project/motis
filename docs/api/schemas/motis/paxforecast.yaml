@@ -40,7 +40,7 @@ MeasureRecipients:
         `time`). Does not include passengers in a trip that is currently waiting
         at the station.
 LoadLevel:
-  description: TODO
+  description: The expected train occupancy level.
 TripLoadInfoMeasure:
   description: >
     This measure type is deprecated. Use `TripLoadRecommendationMeasure` instead.
@@ -68,12 +68,12 @@ TripRecommendationMeasure:
     recommended_trip:
       description: TODO
 TripWithLoadLevel:
-  description: TODO
+  description: A trip with an associated expected occupancy level.
   fields:
     trip:
       description: TODO
     level:
-      description: TODO
+      description: The expected train occupancy level.
 TripLoadRecommendationMeasure:
   description: |
     Simulate an announcement that a trip is overcrowded and recommend
@@ -93,11 +93,14 @@ TripLoadRecommendationMeasure:
       description: >
         Time at which the announcement is made (unix timestamp).
     planned_destinations:
-      description: TODO
+      description: |
+        A list of planned destination stations (station ids).
     full_trips:
-      description: TODO
+      description: |
+        A list of overcrowded trips that should not be used.
     recommended_trips:
-      description: TODO
+      description: |
+        A list of recommended alternatives.
 RtUpdateMeasure:
   description: |
     Simulate a real-time update.

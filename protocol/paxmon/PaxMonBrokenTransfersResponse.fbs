@@ -1,0 +1,12 @@
+include "paxmon/PaxMonDetailedTransferInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonBrokenTransfersResponse {
+  total_matching_transfers: ulong;
+  transfers_in_this_response: ulong; // number of transfers included in response
+  remaining_transfers: ulong; // number of remaining matching transfers
+  next_skip: ulong; // skip_next parameter for next call
+
+  transfers: [PaxMonDetailedTransferInfo];
+}

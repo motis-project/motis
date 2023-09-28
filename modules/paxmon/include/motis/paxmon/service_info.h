@@ -25,8 +25,8 @@ struct service_info {
   service_class clasz_{service_class::OTHER};
 };
 
-service_info get_service_info(schedule const& sched, connection const& fc,
-                              connection_info const* ci);
+service_info get_service_info(schedule const& sched, connection_info const* ci,
+                              service_class const clasz);
 
 std::vector<std::pair<service_info, unsigned>> get_service_infos(
     schedule const& sched, trip const* trp);

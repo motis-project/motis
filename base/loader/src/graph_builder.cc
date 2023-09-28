@@ -92,9 +92,13 @@ full_trip_id graph_builder::get_full_trip_id(Service const* s, int day,
 }
 
 std::optional<merged_trips_idx> graph_builder::create_merged_trips(
-    Service const* s, int day_idx) {
+    Service const* s, int day_idx, light_connection const* first_lcon) {
   auto const trp = register_service(s, day_idx, false);
   if (trp != nullptr) {
+    if (first_lcon != nullptr) {
+      trp->original_first_connection_info_ = first_lcon->full_con_->con_info_;
+      trp->original_first_clasz_ = first_lcon->full_con_->clasz_;
+    }
     return static_cast<motis::merged_trips_idx>(
         push_mem(sched_.merged_trips_, mcd::vector<ptr<trip>>({trp})));
   } else {
@@ -159,7 +163,8 @@ trip* graph_builder::register_service(Service const* s, int day_idx,
               s->seq_numbers() == nullptr ? mcd::vector<uint32_t>{}
                                           : mcd::to_vec(*s->seq_numbers()),
               boost::uuids::nil_uuid(),
-              s->schedule_relationship() == ScheduleRelationship_UNSCHEDULED))
+              s->schedule_relationship() == ScheduleRelationship_UNSCHEDULED,
+              nullptr, service_class::OTHER))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
   added_full_trip_ids_[ftid] = stored->trip_idx_;
@@ -267,7 +272,10 @@ void graph_builder::add_route_services(
         continue;
       }
 
-      auto const created_merged_trips_idx = create_merged_trips(s, day);
+      auto const first_lcon = !lcons.empty() ? &lcons.front() : nullptr;
+
+      auto const created_merged_trips_idx =
+          create_merged_trips(s, day, first_lcon);
       if (!created_merged_trips_idx) {
         // duplicate trip id
         continue;

@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+
 import { formatShortDuration } from "@/data/durationFormat";
 
 interface DelayProps {
@@ -24,7 +26,7 @@ function Delay({
   minutes,
   colored = true,
   forceSign = false,
-}: DelayProps): JSX.Element {
+}: DelayProps): ReactNode {
   return (
     <span className={colored ? getDelayColor(Math.round(minutes)) : ""}>
       {formatShortDuration(minutes, forceSign)}

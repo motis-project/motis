@@ -343,6 +343,8 @@ ApiDescription:
   fields:
     methods:
       description: TODO
+    version:
+      description: TODO
 MsgContent:
   description: TODO
 DestinationType:

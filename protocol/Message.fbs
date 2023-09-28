@@ -111,8 +111,8 @@ include "paxmon/PaxMonGetGroupsInTripRequest.fbs";
 include "paxmon/PaxMonGetGroupsInTripResponse.fbs";
 include "paxmon/PaxMonUniverseForked.fbs";
 include "paxmon/PaxMonUniverseDestroyed.fbs";
-include "paxmon/PaxMonGetInterchangesRequest.fbs";
-include "paxmon/PaxMonGetInterchangesResponse.fbs";
+include "paxmon/PaxMonTransfersAtStationRequest.fbs";
+include "paxmon/PaxMonTransfersAtStationResponse.fbs";
 include "paxmon/PaxMonGetAddressableGroupsRequest.fbs";
 include "paxmon/PaxMonGetAddressableGroupsResponse.fbs";
 include "paxmon/PaxMonKeepAliveRequest.fbs";
@@ -132,6 +132,12 @@ include "paxmon/PaxMonDetailedCapacityStatusRequest.fbs";
 include "paxmon/PaxMonDetailedCapacityStatusResponse.fbs";
 include "paxmon/PaxMonMetricsRequest.fbs";
 include "paxmon/PaxMonMetricsResponse.fbs";
+include "paxmon/PaxMonBrokenTransfersRequest.fbs";
+include "paxmon/PaxMonBrokenTransfersResponse.fbs";
+include "paxmon/PaxMonTransferDetailsRequest.fbs";
+include "paxmon/PaxMonTransferDetailsResponse.fbs";
+include "paxmon/PaxMonReviseCompactJourneyRequest.fbs";
+include "paxmon/PaxMonReviseCompactJourneyResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -301,8 +307,8 @@ union MsgContent {
   motis.paxforecast.PaxForecastApplyMeasuresRequest                       = 118,
   motis.paxmon.PaxMonUniverseForked                                       = 119,
   motis.paxmon.PaxMonUniverseDestroyed                                    = 120,
-  motis.paxmon.PaxMonGetInterchangesRequest                               = 121,
-  motis.paxmon.PaxMonGetInterchangesResponse                              = 122,
+  motis.paxmon.PaxMonTransfersAtStationRequest                            = 121,
+  motis.paxmon.PaxMonTransfersAtStationResponse                           = 122,
   motis.paxmon.PaxMonStatusRequest                                        = 123,
   motis.ris.RISApplyRequest                                               = 124,
   motis.ris.RISSystemTimeChanged                                          = 125,
@@ -345,7 +351,13 @@ union MsgContent {
   motis.paxforecast.PaxForecastMetricsRequest                             = 162,
   motis.paxforecast.PaxForecastMetricsResponse                            = 163,
   motis.paxmon.PaxMonCapacityStatusRequest                                = 164,
-  motis.paxmon.PaxMonCapacityStatusResponse                               = 165
+  motis.paxmon.PaxMonCapacityStatusResponse                               = 165,
+  motis.paxmon.PaxMonBrokenTransfersRequest                               = 166,
+  motis.paxmon.PaxMonBrokenTransfersResponse                              = 167,
+  motis.paxmon.PaxMonTransferDetailsRequest                               = 168,
+  motis.paxmon.PaxMonTransferDetailsResponse                              = 169,
+  motis.paxmon.PaxMonReviseCompactJourneyRequest                          = 170,
+  motis.paxmon.PaxMonReviseCompactJourneyResponse                         = 171
 }
 
 // Destination Examples:

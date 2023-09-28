@@ -273,7 +273,7 @@
     type: motis.MotisSuccess
     description: Universe was destroyed (or marked for destruction if still in use).
 
-/paxmon/filter/groups:
+/paxmon/filter_groups:
   summary: List passenger groups with filter and sort options
   tags:
     - rsl
@@ -352,14 +352,32 @@
     type: motis.paxmon.PaxMonGetGroupsResponse
     description: Information about the requested passenger groups
 
-/paxmon/get_interchanges:
-  summary: List monitored interchanges at a station
+/paxmon/transfers_at_station:
+  summary: List monitored transfers at a station
   tags:
     - rsl
-  input: motis.paxmon.PaxMonGetInterchangesRequest
+  input: motis.paxmon.PaxMonTransfersAtStationRequest
   output:
-    type: motis.paxmon.PaxMonGetInterchangesResponse
-    description: Information about the requested interchanges
+    type: motis.paxmon.PaxMonTransfersAtStationResponse
+    description: Information about the requested transfers
+
+/paxmon/broken_transfers:
+  summary: List broken transfers
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonBrokenTransfersRequest
+  output:
+    type: motis.paxmon.PaxMonBrokenTransfersResponse
+    description: A list of monitored broken transfers
+
+/paxmon/transfer_details:
+  summary: Transfer information
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonTransferDetailsRequest
+  output:
+    type: motis.paxmon.PaxMonTransferDetailsResponse
+    description: Information about the transfer
 
 /paxmon/group_statistics:
   summary: Passenger group statistics
@@ -535,6 +553,20 @@
   output:
     type: motis.paxmon.PaxMonMetricsResponse
     description: Metrics
+
+/paxmon/revise_compact_journey:
+  summary: Compact journey to real-time connection
+  description: |
+    Convert compact journeys into connections (`motis.Connection`),
+    updated with real-time information.
+
+    Requires the `revise` module.
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonReviseCompactJourneyRequest
+  output:
+    type: motis.paxmon.PaxMonReviseCompactJourneyResponse
+    description: Connections with real-time information
 
 /ppr/profiles:
   summary: List available pedestrian routing profiles
