@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAtom, useSetAtom } from "jotai";
 import { ExternalLink } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { ReactNode, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -38,6 +38,7 @@ import { getBahnSucheUrl } from "@/util/bahnDe";
 import { formatDateTime, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import GroupRouteTree from "@/components/groups/GroupRouteTree";
 import { Button } from "@/components/ui/button";
 import Delay from "@/components/util/Delay";
 
@@ -155,6 +156,9 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
           </div>
           <RerouteLogTable group={group} />
         </div>
+      </div>
+      <div className="py-5">
+        <GroupRouteTree group={group} />
       </div>
     </div>
   );
@@ -333,7 +337,7 @@ interface RerouteLogEntryProps {
   group: PaxMonGroup;
 }
 
-function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
+function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): ReactNode {
   const broken_transfer =
     log.broken_transfer.length === 1 ? log.broken_transfer[0] : undefined;
   const show_reroutes = log.new_routes.length > 0;
@@ -479,17 +483,17 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "RevertForecast":
       return {
         icon: <ArrowUturnUpIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-teal-500",
       };
     case "Simulation":
       return {
         icon: <CpuChipIcon className={style} />,
-        bgColor: "bg-teal-500",
+        bgColor: "bg-cyan-500",
       };
     case "UpdateForecast":
       return {
         icon: <ArrowPathIcon className={style} />,
-        bgColor: "bg-teal-500",
+        bgColor: "bg-violet-500",
       };
     case "DestinationUnreachable":
       return {
@@ -499,7 +503,7 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "DestinationReachable":
       return {
         icon: <CheckCircleIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-lime-500",
       };
   }
 }
