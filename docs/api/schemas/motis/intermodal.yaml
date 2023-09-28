@@ -78,14 +78,54 @@ IntermodalRoutingRequest:
     start:
       description: TODO
     start_modes:
-      description: TODO
+      description: The transport modes allowed at the start.
     destination:
       description: TODO
     destination_modes:
-      description: TODO
+      description: The transport modes allowed at the destination.
     search_type:
-      description: TODO
+      description: |
+        The set of optimization criteria to use.
+
+        Possible values include:
+        - `Default`: Optimize travel time and number of transfers.
+          This computes the Pareto set using multi-criteria optimization.
+        - `Accessibility`: Same as `Default` but including an additional
+          accessibility criterion.
+        - `SingleCriterion`: Optimizes a weighted sum where every transfer
+          adds 20 minutes.
+        - `SingleCriterionNoIntercity`: Same as `SingleCriterion` but
+          excluding all long distance (intercity) trains.
+
+        Note that not all routers support all search types.
+      examples:
+        - "Default"
     search_dir:
-      description: TODO
+      description: |
+        The search direction.
+
+        This defines whether the algorithm searches from departure to arrival
+        (forward in time) or from arrival to departure (backward in time).
+        Thus, `start` is either specifying the source (`search_dir=Forward`)
+        or the destination (`search_dir=Backward`).
+
+        Possible values:
+        - `Forward`: The `start` parameter specifies the departure of the journey.
+          The destination parameter specifies the arrival of the journey.
+        - `Backward`: The `start` parameter specifies the arrival of the journey.
+          The destination parameter specifies the departure of the journey.
     router:
-      description: TODO
+      description: |
+        The public transport routing endpoint to use.
+
+        Set to an empty string to use the default router (based on the
+        configuration parameter `intermodal.router`).
+
+        To override the default router, set it to the desired endpoint,
+        e.g. `/routing` or `/tripbased`.
+
+        Note that not all routers support all features such as
+        intermodal routing or real-time updates.
+      examples:
+        - ""
+        - "/routing"

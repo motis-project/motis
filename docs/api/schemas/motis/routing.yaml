@@ -118,7 +118,14 @@ RoutingRequest:
     use_start_footpaths:
       description: TODO
     schedule:
-      description: TODO
+      description: |
+        The schedule ID.
+
+        This should always be set to `0` unless a paxmon parallel universe
+        should be used for routing, in which case it should be set to the
+        schedule ID (not universe ID) of that universe.
+      examples:
+        - 0
 RoutingResponse:
   description: TODO
   fields:

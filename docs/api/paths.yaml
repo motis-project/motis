@@ -273,7 +273,7 @@
     type: motis.MotisSuccess
     description: Universe was destroyed (or marked for destruction if still in use).
 
-/paxmon/filter/groups:
+/paxmon/filter_groups:
   summary: List passenger groups with filter and sort options
   tags:
     - rsl
