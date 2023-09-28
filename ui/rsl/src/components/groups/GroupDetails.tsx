@@ -11,6 +11,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAtom, useSetAtom } from "jotai";
+import { ExternalLink } from "lucide-react";
 import React, { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
@@ -33,9 +34,11 @@ import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
+import { getBahnSucheUrl } from "@/util/bahnDe";
 import { formatDateTime, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import { Button } from "@/components/ui/button";
 import Delay from "@/components/util/Delay";
 
 import { cn } from "@/lib/utils";
@@ -82,6 +85,8 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
     return <div>Gruppe {groupId} ist ungültig (keine Routen).</div>;
   }
 
+  const plannedJourney = group.routes[0].journey;
+
   return (
     <div>
       <div className="flex gap-10 text-xl">
@@ -104,6 +109,23 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
       <div className="">
         Planmäßige Ankunftszeit:{" "}
         {formatDateTime(group.routes[0].planned_arrival_time)}
+      </div>
+      <div className="mt-2">
+        <Button variant="outline" className="gap-2" asChild>
+          <a
+            href={getBahnSucheUrl(
+              plannedJourney.legs[0].enter_station,
+              plannedJourney.legs[plannedJourney.legs.length - 1].exit_station,
+              plannedJourney.legs[0].enter_time,
+            )}
+            target="_blank"
+            referrerPolicy="no-referrer"
+            rel="noreferrer"
+          >
+            <ExternalLink className="w-4 h-4" aria-hidden="true" />
+            Aktuelle Alternativensuche auf bahn.de
+          </a>
+        </Button>
       </div>
       <div className="mt-4 flex flex-wrap gap-8">
         <div>

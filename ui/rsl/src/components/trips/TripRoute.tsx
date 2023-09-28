@@ -6,7 +6,8 @@ import {
 } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom, useSetAtom } from "jotai";
-import { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
@@ -22,6 +23,7 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
+import { getBahnTrainSearchUrl } from "@/util/bahnDe";
 import {
   getCapacitySourceTooltip,
   isExactCapacitySource,
@@ -32,6 +34,7 @@ import { formatDate, formatTime } from "@/util/dateFormat";
 import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
 import TripOptimization from "@/components/trips/TripOptimization";
 import TripSectionDetails from "@/components/trips/TripSectionDetails";
+import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 
@@ -107,6 +110,20 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {tripData.tsi.primary_station.name} →{" "}
           {tripData.tsi.secondary_station.name}
         </span>
+        <Button variant="outline" className="gap-2" asChild>
+          <a
+            href={getBahnTrainSearchUrl(
+              tripData.tsi.trip,
+              tripData.tsi.primary_station,
+            )}
+            target="_blank"
+            referrerPolicy="no-referrer"
+            rel="noreferrer"
+          >
+            <ExternalLink className="w-4 h-4" aria-hidden="true" />
+            Zugverlauf auf bahn.de
+          </a>
+        </Button>
       </div>
       {secondaryServices.length > 0 && (
         <div className="flex gap-3 items-center justify-center">
