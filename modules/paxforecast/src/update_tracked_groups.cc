@@ -139,7 +139,8 @@ void update_tracked_groups(
 
         auto const current_time =
             unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-        auto const search_time = static_cast<time>(current_time + 15);
+        auto const search_time =
+            static_cast<time>(current_time + uv.preparation_time_);
 
         auto const reachability = get_reachability(uv, old_journey);
         std::cout << "reachability: ok=" << reachability.ok_

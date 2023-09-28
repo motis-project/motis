@@ -11,11 +11,9 @@
 namespace motis::paxmon {
 
 void handle_rt_update(universe& uv, schedule const& sched,
-                      motis::rt::RtUpdates const* update,
-                      int arrival_delay_threshold);
+                      motis::rt::RtUpdates const* update);
 
 std::vector<motis::module::msg_ptr> update_affected_groups(
-    universe& uv, schedule const& sched, int arrival_delay_threshold,
-    int preparation_time);
+    universe& uv, schedule const& sched);
 
 }  // namespace motis::paxmon

@@ -3,14 +3,25 @@
 #include <cstdint>
 #include <iostream>
 #include <limits>
+#include <numeric>
+#include <optional>
+#include <vector>
+
+#include "cista/reflection/comparable.h"
 
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
+#include "utl/verify.h"
+
+#include "motis/core/common/dynamic_fws_multimap.h"
+#include "motis/core/common/fws_graph.h"
 
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
+#include "motis/paxmon/localization.h"
 #include "motis/paxmon/messages.h"
+#include "motis/paxmon/reachability.h"
 #include "motis/paxmon/temp_passenger_group.h"
 
 using namespace motis::paxmon;
@@ -56,87 +67,193 @@ struct print_log_entry {
   passenger_group_container const& pgc_;
 };
 
+struct reroute_node {
+  CISTA_COMPARABLE()
+  local_group_route_index route_{};
+  float probability_{};
+};
+
+struct reroute_edge {
+  CISTA_COMPARABLE()
+  std::uint32_t from_{};
+  std::uint32_t to_{};
+};
+
 }  // namespace
+
+fws_graph<reroute_node, reroute_edge> build_reroute_graph(
+    passenger_group_container const& pgc, passenger_group_index const pgi) {
+  fws_graph<reroute_node, reroute_edge> graph;
+  dynamic_fws_multimap<std::uint32_t> leaves;
+
+  graph.emplace_back_node(static_cast<local_group_route_index>(0), 1.F);
+  leaves[0].emplace_back(0U);
+
+  for (auto const& le : pgc.reroute_log_entries(pgi)) {
+    if (le.reason_ == reroute_reason_t::REVERT_FORECAST) {
+      std::cout << "build_reroute_graph: REVERT_FORECAST NOT YET SUPPORTED"
+                << std::endl;
+      graph.nodes_.clear();
+      return graph;
+    } else {
+      auto const prev_nodes = utl::to_vec(leaves[le.old_route_.route_],
+                                          [&](auto const idx) { return idx; });
+      leaves[le.old_route_.route_].clear();
+      auto const new_routes = pgc.log_entry_new_routes_.at(le.index_);
+
+      auto const total_outgoing_prob =
+          std::accumulate(begin(new_routes), end(new_routes), 0.F,
+                          [&](auto const sum, auto const& new_route) {
+                            if (new_route.route_ == le.old_route_.route_) {
+                              return sum + new_route.new_probability_;
+                            } else {
+                              return sum + (new_route.new_probability_ -
+                                            new_route.previous_probability_);
+                            }
+                          });
+
+      for (auto const prev_node_idx : prev_nodes) {
+        auto const parent_prob = graph.nodes_[prev_node_idx].probability_;
+        for (auto const& new_route : new_routes) {
+          auto const prob_change = new_route.route_ == le.old_route_.route_
+                                       ? new_route.new_probability_
+                                       : new_route.new_probability_ -
+                                             new_route.previous_probability_;
+          auto const pick_prob = prob_change / total_outgoing_prob;
+          auto const abs_prob = pick_prob * parent_prob;
+          auto const new_node_idx = graph.nodes_.size();
+          graph.emplace_back_node(new_route.route_, abs_prob);
+          graph.push_back_edge(reroute_edge{prev_node_idx, new_node_idx});
+          leaves[new_route.route_].emplace_back(new_node_idx);
+        }
+      }
+    }
+  }
+
+  return graph;
+}
 
 void revert_forecast(universe& uv, schedule const& sched,
                      FlatBufferBuilder& fbb,
                      std::vector<Offset<PaxMonRerouteGroup>>& reroutes,
-                     passenger_group_with_route const& pgwr,
-                     passenger_localization const* loc) {
+                     passenger_group_index const pgi,
+                     std::vector<bool> const& unbroken_routes) {
   auto const& pgc = uv.passenger_groups_;
-  auto const log_entries = pgc.reroute_log_entries(pgwr.pg_);
-  if (log_entries.empty()) {
+
+  auto const graph = build_reroute_graph(pgc, pgi);
+  if (unbroken_routes.size() != 1 || graph.nodes_.size() != 1) {
+    std::cout << "  revert_forecast: group " << pgi << ": "
+              << graph.nodes_.size() << " graph nodes, unbroken_routes: [";
+    for (auto const& b : unbroken_routes) {
+      std::cout << " " << b;
+    }
+    std::cout << " ]" << std::endl;
+  }
+  if (graph.nodes_.size() <= 1) {
     return;
   }
 
-  std::cout << "revert_forecast: pg=" << pgwr.pg_ << ", route=" << pgwr.route_
-            << ", log_entries=" << log_entries.size() << "\n";
+  // for localization
+  auto const current_time =
+      unix_to_motistime(sched.schedule_begin_, sched.system_time_);
+  auto const search_time =
+      static_cast<time>(current_time + uv.preparation_time_);
 
-  for (auto const& entry : log_entries) {
-    std::cout << "  " << print_log_entry{entry, pgc} << "\n";
+  auto const routes = pgc.routes(pgi);
+  utl::verify(routes.size() == unbroken_routes.size(),
+              "revert_forecast: invalid unbroken_routes size");
+  auto const localizations = utl::to_vec(routes, [&](auto const& route) {
+    if (route.broken_) {
+      return passenger_localization{};
+    } else {
+      auto const reachability =
+          get_reachability(uv, pgc.journey(route.compact_journey_index_));
+      return localize(sched, reachability, search_time);
+    }
+  });
+
+  auto parents = std::vector<std::uint32_t>(graph.nodes_.size());
+  auto stack = std::vector<std::uint32_t>{0U};
+  auto leaves = std::vector<std::uint32_t>{};
+
+  while (!stack.empty()) {
+    auto const parent_idx = stack.back();
+    stack.pop_back();
+    auto const outgoing_edges = graph.outgoing_edges(parent_idx);
+    for (auto const& e : outgoing_edges) {
+      parents[e.to_] = parent_idx;
+      stack.emplace_back(e.to_);
+    }
+    if (outgoing_edges.empty()) {
+      leaves.emplace_back(parent_idx);
+    }
   }
 
-  auto const routes = pgc.routes(pgwr.pg_);
-  auto orig_probs = utl::to_vec(
-      routes, [](group_route const& gr) { return gr.probability_; });
+  auto prob_changes = std::vector<float>(routes.size() * routes.size());
 
-  auto const print_probs = [&]() {
-    std::cout << "  --> route probs=[";
-    for (auto const& p : orig_probs) {
-      std::cout << " " << p;
-    }
-    std::cout << " ]\n";
-  };
-
-  print_probs();
-  for (auto idx_to_revert = log_entries.size() - 1;; --idx_to_revert) {
-    auto const& entry = log_entries.at(idx_to_revert);
-    std::cout << "  log entry " << idx_to_revert << ": "
-              << print_log_entry{entry, pgc} << "\n";
-    orig_probs[entry.old_route_.route_] =
-        entry.old_route_.previous_probability_;
-    for (auto const& nr : pgc.log_entry_new_routes_.at(entry.index_)) {
-      orig_probs[nr.route_] = nr.previous_probability_;
-    }
-    print_probs();
-    if (entry.old_route_.route_ == pgwr.route_) {
-      if (entry.reason_ == reroute_reason_t::REVERT_FORECAST ||
-          entry.reason_ == reroute_reason_t::MANUAL) {
-        std::cout << "  abort: because of " << print_log_entry{entry, pgc}
-                  << std::endl;
-        return;
-      } else {
-        break;
+  for (auto const leaf_idx : leaves) {
+    auto const& leaf = graph.nodes_[leaf_idx];
+    auto const& leaf_loc = localizations.at(leaf.route_);
+    auto candidate = std::optional<std::uint32_t>{};
+    for (auto node_idx = parents[leaf_idx]; node_idx != parents[node_idx];
+         node_idx = parents[node_idx]) {
+      auto const& node = graph.nodes_[node_idx];
+      if (!unbroken_routes[node.route_]) {
+        continue;
       }
+
+      auto const& node_loc = localizations.at(node.route_);
+      // simple check for now, can maybe be improved later
+      if (leaf_loc.at_station_ != node_loc.at_station_ ||
+          leaf_loc.in_trip_ != node_loc.in_trip_) {
+        std::cout << "revert_forecast: localization mismatch (group " << pgi
+                  << ")" << std::endl;
+        continue;
+      }
+
+      candidate = node.route_;
     }
-    if (idx_to_revert == 0) {
-      std::cout << "  abort: no matching reroute entry found" << std::endl;
-      return;
+
+    if (candidate) {
+      // candidate found -> move probability from leaf to candidate
+      auto const c = *candidate;
+      auto const offset = c * routes.size();
+      prob_changes[offset + leaf.route_] -= leaf.probability_;
+      prob_changes[offset + c] += leaf.probability_;
     }
   }
+
   auto new_routes = std::vector<Offset<PaxMonGroupRoute>>{};
-  for (auto const [i, p] : utl::enumerate(orig_probs)) {
-    new_routes.emplace_back(
-        to_fbs(sched, fbb,
-               temp_group_route{
-                   static_cast<local_group_route_index>(i), p,
-                   compact_journey{}, INVALID_TIME,
-                   0 /* estimated delay - updated by reroute groups api */,
-                   route_source_flags::NONE, false /* planned */
-               }));
+  for (auto reactivated_route_idx = static_cast<local_group_route_index>(0);
+       reactivated_route_idx < routes.size(); ++reactivated_route_idx) {
+    auto const offset = reactivated_route_idx * routes.size();
+
+    for (auto route_idx = static_cast<local_group_route_index>(0);
+         route_idx < routes.size(); ++route_idx) {
+      auto const p_change = prob_changes[offset + route_idx];
+      if (p_change == 0.F) {
+        continue;
+      }
+      new_routes.emplace_back(
+          to_fbs(sched, fbb,
+                 temp_group_route{
+                     route_idx, p_change, compact_journey{}, INVALID_TIME,
+                     0 /* estimated delay - updated by reroute groups api */,
+                     route_source_flags::NONE, false /* planned */
+                 }));
+    }
+
+    if (!new_routes.empty()) {
+      reroutes.emplace_back(CreatePaxMonRerouteGroup(
+          fbb, pgi, reactivated_route_idx, fbb.CreateVector(new_routes),
+          paxmon::PaxMonRerouteReason_RevertForecast,
+          broken_transfer_info_to_fbs(fbb, sched, std::nullopt), false,
+          fbb.CreateVector(std::vector<Offset<PaxMonLocalizationWrapper>>{
+              to_fbs_localization_wrapper(
+                  sched, fbb, localizations.at(reactivated_route_idx))})));
+    }
+    new_routes.clear();
   }
-  auto fbs_localization =
-      std::vector<flatbuffers::Offset<PaxMonLocalizationWrapper>>{};
-  if (loc != nullptr) {
-    fbs_localization.emplace_back(
-        to_fbs_localization_wrapper(sched, fbb, *loc));
-  }
-  reroutes.emplace_back(CreatePaxMonRerouteGroup(
-      fbb, pgwr.pg_, pgwr.route_, fbb.CreateVector(new_routes),
-      paxmon::PaxMonRerouteReason_RevertForecast,
-      broken_transfer_info_to_fbs(fbb, sched, std::nullopt), true,
-      fbb.CreateVector(fbs_localization)));
-  std::cout << std::endl;
 }
 
 void revert_forecasts(
@@ -153,6 +270,8 @@ void revert_forecasts(
     if (reroutes.empty()) {
       return;
     }
+    std::cout << "revert_forecasts: sending " << reroutes.size() << " reroutes"
+              << std::endl;
     mc.create_and_finish(
         MsgContent_PaxMonRerouteGroupsRequest,
         CreatePaxMonRerouteGroupsRequest(mc, uv.id_, mc.CreateVector(reroutes))
@@ -164,40 +283,35 @@ void revert_forecasts(
     mc.Clear();
   };
 
-  auto last_group = std::numeric_limits<passenger_group_index>::max();
-  for (auto const& pgwr : pgwrs) {
+  std::cout
+      << "=================================================================\n"
+      << "revert_forecasts: " << pgwrs.size() << " groups" << std::endl;
 
-    (void)sim_result;
-    // TODO(pablo): won't work if current p=0
-    /*
-    if (auto it = sim_result.group_route_results_.find(pgwr);
-        it != end(sim_result.group_route_results_)) {
-      std::cout << "revert_forecast: group route " << pgwr.pg_ << "#"
-                << pgwr.route_ << " has "
-                << it->second.alternative_probabilities_.size()
-                << " alternatives" << std::endl;
+  auto const pgc = uv.passenger_groups_;
+  auto current_pgi = std::numeric_limits<passenger_group_index>::max();
+  auto unbroken_routes = std::vector<bool>{};
+
+  auto const handle_group = [&]() {
+    if (current_pgi == std::numeric_limits<passenger_group_index>::max()) {
+      return;
     }
-    */
-
-    if (pgwr.pg_ == last_group) {
-      // TODO(pablo): for now, always revert the earliest route
-      std::cout << "revert_forecast: skipping multiple reverts per group: "
-                << pgwr.pg_ << std::endl;
-      continue;
-    }
-    last_group = pgwr.pg_;
-
-    passenger_localization const* loc = nullptr;
-    if (auto const it = pgwr_localizations.find(pgwr);
-        it != end(pgwr_localizations)) {
-      loc = it->second;
-    }
-
-    revert_forecast(uv, sched, mc, reroutes, pgwr, loc);
+    revert_forecast(uv, sched, mc, reroutes, current_pgi, unbroken_routes);
     if (reroutes.size() >= BATCH_SIZE) {
       send_reroutes();
     }
+  };
+
+  for (auto const& pgwr : pgwrs) {
+    if (pgwr.pg_ != current_pgi) {
+      handle_group();
+      current_pgi = pgwr.pg_;
+      unbroken_routes.clear();
+      unbroken_routes.resize(pgc.routes(pgwr.pg_).size());
+    }
+    unbroken_routes[pgwr.route_] = true;
   }
+
+  handle_group();
 
   send_reroutes();
 }
