@@ -7,6 +7,9 @@ import os
 
 from dotenv import load_dotenv
 
+__all__ = ["get_stations_mobility_service_availability_info",
+           "export_multiple_mobility_service_info_to_csv"]
+
 
 def get_all_stations() -> http.client.HTTPResponse:
     """ Sends an request to the DB API to get information about all stations in
@@ -51,7 +54,6 @@ def get_stations_mobility_service_availability_info() -> List[Dict[str, Any]]:
 
     stations = get_all_stations().read()
     stations_data: Dict[str, Any] = json.loads(stations.decode("utf-8"))
-    print(len(stations_data.get("result")))
 
     for station in stations_data.get("result"):
         service_staff_info = {}
@@ -182,13 +184,16 @@ def export_multiple_mobility_service_info_to_csv(
                 stations.
     """
     set_station_mobility_service_availability_csv_header(path)
-    for station_staff_info in stations_mobility_service_info:
-        export_single_mobility_service_info_to_csv(path, station_staff_info)
+    for station_mobility_service_info in stations_mobility_service_info:
+        export_single_mobility_service_info_to_csv(
+            path,
+            station_mobility_service_info)
 
 
 if __name__ == "__main__":
     load_dotenv()
-    staff_infos = get_stations_mobility_service_availability_info()
+    stations_mobility_service_info =\
+        get_stations_mobility_service_availability_info()
     export_multiple_mobility_service_info_to_csv(
         "db_mobility_service_availability.csv",
-        staff_infos)
+        stations_mobility_service_info)

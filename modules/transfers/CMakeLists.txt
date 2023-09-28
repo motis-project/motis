@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.21)
 project(motis)
 
+find_package(Python3 REQUIRED
+                     COMPONENTS Interpreter Development)
+
 include_directories(include)
 
 build_flatbuffers(
@@ -13,22 +16,29 @@ build_flatbuffers(
   "${motis-transfers-generated-headers-dir}"    # generated_includes_dir
   ""                                            # binary_schemas_dir
   ""                                            # copy_text_schemas_dir
-)
+  )
 
 file(GLOB_RECURSE motis-transfers-files src/*.cc)
 add_library(motis-transfers STATIC ${motis-transfers-files})
 target_include_directories(motis-transfers PUBLIC include)
 target_include_directories(motis-transfers PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../ppr/include)
+
+# Python 3
+target_include_directories(motis-transfers PRIVATE ${Python3_INCLUDE_DIRS})
+target_link_directories(motis-transfers PRIVATE ${Python3_LIBRARY_DIRS})
+
 target_compile_features(motis-transfers PRIVATE cxx_std_20)
-target_link_libraries(motis-transfers
-        boost-system
-        boost-thread
-        motis-module
-        motis-libjson
-        lmdb
-        nigiri
-        osmium
-        geo
-        ppr-routing
-        )
+target_link_libraries(motis-transfers PRIVATE
+  boost-system
+  boost-thread
+  motis-module
+  motis-libjson
+  lmdb
+  nigiri
+  osmium
+  geo
+  ppr-routing
+  ${Python3_LIBRARIES}
+)
+
 target_compile_options(motis-transfers PRIVATE ${MOTIS_CXX_FLAGS})
