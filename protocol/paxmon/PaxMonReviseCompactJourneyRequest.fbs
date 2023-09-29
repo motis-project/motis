@@ -1,0 +1,8 @@
+include "paxmon/PaxMonCompactJourney.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonReviseCompactJourneyRequest {
+  universe: uint;
+  journeys: [PaxMonCompactJourney];
+}

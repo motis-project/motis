@@ -35,6 +35,8 @@ import {
 import {
   PaxMonAddGroupsRequest,
   PaxMonAddGroupsResponse,
+  PaxMonBrokenTransfersRequest,
+  PaxMonBrokenTransfersResponse,
   PaxMonCapacityStatusRequest,
   PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
@@ -56,8 +58,6 @@ import {
   PaxMonGetGroupsInTripResponse,
   PaxMonGetGroupsRequest,
   PaxMonGetGroupsResponse,
-  PaxMonGetInterchangesRequest,
-  PaxMonGetInterchangesResponse,
   PaxMonGetTripCapacityRequest,
   PaxMonGetTripCapacityResponse,
   PaxMonGetTripLoadInfosRequest,
@@ -72,8 +72,14 @@ import {
   PaxMonRemoveGroupsRequest,
   PaxMonRerouteGroupsRequest,
   PaxMonRerouteGroupsResponse,
+  PaxMonReviseCompactJourneyRequest,
+  PaxMonReviseCompactJourneyResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
+  PaxMonTransferDetailsRequest,
+  PaxMonTransferDetailsResponse,
+  PaxMonTransfersAtStationRequest,
+  PaxMonTransfersAtStationResponse,
   PaxMonTripLoadInfo,
   PaxMonUniverseDestroyed,
   PaxMonUniverseForked,
@@ -308,6 +314,7 @@ export interface MotisNoMessage {}
 
 // Message.fbs
 export interface ApiDescription {
+  version: string;
   methods: string[];
 }
 
@@ -363,8 +370,8 @@ export type MsgContent =
   | PaxForecastApplyMeasuresRequest
   | PaxMonUniverseForked
   | PaxMonUniverseDestroyed
-  | PaxMonGetInterchangesRequest
-  | PaxMonGetInterchangesResponse
+  | PaxMonTransfersAtStationRequest
+  | PaxMonTransfersAtStationResponse
   | PaxMonStatusRequest
   | LookupRiBasisRequest
   | LookupRiBasisResponse
@@ -396,7 +403,13 @@ export type MsgContent =
   | PaxForecastMetricsRequest
   | PaxForecastMetricsResponse
   | PaxMonCapacityStatusRequest
-  | PaxMonCapacityStatusResponse;
+  | PaxMonCapacityStatusResponse
+  | PaxMonBrokenTransfersRequest
+  | PaxMonBrokenTransfersResponse
+  | PaxMonTransferDetailsRequest
+  | PaxMonTransferDetailsResponse
+  | PaxMonReviseCompactJourneyRequest
+  | PaxMonReviseCompactJourneyResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -449,8 +462,8 @@ export type MsgContentType =
   | "PaxForecastApplyMeasuresRequest"
   | "PaxMonUniverseForked"
   | "PaxMonUniverseDestroyed"
-  | "PaxMonGetInterchangesRequest"
-  | "PaxMonGetInterchangesResponse"
+  | "PaxMonTransfersAtStationRequest"
+  | "PaxMonTransfersAtStationResponse"
   | "PaxMonStatusRequest"
   | "LookupRiBasisRequest"
   | "LookupRiBasisResponse"
@@ -482,7 +495,13 @@ export type MsgContentType =
   | "PaxForecastMetricsRequest"
   | "PaxForecastMetricsResponse"
   | "PaxMonCapacityStatusRequest"
-  | "PaxMonCapacityStatusResponse";
+  | "PaxMonCapacityStatusResponse"
+  | "PaxMonBrokenTransfersRequest"
+  | "PaxMonBrokenTransfersResponse"
+  | "PaxMonTransferDetailsRequest"
+  | "PaxMonTransferDetailsResponse"
+  | "PaxMonReviseCompactJourneyRequest"
+  | "PaxMonReviseCompactJourneyResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

@@ -177,6 +177,8 @@ struct trip {
   mcd::vector<uint32_t> stop_seq_numbers_;
   boost::uuids::uuid uuid_{};
   bool unscheduled_{false};
+  ptr<connection_info const> original_first_connection_info_{};
+  service_class original_first_clasz_{service_class::OTHER};
 };
 
 }  // namespace motis

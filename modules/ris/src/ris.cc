@@ -277,32 +277,6 @@ struct ris::impl {
         return;
       }
 
-      if (config.resume_stream_) {
-        auto const queue_id = ribasis::get_queue_id(config.login_);
-        auto const stored_stream_offset = get_stream_offset(queue_id);
-        auto const stored_stream_timestamp = get_stream_timestamp(queue_id);
-        if (stored_stream_offset) {
-          auto resume = true;
-          if (config.max_resume_age_ && stored_stream_timestamp) {
-            if (*stored_stream_timestamp <
-                unixtime_duration_ago(config.max_resume_age_)) {
-              LOG(info) << prefix
-                        << ": last stream timestamp is too old, resuming at "
-                        << config.login_.stream_offset_;
-              resume = false;
-            }
-          }
-          if (resume) {
-            LOG(info) << prefix << ": resuming at stored stream offset "
-                      << *stored_stream_offset;
-            config.login_.numeric_stream_offset_ = *stored_stream_offset + 1;
-          }
-        } else {
-          LOG(info) << prefix << ": no stored stream offset found, resuming at "
-                    << config.login_.stream_offset_;
-        }
-      }
-
       ribasis_receivers_.emplace_back(std::make_unique<ribasis::receiver>(
           config, get_ribasis_status(prefix),
           [this, d, sched](ribasis::receiver& rec,
@@ -339,14 +313,50 @@ struct ris::impl {
                   rec.status_.add_update(pub.message_count_,
                                          pub.max_timestamp_);
 
-                  update_system_time(*sched, pub);
-                  publish_system_time_changed(pub.schedule_res_id_);
+                  if (rec.name() == "ribasis_fahrt") {
+                    update_system_time(*sched, pub);
+                    publish_system_time_changed(pub.schedule_res_id_);
+                  }
                 },
                 ctx::op_id{"ribasis_receive_" + rec.name(), CTX_LOCATION, 0U},
                 ctx::op_type_t::IO,
                 ctx::accesses_t{ctx::access_request{
                     to_res_id(::motis::module::global_res_id::RIS_DATA),
                     ctx::access_t::WRITE}});
+          },
+          [this, &config, prefix]() {
+            auto stream_opts = amqp::stream_options{};
+            if (config.resume_stream_) {
+              auto const queue_id = ribasis::get_queue_id(config.login_);
+              auto const stored_stream_offset = get_stream_offset(queue_id);
+              auto const stored_stream_timestamp =
+                  get_stream_timestamp(queue_id);
+              stream_opts.stream_offset_ = config.login_.stream_offset_;
+              if (stored_stream_offset) {
+                auto resume = true;
+                if (config.max_resume_age_ && stored_stream_timestamp) {
+                  if (*stored_stream_timestamp <
+                      unixtime_duration_ago(config.max_resume_age_)) {
+                    LOG(info)
+                        << prefix
+                        << ": last stream timestamp is too old, resuming at "
+                        << config.login_.stream_offset_;
+                    resume = false;
+                  }
+                }
+                if (resume) {
+                  LOG(info) << prefix << ": resuming at stored stream offset "
+                            << *stored_stream_offset;
+                  stream_opts.numeric_stream_offset_ =
+                      *stored_stream_offset + 1;
+                }
+              } else {
+                LOG(info) << prefix
+                          << ": no stored stream offset found, resuming at "
+                          << config.login_.stream_offset_;
+              }
+            }
+            return stream_opts;
           }));
     });
   }

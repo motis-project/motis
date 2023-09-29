@@ -5,7 +5,6 @@ import {
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { add, getUnixTime } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -27,6 +26,7 @@ import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import { formatTime } from "@/util/dateFormat";
 import { extractNumbers } from "@/util/extractNumbers";
+import { getDayInterval } from "@/util/interval";
 import { getScheduleRange } from "@/util/scheduleRange";
 
 import DatePicker from "@/components/inputs/DatePicker";
@@ -79,10 +79,7 @@ function getFilterTripsRequest(
     max_results: 100,
     skip_first: pageParam,
     filter_by_time: selectedDate ? "ActiveTime" : "NoFilter",
-    filter_interval: {
-      begin: selectedDate ? getUnixTime(selectedDate) : 0,
-      end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
-    },
+    filter_interval: getDayInterval(selectedDate),
     filter_by_train_nr: filterTrainNrs.length > 0,
     filter_train_nrs: filterTrainNrs,
     filter_by_service_class: true,

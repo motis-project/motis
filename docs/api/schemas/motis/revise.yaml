@@ -3,6 +3,8 @@ ReviseRequest:
   fields:
     connections:
       description: TODO
+    schedule:
+      description: TODO
 ReviseResponse:
   description: TODO
   fields:

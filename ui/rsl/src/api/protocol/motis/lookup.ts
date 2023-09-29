@@ -87,10 +87,18 @@ export interface LookupRiBasisResponse {
 }
 
 // lookup/LookupScheduleInfoResponse.fbs
+export interface LookupSchedule {
+  tag: string;
+  hash: number;
+  created: number;
+}
+
+// lookup/LookupScheduleInfoResponse.fbs
 export interface LookupScheduleInfoResponse {
   name: string;
   begin: number;
   end: number;
+  schedules: LookupSchedule[];
 }
 
 // lookup/LookupStationEventsRequest.fbs
