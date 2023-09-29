@@ -626,6 +626,13 @@ private:
       sched_.trips_.insert(
           std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
           trp_entry);
+
+      if (!trip_edges.empty()) {
+        auto const& first_lcon =
+            trip_edges.front()->m_.route_edge_.conns_.at(lcon_idx);
+        trp->original_first_connection_info_ = first_lcon.full_con_->con_info_;
+        trp->original_first_clasz_ = first_lcon.full_con_->clasz_;
+      }
     } else {
       old_eti = remove_expanded_trip(trp);
       for (auto const& e : *trp->edges_) {

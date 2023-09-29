@@ -31,7 +31,7 @@ namespace motis::paxmon {
 void check_broken_interchanges(
     universe& uv, schedule const& sched,
     std::vector<edge_index> const& updated_interchange_edges,
-    int arrival_delay_threshold) {
+    int const arrival_delay_threshold) {
   std::set<edge*> broken_interchanges;
   for (auto& icei : updated_interchange_edges) {
     auto* ice = icei.get(uv);
@@ -42,10 +42,13 @@ void check_broken_interchanges(
     auto const to = ice->to(uv);
     auto const ic = static_cast<int>(to->current_time()) -
                     static_cast<int>(from->current_time());
+    auto const early_departure = static_cast<int>(to->schedule_time()) -
+                                 static_cast<int>(to->current_time());
     if (ice->is_canceled(uv) ||
         (from->station_ != 0 && to->station_ != 0 &&
          ic < ice->transfer_time()) ||
-        (from->station_ == 0 && to->current_time() < to->schedule_time())) {
+        (from->station_ == 0 &&
+         early_departure <= uv.early_departure_tolerance_)) {
       if (ice->broken_) {
         continue;
       }

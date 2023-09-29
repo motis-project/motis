@@ -313,8 +313,10 @@ struct ris::impl {
                   rec.status_.add_update(pub.message_count_,
                                          pub.max_timestamp_);
 
-                  update_system_time(*sched, pub);
-                  publish_system_time_changed(pub.schedule_res_id_);
+                  if (rec.name() == "ribasis_fahrt") {
+                    update_system_time(*sched, pub);
+                    publish_system_time_changed(pub.schedule_res_id_);
+                  }
                 },
                 ctx::op_id{"ribasis_receive_" + rec.name(), CTX_LOCATION, 0U},
                 ctx::op_type_t::IO,

@@ -123,8 +123,8 @@ msg_ptr get_trip_capacity(paxmon_data& data, msg_ptr const& msg) {
 
           return CreatePaxMonMergedTripCapacityInfo(
               mc, to_fbs(sched, mc, trp_cap.trp_),
-              to_fbs(mc, get_service_info(sched, *trp_cap.full_con_,
-                                          trp_cap.con_info_)),
+              to_fbs(mc, get_service_info(sched, trp_cap.con_info_,
+                                          trp_cap.full_con_->clasz_)),
               to_fbs_capacity_data(mc, trp_cap.trip_lookup_capacity_),
               to_fbs_capacity_source(trp_cap.trip_lookup_source_),
               to_fbs_capacity_data(mc, trp_cap.formation_capacity_),

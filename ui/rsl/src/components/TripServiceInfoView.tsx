@@ -1,30 +1,43 @@
+import { ReactNode } from "react";
+import { Link } from "react-router-dom";
+
 import { TripServiceInfo } from "@/api/protocol/motis";
 
 import { formatDateTime } from "@/util/dateFormat";
 
+import { cn } from "@/lib/utils";
+
 interface TripServiceInfoViewProps {
   tsi: TripServiceInfo;
   format: "Short" | "ShortAll" | "Long";
+  link?: boolean;
+  className?: string | undefined;
 }
 
 function TripServiceInfoView({
   tsi,
   format,
-}: TripServiceInfoViewProps): JSX.Element {
+  link = false,
+  className = undefined,
+}: TripServiceInfoViewProps): ReactNode {
   const names = [
     ...new Set(tsi.service_infos.map((si) => `${si.category} ${si.train_nr}`)),
   ];
+
+  let content;
   if (format === "Short") {
-    return <span>{names[0] ?? tsi.trip.train_nr}</span>;
+    content = (
+      <span className={cn(className)}>{names[0] ?? tsi.trip.train_nr}</span>
+    );
   } else if (format === "ShortAll") {
-    return (
-      <span>
+    content = (
+      <span className={cn(className)}>
         {names.length > 0 ? names.join(", ") : `${tsi.trip.train_nr}`}
       </span>
     );
   } else {
-    return (
-      <div className="w-full">
+    content = (
+      <div className={cn("w-full", className)}>
         <div className="text-lg">
           {names.length > 0 ? names.join(", ") : `${tsi.trip.train_nr}`}
         </div>
@@ -41,6 +54,14 @@ function TripServiceInfoView({
       </div>
     );
   }
+
+  return link ? (
+    <Link to={`/trips/${encodeURIComponent(JSON.stringify(tsi.trip))}`}>
+      {content}
+    </Link>
+  ) : (
+    content
+  );
 }
 
 export default TripServiceInfoView;
