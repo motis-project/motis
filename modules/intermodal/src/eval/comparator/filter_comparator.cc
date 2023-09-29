@@ -48,31 +48,6 @@ struct improv_pair {
   int id_;
 };
 
-/*std::vector<improv_pair> normalize(const std::vector<improv_pair>& to_normalize) {
-  std::vector<improv_pair> normalized;
-  improv_pair norm{};
-  double max = -DBL_MAX;
-  double min = DBL_MAX;
-  for(auto const v : to_normalize) {
-    if(v.improvement_ > max) {
-      max = v.improvement_;
-    }
-    if(v.improvement_ < min) {
-      min = v.improvement_;
-    }
-  }
-  double denominator = max - min;
-  if(denominator == 0) {
-    denominator = 1;
-  }
-  for(auto const impr : to_normalize) {
-    double impr_norm = (impr.improvement_ - min) / denominator;
-    norm = {impr_norm, impr.id_};
-    normalized.emplace_back(norm);
-  }
-  return normalized;
-}*/
-
 double get_improvement(journey a, journey b, std::vector<int> weights) {
   // criteria 1 dep_time
   unixtime criteria1_a = a.stops_.at(0).departure_.timestamp_;
@@ -208,7 +183,9 @@ double improvement_check(int id, std::vector<msg_ptr> const& responses,
   std::vector<int> weights = {1, 1, 30};
   auto const l_r_impro = eval_improvement(refcons_without_filter, cons_with_filter, weights);
   auto const r_l_impro = eval_improvement(cons_with_filter, refcons_without_filter, weights);
-  return l_r_impro - r_l_impro;
+  double value = l_r_impro - r_l_impro;
+  double return_value = std::round(value * 10.0) / 10.0;
+  return return_value;
 }
 
 int filter_compare(int argc, char const** argv) {
@@ -302,8 +279,7 @@ int filter_compare(int argc, char const** argv) {
     }
   }
 
-  // normalize and print results
-  //std::vector<improv_pair> normalized_improv = normalize(all_improvements);
+  // print results
   std::cout << "\n" << std::endl;
   std::cout << "[---Results:---]" << std::endl;
   std::cout << "msg-count: " << msg_count << std::endl;
@@ -311,12 +287,9 @@ int filter_compare(int argc, char const** argv) {
   std::cout << "errors: " << errors << std::endl;
   std::cout << "Not normalized results: " << std::endl;
   for(auto const p : all_improvements) {
-    std::cout << "ID: " << p.id_ << "\t Improvement: " << p.improvement_ << std::endl;
+    std::cout << "ID: " << p.id_ << "\tResults without filter have an Improvement of: "
+              << p.improvement_  << " over results with filter" << std::endl;
   }
-  //std::cout << "Normalized results: " << std::endl;
-  //for(auto const pn : normalized_improv) {
-    //std::cout << "ID: " << pn.id_ << "\t Improvement: " << pn.improvement_ << std::endl;
-  //}
 
   return errors;
 }
