@@ -7,6 +7,8 @@ import {
 import { verifyContentType } from "@/api/protocol/checks";
 import { MotisSuccess, TripId } from "@/api/protocol/motis";
 import {
+  PaxMonBrokenTransfersRequest,
+  PaxMonBrokenTransfersResponse,
   PaxMonCapacityStatusRequest,
   PaxMonCapacityStatusResponse,
   PaxMonDebugGraphRequest,
@@ -28,8 +30,6 @@ import {
   PaxMonGetGroupsInTripResponse,
   PaxMonGetGroupsRequest,
   PaxMonGetGroupsResponse,
-  PaxMonGetInterchangesRequest,
-  PaxMonGetInterchangesResponse,
   PaxMonGetTripCapacityRequest,
   PaxMonGetTripCapacityResponse,
   PaxMonGetTripLoadInfosRequest,
@@ -43,6 +43,8 @@ import {
   PaxMonMetricsResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
+  PaxMonTransferDetailsRequest,
+  PaxMonTransferDetailsResponse,
 } from "@/api/protocol/motis/paxmon";
 
 import { sendRequest } from "@/api/request";
@@ -176,26 +178,6 @@ export async function sendPaxMonDestroyUniverseRequest(
   );
   verifyContentType(msg, "MotisSuccess");
   return msg.content as MotisSuccess;
-}
-
-export async function sendPaxMonGetInterchangesRequest(
-  content: PaxMonGetInterchangesRequest,
-): Promise<PaxMonGetInterchangesResponse> {
-  const msg = await sendRequest(
-    "/paxmon/get_interchanges",
-    "PaxMonGetInterchangesRequest",
-    content,
-  );
-  verifyContentType(msg, "PaxMonGetInterchangesResponse");
-  return msg.content as PaxMonGetInterchangesResponse;
-}
-
-export function usePaxMonGetInterchangesQuery(
-  content: PaxMonGetInterchangesRequest,
-): UseQueryResult<PaxMonGetInterchangesResponse> {
-  return useQuery(queryKeys.interchanges(content), () =>
-    sendPaxMonGetInterchangesRequest(content),
-  );
 }
 
 export async function sendPaxMonFilterTripsRequest(
@@ -364,6 +346,30 @@ export async function sendPaxMonMetricsRequest(
   return msg.content as PaxMonMetricsResponse;
 }
 
+export async function sendPaxMonBrokenTransfersRequest(
+  content: PaxMonBrokenTransfersRequest,
+): Promise<PaxMonBrokenTransfersResponse> {
+  const msg = await sendRequest(
+    "/paxmon/broken_transfers",
+    "PaxMonBrokenTransfersRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonBrokenTransfersResponse");
+  return msg.content as PaxMonBrokenTransfersResponse;
+}
+
+export async function sendPaxMonTransferDetailsRequest(
+  content: PaxMonTransferDetailsRequest,
+): Promise<PaxMonTransferDetailsResponse> {
+  const msg = await sendRequest(
+    "/paxmon/transfer_details",
+    "PaxMonTransferDetailsRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonTransferDetailsResponse");
+  return msg.content as PaxMonTransferDetailsResponse;
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -374,8 +380,6 @@ export const queryKeys = {
     [...queryKeys.trip(), "load", universe, { tripId }] as const,
   tripGroups: (req: PaxMonGetGroupsInTripRequest) =>
     [...queryKeys.trip(), "groups", req] as const,
-  interchanges: (req: PaxMonGetInterchangesRequest) =>
-    [...queryKeys.all, "interchanges", req] as const,
   filterTrips: (req: PaxMonFilterTripsRequest) =>
     [...queryKeys.all, "filter_trips", req] as const,
   filterGroups: (req: PaxMonFilterGroupsRequest) =>
@@ -398,4 +402,8 @@ export const queryKeys = {
     [...queryKeys.all, "detailed_capacity_status", req] as const,
   metrics: (req: PaxMonMetricsRequest) =>
     [...queryKeys.all, "metrics", req] as const,
+  brokenTransfers: (req: PaxMonBrokenTransfersRequest) =>
+    [...queryKeys.all, "broken_transfers", req] as const,
+  transferDetails: (req: PaxMonTransferDetailsRequest) =>
+    [...queryKeys.all, "transfer_details", req] as const,
 };

@@ -1,0 +1,19 @@
+include "base/Interval.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTransfersAtStationRequest {
+  universe: uint;
+
+  station: string; // station id
+
+  filter_interval: Interval;
+  ignore_past_transfers: bool;
+
+  include_meta_stations: bool;
+  include_group_infos: bool;
+  include_broken_transfers: bool;
+  include_disabled_group_routes: bool;
+
+  max_results: uint; // 0 = unlimited
+}

@@ -1,0 +1,13 @@
+include "paxmon/PaxMonDetailedTransferInfo.fbs";
+include "paxmon/PaxMonGroup.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTransferDetailsResponse {
+  info: PaxMonDetailedTransferInfo;
+
+  normal_routes: uint;
+  broken_routes: uint;
+
+  groups: [PaxMonGroup]; // if include_full_groups
+}
