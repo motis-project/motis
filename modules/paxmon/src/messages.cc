@@ -218,10 +218,13 @@ Offset<Vector<Offset<PaxMonBrokenTransferInfo>>> broken_transfer_info_to_fbs(
   }
 }
 
-Offset<PaxMonRerouteLogRoute> to_fbs(FlatBufferBuilder& fbb,
+Offset<PaxMonRerouteLogRoute> to_fbs(schedule const& sched,
+                                     FlatBufferBuilder& fbb,
                                      reroute_log_route_info const& ri) {
   return CreatePaxMonRerouteLogRoute(fbb, ri.route_, ri.previous_probability_,
-                                     ri.new_probability_);
+                                     ri.new_probability_,
+                                     fbs_localization_type(ri.localization_),
+                                     to_fbs(sched, fbb, ri.localization_));
 }
 
 Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
@@ -232,12 +235,11 @@ Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
       fbb, entry.system_time_, entry.reroute_time_,
       static_cast<PaxMonRerouteReason>(entry.reason_),
       broken_transfer_info_to_fbs(fbb, sched, entry.broken_transfer_),
-      to_fbs(fbb, entry.old_route_),
-      fbb.CreateVector(utl::to_vec(
-          pgc.log_entry_new_routes_.at(entry.index_),
-          [&](auto const& new_route) { return to_fbs(fbb, new_route); })),
-      fbs_localization_type(entry.localization_),
-      to_fbs(sched, fbb, entry.localization_));
+      to_fbs(sched, fbb, entry.old_route_),
+      fbb.CreateVector(utl::to_vec(pgc.log_entry_new_routes_.at(entry.index_),
+                                   [&](auto const& new_route) {
+                                     return to_fbs(sched, fbb, new_route);
+                                   })));
 }
 
 Offset<PaxMonGroup> to_fbs(schedule const& sched,

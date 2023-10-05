@@ -5,11 +5,13 @@
 #include <limits>
 #include <numeric>
 #include <optional>
+#include <set>
 #include <vector>
 
 #include "cista/reflection/comparable.h"
 
 #include "utl/enumerate.h"
+#include "utl/to_set.h"
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
@@ -32,41 +34,6 @@ namespace motis::paxforecast {
 
 namespace {
 
-struct print_log_route_info {
-  friend std::ostream& operator<<(std::ostream& out,
-                                  print_log_route_info const& p) {
-    auto const& ri = p.ri_;
-    out << "{r=" << ri.route_ << ", p=" << ri.previous_probability_ << "->"
-        << ri.new_probability_ << "}";
-    return out;
-  }
-  reroute_log_route_info const& ri_;
-};
-
-struct print_log_entry {
-  friend std::ostream& operator<<(std::ostream& out, print_log_entry const& p) {
-    auto const& e = p.entry_;
-    out << "{old_route=" << print_log_route_info{e.old_route_}
-        << ", reason=" << e.reason_;
-    auto const new_routes = p.pgc_.log_entry_new_routes_.at(e.index_);
-    out << ", new_routes=[";
-    for (auto const& nr : new_routes) {
-      out << " " << print_log_route_info{nr};
-    }
-    out << " ]";
-    if (e.broken_transfer_) {
-      auto const& t = e.broken_transfer_.value();
-      out << ", broken_transfer={"
-          << "leg=" << t.leg_index_ << "}";
-    }
-    out << "}";
-    return out;
-  }
-
-  reroute_log_entry const& entry_;
-  passenger_group_container const& pgc_;
-};
-
 struct reroute_node {
   CISTA_COMPARABLE()
   local_group_route_index route_{};
@@ -81,21 +48,139 @@ struct reroute_edge {
 
 }  // namespace
 
+// TODO(pablo): preparation time
+
+// TODO(pablo): simple check for now, can maybe be improved later
+bool can_switch(passenger_localization const& from,
+                passenger_localization const& to) {
+  return from.at_station_ == to.at_station_ && from.in_trip_ == to.in_trip_;
+}
+
+bool can_switch(reroute_log_localization const& from,
+                reroute_log_localization const& to) {
+  return from.station_id_ == to.station_id_ && from.in_trip_ == to.in_trip_ &&
+         from.trip_idx_ == to.trip_idx_;
+}
+
 fws_graph<reroute_node, reroute_edge> build_reroute_graph(
     passenger_group_container const& pgc, passenger_group_index const pgi) {
-  fws_graph<reroute_node, reroute_edge> graph;
-  dynamic_fws_multimap<std::uint32_t> leaves;
+  auto graph = fws_graph<reroute_node, reroute_edge>{};
+  auto leaves = dynamic_fws_multimap<std::uint32_t>{};
+  auto reverts = std::vector<reroute_log_entry const*>{};
+  auto const routes = pgc.routes(pgi);
+  auto has_reverts = false;
 
   graph.emplace_back_node(static_cast<local_group_route_index>(0), 1.F);
   leaves[0].emplace_back(0U);
 
+  auto const get_parent =
+      [&](std::uint32_t const node_idx) -> std::optional<std::uint32_t> {
+    for (auto const& e : graph.incoming_edges(node_idx)) {
+      return e.from_;
+    }
+    return {};
+  };
+
+  auto const process_reverts = [&]() {
+    if (reverts.empty()) {
+      return;
+    }
+
+    std::cout << "process_reverts: " << reverts.size() << " reverts"
+              << std::endl;
+
+    auto reactivated_routes = utl::to_set(
+        reverts, [](auto const& le) { return le->old_route_.route_; });
+    auto reverted_routes = std::set<local_group_route_index>{};
+    auto localizations =
+        std::vector<reroute_log_localization const*>(routes.size());
+
+    for (auto const* le : reverts) {
+      localizations[le->old_route_.route_] = &le->old_route_.localization_;
+      for (auto const& nr : pgc.log_entry_new_routes_.at(le->index_)) {
+        localizations[nr.route_] = &nr.localization_;
+        if (nr.previous_probability_ > nr.new_probability_) {
+          reverted_routes.insert(nr.route_);
+        }
+      }
+    }
+
+    std::cout << "  reactivated_routes:";
+    for (auto const r : reactivated_routes) {
+      std::cout << " " << r;
+    }
+    std::cout << "\n  reverted_routes:";
+    for (auto const r : reverted_routes) {
+      std::cout << " " << r;
+    }
+    std::cout << std::endl;
+
+    for (auto const reverted_route : reverted_routes) {
+      auto const leaf_localization = localizations.at(reverted_route);
+      utl::verify(leaf_localization != nullptr,
+                  "revert_forecast: leaf localization not found");
+
+      auto const old_leaves = utl::to_vec(leaves[reverted_route],
+                                          [&](auto const idx) { return idx; });
+      leaves[reverted_route].clear();
+
+      std::cout << "  reverting route " << reverted_route << ":\n";
+
+      for (auto const old_leaf : old_leaves) {
+        auto candidate = std::optional<std::uint32_t>{};  // node index
+
+        for (auto node_idx = get_parent(old_leaf); node_idx;
+             node_idx = get_parent(*node_idx)) {
+          auto const& node = graph.nodes_.at(*node_idx);
+          std::cout << "    parent node " << *node_idx << ", route "
+                    << node.route_ << "\n";
+          if (!reactivated_routes.contains(node.route_)) {
+            continue;
+          }
+          auto const candidate_localization = localizations.at(node.route_);
+          utl::verify(candidate_localization != nullptr,
+                      "revert_forecast: candidate localization not found");
+          if (can_switch(*leaf_localization, *candidate_localization)) {
+            candidate = *node_idx;
+            break;
+          }
+        }
+
+        if (candidate) {
+          auto const candidate_node = graph.nodes_.at(*candidate);
+          auto const new_node_idx = graph.nodes_.size();
+          auto const old_leaf_prob = graph.nodes_.at(old_leaf).probability_;
+          graph.emplace_back_node(candidate_node.route_, old_leaf_prob);
+          graph.push_back_edge(reroute_edge{old_leaf, new_node_idx});
+          leaves[candidate_node.route_].emplace_back(new_node_idx);
+          std::cout << "    candidate found: node " << *candidate << ", route "
+                    << candidate_node.route_ << ", probability "
+                    << candidate_node.probability_ << " -> new node "
+                    << new_node_idx << "\n";
+        } else {
+          leaves[reverted_route].emplace_back(old_leaf);
+          std::cout << "    no candidate found, keeping old leaf " << old_leaf
+                    << " for route " << reverted_route << "\n";
+        }
+      }
+    }
+
+    reverts.clear();
+    std::cout << "process_reverts done" << std::endl;
+  };
+
   for (auto const& le : pgc.reroute_log_entries(pgi)) {
     if (le.reason_ == reroute_reason_t::REVERT_FORECAST) {
-      std::cout << "build_reroute_graph: REVERT_FORECAST NOT YET SUPPORTED"
+      has_reverts = true;
+      std::cout << "revert_forecast: multiple reverts for group " << pgi
                 << std::endl;
-      graph.nodes_.clear();
-      return graph;
+      if (!reverts.empty() &&
+          reverts.front()->system_time_ != le.system_time_) {
+        process_reverts();
+      }
+      reverts.emplace_back(&le);
     } else {
+      process_reverts();
       auto const prev_nodes = utl::to_vec(leaves[le.old_route_.route_],
                                           [&](auto const idx) { return idx; });
       leaves[le.old_route_.route_].clear();
@@ -126,6 +211,18 @@ fws_graph<reroute_node, reroute_edge> build_reroute_graph(
           graph.push_back_edge(reroute_edge{prev_node_idx, new_node_idx});
           leaves[new_route.route_].emplace_back(new_node_idx);
         }
+      }
+    }
+  }
+  process_reverts();
+
+  if (has_reverts) {
+    std::cout << "graph for group " << pgi << " includes reverts:\n";
+    for (auto const& [node_idx, node] : utl::enumerate(graph.nodes_)) {
+      std::cout << "  node " << node_idx << ": route = " << node.route_
+                << ", probability = " << node.probability_ << "\n";
+      for (auto const& edge : graph.outgoing_edges(node_idx)) {
+        std::cout << "    edge " << edge.from_ << " -> " << edge.to_ << "\n";
       }
     }
   }
@@ -203,9 +300,7 @@ void revert_forecast(universe& uv, schedule const& sched,
       }
 
       auto const& node_loc = localizations.at(node.route_);
-      // simple check for now, can maybe be improved later
-      if (leaf_loc.at_station_ != node_loc.at_station_ ||
-          leaf_loc.in_trip_ != node_loc.in_trip_) {
+      if (!can_switch(leaf_loc, node_loc)) {
         std::cout << "revert_forecast: localization mismatch (group " << pgi
                   << ")" << std::endl;
         continue;
@@ -223,6 +318,7 @@ void revert_forecast(universe& uv, schedule const& sched,
     }
   }
 
+  auto problem = false;
   auto new_routes = std::vector<Offset<PaxMonGroupRoute>>{};
   for (auto reactivated_route_idx = static_cast<local_group_route_index>(0);
        reactivated_route_idx < routes.size(); ++reactivated_route_idx) {
@@ -233,6 +329,16 @@ void revert_forecast(universe& uv, schedule const& sched,
       auto const p_change = prob_changes[offset + route_idx];
       if (p_change == 0.F) {
         continue;
+      }
+      auto const& route = routes.at(route_idx);
+      auto const new_prob = route.probability_ + p_change;
+      std::cout << "    reactivated route = " << reactivated_route_idx
+                << ", reverted route = " << route_idx
+                << ", p_change = " << p_change << ", current probs: route "
+                << route_idx << " = " << route.probability_ << " => "
+                << new_prob << std::endl;
+      if (new_prob < -0.05F) {
+        problem = true;
       }
       new_routes.emplace_back(
           to_fbs(sched, fbb,
@@ -253,6 +359,65 @@ void revert_forecast(universe& uv, schedule const& sched,
                   sched, fbb, localizations.at(reactivated_route_idx))})));
     }
     new_routes.clear();
+  }
+
+  if (problem) {
+    std::cout << "revert_forecast: PROBLEM DETECTED! group " << pgi
+              << std::endl;
+
+    {
+      message_creator mc;
+      mc.create_and_finish(
+          MsgContent_PaxMonGetGroupsRequest,
+          CreatePaxMonGetGroupsRequest(
+              mc, uv.id_,
+              mc.CreateVector(std::vector<passenger_group_index>{pgi}),
+              mc.CreateVector(std::vector<Offset<PaxMonDataSource>>{}), true)
+              .Union(),
+          "/paxmon/get_groups");
+      auto const req = make_msg(mc);
+      auto const res = motis_call(req)->val();
+      std::cout << "group info:\n"
+                << res->to_json(json_format::CONTENT_ONLY_TYPES_IN_UNIONS)
+                << "\n\n"
+                << std::endl;
+
+      std::cout << "graph:\n";
+      for (auto const& [node_idx, node] : utl::enumerate(graph.nodes_)) {
+        std::cout << "  node " << node_idx << ": route = " << node.route_
+                  << ", probability = " << node.probability_ << "\n";
+        for (auto const& edge : graph.outgoing_edges(node_idx)) {
+          std::cout << "    edge " << edge.from_ << " -> " << edge.to_ << "\n";
+        }
+      }
+      std::cout << "\nparents:\n";
+      for (auto const& [node_idx, parent_idx] : utl::enumerate(parents)) {
+        std::cout << "  node " << node_idx << ": parent = " << parent_idx
+                  << "\n";
+      }
+      std::cout << "\nleaves:";
+      for (auto const& leaf_idx : leaves) {
+        std::cout << " " << leaf_idx;
+      }
+      std::cout << "\n" << std::endl;
+
+      std::cout << "probability changes:\n";
+      for (auto reactivated_route_idx = static_cast<local_group_route_index>(0);
+           reactivated_route_idx < routes.size(); ++reactivated_route_idx) {
+        auto const offset = reactivated_route_idx * routes.size();
+
+        for (auto route_idx = static_cast<local_group_route_index>(0);
+             route_idx < routes.size(); ++route_idx) {
+          auto const p_change = prob_changes[offset + route_idx];
+          if (p_change == 0.F) {
+            continue;
+          }
+          std::cout << "  route " << route_idx << " -> "
+                    << reactivated_route_idx << ": " << p_change << "\n";
+        }
+      }
+      std::cout << std::endl;
+    }
   }
 }
 

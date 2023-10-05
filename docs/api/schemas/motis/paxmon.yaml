@@ -109,6 +109,8 @@ PaxMonRerouteLogRoute:
       description: Probability before the reroute
     new_probability:
       description: Probability after the reroute
+    localization:
+      description: TODO
 PaxMonRerouteLogEntry:
   description: Information about a reroute event
   fields:
@@ -128,11 +130,6 @@ PaxMonRerouteLogEntry:
       description: Index and probabilities of the old route
     new_routes:
       description: Indices and probabilities of the new routes
-    localization:
-      description: |
-        Location of the passenger group at the system time of the reroute.
-
-        Alternative routes are searched from this location.
 PaxMonDataSource:
   description: |
     Passenger group ID based on the input data.

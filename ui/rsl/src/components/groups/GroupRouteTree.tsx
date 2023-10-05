@@ -12,6 +12,7 @@ import { ReactNode, useMemo } from "react";
 
 import {
   PaxMonGroup,
+  PaxMonLocalizationWrapper,
   PaxMonRerouteLogEntry,
   PaxMonRerouteReason,
 } from "@/api/protocol/motis/paxmon";
@@ -19,6 +20,7 @@ import {
 import { formatPercent } from "@/data/numberFormat";
 
 import { saveAsSVG } from "@/util/download";
+import { canSwitchLocalization } from "@/util/paxLocalization";
 
 import { Button } from "@/components/ui/button";
 
@@ -117,12 +119,19 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
     const reactivatedRoutes = reverts.map((lev) => lev.le.old_route.index);
     const revertedRoutes = new Set<number>();
     const reactivatedRouteLogEntry = new Map<
-      number,
+      number /* route index */,
       PaxMonRerouteLogEntryWithVersion
     >();
+    const localizations = new Map<
+      number /* route index */,
+      PaxMonLocalizationWrapper
+    >();
+
     for (const lev of reverts) {
       reactivatedRouteLogEntry.set(lev.le.old_route.index, lev);
+      localizations.set(lev.le.old_route.index, lev.le.old_route);
       for (const nr of lev.le.new_routes) {
+        localizations.set(nr.index, nr);
         if (nr.previous_probability > nr.new_probability) {
           revertedRoutes.add(nr.index);
         }
@@ -130,6 +139,12 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
     }
 
     for (const revertedRoute of revertedRoutes) {
+      const leafLocalization = localizations.get(revertedRoute);
+      if (!leafLocalization) {
+        throw new Error(
+          `leaf localization not found for route ${revertedRoute}`,
+        );
+      }
       const oldLeaves = leaves[revertedRoute];
       leaves[revertedRoute] = [];
       for (const oldLeaf of oldLeaves) {
@@ -141,8 +156,18 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
           node = parents.get(node)
         ) {
           if (reactivatedRoutes.includes(node.route)) {
-            candidate = node;
-            break;
+            const candidateLocalization = localizations.get(node.route);
+            if (!candidateLocalization) {
+              throw new Error(
+                `candidate localization not found for route ${candidateLocalization}`,
+              );
+            }
+            if (
+              canSwitchLocalization(leafLocalization, candidateLocalization)
+            ) {
+              candidate = node;
+              break;
+            }
           }
         }
         if (candidate) {
@@ -154,13 +179,14 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
           const newNode: TreeNode = {
             color: NodeColors.Active,
             pickProbability: 1,
-            probability: candidate.probability,
+            probability: oldLeaf.probability,
             route: candidate.route,
             version: lev.version + 1,
           };
           oldLeaf.children ||= [];
           oldLeaf.children.push(newNode);
           leaves[newNode.route].push(newNode);
+          parents.set(newNode, oldLeaf);
         } else {
           leaves[revertedRoute].push(oldLeaf);
         }
@@ -172,6 +198,9 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
 
   for (const [version, le] of group.reroute_log.entries()) {
     if (le.reason === "RevertForecast") {
+      if (reverts.length > 0 && reverts[0].le.system_time !== le.system_time) {
+        processReverts();
+      }
       reverts.push({ le, version });
     } else {
       processReverts();
@@ -308,9 +337,9 @@ function getInitialTransform(
   const scaledHeight = totalHeight * scale;
   const translateY = scaledHeight >= height ? 0 : (height - scaledHeight) / 2;
 
-  console.log(
-    `getInitialTransform: width=${width}, totalWidth=${totalWidth}, minX=${minX}, maxX=${maxX}, scale=${scale}, translateX=${translateX}`,
-  );
+  // console.log(
+  //   `getInitialTransform: width=${width}, totalWidth=${totalWidth}, minX=${minX}, maxX=${maxX}, scale=${scale}, translateX=${translateX}`,
+  // );
 
   return {
     scaleX: scale,

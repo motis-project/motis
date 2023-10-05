@@ -23,6 +23,7 @@ import {
   PaxMonGroupRoute,
   PaxMonInTrip,
   PaxMonRerouteLogEntry,
+  PaxMonRerouteLogRoute,
   PaxMonRerouteReason,
   PaxMonTransferInfo,
 } from "@/api/protocol/motis/paxmon";
@@ -362,7 +363,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): ReactNode {
             {formatDateTime(log.system_time)}
           </span>
         </div>
-        <RerouteLogEntryLocalization log={log} />
+        <RerouteLogEntryLocalization logRoute={log.old_route} />
         {show_reroutes ? (
           <>
             <div>
@@ -428,15 +429,15 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): ReactNode {
 }
 
 interface RerouteLogEntryLocalizationProps {
-  log: PaxMonRerouteLogEntry;
+  logRoute: PaxMonRerouteLogRoute;
 }
 
 function RerouteLogEntryLocalization({
-  log,
-}: RerouteLogEntryLocalizationProps): JSX.Element {
-  switch (log.localization_type) {
+  logRoute,
+}: RerouteLogEntryLocalizationProps): ReactNode {
+  switch (logRoute.localization_type) {
     case "PaxMonAtStation": {
-      const loc = log.localization as PaxMonAtStation;
+      const loc = logRoute.localization as PaxMonAtStation;
       return (
         <div>
           Reisende an Station {loc.station.name} um{" "}
@@ -446,7 +447,7 @@ function RerouteLogEntryLocalization({
       );
     }
     case "PaxMonInTrip": {
-      const loc = log.localization as PaxMonInTrip;
+      const loc = logRoute.localization as PaxMonInTrip;
       return (
         <div>
           Reisende in Zug {loc.trip.train_nr}, nächster Halt:{" "}
@@ -541,6 +542,7 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
               R #{r.index}
             </td>
           ))}
+          <td className="pr-4 text-center">Summe</td>
         </tr>
       </thead>
       <tbody>
@@ -569,6 +571,9 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
                 {formatPercent(p)}
               </td>
             ))}
+            <td className="pr-4 text-center">
+              {formatPercent(row.reduce((acc, p) => acc + p, 0))}
+            </td>
           </tr>
         ))}
       </tbody>

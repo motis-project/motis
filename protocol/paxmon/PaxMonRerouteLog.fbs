@@ -8,6 +8,7 @@ table PaxMonRerouteLogRoute {
   index: ushort;
   previous_probability: float;
   new_probability: float;
+  localization: PaxMonLocalization;
 }
 
 table PaxMonRerouteLogEntry {
@@ -17,5 +18,4 @@ table PaxMonRerouteLogEntry {
   broken_transfer: [PaxMonBrokenTransferInfo]; // optional (0 or 1)
   old_route: PaxMonRerouteLogRoute;
   new_routes: [PaxMonRerouteLogRoute];
-  localization: PaxMonLocalization;
 }

@@ -73,12 +73,11 @@ void log_destination_reachable(
     log_entries.emplace_back(reroute_log_entry{
         static_cast<reroute_log_entry_index>(log_new_routes.index()),
         reroute_log_route_info{pgwrap.pgwr_.route_, pgwrap.probability_,
-                               pgwrap.probability_},
+                               pgwrap.probability_, to_log_localization(loc)},
         sched.system_time_,
         now(),
         reroute_reason_t::DESTINATION_REACHABLE,
-        {},
-        to_log_localization(loc)});
+        {}});
   }
 }
 

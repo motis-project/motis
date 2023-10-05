@@ -23,12 +23,6 @@ enum class reroute_reason_t : std::uint8_t {
   DESTINATION_REACHABLE
 };
 
-struct reroute_log_route_info {
-  local_group_route_index route_{};
-  float previous_probability_{};
-  float new_probability_{};
-};
-
 struct reroute_log_localization {
   trip_idx_t trip_idx_{};
   std::uint32_t station_id_{};
@@ -38,6 +32,13 @@ struct reroute_log_localization {
   bool in_trip_{};
 };
 
+struct reroute_log_route_info {
+  local_group_route_index route_{};
+  float previous_probability_{};
+  float new_probability_{};
+  reroute_log_localization localization_{};
+};
+
 struct reroute_log_entry {
   reroute_log_entry_index index_{};  // for new routes lookup
   reroute_log_route_info old_route_{};
@@ -45,7 +46,6 @@ struct reroute_log_entry {
   motis::unixtime reroute_time_{};  // current time
   reroute_reason_t reason_{reroute_reason_t::MANUAL};
   std::optional<broken_transfer_info> broken_transfer_;
-  reroute_log_localization localization_{};
 };
 
 inline std::ostream& operator<<(std::ostream& out,

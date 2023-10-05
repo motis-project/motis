@@ -103,6 +103,8 @@ export interface PaxMonRerouteLogRoute {
   index: number;
   previous_probability: number;
   new_probability: number;
+  localization_type: PaxMonLocalizationType;
+  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonRerouteLog.fbs
@@ -113,8 +115,6 @@ export interface PaxMonRerouteLogEntry {
   broken_transfer: PaxMonBrokenTransferInfo[];
   old_route: PaxMonRerouteLogRoute;
   new_routes: PaxMonRerouteLogRoute[];
-  localization_type: PaxMonLocalizationType;
-  localization: PaxMonLocalization;
 }
 
 // paxmon/PaxMonGroup.fbs
