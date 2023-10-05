@@ -421,11 +421,8 @@ void revert_forecast(universe& uv, schedule const& sched,
   }
 }
 
-void revert_forecasts(
-    universe& uv, schedule const& sched, simulation_result const& sim_result,
-    std::vector<passenger_group_with_route> const& pgwrs,
-    mcd::hash_map<passenger_group_with_route,
-                  passenger_localization const*> const& pgwr_localizations) {
+void revert_forecasts(universe& uv, schedule const& sched,
+                      std::vector<passenger_group_with_route> const& pgwrs) {
   auto const constexpr BATCH_SIZE = 5'000;
   // TODO(pablo): refactoring (update_tracked_groups)
   message_creator mc;

@@ -235,7 +235,8 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
     auto const new_prob_sum = std::accumulate(
         begin(new_pg_routes), end(new_pg_routes), 0.F,
         [](auto const sum, auto const& r) { return sum + r.probability_; });
-    if ((reason != reroute_reason_t::MAJOR_DELAY_EXPECTED) &&
+    if ((reason != reroute_reason_t::MAJOR_DELAY_EXPECTED ||
+         !new_routes.empty()) &&
         (new_prob_sum < 0.99F || new_prob_sum > 1.01F) &&
         (old_prob_sum >= 0.99F && old_prob_sum <= 1.01F)) {
       std::cout
@@ -248,7 +249,8 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
       std::cout << " ], reason=" << reason
                 << ", routes=" << new_pg_routes.size() << "/" << routes.size()
                 << " (previous: " << routes_backup.size()
-                << ", added: " << groups_added << ")" << std::endl;
+                << ", added: " << groups_added
+                << "), new_routes=" << new_routes.size() << std::endl;
     }
     // </debug>
 

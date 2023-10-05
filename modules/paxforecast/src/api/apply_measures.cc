@@ -287,7 +287,7 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
 
     manual_timer update_groups_timer{"update groups"};
     tick_statistics tick_stats;
-    update_tracked_groups(sched, uv, sim_result, {}, {}, pgwr_localizations,
+    update_tracked_groups(sched, uv, sim_result, {}, pgwr_localizations,
                           tick_stats, reroute_reason_t::SIMULATION);
     update_groups_timer.stop_and_print();
     t_update_groups += update_groups_timer.duration_ms();

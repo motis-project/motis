@@ -8,6 +8,8 @@
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 
+#include "motis/core/common/logging.h"
+
 #include "motis/core/debug/trip.h"
 
 #include "motis/paxmon/compact_journey_util.h"
@@ -23,22 +25,8 @@ namespace motis::paxforecast {
 
 auto const constexpr REROUTE_BATCH_SIZE = 5'000;
 
-inline reroute_reason_t to_reroute_reason(monitoring_event_type const met) {
-  switch (met) {
-    case monitoring_event_type::BROKEN_TRANSFER:
-      return reroute_reason_t::BROKEN_TRANSFER;
-    case monitoring_event_type::MAJOR_DELAY_EXPECTED:
-      return reroute_reason_t::MAJOR_DELAY_EXPECTED;
-    case monitoring_event_type::NO_PROBLEM:
-      return reroute_reason_t::UPDATE_FORECAST;
-  }
-  throw utl::fail("to_reroute_reason: unhandled monitoring_event_type");
-}
-
 void update_tracked_groups(
     schedule const& sched, universe& uv, simulation_result const& sim_result,
-    std::map<passenger_group_with_route, monitoring_event_type> const&
-        pgwr_event_types,
     std::map<passenger_group_with_route,
              std::optional<broken_transfer_info>> const& broken_transfer_infos,
     mcd::hash_map<passenger_group_with_route,
@@ -55,6 +43,8 @@ void update_tracked_groups(
     if (reroutes.empty()) {
       return;
     }
+    LOG(motis::logging::info)
+        << "update_tracked_groups: sending " << reroutes.size() << " reroutes";
     mc.create_and_finish(
         MsgContent_PaxMonRerouteGroupsRequest,
         CreatePaxMonRerouteGroupsRequest(mc, uv.id_, mc.CreateVector(reroutes))
@@ -67,18 +57,9 @@ void update_tracked_groups(
   };
 
   for (auto const& [pgwr, result] : sim_result.group_route_results_) {
+    auto& gr = uv.passenger_groups_.route(pgwr);
 
     auto reroute_reason = default_reroute_reason;
-    if (auto const it = pgwr_event_types.find(pgwr);
-        it != end(pgwr_event_types)) {
-      reroute_reason = to_reroute_reason(it->second);
-      if (reroute_reason == reroute_reason_t::UPDATE_FORECAST) {
-        std::cout << "update_tracked_groups: UPDATE_FORECAST NYI\n";
-        continue;
-      }
-    }
-
-    auto& gr = uv.passenger_groups_.route(pgwr);
 
     if (result.alternative_probabilities_.empty()) {
       // keep existing group (only reachable part)
@@ -105,6 +86,8 @@ void update_tracked_groups(
         new_journey =
             merge_journeys(sched, journey_prefix, alt->compact_journey_);
       } catch (std::runtime_error const& e) {
+        std::cout << "updated_tracked_groups: merge_journeys failed for group "
+                  << pgwr.pg_ << "." << pgwr.route_ << "\n";
         std::cout << "\noriginal planned journey:\n";
         print_compact_journey(sched, old_journey);
 

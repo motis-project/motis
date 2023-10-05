@@ -21,8 +21,6 @@ void update_tracked_groups(
     schedule const& sched, motis::paxmon::universe& uv,
     simulation_result const& sim_result,
     std::map<motis::paxmon::passenger_group_with_route,
-             motis::paxmon::monitoring_event_type> const& pgwr_event_types,
-    std::map<motis::paxmon::passenger_group_with_route,
              std::optional<motis::paxmon::broken_transfer_info>> const&
         broken_transfer_infos,
     mcd::hash_map<motis::paxmon::passenger_group_with_route,
