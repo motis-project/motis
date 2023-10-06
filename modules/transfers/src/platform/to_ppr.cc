@@ -9,7 +9,6 @@ pr::osm_namespace to_ppr_osm_type(osm_type const& type) {
     case osm_type::kNode: return pr::osm_namespace::NODE;
     case osm_type::kWay: return pr::osm_namespace::WAY;
     case osm_type::kRelation: return pr::osm_namespace::RELATION;
-    default: return pr::osm_namespace::NODE;
   }
 }
 

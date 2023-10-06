@@ -112,21 +112,15 @@ bool osm_platform_extractor::platform_handler::platform_is_bus_stop(
 
 strings osm_platform_extractor::platform_handler::get_platform_names(
     osmium::TagList const& tag_list) {
-  auto const default_value = string{"n/a"};
-
-  auto vector_names =
-      utl::all(osm_name_tag_keys_) |
-      utl::transform([&tag_list, &default_value](auto const& key) {
-        return string{tag_list.get_value_by_key(key.c_str(),
-                                                default_value.str().c_str())};
-      }) |
-      utl::unique() | utl::remove_if([&default_value](auto const& name) {
-        return name == default_value;
-      }) |
-      utl::vec();
-
   auto names = strings{};
-  for (auto const& name : vector_names) {
+
+  for (auto const& osm_name_tag_key : osm_name_tag_keys_) {
+    auto name = tag_list.get_value_by_key(osm_name_tag_key.c_str());
+
+    if (name == nullptr) {
+      continue;
+    }
+
     names.emplace_back(name);
   }
 

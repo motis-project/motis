@@ -9,7 +9,6 @@ char get_osm_type_as_char(osm_type const type) {
     case osm_type::kNode: return 'n';
     case osm_type::kWay: return 'w';
     case osm_type::kRelation: return 'r';
-    case osm_type::kUnknown: return 'u';
     default: return '_';
   }
 }

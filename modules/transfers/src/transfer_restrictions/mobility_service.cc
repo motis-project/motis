@@ -79,6 +79,7 @@ void update_timetable_with_mobility_service_availability(n::timetable& tt,
       utl::make_buf_reader(file_content, progress_tracker->update_fn())} |
       utl::csv<csv_ms_availability>() |
       utl::for_each([&](csv_ms_availability const& s) {
+        std::ignore = s;
         // TODO (CARSTEN) SET MS_AV_ENTRY TO TT (UPDATE TT FIRST)
       });
 }

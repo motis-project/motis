@@ -39,10 +39,6 @@ private:
   // Generates a rtree using the stored platforms in the index.
   void make_point_rtree();
 
-  // Returns a list of platforms within a radius around the given coordinate.
-  [[maybe_unused]] platforms get_platforms_in_radius(geo::latlng const&,
-                                                     double const) const;
-
   platforms platforms_;
   geo::point_rtree platform_index_;
 };

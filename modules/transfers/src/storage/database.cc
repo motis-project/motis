@@ -185,9 +185,9 @@ std::vector<size_t> database::put_matching_results(
     if (auto const r = txn.get(matchings_db, nloc_key); r.has_value()) {
       continue;  // nloc already matched in db
     }
-    if (auto const r = txn.get(platforms_db, osm_key); !r.has_value()) {
-      continue;  // osm platform not in platform_db
-    }
+
+    auto const r = txn.get(platforms_db, osm_key);
+    utl::verify(r.has_value(), "Matched OSM Platform not in DB (platform_db).");
 
     txn.put(matchings_db, nloc_key, osm_key);
     added_indices.emplace_back(idx);

@@ -9,9 +9,10 @@ namespace motis::transfers {
 platforms extract_platforms_from_osm_file(fs::path const& osm_file_path) {
   auto osm_extractor = osm_platform_extractor(osm_file_path);
 
-  for (auto const& [result, key_matcher, value_matcher] :
-       filter_rule_descriptions) {
-    osm_extractor.add_filter_rule(result, key_matcher, value_matcher);
+  for (auto const& filter_rule : filter_rule_descriptions) {
+    osm_extractor.add_filter_rule(filter_rule.include_,
+                                  filter_rule.key_matcher_,
+                                  filter_rule.value_matcher_);
   }
 
   for (auto const& key : platform_name_keys) {

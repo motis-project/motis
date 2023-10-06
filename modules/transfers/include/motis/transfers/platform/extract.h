@@ -9,7 +9,12 @@
 
 namespace motis::transfers {
 
-using filter_rule_description = std::tuple<bool, std::string, std::string>;
+struct filter_rule_description {
+  bool include_;
+  std::string key_matcher_;
+  std::string value_matcher_;
+};
+
 auto const filter_rule_descriptions = std::vector<filter_rule_description>{
     {true, "public_transport", "platform"},
     {true, "public_transport", "stop_position"},
