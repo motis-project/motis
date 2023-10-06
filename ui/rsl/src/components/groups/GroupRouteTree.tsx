@@ -149,7 +149,6 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
       leaves[revertedRoute] = [];
       for (const oldLeaf of oldLeaves) {
         let candidate: TreeNode | null = null;
-        // TODO: needs localization info
         for (
           let node = parents.get(oldLeaf);
           node !== undefined;
