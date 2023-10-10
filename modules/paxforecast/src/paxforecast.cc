@@ -63,9 +63,10 @@ void paxforecast::init(motis::module::registry& reg) {
     behavior_stats_file_.exceptions(std::ios_base::failbit |
                                     std::ios_base::badbit);
     behavior_stats_file_.open(behavior_stats_filename_);
-    behavior_stats_file_ << "system_time,group_route_count,cpg_count,"
-                         << "found_alt_count_avg,picked_alt_count_avg,"
-                         << "best_alt_prob_avg,second_alt_prob_avg\n";
+    behavior_stats_file_
+        << "system_time,event_type,group_route_count,cpg_count,"
+        << "found_alt_count_avg,picked_alt_count_avg,"
+        << "best_alt_prob_avg,second_alt_prob_avg\n";
   }
 
   if (!routing_cache_filename_.empty()) {

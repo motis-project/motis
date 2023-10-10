@@ -237,7 +237,7 @@ void revert_forecast(universe& uv, schedule const& sched,
                      FlatBufferBuilder& fbb,
                      std::vector<Offset<PaxMonRerouteGroup>>& reroutes,
                      passenger_group_index const pgi,
-                     std::vector<bool> const& unbroken_routes) {
+                     std::vector<bool>& unbroken_routes) {
   auto const& pgc = uv.passenger_groups_;
 
   auto const graph = build_reroute_graph(pgc, pgi);
@@ -262,6 +262,23 @@ void revert_forecast(universe& uv, schedule const& sched,
   auto const routes = pgc.routes(pgi);
   utl::verify(routes.size() == unbroken_routes.size(),
               "revert_forecast: invalid unbroken_routes size");
+
+  // remove routes that already have probability > 0
+  // TODO(pablo): support reverting major delay reroutes
+  auto unbroken_count = 0U;
+  for (auto i = 0U; i < routes.size(); ++i) {
+    if (unbroken_routes[i]) {
+      if (routes[i].probability_ != 0.F) {
+        unbroken_routes[i] = false;
+      } else {
+        ++unbroken_count;
+      }
+    }
+  }
+  if (unbroken_count == 0) {
+    return;
+  }
+
   auto const localizations = utl::to_vec(routes, [&](auto const& route) {
     if (route.broken_) {
       return passenger_localization{};
