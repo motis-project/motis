@@ -513,24 +513,25 @@ interface RerouteLogTableProps {
   group: PaxMonGroup;
 }
 
-function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
-  const probs = [group.routes.map((r) => r.probability)];
-  const diffs: number[][] = [];
+function RerouteLogTable({ group }: RerouteLogTableProps) {
+  const probs: number[][] = [group.routes.map((r) => (r.index === 0 ? 1 : 0))];
+  const diffs: number[][] = [group.routes.map(() => 0)];
 
-  for (let i = group.reroute_log.length - 1; i >= 0; --i) {
-    const le = group.reroute_log[i];
-    const new_probs = [...probs[0]];
+  for (const le of group.reroute_log) {
+    const new_probs = [...probs[probs.length - 1]];
     const diff = group.routes.map(() => 0);
-    new_probs[le.old_route.index] = le.old_route.previous_probability;
-    diff[le.old_route.index] = -le.old_route.previous_probability;
+
+    new_probs[le.old_route.index] = le.old_route.new_probability;
+    diff[le.old_route.index] =
+      le.old_route.new_probability - le.old_route.previous_probability;
     for (const nr of le.new_routes) {
-      new_probs[nr.index] = nr.previous_probability;
+      new_probs[nr.index] = nr.new_probability;
       diff[nr.index] = nr.new_probability - nr.previous_probability;
     }
-    probs.unshift(new_probs);
-    diffs.unshift(diff);
+
+    probs.push(new_probs);
+    diffs.push(diff);
   }
-  diffs.unshift(group.routes.map(() => 0));
 
   return (
     <table className="mt-2">
@@ -581,7 +582,7 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
   );
 }
 
-export function GroupDetailsFromRoute(): JSX.Element {
+export function GroupDetailsFromRoute() {
   const params = useParams();
   const groupId = Number.parseInt(params.groupId ?? "");
   if (!Number.isNaN(groupId)) {
