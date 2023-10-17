@@ -8,10 +8,12 @@
 #include <string_view>
 #include <tuple>
 #include <utility>
+#include <vector>
 
 #include "utl/erase_if.h"
 #include "utl/get_or_create.h"
 #include "utl/pipes.h"
+#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/core/access/realtime_access.h"
@@ -35,10 +37,21 @@
 namespace motis::paxmon {
 
 using namespace motis::rt;
+using namespace motis::logging;
+
+namespace {
+
+struct section_with_nodes {
+  motis::access::trip_section section_;
+  event_node_index dep_node_{};
+  event_node_index arr_node_{};
+};
+
+}  // namespace
 
 struct rule_trip_adder {
   using rule_node_key =
-      std::tuple<uint32_t /* station_idx */, time /* schedule_time */,
+      std::tuple<uint32_t /* station_idx */, motis::time /* schedule_time */,
                  uint32_t /* merged_trips_idx */>;
 
   rule_trip_adder(schedule const& sched, universe& uv)
@@ -61,18 +74,23 @@ struct rule_trip_adder {
     auto trip_edges = uv_.trip_data_.edges(tdi);
 
     auto prev_node = INVALID_EVENT_NODE_INDEX;
-    for (auto const& section : motis::access::sections(trp)) {
-      auto dep_node = get_or_create_dep_node(section);
-      auto arr_node = get_or_create_arr_node(section);
-      auto const ei = get_or_create_trip_edge(section, dep_node, arr_node);
-      trip_edges.emplace_back(ei);
-      if (prev_node != INVALID_EVENT_NODE_INDEX) {
-        get_or_create_wait_edge(section, prev_node, dep_node);
-      }
-      prev_node = arr_node;
+    auto const sections =
+        utl::to_vec(motis::access::sections{trp}, [&](auto const& section) {
+          auto dep_node = get_or_create_dep_node(section);
+          auto arr_node = get_or_create_arr_node(section);
+          auto const ei = get_or_create_trip_edge(section, dep_node, arr_node);
+          trip_edges.emplace_back(ei);
+          if (prev_node != INVALID_EVENT_NODE_INDEX) {
+            get_or_create_wait_edge(section, prev_node, dep_node);
+          }
+          prev_node = arr_node;
 
-      add_merged_services(section);
-      add_through_services(section, dep_node, arr_node);
+          return section_with_nodes{section, dep_node, arr_node};
+        });
+
+    for (auto const& sec : sections) {
+      add_merged_services(sec.section_);
+      add_through_services(sec.section_, sec.dep_node_, sec.arr_node_);
     }
 
     update_trip_capacity_status(sched_, uv_, trp, tdi);
@@ -474,7 +492,8 @@ void for_each_edge(schedule const& sched, universe& uv,
 
 event_node* find_event_node(universe& uv, trip_data_index const tdi,
                             std::uint32_t const station_idx,
-                            event_type const et, time const schedule_time) {
+                            event_type const et,
+                            motis::time const schedule_time) {
   for (auto& ei : uv.trip_data_.edges(tdi)) {
     auto* e = ei.get(uv);
     if (et == event_type::DEP) {
