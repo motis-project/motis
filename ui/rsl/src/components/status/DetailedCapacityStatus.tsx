@@ -50,13 +50,11 @@ function DetailedCapacityStatus({
     include_uics_not_found: false,
   };
 
-  const { data } = useQuery(
-    queryKeys.detailedCapacityStatus(request),
-    () => sendPaxMonDetailedCapacityStatusRequest(request),
-    {
-      enabled: selectedDate !== undefined,
-    },
-  );
+  const { data } = useQuery({
+    queryKey: queryKeys.detailedCapacityStatus(request),
+    queryFn: () => sendPaxMonDetailedCapacityStatusRequest(request),
+    enabled: selectedDate !== undefined,
+  });
 
   return (
     <div className="py-3">

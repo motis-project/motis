@@ -7,7 +7,7 @@ import {
 import { useAtom } from "jotai";
 import { useAtomCallback } from "jotai/utils";
 import { Unplug } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 import { PaxMonStatusResponse } from "@/api/protocol/motis/paxmon";
 
@@ -74,31 +74,34 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   );
   const {
     data: status,
-    isLoading,
+    isPending,
     error,
-  } = useQuery(
-    queryKeys.status(universe),
-    () => sendPaxMonStatusRequest({ universe }),
-    {
-      refetchInterval: 30 * 1000,
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-      onSuccess: (data) => {
-        updateMultiverseId(data.multiverse_id);
-      },
-    },
-  );
-
-  const forwardMutation = useMutation((forwardBy: number) => {
-    return forwardTimeByStepped(
-      queryClient,
-      schedule,
-      status?.system_time ?? 0,
-      forwardBy,
-    );
+  } = useQuery({
+    queryKey: queryKeys.status(universe),
+    queryFn: () => sendPaxMonStatusRequest({ universe }),
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   });
 
-  const forwardDisabled = forwardMutation.isLoading;
+  useEffect(() => {
+    if (status) {
+      updateMultiverseId(status.multiverse_id);
+    }
+  }, [status, updateMultiverseId]);
+
+  const forwardMutation = useMutation({
+    mutationFn: (forwardBy: number) => {
+      return forwardTimeByStepped(
+        queryClient,
+        schedule,
+        status?.system_time ?? 0,
+        forwardBy,
+      );
+    },
+  });
+
+  const forwardDisabled = forwardMutation.isPending;
 
   const buttonClass = `px-3 py-1 rounded text-sm ${
     !forwardDisabled
@@ -157,7 +160,7 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
           </HoverCard>
           {buttons}
         </>
-      ) : isLoading ? (
+      ) : isPending ? (
         <div>Verbindung zu MOTIS wird aufgebaut...</div>
       ) : (
         <div>

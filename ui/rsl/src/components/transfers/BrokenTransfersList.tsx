@@ -1,5 +1,5 @@
 import { ArrowPathIcon } from "@heroicons/react/20/solid";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import {
   ArrowDownToLine,
@@ -76,21 +76,20 @@ function BrokenTransfersList(): ReactElement {
     isStale,
     isPreviousData,
     */
-  } = useInfiniteQuery(
-    queryKeys.brokenTransfers(baseRequest),
-    ({ pageParam = 0 }) =>
+  } = useInfiniteQuery({
+    queryKey: queryKeys.brokenTransfers(baseRequest),
+    queryFn: ({ pageParam }) =>
       sendPaxMonBrokenTransfersRequest({
         ...baseRequest,
-        skip_first: pageParam as number,
+        skip_first: pageParam,
       }),
-    {
-      getNextPageParam: (lastPage) =>
-        lastPage.remaining_transfers > 0 ? lastPage.next_skip : undefined,
-      refetchOnWindowFocus: true,
-      keepPreviousData: true,
-      staleTime: 60000,
-    },
-  );
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.remaining_transfers > 0 ? lastPage.next_skip : undefined,
+    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
+    staleTime: 60000,
+  });
 
   const loadMore = useCallback(async () => {
     if (hasNextPage) {

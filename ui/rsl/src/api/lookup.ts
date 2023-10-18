@@ -16,7 +16,10 @@ export async function sendLookupScheduleInfoRequest(): Promise<LookupScheduleInf
 }
 
 export function useLookupScheduleInfoQuery(): UseQueryResult<LookupScheduleInfoResponse> {
-  return useQuery(queryKeys.scheduleInfo(), sendLookupScheduleInfoRequest);
+  return useQuery({
+    queryKey: queryKeys.scheduleInfo(),
+    queryFn: sendLookupScheduleInfoRequest,
+  });
 }
 
 export async function sendLookupRiBasisRequest(
@@ -34,9 +37,10 @@ export async function sendLookupRiBasisRequest(
 export function useLookupRiBasisQuery(
   content: LookupRiBasisRequest,
 ): UseQueryResult<LookupRiBasisResponse> {
-  return useQuery(queryKeys.riBasis(content), () =>
-    sendLookupRiBasisRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.riBasis(content),
+    queryFn: () => sendLookupRiBasisRequest(content),
+  });
 }
 
 export const queryKeys = {

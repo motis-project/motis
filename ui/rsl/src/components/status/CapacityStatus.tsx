@@ -58,13 +58,11 @@ function CapacityStatus(): ReactElement {
     },
   };
 
-  const { data } = useQuery(
-    queryKeys.capacityStatus(request),
-    () => sendPaxMonCapacityStatusRequest(request),
-    {
-      enabled: selectedDate !== undefined,
-    },
-  );
+  const { data } = useQuery({
+    queryKey: queryKeys.capacityStatus(request),
+    queryFn: () => sendPaxMonCapacityStatusRequest(request),
+    enabled: selectedDate !== undefined,
+  });
 
   const scheduleRange = getScheduleRange(scheduleInfo);
   if (selectedDate === undefined && scheduleInfo) {

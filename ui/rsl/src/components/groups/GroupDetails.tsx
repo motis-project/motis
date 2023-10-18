@@ -51,7 +51,7 @@ interface GroupDetailsProps {
 
 function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const { data, isLoading, error } = usePaxMonGetGroupsRequest({
+  const { data, isPending, error } = usePaxMonGetGroupsRequest({
     universe,
     ids: [groupId],
     sources: [],
@@ -66,7 +66,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   }, [groupId, setMostRecentlySelectedGroup]);
 
   if (!data) {
-    if (isLoading) {
+    if (isPending) {
       return <div>Gruppeninformationen werden geladen...</div>;
     } else {
       return (

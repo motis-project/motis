@@ -29,8 +29,8 @@
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
-    "@tanstack/react-query": "^4.36.1",
-    "@tanstack/react-query-devtools": "^4.36.1",
+    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query-devtools": "^5.0.0",
     "@visx/axis": "^3.4.0",
     "@visx/clip-path": "^3.3.0",
     "@visx/event": "^3.3.0",
@@ -66,11 +66,12 @@
   "devDependencies": {
     "@limegrass/eslint-plugin-import-alias": "^1.1.0",
     "@tailwindcss/forms": "^0.5.6",
+    "@tanstack/eslint-plugin-query": "^5.0.0",
     "@trivago/prettier-plugin-sort-imports": "^4.2.0",
     "@types/d3-array": "^3.0.9",
     "@types/d3-force": "^3.0.7",
     "@types/lodash-es": "^4.17.10",
-    "@types/node": "^20.8.6",
+    "@types/node": "^20.8.7",
     "@types/react": "^18.2.28",
     "@types/react-dom": "^18.2.13",
     "@types/uuid": "^9.0.5",
@@ -86,6 +87,6 @@
     "prettier": "^3.0.3",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.2.2",
-    "vite": "^4.4.11"
+    "vite": "^4.5.0"
   }
 }

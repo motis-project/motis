@@ -92,11 +92,11 @@ function RtUpdateMeasureEditor({
     if (tsi) {
       const schedule = getSchedule();
       const lookupReq = { trip_id: tsi.trip, schedule };
-      const data = await queryClient.fetchQuery(
-        lookupQueryKeys.riBasis(lookupReq),
-        () => sendLookupRiBasisRequest(lookupReq),
-        { staleTime: 1000 },
-      );
+      const data = await queryClient.fetchQuery({
+        queryKey: lookupQueryKeys.riBasis(lookupReq),
+        queryFn: () => sendLookupRiBasisRequest(lookupReq),
+        staleTime: 1000,
+      });
       console.log(`received ri basis: ${data.trips.length} trips`);
       const requestedTripId = JSON.stringify(tsi.trip);
       const tripData = data.trips.filter(

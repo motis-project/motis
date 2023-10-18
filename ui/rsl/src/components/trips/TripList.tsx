@@ -4,7 +4,7 @@ import {
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -121,8 +121,8 @@ function TripList(): JSX.Element {
     isStale,
     isPreviousData,
     */
-  } = useInfiniteQuery(
-    [
+  } = useInfiniteQuery({
+    queryKey: [
       "tripList",
       {
         universe,
@@ -132,26 +132,25 @@ function TripList(): JSX.Element {
         serviceClassFilter,
       },
     ],
-    ({ pageParam = 0 }) => {
+    queryFn: ({ pageParam }) => {
       const req = getFilterTripsRequest(
         universe,
         selectedSort.option,
         selectedDate,
         filterTrainNrs,
-        pageParam as number,
+        pageParam,
         serviceClassFilter,
       );
       return sendPaxMonFilterTripsRequest(req);
     },
-    {
-      getNextPageParam: (lastPage) =>
-        lastPage.remaining_trips > 0 ? lastPage.next_skip : undefined,
-      refetchOnWindowFocus: false,
-      keepPreviousData: true,
-      staleTime: 60000,
-      enabled: selectedDate !== undefined,
-    },
-  );
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.remaining_trips > 0 ? lastPage.next_skip : undefined,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+    staleTime: 60000,
+    enabled: selectedDate !== undefined,
+  });
 
   const loadMore = useCallback(() => {
     if (hasNextPage) {

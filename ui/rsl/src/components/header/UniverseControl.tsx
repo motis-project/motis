@@ -2,7 +2,7 @@ import { ArrowDownIcon } from "@heroicons/react/20/solid";
 import { useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useAtomCallback } from "jotai/utils";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 import {
   PaxMonGetUniversesResponse,
@@ -26,7 +26,7 @@ import {
   universesAtom,
 } from "@/data/multiverse";
 
-function UniverseControl(): JSX.Element {
+function UniverseControl() {
   const [universe, setUniverse] = useAtom(universeAtom);
   const [schedule, setSchedule] = useAtom(scheduleAtom);
   const [multiverseId] = useAtom(multiverseIdAtom);
@@ -61,56 +61,56 @@ function UniverseControl(): JSX.Element {
       }
     }, []),
   );
-  useQuery(
-    queryKeys.keepAlive(keepAliveRequest),
-    () => sendPaxMonKeepAliveRequest(keepAliveRequest),
-    {
-      refetchInterval: 30 * 1000,
-      refetchOnWindowFocus: true,
-      refetchIntervalInBackground: true,
-      notifyOnChangeProps: [],
-      onSuccess: keepAliveHandler,
-    },
-  );
+  const { data: keepAliveData } = useQuery({
+    queryKey: queryKeys.keepAlive(keepAliveRequest),
+    queryFn: () => sendPaxMonKeepAliveRequest(keepAliveRequest),
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: true,
+    notifyOnChangeProps: [],
+  });
 
-  const forkMutation = useMutation(
-    (baseUniverse: number) =>
+  useEffect(() => {
+    if (keepAliveData) {
+      keepAliveHandler(keepAliveData);
+    }
+  }, [keepAliveData, keepAliveHandler]);
+
+  const forkMutation = useMutation({
+    mutationFn: (baseUniverse: number) =>
       sendPaxMonForkUniverseRequest({
         universe: baseUniverse,
         fork_schedule: true,
         ttl: 120,
       }),
-    {
-      onSuccess: (data) => {
-        const newUv: UniverseInfo = {
-          id: data.universe,
-          schedule: data.schedule,
-          ttl: data.ttl,
-        };
-        setUniverses([
-          ...universes.filter((uv) => uv.id !== data.universe),
-          newUv,
-        ]);
-        switchTo(newUv);
-      },
+    onSuccess: (data) => {
+      const newUv: UniverseInfo = {
+        id: data.universe,
+        schedule: data.schedule,
+        ttl: data.ttl,
+      };
+      setUniverses([
+        ...universes.filter((uv) => uv.id !== data.universe),
+        newUv,
+      ]);
+      switchTo(newUv);
     },
-  );
+  });
 
-  const destroyMutation = useMutation(
-    (uv: number) => sendPaxMonDestroyUniverseRequest({ universe: uv }),
-    {
-      onSettled: (data, error, variables) => {
-        if (error) {
-          console.log(
-            `error while trying to destroy universe ${variables}:`,
-            error,
-          );
-        }
-        setUniverses(universes.filter((u) => u.id != variables));
-        switchTo(universes[0]);
-      },
+  const destroyMutation = useMutation({
+    mutationFn: (uv: number) =>
+      sendPaxMonDestroyUniverseRequest({ universe: uv }),
+    onSettled: (data, error, variables) => {
+      if (error) {
+        console.log(
+          `error while trying to destroy universe ${variables}:`,
+          error,
+        );
+      }
+      setUniverses(universes.filter((u) => u.id != variables));
+      switchTo(universes[0]);
     },
-  );
+  });
 
   const requestFromServerHandler = useAtomCallback(
     useCallback((get, set, data: PaxMonGetUniversesResponse) => {
@@ -131,7 +131,8 @@ function UniverseControl(): JSX.Element {
     }, []),
   );
 
-  const requestFromServerMutation = useMutation(sendPaxMonGetUniversesRequest, {
+  const requestFromServerMutation = useMutation({
+    mutationFn: sendPaxMonGetUniversesRequest,
     onSettled: (data, error) => {
       if (error) {
         console.log(

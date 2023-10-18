@@ -117,18 +117,17 @@ function TripLoadForecastChart({
   const { data: status } = usePaxMonStatusQuery(universe);
 
   const queryClient = useQueryClient();
-  const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(universe, tripId),
-    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
-    {
-      enabled: !!status,
-      placeholderData: () => {
-        return universe != 0
-          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
-          : undefined;
-      },
+  const { data /*, isLoading, error*/ } = useQuery({
+    queryKey: queryKeys.tripLoad(universe, tripId),
+    queryFn: () =>
+      sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
+    enabled: !!status,
+    placeholderData: () => {
+      return universe != 0
+        ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
+        : undefined;
     },
-  );
+  });
 
   const svgEl = useRef<SVGSVGElement>(null);
 

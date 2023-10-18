@@ -49,17 +49,19 @@ function CombinedGroup({
 
   const [schedule] = useAtom(scheduleAtom);
 
-  const { data, isLoading, error } = useQuery(
-    [
+  const { data, isPending, error } = useQuery({
+    queryKey: [
       "alternatives",
       {
         from: startStation.id,
         to: destinationStation?.id,
         earliestDeparture: earliestDeparture,
         intervalDuration: SEARCH_INTERVAL,
+        destination: destinationStation.id,
+        schedule,
       },
     ],
-    () =>
+    queryFn: () =>
       sendRoutingRequest({
         start_type: "PretripStart",
         start: {
@@ -82,8 +84,8 @@ function CombinedGroup({
         use_start_footpaths: true,
         schedule,
       }),
-    { enabled: findAlternatives },
-  );
+    enabled: findAlternatives,
+  });
 
   const plannedTripId = JSON.stringify(plannedTrip);
   const containsCurrentTrip = (j: Journey) =>
@@ -163,7 +165,7 @@ function CombinedGroup({
         ))}
       </ul>
     </div>
-  ) : isLoading ? (
+  ) : isPending ? (
     <div>Suche nach Alternativverbindungen...</div>
   ) : (
     <div>

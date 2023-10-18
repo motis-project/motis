@@ -262,8 +262,8 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const setSimResults = useSetAtom(simResultsAtom);
   const setSelectedSimResult = useSetAtom(selectedSimResultAtom);
 
-  const applyMeasuresMutation = useMutation(
-    (measures: MeasureWrapper[]) =>
+  const applyMeasuresMutation = useMutation({
+    mutationFn: (measures: MeasureWrapper[]) =>
       sendPaxForecastApplyMeasuresRequest({
         universe,
         measures,
@@ -273,31 +273,31 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         include_after_trip_load_info: true,
         include_trips_with_unchanged_load: false,
       }),
-    {
-      onMutate: () => {
-        return { startedAt: new Date() };
-      },
-      onSuccess: async (data, variables, context) => {
-        console.log("measures applied");
-        const result: SimulationResult = {
-          universe,
-          startedAt: context?.startedAt ?? new Date(),
-          finishedAt: new Date(),
-          measures: variables,
-          response: data,
-        };
-        const resultAtom = atom(result);
-        setSimResults((prev) => {
-          return [...prev, resultAtom];
-        });
-        setSelectedSimResult(resultAtom);
-        await queryClient.invalidateQueries(queryKeys.all);
-        await queryClient.invalidateQueries(["tripList"]);
-        onSimulationFinished();
-      },
-      retry: false,
+    onMutate: () => {
+      return { startedAt: new Date() };
     },
-  );
+    onSuccess: async (data, variables, context) => {
+      console.log("measures applied");
+      const result: SimulationResult = {
+        universe,
+        startedAt: context?.startedAt ?? new Date(),
+        finishedAt: new Date(),
+        measures: variables,
+        response: data,
+      };
+      const resultAtom = atom(result);
+      setSimResults((prev) => {
+        return [...prev, resultAtom];
+      });
+      setSelectedSimResult(resultAtom);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.all });
+      await queryClient.invalidateQueries({
+        queryKey: ["tripList"],
+      });
+      onSimulationFinished();
+    },
+    retry: false,
+  });
 
   const applyMeasures = useAtomCallback(
     useCallback(
@@ -342,13 +342,13 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const applyEnabled =
     universe != 0 &&
     measureAtoms.length > 0 &&
-    !applyMeasuresMutation.isLoading;
+    !applyMeasuresMutation.isPending;
 
   return (
     <div
       className={cn(
         "flex flex-col gap-2 h-full overflow-hidden",
-        applyMeasuresMutation.isLoading && "cursor-wait",
+        applyMeasuresMutation.isPending && "cursor-wait",
       )}
     >
       <div className="flex justify-between">
@@ -402,7 +402,7 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
           onClick={applyMeasures}
           disabled={!applyEnabled}
           className={`w-full p-3 rounded ${
-            applyMeasuresMutation.isLoading
+            applyMeasuresMutation.isPending
               ? "bg-db-red-300 text-db-red-100 cursor-wait"
               : applyEnabled
               ? "bg-db-red-500 hover:bg-db-red-600 text-white"

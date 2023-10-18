@@ -34,13 +34,13 @@ interface CapacityInfoProps {
 
 function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const { data, isLoading, error } = usePaxMonGetTripCapacity({
+  const { data, isPending, error } = usePaxMonGetTripCapacity({
     universe,
     trips: [tripId],
   });
 
   if (!data) {
-    if (isLoading) {
+    if (isPending) {
       return <div>Kapazitätsinformationen werden geladen...</div>;
     } else {
       return (

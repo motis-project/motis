@@ -49,13 +49,13 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
     include_full_groups: true,
     include_reroute_log: false,
   };
-  const { data, isLoading, error } = useQuery(
-    queryKeys.transferDetails(req),
-    () => sendPaxMonTransferDetailsRequest(req),
-  );
+  const { data, isPending, error } = useQuery({
+    queryKey: queryKeys.transferDetails(req),
+    queryFn: () => sendPaxMonTransferDetailsRequest(req),
+  });
 
   if (!data) {
-    if (isLoading) {
+    if (isPending) {
       return <div>Umstiegsinformationen werden geladen...</div>;
     } else {
       return (

@@ -53,9 +53,7 @@ function TripPicker({
 }: TripPickerProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
   const [trainNr, setTrainNr] = useState<number>();
-  const { data } = usePaxMonFindTripsQuery(universe, trainNr, {
-    keepPreviousData: true,
-  });
+  const { data } = usePaxMonFindTripsQuery(universe, trainNr, true);
   const tripList = longDistanceOnly
     ? filterTrips(data?.trips ?? [])
     : data?.trips ?? [];

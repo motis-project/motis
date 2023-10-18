@@ -20,17 +20,16 @@ export function TripTooltip({ tripId }: TripTooltipProps): JSX.Element | null {
   const [universe] = useAtom(universeAtom);
 
   const queryClient = useQueryClient();
-  const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(universe, tripId),
-    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
-    {
-      placeholderData: () => {
-        return universe != 0
-          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
-          : undefined;
-      },
+  const { data /*, isLoading, error*/ } = useQuery({
+    queryKey: queryKeys.tripLoad(universe, tripId),
+    queryFn: () =>
+      sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
+    placeholderData: () => {
+      return universe != 0
+        ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
+        : undefined;
     },
-  );
+  });
 
   if (!data || data.load_infos.length === 0) {
     return null;

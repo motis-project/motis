@@ -89,26 +89,22 @@ function RslStatus(): ReactElement {
   const [grouping, setGrouping] = useState<MetricsGrouping>("by_system_time");
 
   const paxmonRequest: PaxMonMetricsRequest = { universe: 0 };
-  const { data: paxmonData } = useQuery(
-    paxmonQueryKeys.metrics(paxmonRequest),
-    () => sendPaxMonMetricsRequest(paxmonRequest),
-    {
-      refetchInterval: 30 * 1000,
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-    },
-  );
+  const { data: paxmonData } = useQuery({
+    queryKey: paxmonQueryKeys.metrics(paxmonRequest),
+    queryFn: () => sendPaxMonMetricsRequest(paxmonRequest),
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
 
   const paxforecastRequest: PaxForecastMetricsRequest = { universe: 0 };
-  const { data: paxforecastData } = useQuery(
-    paxForecastQueryKeys.metrics(paxforecastRequest),
-    () => sendPaxForecastMetricsRequest(paxforecastRequest),
-    {
-      refetchInterval: 30 * 1000,
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-    },
-  );
+  const { data: paxforecastData } = useQuery({
+    queryKey: paxForecastQueryKeys.metrics(paxforecastRequest),
+    queryFn: () => sendPaxForecastMetricsRequest(paxforecastRequest),
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+  });
 
   const { data: risStatus } = useRISStatusRequest();
   const hideUntil = risStatus?.init_status?.last_update_time ?? 0;

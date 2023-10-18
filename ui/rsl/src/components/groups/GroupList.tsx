@@ -6,7 +6,7 @@ import {
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
 import { MapIcon, UsersIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { add, getUnixTime } from "date-fns";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
@@ -96,7 +96,6 @@ function getFilterGroupsRequest(
   toStationFilter: Station | undefined,
   filterTrainNrs: number[],
   selectedDate: Date | undefined | null,
-  filterByRerouteReason: boolean,
   rerouteReasonFilter: PaxMonRerouteReason[],
 ): PaxMonFilterGroupsRequest {
   return {
@@ -116,7 +115,7 @@ function getFilterGroupsRequest(
       begin: selectedDate ? getUnixTime(selectedDate) : 0,
       end: selectedDate ? getUnixTime(add(selectedDate, { days: 1 })) : 0,
     },
-    filter_by_reroute_reason: filterByRerouteReason ? rerouteReasonFilter : [],
+    filter_by_reroute_reason: rerouteReasonFilter,
   };
 }
 
@@ -139,6 +138,9 @@ function GroupList(): JSX.Element {
   >(rerouteReasonOptions.map((r) => r.reason));
 
   const filterTrainNrs = extractNumbers(trainNrFilter);
+  const rerouteReasonFilterIfUsed = filterByRerouteReason
+    ? rerouteReasonFilter
+    : [];
 
   const filterGroupIdsInput = extractNumbers(groupIdFilter);
   const idType: GroupIdType = externalGroupIds ? "source" : "internal";
@@ -168,8 +170,8 @@ function GroupList(): JSX.Element {
     isStale,
     isPreviousData,
     */
-  } = useInfiniteQuery(
-    [
+  } = useInfiniteQuery({
+    queryKey: [
       "groupList",
       {
         universe,
@@ -180,12 +182,12 @@ function GroupList(): JSX.Element {
         toStationFilter,
         filterTrainNrs,
         selectedDate,
-        rerouteReasonFilter: filterByRerouteReason ? rerouteReasonFilter : [],
+        rerouteReasonFilter: rerouteReasonFilterIfUsed,
       },
     ],
-    ({ pageParam = 0 }) => {
+    queryFn: ({ pageParam }) => {
       const req = getFilterGroupsRequest(
-        pageParam as number,
+        pageParam,
         universe,
         selectedSort.option,
         filterGroupIds,
@@ -194,20 +196,18 @@ function GroupList(): JSX.Element {
         toStationFilter,
         filterTrainNrs,
         selectedDate,
-        filterByRerouteReason,
-        rerouteReasonFilter,
+        rerouteReasonFilterIfUsed,
       );
       return sendPaxMonFilterGroupsRequest(req);
     },
-    {
-      getNextPageParam: (lastPage) =>
-        lastPage.remaining_groups > 0 ? lastPage.next_skip : undefined,
-      refetchOnWindowFocus: true,
-      keepPreviousData: true,
-      staleTime: 60000,
-      enabled: selectedDate !== undefined,
-    },
-  );
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.remaining_groups > 0 ? lastPage.next_skip : undefined,
+    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
+    staleTime: 60000,
+    enabled: selectedDate !== undefined,
+  });
 
   const loadMore = useCallback(async () => {
     if (hasNextPage) {
