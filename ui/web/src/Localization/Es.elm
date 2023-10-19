@@ -1,4 +1,4 @@
-module Localization.De exposing (esLocalization, esTranslations)
+module Localization.Es exposing (esLocalization, esTranslations)
 
 import Localization.Base exposing (..)
 import Util.DateFormat exposing (..)
