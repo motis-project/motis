@@ -727,6 +727,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
 
   MOTIS_START_TIMING(publish);
   for (auto& msg : messages) {
+    ++uv.update_number_;
     ctx::await_all(motis_publish(msg));
     msg.reset();
   }

@@ -93,7 +93,7 @@ inline log_entry_info append_or_extend_log_entry(
       static_cast<reroute_log_entry_index>(log_new_routes.index()),
       reroute_log_route_info{old_route_idx, old_route_probability, 0,
                              to_log_localization(loc)},
-      system_time, now(), reason, bti});
+      system_time, now(), uv.update_number_, reason, bti});
   return {log_entries.back(), log_new_routes, false};
 }
 

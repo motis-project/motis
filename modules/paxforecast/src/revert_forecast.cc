@@ -178,7 +178,7 @@ fws_graph<reroute_node, reroute_edge> build_reroute_graph(
       std::cout << "revert_forecast: multiple reverts for group " << pgi
                 << std::endl;
       if (!reverts.empty() &&
-          reverts.front()->system_time_ != le.system_time_) {
+          reverts.front()->update_number_ != le.update_number_) {
         process_reverts();
       }
       reverts.emplace_back(&le);

@@ -44,6 +44,7 @@ struct reroute_log_entry {
   reroute_log_route_info old_route_{};
   motis::unixtime system_time_{};  // schedule system timestamp
   motis::unixtime reroute_time_{};  // current time
+  std::uint32_t update_number_{};
   reroute_reason_t reason_{reroute_reason_t::MANUAL};
   std::optional<broken_transfer_info> broken_transfer_;
 };

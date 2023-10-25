@@ -359,6 +359,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): ReactNode {
           <span className="font-semibold">
             V{logIndex + 1}: {rerouteReasonText(log.reason)}
           </span>
+          <span>Update {log.update_number}</span>
           <span className="text-db-cool-gray-500">
             {formatDateTime(log.system_time)}
           </span>

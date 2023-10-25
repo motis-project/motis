@@ -232,7 +232,7 @@ Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
                                      passenger_group_container const& pgc,
                                      reroute_log_entry const& entry) {
   return CreatePaxMonRerouteLogEntry(
-      fbb, entry.system_time_, entry.reroute_time_,
+      fbb, entry.update_number_, entry.system_time_, entry.reroute_time_,
       static_cast<PaxMonRerouteReason>(entry.reason_),
       broken_transfer_info_to_fbs(fbb, sched, entry.broken_transfer_),
       to_fbs(sched, fbb, entry.old_route_),

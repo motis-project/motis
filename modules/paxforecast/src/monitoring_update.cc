@@ -87,6 +87,7 @@ void log_destination_reachable(
                                pgwrap.probability_, to_log_localization(loc)},
         sched.system_time_,
         now(),
+        uv.update_number_,
         reroute_reason_t::DESTINATION_REACHABLE,
         {}});
   }

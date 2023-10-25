@@ -23,7 +23,6 @@ struct passenger_group_with_route_and_probability {
 struct combined_passenger_group {
   unsigned destination_station_id_{};
   std::uint16_t passengers_{};
-  bool has_major_delay_groups_{false};
   motis::paxmon::passenger_localization localization_;
   std::vector<passenger_group_with_route_and_probability> group_routes_;
   std::vector<alternative> alternatives_;

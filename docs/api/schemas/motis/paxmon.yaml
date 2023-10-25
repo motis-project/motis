@@ -130,6 +130,12 @@ PaxMonRerouteLogEntry:
       description: Index and probabilities of the old route
     new_routes:
       description: Indices and probabilities of the new routes
+    update_number:
+      description: >
+        The update number at the time of the reroute. Updates are processed in
+        batches. Updates with the same update number are processed in the same
+        batch. Note that there may be multiple update numbers with the same
+        system time.
 PaxMonDataSource:
   description: |
     Passenger group ID based on the input data.

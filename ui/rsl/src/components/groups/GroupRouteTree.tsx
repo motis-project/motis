@@ -116,6 +116,9 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
   let reverts: PaxMonRerouteLogEntryWithVersion[] = [];
 
   const processReverts = () => {
+    if (reverts.length === 0) {
+      return;
+    }
     const reactivatedRoutes = reverts.map((lev) => lev.le.old_route.index);
     const revertedRoutes = new Set<number>();
     const reactivatedRouteLogEntry = new Map<
@@ -197,7 +200,10 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
 
   for (const [version, le] of group.reroute_log.entries()) {
     if (le.reason === "RevertForecast") {
-      if (reverts.length > 0 && reverts[0].le.system_time !== le.system_time) {
+      if (
+        reverts.length > 0 &&
+        reverts[0].le.update_number !== le.update_number
+      ) {
         processReverts();
       }
       reverts.push({ le, version });
@@ -205,7 +211,12 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
       processReverts();
       const oldRoute = le.old_route.index;
       const prevNodes = leaves[oldRoute];
-      console.assert(prevNodes.length !== 0, "old nodes not found: %o", le);
+      console.assert(
+        prevNodes.length !== 0,
+        "old nodes not found (version %i): %o",
+        version + 1,
+        le,
+      );
       leaves[oldRoute] = [];
 
       let totalOutgoingProbability = 0;

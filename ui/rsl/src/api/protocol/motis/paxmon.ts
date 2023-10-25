@@ -109,6 +109,7 @@ export interface PaxMonRerouteLogRoute {
 
 // paxmon/PaxMonRerouteLog.fbs
 export interface PaxMonRerouteLogEntry {
+  update_number: number;
   system_time: number;
   reroute_time: number;
   reason: PaxMonRerouteReason;
