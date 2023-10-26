@@ -144,7 +144,6 @@ fws_graph<reroute_node, reroute_edge> build_reroute_graph(
                       "revert_forecast: candidate localization not found");
           if (can_switch(*leaf_localization, *candidate_localization)) {
             candidate = *node_idx;
-            break;
           }
         }
 

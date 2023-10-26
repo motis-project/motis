@@ -168,7 +168,6 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
               canSwitchLocalization(leafLocalization, candidateLocalization)
             ) {
               candidate = node;
-              break;
             }
           }
         }
