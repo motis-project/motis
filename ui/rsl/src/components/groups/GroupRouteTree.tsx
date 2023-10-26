@@ -210,6 +210,9 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
       processReverts();
       const oldRoute = le.old_route.index;
       const prevNodes = leaves[oldRoute];
+      if (prevNodes.length === 0 && le.old_route.previous_probability == 0) {
+        continue;
+      }
       console.assert(
         prevNodes.length !== 0,
         "old nodes not found (version %i): %o",
