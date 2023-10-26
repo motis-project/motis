@@ -74,6 +74,10 @@
   url=git@github.com:motis-project/tiles.git
   branch=master
   commit=4a1352d5c6d3e1b777085877d1be18eed58667a2
+[transfers]
+  url=git@github.com:carstenhagelgans/transfers.git
+  branch=main
+  commit=63dcc7644bafe094e715192ebcc3106328c961d4
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -97,7 +101,7 @@
 [nigiri]
   url=git@github.com:carstenhagelgans/nigiri.git
   branch=profiles
-  commit=f214629719b4c0e99d6cabbe6b125d35d718b12b
+  commit=b237f4f115a1df2f072ec54100e6418328fb8ec8
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
