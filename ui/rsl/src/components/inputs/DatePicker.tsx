@@ -38,7 +38,7 @@ const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             console.log("Could not parse date input:", e.target.value, ex);
           }
         }}
-        className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+        className="block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700"
       />
     );
   },

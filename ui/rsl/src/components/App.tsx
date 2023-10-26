@@ -33,11 +33,11 @@ const queryClient = new QueryClient({
 function MainContent(): JSX.Element {
   const [showSimPanel] = useAtom(showSimPanelAtom);
   return (
-    <div className="flex justify-between items-stretch overflow-y-auto grow">
+    <div className="flex grow items-stretch justify-between overflow-y-auto">
       <Outlet />
       <div
         className={cn(
-          "bg-db-cool-gray-200 dark:bg-gray-800 overflow-y-auto p-2 w-[32rem] shrink-0",
+          "w-[32rem] shrink-0 overflow-y-auto bg-db-cool-gray-200 p-2 dark:bg-gray-800",
           showSimPanel ? "block" : "hidden",
         )}
       >
@@ -49,7 +49,7 @@ function MainContent(): JSX.Element {
 
 function Root(): JSX.Element {
   return (
-    <div className="w-full h-screen flex flex-col">
+    <div className="flex h-screen w-full flex-col">
       <Header />
       <MainContent />
     </div>

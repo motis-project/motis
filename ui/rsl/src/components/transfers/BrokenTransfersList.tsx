@@ -111,8 +111,8 @@ function BrokenTransfersList(): ReactElement {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex justify-between pb-2 gap-1">
+    <div className="flex h-full flex-col">
+      <div className="flex justify-between gap-1 pb-2">
         <div>
           <Label htmlFor="transfersDatePicker">Datum</Label>
           <DatePicker
@@ -123,7 +123,7 @@ function BrokenTransfersList(): ReactElement {
             max={scheduleRange.lastDay}
           />
         </div>
-        <div className="flex justify-end items-center gap-2 grow pt-6">
+        <div className="flex grow items-center justify-end gap-2 pt-6">
           <Switch
             id="onlyFutureTransfers"
             checked={onlyFutureTransfers}
@@ -135,7 +135,7 @@ function BrokenTransfersList(): ReactElement {
         </div>
       </div>
       {totalNumberOfBrokenTransfers !== undefined && (
-        <div className="flex justify-between items-center my-2">
+        <div className="my-2 flex items-center justify-between">
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfBrokenTransfers)}{" "}
             {totalNumberOfBrokenTransfers === 1
@@ -145,7 +145,7 @@ function BrokenTransfersList(): ReactElement {
           <div>
             {!isFetching && (
               <button onClick={() => refetch()}>
-                <ArrowPathIcon className="w-5 h-5" aria-hidden="true" />
+                <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -203,13 +203,13 @@ function TransferListEntry({ info, isSelected }: TransferListEntryProps) {
       : null;
 
   return (
-    <div className="pr-1 pb-3">
+    <div className="pb-3 pr-1">
       <Link
         to={`/transfers/${info.id.n}/${info.id.e}`}
         className={cn(
-          "block p-2 rounded",
+          "block rounded p-2",
           isSelected
-            ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
+            ? "bg-db-cool-gray-300 shadow-md dark:bg-gray-500 dark:text-gray-100"
             : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
@@ -217,18 +217,18 @@ function TransferListEntry({ info, isSelected }: TransferListEntryProps) {
           {differentStations ? (
             <>
               {arrival && <div>{arrival.station.name}</div>}
-              {differentStations && <ChevronRight className="w-4 h-4" />}
+              {differentStations && <ChevronRight className="h-4 w-4" />}
               {departure && <div>{departure.station.name}</div>}
             </>
           ) : (
             <div>{stopInfo.station.name}</div>
           )}
         </div>
-        <div className="grid grid-cols-12 items-center mt-2 mb-2">
+        <div className="mb-2 mt-2 grid grid-cols-12 items-center">
           {arrival && (
             <>
               <div>
-                {isBrokenArrival && <ArrowDownToLine className="w-4 h-4" />}
+                {isBrokenArrival && <ArrowDownToLine className="h-4 w-4" />}
               </div>
               <div className="col-span-7 flex flex-wrap gap-2">
                 {arrival.trips.map((tsi, idx) => (
@@ -260,9 +260,9 @@ function TransferListEntry({ info, isSelected }: TransferListEntryProps) {
           {departure && (
             <>
               <div>
-                {isBrokenTransfer && <CornerDownRight className="w-4 h-4" />}
+                {isBrokenTransfer && <CornerDownRight className="h-4 w-4" />}
                 {isBrokenDeparture && (
-                  <ArrowUpFromLine className="w-4 h-4 rotate-180" />
+                  <ArrowUpFromLine className="h-4 w-4 rotate-180" />
                 )}
               </div>
               <div className="col-span-7 flex flex-wrap gap-2">
@@ -295,7 +295,7 @@ function TransferListEntry({ info, isSelected }: TransferListEntryProps) {
         </div>
 
         {availableTransferTime !== null && (
-          <div className="text-right mb-2">
+          <div className="mb-2 text-right">
             Fehlende Umstiegszeit:{" "}
             {formatShortDuration(info.transfer_time - availableTransferTime)}
           </div>
@@ -307,20 +307,20 @@ function TransferListEntry({ info, isSelected }: TransferListEntryProps) {
             title="Betroffene Reisende"
           >
             <Users
-              className="w-5 h-5 text-db-cool-gray-500"
+              className="h-5 w-5 text-db-cool-gray-500"
               aria-hidden="true"
             />
             {info.pax_count}
             <span className="sr-only">Reisende</span>
           </div>
           <div
-            className="col-span-3 flex justify-center items-center gap-x-1"
+            className="col-span-3 flex items-center justify-center gap-x-1"
             title="Gestrandete Reisende"
           >
             {(info.delay?.unreachable_pax ?? 0) > 0 ? (
               <>
                 <XCircle
-                  className="w-5 h-5 text-db-cool-gray-500"
+                  className="h-5 w-5 text-db-cool-gray-500"
                   aria-hidden="true"
                 />
                 <span>{info.delay?.unreachable_pax ?? 0}</span>
@@ -329,13 +329,13 @@ function TransferListEntry({ info, isSelected }: TransferListEntryProps) {
             ) : null}
           </div>
           <div
-            className="col-span-6 flex justify-end items-center gap-x-1"
+            className="col-span-6 flex items-center justify-end gap-x-1"
             title="Erwartete Zielverspätung der Reisenden"
           >
             {info.delay && info.delay?.unreachable_pax !== info.pax_count && (
               <>
                 <Clock
-                  className="w-5 h-5 text-db-cool-gray-500"
+                  className="h-5 w-5 text-db-cool-gray-500"
                   aria-hidden="true"
                 />
                 <span>

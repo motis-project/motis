@@ -155,7 +155,7 @@ function CombinedGroup({
                     </Tooltip.Trigger>
                     <Tooltip.Content>
                       <TripTooltip tripId={leg.trips[0].trip.id} />
-                      <Tooltip.Arrow className="text-white fill-current" />
+                      <Tooltip.Arrow className="fill-current text-white" />
                     </Tooltip.Content>
                   </Tooltip.Root>
                 ))}
@@ -181,7 +181,7 @@ function CombinedGroup({
           <Link
             key={idx}
             to={`/groups/${gr.g}`}
-            className={cn("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
+            className={cn("w-24 rounded px-2 py-1", groupRouteBg(gr.p))}
           >
             <div className="flex justify-between">
               <div>{formatPercent(gr.p)}</div>

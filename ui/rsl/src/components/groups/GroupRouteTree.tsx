@@ -467,10 +467,10 @@ function GroupRouteTree({
                     saveAsSVG(zoom.containerRef.current, `group-${group.id}`)
                   }
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" onClick={zoom.reset}>
-                  <Maximize className="w-4 h-4" />
+                  <Maximize className="h-4 w-4" />
                 </Button>
               </div>
             </div>

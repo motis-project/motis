@@ -217,22 +217,22 @@ function TripSectionEditor({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="flex flex-col gap-4 divide-y-2 divide-db-cool-gray-300 divide-dashed">
+      <div className="flex flex-col gap-4 divide-y-2 divide-dashed divide-db-cool-gray-300">
         {allowReroute ? (
           <div className="space-y-3">
-            <div className="py-1 flex justify-center">
+            <div className="flex justify-center py-1">
               <button
                 type="button"
-                className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                className="rounded bg-db-red-500 px-2 py-1 text-xs text-white hover:bg-db-red-600"
                 onClick={() => remove()}
               >
                 Alle Halte entfernen
               </button>
             </div>
-            <div className="py-1 flex justify-center">
+            <div className="flex justify-center py-1">
               <button
                 type="button"
-                className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                className="rounded bg-db-red-500 px-2 py-1 text-xs text-white hover:bg-db-red-600"
                 onClick={() => insertStop(0)}
               >
                 Neuen Halt am Anfang einfügen
@@ -280,7 +280,7 @@ function TripSectionEditor({
                   <label>
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+                      className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:ring-offset-0"
                       {...register(
                         `stops.${index}.arrival.interchange` as const,
                       )}
@@ -292,7 +292,7 @@ function TripSectionEditor({
                   <label>
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+                      className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:ring-offset-0"
                       {...register(
                         `stops.${index}.departure.interchange` as const,
                       )}
@@ -360,17 +360,17 @@ function TripSectionEditor({
               )}
               {allowReroute && (
                 <>
-                  <div className="py-4 flex justify-center gap-4">
+                  <div className="flex justify-center gap-4 py-4">
                     <button
                       type="button"
-                      className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                      className="rounded bg-db-red-500 px-2 py-1 text-xs text-white hover:bg-db-red-600"
                       onClick={() => remove(index)}
                     >
                       Halt entfernen
                     </button>
                     <button
                       type="button"
-                      className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                      className="rounded bg-db-red-500 px-2 py-1 text-xs text-white hover:bg-db-red-600"
                       onClick={() => insertStop(index + 1)}
                     >
                       {isLastStop
@@ -383,10 +383,10 @@ function TripSectionEditor({
             </div>
           );
         })}
-        <div className="pt-5 flex flex-col">
+        <div className="flex flex-col pt-5">
           <button
             type="submit"
-            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+            className="rounded bg-db-red-500 px-2 py-1 text-white hover:bg-db-red-600"
           >
             Maßnahme speichern
           </button>

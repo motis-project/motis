@@ -441,7 +441,7 @@ function TripLoadForecastChart({
     <svg
       ref={svgEl}
       viewBox={`-100 -15 ${120 + graphWidth} 335`}
-      className="max-h-[42rem] mx-auto mt-2"
+      className="mx-auto mt-2 max-h-[42rem]"
     >
       <g style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
         <g>{background}</g>
@@ -478,21 +478,21 @@ function TripLoadForecastChart({
     return (
       <div>
         <div>{chart}</div>
-        <div className="flex justify-center gap-2 my-2">
+        <div className="my-2 flex justify-center gap-2">
           <button
             type="button"
             onClick={() => saveAsSVG(svgEl.current, baseFileName)}
-            className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+            className="flex items-center rounded bg-db-red-500 px-3 py-1 text-sm text-white hover:bg-db-red-600"
           >
-            <ArrowDownTrayIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            <ArrowDownTrayIcon className="mr-2 h-5 w-5" aria-hidden="true" />
             SVG
           </button>
           <button
             type="button"
             onClick={() => saveAsPNG(svgEl.current, baseFileName)}
-            className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+            className="flex items-center rounded bg-db-red-500 px-3 py-1 text-sm text-white hover:bg-db-red-600"
           >
-            <ArrowDownTrayIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            <ArrowDownTrayIcon className="mr-2 h-5 w-5" aria-hidden="true" />
             PNG
           </button>
         </div>

@@ -101,7 +101,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
         <div>Interne ID: {group.id}</div>
         <div className="flex items-center gap-x-1">
           <UsersIcon
-            className="w-4 h-4 text-db-cool-gray-500"
+            className="h-4 w-4 text-db-cool-gray-500"
             aria-hidden="true"
           />
           {group.passenger_count}
@@ -124,7 +124,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
             referrerPolicy="no-referrer"
             rel="noreferrer"
           >
-            <ExternalLink className="w-4 h-4" aria-hidden="true" />
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
             Aktuelle Alternativensuche auf bahn.de
           </a>
         </Button>
@@ -143,9 +143,9 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
           </div>
         </div>
         <div>
-          <div className="text-lg mb-3">Änderungsprotokoll</div>
+          <div className="mb-3 text-lg">Änderungsprotokoll</div>
           <div className="relative inline-flex flex-col">
-            <div className="absolute top-0 left-4 h-full -ml-px bg-db-cool-gray-300 w-0.5"></div>
+            <div className="absolute left-4 top-0 -ml-px h-full w-0.5 bg-db-cool-gray-300"></div>
             {group.reroute_log.map((log, idx) => (
               <RerouteLogEntry
                 key={idx}
@@ -171,27 +171,27 @@ interface GroupRouteProps {
 
 function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   return (
-    <div className="flex flex-col bg-db-cool-gray-200 rounded drop-shadow-md">
+    <div className="flex flex-col rounded bg-db-cool-gray-200 drop-shadow-md">
       <div
         className={cn(
-          "grid grid-cols-3 gap-1 rounded-t p-2 bg-db-cool-gray-200 border-b-4",
+          "grid grid-cols-3 gap-1 rounded-t border-b-4 bg-db-cool-gray-200 p-2",
           route.broken ? "border-red-300" : "border-green-300",
         )}
       >
-        <div className="text-lg flex items-center gap-4">
+        <div className="flex items-center gap-4 text-lg">
           #{route.index}
           {route.planned && (
-            <TicketIcon className="w-5 h-5" title="Planmäßge Route" />
+            <TicketIcon className="h-5 w-5" title="Planmäßge Route" />
           )}
         </div>
-        <div className="text-lg text-center">
+        <div className="text-center text-lg">
           {formatPercent(route.probability)}
         </div>
         <div
-          className="flex justify-end items-center gap-1"
+          className="flex items-center justify-end gap-1"
           title="Erwartete Zielverspätung"
         >
-          <ClockIcon className="w-5 h-5" />
+          <ClockIcon className="h-5 w-5" />
           <Delay minutes={route.estimated_delay} forceSign={true} />
         </div>
       </div>
@@ -208,7 +208,7 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
         <table>
           <thead>
             <tr className="font-semibold">
-              <td className="pr-2 sr-only">Abschnitt</td>
+              <td className="sr-only pr-2">Abschnitt</td>
               <td className="pr-2">Zug</td>
               <td className="pr-2" title="Benötigte Umstiegszeit">
                 Umstieg
@@ -348,7 +348,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): ReactNode {
     <div className="relative">
       <div
         className={cn(
-          "absolute w-8 h-8 rounded-full inline-flex items-center justify-center text-white",
+          "absolute inline-flex h-8 w-8 items-center justify-center rounded-full text-white",
           bgColor,
         )}
       >
@@ -538,7 +538,7 @@ function RerouteLogTable({ group }: RerouteLogTableProps) {
     <table className="mt-2">
       <thead>
         <tr className="font-semibold">
-          <td className="pr-4 sr-only">V</td>
+          <td className="sr-only pr-4">V</td>
           {group.routes.map((r) => (
             <td key={r.index} className="pr-4 text-center">
               R #{r.index}

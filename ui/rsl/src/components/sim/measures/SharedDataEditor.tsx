@@ -88,7 +88,7 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
   };
 
   return (
-    <div className="flex flex-col gap-4 mt-2 mb-5 pb-2">
+    <div className="mb-5 mt-2 flex flex-col gap-4 pb-2">
       <div>
         <div className={labelClass}>Durchführung der Maßnahme</div>
         <div>
@@ -109,7 +109,7 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
                   <TripServiceInfoView tsi={tsi} format="Short" />
                   <button
                     type="button"
-                    className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                    className="ml-3 rounded bg-db-red-500 px-2 py-1 text-xs text-white hover:bg-db-red-600"
                     onClick={() => removeTrip(idx)}
                   >
                     Entfernen
@@ -131,7 +131,7 @@ function SharedDataEditor({ measureAtom }: SharedDataEditorProps): JSX.Element {
                   <span>{station.name}</span>
                   <button
                     type="button"
-                    className="ml-3 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-xs rounded"
+                    className="ml-3 rounded bg-db-red-500 px-2 py-1 text-xs text-white hover:bg-db-red-600"
                     onClick={() => removeStation(idx)}
                   >
                     Entfernen

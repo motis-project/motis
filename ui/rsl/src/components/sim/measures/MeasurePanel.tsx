@@ -36,7 +36,7 @@ function MeasurePanel({
   );
 
   return (
-    <div className="pb-1 h-full">
+    <div className="h-full pb-1">
       {currentMeasureAtom ? (
         <MeasureEditor
           measureAtom={currentMeasureAtom}

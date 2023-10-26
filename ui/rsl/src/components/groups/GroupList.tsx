@@ -229,14 +229,14 @@ function GroupList(): JSX.Element {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <Listbox value={selectedSort} onChange={setSelectedSort}>
         <div className="relative mb-2">
-          <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white dark:bg-gray-700 rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
+          <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 dark:bg-gray-700 sm:text-sm">
             <span className="block truncate">{selectedSort.label}</span>
-            <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
               <ChevronUpDownIcon
-                className="w-5 h-5 text-gray-400"
+                className="h-5 w-5 text-gray-400"
                 aria-hidden="true"
               />
             </span>
@@ -247,15 +247,15 @@ function GroupList(): JSX.Element {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            <Listbox.Options className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
               {sortOptions.map((opt) => (
                 <Listbox.Option
                   key={opt.option}
                   value={opt}
                   className={({ active }) =>
                     cn(
-                      "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
+                      "relative cursor-default select-none py-2 pl-10 pr-4",
+                      active ? "bg-amber-100 text-amber-900" : "text-gray-900",
                     )
                   }
                 >
@@ -276,7 +276,7 @@ function GroupList(): JSX.Element {
                             active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
-                          <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                          <CheckIcon className="h-5 w-5" aria-hidden="true" />
                         </span>
                       ) : null}
                     </>
@@ -305,7 +305,7 @@ function GroupList(): JSX.Element {
           initialStation={toStationFilter}
         />
       </label>
-      <div className="flex justify-between pb-2 gap-1">
+      <div className="flex justify-between gap-1 pb-2">
         <div className="">
           <label>
             <span className="text-sm">Datum</span>
@@ -322,14 +322,14 @@ function GroupList(): JSX.Element {
             <span className="text-sm">Verwendete Zugnummer(n)</span>
             <input
               type="text"
-              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              className="block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700"
               value={trainNrFilter}
               onChange={(e) => setTrainNrFilter(e.target.value)}
             />
           </label>
         </div>
       </div>
-      <div className="flex justify-between pb-2 gap-1">
+      <div className="flex justify-between gap-1 pb-2">
         <div className="grow">
           <div className="flex justify-between">
             <div className="text-sm">Gruppen-ID(s)</div>
@@ -338,14 +338,14 @@ function GroupList(): JSX.Element {
               <Switch
                 checked={externalGroupIds}
                 onChange={setExternalGroupIds}
-                className={`bg-db-cool-gray-500 relative inline-flex h-[18px] w-[38px]
-                  shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                className={`relative inline-flex h-[18px] w-[38px] shrink-0
+                  cursor-pointer rounded-full border-2 border-transparent bg-db-cool-gray-500
                   duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75`}
               >
                 <span
                   aria-hidden="true"
-                  className={`ui-not-checked:translate-x-0 ui-checked:translate-x-5
-                  pointer-events-none inline-block h-[14px] w-[14px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
+                  className={`pointer-events-none inline-block
+                  h-[14px] w-[14px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ui-checked:translate-x-5 ui-not-checked:translate-x-0`}
                 />
               </Switch>
               <span className="text-xs">Quell-IDs</span>
@@ -353,18 +353,18 @@ function GroupList(): JSX.Element {
           </div>
           <input
             type="text"
-            className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            className="block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700"
             value={groupIdFilter}
             onChange={(e) => setGroupIdFilter(e.target.value)}
           />
         </div>
         <div className="flex items-start"></div>
       </div>
-      <div className="flex justify-between pb-2 gap-1">
+      <div className="flex justify-between gap-1 pb-2">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
-            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:ring-offset-0"
             checked={filterByRerouteReason}
             onChange={() => setFilterByRerouteReason((c) => !c)}
           />
@@ -378,7 +378,7 @@ function GroupList(): JSX.Element {
         </div>
       </div>
       {totalNumberOfGroups !== undefined && (
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfGroups)}{" "}
             {totalNumberOfGroups === 1 ? "Gruppe" : "Gruppen"}
@@ -387,7 +387,7 @@ function GroupList(): JSX.Element {
           <div>
             {!isFetching && (
               <button onClick={() => refetch()}>
-                <ArrowPathIcon className="w-5 h-5" aria-hidden="true" />
+                <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -433,8 +433,8 @@ function RerouteReasonOptions({
       multiple
     >
       <div className="relative">
-        <Listbox.Button className="p-2 mb-0.5 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
-          <AdjustmentsVerticalIcon className="w-5 h-5" aria-hidden="true" />
+        <Listbox.Button className="align-center mb-0.5 flex justify-center rounded-full bg-white p-2 text-black shadow-sm outline-0 dark:bg-gray-600 dark:text-gray-100">
+          <AdjustmentsVerticalIcon className="h-5 w-5" aria-hidden="true" />
         </Listbox.Button>
         <Transition
           as={Fragment}
@@ -442,15 +442,15 @@ function RerouteReasonOptions({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <Listbox.Options className="absolute right-0 z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+          <Listbox.Options className="absolute right-0 z-20 mt-1 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
             {rerouteReasonOptions.map((opt) => (
               <Listbox.Option
                 key={opt.reason}
                 value={opt.reason}
                 className={({ active }) =>
                   cn(
-                    "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
+                    "relative cursor-default select-none py-2 pl-10 pr-4",
+                    active ? "bg-amber-100 text-amber-900" : "text-gray-900",
                   )
                 }
               >
@@ -471,7 +471,7 @@ function RerouteReasonOptions({
                           active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
-                        <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
                       </span>
                     ) : null}
                   </>
@@ -524,13 +524,13 @@ function GroupListEntry({
   const isSelected = selectedGroup === group.id;
 
   return (
-    <div className="pr-1 pb-3">
+    <div className="pb-3 pr-1">
       <Link
         to={`/groups/${group.id}`}
         className={cn(
-          "block p-2 rounded",
+          "block rounded p-2",
           isSelected
-            ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
+            ? "bg-db-cool-gray-300 shadow-md dark:bg-gray-500 dark:text-gray-100"
             : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
@@ -551,7 +551,7 @@ function GroupListEntry({
           )}
           <div className="flex items-center gap-x-1">
             <UsersIcon
-              className="w-5 h-5 text-db-cool-gray-500"
+              className="h-5 w-5 text-db-cool-gray-500"
               aria-hidden="true"
             />
             {group.passenger_count}
@@ -574,14 +574,14 @@ function GroupListEntry({
             </div>
           ) : (
             <div className="flex items-center gap-x-1 text-fuchsia-600">
-              <XCircleIcon className="w-5 h-5" aria-hidden="true" />
+              <XCircleIcon className="h-5 w-5" aria-hidden="true" />
               Ziel nicht erreichbar (
               {formatPercent(groupWithStats.prob_destination_unreachable)})
             </div>
           )}
           <div className="flex items-center gap-x-1">
             <MapIcon
-              className="w-5 h-5 text-db-cool-gray-500"
+              className="h-5 w-5 text-db-cool-gray-500"
               aria-hidden="true"
             />
             {activeRouteCount}/{totalRouteCount}

@@ -33,14 +33,14 @@ function LoadInput({
 }: LoadInputProps) {
   return (
     <Listbox value={selectedLevel} onChange={onLevelSelected}>
-      <div className={cn("relative w-full h-full", className)}>
-        <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white dark:bg-gray-700 rounded-lg shadow-sm cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500">
+      <div className={cn("relative h-full w-full", className)}>
+        <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 dark:bg-gray-700">
           <span className="block truncate">
             <LoadLevelLabel level={selectedLevel} />
           </span>
-          <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+          <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
             <ChevronUpDownIcon
-              className="w-5 h-5 text-gray-400"
+              className="h-5 w-5 text-gray-400"
               aria-hidden="true"
             />
           </span>
@@ -51,15 +51,15 @@ function LoadInput({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+          <Listbox.Options className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
             {loadLevels.map((level) => (
               <Listbox.Option
                 key={level}
                 value={level}
                 className={({ active }) =>
                   cn(
-                    "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
+                    "relative cursor-default select-none py-2 pl-10 pr-4",
+                    active ? "bg-amber-100 text-amber-900" : "text-gray-900",
                   )
                 }
               >
@@ -80,7 +80,7 @@ function LoadInput({
                           active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
-                        <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
                       </span>
                     ) : null}
                   </>
@@ -102,7 +102,7 @@ function LoadLevelLabel({ level }: LoadLevelLabelProps) {
   const lli = loadLevelInfos[level];
   return (
     <div className="flex items-center gap-2">
-      <span className={`inline-block w-4 h-4 rounded-full ${lli.bgColor}`} />
+      <span className={`inline-block h-4 w-4 rounded-full ${lli.bgColor}`} />
       {lli.label}
     </div>
   );

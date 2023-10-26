@@ -141,12 +141,12 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   ) : null;
 
   return (
-    <div className="flex justify-center items-center space-x-2">
+    <div className="flex items-center justify-center space-x-2">
       {status ? (
         <>
           <HoverCard>
             <HoverCardTrigger asChild>
-              <div className="flex justify-center items-center space-x-2">
+              <div className="flex items-center justify-center space-x-2">
                 <SystemStatusIndicator status={status} />
                 <div>{formatDate(status.system_time)}</div>
                 <div className="font-bold">
@@ -210,14 +210,14 @@ function StatusIndicator({
 }: StatusIndicatorProps) {
   if (enabled) {
     if (!receiving) {
-      return <div className="bg-red-500 rounded-full w-2 h-2"></div>;
+      return <div className="h-2 w-2 rounded-full bg-red-500"></div>;
     } else if (!up_to_date) {
-      return <div className="bg-orange-500 rounded-full w-2 h-2"></div>;
+      return <div className="h-2 w-2 rounded-full bg-orange-500"></div>;
     } else {
-      return <div className="bg-green-500 rounded-full w-2 h-2"></div>;
+      return <div className="h-2 w-2 rounded-full bg-green-500"></div>;
     }
   } else {
-    return <Unplug className="w-4 h-4 stroke-gray-700" />;
+    return <Unplug className="h-4 w-4 stroke-gray-700" />;
   }
 }
 
@@ -226,7 +226,7 @@ function StatusHoverCardContent({ status }: StatusProps) {
     status.ribasis_fahrt_status || status.ribasis_formation_status;
   return (
     <div>
-      <div className="font-semibold pb-2">Status der Echtzeitdatenströme:</div>
+      <div className="pb-2 font-semibold">Status der Echtzeitdatenströme:</div>
       <table className="w-full">
         <tbody>
           <tr>

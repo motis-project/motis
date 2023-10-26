@@ -204,10 +204,10 @@ function StopListEditor({
           Dieser Zug ist an Vereinigungen und/oder Durchbindungen beteiligt.
           (Teil-)Ausfälle werden momentan nicht unterstützt.
         </div>
-        <div className="pt-5 flex flex-col">
+        <div className="flex flex-col pt-5">
           <button
             onClick={() => deleteMeasure(measureAtom)}
-            className="mt-4 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+            className="mt-4 rounded bg-db-red-500 px-2 py-1 text-white hover:bg-db-red-600"
           >
             Abbrechen
           </button>
@@ -219,13 +219,13 @@ function StopListEditor({
   return (
     <div>
       <div className={labelClass}>Ausgefallene Halte:</div>
-      <div className="mt-2 mb-4">
+      <div className="mb-4 mt-2">
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
             checked={allCanceled}
             onChange={toggleAll}
-            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:ring-offset-0"
           />
           <span className={cn(allCanceled && "line-through")}>Alle Halte</span>
         </label>
@@ -238,7 +238,7 @@ function StopListEditor({
                 type="checkbox"
                 checked={canceled}
                 onChange={() => toggleStop(idx)}
-                className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+                className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:ring-offset-0"
               />
               <span className={cn(canceled && "line-through")}>
                 {stop?.stop?.bezeichnung}
@@ -247,10 +247,10 @@ function StopListEditor({
           </div>
         ))}
       </div>
-      <div className="pt-5 flex flex-col">
+      <div className="flex flex-col pt-5">
         <button
           onClick={() => closeEditor()}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+          className="rounded bg-db-red-500 px-2 py-1 text-white hover:bg-db-red-600"
         >
           Maßnahme speichern
         </button>

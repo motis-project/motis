@@ -153,16 +153,16 @@ function UniverseControl() {
   // <XCircleIcon className="h-5 w-5 text-white" />
 
   return (
-    <div className="flex justify-center items-center space-x-2 pl-4">
+    <div className="flex items-center justify-center space-x-2 pl-4">
       <span className="pr-2">
         Universum #{universe} (Fahrplan #{schedule})
       </span>
       <button
         type="button"
-        className={`inline-flex items-baseline px-3 py-1 rounded text-sm ${
+        className={`inline-flex items-baseline rounded px-3 py-1 text-sm ${
           forkEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
+            ? "bg-db-red-500 text-white hover:bg-db-red-600"
+            : "cursor-default bg-db-red-300 text-db-red-100"
         }`}
         onClick={() => forkMutation.mutate(universe)}
         disabled={!forkEnabled}
@@ -171,10 +171,10 @@ function UniverseControl() {
       </button>
       <button
         type="button"
-        className={`px-3 py-1 rounded text-sm ${
+        className={`rounded px-3 py-1 text-sm ${
           destroyEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
+            ? "bg-db-red-500 text-white hover:bg-db-red-600"
+            : "cursor-default bg-db-red-300 text-db-red-100"
         }`}
         onClick={() => destroyMutation.mutate(universe)}
         disabled={!destroyEnabled}
@@ -183,10 +183,10 @@ function UniverseControl() {
       </button>
       <button
         type="button"
-        className={`px-3 py-1 rounded text-sm ${
+        className={`rounded px-3 py-1 text-sm ${
           requestFromServerEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
+            ? "bg-db-red-500 text-white hover:bg-db-red-600"
+            : "cursor-default bg-db-red-300 text-db-red-100"
         }`}
         onClick={() => requestFromServerMutation.mutate()}
         disabled={!requestFromServerEnabled}
@@ -198,11 +198,11 @@ function UniverseControl() {
         <button
           key={uv.id}
           type="button"
-          className={`px-3 py-1 rounded text-white text-sm ${
+          className={`rounded px-3 py-1 text-sm text-white ${
             isMutating
               ? uv.id == universe
-                ? "bg-db-red-300 text-db-red-100 ring ring-db-red-800 cursor-default"
-                : "bg-db-red-300 text-db-red-100 cursor-default"
+                ? "cursor-default bg-db-red-300 text-db-red-100 ring ring-db-red-800"
+                : "cursor-default bg-db-red-300 text-db-red-100"
               : uv.id == universe
               ? "bg-db-red-500 ring ring-db-red-800"
               : "bg-db-red-500 hover:bg-db-red-600"

@@ -58,7 +58,7 @@ function DetailedCapacityStatus({
 
   return (
     <div className="py-3">
-      <div className="flex pb-2 gap-1">
+      <div className="flex gap-1 pb-2">
         <div className="flex flex-col justify-end">
           <ServiceClassFilter
             selectedServiceClasses={serviceClassFilter}
@@ -130,7 +130,7 @@ function CapacityStatusStats({
           <tr className="text-left">
             <th className="font-medium"></th>
             {columns.map((c) => (
-              <th key={c.label} className="font-medium text-center p-1">
+              <th key={c.label} className="p-1 text-center font-medium">
                 {c.label}
               </th>
             ))}
@@ -140,7 +140,7 @@ function CapacityStatusStats({
           <tr>
             <td className="font-medium">Überwachte Züge</td>
             {columns.map((c) => (
-              <td key={c.label} className="text-center p-1">
+              <td key={c.label} className="p-1 text-center">
                 {formatNumber(c.stats.tracked)}
               </td>
             ))}
@@ -271,7 +271,7 @@ interface StatsTableCellProps {
 function StatsTableCell({ value, total }: StatsTableCellProps) {
   return (
     <td
-      className="text-center p-1"
+      className="p-1 text-center"
       title={`${formatNumber(value)} von ${formatNumber(total)}`}
     >
       {formatPercent(value / total, {
@@ -338,7 +338,7 @@ function CsvDownloadButtons() {
       <a
         href={`${getApiEndpoint()}paxmon/capacity_status/trips.csv`}
         download={`rsl-trips${suffix}.csv`}
-        className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
+        className="inline-flex items-center gap-3 rounded bg-db-red-500 px-3 py-1 text-white hover:bg-db-red-600"
       >
         <ArrowDownTrayIcon className="h-5 w-5" />
         Liste überwachter Züge (CSV)
@@ -346,7 +346,7 @@ function CsvDownloadButtons() {
       <a
         href={`${getApiEndpoint()}paxmon/capacity_status/formations.csv`}
         download={`rls-formations${suffix}.csv`}
-        className="inline-flex items-center gap-3 px-3 py-1 rounded text-white bg-db-red-500 hover:bg-db-red-600"
+        className="inline-flex items-center gap-3 rounded bg-db-red-500 px-3 py-1 text-white hover:bg-db-red-600"
       >
         <ArrowDownTrayIcon className="h-5 w-5" />
         Wagenreihungen (CSV)

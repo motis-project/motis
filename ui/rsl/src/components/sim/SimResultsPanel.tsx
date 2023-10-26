@@ -54,7 +54,7 @@ function SimResultsList(): JSX.Element {
     <div>
       <Listbox value={selectedSimResult} onChange={setSelectedSimResult}>
         <div className="relative mt-1">
-          <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
+          <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
             <span className="block truncate">
               {selectedSimResult ? (
                 <SimResultsListEntry simResultAtom={selectedSimResult} />
@@ -64,9 +64,9 @@ function SimResultsList(): JSX.Element {
                 </span>
               )}
             </span>
-            <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
               <ChevronUpDownIcon
-                className="w-5 h-5 text-gray-400"
+                className="h-5 w-5 text-gray-400"
                 aria-hidden="true"
               />
             </span>
@@ -77,14 +77,14 @@ function SimResultsList(): JSX.Element {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-60 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            <Listbox.Options className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
               {simResultsList.map((resultAtom, resultIdx) => (
                 <Listbox.Option
                   key={resultIdx}
                   className={({ active }) =>
                     cn(
-                      "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
+                      "relative cursor-default select-none py-2 pl-10 pr-4",
+                      active ? "bg-amber-100 text-amber-900" : "text-gray-900",
                     )
                   }
                   value={resultAtom}
@@ -106,7 +106,7 @@ function SimResultsList(): JSX.Element {
                             active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
-                          <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                          <CheckIcon className="h-5 w-5" aria-hidden="true" />
                         </span>
                       ) : null}
                     </>
@@ -207,7 +207,7 @@ function SimResultDetails({
         <label className="mt-2 flex items-center gap-2">
           <input
             type="checkbox"
-            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-offset-0 focus:ring-blue-200 focus:ring-opacity-50"
+            className="rounded border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 focus:ring-offset-0"
             checked={critChangeOnly}
             onChange={() => setCritChangeOnly((b) => !b)}
           />
@@ -243,13 +243,13 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
       to={`/trips/${encodeURIComponent(JSON.stringify(ut.tsi.trip))}`}
       className="block pb-3 pr-1"
     >
-      <div className="p-1 flex flex-col gap-2 rounded bg-db-cool-gray-100">
+      <div className="flex flex-col gap-2 rounded bg-db-cool-gray-100 p-1">
         <div className="flex gap-4 pb-1">
           <div className="flex flex-col">
-            <div className="text-sm text-center">{category}</div>
+            <div className="text-center text-sm">{category}</div>
             <div className="text-xl font-semibold">{trainNr}</div>
           </div>
-          <div className="grow flex flex-col truncate">
+          <div className="flex grow flex-col truncate">
             <div className="flex justify-between">
               <div className="truncate">{ut.tsi.primary_station.name}</div>
               <div>{formatDateTime(ut.tsi.trip.time)}</div>
@@ -268,7 +268,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
           )}
           {ut.newly_critical_sections > 0 && (
             <li className="flex items-center gap-1 text-red-700">
-              <ExclamationCircleIcon className="w-5 h-5" />
+              <ExclamationCircleIcon className="h-5 w-5" />
               {ut.newly_critical_sections > 1
                 ? `${ut.newly_critical_sections} neue kritische Abschnitte`
                 : "Ein neuer kritischer Abschnitt"}
@@ -276,7 +276,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
           )}
           {ut.no_longer_critical_sections > 0 && (
             <li className="flex items-center gap-1 text-green-700">
-              <CheckCircleIcon className="w-5 h-5" />
+              <CheckCircleIcon className="h-5 w-5" />
               {ut.no_longer_critical_sections > 1
                 ? `Auslastung auf ${ut.no_longer_critical_sections} Abschnitten nicht mehr kritisch`
                 : "Auslastung auf einem Abschnitt nicht mehr kritisch"}
@@ -294,7 +294,7 @@ function UpdatedTrip({ ut }: UpdatedTripProps) {
         </ul>
         <div className="flex flex-col items-center gap-1">
           <MiniTripLoadGraph edges={ut.before_edges} />
-          <ArrowSmallDownIcon className="w-5 h-5 fill-gray-500" />
+          <ArrowSmallDownIcon className="h-5 w-5 fill-gray-500" />
           <MiniTripLoadGraph edges={ut.after_edges} />
         </div>
       </div>
@@ -306,7 +306,7 @@ function SimResultsPanel(): JSX.Element {
   const [selectedSimResult] = useAtom(selectedSimResultAtom);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <SimResultsList />
       {selectedSimResult ? (
         <SimResultDetails simResultAtom={selectedSimResult} />

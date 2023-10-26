@@ -23,7 +23,7 @@ function GroupStatistics(): JSX.Element {
   }
 
   return (
-    <div className="p-3 grow overflow-y-auto">
+    <div className="grow overflow-y-auto p-3">
       <h1 className="text-xl font-semibold">Gruppenstatistiken</h1>
       <p>
         Reisendengruppen: {formatNumber(data.group_count)}, Reisende:{" "}
@@ -47,7 +47,7 @@ interface GroupHistogramsProps {
 
 function GroupHistograms({ data }: GroupHistogramsProps): JSX.Element {
   return (
-    <div className="flex flex-col gap-4 mt-4">
+    <div className="mt-4 flex flex-col gap-4">
       <div>
         <div>Routen pro Gruppe</div>
         <div className="h-96">

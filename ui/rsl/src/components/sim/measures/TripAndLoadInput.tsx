@@ -24,7 +24,7 @@ function TripAndLoadInput({
   children,
 }: TripAndLoadInputProps) {
   return (
-    <div className="flex justify-between items-center gap-2">
+    <div className="flex items-center justify-between gap-2">
       <TripPicker
         onTripPicked={onTripSelected}
         clearOnPick={false}

@@ -117,7 +117,7 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
         {differentStations ? (
           <>
             {arrival && <span>{arrival.station.name}</span>}
-            {differentStations && <ChevronRight className="w-5 h-5" />}
+            {differentStations && <ChevronRight className="h-5 w-5" />}
             {departure && <span>{departure.station.name}</span>}
           </>
         ) : (
@@ -125,7 +125,7 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
         )}
       </h1>
 
-      <div className="max-w-5xl grid grid-cols-9 items-start gap-1 mt-2 mb-2">
+      <div className="mb-2 mt-2 grid max-w-5xl grid-cols-9 items-start gap-1">
         {arrival && (
           <>
             <div>Ankunft mit:</div>
@@ -199,22 +199,22 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
         </div>
       )}
 
-      <div className="flex items-center gap-1 mb-2 mt-4">
-        <Users className="w-4 h-4" aria-hidden="true" />
+      <div className="mb-2 mt-4 flex items-center gap-1">
+        <Users className="h-4 w-4" aria-hidden="true" />
         {`${data.info.pax_count} betroffene Reisende`}
       </div>
 
       {(data.info.delay?.unreachable_pax ?? 0) > 0 ? (
-        <div className="flex items-center gap-1 mb-2">
-          <XCircle className="w-4 h-4" aria-hidden="true" />
+        <div className="mb-2 flex items-center gap-1">
+          <XCircle className="h-4 w-4" aria-hidden="true" />
           {`${data.info.delay?.unreachable_pax ?? 0} gestrandete Reisende`}
         </div>
       ) : null}
 
       {data.info.delay &&
         data.info.delay?.unreachable_pax !== data.info.pax_count && (
-          <div className="flex items-center gap-1 mb-2">
-            <Clock className="w-4 h-4" aria-hidden="true" />
+          <div className="mb-2 flex items-center gap-1">
+            <Clock className="h-4 w-4" aria-hidden="true" />
             <span>
               {formatShortDuration(data.info.delay.min_delay_increase)}–
               {formatShortDuration(data.info.delay.max_delay_increase)}
@@ -223,14 +223,14 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
           </div>
         )}
 
-      <h2 className="text-lg mt-6 mb-2">Betroffene Reisende nach Ziel</h2>
+      <h2 className="mb-2 mt-6 text-lg">Betroffene Reisende nach Ziel</h2>
       <div className="flex flex-col gap-1">
         {sortedGroupedByDestination.map(([stationId, groups]) => (
           <GroupsByStation groups={groups} key={stationId} />
         ))}
       </div>
 
-      <h2 className="text-lg mt-6 mb-2">Betroffene Reisendengruppen</h2>
+      <h2 className="mb-2 mt-6 text-lg">Betroffene Reisendengruppen</h2>
       <div className="flex flex-wrap gap-1">
         {data.groups.map((g) => (
           <GroupButton
@@ -254,7 +254,7 @@ function TripRoute({ tsi }: TripRouteProps) {
     <div className="flex items-center gap-1">
       <div>{tsi.primary_station.name}</div>
       <div>
-        <ArrowRight className="w-4 h-4" aria-hidden="true" />
+        <ArrowRight className="h-4 w-4" aria-hidden="true" />
         <span className="sr-only">nach</span>
       </div>
       <div>{tsi.secondary_station.name}</div>
@@ -276,11 +276,11 @@ function GroupsByStation({ groups }: GroupsByStationProps) {
 
   return (
     <div className="flex items-center gap-1">
-      <Users className="w-4 h-4" aria-hidden="true" />
+      <Users className="h-4 w-4" aria-hidden="true" />
       <div className="w-10">
         {totalPax} <span className="sr-only">Reisende</span>
       </div>
-      <ArrowRight className="w-4 h-4" aria-hidden="true" />
+      <ArrowRight className="h-4 w-4" aria-hidden="true" />
       <div>
         <span className="sr-only">mit Ziel </span>
         {station.name}
@@ -288,7 +288,7 @@ function GroupsByStation({ groups }: GroupsByStationProps) {
       {maybeUnreachable && (
         <>
           <XCircle
-            className="w-4 h-4 text-db-cool-gray-500 ml-4"
+            className="ml-4 h-4 w-4 text-db-cool-gray-500"
             aria-hidden="true"
           />
           <div className="text-red-600">
@@ -336,7 +336,7 @@ function GroupButton({
         <Link
           to={`/groups/${group.id}`}
           className={cn(
-            "w-24 px-2 py-1 rounded text-center",
+            "w-24 rounded px-2 py-1 text-center",
             groupHasActiveUnreachableRoutes(group)
               ? "bg-red-200"
               : "bg-gray-200",
@@ -348,24 +348,24 @@ function GroupButton({
       <HoverCardContent className="w-96">
         <div className="flex justify-between gap-1">
           <div className="font-semibold">Planmäßige Verbindung:</div>
-          <div className="flex justify-end items-center gap-1">
-            <Users className="w-4 h-4" aria-hidden="true" />
+          <div className="flex items-center justify-end gap-1">
+            <Users className="h-4 w-4" aria-hidden="true" />
             {group.passenger_count}
           </div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex items-center gap-2">
           <div className="w-5"></div>
           <div>{formatDateTime(plannedDeparture.enter_time)}</div>
           <div>{plannedDeparture.enter_station.name}</div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex items-center gap-2">
           <div className="w-5">
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>{formatDateTime(plannedArrival.exit_time)}</div>
           <div>{plannedArrival.exit_station.name}</div>
         </div>
-        <div className="font-semibold mt-4">
+        <div className="mt-4 font-semibold">
           Zielverspätung mit aktuellen Alternativen:
         </div>
         <table>
