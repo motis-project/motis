@@ -21,7 +21,6 @@ build_flatbuffers(
 file(GLOB_RECURSE motis-transfers-files src/*.cc)
 add_library(motis-transfers STATIC ${motis-transfers-files})
 target_include_directories(motis-transfers PUBLIC include)
-target_include_directories(motis-transfers PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../ppr/include)
 
 target_compile_features(motis-transfers PRIVATE cxx_std_20)
 target_link_libraries(motis-transfers PRIVATE

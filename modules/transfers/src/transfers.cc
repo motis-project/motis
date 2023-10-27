@@ -1,6 +1,10 @@
 #include "motis/transfers/transfers.h"
 
+#include <fstream>
 #include <map>
+#include <sstream>
+#include <string>
+#include <vector>
 
 #include "cista/reflection/comparable.h"
 
@@ -12,7 +16,8 @@
 #include "transfers/storage/updater.h"
 #include "transfers/types.h"
 
-#include "motis/ppr/profiles.h"
+#include "ppr/profiles/parse_search_profile.h"
+#include "ppr/routing/search_profile.h"
 
 #include "nigiri/timetable.h"
 
@@ -22,7 +27,19 @@ namespace mm = motis::module;
 namespace n = ::nigiri;
 namespace t = ::transfers;
 
+namespace pp = ::ppr::profiles;
+namespace pr = ::ppr::routing;
+
 namespace motis::transfers {
+
+inline std::string read_file(std::string const& path) {
+  std::ifstream f(path);
+  std::stringstream ss;
+  f.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  ss.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+  ss << f.rdbuf();
+  return ss.str();
+}
 
 // load already known/stored data
 struct import_state {
@@ -40,7 +57,7 @@ struct import_state {
 
 struct transfers::impl {
   explicit impl(n::timetable& tt,
-                std::map<std::string, ppr::profile_info> const& ppr_profiles,
+                std::map<std::string, pr::search_profile> const& ppr_profiles,
                 t::storage_updater_config const& config)
       : storage_updater_(tt, config) {
     load_ppr_profiles(ppr_profiles);
@@ -92,24 +109,24 @@ struct transfers::impl {
 
 private:
   // -- helper --
-  void load_ppr_profiles(
-      std::map<std::string, ppr::profile_info> const& ppr_profiles_by_name) {
+  void load_ppr_profiles(std::map<std::string, pr::search_profile> const&
+                             search_profiles_by_name) {
     auto profile_names = std::vector<t::string>{};
 
-    for (auto const& [pname, pinfo] : ppr_profiles_by_name) {
+    for (auto const& [pname, profile] : search_profiles_by_name) {
       profile_names.emplace_back(pname);
     }
 
     storage_updater_.storage_.add_new_profiles(profile_names);
 
-    for (auto& [pname, pinfo] : ppr_profiles_by_name) {
+    for (auto& [pname, profile] : search_profiles_by_name) {
       auto pkey =
           storage_updater_.storage_.profile_name_to_profile_key_.at(pname);
       storage_updater_.storage_.used_profiles_.insert(pkey);
 
       // convert walk_duration from minutes to seconds
-      storage_updater_.storage_.profile_key_to_search_profile_.emplace(
-          pkey, ppr_profiles_by_name.at(pname).profile_);
+      storage_updater_.storage_.profile_key_to_search_profile_.emplace(pkey,
+                                                                       profile);
       storage_updater_.storage_.profile_key_to_search_profile_.at(pkey)
           .duration_limit_ = ::motis::MAX_WALK_TIME;
 
@@ -166,12 +183,12 @@ void transfers::import(motis::module::import_dispatcher& reg) {
         auto const new_import_state = import_state{
             nigiri->hash(), osm_path, ppr->graph_hash(), ppr->profiles_hash()};
 
-        // TODO (CARSTEN) remove ppr::profile_info
-        auto ppr_profiles = std::map<std::string, ppr::profile_info>{};
-        ::motis::ppr::read_profile_files(
-            utl::to_vec(*ppr->profiles(),
-                        [](auto const& p) { return p->path()->str(); }),
-            ppr_profiles);
+        auto ppr_profiles = std::map<std::string, pr::search_profile>{};
+        for (auto const& p : *ppr->profiles()) {
+          auto const content = read_file(p->path()->str());
+          auto const profile = pp::parse_search_profile(content);
+          ppr_profiles.emplace(p->name()->str(), profile);
+        }
 
         fs::create_directories(dir);
         auto updater_config = t::storage_updater_config{
@@ -182,7 +199,10 @@ void transfers::import(motis::module::import_dispatcher& reg) {
             .nigiri_dump_path_ = get_data_directory() / "nigiri" /
                                  fmt::to_string(nigiri->hash()),
             .max_matching_dist_ = 400,
-            .max_bus_stop_matching_dist_ = 120};
+            .max_bus_stop_matching_dist_ = 120,
+            .rg_config_ = {.edge_rtree_size_ = edge_rtree_max_size_,
+                           .area_rtree_size_ = area_rtree_max_size_,
+                           .lock_rtree_ = lock_rtree_}};
         impl_ = std::make_unique<impl>(
             *get_shared_data<n::timetable*>(
                 to_res_id(mm::global_res_id::NIGIRI_TIMETABLE)),
