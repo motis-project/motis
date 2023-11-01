@@ -111,7 +111,7 @@ private:
   // -- helper --
   void load_ppr_profiles(std::map<std::string, pr::search_profile> const&
                              search_profiles_by_name) {
-    auto profile_names = std::vector<t::string>{};
+    auto profile_names = std::vector<t::string_t>{};
 
     for (auto const& [pname, profile] : search_profiles_by_name) {
       profile_names.emplace_back(pname);
