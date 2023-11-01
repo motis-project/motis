@@ -12,6 +12,7 @@ table PaxMonRerouteLogRoute {
 }
 
 table PaxMonRerouteLogEntry {
+  update_number: uint;
   system_time: ulong;
   reroute_time: ulong;
   reason: PaxMonRerouteReason;
