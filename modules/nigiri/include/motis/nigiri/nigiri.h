@@ -33,7 +33,7 @@ private:
   bool no_cache_{false};
   bool adjust_footpaths_{true};
   bool merge_duplicates_{false};
-  std::string first_day_;
+  std::string first_day_{"TODAY"};
   std::string default_timezone_;
   std::uint16_t num_days_{2U};
   bool lookup_{true};

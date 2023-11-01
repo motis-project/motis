@@ -3,6 +3,7 @@ module Util.DateFormat exposing
     , deDateConfig
     , durationText
     , enDateConfig
+    , esDateConfig
     , formatDate
     , formatDateTime
     , formatDateTimeWithSeconds
@@ -109,6 +110,32 @@ deDateConfig =
         , "Oktober"
         , "November"
         , "Dezember"
+        ]
+    }
+
+
+esDateConfig : DateConfig
+esDateConfig =
+    { seperator = "-"
+    , shortFormatTrailingSeperator = "-"
+    , yearPos = 2
+    , monthPos = 1
+    , dayPos = 0
+    , weekDayNames = [ "L", "M", "X", "J", "V", "S", "D" ]
+    , monthNames =
+        [ ""
+        , "Enero"
+        , "Febrero"
+        , "Marzo"
+        , "Abril"
+        , "Mayo"
+        , "Junio"
+        , "Julio"
+        , "Agosto"
+        , "Septiembre"
+        , "Octubre"
+        , "Noviembre"
+        , "Diciembre"
         ]
     }
 

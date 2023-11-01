@@ -76,6 +76,7 @@ import Localization.De exposing (..)
 import Localization.En exposing (..)
 import Localization.Fr exposing (..)
 import Localization.Pl exposing (..)
+import Localization.Es exposing (..)
 import Maybe.Extra exposing (isJust, isNothing, orElse)
 import Navigation exposing (Location)
 import Port
@@ -1089,6 +1090,9 @@ getLocale language =
 
         "pl" ->
             plLocalization
+
+        "es" ->
+            esLocalization
 
         _ ->
             deLocalization
