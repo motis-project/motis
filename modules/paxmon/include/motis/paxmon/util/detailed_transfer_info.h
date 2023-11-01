@@ -102,7 +102,7 @@ struct get_detailed_transfer_info_options {
 };
 
 inline detailed_transfer_info get_detailed_transfer_info(
-    universe const& uv, schedule const& sched, edge_index const ei,
+    universe const& uv, schedule const& /*sched*/, edge_index const ei,
     flatbuffers::FlatBufferBuilder& fbb,
     get_detailed_transfer_info_options const& options) {
   auto const* ic_edge = ei.get(uv);
