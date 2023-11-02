@@ -142,6 +142,8 @@ fws_graph<reroute_node, reroute_edge> build_reroute_graph(
           auto const candidate_localization = localizations.at(node.route_);
           utl::verify(candidate_localization != nullptr,
                       "revert_forecast: candidate localization not found");
+          // leaf_localization != nullptr is checked in verify above
+          // NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker)
           if (can_switch(*leaf_localization, *candidate_localization)) {
             candidate = *node_idx;
           }
