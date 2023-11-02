@@ -346,11 +346,14 @@ void revert_forecast(universe& uv, schedule const& sched,
   auto reverted = false;
   auto new_routes = std::vector<Offset<PaxMonGroupRoute>>{};
   for (auto reactivated_route_idx = static_cast<local_group_route_index>(0);
-       reactivated_route_idx < routes.size(); ++reactivated_route_idx) {
+       reactivated_route_idx <
+       static_cast<local_group_route_index>(routes.size());
+       ++reactivated_route_idx) {
     auto const offset = reactivated_route_idx * routes.size();
 
     for (auto route_idx = static_cast<local_group_route_index>(0);
-         route_idx < routes.size(); ++route_idx) {
+         route_idx < static_cast<local_group_route_index>(routes.size());
+         ++route_idx) {
       auto const p_change = prob_changes[offset + route_idx];
       if (p_change == 0.F) {
         continue;
@@ -432,11 +435,14 @@ void revert_forecast(universe& uv, schedule const& sched,
 
     std::cout << "probability changes:\n";
     for (auto reactivated_route_idx = static_cast<local_group_route_index>(0);
-         reactivated_route_idx < routes.size(); ++reactivated_route_idx) {
+         reactivated_route_idx <
+         static_cast<local_group_route_index>(routes.size());
+         ++reactivated_route_idx) {
       auto const offset = reactivated_route_idx * routes.size();
 
       for (auto route_idx = static_cast<local_group_route_index>(0);
-           route_idx < routes.size(); ++route_idx) {
+           route_idx < static_cast<local_group_route_index>(routes.size());
+           ++route_idx) {
         auto const p_change = prob_changes[offset + route_idx];
         if (p_change == 0.F) {
           continue;

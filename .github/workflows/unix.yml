@@ -284,9 +284,9 @@ jobs:
           - preset: linux-arm64-release
             artifact: linux-arm64
             emulator: qemu-aarch64-static
-          #- preset: clang-tidy
-          #  skipui: true
-          #  skiptests: true
+          - preset: clang-tidy
+            skipui: true
+            skiptests: true
           - preset: linux-sanitizer
             skipui: true
           - preset: linux-debug
