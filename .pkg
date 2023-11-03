@@ -77,7 +77,7 @@
 [transfers]
   url=git@github.com:carstenhagelgans/transfers.git
   branch=main
-  commit=91004f0863d59fb355a1d6b99c4fa902859b484b
+  commit=888122d2cbba08ff6a1e42bf5d9364951c6584fc
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
