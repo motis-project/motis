@@ -789,11 +789,12 @@ private:
                                   ev.schedule_time_ == new_ev.schedule_time_;
                          });
         ex_sec != end(existing_sections)) {
-      if (auto const di =
+      if (auto const di_it =
               sched_.graph_to_delay_info_.find(get_ev(*ex_sec).get_ev_key());
-          di != end(sched_.graph_to_delay_info_)) {
-        di->second->set_ev_key(new_ev_key);
-        sched_.graph_to_delay_info_[new_ev_key] = di->second;
+          di_it != end(sched_.graph_to_delay_info_)) {
+        auto di = di_it->second;
+        di->set_ev_key(new_ev_key);
+        sched_.graph_to_delay_info_[new_ev_key] = di;
       }
     } else if (auto const di = cancelled_delays_.find(schedule_event{
                    result_.trp_->id_.primary_, new_ev.station_->id_,
