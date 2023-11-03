@@ -176,6 +176,13 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
     auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
       auto const tgr = from_fbs(sched, nr);
       if (tracking_updates) {
+        if (tgr.index_.has_value()) {
+          before_journey_load_updated(
+              uv, uv.passenger_groups_.journey(
+                      uv.passenger_groups_
+                          .route(passenger_group_with_route{pgi, *tgr.index_})
+                          .compact_journey_index_));
+        }
         before_journey_load_updated(uv, tgr.journey_);
       }
       auto const result =
