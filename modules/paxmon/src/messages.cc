@@ -445,10 +445,10 @@ Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
   return fbb.CreateVectorOfStructs(entries);
 }
 
-PaxMonCapacityType get_capacity_type(motis::paxmon::edge const* e) {
-  if (e->has_unknown_capacity()) {
+PaxMonCapacityType get_capacity_type(capacity_source const src) {
+  if (src == capacity_source::UNKNOWN) {
     return PaxMonCapacityType_Unknown;
-  } else if (e->has_unlimited_capacity()) {
+  } else if (src == capacity_source::UNLIMITED) {
     return PaxMonCapacityType_Unlimited;
   } else {
     return PaxMonCapacityType_Known;
@@ -531,17 +531,15 @@ Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
                                   universe const& uv,
                                   edge_load_info const& eli) {
-  auto const from = eli.edge_->from(uv);
-  auto const to = eli.edge_->to(uv);
   return CreatePaxMonEdgeLoadInfo(
-      fbb, to_fbs(fbb, from->get_station(sched)),
-      to_fbs(fbb, to->get_station(sched)),
-      motis_to_unixtime(sched, from->schedule_time()),
-      motis_to_unixtime(sched, from->current_time()),
-      motis_to_unixtime(sched, to->schedule_time()),
-      motis_to_unixtime(sched, to->current_time()),
-      get_capacity_type(eli.edge_), eli.edge_->capacity(),
-      to_fbs_capacity_source(eli.edge_->get_capacity_source()),
+      fbb, to_fbs(fbb, *sched.stations_.at(eli.from_.station_idx_)),
+      to_fbs(fbb, *sched.stations_.at(eli.to_.station_idx_)),
+      motis_to_unixtime(sched, eli.from_.schedule_time_),
+      motis_to_unixtime(sched, eli.from_.current_time_),
+      motis_to_unixtime(sched, eli.to_.schedule_time_),
+      motis_to_unixtime(sched, eli.to_.current_time_),
+      get_capacity_type(eli.capacity_source_), eli.capacity_,
+      to_fbs_capacity_source(eli.capacity_source_),
       to_fbs_distribution(fbb, eli.forecast_pdf_, eli.forecast_cdf_),
       eli.updated_, eli.possibly_over_capacity_, eli.probability_over_capacity_,
       eli.expected_passengers_);
