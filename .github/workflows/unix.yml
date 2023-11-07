@@ -287,8 +287,8 @@ jobs:
           - preset: clang-tidy
             skipui: true
             skiptests: true
-          #- preset: linux-sanitizer
-          #  skipui: true
+          - preset: linux-sanitizer
+            skipui: true
           - preset: linux-debug
             skipui: true
             emulator: valgrind --leak-check=full --error-exitcode=1
