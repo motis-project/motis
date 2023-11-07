@@ -1,6 +1,5 @@
 # Build directories/files
 /*build*
-**/__pycache__/
 
 # Dependencies
 /deps
@@ -46,6 +45,3 @@ config.ini
 *.zip
 *.7z
 /pathdb*
-
-# dotenv
-.env

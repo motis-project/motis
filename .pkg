@@ -75,7 +75,7 @@
   branch=master
   commit=4a1352d5c6d3e1b777085877d1be18eed58667a2
 [transfers]
-  url=git@github.com:carstenhagelgans/transfers.git
+  url=git@github.com:motis-project/transfers.git
   branch=main
   commit=888122d2cbba08ff6a1e42bf5d9364951c6584fc
 [utl]
@@ -99,9 +99,9 @@
   branch=master
   commit=76c17cc0c50579a20d725f4d212c8ee3f5947044
 [nigiri]
-  url=git@github.com:carstenhagelgans/nigiri.git
-  branch=profiles
-  commit=b237f4f115a1df2f072ec54100e6418328fb8ec8
+  url=git@github.com:motis-project/nigiri.git
+  branch=master
+  commit=4e433fde787e4f1a0a3a551d9535e33122995673
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
