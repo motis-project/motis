@@ -25,7 +25,7 @@ msg_ptr get_trip_load_info(paxmon_data& data, msg_ptr const& msg) {
     return [&](TripId const* fbs_tid) {
       auto const trp = from_fbs(sched, fbs_tid);
       auto const tli = calc_trip_load_info(uv, sched, trp);
-      return to_fbs(mc, sched, uv, tli);
+      return to_fbs(mc, sched, tli);
     };
   };
 

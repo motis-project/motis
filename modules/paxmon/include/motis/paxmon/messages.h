@@ -161,7 +161,7 @@ flatbuffers::Offset<PaxMonEdgeLoadInfo> to_fbs(
 
 flatbuffers::Offset<PaxMonTripLoadInfo> to_fbs(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
-    universe const& uv, trip_load_info const& tli);
+    trip_load_info const& tli);
 
 PaxMonCapacitySource to_fbs_capacity_source(capacity_source const cs);
 

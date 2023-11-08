@@ -545,7 +545,6 @@ Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
 }
 
 Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
-                                  universe const& uv,
                                   trip_load_info const& tli) {
   return CreatePaxMonTripLoadInfo(
       fbb, to_fbs_trip_service_info(fbb, sched, tli.trp_),
