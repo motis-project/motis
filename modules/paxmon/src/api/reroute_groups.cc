@@ -200,7 +200,9 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
                      : result.previous_probability_);
       auto const loc = get_localization(uv, sched, result.pgwr_, current_time);
       lei.new_routes_.emplace_back(reroute_log_route_info{
-          result.pgwr_.route_, previous_probability, result.new_probability_});
+          result.pgwr_.route_, previous_probability, result.new_probability_,
+          to_log_localization(
+              get_localization(uv, sched, result.pgwr_, current_time))});
       uv.update_tracker_.after_group_route_updated(
           result.pgwr_, result.previous_probability_, result.new_probability_,
           result.new_route_);
