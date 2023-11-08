@@ -3,14 +3,11 @@
 #include <cstdint>
 #include <algorithm>
 #include <iostream>
-#include <map>
 #include <optional>
 #include <vector>
 
 #include "fmt/format.h"
 
-#include "utl/erase_if.h"
-#include "utl/to_vec.h"
 #include "utl/verify.h"
 
 #include "motis/hash_map.h"
@@ -20,7 +17,6 @@
 #include "motis/core/common/timing.h"
 
 #include "motis/module/context/motis_call.h"
-#include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
 
 #include "motis/core/access/trip_access.h"
@@ -36,7 +32,6 @@
 #include "motis/paxmon/monitoring_event.h"
 
 #include "motis/paxforecast/affected_route_info.h"
-#include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/paxforecast.h"
 #include "motis/paxforecast/revert_forecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
@@ -49,8 +44,6 @@ using namespace motis::module;
 using namespace motis::logging;
 
 namespace motis::paxforecast {
-
-auto const constexpr REMOVE_GROUPS_BATCH_SIZE = 10'000;
 
 void log_destination_reachable(
     universe& uv, schedule const& sched,
@@ -147,10 +140,8 @@ passenger_group_with_route_and_probability event_to_pgwrap(
       event->group_route()->passenger_count()};
 }
 
-void run_simulation(paxforecast& mod, universe& uv, schedule const& sched,
-                    tick_statistics& tick_stats,
-                    std::vector<affected_route_info>& affected_routes,
-                    alternatives_set& alts_set, char const* event_name) {
+void run_simulation(paxforecast& mod, tick_statistics& tick_stats,
+                    alternatives_set& alts_set) {
   MOTIS_START_TIMING(passenger_behavior);
   auto pb = behavior::default_behavior{mod.deterministic_mode_};
   simulate_behavior_for_alternatives(pb.pb_, alts_set);
@@ -281,8 +272,7 @@ void handle_broken_transfers(paxforecast& mod, universe& uv,
   tick_stats.combined_groups_ += alts_set.requests_.size();
 
   find_alternatives_set(mod, uv, sched, tick_stats, alts_set);
-  run_simulation(mod, uv, sched, tick_stats, affected_routes, alts_set,
-                 "broken");
+  run_simulation(mod, tick_stats, alts_set);
   update_groups(mod, uv, sched, affected_routes, alts_set, tick_stats);
 }
 

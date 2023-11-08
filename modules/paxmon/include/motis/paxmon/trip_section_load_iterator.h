@@ -44,7 +44,7 @@ struct trip_section_with_load {
       }
     };
 
-    auto const lookup_capacity = [this, &sched, &uv]() {
+    auto const lookup_capacity = [this]() {
       auto const cap = lookup_section_capacity();
       capacity_ = cap.capacity_.seats();
       capacity_source_ = cap.source_;
