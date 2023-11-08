@@ -8,6 +8,8 @@
 
 #include "motis/core/schedule/schedule.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
+#include "motis/paxmon/compact_journey.h"
 #include "motis/paxmon/reachability.h"
 
 namespace motis::paxmon {
@@ -20,6 +22,12 @@ struct passenger_localization {
   bool first_station_{false};
   std::vector<std::uint32_t>
       remaining_interchanges_;  // including final destination
+
+  bool in_trip() const { return in_trip_ != nullptr; }
+
+  bool valid() const { return at_station_ != nullptr; }
+
+  explicit operator bool() { return valid(); }
 
   inline friend bool operator==(passenger_localization const& lhs,
                                 passenger_localization const& rhs) {
@@ -37,8 +45,6 @@ struct passenger_localization {
                     rhs.first_station_);
   }
 
-  bool in_trip() const { return in_trip_ != nullptr; }
-
   cista::hash_t hash() const {
     return cista::build_hash(in_trip_, at_station_, schedule_arrival_time_,
                              current_arrival_time_, first_station_);
@@ -48,5 +54,9 @@ struct passenger_localization {
 passenger_localization localize(schedule const& sched,
                                 reachability_info const& reachability,
                                 time localization_time);
+
+passenger_localization localize_broken_transfer(
+    schedule const& sched, fws_compact_journey const& cj,
+    broken_transfer_info const& bti);
 
 }  // namespace motis::paxmon

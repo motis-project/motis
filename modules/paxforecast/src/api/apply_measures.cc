@@ -3,6 +3,7 @@
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/raii.h"
+#include "motis/core/common/timing.h"
 
 #include "motis/core/access/trip_access.h"
 
@@ -16,13 +17,12 @@
 
 #include "motis/paxmon/loader/capacities/load_capacities.h"
 
-#include "motis/paxforecast/combined_passenger_group.h"
+#include "motis/paxforecast/affected_route_info.h"
 #include "motis/paxforecast/error.h"
 #include "motis/paxforecast/messages.h"
 #include "motis/paxforecast/paxforecast.h"
 #include "motis/paxforecast/simulate_behavior.h"
 #include "motis/paxforecast/universe_data.h"
-#include "motis/paxforecast/update_tracked_groups.h"
 
 #include "motis/paxforecast/measures/affected_groups.h"
 #include "motis/paxforecast/measures/measures.h"
@@ -35,6 +35,10 @@ using namespace motis::paxmon;
 using namespace motis::paxforecast;
 
 namespace motis::paxforecast::api {
+
+using sim_combined_routes_t = mcd::hash_map<
+    mcd::pair<passenger_localization, compact_journey /* remaining journey */>,
+    std::vector<std::uint32_t /* index in affected_routes */>>;
 
 void apply_update_capacities_measure(universe& uv, schedule const& sched,
                                      measures::update_capacities const& m) {
@@ -91,6 +95,129 @@ void apply_override_capacity_measure(universe& uv, schedule const& sched,
   if (auto const* trp = find_trip(sched, m.trip_id_); trp != nullptr) {
     update_trip_capacity(uv, sched, trp, true);
   }
+}
+
+bool contains_trip(alternative const& alt, extern_trip const& searched_trip) {
+  return std::any_of(begin(alt.journey_.trips_), end(alt.journey_.trips_),
+                     [&](journey::trip const& jt) {
+                       return jt.extern_trip_ == searched_trip;
+                     });
+}
+
+bool is_recommended(alternative const& alt,
+                    measures::trip_recommendation const& m) {
+  // TODO(pablo): check interchange stop
+  return contains_trip(alt, m.recommended_trip_);
+}
+
+void check_measures(
+    alternative& alt,
+    mcd::vector<measures::measure_variant const*> const& group_measures) {
+  for (auto const* mv : group_measures) {
+    std::visit(
+        utl::overloaded{//
+                        [&](measures::trip_recommendation const& m) {
+                          if (is_recommended(alt, m)) {
+                            alt.is_recommended_ = true;
+                          }
+                        },
+                        [&](measures::trip_load_information const& m) {
+                          // TODO(pablo): handle case where load
+                          // information for multiple trips in the
+                          // journey is available
+                          if (contains_trip(alt, m.trip_)) {
+                            alt.load_info_ = m.level_;
+                          }
+                        },
+                        [&](measures::trip_load_recommendation const& m) {
+                          for (auto const& tll : m.full_trips_) {
+                            if (contains_trip(alt, tll.trip_)) {
+                              alt.load_info_ = tll.level_;
+                            }
+                          }
+                          for (auto const& tll : m.recommended_trips_) {
+                            if (contains_trip(alt, tll.trip_)) {
+                              alt.load_info_ = tll.level_;
+                              alt.is_recommended_ = true;
+                            }
+                          }
+                        }},
+        *mv);
+  }
+}
+
+template <typename PassengerBehavior>
+void sim_and_update_groups(
+    paxforecast& mod, universe& uv, schedule const& sched,
+    PassengerBehavior& pb,
+    measures::affected_groups_info const& affected_groups,
+    std::vector<affected_route_info> const& affected_routes,
+    alternatives_set const& alts_set, sim_combined_routes_t const& combined,
+    tick_statistics& tick_stats) {
+  auto const constexpr REROUTE_BATCH_SIZE = 5'000;
+
+  MOTIS_START_TIMING(update_tracked_groups);
+
+  auto const options =
+      simulation_options{.probability_threshold_ = mod.probability_threshold_,
+                         .uninformed_pax_ = mod.uninformed_pax_};
+  auto ug_ctx = update_groups_context{.mc_ = message_creator()};
+  auto const empty_alts = std::vector<alternative>{};
+
+  auto const send_reroutes = [&]() {
+    if (ug_ctx.reroutes_.empty()) {
+      return;
+    }
+    tick_stats.rerouted_group_routes_ += ug_ctx.reroutes_.size();
+    LOG(motis::logging::info)
+        << "update_groups: sending " << ug_ctx.reroutes_.size() << " reroutes";
+    ug_ctx.mc_.create_and_finish(
+        MsgContent_PaxMonRerouteGroupsRequest,
+        CreatePaxMonRerouteGroupsRequest(
+            ug_ctx.mc_, uv.id_, ug_ctx.mc_.CreateVector(ug_ctx.reroutes_))
+            .Union(),
+        "/paxmon/reroute_groups");
+    auto const msg = make_msg(ug_ctx.mc_);
+    motis_call(msg)->val();
+    ug_ctx.reroutes_.clear();
+    ug_ctx.mc_.Clear();
+  };
+
+  for (auto const& ce : combined) {
+    auto const& remaining_planned_journey = ce.first.second;
+    auto const& affected_route_indices = ce.second;
+    if (affected_route_indices.empty()) {
+      continue;
+    }
+
+    auto const& first_affected_route =
+        affected_routes.at(affected_route_indices.front());
+    auto const& group_measures =
+        affected_groups.measures_.at(first_affected_route.pgwrap_.pgwr_);
+    auto alts =
+        alts_set.requests_.at(first_affected_route.alts_now_).alternatives_;
+
+    for (auto& alt : alts) {
+      check_measures(alt, group_measures);
+      alt.is_original_ = (alt.compact_journey_ == remaining_planned_journey);
+    }
+
+    simulate_behavior_for_alternatives(pb.pb_, alts);
+
+    for (auto const ar_idx : affected_route_indices) {
+      auto const& ar = affected_routes.at(ar_idx);
+      simulate_behavior_for_route(sched, uv, ug_ctx, options, ar, alts,
+                                  empty_alts, reroute_reason_t::SIMULATION);
+      if (ug_ctx.reroutes_.size() >= REROUTE_BATCH_SIZE) {
+        send_reroutes();
+      }
+    }
+  }
+
+  send_reroutes();
+
+  MOTIS_STOP_TIMING(update_tracked_groups);
+  tick_stats.t_update_tracked_groups_ += MOTIS_TIMING_MS(update_tracked_groups);
 }
 
 msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
@@ -212,63 +339,53 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
     total_affected_groups += affected_groups.measures_.size();
     LOG(info) << "affected groups: " << affected_groups.measures_.size();
 
-    // combine groups by (localization, remaining planned journey)
-    auto combined =
-        mcd::hash_map<mcd::pair<passenger_localization, compact_journey>,
-                      combined_passenger_group>{};
-    mcd::hash_map<passenger_group_with_route, passenger_localization const*>
-        pgwr_localizations;
+    auto affected_routes = std::vector<affected_route_info>{};
+    auto alts_set = alternatives_set{};
+    auto combined = sim_combined_routes_t{};
+
     for (auto const& [pgwr, loc] : affected_groups.localization_) {
       auto const& pg = uv.passenger_groups_.group(pgwr.pg_);
       auto const& gr = uv.passenger_groups_.route(pgwr);
       auto const cj = uv.passenger_groups_.journey(gr.compact_journey_index_);
       auto const remaining_planned_journey = get_suffix(sched, cj, loc);
-      pgwr_localizations[pgwr] = &loc;
+
       if (remaining_planned_journey.legs_.empty()) {
         continue;
       }
-      auto& cpg = combined[{loc, remaining_planned_journey}];
-      cpg.group_routes_.emplace_back(passenger_group_with_route_and_probability{
-          pgwr, gr.probability_, pg.passengers_});
-      cpg.passengers_ += pg.passengers_;
-      cpg.localization_ = loc;
-    }
 
-    LOG(info) << "combined: " << combined.size();
+      auto& ar = affected_routes.emplace_back(affected_route_info{
+          .pgwrap_ =
+              passenger_group_with_route_and_probability{
+                  .pgwr_ = pgwr,
+                  .probability_ = gr.probability_,
+                  .passengers_ = pg.passengers_},
+          .destination_station_id_ = cj.destination_station_id(),
+          .loc_now_ = loc,
+      });
+
+      ar.alts_now_ =
+          alts_set.add_request(ar.loc_now_, ar.destination_station_id_);
+
+      combined[{loc, remaining_planned_journey}].emplace_back(
+          static_cast<std::uint32_t>(affected_routes.size() - 1));
+    }
 
     manual_timer alternatives_timer{"apply_measures: find alternatives"};
-    std::vector<ctx::future_ptr<ctx_data, void>> futures;
-    for (auto& ce : combined) {
-      auto const& loc = ce.first.first;
-      auto const& remaining_planned_journey = ce.first.second;
-      auto& cpg = ce.second;
-
-      std::set<measures::measure_variant const*> measures_set;
-      for (auto const& pgwrap : cpg.group_routes_) {
-        for (auto const* mv : affected_groups.measures_.at(pgwrap.pgwr_)) {
-          measures_set.insert(mv);
-        }
-      }
-      auto group_measures = mcd::to_vec(measures_set);
-      futures.emplace_back(spawn_job_void([&, group_measures] {
-        cpg.alternatives_ = find_alternatives(
-            uv, sched, mod.routing_cache_, group_measures,
-            remaining_planned_journey.destination_station_id(), loc,
-            &remaining_planned_journey, false, 61, mod.allow_start_metas_,
-            mod.allow_dest_metas_);
-      }));
-    }
-    ctx::await_all(futures);
-    mod.routing_cache_.sync();
+    alts_set.find(uv, sched, mod.routing_cache_,
+                  alternative_routing_options{
+                      .use_cache_ = false,
+                      .pretrip_interval_length_ = 61,
+                      .allow_start_metas_ = mod.allow_start_metas_,
+                      .allow_dest_metas_ = mod.allow_dest_metas_});
     alternatives_timer.stop_and_print();
     t_find_alternatives += alternatives_timer.duration_ms();
-    total_alternative_routings += combined.size();
+    total_alternative_routings += alts_set.requests_.size();
 
     {
       manual_timer alt_trips_timer{"add alternatives to graph"};
-      for (auto& [grp_key, cpg] : combined) {
-        total_alternatives_found += cpg.alternatives_.size();
-        for (auto const& alt : cpg.alternatives_) {
+      for (auto const& req : alts_set.requests_) {
+        total_alternatives_found += req.alternatives_.size();
+        for (auto const& alt : req.alternatives_) {
           for (auto const& leg : alt.compact_journey_.legs_) {
             get_or_add_trip(sched, uv, leg.trip_idx_);
           }
@@ -278,17 +395,12 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
       t_add_alternatives_to_graph += alt_trips_timer.duration_ms();
     }
 
-    manual_timer sim_timer{"passenger behavior simulation"};
+    manual_timer update_groups_timer{"sim + update groups"};
+    auto tick_stats = tick_statistics{};
     auto pb = behavior::default_behavior{mod.deterministic_mode_};
-    auto const sim_result = simulate_behavior(sched, uv, combined, pb.pb_,
-                                              mod.probability_threshold_);
-    sim_timer.stop_and_print();
-    t_behavior_simulation += sim_timer.duration_ms();
+    sim_and_update_groups(mod, uv, sched, pb, affected_groups, affected_routes,
+                          alts_set, combined, tick_stats);
 
-    manual_timer update_groups_timer{"update groups"};
-    tick_statistics tick_stats;
-    update_tracked_groups(sched, uv, sim_result, {}, pgwr_localizations,
-                          tick_stats, reroute_reason_t::SIMULATION);
     update_groups_timer.stop_and_print();
     t_update_groups += update_groups_timer.duration_ms();
     uv_storage.metrics_.add(sched.system_time_, now(), tick_stats);
