@@ -173,8 +173,28 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
 
     auto groups_added = 0;  // debug
 
-    auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
+    auto new_tgrs = std::vector<temp_group_route>{};
+    new_tgrs.reserve(rr->new_routes()->size());
+    for (auto const& nr : *rr->new_routes()) {
       auto const tgr = from_fbs(sched, nr);
+      auto duplicate = false;
+      for (auto& existing_tgr : new_tgrs) {
+        if (existing_tgr.index_ == tgr.index_ &&
+            existing_tgr.journey_ == tgr.journey_) {
+          duplicate = true;
+          utl::verify(!override_probabilities,
+                      "/paxmon/reroute_groups: duplicate routes with "
+                      "override_probabilities = true");
+          existing_tgr.probability_ += tgr.probability_;
+          break;
+        }
+      }
+      if (!duplicate) {
+        new_tgrs.emplace_back(tgr);
+      }
+    }
+
+    auto new_routes = utl::to_vec(new_tgrs, [&](temp_group_route const& tgr) {
       if (tracking_updates) {
         if (tgr.index_.has_value()) {
           before_journey_load_updated(
@@ -209,6 +229,7 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
       if (result.pgwr_.route_ == old_route_idx) {
         lei.entry_.old_route_.new_probability_ = result.new_probability_;
       }
+
       // <debug>
       if (!tgr.journey_.legs_.empty()) {
         auto const reachability =
@@ -234,6 +255,7 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         }
       }
       // </debug>
+
       return PaxMonRerouteRouteInfo{result.pgwr_.route_,
                                     result.previous_probability_,
                                     result.new_probability_};
