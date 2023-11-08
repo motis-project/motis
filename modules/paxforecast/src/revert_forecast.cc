@@ -257,8 +257,6 @@ void revert_forecast(universe& uv, schedule const& sched,
   // for localization
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
-  auto const search_time =
-      static_cast<time>(current_time + uv.preparation_time_);
 
   auto const routes = pgc.routes(pgi);
   utl::verify(routes.size() == unbroken_routes.size(),
@@ -286,7 +284,7 @@ void revert_forecast(universe& uv, schedule const& sched,
     } else {
       auto const reachability =
           get_reachability(uv, pgc.journey(route.compact_journey_index_));
-      return localize(sched, reachability, search_time);
+      return localize(sched, reachability, current_time);
     }
   });
 
