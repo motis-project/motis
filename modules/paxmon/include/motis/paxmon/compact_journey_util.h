@@ -68,7 +68,7 @@ inline compact_journey get_prefix(schedule const& sched,
 }
 
 template <typename CompactJourney>
-inline compact_journey get_prefix(schedule const& sched,
+inline compact_journey get_prefix(schedule const& /*sched*/,
                                   CompactJourney const& cj,
                                   broken_transfer_info const& bti) {
   auto prefix = compact_journey{};

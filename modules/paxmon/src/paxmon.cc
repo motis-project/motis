@@ -660,7 +660,7 @@ void paxmon::load_capacity_files() {
 
 // called after rt propagate
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
-  scoped_timer t{"paxmon: rt_update"};
+  scoped_timer const t{"paxmon: rt_update"};
   auto const update = motis_content(RtUpdates, msg);
   auto const schedule_res_id = update->schedule();
   auto const uv_ids =

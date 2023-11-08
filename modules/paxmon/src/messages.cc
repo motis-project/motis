@@ -529,7 +529,6 @@ Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
 }
 
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
-                                  universe const& uv,
                                   edge_load_info const& eli) {
   return CreatePaxMonEdgeLoadInfo(
       fbb, to_fbs(fbb, *sched.stations_.at(eli.from_.station_idx_)),
@@ -550,8 +549,8 @@ Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
                                   trip_load_info const& tli) {
   return CreatePaxMonTripLoadInfo(
       fbb, to_fbs_trip_service_info(fbb, sched, tli.trp_),
-      fbb.CreateVector(utl::to_vec(tli.edges_, [&](auto const& efc) {
-        return to_fbs(fbb, sched, uv, efc);
+      fbb.CreateVector(utl::to_vec(tli.edges_, [&](auto const& eli) {
+        return to_fbs(fbb, sched, eli);
       })));
 }
 

@@ -129,8 +129,7 @@ void handle_rt_update(universe& uv, schedule const& sched,
         ++uv.system_stats_.delay_updates_;
         ++uv.tick_stats_.rt_delay_updates_;
         auto const du = reinterpret_cast<RtDelayUpdate const*>(u->content());
-        auto const updated =
-            update_event_times(sched, uv, du, updated_interchange_edges);
+        update_event_times(sched, uv, du, updated_interchange_edges);
         uv.tick_stats_.rt_delay_event_updates_ += du->events()->size();
         for (auto const& uei : *du->events()) {
           switch (uei->reason()) {

@@ -299,9 +299,8 @@ private:
 
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
       trip_load_info const& tli) {
-    return mc_.CreateVector(utl::to_vec(tli.edges_, [&](auto const& eli) {
-      return to_fbs(mc_, sched_, uv_, eli);
-    }));
+    return mc_.CreateVector(utl::to_vec(
+        tli.edges_, [&](auto const& eli) { return to_fbs(mc_, sched_, eli); }));
   }
 
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_empty_fbs_trip_load_info() {

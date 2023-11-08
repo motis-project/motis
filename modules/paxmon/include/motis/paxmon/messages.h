@@ -157,7 +157,7 @@ flatbuffers::Offset<PaxMonDistribution> to_fbs_distribution(
 
 flatbuffers::Offset<PaxMonEdgeLoadInfo> to_fbs(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
-    universe const& uv, edge_load_info const& eli);
+    edge_load_info const& eli);
 
 flatbuffers::Offset<PaxMonTripLoadInfo> to_fbs(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
