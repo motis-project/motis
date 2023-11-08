@@ -289,7 +289,6 @@ void handle_major_delays(paxforecast& mod, universe& uv, schedule const& sched,
 
 void handle_unbroken_transfers(paxforecast& mod, universe& uv,
                                schedule const& sched,
-                               tick_statistics& tick_stats,
                                PaxMonUpdate const* mon_update) {
   auto unbroken_transfers = std::vector<passenger_group_with_route>{};
 
@@ -342,7 +341,7 @@ void on_monitoring_update(paxforecast& mod, paxmon_data& data,
 
   handle_broken_transfers(mod, uv, sched, tick_stats, mon_update);
   handle_major_delays(mod, uv, sched, tick_stats, mon_update);
-  handle_unbroken_transfers(mod, uv, sched, tick_stats, mon_update);
+  handle_unbroken_transfers(mod, uv, sched, mon_update);
 
   MOTIS_STOP_TIMING(total);
   tick_stats.t_total_ = MOTIS_TIMING_MS(total);
