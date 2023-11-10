@@ -77,7 +77,7 @@
 [transfers]
   url=git@github.com:motis-project/transfers.git
   branch=main
-  commit=38e13dd7f980b0b683aa8edd8a1ade49ea0dab40
+  commit=4b1e57bddfa54dd2068d561d531fb807b0176768
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
