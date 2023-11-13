@@ -145,8 +145,8 @@ auto run_search(n::routing::search_state& search_state,
 
 motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                              n::rt_timetable const* rtt,
-                             n::profile_idx_t const prf_idx,
-                             motis::module::msg_ptr const& msg) {
+                             motis::module::msg_ptr const& msg,
+                             n::profile_idx_t const prf_idx) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
 
