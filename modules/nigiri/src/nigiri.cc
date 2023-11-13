@@ -191,9 +191,9 @@ void nigiri::init(motis::module::registry& reg) {
                   {});
 
   if (!impl_->tt_->get()->profiles_.empty()) {
-    for (auto [prf_name, prf_idx] : impl_->tt_->get()->profiles_) {
+    for (auto const& [prf_name, prf_idx] : impl_->tt_->get()->profiles_) {
       reg.register_op(fmt::format("/nigiri/{}", prf_name),
-                      [this, &prf_idx](mm::msg_ptr const& msg) {
+                      [&, this](mm::msg_ptr const& msg) {
                         return route(impl_->tags_, **impl_->tt_,
                                      impl_->get_rtt().get(), msg, prf_idx);
                       },
