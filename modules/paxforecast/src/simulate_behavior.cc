@@ -112,12 +112,16 @@ void simulate_behavior_for_route(
     std::vector<alternative> const& alts_broken,
     reroute_reason_t const default_reroute_reason) {
   auto const use_uninformed_pax = options.uninformed_pax_ != 0.F;
+  auto const use_stay =
+      use_uninformed_pax &&
+      default_reroute_reason == reroute_reason_t::MAJOR_DELAY_EXPECTED;
   auto& gr = uv.passenger_groups_.route(ar.pgwrap_.pgwr_);
 
   auto new_routes = std::vector<Offset<PaxMonGroupRoute>>{};
 
   auto const old_journey =
       uv.passenger_groups_.journey(gr.compact_journey_index_);
+  auto rerouted_to_old_journey = false;
 
   auto const process_alts = [&](std::vector<alternative> const& alts,
                                 passenger_localization const& loc,
@@ -126,8 +130,8 @@ void simulate_behavior_for_route(
     auto const probs = behavior::calc_new_probabilites(
         base_prob, alts, options.probability_threshold_);
 
-    for (auto const& [alt, prob] : utl::zip(alts, probs)) {
-      if (prob == 0.F) {
+    for (auto const& [alt, new_prob] : utl::zip(alts, probs)) {
+      if (new_prob == 0.F) {
         continue;
       }
 
@@ -141,16 +145,22 @@ void simulate_behavior_for_route(
         throw e;
       }
 
-      auto const tgr = temp_group_route{
-          .index_ = std::nullopt,
-          .probability_ = prob,
-          .journey_ = new_journey,
-          .planned_arrival_time_ = gr.planned_arrival_time_,
-          .estimated_delay_ = 0 /* updated by reroute groups api */,
-          .source_flags_ = route_source_flags::FORECAST,
-          .planned_ = false};
+      auto prob = new_prob;
+      if (use_stay && new_journey == old_journey) {
+        prob += ar.pgwrap_.probability_ * options.uninformed_pax_;
+        rerouted_to_old_journey = true;
+      }
 
-      new_routes.emplace_back(to_fbs(sched, ug_ctx.mc_, tgr));
+      new_routes.emplace_back(
+          to_fbs(sched, ug_ctx.mc_,
+                 temp_group_route{
+                     .index_ = std::nullopt,
+                     .probability_ = prob,
+                     .journey_ = new_journey,
+                     .planned_arrival_time_ = gr.planned_arrival_time_,
+                     .estimated_delay_ = 0 /* updated by reroute groups api */,
+                     .source_flags_ = route_source_flags::FORECAST,
+                     .planned_ = false}));
     }
   };
 
@@ -160,6 +170,19 @@ void simulate_behavior_for_route(
       base_prob *= (1.F - options.uninformed_pax_);
     }
     process_alts(alts_now, ar.loc_now_, base_prob);
+    if (use_stay && !rerouted_to_old_journey) {
+      new_routes.emplace_back(to_fbs(
+          sched, ug_ctx.mc_,
+          temp_group_route{
+              .index_ = ar.pgwrap_.pgwr_.route_,
+              .probability_ = ar.pgwrap_.probability_ * options.uninformed_pax_,
+              .journey_ = {},
+              .planned_arrival_time_ = gr.planned_arrival_time_,
+              .estimated_delay_ = 0 /* updated by reroute groups api */,
+              .source_flags_ = route_source_flags::FORECAST,
+              .planned_ = false}));
+      rerouted_to_old_journey = true;
+    }
   }
 
   if (!alts_broken.empty() && use_uninformed_pax) {
@@ -167,8 +190,15 @@ void simulate_behavior_for_route(
     process_alts(alts_broken, ar.loc_broken_, base_prob);
   }
 
+  if (new_routes.size() == 1 && rerouted_to_old_journey) {
+    return;
+  }
+
   auto reroute_reason = default_reroute_reason;
   if (alts_now.empty() && alts_broken.empty()) {
+    if (default_reroute_reason == reroute_reason_t::MAJOR_DELAY_EXPECTED) {
+      return;
+    }
     // keep existing group (only reachable part)
     reroute_reason = reroute_reason_t::DESTINATION_UNREACHABLE;
     gr.destination_unreachable_ = true;

@@ -39,6 +39,9 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
         "dropped)");
   param(uninformed_pax_, "uninformed_pax",
         "percentage of passengers that ignore forecasts and announcements");
+  param(major_delay_switch_, "major_delay_switch",
+        "percentage of passengers that may switch to alternatives in case of "
+        "an expected major delay");
   param(
       allow_start_metas_, "allow_start_metas",
       "allow using equivalent stations as start station in alternative routes");

@@ -152,14 +152,13 @@ void run_simulation(paxforecast& mod, tick_statistics& tick_stats,
 void update_groups(paxforecast& mod, universe& uv, schedule const& sched,
                    std::vector<affected_route_info> const& affected_routes,
                    alternatives_set const& alts_set,
-                   tick_statistics& tick_stats) {
+                   tick_statistics& tick_stats,
+                   simulation_options const& options,
+                   reroute_reason_t const reason) {
   auto const constexpr REROUTE_BATCH_SIZE = 5'000;
 
   MOTIS_START_TIMING(update_tracked_groups);
 
-  auto const options =
-      simulation_options{.probability_threshold_ = mod.probability_threshold_,
-                         .uninformed_pax_ = mod.uninformed_pax_};
   auto ug_ctx = update_groups_context{.mc_ = message_creator()};
   auto const empty_alts = std::vector<alternative>{};
 
@@ -189,7 +188,7 @@ void update_groups(paxforecast& mod, universe& uv, schedule const& sched,
         ar.loc_broken_.valid()
             ? alts_set.requests_.at(ar.alts_broken_).alternatives_
             : empty_alts,
-        reroute_reason_t::BROKEN_TRANSFER);
+        reason);
     if (ug_ctx.reroutes_.size() >= REROUTE_BATCH_SIZE) {
       send_reroutes();
     }
@@ -273,18 +272,72 @@ void handle_broken_transfers(paxforecast& mod, universe& uv,
 
   find_alternatives_set(mod, uv, sched, tick_stats, alts_set);
   run_simulation(mod, tick_stats, alts_set);
-  update_groups(mod, uv, sched, affected_routes, alts_set, tick_stats);
+  update_groups(
+      mod, uv, sched, affected_routes, alts_set, tick_stats,
+      simulation_options{.probability_threshold_ = mod.probability_threshold_,
+                         .uninformed_pax_ = mod.uninformed_pax_},
+      reroute_reason_t::BROKEN_TRANSFER);
 }
 
 void handle_major_delays(paxforecast& mod, universe& uv, schedule const& sched,
                          tick_statistics& tick_stats,
                          PaxMonUpdate const* mon_update) {
-  // TODO(pablo): currently not supported
-  (void)mod;
-  (void)uv;
-  (void)sched;
-  (void)tick_stats;
-  (void)mon_update;
+  auto const switch_prob = mod.major_delay_switch_;
+  auto const stay_prob = 1.F - switch_prob;
+  if (switch_prob == 0.F) {
+    return;
+  }
+
+  auto affected_routes = std::vector<affected_route_info>{};
+  auto alts_set = alternatives_set{};
+
+  auto last_pgi = std::numeric_limits<passenger_group_index>::max();
+  for (auto const& event : *mon_update->events()) {
+    if (event->type() != PaxMonEventType_MAJOR_DELAY_EXPECTED) {
+      continue;
+    }
+
+    auto pgwrap = event_to_pgwrap(event);
+    // probability may have changed because of broken transfers in other
+    // routes of the same group
+    pgwrap.probability_ = uv.passenger_groups_.route(pgwrap.pgwr_).probability_;
+
+    if (pgwrap.probability_ == 0.F) {
+      continue;
+    }
+
+    if (last_pgi == pgwrap.pgwr_.pg_) {
+      // TODO(pablo): major delays for more than one route per group
+      //  are currently not supported because processing them separately
+      //  breaks things
+      LOG(info) << "skipping major delay for group " << pgwrap.pgwr_.pg_
+                << " because of multiple delayed routes";
+      continue;
+    }
+    last_pgi = pgwrap.pgwr_.pg_;
+
+    auto& ar = affected_routes.emplace_back(affected_route_info{
+        .pgwrap_ = pgwrap,
+        .destination_station_id_ = get_destination_station_id(
+            sched, event->group_route()->route()->journey()),
+        .loc_now_ = from_fbs(sched, event->localization_type(),
+                             event->localization())});
+
+    ar.alts_now_ =
+        alts_set.add_request(ar.loc_now_, ar.destination_station_id_);
+  }
+
+  if (alts_set.requests_.empty()) {
+    return;
+  }
+
+  find_alternatives_set(mod, uv, sched, tick_stats, alts_set);
+  run_simulation(mod, tick_stats, alts_set);
+  update_groups(
+      mod, uv, sched, affected_routes, alts_set, tick_stats,
+      simulation_options{.probability_threshold_ = mod.probability_threshold_,
+                         .uninformed_pax_ = stay_prob},
+      reroute_reason_t::MAJOR_DELAY_EXPECTED);
 }
 
 void handle_unbroken_transfers(paxforecast& mod, universe& uv,
