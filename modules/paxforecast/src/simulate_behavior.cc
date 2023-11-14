@@ -166,7 +166,7 @@ void simulate_behavior_for_route(
 
   if (!alts_now.empty()) {
     auto base_prob = ar.pgwrap_.probability_;
-    if (use_uninformed_pax) {
+    if (use_uninformed_pax && (!alts_broken.empty() || use_stay)) {
       base_prob *= (1.F - options.uninformed_pax_);
     }
     process_alts(alts_now, ar.loc_now_, base_prob);
@@ -186,7 +186,9 @@ void simulate_behavior_for_route(
   }
 
   if (!alts_broken.empty() && use_uninformed_pax) {
-    auto const base_prob = ar.pgwrap_.probability_ * options.uninformed_pax_;
+    auto const base_prob =
+        alts_now.empty() ? ar.pgwrap_.probability_
+                         : ar.pgwrap_.probability_ * options.uninformed_pax_;
     process_alts(alts_broken, ar.loc_broken_, base_prob);
   }
 

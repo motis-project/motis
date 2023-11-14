@@ -212,27 +212,23 @@ void handle_broken_transfers(paxforecast& mod, universe& uv,
       continue;
     }
 
-    auto& ar = affected_routes.emplace_back(affected_route_info{
-        .pgwrap_ = event_to_pgwrap(event),
-        .destination_station_id_ = get_destination_station_id(
-            sched, event->group_route()->route()->journey()),
-        .loc_now_ =
-            from_fbs(sched, event->localization_type(), event->localization()),
-        .broken_transfer_info_ =
-            from_fbs(sched, event->reachability()->broken_transfer()),
-    });
+    auto const pgwrap = event_to_pgwrap(event);
+    auto loc_now =
+        from_fbs(sched, event->localization_type(), event->localization());
+    auto const destination_station_id = get_destination_station_id(
+        sched, event->group_route()->route()->journey());
 
     auto const next_stop_is_destination =
-        ar.loc_now_.at_station_->index_ == ar.destination_station_id_;
+        loc_now.at_station_->index_ == destination_station_id;
 
     // <debug>
     if (next_stop_is_destination) {
-      std::cout << "[MU]: next stop is destination: pg=" << ar.pgwrap_.pgwr_.pg_
-                << "#" << ar.pgwrap_.pgwr_.route_
+      std::cout << "[MU]: next stop is destination: pg=" << pgwrap.pgwr_.pg_
+                << "#" << pgwrap.pgwr_.route_
                 << ", event=" << static_cast<int>(event->type())
-                << ", prob=" << ar.pgwrap_.probability_
-                << ", station=" << ar.loc_now_.at_station_->eva_nr_ << " ("
-                << ar.loc_now_.at_station_->name_
+                << ", prob=" << pgwrap.probability_
+                << ", station=" << loc_now.at_station_->eva_nr_ << " ("
+                << loc_now.at_station_->name_
                 << "), eta=" << format_unix_time(event->expected_arrival_time())
                 << ", planned="
                 << format_unix_time(
@@ -240,13 +236,21 @@ void handle_broken_transfers(paxforecast& mod, universe& uv,
                 << ", delay="
                 << event->group_route()->route()->estimated_delay()
                 << ", broken=" << event->group_route()->route()->broken()
-                << ", in_trip=" << ar.loc_now_.in_trip() << std::endl;
+                << ", in_trip=" << loc_now.in_trip() << std::endl;
     }
     // </debug>
 
-    if (next_stop_is_destination || ar.pgwrap_.probability_ == 0.F) {
+    if (next_stop_is_destination || pgwrap.probability_ == 0.F) {
       continue;
     }
+
+    auto& ar = affected_routes.emplace_back(affected_route_info{
+        .pgwrap_ = pgwrap,
+        .destination_station_id_ = destination_station_id,
+        .loc_now_ = std::move(loc_now),
+        .broken_transfer_info_ =
+            from_fbs(sched, event->reachability()->broken_transfer()),
+    });
 
     ar.alts_now_ =
         alts_set.add_request(ar.loc_now_, ar.destination_station_id_);
