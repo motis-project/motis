@@ -298,8 +298,6 @@ void revert_forecast(universe& uv, schedule const& sched,
       if (p_change == 0.F) {
         continue;
       }
-      auto const& route = routes.at(route_idx);
-      auto const new_prob = route.probability_ + p_change;
       new_routes.emplace_back(
           to_fbs(sched, fbb,
                  temp_group_route{
