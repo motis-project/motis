@@ -2,15 +2,12 @@
 
 #include <cstdint>
 #include <algorithm>
-#include <iostream>
 #include <optional>
 #include <vector>
 
 #include "fmt/format.h"
 
 #include "utl/verify.h"
-
-#include "motis/hash_map.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/common/logging.h"
@@ -20,8 +17,6 @@
 #include "motis/module/context/motis_spawn.h"
 
 #include "motis/core/access/trip_access.h"
-#include "motis/core/debug/trip.h"
-#include "motis/paxmon/debug.h"
 
 #include "motis/paxmon/fbs_compact_journey_util.h"
 #include "motis/paxmon/get_universe.h"
@@ -76,16 +71,6 @@ void log_destination_reachable(
         reroute_reason_t::DESTINATION_REACHABLE,
         {}});
   }
-}
-
-bool has_better_alternative(std::vector<alternative> const& alts,
-                            time expected_arrival_time,
-                            duration min_improvement) {
-  auto const latest_accepted_arrival = expected_arrival_time - min_improvement;
-  return std::any_of(begin(alts), end(alts),
-                     [latest_accepted_arrival](alternative const& alt) {
-                       return alt.arrival_time_ <= latest_accepted_arrival;
-                     });
 }
 
 void find_alternatives_set(paxforecast& mod, universe& uv,
