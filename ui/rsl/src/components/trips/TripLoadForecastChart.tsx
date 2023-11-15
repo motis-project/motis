@@ -51,14 +51,14 @@ function getYLabels(maxVal: number) {
     maxVal >= 20000
       ? 2000
       : maxVal >= 10000
-      ? 1000
-      : maxVal >= 3000
-      ? 500
-      : maxVal >= 1500
-      ? 200
-      : maxVal >= 700
-      ? 100
-      : 50;
+        ? 1000
+        : maxVal >= 3000
+          ? 500
+          : maxVal >= 1500
+            ? 200
+            : maxVal >= 700
+              ? 100
+              : 50;
   const labels = [];
   for (let pax = stepSize; pax < maxVal; pax += stepSize) {
     labels.push({

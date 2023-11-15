@@ -204,8 +204,8 @@ function UniverseControl() {
                 ? "cursor-default bg-db-red-300 text-db-red-100 ring ring-db-red-800"
                 : "cursor-default bg-db-red-300 text-db-red-100"
               : uv.id == universe
-              ? "bg-db-red-500 ring ring-db-red-800"
-              : "bg-db-red-500 hover:bg-db-red-600"
+                ? "bg-db-red-500 ring ring-db-red-800"
+                : "bg-db-red-500 hover:bg-db-red-600"
           }`}
           onClick={() => switchTo(uv)}
           disabled={isMutating}

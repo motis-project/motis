@@ -79,8 +79,8 @@ function TripSectionDetails({
     groupByStation === "First" || groupByStation === "FirstLongDistance"
       ? "Origin"
       : groupByStation === "None"
-      ? "None"
-      : "Destination";
+        ? "None"
+        : "Destination";
 
   const getMinPaxInSection = (sec: GroupsInTripSection) =>
     sec.groups.reduce((sum, g) => sum + g.info.dist.q5, 0);

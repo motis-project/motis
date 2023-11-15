@@ -405,8 +405,8 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
             applyMeasuresMutation.isPending
               ? "cursor-wait bg-db-red-300 text-db-red-100"
               : applyEnabled
-              ? "bg-db-red-500 text-white hover:bg-db-red-600"
-              : "cursor-not-allowed bg-db-red-300 text-db-red-100"
+                ? "bg-db-red-500 text-white hover:bg-db-red-600"
+                : "cursor-not-allowed bg-db-red-300 text-db-red-100"
           }`}
         >
           Maßnahmen simulieren

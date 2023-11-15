@@ -112,8 +112,8 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
         {isBrokenTransfer
           ? "Umstieg in"
           : isBrokenDeparture
-          ? "Abfahrt in"
-          : "Ankunft in"}
+            ? "Abfahrt in"
+            : "Ankunft in"}
         {differentStations ? (
           <>
             {arrival && <span>{arrival.station.name}</span>}

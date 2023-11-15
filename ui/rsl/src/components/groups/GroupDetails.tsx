@@ -201,8 +201,8 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
           route.broken
             ? "bg-red-50"
             : route.probability > 0
-            ? "bg-green-50"
-            : "bg-amber-50",
+              ? "bg-green-50"
+              : "bg-amber-50",
         )}
       >
         <table>
@@ -561,10 +561,10 @@ function RerouteLogTable({ group }: RerouteLogTableProps) {
                       ? "text-db-red-300"
                       : "text-db-cool-gray-300"
                     : diffs[rowIdx][colIdx] > 0
-                    ? "text-green-600"
-                    : diffs[rowIdx][colIdx] < 0
-                    ? "text-yellow-500"
-                    : "text-black",
+                      ? "text-green-600"
+                      : diffs[rowIdx][colIdx] < 0
+                        ? "text-yellow-500"
+                        : "text-black",
                 )}
                 title={`Exakter Wert: ${p}, Änderung: ${formatPercent(
                   diffs[rowIdx][colIdx],

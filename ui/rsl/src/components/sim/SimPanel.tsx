@@ -33,8 +33,8 @@ function Tab({
         selectedTab === id
           ? "bg-db-red-500 text-white shadow"
           : disabled
-          ? "text-db-cool-gray-200"
-          : "text-db-cool-gray-100 hover:bg-white/[0.2] hover:text-white",
+            ? "text-db-cool-gray-200"
+            : "text-db-cool-gray-100 hover:bg-white/[0.2] hover:text-white",
       )}
       onClick={() => setSelectedTab(id)}
       disabled={disabled}

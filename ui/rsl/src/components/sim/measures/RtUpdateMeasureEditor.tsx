@@ -210,8 +210,8 @@ function TripSectionEditor({
       section: previousStop
         ? cloneDeep(previousStop.section)
         : nextStop
-        ? cloneDeep(nextStop.section)
-        : getEmptySectionFormData(),
+          ? cloneDeep(nextStop.section)
+          : getEmptySectionFormData(),
     });
   };
 
