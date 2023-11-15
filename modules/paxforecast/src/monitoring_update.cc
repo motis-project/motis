@@ -149,7 +149,7 @@ void run_simulation(paxforecast& mod, tick_statistics& tick_stats,
   tick_stats.t_passenger_behavior_ += MOTIS_TIMING_MS(passenger_behavior);
 }
 
-void update_groups(paxforecast& mod, universe& uv, schedule const& sched,
+void update_groups(universe& uv, schedule const& sched,
                    std::vector<affected_route_info> const& affected_routes,
                    alternatives_set const& alts_set,
                    tick_statistics& tick_stats,
@@ -255,7 +255,7 @@ void handle_broken_transfers(paxforecast& mod, universe& uv,
   find_alternatives_set(mod, uv, sched, tick_stats, alts_set);
   run_simulation(mod, tick_stats, alts_set);
   update_groups(
-      mod, uv, sched, affected_routes, alts_set, tick_stats,
+      uv, sched, affected_routes, alts_set, tick_stats,
       simulation_options{.probability_threshold_ = mod.probability_threshold_,
                          .uninformed_pax_ = mod.uninformed_pax_},
       reroute_reason_t::BROKEN_TRANSFER);
@@ -316,7 +316,7 @@ void handle_major_delays(paxforecast& mod, universe& uv, schedule const& sched,
   find_alternatives_set(mod, uv, sched, tick_stats, alts_set);
   run_simulation(mod, tick_stats, alts_set);
   update_groups(
-      mod, uv, sched, affected_routes, alts_set, tick_stats,
+      uv, sched, affected_routes, alts_set, tick_stats,
       simulation_options{.probability_threshold_ = mod.probability_threshold_,
                          .uninformed_pax_ = stay_prob},
       reroute_reason_t::MAJOR_DELAY_EXPECTED);
