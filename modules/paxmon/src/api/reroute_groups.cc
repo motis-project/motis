@@ -134,26 +134,6 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
         uv, sched, pgi, old_route_idx, old_route_probability, reason, bti,
         rr->new_routes()->size() != 0, localization);
 
-    // <debug>
-    if (reason == reroute_reason_t::REVERT_FORECAST) {
-      std::cout << "reroute_groups: revert forecast for group " << pgi
-                << ", old route " << old_route_idx << ", probability "
-                << old_route_probability << "\n  probs: [ ";
-      for (auto const& r : routes) {
-        std::cout << r.probability_ << " ";
-      }
-      std::cout << "] => [ ";
-      for (auto const& r : *rr->new_routes()) {
-        std::cout << r->index() << "=" << r->probability() << " ";
-      }
-      std::cout << "], broken: [ ";
-      for (auto const& r : routes) {
-        std::cout << r.broken_ << " ";
-      }
-      std::cout << "], override: " << override_probabilities << std::endl;
-    }
-    // </debug>
-
     if (reason == reroute_reason_t::DESTINATION_UNREACHABLE ||
         reason == reroute_reason_t::DESTINATION_REACHABLE) {
       utl::verify(
