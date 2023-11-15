@@ -218,29 +218,7 @@ void handle_broken_transfers(paxforecast& mod, universe& uv,
     auto const destination_station_id = get_destination_station_id(
         sched, event->group_route()->route()->journey());
 
-    auto const next_stop_is_destination =
-        loc_now.at_station_->index_ == destination_station_id;
-
-    // <debug>
-    if (next_stop_is_destination) {
-      std::cout << "[MU]: next stop is destination: pg=" << pgwrap.pgwr_.pg_
-                << "#" << pgwrap.pgwr_.route_
-                << ", event=" << static_cast<int>(event->type())
-                << ", prob=" << pgwrap.probability_
-                << ", station=" << loc_now.at_station_->eva_nr_ << " ("
-                << loc_now.at_station_->name_
-                << "), eta=" << format_unix_time(event->expected_arrival_time())
-                << ", planned="
-                << format_unix_time(
-                       event->group_route()->route()->planned_arrival_time())
-                << ", delay="
-                << event->group_route()->route()->estimated_delay()
-                << ", broken=" << event->group_route()->route()->broken()
-                << ", in_trip=" << loc_now.in_trip() << std::endl;
-    }
-    // </debug>
-
-    if (next_stop_is_destination || pgwrap.probability_ == 0.F) {
+    if (pgwrap.probability_ == 0.F) {
       continue;
     }
 
