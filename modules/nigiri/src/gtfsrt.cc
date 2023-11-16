@@ -28,7 +28,9 @@ gtfsrt::gtfsrt(tag_lookup const& tags, std::string_view config) {
       tag.view(), tags);
   auto req = net::http::client::request{url.to_str()};
   if (!auth.empty()) {
-    req.headers.emplace("Authorization", auth.to_str());
+    url.starts_with("https://gtfs-datenstroeme.tech.deutschebahn.com")
+        ? req.headers.emplace("DB-Api-Key", auth.to_str())
+        : req.headers.emplace("Authorization", auth.to_str());
   }
   impl_ = std::make_unique<impl>(std::move(req), src);
 }
