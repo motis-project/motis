@@ -15,20 +15,20 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@limegrass/eslint-plugin-import-alias": "^1.0.6",
-    "@trivago/prettier-plugin-sort-imports": "^4.2.0",
-    "@types/node": "^20.4.9",
-    "@typescript-eslint/eslint-plugin": "^6.3.0",
-    "@typescript-eslint/parser": "^6.3.0",
-    "eslint": "^8.46.0",
+    "@limegrass/eslint-plugin-import-alias": "^1.1.0",
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
+    "@types/node": "^20.9.0",
+    "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "@typescript-eslint/parser": "^6.11.0",
+    "eslint": "^8.53.0",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.1.6"
+    "typescript": "^5.2.2"
   },
   "dependencies": {
     "arcsecond": "^5.0.0",
-    "commander": "^11.0.0",
-    "prettier": "^3.0.1",
-    "yaml": "^2.3.1"
+    "commander": "^11.1.0",
+    "prettier": "^3.1.0",
+    "yaml": "^2.3.4"
   }
 }
