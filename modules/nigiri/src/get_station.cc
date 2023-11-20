@@ -4,6 +4,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/erase_duplicates.h"
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
@@ -266,6 +267,7 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
       locations.emplace_back(eq);
     }
   }
+  utl::erase_duplicates(locations);
 
   auto const dir = req->direction() != railviz::Direction_EARLIER
                        ? n::direction::kForward
