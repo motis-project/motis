@@ -329,9 +329,11 @@ jobs:
 
       - name: Run Tests
         if: ${{ !matrix.config.skiptests }}
-        run: |
-          ${{ matrix.config.emulator }} build/motis-test & \
-          ${{ matrix.config.emulator }} build/motis-itest
+        run: ${{ matrix.config.emulator }} build/motis-test
+
+      - name: Run Integration Tests
+        if: ${{ !matrix.config.skiptests }}
+        run: ${{ matrix.config.emulator }} build/motis-itest
 
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
