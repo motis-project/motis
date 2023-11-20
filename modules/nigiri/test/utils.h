@@ -45,8 +45,8 @@ inline transit_realtime::FeedMessage to_feed_msg(
   auto id = 0U;
   for (auto const& trip : trip_delays) {
     auto const e = msg.add_entity();
-    e->set_is_deleted(false);
     e->set_id(fmt::format("{}", ++id));
+    e->set_is_deleted(false);
 
     auto const td = e->mutable_trip_update()->mutable_trip();
     td->set_trip_id(trip.trip_id_);
