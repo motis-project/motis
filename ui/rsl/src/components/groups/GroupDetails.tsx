@@ -11,7 +11,8 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAtom, useSetAtom } from "jotai";
-import React, { useEffect } from "react";
+import { ExternalLink } from "lucide-react";
+import React, { ReactNode, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -22,6 +23,7 @@ import {
   PaxMonGroupRoute,
   PaxMonInTrip,
   PaxMonRerouteLogEntry,
+  PaxMonRerouteLogRoute,
   PaxMonRerouteReason,
   PaxMonTransferInfo,
 } from "@/api/protocol/motis/paxmon";
@@ -33,9 +35,12 @@ import { universeAtom } from "@/data/multiverse";
 import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedGroupAtom } from "@/data/selectedGroup";
 
+import { getBahnSucheUrl } from "@/util/bahnDe";
 import { formatDateTime, formatTime } from "@/util/dateFormat";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView";
+import GroupRouteTree from "@/components/groups/GroupRouteTree";
+import { Button } from "@/components/ui/button";
 import Delay from "@/components/util/Delay";
 
 import { cn } from "@/lib/utils";
@@ -46,7 +51,7 @@ interface GroupDetailsProps {
 
 function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const { data, isLoading, error } = usePaxMonGetGroupsRequest({
+  const { data, isPending, error } = usePaxMonGetGroupsRequest({
     universe,
     ids: [groupId],
     sources: [],
@@ -61,7 +66,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
   }, [groupId, setMostRecentlySelectedGroup]);
 
   if (!data) {
-    if (isLoading) {
+    if (isPending) {
       return <div>Gruppeninformationen werden geladen...</div>;
     } else {
       return (
@@ -82,6 +87,8 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
     return <div>Gruppe {groupId} ist ungültig (keine Routen).</div>;
   }
 
+  const plannedJourney = group.routes[0].journey;
+
   return (
     <div>
       <div className="flex gap-10 text-xl">
@@ -94,7 +101,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
         <div>Interne ID: {group.id}</div>
         <div className="flex items-center gap-x-1">
           <UsersIcon
-            className="w-4 h-4 text-db-cool-gray-500"
+            className="h-4 w-4 text-db-cool-gray-500"
             aria-hidden="true"
           />
           {group.passenger_count}
@@ -104,6 +111,23 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
       <div className="">
         Planmäßige Ankunftszeit:{" "}
         {formatDateTime(group.routes[0].planned_arrival_time)}
+      </div>
+      <div className="mt-2">
+        <Button variant="outline" className="gap-2" asChild>
+          <a
+            href={getBahnSucheUrl(
+              plannedJourney.legs[0].enter_station,
+              plannedJourney.legs[plannedJourney.legs.length - 1].exit_station,
+              plannedJourney.legs[0].enter_time,
+            )}
+            target="_blank"
+            referrerPolicy="no-referrer"
+            rel="noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            Aktuelle Alternativensuche auf bahn.de
+          </a>
+        </Button>
       </div>
       <div className="mt-4 flex flex-wrap gap-8">
         <div>
@@ -119,9 +143,9 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
           </div>
         </div>
         <div>
-          <div className="text-lg mb-3">Änderungsprotokoll</div>
+          <div className="mb-3 text-lg">Änderungsprotokoll</div>
           <div className="relative inline-flex flex-col">
-            <div className="absolute top-0 left-4 h-full -ml-px bg-db-cool-gray-300 w-0.5"></div>
+            <div className="absolute left-4 top-0 -ml-px h-full w-0.5 bg-db-cool-gray-300"></div>
             {group.reroute_log.map((log, idx) => (
               <RerouteLogEntry
                 key={idx}
@@ -134,6 +158,9 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
           <RerouteLogTable group={group} />
         </div>
       </div>
+      <div className="py-5">
+        <GroupRouteTree group={group} />
+      </div>
     </div>
   );
 }
@@ -144,27 +171,27 @@ interface GroupRouteProps {
 
 function GroupRoute({ route }: GroupRouteProps): JSX.Element {
   return (
-    <div className="flex flex-col bg-db-cool-gray-200 rounded drop-shadow-md">
+    <div className="flex flex-col rounded bg-db-cool-gray-200 drop-shadow-md">
       <div
         className={cn(
-          "grid grid-cols-3 gap-1 rounded-t p-2 bg-db-cool-gray-200 border-b-4",
+          "grid grid-cols-3 gap-1 rounded-t border-b-4 bg-db-cool-gray-200 p-2",
           route.broken ? "border-red-300" : "border-green-300",
         )}
       >
-        <div className="text-lg flex items-center gap-4">
+        <div className="flex items-center gap-4 text-lg">
           #{route.index}
           {route.planned && (
-            <TicketIcon className="w-5 h-5" title="Planmäßge Route" />
+            <TicketIcon className="h-5 w-5" title="Planmäßge Route" />
           )}
         </div>
-        <div className="text-lg text-center">
+        <div className="text-center text-lg">
           {formatPercent(route.probability)}
         </div>
         <div
-          className="flex justify-end items-center gap-1"
+          className="flex items-center justify-end gap-1"
           title="Erwartete Zielverspätung"
         >
-          <ClockIcon className="w-5 h-5" />
+          <ClockIcon className="h-5 w-5" />
           <Delay minutes={route.estimated_delay} forceSign={true} />
         </div>
       </div>
@@ -174,14 +201,14 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
           route.broken
             ? "bg-red-50"
             : route.probability > 0
-            ? "bg-green-50"
-            : "bg-amber-50",
+              ? "bg-green-50"
+              : "bg-amber-50",
         )}
       >
         <table>
           <thead>
             <tr className="font-semibold">
-              <td className="pr-2 sr-only">Abschnitt</td>
+              <td className="sr-only pr-2">Abschnitt</td>
               <td className="pr-2">Zug</td>
               <td className="pr-2" title="Benötigte Umstiegszeit">
                 Umstieg
@@ -311,7 +338,7 @@ interface RerouteLogEntryProps {
   group: PaxMonGroup;
 }
 
-function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
+function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): ReactNode {
   const broken_transfer =
     log.broken_transfer.length === 1 ? log.broken_transfer[0] : undefined;
   const show_reroutes = log.new_routes.length > 0;
@@ -321,7 +348,7 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
     <div className="relative">
       <div
         className={cn(
-          "absolute w-8 h-8 rounded-full inline-flex items-center justify-center text-white",
+          "absolute inline-flex h-8 w-8 items-center justify-center rounded-full text-white",
           bgColor,
         )}
       >
@@ -332,11 +359,12 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
           <span className="font-semibold">
             V{logIndex + 1}: {rerouteReasonText(log.reason)}
           </span>
+          <span>Update {log.update_number}</span>
           <span className="text-db-cool-gray-500">
             {formatDateTime(log.system_time)}
           </span>
         </div>
-        <RerouteLogEntryLocalization log={log} />
+        <RerouteLogEntryLocalization logRoute={log.old_route} />
         {show_reroutes ? (
           <>
             <div>
@@ -402,15 +430,15 @@ function RerouteLogEntry({ log, logIndex }: RerouteLogEntryProps): JSX.Element {
 }
 
 interface RerouteLogEntryLocalizationProps {
-  log: PaxMonRerouteLogEntry;
+  logRoute: PaxMonRerouteLogRoute;
 }
 
 function RerouteLogEntryLocalization({
-  log,
-}: RerouteLogEntryLocalizationProps): JSX.Element {
-  switch (log.localization_type) {
+  logRoute,
+}: RerouteLogEntryLocalizationProps): ReactNode {
+  switch (logRoute.localization_type) {
     case "PaxMonAtStation": {
-      const loc = log.localization as PaxMonAtStation;
+      const loc = logRoute.localization as PaxMonAtStation;
       return (
         <div>
           Reisende an Station {loc.station.name} um{" "}
@@ -420,7 +448,7 @@ function RerouteLogEntryLocalization({
       );
     }
     case "PaxMonInTrip": {
-      const loc = log.localization as PaxMonInTrip;
+      const loc = logRoute.localization as PaxMonInTrip;
       return (
         <div>
           Reisende in Zug {loc.trip.train_nr}, nächster Halt:{" "}
@@ -457,17 +485,17 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "RevertForecast":
       return {
         icon: <ArrowUturnUpIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-teal-500",
       };
     case "Simulation":
       return {
         icon: <CpuChipIcon className={style} />,
-        bgColor: "bg-teal-500",
+        bgColor: "bg-cyan-500",
       };
     case "UpdateForecast":
       return {
         icon: <ArrowPathIcon className={style} />,
-        bgColor: "bg-teal-500",
+        bgColor: "bg-violet-500",
       };
     case "DestinationUnreachable":
       return {
@@ -477,7 +505,7 @@ function getRerouteReasonIcon(reason: PaxMonRerouteReason): RerouteReasonIcon {
     case "DestinationReachable":
       return {
         icon: <CheckCircleIcon className={style} />,
-        bgColor: "bg-green-500",
+        bgColor: "bg-lime-500",
       };
   }
 }
@@ -486,35 +514,37 @@ interface RerouteLogTableProps {
   group: PaxMonGroup;
 }
 
-function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
-  const probs = [group.routes.map((r) => r.probability)];
-  const diffs: number[][] = [];
+function RerouteLogTable({ group }: RerouteLogTableProps) {
+  const probs: number[][] = [group.routes.map((r) => (r.index === 0 ? 1 : 0))];
+  const diffs: number[][] = [group.routes.map(() => 0)];
 
-  for (let i = group.reroute_log.length - 1; i >= 0; --i) {
-    const le = group.reroute_log[i];
-    const new_probs = [...probs[0]];
+  for (const le of group.reroute_log) {
+    const new_probs = [...probs[probs.length - 1]];
     const diff = group.routes.map(() => 0);
-    new_probs[le.old_route.index] = le.old_route.previous_probability;
-    diff[le.old_route.index] = -le.old_route.previous_probability;
+
+    new_probs[le.old_route.index] = le.old_route.new_probability;
+    diff[le.old_route.index] =
+      le.old_route.new_probability - le.old_route.previous_probability;
     for (const nr of le.new_routes) {
-      new_probs[nr.index] = nr.previous_probability;
+      new_probs[nr.index] = nr.new_probability;
       diff[nr.index] = nr.new_probability - nr.previous_probability;
     }
-    probs.unshift(new_probs);
-    diffs.unshift(diff);
+
+    probs.push(new_probs);
+    diffs.push(diff);
   }
-  diffs.unshift(group.routes.map(() => 0));
 
   return (
     <table className="mt-2">
       <thead>
         <tr className="font-semibold">
-          <td className="pr-4 sr-only">V</td>
+          <td className="sr-only pr-4">V</td>
           {group.routes.map((r) => (
             <td key={r.index} className="pr-4 text-center">
               R #{r.index}
             </td>
           ))}
+          <td className="pr-4 text-center">Summe</td>
         </tr>
       </thead>
       <tbody>
@@ -531,10 +561,10 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
                       ? "text-db-red-300"
                       : "text-db-cool-gray-300"
                     : diffs[rowIdx][colIdx] > 0
-                    ? "text-green-600"
-                    : diffs[rowIdx][colIdx] < 0
-                    ? "text-yellow-500"
-                    : "text-black",
+                      ? "text-green-600"
+                      : diffs[rowIdx][colIdx] < 0
+                        ? "text-yellow-500"
+                        : "text-black",
                 )}
                 title={`Exakter Wert: ${p}, Änderung: ${formatPercent(
                   diffs[rowIdx][colIdx],
@@ -543,6 +573,9 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
                 {formatPercent(p)}
               </td>
             ))}
+            <td className="pr-4 text-center">
+              {formatPercent(row.reduce((acc, p) => acc + p, 0))}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -550,7 +583,7 @@ function RerouteLogTable({ group }: RerouteLogTableProps): JSX.Element {
   );
 }
 
-export function GroupDetailsFromRoute(): JSX.Element {
+export function GroupDetailsFromRoute() {
   const params = useParams();
   const groupId = Number.parseInt(params.groupId ?? "");
   if (!Number.isNaN(groupId)) {

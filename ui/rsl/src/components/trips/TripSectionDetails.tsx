@@ -64,7 +64,7 @@ function TripSectionDetails({
 
   const {
     data: groupsInTrip,
-    isLoading,
+    isPending,
     error,
   } = usePaxMonGroupsInTripQuery({
     universe,
@@ -79,17 +79,17 @@ function TripSectionDetails({
     groupByStation === "First" || groupByStation === "FirstLongDistance"
       ? "Origin"
       : groupByStation === "None"
-      ? "None"
-      : "Destination";
+        ? "None"
+        : "Destination";
 
   const getMinPaxInSection = (sec: GroupsInTripSection) =>
     sec.groups.reduce((sum, g) => sum + g.info.dist.q5, 0);
   const getMaxPaxInSection = (sec: GroupsInTripSection) =>
     sec.groups.reduce((sum, g) => sum + g.info.dist.q95, 0);
 
-  const content = isLoading ? (
+  const content = isPending ? (
     <div>Loading trip section data..</div>
-  ) : error || !groupsInTrip ? (
+  ) : error ?? !groupsInTrip ? (
     <div>
       Error loading trip section data:{" "}
       {error instanceof Error ? error.message : `Unbekannter Fehler`}

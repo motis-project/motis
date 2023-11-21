@@ -58,13 +58,11 @@ function CapacityStatus(): ReactElement {
     },
   };
 
-  const { data } = useQuery(
-    queryKeys.capacityStatus(request),
-    () => sendPaxMonCapacityStatusRequest(request),
-    {
-      enabled: selectedDate !== undefined,
-    },
-  );
+  const { data } = useQuery({
+    queryKey: queryKeys.capacityStatus(request),
+    queryFn: () => sendPaxMonCapacityStatusRequest(request),
+    enabled: selectedDate !== undefined,
+  });
 
   const scheduleRange = getScheduleRange(scheduleInfo);
   if (selectedDate === undefined && scheduleInfo) {
@@ -78,7 +76,7 @@ function CapacityStatus(): ReactElement {
   return (
     <div className="py-3">
       <h2 className="text-lg font-semibold">Kapazitätsdaten</h2>
-      <div className="flex pb-2 gap-1">
+      <div className="flex gap-1 pb-2">
         <div>
           <label>
             <span className="text-sm">Datum</span>
@@ -227,7 +225,7 @@ function ProviderCapacityStatus({ data }: CapacityStatusDataProps) {
           <tr className="text-left">
             <th className="font-medium"></th>
             {columns.map((c) => (
-              <th key={c.label} className="font-medium text-center p-1">
+              <th key={c.label} className="p-1 text-center font-medium">
                 {c.label}
               </th>
             ))}
@@ -237,7 +235,7 @@ function ProviderCapacityStatus({ data }: CapacityStatusDataProps) {
           <tr>
             <td className="font-medium">Überwachte Züge</td>
             {columns.map((c) => (
-              <td key={c.label} className="text-center p-1">
+              <td key={c.label} className="p-1 text-center">
                 {formatNumber(c.stats.tracked)}
               </td>
             ))}
@@ -276,7 +274,7 @@ interface StatsTableCellProps {
 function StatsTableCell({ value, total }: StatsTableCellProps) {
   return (
     <td
-      className="text-center p-1"
+      className="p-1 text-center"
       title={`${formatNumber(value)} von ${formatNumber(total)}`}
     >
       {formatPercent(value / total, {

@@ -20,17 +20,16 @@ export function TripTooltip({ tripId }: TripTooltipProps): JSX.Element | null {
   const [universe] = useAtom(universeAtom);
 
   const queryClient = useQueryClient();
-  const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(universe, tripId),
-    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
-    {
-      placeholderData: () => {
-        return universe != 0
-          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
-          : undefined;
-      },
+  const { data /*, isLoading, error*/ } = useQuery({
+    queryKey: queryKeys.tripLoad(universe, tripId),
+    queryFn: () =>
+      sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
+    placeholderData: () => {
+      return universe != 0
+        ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
+        : undefined;
     },
-  );
+  });
 
   if (!data || data.load_infos.length === 0) {
     return null;
@@ -42,13 +41,13 @@ export function TripTooltip({ tripId }: TripTooltipProps): JSX.Element | null {
   const trainNr = li.tsi.service_infos[0]?.train_nr ?? li.tsi.trip.train_nr;
 
   return (
-    <div className="w-[30rem] bg-white p-2 rounded-md shadow-lg flex flex-col gap-2">
+    <div className="flex w-[30rem] flex-col gap-2 rounded-md bg-white p-2 shadow-lg">
       <div className="flex gap-4 pb-1">
         <div className="flex flex-col">
-          <div className="text-sm text-center">{category}</div>
+          <div className="text-center text-sm">{category}</div>
           <div className="text-xl font-semibold">{trainNr}</div>
         </div>
-        <div className="grow flex flex-col truncate">
+        <div className="flex grow flex-col truncate">
           <div className="flex justify-between">
             <div className="truncate">{li.tsi.primary_station.name}</div>
             <div>{formatDateTime(li.tsi.trip.time)}</div>

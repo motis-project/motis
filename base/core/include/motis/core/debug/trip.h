@@ -135,7 +135,8 @@ struct trip_with_sections {
                 out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
               }
               out << "] arriving from "
-                  << station{sched, re->from_->get_station()->id_} << "\n";
+                  << station{sched, re->from_->get_station()->id_} << " at "
+                  << format_time(through_lc.a_time_) << "\n";
             }
           }
         }
@@ -152,7 +153,8 @@ struct trip_with_sections {
                 out << cista::ptr_cast(mt) << "/" << mt->trip_idx_ << " ";
               }
               out << "] departing to "
-                  << station{sched, re.to_->get_station()->id_} << "\n";
+                  << station{sched, re.to_->get_station()->id_} << " at "
+                  << format_time(through_lc.d_time_) << "\n";
             }
           }
         }

@@ -49,7 +49,7 @@ function MeasureEditor({
         <span className="text-xl">Maßnahme bearbeiten</span>
         <button
           onClick={() => setChangeTypeDialogOpen(true)}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+          className="rounded bg-db-red-500 px-2 py-1 text-sm text-white hover:bg-db-red-600"
         >
           Typ ändern
         </button>
@@ -145,7 +145,7 @@ function MeasureTypeOption({
 }: MeasureTypeOptionProps) {
   return (
     <div
-      className="group bg-white hover:bg-db-red-700 rounded-lg shadow-md px-5 py-4 cursor-pointer"
+      className="group cursor-pointer rounded-lg bg-white px-5 py-4 shadow-md hover:bg-db-red-700"
       onClick={onClick}
     >
       <div className="font-medium text-gray-900 group-hover:text-white">
@@ -287,7 +287,7 @@ function EmptyMeasureEditor({
         </MeasureTypeOption>
         <button
           onClick={() => deleteMeasure(measureAtom)}
-          className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+          className="rounded bg-db-red-500 px-2 py-1 text-sm text-white hover:bg-db-red-600"
         >
           Abbrechen
         </button>

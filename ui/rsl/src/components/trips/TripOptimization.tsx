@@ -126,22 +126,22 @@ function TripOptimization({
   return (
     <div
       className={cn(
-        "max-w-7xl mx-auto pb-2",
+        "mx-auto max-w-7xl pb-2",
         optimizationAvailable ? "visible" : "invisible",
       )}
     >
-      <div className="flex justify-center my-2 gap-2">
+      <div className="my-2 flex justify-center gap-2">
         <button
           type="button"
           onClick={toggleOptimization}
           className={cn(
-            "flex justify-center items-center gap-1 px-3 py-1 rounded text-sm",
+            "flex items-center justify-center gap-1 rounded px-3 py-1 text-sm",
             running
-              ? "bg-db-red-300 text-db-red-100 cursor-wait"
-              : "bg-db-red-500 hover:bg-db-red-600 text-white",
+              ? "cursor-wait bg-db-red-300 text-db-red-100"
+              : "bg-db-red-500 text-white hover:bg-db-red-600",
           )}
         >
-          <SparklesIcon className="w-5 h-5" aria-hidden="true" />
+          <SparklesIcon className="h-5 w-5" aria-hidden="true" />
           Maßnahmen zur Auslastungsreduktion ermitteln
         </button>
       </div>

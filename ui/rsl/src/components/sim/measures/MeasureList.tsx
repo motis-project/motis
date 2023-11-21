@@ -176,7 +176,7 @@ function TripWithLoadLevel({
   const lli = loadLevelInfos[level];
   return (
     <div className="flex items-center gap-2">
-      <span className={`inline-block w-4 h-4 rounded-full ${lli.bgColor}`} />
+      <span className={`inline-block h-4 w-4 rounded-full ${lli.bgColor}`} />
       <span>
         <TripServiceInfoView tsi={tsi} format="Short" />
         <span className="text-gray-500">: {lli.label}</span>
@@ -210,8 +210,8 @@ function MeasureListEntry({
       : `Zug ${tsi.trip.train_nr}`;
 
   return (
-    <div className="bg-db-cool-gray-100 rounded p-3">
-      <div className="flex justify-between items-center">
+    <div className="rounded bg-db-cool-gray-100 p-3">
+      <div className="flex items-center justify-between">
         <div className="font-medium text-gray-900">
           {measureTypeTexts[measure.type]}
         </div>
@@ -224,14 +224,14 @@ function MeasureListEntry({
               <PencilIcon className="h-5 w-5 text-gray-900 hover:text-gray-600" />
               <span className="sr-only">Bearbeiten</span>
             </button>
-            <button onClick={() => remove(measureAtom)} className="p-1 ml-1">
+            <button onClick={() => remove(measureAtom)} className="ml-1 p-1">
               <TrashIcon className="h-5 w-5 text-gray-900 hover:text-gray-600" />
               <span className="sr-only">Löschen</span>
             </button>
           </div>
         </div>
       </div>
-      <div className="text-sm mb-2">
+      <div className="mb-2 text-sm">
         {hasRecipients ? (
           <span className="text-gray-600">
             {`Ansage in ${[
@@ -262,8 +262,8 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const setSimResults = useSetAtom(simResultsAtom);
   const setSelectedSimResult = useSetAtom(selectedSimResultAtom);
 
-  const applyMeasuresMutation = useMutation(
-    (measures: MeasureWrapper[]) =>
+  const applyMeasuresMutation = useMutation({
+    mutationFn: (measures: MeasureWrapper[]) =>
       sendPaxForecastApplyMeasuresRequest({
         universe,
         measures,
@@ -273,31 +273,31 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         include_after_trip_load_info: true,
         include_trips_with_unchanged_load: false,
       }),
-    {
-      onMutate: () => {
-        return { startedAt: new Date() };
-      },
-      onSuccess: async (data, variables, context) => {
-        console.log("measures applied");
-        const result: SimulationResult = {
-          universe,
-          startedAt: context?.startedAt ?? new Date(),
-          finishedAt: new Date(),
-          measures: variables,
-          response: data,
-        };
-        const resultAtom = atom(result);
-        setSimResults((prev) => {
-          return [...prev, resultAtom];
-        });
-        setSelectedSimResult(resultAtom);
-        await queryClient.invalidateQueries(queryKeys.all);
-        await queryClient.invalidateQueries(["tripList"]);
-        onSimulationFinished();
-      },
-      retry: false,
+    onMutate: () => {
+      return { startedAt: new Date() };
     },
-  );
+    onSuccess: async (data, variables, context) => {
+      console.log("measures applied");
+      const result: SimulationResult = {
+        universe,
+        startedAt: context?.startedAt ?? new Date(),
+        finishedAt: new Date(),
+        measures: variables,
+        response: data,
+      };
+      const resultAtom = atom(result);
+      setSimResults((prev) => {
+        return [...prev, resultAtom];
+      });
+      setSelectedSimResult(resultAtom);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.all });
+      await queryClient.invalidateQueries({
+        queryKey: ["tripList"],
+      });
+      onSimulationFinished();
+    },
+    retry: false,
+  });
 
   const applyMeasures = useAtomCallback(
     useCallback(
@@ -342,13 +342,13 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
   const applyEnabled =
     universe != 0 &&
     measureAtoms.length > 0 &&
-    !applyMeasuresMutation.isLoading;
+    !applyMeasuresMutation.isPending;
 
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 h-full overflow-hidden",
-        applyMeasuresMutation.isLoading && "cursor-wait",
+        "flex h-full flex-col gap-2 overflow-hidden",
+        applyMeasuresMutation.isPending && "cursor-wait",
       )}
     >
       <div className="flex justify-between">
@@ -360,19 +360,19 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         <div className="flex gap-2">
           <button
             onClick={add}
-            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+            className="rounded bg-db-red-500 px-2 py-1 text-sm text-white hover:bg-db-red-600"
           >
             Maßnahme hinzufügen
           </button>
           <button
             onClick={clear}
-            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+            className="rounded bg-db-red-500 px-2 py-1 text-sm text-white hover:bg-db-red-600"
           >
             Alle löschen
           </button>
         </div>
       </div>
-      <div className="overflow-y-auto grow pr-2">
+      <div className="grow overflow-y-auto pr-2">
         {measureAtoms.length > 0 ? (
           <div className="flex flex-col gap-2">
             {measureAtoms.map((ma, idx) => (
@@ -401,12 +401,12 @@ function MeasureList({ onSimulationFinished }: MeasureListProps): JSX.Element {
         <button
           onClick={applyMeasures}
           disabled={!applyEnabled}
-          className={`w-full p-3 rounded ${
-            applyMeasuresMutation.isLoading
-              ? "bg-db-red-300 text-db-red-100 cursor-wait"
+          className={`w-full rounded p-3 ${
+            applyMeasuresMutation.isPending
+              ? "cursor-wait bg-db-red-300 text-db-red-100"
               : applyEnabled
-              ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-              : "bg-db-red-300 text-db-red-100 cursor-not-allowed"
+                ? "bg-db-red-500 text-white hover:bg-db-red-600"
+                : "cursor-not-allowed bg-db-red-300 text-db-red-100"
           }`}
         >
           Maßnahmen simulieren

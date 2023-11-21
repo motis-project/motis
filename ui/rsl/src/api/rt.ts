@@ -12,7 +12,9 @@ export async function sendRtMetricsRequest(): Promise<RtMetricsResponse> {
 }
 
 export function useRtMetricsRequest(): UseQueryResult<RtMetricsResponse> {
-  return useQuery(queryKeys.metrics(), () => sendRtMetricsRequest(), {
+  return useQuery({
+    queryKey: queryKeys.metrics(),
+    queryFn: () => sendRtMetricsRequest(),
     refetchInterval: 30 * 1000,
     refetchOnWindowFocus: true,
     staleTime: 0,

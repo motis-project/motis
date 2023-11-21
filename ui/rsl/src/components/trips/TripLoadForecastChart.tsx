@@ -22,6 +22,7 @@ import {
   formatLongDateTime,
   formatTime,
 } from "@/util/dateFormat";
+import { saveAsPNG, saveAsSVG } from "@/util/download";
 
 function getSvgLinePath(
   edges: PaxMonEdgeLoadInfo[],
@@ -50,14 +51,14 @@ function getYLabels(maxVal: number) {
     maxVal >= 20000
       ? 2000
       : maxVal >= 10000
-      ? 1000
-      : maxVal >= 3000
-      ? 500
-      : maxVal >= 1500
-      ? 200
-      : maxVal >= 700
-      ? 100
-      : 50;
+        ? 1000
+        : maxVal >= 3000
+          ? 500
+          : maxVal >= 1500
+            ? 200
+            : maxVal >= 700
+              ? 100
+              : 50;
   const labels = [];
   for (let pax = stepSize; pax < maxVal; pax += stepSize) {
     labels.push({
@@ -89,54 +90,6 @@ function getCurrentTimePosition(
   return edges.length * 50 + 5;
 }
 
-function getSvgBlob(svgEl: SVGSVGElement) {
-  const serializer = new XMLSerializer();
-  const source = serializer.serializeToString(svgEl);
-  return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
-}
-
-function downloadBlob(url: string, filename: string) {
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-}
-
-function saveAsSVG(svgEl: SVGSVGElement | null, baseFileName: string) {
-  if (!svgEl) {
-    return;
-  }
-  const svgBlob = getSvgBlob(svgEl);
-  const url = URL.createObjectURL(svgBlob);
-  downloadBlob(url, baseFileName + ".svg");
-}
-
-function saveAsPNG(svgEl: SVGSVGElement | null, baseFileName: string) {
-  if (!svgEl) {
-    return;
-  }
-  const svgBlob = getSvgBlob(svgEl);
-  const svgUrl = URL.createObjectURL(svgBlob);
-  const svgBB = svgEl.getBoundingClientRect();
-  const canvas = document.createElement("canvas");
-  canvas.width = svgBB.width * 2;
-  canvas.height = svgBB.height * 2;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return;
-  }
-  const img = new Image();
-  img.onload = () => {
-    ctx.fillStyle = "white";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
-    URL.revokeObjectURL(svgUrl);
-    const pngUrl = canvas.toDataURL("image/png");
-    downloadBlob(pngUrl, baseFileName + ".png");
-  };
-  img.src = svgUrl;
-}
-
 function getBaseFileName(data: PaxMonTripLoadInfo, systemTime: number) {
   const parts = ["forecast", formatFileNameTime(systemTime)];
   for (const si of data.tsi.service_infos) {
@@ -164,18 +117,17 @@ function TripLoadForecastChart({
   const { data: status } = usePaxMonStatusQuery(universe);
 
   const queryClient = useQueryClient();
-  const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(universe, tripId),
-    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
-    {
-      enabled: !!status,
-      placeholderData: () => {
-        return universe != 0
-          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
-          : undefined;
-      },
+  const { data /*, isLoading, error*/ } = useQuery({
+    queryKey: queryKeys.tripLoad(universe, tripId),
+    queryFn: () =>
+      sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
+    enabled: !!status,
+    placeholderData: () => {
+      return universe != 0
+        ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
+        : undefined;
     },
-  );
+  });
 
   const svgEl = useRef<SVGSVGElement>(null);
 
@@ -489,7 +441,7 @@ function TripLoadForecastChart({
     <svg
       ref={svgEl}
       viewBox={`-100 -15 ${120 + graphWidth} 335`}
-      className="max-h-[42rem] mx-auto mt-2"
+      className="mx-auto mt-2 max-h-[42rem]"
     >
       <g style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
         <g>{background}</g>
@@ -526,21 +478,21 @@ function TripLoadForecastChart({
     return (
       <div>
         <div>{chart}</div>
-        <div className="flex justify-center gap-2 my-2">
+        <div className="my-2 flex justify-center gap-2">
           <button
             type="button"
             onClick={() => saveAsSVG(svgEl.current, baseFileName)}
-            className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+            className="flex items-center rounded bg-db-red-500 px-3 py-1 text-sm text-white hover:bg-db-red-600"
           >
-            <ArrowDownTrayIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            <ArrowDownTrayIcon className="mr-2 h-5 w-5" aria-hidden="true" />
             SVG
           </button>
           <button
             type="button"
             onClick={() => saveAsPNG(svgEl.current, baseFileName)}
-            className="flex items-center bg-db-red-500 px-3 py-1 rounded text-white text-sm hover:bg-db-red-600"
+            className="flex items-center rounded bg-db-red-500 px-3 py-1 text-sm text-white hover:bg-db-red-600"
           >
-            <ArrowDownTrayIcon className="w-5 h-5 mr-2" aria-hidden="true" />
+            <ArrowDownTrayIcon className="mr-2 h-5 w-5" aria-hidden="true" />
             PNG
           </button>
         </div>

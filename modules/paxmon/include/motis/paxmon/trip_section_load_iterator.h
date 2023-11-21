@@ -44,7 +44,7 @@ struct trip_section_with_load {
       }
     };
 
-    auto const lookup_capacity = [this, &sched, &uv]() {
+    auto const lookup_capacity = [this]() {
       auto const cap = lookup_section_capacity();
       capacity_ = cap.capacity_.seats();
       capacity_source_ = cap.source_;
@@ -105,6 +105,10 @@ struct trip_section_with_load {
 
   std::uint16_t median_load() const {
     return edge_ != nullptr ? get_median_load(load_cdf()) : 0;
+  }
+
+  std::uint16_t expected_load() const {
+    return edge_ != nullptr ? get_expected_load(uv_, edge_->pci_) : 0;
   }
 
   light_connection const& lcon() const { return section_.lcon(); }

@@ -218,10 +218,13 @@ Offset<Vector<Offset<PaxMonBrokenTransferInfo>>> broken_transfer_info_to_fbs(
   }
 }
 
-Offset<PaxMonRerouteLogRoute> to_fbs(FlatBufferBuilder& fbb,
+Offset<PaxMonRerouteLogRoute> to_fbs(schedule const& sched,
+                                     FlatBufferBuilder& fbb,
                                      reroute_log_route_info const& ri) {
   return CreatePaxMonRerouteLogRoute(fbb, ri.route_, ri.previous_probability_,
-                                     ri.new_probability_);
+                                     ri.new_probability_,
+                                     fbs_localization_type(ri.localization_),
+                                     to_fbs(sched, fbb, ri.localization_));
 }
 
 Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
@@ -229,15 +232,14 @@ Offset<PaxMonRerouteLogEntry> to_fbs(schedule const& sched,
                                      passenger_group_container const& pgc,
                                      reroute_log_entry const& entry) {
   return CreatePaxMonRerouteLogEntry(
-      fbb, entry.system_time_, entry.reroute_time_,
+      fbb, entry.update_number_, entry.system_time_, entry.reroute_time_,
       static_cast<PaxMonRerouteReason>(entry.reason_),
       broken_transfer_info_to_fbs(fbb, sched, entry.broken_transfer_),
-      to_fbs(fbb, entry.old_route_),
-      fbb.CreateVector(utl::to_vec(
-          pgc.log_entry_new_routes_.at(entry.index_),
-          [&](auto const& new_route) { return to_fbs(fbb, new_route); })),
-      fbs_localization_type(entry.localization_),
-      to_fbs(sched, fbb, entry.localization_));
+      to_fbs(sched, fbb, entry.old_route_),
+      fbb.CreateVector(utl::to_vec(pgc.log_entry_new_routes_.at(entry.index_),
+                                   [&](auto const& new_route) {
+                                     return to_fbs(sched, fbb, new_route);
+                                   })));
 }
 
 Offset<PaxMonGroup> to_fbs(schedule const& sched,
@@ -443,10 +445,10 @@ Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
   return fbb.CreateVectorOfStructs(entries);
 }
 
-PaxMonCapacityType get_capacity_type(motis::paxmon::edge const* e) {
-  if (e->has_unknown_capacity()) {
+PaxMonCapacityType get_capacity_type(capacity_source const src) {
+  if (src == capacity_source::UNKNOWN) {
     return PaxMonCapacityType_Unknown;
-  } else if (e->has_unlimited_capacity()) {
+  } else if (src == capacity_source::UNLIMITED) {
     return PaxMonCapacityType_Unlimited;
   } else {
     return PaxMonCapacityType_Known;
@@ -527,31 +529,27 @@ Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
 }
 
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
-                                  universe const& uv,
                                   edge_load_info const& eli) {
-  auto const from = eli.edge_->from(uv);
-  auto const to = eli.edge_->to(uv);
   return CreatePaxMonEdgeLoadInfo(
-      fbb, to_fbs(fbb, from->get_station(sched)),
-      to_fbs(fbb, to->get_station(sched)),
-      motis_to_unixtime(sched, from->schedule_time()),
-      motis_to_unixtime(sched, from->current_time()),
-      motis_to_unixtime(sched, to->schedule_time()),
-      motis_to_unixtime(sched, to->current_time()),
-      get_capacity_type(eli.edge_), eli.edge_->capacity(),
-      to_fbs_capacity_source(eli.edge_->get_capacity_source()),
+      fbb, to_fbs(fbb, *sched.stations_.at(eli.from_.station_idx_)),
+      to_fbs(fbb, *sched.stations_.at(eli.to_.station_idx_)),
+      motis_to_unixtime(sched, eli.from_.schedule_time_),
+      motis_to_unixtime(sched, eli.from_.current_time_),
+      motis_to_unixtime(sched, eli.to_.schedule_time_),
+      motis_to_unixtime(sched, eli.to_.current_time_),
+      get_capacity_type(eli.capacity_source_), eli.capacity_,
+      to_fbs_capacity_source(eli.capacity_source_),
       to_fbs_distribution(fbb, eli.forecast_pdf_, eli.forecast_cdf_),
       eli.updated_, eli.possibly_over_capacity_, eli.probability_over_capacity_,
       eli.expected_passengers_);
 }
 
 Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
-                                  universe const& uv,
                                   trip_load_info const& tli) {
   return CreatePaxMonTripLoadInfo(
       fbb, to_fbs_trip_service_info(fbb, sched, tli.trp_),
-      fbb.CreateVector(utl::to_vec(tli.edges_, [&](auto const& efc) {
-        return to_fbs(fbb, sched, uv, efc);
+      fbb.CreateVector(utl::to_vec(tli.edges_, [&](auto const& eli) {
+        return to_fbs(fbb, sched, eli);
       })));
 }
 

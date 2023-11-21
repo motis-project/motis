@@ -64,7 +64,7 @@ function TripLoadInfoMeasureEditor({
       </div>
       <button
         onClick={() => closeEditor()}
-        className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+        className="rounded bg-db-red-500 px-2 py-1 text-white hover:bg-db-red-600"
       >
         Maßnahme speichern
       </button>

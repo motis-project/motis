@@ -6,7 +6,8 @@ import {
 } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom, useSetAtom } from "jotai";
-import { useEffect, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
@@ -22,6 +23,7 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
+import { getBahnTrainSearchUrl } from "@/util/bahnDe";
 import {
   getCapacitySourceTooltip,
   isExactCapacitySource,
@@ -32,6 +34,7 @@ import { formatDate, formatTime } from "@/util/dateFormat";
 import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
 import TripOptimization from "@/components/trips/TripOptimization";
 import TripSectionDetails from "@/components/trips/TripSectionDetails";
+import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 
@@ -44,18 +47,17 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
   const { data: status } = usePaxMonStatusQuery(universe);
 
   const queryClient = useQueryClient();
-  const { data /*, isLoading, error*/ } = useQuery(
-    queryKeys.tripLoad(universe, tripId),
-    () => sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
-    {
-      enabled: !!status,
-      placeholderData: () => {
-        return universe != 0
-          ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
-          : undefined;
-      },
+  const { data /*, isLoading, error*/ } = useQuery({
+    queryKey: queryKeys.tripLoad(universe, tripId),
+    queryFn: () =>
+      sendPaxMonGetTripLoadInfosRequest({ universe, trips: [tripId] }),
+    enabled: !!status,
+    placeholderData: () => {
+      return universe != 0
+        ? queryClient.getQueryData(queryKeys.tripLoad(0, tripId))
+        : undefined;
     },
-  );
+  });
 
   const setMostRecentlySelectedTrip = useSetAtom(mostRecentlySelectedTripAtom);
   useEffect(() => {
@@ -97,8 +99,8 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
 
   return (
     <div className="">
-      <div className="flex gap-6 items-center text-lg justify-center">
-        <span className="font-medium text-2xl">
+      <div className="flex items-center justify-center gap-6 text-lg">
+        <span className="text-2xl font-medium">
           {category} {trainNr}
         </span>
         {line && <span>Linie {line}</span>}
@@ -107,9 +109,23 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
           {tripData.tsi.primary_station.name} →{" "}
           {tripData.tsi.secondary_station.name}
         </span>
+        <Button variant="outline" className="gap-2" asChild>
+          <a
+            href={getBahnTrainSearchUrl(
+              tripData.tsi.trip,
+              tripData.tsi.primary_station,
+            )}
+            target="_blank"
+            referrerPolicy="no-referrer"
+            rel="noreferrer"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            Zugverlauf auf bahn.de
+          </a>
+        </Button>
       </div>
       {secondaryServices.length > 0 && (
-        <div className="flex gap-3 items-center justify-center">
+        <div className="flex items-center justify-center gap-3">
           <span>Fährt teilweise auch als:</span>
           {secondaryServices.map((si, idx) => (
             <span key={idx}>{`${si.category} ${si.train_nr}`}</span>
@@ -166,16 +182,16 @@ function TripSection({
   return (
     <>
       <div
-        className="flex gap-1 cursor-pointer group"
+        className="group flex cursor-pointer gap-1"
         onClick={() => setExpanded((val) => !val)}
       >
         <div>
-          <ChevronIcon className="w-5 h-5 mt-0.5 group-hover:fill-db-red-500" />
+          <ChevronIcon className="mt-0.5 h-5 w-5 group-hover:fill-db-red-500" />
         </div>
         <div className="w-80 shrink-0">
           <div className="flex gap-1">
-            <div className="flex justify-between w-24 shrink-0">
-              <span className="text-gray-600 w-1/2">
+            <div className="flex w-24 shrink-0 justify-between">
+              <span className="w-1/2 text-gray-600">
                 {formatTime(section.departure_schedule_time)}
               </span>
               <span
@@ -187,13 +203,13 @@ function TripSection({
                 {formatTime(section.departure_current_time)}
               </span>
             </div>
-            <div className="truncate hover:overflow-visible hover:relative">
+            <div className="truncate hover:relative hover:overflow-visible">
               {section.from.name}
             </div>
           </div>
           <div className="flex gap-1">
-            <div className="flex justify-between w-24 shrink-0">
-              <span className="text-gray-600 w-1/2">
+            <div className="flex w-24 shrink-0 justify-between">
+              <span className="w-1/2 text-gray-600">
                 {formatTime(section.arrival_schedule_time)}
               </span>
               <span
@@ -205,13 +221,13 @@ function TripSection({
                 {formatTime(section.arrival_current_time)}
               </span>
             </div>
-            <div className="truncate hover:overflow-visible hover:relative">
+            <div className="truncate hover:relative hover:overflow-visible">
               {section.to.name}
             </div>
           </div>
         </div>
         <div
-          className="w-10 pt-1 flex flex-col items-center"
+          className="flex w-10 flex-col items-center pt-1"
           title={`Überlastungswahrscheinlichkeit: ${formatPercent(
             section.prob_over_capacity,
           )}`}
@@ -219,7 +235,7 @@ function TripSection({
           {section.prob_over_capacity >= 0.01 ? (
             <>
               <span>
-                <ExclamationTriangleIcon className="w-5 h-5 fill-db-red-500" />
+                <ExclamationTriangleIcon className="h-5 w-5 fill-db-red-500" />
               </span>
               <span className="text-xs text-db-red-500">
                 {formatPercent(section.prob_over_capacity)}
@@ -227,8 +243,8 @@ function TripSection({
             </>
           ) : null}
         </div>
-        <div className="grow shrink">
-          <div className="w-full h-16">
+        <div className="shrink grow">
+          <div className="h-16 w-full">
             <SectionLoadGraph
               section={section}
               maxVal={maxVal}
@@ -238,11 +254,11 @@ function TripSection({
         </div>
         {showCapacitySource && (
           <div
-            className="w-7 pt-3 flex justify-center"
+            className="flex w-7 justify-center pt-3"
             title={getCapacitySourceTooltip(section.capacity_source)}
           >
             {!isExactCapacitySource(section.capacity_source) ? (
-              <QuestionMarkCircleIcon className="w-5 h-5 fill-db-cool-gray-500" />
+              <QuestionMarkCircleIcon className="h-5 w-5 fill-db-cool-gray-500" />
             ) : null}
           </div>
         )}
@@ -259,45 +275,45 @@ function Legend() {
 
   return (
     <div>
-      <div className="flex flex-wrap justify-end gap-x-5 gap-y-2 pr-2 pt-2 pb-2 text-sm">
+      <div className="flex flex-wrap justify-end gap-x-5 gap-y-2 pb-2 pr-2 pt-2 text-sm">
         <div>Auslastungsstufen:</div>
         <div className="flex items-center gap-1">
           <span
-            className="inline-block w-5 h-5 rounded-md"
+            className="inline-block h-5 w-5 rounded-md"
             style={{ backgroundColor: SectionLoadColors.Bg_0_80 }}
           />
           &lt;80%
         </div>
         <div className="flex items-center gap-1">
           <span
-            className="inline-block w-5 h-5 rounded-md"
+            className="inline-block h-5 w-5 rounded-md"
             style={{ backgroundColor: SectionLoadColors.Bg_80_100 }}
           />
           80-100%
         </div>
         <div className="flex items-center gap-1">
           <span
-            className="inline-block w-5 h-5 rounded-md"
+            className="inline-block h-5 w-5 rounded-md"
             style={{ backgroundColor: SectionLoadColors.Bg_100_120 }}
           />
           100-120%
         </div>
         <div className="flex items-center gap-1">
           <span
-            className="inline-block w-5 h-5 rounded-md"
+            className="inline-block h-5 w-5 rounded-md"
             style={{ backgroundColor: SectionLoadColors.Bg_120_200 }}
           />
           120-200%
         </div>
         <div className="flex items-center gap-1">
           <span
-            className="inline-block w-5 h-5 rounded-md"
+            className="inline-block h-5 w-5 rounded-md"
             style={{ backgroundColor: SectionLoadColors.Bg_200_plus }}
           />
           &gt;200%
         </div>
       </div>
-      <div className="flex flex-wrap justify-end gap-x-5 gap-y-2 pr-2 pt-2 pb-4 text-sm">
+      <div className="flex flex-wrap justify-end gap-x-5 gap-y-2 pb-4 pr-2 pt-2 text-sm">
         {sectionGraphPlotType == "SimpleBox" ? (
           <div className="flex items-center gap-1">
             <svg width={20} height={20} viewBox="0 0 20 20">

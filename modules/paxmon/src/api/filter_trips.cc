@@ -320,10 +320,10 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                     ti.cumulative_excess_pax_, ti.max_load_,
                     ti.max_expected_pax_,
                     to_fbs(mc, uv.trip_data_.capacity_status(ti.tdi_)),
-                    mc.CreateVector(utl::to_vec(
-                        ti.edge_load_infos_, [&](edge_load_info const& eli) {
-                          return to_fbs(mc, sched, uv, eli);
-                        })));
+                    mc.CreateVector(utl::to_vec(ti.edge_load_infos_,
+                                                [&](edge_load_info const& eli) {
+                                                  return to_fbs(mc, sched, eli);
+                                                })));
               })))
           .Union());
   return make_msg(mc);

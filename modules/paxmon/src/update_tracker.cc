@@ -199,7 +199,7 @@ private:
   updated_trip_info& get_or_create_updated_trip_info(trip_idx_t const ti) {
     return utl::get_or_create(updated_trip_infos_, ti, [&]() {
       auto uti = updated_trip_info{};
-      auto const tli = calc_trip_load_info(uv_, get_trip(sched_, ti));
+      auto const tli = calc_trip_load_info(uv_, sched_, get_trip(sched_, ti));
       uti.before_edges_ = include_before_trip_load_info_
                               ? get_fbs_trip_load_info(tli)
                               : get_empty_fbs_trip_load_info();
@@ -215,7 +215,7 @@ private:
   void finish_trips() {
     for (auto& [ti, uti] : updated_trip_infos_) {
       uti.after_cti_ = get_critical_trip_info(
-          calc_trip_load_info(uv_, get_trip(sched_, ti)));
+          calc_trip_load_info(uv_, sched_, get_trip(sched_, ti)));
       uti.critical_sections_diff_ =
           std::abs(uti.before_cti_.critical_sections_ -
                    uti.after_cti_.critical_sections_);
@@ -271,16 +271,16 @@ private:
     cti.max_excess_pax_ = 0;
     cti.edge_infos_.reserve(tli.edges_.size());
     for (auto const& eli : tli.edges_) {
-      cti.edge_infos_.emplace_back(
-          edge_info{get_pax_stats(eli.forecast_cdf_), eli.edge_->capacity(),
-                    eli.edge_->has_capacity(), eli.possibly_over_capacity_});
-      if (!eli.edge_->has_capacity()) {
+      cti.edge_infos_.emplace_back(edge_info{get_pax_stats(eli.forecast_cdf_),
+                                             eli.capacity_, eli.capacity_ != 0,
+                                             eli.possibly_over_capacity_});
+      if (eli.capacity_ == 0) {
         continue;
       }
       if (eli.possibly_over_capacity_) {
         ++cti.critical_sections_;
       }
-      auto const capacity = eli.edge_->capacity();
+      auto const capacity = eli.capacity_;
       auto const max_pax = eli.forecast_cdf_.data_.size();
       if (max_pax > capacity) {
         auto const excess_pax = static_cast<int>(max_pax - capacity);
@@ -294,14 +294,13 @@ private:
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
       trip_idx_t const ti) {
     return get_fbs_trip_load_info(
-        calc_trip_load_info(uv_, get_trip(sched_, ti)));
+        calc_trip_load_info(uv_, sched_, get_trip(sched_, ti)));
   }
 
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
       trip_load_info const& tli) {
-    return mc_.CreateVector(utl::to_vec(tli.edges_, [&](auto const& eli) {
-      return to_fbs(mc_, sched_, uv_, eli);
-    }));
+    return mc_.CreateVector(utl::to_vec(
+        tli.edges_, [&](auto const& eli) { return to_fbs(mc_, sched_, eli); }));
   }
 
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_empty_fbs_trip_load_info() {

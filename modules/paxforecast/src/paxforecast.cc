@@ -26,10 +26,6 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
         "output file for behavior statistics");
   param(routing_cache_filename_, "routing_cache",
         "optional cache file for routing queries");
-  param(calc_load_forecast_, "calc_load_forecast",
-        "calculate load forecast (required for output/publish)");
-  param(publish_load_forecast_, "publish_load_forecast",
-        "publish load forecast");
   param(stats_file_, "stats", "statistics file");
   param(deterministic_mode_, "deterministic_mode",
         "all passengers always pick the best alternative");
@@ -41,6 +37,11 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
   param(probability_threshold_, "probability_threshold",
         "minimum allowed route probability (routes with lower probability are "
         "dropped)");
+  param(uninformed_pax_, "uninformed_pax",
+        "percentage of passengers that ignore forecasts and announcements");
+  param(major_delay_switch_, "major_delay_switch",
+        "percentage of passengers that may switch to alternatives in case of "
+        "an expected major delay");
   param(
       allow_start_metas_, "allow_start_metas",
       "allow using equivalent stations as start station in alternative routes");
@@ -63,9 +64,10 @@ void paxforecast::init(motis::module::registry& reg) {
     behavior_stats_file_.exceptions(std::ios_base::failbit |
                                     std::ios_base::badbit);
     behavior_stats_file_.open(behavior_stats_filename_);
-    behavior_stats_file_ << "system_time,group_route_count,cpg_count,"
-                         << "found_alt_count_avg,picked_alt_count_avg,"
-                         << "best_alt_prob_avg,second_alt_prob_avg\n";
+    behavior_stats_file_
+        << "system_time,event_type,group_route_count,cpg_count,"
+        << "found_alt_count_avg,picked_alt_count_avg,"
+        << "best_alt_prob_avg,second_alt_prob_avg\n";
   }
 
   if (!routing_cache_filename_.empty()) {

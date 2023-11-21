@@ -2,7 +2,7 @@ import { ArrowDownIcon } from "@heroicons/react/20/solid";
 import { useIsMutating, useMutation, useQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import { useAtomCallback } from "jotai/utils";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 import {
   PaxMonGetUniversesResponse,
@@ -26,7 +26,7 @@ import {
   universesAtom,
 } from "@/data/multiverse";
 
-function UniverseControl(): JSX.Element {
+function UniverseControl() {
   const [universe, setUniverse] = useAtom(universeAtom);
   const [schedule, setSchedule] = useAtom(scheduleAtom);
   const [multiverseId] = useAtom(multiverseIdAtom);
@@ -61,56 +61,56 @@ function UniverseControl(): JSX.Element {
       }
     }, []),
   );
-  useQuery(
-    queryKeys.keepAlive(keepAliveRequest),
-    () => sendPaxMonKeepAliveRequest(keepAliveRequest),
-    {
-      refetchInterval: 30 * 1000,
-      refetchOnWindowFocus: true,
-      refetchIntervalInBackground: true,
-      notifyOnChangeProps: [],
-      onSuccess: keepAliveHandler,
-    },
-  );
+  const { data: keepAliveData } = useQuery({
+    queryKey: queryKeys.keepAlive(keepAliveRequest),
+    queryFn: () => sendPaxMonKeepAliveRequest(keepAliveRequest),
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: true,
+    notifyOnChangeProps: [],
+  });
 
-  const forkMutation = useMutation(
-    (baseUniverse: number) =>
+  useEffect(() => {
+    if (keepAliveData) {
+      keepAliveHandler(keepAliveData);
+    }
+  }, [keepAliveData, keepAliveHandler]);
+
+  const forkMutation = useMutation({
+    mutationFn: (baseUniverse: number) =>
       sendPaxMonForkUniverseRequest({
         universe: baseUniverse,
         fork_schedule: true,
         ttl: 120,
       }),
-    {
-      onSuccess: (data) => {
-        const newUv: UniverseInfo = {
-          id: data.universe,
-          schedule: data.schedule,
-          ttl: data.ttl,
-        };
-        setUniverses([
-          ...universes.filter((uv) => uv.id !== data.universe),
-          newUv,
-        ]);
-        switchTo(newUv);
-      },
+    onSuccess: (data) => {
+      const newUv: UniverseInfo = {
+        id: data.universe,
+        schedule: data.schedule,
+        ttl: data.ttl,
+      };
+      setUniverses([
+        ...universes.filter((uv) => uv.id !== data.universe),
+        newUv,
+      ]);
+      switchTo(newUv);
     },
-  );
+  });
 
-  const destroyMutation = useMutation(
-    (uv: number) => sendPaxMonDestroyUniverseRequest({ universe: uv }),
-    {
-      onSettled: (data, error, variables) => {
-        if (error) {
-          console.log(
-            `error while trying to destroy universe ${variables}:`,
-            error,
-          );
-        }
-        setUniverses(universes.filter((u) => u.id != variables));
-        switchTo(universes[0]);
-      },
+  const destroyMutation = useMutation({
+    mutationFn: (uv: number) =>
+      sendPaxMonDestroyUniverseRequest({ universe: uv }),
+    onSettled: (data, error, variables) => {
+      if (error) {
+        console.log(
+          `error while trying to destroy universe ${variables}:`,
+          error,
+        );
+      }
+      setUniverses(universes.filter((u) => u.id != variables));
+      switchTo(universes[0]);
     },
-  );
+  });
 
   const requestFromServerHandler = useAtomCallback(
     useCallback((get, set, data: PaxMonGetUniversesResponse) => {
@@ -131,7 +131,8 @@ function UniverseControl(): JSX.Element {
     }, []),
   );
 
-  const requestFromServerMutation = useMutation(sendPaxMonGetUniversesRequest, {
+  const requestFromServerMutation = useMutation({
+    mutationFn: sendPaxMonGetUniversesRequest,
     onSettled: (data, error) => {
       if (error) {
         console.log(
@@ -152,16 +153,16 @@ function UniverseControl(): JSX.Element {
   // <XCircleIcon className="h-5 w-5 text-white" />
 
   return (
-    <div className="flex justify-center items-center space-x-2 pl-4">
+    <div className="flex items-center justify-center space-x-2 pl-4">
       <span className="pr-2">
         Universum #{universe} (Fahrplan #{schedule})
       </span>
       <button
         type="button"
-        className={`inline-flex items-baseline px-3 py-1 rounded text-sm ${
+        className={`inline-flex items-baseline rounded px-3 py-1 text-sm ${
           forkEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
+            ? "bg-db-red-500 text-white hover:bg-db-red-600"
+            : "cursor-default bg-db-red-300 text-db-red-100"
         }`}
         onClick={() => forkMutation.mutate(universe)}
         disabled={!forkEnabled}
@@ -170,10 +171,10 @@ function UniverseControl(): JSX.Element {
       </button>
       <button
         type="button"
-        className={`px-3 py-1 rounded text-sm ${
+        className={`rounded px-3 py-1 text-sm ${
           destroyEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
+            ? "bg-db-red-500 text-white hover:bg-db-red-600"
+            : "cursor-default bg-db-red-300 text-db-red-100"
         }`}
         onClick={() => destroyMutation.mutate(universe)}
         disabled={!destroyEnabled}
@@ -182,10 +183,10 @@ function UniverseControl(): JSX.Element {
       </button>
       <button
         type="button"
-        className={`px-3 py-1 rounded text-sm ${
+        className={`rounded px-3 py-1 text-sm ${
           requestFromServerEnabled
-            ? "bg-db-red-500 hover:bg-db-red-600 text-white"
-            : "bg-db-red-300 text-db-red-100 cursor-default"
+            ? "bg-db-red-500 text-white hover:bg-db-red-600"
+            : "cursor-default bg-db-red-300 text-db-red-100"
         }`}
         onClick={() => requestFromServerMutation.mutate()}
         disabled={!requestFromServerEnabled}
@@ -197,14 +198,14 @@ function UniverseControl(): JSX.Element {
         <button
           key={uv.id}
           type="button"
-          className={`px-3 py-1 rounded text-white text-sm ${
+          className={`rounded px-3 py-1 text-sm text-white ${
             isMutating
               ? uv.id == universe
-                ? "bg-db-red-300 text-db-red-100 ring ring-db-red-800 cursor-default"
-                : "bg-db-red-300 text-db-red-100 cursor-default"
+                ? "cursor-default bg-db-red-300 text-db-red-100 ring ring-db-red-800"
+                : "cursor-default bg-db-red-300 text-db-red-100"
               : uv.id == universe
-              ? "bg-db-red-500 ring ring-db-red-800"
-              : "bg-db-red-500 hover:bg-db-red-600"
+                ? "bg-db-red-500 ring ring-db-red-800"
+                : "bg-db-red-500 hover:bg-db-red-600"
           }`}
           onClick={() => switchTo(uv)}
           disabled={isMutating}

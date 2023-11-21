@@ -6,6 +6,7 @@
 #include <optional>
 #include <utility>
 
+#include "utl/enumerate.h"
 #include "utl/verify.h"
 
 #include "motis/core/schedule/schedule.h"
@@ -17,6 +18,7 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/access/trip_section.h"
 
+#include "motis/paxmon/broken_transfer_info.h"
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/compact_journey.h"
 #include "motis/paxmon/debug.h"
@@ -59,6 +61,23 @@ inline compact_journey get_prefix(schedule const& sched,
       new_leg.exit_station_id_ = exit_section.to_station_id();
       new_leg.exit_time_ = get_schedule_time(sched, exit_section.ev_key_to());
       break;
+    }
+  }
+
+  return prefix;
+}
+
+template <typename CompactJourney>
+inline compact_journey get_prefix(schedule const& /*sched*/,
+                                  CompactJourney const& cj,
+                                  broken_transfer_info const& bti) {
+  auto prefix = compact_journey{};
+
+  for (auto const& [leg_idx, leg] : utl::enumerate(cj.legs())) {
+    if (leg_idx == bti.leg_index_) {
+      break;
+    } else {
+      prefix.legs_.emplace_back(leg);
     }
   }
 

@@ -156,6 +156,8 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
       capacity_fuzzy_match_max_time_diff_;
   uv->capacity_maps_.min_capacity_ = min_capacity_;
   uv->early_departure_tolerance_ = std::max(early_departure_tolerance_, 0);
+  uv->arrival_delay_threshold_ = arrival_delay_threshold_;
+  uv->preparation_time_ = preparation_time_;
 
   std::make_shared<event_collector>(
       get_data_directory().generic_string(), "paxmon", reg,
@@ -658,6 +660,7 @@ void paxmon::load_capacity_files() {
 
 // called after rt propagate
 msg_ptr paxmon::rt_update(msg_ptr const& msg) {
+  scoped_timer const t{"paxmon: rt_update"};
   auto const update = motis_content(RtUpdates, msg);
   auto const schedule_res_id = update->schedule();
   auto const uv_ids =
@@ -665,15 +668,14 @@ msg_ptr paxmon::rt_update(msg_ptr const& msg) {
   for (auto const uv_id : uv_ids) {
     auto const uv_access =
         get_universe_and_schedule(data_, uv_id, ctx::access_t::WRITE);
-    handle_rt_update(uv_access.uv_, uv_access.sched_, update,
-                     arrival_delay_threshold_);
+    handle_rt_update(uv_access.uv_, uv_access.sched_, update);
   }
   return {};
 }
 
 // called after rt flush
 void paxmon::rt_updates_applied(msg_ptr const& msg) {
-  scoped_timer const t{"paxmon: graph_updated"};
+  scoped_timer const t{"paxmon: rt_updates_applied / graph_updated"};
   auto const rgu = motis_content(RtGraphUpdated, msg);
   auto const schedule_res_id = rgu->schedule();
   auto const uv_ids =
@@ -700,8 +702,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
             << uv.rt_update_ctx_.group_routes_affected_by_last_update_.size();
   print_allocator_stats(uv);
 
-  auto messages = update_affected_groups(uv, sched, arrival_delay_threshold_,
-                                         preparation_time_);
+  auto messages = update_affected_groups(uv, sched);
 
   if (check_graph_integrity_) {
     utl::verify(check_graph_integrity(uv, sched),
@@ -726,6 +727,7 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
 
   MOTIS_START_TIMING(publish);
   for (auto& msg : messages) {
+    ++uv.update_number_;
     ctx::await_all(motis_publish(msg));
     msg.reset();
   }

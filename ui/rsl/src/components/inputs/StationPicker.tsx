@@ -20,10 +20,7 @@ function StationPicker({
   initialStation,
 }: StationPickerProps): JSX.Element {
   const [input, setInput] = useState("");
-  const { data } = useStationGuesserQuery(
-    { input, guess_count: 10 },
-    { keepPreviousData: true },
-  );
+  const { data } = useStationGuesserQuery({ input, guess_count: 10 }, true);
   const stationList = data?.guesses ?? [];
 
   const {
@@ -67,7 +64,7 @@ function StationPicker({
             tabIndex={-1}
             onClick={() => reset()}
             aria-label="clear selection"
-            className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
+            className="absolute right-0 top-0 flex h-full items-center justify-center px-2"
           >
             <XMarkIcon className="h-5 w-5 text-gray-500" />
           </button>
@@ -76,7 +73,7 @@ function StationPicker({
             type="button"
             {...getToggleButtonProps()}
             aria-label="toggle menu"
-            className="absolute top-0 right-0 h-full px-2 flex items-center justify-center"
+            className="absolute right-0 top-0 flex h-full items-center justify-center px-2"
           >
             <ChevronDownIcon className="h-5 w-5 text-gray-500" />
           </button>
@@ -86,7 +83,7 @@ function StationPicker({
         {...getMenuProps()}
         className={`${
           isOpen && stationList.length > 0 ? "" : "hidden"
-        } absolute z-50 top-12 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none p-2`}
+        } absolute top-12 z-50 rounded-md bg-white p-2 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`}
       >
         {isOpen &&
           stationList.map((item, index) => (
@@ -95,7 +92,7 @@ function StationPicker({
                 highlightedIndex === index
                   ? "bg-blue-500 text-white"
                   : "text-gray-900"
-              } group flex items-center w-full p-2 rounded-md text-sm select-none cursor-pointer`}
+              } group flex w-full cursor-pointer select-none items-center rounded-md p-2 text-sm`}
               key={index}
               {...getItemProps({ item, index })}
             >

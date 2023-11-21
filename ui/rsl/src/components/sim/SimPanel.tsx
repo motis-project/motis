@@ -28,13 +28,13 @@ function Tab({
   return (
     <button
       className={cn(
-        "w-full py-2.5 text-sm leading-5 font-medium rounded-lg",
-        "focus:outline-none focus:ring-2 ring-db-red-800",
+        "w-full rounded-lg py-2.5 text-sm font-medium leading-5",
+        "ring-db-red-800 focus:outline-none focus:ring-2",
         selectedTab === id
           ? "bg-db-red-500 text-white shadow"
           : disabled
-          ? "text-db-cool-gray-200"
-          : "text-db-cool-gray-100 hover:bg-white/[0.2] hover:text-white",
+            ? "text-db-cool-gray-200"
+            : "text-db-cool-gray-100 hover:bg-white/[0.2] hover:text-white",
       )}
       onClick={() => setSelectedTab(id)}
       disabled={disabled}
@@ -53,8 +53,8 @@ function SimPanel(): JSX.Element {
   }, [setSelectedTab]);
 
   return (
-    <div className="flex flex-col w-full h-full">
-      <div className="flex p-1 space-x-1 bg-db-cool-gray-400 rounded-xl mb-3">
+    <div className="flex h-full w-full flex-col">
+      <div className="mb-3 flex space-x-1 rounded-xl bg-db-cool-gray-400 p-1">
         <Tab
           id="measures"
           label="Maßnahmen"

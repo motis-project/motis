@@ -11,6 +11,8 @@
 
 #include "motis/paxmon/passenger_group.h"
 
+#include "motis/paxforecast/alternatives.h"
+
 namespace motis::paxforecast::behavior {
 
 template <typename T>
@@ -66,13 +68,13 @@ inline void only_keep_best_alternative(std::vector<float>& probabilities,
 }
 
 inline std::vector<float> calc_new_probabilites(
-    float const base_prob, std::vector<float> const& pick_probs,
+    float const base_prob, std::vector<alternative> const& alts,
     float const threshold) {
-  if (pick_probs.empty()) {
+  if (alts.empty()) {
     return {};
   }
   auto probs = utl::to_vec(
-      pick_probs, [&](auto const& pick_prob) { return base_prob * pick_prob; });
+      alts, [&](auto const& alt) { return base_prob * alt.pick_probability_; });
   auto total_sum = 0.0F;
   auto kept_sum = 0.0F;
   auto rescale = false;
@@ -91,7 +93,8 @@ inline std::vector<float> calc_new_probabilites(
       p /= scale;
     }
   } else if (kept_sum == 0.0F) {
-    probs = pick_probs;
+    probs = utl::to_vec(alts,
+                        [&](auto const& alt) { return alt.pick_probability_; });
     only_keep_best_alternative(probs, base_prob);
   }
   return probs;

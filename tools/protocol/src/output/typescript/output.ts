@@ -10,6 +10,11 @@ import { getUnionTagTypeName } from "@/output/typescript/util";
 import { FieldType, SchemaTypes, TableType, UnionValue } from "@/schema/types";
 import { isRequired } from "@/util/required";
 
+// plugins must be available in this project
+const supportedPrettierPlugins: (string | prettier.Plugin)[] = [
+  "@trivago/prettier-plugin-sort-imports",
+];
+
 export async function writeTypeScriptOutput(
   schema: SchemaTypes,
   typeFilter: TypeFilter,
@@ -50,6 +55,11 @@ export async function writeTypeScriptOutput(
       ctx.prettierOptions = resolvedOptions;
     }
     ctx.prettierOptions.parser = "typescript";
+    if (ctx.prettierOptions.plugins) {
+      ctx.prettierOptions.plugins = ctx.prettierOptions.plugins.filter(
+        (plugin) => supportedPrettierPlugins.includes(plugin),
+      );
+    }
   }
 
   for (const [fqtn, type] of schema.types) {

@@ -1,6 +1,8 @@
 #include "motis/paxmon/api/reroute_groups.h"
 
 #include <algorithm>
+#include <iostream>
+#include <numeric>
 
 #include "utl/to_vec.h"
 #include "utl/verify.h"
@@ -33,20 +35,27 @@ inline void before_journey_load_updated(universe& uv,
 
 passenger_localization get_localization(universe const& uv,
                                         schedule const& sched,
+                                        passenger_group_with_route const pgwr,
+                                        time const loc_time) {
+  auto const reachability = get_reachability(
+      uv, uv.passenger_groups_.journey(
+              uv.passenger_groups_.route(pgwr).compact_journey_index_));
+  return localize(sched, reachability, loc_time);
+}
+
+passenger_localization get_localization(universe const& uv,
+                                        schedule const& sched,
                                         PaxMonRerouteGroup const* rr,
-                                        time const current_time) {
+                                        time const loc_time) {
   if (rr->localization()->size() != 0) {
     return from_fbs(sched, rr->localization()->Get(0));
   } else {
-    auto const reachability = get_reachability(
-        uv, uv.passenger_groups_.journey(
-                uv.passenger_groups_
-                    .route(passenger_group_with_route{
-                        static_cast<passenger_group_index>(rr->group()),
-                        static_cast<local_group_route_index>(
-                            rr->old_route_index())})
-                    .compact_journey_index_));
-    return localize(sched, reachability, current_time);
+    return get_localization(
+        uv, sched,
+        passenger_group_with_route{
+            static_cast<passenger_group_index>(rr->group()),
+            static_cast<local_group_route_index>(rr->old_route_index())},
+        loc_time);
   }
 }
 
@@ -82,8 +91,9 @@ inline log_entry_info append_or_extend_log_entry(
   auto log_new_routes = pgc.log_entry_new_routes_.emplace_back();
   log_entries.emplace_back(reroute_log_entry{
       static_cast<reroute_log_entry_index>(log_new_routes.index()),
-      reroute_log_route_info{old_route_idx, old_route_probability, 0},
-      system_time, now(), reason, bti, to_log_localization(loc)});
+      reroute_log_route_info{old_route_idx, old_route_probability, 0,
+                             to_log_localization(loc)},
+      system_time, now(), uv.update_number_, reason, bti});
   return {log_entries.back(), log_new_routes, false};
 }
 
@@ -114,14 +124,23 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
     auto routes_backup = utl::to_vec(
         routes, [](group_route const& gr) -> group_route { return gr; });
 
+    auto const old_prob_sum = std::accumulate(
+        begin(routes_backup), end(routes_backup), 0.F,
+        [](auto const sum, auto const& r) { return sum + r.probability_; });
+
     auto& old_route = routes.at(old_route_idx);
     auto const old_route_probability = old_route.probability_;
     auto lei = append_or_extend_log_entry(
         uv, sched, pgi, old_route_idx, old_route_probability, reason, bti,
         rr->new_routes()->size() != 0, localization);
 
-    if (reason != reroute_reason_t::DESTINATION_UNREACHABLE &&
-        reason != reroute_reason_t::DESTINATION_REACHABLE) {
+    if (reason == reroute_reason_t::DESTINATION_UNREACHABLE ||
+        reason == reroute_reason_t::DESTINATION_REACHABLE) {
+      utl::verify(
+          rr->new_routes()->size() == 0,
+          "reroute_groups: destination (un)reachable, but new groups provided");
+    } else if (reason != reroute_reason_t::REVERT_FORECAST &&
+               reason != reroute_reason_t::UPDATE_FORECAST) {
       if (tracking_updates) {
         before_journey_load_updated(
             uv, uv.passenger_groups_.journey(old_route.compact_journey_index_));
@@ -130,20 +149,48 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
       uv.update_tracker_.after_group_route_updated(
           passenger_group_with_route{pgi, old_route_idx}, old_route_probability,
           0, false);
-    } else {
-      utl::verify(
-          rr->new_routes()->size() == 0,
-          "reroute_groups: destination (un)reachable, but new groups provided");
     }
 
-    auto new_routes = utl::to_vec(*rr->new_routes(), [&](auto const& nr) {
+    auto groups_added = 0;  // debug
+
+    auto new_tgrs = std::vector<temp_group_route>{};
+    new_tgrs.reserve(rr->new_routes()->size());
+    for (auto const& nr : *rr->new_routes()) {
       auto const tgr = from_fbs(sched, nr);
+      auto duplicate = false;
+      for (auto& existing_tgr : new_tgrs) {
+        if (existing_tgr.index_ == tgr.index_ &&
+            existing_tgr.journey_ == tgr.journey_) {
+          duplicate = true;
+          utl::verify(!override_probabilities,
+                      "/paxmon/reroute_groups: duplicate routes with "
+                      "override_probabilities = true");
+          existing_tgr.probability_ += tgr.probability_;
+          break;
+        }
+      }
+      if (!duplicate) {
+        new_tgrs.emplace_back(tgr);
+      }
+    }
+
+    auto new_routes = utl::to_vec(new_tgrs, [&](temp_group_route const& tgr) {
       if (tracking_updates) {
+        if (tgr.index_.has_value()) {
+          before_journey_load_updated(
+              uv, uv.passenger_groups_.journey(
+                      uv.passenger_groups_
+                          .route(passenger_group_with_route{pgi, *tgr.index_})
+                          .compact_journey_index_));
+        }
         before_journey_load_updated(uv, tgr.journey_);
       }
       auto const result =
           add_group_route(uv, sched, pgi, tgr, override_probabilities, true,
                           pci_log_reason_t::API);
+      if (result.new_route_) {
+        ++groups_added;  // debug
+      }
       auto const previous_probability =
           lei.extended_entry_ && result.pgwr_.route_ == old_route_idx &&
                   result.previous_probability_ == 0.0F
@@ -151,18 +198,72 @@ msg_ptr reroute_groups(paxmon_data& data, msg_ptr const& msg) {
               : (result.pgwr_.route_ == old_route_idx
                      ? old_route_probability
                      : result.previous_probability_);
+      auto const loc = get_localization(uv, sched, result.pgwr_, current_time);
       lei.new_routes_.emplace_back(reroute_log_route_info{
-          result.pgwr_.route_, previous_probability, result.new_probability_});
+          result.pgwr_.route_, previous_probability, result.new_probability_,
+          to_log_localization(
+              get_localization(uv, sched, result.pgwr_, current_time))});
       uv.update_tracker_.after_group_route_updated(
           result.pgwr_, result.previous_probability_, result.new_probability_,
           result.new_route_);
       if (result.pgwr_.route_ == old_route_idx) {
         lei.entry_.old_route_.new_probability_ = result.new_probability_;
       }
+
+      // <debug>
+      if (!tgr.journey_.legs_.empty()) {
+        auto const reachability =
+            get_reachability(uv, uv.passenger_groups_.journey(
+                                     uv.passenger_groups_.route(result.pgwr_)
+                                         .compact_journey_index_));
+        if (!reachability.ok_) {
+          std::cout << "reroute_groups: rerouting to unreachable route: " << pgi
+                    << " #" << result.pgwr_.route_ << "\n";
+          std::cout << "  reachability=" << reachability.status_;
+          if (reachability.first_unreachable_transfer_) {
+            auto const& bti = *reachability.first_unreachable_transfer_;
+            std::cout << " (leg=" << bti.leg_index_ << ", dir="
+                      << (bti.direction_ == transfer_direction_t::ENTER
+                              ? "enter"
+                              : "exit")
+                      << ", carr=" << format_time(bti.current_arrival_time_)
+                      << ", cdep=" << format_time(bti.current_departure_time_)
+                      << ", tt=" << bti.required_transfer_time_
+                      << ", canceled={arr=" << bti.arrival_canceled_
+                      << ", dep=" << bti.departure_canceled_ << "})\n";
+          }
+        }
+      }
+      // </debug>
+
       return PaxMonRerouteRouteInfo{result.pgwr_.route_,
                                     result.previous_probability_,
                                     result.new_probability_};
     });
+
+    // <debug>
+    auto const new_pg_routes = uv.passenger_groups_.routes(pgi);
+    auto const new_prob_sum = std::accumulate(
+        begin(new_pg_routes), end(new_pg_routes), 0.F,
+        [](auto const sum, auto const& r) { return sum + r.probability_; });
+    if ((reason != reroute_reason_t::MAJOR_DELAY_EXPECTED ||
+         !new_routes.empty()) &&
+        (new_prob_sum < 0.99F || new_prob_sum > 1.01F) &&
+        (old_prob_sum >= 0.99F && old_prob_sum <= 1.01F)) {
+      std::cout
+          << "[!!] reroute_groups: probability sum out of range for group "
+          << pgi << ": sum=" << new_prob_sum << " (previous: " << old_prob_sum
+          << "), probabilities: [";
+      for (auto const& r : new_pg_routes) {
+        std::cout << " " << r.probability_;
+      }
+      std::cout << " ], reason=" << reason
+                << ", routes=" << new_pg_routes.size() << "/" << routes.size()
+                << " (previous: " << routes_backup.size()
+                << ", added: " << groups_added
+                << "), new_routes=" << new_routes.size() << std::endl;
+    }
+    // </debug>
 
     return CreatePaxMonRerouteGroupResult(mc, pgi, old_route_idx,
                                           mc.CreateVectorOfStructs(new_routes));

@@ -35,7 +35,7 @@ function SectionGraphPlotSettings() {
   return (
     <div className="bg-white p-7">
       Auslastungsgrafik:
-      <div className="flex flex-col pl-3 pt-2 gap-2">
+      <div className="flex flex-col gap-2 pl-3 pt-2">
         {sectionGraphPlotTypes.map(({ plotType, label }) => (
           <label key={plotType} className="inline-flex items-center gap-2">
             <input
@@ -68,7 +68,7 @@ function CapacitySettings() {
   return (
     <div className="bg-white p-7 pt-0">
       Kapazitätsdaten:
-      <div className="flex flex-col pl-3 pt-2 gap-2">
+      <div className="flex flex-col gap-2 pl-3 pt-2">
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
@@ -91,7 +91,7 @@ function MeasureSettings() {
   return (
     <div className="bg-white p-7 pt-0">
       Maßnahmen:
-      <div className="flex flex-col pl-3 pt-2 gap-2">
+      <div className="flex flex-col gap-2 pl-3 pt-2">
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
@@ -114,7 +114,7 @@ function OptimizationSettings() {
   return (
     <div className="bg-white p-7 pt-0">
       Maßnahmenoptimierung:
-      <div className="flex flex-col pl-3 pt-2 gap-2">
+      <div className="flex flex-col gap-2 pl-3 pt-2">
         <label className="inline-flex items-center gap-2">
           <input
             type="checkbox"
@@ -131,17 +131,17 @@ function OptimizationSettings() {
 
 function Settings(): JSX.Element {
   return (
-    <div className="flex justify-center items-center h-full">
+    <div className="flex h-full items-center justify-center">
       <Popover className="relative">
         {({ open }) => (
           <>
             <Popover.Button
               className={cn(
                 open ? "opacity-100" : "opacity-30 hover:opacity-100",
-                "p-2 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0",
+                "align-center flex justify-center rounded-full bg-white p-2 text-black shadow-sm outline-0 dark:bg-gray-600 dark:text-gray-100",
               )}
             >
-              <Cog6ToothIcon className="w-5 h-5" aria-hidden="true" />
+              <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
             </Popover.Button>
             <Transition
               as={Fragment}
@@ -152,7 +152,7 @@ function Settings(): JSX.Element {
               leaveFrom="opacity-100 translate-y-0"
               leaveTo="opacity-0 translate-y-1"
             >
-              <Popover.Panel className="absolute z-10 w-screen px-4 mt-1 right-0 max-w-sm">
+              <Popover.Panel className="absolute right-0 z-10 mt-1 w-screen max-w-sm px-4">
                 <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
                   <SectionGraphPlotSettings />
                   <CapacitySettings />

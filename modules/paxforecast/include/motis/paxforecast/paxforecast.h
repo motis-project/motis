@@ -39,13 +39,12 @@ struct paxforecast : public motis::module::module {
   std::string routing_cache_filename_;
   routing_cache routing_cache_;
 
-  bool calc_load_forecast_{true};
-  bool publish_load_forecast_{false};
-
   bool deterministic_mode_{false};
   duration min_delay_improvement_{5};
   bool revert_forecasts_{false};
   float probability_threshold_{0.01F};
+  float uninformed_pax_{0.F};
+  float major_delay_switch_{0.F};
 
   bool allow_start_metas_{false};
   bool allow_dest_metas_{false};

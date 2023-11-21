@@ -30,8 +30,7 @@ namespace motis::paxmon {
 
 void check_broken_interchanges(
     universe& uv, schedule const& sched,
-    std::vector<edge_index> const& updated_interchange_edges,
-    int const arrival_delay_threshold) {
+    std::vector<edge_index> const& updated_interchange_edges) {
   std::set<edge*> broken_interchanges;
   for (auto& icei : updated_interchange_edges) {
     auto* ice = icei.get(uv);
@@ -81,7 +80,7 @@ void check_broken_interchanges(
       }
       if (to->station_ == 0) {
         // update delay + check for delayed arrival at destination
-        auto const check_threshold = arrival_delay_threshold >= 0;
+        auto const check_threshold = uv.arrival_delay_threshold_ >= 0;
         auto const estimated_arrival = static_cast<int>(from->current_time());
         for (auto const& pgwr :
              uv.pax_connection_info_.group_routes(ice->pci_)) {
@@ -97,7 +96,7 @@ void check_broken_interchanges(
               static_cast<int>(gr.planned_arrival_time_));
           gr.estimated_delay_ = estimated_delay;
           if (check_threshold && gr.probability_ != 0 &&
-              estimated_delay >= arrival_delay_threshold) {
+              estimated_delay >= uv.arrival_delay_threshold_) {
             uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(
                 pgwr);
           }
@@ -114,7 +113,7 @@ void check_broken_interchanges(
 }
 
 void handle_rt_update(universe& uv, schedule const& sched,
-                      RtUpdates const* update, int arrival_delay_threshold) {
+                      RtUpdates const* update) {
   uv.tick_stats_.rt_updates_ += update->updates()->size();
 
   std::vector<edge_index> updated_interchange_edges;
@@ -189,8 +188,7 @@ void handle_rt_update(universe& uv, schedule const& sched,
     LOG(info) << "skipped " << intermediate_skipped << "/"
               << update->updates()->size() << " intermediate rt updates";
   }
-  check_broken_interchanges(uv, sched, updated_interchange_edges,
-                            arrival_delay_threshold);
+  check_broken_interchanges(uv, sched, updated_interchange_edges);
 }
 
 monitoring_event_type get_monitoring_event_type(
@@ -207,9 +205,8 @@ monitoring_event_type get_monitoring_event_type(
   }
 }
 
-std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
-                                            int arrival_delay_threshold,
-                                            int preparation_time) {
+std::vector<msg_ptr> update_affected_groups(universe& uv,
+                                            schedule const& sched) {
   scoped_timer const timer{"update affected passenger groups"};
   auto const current_time =
       unix_to_motistime(sched.schedule_begin_, sched.system_time_);
@@ -217,7 +214,8 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
               "paxmon::update_affected_groups: invalid current system time: "
               "system_time={}, schedule_begin={}",
               sched.system_time_, sched.schedule_begin_);
-  auto const search_time = static_cast<time>(current_time + preparation_time);
+  auto const search_time =
+      static_cast<time>(current_time + uv.preparation_time_);
 
   uv.tick_stats_.system_time_ = sched.system_time_;
 
@@ -287,8 +285,8 @@ std::vector<msg_ptr> update_affected_groups(universe& uv, schedule const& sched,
     auto const localization = localize(sched, reachability, search_time);
     MOTIS_STOP_TIMING(localization);
 
-    auto const event_type =
-        get_monitoring_event_type(gr, reachability, arrival_delay_threshold);
+    auto const event_type = get_monitoring_event_type(
+        gr, reachability, uv.arrival_delay_threshold_);
     auto const expected_arrival_time =
         event_type == monitoring_event_type::BROKEN_TRANSFER
             ? INVALID_TIME

@@ -174,7 +174,11 @@ struct universe {
   metrics<tick_statistics> metrics_;
   update_tracker update_tracker_;
 
-  int early_departure_tolerance_{0};  // minutes
+  std::uint32_t update_number_{};
+
+  int early_departure_tolerance_{};  // minutes
+  int arrival_delay_threshold_{};  // minutes
+  int preparation_time_{};  // minutes
 };
 
 }  // namespace motis::paxmon

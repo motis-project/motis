@@ -48,8 +48,8 @@ function ServiceClassFilter({
       multiple
     >
       <div className="relative">
-        <Listbox.Button className="p-2 mb-0.5 flex justify-center align-center bg-white text-black dark:bg-gray-600 dark:text-gray-100 rounded-full shadow-sm outline-0">
-          <AdjustmentsVerticalIcon className="w-5 h-5" aria-hidden="true" />
+        <Listbox.Button className="align-center mb-0.5 flex justify-center rounded-full bg-white p-2 text-black shadow-sm outline-0 dark:bg-gray-600 dark:text-gray-100">
+          <AdjustmentsVerticalIcon className="h-5 w-5" aria-hidden="true" />
         </Listbox.Button>
         <Transition
           as={Fragment}
@@ -59,7 +59,7 @@ function ServiceClassFilter({
         >
           <Listbox.Options
             className={cn(
-              "absolute z-20 py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm",
+              "absolute z-20 mt-1 overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm",
               popupPosition,
             )}
           >
@@ -69,8 +69,8 @@ function ServiceClassFilter({
                 value={opt.sc}
                 className={({ active }) =>
                   cn(
-                    "cursor-default select-none relative py-2 pl-10 pr-4",
-                    active ? "text-amber-900 bg-amber-100" : "text-gray-900",
+                    "relative cursor-default select-none py-2 pl-10 pr-4",
+                    active ? "bg-amber-100 text-amber-900" : "text-gray-900",
                   )
                 }
               >
@@ -91,7 +91,7 @@ function ServiceClassFilter({
                           active ? "text-amber-600" : "text-amber-600",
                         )}
                       >
-                        <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                        <CheckIcon className="h-5 w-5" aria-hidden="true" />
                       </span>
                     ) : null}
                   </>

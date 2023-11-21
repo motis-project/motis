@@ -14,9 +14,9 @@ const allowForwarding = getQueryParameters().get("allowForwarding") === "yes";
 function Header(): JSX.Element {
   return (
     <div
-      className="flex justify-between items-center p-2
-            bg-db-cool-gray-200 dark:bg-gray-800 text-black dark:text-neutral-300
-            border-b-2 border-db-cool-gray-600"
+      className="flex items-center justify-between border-b-2
+            border-db-cool-gray-600 bg-db-cool-gray-200 p-2 text-black
+            dark:bg-gray-800 dark:text-neutral-300"
     >
       <div className="flex items-center space-x-4">
         <Link to="/">

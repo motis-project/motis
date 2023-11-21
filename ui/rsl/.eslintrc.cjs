@@ -10,6 +10,7 @@ module.exports = {
     "plugin:@typescript-eslint/stylistic-type-checked",
     "plugin:react/recommended",
     "plugin:react-hooks/recommended",
+    "plugin:@tanstack/eslint-plugin-query/recommended",
     "prettier",
   ],
   parser: "@typescript-eslint/parser",
@@ -22,7 +23,12 @@ module.exports = {
     project: true,
     tsconfigRootDir: __dirname,
   },
-  plugins: ["@typescript-eslint", "react", "@limegrass/import-alias"],
+  plugins: [
+    "@typescript-eslint",
+    "react",
+    "@limegrass/import-alias",
+    "@tanstack/query",
+  ],
   rules: {
     "react/jsx-uses-react": "off",
     "react/react-in-jsx-scope": "off",

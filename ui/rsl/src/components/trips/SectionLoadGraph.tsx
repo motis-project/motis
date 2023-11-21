@@ -245,8 +245,8 @@ function SectionLoadGraph({
         <AxisBottom scale={paxScale} top={margin.top + innerHeight} />
       </svg>
       <div
-        className="absolute hidden group-hover:block z-10 pointer-events-none w-40
-         bg-white text-black shadow-lg rounded p-1 text-xs opacity-95"
+        className="pointer-events-none absolute z-10 hidden w-40 rounded
+         bg-white p-1 text-xs text-black opacity-95 shadow-lg group-hover:block"
         style={tooltipStyle}
       >
         <table className="w-full">

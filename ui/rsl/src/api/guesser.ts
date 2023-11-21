@@ -1,6 +1,6 @@
 import {
-  UseQueryOptions,
   UseQueryResult,
+  keepPreviousData,
   useQuery,
 } from "@tanstack/react-query";
 
@@ -22,13 +22,14 @@ export async function sendStationGuesserRequest(
 
 export function useStationGuesserQuery(
   content: StationGuesserRequest,
-  options?: Pick<UseQueryOptions, "keepPreviousData">,
+  keepPrevious: boolean,
 ): UseQueryResult<StationGuesserResponse> {
-  return useQuery(
-    queryKeys.stationGuess(content),
-    () => sendStationGuesserRequest(content),
-    { ...options, enabled: content.input.length >= 3 },
-  );
+  return useQuery({
+    queryKey: queryKeys.stationGuess(content),
+    queryFn: () => sendStationGuesserRequest(content),
+    ...(keepPrevious ? { placeholderData: keepPreviousData } : {}),
+    enabled: content.input.length >= 3,
+  });
 }
 
 export const queryKeys = {

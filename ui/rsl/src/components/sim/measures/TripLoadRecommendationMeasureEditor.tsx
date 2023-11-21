@@ -157,7 +157,7 @@ function TripLoadRecommendationMeasureEditor({
           ))}
           <button
             onClick={addAlternative}
-            className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white text-sm rounded"
+            className="rounded bg-db-red-500 px-2 py-1 text-sm text-white hover:bg-db-red-600"
           >
             Weitere Alternative hinzufügen
           </button>
@@ -166,7 +166,7 @@ function TripLoadRecommendationMeasureEditor({
 
       <button
         onClick={() => closeEditor()}
-        className="mt-4 px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+        className="mt-4 rounded bg-db-red-500 px-2 py-1 text-white hover:bg-db-red-600"
       >
         Maßnahme speichern
       </button>

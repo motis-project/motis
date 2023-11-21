@@ -34,13 +34,13 @@ interface CapacityInfoProps {
 
 function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
   const [universe] = useAtom(universeAtom);
-  const { data, isLoading, error } = usePaxMonGetTripCapacity({
+  const { data, isPending, error } = usePaxMonGetTripCapacity({
     universe,
     trips: [tripId],
   });
 
   if (!data) {
-    if (isLoading) {
+    if (isPending) {
       return <div>Kapazitätsinformationen werden geladen...</div>;
     } else {
       return (
@@ -70,7 +70,7 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
 
   return (
     <div className="py-4">
-      <h1 className="text-2xl mb-4">Kapazitätsinformationen</h1>
+      <h1 className="mb-4 text-2xl">Kapazitätsinformationen</h1>
       <div>
         {trips.map((t) => (
           <TripCapacityInfo data={t} key={JSON.stringify(t.tsi.trip)} />
@@ -99,7 +99,7 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
 function TripCapacityInfo({ data }: { data: PaxMonTripCapacityInfo }) {
   return (
     <div className="mb-16">
-      <div className="flex gap-4 items-center sticky -top-2 bg-db-cool-gray-100">
+      <div className="sticky -top-2 flex items-center gap-4 bg-db-cool-gray-100">
         <TripServiceInfoView
           tsi={data.tsi}
           format={"Short"}
@@ -111,7 +111,7 @@ function TripCapacityInfo({ data }: { data: PaxMonTripCapacityInfo }) {
           {data.tsi.primary_station.name} → {data.tsi.secondary_station.name}
         </span>
       </div>
-      <div className="flex flex-col gap-8 mt-2 ml-4">
+      <div className="ml-4 mt-2 flex flex-col gap-8">
         {data.sections.map((section, idx) => (
           <SectionCapacityInfo section={section} key={idx} />
         ))}
@@ -134,8 +134,8 @@ function SectionCapacityInfo({
     <div className="flex gap-1">
       <div className="w-80 shrink-0">
         <div className="flex gap-1">
-          <div className="flex justify-between w-24 shrink-0">
-            <span className="text-gray-600 w-1/2">
+          <div className="flex w-24 shrink-0 justify-between">
+            <span className="w-1/2 text-gray-600">
               {formatTime(section.departure_schedule_time)}
             </span>
             <span
@@ -147,13 +147,13 @@ function SectionCapacityInfo({
               {formatTime(section.departure_current_time)}
             </span>
           </div>
-          <div className="truncate hover:overflow-visible hover:relative">
+          <div className="truncate hover:relative hover:overflow-visible">
             {section.from.name}
           </div>
         </div>
         <div className="flex gap-1">
-          <div className="flex justify-between w-24 shrink-0">
-            <span className="text-gray-600 w-1/2">
+          <div className="flex w-24 shrink-0 justify-between">
+            <span className="w-1/2 text-gray-600">
               {formatTime(section.arrival_schedule_time)}
             </span>
             <span
@@ -165,12 +165,12 @@ function SectionCapacityInfo({
               {formatTime(section.arrival_current_time)}
             </span>
           </div>
-          <div className="truncate hover:overflow-visible hover:relative">
+          <div className="truncate hover:relative hover:overflow-visible">
             {section.to.name}
           </div>
         </div>
       </div>
-      <div className="w-20 flex flex-col items-center">
+      <div className="flex w-20 flex-col items-center">
         <div className="font-semibold">
           {section.capacity_type === "Known" ? section.capacity.seats : "?"}
         </div>
@@ -181,7 +181,7 @@ function SectionCapacityInfo({
           {getCapacitySourceShortText(section.capacity_source)}
         </div>
       </div>
-      <div className="grow flex flex-col gap-4">
+      <div className="flex grow flex-col gap-4">
         {section.merged_trips.map((mt, idx) => (
           <MergedTripCapacityInfo mt={mt} key={idx} />
         ))}
@@ -205,7 +205,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
       </div>
       <div className="flex flex-col gap-1">
         {has_override && (
-          <div className="flex gap-1 flex-wrap text-db-red-500">
+          <div className="flex flex-wrap gap-1 text-db-red-500">
             <span className="font-semibold">
               Manuell überschriebene Kapazität:
             </span>
@@ -213,7 +213,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
           </div>
         )}
         {has_trip_lookup && (
-          <div className="flex gap-1 flex-wrap">
+          <div className="flex flex-wrap gap-1">
             <span className="font-semibold">Zugkapazität:</span>
             <span>{mt.trip_lookup_capacity.seats}</span>
             <span
@@ -225,7 +225,7 @@ function MergedTripCapacityInfo({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
         )}
         {has_trip_formation && (
           <>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex flex-wrap gap-1">
               <span className="font-semibold">Kapazität aus Wagenreihung:</span>
               <span>{mt.trip_formation_capacity.seats}</span>
               <span>
@@ -255,7 +255,7 @@ function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
     <div>
       <table className="mt-2">
         <thead>
-          <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
+          <tr className="border-b-2 border-db-cool-gray-300 text-sm font-semibold">
             <td className="px-2">Fahrzeuggruppe</td>
             <td className="px-2">Zugnummer</td>
             <td className="px-2">von</td>
@@ -322,7 +322,7 @@ function SectionVehicleGroups({ mt }: { mt: PaxMonMergedTripCapacityInfo }) {
           ))}
         </tbody>
         <tfoot>
-          <tr className="font-semibold border-t-2 border-db-cool-gray-300">
+          <tr className="border-t-2 border-db-cool-gray-300 font-semibold">
             <td className="px-2" colSpan={4}></td>
             <td className="px-2 text-center">{capacitySum.seats}</td>
             <td className="px-2 text-center">{capacitySum.seats_1st}</td>
@@ -354,7 +354,7 @@ function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
       <div className="font-semibold">Fahrzeuggruppe {vg.name}:</div>
       <table className="mt-2">
         <thead>
-          <tr className="text-sm font-semibold border-b-2 border-db-cool-gray-300">
+          <tr className="border-b-2 border-db-cool-gray-300 text-sm font-semibold">
             <td className="px-2">Wagen</td>
             <td className="px-2">Bauart</td>
             <td className="px-2">Baureihe</td>
@@ -413,7 +413,7 @@ function VehicleGroup({ vg }: { vg: PaxMonVehicleGroupInfo }) {
           ))}
         </tbody>
         <tfoot>
-          <tr className="font-semibold border-t-2 border-db-cool-gray-300">
+          <tr className="border-t-2 border-db-cool-gray-300 font-semibold">
             <td className="px-2" colSpan={4}></td>
             <td className="px-2 text-center">{capacitySum.seats}</td>
             <td className="px-2 text-center">{capacitySum.seats_1st}</td>

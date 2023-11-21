@@ -25,7 +25,9 @@ export async function sendRISStatusRequest(): Promise<RISStatusResponse> {
 }
 
 export function useRISStatusRequest(): UseQueryResult<RISStatusResponse> {
-  return useQuery(queryKeys.status(), () => sendRISStatusRequest(), {
+  return useQuery({
+    queryKey: queryKeys.status(),
+    queryFn: () => sendRISStatusRequest(),
     refetchInterval: 30 * 1000,
     refetchOnWindowFocus: true,
     staleTime: 0,

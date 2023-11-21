@@ -1,6 +1,6 @@
 import {
-  UseQueryOptions,
   UseQueryResult,
+  keepPreviousData,
   useQuery,
 } from "@tanstack/react-query";
 
@@ -64,13 +64,11 @@ export async function sendPaxMonStatusRequest(
 export function usePaxMonStatusQuery(
   universe: number,
 ): UseQueryResult<PaxMonStatusResponse> {
-  return useQuery(
-    queryKeys.status(universe),
-    () => sendPaxMonStatusRequest({ universe }),
-    {
-      staleTime: 0,
-    },
-  );
+  return useQuery({
+    queryKey: queryKeys.status(universe),
+    queryFn: () => sendPaxMonStatusRequest({ universe }),
+    staleTime: 0,
+  });
 }
 
 export async function sendPaxMonGetTripLoadInfosRequest(
@@ -100,11 +98,11 @@ export async function sendPaxMonFindTripsRequest(
 export function usePaxMonFindTripsQuery(
   universe: number,
   trainNr: number | undefined,
-  options?: Pick<UseQueryOptions, "keepPreviousData">,
+  keepPrevious: boolean,
 ): UseQueryResult<PaxMonFindTripsResponse> {
-  return useQuery(
-    queryKeys.findTrips(universe, trainNr),
-    () =>
+  return useQuery({
+    queryKey: queryKeys.findTrips(universe, trainNr),
+    queryFn: () =>
       sendPaxMonFindTripsRequest({
         universe,
         train_nr: trainNr ?? 0,
@@ -112,8 +110,9 @@ export function usePaxMonFindTripsQuery(
         filter_class: false,
         max_class: 0,
       }),
-    { ...options, enabled: trainNr != undefined && !isNaN(trainNr) },
-  );
+    ...(keepPrevious ? { placeholderData: keepPreviousData } : {}),
+    enabled: trainNr != undefined && !isNaN(trainNr),
+  });
 }
 
 export async function sendPaxMonGroupsInTripRequest(
@@ -131,9 +130,10 @@ export async function sendPaxMonGroupsInTripRequest(
 export function usePaxMonGroupsInTripQuery(
   content: PaxMonGetGroupsInTripRequest,
 ): UseQueryResult<PaxMonGetGroupsInTripResponse> {
-  return useQuery(queryKeys.tripGroups(content), () =>
-    sendPaxMonGroupsInTripRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.tripGroups(content),
+    queryFn: () => sendPaxMonGroupsInTripRequest(content),
+  });
 }
 
 export async function sendPaxMonAddressableGroupsRequest(
@@ -151,9 +151,10 @@ export async function sendPaxMonAddressableGroupsRequest(
 export function usePaxMonAddressableGroupsQuery(
   content: PaxMonGetAddressableGroupsRequest,
 ): UseQueryResult<PaxMonGetAddressableGroupsResponse> {
-  return useQuery(queryKeys.addressableGroups(content), () =>
-    sendPaxMonAddressableGroupsRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.addressableGroups(content),
+    queryFn: () => sendPaxMonAddressableGroupsRequest(content),
+  });
 }
 
 export async function sendPaxMonForkUniverseRequest(
@@ -195,9 +196,10 @@ export async function sendPaxMonFilterTripsRequest(
 export function usePaxMonFilterTripsRequest(
   content: PaxMonFilterTripsRequest,
 ): UseQueryResult<PaxMonFilterTripsResponse> {
-  return useQuery(queryKeys.filterTrips(content), () =>
-    sendPaxMonFilterTripsRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.filterTrips(content),
+    queryFn: () => sendPaxMonFilterTripsRequest(content),
+  });
 }
 
 export async function sendPaxMonFilterGroupsRequest(
@@ -215,9 +217,10 @@ export async function sendPaxMonFilterGroupsRequest(
 export function usePaxMonFilterGroupsRequest(
   content: PaxMonFilterGroupsRequest,
 ): UseQueryResult<PaxMonFilterGroupsResponse> {
-  return useQuery(queryKeys.filterGroups(content), () =>
-    sendPaxMonFilterGroupsRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.filterGroups(content),
+    queryFn: () => sendPaxMonFilterGroupsRequest(content),
+  });
 }
 
 export async function sendPaxMonGetGroupsRequest(
@@ -235,9 +238,10 @@ export async function sendPaxMonGetGroupsRequest(
 export function usePaxMonGetGroupsRequest(
   content: PaxMonGetGroupsRequest,
 ): UseQueryResult<PaxMonGetGroupsResponse> {
-  return useQuery(queryKeys.getGroups(content), () =>
-    sendPaxMonGetGroupsRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.getGroups(content),
+    queryFn: () => sendPaxMonGetGroupsRequest(content),
+  });
 }
 
 export async function sendPaxMonKeepAliveRequest(
@@ -267,9 +271,10 @@ export async function sendPaxMonGroupStatisticsRequest(
 export function usePaxMonGroupStatisticsQuery(
   content: PaxMonGroupStatisticsRequest,
 ): UseQueryResult<PaxMonGroupStatisticsResponse> {
-  return useQuery(queryKeys.groupStatistics(content), () =>
-    sendPaxMonGroupStatisticsRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.groupStatistics(content),
+    queryFn: () => sendPaxMonGroupStatisticsRequest(content),
+  });
 }
 
 export async function sendPaxMonDebugGraphRequest(
@@ -305,9 +310,10 @@ export async function sendPaxMonGetTripCapacityRequest(
 export function usePaxMonGetTripCapacity(
   content: PaxMonGetTripCapacityRequest,
 ): UseQueryResult<PaxMonGetTripCapacityResponse> {
-  return useQuery(queryKeys.tripCapacity(content), () =>
-    sendPaxMonGetTripCapacityRequest(content),
-  );
+  return useQuery({
+    queryKey: queryKeys.tripCapacity(content),
+    queryFn: () => sendPaxMonGetTripCapacityRequest(content),
+  });
 }
 
 export async function sendPaxMonCapacityStatusRequest(

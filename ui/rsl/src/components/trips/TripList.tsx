@@ -4,7 +4,7 @@ import {
   CheckIcon,
   ChevronUpDownIcon,
 } from "@heroicons/react/20/solid";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useAtom } from "jotai";
 import React, { Fragment, useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -121,8 +121,8 @@ function TripList(): JSX.Element {
     isStale,
     isPreviousData,
     */
-  } = useInfiniteQuery(
-    [
+  } = useInfiniteQuery({
+    queryKey: [
       "tripList",
       {
         universe,
@@ -132,26 +132,25 @@ function TripList(): JSX.Element {
         serviceClassFilter,
       },
     ],
-    ({ pageParam = 0 }) => {
+    queryFn: ({ pageParam }) => {
       const req = getFilterTripsRequest(
         universe,
         selectedSort.option,
         selectedDate,
         filterTrainNrs,
-        pageParam as number,
+        pageParam,
         serviceClassFilter,
       );
       return sendPaxMonFilterTripsRequest(req);
     },
-    {
-      getNextPageParam: (lastPage) =>
-        lastPage.remaining_trips > 0 ? lastPage.next_skip : undefined,
-      refetchOnWindowFocus: false,
-      keepPreviousData: true,
-      staleTime: 60000,
-      enabled: selectedDate !== undefined,
-    },
-  );
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) =>
+      lastPage.remaining_trips > 0 ? lastPage.next_skip : undefined,
+    refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
+    staleTime: 60000,
+    enabled: selectedDate !== undefined,
+  });
 
   const loadMore = useCallback(() => {
     if (hasNextPage) {
@@ -172,14 +171,14 @@ function TripList(): JSX.Element {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <Listbox value={selectedSort} onChange={setSelectedSort}>
         <div className="relative mb-2">
-          <Listbox.Button className="relative w-full py-2 pl-3 pr-10 text-left bg-white dark:bg-gray-700 rounded-lg shadow-md cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-orange-300 focus-visible:ring-offset-2 focus-visible:border-indigo-500 sm:text-sm">
+          <Listbox.Button className="relative w-full cursor-default rounded-lg bg-white py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 dark:bg-gray-700 sm:text-sm">
             <span className="block truncate">{selectedSort.label}</span>
-            <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+            <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
               <ChevronUpDownIcon
-                className="w-5 h-5 text-gray-400"
+                className="h-5 w-5 text-gray-400"
                 aria-hidden="true"
               />
             </span>
@@ -190,15 +189,15 @@ function TripList(): JSX.Element {
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Listbox.Options className="absolute z-20 w-full py-1 mt-1 overflow-auto text-base bg-white rounded-md shadow-lg max-h-80 ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+            <Listbox.Options className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
               {sortOptions.map((opt) => (
                 <Listbox.Option
                   key={opt.option}
                   value={opt}
                   className={({ active }) =>
                     cn(
-                      "cursor-default select-none relative py-2 pl-10 pr-4",
-                      active ? "text-amber-900 bg-amber-100" : "text-gray-900",
+                      "relative cursor-default select-none py-2 pl-10 pr-4",
+                      active ? "bg-amber-100 text-amber-900" : "text-gray-900",
                     )
                   }
                 >
@@ -219,7 +218,7 @@ function TripList(): JSX.Element {
                             active ? "text-amber-600" : "text-amber-600",
                           )}
                         >
-                          <CheckIcon className="w-5 h-5" aria-hidden="true" />
+                          <CheckIcon className="h-5 w-5" aria-hidden="true" />
                         </span>
                       ) : null}
                     </>
@@ -230,7 +229,7 @@ function TripList(): JSX.Element {
           </Transition>
         </div>
       </Listbox>
-      <div className="flex justify-between pb-2 gap-1">
+      <div className="flex justify-between gap-1 pb-2">
         <div className="">
           <label>
             <span className="text-sm">Datum</span>
@@ -247,7 +246,7 @@ function TripList(): JSX.Element {
             <span className="text-sm">Zugnummer(n)</span>
             <input
               type="text"
-              className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+              className="block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700"
               value={trainNrFilter}
               onChange={(e) => setTrainNrFilter(e.target.value)}
             />
@@ -262,7 +261,7 @@ function TripList(): JSX.Element {
         </div>
       </div>
       {totalNumberOfTrips !== undefined && (
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfTrips)}{" "}
             {totalNumberOfTrips === 1 ? "Zug" : "Züge"}
@@ -270,7 +269,7 @@ function TripList(): JSX.Element {
           <div>
             {!isFetching && (
               <button onClick={() => refetch()}>
-                <ArrowPathIcon className="w-5 h-5" aria-hidden="true" />
+                <ArrowPathIcon className="h-5 w-5" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -327,7 +326,7 @@ function TripListEntry({
     )[0];
 
     criticalInfo = (
-      <div className="pt-1 flex flex-col gap-1">
+      <div className="flex flex-col gap-1 pt-1">
         <SectionOverCap label="Kritisch ab:" section={firstCritSection} />
         {mostCritSection != firstCritSection && (
           <SectionOverCap
@@ -340,22 +339,22 @@ function TripListEntry({
   }
 
   return (
-    <div className="pr-1 pb-3">
+    <div className="pb-3 pr-1">
       <Link
         to={`/trips/${encodeURIComponent(JSON.stringify(ti.tsi.trip))}`}
         className={cn(
-          "block p-1 rounded",
+          "block rounded p-1",
           isSelected
-            ? "bg-db-cool-gray-300 dark:bg-gray-500 dark:text-gray-100 shadow-md"
+            ? "bg-db-cool-gray-300 shadow-md dark:bg-gray-500 dark:text-gray-100"
             : "bg-db-cool-gray-100 dark:bg-gray-700 dark:text-gray-300",
         )}
       >
         <div className="flex gap-4 pb-1">
           <div className="flex flex-col">
-            <div className="text-sm text-center">{category}</div>
+            <div className="text-center text-sm">{category}</div>
             <div className="text-xl font-semibold">{trainNr}</div>
           </div>
-          <div className="grow flex flex-col truncate">
+          <div className="flex grow flex-col truncate">
             <div className="flex justify-between">
               <div className="truncate">{ti.tsi.primary_station.name}</div>
               <div>{formatTime(ti.tsi.trip.time)}</div>
@@ -392,7 +391,7 @@ function SectionOverCap({ label, section }: SectionOverCapProps) {
     <div>
       <div className="flex justify-between">
         <div className="text-xs">{label}</div>
-        <div className="text-xs space-x-1">
+        <div className="space-x-1 text-xs">
           <span>
             {section.maxOverCap}{" "}
             <abbr title="Reisende über Kapazität" className="no-underline">

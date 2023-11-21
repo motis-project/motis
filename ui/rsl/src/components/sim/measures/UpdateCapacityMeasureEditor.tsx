@@ -70,7 +70,7 @@ function UpdateCapacityMeasureEditor({
         <div>
           <input
             type="number"
-            className="block w-full text-sm rounded-md bg-white dark:bg-gray-700 border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+            className="block w-full rounded-md border-gray-300 bg-white text-sm shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:bg-gray-700"
             value={data.seats}
             onChange={setSeats}
             min={0}
@@ -85,7 +85,7 @@ function UpdateCapacityMeasureEditor({
 
       <button
         onClick={() => closeEditor()}
-        className="px-2 py-1 bg-db-red-500 hover:bg-db-red-600 text-white rounded"
+        className="rounded bg-db-red-500 px-2 py-1 text-white hover:bg-db-red-600"
       >
         Maßnahme speichern
       </button>

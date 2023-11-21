@@ -18,51 +18,6 @@ using namespace motis::paxmon;
 
 namespace motis::paxforecast {
 
-Offset<PaxForecastGroupRoute> get_passenger_group_route_forecast(
-    FlatBufferBuilder& fbb, schedule const& sched, universe const& uv,
-    passenger_group_with_route const& pgwr,
-    group_simulation_result const& group_result) {
-  return CreatePaxForecastGroupRoute(
-      fbb, to_fbs(sched, uv.passenger_groups_, fbb, pgwr),
-      fbs_localization_type(*group_result.localization_),
-      to_fbs(sched, fbb, *group_result.localization_),
-      fbb.CreateVector(utl::to_vec(
-          group_result.alternative_probabilities_, [&](auto const& alt) {
-            return CreatePaxForecastAlternative(
-                fbb, to_fbs(sched, fbb, alt.first->compact_journey_),
-                alt.second);
-          })));
-}
-
-Offset<Vector<Offset<PaxMonTripLoadInfo>>> to_fbs(FlatBufferBuilder& fbb,
-                                                  schedule const& sched,
-                                                  universe const& uv,
-                                                  load_forecast const& lfc) {
-  return fbb.CreateVector(utl::to_vec(lfc.trips_, [&](auto const& tfc) {
-    return to_fbs(fbb, sched, uv, tfc);
-  }));
-}
-
-msg_ptr make_forecast_update_msg(schedule const& sched, universe const& uv,
-                                 simulation_result const& sim_result,
-                                 load_forecast const& lfc) {
-  message_creator fbb;
-  fbb.create_and_finish(
-      MsgContent_PaxForecastUpdate,
-      CreatePaxForecastUpdate(fbb, uv.id_, sched.system_time_,
-                              fbb.CreateVector(utl::to_vec(
-                                  sim_result.group_route_results_,
-                                  [&](auto const& entry) {
-                                    return get_passenger_group_route_forecast(
-                                        fbb, sched, uv, entry.first,
-                                        entry.second);
-                                  })),
-                              to_fbs(fbb, sched, uv, lfc))
-          .Union(),
-      "/paxforecast/passenger_forecast");
-  return make_msg(fbb);
-}
-
 std::uint32_t get_station_index(schedule const& sched, String const* eva) {
   return get_station(sched, {eva->c_str(), eva->Length()})->index_;
 }

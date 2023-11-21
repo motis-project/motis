@@ -22,11 +22,6 @@ struct tick_statistics {
     t_find_alternatives_ += rhs.t_find_alternatives_;
     t_add_alternatives_ += rhs.t_add_alternatives_;
     t_passenger_behavior_ += rhs.t_passenger_behavior_;
-    t_calc_load_forecast_ += rhs.t_calc_load_forecast_;
-    t_load_forecast_fbs_ += rhs.t_load_forecast_fbs_;
-    t_write_load_forecast_ += rhs.t_write_load_forecast_;
-    t_publish_load_forecast_ += rhs.t_publish_load_forecast_;
-    t_total_load_forecast_ += rhs.t_total_load_forecast_;
     t_update_tracked_groups_ += rhs.t_update_tracked_groups_;
     t_total_ += rhs.t_total_;
 
@@ -57,11 +52,6 @@ struct tick_statistics {
   std::uint64_t t_find_alternatives_{};
   std::uint64_t t_add_alternatives_{};
   std::uint64_t t_passenger_behavior_{};
-  std::uint64_t t_calc_load_forecast_{};
-  std::uint64_t t_load_forecast_fbs_{};
-  std::uint64_t t_write_load_forecast_{};
-  std::uint64_t t_publish_load_forecast_{};
-  std::uint64_t t_total_load_forecast_{};
   std::uint64_t t_update_tracked_groups_{};
   std::uint64_t t_total_{};
 };

@@ -28,11 +28,6 @@ void stats_writer::write_header() {
        << "t_find_alternatives"
        << "t_add_alternatives"
        << "t_passenger_behavior"
-       << "t_calc_load_forecast"
-       << "t_load_forecast_fbs"
-       << "t_write_load_forecast"
-       << "t_publish_load_forecast"
-       << "t_total_load_forecast"
        << "t_update_tracked_groups"
        << "t_total"
        //
@@ -52,10 +47,7 @@ void stats_writer::write_tick(const tick_statistics& ts) {
        << ts.major_delay_group_routes_with_alternatives_
        //
        << ts.t_find_alternatives_ << ts.t_add_alternatives_
-       << ts.t_passenger_behavior_ << ts.t_calc_load_forecast_
-       << ts.t_load_forecast_fbs_ << ts.t_write_load_forecast_
-       << ts.t_publish_load_forecast_ << ts.t_total_load_forecast_
-       << ts.t_update_tracked_groups_
+       << ts.t_passenger_behavior_ << ts.t_update_tracked_groups_
        << ts.t_total_
        //
        << end_row;

@@ -49,17 +49,19 @@ function CombinedGroup({
 
   const [schedule] = useAtom(scheduleAtom);
 
-  const { data, isLoading, error } = useQuery(
-    [
+  const { data, isPending, error } = useQuery({
+    queryKey: [
       "alternatives",
       {
         from: startStation.id,
         to: destinationStation?.id,
         earliestDeparture: earliestDeparture,
         intervalDuration: SEARCH_INTERVAL,
+        destination: destinationStation.id,
+        schedule,
       },
     ],
-    () =>
+    queryFn: () =>
       sendRoutingRequest({
         start_type: "PretripStart",
         start: {
@@ -82,8 +84,8 @@ function CombinedGroup({
         use_start_footpaths: true,
         schedule,
       }),
-    { enabled: findAlternatives },
-  );
+    enabled: findAlternatives,
+  });
 
   const plannedTripId = JSON.stringify(plannedTrip);
   const containsCurrentTrip = (j: Journey) =>
@@ -153,7 +155,7 @@ function CombinedGroup({
                     </Tooltip.Trigger>
                     <Tooltip.Content>
                       <TripTooltip tripId={leg.trips[0].trip.id} />
-                      <Tooltip.Arrow className="text-white fill-current" />
+                      <Tooltip.Arrow className="fill-current text-white" />
                     </Tooltip.Content>
                   </Tooltip.Root>
                 ))}
@@ -163,7 +165,7 @@ function CombinedGroup({
         ))}
       </ul>
     </div>
-  ) : isLoading ? (
+  ) : isPending ? (
     <div>Suche nach Alternativverbindungen...</div>
   ) : (
     <div>
@@ -179,7 +181,7 @@ function CombinedGroup({
           <Link
             key={idx}
             to={`/groups/${gr.g}`}
-            className={cn("w-24 px-2 py-1 rounded", groupRouteBg(gr.p))}
+            className={cn("w-24 rounded px-2 py-1", groupRouteBg(gr.p))}
           >
             <div className="flex justify-between">
               <div>{formatPercent(gr.p)}</div>
