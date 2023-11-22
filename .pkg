@@ -56,8 +56,8 @@
   commit=7a4d4fdd0b0b6c75adf38d0a85c40e933815f5a1
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
-  branch=master
-  commit=297171ade5e9bd01d823ffe8b203a5443ec03f15
+  branch=main
+  commit=690e03babf0963d3da9615a2dae0891777842719
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
@@ -101,7 +101,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=dd84a4afe59c1e2cf9f596b7ec1e9e248b48dd14
+  commit=e56ce4329cbaebaecea21e53d66f5ef89adba5ae
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
