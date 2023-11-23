@@ -53,11 +53,11 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=14b5a9da9a4249f7becaf2e0e577ddbc9856d2db
+  commit=7a4d4fdd0b0b6c75adf38d0a85c40e933815f5a1
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
-  branch=master
-  commit=297171ade5e9bd01d823ffe8b203a5443ec03f15
+  branch=main
+  commit=690e03babf0963d3da9615a2dae0891777842719
 [pugixml]
   url=git@github.com:motis-project/pugixml.git
   branch=master
@@ -74,6 +74,10 @@
   url=git@github.com:motis-project/tiles.git
   branch=master
   commit=4a1352d5c6d3e1b777085877d1be18eed58667a2
+[transfers]
+  url=git@github.com:motis-project/transfers.git
+  branch=main
+  commit=ee017c4647cefd92349cb34404b05ba58bc112a6
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -97,7 +101,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=236bea5afb3589a2b1ac2ed1969dd5c0ae3e8f98
+  commit=e56ce4329cbaebaecea21e53d66f5ef89adba5ae
 [osmium]
   url=git@github.com:motis-project/libosmium.git
   branch=master
@@ -105,4 +109,4 @@
 [valhalla]
   url=git@github.com:motis-project/valhalla.git
   branch=master
-  commit=0e7c45e9538fab198252b8a980a3d8597522ee6c
+  commit=12f0a5c142afc70ad362388b03a23d46c7a61bb6

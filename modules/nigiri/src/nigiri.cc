@@ -190,6 +190,17 @@ void nigiri::init(motis::module::registry& reg) {
                   },
                   {});
 
+  if (!impl_->tt_->get()->profiles_.empty()) {
+    for (auto const& [prf_name, prf_idx] : impl_->tt_->get()->profiles_) {
+      reg.register_op(fmt::format("/nigiri/{}", prf_name),
+                      [&, p = prf_idx, this](mm::msg_ptr const& msg) {
+                        return route(impl_->tags_, **impl_->tt_,
+                                     impl_->get_rtt().get(), msg, p);
+                      },
+                      {});
+    }
+  }
+
   if (lookup_) {
     reg.register_op("/lookup/geo_station",
                     [&](mm::msg_ptr const& msg) {
@@ -495,9 +506,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         import_successful_ = true;
         {
           mm::message_creator fbb;
-          fbb.create_and_finish(MsgContent_NigiriEvent,
-                                motis::import::CreateNigiriEvent(fbb).Union(),
-                                "/import", DestinationType_Topic);
+          fbb.create_and_finish(
+              MsgContent_NigiriEvent,
+              motis::import::CreateNigiriEvent(fbb, h).Union(), "/import",
+              DestinationType_Topic);
           publish(make_msg(fbb));
         }
         {
