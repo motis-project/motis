@@ -29,6 +29,7 @@ void stats_writer::write_header() {
        << "ok_group_routes"
        << "broken_group_routes"
        << "major_delay_group_routes"
+       << "reactivated_group_routes"
        //
        << "t_reachability"
        << "t_localization"
@@ -53,8 +54,8 @@ void stats_writer::write_tick(const tick_statistics& ts) {
        << ts.rt_delay_schedule_updates_
        //
        << ts.affected_group_routes_ << ts.ok_group_routes_
-       << ts.broken_group_routes_
-       << ts.major_delay_group_routes_
+       << ts.broken_group_routes_ << ts.major_delay_group_routes_
+       << ts.reactivated_group_routes_
        //
        << ts.t_reachability_ << ts.t_localization_ << ts.t_update_load_
        << ts.t_fbs_events_ << ts.t_publish_

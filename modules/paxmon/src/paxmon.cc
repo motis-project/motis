@@ -740,9 +740,10 @@ void paxmon::rt_updates_applied(universe& uv, schedule const& sched) {
             << uv.rt_update_ctx_.group_routes_affected_by_last_update_.size()
             << " passenger group routes";
 
-  uv.rt_update_ctx_.group_routes_affected_by_last_update_.clear();
+  uv.rt_update_ctx_.reset();
   LOG(info) << "passenger group routes: " << uv.tick_stats_.ok_group_routes_
-            << " ok, " << uv.tick_stats_.broken_group_routes_ << " broken";
+            << " ok, " << uv.tick_stats_.broken_group_routes_ << " broken, "
+            << uv.tick_stats_.reactivated_group_routes_ << " reactivated";
 
   MOTIS_STOP_TIMING(total);
   uv.tick_stats_.t_rt_updates_applied_total_ =

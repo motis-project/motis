@@ -8,6 +8,7 @@ enum PaxMonEventType : byte {
   NO_PROBLEM,
   BROKEN_TRANSFER,
   MAJOR_DELAY_EXPECTED,
+  REACTIVATED,
 }
 
 table PaxMonEvent {

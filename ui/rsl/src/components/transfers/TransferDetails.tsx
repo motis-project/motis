@@ -87,6 +87,12 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
       ? (departure.current_time - arrival.current_time) / 60
       : null;
 
+  const missingTransferTime =
+    availableTransferTime !== null &&
+    availableTransferTime < data.info.transfer_time
+      ? data.info.transfer_time - availableTransferTime
+      : null;
+
   const groupedByDestination = data.groups.reduce(
     (result, group) => {
       const destinationStationId = getDestinationStation(group).id;
@@ -192,10 +198,9 @@ function TransferDetails({ transferId }: TransferDetailsProps): ReactNode {
         )}
       </div>
 
-      {availableTransferTime !== null && (
+      {missingTransferTime !== null && (
         <div className="mb-2">
-          Fehlende Umstiegszeit:{" "}
-          {formatShortDuration(data.info.transfer_time - availableTransferTime)}
+          Fehlende Umstiegszeit: {formatShortDuration(missingTransferTime)}
         </div>
       )}
 

@@ -313,7 +313,7 @@ void handle_unbroken_transfers(paxforecast& mod, universe& uv,
   auto unbroken_transfers = std::vector<passenger_group_with_route>{};
 
   for (auto const& event : *mon_update->events()) {
-    if (event->type() != PaxMonEventType_NO_PROBLEM) {
+    if (event->type() != PaxMonEventType_REACTIVATED) {
       continue;
     }
 
