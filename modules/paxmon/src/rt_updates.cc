@@ -31,7 +31,17 @@ namespace motis::paxmon {
 void check_broken_interchanges(
     universe& uv, schedule const& sched,
     std::vector<edge_index> const& updated_interchange_edges) {
-  std::set<edge*> broken_interchanges;
+
+  auto broken_interchanges = std::set<edge*>{};
+
+  auto const update_previous_broken_status = [&](auto const& pgwr,
+                                                 auto const& gr) {
+    if (uv.rt_update_ctx_.previous_broken_status_.find(pgwr) ==
+        end(uv.rt_update_ctx_.previous_broken_status_)) {
+      uv.rt_update_ctx_.previous_broken_status_[pgwr] = gr.broken_;
+    }
+  };
+
   for (auto& icei : updated_interchange_edges) {
     auto* ice = icei.get(uv);
     if (ice->type_ != edge_type::INTERCHANGE) {
@@ -59,6 +69,7 @@ void check_broken_interchanges(
       }
       for (auto const& pgwr : uv.pax_connection_info_.group_routes(ice->pci_)) {
         auto& gr = uv.passenger_groups_.route(pgwr);
+        update_previous_broken_status(pgwr, gr);
         gr.broken_ = true;
         if (gr.probability_ == 0) {
           continue;
@@ -71,10 +82,12 @@ void check_broken_interchanges(
         ice->broken_ = false;
         for (auto const& pgwr :
              uv.pax_connection_info_.group_routes(ice->pci_)) {
+          update_previous_broken_status(pgwr, uv.passenger_groups_.route(pgwr));
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
         for (auto const& pgwr :
              uv.pax_connection_info_.broken_group_routes(ice->pci_)) {
+          update_previous_broken_status(pgwr, uv.passenger_groups_.route(pgwr));
           uv.rt_update_ctx_.group_routes_affected_by_last_update_.insert(pgwr);
         }
       }
@@ -192,10 +205,17 @@ void handle_rt_update(universe& uv, schedule const& sched,
 }
 
 monitoring_event_type get_monitoring_event_type(
+    universe const& uv, passenger_group_with_route const& pgwr,
     group_route const& gr, reachability_info const& reachability,
     int const arrival_delay_threshold) {
   if (!reachability.ok_) {
     return monitoring_event_type::BROKEN_TRANSFER;
+  } else if (auto const it =
+                 uv.rt_update_ctx_.previous_broken_status_.find(pgwr);
+             it != end(uv.rt_update_ctx_.previous_broken_status_) &&
+             it->second) {
+    // route was broken before
+    return monitoring_event_type::REACTIVATED;
   } else if (arrival_delay_threshold >= 0 &&
              gr.planned_arrival_time_ != INVALID_TIME &&
              gr.estimated_delay_ >= arrival_delay_threshold) {
@@ -286,7 +306,7 @@ std::vector<msg_ptr> update_affected_groups(universe& uv,
     MOTIS_STOP_TIMING(localization);
 
     auto const event_type = get_monitoring_event_type(
-        gr, reachability, uv.arrival_delay_threshold_);
+        uv, pgwr, gr, reachability, uv.arrival_delay_threshold_);
     auto const expected_arrival_time =
         event_type == monitoring_event_type::BROKEN_TRANSFER
             ? INVALID_TIME
@@ -325,6 +345,9 @@ std::vector<msg_ptr> update_affected_groups(universe& uv,
         break;
       case monitoring_event_type::MAJOR_DELAY_EXPECTED:
         ++uv.tick_stats_.major_delay_group_routes_;
+        break;
+      case monitoring_event_type::REACTIVATED:
+        ++uv.tick_stats_.reactivated_group_routes_;
         break;
     }
   }

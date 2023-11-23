@@ -46,6 +46,7 @@ struct tick_statistics {
     ok_group_routes_ += rhs.ok_group_routes_;
     broken_group_routes_ += rhs.broken_group_routes_;
     major_delay_group_routes_ += rhs.major_delay_group_routes_;
+    reactivated_group_routes_ += rhs.reactivated_group_routes_;
 
     t_reachability_ += rhs.t_reachability_;
     t_localization_ += rhs.t_localization_;
@@ -86,6 +87,7 @@ struct tick_statistics {
   std::uint64_t ok_group_routes_{};
   std::uint64_t broken_group_routes_{};
   std::uint64_t major_delay_group_routes_{};
+  std::uint64_t reactivated_group_routes_{};
 
   // timing (ms)
   std::uint64_t t_reachability_{};

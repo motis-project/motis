@@ -8,6 +8,7 @@ table PaxMonMetrics {
   ok_group_routes: [ulong];
   broken_group_routes: [ulong];
   major_delay_group_routes: [ulong];
+  reactivated_group_routes: [ulong];
 
   total_timing: [ulong]; // ms
 }

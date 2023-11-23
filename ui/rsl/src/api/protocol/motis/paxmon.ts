@@ -196,7 +196,8 @@ export interface PaxMonReachability {
 export type PaxMonEventType =
   | "NO_PROBLEM"
   | "BROKEN_TRANSFER"
-  | "MAJOR_DELAY_EXPECTED";
+  | "MAJOR_DELAY_EXPECTED"
+  | "REACTIVATED";
 
 // paxmon/PaxMonUpdate.fbs
 export interface PaxMonEvent {
@@ -1079,6 +1080,7 @@ export interface PaxMonMetrics {
   ok_group_routes: number[];
   broken_group_routes: number[];
   major_delay_group_routes: number[];
+  reactivated_group_routes: number[];
   total_timing: number[];
 }
 

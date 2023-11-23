@@ -16,7 +16,8 @@ namespace motis::paxmon {
 enum class monitoring_event_type : std::uint8_t {
   NO_PROBLEM,
   BROKEN_TRANSFER,
-  MAJOR_DELAY_EXPECTED
+  MAJOR_DELAY_EXPECTED,
+  REACTIVATED
 };
 
 inline std::ostream& operator<<(std::ostream& out,
@@ -27,6 +28,7 @@ inline std::ostream& operator<<(std::ostream& out,
       return out << "BROKEN_TRANSFER";
     case monitoring_event_type::MAJOR_DELAY_EXPECTED:
       return out << "MAJOR_DELAY_EXPECTED";
+    case monitoring_event_type::REACTIVATED: return out << "REACTIVATED";
   }
   return out;
 }

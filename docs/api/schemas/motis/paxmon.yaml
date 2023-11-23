@@ -550,7 +550,7 @@ PaxMonFilterGroupsRequest:
 
         If set to `false`, the reroute log information in the response is
         empty.
-      examples: 0
+      examples: false
     filter_by_start:
       description: |
         A list of station IDs. If non-empty, only groups departing at one
@@ -558,7 +558,7 @@ PaxMonFilterGroupsRequest:
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
     filter_by_destination:
       description: |
         A list of station IDs. If non-empty, only groups arriving at one
@@ -566,7 +566,7 @@ PaxMonFilterGroupsRequest:
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
     filter_by_via:
       description: |
         A list of station IDs. If non-empty, only groups with a transfer at one
@@ -578,7 +578,7 @@ PaxMonFilterGroupsRequest:
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
     filter_by_group_id:
       description: |
         A list of group IDs. If non-empty, only these groups are included
@@ -586,15 +586,15 @@ PaxMonFilterGroupsRequest:
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
     filter_by_data_source:
       description: |
         A list of group data sources. If non-empty, only groups with these
-        data sources are included in the repsonse.
+        data sources are included in the response.
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
     filter_by_train_nr:
       description: |
         A list of train numbers. If non-empty, only groups using a train
@@ -602,7 +602,7 @@ PaxMonFilterGroupsRequest:
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
     filter_by_time:
       description: |
         Filter groups by time.
@@ -629,7 +629,7 @@ PaxMonFilterGroupsRequest:
 
         Set to an empty array to disable this filter.
       examples:
-        - []
+        - [ ]
 PaxMonGroupWithStats:
   description: TODO
   fields:
@@ -1708,6 +1708,10 @@ PaxMonMetrics:
     total_timing:
       description: >
         Total time spent by passenger monitoring and forecast in milliseconds
+    reactivated_group_routes:
+      description: >
+        Number of passenger group routes that were affected by a real-time
+        update that are no longer broken, but were broken before this update
 PaxMonMetricsResponse:
   description: |
     Contains metrics for the requested universe.

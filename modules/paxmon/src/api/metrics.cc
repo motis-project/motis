@@ -19,12 +19,14 @@ msg_ptr metrics(paxmon_data& data, msg_ptr const& msg) {
 
   auto const metrics_to_fbs = [&](metrics_storage<tick_statistics> const& m) {
     std::vector<std::uint64_t> affected_group_routes, ok_group_routes,
-        broken_group_routes, major_delay_group_routes, total_timing;
+        broken_group_routes, major_delay_group_routes, reactivated_group_routes,
+        total_timing;
 
     affected_group_routes.reserve(m.size());
     ok_group_routes.reserve(m.size());
     broken_group_routes.reserve(m.size());
     major_delay_group_routes.reserve(m.size());
+    reactivated_group_routes.reserve(m.size());
     total_timing.reserve(m.size());
 
     for (auto i = 0UL; i < m.size(); ++i) {
@@ -33,6 +35,7 @@ msg_ptr metrics(paxmon_data& data, msg_ptr const& msg) {
       ok_group_routes.push_back(entry.ok_group_routes_);
       broken_group_routes.push_back(entry.broken_group_routes_);
       major_delay_group_routes.push_back(entry.major_delay_group_routes_);
+      reactivated_group_routes.push_back(entry.reactivated_group_routes_);
       total_timing.push_back(entry.t_rt_updates_applied_total_);
     }
 
@@ -40,6 +43,7 @@ msg_ptr metrics(paxmon_data& data, msg_ptr const& msg) {
         mc, m.start_time(), m.size(), mc.CreateVector(affected_group_routes),
         mc.CreateVector(ok_group_routes), mc.CreateVector(broken_group_routes),
         mc.CreateVector(major_delay_group_routes),
+        mc.CreateVector(reactivated_group_routes),
         mc.CreateVector(total_timing));
   };
 
