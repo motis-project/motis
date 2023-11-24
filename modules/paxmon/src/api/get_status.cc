@@ -41,6 +41,7 @@ msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg) {
           mc, static_cast<std::uint64_t>(sched.system_time_),
           data.multiverse_->id(), uv.passenger_groups_.active_groups(),
           uv.trip_data_.size(), ris_status->system_time(), current_time,
+          data.motis_start_time_,
           to_feed_status(ris_status->ribasis_fahrt_status()),
           to_feed_status(ris_status->ribasis_formation_status()))
           .Union());

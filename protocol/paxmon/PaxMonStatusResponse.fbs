@@ -20,6 +20,7 @@ table PaxMonStatusResponse {
 
   primary_system_time: ulong; // for the primary universe
   current_time: ulong; // used to check if feeds are up-to-date
+  motis_start_time: ulong;
   ribasis_fahrt_status: PaxMonFeedStatus;
   ribasis_formation_status: PaxMonFeedStatus;
 }

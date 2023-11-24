@@ -568,6 +568,17 @@
     type: motis.paxmon.PaxMonReviseCompactJourneyResponse
     description: Connections with real-time information
 
+/paxmon/dataset_info:
+  summary: Dataset information
+  description: >
+    Returns information about the loaded datasets (schedule, journeys and
+    capacity files).
+  tags:
+    - rsl
+  output:
+    type: motis.paxmon.PaxMonDatasetInfoResponse
+    description: Information about the loaded datasets
+
 /ppr/profiles:
   summary: List available pedestrian routing profiles
   tags:

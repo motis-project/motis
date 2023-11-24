@@ -25,6 +25,7 @@
 #include "motis/paxmon/api/add_groups.h"
 #include "motis/paxmon/api/broken_transfers.h"
 #include "motis/paxmon/api/capacity_status.h"
+#include "motis/paxmon/api/dataset_info.h"
 #include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
 #include "motis/paxmon/api/detailed_capacity_status.h"
@@ -50,10 +51,12 @@
 
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/checks.h"
+#include "motis/paxmon/file_time.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/load_info.h"
+#include "motis/paxmon/loaded_files.h"
 #include "motis/paxmon/loader/capacities/load_capacities.h"
 #include "motis/paxmon/loader/csv_journeys/csv_journeys.h"
 #include "motis/paxmon/loader/dailytrek.h"
@@ -474,6 +477,12 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
+  reg.register_op("/paxmon/dataset_info",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    return api::dataset_info(data_, get_sched());
+                  },
+                  {kScheduleReadAccess});
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -561,6 +570,14 @@ void paxmon::load_journeys() {
     }
     for (auto const& file : journey_files_) {
       auto const result = load_journeys(file);
+      auto const path = std::filesystem::path{file};
+      auto& ljf = data_.loaded_journey_files_.emplace_back(loaded_journey_file{
+          .path_ = path,
+          .last_modified_ = get_last_modified_time(path),
+          .matched_journeys_ = result.loaded_journeys_,
+          .unmatched_journeys_ = result.unmatched_journeys_.size(),
+          .matched_pax_ = result.loaded_pax_,
+          .unmatched_pax_ = result.unmatched_pax_});
       if (reroute_unmatched_) {
         scoped_timer const timer{"reroute unmatched journeys"};
         LOG(info) << "routing " << result.unmatched_journeys_.size()
@@ -581,6 +598,8 @@ void paxmon::load_journeys() {
           if (journeys.empty()) {
             continue;
           }
+          ++ljf.unmatched_journeys_rerouted_;
+          ljf.unmatched_pax_rerouted_ += uj.passengers_;
           // TODO(pablo): select journey(s)
           if (converter) {
             converter->write_journey(journeys.front(), uj.source_.primary_ref_,
@@ -648,6 +667,13 @@ void paxmon::load_capacity_files() {
     auto const res = loader::capacities::load_capacities_from_file(
         sched, primary_uv.capacity_maps_, file, capacity_match_log_file_);
     total_entries += res.loaded_entry_count_;
+    data_.loaded_capacity_files_.emplace_back(loaded_capacity_file{
+        .path_ = capacity_path,
+        .last_modified_ = get_last_modified_time(capacity_path),
+        .format_ = res.format_,
+        .loaded_entry_count_ = res.loaded_entry_count_,
+        .skipped_entry_count_ = res.skipped_entry_count_,
+        .station_not_found_count_ = res.stations_not_found_.size()});
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              res.loaded_entry_count_, file);
     progress_tracker->increment();

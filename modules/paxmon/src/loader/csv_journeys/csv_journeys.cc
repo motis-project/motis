@@ -544,6 +544,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
 
     if (all_trips_found && !invalid_transfer_times) {
       ++result.loaded_journeys_;
+      result.loaded_pax_ += current_passengers;
       auto current_journey = compact_journey{};
       current_journey.legs_ =
           utl::to_vec(std::next(begin(current_input_legs), start_idx),
@@ -582,6 +583,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       if (invalid_transfer_times) {
         ++journeys_with_invalid_transfer_times;
       }
+      result.unmatched_pax_ += current_passengers;
       auto const& first_leg = current_input_legs.at(start_idx);
       auto const& last_leg = current_input_legs.at(end_idx - 1);
       if (split_groups) {

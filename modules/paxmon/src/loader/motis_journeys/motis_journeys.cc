@@ -38,6 +38,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
                          std::uint64_t secondary_ref = 0) {
     load_journey(sched, uv, j, data_source{primary_ref, secondary_ref}, 1);
     ++result.loaded_journeys_;
+    ++result.loaded_pax_;
   };
 
   auto line_nr = 0ULL;
