@@ -201,8 +201,10 @@ std::vector<n::rt::run> get_events(
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
               ((ev_type == n::event_type::kDep &&
-                stop_idx != location_seq.size() - 1U) ||
-               (ev_type == n::event_type::kArr && stop_idx != 0U))) {
+                stop_idx != location_seq.size() - 1U &&
+                n::stop{s}.in_allowed()) ||
+               (ev_type == n::event_type::kArr && stop_idx != 0U &&
+                n::stop{s}.out_allowed()))) {
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
                 *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
                 dir));
