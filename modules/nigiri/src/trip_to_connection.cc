@@ -40,18 +40,16 @@ motis::module::msg_ptr trip_to_connection(tag_lookup const& tags,
   auto const dest_time = to_l.time(n::event_type::kArr);
   auto const j = nigiri_to_motis_journey(
       tt, rtt, tags,
-      n::routing::journey{
-          .legs_ = {n::routing::journey::leg{
-              n::direction::kForward, from_l.get_location_idx(),
-              to_l.get_location_idx(), start_time, dest_time,
-              n::routing::journey::run_enter_exit{
-                  fr,  // NOLINT(cppcoreguidelines-slicing)
-                  r.stop_range_.from_,
-                  static_cast<n::stop_idx_t>(r.stop_range_.to_ - 1U)}}},
-          .start_time_ = start_time,
-          .dest_time_ = dest_time,
-          .dest_ = to_l.get_location_idx(),
-          .transfers_ = 0U});
+      n::routing::journey{.legs_ = {n::routing::journey::leg{
+                              n::direction::kForward, from_l.get_location_idx(),
+                              to_l.get_location_idx(), start_time, dest_time,
+                              n::routing::journey::run_enter_exit{
+                                  fr,  // NOLINT(cppcoreguidelines-slicing)
+                                  fr.first_valid(), fr.last_valid()}}},
+                          .start_time_ = start_time,
+                          .dest_time_ = dest_time,
+                          .dest_ = to_l.get_location_idx(),
+                          .transfers_ = 0U});
 
   mm::message_creator fbb;
   fbb.create_and_finish(MsgContent_Connection, to_connection(fbb, j).Union());
