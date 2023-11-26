@@ -145,7 +145,10 @@ struct railviz::impl {
 
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
       for (auto const [from, to] : utl::pairwise(fr)) {
-        runs.emplace_back(fr, from.stop_idx_, to.stop_idx_);
+        runs.emplace_back(
+            stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
+                      .from_ = from.stop_idx_,
+                      .to_ = to.stop_idx_});
       }
     }
     return create_response(runs);
@@ -287,7 +290,10 @@ struct railviz::impl {
           n::interval{from.time(n::event_type::kDep),
                       to.time(n::event_type::kArr) + n::i32_minutes{1}};
       if (active.overlaps(time_interval)) {
-        runs.emplace_back(fr, from.stop_idx_, to.stop_idx_);
+        runs.emplace_back(
+            stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
+                      .from_ = from.stop_idx_,
+                      .to_ = to.stop_idx_});
       }
     }
   }
@@ -329,11 +335,12 @@ struct railviz::impl {
                    tt_.event_time(t, to, n::event_type::kArr) +
                        n::unixtime_t::duration{1}}) &&
               is_active(t)) {
-            runs.emplace_back(
-                n::rt::run{.t_ = t,
-                           .stop_range_ = {from, to},
-                           .rt_ = n::rt_transport_idx_t::invalid()},
-                0, 1);
+            runs.emplace_back(stop_pair{
+                .r_ = n::rt::run{.t_ = t,
+                                 .stop_range_ = {from, to},
+                                 .rt_ = n::rt_transport_idx_t::invalid()},
+                .from_ = 0,
+                .to_ = 1});
           }
         }
       }
