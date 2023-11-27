@@ -833,7 +833,8 @@ struct ris::impl {
         return {std::make_tuple(
             static_cast<unixtime>(
                 std::chrono::time_point_cast<std::chrono::seconds>(
-                    fs::last_write_time(p))
+                    std::chrono::clock_cast<std::chrono::system_clock>(
+                        fs::last_write_time(p)))
                     .time_since_epoch()
                     .count()),
             p, t)};
