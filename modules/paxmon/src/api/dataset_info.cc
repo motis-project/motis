@@ -2,6 +2,8 @@
 
 #include "utl/to_vec.h"
 
+#include "motis/core/access/time_access.h"
+
 using namespace motis::module;
 using namespace motis::paxmon;
 
@@ -21,8 +23,9 @@ msg_ptr dataset_info(paxmon_data& data, schedule const& sched) {
                     mc, mc.CreateString(ljf.path_.filename().string()),
                     ljf.last_modified_, ljf.matched_journeys_,
                     ljf.unmatched_journeys_, ljf.unmatched_journeys_rerouted_,
-                    ljf.matched_pax_, ljf.unmatched_pax_,
-                    ljf.unmatched_pax_rerouted_);
+                    ljf.matched_groups_, ljf.unmatched_groups_,
+                    ljf.unmatched_groups_rerouted_, ljf.matched_pax_,
+                    ljf.unmatched_pax_, ljf.unmatched_pax_rerouted_);
               })),
           mc.CreateVector(utl::to_vec(
               data.loaded_capacity_files_,
@@ -40,6 +43,7 @@ msg_ptr dataset_info(paxmon_data& data, schedule const& sched) {
                                           [&](auto const& name) {
                                             return mc.CreateString(name.str());
                                           })),
+              external_schedule_begin(sched), external_schedule_end(sched),
               sched.schedule_begin_, sched.schedule_end_,
               sched.stations_.size(), sched.trip_mem_.size(),
               sched.expanded_trips_.element_count()),

@@ -17,6 +17,10 @@ struct loaded_journey_file {
   std::size_t unmatched_journeys_{};
   std::size_t unmatched_journeys_rerouted_{};
 
+  std::size_t matched_groups_{};
+  std::size_t unmatched_groups_{};
+  std::size_t unmatched_groups_rerouted_{};
+
   std::size_t matched_pax_{};
   std::size_t unmatched_pax_{};
   std::size_t unmatched_pax_rerouted_{};

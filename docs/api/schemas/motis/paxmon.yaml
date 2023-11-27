@@ -2051,6 +2051,12 @@ PaxMonJourneyFileInfo:
       description: TODO
     unmatched_pax_rerouted:
       description: TODO
+    matched_groups:
+      description: TODO
+    unmatched_groups:
+      description: TODO
+    unmatched_groups_rerouted:
+      description: TODO
 PaxMonCapacityFileFormat:
   description: TODO
 PaxMonCapacityFileInfo:
@@ -2082,6 +2088,10 @@ PaxMonScheduleInfo:
     trip_count:
       description: TODO
     expanded_trip_count:
+      description: TODO
+    internal_begin:
+      description: TODO
+    internal_end:
       description: TODO
 PaxMonDatasetInfoResponse:
   description: TODO

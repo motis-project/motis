@@ -1160,6 +1160,9 @@ export interface PaxMonJourneyFileInfo {
   matched_journeys: number;
   unmatched_journeys: number;
   unmatched_journeys_rerouted: number;
+  matched_groups: number;
+  unmatched_groups: number;
+  unmatched_groups_rerouted: number;
   matched_pax: number;
   unmatched_pax: number;
   unmatched_pax_rerouted: number;
@@ -1189,6 +1192,8 @@ export interface PaxMonScheduleInfo {
   names: string[];
   begin: number;
   end: number;
+  internal_begin: number;
+  internal_end: number;
   station_count: number;
   trip_count: number;
   expanded_trip_count: number;

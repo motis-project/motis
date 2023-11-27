@@ -543,8 +543,8 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     }
 
     if (all_trips_found && !invalid_transfer_times) {
-      ++result.loaded_journeys_;
-      result.loaded_pax_ += current_passengers;
+      ++result.loaded_journey_count_;
+      result.loaded_pax_count_ += current_passengers;
       auto current_journey = compact_journey{};
       current_journey.legs_ =
           utl::to_vec(std::next(begin(current_input_legs), start_idx),
@@ -571,9 +571,11 @@ loader_result load_journeys(schedule const& sched, universe& uv,
           ++tpg.source_.secondary_ref_;
           distributed += group_size;
           tpg.passengers_ = group_size;
+          ++result.loaded_group_count_;
           add_passenger_group(uv, sched, tpg, false);
         }
       } else {
+        ++result.loaded_group_count_;
         add_passenger_group(uv, sched, tpg, false);
       }
     } else {
@@ -583,7 +585,8 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       if (invalid_transfer_times) {
         ++journeys_with_invalid_transfer_times;
       }
-      result.unmatched_pax_ += current_passengers;
+      ++result.unmatched_journey_count_;
+      result.unmatched_pax_count_ += current_passengers;
       auto const& first_leg = current_input_legs.at(start_idx);
       auto const& last_leg = current_input_legs.at(end_idx - 1);
       if (split_groups) {
@@ -594,12 +597,14 @@ loader_result load_journeys(schedule const& sched, universe& uv,
               group_gen.get_group_size(current_passengers - distributed);
           ++source.secondary_ref_;
           distributed += group_size;
+          ++result.unmatched_group_count_;
           result.unmatched_journeys_.emplace_back(
               unmatched_journey{first_leg.from_station_idx_.value(),
                                 last_leg.to_station_idx_.value(),
                                 first_leg.enter_time_, source, group_size});
         }
       } else {
+        ++result.unmatched_group_count_;
         result.unmatched_journeys_.emplace_back(unmatched_journey{
             first_leg.from_station_idx_.value(),
             last_leg.to_station_idx_.value(), first_leg.enter_time_, source,
@@ -732,7 +737,9 @@ loader_result load_journeys(schedule const& sched, universe& uv,
 
   finish_journey();
 
-  LOG(info) << "loaded " << result.loaded_journeys_ << " journeys";
+  LOG(info) << "loaded " << result.loaded_journey_count_ << " journeys, "
+            << result.loaded_group_count_ << " groups, "
+            << result.loaded_pax_count_ << " passengers";
   LOG(info) << journeys_with_invalid_legs << " journeys with some invalid legs";
   LOG(info) << journeys_with_no_valid_legs << " journeys with no valid legs";
   LOG(info) << journeys_with_inexact_matches

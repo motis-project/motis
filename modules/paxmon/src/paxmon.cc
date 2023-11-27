@@ -511,8 +511,8 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
-  LOG(result.loaded_journeys_ != 0 ? info : warn)
-      << "loaded " << result.loaded_journeys_ << " journeys from " << file;
+  LOG(result.loaded_journey_count_ != 0 ? info : warn)
+      << "loaded " << result.loaded_journey_count_ << " journeys from " << file;
   return result;
 }
 
@@ -574,11 +574,15 @@ void paxmon::load_journeys() {
       auto& ljf = data_.loaded_journey_files_.emplace_back(loaded_journey_file{
           .path_ = path,
           .last_modified_ = get_last_modified_time(path),
-          .matched_journeys_ = result.loaded_journeys_,
-          .unmatched_journeys_ = result.unmatched_journeys_.size(),
-          .matched_pax_ = result.loaded_pax_,
-          .unmatched_pax_ = result.unmatched_pax_});
+          .matched_journeys_ = result.loaded_journey_count_,
+          .unmatched_journeys_ = result.unmatched_journey_count_,
+          .matched_groups_ = result.loaded_group_count_,
+          .unmatched_groups_ = result.unmatched_group_count_,
+          .matched_pax_ = result.loaded_pax_count_,
+          .unmatched_pax_ = result.unmatched_pax_count_});
       if (reroute_unmatched_) {
+        // TODO(pablo): needs to be moved out of import
+        // TODO(pablo): group by journey, not pax group
         scoped_timer const timer{"reroute unmatched journeys"};
         LOG(info) << "routing " << result.unmatched_journeys_.size()
                   << " unmatched journeys using " << initial_reroute_router_
@@ -598,7 +602,7 @@ void paxmon::load_journeys() {
           if (journeys.empty()) {
             continue;
           }
-          ++ljf.unmatched_journeys_rerouted_;
+          ++ljf.unmatched_groups_rerouted_;
           ljf.unmatched_pax_rerouted_ += uj.passengers_;
           // TODO(pablo): select journey(s)
           if (converter) {

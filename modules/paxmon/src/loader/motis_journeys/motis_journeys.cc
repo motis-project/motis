@@ -37,8 +37,9 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   auto add_journey = [&](journey const& j, std::uint64_t primary_ref = 0,
                          std::uint64_t secondary_ref = 0) {
     load_journey(sched, uv, j, data_source{primary_ref, secondary_ref}, 1);
-    ++result.loaded_journeys_;
-    ++result.loaded_pax_;
+    ++result.loaded_journey_count_;
+    ++result.loaded_group_count_;
+    ++result.loaded_pax_count_;
   };
 
   auto line_nr = 0ULL;
