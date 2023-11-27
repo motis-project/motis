@@ -11,6 +11,7 @@
 #include "geo/polyline_format.h"
 
 #include "nigiri/common/linear_lower_bound.h"
+#include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
@@ -39,6 +40,11 @@ using rt_rtree = bgi::rtree<rt_transport_box, bgi::quadratic<16>>;
 using int_clasz = decltype(n::kNumClasses);
 
 namespace motis::nigiri {
+
+struct stop_pair {
+  n::rt::run r_;
+  n::stop_idx_t from_, to_;
+};
 
 struct route_geo_index {
   route_geo_index() = default;
@@ -128,7 +134,7 @@ struct railviz::impl {
     using motis::railviz::RailVizTripsRequest;
     auto const* req = motis_content(RailVizTripsRequest, msg);
 
-    auto runs = std::vector<n::rt::run>{};
+    auto runs = std::vector<stop_pair>{};
     for (auto const t : *req->trips()) {
       auto const et = to_extern_trip(t);
       auto const r = resolve_run(tags_, tt_, et);
@@ -137,14 +143,12 @@ struct railviz::impl {
         continue;
       }
 
-      auto const seq =
-          tt_.route_location_seq_[tt_.transport_route_[r.t_.t_idx_]];
-      auto const stop_range = n::interval{
-          n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
-      for (auto const [from, to] : utl::pairwise(stop_range)) {
-        auto copy = r;
-        copy.stop_range_ = {from, to};
-        runs.emplace_back(copy);
+      auto const fr = n::rt::frun{tt_, rtt_.get(), r};
+      for (auto const [from, to] : utl::pairwise(fr)) {
+        runs.emplace_back(
+            stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
+                      .from_ = from.stop_idx_,
+                      .to_ = to.stop_idx_});
       }
     }
     return create_response(runs);
@@ -169,7 +173,7 @@ struct railviz::impl {
 
   mm::msg_ptr get_trains(n::interval<n::unixtime_t> time_interval,
                          geo::box const& area, int const zoom_level) {
-    auto runs = std::vector<n::rt::run>{};
+    auto runs = std::vector<stop_pair>{};
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
       auto const sc = static_cast<service_class>(c);
       if (!path::should_display(sc, zoom_level,
@@ -192,7 +196,7 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  mm::msg_ptr create_response(std::vector<n::rt::run> const& runs) const {
+  mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
     geo::polyline_encoder<6> enc;
 
     mm::message_creator mc;
@@ -221,10 +225,11 @@ struct railviz::impl {
                     std::int64_t>{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
-    auto const trains = utl::to_vec(runs, [&](n::rt::run const& r) {
-      auto const fr = n::rt::frun{tt_, rtt_.get(), r};
-      auto const from = fr[0];
-      auto const to = fr[1];
+    auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
+      auto const fr = n::rt::frun{tt_, rtt_.get(), r.r_};
+
+      auto const from = fr[r.from_];
+      auto const to = fr[r.to_];
 
       auto const from_l = add_station(from.get_location_idx());
       auto const to_l = add_station(to.get_location_idx());
@@ -273,24 +278,22 @@ struct railviz::impl {
 
   void add_rt_transports(n::rt_transport_idx_t const rt_t,
                          n::interval<n::unixtime_t> const time_interval,
-                         geo::box const& area, std::vector<n::rt::run>& runs) {
-    auto const seq = rtt_->rt_transport_location_seq_[rt_t];
-    auto const stop_indices =
-        n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
-    for (auto const [from, to] : utl::pairwise(stop_indices)) {
-      auto const box = geo::make_box(
-          {tt_.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
-           tt_.locations_.coordinates_[n::stop{seq[to]}.location_idx()]});
+                         geo::box const& area, std::vector<stop_pair>& runs) {
+    auto const fr = n::rt::frun::from_rt(tt_, rtt_.get(), rt_t);
+    for (auto const [from, to] : utl::pairwise(fr)) {
+      auto const box = geo::make_box({from.pos(), to.pos()});
       if (!box.overlaps(area)) {
         continue;
       }
 
       auto const active =
-          n::interval{rtt_->unix_event_time(rt_t, from, n::event_type::kDep),
-                      rtt_->unix_event_time(rt_t, to, n::event_type::kArr) +
-                          n::unixtime_t::duration{1U}};
+          n::interval{from.time(n::event_type::kDep),
+                      to.time(n::event_type::kArr) + n::i32_minutes{1}};
       if (active.overlaps(time_interval)) {
-        runs.emplace_back(n::rt::run{.stop_range_ = {from, to}, .rt_ = rt_t});
+        runs.emplace_back(
+            stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
+                      .from_ = from.stop_idx_,
+                      .to_ = to.stop_idx_});
       }
     }
   }
@@ -298,7 +301,7 @@ struct railviz::impl {
   void add_static_transports(n::route_idx_t const r,
                              n::interval<n::unixtime_t> const time_interval,
                              geo::box const& area,
-                             std::vector<n::rt::run>& runs) const {
+                             std::vector<stop_pair>& runs) const {
     auto const is_active = [&](n::transport const t) -> bool {
       return (rtt_ == nullptr
                   ? tt_.bitfields_[tt_.transport_traffic_days_[t.t_idx_]]
@@ -332,10 +335,12 @@ struct railviz::impl {
                    tt_.event_time(t, to, n::event_type::kArr) +
                        n::unixtime_t::duration{1}}) &&
               is_active(t)) {
-            runs.emplace_back(
-                n::rt::run{.t_ = t,
-                           .stop_range_ = {from, to},
-                           .rt_ = n::rt_transport_idx_t::invalid()});
+            runs.emplace_back(stop_pair{
+                .r_ = n::rt::run{.t_ = t,
+                                 .stop_range_ = {from, to},
+                                 .rt_ = n::rt_transport_idx_t::invalid()},
+                .from_ = 0,
+                .to_ = 1});
           }
         }
       }
