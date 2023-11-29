@@ -15,6 +15,7 @@
 
 #include "motis/core/common/dynamic_fws_multimap.h"
 #include "motis/core/common/fws_graph.h"
+#include "motis/core/common/logging.h"
 
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
@@ -349,7 +350,12 @@ void revert_forecasts(universe& uv, schedule const& sched,
     if (current_pgi == std::numeric_limits<passenger_group_index>::max()) {
       return;
     }
-    revert_forecast(uv, sched, mc, reroutes, current_pgi, unbroken_routes);
+    try {
+      revert_forecast(uv, sched, mc, reroutes, current_pgi, unbroken_routes);
+    } catch (std::runtime_error const& ex) {
+      LOG(motis::logging::error) << "revert forecast for group " << current_pgi
+                                 << " failed: " << ex.what();
+    }
     if (reroutes.size() >= BATCH_SIZE) {
       send_reroutes();
     }
