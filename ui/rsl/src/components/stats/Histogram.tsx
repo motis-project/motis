@@ -48,7 +48,7 @@ function Histogram({
   width,
   height,
   margin = defaultMargin,
-  bgClass = "fill-gray-200",
+  bgClass = "fill-white",
   barClass = "fill-blue-800",
   yScaleType = "log",
   xTickFormat,

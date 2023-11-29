@@ -229,6 +229,11 @@ std::vector<current_universe_info> multiverse::get_current_universe_infos() {
   return infos;
 }
 
+std::size_t multiverse::get_current_universe_count() {
+  auto const lock = std::unique_lock{mutex_};
+  return universe_info_storage_.size();
+}
+
 void multiverse::send_universe_destroyed_notifications() {
   auto lock = std::unique_lock{mutex_};
   auto const recently_destroyed = recently_destroyed_universes_;

@@ -153,6 +153,7 @@ void paxmon::reg_subc(motis::module::subc_reg& r) {
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
   add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
+  data_.motis_start_time_ = now();
   auto* uv = data_.multiverse_->create_default_universe();
   uv->graph_log_.enabled_ = graph_log_enabled_;
   uv->capacity_maps_.fuzzy_match_max_time_diff_ =

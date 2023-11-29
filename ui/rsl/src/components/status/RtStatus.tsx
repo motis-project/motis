@@ -83,7 +83,10 @@ function RtMetricsDisplay({
 
   return (
     <div>
-      <div className="h-72">
+      <h3 className="font-semibold">
+        Empfangene Echtzeitnachrichten pro Minute
+      </h3>
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{
@@ -99,7 +102,10 @@ function RtMetricsDisplay({
           hideUntil={hideUntil}
         />
       </div>
-      <div className="h-72">
+      <h3 className="font-semibold">
+        Verarbeitung der empfangenen Echtzeitnachrichten
+      </h3>
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{
@@ -115,7 +121,7 @@ function RtMetricsDisplay({
           hideUntil={hideUntil}
         />
       </div>
-      <div className="h-72">
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{
@@ -127,7 +133,7 @@ function RtMetricsDisplay({
           hideUntil={hideUntil}
         />
       </div>
-      <div className="h-72">
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{
@@ -143,7 +149,7 @@ function RtMetricsDisplay({
           hideUntil={hideUntil}
         />
       </div>
-      <div className="h-72">
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{
@@ -169,7 +175,10 @@ function FormationMetricsDisplay({
 
   return (
     <div>
-      <div className="h-72">
+      <h3 className="font-semibold">
+        Empfangene Wagenreihungsmeldungen pro Minute
+      </h3>
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{
@@ -185,7 +194,8 @@ function FormationMetricsDisplay({
           hideUntil={hideUntil}
         />
       </div>
-      <div className="h-72">
+      <h3 className="font-semibold">Verarbeitung der Wagenreihungsmeldungen</h3>
+      <div className="h-72 py-2">
         <MetricsChart
           metricsData={metrics}
           metricsInfo={{

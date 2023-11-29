@@ -30,9 +30,9 @@ msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg) {
     auto const up_to_date = status->last_message_time() != 0 &&
                             (current_time - status->last_message_time()) <
                                 (status->update_interval() * 2);
-    return CreatePaxMonFeedStatus(mc, status->enabled(), receiving, up_to_date,
-                                  status->last_update_time(),
-                                  status->last_message_time());
+    return CreatePaxMonFeedStatus(
+        mc, status->enabled(), receiving, up_to_date, status->update_interval(),
+        status->last_update_time(), status->last_message_time());
   };
 
   mc.create_and_finish(
@@ -40,8 +40,9 @@ msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg) {
       CreatePaxMonStatusResponse(
           mc, static_cast<std::uint64_t>(sched.system_time_),
           data.multiverse_->id(), uv.passenger_groups_.active_groups(),
-          uv.trip_data_.size(), ris_status->system_time(), current_time,
-          data.motis_start_time_,
+          uv.passenger_groups_.active_pax(), uv.trip_data_.size(),
+          ris_status->system_time(), current_time, data.motis_start_time_,
+          data.multiverse_->get_current_universe_count(),
           to_feed_status(ris_status->ribasis_fahrt_status()),
           to_feed_status(ris_status->ribasis_formation_status()))
           .Union());

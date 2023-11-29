@@ -277,6 +277,7 @@ export interface PaxMonFeedStatus {
   enabled: boolean;
   receiving: boolean;
   up_to_date: boolean;
+  update_interval: number;
   last_update_time: number;
   last_message_time: number;
 }
@@ -286,10 +287,12 @@ export interface PaxMonStatusResponse {
   system_time: number;
   multiverse_id: number;
   active_groups: number;
+  active_pax: number;
   trip_count: number;
   primary_system_time: number;
   current_time: number;
   motis_start_time: number;
+  universe_count: number;
   ribasis_fahrt_status: PaxMonFeedStatus;
   ribasis_formation_status: PaxMonFeedStatus;
 }

@@ -99,7 +99,7 @@ function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
 function TripCapacityInfo({ data }: { data: PaxMonTripCapacityInfo }) {
   return (
     <div className="mb-16">
-      <div className="sticky -top-2 flex items-center gap-4 bg-db-cool-gray-100">
+      <div className="sticky -top-2 flex items-center gap-4">
         <TripServiceInfoView
           tsi={data.tsi}
           format={"Short"}

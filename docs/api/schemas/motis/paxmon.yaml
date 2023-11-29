@@ -424,9 +424,16 @@ PaxMonStatusResponse:
     ribasis_fahrt_status:
       description: Status of the RiBasisFahrt stream.
     ribasis_formation_status:
-      description: STatus of the RiBasisFormation stream.
+      description: Status of the RiBasisFormation stream.
     motis_start_time:
-      description: TODO
+      description: >
+        The time when MOTIS was started as a unix timestamp.
+    active_pax:
+      description: >
+        The number of passengers currently being tracked in this universe.
+    universe_count:
+      description: >
+        The current number of universes.
 PaxMonPdfEntry:
   description: TODO
   fields:
@@ -1877,6 +1884,8 @@ PaxMonFeedStatus:
       description: >
         The creation time of the latest real-time updated received from this
         real-time feed (unix timestamp).
+    update_interval:
+      description: Interval between scheduled updates in seconds.
 PaxMonTransfersAtStationRequest:
   description: TODO
   fields:
