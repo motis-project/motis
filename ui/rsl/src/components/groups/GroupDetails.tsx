@@ -159,7 +159,7 @@ function GroupDetails({ groupId }: GroupDetailsProps): JSX.Element {
         </div>
       </div>
       <div className="py-5">
-        {group.routes.length <= 20 ? (
+        {group.routes.length <= 10 && group.reroute_log.length <= 10 ? (
           <GroupRouteTree group={group} />
         ) : (
           <div>Der Verbindungsbaum ist zu groß, um angezeigt zu werden.</div>
