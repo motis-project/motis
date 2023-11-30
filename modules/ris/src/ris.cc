@@ -831,10 +831,13 @@ struct ris::impl {
       if (auto const t = get_file_type(p);
           t != file_type::NONE && !is_known_file(p)) {
         return {std::make_tuple(
+            // NOTE: this is not guaranteed to be a unix timestamp, because
+            // the std::chrono::file_clock epoch is unspecified. On Windows,
+            // it is not a unix timestamp, but since it is only used for
+            // sorting, it should be ok here.
             static_cast<unixtime>(
                 std::chrono::time_point_cast<std::chrono::seconds>(
-                    std::chrono::clock_cast<std::chrono::system_clock>(
-                        fs::last_write_time(p)))
+                    fs::last_write_time(p))
                     .time_since_epoch()
                     .count()),
             p, t)};
