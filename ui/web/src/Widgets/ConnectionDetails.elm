@@ -268,14 +268,6 @@ connectionInfoView goBackMsg locale inSubOverlay connection =
         dateText =
             formatDate locale.dateConfig depTime
 
-        actions =
-            if inSubOverlay then
-                []
-
-            else
-                [ i [ class "icon" ] [ text "save" ]
-                , i [ class "icon" ] [ text "share" ]
-                ]
     in
     div [ class "connection-info" ]
         [ div [ class "header" ]
@@ -308,8 +300,6 @@ connectionInfoView goBackMsg locale inSubOverlay connection =
                         ]
                     ]
                 ]
-            , div [ class "actions" ]
-                actions
             ]
         ]
 
