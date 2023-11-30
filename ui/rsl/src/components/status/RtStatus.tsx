@@ -82,21 +82,85 @@ function RtMetricsDisplay({
   }
 
   return (
-    <div className="h-72">
-      <MetricsChart
-        metricsData={metrics}
-        metricsInfo={{
-          full_trip_schedule_messages: {
-            label: "Sollfahrten",
-            color: "#1e40af",
-          },
-          full_trip_update_messages: {
-            label: "Fahrt Updates",
-            color: "#c2410c",
-          },
-        }}
-        hideUntil={hideUntil}
-      />
+    <div>
+      <h3 className="font-semibold">
+        Empfangene Echtzeitnachrichten pro Minute
+      </h3>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            full_trip_schedule_messages: {
+              label: "Sollfahrten",
+              color: "#1e40af",
+            },
+            full_trip_update_messages: {
+              label: "Fahrt Updates",
+              color: "#c2410c",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
+      <h3 className="font-semibold">
+        Verarbeitung der empfangenen Echtzeitnachrichten
+      </h3>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            trip_id_not_found: {
+              label: "Zug nicht gefunden",
+              color: "#1e40af",
+            },
+            trip_id_ambiguous: {
+              label: "Zug nicht eindeutig",
+              color: "#c2410c",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            trip_delay_updates: {
+              label: "Verarbeitete Verspätungsupdates (Anzahl Züge)",
+              color: "#1e40af",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            reroutes: {
+              label: "Verarbeitete Umleitungen",
+              color: "#700cc2",
+            },
+            rule_service_reroutes: {
+              label: "Umleitungen vereinigter/durchgebundener Züge",
+              color: "#c20c0c",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            trip_track_updates: {
+              label: "Verarbeitete Gleisänderungen",
+              color: "#0f6105",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
     </div>
   );
 }
@@ -110,21 +174,47 @@ function FormationMetricsDisplay({
   }
 
   return (
-    <div className="h-72">
-      <MetricsChart
-        metricsData={metrics}
-        metricsInfo={{
-          formation_schedule_messages: {
-            label: "Sollwagenreihungen",
-            color: "#1e40af",
-          },
-          formation_preview_messages: {
-            label: "Wagenreihungsänderungen",
-            color: "#c2410c",
-          },
-        }}
-        hideUntil={hideUntil}
-      />
+    <div>
+      <h3 className="font-semibold">
+        Empfangene Wagenreihungsmeldungen pro Minute
+      </h3>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            formation_schedule_messages: {
+              label: "Sollwagenreihungen",
+              color: "#1e40af",
+            },
+            formation_preview_messages: {
+              label: "Wagenreihungsänderungen",
+              color: "#c2410c",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
+      <h3 className="font-semibold">Verarbeitung der Wagenreihungsmeldungen</h3>
+      <div className="h-72 py-2">
+        <MetricsChart
+          metricsData={metrics}
+          metricsInfo={{
+            formation_trip_id_not_found: {
+              label: "Zug nicht gefunden",
+              color: "#1e40af",
+            },
+            formation_trip_id_ambiguous: {
+              label: "Zug nicht eindeutig",
+              color: "#c2410c",
+            },
+            formation_invalid_trip_id: {
+              label: "Ungültige Zug ID",
+              color: "#700cc2",
+            },
+          }}
+          hideUntil={hideUntil}
+        />
+      </div>
     </div>
   );
 }

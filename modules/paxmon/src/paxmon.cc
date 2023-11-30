@@ -25,6 +25,7 @@
 #include "motis/paxmon/api/add_groups.h"
 #include "motis/paxmon/api/broken_transfers.h"
 #include "motis/paxmon/api/capacity_status.h"
+#include "motis/paxmon/api/dataset_info.h"
 #include "motis/paxmon/api/debug_graph.h"
 #include "motis/paxmon/api/destroy_universe.h"
 #include "motis/paxmon/api/detailed_capacity_status.h"
@@ -50,10 +51,12 @@
 
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/checks.h"
+#include "motis/paxmon/file_time.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/graph_access.h"
 #include "motis/paxmon/load_info.h"
+#include "motis/paxmon/loaded_files.h"
 #include "motis/paxmon/loader/capacities/load_capacities.h"
 #include "motis/paxmon/loader/csv_journeys/csv_journeys.h"
 #include "motis/paxmon/loader/dailytrek.h"
@@ -150,6 +153,7 @@ void paxmon::reg_subc(motis::module::subc_reg& r) {
 
 void paxmon::import(motis::module::import_dispatcher& reg) {
   add_shared_data(to_res_id(global_res_id::PAX_DATA), &data_);
+  data_.motis_start_time_ = now();
   auto* uv = data_.multiverse_->create_default_universe();
   uv->graph_log_.enabled_ = graph_log_enabled_;
   uv->capacity_maps_.fuzzy_match_max_time_diff_ =
@@ -474,6 +478,12 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {});
 
+  reg.register_op("/paxmon/dataset_info",
+                  [&](msg_ptr const&) -> msg_ptr {
+                    return api::dataset_info(data_, get_sched());
+                  },
+                  {kScheduleReadAccess});
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -502,8 +512,8 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
   } else {
     LOG(logging::error) << "paxmon: unknown journey file type: " << file;
   }
-  LOG(result.loaded_journeys_ != 0 ? info : warn)
-      << "loaded " << result.loaded_journeys_ << " journeys from " << file;
+  LOG(result.loaded_journey_count_ != 0 ? info : warn)
+      << "loaded " << result.loaded_journey_count_ << " journeys from " << file;
   return result;
 }
 
@@ -561,7 +571,19 @@ void paxmon::load_journeys() {
     }
     for (auto const& file : journey_files_) {
       auto const result = load_journeys(file);
+      auto const path = std::filesystem::path{file};
+      auto& ljf = data_.loaded_journey_files_.emplace_back(loaded_journey_file{
+          .path_ = path,
+          .last_modified_ = get_last_modified_time(path),
+          .matched_journeys_ = result.loaded_journey_count_,
+          .unmatched_journeys_ = result.unmatched_journey_count_,
+          .matched_groups_ = result.loaded_group_count_,
+          .unmatched_groups_ = result.unmatched_group_count_,
+          .matched_pax_ = result.loaded_pax_count_,
+          .unmatched_pax_ = result.unmatched_pax_count_});
       if (reroute_unmatched_) {
+        // TODO(pablo): needs to be moved out of import
+        // TODO(pablo): group by journey, not pax group
         scoped_timer const timer{"reroute unmatched journeys"};
         LOG(info) << "routing " << result.unmatched_journeys_.size()
                   << " unmatched journeys using " << initial_reroute_router_
@@ -581,6 +603,8 @@ void paxmon::load_journeys() {
           if (journeys.empty()) {
             continue;
           }
+          ++ljf.unmatched_groups_rerouted_;
+          ljf.unmatched_pax_rerouted_ += uj.passengers_;
           // TODO(pablo): select journey(s)
           if (converter) {
             converter->write_journey(journeys.front(), uj.source_.primary_ref_,
@@ -648,6 +672,13 @@ void paxmon::load_capacity_files() {
     auto const res = loader::capacities::load_capacities_from_file(
         sched, primary_uv.capacity_maps_, file, capacity_match_log_file_);
     total_entries += res.loaded_entry_count_;
+    data_.loaded_capacity_files_.emplace_back(loaded_capacity_file{
+        .path_ = capacity_path,
+        .last_modified_ = get_last_modified_time(capacity_path),
+        .format_ = res.format_,
+        .loaded_entry_count_ = res.loaded_entry_count_,
+        .skipped_entry_count_ = res.skipped_entry_count_,
+        .station_not_found_count_ = res.stations_not_found_.size()});
     LOG(info) << fmt::format("loaded {:L} capacity entries from {}",
                              res.loaded_entry_count_, file);
     progress_tracker->increment();

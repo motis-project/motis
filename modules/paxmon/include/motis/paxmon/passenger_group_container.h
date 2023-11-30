@@ -163,6 +163,7 @@ struct passenger_group_container {
                 "passenger_group_container: reroute_log_entries out of sync");
 
     ++active_groups_;
+    active_pax_ += m_ptr->passengers_;
     return m_ptr;
   }
 
@@ -183,9 +184,11 @@ struct passenger_group_container {
       }
       reroute_log_entries_.at(pgi).clear();
 
+      --active_groups_;
+      active_pax_ -= m_ptr->passengers_;
+
       allocator_.release(ptr);
       groups_[pgi] = {};
-      --active_groups_;
     }
   }
 
@@ -227,6 +230,7 @@ struct passenger_group_container {
 
   std::size_t size() const { return groups_.size(); }
   std::size_t active_groups() const { return active_groups_; }
+  std::size_t active_pax() const { return active_pax_; }
 
   void reserve(std::size_t size) { groups_.reserve(size); }
 
@@ -278,6 +282,7 @@ struct passenger_group_container {
   mcd::hash_map<data_source, mcd::vector<passenger_group_index>>
       groups_by_source_;
   std::size_t active_groups_{};
+  std::size_t active_pax_{};
 
   // index: passenger_group_index
   dynamic_fws_multimap<group_route> group_routes_;

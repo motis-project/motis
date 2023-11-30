@@ -111,7 +111,6 @@ function RslStatus(): ReactElement {
 
   return (
     <div className="py-3">
-      <h2 className="text-lg font-semibold">RSL</h2>
       <div className="flex justify-between pt-2">
         <Select
           value={selectedMetric.label}

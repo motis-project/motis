@@ -73,6 +73,8 @@ struct multiverse : std::enable_shared_from_this<multiverse> {
 
   std::vector<current_universe_info> get_current_universe_infos();
 
+  std::size_t get_current_universe_count();
+
   friend universe_info;
 
 private:

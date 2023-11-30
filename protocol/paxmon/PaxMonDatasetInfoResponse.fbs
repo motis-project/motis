@@ -1,0 +1,56 @@
+namespace motis.paxmon;
+
+table PaxMonJourneyFileInfo {
+  name: string;
+  last_modified: ulong; // unix timestamp
+
+  matched_journeys: ulong;
+  unmatched_journeys: ulong;
+  unmatched_journeys_rerouted: ulong;
+
+  matched_groups: ulong;
+  unmatched_groups: ulong;
+  unmatched_groups_rerouted: ulong;
+
+  matched_pax: ulong;
+  unmatched_pax: ulong;
+  unmatched_pax_rerouted: ulong;
+}
+
+enum PaxMonCapacityFileFormat : byte {
+  TRIP,
+  RIS_SERVICE_VEHICLES,
+  FZG_KAP,
+  FZG_GRUPPE,
+  GATTUNG,
+  BAUREIHE
+}
+
+table PaxMonCapacityFileInfo {
+  name: string;
+  last_modified: ulong; // unix timestamp
+
+  format: PaxMonCapacityFileFormat;
+  loaded_entry_count: ulong;
+  skipped_entry_count: ulong;
+  station_not_found_count: ulong;
+}
+
+table PaxMonScheduleInfo {
+  names: [string];
+  begin: ulong; // unix timestamp
+  end: ulong; // unix timestamp
+  internal_begin: ulong; // unix timestamp
+  internal_end: ulong; // unix timestamp
+
+  station_count: ulong;
+  trip_count: ulong;
+  expanded_trip_count: ulong;
+}
+
+table PaxMonDatasetInfoResponse {
+  journey_files: [PaxMonJourneyFileInfo];
+  capacity_files: [PaxMonCapacityFileInfo];
+  schedule: PaxMonScheduleInfo;
+  motis_start_time: ulong; // unix timestamp
+}

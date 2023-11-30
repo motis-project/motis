@@ -37,9 +37,9 @@ function RISStatusDisplay({
         <thead>
           <tr className="text-left">
             <th className="font-medium">Datenstrom</th>
-            <th className="font-medium">Letzte Echtzeitmeldung</th>
+            <th className="font-medium">Letzter Nachrichtenzeitstempel</th>
             <th className="font-medium">Letzte Aktualisierung</th>
-            <th className="font-medium">Nachrichten insgesamt</th>
+            <th className="font-medium">Nachrichten seit letztem Neustart</th>
           </tr>
         </thead>
         <tbody>

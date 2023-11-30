@@ -11,6 +11,7 @@ import {
   PaxMonBrokenTransfersResponse,
   PaxMonCapacityStatusRequest,
   PaxMonCapacityStatusResponse,
+  PaxMonDatasetInfoResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
   PaxMonDestroyUniverseRequest,
@@ -41,6 +42,8 @@ import {
   PaxMonKeepAliveResponse,
   PaxMonMetricsRequest,
   PaxMonMetricsResponse,
+  PaxMonReviseCompactJourneyRequest,
+  PaxMonReviseCompactJourneyResponse,
   PaxMonStatusRequest,
   PaxMonStatusResponse,
   PaxMonTransferDetailsRequest,
@@ -376,6 +379,31 @@ export async function sendPaxMonTransferDetailsRequest(
   return msg.content as PaxMonTransferDetailsResponse;
 }
 
+export async function sendPaxMonReviseCompactJourneyRequest(
+  content: PaxMonReviseCompactJourneyRequest,
+): Promise<PaxMonReviseCompactJourneyResponse> {
+  const msg = await sendRequest(
+    "/paxmon/revise_compact_journey",
+    "PaxMonReviseCompactJourneyRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonReviseCompactJourneyResponse");
+  return msg.content as PaxMonReviseCompactJourneyResponse;
+}
+
+export async function sendPaxMonDatasetInfoRequest(): Promise<PaxMonDatasetInfoResponse> {
+  const msg = await sendRequest("/paxmon/dataset_info");
+  verifyContentType(msg, "PaxMonDatasetInfoResponse");
+  return msg.content as PaxMonDatasetInfoResponse;
+}
+
+export function usePaxMonDatasetInfo(): UseQueryResult<PaxMonDatasetInfoResponse> {
+  return useQuery({
+    queryKey: queryKeys.datasetInfo(),
+    queryFn: sendPaxMonDatasetInfoRequest,
+  });
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -412,4 +440,7 @@ export const queryKeys = {
     [...queryKeys.all, "broken_transfers", req] as const,
   transferDetails: (req: PaxMonTransferDetailsRequest) =>
     [...queryKeys.all, "transfer_details", req] as const,
+  reviseCompactJourney: (req: PaxMonReviseCompactJourneyRequest) =>
+    [...queryKeys.all, "revise_compact_journey", req] as const,
+  datasetInfo: () => [...queryKeys.all, "dataset_info"] as const,
 };

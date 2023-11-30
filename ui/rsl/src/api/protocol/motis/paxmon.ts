@@ -277,6 +277,7 @@ export interface PaxMonFeedStatus {
   enabled: boolean;
   receiving: boolean;
   up_to_date: boolean;
+  update_interval: number;
   last_update_time: number;
   last_message_time: number;
 }
@@ -286,9 +287,12 @@ export interface PaxMonStatusResponse {
   system_time: number;
   multiverse_id: number;
   active_groups: number;
+  active_pax: number;
   trip_count: number;
   primary_system_time: number;
   current_time: number;
+  motis_start_time: number;
+  universe_count: number;
   ribasis_fahrt_status: PaxMonFeedStatus;
   ribasis_formation_status: PaxMonFeedStatus;
 }
@@ -1150,6 +1154,60 @@ export interface PaxMonReviseCompactJourneyRequest {
 // paxmon/PaxMonReviseCompactJourneyResponse.fbs
 export interface PaxMonReviseCompactJourneyResponse {
   connections: Connection[];
+}
+
+// paxmon/PaxMonDatasetInfoResponse.fbs
+export interface PaxMonJourneyFileInfo {
+  name: string;
+  last_modified: number;
+  matched_journeys: number;
+  unmatched_journeys: number;
+  unmatched_journeys_rerouted: number;
+  matched_groups: number;
+  unmatched_groups: number;
+  unmatched_groups_rerouted: number;
+  matched_pax: number;
+  unmatched_pax: number;
+  unmatched_pax_rerouted: number;
+}
+
+// paxmon/PaxMonDatasetInfoResponse.fbs
+export type PaxMonCapacityFileFormat =
+  | "TRIP"
+  | "RIS_SERVICE_VEHICLES"
+  | "FZG_KAP"
+  | "FZG_GRUPPE"
+  | "GATTUNG"
+  | "BAUREIHE";
+
+// paxmon/PaxMonDatasetInfoResponse.fbs
+export interface PaxMonCapacityFileInfo {
+  name: string;
+  last_modified: number;
+  format: PaxMonCapacityFileFormat;
+  loaded_entry_count: number;
+  skipped_entry_count: number;
+  station_not_found_count: number;
+}
+
+// paxmon/PaxMonDatasetInfoResponse.fbs
+export interface PaxMonScheduleInfo {
+  names: string[];
+  begin: number;
+  end: number;
+  internal_begin: number;
+  internal_end: number;
+  station_count: number;
+  trip_count: number;
+  expanded_trip_count: number;
+}
+
+// paxmon/PaxMonDatasetInfoResponse.fbs
+export interface PaxMonDatasetInfoResponse {
+  journey_files: PaxMonJourneyFileInfo[];
+  capacity_files: PaxMonCapacityFileInfo[];
+  schedule: PaxMonScheduleInfo;
+  motis_start_time: number;
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs
