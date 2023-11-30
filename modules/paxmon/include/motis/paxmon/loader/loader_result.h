@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <cstddef>
+#include <vector>
 
 #include "motis/paxmon/loader/unmatched_journey.h"
 
