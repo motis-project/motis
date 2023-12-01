@@ -21,6 +21,7 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
+#include "nigiri/rt/util.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
@@ -312,7 +313,8 @@ void nigiri::update_gtfsrt() {
     auto stats = n::rt::statistics{};
     try {
       auto const& body = f->val().body;
-      std::ofstream{fmt::format("{}.json", tag)} << n::protobuf_to_json(body);
+      std::ofstream{fmt::format("{}.json", tag)}
+          << n::rt::protobuf_to_json(body);
       stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
                                        body);
     } catch (std::exception const& e) {
