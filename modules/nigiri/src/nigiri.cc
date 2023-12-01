@@ -1,5 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
+#include <fstream>
+
 #include "boost/filesystem.hpp"
 
 #include "cista/memory_holder.h"
@@ -309,8 +311,10 @@ void nigiri::update_gtfsrt() {
     auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
     auto stats = n::rt::statistics{};
     try {
+      auto const& body = f->val().body;
+      std::ofstream{fmt::format("{}.json", tag)} << n::protobuf_to_json(body);
       stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
-                                       f->val().body);
+                                       body);
     } catch (std::exception const& e) {
       stats.parser_error_ = true;
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
