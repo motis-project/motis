@@ -140,6 +140,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "list of GTFS-RT, format: tag|/path/to/file.pb");
   param(gtfsrt_incremental_, "gtfsrt_incremental",
         "true=incremental updates, false=forget all prev. RT updates");
+  param(debug_, "debug", "write protobuf JSON files for debugging");
 }
 
 nigiri::~nigiri() = default;
@@ -313,8 +314,10 @@ void nigiri::update_gtfsrt() {
     auto stats = n::rt::statistics{};
     try {
       auto const& body = f->val().body;
-      std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
-          << n::rt::protobuf_to_json(body);
+      if (debug_) {
+        std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
+            << n::rt::protobuf_to_json(body);
+      }
       stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
                                        body);
     } catch (std::exception const& e) {
