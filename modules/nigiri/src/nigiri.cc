@@ -313,7 +313,7 @@ void nigiri::update_gtfsrt() {
     auto stats = n::rt::statistics{};
     try {
       auto const& body = f->val().body;
-      std::ofstream{fmt::format("{}.json", tag)}
+      std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
           << n::rt::protobuf_to_json(body);
       stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
                                        body);
