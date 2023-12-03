@@ -1,5 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
+#include <fstream>
+
 #include "boost/filesystem.hpp"
 
 #include "cista/memory_holder.h"
@@ -19,6 +21,7 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
+#include "nigiri/rt/util.h"
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
@@ -137,6 +140,7 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "list of GTFS-RT, format: tag|/path/to/file.pb");
   param(gtfsrt_incremental_, "gtfsrt_incremental",
         "true=incremental updates, false=forget all prev. RT updates");
+  param(debug_, "debug", "write protobuf JSON files for debugging");
 }
 
 nigiri::~nigiri() = default;
@@ -309,8 +313,13 @@ void nigiri::update_gtfsrt() {
     auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
     auto stats = n::rt::statistics{};
     try {
+      auto const& body = f->val().body;
+      if (debug_) {
+        std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
+            << n::rt::protobuf_to_json(body);
+      }
       stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
-                                       f->val().body);
+                                       body);
     } catch (std::exception const& e) {
       stats.parser_error_ = true;
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
