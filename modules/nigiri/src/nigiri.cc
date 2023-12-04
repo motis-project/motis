@@ -50,7 +50,12 @@ struct schedule_info {
       : tag_{std::move(tag)}, sha1sum_{hash}, created_{get_created(path)} {}
 
   static std::time_t get_created(fs::path const& p) {
-    return boost::filesystem::creation_time(p.string());
+    try {
+      return boost::filesystem::creation_time(p.string());
+    } catch (std::exception const& e) {
+      LOG(logging::error) << "boost::filesystem::creation_time:  " << e.what();
+      return 0U;
+    }
   }
 
   fbs::Offset<motis::lookup::LookupSchedule> to_fbs(
