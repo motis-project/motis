@@ -471,6 +471,29 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
   return unix_to_motistime(sched.schedule_begin_, unix_ts);
 }
 
+compact_journey to_compact_journey(
+    std::vector<input_journey_leg> const& input_legs,
+    std::size_t const start_idx, std::size_t const end_idx) {
+  auto cj = compact_journey{};
+
+  for (auto i = start_idx; i < end_idx; ++i) {
+    auto jl = input_legs.at(i).to_journey_leg();
+    if (!cj.legs_.empty() && cj.legs_.back().trip_idx_ == jl.trip_idx_) {
+      auto& prev_jl = cj.legs_.back();
+      prev_jl.exit_station_id_ = jl.exit_station_id_;
+      prev_jl.exit_time_ = jl.exit_time_;
+    } else {
+      cj.legs_.push_back(jl);
+    }
+  }
+
+  if (!cj.legs_.empty()) {
+    cj.legs_.front().enter_transfer_ = {};
+  }
+
+  return cj;
+}
+
 loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file,
                             journey_input_settings const& settings) {
@@ -545,13 +568,9 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     if (all_trips_found && !invalid_transfer_times) {
       ++result.loaded_journey_count_;
       result.loaded_pax_count_ += current_passengers;
-      auto current_journey = compact_journey{};
-      current_journey.legs_ =
-          utl::to_vec(std::next(begin(current_input_legs), start_idx),
-                      std::next(begin(current_input_legs), end_idx),
-                      [&](auto const& leg) { return leg.to_journey_leg(); });
+      auto const current_journey =
+          to_compact_journey(current_input_legs, start_idx, end_idx);
       utl::verify(!current_journey.legs_.empty(), "empty csv journey");
-      current_journey.legs_.front().enter_transfer_ = {};
       if (current_journey.scheduled_duration() > 24 * 60) {
         ++journeys_too_long;
         return;
