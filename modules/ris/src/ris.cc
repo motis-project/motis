@@ -267,7 +267,7 @@ struct ris::impl {
   };
 
   explicit impl(config& c)
-      : config_{c}, perform_init_forward_{!c.delayed_init_} {}
+      : perform_init_forward_{!c.delayed_init_}, config_{c} {}
 
   void init_ribasis_receivers(dispatcher* d, schedule* sched) {
     for_each_rabbitmq_config(config_, [this, &d, &sched](
@@ -1372,7 +1372,8 @@ void ris::init(motis::module::registry& r) {
   r.register_op(
       "/ris/delayed_init",
       [this](auto&& /*m*/) {
-        return impl_->delayed_init(const_cast<schedule&>(get_sched()));
+        return impl_->delayed_init(
+            const_cast<schedule&>(get_sched()));  // NOLINT
       },
       ctx::accesses_t{ctx::access_request{
                           to_res_id(::motis::module::global_res_id::RIS_DATA),
