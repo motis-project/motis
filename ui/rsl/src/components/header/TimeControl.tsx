@@ -74,8 +74,8 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
   );
   const {
     data: status,
-    isPending,
     error,
+    isError,
   } = useQuery({
     queryKey: queryKeys.status(universe),
     queryFn: () => sendPaxMonStatusRequest({ universe }),
@@ -142,7 +142,9 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
 
   return (
     <div className="flex items-center justify-center space-x-2">
-      {status ? (
+      {isError ? (
+        <ConnectionError error={error} />
+      ) : status ? (
         <>
           <HoverCard>
             <HoverCardTrigger asChild>
@@ -152,6 +154,14 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
                 <div className="font-bold">
                   {formatTime(status.system_time)}
                 </div>
+                {isError && (
+                  <div className="flex items-center gap-2 text-red-600">
+                    <Unplug className="h-4 w-4" />
+                    <span className="font-semibold">
+                      Keine Verbindung zu MOTIS
+                    </span>
+                  </div>
+                )}
               </div>
             </HoverCardTrigger>
             <HoverCardContent className="w-96">
@@ -160,16 +170,24 @@ function TimeControl({ allowForwarding }: TimeControlProps): JSX.Element {
           </HoverCard>
           {buttons}
         </>
-      ) : isPending ? (
-        <div>Verbindung zu MOTIS wird aufgebaut...</div>
       ) : (
-        <div>
-          Fehler:{" "}
-          {error instanceof Error
-            ? error.message
-            : `Verbindung zu MOTIS fehlgeschlagen.`}
-        </div>
+        <div>Verbindung zu MOTIS wird aufgebaut...</div>
       )}
+    </div>
+  );
+}
+
+interface ConnectionErrorProps {
+  error: Error;
+}
+
+function ConnectionError({ error }: ConnectionErrorProps) {
+  return (
+    <div className="flex items-center gap-2 text-red-600">
+      <Unplug className="h-4 w-4" />
+      <span className="font-semibold" title={error.message}>
+        Keine Verbindung zu MOTIS
+      </span>
     </div>
   );
 }
