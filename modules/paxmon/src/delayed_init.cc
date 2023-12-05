@@ -28,8 +28,8 @@ msg_ptr initial_reroute_query(schedule const& sched,
 
   message_creator fbb;
 
-  auto const planned_departure =
-      motis_to_unixtime(sched.schedule_begin_, uj.departure_time_);
+  auto const planned_departure = static_cast<unixtime>(
+      motis_to_unixtime(sched.schedule_begin_, uj.departure_time_));
 
   // should be ensured while loading the journey
   utl::verify(planned_departure >= min_time && planned_departure <= max_time,
