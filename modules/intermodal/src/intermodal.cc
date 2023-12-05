@@ -522,7 +522,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   if ((!start.is_intermodal_ || !deps.empty()) &&
       (!dest.is_intermodal_ || !arrs.empty())) {
     auto const router =
-        req->router()->Length() == 0U
+        (req->router() == nullptr || req->router()->Length() == 0U)
             ? ((req->search_type() == SearchType_Default ||
                 req->search_type() == SearchType_Accessibility) &&
                start.start_type_ != Start_OntripTrainStart)
