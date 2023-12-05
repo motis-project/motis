@@ -123,6 +123,16 @@ void delayed_init(paxmon_data& data, universe& uv, schedule const& sched,
           }
         }
       }
+      ljf.unmatched_journeys_.clear();
+    }
+  } else {
+    for (auto& ljf : data.loaded_journey_files_) {
+      if (!ljf.unmatched_journeys_.empty()) {
+        LOG(warn) << "ignoring " << ljf.unmatched_journeys_.size()
+                  << " unmatched journeys from " << ljf.path_.filename()
+                  << ", set paxmon.reroute_unmatched=1 to enable rerouting";
+        ljf.unmatched_journeys_.clear();
+      }
     }
   }
 
