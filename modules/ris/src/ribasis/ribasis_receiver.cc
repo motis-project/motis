@@ -27,7 +27,6 @@ receiver::receiver(rabbitmq_config config, source_status& status,
       status_{status} {
   status_.enabled_ = true;
   status_.update_interval_ = config_.update_interval_;
-  connection_.run([this](amqp::msg const& m) { on_msg(m); });
 }
 
 void receiver::log(std::string const& log_msg) {
@@ -47,6 +46,10 @@ void receiver::on_msg(amqp::msg const& m) {
       msg_handler_(*this, std::move(msgs));
     }
   }
+}
+
+void receiver::start() {
+  connection_.run([this](amqp::msg const& m) { on_msg(m); });
 }
 
 void receiver::stop() { connection_.stop(); }

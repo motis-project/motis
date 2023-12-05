@@ -29,6 +29,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -539,6 +540,11 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   std::uint16_t current_passengers = 0;
   auto const check_station_wait_time = settings.max_station_wait_time_ != 0;
 
+  auto const ext_begin =
+      unix_to_motistime(sched.schedule_begin_, external_schedule_begin(sched));
+  auto const ext_end =
+      unix_to_motistime(sched.schedule_begin_, external_schedule_end(sched));
+
   auto const add_journey = [&](std::size_t start_idx, std::size_t end_idx,
                                route_source_flags source_flags) {
     if (start_idx == end_idx) {
@@ -605,6 +611,17 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         add_passenger_group(uv, sched, tpg, false);
       }
     } else {
+      auto const& first_leg = current_input_legs.at(start_idx);
+      auto const& last_leg = current_input_legs.at(end_idx - 1);
+
+      auto const departure_time = first_leg.enter_time_;
+      auto const arrival_time = last_leg.exit_time_;
+
+      if (departure_time == INVALID_TIME || departure_time < ext_begin ||
+          departure_time > ext_end) {
+        return;
+      }
+
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
       }
@@ -613,28 +630,27 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       }
       ++result.unmatched_journey_count_;
       result.unmatched_pax_count_ += current_passengers;
-      auto const& first_leg = current_input_legs.at(start_idx);
-      auto const& last_leg = current_input_legs.at(end_idx - 1);
+
+      auto& uj = result.unmatched_journeys_.emplace_back(unmatched_journey{
+          .start_station_idx_ = first_leg.from_station_idx_.value(),
+          .destination_station_idx_ = last_leg.to_station_idx_.value(),
+          .departure_time_ = departure_time,
+          .arrival_time_ = arrival_time,
+          .source_ = source,
+          .passengers_ = current_passengers});
+
       if (split_groups) {
-        source.secondary_ref_ *= 100;
+        uj.source_.secondary_ref_ *= 100;
         auto distributed = 0U;
         while (distributed < current_passengers) {
           auto const group_size =
               group_gen.get_group_size(current_passengers - distributed);
-          ++source.secondary_ref_;
           distributed += group_size;
           ++result.unmatched_group_count_;
-          result.unmatched_journeys_.emplace_back(
-              unmatched_journey{first_leg.from_station_idx_.value(),
-                                last_leg.to_station_idx_.value(),
-                                first_leg.enter_time_, source, group_size});
+          uj.group_sizes_.emplace_back(group_size);
         }
       } else {
         ++result.unmatched_group_count_;
-        result.unmatched_journeys_.emplace_back(unmatched_journey{
-            first_leg.from_station_idx_.value(),
-            last_leg.to_station_idx_.value(), first_leg.enter_time_, source,
-            current_passengers});
       }
     }
   };

@@ -31,4 +31,7 @@ export interface RISStatusResponse {
   upload_status: RISSourceStatus;
   read_status: RISSourceStatus;
   init_status: RISSourceStatus;
+  delayed_init: boolean;
+  init_forward_started: boolean;
+  init_forward_done: boolean;
 }

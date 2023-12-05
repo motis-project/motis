@@ -32,6 +32,7 @@ struct paxmon : public motis::module::module {
   void reg_subc(motis::module::subc_reg&) override;
   void import(motis::module::import_dispatcher& reg) override;
   void init(motis::module::registry&) override;
+  void init_op();
 
   bool import_successful() const override { return import_successful_; }
 

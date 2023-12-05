@@ -17,6 +17,7 @@ struct config {
   std::string db_path_{"ris.mdb"};
   std::vector<std::string> input_;
   conf::time init_time_{0};
+  bool delayed_init_{false};
   bool clear_db_ = false;
   conf::duration init_purge_{};
   size_t db_max_size_{static_cast<size_t>(1024) * 1024 * 1024 * 512};
