@@ -130,6 +130,9 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
       PaxMonLocalizationWrapper
     >();
 
+    console.log("processReverts: %d reverts: %o", reverts.length, reverts);
+    console.log("reactivated routes: %o", reactivatedRoutes);
+
     for (const lev of reverts) {
       reactivatedRouteLogEntry.set(lev.le.old_route.index, lev);
       localizations.set(lev.le.old_route.index, lev.le.old_route);
@@ -141,8 +144,15 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
       }
     }
 
+    console.log("reverted routes: %o", revertedRoutes);
+
     for (const revertedRoute of revertedRoutes) {
       const leafLocalization = localizations.get(revertedRoute);
+      console.log(
+        "reverted route %d: leaf localization: %o",
+        revertedRoute,
+        leafLocalization,
+      );
       if (!leafLocalization) {
         throw new Error(
           `leaf localization not found for route ${revertedRoute}`,
@@ -150,7 +160,9 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
       }
       const oldLeaves = leaves[revertedRoute];
       leaves[revertedRoute] = [];
+      console.log("old leaves: %o", oldLeaves);
       for (const oldLeaf of oldLeaves) {
+        console.log("old leaf: %o", oldLeaf);
         let candidate: TreeNode | null = null;
         for (
           let node = parents.get(oldLeaf);
@@ -167,12 +179,24 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
             if (
               canSwitchLocalization(leafLocalization, candidateLocalization)
             ) {
+              console.log(
+                "candidate: %o, localization: %o",
+                node,
+                candidateLocalization,
+              );
               candidate = node;
+            } else {
+              console.log(
+                "ignoring candidate because of localization: %o, localization: %o",
+                node,
+                candidateLocalization,
+              );
             }
           }
         }
         if (candidate) {
           const lev = reactivatedRouteLogEntry.get(candidate.route);
+          console.log("candidate found: %o, lev: %o", candidate, lev);
           if (!lev) {
             throw new Error("no reactivated route log entry found");
           }
@@ -189,6 +213,7 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
           leaves[newNode.route].push(newNode);
           parents.set(newNode, oldLeaf);
         } else {
+          console.log("no candidate found, keeping old leaf: %o", oldLeaf);
           leaves[revertedRoute].push(oldLeaf);
         }
       }
@@ -198,6 +223,7 @@ export function buildRouteTree(group: PaxMonGroup): TreeNode {
   };
 
   for (const [version, le] of group.reroute_log.entries()) {
+    console.log("log entry version %i (%s): %o", version + 1, le.reason, le);
     if (le.reason === "RevertForecast") {
       if (
         reverts.length > 0 &&
