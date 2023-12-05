@@ -116,7 +116,7 @@ void delayed_init(paxmon_data& data, universe& uv, schedule const& sched,
           auto source = uj.source_;
           for (auto const& group_size : uj.group_sizes_) {
             loader::motis_journeys::load_journey(
-                sched, uv, journeys.front(), source, uj.passengers_,
+                sched, uv, journeys.front(), source, group_size,
                 route_source_flags::MATCH_REROUTED);
             ++source.secondary_ref_;
             ++ljf.unmatched_group_rerouted_count_;
