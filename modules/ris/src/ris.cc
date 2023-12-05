@@ -1213,7 +1213,7 @@ struct ris::impl {
   std::atomic<bool> perform_init_forward_;
   std::atomic<bool> init_forward_started_;
   std::atomic<bool> init_done_;
-  bool init_forward_done_;
+  bool init_forward_done_{};
 
   config& config_;
 
