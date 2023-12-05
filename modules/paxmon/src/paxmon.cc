@@ -538,7 +538,7 @@ void paxmon::load_journeys() {
 
   {
     for (auto const& file : journey_files_) {
-      auto const result = load_journeys(file);
+      auto result = load_journeys(file);
       auto const path = std::filesystem::path{file};
       data_.loaded_journey_files_.emplace_back(loaded_journey_file{
           .path_ = path,
