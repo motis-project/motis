@@ -1,6 +1,6 @@
 import { ClockIcon, TicketIcon } from "@heroicons/react/24/outline";
-import { ExternalLink } from "lucide-react";
-import React from "react";
+import { AlertTriangle, ExternalLink } from "lucide-react";
+import React, { ReactElement } from "react";
 
 import {
   PaxMonCompactJourney,
@@ -62,11 +62,33 @@ export function GroupRoutes({ group }: GroupRoutesProps) {
   );
 }
 
+const MATCH_INEXACT_TIME = 1;
+const MATCH_JOURNEY_SUBSET = 2;
+const MATCH_REROUTED = 4;
+
 interface GroupRouteProps {
   route: PaxMonGroupRoute;
 }
 
-function GroupRoute({ route }: GroupRouteProps): JSX.Element {
+function GroupRoute({ route }: GroupRouteProps): ReactElement {
+  const showWarning = route.planned && route.source_flags != 0;
+  const warnings: string[] = [];
+  if ((route.source_flags & MATCH_INEXACT_TIME) == MATCH_INEXACT_TIME) {
+    warnings.push(
+      "Zeitstempel der Original-Reisekette weichen vom Fahrplan ab und wurden an den geladenen Fahrplan angepasst.",
+    );
+  }
+  if ((route.source_flags & MATCH_JOURNEY_SUBSET) == MATCH_JOURNEY_SUBSET) {
+    warnings.push(
+      "Teil-Reisekette, da die komplette Original-Reisekette nicht dem Fahrplan zugeordnet werden konnte.",
+    );
+  }
+  if ((route.source_flags & MATCH_REROUTED) == MATCH_REROUTED) {
+    warnings.push(
+      "Reisekette wurde neu berechnet, da die Original-Reisekette nicht dem Fahrplan zugeordnet werden konnte.",
+    );
+  }
+
   return (
     <div className="flex flex-col rounded bg-db-cool-gray-200 drop-shadow-md">
       <div
@@ -79,6 +101,11 @@ function GroupRoute({ route }: GroupRouteProps): JSX.Element {
           #{route.index}
           {route.planned && (
             <TicketIcon className="h-5 w-5" title="Planmäßge Route" />
+          )}
+          {showWarning && (
+            <div title={warnings.join("\n")}>
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+            </div>
           )}
         </div>
         <div className="text-center text-lg">
