@@ -244,18 +244,24 @@ struct input_journey_leg {
 
   inline bool trip_found() const { return trp_candidate_.trp_ != nullptr; }
 
-  journey_leg to_journey_leg() const {
+  journey_leg to_journey_leg(bool adjust_times_to_schedule = true) const {
     utl::verify(stations_found(),
                 "input_journey_leg.to_journey_leg(): stations not found");
     utl::verify(valid_times(),
                 "input_journey_leg.to_journey_leg(): invalid times");
     utl::verify(trip_found(),
                 "input_journey_leg.to_journey_leg(): trip not found");
+
+    auto const enter_time =
+        adjust_times_to_schedule ? trp_candidate_.enter_time_ : enter_time_;
+    auto const exit_time =
+        adjust_times_to_schedule ? trp_candidate_.exit_time_ : exit_time_;
+
     return journey_leg{trp_candidate_.trp_->trip_idx_,
                        from_station_idx_.value(),
                        to_station_idx_.value(),
-                       enter_time_,
-                       exit_time_,
+                       enter_time,
+                       exit_time,
                        enter_transfer_};
   }
 
@@ -477,7 +483,8 @@ compact_journey to_compact_journey(
   auto cj = compact_journey{};
 
   for (auto i = start_idx; i < end_idx; ++i) {
-    auto jl = input_legs.at(i).to_journey_leg();
+    auto const& il = input_legs.at(i);
+    auto jl = il.to_journey_leg();
     if (!cj.legs_.empty() && cj.legs_.back().trip_idx_ == jl.trip_idx_) {
       auto& prev_jl = cj.legs_.back();
       prev_jl.exit_station_id_ = jl.exit_station_id_;
