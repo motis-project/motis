@@ -109,8 +109,6 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(initial_broken_report_file_, "broken_report",
         "initial broken interchanges report file");
   param(reroute_unmatched_, "reroute_unmatched", "reroute unmatched journeys");
-  param(initial_reroute_query_file_, "reroute_file",
-        "output file for initial rerouted journeys");
   param(initial_reroute_router_, "reroute_router",
         "router for initial reroute queries");
   param(start_time_, "start_time", "evaluation start time");

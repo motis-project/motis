@@ -57,7 +57,6 @@ private:
   std::string capacity_match_log_file_{};
   std::string initial_over_capacity_report_file_{};
   std::string initial_broken_report_file_{};
-  std::string initial_reroute_query_file_{};
   std::string initial_reroute_router_{"/tripbased"};
   conf::time start_time_{};
   conf::time end_time_{};
