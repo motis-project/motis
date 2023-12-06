@@ -1,6 +1,8 @@
 #include "motis/paxmon/delayed_init.h"
 
+#include <cstdint>
 #include <algorithm>
+#include <limits>
 #include <memory>
 
 #include "utl/verify.h"
@@ -63,6 +65,36 @@ msg_ptr initial_reroute_query(schedule const& sched,
   return make_msg(fbb);
 }
 
+journey const* get_closest_journey(schedule const& sched,
+                                   loader::unmatched_journey const& uj,
+                                   std::vector<journey> const& journeys) {
+  journey const* best_journey = nullptr;
+  auto best_score = std::numeric_limits<std::int64_t>::max();
+  auto const planned_dep = static_cast<std::int64_t>(
+      motis_to_unixtime(sched.schedule_begin_, uj.departure_time_));
+  auto const planned_arr = static_cast<std::int64_t>(
+      motis_to_unixtime(sched.schedule_begin_, uj.arrival_time_));
+
+  for (auto const& j : journeys) {
+    if (j.stops_.empty()) {
+      continue;
+    }
+    auto const dep_diff = static_cast<std::int64_t>(
+                              j.stops_.front().departure_.schedule_timestamp_) -
+                          planned_dep;
+    auto const arr_diff = static_cast<std::int64_t>(
+                              j.stops_.back().arrival_.schedule_timestamp_) -
+                          planned_arr;
+    auto const score = dep_diff * dep_diff + arr_diff * arr_diff;
+    if (score < best_score) {
+      best_score = score;
+      best_journey = &j;
+    }
+  }
+
+  return best_journey;
+}
+
 void delayed_init(paxmon_data& data, universe& uv, schedule const& sched,
                   delay_init_options const& opt) {
   using namespace motis::ris;
@@ -101,7 +133,8 @@ void delayed_init(paxmon_data& data, universe& uv, schedule const& sched,
         auto const rr_msg = fut->val();
         auto const rr = motis_content(RoutingResponse, rr_msg);
         auto const journeys = message_to_journeys(rr);
-        if (journeys.empty()) {
+        auto const* journey = get_closest_journey(sched, uj, journeys);
+        if (journey == nullptr) {
           continue;
         }
         ++ljf.unmatched_journey_rerouted_count_;
@@ -109,14 +142,14 @@ void delayed_init(paxmon_data& data, universe& uv, schedule const& sched,
 
         if (uj.group_sizes_.empty()) {
           loader::motis_journeys::load_journey(
-              sched, uv, journeys.front(), uj.source_, uj.passengers_,
+              sched, uv, *journey, uj.source_, uj.passengers_,
               route_source_flags::MATCH_REROUTED);
           ++ljf.unmatched_group_rerouted_count_;
         } else {
           auto source = uj.source_;
           for (auto const& group_size : uj.group_sizes_) {
             loader::motis_journeys::load_journey(
-                sched, uv, journeys.front(), source, group_size,
+                sched, uv, *journey, source, group_size,
                 route_source_flags::MATCH_REROUTED);
             ++source.secondary_ref_;
             ++ljf.unmatched_group_rerouted_count_;
