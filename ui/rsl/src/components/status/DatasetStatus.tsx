@@ -121,20 +121,24 @@ function JourneyFilesInfo({
 
 function JourneyFileRow({ file }: { file: PaxMonJourneyFileInfo }) {
   const totalJourneys = file.matched_journeys + file.unmatched_journeys;
+  const loadedJourneys =
+    file.matched_journeys + file.unmatched_journeys_rerouted;
   const skippedJourneys =
     file.unmatched_journeys - file.unmatched_journeys_rerouted;
 
   const totalGroups = file.matched_groups + file.unmatched_groups;
+  const loadedGroups = file.matched_groups + file.unmatched_groups_rerouted;
   const skippedGroups = file.unmatched_groups - file.unmatched_groups_rerouted;
 
   const totalPax = file.matched_pax + file.unmatched_pax;
+  const loadedPax = file.matched_pax + file.unmatched_pax_rerouted;
   const skippedPax = file.unmatched_pax - file.unmatched_pax_rerouted;
 
   return (
     <tr>
       <td>{file.name}</td>
       <td className="pl-5">{formatDateTime(file.last_modified)}</td>
-      <td className="pl-5">{formatNumber(totalJourneys)}</td>
+      <td className="pl-5">{formatNumber(loadedJourneys)}</td>
       <td>
         {formatNumber(file.unmatched_journeys_rerouted)} (
         {formatPercent(file.unmatched_journeys_rerouted / totalJourneys)})
@@ -143,7 +147,7 @@ function JourneyFileRow({ file }: { file: PaxMonJourneyFileInfo }) {
         {formatNumber(skippedJourneys)} (
         {formatPercent(skippedJourneys / totalJourneys)})
       </td>
-      <td className="pl-5">{formatNumber(totalGroups)}</td>
+      <td className="pl-5">{formatNumber(loadedGroups)}</td>
       <td>
         {formatNumber(file.unmatched_groups_rerouted)} (
         {formatPercent(file.unmatched_groups_rerouted / totalGroups)})
@@ -152,7 +156,7 @@ function JourneyFileRow({ file }: { file: PaxMonJourneyFileInfo }) {
         {formatNumber(skippedGroups)} (
         {formatPercent(skippedGroups / totalGroups)})
       </td>
-      <td className="pl-5">{formatNumber(totalPax)}</td>
+      <td className="pl-5">{formatNumber(loadedPax)}</td>
       <td>
         {formatNumber(file.unmatched_pax_rerouted)} (
         {formatPercent(file.unmatched_pax_rerouted / totalPax)})
