@@ -16,7 +16,6 @@
 #include "motis/core/common/timing.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
-#include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/event_collector.h"
@@ -51,6 +50,7 @@
 
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/checks.h"
+#include "motis/paxmon/delayed_init.h"
 #include "motis/paxmon/file_time.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_universe.h"
@@ -109,8 +109,6 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(initial_broken_report_file_, "broken_report",
         "initial broken interchanges report file");
   param(reroute_unmatched_, "reroute_unmatched", "reroute unmatched journeys");
-  param(initial_reroute_query_file_, "reroute_file",
-        "output file for initial rerouted journeys");
   param(initial_reroute_router_, "reroute_router",
         "router for initial reroute queries");
   param(start_time_, "start_time", "evaluation start time");
@@ -209,24 +207,11 @@ void paxmon::init(motis::module::registry& reg) {
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
   reg.subscribe(
-      "/init",
-      [&]() {
-        auto const& primary_uv = primary_universe();
-        if (primary_uv.capacity_maps_.trip_capacity_map_.empty() &&
-            primary_uv.capacity_maps_.category_capacity_map_.empty()) {
-          LOG(warn) << "no capacity information available";
-        }
-        LOG(info) << "tracking " << primary_uv.passenger_groups_.size()
-                  << " passenger groups";
-
-        shared_data_->register_timer("PaxMon Universe GC",
-                                     boost::posix_time::seconds{10},
-                                     [this]() { universe_gc(); }, {});
-      },
+      "/init", [&]() { init_op(); },
       {ctx::access_request{to_res_id(global_res_id::SCHEDULE),
                            ctx::access_t::READ},
        ctx::access_request{to_res_id(global_res_id::PAX_DEFAULT_UNIVERSE),
-                           ctx::access_t::READ}});
+                           ctx::access_t::WRITE}});
 
   reg.register_op("/paxmon/flush",
                   [&](msg_ptr const&) -> msg_ptr {
@@ -493,6 +478,25 @@ void paxmon::init(motis::module::registry& reg) {
   }
 }
 
+void paxmon::init_op() {
+  delayed_init(
+      data_, primary_universe(), get_sched(),
+      delay_init_options{.reroute_unmatched_ = reroute_unmatched_,
+                         .initial_reroute_router_ = initial_reroute_router_});
+
+  auto const& primary_uv = primary_universe();
+  if (primary_uv.capacity_maps_.trip_capacity_map_.empty() &&
+      primary_uv.capacity_maps_.category_capacity_map_.empty()) {
+    LOG(warn) << "no capacity information available";
+  }
+  LOG(info) << "tracking " << primary_uv.passenger_groups_.size()
+            << " passenger groups";
+
+  shared_data_->register_timer("PaxMon Universe GC",
+                               boost::posix_time::seconds{10},
+                               [this]() { universe_gc(); }, {});
+}
+
 loader::loader_result paxmon::load_journeys(std::string const& file) {
   auto const journey_path = fs::path{file};
   if (!fs::exists(journey_path)) {
@@ -517,39 +521,6 @@ loader::loader_result paxmon::load_journeys(std::string const& file) {
   return result;
 }
 
-msg_ptr initial_reroute_query(schedule const& sched,
-                              loader::unmatched_journey const& uj,
-                              std::string const& router) {
-  message_creator fbb;
-  auto const planned_departure =
-      motis_to_unixtime(sched.schedule_begin_, uj.departure_time_);
-  auto const interval = Interval{planned_departure - 2 * 60 * 60,
-                                 planned_departure + 2 * 60 * 60};
-  auto const& start_station = sched.stations_.at(uj.start_station_idx_);
-  auto const& destination_station =
-      sched.stations_.at(uj.destination_station_idx_);
-  fbb.create_and_finish(
-      MsgContent_RoutingRequest,
-      CreateRoutingRequest(
-          fbb, Start_PretripStart,
-          CreatePretripStart(
-              fbb,
-              CreateInputStation(fbb, fbb.CreateString(start_station->eva_nr_),
-                                 fbb.CreateString(start_station->name_)),
-              &interval)
-              .Union(),
-          CreateInputStation(fbb,
-                             fbb.CreateString(destination_station->eva_nr_),
-                             fbb.CreateString(destination_station->name_)),
-          SearchType_Default, SearchDir_Forward,
-          fbb.CreateVector(std::vector<flatbuffers::Offset<Via>>{}),
-          fbb.CreateVector(
-              std::vector<flatbuffers::Offset<AdditionalEdgeWrapper>>{}))
-          .Union(),
-      router);
-  return make_msg(fbb);
-}
-
 void paxmon::load_journeys() {
   auto const& sched = get_sched();
   auto& uv = primary_universe();
@@ -564,57 +535,19 @@ void paxmon::load_journeys() {
   }
 
   {
-    std::unique_ptr<output::journey_converter> converter;
-    if (reroute_unmatched_ && !initial_reroute_query_file_.empty()) {
-      converter = std::make_unique<output::journey_converter>(
-          initial_reroute_query_file_);
-    }
     for (auto const& file : journey_files_) {
-      auto const result = load_journeys(file);
+      auto result = load_journeys(file);
       auto const path = std::filesystem::path{file};
-      auto& ljf = data_.loaded_journey_files_.emplace_back(loaded_journey_file{
+      data_.loaded_journey_files_.emplace_back(loaded_journey_file{
           .path_ = path,
           .last_modified_ = get_last_modified_time(path),
-          .matched_journeys_ = result.loaded_journey_count_,
-          .unmatched_journeys_ = result.unmatched_journey_count_,
-          .matched_groups_ = result.loaded_group_count_,
-          .unmatched_groups_ = result.unmatched_group_count_,
-          .matched_pax_ = result.loaded_pax_count_,
-          .unmatched_pax_ = result.unmatched_pax_count_});
-      if (reroute_unmatched_) {
-        // TODO(pablo): needs to be moved out of import
-        // TODO(pablo): group by journey, not pax group
-        scoped_timer const timer{"reroute unmatched journeys"};
-        LOG(info) << "routing " << result.unmatched_journeys_.size()
-                  << " unmatched journeys using " << initial_reroute_router_
-                  << "...";
-        auto const futures =
-            utl::to_vec(result.unmatched_journeys_, [&](auto const& uj) {
-              return motis_call(
-                  initial_reroute_query(sched, uj, initial_reroute_router_));
-            });
-        ctx::await_all(futures);
-        LOG(info) << "adding replacement journeys...";
-        for (auto const& [uj, fut] :
-             utl::zip(result.unmatched_journeys_, futures)) {
-          auto const rr_msg = fut->val();
-          auto const rr = motis_content(RoutingResponse, rr_msg);
-          auto const journeys = message_to_journeys(rr);
-          if (journeys.empty()) {
-            continue;
-          }
-          ++ljf.unmatched_groups_rerouted_;
-          ljf.unmatched_pax_rerouted_ += uj.passengers_;
-          // TODO(pablo): select journey(s)
-          if (converter) {
-            converter->write_journey(journeys.front(), uj.source_.primary_ref_,
-                                     uj.source_.secondary_ref_, uj.passengers_);
-          }
-          loader::motis_journeys::load_journey(
-              sched, uv, journeys.front(), uj.source_, uj.passengers_,
-              route_source_flags::MATCH_REROUTED);
-        }
-      }
+          .matched_journey_count_ = result.loaded_journey_count_,
+          .unmatched_journey_count_ = result.unmatched_journey_count_,
+          .matched_group_count_ = result.loaded_group_count_,
+          .unmatched_group_count_ = result.unmatched_group_count_,
+          .matched_pax_count_ = result.loaded_pax_count_,
+          .unmatched_pax_count_ = result.unmatched_pax_count_,
+          .unmatched_journeys_ = std::move(result.unmatched_journeys_)});
       progress_tracker->increment();
     }
   }

@@ -23,6 +23,7 @@ struct receiver {
            msg_handler_fn msg_handler,
            amqp::get_stream_options_fn_t get_stream_options);
 
+  void start();
   void stop();
 
   std::string const& queue_id() const;

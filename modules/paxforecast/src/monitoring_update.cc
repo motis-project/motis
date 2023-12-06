@@ -283,12 +283,19 @@ void handle_major_delays(paxforecast& mod, universe& uv, schedule const& sched,
     }
     last_pgi = pgwrap.pgwr_.pg_;
 
-    auto& ar = affected_routes.emplace_back(affected_route_info{
-        .pgwrap_ = pgwrap,
-        .destination_station_id_ = get_destination_station_id(
-            sched, event->group_route()->route()->journey()),
-        .loc_now_ = from_fbs(sched, event->localization_type(),
-                             event->localization())});
+    auto loc_now =
+        from_fbs(sched, event->localization_type(), event->localization());
+    auto const destination_station_id = get_destination_station_id(
+        sched, event->group_route()->route()->journey());
+
+    if (loc_now.at_station_->index_ == destination_station_id) {
+      continue;
+    }
+
+    auto& ar = affected_routes.emplace_back(
+        affected_route_info{.pgwrap_ = pgwrap,
+                            .destination_station_id_ = destination_station_id,
+                            .loc_now_ = std::move(loc_now)});
 
     ar.alts_now_ =
         alts_set.add_request(ar.loc_now_, ar.destination_station_id_);

@@ -79,7 +79,7 @@ ScheduleEvent:
       description: TODO
 NigiriEvent:
   description: TODO
-  fields: {}
+  fields: { hash: { description: TODO } }
 StationsEvent:
   description: TODO
   fields: {}

@@ -29,6 +29,7 @@
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
@@ -244,18 +245,24 @@ struct input_journey_leg {
 
   inline bool trip_found() const { return trp_candidate_.trp_ != nullptr; }
 
-  journey_leg to_journey_leg() const {
+  journey_leg to_journey_leg(bool adjust_times_to_schedule = true) const {
     utl::verify(stations_found(),
                 "input_journey_leg.to_journey_leg(): stations not found");
     utl::verify(valid_times(),
                 "input_journey_leg.to_journey_leg(): invalid times");
     utl::verify(trip_found(),
                 "input_journey_leg.to_journey_leg(): trip not found");
+
+    auto const enter_time =
+        adjust_times_to_schedule ? trp_candidate_.enter_time_ : enter_time_;
+    auto const exit_time =
+        adjust_times_to_schedule ? trp_candidate_.exit_time_ : exit_time_;
+
     return journey_leg{trp_candidate_.trp_->trip_idx_,
                        from_station_idx_.value(),
                        to_station_idx_.value(),
-                       enter_time_,
-                       exit_time_,
+                       enter_time,
+                       exit_time,
                        enter_transfer_};
   }
 
@@ -471,6 +478,30 @@ time parse_trek_timestamp(std::string_view const val, date::time_zone const* tz,
   return unix_to_motistime(sched.schedule_begin_, unix_ts);
 }
 
+compact_journey to_compact_journey(
+    std::vector<input_journey_leg> const& input_legs,
+    std::size_t const start_idx, std::size_t const end_idx) {
+  auto cj = compact_journey{};
+
+  for (auto i = start_idx; i < end_idx; ++i) {
+    auto const& il = input_legs.at(i);
+    auto jl = il.to_journey_leg();
+    if (!cj.legs_.empty() && cj.legs_.back().trip_idx_ == jl.trip_idx_) {
+      auto& prev_jl = cj.legs_.back();
+      prev_jl.exit_station_id_ = jl.exit_station_id_;
+      prev_jl.exit_time_ = jl.exit_time_;
+    } else {
+      cj.legs_.push_back(jl);
+    }
+  }
+
+  if (!cj.legs_.empty()) {
+    cj.legs_.front().enter_transfer_ = {};
+  }
+
+  return cj;
+}
+
 loader_result load_journeys(schedule const& sched, universe& uv,
                             std::string const& journey_file,
                             journey_input_settings const& settings) {
@@ -509,6 +540,11 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   std::uint16_t current_passengers = 0;
   auto const check_station_wait_time = settings.max_station_wait_time_ != 0;
 
+  auto const ext_begin =
+      unix_to_motistime(sched.schedule_begin_, external_schedule_begin(sched));
+  auto const ext_end =
+      unix_to_motistime(sched.schedule_begin_, external_schedule_end(sched));
+
   auto const add_journey = [&](std::size_t start_idx, std::size_t end_idx,
                                route_source_flags source_flags) {
     if (start_idx == end_idx) {
@@ -545,13 +581,9 @@ loader_result load_journeys(schedule const& sched, universe& uv,
     if (all_trips_found && !invalid_transfer_times) {
       ++result.loaded_journey_count_;
       result.loaded_pax_count_ += current_passengers;
-      auto current_journey = compact_journey{};
-      current_journey.legs_ =
-          utl::to_vec(std::next(begin(current_input_legs), start_idx),
-                      std::next(begin(current_input_legs), end_idx),
-                      [&](auto const& leg) { return leg.to_journey_leg(); });
+      auto const current_journey =
+          to_compact_journey(current_input_legs, start_idx, end_idx);
       utl::verify(!current_journey.legs_.empty(), "empty csv journey");
-      current_journey.legs_.front().enter_transfer_ = {};
       if (current_journey.scheduled_duration() > 24 * 60) {
         ++journeys_too_long;
         return;
@@ -579,6 +611,17 @@ loader_result load_journeys(schedule const& sched, universe& uv,
         add_passenger_group(uv, sched, tpg, false);
       }
     } else {
+      auto const& first_leg = current_input_legs.at(start_idx);
+      auto const& last_leg = current_input_legs.at(end_idx - 1);
+
+      auto const departure_time = first_leg.enter_time_;
+      auto const arrival_time = last_leg.exit_time_;
+
+      if (departure_time == INVALID_TIME || departure_time < ext_begin ||
+          departure_time > ext_end) {
+        return;
+      }
+
       if (!all_trips_found) {
         ++journeys_with_missing_trips;
       }
@@ -587,28 +630,27 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       }
       ++result.unmatched_journey_count_;
       result.unmatched_pax_count_ += current_passengers;
-      auto const& first_leg = current_input_legs.at(start_idx);
-      auto const& last_leg = current_input_legs.at(end_idx - 1);
+
+      auto& uj = result.unmatched_journeys_.emplace_back(unmatched_journey{
+          .start_station_idx_ = first_leg.from_station_idx_.value(),
+          .destination_station_idx_ = last_leg.to_station_idx_.value(),
+          .departure_time_ = departure_time,
+          .arrival_time_ = arrival_time,
+          .source_ = source,
+          .passengers_ = current_passengers});
+
       if (split_groups) {
-        source.secondary_ref_ *= 100;
+        uj.source_.secondary_ref_ *= 100;
         auto distributed = 0U;
         while (distributed < current_passengers) {
           auto const group_size =
               group_gen.get_group_size(current_passengers - distributed);
-          ++source.secondary_ref_;
           distributed += group_size;
           ++result.unmatched_group_count_;
-          result.unmatched_journeys_.emplace_back(
-              unmatched_journey{first_leg.from_station_idx_.value(),
-                                last_leg.to_station_idx_.value(),
-                                first_leg.enter_time_, source, group_size});
+          uj.group_sizes_.emplace_back(group_size);
         }
       } else {
         ++result.unmatched_group_count_;
-        result.unmatched_journeys_.emplace_back(unmatched_journey{
-            first_leg.from_station_idx_.value(),
-            last_leg.to_station_idx_.value(), first_leg.enter_time_, source,
-            current_passengers});
       }
     }
   };

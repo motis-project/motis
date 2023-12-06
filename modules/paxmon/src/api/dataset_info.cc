@@ -21,11 +21,13 @@ msg_ptr dataset_info(paxmon_data& data, schedule const& sched) {
               [&](auto const& ljf) {
                 return CreatePaxMonJourneyFileInfo(
                     mc, mc.CreateString(ljf.path_.filename().string()),
-                    ljf.last_modified_, ljf.matched_journeys_,
-                    ljf.unmatched_journeys_, ljf.unmatched_journeys_rerouted_,
-                    ljf.matched_groups_, ljf.unmatched_groups_,
-                    ljf.unmatched_groups_rerouted_, ljf.matched_pax_,
-                    ljf.unmatched_pax_, ljf.unmatched_pax_rerouted_);
+                    ljf.last_modified_, ljf.matched_journey_count_,
+                    ljf.unmatched_journey_count_,
+                    ljf.unmatched_journey_rerouted_count_,
+                    ljf.matched_group_count_, ljf.unmatched_group_count_,
+                    ljf.unmatched_group_rerouted_count_, ljf.matched_pax_count_,
+                    ljf.unmatched_pax_count_,
+                    ljf.unmatched_pax_rerouted_count_);
               })),
           mc.CreateVector(utl::to_vec(
               data.loaded_capacity_files_,

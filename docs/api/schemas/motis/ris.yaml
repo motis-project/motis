@@ -415,6 +415,12 @@ RISStatusResponse:
       description: TODO
     init_status:
       description: TODO
+    delayed_init:
+      description: TODO
+    init_forward_started:
+      description: TODO
+    init_forward_done:
+      description: TODO
 FullTripMessageType:
   description: TODO
 TripFormationMessageType:

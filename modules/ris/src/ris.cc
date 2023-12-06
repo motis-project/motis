@@ -266,7 +266,8 @@ struct ris::impl {
     std::unique_ptr<amqp::ssl_connection> con_;
   };
 
-  explicit impl(config& c) : config_{c} {}
+  explicit impl(config& c)
+      : perform_init_forward_{!c.delayed_init_}, config_{c} {}
 
   void init_ribasis_receivers(dispatcher* d, schedule* sched) {
     for_each_rabbitmq_config(config_, [this, &d, &sched](
@@ -473,11 +474,34 @@ struct ris::impl {
               ctx::access_t::WRITE}});
     }
 
+    init_ribasis_receivers(&d, &sched);
+
+    init_done_ = true;
+    if (perform_init_forward_) {
+      init_forward(sched);
+    }
+  }
+
+  bool init_forward(schedule& sched) {
+    if (init_forward_started_.exchange(true)) {
+      return false;
+    }
     if (config_.init_time_.unix_time_ != 0) {
       forward(sched, 0U, config_.init_time_.unix_time_, true, true);
     }
+    for (auto& r : ribasis_receivers_) {
+      r->start();
+    }
+    init_forward_done_ = true;
+    return true;
+  }
 
-    init_ribasis_receivers(&d, &sched);
+  msg_ptr delayed_init(schedule& sched) {
+    perform_init_forward_ = true;
+    if (init_done_) {
+      init_forward(sched);
+    }
+    return {};
   }
 
   static std::string_view get_content_type(HTTPRequest const* req) {
@@ -747,7 +771,7 @@ struct ris::impl {
     }
 
     pub.flush();
-    sched.system_time_ = to;
+    update_system_time(sched, pub);
     if (init_forward) {
       init_status_.enabled_ = true;
       init_status_.add_update(pub.message_count_, pub.max_timestamp_);
@@ -1176,7 +1200,8 @@ struct ris::impl {
             status_to_fbs(ribasis_fahrt_status_),
             status_to_fbs(ribasis_formation_status_),
             status_to_fbs(upload_status_), status_to_fbs(read_status_),
-            status_to_fbs(init_status_))
+            status_to_fbs(init_status_), config_.delayed_init_,
+            init_forward_started_, init_forward_done_)
             .Union());
     return make_msg(mc);
   }
@@ -1184,6 +1209,11 @@ struct ris::impl {
   db::env env_;
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
+
+  std::atomic<bool> perform_init_forward_;
+  std::atomic<bool> init_forward_started_;
+  std::atomic<bool> init_done_;
+  bool init_forward_done_{};
 
   config& config_;
 
@@ -1207,6 +1237,8 @@ ris::ris() : module("RIS", "ris") {
         "timetable)");
   param(config_.db_max_size_, "db_max_size", "virtual memory map size");
   param(config_.init_time_, "init_time", "initial forward time");
+  param(config_.delayed_init_, "delayed_init",
+        "delayed init (required for RSL)");
   param(config_.clear_db_, "clear_db", "clean db before init");
   param(config_.init_purge_, "init_purge",
         "remove messages older than this value from the database during "
@@ -1337,6 +1369,18 @@ void ris::init(motis::module::registry& r) {
   r.register_op("/ris/status",
                 [this](auto&& /*m*/) { return impl_->status(get_sched()); },
                 {kScheduleReadAccess});
+  r.register_op(
+      "/ris/delayed_init",
+      [this](auto&& /*m*/) {
+        return impl_->delayed_init(
+            const_cast<schedule&>(get_sched()));  // NOLINT
+      },
+      ctx::accesses_t{ctx::access_request{
+                          to_res_id(::motis::module::global_res_id::RIS_DATA),
+                          ctx::access_t::WRITE},
+                      ctx::access_request{
+                          to_res_id(::motis::module::global_res_id::SCHEDULE),
+                          ctx::access_t::WRITE}});
 }
 
 void ris::import(motis::module::import_dispatcher& reg) {

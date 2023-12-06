@@ -85,13 +85,13 @@ function JourneyFilesInfo({
         <thead>
           <tr className="text-center">
             <th colSpan={2}></th>
-            <th colSpan={2} className="pl-5 font-medium">
+            <th colSpan={3} className="pl-5 font-medium">
               Reiseketten
             </th>
-            <th colSpan={2} className="pl-5 font-medium">
+            <th colSpan={3} className="pl-5 font-medium">
               Reisendengruppen
             </th>
-            <th colSpan={2} className="pl-5 font-medium">
+            <th colSpan={3} className="pl-5 font-medium">
               Reisende
             </th>
           </tr>
@@ -99,49 +99,72 @@ function JourneyFilesInfo({
             <th className="font-medium">Datei</th>
             <th className="pl-5 font-medium">Änderungsdatum</th>
             <th className="pl-5 font-medium">Geladen</th>
-            <th className="font-medium">Nicht geladen</th>
+            <th className="font-medium">Neu berechnet</th>
+            <th className="font-medium">Ignoriert</th>
             <th className="pl-5 font-medium">Geladen</th>
-            <th className="font-medium">Nicht geladen</th>
+            <th className="font-medium">Neu berechnet</th>
+            <th className="font-medium">Ignoriert</th>
             <th className="pl-5 font-medium">Geladen</th>
-            <th className="font-medium">Nicht geladen</th>
+            <th className="font-medium">Neu berechnet</th>
+            <th className="font-medium">Ignoriert</th>
           </tr>
         </thead>
         <tbody>
           {journey_files.map((file) => (
-            <tr key={file.name}>
-              <td>{file.name}</td>
-              <td className="pl-5">{formatDateTime(file.last_modified)}</td>
-              <td className="pl-5">{formatNumber(file.matched_journeys)}</td>
-              <td>
-                {formatNumber(file.unmatched_journeys)} (
-                {formatPercent(
-                  file.unmatched_journeys /
-                    (file.matched_journeys + file.unmatched_journeys),
-                )}
-                )
-              </td>
-              <td className="pl-5">{formatNumber(file.matched_groups)}</td>
-              <td>
-                {formatNumber(file.unmatched_groups)} (
-                {formatPercent(
-                  file.unmatched_groups /
-                    (file.matched_groups + file.unmatched_groups),
-                )}
-                )
-              </td>
-              <td className="pl-5">{formatNumber(file.matched_pax)}</td>
-              <td>
-                {formatNumber(file.unmatched_pax)} (
-                {formatPercent(
-                  file.unmatched_pax / (file.matched_pax + file.unmatched_pax),
-                )}
-                )
-              </td>
-            </tr>
+            <JourneyFileRow file={file} key={file.name} />
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function JourneyFileRow({ file }: { file: PaxMonJourneyFileInfo }) {
+  const totalJourneys = file.matched_journeys + file.unmatched_journeys;
+  const loadedJourneys =
+    file.matched_journeys + file.unmatched_journeys_rerouted;
+  const skippedJourneys =
+    file.unmatched_journeys - file.unmatched_journeys_rerouted;
+
+  const totalGroups = file.matched_groups + file.unmatched_groups;
+  const loadedGroups = file.matched_groups + file.unmatched_groups_rerouted;
+  const skippedGroups = file.unmatched_groups - file.unmatched_groups_rerouted;
+
+  const totalPax = file.matched_pax + file.unmatched_pax;
+  const loadedPax = file.matched_pax + file.unmatched_pax_rerouted;
+  const skippedPax = file.unmatched_pax - file.unmatched_pax_rerouted;
+
+  return (
+    <tr>
+      <td>{file.name}</td>
+      <td className="pl-5">{formatDateTime(file.last_modified)}</td>
+      <td className="pl-5">{formatNumber(loadedJourneys)}</td>
+      <td>
+        {formatNumber(file.unmatched_journeys_rerouted)} (
+        {formatPercent(file.unmatched_journeys_rerouted / totalJourneys)})
+      </td>
+      <td>
+        {formatNumber(skippedJourneys)} (
+        {formatPercent(skippedJourneys / totalJourneys)})
+      </td>
+      <td className="pl-5">{formatNumber(loadedGroups)}</td>
+      <td>
+        {formatNumber(file.unmatched_groups_rerouted)} (
+        {formatPercent(file.unmatched_groups_rerouted / totalGroups)})
+      </td>
+      <td>
+        {formatNumber(skippedGroups)} (
+        {formatPercent(skippedGroups / totalGroups)})
+      </td>
+      <td className="pl-5">{formatNumber(loadedPax)}</td>
+      <td>
+        {formatNumber(file.unmatched_pax_rerouted)} (
+        {formatPercent(file.unmatched_pax_rerouted / totalPax)})
+      </td>
+      <td>
+        {formatNumber(skippedPax)} ({formatPercent(skippedPax / totalPax)})
+      </td>
+    </tr>
   );
 }
 
