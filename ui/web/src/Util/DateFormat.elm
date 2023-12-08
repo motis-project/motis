@@ -4,6 +4,7 @@ module Util.DateFormat exposing
     , durationText
     , enDateConfig
     , esDateConfig
+    , czDateConfig
     , formatDate
     , formatDateTime
     , formatDateTimeWithSeconds
