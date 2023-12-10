@@ -75,8 +75,14 @@ czTranslations =
                     1  ->
                         "1 přestup"
 
-                    (2, 3, 4) ->
-                        count ++ " přestupy"
+                    2 ->
+                        "2 přestupy"
+
+                    3 ->
+                        "3 přestupy"
+
+                    4 ->
+                        "4 přestupy"
 
                     _ ->
                         toString count ++ " přestupů"
@@ -93,8 +99,14 @@ czTranslations =
                     1 ->
                         "1 mezizastávka"
 
-                    (2, 3, 4) ->
-                        count ++ " mezizastávky"
+                    2 ->
+                        "2 mezizastávky"
+
+                    3 ->
+                        "3 mezizastávky"
+
+                    4 ->
+                        "4 mezizastávky"
 
                     _ ->
                         toString count ++ " mezizastávek"
