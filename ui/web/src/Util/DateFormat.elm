@@ -4,6 +4,7 @@ module Util.DateFormat exposing
     , durationText
     , enDateConfig
     , esDateConfig
+    , czDateConfig
     , formatDate
     , formatDateTime
     , formatDateTimeWithSeconds
@@ -136,6 +137,31 @@ esDateConfig =
         , "Octubre"
         , "Noviembre"
         , "Diciembre"
+        ]
+    }
+
+czDateConfig : DateConfig
+czDateConfig =
+    { seperator = "."
+    , shortFormatTrailingSeperator = "."
+    , yearPos = 2
+    , monthPos = 1
+    , dayPos = 0
+    , weekDayNames = [ "Po", "Út", "St", "Čt", "Pá", "So", "Ne" ]
+    , monthNames =
+        [ ""
+        , "Leden"
+        , "Únor"
+        , "Březen"
+        , "Duben"
+        , "Květen"
+        , "Červen"
+        , "Červenec"
+        , "Srpen"
+        , "Září"
+        , "Říjen"
+        , "Listopad"
+        , "Prosinec"
         ]
     }
 
