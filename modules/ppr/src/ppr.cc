@@ -74,7 +74,11 @@ Offset<RouteStep> write_route_step(FlatBufferBuilder& fbb,
       static_cast<StreetType>(rs.street_type_),
       static_cast<CrossingType>(rs.crossing_), rs.distance_, rs.time_,
       rs.accessibility_, write_polyline(fbb, rs.path_), rs.elevation_up_,
-      rs.elevation_down_, rs.incline_up_, static_cast<TriState>(rs.handrail_));
+      rs.elevation_down_, rs.incline_up_, static_cast<TriState>(rs.handrail_),
+      static_cast<DoorType>(rs.door_type_),
+      static_cast<AutomaticDoorType>(rs.automatic_door_type_),
+      static_cast<TriState>(rs.traffic_signals_sound_),
+      static_cast<TriState>(rs.traffic_signals_vibration_));
 }
 
 Offset<Edge> write_edge(FlatBufferBuilder& fbb, route::edge const& e) {
@@ -84,7 +88,11 @@ Offset<Edge> write_edge(FlatBufferBuilder& fbb, route::edge const& e) {
                     static_cast<StreetType>(e.street_type_),
                     static_cast<CrossingType>(e.crossing_type_),
                     e.elevation_up_, e.elevation_down_, e.incline_up_,
-                    static_cast<TriState>(e.handrail_));
+                    static_cast<TriState>(e.handrail_),
+                    static_cast<DoorType>(e.door_type_),
+                    static_cast<AutomaticDoorType>(e.automatic_door_type_),
+                    static_cast<TriState>(e.traffic_signals_sound_),
+                    static_cast<TriState>(e.traffic_signals_vibration_));
 }
 
 Offset<Route> write_route(FlatBufferBuilder& fbb, route const& r,
