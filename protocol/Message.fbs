@@ -139,6 +139,10 @@ include "paxmon/PaxMonTransferDetailsResponse.fbs";
 include "paxmon/PaxMonReviseCompactJourneyRequest.fbs";
 include "paxmon/PaxMonReviseCompactJourneyResponse.fbs";
 include "paxmon/PaxMonDatasetInfoResponse.fbs";
+include "paxmon/PaxMonCheckDataRequest.fbs";
+include "paxmon/PaxMonCheckDataResponse.fbs";
+include "paxmon/PaxMonCheckDataByOrderRequest.fbs";
+include "paxmon/PaxMonCheckDataByOrderResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
 include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
 include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
@@ -359,7 +363,11 @@ union MsgContent {
   motis.paxmon.PaxMonTransferDetailsResponse                              = 169,
   motis.paxmon.PaxMonReviseCompactJourneyRequest                          = 170,
   motis.paxmon.PaxMonReviseCompactJourneyResponse                         = 171,
-  motis.paxmon.PaxMonDatasetInfoResponse                                  = 172
+  motis.paxmon.PaxMonDatasetInfoResponse                                  = 172,
+  motis.paxmon.PaxMonCheckDataRequest                                     = 173,
+  motis.paxmon.PaxMonCheckDataResponse                                    = 174,
+  motis.paxmon.PaxMonCheckDataByOrderRequest                              = 175,
+  motis.paxmon.PaxMonCheckDataByOrderResponse                             = 176
 }
 
 // Destination Examples:

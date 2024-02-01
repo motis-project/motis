@@ -2113,3 +2113,111 @@ PaxMonDatasetInfoResponse:
       description: TODO
     motis_start_time:
       description: TODO
+PaxMonCheckDataRequest:
+  description: TODO
+  fields:
+    trip_id:
+      description: TODO
+PaxMonCheckType:
+  description: TODO
+PaxMonCheckLegStatus:
+  description: TODO
+PaxMonCheckEntry:
+  description: TODO
+  fields:
+    check_type:
+      description: TODO
+    check_count:
+      description: TODO
+    leg_status:
+      description: TODO
+    planned_train:
+      description: TODO
+    canceled:
+      description: TODO
+    leg_start_station:
+      description: TODO
+    leg_destination_station:
+      description: TODO
+    leg_start_time:
+      description: TODO
+    leg_destination_time:
+      description: TODO
+    checkin_start_station:
+      description: TODO
+    checkin_destination_station:
+      description: TODO
+    check_min_time:
+      description: TODO
+    check_max_time:
+      description: TODO
+    schedule_train_start_time:
+      description: TODO
+    ref:
+      description: TODO
+    checked_in_train:
+      description: TODO
+    order_id:
+      description: TODO
+    trip_id:
+      description: TODO
+    category:
+      description: TODO
+    train_nr:
+      description: TODO
+    direction:
+      description: TODO
+    planned_trip_ref:
+      description: TODO
+PaxMonCheckDataResponse:
+  description: TODO
+  fields:
+    category:
+      description: TODO
+    train_nr:
+      description: TODO
+    matched_entry_count:
+      description: TODO
+    unmatched_entry_count:
+      description: TODO
+    entries:
+      description: TODO
+    sections:
+      description: TODO
+PaxMonCheckSectionData:
+  description: TODO
+  fields:
+    from:
+      description: TODO
+    to:
+      description: TODO
+    departure_schedule_time:
+      description: TODO
+    departure_current_time:
+      description: TODO
+    arrival_schedule_time:
+      description: TODO
+    arrival_current_time:
+      description: TODO
+    entry_refs:
+      description: TODO
+    total_group_count:
+      description: TODO
+    checked_group_count:
+      description: TODO
+    unchecked_but_covered_group_count:
+      description: TODO
+    unchecked_uncovered_group_count:
+      description: TODO
+PaxMonCheckDataByOrderRequest:
+  description: TODO
+  fields:
+    order_id:
+      description: TODO
+PaxMonCheckDataByOrderResponse:
+  description: TODO
+  fields:
+    entries:
+      description: TODO
+PaxMonCheckDirection:
+  description: TODO

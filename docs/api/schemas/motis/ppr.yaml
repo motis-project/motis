@@ -45,6 +45,14 @@ Edge:
       description: TODO
     handrail:
       description: TODO
+    door_type:
+      description: TODO
+    automatic_door_type:
+      description: TODO
+    traffic_signals_sound:
+      description: TODO
+    traffic_signals_vibration:
+      description: TODO
 RouteStepType:
   description: TODO
 RouteStep:
@@ -73,6 +81,14 @@ RouteStep:
     incline_up:
       description: TODO
     handrail:
+      description: TODO
+    door_type:
+      description: TODO
+    automatic_door_type:
+      description: TODO
+    traffic_signals_sound:
+      description: TODO
+    traffic_signals_vibration:
       description: TODO
 Route:
   description: TODO
@@ -170,3 +186,7 @@ FootRoutingSimpleResponse:
   fields:
     routes:
       description: TODO
+DoorType:
+  description: TODO
+AutomaticDoorType:
+  description: TODO

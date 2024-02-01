@@ -9,6 +9,8 @@
 #include "motis/paxmon/loaded_files.h"
 #include "motis/paxmon/multiverse.h"
 
+#include "motis/paxmon/eval/forecast/pax_check_data.h"
+
 namespace motis::paxmon {
 
 struct paxmon_data {
@@ -24,6 +26,8 @@ struct paxmon_data {
   std::vector<loaded_capacity_file> loaded_capacity_files_;
 
   unixtime motis_start_time_{};
+
+  eval::forecast::pax_check_data pax_check_data_;
 };
 
 }  // namespace motis::paxmon

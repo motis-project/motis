@@ -41,6 +41,7 @@ private:
   loader::loader_result load_journeys(std::string const& file);
   void find_journey_files();
   void load_capacity_files();
+  void load_eval_data();
   motis::module::msg_ptr rt_update(motis::module::msg_ptr const& msg);
   void rt_updates_applied(motis::module::msg_ptr const& msg);
   void rt_updates_applied(universe& uv, schedule const& sched);
@@ -73,6 +74,7 @@ private:
   bool graph_log_enabled_{false};
   int capacity_fuzzy_match_max_time_diff_{60};  // minutes
   std::uint16_t min_capacity_{0};
+  std::string pax_check_file_;
 
   paxmon_data data_;
   std::unique_ptr<stats_writer> stats_writer_;

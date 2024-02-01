@@ -33,6 +33,7 @@
 #include "motis/paxmon/api/find_trips.h"
 #include "motis/paxmon/api/fork_universe.h"
 #include "motis/paxmon/api/get_addressable_groups.h"
+#include "motis/paxmon/api/get_check_data.h"
 #include "motis/paxmon/api/get_groups.h"
 #include "motis/paxmon/api/get_groups_in_trip.h"
 #include "motis/paxmon/api/get_status.h"
@@ -51,6 +52,7 @@
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/checks.h"
 #include "motis/paxmon/delayed_init.h"
+#include "motis/paxmon/eval/forecast/pax_check_data.h"
 #include "motis/paxmon/file_time.h"
 #include "motis/paxmon/generate_capacities.h"
 #include "motis/paxmon/get_universe.h"
@@ -139,6 +141,8 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(min_capacity_, "min_capacity",
         "minimum capacity override (if capacity data is available but lower "
         "than this value, the minimum is used)");
+  param(pax_check_file_, "pax_check_file",
+        "pax check data for forecast evaluation");
 }
 
 paxmon::~paxmon() = default;
@@ -193,6 +197,7 @@ void paxmon::import(motis::module::import_dispatcher& reg) {
         load_capacity_files();
         find_journey_files();
         load_journeys();
+        load_eval_data();
       })
       ->require("SCHEDULE",
                 [](msg_ptr const& msg) {
@@ -469,6 +474,19 @@ void paxmon::init(motis::module::registry& reg) {
                   },
                   {kScheduleReadAccess});
 
+  reg.register_op("/paxmon/get_check_data",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_check_data(data_, get_sched(), msg);
+                  },
+                  {kScheduleReadAccess});
+
+  reg.register_op("/paxmon/get_check_data_by_order",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::get_check_data_by_order(data_, get_sched(),
+                                                        msg);
+                  },
+                  {kScheduleReadAccess});
+
   if (!mcfp_scenario_dir_.empty()) {
     if (fs::exists(mcfp_scenario_dir_)) {
       write_mcfp_scenarios_ = fs::is_directory(mcfp_scenario_dir_);
@@ -619,6 +637,13 @@ void paxmon::load_capacity_files() {
   if (total_entries == 0) {
     LOG(warn)
         << "no capacity data loaded, all trips will have unknown capacity";
+  }
+}
+
+void paxmon::load_eval_data() {
+  if (!pax_check_file_.empty()) {
+    eval::forecast::load_pax_check_data(get_sched(), pax_check_file_,
+                                        data_.pax_check_data_);
   }
 }
 
