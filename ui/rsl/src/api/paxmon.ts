@@ -11,6 +11,10 @@ import {
   PaxMonBrokenTransfersResponse,
   PaxMonCapacityStatusRequest,
   PaxMonCapacityStatusResponse,
+  PaxMonCheckDataByOrderRequest,
+  PaxMonCheckDataByOrderResponse,
+  PaxMonCheckDataRequest,
+  PaxMonCheckDataResponse,
   PaxMonDatasetInfoResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
@@ -404,6 +408,30 @@ export function usePaxMonDatasetInfo(): UseQueryResult<PaxMonDatasetInfoResponse
   });
 }
 
+export async function sendPaxMonCheckDataRequest(
+  content: PaxMonCheckDataRequest,
+): Promise<PaxMonCheckDataResponse> {
+  const msg = await sendRequest(
+    "/paxmon/get_check_data",
+    "PaxMonCheckDataRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonCheckDataResponse");
+  return msg.content as PaxMonCheckDataResponse;
+}
+
+export async function sendPaxMonCheckDataByOrderRequest(
+  content: PaxMonCheckDataByOrderRequest,
+): Promise<PaxMonCheckDataByOrderResponse> {
+  const msg = await sendRequest(
+    "/paxmon/get_check_data_by_order",
+    "PaxMonCheckDataByOrderRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonCheckDataByOrderResponse");
+  return msg.content as PaxMonCheckDataByOrderResponse;
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -443,4 +471,8 @@ export const queryKeys = {
   reviseCompactJourney: (req: PaxMonReviseCompactJourneyRequest) =>
     [...queryKeys.all, "revise_compact_journey", req] as const,
   datasetInfo: () => [...queryKeys.all, "dataset_info"] as const,
+  checkData: (req: PaxMonCheckDataRequest) =>
+    [...queryKeys.all, "check_data", req] as const,
+  checkDataByOrder: (req: PaxMonCheckDataByOrderRequest) =>
+    [...queryKeys.all, "check_data_by_order", req] as const,
 };

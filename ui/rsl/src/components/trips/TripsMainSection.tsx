@@ -8,7 +8,7 @@ function TripsMainSection(): JSX.Element {
       <div className="w-[25rem] shrink-0 overflow-y-auto bg-db-cool-gray-200 p-2 dark:bg-gray-800">
         <TripList />
       </div>
-      <div className="grow overflow-y-auto p-2">
+      <div className="grow overflow-y-auto px-2">
         <Outlet />
       </div>
     </>

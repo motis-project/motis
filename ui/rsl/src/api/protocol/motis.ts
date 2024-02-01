@@ -39,6 +39,10 @@ import {
   PaxMonBrokenTransfersResponse,
   PaxMonCapacityStatusRequest,
   PaxMonCapacityStatusResponse,
+  PaxMonCheckDataByOrderRequest,
+  PaxMonCheckDataByOrderResponse,
+  PaxMonCheckDataRequest,
+  PaxMonCheckDataResponse,
   PaxMonDatasetInfoResponse,
   PaxMonDebugGraphRequest,
   PaxMonDebugGraphResponse,
@@ -411,7 +415,11 @@ export type MsgContent =
   | PaxMonTransferDetailsResponse
   | PaxMonReviseCompactJourneyRequest
   | PaxMonReviseCompactJourneyResponse
-  | PaxMonDatasetInfoResponse;
+  | PaxMonDatasetInfoResponse
+  | PaxMonCheckDataRequest
+  | PaxMonCheckDataResponse
+  | PaxMonCheckDataByOrderRequest
+  | PaxMonCheckDataByOrderResponse;
 
 export type MsgContentType =
   | "MotisNoMessage"
@@ -504,7 +512,11 @@ export type MsgContentType =
   | "PaxMonTransferDetailsResponse"
   | "PaxMonReviseCompactJourneyRequest"
   | "PaxMonReviseCompactJourneyResponse"
-  | "PaxMonDatasetInfoResponse";
+  | "PaxMonDatasetInfoResponse"
+  | "PaxMonCheckDataRequest"
+  | "PaxMonCheckDataResponse"
+  | "PaxMonCheckDataByOrderRequest"
+  | "PaxMonCheckDataByOrderResponse";
 
 // Message.fbs
 export type DestinationType = "Module" | "Topic";

@@ -9,6 +9,7 @@ import {
 } from "@/data/settings";
 
 import CapacityInfo from "@/components/trips/CapacityInfo";
+import { CheckData } from "@/components/trips/CheckData.tsx";
 import TripLoadForecastChart from "@/components/trips/TripLoadForecastChart";
 import TripRoute from "@/components/trips/TripRoute";
 
@@ -25,6 +26,7 @@ function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
   return (
     <div>
       <TripRoute tripId={tripId} />
+      <CheckData tripId={tripId} />
       {showCapacityInfo && <CapacityInfo tripId={tripId} />}
       {showLegacyLoadForecastChart && (
         <TripLoadForecastChart tripId={tripId} mode="Interactive" />
