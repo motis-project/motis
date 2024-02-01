@@ -17,18 +17,18 @@
   "devDependencies": {
     "@limegrass/eslint-plugin-import-alias": "^1.1.0",
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",
-    "@types/node": "^20.9.0",
-    "@typescript-eslint/eslint-plugin": "^6.11.0",
-    "@typescript-eslint/parser": "^6.11.0",
-    "eslint": "^8.53.0",
-    "ts-node": "^10.9.1",
+    "@types/node": "^20.11.15",
+    "@typescript-eslint/eslint-plugin": "^6.20.0",
+    "@typescript-eslint/parser": "^6.20.0",
+    "eslint": "^8.56.0",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "arcsecond": "^5.0.0",
     "commander": "^11.1.0",
-    "prettier": "^3.1.0",
+    "prettier": "^3.2.4",
     "yaml": "^2.3.4"
   }
 }
