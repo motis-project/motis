@@ -1,33 +1,29 @@
 #pragma once
 
+#include <ctime>
 #include <limits>
 #include <random>
 #include <vector>
 
 #include "utl/enumerate.h"
-#include "utl/to_vec.h"
-
-#include "motis/paxmon/passenger_group.h"
 
 #include "motis/paxforecast/alternatives.h"
 #include "motis/paxforecast/behavior/util.h"
 
 namespace motis::paxforecast::behavior::probabilistic {
 
-template <typename Generator, typename TransferDist, typename OriginalDist,
-          typename RecommendedDist, typename LoadInfoDist,
-          typename LoadInfoLowDist, typename LoadInfoNoSeatsDist,
-          typename LoadInfoFullDist, typename RandomDist>
 struct passenger_behavior {
-  passenger_behavior(Generator& gen, unsigned sample_count, bool best_only,
-                     TransferDist& transfer_dist, OriginalDist& original_dist,
-                     RecommendedDist& recommended_dist,
-                     LoadInfoDist& load_info_dist,
-                     LoadInfoLowDist& load_info_low_dist,
-                     LoadInfoNoSeatsDist& load_info_no_seats_dist,
-                     LoadInfoFullDist& load_info_full_dist,
-                     RandomDist& random_dist)
-      : gen_{gen},
+  passenger_behavior(
+      unsigned sample_count, bool best_only,
+      std::normal_distribution<float> const& transfer_dist,
+      std::normal_distribution<float> const& original_dist,
+      std::normal_distribution<float> const& recommended_dist,
+      std::normal_distribution<float> const& load_info_dist,
+      std::normal_distribution<float> const& load_info_low_dist,
+      std::normal_distribution<float> const& load_info_no_seats_dist,
+      std::normal_distribution<float> const& load_info_full_dist,
+      std::normal_distribution<float> const& random_dist)
+      : gen_{get_seed()},
         sample_count_{sample_count},
         best_only_{best_only},
         transfer_dist_{transfer_dist},
@@ -38,6 +34,17 @@ struct passenger_behavior {
         load_info_no_seats_dist_{load_info_no_seats_dist},
         load_info_full_dist_{load_info_full_dist},
         random_dist_{random_dist} {}
+
+  static std::mt19937::result_type get_seed() {
+#ifdef WIN32
+    return static_cast<std::mt19937::result_type>(
+        std::time(nullptr) %
+        std::numeric_limits<std::mt19937::result_type>::max());
+#else
+    auto rd = std::random_device();
+    return rd();
+#endif
+  }
 
   std::vector<float> pick_routes(std::vector<alternative> const& alternatives) {
     if (alternatives.empty()) {
@@ -104,17 +111,17 @@ private:
     }
   }
 
-  Generator& gen_;
+  std::mt19937 gen_;
   unsigned sample_count_{};
   bool best_only_{false};
-  TransferDist& transfer_dist_;
-  OriginalDist& original_dist_;
-  RecommendedDist& recommended_dist_;
-  LoadInfoDist& load_info_dist_;
-  LoadInfoLowDist& load_info_low_dist_;
-  LoadInfoNoSeatsDist& load_info_no_seats_dist_;
-  LoadInfoFullDist& load_info_full_dist_;
-  RandomDist& random_dist_;
+  std::normal_distribution<float> transfer_dist_;
+  std::normal_distribution<float> original_dist_;
+  std::normal_distribution<float> recommended_dist_;
+  std::normal_distribution<float> load_info_dist_;
+  std::normal_distribution<float> load_info_low_dist_;
+  std::normal_distribution<float> load_info_no_seats_dist_;
+  std::normal_distribution<float> load_info_full_dist_;
+  std::normal_distribution<float> random_dist_;
 };
 
 }  // namespace motis::paxforecast::behavior::probabilistic

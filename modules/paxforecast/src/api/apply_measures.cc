@@ -27,8 +27,6 @@
 #include "motis/paxforecast/measures/affected_groups.h"
 #include "motis/paxforecast/measures/measures.h"
 
-#include "motis/paxforecast/behavior/default_behavior.h"
-
 using namespace motis::module;
 using namespace motis::logging;
 using namespace motis::paxmon;
@@ -202,7 +200,7 @@ void sim_and_update_groups(
       alt.is_original_ = (alt.compact_journey_ == remaining_planned_journey);
     }
 
-    simulate_behavior_for_alternatives(pb.pb_, alts);
+    simulate_behavior_for_alternatives(pb, alts);
 
     for (auto const ar_idx : affected_route_indices) {
       auto const& ar = affected_routes.at(ar_idx);
@@ -397,9 +395,8 @@ msg_ptr apply_measures(paxforecast& mod, paxmon_data& data,
 
     manual_timer update_groups_timer{"sim + update groups"};
     auto tick_stats = tick_statistics{};
-    auto pb = behavior::default_behavior{mod.deterministic_mode_};
-    sim_and_update_groups(mod, uv, sched, pb, affected_groups, affected_routes,
-                          alts_set, combined, tick_stats);
+    sim_and_update_groups(mod, uv, sched, *mod.behavior_, affected_groups,
+                          affected_routes, alts_set, combined, tick_stats);
 
     update_groups_timer.stop_and_print();
     t_update_groups += update_groups_timer.duration_ms();
