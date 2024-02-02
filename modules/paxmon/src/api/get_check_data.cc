@@ -72,21 +72,22 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
   auto const trp_sections = access::sections{trp};
   utl::verify(trp_sections.size() != 0, "trip has no active sections");
 
-  // TODO(pablo): times from trip id (canceled stops)
+  auto const trp_id_start_time = trp->id_.primary_.get_time();
+  auto const trp_id_destination_time = trp->id_.secondary_.target_time_;
 
   auto const first_trp_section = *trp_sections.begin();
   auto const current_first_departure = first_trp_section.lcon().d_time_;
   auto const schedule_first_departure =
       get_schedule_time(sched, first_trp_section.ev_key_from());
-  auto const min_first_departure =
-      std::min(current_first_departure, schedule_first_departure);
+  auto const min_first_departure = std::min(
+      {current_first_departure, schedule_first_departure, trp_id_start_time});
 
   auto const last_trp_section = *std::prev(trp_sections.end());
   auto const current_last_arrival = last_trp_section.lcon().a_time_;
   auto const schedule_last_arrival =
       get_schedule_time(sched, last_trp_section.ev_key_to());
-  auto const max_last_arrival =
-      std::max(current_last_arrival, schedule_last_arrival);
+  auto const max_last_arrival = std::max(
+      {current_last_arrival, schedule_last_arrival, trp_id_destination_time});
 
   auto sec_data = std::vector<section_data>(trp_sections.size());
 
@@ -96,16 +97,17 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
   auto unmatched_entry_count = 0U;
 
   auto const is_matching_entry = [&](pax_check_entry const& entry) {
-    if (entry.schedule_train_start_time_ == schedule_first_departure) {
-      return true;
-    }
-    if (entry.has_leg_info() && entry.leg_start_time_ >= min_first_departure &&
-        entry.leg_destination_time_ <= max_last_arrival) {
+    if (entry.schedule_train_start_time_ == schedule_first_departure ||
+        entry.schedule_train_start_time_ == trp_id_start_time) {
       return true;
     }
     if (entry.has_check_time() &&
         entry.check_min_time_ >= min_first_departure &&
         entry.check_max_time_ <= max_last_arrival) {
+      return true;
+    }
+    if (entry.has_leg_info() && entry.leg_start_time_ >= min_first_departure &&
+        entry.leg_destination_time_ <= max_last_arrival) {
       return true;
     }
     return false;
