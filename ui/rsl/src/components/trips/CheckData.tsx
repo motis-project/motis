@@ -247,7 +247,7 @@ function CheckEntryRow({ entry, section }: CheckEntryRowProps) {
           <HoverCardTrigger asChild>
             <Info className="h-4 w-4 text-gray-500 transition hover:text-black" />
           </HoverCardTrigger>
-          <HoverCardContent className="w-max">
+          <HoverCardContent className="max-h-[32rem] w-max overflow-y-auto">
             <OrderCheckDataCard entryRef={entry.ref} orderId={entry.order_id} />
           </HoverCardContent>
         </HoverCard>
@@ -620,7 +620,10 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
   return (
     <div className="text-left text-base">
       <div className="mb-4 flex gap-4 px-2 font-semibold">
-        <span>Auftrag {orderId}</span>
+        <span>
+          Auftrag {orderId}: {entries.length}{" "}
+          {entries.length == 1 ? "Eintrag" : "Einträge"}
+        </span>
       </div>
       <div className="flex flex-col gap-2">
         {entries.map((entry) => (
