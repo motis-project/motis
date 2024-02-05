@@ -156,14 +156,17 @@ export function CheckData({ tripId }: CheckDataProps) {
         Einträge: {formatNumber(checkData.matched_entry_count)} passend,{" "}
         {formatNumber(checkData.unmatched_entry_count)} unpassend
       </div>
-      <div className="mb-4">
-        <CheckEntries entries={checkData.entries} />
-      </div>
       <CheckDataBySection
         checkData={checkData}
         loadData={loadData ? loadData.load_infos[0] : undefined}
         includeSectionDetails={true}
       />
+      <details className="my-4">
+        <summary className=" cursor-pointer text-xl">
+          Alle Reisendenzähldaten für {checkData.category} {checkData.train_nr}
+        </summary>
+        <CheckEntries entries={checkData.entries} />
+      </details>
     </div>
   );
 }
@@ -365,8 +368,8 @@ function CheckDataBySection({
 
     sectionSummary.push(
       <tr key={i}>
-        <td className="pr-2">{cd.from.name}</td>
-        <td className="flex gap-1 pr-2">
+        <td className="pr-1">{cd.from.name}</td>
+        <td className="flex gap-1 px-1">
           <span>{formatDateTime(cd.departure_schedule_time)}</span>
           <span
             className={cn(departureDelayed ? "text-red-600" : "text-green-600")}
@@ -374,8 +377,8 @@ function CheckDataBySection({
             {formatTime(cd.departure_current_time)}
           </span>
         </td>
-        <td className="pr-2">{cd.to.name}</td>
-        <td className="flex gap-1 pr-2">
+        <td className="px-1">{cd.to.name}</td>
+        <td className="flex gap-1 px-1">
           <span>{formatDateTime(cd.arrival_schedule_time)}</span>
           <span
             className={cn(arrivalDelayed ? "text-red-600" : "text-green-600")}
@@ -383,39 +386,48 @@ function CheckDataBySection({
             {formatTime(cd.arrival_current_time)}
           </span>
         </td>
-        <td className="bg-red-100 pr-2 text-center">{cd.total_group_count}</td>
-        <td className="bg-red-100 pr-2 text-center font-semibold">
+        <td className="bg-red-100 px-1 text-center">{cd.total_group_count}</td>
+        <td className="bg-red-100 px-1 text-center font-semibold">
           {cd.checked_group_count}
         </td>
-        <td className="bg-red-100 pr-2 text-center">
+        <td className="bg-red-100 px-1 text-center">
           {cd.unchecked_but_covered_group_count}
         </td>
-        <td className="bg-red-100 pr-2 text-center">
+        <td className="bg-red-100 px-1 text-center">
           {cd.unchecked_uncovered_group_count}
         </td>
-        <td className="bg-red-100 pr-2 text-center font-semibold">
+        <td className="bg-red-100 px-1 text-center font-semibold">
           {cd.checked_group_count + cd.unchecked_uncovered_group_count}
         </td>
         <td
           className={cn(
-            "bg-red-100 pr-2 text-center",
+            "bg-red-100 px-1 text-center",
             cd.check_count == 0 && "text-red-600",
           )}
         >
           {cd.check_count}
         </td>
-        <td className="bg-blue-100 pr-2 text-center">
+        <td className="bg-blue-100 px-1 text-center">
           {ld.expected_passengers}
         </td>
-        <td className="bg-blue-100 pr-2 text-center">{ld.dist.q5}</td>
-        <td className="bg-blue-100 pr-2 text-center font-semibold">
+        <td className="bg-blue-100 px-1 text-center">{ld.dist.q5}</td>
+        <td className="bg-blue-100 px-1 text-center font-semibold">
           {ld.dist.q50}
         </td>
-        <td className="bg-blue-100 pr-2 text-center">{ld.dist.q95}</td>
-        <td className="bg-orange-100 pr-2 text-center">
+        <td className="bg-blue-100 px-1 text-center">{ld.dist.q95}</td>
+        <td className="bg-yellow-100 px-1 text-center">
+          {formatFactor(ld.expected_passengers / cd.checked_group_count)}
+        </td>
+        <td className="bg-yellow-100 px-1 text-center">
+          {formatFactor(
+            ld.expected_passengers /
+              (cd.checked_group_count + cd.unchecked_uncovered_group_count),
+          )}
+        </td>
+        <td className="bg-green-100 px-1 text-center">
           {formatFactor(ld.dist.q50 / cd.checked_group_count)}
         </td>
-        <td className="bg-orange-100 pr-2 text-center">
+        <td className="bg-green-100 px-1 text-center">
           {formatFactor(
             ld.dist.q50 /
               (cd.checked_group_count + cd.unchecked_uncovered_group_count),
@@ -450,7 +462,7 @@ function CheckDataBySection({
   }
 
   const thClass = "py-1 px-2 border-b-2 border-db-cool-gray-300 font-semibold";
-  const thTopClass = "font-semibold";
+  const thTopClass = "font-semibold px-1";
 
   return (
     <div>
@@ -468,8 +480,11 @@ function CheckDataBySection({
               <th colSpan={4} className={cn(thTopClass, "bg-blue-100")}>
                 RSL-Prognose (Reisende)
               </th>
-              <th colSpan={2} className={cn(thTopClass, "bg-orange-100")}>
-                Vergleich
+              <th colSpan={2} className={cn(thTopClass, "bg-yellow-100")}>
+                Vergleich Plan
+              </th>
+              <th colSpan={2} className={cn(thTopClass, "bg-green-100")}>
+                Vergleich 50 %
               </th>
             </tr>
             <tr>
@@ -489,7 +504,7 @@ function CheckDataBySection({
                 className={cn(thClass, "bg-red-100")}
                 title="Einträge mit Kontrolle oder Check-In"
               >
-                Ktr.
+                K
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
@@ -519,8 +534,10 @@ function CheckDataBySection({
               <th className={cn(thClass, "bg-blue-100")}>5 %</th>
               <th className={cn(thClass, "bg-blue-100")}>50 %</th>
               <th className={cn(thClass, "bg-blue-100")}>95 %</th>
-              <th className={cn(thClass, "bg-orange-100")}>50% / Ktr.</th>
-              <th className={cn(thClass, "bg-orange-100")}>50% / K+NA</th>
+              <th className={cn(thClass, "bg-yellow-100")}>K</th>
+              <th className={cn(thClass, "bg-yellow-100")}>K+NA</th>
+              <th className={cn(thClass, "bg-green-100")}>K</th>
+              <th className={cn(thClass, "bg-green-100")}>K+NA</th>
             </tr>
           </thead>
           <tbody>{sectionSummary}</tbody>
@@ -605,9 +622,15 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
       <div className="mb-4 flex gap-4 font-semibold">
         <span>Auftrag {orderId}</span>
       </div>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
         {entries.map((entry) => (
-          <div key={entry.ref} className="flex flex-col gap-1">
+          <div
+            key={entry.ref}
+            className={cn(
+              "flex flex-col gap-1 p-2",
+              entry.ref == entryRef && "bg-yellow-100",
+            )}
+          >
             <div className="flex items-center gap-2 border-b border-b-gray-500">
               <span className="flex min-w-36 items-center gap-2">
                 <ColorDot index={refs.indexOf(entry.ref)} colors={REF_COLORS} />
