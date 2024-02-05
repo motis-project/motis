@@ -1274,6 +1274,7 @@ export interface PaxMonCheckSectionData {
   unchecked_but_covered_group_count: number;
   unchecked_uncovered_group_count: number;
   check_count: number;
+  checkin_count: number;
 }
 
 // paxmon/PaxMonCheckDataResponse.fbs

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowBigLeft,
   ArrowBigRight,
   ArrowDown,
@@ -386,6 +387,12 @@ function CheckDataBySection({
             {formatTime(cd.arrival_current_time)}
           </span>
         </td>
+        <td className="px-1">
+          {formatNumber(
+            (cd.arrival_current_time - cd.departure_current_time) / 60,
+            { style: "unit", unit: "minute" },
+          )}
+        </td>
         <td className="bg-red-100 px-1 text-center">{cd.total_group_count}</td>
         <td className="bg-red-100 px-1 text-center font-semibold">
           {cd.checked_group_count}
@@ -441,6 +448,14 @@ function CheckDataBySection({
               (cd.checked_group_count + cd.unchecked_uncovered_group_count),
           )}
         </td>
+
+        {cd.check_count == 0 ? (
+          <td title="Auf diesem Fahrtabschnitt wurden keine Reisenden kontrolliert">
+            <AlertTriangle className="ml-1 h-4 w-4 text-red-800" />
+          </td>
+        ) : (
+          <td></td>
+        )}
       </tr>,
     );
 
@@ -479,7 +494,7 @@ function CheckDataBySection({
         <table className="text-xs">
           <thead>
             <tr className="text-center">
-              <th colSpan={4} className={thTopClass}>
+              <th colSpan={5} className={thTopClass}>
                 Fahrtabschnitt
               </th>
               <th colSpan={7} className={cn(thTopClass, "bg-red-100")}>
@@ -502,6 +517,7 @@ function CheckDataBySection({
               <th className={thClass} colSpan={2}>
                 Nach
               </th>
+              <th className={thClass}>Dauer</th>
               <th
                 className={cn(thClass, "bg-red-100")}
                 title="Anzahl der Einträge in den Zähldaten"
@@ -552,6 +568,7 @@ function CheckDataBySection({
               <th className={cn(thClass, "bg-yellow-100")}>K+NA</th>
               <th className={cn(thClass, "bg-green-100")}>K</th>
               <th className={cn(thClass, "bg-green-100")}>K+NA</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>{sectionSummary}</tbody>
