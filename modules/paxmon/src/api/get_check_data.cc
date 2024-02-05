@@ -30,6 +30,7 @@ namespace {
 struct section_data {
   std::vector<pax_check_entry const*> check_entries_;
   std::uint16_t checks_{};
+  std::uint16_t checkins_{};
 };
 
 Offset<Station> optional_station(message_creator& mc, schedule const& sched,
@@ -127,10 +128,15 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
         if (in_leg || checked) {
           auto& sd = sec_data.at(sec_idx);
           sd.check_entries_.emplace_back(&entry);
-          if (checked_in_section &&
-              (entry.check_type_ == check_type::TICKED_CHECKED ||
-               entry.check_type_ == check_type::BOTH)) {
-            ++sd.checks_;
+          if (checked_in_section) {
+            if ((entry.check_type_ == check_type::TICKED_CHECKED ||
+                 entry.check_type_ == check_type::BOTH)) {
+              ++sd.checks_;
+            }
+            if ((entry.check_type_ == check_type::CHECKIN ||
+                 entry.check_type_ == check_type::BOTH)) {
+              ++sd.checkins_;
+            }
           }
         }
       };
@@ -197,7 +203,7 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
                                     [](auto const& ce) { return ce->ref_; })),
         total_group_count, checked_group_count,
         unchecked_but_covered_group_count, unchecked_uncovered_group_count,
-        sd.checks_));
+        sd.checks_, sd.checkins_));
   }
 
   mc.create_and_finish(

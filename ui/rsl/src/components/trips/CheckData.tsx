@@ -402,6 +402,14 @@ function CheckDataBySection({
         <td
           className={cn(
             "bg-red-100 px-1 text-center",
+            cd.checkin_count == 0 && "text-red-600",
+          )}
+        >
+          {cd.checkin_count}
+        </td>
+        <td
+          className={cn(
+            "bg-red-100 px-1 text-center",
             cd.check_count == 0 && "text-red-600",
           )}
         >
@@ -461,7 +469,7 @@ function CheckDataBySection({
     }
   }
 
-  const thClass = "py-1 px-2 border-b-2 border-db-cool-gray-300 font-semibold";
+  const thClass = "py-1 px-1 border-b-2 border-db-cool-gray-300 font-semibold";
   const thTopClass = "font-semibold px-1";
 
   return (
@@ -474,7 +482,7 @@ function CheckDataBySection({
               <th colSpan={4} className={thTopClass}>
                 Fahrtabschnitt
               </th>
-              <th colSpan={6} className={cn(thTopClass, "bg-red-100")}>
+              <th colSpan={7} className={cn(thTopClass, "bg-red-100")}>
                 Zähldaten (Tickets!)
               </th>
               <th colSpan={4} className={cn(thTopClass, "bg-blue-100")}>
@@ -523,6 +531,12 @@ function CheckDataBySection({
                 title="Kontrolliert + Nicht abgedeckt"
               >
                 K + NA
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Anzahl Check-in-Einträge in diesem Abschnitt"
+              >
+                CI.i.A.
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
