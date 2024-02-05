@@ -1,36 +1,58 @@
 import { useAtom } from "jotai";
+import React, { ReactNode } from "react";
 import { useParams } from "react-router-dom";
 
 import { TripId } from "@/api/protocol/motis";
 
-import {
-  showCapacityInfoAtom,
-  showLegacyLoadForecastChartAtom,
-} from "@/data/settings";
+import { showLegacyLoadForecastChartAtom } from "@/data/settings";
+import { activeTripTabAtom } from "@/data/views.ts";
 
 import CapacityInfo from "@/components/trips/CapacityInfo";
 import { CheckData } from "@/components/trips/CheckData.tsx";
 import TripLoadForecastChart from "@/components/trips/TripLoadForecastChart";
 import TripRoute from "@/components/trips/TripRoute";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs.tsx";
 
 interface TripDetailsProps {
   tripId: TripId;
 }
 
-function TripDetails({ tripId }: TripDetailsProps): JSX.Element {
+function TripDetails({ tripId }: TripDetailsProps): ReactNode {
   const [showLegacyLoadForecastChart] = useAtom(
     showLegacyLoadForecastChartAtom,
   );
-  const [showCapacityInfo] = useAtom(showCapacityInfoAtom);
+  const [activeTripTab, setActiveTripTab] = useAtom(activeTripTabAtom);
 
   return (
     <div>
-      <TripRoute tripId={tripId} />
-      <CheckData tripId={tripId} />
-      {showCapacityInfo && <CapacityInfo tripId={tripId} />}
-      {showLegacyLoadForecastChart && (
-        <TripLoadForecastChart tripId={tripId} mode="Interactive" />
-      )}
+      <Tabs
+        defaultValue={activeTripTab}
+        onValueChange={setActiveTripTab}
+        className="mt-2 text-center"
+      >
+        <TabsList>
+          <TabsTrigger value="forecast">Auslastungsprognose</TabsTrigger>
+          <TabsTrigger value="capacity">Kapazitätsdaten</TabsTrigger>
+          <TabsTrigger value="check">Reisendenzähldaten</TabsTrigger>
+        </TabsList>
+        <TabsContent value="forecast" className="text-left">
+          <TripRoute tripId={tripId} />
+          {showLegacyLoadForecastChart && (
+            <TripLoadForecastChart tripId={tripId} mode="Interactive" />
+          )}
+        </TabsContent>
+        <TabsContent value="capacity" className="text-left">
+          <CapacityInfo tripId={tripId} />
+        </TabsContent>
+        <TabsContent value="check" className="text-left">
+          <CheckData tripId={tripId} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

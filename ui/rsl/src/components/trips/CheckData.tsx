@@ -149,7 +149,7 @@ export function CheckData({ tripId }: CheckDataProps) {
 
   return (
     <div className="py-4">
-      <h2 className="mb-4 text-2xl">
+      <h2 className="mb-1 text-2xl">
         Reisendenzähldaten für {checkData.category} {checkData.train_nr}
       </h2>
       <div className="mb-4">
@@ -183,7 +183,7 @@ function CheckEntries({ entries, section }: CheckEntriesProps) {
   return (
     <table className="relative border-separate text-xs">
       <thead>
-        <tr>
+        <tr className="text-center">
           {/*<td className={thClass}>Ref</td>*/}
           <th className={cn(thClass, "border-none")}></th>
           <th className={thClass}>Typ</th>
@@ -470,7 +470,7 @@ function CheckDataBySection({
         <h3 className="mb-2 text-xl">Abschnittsweiser Vergleich</h3>
         <table className="text-xs">
           <thead>
-            <tr>
+            <tr className="text-center">
               <th colSpan={4} className={thTopClass}>
                 Fahrtabschnitt
               </th>
@@ -487,7 +487,7 @@ function CheckDataBySection({
                 Vergleich 50 %
               </th>
             </tr>
-            <tr>
+            <tr className="text-center">
               <th className={thClass} colSpan={2}>
                 Von
               </th>
@@ -619,7 +619,7 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
 
   return (
     <div className="text-left text-base">
-      <div className="mb-4 flex gap-4 font-semibold">
+      <div className="mb-4 flex gap-4 px-2 font-semibold">
         <span>Auftrag {orderId}</span>
       </div>
       <div className="flex flex-col gap-2">

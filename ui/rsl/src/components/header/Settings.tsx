@@ -5,7 +5,6 @@ import { Fragment } from "react";
 
 import {
   sectionGraphPlotTypeAtom,
-  showCapacityInfoAtom,
   showLegacyLoadForecastChartAtom,
   showLegacyMeasureTypesAtom,
   showOptimizationDebugLogAtom,
@@ -56,27 +55,6 @@ function SectionGraphPlotSettings() {
             onChange={() => setShowLegacyLoadForecastChart((c) => !c)}
           />
           Alte Auslastungsgrafik anzeigen
-        </label>
-      </div>
-    </div>
-  );
-}
-
-function CapacitySettings() {
-  const [showCapacityInfo, setShowCapacityInfo] = useAtom(showCapacityInfoAtom);
-
-  return (
-    <div className="bg-white p-7 pt-0">
-      Kapazitätsdaten:
-      <div className="flex flex-col gap-2 pl-3 pt-2">
-        <label className="inline-flex items-center gap-2">
-          <input
-            type="checkbox"
-            name="capacity-info"
-            checked={showCapacityInfo}
-            onChange={() => setShowCapacityInfo((c) => !c)}
-          />
-          Kapazitätsinformationen anzeigen
         </label>
       </div>
     </div>
@@ -155,7 +133,6 @@ function Settings(): JSX.Element {
               <Popover.Panel className="absolute right-0 z-10 mt-1 w-screen max-w-sm px-4">
                 <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
                   <SectionGraphPlotSettings />
-                  <CapacitySettings />
                   <MeasureSettings />
                   <OptimizationSettings />
                 </div>
