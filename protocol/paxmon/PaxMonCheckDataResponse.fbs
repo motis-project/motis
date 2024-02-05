@@ -16,6 +16,7 @@ table PaxMonCheckSectionData {
   checked_group_count: uint;
   unchecked_but_covered_group_count: uint;
   unchecked_uncovered_group_count: uint;
+  check_count: uint;
 }
 
 table PaxMonCheckDataResponse {

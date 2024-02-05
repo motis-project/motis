@@ -2,9 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowBigLeft,
   ArrowBigRight,
+  ArrowDown,
   ArrowRight,
+  ArrowUp,
   Asterisk,
-  Badge,
   CheckCircle2,
   HelpCircle,
   Info,
@@ -20,6 +21,7 @@ import {
   PaxMonCheckDirection,
   PaxMonCheckEntry,
   PaxMonCheckLegStatus,
+  PaxMonCheckSectionData,
   PaxMonCheckType,
   PaxMonTripLoadInfo,
 } from "@/api/protocol/motis/paxmon.ts";
@@ -33,7 +35,7 @@ import {
 
 import { formatNumber } from "@/data/numberFormat.ts";
 
-import { formatDateTime } from "@/util/dateFormat.ts";
+import { formatDateTime, formatTime } from "@/util/dateFormat.ts";
 
 import {
   HoverCard,
@@ -168,9 +170,10 @@ export function CheckData({ tripId }: CheckDataProps) {
 
 interface CheckEntriesProps {
   entries: PaxMonCheckEntry[];
+  section?: PaxMonCheckSectionData | undefined;
 }
 
-function CheckEntries({ entries }: CheckEntriesProps) {
+function CheckEntries({ entries, section }: CheckEntriesProps) {
   const thClass =
     "sticky top-0 bg-white py-1 border-b-2 border-db-cool-gray-300 font-semibold";
 
@@ -201,7 +204,7 @@ function CheckEntries({ entries }: CheckEntriesProps) {
       </thead>
       <tbody>
         {entries.map((entry) => (
-          <CheckEntryRow key={entry.ref} entry={entry} />
+          <CheckEntryRow key={entry.ref} entry={entry} section={section} />
         ))}
       </tbody>
     </table>
@@ -210,9 +213,24 @@ function CheckEntries({ entries }: CheckEntriesProps) {
 
 interface CheckEntryRowProps {
   entry: PaxMonCheckEntry;
+  section?: PaxMonCheckSectionData | undefined;
 }
 
-function CheckEntryRow({ entry }: CheckEntryRowProps) {
+function CheckEntryRow({ entry, section }: CheckEntryRowProps) {
+  const hasCheckInfo =
+    section && entry.check_min_time != 0 && entry.check_max_time != 0;
+  const checkMinInSection =
+    hasCheckInfo &&
+    entry.check_min_time >= section.departure_current_time &&
+    entry.check_min_time <= section.arrival_current_time;
+  const checkMaxInSection =
+    hasCheckInfo &&
+    entry.check_max_time >= section.departure_current_time &&
+    entry.check_max_time <= section.arrival_current_time;
+  const hasMultipleChecks = entry.check_min_time != entry.check_max_time;
+  const isCheck =
+    entry.check_type == "TICKED_CHECKED" || entry.check_type == "BOTH";
+
   return (
     <tr
       className={cn(
@@ -262,14 +280,43 @@ function CheckEntryRow({ entry }: CheckEntryRowProps) {
       >
         {optionalStation(entry.checkin_destination_station)}
       </td>
-      <td className="pr-2">{optionalTime(entry.check_min_time)}</td>
+      <td
+        className={cn("pr-2", checkMinInSection && isCheck && "text-green-600")}
+      >
+        <div className="flex items-center gap-1">
+          {optionalTime(entry.check_min_time)}
+          {hasCheckInfo &&
+            entry.check_min_time < section?.departure_current_time && (
+              <ArrowUp className="h-4 w-4 text-gray-800" />
+            )}
+          {hasCheckInfo &&
+            entry.check_min_time > section?.arrival_current_time && (
+              <ArrowDown className="h-4 w-4 text-gray-800" />
+            )}
+        </div>
+      </td>
       <td
         className={cn(
           "pr-2",
-          entry.check_min_time == entry.check_max_time && "text-gray-300",
+          !hasMultipleChecks && "text-gray-300",
+          hasMultipleChecks && checkMaxInSection && isCheck && "text-green-600",
         )}
       >
-        {optionalTime(entry.check_max_time)}
+        <div className="flex items-center gap-1">
+          {optionalTime(entry.check_max_time)}
+          {hasCheckInfo &&
+            entry.check_max_time < section?.departure_current_time && (
+              <ArrowUp
+                className={cn("h-4 w-4", hasMultipleChecks && "text-gray-800")}
+              />
+            )}
+          {hasCheckInfo &&
+            entry.check_max_time > section?.arrival_current_time && (
+              <ArrowDown
+                className={cn("h-4 w-4", hasMultipleChecks && "text-gray-800")}
+              />
+            )}
+        </div>
       </td>
       <td className="pr-2">{optionalTime(entry.schedule_train_start_time)}</td>
     </tr>
@@ -312,14 +359,32 @@ function CheckDataBySection({
     const cd = checkData.sections[i];
     const ld = loadData.edges[i];
 
+    const departureDelayed =
+      cd.departure_current_time > cd.departure_schedule_time;
+    const arrivalDelayed = cd.arrival_current_time > cd.arrival_schedule_time;
+
     sectionSummary.push(
       <tr key={i}>
         <td className="pr-2">{cd.from.name}</td>
-        <td className="pr-2">{formatDateTime(cd.departure_schedule_time)}</td>
+        <td className="flex gap-1 pr-2">
+          <span>{formatDateTime(cd.departure_schedule_time)}</span>
+          <span
+            className={cn(departureDelayed ? "text-red-600" : "text-green-600")}
+          >
+            {formatTime(cd.departure_current_time)}
+          </span>
+        </td>
         <td className="pr-2">{cd.to.name}</td>
-        <td className="pr-2">{formatDateTime(cd.arrival_schedule_time)}</td>
+        <td className="flex gap-1 pr-2">
+          <span>{formatDateTime(cd.arrival_schedule_time)}</span>
+          <span
+            className={cn(arrivalDelayed ? "text-red-600" : "text-green-600")}
+          >
+            {formatTime(cd.arrival_current_time)}
+          </span>
+        </td>
         <td className="bg-red-100 pr-2 text-center">{cd.total_group_count}</td>
-        <td className="bg-red-100 pr-2 text-center">
+        <td className="bg-red-100 pr-2 text-center font-semibold">
           {cd.checked_group_count}
         </td>
         <td className="bg-red-100 pr-2 text-center">
@@ -328,14 +393,24 @@ function CheckDataBySection({
         <td className="bg-red-100 pr-2 text-center">
           {cd.unchecked_uncovered_group_count}
         </td>
-        <td className="bg-red-100 pr-2 text-center">
+        <td className="bg-red-100 pr-2 text-center font-semibold">
           {cd.checked_group_count + cd.unchecked_uncovered_group_count}
+        </td>
+        <td
+          className={cn(
+            "bg-red-100 pr-2 text-center",
+            cd.check_count == 0 && "text-red-600",
+          )}
+        >
+          {cd.check_count}
         </td>
         <td className="bg-blue-100 pr-2 text-center">
           {ld.expected_passengers}
         </td>
         <td className="bg-blue-100 pr-2 text-center">{ld.dist.q5}</td>
-        <td className="bg-blue-100 pr-2 text-center">{ld.dist.q50}</td>
+        <td className="bg-blue-100 pr-2 text-center font-semibold">
+          {ld.dist.q50}
+        </td>
         <td className="bg-blue-100 pr-2 text-center">{ld.dist.q95}</td>
         <td className="bg-orange-100 pr-2 text-center">
           {formatFactor(ld.dist.q50 / cd.checked_group_count)}
@@ -368,7 +443,7 @@ function CheckDataBySection({
               {formatDateTime(ld.arrival_schedule_time)})
             </span>
           </div>
-          <CheckEntries entries={filteredEntries} />
+          <CheckEntries entries={filteredEntries} section={cd} />
         </details>,
       );
     }
@@ -387,7 +462,7 @@ function CheckDataBySection({
               <th colSpan={4} className={thTopClass}>
                 Fahrtabschnitt
               </th>
-              <th colSpan={5} className={cn(thTopClass, "bg-red-100")}>
+              <th colSpan={6} className={cn(thTopClass, "bg-red-100")}>
                 Zähldaten (Tickets!)
               </th>
               <th colSpan={4} className={cn(thTopClass, "bg-blue-100")}>
@@ -404,11 +479,42 @@ function CheckDataBySection({
               <th className={thClass} colSpan={2}>
                 Nach
               </th>
-              <th className={cn(thClass, "bg-red-100")}>Eintr.</th>
-              <th className={cn(thClass, "bg-red-100")}>Ktr.</th>
-              <th className={cn(thClass, "bg-red-100")}>NK A</th>
-              <th className={cn(thClass, "bg-red-100")}>NK NA</th>
-              <th className={cn(thClass, "bg-red-100")}>K + NA</th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Anzahl der Einträge in den Zähldaten"
+              >
+                Eintr.
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Einträge mit Kontrolle oder Check-In"
+              >
+                Ktr.
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Nicht kontrolliert, abgedeckt"
+              >
+                NK A
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Nicht kontrolliert, nicht abgedeckt"
+              >
+                NK NA
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Kontrolliert + Nicht abgedeckt"
+              >
+                K + NA
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Anzahl kontrollierte Einträge in diesem Abschnitt"
+              >
+                K.i.A.
+              </th>
               <th className={cn(thClass, "bg-blue-100")}>Plan</th>
               <th className={cn(thClass, "bg-blue-100")}>5 %</th>
               <th className={cn(thClass, "bg-blue-100")}>50 %</th>
@@ -425,6 +531,20 @@ function CheckDataBySection({
     </div>
   );
 }
+
+const REF_COLORS = [
+  "bg-red-700",
+  "bg-blue-700",
+  "bg-green-700",
+  "bg-amber-700",
+  "bg-teal-700",
+  "bg-purple-700",
+  "bg-pink-700",
+  "bg-orange-700",
+  "bg-lime-700",
+];
+
+const TRIP_COLORS = REF_COLORS.toReversed();
 
 interface OrderCheckDataCardProps {
   entryRef: number;
@@ -483,10 +603,6 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
   return (
     <div className="text-left text-base">
       <div className="mb-4 flex gap-4 font-semibold">
-        <div className="flex items-center gap-2">
-          <BadgeIcon index={refs.indexOf(entryRef)} />
-          <span>PK {entryRef}</span>
-        </div>
         <span>Auftrag {orderId}</span>
       </div>
       <div className="flex flex-col gap-6">
@@ -494,7 +610,7 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
           <div key={entry.ref} className="flex flex-col gap-1">
             <div className="flex items-center gap-2 border-b border-b-gray-500">
               <span className="flex min-w-36 items-center gap-2">
-                <BadgeIcon index={refs.indexOf(entry.ref)} />
+                <ColorDot index={refs.indexOf(entry.ref)} colors={REF_COLORS} />
                 <span>PK {entry.ref}</span>
               </span>
               <span className="min-w-5">
@@ -512,6 +628,16 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
               <span>
                 Zug Start: {optionalTime(entry.schedule_train_start_time)}
               </span>
+              <div
+                className="flex grow items-center justify-end gap-2"
+                title={entry.trip_id}
+              >
+                <span>Trip</span>
+                <ColorDot
+                  index={trips.indexOf(entry.trip_id)}
+                  colors={TRIP_COLORS}
+                />
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <BoolProperty value={entry.planned_train}>Planmäßig</BoolProperty>
@@ -553,20 +679,13 @@ function OrderCheckDataCard({ entryRef, orderId }: OrderCheckDataCardProps) {
                 {` (${entry.check_count}x)`}
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <span>Trip:</span>
-              {entry.trip_id != "" && (
-                <BadgeIcon
-                  index={trips.indexOf(entry.trip_id)}
-                  iconClass="fill-blue-600 text-blue-800"
-                />
-              )}
-              <span>{entry.trip_id || "unbekannt"}</span>
-            </div>
             {entry.planned_trip_ref != 0 && (
               <div className="flex items-center gap-2">
                 <span>Planzug:</span>
-                <BadgeIcon index={refs.indexOf(entry.planned_trip_ref)} />
+                <ColorDot
+                  index={refs.indexOf(entry.planned_trip_ref)}
+                  colors={REF_COLORS}
+                />
                 <span>PK {entry.planned_trip_ref}</span>
               </div>
             )}
@@ -621,7 +740,7 @@ function BoolProperty({ value, children }: BoolPropertyProps) {
     <div
       className={cn(
         "flex items-center gap-1",
-        value ? "text-gray-900" : "text-gray-500",
+        value ? "text-gray-900" : "text-gray-300",
       )}
     >
       {value ? (
@@ -634,30 +753,27 @@ function BoolProperty({ value, children }: BoolPropertyProps) {
   );
 }
 
-interface BadgeIconProps {
+interface ColorDotProps {
   index: number;
-  iconClass?: string;
-  numberClass?: string;
+  colors: string[];
+  unknownColor?: string;
 }
 
-function BadgeIcon({
+function ColorDot({
   index,
-  iconClass = "",
-  numberClass = "",
-}: BadgeIconProps) {
+  colors,
+  unknownColor = "bg-gray-700",
+}: ColorDotProps) {
+  const color = index >= 0 ? colors[index % colors.length] : unknownColor;
+  const label = index >= 0 ? `${index + 1}` : "?";
   return (
-    <span className="relative h-5 w-5">
-      <Badge
-        className={cn("z-0 h-5 w-5 fill-red-600 text-red-800", iconClass)}
-      />
-      <span
-        className={cn(
-          "absolute left-0 top-0 z-10 flex h-full w-full items-center justify-center text-xs text-white",
-          numberClass,
-        )}
-      >
-        {index + 1}
-      </span>
+    <span
+      className={cn(
+        "flex h-5 w-5 items-center justify-center rounded-full text-xs text-white",
+        color,
+      )}
+    >
+      {label}
     </span>
   );
 }

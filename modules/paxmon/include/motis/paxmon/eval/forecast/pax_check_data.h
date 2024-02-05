@@ -31,11 +31,7 @@ enum class leg_status : std::uint8_t {
   NOT_CHECKED_NOT_COVERED
 };
 
-enum class travel_direction : std::uint8_t {
-  UNKNOWN,
-  OUTWARD,
-  RETURN
-};
+enum class travel_direction : std::uint8_t { UNKNOWN, OUTWARD, RETURN };
 
 struct pax_check_entry {
   [[nodiscard]] inline bool has_leg_info() const {
@@ -54,6 +50,33 @@ struct pax_check_entry {
 
   [[nodiscard]] inline bool has_schedule_train_start_time() const {
     return schedule_train_start_time_ != INVALID_TIME;
+  }
+
+  [[nodiscard]] inline bool all_checks_between(time const min,
+                                               time const max) const {
+    return has_check_time() && check_min_time_ >= min && check_max_time_ <= max;
+  }
+
+  [[nodiscard]] inline bool maybe_checked_between(time const min,
+                                                  time const max) const {
+    return has_check_time() && check_min_time_ <= max && check_max_time_ >= min;
+  }
+
+  [[nodiscard]] inline bool definitely_checked_between(time const min,
+                                                       time const max) const {
+    return has_check_time() &&
+           ((check_min_time_ >= min && check_min_time_ <= max) ||
+            (check_max_time_ >= min && check_max_time_ <= max));
+  }
+
+  [[nodiscard]] inline bool leg_between(time const min, time const max) const {
+    return has_leg_info() && leg_start_time_ >= min &&
+           leg_destination_time_ <= max;
+  }
+
+  [[nodiscard]] inline bool in_leg(time const dep, time const arr) const {
+    return has_leg_info() && leg_start_time_ <= dep &&
+           leg_destination_time_ >= arr;
   }
 
   std::uint64_t ref_{};

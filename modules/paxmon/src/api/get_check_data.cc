@@ -29,6 +29,7 @@ namespace {
 
 struct section_data {
   std::vector<pax_check_entry const*> check_entries_;
+  std::uint16_t checks_{};
 };
 
 Offset<Station> optional_station(message_creator& mc, schedule const& sched,
@@ -64,6 +65,7 @@ Offset<PaxMonCheckEntry> check_entry_to_fbs(message_creator& mc,
       mc.CreateString(entry.category_.view()), entry.train_nr_,
       entry.planned_trip_ref_);
 }
+
 msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
                        msg_ptr const& msg) {
   auto const req = motis_content(PaxMonCheckDataRequest, msg);
@@ -101,38 +103,37 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
         entry.schedule_train_start_time_ == trp_id_start_time) {
       return true;
     }
-    if (entry.has_check_time() &&
-        entry.check_min_time_ >= min_first_departure &&
-        entry.check_max_time_ <= max_last_arrival) {
-      return true;
-    }
-    if (entry.has_leg_info() && entry.leg_start_time_ >= min_first_departure &&
-        entry.leg_destination_time_ <= max_last_arrival) {
+    if (entry.all_checks_between(min_first_departure, max_last_arrival) ||
+        entry.leg_between(min_first_departure, max_last_arrival)) {
       return true;
     }
     return false;
   };
 
-  auto const is_matching_section = [&](pax_check_entry const& entry,
-                                       access::trip_section const& sec) {
-    auto const schedule_dep = get_schedule_time(sched, sec.ev_key_from());
-    auto const schedule_arr = get_schedule_time(sched, sec.ev_key_to());
+  auto const check_and_add_matching_section =
+      [&](pax_check_entry const& entry, access::trip_section const& sec,
+          std::size_t sec_idx) {
+        auto const schedule_dep = get_schedule_time(sched, sec.ev_key_from());
+        auto const schedule_arr = get_schedule_time(sched, sec.ev_key_to());
+        auto current_dep = sec.lcon().d_time_;
+        auto const current_arr = sec.lcon().a_time_;
 
-    if (entry.has_leg_info() && entry.leg_start_time_ <= schedule_dep &&
-        entry.leg_destination_time_ >= schedule_arr) {
-      return true;
-    }
+        auto const in_leg = entry.in_leg(schedule_dep, schedule_arr);
+        auto const checked =
+            entry.maybe_checked_between(current_dep, current_arr);
+        auto const checked_in_section =
+            entry.definitely_checked_between(current_dep, current_arr);
 
-    auto current_dep = sec.lcon().d_time_;
-    auto const current_arr = sec.lcon().a_time_;
-
-    if (entry.has_check_time() && entry.check_min_time_ <= current_arr &&
-        entry.check_max_time_ >= current_dep) {
-      return true;
-    }
-
-    return false;
-  };
+        if (in_leg || checked) {
+          auto& sd = sec_data.at(sec_idx);
+          sd.check_entries_.emplace_back(&entry);
+          if (checked_in_section &&
+              (entry.check_type_ == check_type::TICKED_CHECKED ||
+               entry.check_type_ == check_type::BOTH)) {
+            ++sd.checks_;
+          }
+        }
+      };
 
   auto con_info = first_trp_section.lcon().full_con_->con_info_;
   auto train_nr = con_info->train_nr_;
@@ -148,10 +149,7 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
           ++matched_entry_count;
 
           for (auto const& [sec_idx, sec] : utl::enumerate(trp_sections)) {
-            if (is_matching_section(entry, sec)) {
-              auto& sd = sec_data.at(sec_idx);
-              sd.check_entries_.emplace_back(&entry);
-            }
+            check_and_add_matching_section(entry, sec, sec_idx);
           }
         } else {
           ++unmatched_entry_count;
@@ -198,7 +196,8 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
         mc.CreateVector(utl::to_vec(sd.check_entries_,
                                     [](auto const& ce) { return ce->ref_; })),
         total_group_count, checked_group_count,
-        unchecked_but_covered_group_count, unchecked_uncovered_group_count));
+        unchecked_but_covered_group_count, unchecked_uncovered_group_count,
+        sd.checks_));
   }
 
   mc.create_and_finish(
