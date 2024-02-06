@@ -58,6 +58,11 @@ const sortOptions: LabeledFilterOption[] = [
   { option: "MaxPaxRange", label: "Züge sortiert nach Unsicherheit" },
   { option: "MaxPax", label: "Züge sortiert nach Anzahl Reisender" },
   { option: "MaxCapacity", label: "Züge sortiert nach Kapazität" },
+  { option: "ExpectedPax", label: "Züge sortiert nach erwarteten Reisenden" },
+  {
+    option: "BiggestDeviation",
+    label: "Züge sortiert nach Abweichung von erwarteten Reisenden",
+  },
 ];
 
 function getFilterTripsRequest(

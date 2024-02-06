@@ -432,7 +432,8 @@ export type PaxMonFilterTripsSortOrder =
   | "EarliestCritical"
   | "MaxPaxRange"
   | "MaxPax"
-  | "MaxCapacity";
+  | "MaxCapacity"
+  | "BiggestDeviation";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
@@ -474,6 +475,7 @@ export interface PaxMonFilteredTripInfo {
   cumulative_excess_pax: number;
   max_load: number;
   max_expected_pax: number;
+  max_deviation: number;
   capacity_status: PaxMonTripCapacityStatus;
   edges: PaxMonEdgeLoadInfo[];
 }
