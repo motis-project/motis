@@ -188,11 +188,24 @@ function CheckEntries({ entries, section }: CheckEntriesProps) {
           {/*<td className={thClass}>Ref</td>*/}
           <th className={cn(thClass, "border-none")}></th>
           <th className={thClass}>Typ</th>
-          <th className={thClass}>#Ktr</th>
-          <th className={thClass}>Plan</th>
-          <th className={thClass}>Ktr</th>
-          <th className={thClass}>Ausf</th>
-          <th className={thClass}>RA Status</th>
+          <th className={thClass} title="Anzahl Reisende">
+            #Rsd
+          </th>
+          <th className={thClass} title="Anzahl Kontrollen">
+            #Ktr
+          </th>
+          <th className={thClass} title="Planmäßig?">
+            Plan
+          </th>
+          <th className={thClass} title="Kontrolliert?">
+            Ktr
+          </th>
+          <th className={thClass} title="Ausfall?">
+            Ausf
+          </th>
+          <th className={thClass} title="Reiseabschnitt-Status">
+            RA Status
+          </th>
           <th className={thClass} colSpan={2}>
             Reiseabschnitt Start
           </th>
@@ -201,8 +214,12 @@ function CheckEntries({ entries, section }: CheckEntriesProps) {
           </th>
           <th className={thClass}>Check-In Start</th>
           <th className={thClass}>Check-In Ziel</th>
-          <th className={thClass}>Ktr Min</th>
-          <th className={thClass}>Ktr Max</th>
+          <th className={thClass} title="Frühester Kontrollzeitpunkt">
+            Ktr Min
+          </th>
+          <th className={thClass} title="Spätester Kontrollzeitpunkt">
+            Ktr Max
+          </th>
           <th className={thClass}>Plan Zug Start</th>
         </tr>
       </thead>
@@ -254,6 +271,7 @@ function CheckEntryRow({ entry, section }: CheckEntryRowProps) {
         </HoverCard>
       </td>
       <td className="pr-2 text-center">{shortCheckType(entry.check_type)}</td>
+      <td className="pr-2 text-center">{entry.passengers}</td>
       <td className="pr-2 text-center">{entry.check_count}</td>
       <td className="pr-2 text-center">{entry.planned_train ? "+" : "-"}</td>
       <td className="pr-2 text-center">{entry.checked_in_train ? "+" : "-"}</td>
@@ -327,6 +345,10 @@ function CheckEntryRow({ entry, section }: CheckEntryRowProps) {
   );
 }
 
+function sqr(x: number) {
+  return x * x;
+}
+
 interface CheckDataBySectionProps {
   checkData: PaxMonCheckDataResponse;
   loadData: PaxMonTripLoadInfo | undefined;
@@ -357,7 +379,16 @@ function CheckDataBySection({
     formatNumber(factor, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
+    }) + "x";
+
+  const formatDiff = (diff: number) =>
+    formatNumber(diff, { signDisplay: "always" });
+
+  let maePlan = 0;
+  let msePlan = 0;
+  let maeQ50 = 0;
+  let mseQ50 = 0;
+  let sectionsWithChecks = 0;
 
   for (let i = 0; i < checkData.sections.length; i++) {
     const cd = checkData.sections[i];
@@ -367,9 +398,20 @@ function CheckDataBySection({
       cd.departure_current_time > cd.departure_schedule_time;
     const arrivalDelayed = cd.arrival_current_time > cd.arrival_schedule_time;
 
+    const diffPlan = ld.expected_passengers - cd.checked_pax_count;
+    const diffQ50 = ld.dist.q50 - cd.checked_pax_count;
+
+    if (cd.check_count != 0) {
+      ++sectionsWithChecks;
+      maePlan += Math.abs(diffPlan);
+      msePlan += sqr(diffPlan);
+      maeQ50 += Math.abs(diffQ50);
+      mseQ50 += sqr(diffQ50);
+    }
+
     sectionSummary.push(
       <tr key={i}>
-        <td className="pr-1">{cd.from.name}</td>
+        <td className="max-w-40 truncate pr-1">{cd.from.name}</td>
         <td className="flex gap-1 px-1">
           <span>{formatDateTime(cd.departure_schedule_time)}</span>
           <span
@@ -378,7 +420,7 @@ function CheckDataBySection({
             {formatTime(cd.departure_current_time)}
           </span>
         </td>
-        <td className="px-1">{cd.to.name}</td>
+        <td className="max-w-40 truncate">{cd.to.name}</td>
         <td className="flex gap-1 px-1">
           <span>{formatDateTime(cd.arrival_schedule_time)}</span>
           <span
@@ -393,26 +435,12 @@ function CheckDataBySection({
             { style: "unit", unit: "minute" },
           )}
         </td>
-        <td className="bg-red-100 px-1 text-center">{cd.total_group_count}</td>
+        <td className="bg-red-100 px-1 text-center">{cd.total_pax_count}</td>
         <td className="bg-red-100 px-1 text-center font-semibold">
-          {cd.checked_group_count}
-        </td>
-        <td className="bg-red-100 px-1 text-center">
-          {cd.unchecked_but_covered_group_count}
-        </td>
-        <td className="bg-red-100 px-1 text-center">
-          {cd.unchecked_uncovered_group_count}
+          {cd.checked_pax_count}
         </td>
         <td className="bg-red-100 px-1 text-center font-semibold">
-          {cd.checked_group_count + cd.unchecked_uncovered_group_count}
-        </td>
-        <td
-          className={cn(
-            "bg-red-100 px-1 text-center",
-            cd.checkin_count == 0 && "text-red-600",
-          )}
-        >
-          {cd.checkin_count}
+          {cd.checked_pax_count + cd.unchecked_uncovered_pax_count}
         </td>
         <td
           className={cn(
@@ -431,21 +459,39 @@ function CheckDataBySection({
         </td>
         <td className="bg-blue-100 px-1 text-center">{ld.dist.q95}</td>
         <td className="bg-yellow-100 px-1 text-center">
-          {formatFactor(ld.expected_passengers / cd.checked_group_count)}
+          {formatDiff(ld.expected_passengers - cd.checked_pax_count)}
         </td>
         <td className="bg-yellow-100 px-1 text-center">
+          {formatFactor(ld.expected_passengers / cd.checked_pax_count)}
+        </td>
+        <td className="bg-yellow-200 px-1 text-center">
+          {formatDiff(
+            ld.expected_passengers -
+              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
+          )}
+        </td>
+        <td className="bg-yellow-200 px-1 text-center">
           {formatFactor(
             ld.expected_passengers /
-              (cd.checked_group_count + cd.unchecked_uncovered_group_count),
+              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
           )}
         </td>
         <td className="bg-green-100 px-1 text-center">
-          {formatFactor(ld.dist.q50 / cd.checked_group_count)}
+          {formatDiff(ld.dist.q50 - cd.checked_pax_count)}
         </td>
         <td className="bg-green-100 px-1 text-center">
+          {formatFactor(ld.dist.q50 / cd.checked_pax_count)}
+        </td>
+        <td className="bg-green-200 px-1 text-center">
+          {formatDiff(
+            ld.dist.q50 -
+              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
+          )}
+        </td>
+        <td className="bg-green-200 px-1 text-center">
           {formatFactor(
             ld.dist.q50 /
-              (cd.checked_group_count + cd.unchecked_uncovered_group_count),
+              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
           )}
         </td>
 
@@ -484,6 +530,13 @@ function CheckDataBySection({
     }
   }
 
+  if (sectionsWithChecks != 0) {
+    maePlan /= sectionsWithChecks;
+    msePlan /= sectionsWithChecks;
+    maeQ50 /= sectionsWithChecks;
+    mseQ50 /= sectionsWithChecks;
+  }
+
   const thClass = "py-1 px-1 border-b-2 border-db-cool-gray-300 font-semibold";
   const thTopClass = "font-semibold px-1";
 
@@ -497,16 +550,28 @@ function CheckDataBySection({
               <th colSpan={5} className={thTopClass}>
                 Fahrtabschnitt
               </th>
-              <th colSpan={7} className={cn(thTopClass, "bg-red-100")}>
-                Zähldaten (Tickets!)
+              <th colSpan={4} className={cn(thTopClass, "bg-red-100")}>
+                Zähldaten
               </th>
               <th colSpan={4} className={cn(thTopClass, "bg-blue-100")}>
                 RSL-Prognose (Reisende)
               </th>
-              <th colSpan={2} className={cn(thTopClass, "bg-yellow-100")}>
+              <th
+                colSpan={4}
+                className={cn(
+                  thTopClass,
+                  "bg-gradient-to-r from-yellow-100 to-yellow-200",
+                )}
+              >
                 Vergleich Plan
               </th>
-              <th colSpan={2} className={cn(thTopClass, "bg-green-100")}>
+              <th
+                colSpan={4}
+                className={cn(
+                  thTopClass,
+                  "bg-gradient-to-r from-green-100 to-green-200",
+                )}
+              >
                 Vergleich 50 %
               </th>
             </tr>
@@ -520,39 +585,21 @@ function CheckDataBySection({
               <th className={thClass}>Dauer</th>
               <th
                 className={cn(thClass, "bg-red-100")}
-                title="Anzahl der Einträge in den Zähldaten"
+                title="Anzahl der Reisende in den Zähldaten (alle Einträge)"
               >
                 Eintr.
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
-                title="Einträge mit Kontrolle oder Check-In"
+                title="Reisende mit Kontrolle oder Check-In"
               >
                 K
-              </th>
-              <th
-                className={cn(thClass, "bg-red-100")}
-                title="Nicht kontrolliert, abgedeckt"
-              >
-                NK A
-              </th>
-              <th
-                className={cn(thClass, "bg-red-100")}
-                title="Nicht kontrolliert, nicht abgedeckt"
-              >
-                NK NA
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
                 title="Kontrolliert + Nicht abgedeckt"
               >
                 K + NA
-              </th>
-              <th
-                className={cn(thClass, "bg-red-100")}
-                title="Anzahl Check-in-Einträge in diesem Abschnitt"
-              >
-                CI.i.A.
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
@@ -564,17 +611,49 @@ function CheckDataBySection({
               <th className={cn(thClass, "bg-blue-100")}>5 %</th>
               <th className={cn(thClass, "bg-blue-100")}>50 %</th>
               <th className={cn(thClass, "bg-blue-100")}>95 %</th>
-              <th className={cn(thClass, "bg-yellow-100")}>K</th>
-              <th className={cn(thClass, "bg-yellow-100")}>K+NA</th>
-              <th className={cn(thClass, "bg-green-100")}>K</th>
-              <th className={cn(thClass, "bg-green-100")}>K+NA</th>
+              <th colSpan={2} className={cn(thClass, "bg-yellow-100")}>
+                K
+              </th>
+              <th colSpan={2} className={cn(thClass, "bg-yellow-200")}>
+                K+NA
+              </th>
+              <th colSpan={2} className={cn(thClass, "bg-green-100")}>
+                K
+              </th>
+              <th colSpan={2} className={cn(thClass, "bg-green-200")}>
+                K+NA
+              </th>
               <th></th>
             </tr>
           </thead>
           <tbody>{sectionSummary}</tbody>
         </table>
+        {sectionsWithChecks != 0 && (
+          <div className="mt-4">
+            <table>
+              <thead>
+                <tr className="text-center">
+                  <th className={cn(thClass, "text-left")}>Vergleich</th>
+                  <th className={cn(thClass)}>MAE</th>
+                  <th className={cn(thClass)}>MSE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="pr-2">Plan vs. Kontrolliert</td>
+                  <td className="px-2">{formatNumber(Math.round(maePlan))}</td>
+                  <td className="px-2">{formatNumber(Math.round(msePlan))}</td>
+                </tr>
+                <tr>
+                  <td className="pr-2">50 % Prognose vs. Kontrolliert</td>
+                  <td className="px-2">{formatNumber(Math.round(maeQ50))}</td>
+                  <td className="px-2">{formatNumber(Math.round(mseQ50))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
-
       {sectionDetails}
     </div>
   );

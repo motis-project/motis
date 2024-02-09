@@ -88,6 +88,7 @@ struct pax_check_entry {
   std::uint8_t check_count_{};
   leg_status leg_status_{};
   travel_direction direction_{};
+
   bool planned_train_{};
   bool checked_in_train_{};
   bool canceled_{};
@@ -105,6 +106,8 @@ struct pax_check_entry {
   time check_max_time_{INVALID_TIME};
 
   time schedule_train_start_time_{INVALID_TIME};
+
+  std::uint16_t passengers_{};
 
   mcd::string category_;
   std::uint32_t train_nr_{};

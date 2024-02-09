@@ -1241,6 +1241,7 @@ export interface PaxMonCheckEntry {
   ref: number;
   order_id: string;
   trip_id: string;
+  passengers: number;
   check_type: PaxMonCheckType;
   check_count: number;
   leg_status: PaxMonCheckLegStatus;
@@ -1272,9 +1273,13 @@ export interface PaxMonCheckSectionData {
   arrival_current_time: number;
   entry_refs: number[];
   total_group_count: number;
+  total_pax_count: number;
   checked_group_count: number;
+  checked_pax_count: number;
   unchecked_but_covered_group_count: number;
+  unchecked_but_covered_pax_count: number;
   unchecked_uncovered_group_count: number;
+  unchecked_uncovered_pax_count: number;
   check_count: number;
   checkin_count: number;
 }

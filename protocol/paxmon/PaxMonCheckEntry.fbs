@@ -29,6 +29,7 @@ table PaxMonCheckEntry {
 
   order_id: string;
   trip_id: string;
+  passengers: uint;
 
   check_type: PaxMonCheckType;
   check_count: uint;

@@ -25,6 +25,8 @@ struct csv_row {
   utl::csv_col<utl::cstr, UTL_NAME("order_id")> order_id_;
   utl::csv_col<utl::cstr, UTL_NAME("trip_id")> trip_id_;
 
+  utl::csv_col<std::uint16_t, UTL_NAME("passengers")> passengers_;
+
   utl::csv_col<utl::cstr, UTL_NAME("min_date")> min_date_;
   utl::csv_col<utl::cstr, UTL_NAME("max_date")> max_date_;
 
@@ -124,6 +126,7 @@ void load_pax_check_data(schedule const& sched, std::string const& filename,
                                                  row.check_max_time_.val()),
             .schedule_train_start_time_ = unix_to_motistime(
                 sched.schedule_begin_, row.schedule_train_start_time_.val()),
+            .passengers_ = row.passengers_.val(),
             .category_ = key.category_,
             .train_nr_ = key.train_nr_,
             .planned_trip_ref_ = row.planned_trip_ref_.val()});

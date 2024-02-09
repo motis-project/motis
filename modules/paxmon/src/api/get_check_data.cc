@@ -49,7 +49,7 @@ Offset<PaxMonCheckEntry> check_entry_to_fbs(message_creator& mc,
                                             pax_check_entry const& entry) {
   return CreatePaxMonCheckEntry(
       mc, entry.ref_, mc.CreateString(entry.order_id_.view()),
-      mc.CreateString(entry.trip_id_.view()),
+      mc.CreateString(entry.trip_id_.view()), entry.passengers_,
       static_cast<PaxMonCheckType>(entry.check_type_), entry.check_count_,
       static_cast<PaxMonCheckLegStatus>(entry.leg_status_),
       static_cast<PaxMonCheckDirection>(entry.direction_), entry.planned_train_,
@@ -175,19 +175,27 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
   for (auto const& [sec_idx, sec] : utl::enumerate(trp_sections)) {
     auto const& sd = sec_data.at(sec_idx);
     auto total_group_count = 0U;
+    auto total_pax_count = 0U;
     auto checked_group_count = 0U;
+    auto checked_pax_count = 0U;
     auto unchecked_but_covered_group_count = 0U;
+    auto unchecked_but_covered_pax_count = 0U;
     auto unchecked_uncovered_group_count = 0U;
+    auto unchecked_uncovered_pax_count = 0U;
 
     for (auto const* ce : sd.check_entries_) {
       ++total_group_count;
+      total_pax_count += ce->passengers_;
       if (ce->check_type_ != check_type::NOT_CHECKED) {
         ++checked_group_count;
+        checked_pax_count += ce->passengers_;
       } else {
         if (ce->leg_status_ == leg_status::NOT_CHECKED_COVERED) {
           ++unchecked_but_covered_group_count;
+          unchecked_but_covered_pax_count += ce->passengers_;
         } else if (ce->leg_status_ == leg_status::NOT_CHECKED_NOT_COVERED) {
           ++unchecked_uncovered_group_count;
+          unchecked_uncovered_pax_count += ce->passengers_;
         }
       }
     }
@@ -201,9 +209,10 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
         motis_to_unixtime(sched, sec.lcon().a_time_),
         mc.CreateVector(utl::to_vec(sd.check_entries_,
                                     [](auto const& ce) { return ce->ref_; })),
-        total_group_count, checked_group_count,
-        unchecked_but_covered_group_count, unchecked_uncovered_group_count,
-        sd.checks_, sd.checkins_));
+        total_group_count, total_pax_count, checked_group_count,
+        checked_pax_count, unchecked_but_covered_group_count,
+        unchecked_but_covered_pax_count, unchecked_uncovered_group_count,
+        unchecked_uncovered_pax_count, sd.checks_, sd.checkins_));
   }
 
   mc.create_and_finish(
