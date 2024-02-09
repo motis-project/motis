@@ -13,7 +13,8 @@ enum PaxMonFilterTripsSortOrder : byte {
   MaxPaxRange, // trips with highest max - min pax first
   MaxPax, // trips with most passengers first
   MaxCapacity, // trips with highest capacity first
-  BiggestDeviation // trips with biggest deviation (forecast vs. expected) first
+  BiggestDeviation, // trips with biggest deviation (forecast vs. expected) first
+  SmallestDeviation // trips with smallest deviation (forecast vs. expected) first
 }
 
 table PaxMonFilterTripsRequest {

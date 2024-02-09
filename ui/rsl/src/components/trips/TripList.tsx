@@ -61,7 +61,11 @@ const sortOptions: LabeledFilterOption[] = [
   { option: "ExpectedPax", label: "Züge sortiert nach erwarteten Reisenden" },
   {
     option: "BiggestDeviation",
-    label: "Züge sortiert nach Abweichung von erwarteten Reisenden",
+    label: "Züge sortiert nach größter Abweichung",
+  },
+  {
+    option: "SmallestDeviation",
+    label: "Züge sortiert nach geringster Abweichung",
   },
 ];
 

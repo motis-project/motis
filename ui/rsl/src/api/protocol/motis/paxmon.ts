@@ -433,7 +433,8 @@ export type PaxMonFilterTripsSortOrder =
   | "MaxPaxRange"
   | "MaxPax"
   | "MaxCapacity"
-  | "BiggestDeviation";
+  | "BiggestDeviation"
+  | "SmallestDeviation";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {

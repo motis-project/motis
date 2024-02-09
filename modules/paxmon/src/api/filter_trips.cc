@@ -295,6 +295,15 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                          return std::tie(lhs.max_deviation_, lhs.max_load_) >
                                 std::tie(rhs.max_deviation_, rhs.max_load_);
                        });
+    case PaxMonFilterTripsSortOrder_SmallestDeviation:
+      std::stable_sort(
+          begin(selected_trips), end(selected_trips),
+          [](trip_info const& lhs, trip_info const& rhs) {
+            auto const lhs_dev = -static_cast<int>(lhs.max_deviation_);
+            auto const rhs_dev = -static_cast<int>(rhs.max_deviation_);
+            return std::tie(lhs_dev, lhs.max_load_) >
+                   std::tie(rhs_dev, rhs.max_load_);
+          });
       break;
     default: break;
   }

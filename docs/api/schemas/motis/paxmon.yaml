@@ -797,6 +797,8 @@ PaxMonFilteredTripInfo:
       description: TODO
     capacity_status:
       description: TODO
+    max_deviation:
+      description: TODO
 PaxMonFilterTripsResponse:
   description: TODO
   fields:
@@ -2169,6 +2171,8 @@ PaxMonCheckEntry:
       description: TODO
     planned_trip_ref:
       description: TODO
+    passengers:
+      description: TODO
 PaxMonCheckDataResponse:
   description: TODO
   fields:
@@ -2208,6 +2212,18 @@ PaxMonCheckSectionData:
     unchecked_but_covered_group_count:
       description: TODO
     unchecked_uncovered_group_count:
+      description: TODO
+    check_count:
+      description: TODO
+    checkin_count:
+      description: TODO
+    total_pax_count:
+      description: TODO
+    checked_pax_count:
+      description: TODO
+    unchecked_but_covered_pax_count:
+      description: TODO
+    unchecked_uncovered_pax_count:
       description: TODO
 PaxMonCheckDataByOrderRequest:
   description: TODO
