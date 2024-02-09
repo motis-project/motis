@@ -100,6 +100,9 @@ paxmon::paxmon() : module("Passenger Monitoring", "paxmon"), data_{*this} {
   param(journey_input_settings_.max_station_wait_time_, "max_station_wait_time",
         "maximum wait time at a station, if exceeded the journey is split into "
         "separate journeys (minutes, set to 0 to disable)");
+  param(
+      journey_input_settings_.type_filter_, "journey_type_filter",
+      "only load specific journey types (empty for all, file format specific)");
 
   param(generated_capacity_file_, "generated_capacity_file",
         "output for generated capacities");

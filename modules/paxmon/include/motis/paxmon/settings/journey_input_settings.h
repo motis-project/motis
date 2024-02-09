@@ -17,6 +17,8 @@ struct journey_input_settings {
   unsigned split_groups_seed_{0};
 
   unsigned max_station_wait_time_{0};  // minutes
+
+  std::string type_filter_;
 };
 
 }  // namespace motis::paxmon::settings
