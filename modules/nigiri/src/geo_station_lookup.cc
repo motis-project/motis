@@ -31,7 +31,7 @@ motis::module::msg_ptr geo_station_lookup(station_lookup const& index,
                         mc,
                         mc.CreateString(
                             fmt::format("{}{}", station.tag_, station.id_)),
-                        mc.CreateString(station.id_), &pos);
+                        mc.CreateString(station.name_), &pos);
                   })))
           .Union());
   return mm::make_msg(mc);
