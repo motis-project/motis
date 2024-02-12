@@ -27,7 +27,13 @@ void add_status(std::string const& tag,
 
   auto const& in = get_array(get_obj(doc, "data"), "stations");
   for (auto const& x : in) {
-    auto& station = stations.at(tag + std::string{get_str(x, "station_id")});
+    auto const station_id = x.FindMember("station_id");
+    if (station_id == x.MemberEnd() || !station_id->value.IsString()) {
+      continue;
+    }
+    auto& station =
+        stations.at(tag + std::string{station_id->value.GetString(),
+                                      station_id->value.GetStringLength()});
     if (auto const it = x.FindMember("num_bikes_available");
         it != x.MemberEnd() && it->value.IsNumber()) {
       station.bikes_available_ = it->value.GetUint();
