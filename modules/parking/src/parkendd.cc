@@ -49,7 +49,17 @@ std::vector<api_parking_lot> parse(std::string const& json) {
 
   utl::verify(doc.IsObject(), "no root object");
   auto const& lots = get_array(doc, "lots");
-  return utl::to_vec(lots, [](auto const& lot) { return parse_lot(lot); });
+
+  std::vector<api_parking_lot> result;
+  result.reserve(lots.Size());
+  for (auto const& lot : lots) {
+    try {
+      result.push_back(parse_lot(lot));
+    } catch (...) {
+      continue;
+    }
+  }
+  return result;
 }
 
 parking_lot to_parking_lot(api_parking_lot const& apl) {
