@@ -1,6 +1,6 @@
 InputStation:
   description: |
-    A input station is a station from user input. If the user used the
+    An input station is a station from user input. If the user used the
     auto-completion function and the station ID is available, then the `id`
     field is used to resolve the station. If this is not the case (the user just
     entered a string), the `name` field is filled with a (possibly incomplete or
