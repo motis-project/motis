@@ -15,7 +15,7 @@ RailViz.GBFS = (function () {
         tilesEndpoint = _tilesEndpoint;
 
         let loaded = 0;
-        map.loadImage(`${tilesEndpoint}img/bike_marker.png`, (error, image) => {
+        map.loadImage("img/bike_marker.png", (error, image) => {
             if (error) {
                 throw error;
             }
@@ -30,7 +30,7 @@ RailViz.GBFS = (function () {
             }
         });
 
-        map.loadImage(`${tilesEndpoint}img/car_marker.png`, (error, image) => {
+        map.loadImage("img/car_marker.png", (error, image) => {
             if (error) {
                 throw error;
             }
