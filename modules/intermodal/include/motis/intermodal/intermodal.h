@@ -26,6 +26,7 @@ private:
 
   std::string router_{"routing"};
   bool revise_{false};
+  unsigned timeout_{0};
   ppr_profiles ppr_profiles_;
 };
 

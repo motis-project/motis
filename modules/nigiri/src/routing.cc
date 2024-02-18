@@ -129,16 +129,18 @@ std::vector<n::routing::offset> get_offsets(
 template <n::direction SearchDir>
 auto run_search(n::routing::search_state& search_state,
                 n::routing::raptor_state& raptor_state, n::timetable const& tt,
-                n::rt_timetable const* rtt, n::routing::query&& q) {
+                n::rt_timetable const* rtt,
+                std::optional<std::chrono::seconds> timeout,
+                n::routing::query&& q) {
   if (rtt == nullptr) {
     using algo_t = n::routing::raptor<SearchDir, false>;
-    return n::routing::search<SearchDir, algo_t>{tt, nullptr, search_state,
-                                                 raptor_state, std::move(q)}
+    return n::routing::search<SearchDir, algo_t>{
+        tt, nullptr, search_state, raptor_state, std::move(q), timeout}
         .execute();
   } else {
     using algo_t = n::routing::raptor<SearchDir, true>;
-    return n::routing::search<SearchDir, algo_t>{tt, rtt, search_state,
-                                                 raptor_state, std::move(q)}
+    return n::routing::search<SearchDir, algo_t>{
+        tt, rtt, search_state, raptor_state, std::move(q), timeout}
         .execute();
   }
 }
@@ -155,6 +157,13 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   auto extend_interval_later = false;
   auto start_time = n::routing::start_time_t{};
   auto start_station = n::location_idx_t::invalid();
+  auto timeout = [&]() -> std::optional<std::chrono::seconds> {
+    if (req->timeout() == 0) {
+      return std::nullopt;
+    } else {
+      return {std::chrono::seconds(req->timeout())};
+    }
+  }();
 
   if (req->start_type() == routing::Start_PretripStart) {
     auto const start =
@@ -309,14 +318,14 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   n::routing::raptor_stats raptor_stats;
   if (req->search_dir() == SearchDir_Forward) {
     auto const r = run_search<n::direction::kForward>(
-        *search_state, *raptor_state, tt, rtt, std::move(q));
+        *search_state, *raptor_state, tt, rtt, timeout, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
     search_interval = r.interval_;
   } else {
     auto const r = run_search<n::direction::kBackward>(
-        *search_state, *raptor_state, tt, rtt, std::move(q));
+        *search_state, *raptor_state, tt, rtt, timeout, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
