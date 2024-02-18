@@ -37,8 +37,8 @@ stop_id,stop_name,stop_lat,stop_lon,location_type,parent_station
 "8503000:0:9","Zürich HB","47.3782796148195","8.53824423161787","","Parent8503000"
 
 # routes.txt
-route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
-"91-1V-Y-j23-1","11","RJX","","RJX","102"
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
+"91-1V-Y-j23-1","11","RJX","","RJX","102",,aB0020,FfFfFf
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id,block_id
@@ -90,4 +90,11 @@ TEST(nigiri, dst_test) {
   auto const et =
       to_extern_trip(res->connections()->Get(0)->trips()->Get(0)->id());
   EXPECT_TRUE(mn::resolve_run(tags, tt, et).valid());
+
+  auto const move = res->connections()->Get(0)->transports()->Get(0);
+  ASSERT_EQ(move->move_type(), Move_Transport);
+  auto const transport = static_cast<const Transport*>(move->move());
+  EXPECT_TRUE(transport->route_color());
+  ASSERT_EQ(transport->route_color()->str(), "ab0020");
+  ASSERT_EQ(transport->route_text_color()->str(), "ffffff");
 }

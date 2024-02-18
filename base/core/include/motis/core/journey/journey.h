@@ -43,6 +43,8 @@ struct journey {
     unsigned mumo_price_{0};
     unsigned mumo_accessibility_{0};
     std::string mumo_type_;
+    uint32_t route_color_{0};
+    uint32_t route_text_color_{0};
   };
 
   struct trip {
