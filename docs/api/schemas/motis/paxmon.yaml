@@ -710,27 +710,40 @@ PaxMonFilterTripsRequest:
         Note that if `include_edges` is set to true and the trip is included,
         all sections (even those in the past) are included in the result in any
         case.
+      examples:
+        - false
     include_load_threshold:
       description: >
         Only include trips that have at least one section with a load >= this
         value. Set to 0 to disable the filter. Setting this value to 0.5 would
         only include trips where at least one section has 50% or higher load.
+      examples:
+        - 0.0
     critical_load_threshold:
       description: >
         Sections with load >= this value are counted as critical sections in the
         result. Setting this value to 1.0 would count all sections with a load
         of 100% or higher as critical.
+      examples:
+        - 1.0
     crowded_load_threshold:
       description: >
         Sections with load >= this value are counted as crowded sections in the
         result. Setting this value to 0.8 would count all sections with a load
         of 80% or higher as crowded.
+      examples:
+        - 0.8
     include_edges:
       description: Whether edge load information should be included in the response.
+      examples:
+        - false
     sort_by:
       description: TODO
     max_results:
-      description: The maximum number of trips to return.
+      description: >
+        The maximum number of trips to return. Set to `0` to return all trips.
+      examples:
+        - 100
     skip_first:
       description: |
         Set to `0` if not using pagination.
@@ -740,6 +753,8 @@ PaxMonFilterTripsRequest:
           to the desired page size (e.g. `100`).
         - For the next requests, set `skip_first` to the `next_skip` value
           of the previous response.
+      examples:
+        - 0
     filter_by_time:
       description: TODO
     filter_interval:
@@ -748,24 +763,53 @@ PaxMonFilterTripsRequest:
       description: >
         Set to true to only include trips matching one of the train numbers in
         `filter_train_nrs`.
+      examples:
+        - false
     filter_train_nrs:
       description: TODO
+      examples:
+        - []
     filter_by_service_class:
       description: >
         Set to true to only include trips matching one of the service classes in
         `filter_service_classes`.
+      examples:
+        - false
     filter_service_classes:
-      description: TODO
+      description: |
+        If `filter_by_service_class` is set to `true`, only trips that belong
+        to one of the listed service classes are included.
+
+        Currently available service classes are:
+        - `0`: Airplanes
+        - `1`: High speed rail (e.g. ICE, TGV, RJ, ECE)
+        - `2`: Long range trains (e.g. IC, EC)
+        - `3`: Long range bus
+        - `4`: Night trains
+        - `5`: Fast local trains (e.g. RE)
+        - `6`: Local trains (e.g. RB)
+        - `7`: Metro (e.g. S)
+        - `8`: Subway (e.g. U)
+        - `9`: Tram
+        - `10`: Bus
+        - `11`: Ships
+        - `12`: Other
+      examples:
+        - [ 1, 2 ]
     filter_by_capacity_status:
       description: >
         Set to true to activate the `filter_has_trip_formation` and
         `filter_has_capacity_for_all_sections` filters.
+      examples:
+        - false
     filter_has_trip_formation:
       description: |
         Only active if `filter_by_capacity_status` is set to true.
 
         - If true, only trips that have formation information are included.
         - If false, only trips that don't have formation information are included.
+      examples:
+        - false
     filter_has_capacity_for_all_sections:
       description: |
         Only active if `filter_by_capacity_status` is set to true.
@@ -774,6 +818,8 @@ PaxMonFilterTripsRequest:
           are included.
         - If false, only trips that don't have capacity information for all
           sections are included.
+      examples:
+        - false
 PaxMonFilteredTripInfo:
   description: TODO
   fields:
