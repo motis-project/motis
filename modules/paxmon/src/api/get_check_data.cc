@@ -161,7 +161,8 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
           ++unmatched_entry_count;
         }
       }
-    } else {
+    }
+    if (matched_entry_count == 0) {
       con_info = con_info->merged_with_;
       if (con_info != nullptr) {
         train_nr = con_info->train_nr_;
