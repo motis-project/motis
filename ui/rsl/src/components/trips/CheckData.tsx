@@ -465,28 +465,28 @@ function CheckDataBySection({
         </td>
         <td className="bg-blue-100 px-1 text-center">{ld.dist.q95}</td>
         <td className="bg-yellow-100 px-1 text-center">
-          {formatDiff(ld.expected_passengers - cd.min_pax_count)}
+          {formatDiff(ld.expected_passengers - cd.avg_pax_count)}
         </td>
         <td className="bg-yellow-100 px-1 text-center">
-          {formatFactor(ld.expected_passengers / cd.min_pax_count)}
-        </td>
-        <td className="bg-yellow-200 px-1 text-center">
-          {formatDiff(ld.expected_passengers - cd.max_pax_count)}
-        </td>
-        <td className="bg-yellow-200 px-1 text-center">
-          {formatFactor(ld.expected_passengers / cd.max_pax_count)}
+          {formatFactor(ld.expected_passengers / cd.avg_pax_count)}
         </td>
         <td className="bg-green-100 px-1 text-center">
-          {formatDiff(ld.dist.q50 - cd.min_pax_count)}
+          {formatDiff(ld.dist.q5 - cd.min_pax_count)}
         </td>
         <td className="bg-green-100 px-1 text-center">
-          {formatFactor(ld.dist.q50 / cd.min_pax_count)}
+          {formatFactor(ld.dist.q5 / cd.min_pax_count)}
         </td>
         <td className="bg-green-200 px-1 text-center">
-          {formatDiff(ld.dist.q50 - cd.max_pax_count)}
+          {formatDiff(ld.dist.q50 - cd.avg_pax_count)}
         </td>
         <td className="bg-green-200 px-1 text-center">
-          {formatFactor(ld.dist.q50 / cd.max_pax_count)}
+          {formatFactor(ld.dist.q50 / cd.avg_pax_count)}
+        </td>
+        <td className="bg-green-300 px-1 text-center">
+          {formatDiff(ld.dist.q95 - cd.max_pax_count)}
+        </td>
+        <td className="bg-green-300 px-1 text-center">
+          {formatFactor(ld.dist.q95 / cd.max_pax_count)}
         </td>
 
         {cd.check_count == 0 ? (
@@ -551,7 +551,7 @@ function CheckDataBySection({
                 RSL-Prognose (Reisende)
               </th>
               <th
-                colSpan={4}
+                colSpan={2}
                 className={cn(
                   thTopClass,
                   "bg-gradient-to-r from-yellow-100 to-yellow-200",
@@ -560,13 +560,13 @@ function CheckDataBySection({
                 Vergleich Plan
               </th>
               <th
-                colSpan={4}
+                colSpan={6}
                 className={cn(
                   thTopClass,
-                  "bg-gradient-to-r from-green-100 to-green-200",
+                  "bg-gradient-to-r from-green-100 to-green-300",
                 )}
               >
-                Vergleich 50 %
+                Vergleich Prognose
               </th>
             </tr>
             <tr className="text-center">
@@ -612,16 +612,16 @@ function CheckDataBySection({
               <th className={cn(thClass, "bg-blue-100")}>50 %</th>
               <th className={cn(thClass, "bg-blue-100")}>95 %</th>
               <th colSpan={2} className={cn(thClass, "bg-yellow-100")}>
-                Min
-              </th>
-              <th colSpan={2} className={cn(thClass, "bg-yellow-200")}>
-                Max
+                Avg
               </th>
               <th colSpan={2} className={cn(thClass, "bg-green-100")}>
-                Min
+                5 % / Min
               </th>
               <th colSpan={2} className={cn(thClass, "bg-green-200")}>
-                Max
+                50 % / Avg
+              </th>
+              <th colSpan={2} className={cn(thClass, "bg-green-300")}>
+                95 % / Max
               </th>
               <th></th>
             </tr>
