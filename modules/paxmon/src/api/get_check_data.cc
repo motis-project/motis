@@ -31,6 +31,7 @@ struct section_data {
   std::vector<pax_check_entry const*> check_entries_;
   std::uint16_t checks_{};
   std::uint16_t checkins_{};
+  std::uint16_t possible_additional_pax_{};  // from CHECKED_DEVIATION_NO_MATCH
 };
 
 Offset<Station> optional_station(message_creator& mc, schedule const& sched,
@@ -125,8 +126,8 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
         auto const checked_in_section =
             entry.definitely_checked_between(current_dep, current_arr);
 
+        auto& sd = sec_data.at(sec_idx);
         if (in_leg || checked) {
-          auto& sd = sec_data.at(sec_idx);
           sd.check_entries_.emplace_back(&entry);
           if (checked_in_section) {
             if ((entry.check_type_ == check_type::TICKED_CHECKED ||
@@ -138,6 +139,10 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
               ++sd.checkins_;
             }
           }
+        } else if (!entry.has_leg_info() &&
+                   entry.leg_status_ ==
+                       leg_status::CHECKED_DEVIATION_NO_MATCH) {
+          ++sd.possible_additional_pax_;
         }
       };
 
@@ -201,6 +206,12 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
       }
     }
 
+    auto const min_pax_count = checked_pax_count;
+    auto const max_pax_count = checked_pax_count +
+                               unchecked_uncovered_pax_count +
+                               sd.possible_additional_pax_;
+    auto const avg_pax_count = (min_pax_count + max_pax_count) / 2;
+
     fbs_sections.emplace_back(CreatePaxMonCheckSectionData(
         mc, to_fbs(mc, sec.from_station(sched)),
         to_fbs(mc, sec.to_station(sched)),
@@ -213,7 +224,8 @@ msg_ptr get_check_data(paxmon_data& data, schedule const& sched,
         total_group_count, total_pax_count, checked_group_count,
         checked_pax_count, unchecked_but_covered_group_count,
         unchecked_but_covered_pax_count, unchecked_uncovered_group_count,
-        unchecked_uncovered_pax_count, sd.checks_, sd.checkins_));
+        unchecked_uncovered_pax_count, sd.possible_additional_pax_,
+        min_pax_count, avg_pax_count, max_pax_count, sd.checks_, sd.checkins_));
   }
 
   mc.create_and_finish(

@@ -2271,6 +2271,14 @@ PaxMonCheckSectionData:
       description: TODO
     unchecked_uncovered_pax_count:
       description: TODO
+    possible_additional_pax_count:
+      description: TODO
+    min_pax_count:
+      description: TODO
+    avg_pax_count:
+      description: TODO
+    max_pax_count:
+      description: TODO
 PaxMonCheckDataByOrderRequest:
   description: TODO
   fields:

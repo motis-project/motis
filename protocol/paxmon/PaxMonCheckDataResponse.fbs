@@ -21,6 +21,11 @@ table PaxMonCheckSectionData {
   unchecked_but_covered_pax_count: uint;
   unchecked_uncovered_group_count: uint;
   unchecked_uncovered_pax_count: uint;
+  possible_additional_pax_count: uint;
+
+  min_pax_count: uint;
+  avg_pax_count: uint;
+  max_pax_count: uint;
 
   check_count: uint;
   checkin_count: uint;

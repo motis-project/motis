@@ -437,10 +437,16 @@ function CheckDataBySection({
         </td>
         <td className="bg-red-100 px-1 text-center">{cd.total_pax_count}</td>
         <td className="bg-red-100 px-1 text-center font-semibold">
-          {cd.checked_pax_count}
+          {cd.min_pax_count}
         </td>
         <td className="bg-red-100 px-1 text-center font-semibold">
-          {cd.checked_pax_count + cd.unchecked_uncovered_pax_count}
+          {cd.avg_pax_count}
+        </td>
+        <td
+          className="bg-red-100 px-1 text-center font-semibold"
+          title={`${cd.checked_pax_count} kontrolliert\n+ ${cd.unchecked_uncovered_pax_count} nicht kontrolliert, aber nicht anderweitig abgedeckt\n+ ${cd.possible_additional_pax_count} ohne Abschnittsinformationen`}
+        >
+          {cd.max_pax_count}
         </td>
         <td
           className={cn(
@@ -459,40 +465,28 @@ function CheckDataBySection({
         </td>
         <td className="bg-blue-100 px-1 text-center">{ld.dist.q95}</td>
         <td className="bg-yellow-100 px-1 text-center">
-          {formatDiff(ld.expected_passengers - cd.checked_pax_count)}
+          {formatDiff(ld.expected_passengers - cd.min_pax_count)}
         </td>
         <td className="bg-yellow-100 px-1 text-center">
-          {formatFactor(ld.expected_passengers / cd.checked_pax_count)}
+          {formatFactor(ld.expected_passengers / cd.min_pax_count)}
         </td>
         <td className="bg-yellow-200 px-1 text-center">
-          {formatDiff(
-            ld.expected_passengers -
-              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
-          )}
+          {formatDiff(ld.expected_passengers - cd.max_pax_count)}
         </td>
         <td className="bg-yellow-200 px-1 text-center">
-          {formatFactor(
-            ld.expected_passengers /
-              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
-          )}
+          {formatFactor(ld.expected_passengers / cd.max_pax_count)}
         </td>
         <td className="bg-green-100 px-1 text-center">
-          {formatDiff(ld.dist.q50 - cd.checked_pax_count)}
+          {formatDiff(ld.dist.q50 - cd.min_pax_count)}
         </td>
         <td className="bg-green-100 px-1 text-center">
-          {formatFactor(ld.dist.q50 / cd.checked_pax_count)}
+          {formatFactor(ld.dist.q50 / cd.min_pax_count)}
         </td>
         <td className="bg-green-200 px-1 text-center">
-          {formatDiff(
-            ld.dist.q50 -
-              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
-          )}
+          {formatDiff(ld.dist.q50 - cd.max_pax_count)}
         </td>
         <td className="bg-green-200 px-1 text-center">
-          {formatFactor(
-            ld.dist.q50 /
-              (cd.checked_pax_count + cd.unchecked_uncovered_pax_count),
-          )}
+          {formatFactor(ld.dist.q50 / cd.max_pax_count)}
         </td>
 
         {cd.check_count == 0 ? (
@@ -550,7 +544,7 @@ function CheckDataBySection({
               <th colSpan={5} className={thTopClass}>
                 Fahrtabschnitt
               </th>
-              <th colSpan={4} className={cn(thTopClass, "bg-red-100")}>
+              <th colSpan={5} className={cn(thTopClass, "bg-red-100")}>
                 Zähldaten
               </th>
               <th colSpan={4} className={cn(thTopClass, "bg-blue-100")}>
@@ -593,13 +587,19 @@ function CheckDataBySection({
                 className={cn(thClass, "bg-red-100")}
                 title="Reisende mit Kontrolle oder Check-In"
               >
-                K
+                Min
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
-                title="Kontrolliert + Nicht abgedeckt"
+                title="Durchschnitt aus Min und Max"
               >
-                K + NA
+                Avg
+              </th>
+              <th
+                className={cn(thClass, "bg-red-100")}
+                title="Kontrolliert + Nicht abgedeckt + aus Punktdaten"
+              >
+                Max
               </th>
               <th
                 className={cn(thClass, "bg-red-100")}
@@ -612,16 +612,16 @@ function CheckDataBySection({
               <th className={cn(thClass, "bg-blue-100")}>50 %</th>
               <th className={cn(thClass, "bg-blue-100")}>95 %</th>
               <th colSpan={2} className={cn(thClass, "bg-yellow-100")}>
-                K
+                Min
               </th>
               <th colSpan={2} className={cn(thClass, "bg-yellow-200")}>
-                K+NA
+                Max
               </th>
               <th colSpan={2} className={cn(thClass, "bg-green-100")}>
-                K
+                Min
               </th>
               <th colSpan={2} className={cn(thClass, "bg-green-200")}>
-                K+NA
+                Max
               </th>
               <th></th>
             </tr>
