@@ -25,7 +25,7 @@ import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import { formatTime } from "@/util/dateFormat";
-import { extractNumbers } from "@/util/extractNumbers";
+import { extractNumbersWithRanges } from "@/util/extractNumbers";
 import { getDayInterval } from "@/util/interval";
 import { getScheduleRange } from "@/util/scheduleRange";
 
@@ -111,7 +111,7 @@ function TripList(): JSX.Element {
     ServiceClass.IC,
   ]);
 
-  const filterTrainNrs = extractNumbers(trainNrFilter);
+  const filterTrainNrs = extractNumbersWithRanges(trainNrFilter);
 
   const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
