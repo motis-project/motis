@@ -4,11 +4,14 @@ export function getSvgBlob(svgEl: SVGSVGElement) {
   return new Blob([source], { type: "image/svg+xml;charset=utf-8" });
 }
 
-export function downloadBlob(url: string, filename: string) {
+export function downloadBlob(url: string, filename: string, release = true) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
+  if (release) {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function saveAsSVG(svgEl: SVGSVGElement | null, baseFileName: string) {
@@ -44,4 +47,10 @@ export function saveAsPNG(svgEl: SVGSVGElement | null, baseFileName: string) {
     downloadBlob(pngUrl, baseFileName + ".png");
   };
   img.src = svgUrl;
+}
+
+export function saveAsCSV(content: string, fileName: string) {
+  const blob = new Blob([content], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  downloadBlob(url, fileName);
 }
