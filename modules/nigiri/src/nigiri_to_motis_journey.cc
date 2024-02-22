@@ -30,6 +30,8 @@ struct transport_display_info {
   std::string direction_;
   std::string provider_;
   std::string line_;
+  n::color_t route_color_;
+  n::color_t route_text_color_;
 };
 
 motis::journey nigiri_to_motis_journey(n::timetable const& tt,
@@ -174,6 +176,16 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       }
     }
 
+    auto const colors = tt.transport_section_route_colors_.at(t.t_idx_);
+    n::color_t route_color{0};
+    n::color_t route_text_color{0};
+    if (!colors.empty()) {
+      auto const color =
+          colors.size() == 1U ? colors.at(0U) : colors.at(section_idx);
+      route_color = color.color_;
+      route_text_color = color.text_color_;
+    }
+
     for (auto const trip : tt.merged_trips_.at(merged_trips_idx)) {
       transports.add_entry(
           transport_display_info{
@@ -183,7 +195,9 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   std::string{tt.trip_display_names_.at(trip).view()},
               .direction_ = direction,
               .provider_ = provider,
-              .line_ = line},
+              .line_ = line,
+              .route_color_ = route_color,
+              .route_text_color_ = route_text_color},
           mj.stops_.size() - 1, mj.stops_.size());
 
       auto const src_file =
@@ -280,6 +294,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       t.provider_ = x.provider_;
       t.direction_ = x.direction_;
       t.line_identifier_ = x.line_;
+      t.route_color_ = x.route_color_.v_;
+      t.route_text_color_ = x.route_text_color_.v_;
       mj.transports_.emplace_back(std::move(t));
     }
   }

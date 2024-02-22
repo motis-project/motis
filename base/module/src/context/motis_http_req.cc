@@ -25,7 +25,8 @@ struct http_request_executor
 
   void make_request(net::http::client::request req) {
     l(debug, "http request {} {}",
-      net::http::client::method_to_str(req.req_method), req.address);
+      net::http::client::method_to_str(req.req_method),
+      fmt::streamed(req.address));
 
     auto cb = [self = shared_from_this()](auto&& a,
                                           net::http::client::response&& res,

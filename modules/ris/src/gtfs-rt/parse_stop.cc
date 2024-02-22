@@ -56,11 +56,12 @@ void update_stop_idx(stop_context& current_stop, schedule const& sched,
         begin(stops), end(stops), [&](access::trip_stop const& stop) {
           return stop.get_station(sched).eva_nr_ == current_stop.station_id_;
         });
-    utl::verify(it != end(stops), "trip {} has no station {}", trip.dbg_,
-                current_stop.station_id_);
+    utl::verify(it != end(stops), "trip {} has no station {}",
+                fmt::streamed(trip.dbg_), current_stop.station_id_);
     current_stop.idx_ = static_cast<int>(std::distance(begin(stops), it));
   } else {
-    throw utl::fail("update for trip {} w/o station and seq", trip.dbg_);
+    throw utl::fail("update for trip {} w/o station and seq",
+                    fmt::streamed(trip.dbg_));
   }
 };
 

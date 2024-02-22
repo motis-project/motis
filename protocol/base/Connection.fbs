@@ -35,6 +35,8 @@ table Transport {
   name:string;
   provider:string;
   direction:string;
+  route_color:string (optional);
+  route_text_color:string (optional);
 }
 
 /* walk and mumo */

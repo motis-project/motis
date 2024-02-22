@@ -10,6 +10,8 @@
 
 #include "boost/algorithm/string/predicate.hpp"
 
+#include "fmt/std.h"
+
 #include "utl/concat.h"
 #include "utl/parser/file.h"
 #include "utl/read_file.h"

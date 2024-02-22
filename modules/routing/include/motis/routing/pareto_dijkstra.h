@@ -20,9 +20,9 @@ const bool FORWARDING = true;
 constexpr auto const kTracing = false;
 
 template <typename... T>
-void trace(T&&... t) {
+void trace(fmt::format_string<T...> ctx, T&&... t) {
   if (kTracing) {
-    fmt::print(std::cout, std::forward<T>(t)...);
+    fmt::print(std::cout, ctx, std::forward<T>(t)...);
   }
 }
 
@@ -47,7 +47,7 @@ struct pareto_dijkstra {
         label_store_(label_store),
         max_labels_(1024 * 1024 * 128),
         fastest_direct_(std::min(MAX_TRAVEL_TIME, fastest_direct)) {
-    if (kTracing) {
+    if constexpr (kTracing) {
       for (auto const& [_, edges] : additional_edges_) {
         for (auto const& e : edges) {
           auto const& from = sched.stations_[e.from_->get_station()->id_];

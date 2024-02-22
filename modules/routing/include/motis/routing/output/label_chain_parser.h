@@ -18,9 +18,9 @@ namespace motis::routing::output {
 constexpr auto const kTracing = false;
 
 template <typename... T>
-void trace(T&&... t) {
+void trace(fmt::format_string<T...> str, T&&... t) {
   if (kTracing) {
-    fmt::print(std::cerr, std::forward<T>(t)...);
+    fmt::print(std::cerr, str, std::forward<T>(t)...);
   }
 }
 

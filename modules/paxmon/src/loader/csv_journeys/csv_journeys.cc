@@ -17,6 +17,7 @@
 #include "date/tz.h"
 
 #include "fmt/ostream.h"
+#include "fmt/std.h"
 
 #include "utl/nwise.h"
 #include "utl/parser/buf_reader.h"
@@ -52,7 +53,7 @@ struct fmt::formatter<std::optional<std::pair<std::uint64_t, std::uint64_t>>>
     : formatter<string_view> {
   template <typename FormatContext>
   auto format(std::optional<std::pair<std::uint64_t, std::uint64_t>> const& id,
-              FormatContext& ctx) {
+              FormatContext& ctx) const {
     if (id) {
       return formatter<string_view>::format(
           fmt::format("{}.{}", id->first, id->second), ctx);
