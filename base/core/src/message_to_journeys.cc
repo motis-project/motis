@@ -47,6 +47,20 @@ journey::transport to_transport(Walk const& walk, uint16_t duration) {
   return t;
 }
 
+uint32_t to_color(std::string_view const color_str) {
+  auto const is_hex = [](uint8_t c) {
+    return std::isdigit(c) != 0 || (c >= 'a' && c <= 'f') ||
+           (c >= 'A' && c <= 'F');
+  };
+
+  if (color_str.size() != 6 ||
+      !std::all_of(color_str.begin(), color_str.end(), is_hex)) {
+    return 0;
+  }
+  return 0xFF000000U |
+         static_cast<std::uint32_t>(std::strtol(color_str.data(), nullptr, 16));
+}
+
 journey::transport to_transport(Transport const& transport, uint16_t duration) {
   auto t = journey::transport{};
   t.duration_ = duration;
@@ -59,6 +73,12 @@ journey::transport to_transport(Transport const& transport, uint16_t duration) {
   t.name_ = transport.name()->view();
   t.provider_ = transport.provider()->view();
   t.mumo_id_ = 0;
+  t.route_color_ = transport.route_color() != nullptr
+                       ? to_color(transport.route_color()->view())
+                       : 0;
+  t.route_text_color_ = transport.route_text_color() != nullptr
+                            ? to_color(transport.route_text_color()->view())
+                            : 0;
   return t;
 }
 

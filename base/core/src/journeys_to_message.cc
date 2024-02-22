@@ -64,6 +64,14 @@ std::vector<Offset<MoveWrapper>> convert_moves(
     FlatBufferBuilder& b, std::vector<journey::transport> const& transports) {
   std::vector<Offset<MoveWrapper>> moves;
 
+  auto const convert_color =
+      [&b](uint32_t color) -> flatbuffers::Offset<flatbuffers::String> {
+    if (color == 0U) {
+      return 0;
+    }
+    return b.CreateString(fmt::format("{:06x}", color & 0x00ffffff));
+  };
+
   for (auto const& t : transports) {
     Range const r(t.from_, t.to_);
     if (t.is_walk_) {
@@ -77,7 +85,9 @@ std::vector<Offset<MoveWrapper>> convert_moves(
           b, Move_Transport,
           CreateTransport(b, &r, t.clasz_, b.CreateString(t.line_identifier_),
                           b.CreateString(t.name_), b.CreateString(t.provider_),
-                          b.CreateString(t.direction_))
+                          b.CreateString(t.direction_),
+                          convert_color(t.route_color_),
+                          convert_color(t.route_text_color_))
               .Union()));
     }
   }

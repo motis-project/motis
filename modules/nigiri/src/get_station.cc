@@ -11,6 +11,7 @@
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "motis/core/conv/position_conv.h"
 #include "motis/core/conv/trip_conv.h"
@@ -281,6 +282,14 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
 
   mm::message_creator fbb;
 
+  auto const convert_color =
+      [&fbb](n::color_t color) -> flatbuffers::Offset<flatbuffers::String> {
+    if (color.v_ == 0U) {
+      return 0;
+    }
+    return fbb.CreateString(fmt::format("{:06x}", color.v_ & 0x00ffffff));
+  };
+
   auto const write = [&](n::rt::run const r, n::event_type const ev_type) {
     auto const fr = n::rt::frun{tt, rtt, r};
     auto const range = Range{0, 0};
@@ -295,7 +304,9 @@ mm::msg_ptr get_station(tag_lookup const& tags, n::timetable const& tt,
                 fbb.CreateString(fr[0].line(ev_type)),
                 fbb.CreateString(fr.name()),
                 fbb.CreateString(fr[0].get_provider(ev_type).long_name_),
-                fbb.CreateString(fr[0].direction(ev_type))))}),
+                fbb.CreateString(fr[0].direction(ev_type)),
+                convert_color(fr[0].get_route_color(ev_type).color_),
+                convert_color(fr[0].get_route_color(ev_type).text_color_)))}),
         ev_type == n::event_type::kDep ? EventType_DEP : EventType_ARR,
         CreateEventInfo(
             fbb, to_motis_unixtime(fr[0].time(ev_type)),
