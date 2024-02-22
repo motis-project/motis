@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "fmt/ranges.h"
+
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"
 #include "utl/raii.h"

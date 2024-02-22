@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "fmt/ranges.h"
+
 #include "utl/verify.h"
 
 #include "motis/string.h"
@@ -17,7 +19,7 @@ namespace motis {
 trip const* get_gtfs_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
   auto const it = sched.gtfs_trip_ids_.find(trip_id.trip_id_);
   utl::verify(it != end(sched.gtfs_trip_ids_), "unable to find GTFS trip {}",
-              trip_id);
+              fmt::streamed(trip_id));
 
   auto const& trips = it->second;
   if (trip_id.start_date_.has_value()) {
@@ -27,8 +29,8 @@ trip const* get_gtfs_trip(schedule const& sched, gtfs_trip_id const& trip_id) {
                        return trp.first == *trip_id.start_date_;
                      });
     utl::verify(trip_it != end(trips),
-                "unable to find GTFS trip {} with at date {}", trip_id,
-                format_unix_time(*trip_id.start_date_));
+                "unable to find GTFS trip {} with at date {}",
+                fmt::streamed(trip_id), format_unix_time(*trip_id.start_date_));
     return trip_it->second;
   } else if (it->second.size() > 1) {
     auto const n = now();

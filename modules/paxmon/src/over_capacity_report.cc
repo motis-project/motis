@@ -6,6 +6,7 @@
 #include <set>
 
 #include "fmt/ostream.h"
+#include "fmt/ranges.h"
 
 #include "motis/core/common/date_time_util.h"
 #include "motis/core/access/service_access.h"
@@ -95,15 +96,16 @@ void write_over_capacity_report(universe const& uv, schedule const& sched,
         "Trip: train_nr={:<6} line_id={:<6}  train_nrs={:<30}  "
         "service_names={}\n"
         "From: {:16}    {:8} {:50}\nTo:   {:16}    {:8} {:50}\n{:->148}\n",
-        trp->id_.primary_.train_nr_, trp->id_.secondary_.line_id_,
+        trp->id_.primary_.train_nr_, trp->id_.secondary_.line_id_.view(),
         fmt::join(get_train_nrs(trp), ", "),
         fmt::join(get_service_names(sched, trp), ", "),
         format_unix_time(motis_to_unixtime(sched.schedule_begin_,
                                            trp->id_.primary_.get_time())),
-        trp_start_station->eva_nr_, trp_start_station->name_,
+        trp_start_station->eva_nr_.view(), trp_start_station->name_.view(),
         format_unix_time(motis_to_unixtime(sched.schedule_begin_,
                                            trp->id_.secondary_.target_time_)),
-        trp_target_station->eva_nr_, trp_target_station->name_, "");
+        trp_target_station->eva_nr_.view(), trp_target_station->name_.view(),
+        "");
 
     for (auto const& e : edges) {
       auto const& from_station = e->from(uv)->get_station(sched);
@@ -115,10 +117,12 @@ void write_over_capacity_report(universe const& uv, schedule const& sched,
       auto const percentage = static_cast<double>(passengers) /
                               static_cast<double>(capacity) * 100.0;
       fmt::print(
-          out, "{:4}/{:4} [{:+4} {:3.0f}%] [{:8}] | {:8} {:50} => {:8} {:50}\n",
+          out,
+          "{:4}/{:4} [{:+4} {:3.0f}%] [{:8}] | {:8} {:50} => {:8} {:50}\\n",
           passengers, capacity, additional, percentage,
-          capacity_source_str(e->get_capacity_source()), from_station.eva_nr_,
-          from_station.name_, to_station.eva_nr_, to_station.name_);
+          capacity_source_str(e->get_capacity_source()),
+          from_station.eva_nr_.view(), from_station.name_.view(),
+          to_station.eva_nr_.view(), to_station.name_.view());
     }
 
     fmt::print(out, "\n\n");

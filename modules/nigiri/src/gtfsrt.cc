@@ -25,7 +25,7 @@ gtfsrt::gtfsrt(tag_lookup const& tags, std::string_view config) {
   utl::verify(
       src != n::source_idx_t::invalid(),
       "nigiri GTFS-RT tag {} not found as static timetable (known tags: {})",
-      tag.view(), tags);
+      tag.view(), fmt::streamed(tags));
   auto req = net::http::client::request{url.to_str()};
   if (!auth.empty()) {
     url.starts_with("https://gtfs-datenstroeme.tech.deutschebahn.com")

@@ -396,7 +396,7 @@ void ppr::import(import_dispatcher& reg) {
           };
 
           auto const result = pp::create_routing_data(opt, log);
-          utl::verify(result.successful(), result.error_msg_);
+          utl::verify(result.successful(), "{}", result.error_msg_);
           write_ini(dir / "import.ini", state);
 
           try {

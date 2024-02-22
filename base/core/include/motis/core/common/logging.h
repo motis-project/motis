@@ -60,14 +60,14 @@ enum log_level { emrg, alrt, crit, error, warn, notice, info, debug };
 static const char* const str[]{"emrg", "alrt", "crit", "erro",
                                "warn", "note", "info", "debg"};
 
-template <typename Msg, typename... Args>
-void l(log_level const lvl, Msg&& msg, Args&&... args) {
+template <typename... Args>
+void l(log_level const lvl, fmt::format_string<Args...> fmt_str,
+       Args&&... args) {
   motis::logging::log() << "[" << motis::logging::str[lvl] << "]"
                         << "[" << motis::logging::time() << "]"
                         << "[" << FILE_NAME << ":" << __LINE__ << "]"
                         << " "
-                        << fmt::format(std::forward<Msg>(msg),
-                                       std::forward<Args>(args)...);
+                        << fmt::format(fmt_str, std::forward<Args>(args)...);
 }
 
 struct scoped_timer final {
