@@ -25,7 +25,7 @@
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
-  commit=c68ab4be8f3cb0e5c6eb181b3f419622e15e02bd
+  commit=edb385ac526c24bc917ec4a41bb0edb28f0ca59e
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
@@ -97,7 +97,7 @@
 [rabbitmq-c]
   url=git@github.com:motis-project/rabbitmq-c.git
   branch=master
-  commit=eb29499889a80576d020e5b0bd431e35896b961f
+  commit=5c57cc7ebbfba2d77c4fd6adfe6644586c87b3bb
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
