@@ -131,6 +131,10 @@ Transport:
       description: TODO
     direction:
       description: TODO
+    route_color:
+      description: TODO
+    route_text_color:
+      description: TODO
 Walk:
   description: TODO
   fields:
