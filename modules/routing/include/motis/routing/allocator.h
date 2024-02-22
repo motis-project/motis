@@ -12,9 +12,9 @@ namespace motis::routing {
 constexpr auto const alloc_tracing = false;
 
 template <typename... Ts>
-void alloc_trace(Ts&&... args) {
+void alloc_trace(fmt::format_string<Ts...> str, Ts&&... args) {
   if (alloc_tracing) {
-    fmt::print(std::cerr, std::forward<Ts>(args)...);
+    fmt::print(std::cerr, str, std::forward<Ts>(args)...);
   }
 }
 

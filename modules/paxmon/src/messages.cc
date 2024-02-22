@@ -349,7 +349,8 @@ passenger_localization from_fbs(schedule const& sched,
               {}};
     }
     default:
-      throw utl::fail("invalid passenger localization type: {}", loc_type);
+      throw utl::fail("invalid passenger localization type: {}",
+                      EnumNamePaxMonLocalization(loc_type));
   }
 }
 

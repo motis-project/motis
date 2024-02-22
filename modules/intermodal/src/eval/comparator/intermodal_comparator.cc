@@ -14,6 +14,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "fmt/ranges.h"
+
 #include "boost/program_options.hpp"
 
 #include "utl/to_vec.h"
@@ -376,7 +378,7 @@ int compare(int argc, char const** argv) {
   po::notify(vm);
 
   if (help || filenames.size() < 2) {
-    fmt::print("{}\n", desc);
+    fmt::print("{}\n", fmt::streamed(desc));
     if (filenames.size() < 2) {
       fmt::print("only {} filenames given, >=2 required: {}\nquery_paths: {}\n",
                  filenames.size(), filenames, query_paths);

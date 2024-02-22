@@ -131,7 +131,7 @@ std::unique_ptr<edge_geo_index> make_edge_rtree(
 
   if (no_match != 0) {
     LOG(logging::warn) << fmt::format(
-        "clasz {} : stations without tbbox {} / {}", clasz, no_match,
+        "clasz {} : stations without tbbox {} / {}", to_str(clasz), no_match,
         entries.size());
   }
 

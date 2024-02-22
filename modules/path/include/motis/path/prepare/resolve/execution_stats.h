@@ -68,7 +68,8 @@ struct execution_stats {
     auto const lock = std::lock_guard{main_mutex_};
     read_buffers();
 
-    fmt::memory_buffer out;
+    fmt::memory_buffer buf;
+    auto out = std::back_inserter(buf);
 
     format_headline(out);
     for (auto& [key, v] : main_part_timings_) {
@@ -95,16 +96,17 @@ struct execution_stats {
       format_timing_summary(out, v);
     }
 
-    std::clog << fmt::to_string(out) << std::endl;
+    std::clog << fmt::to_string(buf) << std::endl;
   }
 
-  static void format_headline(fmt::memory_buffer& out) {
+  template <typename Buf>
+  static void format_headline(Buf& out) {
     fmt::format_to(out, "{:23} | {:8} | {:9} | {:9} | {:9} | {:9} | {:9}\n",
                    "task", "count", "sum", "avg", "sd", "q50", "q95");
   }
 
-  static void format_timing_summary(fmt::memory_buffer& out,
-                                    std::vector<double>& v) {
+  template <typename Buf>
+  static void format_timing_summary(Buf& out, std::vector<double>& v) {
     auto const format_count = [&](double const n) {
       auto const k = n / 1e3;
       auto const m = n / 1e6;

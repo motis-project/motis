@@ -4,6 +4,8 @@
 
 #include "boost/filesystem.hpp"
 
+#include "fmt/std.h"
+
 #include "cista/memory_holder.h"
 
 #include "conf/date_time.h"

@@ -53,7 +53,8 @@ void collect_events(trip_update_context& update_ctx,
         throw utl::fail(
             "stop_time_update {} for trip {}: stop seq_no={}, id={} was "
             "SKIPPED now SCHEDULED",
-            i, trip.dbg_, stop_ctx.seq_no_, stop_ctx.station_id_);
+            i, fmt::streamed(trip.dbg_), stop_ctx.seq_no_,
+            stop_ctx.station_id_);
       }
 
       auto const has_delay_for_addition =
@@ -298,7 +299,7 @@ void check_and_fix_addition(trip_update_context& update_ctx) {
 
   utl::verify(add_evts.size() >= 2,
               "found additional trip {} with only one event",
-              update_ctx.trip_id_);
+              fmt::streamed(update_ctx.trip_id_));
 }
 
 void check_and_fix_delay_with_additional(trip_update_context& update_ctx) {
@@ -393,7 +394,8 @@ void initialize_update_context(knowledge_context const& knowledge,
     return;
   }
   utl::verify(update_ctx.trip_ != nullptr,
-              "GTFS trip update: unknown trip \"{}\"", update_ctx.trip_id_);
+              R"(GTFS trip update: unknown trip "{}")",
+              fmt::streamed(update_ctx.trip_id_));
 
   update_ctx.is_stop_skip_new_.resize(
       (update_ctx.is_new_addition_ ||

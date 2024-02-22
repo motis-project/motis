@@ -33,7 +33,7 @@ inline int get_price_per_km(service_class const clasz) {
 
     case service_class::COACH: return 12;
 
-    default: throw utl::fail("unknown service class: {} ", clasz);
+    default: throw utl::fail("unknown service class: {} ", to_str(clasz));
   }
 }
 
