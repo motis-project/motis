@@ -92,7 +92,7 @@ ev_key get_event_at(schedule const& sched, Connection const* con,
               ev_type == event_type::DEP ? "DEP" : "ARR", format_time(ev_time),
               sched.stations_.at(station_idx)->name_,
               sched.stations_.at(station_idx)->eva_nr_,
-              to_extern_trip(sched, trp).to_str(), trp->dbg_);
+              to_extern_trip(sched, trp).to_str(), fmt::streamed(trp->dbg_));
 
   return ev_key{*edge_it, trp->lcon_idx_, ev_type};
 }

@@ -20,7 +20,7 @@ void print_trip(schedule const& sched, trip const* trp) {
           ->eva_nr_.view(),
       format_time(trp->id_.secondary_.target_time_),
       trp->id_.secondary_.line_id_, trp->trip_idx_,
-      static_cast<void const*>(trp), trp->dbg_);
+      static_cast<void const*>(trp), fmt::streamed(trp->dbg_));
   fmt::print("    {}\n", debug::to_fbs_json(sched, trp));
 }
 
@@ -37,7 +37,7 @@ void print_leg(schedule const& sched, journey_leg const& leg) {
              exit_station->eva_nr_.str(), exit_station->name_.str());
   if (leg.enter_transfer_) {
     fmt::print("  enter_transfer={:2} {}\n", leg.enter_transfer_->duration_,
-               leg.enter_transfer_->type_);
+               fmt::streamed(leg.enter_transfer_->type_));
   } else {
     fmt::print("\n");
   }

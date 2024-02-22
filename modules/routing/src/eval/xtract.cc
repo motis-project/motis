@@ -7,6 +7,8 @@
 #include <set>
 #include <string>
 
+#include "fmt/std.h"
+
 #include "cista/mmap.h"
 #include "cista/reflection/comparable.h"
 

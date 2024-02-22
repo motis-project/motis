@@ -390,7 +390,7 @@ Offset<PathSeqResponse> path_database_query::write_sequence(
     for (auto const& [is_fwd, rf] : s_features) {
       utl::verify(rf->is_resolved_,
                   "path_database_query: have unresolved feature! {} {}",
-                  rf->feature_id_, rf->min_clasz_);
+                  rf->feature_id_, to_str(rf->min_clasz_));
 
       pb.append(is_fwd, rf);
     }

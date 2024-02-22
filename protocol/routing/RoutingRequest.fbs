@@ -114,4 +114,5 @@ table RoutingRequest {
   use_dest_metas: bool = true;
   use_start_footpaths: bool = true;
   schedule: ulong; // schedule id (0 = default)
+  timeout: int = 0; // 0 = none
 }
