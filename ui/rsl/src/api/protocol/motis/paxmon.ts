@@ -295,6 +295,7 @@ export interface PaxMonStatusResponse {
   universe_count: number;
   ribasis_fahrt_status: PaxMonFeedStatus;
   ribasis_formation_status: PaxMonFeedStatus;
+  has_check_data: boolean;
 }
 
 // paxmon/PaxMonDistribution.fbs

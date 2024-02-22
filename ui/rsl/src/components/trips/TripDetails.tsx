@@ -4,6 +4,9 @@ import { useParams } from "react-router-dom";
 
 import { TripId } from "@/api/protocol/motis";
 
+import { usePaxMonStatusQuery } from "@/api/paxmon.ts";
+
+import { universeAtom } from "@/data/multiverse.ts";
 import { showLegacyLoadForecastChartAtom } from "@/data/settings";
 import { activeTripTabAtom } from "@/data/views.ts";
 
@@ -27,6 +30,10 @@ function TripDetails({ tripId }: TripDetailsProps): ReactNode {
     showLegacyLoadForecastChartAtom,
   );
   const [activeTripTab, setActiveTripTab] = useAtom(activeTripTabAtom);
+  const [universe] = useAtom(universeAtom);
+  const { data: paxmonStatus } = usePaxMonStatusQuery(universe);
+  const showCheckData =
+    paxmonStatus != undefined && paxmonStatus.has_check_data;
 
   return (
     <div>
@@ -38,7 +45,9 @@ function TripDetails({ tripId }: TripDetailsProps): ReactNode {
         <TabsList>
           <TabsTrigger value="forecast">Auslastungsprognose</TabsTrigger>
           <TabsTrigger value="capacity">Kapazitätsdaten</TabsTrigger>
-          <TabsTrigger value="check">Reisendenzähldaten</TabsTrigger>
+          {showCheckData && (
+            <TabsTrigger value="check">Reisendenzähldaten</TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="forecast" className="text-left">
           <TripRoute tripId={tripId} />
@@ -49,9 +58,11 @@ function TripDetails({ tripId }: TripDetailsProps): ReactNode {
         <TabsContent value="capacity" className="text-left">
           <CapacityInfo tripId={tripId} />
         </TabsContent>
-        <TabsContent value="check" className="text-left">
-          <CheckData tripId={tripId} />
-        </TabsContent>
+        {showCheckData && (
+          <TabsContent value="check" className="text-left">
+            <CheckData tripId={tripId} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -2,6 +2,9 @@ import { useAtom } from "jotai";
 import { ReactNode, forwardRef } from "react";
 import { NavLink } from "react-router-dom";
 
+import { usePaxMonStatusQuery } from "@/api/paxmon.ts";
+
+import { universeAtom } from "@/data/multiverse.ts";
 import { showSimPanelAtom } from "@/data/views";
 
 import { cn } from "@/lib/utils";
@@ -56,8 +59,12 @@ const MainPageLink = forwardRef<HTMLAnchorElement, MainPageLinkProps>(
 );
 MainPageLink.displayName = "MainPageLink";
 
-function MainMenu(): JSX.Element {
+function MainMenu(): ReactNode {
   const [showSimPanel, setShowSimPanel] = useAtom(showSimPanelAtom);
+  const [universe] = useAtom(universeAtom);
+  const { data: paxmonStatus } = usePaxMonStatusQuery(universe);
+  const showCheckData =
+    paxmonStatus != undefined && paxmonStatus.has_check_data;
 
   return (
     <nav className="flex space-x-2">
@@ -66,7 +73,7 @@ function MainMenu(): JSX.Element {
       <MainPageLink to="groups">Reisende</MainPageLink>
       <MainPageLink to="stats">Statistiken</MainPageLink>
       <MainPageLink to="status">Status</MainPageLink>
-      <MainPageLink to="eval">Evaluation</MainPageLink>
+      {showCheckData && <MainPageLink to="eval">Evaluation</MainPageLink>}
       <PageLink
         active={showSimPanel}
         onClick={() => setShowSimPanel((v) => !v)}
