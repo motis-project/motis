@@ -7,7 +7,7 @@ SearchOptions:
       description: Upper limit for walking duration in seconds
   examples:
     - profile: default
-      duration: 1800
+      duration_limit: 1800
 EdgeType:
   description: TODO
 CrossingType:
