@@ -38,6 +38,7 @@ namespace motis::intermodal {
 intermodal::intermodal() : module("Intermodal Options", "intermodal") {
   param(router_, "router", "routing module");
   param(revise_, "revise", "revise connections");
+  param(timeout_, "timeout", "routing timeout in seconds (0 = no timeout)");
 }
 
 intermodal::~intermodal() = default;
@@ -535,7 +536,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         CreateRoutingRequest(mc, start.start_type_, start.start_, dest.station_,
                              req->search_type(), req->search_dir(),
                              mc.CreateVector(std::vector<Offset<Via>>{}),
-                             mc.CreateVector(edges))
+                             mc.CreateVector(edges), true, true, true, 0,
+                             timeout_)
             .Union(),
         router);
 
