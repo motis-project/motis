@@ -145,6 +145,20 @@ auto run_search(n::routing::search_state& search_state,
   }
 }
 
+n::routing::clasz_mask_t to_clasz_mask(fbs::Vector<std::uint8_t> const* v) {
+  if (v == nullptr) {
+    return n::routing::all_clasz_allowed();
+  } else {
+    auto mask = n::routing::clasz_mask_t{0U};
+    for (auto const c : *v) {
+      utl::verify(c < static_cast<std::uint8_t>(n::clasz::kNumClasses),
+                  "clasz {} does not exist", c);
+      mask |= (1U << c);
+    }
+    return mask;
+  }
+}
+
 motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                              n::rt_timetable const* rtt,
                              motis::module::msg_ptr const& msg,
@@ -299,7 +313,8 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .min_connection_count_ = min_connection_count,
       .extend_interval_earlier_ = extend_interval_earlier,
       .extend_interval_later_ = extend_interval_later,
-      .prf_idx_ = prf_idx};
+      .prf_idx_ = prf_idx,
+      .allowed_claszes_ = to_clasz_mask(req->allowed_claszes())};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");

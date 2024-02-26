@@ -115,4 +115,5 @@ table RoutingRequest {
   use_start_footpaths: bool = true;
   schedule: ulong; // schedule id (0 = default)
   timeout: int = 0; // 0 = none
+  allowed_claszes: [ubyte] (optional);
 }
