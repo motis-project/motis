@@ -182,6 +182,7 @@ async function optimizeTripEdgeV1(
       use_dest_metas: true,
       use_start_footpaths: true,
       schedule,
+      timeout: 0,
     });
     const journeys = routingResponse.connections
       .map(connectionToJourney)

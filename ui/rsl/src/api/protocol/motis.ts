@@ -191,6 +191,8 @@ export interface Transport {
   name: string;
   provider: string;
   direction: string;
+  route_color?: string;
+  route_text_color?: string;
 }
 
 // base/Connection.fbs
