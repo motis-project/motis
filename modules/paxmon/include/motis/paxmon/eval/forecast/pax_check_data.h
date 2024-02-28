@@ -132,6 +132,10 @@ struct pax_check_data {
     trains_.clear();
   }
 
+  [[nodiscard]] bool empty() const {
+    return trains_.empty();
+  }
+
   mcd::hash_map<train_pax_data_key, train_pax_check_data> trains_;
   mcd::hash_map<mcd::string, mcd::vector<pax_check_entry const*>>
       entries_by_order_id_;
