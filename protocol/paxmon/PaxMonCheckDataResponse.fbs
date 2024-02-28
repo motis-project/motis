@@ -1,0 +1,44 @@
+include "base/Station.fbs";
+include "paxmon/PaxMonCheckEntry.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonCheckSectionData {
+  from: Station;
+  to: Station;
+  departure_schedule_time: ulong;
+  departure_current_time: ulong;
+  arrival_schedule_time: ulong;
+  arrival_current_time: ulong;
+
+  entry_refs: [ulong];
+
+  total_group_count: uint;
+  total_pax_count: uint;
+  checked_group_count: uint;
+  checked_pax_count: uint;
+  unchecked_but_covered_group_count: uint;
+  unchecked_but_covered_pax_count: uint;
+  unchecked_uncovered_group_count: uint;
+  unchecked_uncovered_pax_count: uint;
+  possible_additional_pax_count: uint;
+
+  min_pax_count: uint;
+  avg_pax_count: uint;
+  max_pax_count: uint;
+
+  check_count: uint;
+  checkin_count: uint;
+}
+
+table PaxMonCheckDataResponse {
+  category: string;
+  train_nr: uint;
+
+  matched_entry_count: uint;
+  unmatched_entry_count: uint;
+
+  entries: [PaxMonCheckEntry];
+
+  sections: [PaxMonCheckSectionData];
+}

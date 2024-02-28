@@ -16,6 +16,7 @@ table PaxMonFilteredTripInfo {
   max_load: float;
 
   max_expected_pax: uint;
+  max_deviation: uint;
 
   capacity_status: PaxMonTripCapacityStatus;
 

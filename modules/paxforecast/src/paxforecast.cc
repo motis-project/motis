@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "utl/read_file.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/module/message.h"
 
@@ -9,6 +11,8 @@
 
 #include "motis/paxforecast/api/apply_measures.h"
 #include "motis/paxforecast/api/metrics.h"
+#include "motis/paxforecast/behavior/default_behavior.h"
+#include "motis/paxforecast/behavior/parser.h"
 #include "motis/paxforecast/monitoring_update.h"
 
 #include "motis/paxforecast/universe_data.h"
@@ -26,9 +30,8 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
         "output file for behavior statistics");
   param(routing_cache_filename_, "routing_cache",
         "optional cache file for routing queries");
+  param(behavior_file_, "behavior", "behavior model configuration file");
   param(stats_file_, "stats", "statistics file");
-  param(deterministic_mode_, "deterministic_mode",
-        "all passengers always pick the best alternative");
   param(min_delay_improvement_, "min_delay_improvement",
         "minimum required arrival time improvement for major delay "
         "alternatives (minutes)");
@@ -53,6 +56,25 @@ paxforecast::paxforecast() : module("Passenger Forecast", "paxforecast") {
 paxforecast::~paxforecast() = default;
 
 void paxforecast::init(motis::module::registry& reg) {
+  if (!behavior_file_.empty()) {
+    auto const config = utl::read_file(behavior_file_.c_str());
+    if (config) {
+      behavior_ = std::make_unique<behavior::probabilistic::passenger_behavior>(
+          behavior::parse_passenger_behavior(config.value()));
+    } else {
+      LOG(log_level::error)
+          << "could not read passenger behavior model configuration from "
+          << behavior_file_;
+      throw std::runtime_error{
+          "could not read passenger behavior model configuration"};
+    }
+  } else {
+    LOG(info) << "no passenger behavior model configuration specified, using "
+                 "defaults";
+    behavior_ = std::make_unique<behavior::probabilistic::passenger_behavior>(
+        behavior::get_default_behavior());
+  }
+
   stats_writer_ = std::make_unique<stats_writer>(stats_file_);
 
   if (!forecast_filename_.empty()) {

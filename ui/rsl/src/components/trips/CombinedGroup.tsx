@@ -83,6 +83,7 @@ function CombinedGroup({
         use_dest_metas: true,
         use_start_footpaths: true,
         schedule,
+        timeout: 0,
       }),
     enabled: findAlternatives,
   });

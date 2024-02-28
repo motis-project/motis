@@ -295,6 +295,7 @@ export interface PaxMonStatusResponse {
   universe_count: number;
   ribasis_fahrt_status: PaxMonFeedStatus;
   ribasis_formation_status: PaxMonFeedStatus;
+  has_check_data: boolean;
 }
 
 // paxmon/PaxMonDistribution.fbs
@@ -432,7 +433,9 @@ export type PaxMonFilterTripsSortOrder =
   | "EarliestCritical"
   | "MaxPaxRange"
   | "MaxPax"
-  | "MaxCapacity";
+  | "MaxCapacity"
+  | "BiggestDeviation"
+  | "SmallestDeviation";
 
 // paxmon/PaxMonFilterTripsRequest.fbs
 export interface PaxMonFilterTripsRequest {
@@ -474,6 +477,7 @@ export interface PaxMonFilteredTripInfo {
   cumulative_excess_pax: number;
   max_load: number;
   max_expected_pax: number;
+  max_deviation: number;
   capacity_status: PaxMonTripCapacityStatus;
   edges: PaxMonEdgeLoadInfo[];
 }
@@ -1208,6 +1212,102 @@ export interface PaxMonDatasetInfoResponse {
   capacity_files: PaxMonCapacityFileInfo[];
   schedule: PaxMonScheduleInfo;
   motis_start_time: number;
+}
+
+// paxmon/PaxMonCheckDataRequest.fbs
+export interface PaxMonCheckDataRequest {
+  trip_id: TripId;
+}
+
+// paxmon/PaxMonCheckEntry.fbs
+export type PaxMonCheckType =
+  | "NOT_CHECKED"
+  | "TICKED_CHECKED"
+  | "CHECKIN"
+  | "BOTH";
+
+// paxmon/PaxMonCheckEntry.fbs
+export type PaxMonCheckLegStatus =
+  | "NOT_CHECKED_COVERED"
+  | "CHECKED_PLANNED"
+  | "CHECKED_DEVIATION_EXACT_MATCH"
+  | "CHECKED_DEVIATION_EQUIVALENT_MATCH"
+  | "CHECKED_DEVIATION_NO_MATCH"
+  | "NOT_CHECKED_NOT_COVERED";
+
+// paxmon/PaxMonCheckEntry.fbs
+export type PaxMonCheckDirection = "UNKNOWN" | "OUTWARD" | "RETURN";
+
+// paxmon/PaxMonCheckEntry.fbs
+export interface PaxMonCheckEntry {
+  ref: number;
+  order_id: string;
+  trip_id: string;
+  passengers: number;
+  check_type: PaxMonCheckType;
+  check_count: number;
+  leg_status: PaxMonCheckLegStatus;
+  direction: PaxMonCheckDirection;
+  planned_train: boolean;
+  checked_in_train: boolean;
+  canceled: boolean;
+  leg_start_station?: Station;
+  leg_destination_station?: Station;
+  leg_start_time: number;
+  leg_destination_time: number;
+  checkin_start_station?: Station;
+  checkin_destination_station?: Station;
+  check_min_time: number;
+  check_max_time: number;
+  schedule_train_start_time: number;
+  category: string;
+  train_nr: number;
+  planned_trip_ref: number;
+}
+
+// paxmon/PaxMonCheckDataResponse.fbs
+export interface PaxMonCheckSectionData {
+  from: Station;
+  to: Station;
+  departure_schedule_time: number;
+  departure_current_time: number;
+  arrival_schedule_time: number;
+  arrival_current_time: number;
+  entry_refs: number[];
+  total_group_count: number;
+  total_pax_count: number;
+  checked_group_count: number;
+  checked_pax_count: number;
+  unchecked_but_covered_group_count: number;
+  unchecked_but_covered_pax_count: number;
+  unchecked_uncovered_group_count: number;
+  unchecked_uncovered_pax_count: number;
+  possible_additional_pax_count: number;
+  min_pax_count: number;
+  avg_pax_count: number;
+  max_pax_count: number;
+  check_count: number;
+  checkin_count: number;
+}
+
+// paxmon/PaxMonCheckDataResponse.fbs
+export interface PaxMonCheckDataResponse {
+  category: string;
+  train_nr: number;
+  matched_entry_count: number;
+  unmatched_entry_count: number;
+  entries: PaxMonCheckEntry[];
+  sections: PaxMonCheckSectionData[];
+}
+
+// paxmon/PaxMonCheckDataByOrderRequest.fbs
+export interface PaxMonCheckDataByOrderRequest {
+  order_id: string;
+}
+
+// paxmon/PaxMonCheckDataByOrderResponse.fbs
+export interface PaxMonCheckDataByOrderResponse {
+  entries: PaxMonCheckEntry[];
 }
 
 // paxmon/PaxMonTrackedUpdates.fbs

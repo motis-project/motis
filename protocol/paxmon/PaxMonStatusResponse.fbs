@@ -29,4 +29,6 @@ table PaxMonStatusResponse {
 
   ribasis_fahrt_status: PaxMonFeedStatus;
   ribasis_formation_status: PaxMonFeedStatus;
+
+  has_check_data: bool;
 }

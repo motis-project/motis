@@ -25,7 +25,7 @@ import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import { formatTime } from "@/util/dateFormat";
-import { extractNumbers } from "@/util/extractNumbers";
+import { extractNumbersWithRanges } from "@/util/extractNumbers";
 import { getDayInterval } from "@/util/interval";
 import { getScheduleRange } from "@/util/scheduleRange";
 
@@ -58,6 +58,15 @@ const sortOptions: LabeledFilterOption[] = [
   { option: "MaxPaxRange", label: "Züge sortiert nach Unsicherheit" },
   { option: "MaxPax", label: "Züge sortiert nach Anzahl Reisender" },
   { option: "MaxCapacity", label: "Züge sortiert nach Kapazität" },
+  { option: "ExpectedPax", label: "Züge sortiert nach erwarteten Reisenden" },
+  {
+    option: "BiggestDeviation",
+    label: "Züge sortiert nach größter Abweichung",
+  },
+  {
+    option: "SmallestDeviation",
+    label: "Züge sortiert nach geringster Abweichung",
+  },
 ];
 
 function getFilterTripsRequest(
@@ -102,7 +111,7 @@ function TripList(): JSX.Element {
     ServiceClass.IC,
   ]);
 
-  const filterTrainNrs = extractNumbers(trainNrFilter);
+  const filterTrainNrs = extractNumbersWithRanges(trainNrFilter);
 
   const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 

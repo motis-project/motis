@@ -32,8 +32,6 @@
 #include "motis/paxforecast/simulate_behavior.h"
 #include "motis/paxforecast/universe_data.h"
 
-#include "motis/paxforecast/behavior/default_behavior.h"
-
 using namespace motis::paxmon;
 using namespace motis::module;
 using namespace motis::logging;
@@ -128,8 +126,7 @@ passenger_group_with_route_and_probability event_to_pgwrap(
 void run_simulation(paxforecast& mod, tick_statistics& tick_stats,
                     alternatives_set& alts_set) {
   MOTIS_START_TIMING(passenger_behavior);
-  auto pb = behavior::default_behavior{mod.deterministic_mode_};
-  simulate_behavior_for_alternatives(pb.pb_, alts_set);
+  simulate_behavior_for_alternatives(*mod.behavior_, alts_set);
   MOTIS_STOP_TIMING(passenger_behavior);
   tick_stats.t_passenger_behavior_ += MOTIS_TIMING_MS(passenger_behavior);
 }

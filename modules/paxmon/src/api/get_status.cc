@@ -44,7 +44,8 @@ msg_ptr get_status(paxmon_data& data, motis::module::msg_ptr const& msg) {
           ris_status->system_time(), current_time, data.motis_start_time_,
           data.multiverse_->get_current_universe_count(),
           to_feed_status(ris_status->ribasis_fahrt_status()),
-          to_feed_status(ris_status->ribasis_formation_status()))
+          to_feed_status(ris_status->ribasis_formation_status()),
+          !data.pax_check_data_.empty())
           .Union());
   return make_msg(mc);
 }

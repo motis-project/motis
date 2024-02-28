@@ -33,6 +33,10 @@ export function formatISODate(ts: Date | number): string {
   return formatISO(getDate(ts), { representation: "date" });
 }
 
+export function formatISODateTime(ts: Date | number): string {
+  return formatISO(getDate(ts));
+}
+
 export function formatTime(ts: Date | number, fmt = "HH:mm"): string {
   return format(getDate(ts), fmt, {
     locale: de,

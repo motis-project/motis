@@ -9,6 +9,7 @@ namespace motis::paxmon::loader::csv_journeys {
 
 struct trek1_row {
   utl::csv_col<std::uint64_t, UTL_NAME("Id")> id_;
+  utl::csv_col<std::uint8_t, UTL_NAME("ReiseTyp")> type_;
   utl::csv_col<std::uint16_t, UTL_NAME("AnzP")> passengers_;
   utl::csv_col<std::uint16_t, UTL_NAME("AnzTeilwege")> leg_count_;
   utl::csv_col<std::uint16_t, UTL_NAME("Position")> leg_idx_;
@@ -22,6 +23,7 @@ struct trek1_row {
 
 struct trek2_row {
   utl::csv_col<std::uint64_t, UTL_NAME("REISEKETTE_ID")> id_;
+  utl::csv_col<std::uint8_t, UTL_NAME("REISE_TYP")> type_;
   utl::csv_col<std::uint16_t, UTL_NAME("ANZAHL_PERSONEN")> passengers_;
   utl::csv_col<std::uint16_t, UTL_NAME("ANZAHL_TEILWEGE")> leg_count_;
   utl::csv_col<std::uint16_t, UTL_NAME("POSITION")> leg_idx_;

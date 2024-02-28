@@ -42,6 +42,7 @@ struct trip_info {
   std::uint16_t max_pax_range_{};
   std::uint16_t max_pax_{};
   std::uint16_t max_capacity_{};
+  std::uint16_t max_deviation_{};
 
   std::vector<edge_load_info> edge_load_infos_{};
 };
@@ -168,6 +169,10 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
       }
       ++ti.section_count_;
       ti.max_expected_pax_ = std::max(ti.max_expected_pax_, expected_pax);
+      auto const deviation = static_cast<std::uint16_t>(
+          std::abs(static_cast<int>(get_median_load(cdf)) -
+                   static_cast<int>(expected_pax)));
+      ti.max_deviation_ = std::max(ti.max_deviation_, deviation);
       if (!include && include_load_threshold == 0.0F) {
         include = true;
       }
@@ -284,6 +289,22 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                                 std::tie(rhs.max_capacity_, rhs.max_load_);
                        });
       break;
+    case PaxMonFilterTripsSortOrder_BiggestDeviation:
+      std::stable_sort(begin(selected_trips), end(selected_trips),
+                       [](trip_info const& lhs, trip_info const& rhs) {
+                         return std::tie(lhs.max_deviation_, lhs.max_load_) >
+                                std::tie(rhs.max_deviation_, rhs.max_load_);
+                       });
+    case PaxMonFilterTripsSortOrder_SmallestDeviation:
+      std::stable_sort(
+          begin(selected_trips), end(selected_trips),
+          [](trip_info const& lhs, trip_info const& rhs) {
+            auto const lhs_dev = -static_cast<int>(lhs.max_deviation_);
+            auto const rhs_dev = -static_cast<int>(rhs.max_deviation_);
+            return std::tie(lhs_dev, lhs.max_load_) >
+                   std::tie(rhs_dev, rhs.max_load_);
+          });
+      break;
     default: break;
   }
 
@@ -318,7 +339,7 @@ msg_ptr filter_trips(paxmon_data& data, msg_ptr const& msg) {
                     ti.section_count_, ti.critical_sections_,
                     ti.crowded_sections_, ti.max_excess_pax_,
                     ti.cumulative_excess_pax_, ti.max_load_,
-                    ti.max_expected_pax_,
+                    ti.max_expected_pax_, ti.max_deviation_,
                     to_fbs(mc, uv.trip_data_.capacity_status(ti.tdi_)),
                     mc.CreateVector(utl::to_vec(ti.edge_load_infos_,
                                                 [&](edge_load_info const& eli) {

@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <functional>
 #include <iterator>
@@ -509,6 +510,16 @@ loader_result load_journeys(schedule const& sched, universe& uv,
   auto const match_tolerance = settings.match_tolerance_;
   auto const debug_match_tolerance = match_tolerance + 60;
   auto const split_groups = settings.split_groups_;
+
+  auto const filter_type = !settings.type_filter_.empty();
+  auto filter_types = std::array<bool, 10>{false};
+  if (filter_type) {
+    for (auto i = 0; i < filter_types.size(); i++) {
+      filter_types[i] = settings.type_filter_.find(
+                            '0' + static_cast<char>(i)) != std::string::npos;
+    }
+  }
+
   auto result = loader_result{};
   auto journeys_with_invalid_legs = 0ULL;
   auto journeys_with_no_valid_legs = 0ULL;
@@ -743,6 +754,16 @@ loader_result load_journeys(schedule const& sched, universe& uv,
       }
       if (row.category_.val() == "Fussweg") {
         return;
+      }
+      if (filter_type) {
+        auto const type = row.type_.val();
+        if (type < filter_types.size()) {
+          if (!filter_types.at(type)) {
+            return;
+          }
+        } else {
+          return;
+        }
       }
       auto& leg = current_input_legs.emplace_back();
       leg.from_station_idx_ = get_station_idx(sched, row.from_.val().view());

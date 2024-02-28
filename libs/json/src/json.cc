@@ -79,7 +79,8 @@ std::uint64_t get_uint64(rapidjson::Value const& obj, char const* key) {
 
 double get_double(rapidjson::Value const& obj, char const* key) {
   auto const& value = get_value(obj, key);
-  utl::verify(value.IsDouble(), "not a double: {}", key);
+  utl::verify(value.IsDouble() || value.IsLosslessDouble(), "not a double: {}",
+              key);
   return value.GetDouble();
 }
 

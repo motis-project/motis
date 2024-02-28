@@ -1,0 +1,60 @@
+include "base/Station.fbs";
+
+namespace motis.paxmon;
+
+enum PaxMonCheckType : byte {
+  NOT_CHECKED,
+  TICKED_CHECKED,
+  CHECKIN,
+  BOTH
+}
+
+enum PaxMonCheckLegStatus : byte {
+  NOT_CHECKED_COVERED,
+  CHECKED_PLANNED,
+  CHECKED_DEVIATION_EXACT_MATCH,
+  CHECKED_DEVIATION_EQUIVALENT_MATCH,
+  CHECKED_DEVIATION_NO_MATCH,
+  NOT_CHECKED_NOT_COVERED
+}
+
+enum PaxMonCheckDirection : byte {
+  UNKNOWN,
+  OUTWARD,
+  RETURN
+}
+
+table PaxMonCheckEntry {
+  ref: ulong;
+
+  order_id: string;
+  trip_id: string;
+  passengers: uint;
+
+  check_type: PaxMonCheckType;
+  check_count: uint;
+  leg_status: PaxMonCheckLegStatus;
+  direction: PaxMonCheckDirection;
+  planned_train: bool;
+  checked_in_train: bool;
+  canceled: bool;
+
+  leg_start_station: Station (optional);
+  leg_destination_station: Station (optional);
+
+  leg_start_time: ulong; // unix timestamp
+  leg_destination_time: ulong; // unix timestamp
+
+  checkin_start_station: Station (optional);
+  checkin_destination_station: Station (optional);
+
+  check_min_time: ulong; // unix timestamp
+  check_max_time: ulong; // unix timestamp
+
+  schedule_train_start_time: ulong; // unix timestamp
+
+  category: string;
+  train_nr: uint;
+
+  planned_trip_ref: ulong;
+}

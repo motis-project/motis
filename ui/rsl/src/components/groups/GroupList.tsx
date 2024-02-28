@@ -30,7 +30,7 @@ import { universeAtom } from "@/data/multiverse";
 import { formatNumber, formatPercent } from "@/data/numberFormat";
 
 import { formatTime } from "@/util/dateFormat";
-import { extractNumbers } from "@/util/extractNumbers";
+import { extractNumbersWithRanges } from "@/util/extractNumbers";
 import { getScheduleRange } from "@/util/scheduleRange";
 
 import DatePicker from "@/components/inputs/DatePicker";
@@ -137,12 +137,12 @@ function GroupList(): JSX.Element {
     PaxMonRerouteReason[]
   >(rerouteReasonOptions.map((r) => r.reason));
 
-  const filterTrainNrs = extractNumbers(trainNrFilter);
+  const filterTrainNrs = extractNumbersWithRanges(trainNrFilter);
   const rerouteReasonFilterIfUsed = filterByRerouteReason
     ? rerouteReasonFilter
     : [];
 
-  const filterGroupIdsInput = extractNumbers(groupIdFilter);
+  const filterGroupIdsInput = extractNumbersWithRanges(groupIdFilter);
   const idType: GroupIdType = externalGroupIds ? "source" : "internal";
   const filterGroupIds: number[] =
     idType == "internal" ? filterGroupIdsInput : [];

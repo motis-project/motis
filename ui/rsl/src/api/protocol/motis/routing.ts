@@ -123,6 +123,7 @@ export interface RoutingRequest {
   use_dest_metas: boolean; // default: true
   use_start_footpaths: boolean; // default: true
   schedule: number;
+  timeout: number; // default: 0
 }
 
 // routing/RoutingResponse.fbs

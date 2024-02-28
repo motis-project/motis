@@ -10,6 +10,7 @@ import {
 
 import { showSimPanelAtom } from "@/data/views";
 
+import { ForecastEval } from "@/components/eval/forecast/ForecastEval.tsx";
 import { GroupDetailsFromRoute } from "@/components/groups/GroupDetails";
 import GroupsMainSection from "@/components/groups/GroupsMainSection";
 import Header from "@/components/header/Header";
@@ -85,6 +86,7 @@ const router = createHashRouter([
       },
       { path: "stats", element: <GroupStatistics /> },
       { path: "status", element: <StatusMain /> },
+      { path: "eval", element: <ForecastEval /> },
     ],
   },
 ]);
