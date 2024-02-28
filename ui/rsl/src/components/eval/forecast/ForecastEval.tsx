@@ -6,6 +6,7 @@ import { getApiEndpoint } from "@/api/endpoint.ts";
 import { formatFileNameTime } from "@/util/dateFormat.ts";
 import { saveAsCSV } from "@/util/download.ts";
 
+import { EvalResults } from "@/components/eval/forecast/EvalResults.tsx";
 import ForecastEvalWorker from "@/components/eval/forecast/worker.ts?worker";
 import {
   EvalResult,
@@ -148,6 +149,7 @@ export function ForecastEval(): ReactNode {
           value={progressMax != 0 ? (progress / progressMax) * 100 : 0}
         />
       </div>
+      {evalResult && <EvalResults result={evalResult} />}
     </div>
   );
 }
