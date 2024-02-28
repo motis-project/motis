@@ -685,6 +685,8 @@ PaxMonFilterTripsSortOrder:
     - `MaxPaxRange`: Sort by largest passenger range (trip with largest range first)
     - `MaxPax`: Sort by number of passengers (trip with most passengers first)
     - `MaxCapacity`: Sort by capacity (trip with highest capacity first)
+    - `BiggestDeviation`: Sort by deviation forecast vs. expected (trips with biggest deviation first)
+    - `SmallestDeviation`: Sort by deviation forecast vs. expected (trips with smallest deviation first)
 PaxMonFilterTripsTimeFilter:
   description: |
     Specifies which timestamps must be in the filter interval.
