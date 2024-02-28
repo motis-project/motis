@@ -82,9 +82,9 @@ Offset<VehicleGroup> parse_vehicle_group(context& ctx,
   }
 
   auto dep_uuid = default_dep_uuid;
-  auto const& dep = get_value(vg, "abfahrtAbweichend");
-  if (dep.IsObject()) {
-    dep_uuid = ctx.ris_.b_.CreateString(get_optional_str(dep, "abfahrtID"));
+  auto const& dep = get_optional_value(vg, "abfahrtAbweichend");
+  if (dep != nullptr && dep->IsObject()) {
+    dep_uuid = ctx.ris_.b_.CreateString(get_optional_str(*dep, "abfahrtID"));
   }
 
   return CreateVehicleGroup(

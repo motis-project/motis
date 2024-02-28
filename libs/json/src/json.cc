@@ -15,6 +15,12 @@ rapidjson::Value const& get_value(rapidjson::Value const& parent,
   return member->value;
 }
 
+rapidjson::Value const* get_optional_value(rapidjson::Value const& parent,
+                                           char const* key) {
+  auto const member = parent.FindMember(key);
+  return (member != parent.MemberEnd()) ? &member->value : nullptr;
+}
+
 rapidjson::Value const& get_obj(rapidjson::Value const& parent,
                                 char const* key) {
   auto const& value = get_value(parent, key);
