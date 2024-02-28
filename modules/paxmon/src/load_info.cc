@@ -107,4 +107,21 @@ trip_load_info calc_trip_load_info(universe const& uv, schedule const& sched,
           [&](auto const& sec) { return make_edge_load_info(sec); })};
 }
 
+trip_load_info calc_trip_load_info(universe const& uv, trip const* trp) {
+  return trip_load_info{
+      trp,
+      utl::all(uv.trip_data_.edges(trp))  //
+          | utl::transform([&](auto const e) { return e.get(uv); })  //
+          | utl::remove_if([](auto const* e) { return !e->is_trip(); })  //
+          | utl::transform([&](auto const* e) {
+              auto pdf =
+                  get_load_pdf(uv.passenger_groups_,
+                               uv.pax_connection_info_.group_routes(e->pci_));
+              auto cdf = get_cdf(pdf);
+              return make_edge_load_info(uv, e, std::move(pdf), std::move(cdf),
+                                         false);
+            })  //
+          | utl::vec()};
+}
+
 }  // namespace motis::paxmon
