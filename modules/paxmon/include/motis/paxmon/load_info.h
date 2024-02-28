@@ -47,4 +47,6 @@ edge_load_info make_edge_load_info(universe const& uv, edge const* e,
 trip_load_info calc_trip_load_info(universe const& uv, schedule const& sched,
                                    trip const* trp);
 
+trip_load_info calc_trip_load_info(universe const& uv, trip const* trp);
+
 }  // namespace motis::paxmon

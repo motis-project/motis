@@ -199,7 +199,7 @@ private:
   updated_trip_info& get_or_create_updated_trip_info(trip_idx_t const ti) {
     return utl::get_or_create(updated_trip_infos_, ti, [&]() {
       auto uti = updated_trip_info{};
-      auto const tli = calc_trip_load_info(uv_, sched_, get_trip(sched_, ti));
+      auto const tli = calc_trip_load_info(uv_, get_trip(sched_, ti));
       uti.before_edges_ = include_before_trip_load_info_
                               ? get_fbs_trip_load_info(tli)
                               : get_empty_fbs_trip_load_info();
@@ -294,7 +294,7 @@ private:
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
       trip_idx_t const ti) {
     return get_fbs_trip_load_info(
-        calc_trip_load_info(uv_, sched_, get_trip(sched_, ti)));
+        calc_trip_load_info(uv_, get_trip(sched_, ti)));
   }
 
   Offset<Vector<Offset<PaxMonEdgeLoadInfo>>> get_fbs_trip_load_info(
