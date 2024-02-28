@@ -136,7 +136,6 @@ jobs:
           Copy-Item .\deps\osrm-backend\profiles .\osrm-profiles -Recurse
           Copy-Item .\deps\ppr\profiles .\ppr-profiles -Recurse
           Copy-Item .\deps\tiles\profile .\tiles-profiles -Recurse
-          Copy-Item .\modules\paxforecast\behavior .\rsl-behavior -Recurse
 
       - name: Move Web UI
         if: matrix.config.mode == 'Release'
