@@ -434,6 +434,9 @@ PaxMonStatusResponse:
     universe_count:
       description: >
         The current number of universes.
+    has_check_data:
+      description: >
+        Whether pax check data is loaded.
 PaxMonPdfEntry:
   description: TODO
   fields:
