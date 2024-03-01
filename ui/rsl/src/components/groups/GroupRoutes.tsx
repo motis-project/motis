@@ -1,20 +1,30 @@
 import { ClockIcon, TicketIcon } from "@heroicons/react/24/outline";
+import { useQuery } from "@tanstack/react-query";
+import { useAtom } from "jotai";
 import { AlertTriangle, ExternalLink } from "lucide-react";
-import React, { ReactElement } from "react";
+import React, { ReactNode } from "react";
 
+import { Connection, EventInfo } from "@/api/protocol/motis.ts";
 import {
   PaxMonCompactJourney,
   PaxMonCompactJourneyLeg,
   PaxMonGroup,
   PaxMonGroupRoute,
+  PaxMonReviseCompactJourneyRequest,
   PaxMonTransferInfo,
 } from "@/api/protocol/motis/paxmon.ts";
 
+import {
+  queryKeys,
+  sendPaxMonReviseCompactJourneyRequest,
+} from "@/api/paxmon.ts";
+
 import { formatShortDuration } from "@/data/durationFormat.ts";
+import { universeAtom } from "@/data/multiverse.ts";
 import { formatPercent } from "@/data/numberFormat.ts";
 
 import { getBahnSucheUrl } from "@/util/bahnDe.ts";
-import { formatDateTime } from "@/util/dateFormat.ts";
+import { formatDateTime, formatTime } from "@/util/dateFormat.ts";
 
 import TripServiceInfoView from "@/components/TripServiceInfoView.tsx";
 import { Button } from "@/components/ui/button.tsx";
@@ -27,6 +37,17 @@ interface GroupRoutesProps {
 }
 
 export function GroupRoutes({ group }: GroupRoutesProps) {
+  const [universe] = useAtom(universeAtom);
+
+  const reviseRequest: PaxMonReviseCompactJourneyRequest = {
+    universe,
+    journeys: group.routes.map((r) => r.journey),
+  };
+  const { data: reviseData } = useQuery({
+    queryKey: queryKeys.reviseCompactJourney(reviseRequest),
+    queryFn: () => sendPaxMonReviseCompactJourneyRequest(reviseRequest),
+  });
+
   const plannedJourney = group.routes[0].journey;
 
   return (
@@ -54,8 +75,12 @@ export function GroupRoutes({ group }: GroupRoutesProps) {
         </Button>
       </div>
       <div className="inline-flex flex-col gap-y-3">
-        {group.routes.map((route) => (
-          <GroupRoute route={route} key={route.index} />
+        {group.routes.map((route, idx) => (
+          <GroupRoute
+            key={route.index}
+            route={route}
+            revisedConnection={reviseData?.connections[idx]}
+          />
         ))}
       </div>
     </div>
@@ -68,9 +93,10 @@ const MATCH_REROUTED = 4;
 
 interface GroupRouteProps {
   route: PaxMonGroupRoute;
+  revisedConnection: Connection | undefined;
 }
 
-function GroupRoute({ route }: GroupRouteProps): ReactElement {
+function GroupRoute({ route, revisedConnection }: GroupRouteProps): ReactNode {
   const showWarning = route.planned && route.source_flags != 0;
   const warnings: string[] = [];
   if ((route.source_flags & MATCH_INEXACT_TIME) == MATCH_INEXACT_TIME) {
@@ -133,21 +159,26 @@ function GroupRoute({ route }: GroupRouteProps): ReactElement {
           <thead>
             <tr className="font-semibold">
               <td className="sr-only pr-2">Abschnitt</td>
-              <td className="pr-2">Zug</td>
-              <td className="pr-2" title="Benötigte Umstiegszeit">
+              <td className="px-2">Zug</td>
+              <td className="px-2" title="Benötigte Umstiegszeit">
                 Umstieg
               </td>
-              <td className="pr-2" colSpan={2}>
-                Planmäßige Abfahrt
+              <td className="px-2" colSpan={3}>
+                Abfahrt
               </td>
-              <td className="pr-2" colSpan={2}>
-                Planmäßige Ankunft
+              <td className="px-2" colSpan={3}>
+                Ankunft
               </td>
             </tr>
           </thead>
           <tbody>
             {route.journey.legs.map((leg, idx) => (
-              <JourneyLeg key={idx} leg={leg} index={idx} />
+              <JourneyLeg
+                key={idx}
+                leg={leg}
+                index={idx}
+                revisedConnection={revisedConnection}
+              />
             ))}
             <FinalFootpath journey={route.journey} />
           </tbody>
@@ -160,30 +191,72 @@ function GroupRoute({ route }: GroupRouteProps): ReactElement {
 interface JourneyLegProps {
   leg: PaxMonCompactJourneyLeg;
   index: number;
+  revisedConnection: Connection | undefined;
 }
 
-function JourneyLeg({ leg, index }: JourneyLegProps): JSX.Element {
+function JourneyLeg({
+  leg,
+  index,
+  revisedConnection,
+}: JourneyLegProps): ReactNode {
+  const revisedDeparture = revisedConnection?.stops?.find(
+    (stop) => stop.station.id == leg.enter_station.id,
+  )?.departure;
+
+  const revisedArrival = revisedConnection?.stops?.find(
+    (stop) => stop.station.id == leg.exit_station.id,
+  )?.arrival;
+
   return (
     <tr>
       <td className="pr-2">{index + 1}.</td>
-      <td className="pr-2">
+      <td className="px-2">
         <TripServiceInfoView tsi={leg.trip} format={"ShortAll"} link={true} />
       </td>
-      <td className="pr-2" title={transferTypeText(leg.enter_transfer)}>
+      <td className="px-2" title={transferTypeText(leg.enter_transfer)}>
         {requiresTransfer(leg.enter_transfer)
           ? formatShortDuration(leg.enter_transfer.duration)
           : "—"}
       </td>
-      <td className="pr-2">{formatDateTime(leg.enter_time)}</td>
+      <td className="px-2">{formatDateTime(leg.enter_time)}</td>
+      <td className="min-w-12 pr-2">
+        <RevisedEventTime event={revisedDeparture} />
+      </td>
       <td className="pr-2" title={leg.enter_station.id}>
         {leg.enter_station.name}
       </td>
-      <td className="pr-2">{formatDateTime(leg.exit_time)}</td>
+      <td className="px-2">{formatDateTime(leg.exit_time)}</td>
+      <td className="min-w-12 pr-2">
+        <RevisedEventTime event={revisedArrival} />
+      </td>
       <td className="" title={leg.exit_station.id}>
         {leg.exit_station.name}
       </td>
     </tr>
   );
+}
+
+interface RevisedEventTimeProps {
+  event: EventInfo | undefined;
+}
+
+function RevisedEventTime({ event }: RevisedEventTimeProps) {
+  if (!event) {
+    return null;
+  } else if (!event.valid) {
+    return (
+      <span className="text-red-600" title="Halt ausgefallen">
+        ––:––
+      </span>
+    );
+  } else {
+    const delayed = event.time > event.schedule_time;
+    return (
+      <span className={cn(delayed ? "text-red-600" : "text-green-600")}>
+        {formatTime(event.time)}
+      </span>
+    );
+  }
 }
 
 interface FinalFootpathProps {
