@@ -10,7 +10,8 @@ namespace motis {
 
 struct schedule;
 
-flatbuffers::Offset<Connection> to_connection(flatbuffers::FlatBufferBuilder&,
-                                              journey const&);
+flatbuffers::Offset<Connection> to_connection(
+    flatbuffers::FlatBufferBuilder&, journey const&,
+    bool include_invalid_stop_info = false);
 
 }  // namespace motis

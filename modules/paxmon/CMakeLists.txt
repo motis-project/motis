@@ -13,5 +13,6 @@ target_link_libraries(motis-paxmon
   motis-bootstrap
   motis-module
   motis-core
+  motis-routing
 )
 target_compile_options(motis-paxmon PRIVATE ${MOTIS_CXX_FLAGS})
