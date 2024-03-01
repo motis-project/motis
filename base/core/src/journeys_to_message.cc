@@ -23,13 +23,14 @@ TimestampReason convert_reason(timestamp_reason const r) {
   }
 }
 
-std::vector<Offset<Stop>> convert_stops(
-    FlatBufferBuilder& b, std::vector<journey::stop> const& stops) {
+std::vector<Offset<Stop>> convert_stops(FlatBufferBuilder& b,
+                                        std::vector<journey::stop> const& stops,
+                                        bool const include_invalid_stop_info) {
   std::vector<Offset<Stop>> buf_stops;
 
   for (auto const& stop : stops) {
     auto const arr =
-        stop.arrival_.valid_
+        stop.arrival_.valid_ || include_invalid_stop_info
             ? CreateEventInfo(b, stop.arrival_.timestamp_,
                               stop.arrival_.schedule_timestamp_,
                               b.CreateString(stop.arrival_.track_),
@@ -39,7 +40,7 @@ std::vector<Offset<Stop>> convert_stops(
             : CreateEventInfo(b, 0, 0, b.CreateString(""), b.CreateString(""),
                               stop.arrival_.valid_, TimestampReason_SCHEDULE);
     auto const dep =
-        stop.departure_.valid_
+        stop.departure_.valid_ || include_invalid_stop_info
             ? CreateEventInfo(b, stop.departure_.timestamp_,
                               stop.departure_.schedule_timestamp_,
                               b.CreateString(stop.departure_.track_),
@@ -147,15 +148,16 @@ std::vector<Offset<Problem>> convert_problems(
   return buf_problems;
 }
 
-Offset<Connection> to_connection(FlatBufferBuilder& b, journey const& j) {
-  return CreateConnection(b, b.CreateVector(convert_stops(b, j.stops_)),
-                          b.CreateVector(convert_moves(b, j.transports_)),
-                          b.CreateVector(convert_trips(b, j.trips_)),
-                          b.CreateVector(convert_attributes(b, j.attributes_)),
-                          b.CreateVector(convert_free_texts(b, j.free_texts_)),
-                          b.CreateVector(convert_problems(b, j.problems_)),
-                          j.night_penalty_, j.db_costs_,
-                          status_to_fbs(j.status_));
+Offset<Connection> to_connection(FlatBufferBuilder& b, journey const& j,
+                                 bool const include_invalid_stop_info) {
+  return CreateConnection(
+      b, b.CreateVector(convert_stops(b, j.stops_, include_invalid_stop_info)),
+      b.CreateVector(convert_moves(b, j.transports_)),
+      b.CreateVector(convert_trips(b, j.trips_)),
+      b.CreateVector(convert_attributes(b, j.attributes_)),
+      b.CreateVector(convert_free_texts(b, j.free_texts_)),
+      b.CreateVector(convert_problems(b, j.problems_)), j.night_penalty_,
+      j.db_costs_, status_to_fbs(j.status_));
 }
 
 }  // namespace motis

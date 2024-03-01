@@ -1,28 +1,159 @@
 #include "motis/paxmon/api/revise_compact_journey.h"
 
+#include <cstdint>
+#include <algorithm>
+#include <iterator>
+#include <optional>
+
 #include "utl/to_vec.h"
 
+#include "motis/core/common/interval_map.h"
+
+#include "motis/core/access/realtime_access.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/access/trip_access.h"
+#include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/station_conv.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/journeys_to_message.h"
 
-#include "motis/module/context/motis_call.h"
+#include "motis/routing/output/to_journey.h"
 
 #include "motis/paxmon/get_universe.h"
 #include "motis/paxmon/messages.h"
 
 using namespace motis::module;
 using namespace motis::paxmon;
-using namespace motis::revise;
 using namespace flatbuffers;
+
+namespace mro = motis::routing::output;
+namespace mroi = motis::routing::output::intermediate;
 
 namespace motis::paxmon::api {
 
-journey compact_journey_to_basic_journey(schedule const& sched,
-                                         compact_journey const& cj) {
+struct event_info {
+  time cur_time_{};
+  time sched_time_{};
+  std::uint16_t cur_track_{};
+  std::uint16_t sched_track_{};
+  timestamp_reason reason_{timestamp_reason::SCHEDULE};
+
+  [[nodiscard]] journey::stop::event_info to_journey(
+      schedule const& sched, bool const valid = true) const {
+    return {.valid_ = valid,
+            .timestamp_ = motis_to_unixtime(sched, cur_time_),
+            .schedule_timestamp_ = motis_to_unixtime(sched, sched_time_),
+            .timestamp_reason_ = reason_,
+            .track_ = sched.tracks_.at(cur_track_).str(),
+            .schedule_track_ = sched.tracks_.at(sched_track_).str()};
+  }
+};
+
+struct trip_section_info {
+  light_connection const* lcon_{};
+  station const& from_;
+  station const& to_;
+  event_info dep_{};
+  event_info arr_{};
+};
+
+struct used_trip_sections {
+  std::vector<trip_section_info> sections_;
+  std::optional<std::size_t> enter_section_;
+  std::optional<std::size_t> exit_section_;
+  bool exact_enter_section_{};
+  bool exact_exit_section_{};
+};
+
+used_trip_sections get_trip_sections(schedule const& sched,
+                                     journey_leg const& leg, trip const* trp) {
+  auto result = used_trip_sections{};
+  result.sections_ = utl::to_vec(access::sections{trp}, [&](auto const& sec) {
+    auto const& lc = sec.lcon();
+    auto const ek_dep = sec.ev_key_from();
+    auto const ek_arr = sec.ev_key_to();
+    auto const di_dep = get_delay_info(sched, ek_dep);
+    auto const di_arr = get_delay_info(sched, ek_arr);
+    return trip_section_info{
+        .lcon_ = &lc,
+        .from_ = sec.from_station(sched),
+        .to_ = sec.to_station(sched),
+        .dep_ = event_info{.cur_time_ = lc.d_time_,
+                           .sched_time_ = di_dep.get_schedule_time(),
+                           .cur_track_ = lc.full_con_->d_track_,
+                           .sched_track_ = get_schedule_track(sched, ek_dep),
+                           .reason_ = di_dep.get_reason()},
+        .arr_ = event_info{.cur_time_ = lc.a_time_,
+                           .sched_time_ = di_arr.get_schedule_time(),
+                           .cur_track_ = lc.full_con_->a_track_,
+                           .sched_track_ = get_schedule_track(sched, ek_arr),
+                           .reason_ = di_arr.get_reason()}};
+  });
+
+  auto enter_section_it =
+      std::find_if(begin(result.sections_), end(result.sections_),
+                   [&](trip_section_info const& sec) {
+                     return sec.from_.index_ == leg.enter_station_id_ &&
+                            sec.dep_.sched_time_ == leg.enter_time_;
+                   });
+  result.exact_enter_section_ = enter_section_it != end(result.sections_);
+
+  auto exit_section_it =
+      std::find_if(begin(result.sections_), end(result.sections_),
+                   [&](trip_section_info const& sec) {
+                     return sec.to_.index_ == leg.exit_station_id_ &&
+                            sec.arr_.sched_time_ == leg.exit_time_;
+                   });
+  result.exact_exit_section_ = exit_section_it != end(result.sections_);
+
+  if (!result.exact_enter_section_) {
+    // no exact match, see if a stop with a different scheduled time at the
+    // enter station exists (possible reroute)
+    // if multiple stops at the same station exist, choose the first one
+    // after the scheduled departure time, or the last if none are after
+    // the scheduled departure time
+    for (auto it = begin(result.sections_); it != end(result.sections_); ++it) {
+      if (it->from_.index_ == leg.enter_station_id_) {
+        enter_section_it = it;
+        if (it->dep_.sched_time_ >= leg.enter_time_) {
+          break;
+        }
+      }
+    }
+  }
+
+  if (!result.exact_exit_section_) {
+    // same logic
+    for (auto it = begin(result.sections_); it != end(result.sections_); ++it) {
+      if (it->to_.index_ == leg.exit_station_id_) {
+        exit_section_it = it;
+        if (enter_section_it != end(result.sections_)) {
+          if (it->arr_.sched_time_ >= enter_section_it->dep_.sched_time_) {
+            break;
+          }
+        } else if (it->arr_.sched_time_ >= leg.exit_time_) {
+          break;
+        }
+      }
+    }
+  }
+
+  if (enter_section_it != end(result.sections_)) {
+    result.enter_section_ =
+        std::distance(begin(result.sections_), enter_section_it);
+  }
+
+  if (exit_section_it != end(result.sections_)) {
+    result.exit_section_ =
+        std::distance(begin(result.sections_), exit_section_it);
+  }
+
+  return result;
+}
+
+journey revise_compact_journey(schedule const& sched,
+                               compact_journey const& cj) {
   auto j = journey{};
   auto last_time = unixtime{};
 
@@ -39,6 +170,8 @@ journey compact_journey_to_basic_journey(schedule const& sched,
     }
   };
 
+  auto itransports = std::vector<mroi::transport>{};
+
   for (auto const& leg : cj.legs()) {
     auto const& enter_station = *sched.stations_.at(leg.enter_station_id_);
     auto const& exit_station = *sched.stations_.at(leg.exit_station_id_);
@@ -47,45 +180,81 @@ journey compact_journey_to_basic_journey(schedule const& sched,
       if (leg.enter_transfer_ &&
           leg.enter_transfer_->type_ == transfer_info::type::FOOTPATH) {
         auto const prev_idx = static_cast<unsigned>(j.stops_.size() - 1);
-        j.transports_.emplace_back(
-            journey::transport{.from_ = prev_idx,
-                               .to_ = prev_idx + 1,  // will be added below
-                               .is_walk_ = true,
-                               .duration_ = leg.enter_transfer_->duration_,
-                               .mumo_id_ = -1});
+        itransports.emplace_back(prev_idx, prev_idx + 1,
+                                 leg.enter_transfer_->duration_, 0, 0, 0);
       }
     }
 
-    auto& enter_stop = push_station(enter_station);
-    auto const enter_idx = static_cast<unsigned>(j.stops_.size() - 1);
-    enter_stop.enter_ = true;
-    auto& dep = enter_stop.departure_;
-    dep.valid_ = true;
-    dep.schedule_timestamp_ = motis_to_unixtime(sched, leg.enter_time_);
-    dep.timestamp_ = dep.schedule_timestamp_;
-
-    auto& exit_stop = push_station(exit_station);
-    auto const exit_idx = static_cast<unsigned>(j.stops_.size() - 1);
-    exit_stop.exit_ = true;
-    auto& arr = exit_stop.arrival_;
-    arr.valid_ = true;
-    arr.schedule_timestamp_ = motis_to_unixtime(sched, leg.exit_time_);
-    arr.timestamp_ = arr.schedule_timestamp_;
-    last_time = arr.schedule_timestamp_;
-
     auto const* trp = get_trip(sched, leg.trip_idx_);
+    auto const sections = get_trip_sections(sched, leg, trp);
 
-    j.transports_.emplace_back(journey::transport{
-        .from_ = enter_idx,
-        .to_ = exit_idx,
-        .is_walk_ = false,
-    });
+    auto enter_idx = 0U;
+    auto exit_idx = 0U;
 
-    j.trips_.emplace_back(
-        journey::trip{.from_ = enter_idx,
-                      .to_ = exit_idx,
-                      .extern_trip_ = to_extern_trip(sched, trp),
-                      .debug_ = trp->dbg_.str()});
+    if (!sections.sections_.empty() && sections.enter_section_ &&
+        sections.exit_section_ &&
+        *sections.enter_section_ <= *sections.exit_section_) {
+      // enter + exit found -> add all trip stops
+      auto const& enter_sec = sections.sections_.at(*sections.enter_section_);
+      auto& enter_stop = push_station(enter_sec.from_);
+      enter_idx = static_cast<unsigned>(j.stops_.size() - 1);
+      enter_stop.enter_ = true;
+
+      for (auto i = *sections.enter_section_; i <= *sections.exit_section_;
+           ++i) {
+        auto const& sec = sections.sections_[i];
+        auto& dep_stop = j.stops_.back();
+        dep_stop.departure_ = sec.dep_.to_journey(sched);
+        auto& arr_stop = push_station(sec.to_);
+        arr_stop.arrival_ = sec.arr_.to_journey(sched);
+        itransports.emplace_back(static_cast<unsigned>(j.stops_.size() - 2),
+                                 static_cast<unsigned>(j.stops_.size() - 1),
+                                 sec.lcon_);
+      }
+
+      auto& exit_stop = j.stops_.back();
+      exit_idx = static_cast<unsigned>(j.stops_.size() - 1);
+      exit_stop.exit_ = true;
+      last_time = exit_stop.arrival_.schedule_timestamp_;
+    } else {
+      // enter and/or exit not found -> add planned enter/exit stops
+      auto& enter_stop = push_station(enter_station);
+      enter_idx = static_cast<unsigned>(j.stops_.size() - 1);
+      enter_stop.enter_ = true;
+      auto& dep = enter_stop.departure_;
+      dep.valid_ = sections.exact_enter_section_;
+      dep.schedule_timestamp_ = motis_to_unixtime(sched, leg.enter_time_);
+      dep.timestamp_ = dep.schedule_timestamp_;
+      if (sections.enter_section_) {
+        enter_stop.departure_ =
+            sections.sections_[*sections.enter_section_].dep_.to_journey(sched);
+      }
+
+      auto& exit_stop = push_station(exit_station);
+      exit_idx = static_cast<unsigned>(j.stops_.size() - 1);
+      exit_stop.exit_ = true;
+      auto& arr = exit_stop.arrival_;
+      arr.valid_ = sections.exact_exit_section_;
+      arr.schedule_timestamp_ = motis_to_unixtime(sched, leg.exit_time_);
+      arr.timestamp_ = arr.schedule_timestamp_;
+      if (sections.exit_section_) {
+        exit_stop.arrival_ =
+            sections.sections_[*sections.exit_section_].arr_.to_journey(sched);
+      }
+      last_time = arr.schedule_timestamp_;
+
+      if (sections.enter_section_) {
+        itransports.emplace_back(
+            enter_idx, exit_idx,
+            sections.sections_.at(*sections.enter_section_).lcon_);
+      } else if (sections.exit_section_) {
+        itransports.emplace_back(
+            enter_idx, exit_idx,
+            sections.sections_.at(*sections.exit_section_).lcon_);
+      } else {
+        itransports.emplace_back(enter_idx, exit_idx, 0, 0, 0, 0);
+      }
+    }
   }
 
   if (cj.final_footpath().is_footpath()) {
@@ -107,35 +276,14 @@ journey compact_journey_to_basic_journey(schedule const& sched,
     arr.schedule_timestamp_ = last_time + fp.duration_ * 60;
     arr.timestamp_ = arr.schedule_timestamp_;
 
-    j.transports_.emplace_back(journey::transport{.from_ = from_idx,
-                                                  .to_ = to_idx,
-                                                  .is_walk_ = true,
-                                                  .duration_ = fp.duration_,
-                                                  .mumo_id_ = -1});
+    itransports.emplace_back(from_idx, to_idx, fp.duration_, 0, 0, 0);
   }
 
+  j.transports_ = mro::generate_journey_transports(itransports, sched);
+  j.trips_ = mro::generate_journey_trips(itransports, sched);
+  j.attributes_ = mro::generate_journey_attributes(itransports);
+
   return j;
-}
-
-Offset<Connection> compact_journey_to_basic_connection(
-    FlatBufferBuilder& fbb, schedule const& sched, compact_journey const& cj) {
-  return to_connection(fbb, compact_journey_to_basic_journey(sched, cj));
-}
-
-msg_ptr revise_journeys(std::vector<journey> const& journeys,
-                        ctx::res_id_t const schedule_res_id) {
-  message_creator mc;
-  mc.create_and_finish(
-      MsgContent_ReviseRequest,
-      CreateReviseRequest(
-          mc,
-          mc.CreateVector(utl::to_vec(
-              journeys, [&](auto const& j) { return to_connection(mc, j); })),
-          schedule_res_id)
-          .Union(),
-      "/revise");
-  auto const req = make_msg(mc);
-  return motis_call(req)->val();
 }
 
 msg_ptr revise_compact_journey(paxmon_data& data, msg_ptr const& msg) {
@@ -148,24 +296,16 @@ msg_ptr revise_compact_journey(paxmon_data& data, msg_ptr const& msg) {
     return from_fbs(sched, fbs_cj);
   });
 
-  auto const revised = revise_journeys(
-      utl::to_vec(cjs,
-                  [&](auto const& cj) {
-                    return compact_journey_to_basic_journey(sched, cj);
-                  }),
-      uv.schedule_res_id_);
-
-  auto const revise_res = motis_content(ReviseResponse, revised);
+  auto const revised = utl::to_vec(
+      cjs, [&](auto const& cj) { return revise_compact_journey(sched, cj); });
 
   message_creator mc;
   mc.create_and_finish(
       MsgContent_PaxMonReviseCompactJourneyResponse,
       CreatePaxMonReviseCompactJourneyResponse(
-          mc, mc.CreateVector(utl::to_vec(*revise_res->connections(),
-                                          [&](auto const& con) {
-                                            return motis_copy_table(Connection,
-                                                                    mc, con);
-                                          })))
+          mc, mc.CreateVector(utl::to_vec(
+                  revised,
+                  [&](auto const& j) { return to_connection(mc, j, true); })))
           .Union());
   return make_msg(mc);
 }
