@@ -1,6 +1,8 @@
 #include "motis/module/context/motis_http_req.h"
 
 #include "boost/algorithm/string/predicate.hpp"
+#include "boost/url/url.hpp"
+#include "boost/url/url_view.hpp"
 
 #include "net/http/client/http_client.h"
 #include "net/http/client/https_client.h"
@@ -27,6 +29,7 @@ struct http_request_executor
     l(debug, "http request {} {}",
       net::http::client::method_to_str(req.req_method),
       fmt::streamed(req.address));
+    request_url_ = req.address;
 
     auto cb = [self = shared_from_this()](auto&& a,
                                           net::http::client::response&& res,
@@ -76,13 +79,17 @@ struct http_request_executor
       }
     }
 
+    auto resolved_url = boost::urls::url{};
+    boost::urls::resolve(boost::urls::url_view(request_url_.str()),
+                         boost::urls::url_view(target), resolved_url);
     ++redirect_count_;
-    make_request(url(target));
+    make_request(url(resolved_url.c_str()));
   }
 
   unsigned redirect_count_{0U};
   boost::asio::io_service& ios_;
   http_future_t f_;
+  url request_url_;
 };
 
 std::shared_ptr<ctx::future<ctx_data, net::http::client::response>>
