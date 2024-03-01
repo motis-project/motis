@@ -188,16 +188,12 @@ journey revise_compact_journey(schedule const& sched,
     auto const* trp = get_trip(sched, leg.trip_idx_);
     auto const sections = get_trip_sections(sched, leg, trp);
 
-    auto enter_idx = 0U;
-    auto exit_idx = 0U;
-
     if (!sections.sections_.empty() && sections.enter_section_ &&
         sections.exit_section_ &&
         *sections.enter_section_ <= *sections.exit_section_) {
       // enter + exit found -> add all trip stops
       auto const& enter_sec = sections.sections_.at(*sections.enter_section_);
       auto& enter_stop = push_station(enter_sec.from_);
-      enter_idx = static_cast<unsigned>(j.stops_.size() - 1);
       enter_stop.enter_ = true;
 
       for (auto i = *sections.enter_section_; i <= *sections.exit_section_;
@@ -213,13 +209,12 @@ journey revise_compact_journey(schedule const& sched,
       }
 
       auto& exit_stop = j.stops_.back();
-      exit_idx = static_cast<unsigned>(j.stops_.size() - 1);
       exit_stop.exit_ = true;
       last_time = exit_stop.arrival_.schedule_timestamp_;
     } else {
       // enter and/or exit not found -> add planned enter/exit stops
       auto& enter_stop = push_station(enter_station);
-      enter_idx = static_cast<unsigned>(j.stops_.size() - 1);
+      auto const enter_idx = static_cast<unsigned>(j.stops_.size() - 1);
       enter_stop.enter_ = true;
       auto& dep = enter_stop.departure_;
       dep.valid_ = sections.exact_enter_section_;
@@ -231,7 +226,7 @@ journey revise_compact_journey(schedule const& sched,
       }
 
       auto& exit_stop = push_station(exit_station);
-      exit_idx = static_cast<unsigned>(j.stops_.size() - 1);
+      auto const exit_idx = static_cast<unsigned>(j.stops_.size() - 1);
       exit_stop.exit_ = true;
       auto& arr = exit_stop.arrival_;
       arr.valid_ = sections.exact_exit_section_;
@@ -290,7 +285,6 @@ msg_ptr revise_compact_journey(paxmon_data& data, msg_ptr const& msg) {
   auto const req = motis_content(PaxMonReviseCompactJourneyRequest, msg);
   auto const uv_access = get_universe_and_schedule(data, req->universe());
   auto const& sched = uv_access.sched_;
-  auto const& uv = uv_access.uv_;
 
   auto const cjs = utl::to_vec(*req->journeys(), [&](auto const& fbs_cj) {
     return from_fbs(sched, fbs_cj);
