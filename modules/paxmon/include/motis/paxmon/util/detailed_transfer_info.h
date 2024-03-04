@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <optional>
 
 #include "boost/range/join.hpp"
 
@@ -102,12 +103,18 @@ struct get_detailed_transfer_info_options {
 };
 
 inline detailed_transfer_info get_detailed_transfer_info(
-    universe const& uv, schedule const& /*sched*/, edge_index const ei,
+    universe const& uv, schedule const& /*sched*/, edge const* ic_edge,
     flatbuffers::FlatBufferBuilder& fbb,
-    get_detailed_transfer_info_options const& options) {
-  auto const* ic_edge = ei.get(uv);
+    get_detailed_transfer_info_options const& options,
+    std::optional<edge_index> const opt_edge_idx = std::nullopt) {
   auto info = detailed_transfer_info{
-      .ei_ = ei, .from_ = ic_edge->from(uv), .to_ = ic_edge->to(uv)};
+      .ei_ = opt_edge_idx
+                 .or_else([&]() {
+                   return std::make_optional(get_edge_index(uv, ic_edge));
+                 })
+                 .value(),
+      .from_ = ic_edge->from(uv),
+      .to_ = ic_edge->to(uv)};
 
   auto group_route_infos = std::vector<PaxMonGroupRouteBaseInfo>{};
   auto last_pg = std::numeric_limits<passenger_group_index>::max();
@@ -205,6 +212,13 @@ inline detailed_transfer_info get_detailed_transfer_info(
   }
 
   return info;
+}
+
+inline detailed_transfer_info get_detailed_transfer_info(
+    universe const& uv, schedule const& sched, edge_index const ei,
+    flatbuffers::FlatBufferBuilder& fbb,
+    get_detailed_transfer_info_options const& options) {
+  return get_detailed_transfer_info(uv, sched, ei.get(uv), fbb, options, ei);
 }
 
 }  // namespace motis::paxmon::util
