@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=49090f7891d069e6136efef1e730a4f24a190a81
+  commit=f67b3bf31342e0685ec26c510f52328ceff8ff23
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -21,7 +21,7 @@
 [flatbuffers]
   url=git@github.com:motis-project/flatbuffers.git
   branch=motis
-  commit=7fce539aa13742e3e7c77b7bccf1ea3338a4141c
+  commit=a2028f13ae6aafe855010b43a0c93f86e04d9717
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
@@ -49,7 +49,7 @@
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
-  commit=c4174ff47ea04eee883b5d00b9937fb0fa39a831
+  commit=a7fe58cf3b6a54968d1248e0b4299d49db02ff2e
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
@@ -81,7 +81,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=6360fac4f35f4088decb71189adc1337cd28dfaa
+  commit=e88570eda1ba665b8a24e22d32cf777c2285cab5
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -109,4 +109,4 @@
 [valhalla]
   url=git@github.com:motis-project/valhalla.git
   branch=master
-  commit=12f0a5c142afc70ad362388b03a23d46c7a61bb6
+  commit=4711787bcf8077929d49d7f911453c66396f80f1
