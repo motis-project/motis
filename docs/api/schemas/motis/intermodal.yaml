@@ -129,3 +129,5 @@ IntermodalRoutingRequest:
       examples:
         - ""
         - "/routing"
+    allowed_claszes:
+      description: TODO

@@ -1981,10 +1981,19 @@ PaxMonTransferDelayInfo:
     unreachable_pax:
       description: TODO
 PaxMonDetailedTransferInfo:
-  description: TODO
+  description: |
+    Information about a transfer, including information about the groups
+    that want to use this transfer.
+
+    Included are:
+    - Transfers between two trips (both `arrival` and `departure` are set)
+    - Initial transfers into a trip at the start (only `departure` is set)
+    - Final transfers from a trip to the destination (only `arrival` is set)
   fields:
     id:
-      description: TODO
+      description: >
+        A transfer ID that can be used with other APIs (e.g.
+        `/paxmon/paxmon/transfer_details`).
     arrival:
       description: TODO
     departure:
@@ -2296,3 +2305,43 @@ PaxMonCheckDataByOrderResponse:
       description: TODO
 PaxMonCheckDirection:
   description: TODO
+PaxMonTripTransfersRequest:
+  description: |
+    Request a list of all transfers in and out of a trip. The trip must
+    be tracked by paxmon.
+  fields:
+    universe:
+      description: TODO
+    trip:
+      description: TODO
+    include_delay_info:
+      description: TODO
+PaxMonTripTransfersAtStop:
+  description: TODO
+  fields:
+    station:
+      description: |
+        The station where this trip stops.
+
+        Note that for transfers from/to other trips, the other trip can
+        stop at another station. In this case, a footpath between the stations
+        is used.
+    transfers:
+      description: A list of the transfers at this stop.
+PaxMonTripTransfersResponse:
+  description: TODO
+  fields:
+    incoming_transfers:
+      description: |
+        Incoming transfers into this trip, grouped by stop.
+
+        The stops are in order of occurrence. All stops where the trip
+        has a departure event are included (the final arrival stop is
+        therefore not included).
+    outgoing_transfers:
+      description: |
+        Outgoing transfers from this trip, grouped by stop.
+
+        The stops are in order of occurrence. All stops where the trip
+        has an arrival event are included (the first departure stop is
+        therefore not included).

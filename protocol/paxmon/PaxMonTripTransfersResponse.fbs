@@ -1,0 +1,14 @@
+include "base/Station.fbs";
+include "paxmon/PaxMonDetailedTransferInfo.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTripTransfersAtStop {
+  station: motis.Station;
+  transfers: [PaxMonDetailedTransferInfo];
+}
+
+table PaxMonTripTransfersResponse {
+  incoming_transfers: [PaxMonTripTransfersAtStop];
+  outgoing_transfers: [PaxMonTripTransfersAtStop];
+}

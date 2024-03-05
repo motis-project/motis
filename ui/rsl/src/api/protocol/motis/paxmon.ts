@@ -1310,6 +1310,25 @@ export interface PaxMonCheckDataByOrderResponse {
   entries: PaxMonCheckEntry[];
 }
 
+// paxmon/PaxMonTripTransfersRequest.fbs
+export interface PaxMonTripTransfersRequest {
+  universe: number;
+  trip: TripId;
+  include_delay_info: boolean;
+}
+
+// paxmon/PaxMonTripTransfersResponse.fbs
+export interface PaxMonTripTransfersAtStop {
+  station: Station;
+  transfers: PaxMonDetailedTransferInfo[];
+}
+
+// paxmon/PaxMonTripTransfersResponse.fbs
+export interface PaxMonTripTransfersResponse {
+  incoming_transfers: PaxMonTripTransfersAtStop[];
+  outgoing_transfers: PaxMonTripTransfersAtStop[];
+}
+
 // paxmon/PaxMonTrackedUpdates.fbs
 export interface PaxMonCriticalTripInfo {
   critical_sections: number;
