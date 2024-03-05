@@ -97,7 +97,7 @@ jobs:
           path: docs/generated/
 
   macos:
-    runs-on: macos-13
+    runs-on: macos-14
     needs: api-docs
     strategy:
       fail-fast: false
@@ -107,9 +107,9 @@ jobs:
             cache: macos-x86_64-avx
           - preset: macos-x86_64-noavx2
             cache: macos-x86_64-noavx
-            tests: On
           - preset: macos-arm64
             cache: macos-arm64
+            tests: On
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -411,8 +411,8 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - artifact: macos-x86_64-noavx2
-            os: macos-13
+          - artifact: macos-arm64
+            os: macos-14
           - artifact: linux-amd64
             os: ubuntu-20.04
           - artifact: linux-x86
