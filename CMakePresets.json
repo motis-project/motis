@@ -14,6 +14,8 @@
       "cacheVariables": {
         "CMAKE_OSX_ARCHITECTURES": "x86_64",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "BOOST_CONTEXT_ARCHITECTURE": "x86_64",
+        "BOOST_CONTEXT_ABI": "sysv",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON"
       }
@@ -26,6 +28,8 @@
       "cacheVariables": {
         "CMAKE_OSX_ARCHITECTURES": "x86_64",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
+        "BOOST_CONTEXT_ARCHITECTURE": "x86_64",
+        "BOOST_CONTEXT_ABI": "sysv",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON",
         "MOTIS_AVX2": "OFF"
