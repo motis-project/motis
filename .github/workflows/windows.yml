@@ -37,7 +37,7 @@ jobs:
       BUILDCACHE_MAX_CACHE_SIZE: 1073741824
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # ==== RESTORE CACHE ====
       - name: Restore buildcache Cache
@@ -103,7 +103,7 @@ jobs:
           rm -r ui/web/src
 
       - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
         if: matrix.config.webui == 'On'
         with:
           version: ^8.10.5
@@ -118,7 +118,7 @@ jobs:
       # ==== API DOCS ====
       - name: Install Protocol Tool Dependencies
         if: matrix.config.mode == 'Release'
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3
         with:
           version: ^8.10.5
           run_install: |
@@ -164,7 +164,7 @@ jobs:
 
       - name: Upload Distribution
         if: matrix.config.mode == 'Release'
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v4
         with:
           name: motis-windows${{ matrix.config.tag }}
           path: motis-windows${{ matrix.config.tag }}.zip

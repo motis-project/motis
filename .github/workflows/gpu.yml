@@ -26,7 +26,7 @@ jobs:
       CUDACXX: /usr/local/cuda/bin/nvcc
       CLICOLOR_FORCE: 1
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Get deps
         run: mkdir -p ~/deps && mv ~/deps .
