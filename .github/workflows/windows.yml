@@ -154,20 +154,20 @@ jobs:
 
       - name: Create Distribution
         if: matrix.config.mode == 'Release'
-        run: >
-          7z a motis-windows${{ matrix.config.tag }}.zip
-          .\build\motis.exe
-          .\osrm-profiles
-          .\ppr-profiles
-          .\tiles-profiles
-          .\web
+        run: |
+          mkdir dist
+          mv .\build\motis.exe dist
+          mv .\osrm-profiles dist
+          mv .\ppr-profiles dist
+          mv .\tiles-profiles dist
+          mv .\web dist
 
       - name: Upload Distribution
         if: matrix.config.mode == 'Release'
         uses: actions/upload-artifact@v4
         with:
-          name: motis-windows${{ matrix.config.tag }}
-          path: motis-windows${{ matrix.config.tag }}.zip
+          name: motis-windows
+          path: dist
 
       # ==== RELEASE ====
       - name: Upload Release
@@ -177,6 +177,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motis-windows${{ matrix.config.tag }}.zip
-          asset_name: motis-windows${{ matrix.config.tag }}.zip
+          asset_path: ./motis-windows.zip
+          asset_name: motis-windows.zip
           asset_content_type: application/zip
