@@ -97,7 +97,7 @@ jobs:
           path: docs/generated/
 
   macos:
-    runs-on: macos-latest
+    runs-on: macos-13
     needs: api-docs
     strategy:
       fail-fast: false
@@ -412,7 +412,7 @@ jobs:
       matrix:
         config:
           - artifact: macos-x86_64-noavx2
-            os: macos-latest
+            os: macos-13
           - artifact: linux-amd64
             os: ubuntu-20.04
           - artifact: linux-x86
