@@ -33,7 +33,7 @@ jobs:
 
       - name: CMake
         run: |
-          cmake ${{ matrix.config.cross }} \
+          cmake \
             -G Ninja -S . -B build \
             -DCMAKE_C_COMPILER=gcc-12 \
             -DCMAKE_CXX_COMPILER=g++-12 \
@@ -41,7 +41,7 @@ jobs:
             -DMOTIS_CUDA=On \
             -DMOTIS_AVX=Off \
             -DMOTIS_AVX2=Off \
-            -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
+            -DMOTIS_WITH_WEBUI=Off
 
       - name: Build
         run: |
@@ -57,7 +57,7 @@ jobs:
         run: mv deps ~
 
       - name: Run Tests
-        run: ${{ matrix.config.emulator }} ./build/motis-test
+        run: ./build/motis-test
 
       - name: Run Integration Tests
-        run: ${{ matrix.config.emulator }} ./build/motis-itest
+        run: ./build/motis-itest
