@@ -45,7 +45,6 @@
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "BOOST_CONTEXT_ARCHITECTURE": "arm64",
         "BOOST_CONTEXT_ABI": "aapcs",
-        "ENABLE_ASM": "OFF",
         "CMAKE_BUILD_TYPE": "Release",
         "MOTIS_WITH_WEBUI": "ON",
         "MOTIS_AVX": "OFF",
