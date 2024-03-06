@@ -370,6 +370,15 @@
     type: motis.paxmon.PaxMonBrokenTransfersResponse
     description: A list of monitored broken transfers
 
+/paxmon/trip_transfers:
+  summary: List transfers in and out of a trip
+  tags:
+    - rsl
+  input: motis.paxmon.PaxMonTripTransfersRequest
+  output:
+    type: motis.paxmon.PaxMonTripTransfersResponse
+    description: A list of all transfers in and out of the trip
+
 /paxmon/transfer_details:
   summary: Transfer information
   tags:

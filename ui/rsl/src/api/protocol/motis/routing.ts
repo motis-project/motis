@@ -124,6 +124,7 @@ export interface RoutingRequest {
   use_start_footpaths: boolean; // default: true
   schedule: number;
   timeout: number; // default: 0
+  allowed_claszes?: number[];
 }
 
 // routing/RoutingResponse.fbs

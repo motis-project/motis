@@ -1,0 +1,10 @@
+include "base/TripId.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTripTransfersRequest {
+  universe: uint;
+  trip: TripId;
+
+  include_delay_info: bool;
+}

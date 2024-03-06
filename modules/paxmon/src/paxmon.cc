@@ -48,6 +48,7 @@
 #include "motis/paxmon/api/revise_compact_journey.h"
 #include "motis/paxmon/api/transfer_details.h"
 #include "motis/paxmon/api/transfers_at_station.h"
+#include "motis/paxmon/api/trip_transfers.h"
 
 #include "motis/paxmon/broken_interchanges_report.h"
 #include "motis/paxmon/checks.h"
@@ -421,6 +422,12 @@ void paxmon::init(motis::module::registry& reg) {
   reg.register_op("/paxmon/transfer_details",
                   [&](msg_ptr const& msg) -> msg_ptr {
                     return api::transfer_details(data_, msg);
+                  },
+                  {});
+
+  reg.register_op("/paxmon/trip_transfers",
+                  [&](msg_ptr const& msg) -> msg_ptr {
+                    return api::trip_transfers(data_, msg);
                   },
                   {});
 
