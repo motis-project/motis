@@ -45,7 +45,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=44674d2f3917e20b7019a0f7254d332522c36fb7
+  commit=785b39c08212732e510305f0eef18de70f19b15e
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -110,7 +110,3 @@
   url=git@github.com:motis-project/valhalla.git
   branch=master
   commit=bcc77cb2746e3d234a34c73bd13880c32a96e6cc
-[libressl]
-  url=git@github.com:motis-project/libressl.git
-  branch=upstream-update
-  commit=121c4767f5b5ea0327fef106c2fec6d07ecc662b
