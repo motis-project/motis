@@ -413,6 +413,8 @@ jobs:
         config:
           - artifact: macos-arm64
             os: macos-14
+          - artifact: macos-x86_64-noavx2
+            os: macos-13
           - artifact: linux-amd64
             os: ubuntu-20.04
           - artifact: linux-x86
