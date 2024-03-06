@@ -97,7 +97,7 @@ jobs:
           path: docs/generated/
 
   macos:
-    runs-on: macos-13
+    runs-on: macos-14
     needs: api-docs
     strategy:
       fail-fast: false
@@ -107,9 +107,9 @@ jobs:
             cache: macos-x86_64-avx
           - preset: macos-x86_64-noavx2
             cache: macos-x86_64-noavx
-            tests: On
           - preset: macos-arm64
             cache: macos-arm64
+            tests: On
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -117,7 +117,7 @@ jobs:
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       BUILDCACHE_MAX_CACHE_SIZE: 1073741824
-      BUILDCACHE_DEBUG: 1
+      BUILDCACHE_DEBUG: 0
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
       CLICOLOR_FORCE: 1
@@ -411,6 +411,8 @@ jobs:
       fail-fast: false
       matrix:
         config:
+          - artifact: macos-arm64
+            os: macos-14
           - artifact: macos-x86_64-noavx2
             os: macos-13
           - artifact: linux-amd64
