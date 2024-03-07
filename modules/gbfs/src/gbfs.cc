@@ -287,7 +287,7 @@ struct gbfs::impl {
     auto const p = st_.in_radius(x, max_total_dist);
     auto p_pos =
         utl::to_vec(p, [&](std::pair<lookup_station, double> const& el) {
-          return el.first.pos_;
+          return el.first.pos();
         });
     utl::concat(p_pos, utl::to_vec(*req->direct(), [](Position const* p) {
                   return from_fbs(p);
