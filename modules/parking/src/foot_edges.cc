@@ -98,7 +98,7 @@ void compute_edges(
     auto const parking_loc = to_location(lot->location_);
     auto const station_locs = utl::to_vec(
         task.stations_in_radius_,
-        [](auto const& s) { return to_location(std::get<0>(s).pos_); });
+        [](auto const& s) { return to_location(std::get<0>(s).pos()); });
 
     auto const fwd_result = route_fn(parking_loc, station_locs, profile_name,
                                      profile, search_direction::FWD);
@@ -118,7 +118,7 @@ void compute_edges(
         continue;
       }
       auto const station_id = fbb.CreateString(
-          std::get<0>(task.stations_in_radius_[station_idx]).id_);
+          std::get<0>(task.stations_in_radius_[station_idx]).id());
       auto const station_dist =
           std::get<1>(task.stations_in_radius_[station_idx]);
       for (auto const& r : fwd_routes) {

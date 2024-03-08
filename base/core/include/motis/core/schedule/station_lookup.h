@@ -19,8 +19,18 @@ namespace motis {
 struct schedule;
 
 struct lookup_station {
+  lookup_station(std::string_view tag, std::string_view id,
+                 std::string_view name, geo::latlng pos);
+
   flatbuffers::Offset<Station> to_fbs(flatbuffers::FlatBufferBuilder&) const;
   bool valid() const { return !id_.empty(); }
+  std::string id() const;
+  geo::latlng pos() const;
+  cista::hash_t hash() const;
+
+  static lookup_station invalid();
+
+private:
   std::string_view tag_;
   std::string_view id_;
   std::string_view name_;

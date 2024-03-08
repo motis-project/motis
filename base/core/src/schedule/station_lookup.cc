@@ -9,12 +9,34 @@
 
 namespace motis {
 
+lookup_station lookup_station::invalid() {
+  return lookup_station{"", "", "", geo::latlng{0.0, 0.0}};
+}
+
+lookup_station::lookup_station(std::string_view tag, std::string_view id,
+                               std::string_view name, geo::latlng pos)
+    : tag_{tag}, id_{id}, name_{name}, pos_{pos} {}
+
 flatbuffers::Offset<Station> lookup_station::to_fbs(
     flatbuffers::FlatBufferBuilder& fbb) const {
   auto const pos = motis::to_fbs(pos_);
-  return CreateStation(fbb, fbb.CreateString(fmt::format("{}{}", tag_, id_)),
-                       fbb.CreateString(id_), &pos);
+  return CreateStation(fbb, fbb.CreateString(id()), fbb.CreateString(name_),
+                       &pos);
 }
+
+std::string lookup_station::id() const {
+  return fmt::format("{}{}", tag_, id_);
+}
+
+cista::hash_t lookup_station::hash() const {
+  auto h = cista::BASE_HASH;
+  h = cista::hash_combine(h, cista::hash(id_));
+  h = cista::hash_combine(h, cista::hash(tag_));
+  h = cista::hash_combine(h, cista::hashing<geo::latlng>{}(pos_));
+  return h;
+}
+
+geo::latlng lookup_station::pos() const { return pos_; }
 
 station_lookup::~station_lookup() noexcept = default;
 
@@ -60,12 +82,7 @@ schedule_station_lookup::~schedule_station_lookup() noexcept = default;
 
 lookup_station schedule_station_lookup::get(std::size_t const idx) const {
   auto const& station = *sched_.stations_.at(idx);
-  auto s = lookup_station{};
-  s.tag_ = "";
-  s.id_ = station.eva_nr_;
-  s.name_ = station.name_;
-  s.pos_ = {station.lat(), station.lng()};
-  return s;
+  return {"", station.eva_nr_, station.name_, {station.lat(), station.lng()}};
 }
 
 lookup_station schedule_station_lookup::get(std::string_view id) const {
