@@ -89,7 +89,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=8e1e2ea859a6cb4b69d2e00e87b618c85e35fbe0
+  commit=1c3f21c1fa8b149da89e2f6bcb48b28fff30fa5e
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
