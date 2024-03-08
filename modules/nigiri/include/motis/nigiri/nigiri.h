@@ -33,6 +33,7 @@ private:
   bool no_cache_{false};
   bool adjust_footpaths_{true};
   bool merge_duplicates_{false};
+  unsigned max_footpath_length_{std::numeric_limits<std::uint16_t>::max()};
   std::string first_day_{"TODAY"};
   std::string default_timezone_;
   std::uint16_t num_days_{2U};
