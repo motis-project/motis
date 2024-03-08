@@ -59,7 +59,7 @@ inline std::string serialize_reachable_stations(
     std::vector<std::pair<lookup_station, double>> const& st) {
   std::stringstream ss;
   for (auto const& s : st) {
-    ss << s.first.tag_ << s.first.id_ << "|";
+    ss << s.first.id() << "|";
   }
   return ss.str();
 }

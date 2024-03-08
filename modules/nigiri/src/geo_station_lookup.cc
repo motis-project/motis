@@ -24,15 +24,7 @@ motis::module::msg_ptr geo_station_lookup(station_lookup const& index,
           mc, mc.CreateVector(utl::to_vec(
                   index.in_radius({req->pos()->lat(), req->pos()->lng()},
                                   req->min_radius(), req->max_radius()),
-                  [&](auto const idx) {
-                    auto const station = index.get(idx);
-                    auto const pos = to_fbs(station.pos_);
-                    return CreateStation(
-                        mc,
-                        mc.CreateString(
-                            fmt::format("{}{}", station.tag_, station.id_)),
-                        mc.CreateString(station.name_), &pos);
-                  })))
+                  [&](auto const idx) { return index.get(idx).to_fbs(mc); })))
           .Union());
   return mm::make_msg(mc);
 }
