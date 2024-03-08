@@ -130,6 +130,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "adjust footpaths if they are too fast for the distance");
   param(merge_duplicates_, "match_duplicates",
         "match and merge duplicate trips");
+  param(max_footpath_length_, "max_footpath_length",
+        "maximum footpath length in minutes");
   param(first_day_, "first_day",
         "YYYY-MM-DD, leave empty to use first day in source data");
   param(num_days_, "num_days", "number of days, ignored if first_day is empty");
@@ -452,7 +454,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             }
 
             n::loader::finalize(**impl_->tt_, adjust_footpaths_,
-                                merge_duplicates_);
+                                merge_duplicates_, max_footpath_length_);
 
             if (no_cache_) {
               loaded = true;
