@@ -109,12 +109,15 @@ struct rt_transport_geo_index {
   }
 
   std::vector<n::rt_transport_idx_t> get_rt_transports(
-      geo::box const& b) const {
+      n::rt_timetable const& rtt, geo::box const& b) const {
     std::vector<n::rt_transport_idx_t> rt_transports;
-    rtree_.query(bgi::intersects(b), boost::make_function_output_iterator(
-                                         [&](rt_transport_box const& v) {
-                                           rt_transports.emplace_back(v.second);
-                                         }));
+    rtree_.query(
+        bgi::intersects(b),
+        boost::make_function_output_iterator([&](rt_transport_box const& v) {
+          if (!rtt.rt_transport_is_cancelled_[to_idx(v.second)]) {
+            rt_transports.emplace_back(v.second);
+          }
+        }));
     return rt_transports;
   }
 
@@ -181,9 +184,12 @@ struct railviz::impl {
         continue;
       }
 
-      for (auto const& rt_t : rt_geo_indices_[c].get_rt_transports(area)) {
-        if (path::should_display(sc, zoom_level, rt_distances_[rt_t])) {
-          add_rt_transports(rt_t, time_interval, area, runs);
+      if (rtt_ != nullptr) {
+        for (auto const& rt_t :
+             rt_geo_indices_[c].get_rt_transports(*rtt_, area)) {
+          if (path::should_display(sc, zoom_level, rt_distances_[rt_t])) {
+            add_rt_transports(rt_t, time_interval, area, runs);
+          }
         }
       }
 
