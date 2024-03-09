@@ -30,6 +30,7 @@ struct http_request_executor
       net::http::client::method_to_str(req.req_method),
       fmt::streamed(req.address));
     request_url_ = req.address;
+    req.headers["Accept-Encoding"] = "gzip";
 
     auto cb = [self = shared_from_this()](auto&& a,
                                           net::http::client::response&& res,
