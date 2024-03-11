@@ -53,7 +53,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=884bed8debe22ed6952b4ed1195a51d75ef84429
+  commit=29453edc1f37a29e24fcceab8adbfccce4ce80c5
 [protobuf]
   url=git@github.com:motis-project/protobuf.git
   branch=main
@@ -89,7 +89,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=2db0acc02ea3f3775d1f8b48ba6c10f58dd6fcc9
+  commit=1c3f21c1fa8b149da89e2f6bcb48b28fff30fa5e
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
