@@ -43,9 +43,9 @@ function StatusOverview(): ReactNode {
                 <div className="text-2xl font-bold">
                   {formatNumber(paxmonStatus.active_groups)}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {`${formatNumber(paxmonStatus.active_pax)} Reisende`}
-                </p>
+                </div>
               </>
             ) : (
               <>
@@ -73,7 +73,7 @@ function StatusOverview(): ReactNode {
                 <Skeleton className="h-8 w-24" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {paxmonStatus &&
               datasetInfo &&
               datasetInfo.schedule.trip_count > 0 ? (
@@ -85,7 +85,7 @@ function StatusOverview(): ReactNode {
               ) : (
                 <Skeleton className="h-4 w-48" />
               )}
-            </p>
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -107,13 +107,13 @@ function StatusOverview(): ReactNode {
                     { locale: de },
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {paxmonStatus.ribasis_fahrt_status.receiving
                     ? `Nachrichten werden alle ${paxmonStatus.ribasis_fahrt_status.update_interval} Sekunden verarbeitet`
                     : paxmonStatus.ribasis_fahrt_status.enabled
                       ? "Echtzeitdatenstrom nicht aktiviert"
                       : "Empfang der Echtzeitdaten gestört"}
-                </p>
+                </div>
               </>
             ) : (
               <>
@@ -142,9 +142,9 @@ function StatusOverview(): ReactNode {
                     { locale: de, addSuffix: true },
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground">
                   {formatDateTime(paxmonStatus.motis_start_time)}
-                </p>
+                </div>
               </>
             ) : (
               <>

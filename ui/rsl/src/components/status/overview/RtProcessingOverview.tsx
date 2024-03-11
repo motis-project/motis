@@ -63,14 +63,14 @@ function FahrtStatus({ rtMetrics, risStatus }: RtStatusProps) {
 
   if (total_msgs === 0) {
     messages.push(
-      <div className="flex gap-2">
+      <div className="flex gap-2" key="no-messages">
         <StatusIconError />
         Keine Nachrichten empfangen.
       </div>,
     );
   } else if (update_msgs === 0) {
     messages.push(
-      <div className="flex gap-2">
+      <div className="flex gap-2" key="no-update-messages">
         <StatusIconError />
         Der Datenstrom liefert nur Sollfahrten, keine Echtzeitupdates.
       </div>,
@@ -84,7 +84,7 @@ function FahrtStatus({ rtMetrics, risStatus }: RtStatusProps) {
 
     if (trip_id_error_rate <= 0.01) {
       messages.push(
-        <div className="flex gap-2">
+        <div className="flex gap-2" key="ok">
           <StatusIconOk />
           <div>
             <p className="font-semibold">
@@ -96,7 +96,7 @@ function FahrtStatus({ rtMetrics, risStatus }: RtStatusProps) {
       );
     } else if (trip_id_error_rate <= 0.1) {
       messages.push(
-        <div className="flex gap-2">
+        <div className="flex gap-2" key="some-errors">
           <StatusIconWarning />
           <div>
             <p className="font-semibold">
@@ -112,7 +112,7 @@ function FahrtStatus({ rtMetrics, risStatus }: RtStatusProps) {
       );
     } else {
       messages.push(
-        <div className="flex gap-2">
+        <div className="flex gap-2" key="many-errors">
           <StatusIconError />
           <div>
             <p className="font-semibold">
@@ -179,7 +179,7 @@ function FormationStatus({ rtMetrics, risStatus }: RtStatusProps) {
 
   if (total_msgs === 0) {
     messages.push(
-      <div className="flex gap-2">
+      <div className="flex gap-2" key="no-messages">
         <StatusIconError />
         Keine Nachrichten empfangen.
       </div>,
@@ -193,7 +193,7 @@ function FormationStatus({ rtMetrics, risStatus }: RtStatusProps) {
 
     if (trip_id_error_rate <= 0.01) {
       messages.push(
-        <div className="flex gap-2">
+        <div className="flex gap-2" key="ok">
           <StatusIconOk />
           <div>
             <p className="font-semibold">
@@ -205,7 +205,7 @@ function FormationStatus({ rtMetrics, risStatus }: RtStatusProps) {
       );
     } else if (trip_id_error_rate <= 0.1) {
       messages.push(
-        <div className="flex gap-2">
+        <div className="flex gap-2" key="some-errors">
           <StatusIconWarning />
           <div>
             <p className="font-semibold">
@@ -221,7 +221,7 @@ function FormationStatus({ rtMetrics, risStatus }: RtStatusProps) {
       );
     } else {
       messages.push(
-        <div className="flex gap-2">
+        <div className="flex gap-2" key="many-errors">
           <StatusIconError />
           <div>
             <p className="font-semibold">
