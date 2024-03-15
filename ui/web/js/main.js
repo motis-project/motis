@@ -45,6 +45,9 @@
       simulationTime = initialPermalink.timestamp;
     }
 
+    let fromLocation = params.get("fromLocation")
+    let toLocation = params.get("toLocation")
+
     let langParam = params.get("lang");
     let language = langParam || "de";
 
@@ -56,8 +59,8 @@
       motisParam: params.get("motis"),
       timeParam: timeParam,
       langParam: langParam,
-      fromLocation: null,
-      toLocation: null,
+      fromLocation: fromLocation,
+      toLocation: toLocation,
       fromModes: null,
       toModes: null,
       intermodalPprMode: null,
