@@ -141,6 +141,18 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(routing_, "routing", "provide trip_to_connection");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
+  param(use_stationfilter_, "use_stationfilter",
+        "filter stations in intermodal routing");
+  param(time_consistency_, "time_consistency",
+        "to speed up the algorithm");
+  param(percentage_filter_, "percentage_filter",
+        "easiest filter for stations in intermodal routing");
+  param(percent_for_filter_, "percent_for_filter",
+        "0.1 as default value for percentage_filter");
+  param(weighted_filter_, "weighted_filter",
+        "weighted filter for stations in intermodal routing");
+  param(line_filter_, "line_filter",
+        "additional option for weighted filter, only works with weighted filter");
   param(default_timezone_, "default_timezone",
         "tz for agencies w/o tz or routes w/o agency");
   param(gtfsrt_urls_, "gtfsrt",
