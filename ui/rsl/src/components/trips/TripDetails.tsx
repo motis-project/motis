@@ -14,6 +14,7 @@ import CapacityInfo from "@/components/trips/CapacityInfo";
 import { CheckData } from "@/components/trips/CheckData.tsx";
 import TripLoadForecastChart from "@/components/trips/TripLoadForecastChart";
 import TripRoute from "@/components/trips/TripRoute";
+import { TripTransfers } from "@/components/trips/TripTransfers.tsx";
 import {
   Tabs,
   TabsContent,
@@ -44,6 +45,7 @@ function TripDetails({ tripId }: TripDetailsProps): ReactNode {
       >
         <TabsList>
           <TabsTrigger value="forecast">Auslastungsprognose</TabsTrigger>
+          <TabsTrigger value="transfers">Anschlüsse</TabsTrigger>
           <TabsTrigger value="capacity">Kapazitätsdaten</TabsTrigger>
           {showCheckData && (
             <TabsTrigger value="check">Reisendenzähldaten</TabsTrigger>
@@ -54,6 +56,9 @@ function TripDetails({ tripId }: TripDetailsProps): ReactNode {
           {showLegacyLoadForecastChart && (
             <TripLoadForecastChart tripId={tripId} mode="Interactive" />
           )}
+        </TabsContent>
+        <TabsContent value="transfers" className="text-left">
+          <TripTransfers tripId={tripId} />
         </TabsContent>
         <TabsContent value="capacity" className="text-left">
           <CapacityInfo tripId={tripId} />
