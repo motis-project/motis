@@ -6,8 +6,7 @@ import {
 } from "@heroicons/react/20/solid";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAtom, useSetAtom } from "jotai";
-import { ExternalLink } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 
 import { TripId } from "@/api/protocol/motis";
 import { PaxMonEdgeLoadInfo } from "@/api/protocol/motis/paxmon";
@@ -23,18 +22,16 @@ import { formatPercent } from "@/data/numberFormat";
 import { mostRecentlySelectedTripAtom } from "@/data/selectedTrip";
 import { sectionGraphPlotTypeAtom } from "@/data/settings";
 
-import { getBahnTrainSearchUrl } from "@/util/bahnDe";
 import {
   getCapacitySourceTooltip,
   isExactCapacitySource,
 } from "@/util/capacitySource";
 import { SectionLoadColors } from "@/util/colors";
-import { formatDate, formatTime } from "@/util/dateFormat";
+import { formatTime } from "@/util/dateFormat";
 
 import SectionLoadGraph from "@/components/trips/SectionLoadGraph";
 import TripOptimization from "@/components/trips/TripOptimization";
 import TripSectionDetails from "@/components/trips/TripSectionDetails";
-import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 
@@ -42,7 +39,7 @@ interface TripRouteProps {
   tripId: TripId;
 }
 
-function TripRoute({ tripId }: TripRouteProps): JSX.Element {
+function TripRoute({ tripId }: TripRouteProps): ReactNode {
   const [universe] = useAtom(universeAtom);
   const { data: status } = usePaxMonStatusQuery(universe);
 
@@ -90,48 +87,8 @@ function TripRoute({ tripId }: TripRouteProps): JSX.Element {
 
   const optimizationAvailable = edges.some((e) => e.possibly_over_capacity);
 
-  const category = tripData.tsi.service_infos[0]?.category ?? "";
-  const trainNr =
-    tripData.tsi.service_infos[0]?.train_nr ?? tripData.tsi.trip.train_nr;
-  const line = tripData.tsi.service_infos[0]?.line;
-
-  const [, ...secondaryServices] = tripData.tsi.service_infos;
-
   return (
-    <div className="">
-      <div className="flex items-center justify-center gap-6 text-lg">
-        <span className="text-2xl font-medium">
-          {category} {trainNr}
-        </span>
-        {line && <span>Linie {line}</span>}
-        <span>{formatDate(tripData.tsi.trip.time)}</span>
-        <span>
-          {tripData.tsi.primary_station.name} →{" "}
-          {tripData.tsi.secondary_station.name}
-        </span>
-        <Button variant="outline" className="gap-2" asChild>
-          <a
-            href={getBahnTrainSearchUrl(
-              tripData.tsi.trip,
-              tripData.tsi.primary_station,
-            )}
-            target="_blank"
-            referrerPolicy="no-referrer"
-            rel="noreferrer"
-          >
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-            Zugverlauf auf bahn.de
-          </a>
-        </Button>
-      </div>
-      {secondaryServices.length > 0 && (
-        <div className="flex items-center justify-center gap-3">
-          <span>Fährt teilweise auch als:</span>
-          {secondaryServices.map((si, idx) => (
-            <span key={idx}>{`${si.category} ${si.train_nr}`}</span>
-          ))}
-        </div>
-      )}
+    <div>
       <TripOptimization
         tripId={tripId}
         optimizationAvailable={optimizationAvailable}

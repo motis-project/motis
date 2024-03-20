@@ -178,83 +178,86 @@ function TransferEntry({ transfer, direction }: TransferEntryProps) {
       : 0;
 
   return (
-    <Link to={`/transfers/${transfer.id.n}/${transfer.id.e}`}>
-      <div className="flex gap-1">
-        <div className="flex w-6 items-center pl-1">
-          {transfer.broken && (
-            <XCircle className="h-4 w-4 text-red-600" aria-hidden="true" />
-          )}
-        </div>
+    <div className="flex gap-1">
+      <div className="flex w-6 items-center pl-1">
+        {transfer.broken && (
+          <XCircle className="h-4 w-4 text-red-600" aria-hidden="true" />
+        )}
+      </div>
+      <Link to={`/transfers/${transfer.id.n}/${transfer.id.e}`}>
         <div className="flex w-16 items-center gap-1">
           <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           <span>{transfer.pax_count}</span>
         </div>
-        <div className="flex w-32 items-center gap-1">
-          {stopInfo ? (
-            <>
+      </Link>
+      <div className="flex w-32 items-center gap-1">
+        {stopInfo ? (
+          <>
+            <Link
+              to={`/trips/${encodeURIComponent(JSON.stringify(stopInfo.trips[0].trip))}`}
+              className="flex items-center gap-1"
+            >
               <TrainFront
                 className="h-4 w-4 text-muted-foreground"
                 aria-hidden="true"
               />
               <TripServiceInfoView tsi={stopInfo.trips[0]} format="Short" />
-            </>
-          ) : direction == "incoming" ? (
-            <>
-              <ArrowRightFromLine
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <span>Reisebeginn</span>
-            </>
-          ) : (
-            <>
-              <ArrowRightToLine
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <span>Reiseziel</span>
-            </>
-          )}
-        </div>
-        {stopInfo && (
+            </Link>
+          </>
+        ) : direction == "incoming" ? (
           <>
-            <div className="flex w-14 items-center gap-1">
-              {formatTime(stopInfo.schedule_time)}
-            </div>
-            <div
-              className={cn(
-                "flex w-14 items-center gap-1",
-                stopInfo.current_time > stopInfo.schedule_time ||
-                  stopInfo.canceled
-                  ? "text-red-600"
-                  : "text-green-600",
-              )}
-            >
-              {stopInfo.canceled
-                ? "Ausfall"
-                : formatTime(stopInfo.current_time)}
-            </div>
-            <div className="flex w-24 items-center gap-1">
-              <Watch
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <span
-                className={cn(
-                  availableTransferTime >= transfer.transfer_time &&
-                    !stopInfo.canceled
-                    ? "text-green-600"
-                    : "text-red-600",
-                )}
-              >
-                {stopInfo.canceled ? "–" : availableTransferTime}
-              </span>
-              <span>/</span>
-              <span>{transfer.transfer_time}</span>
-            </div>
+            <ArrowRightFromLine
+              className="h-4 w-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span>Reisebeginn</span>
+          </>
+        ) : (
+          <>
+            <ArrowRightToLine
+              className="h-4 w-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span>Reiseziel</span>
           </>
         )}
       </div>
-    </Link>
+      {stopInfo && (
+        <>
+          <div className="flex w-14 items-center gap-1">
+            {formatTime(stopInfo.schedule_time)}
+          </div>
+          <div
+            className={cn(
+              "flex w-14 items-center gap-1",
+              stopInfo.current_time > stopInfo.schedule_time ||
+                stopInfo.canceled
+                ? "text-red-600"
+                : "text-green-600",
+            )}
+          >
+            {stopInfo.canceled ? "Ausfall" : formatTime(stopInfo.current_time)}
+          </div>
+          <div className="flex w-24 items-center gap-1">
+            <Watch
+              className="h-4 w-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                availableTransferTime >= transfer.transfer_time &&
+                  !stopInfo.canceled
+                  ? "text-green-600"
+                  : "text-red-600",
+              )}
+            >
+              {stopInfo.canceled ? "–" : availableTransferTime}
+            </span>
+            <span>/</span>
+            <span>{transfer.transfer_time}</span>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
