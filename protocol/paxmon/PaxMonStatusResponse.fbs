@@ -1,5 +1,3 @@
-include "base/TripServiceInfo.fbs";
-
 namespace motis.paxmon;
 
 table PaxMonFeedStatus {
