@@ -1,5 +1,5 @@
 import { useAtom } from "jotai";
-import React from "react";
+import React, { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { TripId } from "@/api/protocol/motis";
@@ -32,7 +32,7 @@ interface CapacityInfoProps {
   tripId: TripId;
 }
 
-function CapacityInfo({ tripId }: CapacityInfoProps): JSX.Element {
+function CapacityInfo({ tripId }: CapacityInfoProps): ReactNode {
   const [universe] = useAtom(universeAtom);
   const { data, isPending, error } = usePaxMonGetTripCapacity({
     universe,

@@ -43,6 +43,11 @@ function BrokenTransfersList(): ReactElement {
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined | null>();
   const [onlyFutureTransfers, setOnlyFutureTransfers] = useState(false);
+  const [includeInsufficientTransferTime, setIncludeInsufficientTransferTime] =
+    useState(true);
+  const [includeMissedInitialDeparture, setIncludeMissedInitialDeparture] =
+    useState(true);
+  const [includeCancellations, setIncludeCancellations] = useState(true);
 
   const { data: scheduleInfo } = useLookupScheduleInfoQuery();
 
@@ -50,11 +55,11 @@ function BrokenTransfersList(): ReactElement {
     universe,
     filter_interval: getDayInterval(selectedDate),
     ignore_past_transfers: onlyFutureTransfers,
-    include_insufficient_transfer_time: true,
-    include_missed_initial_departure: true,
-    include_canceled_transfer: true,
-    include_canceled_initial_departure: true,
-    include_canceled_final_arrival: true,
+    include_insufficient_transfer_time: includeInsufficientTransferTime,
+    include_missed_initial_departure: includeMissedInitialDeparture,
+    include_canceled_transfer: includeCancellations,
+    include_canceled_initial_departure: includeCancellations,
+    include_canceled_final_arrival: includeCancellations,
     only_planned_routes: false,
     sort_by: "SquaredTotalDelayIncrease",
     max_results: 100,
@@ -111,7 +116,7 @@ function BrokenTransfersList(): ReactElement {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col gap-1">
       <div className="flex justify-between gap-1 pb-2">
         <div>
           <Label htmlFor="transfersDatePicker">Datum</Label>
@@ -134,8 +139,34 @@ function BrokenTransfersList(): ReactElement {
           </Label>
         </div>
       </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          id="includeInsufficientTransferTime"
+          checked={includeInsufficientTransferTime}
+          onCheckedChange={() => setIncludeInsufficientTransferTime((v) => !v)}
+        />
+        <Label htmlFor="onlyFutureTransfers">
+          Nicht ausreichende Umstiegszeit
+        </Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          id="includeMissedInitialDeparture"
+          checked={includeMissedInitialDeparture}
+          onCheckedChange={() => setIncludeMissedInitialDeparture((v) => !v)}
+        />
+        <Label htmlFor="onlyFutureTransfers">Verpasste erste Abfahrt</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch
+          id="includeCancellations"
+          checked={includeCancellations}
+          onCheckedChange={() => setIncludeCancellations((v) => !v)}
+        />
+        <Label htmlFor="onlyFutureTransfers">Haltausfälle</Label>
+      </div>
       {totalNumberOfBrokenTransfers !== undefined && (
-        <div className="my-2 flex items-center justify-between">
+        <div className="my-1 flex items-center justify-between">
           <div className="pb-2 text-lg">
             {formatNumber(totalNumberOfBrokenTransfers)}{" "}
             {totalNumberOfBrokenTransfers === 1

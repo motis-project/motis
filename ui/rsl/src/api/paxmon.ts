@@ -52,6 +52,8 @@ import {
   PaxMonStatusResponse,
   PaxMonTransferDetailsRequest,
   PaxMonTransferDetailsResponse,
+  PaxMonTripTransfersRequest,
+  PaxMonTripTransfersResponse,
 } from "@/api/protocol/motis/paxmon";
 
 import { sendRequest } from "@/api/request";
@@ -432,6 +434,18 @@ export async function sendPaxMonCheckDataByOrderRequest(
   return msg.content as PaxMonCheckDataByOrderResponse;
 }
 
+export async function sendPaxMonTripTransfersRequest(
+  content: PaxMonTripTransfersRequest,
+): Promise<PaxMonTripTransfersResponse> {
+  const msg = await sendRequest(
+    "/paxmon/trip_transfers",
+    "PaxMonTripTransfersRequest",
+    content,
+  );
+  verifyContentType(msg, "PaxMonTripTransfersResponse");
+  return msg.content as PaxMonTripTransfersResponse;
+}
+
 export const queryKeys = {
   all: ["paxmon"] as const,
   status: (universe: number) => [...queryKeys.all, "status", universe] as const,
@@ -475,4 +489,6 @@ export const queryKeys = {
     [...queryKeys.all, "check_data", req] as const,
   checkDataByOrder: (req: PaxMonCheckDataByOrderRequest) =>
     [...queryKeys.all, "check_data_by_order", req] as const,
+  tripTransfers: (req: PaxMonTripTransfersRequest) =>
+    [...queryKeys.all, "trip_transfers", req] as const,
 };
