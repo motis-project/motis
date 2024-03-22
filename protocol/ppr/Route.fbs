@@ -13,7 +13,14 @@ enum EdgeType : ubyte {
   CYCLE_BARRIER
 }
 
-enum CrossingType : ubyte { NONE, GENERATED, UNMARKED, MARKED, ISLAND, SIGNALS }
+enum CrossingType : ubyte {
+  NONE,
+  GENERATED,
+  UNMARKED,
+  MARKED,
+  ISLAND,
+  SIGNALS
+}
 
 enum StreetType : ubyte {
   NONE,
@@ -22,6 +29,7 @@ enum StreetType : ubyte {
   FOOTWAY,
   PATH,
   CYCLEWAY,
+  CORRIDOR,
   BRIDLEWAY,
   STAIRS,
   ESCALATOR,
@@ -73,6 +81,8 @@ table Edge {
   path: Polyline;
   name: string;
   osm_way_id: long;
+  from_node_osm_id: ulong;
+  to_node_osm_id: ulong;
   edge_type: EdgeType;
   street_type: StreetType;
   crossing_type: CrossingType;
@@ -84,6 +94,10 @@ table Edge {
   automatic_door_type: AutomaticDoorType;
   traffic_signals_sound: TriState;
   traffic_signals_vibration: TriState;
+  area: bool;
+  free_crossing: bool;
+  beeline: bool;
+  levels: [double];
 }
 
 enum RouteStepType : ubyte {
@@ -113,6 +127,7 @@ table RouteStep {
   automatic_door_type: AutomaticDoorType;
   traffic_signals_sound: TriState;
   traffic_signals_vibration: TriState;
+  beeline: bool;
 }
 
 table Route {
