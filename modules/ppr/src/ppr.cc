@@ -78,26 +78,40 @@ Offset<RouteStep> write_route_step(FlatBufferBuilder& fbb,
       static_cast<DoorType>(rs.door_type_),
       static_cast<AutomaticDoorType>(rs.automatic_door_type_),
       static_cast<TriState>(rs.traffic_signals_sound_),
-      static_cast<TriState>(rs.traffic_signals_vibration_));
+      static_cast<TriState>(rs.traffic_signals_vibration_), rs.beeline_);
 }
 
-Offset<Edge> write_edge(FlatBufferBuilder& fbb, route::edge const& e) {
-  return CreateEdge(fbb, e.distance_, e.duration_, e.accessibility_,
-                    write_polyline(fbb, e.path_), fbb.CreateString(e.name_),
-                    e.osm_way_id_, static_cast<EdgeType>(e.edge_type_),
-                    static_cast<StreetType>(e.street_type_),
-                    static_cast<CrossingType>(e.crossing_type_),
-                    e.elevation_up_, e.elevation_down_, e.incline_up_,
-                    static_cast<TriState>(e.handrail_),
-                    static_cast<DoorType>(e.door_type_),
-                    static_cast<AutomaticDoorType>(e.automatic_door_type_),
-                    static_cast<TriState>(e.traffic_signals_sound_),
-                    static_cast<TriState>(e.traffic_signals_vibration_));
+Offset<Edge> write_edge(FlatBufferBuilder& fbb, routing_graph_data const& rg,
+                        route::edge const& e) {
+  auto const& lvl = e.levels_;
+
+  return CreateEdge(
+      fbb, e.distance_, e.duration_, e.accessibility_,
+      write_polyline(fbb, e.path_), fbb.CreateString(e.name_), e.osm_way_id_,
+      e.from_node_osm_id_, e.to_node_osm_id_,
+      static_cast<EdgeType>(e.edge_type_),
+      static_cast<StreetType>(e.street_type_),
+      static_cast<CrossingType>(e.crossing_type_), e.elevation_up_,
+      e.elevation_down_, e.incline_up_, static_cast<TriState>(e.handrail_),
+      static_cast<DoorType>(e.door_type_),
+      static_cast<AutomaticDoorType>(e.automatic_door_type_),
+      static_cast<TriState>(e.traffic_signals_sound_),
+      static_cast<TriState>(e.traffic_signals_vibration_), e.area_,
+      e.free_crossing_, e.is_additional_edge_,
+      fbb.CreateVector(
+          lvl.has_level()
+              ? (lvl.has_single_level()
+                     ? std::vector{to_human_level(lvl.single_level())}
+                     : utl::to_vec(rg.levels_.at(lvl.multi_level_index()),
+                                   [](auto const level) {
+                                     return to_human_level(level);
+                                   }))
+              : std::vector<double>{}));
 }
 
-Offset<Route> write_route(FlatBufferBuilder& fbb, route const& r,
-                          bool include_steps, bool include_edges,
-                          bool include_path) {
+Offset<Route> write_route(FlatBufferBuilder& fbb, routing_graph_data const& rg,
+                          route const& r, bool include_steps,
+                          bool include_edges, bool include_path) {
   auto const start = to_position(r.edges_.front().path_.front());
   auto const destination = to_position(r.edges_.back().path_.back());
   auto const steps =
@@ -108,11 +122,11 @@ Offset<Route> write_route(FlatBufferBuilder& fbb, route const& r,
                                          }))
           : fbb.CreateVector(std::vector<Offset<RouteStep>>{});
   auto const edges =
-      include_edges ? fbb.CreateVector(utl::to_vec(r.edges_,
-                                                   [&](route::edge const& e) {
-                                                     return write_edge(fbb, e);
-                                                   }))
-                    : fbb.CreateVector(std::vector<Offset<Edge>>{});
+      include_edges
+          ? fbb.CreateVector(utl::to_vec(
+                r.edges_,
+                [&](route::edge const& e) { return write_edge(fbb, rg, e); }))
+          : fbb.CreateVector(std::vector<Offset<Edge>>{});
   auto const path = write_polyline(
       fbb, include_path ? get_route_path(r) : std::vector<location>{});
   auto const duration_min = static_cast<duration>(
@@ -127,12 +141,14 @@ Offset<Route> write_route(FlatBufferBuilder& fbb, route const& r,
 }
 
 Offset<Routes> write_routes(FlatBufferBuilder& fbb,
+                            routing_graph_data const& rg,
                             std::vector<route> const& routes,
                             bool include_steps, bool include_edges,
                             bool include_path) {
   return CreateRoutes(
       fbb, fbb.CreateVector(utl::to_vec(routes, [&](struct route const& r) {
-        return write_route(fbb, r, include_steps, include_edges, include_path);
+        return write_route(fbb, rg, r, include_steps, include_edges,
+                           include_path);
       })));
 }
 
@@ -213,8 +229,9 @@ private:
             fbb, fbb.CreateVector(utl::to_vec(
                      result.routes_,
                      [&](std::vector<struct route> const& rs) {
-                       return write_routes(fbb, rs, include_steps,
-                                           include_edges, include_path);
+                       return write_routes(fbb, *data_.rg_.data_, rs,
+                                           include_steps, include_edges,
+                                           include_path);
                      })))
             .Union());
     return make_msg(fbb);
@@ -244,7 +261,8 @@ private:
             fbb, fbb.CreateVector(utl::to_vec(result.routes_[0],
                                               [&](struct route const& r) {
                                                 return write_route(
-                                                    fbb, r, include_steps,
+                                                    fbb, *data_.rg_.data_, r,
+                                                    include_steps,
                                                     include_edges,
                                                     include_path);
                                               })))

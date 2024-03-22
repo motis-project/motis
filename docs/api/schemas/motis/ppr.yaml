@@ -53,6 +53,18 @@ Edge:
       description: TODO
     traffic_signals_vibration:
       description: TODO
+    from_node_osm_id:
+      description: TODO
+    to_node_osm_id:
+      description: TODO
+    area:
+      description: TODO
+    free_crossing:
+      description: TODO
+    beeline:
+      description: TODO
+    levels:
+      description: TODO
 RouteStepType:
   description: TODO
 RouteStep:
@@ -89,6 +101,8 @@ RouteStep:
     traffic_signals_sound:
       description: TODO
     traffic_signals_vibration:
+      description: TODO
+    beeline:
       description: TODO
 Route:
   description: TODO
