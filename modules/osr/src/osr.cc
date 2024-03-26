@@ -67,24 +67,33 @@ mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
   using osrm::OSRMOneToManyRequest;
   auto const req = motis_content(OSRMOneToManyRequest, msg);
   auto const from = impl_->l_->get_match(from_fbs(req->one()));
-  auto const to = utl::to_vec(*req->many(), [&](auto&& p) {
-    return impl_->l_->get_match(from_fbs(p));
-  });
 
-  /*
+  auto const profile = o::read_profile(req->profile()->view());
+  o::route(*impl_->w_, from, kMaxDist, profile,
+           req->direction() == SearchDir_Forward ? o::search_dir::kForward
+                                                 : o::search_dir::kBackward,
+           *impl_->s_);
+
   mm::message_creator fbb;
   fbb.create_and_finish(
       MsgContent_OSRMOneToManyResponse,
       CreateOSRMOneToManyResponse(
           fbb, fbb.CreateVectorOfStructs(utl::to_vec(
-                   res,
-                   [](v::thor::TimeDistance const& td) {
-                     return motis::osrm::Cost{td.time / 60.0, 1.0 * td.dist};
+                   *req->many(),
+                   [&](auto const& p) {
+                     auto const to = impl_->l_->get_match(from_fbs(p));
+                     auto const result =
+                         o::reconstruct(*impl_->w_, *impl_->s_, to, profile,
+                                        o::search_dir::kForward);
+                     return result.has_value()
+                                ? motis::osrm::Cost{result->time_ / 60.0,
+                                                    1.0 * result->dist_}
+                                : motis::osrm::Cost{
+                                      std::numeric_limits<double>::max(),
+                                      std::numeric_limits<double>::max()};
                    })))
           .Union());
-  */
-
-  return mm::make_success_msg();
+  return make_msg(fbb);
 }
 
 mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
@@ -104,8 +113,8 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
   o::route(*impl_->w_, from, kMaxDist, profile, o::search_dir::kForward,
            *impl_->s_);
 
-  auto const result =
-      reconstruct(*impl_->w_, *impl_->s_, to, profile, o::search_dir::kForward);
+  auto const result = o::reconstruct(*impl_->w_, *impl_->s_, to, profile,
+                                     o::search_dir::kForward);
 
   utl::verify(result.has_value(), "no path found");
 
@@ -118,8 +127,7 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
   fbb.create_and_finish(
       MsgContent_OSRMViaRouteResponse,
       osrm::CreateOSRMViaRouteResponse(
-          fbb, static_cast<int>(result->time_),
-          static_cast<double>(0) /* TODO */,
+          fbb, static_cast<int>(result->time_), result->dist_,
           CreatePolyline(fbb, fbb.CreateVector(doubles.data(), doubles.size())))
           .Union());
   return make_msg(fbb);
