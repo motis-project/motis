@@ -24,6 +24,8 @@ namespace o = osr;
 
 namespace motis::osr {
 
+constexpr auto const kMaxDist = o::dist_t{7200};  // = 2h
+
 struct import_state {
   CISTA_COMPARABLE()
 
@@ -64,7 +66,24 @@ mm::msg_ptr osr::table(mm::msg_ptr const& msg) const {
 mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
   using osrm::OSRMOneToManyRequest;
   auto const req = motis_content(OSRMOneToManyRequest, msg);
-  (void)req;
+  auto const from = impl_->l_->get_match(from_fbs(req->one()));
+  auto const to = utl::to_vec(*req->many(), [&](auto&& p) {
+    return impl_->l_->get_match(from_fbs(p));
+  });
+
+  /*
+  mm::message_creator fbb;
+  fbb.create_and_finish(
+      MsgContent_OSRMOneToManyResponse,
+      CreateOSRMOneToManyResponse(
+          fbb, fbb.CreateVectorOfStructs(utl::to_vec(
+                   res,
+                   [](v::thor::TimeDistance const& td) {
+                     return motis::osrm::Cost{td.time / 60.0, 1.0 * td.dist};
+                   })))
+          .Union());
+  */
+
   return mm::make_success_msg();
 }
 
@@ -74,19 +93,21 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
 
   utl::verify(req->waypoints()->size() == 2U, "no via points supported");
 
-  auto const from = from_fbs(req->waypoints()->Get(0));
-  auto const to = from_fbs(req->waypoints()->Get(1));
+  auto const profile = o::read_profile(req->profile()->view());
+  auto const from = impl_->l_->get_match(from_fbs(req->waypoints()->Get(0)));
+  auto const to = impl_->l_->get_match(from_fbs(req->waypoints()->Get(1)));
 
   if (impl_->s_.get() == nullptr) {
     impl_->s_.reset(new o::routing_state{});
   }
 
-  auto const result =
-      o::route(*impl_->w_, *impl_->l_, from, to, 7200U, *impl_->s_,
-               o::read_profile(req->profile()->view()));
+  o::route(*impl_->w_, from, kMaxDist, profile, o::search_dir::kForward,
+           *impl_->s_);
 
-  utl::verify(result.has_value(), "no path found from {} to {} with profile {}",
-              from, to, req->profile()->view());
+  auto const result =
+      reconstruct(*impl_->w_, *impl_->s_, to, profile, o::search_dir::kForward);
+
+  utl::verify(result.has_value(), "no path found");
 
   auto doubles = std::vector<double>{};
   for (auto const& p : result->polyline_) {
