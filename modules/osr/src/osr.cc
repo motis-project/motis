@@ -81,9 +81,9 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
     impl_->s_.reset(new o::routing_state{});
   }
 
-  auto const start = o::route(*impl_->w_, *impl_->l_, from, 7200U, *impl_->s_,
-                              o::read_profile(req->profile()->view()));
-  o::reconstruct(*impl_->w_, *impl_->l_, to, 7200U, );
+  auto const result =
+      o::route(*impl_->w_, *impl_->l_, from, to, 7200U, *impl_->s_,
+               o::read_profile(req->profile()->view()));
 
   utl::verify(result.has_value(), "no path found from {} to {} with profile {}",
               from, to, req->profile()->view());
@@ -98,7 +98,7 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
       MsgContent_OSRMViaRouteResponse,
       osrm::CreateOSRMViaRouteResponse(
           fbb, static_cast<int>(result->time_),
-          static_cast<double>(result->distance_),
+          static_cast<double>(0) /* TODO */,
           CreatePolyline(fbb, fbb.CreateVector(doubles.data(), doubles.size())))
           .Union());
   return make_msg(fbb);
@@ -213,7 +213,7 @@ void osr::import(mm::import_dispatcher& reg) {
 
         impl_->w_ =
             std::make_unique<o::ways>(dir, cista::mmap::protection::READ);
-        impl_->lookup_ = o::lookup{*impl_->w_};
+        impl_->l_ = std::make_unique<o::lookup>(*impl_->w_);
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;
