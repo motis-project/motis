@@ -81,7 +81,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=84347b2ef7105ec3106f5ff2a6aeca4c98eea5e2
+  commit=c066619aee056604bc18e71b636d8c565012b6c6
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -113,4 +113,4 @@
 [osr]
   url=git@github.com:felixguendling/open-street-router.git
   branch=master
-  commit=5d6d7b77db6fa00f3117e6c90c0839340898f75d
+  commit=0839cdfe9487c9489e7f857d06fc07b76afdb0df
