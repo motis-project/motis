@@ -112,5 +112,5 @@
   commit=bcc77cb2746e3d234a34c73bd13880c32a96e6cc
 [osr]
   url=git@github.com:felixguendling/open-street-router.git
-  branch=motis
-  commit=5a49caf73e40c4dd1f9d21109069c283c6040ccb
+  branch=master
+  commit=5d6d7b77db6fa00f3117e6c90c0839340898f75d

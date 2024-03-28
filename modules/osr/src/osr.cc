@@ -15,6 +15,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/conv/position_conv.h"
+#include "motis/module/context/motis_spawn.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -24,7 +25,7 @@ namespace o = osr;
 
 namespace motis::osr {
 
-constexpr auto const kMaxDist = o::dist_t{7200};  // = 2h
+constexpr auto const kMaxDist = o::dist_t{3600};  // = 1h
 
 struct import_state {
   CISTA_COMPARABLE()
@@ -35,9 +36,16 @@ struct import_state {
 };
 
 struct osr::impl {
+  o::dijkstra_state& get_dijkstra_state() {
+    if (s_.get() == nullptr) {
+      s_.reset(new o::dijkstra_state{});
+    }
+    return *s_;
+  }
+
   std::unique_ptr<o::ways> w_;
   std::unique_ptr<o::lookup> l_;
-  boost::thread_specific_ptr<o::routing_state> s_;
+  boost::thread_specific_ptr<o::dijkstra_state> s_;
 };
 
 osr::osr() : module("Open Street Router", "osr") {}
@@ -57,37 +65,61 @@ void osr::init(mm::registry& reg) {
 }
 
 mm::msg_ptr osr::table(mm::msg_ptr const& msg) const {
+  using osrm::CreateOSRMManyToManyResponse;
   using osrm::OSRMManyToManyRequest;
   auto const req = motis_content(OSRMManyToManyRequest, msg);
-  (void)req;
-  return mm::make_success_msg();
+
+  auto const profile = o::to_profile(req->profile()->view());
+  auto const to = utl::to_vec(*req->to(), [](auto&& x) { return from_fbs(x); });
+  auto const fut = utl::to_vec(*req->from(), [&](auto&& from) {
+    return mm::spawn_job([&]() {
+      return o::route(*impl_->w_, *impl_->l_, from_fbs(from), to, kMaxDist,
+                      profile, o::direction::kForward,
+                      impl_->get_dijkstra_state());
+    });
+  });
+
+  auto durations = std::vector<double>{};
+  for (auto const& row : fut) {
+    for (auto const& d : row->val()) {
+      durations.emplace_back(
+          d.has_value() ? d->time_ : std::numeric_limits<double>::max());
+    }
+  }
+
+  mm::message_creator fbb;
+  fbb.create_and_finish(
+      MsgContent_OSRMManyToManyResponse,
+      CreateOSRMManyToManyResponse(
+          fbb, fbb.CreateVector(durations.data(), durations.size()))
+          .Union());
+  return make_msg(fbb);
 }
 
 mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
   using osrm::OSRMOneToManyRequest;
   auto const req = motis_content(OSRMOneToManyRequest, msg);
-  auto const from = impl_->l_->get_match(from_fbs(req->one()));
+  auto const from = from_fbs(req->one());
+  auto const to =
+      utl::to_vec(*req->many(), [](auto&& x) { return from_fbs(x); });
 
-  auto const profile = o::read_profile(req->profile()->view());
-  o::route(*impl_->w_, from, kMaxDist, profile,
-           req->direction() == SearchDir_Forward ? o::search_dir::kForward
-                                                 : o::search_dir::kBackward,
-           *impl_->s_);
+  auto const profile = o::to_profile(req->profile()->view());
+  auto const dir = req->direction() == SearchDir_Forward
+                       ? o::direction::kForward
+                       : o::direction::kBackward;
+  auto const result = o::route(*impl_->w_, *impl_->l_, from, to, kMaxDist,
+                               profile, dir, impl_->get_dijkstra_state());
 
   mm::message_creator fbb;
   fbb.create_and_finish(
       MsgContent_OSRMOneToManyResponse,
       CreateOSRMOneToManyResponse(
           fbb, fbb.CreateVectorOfStructs(utl::to_vec(
-                   *req->many(),
-                   [&](auto const& p) {
-                     auto const to = impl_->l_->get_match(from_fbs(p));
-                     auto const result =
-                         o::reconstruct(*impl_->w_, *impl_->s_, to, profile,
-                                        o::search_dir::kForward);
-                     return result.has_value()
-                                ? motis::osrm::Cost{result->time_ / 60.0,
-                                                    1.0 * result->dist_}
+                   result,
+                   [&](auto const& r) {
+                     return r.has_value()
+                                ? motis::osrm::Cost{r->time_ / 60.0,
+                                                    1.0 * r->dist_}
                                 : motis::osrm::Cost{
                                       std::numeric_limits<double>::max(),
                                       std::numeric_limits<double>::max()};
@@ -102,19 +134,14 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
 
   utl::verify(req->waypoints()->size() == 2U, "no via points supported");
 
-  auto const profile = o::read_profile(req->profile()->view());
+  auto const profile = o::to_profile(req->profile()->view());
   auto const from = impl_->l_->get_match(from_fbs(req->waypoints()->Get(0)));
   auto const to = impl_->l_->get_match(from_fbs(req->waypoints()->Get(1)));
 
-  if (impl_->s_.get() == nullptr) {
-    impl_->s_.reset(new o::routing_state{});
-  }
-
-  o::route(*impl_->w_, from, kMaxDist, profile, o::search_dir::kForward,
-           *impl_->s_);
-
-  auto const result = o::reconstruct(*impl_->w_, *impl_->s_, to, profile,
-                                     o::search_dir::kForward);
+  auto const result =
+      o::route(*impl_->w_, *impl_->l_, from_fbs(req->waypoints()->Get(0)),
+               from_fbs(req->waypoints()->Get(1)), kMaxDist, profile,
+               impl_->get_dijkstra_state());
 
   utl::verify(result.has_value(), "no path found");
 
