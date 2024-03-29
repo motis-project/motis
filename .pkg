@@ -81,7 +81,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=84347b2ef7105ec3106f5ff2a6aeca4c98eea5e2
+  commit=c066619aee056604bc18e71b636d8c565012b6c6
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -110,3 +110,7 @@
   url=git@github.com:motis-project/valhalla.git
   branch=master
   commit=bcc77cb2746e3d234a34c73bd13880c32a96e6cc
+[osr]
+  url=git@github.com:motis-project/osr.git
+  branch=master
+  commit=2957a0f49c8a40737485134c23474b561d85c6b2

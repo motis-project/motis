@@ -210,6 +210,12 @@ else()
   string(REPLACE " " ";" modules "${MODULES}")
 endif()
 
+if (MSVC)
+  list(REMOVE_ITEM modules "osr")
+endif()
+
+message(STATUS "compiling modules: ${modules}")
+
 add_subdirectory(libs)
 
 set(module-targets "")
