@@ -211,7 +211,7 @@ else()
 endif()
 
 if (MSVC)
-  list(REMOVE_ITEM ${modules} "osr")
+  list(REMOVE_ITEM modules "osr")
 endif()
 
 message(STATUS "compiling modules: ${modules}")
