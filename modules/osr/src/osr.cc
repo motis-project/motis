@@ -51,7 +51,9 @@ struct osr::impl {
   boost::thread_specific_ptr<o::dijkstra_state> s_;
 };
 
-osr::osr() : module("Open Street Router", "osr") {}
+osr::osr() : module("Open Street Router", "osr") {
+  param(lock_, "lock", "mlock routing data into RAM");
+}
 
 osr::~osr() noexcept = default;
 
@@ -272,6 +274,9 @@ void osr::import(mm::import_dispatcher& reg) {
         auto w = std::make_unique<o::ways>(dir, cista::mmap::protection::READ);
         auto l = std::make_unique<o::lookup>(*w);
         impl_ = std::make_unique<impl>(std::move(w), std::move(l));
+        if (lock_) {
+          w->lock();
+        }
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;

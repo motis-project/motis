@@ -24,6 +24,8 @@ struct osr : public motis::module::module {
   motis::module::msg_ptr via(motis::module::msg_ptr const&) const;
   motis::module::msg_ptr ppr(motis::module::msg_ptr const&) const;
 
+  bool lock_{true};
+
   struct impl;
   std::unique_ptr<impl> impl_;
 };
