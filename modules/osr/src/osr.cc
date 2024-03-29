@@ -36,6 +36,9 @@ struct import_state {
 };
 
 struct osr::impl {
+  impl(std::unique_ptr<o::ways> w, std::unique_ptr<o::lookup> l)
+      : w_{std::move(w)}, l_{std::move(l)} {}
+
   o::dijkstra_state& get_dijkstra_state() {
     if (s_.get() == nullptr) {
       s_.reset(new o::dijkstra_state{});
@@ -53,7 +56,6 @@ osr::osr() : module("Open Street Router", "osr") {}
 osr::~osr() noexcept = default;
 
 void osr::init(mm::registry& reg) {
-  impl_ = std::make_unique<impl>();
   reg.register_op("/osrm/one_to_many",
                   [&](mm::msg_ptr const& msg) { return one_to_many(msg); }, {});
   reg.register_op("/osrm/table",
@@ -267,9 +269,9 @@ void osr::import(mm::import_dispatcher& reg) {
           mm::write_ini(dir / "import.ini", state);
         }
 
-        impl_->w_ =
-            std::make_unique<o::ways>(dir, cista::mmap::protection::READ);
-        impl_->l_ = std::make_unique<o::lookup>(*impl_->w_);
+        auto w = std::make_unique<o::ways>(dir, cista::mmap::protection::READ);
+        auto l = std::make_unique<o::lookup>(*w);
+        impl_ = std::make_unique<impl>(std::move(w), std::move(l));
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;
