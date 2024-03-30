@@ -35,7 +35,7 @@ struct import_state {
 };
 
 struct adr::impl {
-  impl(cista::wrapped<a::typeahead> t) : t_{std::move(t)} {}
+ explicit impl(cista::wrapped<a::typeahead> t) : t_{std::move(t)} {}
 
   a::guess_context& get_guess_context() {
     auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
@@ -89,7 +89,6 @@ mm::msg_ptr adr::guess(mm::msg_ptr const& msg) {
   a::get_suggestions<false>(*impl_->t_, geo::latlng{0, 0}, req->input()->view(),
                             10U, lang_indices, ctx);
 
-  std::stringstream name;
   mm::message_creator fbb;
   fbb.create_and_finish(
       MsgContent_AddressResponse,
