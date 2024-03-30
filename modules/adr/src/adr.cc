@@ -35,7 +35,7 @@ struct import_state {
 };
 
 struct adr::impl {
- explicit impl(cista::wrapped<a::typeahead> t) : t_{std::move(t)} {}
+  explicit impl(cista::wrapped<a::typeahead> t) : t_{std::move(t)} {}
 
   a::guess_context& get_guess_context() {
     auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
