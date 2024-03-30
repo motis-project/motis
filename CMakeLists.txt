@@ -101,6 +101,8 @@ configure_file (
 ################################
 if (MOTIS_MIMALLOC)
   set(PPR_MIMALLOC ON)
+  set(ADR_MIMALLOC ON)
+  set(OSR_MIMALLOC ON)
   if(WIN32)
     set(MI_BUILD_SHARED ON)
   endif()
