@@ -169,7 +169,7 @@ jobs:
             --dataset.write_serialized false \
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr
+            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
@@ -326,7 +326,7 @@ jobs:
             --dataset.write_serialized false \
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr
+            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
 
       - name: Run Tests
         if: ${{ !matrix.config.skiptests }}
