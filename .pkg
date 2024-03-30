@@ -117,4 +117,4 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=04847fd550b8ca4b31df6af1edd44f4c6c67af63
+  commit=eb4d57d4a6c22a276617742cfd2103244e151349
