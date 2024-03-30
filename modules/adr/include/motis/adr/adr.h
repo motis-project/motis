@@ -20,6 +20,8 @@ struct adr : public motis::module::module {
   bool import_successful() const override { return import_successful_; }
 
 private:
+  motis::module::msg_ptr guess(motis::module::msg_ptr const&);
+
   struct impl;
   std::unique_ptr<impl> impl_;
   bool import_successful_{false};
