@@ -8,6 +8,7 @@ add_library(motis-adr STATIC ${motis-adr-files})
 target_link_libraries(motis-adr
   adr
   motis-module
+  boost-thread
 )
 target_include_directories(motis-adr PUBLIC include)
 target_compile_features(motis-adr PUBLIC cxx_std_23)
