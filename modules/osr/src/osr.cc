@@ -277,6 +277,8 @@ void osr::import(mm::import_dispatcher& reg) {
         }
         auto l = std::make_unique<o::lookup>(*w);
         impl_ = std::make_unique<impl>(std::move(w), std::move(l));
+
+        import_successful_ = true;
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;

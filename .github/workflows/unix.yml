@@ -169,7 +169,7 @@ jobs:
             --dataset.write_serialized false \
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr
+            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
@@ -277,11 +277,6 @@ jobs:
             artifact: linux-amd64
           - preset: linux-amd64-noavx-release
             artifact: linux-amd64-noavx
-          - preset: linux-x86-release
-            artifact: linux-x86
-          - preset: linux-arm-release
-            artifact: linux-arm
-            emulator: qemu-arm-static
           - preset: linux-arm64-release
             artifact: linux-arm64
             emulator: qemu-aarch64-static
@@ -326,7 +321,7 @@ jobs:
             --dataset.write_serialized false \
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr
+            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
 
       - name: Run Tests
         if: ${{ !matrix.config.skiptests }}
@@ -417,12 +412,6 @@ jobs:
             os: macos-13
           - artifact: linux-amd64
             os: ubuntu-20.04
-          - artifact: linux-x86
-            os: ubuntu-20.04
-          - artifact: linux-arm
-            os: ubuntu-20.04
-            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
-            packages: bzip2 unzip qemu-user-static
           - artifact: linux-arm64
             os: ubuntu-20.04
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
@@ -512,4 +501,4 @@ jobs:
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm64
