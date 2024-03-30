@@ -412,12 +412,6 @@ jobs:
             os: macos-13
           - artifact: linux-amd64
             os: ubuntu-20.04
-          - artifact: linux-x86
-            os: ubuntu-20.04
-          - artifact: linux-arm
-            os: ubuntu-20.04
-            emulator: qemu-arm-static -L /usr/arm-linux-gnueabihf
-            packages: bzip2 unzip qemu-user-static
           - artifact: linux-arm64
             os: ubuntu-20.04
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
@@ -507,4 +501,4 @@ jobs:
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          platforms: linux/amd64,linux/arm64
