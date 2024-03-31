@@ -72,9 +72,64 @@ struct journey {
   std::variant<invalid, s, b> info_{invalid{}};
 };
 
+struct tiles_database {
+  explicit tiles_database(std::string const& path, size_t const db_size)
+      : db_env_{tiles::make_tile_database(path.c_str(), db_size)},
+        db_handle_{db_env_},
+        render_ctx_{tiles::make_render_ctx(db_handle_)},
+        pack_handle_{path.c_str()} {}
+
+  ~tiles_database() = default;
+
+  tiles_database(tiles_database&&) = delete;
+  tiles_database(tiles_database const&) = delete;
+
+  tiles_database& operator=(tiles_database&&) = delete;
+  tiles_database& operator=(tiles_database const&) = delete;
+
+  void clear() {
+    lmdb::txn txn{db_handle_.env_};
+    tiles::clear_database(db_handle_, txn);
+    txn.commit();
+
+    pack_handle_.resize(0);
+  }
+
+  lmdb::env db_env_;
+  tiles::tile_db_handle db_handle_;
+  tiles::render_ctx render_ctx_;
+  tiles::pack_handle pack_handle_;
+};
+
+struct provider_status {
+  explicit provider_status(std::unique_ptr<tiles_database>&& db)
+      : tiles_{std::move(db)} {}
+  system_information info_;
+  std::string vehicle_type_;
+  std::vector<station> stations_;
+  std::vector<free_bike> free_bikes_;
+  geo::point_rtree free_bikes_rtree_, stations_rtree_;
+  std::unique_ptr<tiles_database> tiles_;
+};
+
 struct gbfs::impl {
   explicit impl(fs::path data_dir, config const& c, station_lookup const& st)
       : config_{c}, st_{st}, data_dir_{std::move(data_dir)} {}
+
+  provider_status& get_or_create_info(std::string const& tag) {
+    auto const lock = std::scoped_lock{mutex_};
+    return utl::get_or_create(status_, tag, [&]() {
+      return provider_status{std::make_unique<tiles_database>(
+          (data_dir_ / (tag + "tiles.mdb")).string(), config_.db_size_)};
+    });
+  }
+
+  provider_status& get_info(std::string_view const& tag) {
+    auto const lock = std::scoped_lock{mutex_};
+    auto const it = status_.find(std::string{tag});
+    utl::verify(it != end(status_), "provider {} not found", tag);
+    return it->second;
+  }
 
   void fetch_stream(std::string url) {
     auto tag = std::string{"default"};
@@ -118,11 +173,7 @@ struct gbfs::impl {
       f_system_info = motis_http(*urls.system_information_url_);
     }
 
-    auto const lock = std::scoped_lock{mutex_};
-    auto& info = utl::get_or_create(status_, tag, [&]() {
-      return provider_status{std::make_unique<tiles_database>(
-          (data_dir_ / (tag + "tiles.mdb")).string(), config_.db_size_)};
-    });
+    auto& info = get_or_create_info(tag);
     info.vehicle_type_ = vehicle_type;
     if (urls.station_info_url_.has_value()) {
       info.stations_ =
@@ -197,7 +248,15 @@ struct gbfs::impl {
       fs::create_directories(data_dir_);
     }
 
-    motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
+    motis_parallel_for(config_.urls_, [&](auto&& url) {
+      try {
+        fetch_stream(url);
+      } catch (std::exception const& e) {
+        l(logging::error, "GBFS {} fetch failed: {}", url, e.what());
+      } catch (...) {
+        l(logging::error, "GBFS {} fetch failed: unknown error", url);
+      }
+    });
 
     auto const lock = std::scoped_lock{mutex_};
     for (auto const& [tag, info] : status_) {
@@ -260,12 +319,7 @@ struct gbfs::impl {
 
     auto const req = motis_content(GBFSRoutingRequest, m);
 
-    auto const provider = req->provider()->str();
-    auto const status_it = status_.find(provider);
-    utl::verify(status_it != end(status_), "provider {} not found", provider);
-
-    auto const lock = std::lock_guard{mutex_};
-    auto const& info = status_it->second;
+    auto const& info = get_info(req->provider()->view());
     auto const& stations = info.stations_;
     auto const& stations_rtree = info.stations_rtree_;
     auto const& free_bikes = info.free_bikes_;
@@ -743,46 +797,6 @@ struct gbfs::impl {
 
     return make_msg(mc);
   }
-
-  struct tiles_database {
-    explicit tiles_database(std::string const& path, size_t const db_size)
-        : db_env_{tiles::make_tile_database(path.c_str(), db_size)},
-          db_handle_{db_env_},
-          render_ctx_{tiles::make_render_ctx(db_handle_)},
-          pack_handle_{path.c_str()} {}
-
-    ~tiles_database() = default;
-
-    tiles_database(tiles_database&&) = delete;
-    tiles_database(tiles_database const&) = delete;
-
-    tiles_database& operator=(tiles_database&&) = delete;
-    tiles_database& operator=(tiles_database const&) = delete;
-
-    void clear() {
-      lmdb::txn txn{db_handle_.env_};
-      tiles::clear_database(db_handle_, txn);
-      txn.commit();
-
-      pack_handle_.resize(0);
-    }
-
-    lmdb::env db_env_;
-    tiles::tile_db_handle db_handle_;
-    tiles::render_ctx render_ctx_;
-    tiles::pack_handle pack_handle_;
-  };
-
-  struct provider_status {
-    explicit provider_status(std::unique_ptr<tiles_database>&& db)
-        : tiles_{std::move(db)} {}
-    system_information info_;
-    std::string vehicle_type_;
-    std::vector<station> stations_;
-    std::vector<free_bike> free_bikes_;
-    geo::point_rtree free_bikes_rtree_, stations_rtree_;
-    std::unique_ptr<tiles_database> tiles_;
-  };
 
   config const& config_;
   station_lookup const& st_;

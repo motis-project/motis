@@ -118,16 +118,17 @@ mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
   fbb.create_and_finish(
       MsgContent_OSRMOneToManyResponse,
       CreateOSRMOneToManyResponse(
-          fbb, fbb.CreateVectorOfStructs(utl::to_vec(
-                   result,
-                   [&](auto const& r) {
-                     return r.has_value()
-                                ? motis::osrm::Cost{r->time_ / 60.0,
-                                                    1.0 * r->dist_}
-                                : motis::osrm::Cost{
-                                      std::numeric_limits<double>::max(),
-                                      std::numeric_limits<double>::max()};
-                   })))
+          fbb,
+          fbb.CreateVectorOfStructs(utl::to_vec(
+              result,
+              [&](auto const& r) {
+                return r.has_value()
+                           ? motis::osrm::Cost{static_cast<double>(r->time_),
+                                               static_cast<double>(r->dist_)}
+                           : motis::osrm::Cost{
+                                 std::numeric_limits<double>::max(),
+                                 std::numeric_limits<double>::max()};
+              })))
           .Union());
   return make_msg(fbb);
 }
@@ -201,8 +202,9 @@ mm::msg_ptr osr::ppr(mm::msg_ptr const& msg) const {
                   return ppr::CreateRoutes(
                       fbb,
                       fbb.CreateVector(std::vector{ppr::CreateRoute(
-                          fbb, res->distance(), res->time(), res->time(), 0.0,
-                          0U, 0.0, 0.0, req->start(), dest,
+                          fbb, res->distance(), res->time() / 60.0,
+                          res->time() / 60.0, 0.0, 0U, 0.0, 0.0, req->start(),
+                          dest,
                           fbb.CreateVector(
                               std::vector<
                                   flatbuffers::Offset<ppr::RouteStep>>{}),
@@ -236,8 +238,8 @@ mm::msg_ptr osr::ppr(mm::msg_ptr const& msg) const {
                 *res->costs(),
                 [&, i = 0](osrm::Cost const* cost) mutable {
                   auto const vec = std::vector{ppr::CreateRoute(
-                      fbb, cost->distance(), cost->duration(), cost->duration(),
-                      0.0, 0U, 0.0, 0.0, req->start(),
+                      fbb, cost->distance() / 60.0, cost->duration() / 60.0,
+                      cost->duration(), 0.0, 0U, 0.0, 0.0, req->start(),
                       req->destinations()->Get(i++),
                       fbb.CreateVector(
                           std::vector<flatbuffers::Offset<ppr::RouteStep>>{}),
@@ -256,7 +258,7 @@ void osr::import(mm::import_dispatcher& reg) {
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "osr", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
-             mm::event_collector::publish_fn_t const&) {
+             mm::event_collector::publish_fn_t const& publish) {
         using import::OSMEvent;
 
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
@@ -279,6 +281,17 @@ void osr::import(mm::import_dispatcher& reg) {
         impl_ = std::make_unique<impl>(std::move(w), std::move(l));
 
         import_successful_ = true;
+
+        for (auto const& profile : {"foot", "bike", "car"}) {
+          mm::message_creator fbb;
+          fbb.create_and_finish(
+              MsgContent_OSRMEvent,
+              motis::import::CreateOSRMEvent(fbb, fbb.CreateString(""),
+                                             fbb.CreateString(profile))
+                  .Union(),
+              "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;
