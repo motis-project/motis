@@ -197,7 +197,15 @@ struct gbfs::impl {
       fs::create_directories(data_dir_);
     }
 
-    motis_parallel_for(config_.urls_, [&](auto&& url) { fetch_stream(url); });
+    motis_parallel_for(config_.urls_, [&](auto&& url) {
+      try {
+        fetch_stream(url);
+      } catch (std::exception const& e) {
+        l(logging::error, "GBFS {} fetch failed: {}", url, e.what());
+      } catch (...) {
+        l(logging::error, "GBFS {} fetch failed: unknown error", url);
+      }
+    });
 
     auto const lock = std::scoped_lock{mutex_};
     for (auto const& [tag, info] : status_) {
