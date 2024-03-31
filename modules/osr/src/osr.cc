@@ -256,7 +256,7 @@ void osr::import(mm::import_dispatcher& reg) {
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "osr", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
-             mm::event_collector::publish_fn_t const&) {
+             mm::event_collector::publish_fn_t const& publish) {
         using import::OSMEvent;
 
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
@@ -279,6 +279,17 @@ void osr::import(mm::import_dispatcher& reg) {
         impl_ = std::make_unique<impl>(std::move(w), std::move(l));
 
         import_successful_ = true;
+
+        for (auto const& profile : {"foot", "bike", "car"}) {
+          mm::message_creator fbb;
+          fbb.create_and_finish(
+              MsgContent_OSRMEvent,
+              motis::import::CreateOSRMEvent(fbb, fbb.CreateString(""),
+                                             fbb.CreateString(profile))
+                  .Union(),
+              "/import", DestinationType_Topic);
+          publish(make_msg(fbb));
+        }
       })
       ->require("OSM", [](mm::msg_ptr const& msg) {
         return msg->get()->content_type() == MsgContent_OSMEvent;
