@@ -161,6 +161,9 @@ jobs:
           mv .\ppr-profiles dist
           mv .\tiles-profiles dist
           mv .\web dist
+          cd dist
+          7z a motis-windows.zip *
+          mv motis-windows.zip ..
 
       - name: Upload Distribution
         if: matrix.config.mode == 'Release'
