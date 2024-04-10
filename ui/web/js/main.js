@@ -68,7 +68,8 @@
 
     window.elmMaps = {};
 
-    initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink);
+    const style = params.get("style") || "bg";
+    initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink, style);
     handleDrop(document.getElementById("app-container"));
     app.ports.localStorageSet.subscribe(function (kv) {
       localStorageSet(kv[0], kv[1]);

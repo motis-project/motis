@@ -74,10 +74,13 @@ mm::msg_ptr osr::table(mm::msg_ptr const& msg) const {
   auto const req = motis_content(OSRMManyToManyRequest, msg);
 
   auto const profile = o::to_profile(req->profile()->view());
-  auto const to = utl::to_vec(*req->to(), [](auto&& x) { return from_fbs(x); });
+  auto const to = utl::to_vec(*req->to(), [](auto&& x) {
+    return o::location{from_fbs(x), o::level_t::invalid()};
+  });
   auto const fut = utl::to_vec(*req->from(), [&](auto&& from) {
     return mm::spawn_job([&]() {
-      return o::route(*impl_->w_, *impl_->l_, from_fbs(from), to, kMaxDist,
+      return o::route(*impl_->w_, *impl_->l_,
+                      {from_fbs(from), o::level_t::invalid()}, {to}, kMaxDist,
                       profile, o::direction::kForward,
                       impl_->get_dijkstra_state());
     });
@@ -103,9 +106,10 @@ mm::msg_ptr osr::table(mm::msg_ptr const& msg) const {
 mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
   using osrm::OSRMOneToManyRequest;
   auto const req = motis_content(OSRMOneToManyRequest, msg);
-  auto const from = from_fbs(req->one());
-  auto const to =
-      utl::to_vec(*req->many(), [](auto&& x) { return from_fbs(x); });
+  auto const from = o::location{from_fbs(req->one()), o::level_t::invalid()};
+  auto const to = utl::to_vec(*req->many(), [](auto&& x) {
+    return o::location{from_fbs(x), o::level_t::invalid()};
+  });
 
   auto const profile = o::to_profile(req->profile()->view());
   auto const dir = req->direction() == SearchDir_Forward
@@ -140,20 +144,20 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
   utl::verify(req->waypoints()->size() == 2U, "no via points supported");
 
   auto const profile = o::to_profile(req->profile()->view());
-  auto const from = impl_->l_->get_match(from_fbs(req->waypoints()->Get(0)));
-  auto const to = impl_->l_->get_match(from_fbs(req->waypoints()->Get(1)));
-
   auto const result =
-      o::route(*impl_->w_, *impl_->l_, from_fbs(req->waypoints()->Get(0)),
-               from_fbs(req->waypoints()->Get(1)), kMaxDist, profile,
-               impl_->get_dijkstra_state());
+      o::route(*impl_->w_, *impl_->l_,
+               {from_fbs(req->waypoints()->Get(0)), o::level_t::invalid()},
+               {from_fbs(req->waypoints()->Get(1)), o::level_t::invalid()},
+               kMaxDist, profile, impl_->get_dijkstra_state());
 
   utl::verify(result.has_value(), "no path found");
 
   auto doubles = std::vector<double>{};
-  for (auto const& p : result->polyline_) {
-    doubles.emplace_back(p.lat());
-    doubles.emplace_back(p.lng());
+  for (auto const& s : result->segments_) {
+    for (auto const& p : s.polyline_) {
+      doubles.emplace_back(p.lat());
+      doubles.emplace_back(p.lng());
+    }
   }
   mm::message_creator fbb;
   fbb.create_and_finish(
