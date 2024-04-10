@@ -73,7 +73,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=abbf28537c2ac0271dc8e4e29ed47b0359265723
+  commit=64f297ea0f782d04c89e82c6d478a1dd453e5f70
 [transfers]
   url=git@github.com:motis-project/transfers.git
   branch=main
@@ -113,7 +113,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=791c39dee296b6fa7e8c0012166ba60d05ee28b2
+  commit=427a4b78e8887ac43de2d293faf7cb5d7ea322e9
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
