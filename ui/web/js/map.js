@@ -197,7 +197,7 @@ class RailVizCustomLayer {
   }
 }
 
-function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
+function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink, style) {
   app.ports.mapInit.subscribe(function (id) {
     let settings = localStorage.getItem("motis.map");
     if (settings) {
@@ -212,7 +212,7 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink) {
     // use two maps until resolved: https://github.com/mapbox/mapbox-gl-js/issues/8159
     var map_bg = new mapboxgl.Map({
       container: `${id}-background`,
-      style: backgroundMapStyle(tilesEndpoint),
+      style: style == 'color' ? colorStyle(tilesEndpoint, apiEndpoint) : backgroundMapStyle(tilesEndpoint),
       zoom: zoom,
       minZoom: 2,
       maxZoom: 20,
