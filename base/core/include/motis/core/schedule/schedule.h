@@ -90,6 +90,8 @@ struct schedule {
 
   dynamic_fws_multimap<ptr<trip>> expanded_trips_;
   dynamic_fws_multimap<uint32_t> route_to_expanded_routes_;
+
+  mcd::hash_map<hrd_key, mcd::vector<trip_idx_t>> hrd_key_to_trips_;
 };
 
 using schedule_ptr = mcd::unique_ptr<schedule>;

@@ -130,6 +130,7 @@ table ProviderInfo {
 
 table FullTripId {
   id:TripId;
+  admin:string;
   uuid:string;
   start_station:StationInfo;
   target_station:StationInfo;

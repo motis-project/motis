@@ -115,7 +115,10 @@ Offset<Service> service_builder::create_service(
               [&fbb, &s]() { return fbb.CreateString(s.origin_.filename_); }),
           s.origin_.line_number_from_, s.origin_.line_number_to_),
       static_cast<uint8_t>(is_rule_participant ? 1U : 0U) != 0U,
-      s.initial_train_num_));
+      s.initial_train_num_, 0 /* gtfs trip_id */, 0 /* gtfs seq_numbers */,
+      ScheduleRelationship_SCHEDULED,
+      fbb.CreateSharedString(s.initial_admin_.data(),
+                             s.initial_admin_.length())));
   return fbs_services_.back();
 }
 

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <optional>
 #include <set>
@@ -22,10 +23,13 @@
 #include "motis/core/schedule/timestamp_reason.h"
 #include "motis/core/access/realtime_access.h"
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/access/uuids.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/debug/trip.h"
+
+#include "motis/loader/hrd_admin.h"
 
 #include "motis/rt/build_route_node.h"
 #include "motis/rt/connection_builder.h"
@@ -162,8 +166,9 @@ struct full_trip_handler {
     get_or_add_station(msg_->trip_id()->start_station());
     get_or_add_station(msg_->trip_id()->target_station());
     auto const ftid = get_full_trip_id();
+    auto const hk = get_hrd_key();
     auto const trip_uuid = parse_uuid(view(msg_->trip_id()->uuid()));
-    result_.trp_ = find_existing_trip(ftid);
+    result_.trp_ = find_existing_trip(ftid, hk);
     result_.is_new_trip_ = result_.trp_ == nullptr;
 
     auto existing_sections = get_existing_sections(result_.trp_);
@@ -228,7 +233,7 @@ struct full_trip_handler {
           sections);  // TODO(pablo): reuse/copy existing
       auto const route = build_route(sections, lcs, incoming);
       patch_incoming_edges(incoming);
-      result_.trp_ = create_or_update_trip(result_.trp_, ftid, route);
+      result_.trp_ = create_or_update_trip(result_.trp_, ftid, hk, route);
       update_delay_infos(existing_sections, sections);
 
       for (auto const station_idx : result_.stations_addded_) {
@@ -342,7 +347,46 @@ private:
     return ftid;
   }
 
-  trip* find_existing_trip(full_trip_id const& ftid) {
+  hrd_key get_hrd_key() const {
+    return hrd_key{
+        static_cast<std::uint32_t>(msg_->trip_id()->id()->train_nr()),
+        motis::loader::hrd_admin_str_to_int(msg_->trip_id()->admin()->view())};
+  }
+
+  trip* find_existing_trip(full_trip_id const& ftid, hrd_key const hk) {
+    // try to find the trip using the hrd_key
+    if (auto const hrd_key_trips = sched_.hrd_key_to_trips_.find(hk);
+        hrd_key_trips != end(sched_.hrd_key_to_trips_)) {
+      auto best_trip = static_cast<trip const*>(nullptr);
+      auto best_trip_diff = std::numeric_limits<int>::max();
+      for (auto const ti : hrd_key_trips->second) {
+        auto const trp = get_trip(sched_, ti);
+        auto const diff =
+            std::abs(static_cast<int>(trp->id_.primary_.get_time()) -
+                     static_cast<int>(ftid.primary_.get_time()));
+        if (diff < best_trip_diff) {
+          best_trip = trp;
+          best_trip_diff = diff;
+        }
+      }
+      if (best_trip != nullptr && best_trip_diff <= 12 * 60) {
+        if (best_trip_diff == 0) {
+          return const_cast<trip*>(best_trip);  // NOLINT
+        } else {
+          LOG(info) << "[FTH] hrd key match with diff = " << best_trip_diff
+                    << ": RIB={admin=" << msg_->trip_id()->admin()->view()
+                    << ", train_nr=" << msg_->trip_id()->id()->train_nr()
+                    << "}, best_trip=" << debug::trip{sched_, best_trip}
+                    << " (hrd_key: admin="
+                    << motis::loader::hrd_admin_int_to_str(
+                           best_trip->hrd_key_.admin_)
+                    << ", train_nr=" << best_trip->hrd_key_.train_nr_ << ")";
+          ;
+        }
+      }
+    }
+
+    // try to find the trip using the primary key
     auto const first_it = std::lower_bound(
         begin(sched_.trips_), end(sched_.trips_),
         std::make_pair(ftid.primary_, static_cast<trip*>(nullptr)));
@@ -600,6 +644,7 @@ private:
   }
 
   trip* create_or_update_trip(trip* trp, full_trip_id const& ftid,
+                              hrd_key const hk,
                               mcd::vector<trip::route_edge> const& trip_edges) {
     std::optional<expanded_trip_index> old_eti;
     std::optional<expanded_trip_index> new_eti;
@@ -632,6 +677,10 @@ private:
             trip_edges.front()->m_.route_edge_.conns_.at(lcon_idx);
         trp->original_first_connection_info_ = first_lcon.full_con_->con_info_;
         trp->original_first_clasz_ = first_lcon.full_con_->clasz_;
+      }
+      if (hk) {
+        trp->hrd_key_ = hk;
+        sched_.hrd_key_to_trips_[hk].emplace_back(trp->trip_idx_);
       }
     } else {
       old_eti = remove_expanded_trip(trp);
@@ -829,7 +878,8 @@ private:
     return a.station_ == b.station_ &&
            a.interchange_allowed_ == b.interchange_allowed_ &&
            st->get_platform(a.current_track_) ==
-               st->get_platform(b.current_track_);
+               st->get_platform(b.current_track_) &&
+           a.schedule_time_ == b.schedule_time_;
   }
 
   bool is_same_route(std::vector<section> const& a,

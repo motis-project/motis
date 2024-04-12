@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <array>
 #include <optional>
 #include <utility>
 
@@ -121,6 +122,17 @@ struct gtfs_trip_id {
   std::optional<unixtime> start_date_;
 };
 
+struct hrd_key {
+  CISTA_COMPARABLE();
+
+  cista::hash_t hash() const { return cista::build_hash(train_nr_, admin_); }
+
+  explicit operator bool() const { return train_nr_ != 0 && admin_ != 0; }
+
+  std::uint32_t train_nr_{};
+  std::uint64_t admin_{};
+};
+
 using trip_idx_t = uint32_t;
 
 struct trip {
@@ -179,6 +191,7 @@ struct trip {
   bool unscheduled_{false};
   ptr<connection_info const> original_first_connection_info_{};
   service_class original_first_clasz_{service_class::OTHER};
+  hrd_key hrd_key_{};
 };
 
 }  // namespace motis

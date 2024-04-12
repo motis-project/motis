@@ -61,14 +61,16 @@ struct hrd_service {
 
   hrd_service(parser_info origin, int num_repetitions, int interval,
               std::vector<stop> stops, std::vector<section> sections,
-              bitfield traffic_days, int initial_train_num)
+              bitfield traffic_days, int initial_train_num,
+              utl::cstr initial_admin)
       : origin_(origin),
         num_repetitions_(num_repetitions),
         interval_(interval),
         stops_(std::move(stops)),
         sections_(std::move(sections)),
         traffic_days_(traffic_days),
-        initial_train_num_(initial_train_num) {}
+        initial_train_num_(initial_train_num),
+        initial_admin_(initial_admin) {}
 
   hrd_service(specification const& spec, config const&);
 
@@ -131,6 +133,7 @@ struct hrd_service {
   std::vector<section> sections_;
   bitfield traffic_days_;
   int initial_train_num_;
+  utl::cstr initial_admin_;
 };
 
 }  // namespace motis::loader::hrd

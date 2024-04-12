@@ -30,6 +30,7 @@
 #include "motis/loader/build_stations.h"
 #include "motis/loader/classes.h"
 #include "motis/loader/filter/local_stations.h"
+#include "motis/loader/hrd_admin.h"
 #include "motis/loader/interval_util.h"
 #include "motis/loader/rule_route_builder.h"
 #include "motis/loader/rule_service_graph_builder.h"
@@ -141,6 +142,8 @@ trip* graph_builder::register_service(Service const* s, int day_idx,
                        ftid.secondary_.line_id_);
   };
 
+  auto const hk = hrd_key{static_cast<std::uint32_t>(s->initial_train_nr()),
+                          hrd_admin_str_to_int(s->initial_admin()->view())};
   auto const stored =
       sched_.trip_mem_
           .emplace_back(mcd::make_unique<trip>(
@@ -164,7 +167,7 @@ trip* graph_builder::register_service(Service const* s, int day_idx,
                                           : mcd::to_vec(*s->seq_numbers()),
               boost::uuids::nil_uuid(),
               s->schedule_relationship() == ScheduleRelationship_UNSCHEDULED,
-              nullptr, service_class::OTHER))
+              nullptr, service_class::OTHER, hk))
           .get();
   sched_.trips_.emplace_back(stored->id_.primary_, stored);
   added_full_trip_ids_[ftid] = stored->trip_idx_;
@@ -174,6 +177,10 @@ trip* graph_builder::register_service(Service const* s, int day_idx,
     auto const date = motis_to_unixtime(sched_, motis_time);
     sched_.gtfs_trip_ids_[dataset_prefix_ + s->trip_id()->str()].emplace_back(
         date, stored);
+  }
+
+  if (hk) {
+    sched_.hrd_key_to_trips_[hk].emplace_back(stored->trip_idx_);
   }
 
   for (auto i = 1UL; i < s->sections()->size(); ++i) {

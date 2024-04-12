@@ -29,4 +29,5 @@ table Service {
   trip_id : string;  // optional, GTFS trip ID (GTFS-RT matching)
   seq_numbers : [uint];  // optional, GTFS sequence numbers (GTFS-RT matching)
   schedule_relationship: ScheduleRelationship;  // optional (GTFS-RT UNSCHEDULED matching)
+  initial_admin: string; // optional
 }

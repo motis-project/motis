@@ -5,6 +5,7 @@ namespace motis.ris;
 
 table HalfTripId {
   id: TripId; // secondary values not set/ignored
+  admin: string;
   uuid: string;
   category: string;
 }
