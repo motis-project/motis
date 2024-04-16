@@ -148,10 +148,11 @@ struct railviz::impl {
 
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
       for (auto const [from, to] : utl::pairwise(fr)) {
-        runs.emplace_back(
-            stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
-                      .from_ = from.stop_idx_,
-                      .to_ = to.stop_idx_});
+        runs.emplace_back(stop_pair{.r_ = r,
+                                    .from_ = static_cast<n::stop_idx_t>(
+                                        from.stop_idx_ - fr.stop_range_.from_),
+                                    .to_ = static_cast<n::stop_idx_t>(
+                                        to.stop_idx_ - fr.stop_range_.from_)});
       }
     }
     return create_response(runs);

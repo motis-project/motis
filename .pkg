@@ -113,7 +113,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=0ec618deffbc251063f76b2a29d98beab86c1cd7
+  commit=4666c6ca17375ffc5591987d9eb426fb6b33c22c
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
