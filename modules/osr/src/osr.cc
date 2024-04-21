@@ -176,8 +176,8 @@ mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
                            ? motis::osrm::Cost{static_cast<double>(r->cost_),
                                                static_cast<double>(r->dist_)}
                            : motis::osrm::Cost{
-                                 std::numeric_limits<double>::max(),
-                                 std::numeric_limits<double>::max()};
+                                 std::numeric_limits<std::uint16_t>::max(),
+                                 std::numeric_limits<std::uint16_t>::max()};
               })))
           .Union());
   return make_msg(fbb);
