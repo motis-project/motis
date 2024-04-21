@@ -84,9 +84,15 @@ mm::msg_ptr osr::table(mm::msg_ptr const& msg) const {
   auto const fut = utl::to_vec(*req->from(), [&](auto&& from) {
     return mm::spawn_job([&]() {
       switch (profile) {
+        case o::search_profile::kWheelchair:
+          return o::route(*impl_->w_, *impl_->l_,
+                          impl_->get_dijkstra<o::foot<true>>(),
+                          {from_fbs(from), o::level_t::invalid()}, {to},
+                          kMaxDist, o::direction::kForward);
+          break;
         case o::search_profile::kFoot:
           return o::route(*impl_->w_, *impl_->l_,
-                          impl_->get_dijkstra<o::foot>(),
+                          impl_->get_dijkstra<o::foot<false>>(),
                           {from_fbs(from), o::level_t::invalid()}, {to},
                           kMaxDist, o::direction::kForward);
           break;
@@ -137,9 +143,15 @@ mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
                        : o::direction::kBackward;
   auto result = std::vector<std::optional<o::path>>{};
   switch (profile) {
+    case o::search_profile::kWheelchair:
+      result =
+          o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::foot<true>>(),
+                   from, to, kMaxDist, dir);
+      break;
     case o::search_profile::kFoot:
-      result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::foot>(),
-                        from, to, kMaxDist, dir);
+      result = o::route(*impl_->w_, *impl_->l_,
+                        impl_->get_dijkstra<o::foot<false>>(), from, to,
+                        kMaxDist, dir);
       break;
     case o::search_profile::kBike:
       result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::bike>(),
@@ -184,9 +196,15 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
       o::location{from_fbs(req->waypoints()->Get(1)), o::level_t::invalid()};
   auto result = std::optional<o::path>{};
   switch (profile) {
+    case o::search_profile::kWheelchair:
+      result =
+          o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::foot<true>>(),
+                   from, to, kMaxDist, o::direction::kForward);
+      break;
     case o::search_profile::kFoot:
-      result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::foot>(),
-                        from, to, kMaxDist, o::direction::kForward);
+      result = o::route(*impl_->w_, *impl_->l_,
+                        impl_->get_dijkstra<o::foot<false>>(), from, to,
+                        kMaxDist, o::direction::kForward);
       break;
     case o::search_profile::kBike:
       result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::bike>(),
