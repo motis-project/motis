@@ -85,7 +85,7 @@
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
-  commit=5acaeaacca154bd20987806f9626be5e3b87e1c5
+  commit=cd2700556d69de939ea67af976cc982c9c05ee3a
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
