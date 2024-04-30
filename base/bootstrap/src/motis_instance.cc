@@ -86,13 +86,15 @@ void motis_instance::import(module_settings const& module_opt,
     }
   }
 
-  // Dummy message to trigger initial progress updates.
-  dispatcher.publish(make_success_msg("/import"));
-  dispatcher.run();
+  if (!import_opt.disabled_) {
+    // Dummy message to trigger initial progress updates.
+    dispatcher.publish(make_success_msg("/import"));
+    dispatcher.run();
 
-  // Paths as actual trigger for import processing.
-  dispatcher.publish(make_file_event(import_opt.import_paths_));
-  dispatcher.run();
+    // Paths as actual trigger for import processing.
+    dispatcher.publish(make_file_event(import_opt.import_paths_));
+    dispatcher.run();
+  }
 
   registry_.reset();
 
@@ -100,17 +102,19 @@ void motis_instance::import(module_settings const& module_opt,
       dataset_opt.no_schedule_ || includes(to_res_id(global_res_id::SCHEDULE)),
       "schedule not loaded");
 
-  if (import_opt.require_successful_) {
-    auto const unsuccessful_imports =
-        utl::all(modules_)  //
-        | utl::remove_if([&](auto&& m) {
-            return !module_opt.is_module_active(m->module_name()) ||
-                   m->import_successful();
-          })  //
-        | utl::transform([&](auto&& m) { return m->module_name(); })  //
-        | utl::vec();
-    utl::verify(unsuccessful_imports.empty(),
-                "some imports were not successful: {}", unsuccessful_imports);
+  if (!import_opt.disabled_) {
+    if (import_opt.require_successful_) {
+      auto const unsuccessful_imports =
+          utl::all(modules_)  //
+          | utl::remove_if([&](auto&& m) {
+              return !module_opt.is_module_active(m->module_name()) ||
+                     m->import_successful();
+            })  //
+          | utl::transform([&](auto&& m) { return m->module_name(); })  //
+          | utl::vec();
+      utl::verify(unsuccessful_imports.empty(),
+                  "some imports were not successful: {}", unsuccessful_imports);
+    }
   }
 }
 

@@ -17,6 +17,8 @@ struct import_settings : conf::configuration {
     param(data_directory_, "data_dir", "directory for preprocessing output");
     param(require_successful_, "require_successful",
           "exit if import is not successful for all modules");
+    param(disabled_, "disabled",
+          "Always use the existing files in data/ without checking");
   }
 
   import_settings(import_settings const&) = delete;
@@ -28,6 +30,7 @@ struct import_settings : conf::configuration {
   std::vector<std::string> import_paths_;
   std::string data_directory_{"data"};
   bool require_successful_{true};
+  bool disabled_{false};
 };
 
 }  // namespace motis::bootstrap
