@@ -84,7 +84,7 @@ struct generator_settings : public conf::configuration {
       case hash("routing"): return MsgContent_RoutingRequest;
       case hash("intermodal"): return MsgContent_IntermodalRoutingRequest;
     }
-    throw std::runtime_error{"query type not "};
+    throw std::runtime_error{"query type not supported"};
   }
 
   IntermodalStart get_start_type() const {
@@ -107,7 +107,7 @@ struct generator_settings : public conf::configuration {
       case hash("coordinate"): return IntermodalDestination_InputPosition;
       case hash("station"): return IntermodalDestination_InputStation;
     }
-    throw std::runtime_error{"start type not supported"};
+    throw std::runtime_error{"destination type not supported"};
   }
 
   SearchDir get_search_dir() const {
