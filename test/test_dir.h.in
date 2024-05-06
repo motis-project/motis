@@ -1,0 +1,3 @@
+#pragma once
+
+#define OSR_TEST_EXECUTION_DIR "@CMAKE_CURRENT_SOURCE_DIR@"
