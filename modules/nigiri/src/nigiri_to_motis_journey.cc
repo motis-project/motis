@@ -279,7 +279,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
               add_walk(leg, fp.duration(), -1, i == nj.legs_.size() - 1U);
             },
             [&, leg = leg](n::routing::offset const x) {
-              add_walk(leg, x.duration(), x.type_, false);
+              add_walk(leg, x.duration(), x.transport_mode_id_, false);
             }},
         leg.uses_);
   }
