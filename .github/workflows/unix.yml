@@ -167,7 +167,6 @@ jobs:
             --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
             --nigiri.first_day 2015-10-04 \
             --nigiri.no_cache true \
-            --ris.db_max_size 1048576 \
             --modules nigiri
 
       - name: Run Tests
@@ -318,7 +317,6 @@ jobs:
             --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
             --nigiri.first_day 2015-10-04 \
             --nigiri.no_cache true \
-            --ris.db_max_size 1048576 \
             --modules nigiri
 
       - name: Run Tests
