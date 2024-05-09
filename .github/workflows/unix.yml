@@ -32,38 +32,6 @@ jobs:
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
-  rsl-ui-checks:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ui/rsl
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: pnpm Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ui/rsl
-
-      - name: Formatting
-        run: pnpm run format-check
-
-      - name: ESLint
-        run: pnpm run lint
-
-      - name: TypeScript
-        run: pnpm run ts-check
-
   api-docs:
     runs-on: ubuntu-latest
     defaults:
@@ -88,7 +56,7 @@ jobs:
             - cwd: tools/protocol
 
       - name: Run Protocol Tool
-        run: pnpm start --skip rsl-ui
+        run: pnpm start
 
       - name: Upload API Docs
         uses: actions/upload-artifact@v4
@@ -181,25 +149,6 @@ jobs:
       - name: Compile Web Interface
         run: cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
-      - name: pnpm Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ./ui/rsl
-
-      - name: Compile RSL Web Interface
-        run: pnpm run build
-        working-directory: ./ui/rsl
-
       - name: Download API Docs
         uses: actions/download-artifact@v4
         with:
@@ -214,7 +163,6 @@ jobs:
           mv ui/web/{external_lib,img,js,style} motis/web/
           mv ui/web/{*.html,*.js,*.ico} motis/web/
           mv ui/web/openapi motis/web/
-          mv ui/rsl/dist motis/web/rsl
           mv build/motis motis/
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
@@ -334,19 +282,6 @@ jobs:
           ln -s /elm ui/web/elm-stuff
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
 
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        if: ${{ !matrix.config.skipui }}
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ./ui/rsl
-
-      - name: Compile RSL Web Interface
-        if: ${{ !matrix.config.skipui }}
-        run: pnpm run build
-        working-directory: ./ui/rsl
-
       - name: Download API Docs
         if: matrix.config.artifact
         uses: actions/download-artifact@v4
@@ -367,7 +302,6 @@ jobs:
           mv ui/web/*.js motis/web/
           mv ui/web/*.ico motis/web/
           mv ui/web/openapi motis/web/
-          mv ui/rsl/dist motis/web/rsl
           mv build/motis motis/motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles

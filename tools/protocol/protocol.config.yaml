@@ -60,26 +60,3 @@ output:
     format: markdown
     dir: ../../docs/generated/markdown
     exclude: *public-exclude
-  rsl-ui:
-    format: typescript
-    dir: ../../ui/rsl/src/api/protocol
-    header: |
-      // GENERATED FILE - DO NOT MODIFY
-      // -> see /tools/protocol for information on how to update this file
-    import-base: "@/api/protocol/"
-    prettier: true
-    include: &rsl-include
-      - motis.*
-      - motis.ris.RISForwardTimeRequest
-      - motis.ris.RISContentType
-      - motis.ris.RISStatusResponse
-      - motis.ris.RISSourceStatus
-      - motis.rt.RtMetrics*
-      - motis.paxmon.*
-      - motis.paxforecast.*
-      - motis.routing.*
-      - motis.guesser.*
-      - motis.lookup.*
-      - motis.ribasis.*
-    exclude: &rsl-exclude
-      - motis.HTTP*

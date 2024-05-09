@@ -101,19 +101,6 @@ jobs:
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
 
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        if: matrix.config.webui == 'On'
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ./ui/rsl
-
-      - name: Compile RSL Web Interface
-        if: matrix.config.webui == 'On'
-        run: pnpm run build
-        working-directory: ./ui/rsl
-
       # ==== API DOCS ====
       - name: Install Protocol Tool Dependencies
         if: matrix.config.mode == 'Release'
@@ -125,7 +112,7 @@ jobs:
 
       - name: Run Protocol Tool
         if: matrix.config.mode == 'Release'
-        run: pnpm start --skip rsl-ui
+        run: pnpm start
         working-directory: tools/protocol
 
       # ==== DISTRIBUTION ====
@@ -143,7 +130,6 @@ jobs:
           Copy-Item .\ui\web\external_lib,.\ui\web\img,.\ui\web\js,.\ui\web\style .\web\ -Recurse
           Copy-Item .\ui\web\*.html,.\ui\web\*.js,.\ui\web\*.ico .\web\
           Copy-Item .\ui\web\openapi .\web\ -Recurse
-          Copy-Item .\ui\rsl\dist .\web\rsl -Recurse
 
       - name: Move API Docs
         if: matrix.config.mode == 'Release'
