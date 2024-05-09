@@ -106,10 +106,6 @@
   url=git@github.com:motis-project/libosmium.git
   branch=master
   commit=6e6d6b3081cc8bdf25dda89730e25c36eb995516
-[valhalla]
-  url=git@github.com:motis-project/valhalla.git
-  branch=master
-  commit=bcc77cb2746e3d234a34c73bd13880c32a96e6cc
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
