@@ -164,12 +164,12 @@ jobs:
         if: matrix.config.tests == 'On'
         run: |
           ./build/motis --mode test \
-            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
+            --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
             --nigiri.first_day 2015-10-04
             --nigiri.no_cache true
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
+            --modules nigiri
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
@@ -316,12 +316,12 @@ jobs:
         if: ${{ !matrix.config.skiptests }}
         run: |
           ${{ matrix.config.emulator }} ./build/motis --mode test \
-            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
+            --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
             --nigiri.first_day 2015-10-04
             --nigiri.no_cache true
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
+            --modules nigiri
 
       - name: Run Tests
         if: ${{ !matrix.config.skiptests }}
@@ -447,10 +447,10 @@ jobs:
         run: |
           ${{ matrix.config.emulator }} ./motis/motis \
             --mode test \
-            --modules routing lookup guesser ppr address intermodal osrm railviz tiles \
+            --modules nigiri osr adr tiles intermodal \
             --server.static_path motis/web \
             --import.data_dir data \
-            --import.paths schedule:data/hrd osm:data/aachen.osm.pbf \
+            --import.paths schedule-x:data/hrd osm:data/aachen.osm.pbf \
             --nigiri.first_day 2015-10-04
             --nigiri.no_cache true
             --osrm.profiles motis/osrm-profiles/car.lua \

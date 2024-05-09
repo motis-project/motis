@@ -80,7 +80,7 @@ jobs:
         run: >
           .\build\motis.exe
           --mode test
-          --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice
+          --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice
           --nigiri.first_day 2015-10-04
           --nigiri.no_cache true
           --modules nigiri
