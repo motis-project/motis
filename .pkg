@@ -65,7 +65,7 @@
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
-  commit=cd2700556d69de939ea67af976cc982c9c05ee3a
+  commit=cecba85dbd6796c92a7f9c4e274849bb6ef03494
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
@@ -85,4 +85,4 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=f044654571cfe5dd4cdd5260b16d9907dc270644
+  commit=19f49b4290cb8e9cb093c3ea83746514e74ebb87
