@@ -50,30 +50,14 @@
   url=git@github.com:motis-project/ppr.git
   branch=master
   commit=217585f424f6865693dd4aaa1a16f85daa574863
-[protobuf]
-  url=git@github.com:motis-project/protobuf.git
-  branch=main
-  commit=690e03babf0963d3da9615a2dae0891777842719
-[pugixml]
-  url=git@github.com:motis-project/pugixml.git
-  branch=master
-  commit=60175e80e2f5e97e027ac78f7e14c5acc009ce50
 [rapidjson]
   url=git@github.com:motis-project/rapidjson.git
   branch=master
   commit=e7a1ac95c7840c6f4351abead02b1f7a02874197
-[tar]
-  url=git@github.com:motis-project/tar.git
-  branch=master
-  commit=3a08b6575eb6a04e6b3d0977e6da3b61a91d62f2
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
   commit=64f297ea0f782d04c89e82c6d478a1dd453e5f70
-[transfers]
-  url=git@github.com:motis-project/transfers.git
-  branch=main
-  commit=e66556443bad898ba98d418d53c96f5f03304833
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -90,18 +74,10 @@
   url=git@github.com:motis-project/mimalloc.git
   branch=master
   commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
-[rabbitmq-c]
-  url=git@github.com:motis-project/rabbitmq-c.git
-  branch=master
-  commit=5c57cc7ebbfba2d77c4fd6adfe6644586c87b3bb
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=f3aad88ca8178cfc51cc1042c7f5f8158f47c821
-[osmium]
-  url=git@github.com:motis-project/libosmium.git
-  branch=master
-  commit=6e6d6b3081cc8bdf25dda89730e25c36eb995516
+  commit=ea19b96787ca6a32ec6485256e7c093ae73a387b
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
