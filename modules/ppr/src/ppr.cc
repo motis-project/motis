@@ -395,7 +395,7 @@ void ppr::import(import_dispatcher& reg) {
                                                   pp::step_info const& step) {
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name() << ": Starting"
-                      << std::endl;
+                      << '\n';
             progress_tracker->status(step.name());
           };
 
@@ -410,7 +410,7 @@ void ppr::import(import_dispatcher& reg) {
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name()
                       << ": Finished in " << static_cast<int>(step.duration_)
-                      << "ms" << std::endl;
+                      << "ms" << '\n';
           };
 
           auto const result = pp::create_routing_data(opt, log);

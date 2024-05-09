@@ -42,7 +42,7 @@ namespace motis::nigiri {
 
 struct stop_pair {
   n::rt::run r_;
-  n::stop_idx_t from_, to_;
+  n::stop_idx_t from_{}, to_{};
 };
 
 int min_zoom_level(n::clasz const clasz, float const distance) {
@@ -117,7 +117,7 @@ struct route_geo_index {
   }
 
   std::vector<n::route_idx_t> get_routes(geo::box const& b) const {
-    std::vector<n::route_idx_t> routes;
+    auto routes = std::vector<n::route_idx_t>{};
     rtree_.query(bgi::intersects(b),
                  boost::make_function_output_iterator([&](route_box const& v) {
                    routes.emplace_back(v.second);
@@ -125,7 +125,7 @@ struct route_geo_index {
     return routes;
   }
 
-  static_rtree rtree_;
+  static_rtree rtree_{};
 };
 
 struct rt_transport_geo_index {
@@ -156,7 +156,7 @@ struct rt_transport_geo_index {
 
   std::vector<n::rt_transport_idx_t> get_rt_transports(
       n::rt_timetable const& rtt, geo::box const& b) const {
-    std::vector<n::rt_transport_idx_t> rt_transports;
+    auto rt_transports = std::vector<n::rt_transport_idx_t>{};
     rtree_.query(
         bgi::intersects(b),
         boost::make_function_output_iterator([&](rt_transport_box const& v) {
@@ -167,7 +167,7 @@ struct rt_transport_geo_index {
     return rt_transports;
   }
 
-  rt_rtree rtree_;
+  rt_rtree rtree_{};
 };
 
 struct railviz::impl {
@@ -414,8 +414,8 @@ struct railviz::impl {
   std::shared_ptr<n::rt_timetable> rtt_;
   std::array<route_geo_index, n::kNumClasses> static_geo_indices_;
   std::array<rt_transport_geo_index, n::kNumClasses> rt_geo_indices_;
-  n::vector_map<n::route_idx_t, float> static_distances_;
-  n::vector_map<n::rt_transport_idx_t, float> rt_distances_;
+  n::vector_map<n::route_idx_t, float> static_distances_{};
+  n::vector_map<n::rt_transport_idx_t, float> rt_distances_{};
 };
 
 railviz::railviz(tag_lookup const& tags, n::timetable const& tt)

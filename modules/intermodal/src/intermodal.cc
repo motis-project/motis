@@ -463,7 +463,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
 
   auto const mumo_stats_appender = [&](stats_category&& s) {
     std::lock_guard const guard(mumo_stats_mutex);
-    mumo_stats.emplace_back(s);
+    mumo_stats.emplace_back(std::move(s));
   };
 
   std::vector<ctx::future_ptr<ctx_data, void>> futures;

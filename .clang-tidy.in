@@ -78,7 +78,8 @@ Checks: "*,\
 -cert-dcl37-c,\
 -bugprone-reserved-identifier,\
 -cert-dcl51-cpp,\
--misc-confusable-identifiers"
+-misc-confusable-identifiers,\
+-misc-include-cleaner"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false

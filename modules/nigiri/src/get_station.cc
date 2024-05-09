@@ -153,8 +153,13 @@ struct rt_ev_iterator : public ev_iterator {
   rt_ev_iterator(n::rt_timetable const& rtt, n::rt_transport_idx_t const rt_t,
                  n::stop_idx_t const stop_idx, n::unixtime_t const start,
                  n::event_type const ev_type, n::direction const dir)
-      : rtt_{rtt}, stop_idx_{stop_idx}, rt_t_{rt_t}, ev_type_{ev_type} {
-    finished_ = dir == n::direction::kForward ? time() < start : time() > start;
+      : rtt_{rtt},
+        finished_(dir == n::direction::kForward ? time() < start
+                                                : time() > start),
+        stop_idx_{stop_idx},
+        rt_t_{rt_t},
+        ev_type_{ev_type} {
+
     assert((ev_type == n::event_type::kDep &&
             stop_idx_ < rtt.rt_transport_location_seq_[rt_t].size() - 1U) ||
            (ev_type == n::event_type::kArr && stop_idx_ > 0U));

@@ -1,6 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
 #include <fstream>
+#include <utility>
 
 #include "boost/filesystem.hpp"
 
@@ -106,7 +107,7 @@ struct nigiri::impl {
 #endif
   }
 
-  std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_;
+  std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_{};
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
 #if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
   std::atomic<std::shared_ptr<n::rt_timetable>> rtt_;
@@ -116,11 +117,11 @@ struct nigiri::impl {
 #endif
   tag_lookup tags_;
   std::shared_ptr<station_lookup> station_lookup_;
-  std::vector<gtfsrt> gtfsrt_;
-  std::unique_ptr<guesser> guesser_;
-  std::unique_ptr<railviz> railviz_;
+  std::vector<gtfsrt> gtfsrt_{};
+  std::unique_ptr<guesser> guesser_{};
+  std::unique_ptr<railviz> railviz_{};
   std::string initial_permalink_;
-  std::vector<schedule_info> schedules_;
+  std::vector<schedule_info> schedules_{};
   cista::hash_t hash_{0U};
 };
 

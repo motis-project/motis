@@ -13,7 +13,6 @@
 
 #include "utl/erase_if.h"
 #include "utl/parser/cstr.h"
-#include "utl/to_vec.h"
 
 #include "net/stop_handler.h"
 
@@ -119,7 +118,7 @@ int main(int argc, char const** argv) {
           std::getline(in, json);
           auto const res =
               instance.call(make_msg(json), launcher_opt.num_threads_);
-          std::cout << res->to_json() << std::endl;
+          std::cout << res->to_json() << '\n';
         }
       } else {
         instance.call(launcher_opt.init_, launcher_opt.num_threads_);

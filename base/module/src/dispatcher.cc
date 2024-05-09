@@ -33,8 +33,9 @@ void dispatcher::register_timer(char const* name,
                                 ctx::accesses_t&& access) {
   auto const inserted =
       timers_
-          .emplace(name, std::make_shared<timer>(name, this, interval, fn,
-                                                 std::move(access)))
+          .emplace(name,
+                   std::make_shared<timer>(name, this, interval, std::move(fn),
+                                           std::move(access)))
           .second;
   utl::verify(inserted, "register_timer: {} already registered", name);
 }
@@ -77,8 +78,7 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
       f->set(op.fn_(msg));
       return f;
     } else {
-      return post_work(
-          data, [&, msg] { return op.fn_(msg); }, id);
+      return post_work(data, [&, msg] { return op.fn_(msg); }, id);
     }
   });
 }

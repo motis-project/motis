@@ -14,7 +14,7 @@ timer::timer(char const* name, dispatcher* d,
       timer_{d->runner_.ios()},
       fn_{std::move(fn)},
       dispatcher_{d},
-      access_{access} {}
+      access_{std::move(access)} {}
 
 void timer::stop() {
   stopped_ = true;

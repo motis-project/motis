@@ -191,13 +191,12 @@ struct web_server::impl {
         serve_static_files_ = true;
       }
     } catch (fs::filesystem_error const& e) {
-      std::cerr << "Static file directory not found: " << e.what() << std::endl;
+      std::cerr << "Static file directory not found: " << e.what() << '\n';
     }
     if (serve_static_files_) {
-      std::cout << "Serving static files from " << static_file_path_
-                << std::endl;
+      std::cout << "Serving static files from " << static_file_path_ << '\n';
     } else {
-      std::cout << "Not serving static files" << std::endl;
+      std::cout << "Not serving static files" << '\n';
     }
     if (!ec) {
       server_.run();
@@ -409,7 +408,7 @@ struct web_server::impl {
 
     try {
       log_file_ << "[" << motis::logging::time() << "] "
-                << msg->to_json(json_format::SINGLE_LINE) << std::endl;
+                << msg->to_json(json_format::SINGLE_LINE) << '\n';
     } catch (std::ios_base::failure const& e) {
       LOG(logging::error) << "could not log request: " << e.what();
       reset_logging(false);

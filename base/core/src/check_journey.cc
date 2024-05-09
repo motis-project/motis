@@ -17,7 +17,7 @@ bool check_journey(journey const& j,
       auto const& t = j.transports_[i];
       if (t.to_ <= t.from_) {
         raise_error() << "  Transport " << i << " broken: " << t.from_ << " -> "
-                      << t.to_ << std::endl;
+                      << t.to_ << '\n';
       }
       for (auto s = t.from_; s < t.to_; ++s) {
         ++segment_transports[s];
@@ -26,18 +26,18 @@ bool check_journey(journey const& j,
     for (auto i = 0UL; i < j.stops_.size() - 1; ++i) {
       if (segment_transports[i] < 1) {
         raise_error() << "  No transport for segment between stops " << i
-                      << " -> " << (i + 1) << std::endl;
+                      << " -> " << (i + 1) << '\n';
       }
     }
   } else if (j.stops_.size() == 1) {
-    raise_error() << "  Connection only has one stop" << std::endl;
+    raise_error() << "  Connection only has one stop" << '\n';
   }
 
   for (auto i = 1UL; i < j.stops_.size(); ++i) {
     if (j.stops_[i].arrival_.timestamp_ <
         j.stops_[i - 1].departure_.timestamp_) {
       raise_error() << "  Stops broken: " << (i - 1) << "/" << i
-                    << ": Arrival before departure" << std::endl;
+                    << ": Arrival before departure" << '\n';
     }
   }
 
@@ -45,7 +45,7 @@ bool check_journey(journey const& j,
     if (stop.arrival_.valid_ && stop.departure_.valid_) {
       if (stop.departure_.timestamp_ < stop.arrival_.timestamp_) {
         raise_error() << "  Stop broken: " << stop.name_
-                      << ": Departure before arrival" << std::endl;
+                      << ": Departure before arrival" << '\n';
       }
     }
   }

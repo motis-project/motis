@@ -28,7 +28,7 @@ struct remote::impl : std::enable_shared_from_this<impl> {
         on_register_{std::move(on_register)},
         on_unregister_{std::move(on_unregister)} {
     boost::system::error_code ignore;
-    ctx_.set_verify_mode(boost::asio::ssl::verify_none, ignore);
+    (void)ctx_.set_verify_mode(boost::asio::ssl::verify_none, ignore);
   }
 
   void stop() {

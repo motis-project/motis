@@ -516,10 +516,10 @@ void parking::import(import_dispatcher& reg) {
                 std::thread::hardware_concurrency(), ppr_exact_);
           } else {
             std::clog << "OSM import disabled, not importing parking lots"
-                      << std::endl;
+                      << '\n';
           }
 
-          std::clog << "Parking Import done!" << std::endl;
+          std::clog << "Parking Import done!" << '\n';
           write_ini(dir / "import.ini", state);
         }
 

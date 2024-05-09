@@ -110,9 +110,10 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
     }
   };
 
-  interval_map<transport_display_info> transports;
-  interval_map<std::pair<extern_trip, std::string /* debug */>> extern_trips;
-  interval_map<attribute> attributes;
+  auto transports = interval_map<transport_display_info>{};
+  auto extern_trips =
+      interval_map<std::pair<extern_trip, std::string /* debug */>>{};
+  auto attributes = interval_map<attribute>{};
 
   auto const add_transports = [&](n::rt::frun const& fr, unsigned section_idx) {
     auto const t = fr.t_;

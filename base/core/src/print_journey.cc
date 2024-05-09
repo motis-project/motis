@@ -113,12 +113,12 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
   out << " --> ";
   print_event(out, arrival_event(j), local_time, rt_format);
   if (local_time) {
-    out << " (local)" << std::endl;
+    out << " (local)" << '\n';
   } else {
-    out << " (UTC)" << std::endl;
+    out << " (UTC)" << '\n';
   }
 
-  out << "\nStops:" << std::endl;
+  out << "\nStops:" << '\n';
   for (auto i = 0UL; i < j.stops_.size(); ++i) {
     auto const& stop = j.stops_[i];
     auto stop_name = is_virtual_station(stop)
@@ -141,7 +141,7 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
     out << "\n";
   }
 
-  out << "\nTransports:" << std::endl;
+  out << "\nTransports:" << '\n';
   for (auto i = 0UL; i < j.transports_.size(); ++i) {
     auto const& trans = j.transports_[i];
     out << std::right << std::setw(2) << i << ": " << std::left << std::setw(2)
@@ -152,7 +152,7 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
           << " id=" << std::left << std::setw(7) << trans.mumo_id_
           << " duration=" << std::left << std::setw(3) << trans.duration_
           << " accessibility=" << std::left << trans.mumo_accessibility_
-          << std::endl;
+          << '\n';
     } else {
       out << std::left << std::setw(10) << trans.name_
           << "                duration=" << trans.duration_ << ", provider=\""
@@ -163,7 +163,7 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
     }
   }
 
-  out << "\nTrips:" << std::endl;
+  out << "\nTrips:" << '\n';
   for (auto i = 0UL; i < j.trips_.size(); ++i) {
     auto const& trp = j.trips_[i].extern_trip_;
     out << std::right << std::setw(2) << i << ": " << std::left << std::setw(2)
@@ -175,21 +175,21 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
         << "}, line_id=" << trp.line_id_ << ", id=" << trp.id_
         << "\n       #/trip/" << trp.station_id_ << "/" << trp.train_nr_ << "/"
         << trp.time_ << "/" << trp.target_station_id_ << "/" << trp.target_time_
-        << "/" << trp.line_id_ << "  " << j.trips_[i].debug_ << std::endl;
+        << "/" << trp.line_id_ << "  " << j.trips_[i].debug_ << '\n';
   }
 
-  out << "\nAttributes:" << std::endl;
+  out << "\nAttributes:" << '\n';
   for (auto i = 0UL; i < j.attributes_.size(); ++i) {
     auto const& attribute = j.attributes_[i];
     out << std::right << std::setw(2) << i << ": " << std::left << std::setw(2)
         << attribute.from_ << " -> " << std::left << std::setw(2)
         << attribute.to_ << " {" << attribute.attr_.code_ << "  "
-        << attribute.attr_.text_ << "}" << std::endl;
+        << attribute.attr_.text_ << "}" << '\n';
   }
 
   auto const report_error = [&](bool first_error) -> std::ostream& {
     if (first_error) {
-      out << "\nWARNING: Journey is broken:" << std::endl;
+      out << "\nWARNING: Journey is broken:" << '\n';
     }
     return out;
   };
