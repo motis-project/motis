@@ -343,7 +343,7 @@ jobs:
           - artifact: linux-amd64
             os: ubuntu-20.04
           - artifact: linux-arm64
-            os: ubuntu-20.04
+            os: ['self-hosted', 'Linux', 'ARM64']
             emulator: qemu-aarch64-static -L /usr/aarch64-linux-gnu
             packages: bzip2 unzip qemu-user-static
 
