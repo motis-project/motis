@@ -18,7 +18,7 @@ void check_result(std::vector<T> const& ref,
     std::cout << "\n  Result:   ";
     std::copy(begin(result), end(result),
               std::ostream_iterator<T>(std::cout, " "));
-    std::cout << std::endl;
+    std::cout << '\n';
   }
   ASSERT_EQ(ref.size(), result.size());
   for (auto i = 0UL; i < ref.size(); ++i) {
