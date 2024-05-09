@@ -8,7 +8,6 @@
 
 #include "motis/core/common/constants.h"
 #include "motis/core/common/unixtime.h"
-#include "motis/core/schedule/schedule.h"
 
 #include "motis/protocol/Message_generated.h"
 

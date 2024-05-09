@@ -1,8 +1,0 @@
-"trip_id","arrival_time","departure_time","stop_id","stop_sequence","pickup_type","drop_off_type","stop_headsign"
-207396439,26:30:00,26:30:00,"de:11000:900026271::2",0,0,0,"U Berliner Str. weiter als M43 Richtung Tunnelstr."
-207396439,26:37:00,26:37:00,"de:11000:900040102::2",8,0,0,"U Berliner Str. weiter als M43 Richtung Tunnelstr."
-207396439,26:45:30,26:45:30,"de:11000:900043252::1",14,0,0,"U Berliner Str. weiter als M43 Richtung Tunnelstr."
-207396439,26:46:00,26:46:00,"de:11000:900044201::12",15,0,0,"Stralau, Tunnelstr."
-207383275,26:46:00,26:46:00,"de:11000:900044201::12",0,0,0,"Stralau, Tunnelstr."
-207383275,26:55:00,26:55:00,"de:11000:900058157::2",9,0,0,"Stralau, Tunnelstr."
-207383275,27:26:00,27:26:00,"de:11000:900120002::1",33,0,0,"Fahrt endet hier"

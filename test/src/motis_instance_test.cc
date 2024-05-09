@@ -10,8 +10,6 @@
 
 #include "motis/core/common/logging.h"
 
-#include "motis/loader/parser_error.h"
-
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
@@ -24,7 +22,6 @@ namespace motis::test {
 
 template <typename Base>
 generic_motis_instance_test<Base>::generic_motis_instance_test(
-    loader::loader_options const& dataset_opt,
     std::vector<std::string> const& modules,
     std::vector<std::string> const& modules_cmdline_opt)
     : instance_(std::make_unique<motis_instance>()) {
@@ -33,11 +30,10 @@ generic_motis_instance_test<Base>::generic_motis_instance_test(
   }
 
   auto modules_cmdline_opt_patched = modules_cmdline_opt;
-  modules_cmdline_opt_patched.emplace_back("--ris.db_max_size=1048576");
-  modules_cmdline_opt_patched.emplace_back("--ris.clear_db=true");
   modules_cmdline_opt_patched.emplace_back("--nigiri.no_cache=true");
 
-  std::vector<conf::configuration*> confs;
+  import_settings import_opt;
+  std::vector<conf::configuration*> confs = {&import_opt};
   for (auto const& module : instance_->modules()) {
     confs.push_back(module);
   }
@@ -45,28 +41,8 @@ generic_motis_instance_test<Base>::generic_motis_instance_test(
   conf::options_parser parser(confs);
   parser.read_command_line_args(modules_cmdline_opt_patched);
 
-  import_settings import_opt;
-  if (!dataset_opt.dataset_prefix_.empty()) {
-    for (auto const& [prefix, dataset] :
-         utl::zip(dataset_opt.dataset_prefix_, dataset_opt.dataset_)) {
-      import_opt.import_paths_.push_back(
-          fmt::format("schedule-{}:{}", prefix, dataset));
-    }
-
-  } else {
-    for (auto const& dataset : dataset_opt.dataset_) {
-      import_opt.import_paths_.push_back(fmt::format("schedule:{}", dataset));
-    }
-  }
-
-  try {
-    clog_redirect::set_enabled(false);
-    instance_->import(module_settings{modules}, dataset_opt, import_opt, true);
-  } catch (loader::parser_error const& e) {
-    LOG(logging::error) << "unable to parse schedule, problem at "
-                        << e.filename_copy_ << ":" << e.line_number_;
-    throw;
-  }
+  clog_redirect::set_enabled(false);
+  instance_->import(module_settings{modules}, import_opt, true);
   instance_->init_modules(module_settings{modules});
 }
 
@@ -99,17 +75,6 @@ generic_motis_instance_test<Base>::msg_sink(std::vector<module::msg_ptr>* vec) {
     vec->push_back(m);
     return nullptr;
   };
-}
-
-template <typename Base>
-schedule const& generic_motis_instance_test<Base>::sched() const {
-  return instance_->sched();
-}
-
-template <typename Base>
-std::time_t generic_motis_instance_test<Base>::unix_time(
-    int hhmm, int day_idx, int timezone_offset) const {
-  return motis::unix_time(sched(), hhmm, day_idx, timezone_offset);
 }
 
 template struct generic_motis_instance_test<::testing::Test>;

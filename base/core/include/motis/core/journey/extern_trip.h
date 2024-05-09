@@ -3,6 +3,8 @@
 #include <ctime>
 #include <sstream>
 
+#include "cista/reflection/comparable.h"
+
 #include "motis/string.h"
 
 #include "motis/core/common/date_time_util.h"

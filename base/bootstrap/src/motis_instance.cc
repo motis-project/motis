@@ -16,8 +16,6 @@
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/bootstrap/import_files.h"
-#include "motis/bootstrap/import_schedule.h"
-#include "motis/loader/loader.h"
 
 #include "modules.h"
 
@@ -63,12 +61,7 @@ std::vector<std::string> motis_instance::module_names() const {
   return s;
 }
 
-schedule const& motis_instance::sched() const {
-  return *get<schedule_data>(to_res_id(global_res_id::SCHEDULE)).schedule_;
-}
-
 void motis_instance::import(module_settings const& module_opt,
-                            loader::loader_options const& dataset_opt,
                             import_settings const& import_opt,
                             bool const silent) {
   auto bars = utl::global_progress_bars{silent};
@@ -76,8 +69,6 @@ void motis_instance::import(module_settings const& module_opt,
   auto dispatcher = import_dispatcher{};
 
   register_import_files(dispatcher);
-  register_import_schedule(*this, dispatcher, dataset_opt,
-                           import_opt.data_directory_);
 
   for (auto const& module : modules_) {
     if (module_opt.is_module_active(module->module_name())) {
@@ -95,10 +86,6 @@ void motis_instance::import(module_settings const& module_opt,
   dispatcher.run();
 
   registry_.reset();
-
-  utl::verify(
-      dataset_opt.no_schedule_ || includes(to_res_id(global_res_id::SCHEDULE)),
-      "schedule not loaded");
 
   if (import_opt.require_successful_) {
     auto const unsuccessful_imports =

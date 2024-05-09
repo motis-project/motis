@@ -1,17 +1,10 @@
 #include "motis/module/module.h"
 
-#include "motis/core/schedule/schedule.h"
-
 #include "motis/module/dispatcher.h"
 
 namespace fs = std::filesystem;
 
 namespace motis::module {
-
-schedule const& module::get_sched() const {
-  return *get_shared_data<schedule_data>(to_res_id(global_res_id::SCHEDULE))
-              .schedule_;
-}
 
 void module::set_data_directory(std::string const& d) { data_directory_ = d; }
 

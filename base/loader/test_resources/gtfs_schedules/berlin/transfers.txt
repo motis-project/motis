@@ -1,6 +1,0 @@
-from_stop_id,to_stop_id,transfer_type,min_transfer_time,from_transfer_id,to_transfer_id
-9003104,9003174,2,180,,
-9003104,9003175,2,240,,
-9003104,9003176,2,180,,
-9003174,9003104,2,180,,
-9003174,9003175,2,180,,

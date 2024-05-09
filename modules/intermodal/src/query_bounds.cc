@@ -3,7 +3,6 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/unixtime.h"
-#include "motis/core/access/station_access.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/message.h"
 

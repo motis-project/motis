@@ -24,45 +24,13 @@ jobs:
         run: |
           find base libs modules test \
             -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
-            -print0 | xargs -0 clang-format-16 -i
+            -print0 | xargs -0 clang-format-17 -i
 
       - name: Check for differences
         run: |
           git config --global --add safe.directory `pwd`
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
-
-  rsl-ui-checks:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ui/rsl
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: pnpm Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ui/rsl
-
-      - name: Formatting
-        run: pnpm run format-check
-
-      - name: ESLint
-        run: pnpm run lint
-
-      - name: TypeScript
-        run: pnpm run ts-check
 
   api-docs:
     runs-on: ubuntu-latest
@@ -88,7 +56,7 @@ jobs:
             - cwd: tools/protocol
 
       - name: Run Protocol Tool
-        run: pnpm start --skip rsl-ui
+        run: pnpm start
 
       - name: Upload API Docs
         uses: actions/upload-artifact@v4
@@ -164,12 +132,10 @@ jobs:
         if: matrix.config.tests == 'On'
         run: |
           ./build/motis --mode test \
-            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
-            --dataset.begin 20151004 \
-            --dataset.write_serialized false \
+            --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
+            --nigiri.first_day 2015-10-04 \
             --nigiri.no_cache true \
-            --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
+            --modules nigiri
 
       - name: Run Tests
         if: matrix.config.tests == 'On'
@@ -182,25 +148,6 @@ jobs:
       # ==== WEB INTERFACE ====
       - name: Compile Web Interface
         run: cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
-
-      - name: pnpm Cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('ui/rsl/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ./ui/rsl
-
-      - name: Compile RSL Web Interface
-        run: pnpm run build
-        working-directory: ./ui/rsl
 
       - name: Download API Docs
         uses: actions/download-artifact@v4
@@ -216,7 +163,6 @@ jobs:
           mv ui/web/{external_lib,img,js,style} motis/web/
           mv ui/web/{*.html,*.js,*.ico} motis/web/
           mv ui/web/openapi motis/web/
-          mv ui/rsl/dist motis/web/rsl
           mv build/motis motis/
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
@@ -316,12 +262,10 @@ jobs:
         if: ${{ !matrix.config.skiptests }}
         run: |
           ${{ matrix.config.emulator }} ./build/motis --mode test \
-            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
-            --dataset.begin 20151004 \
-            --dataset.write_serialized false \
+            --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
+            --nigiri.first_day 2015-10-04 \
             --nigiri.no_cache true \
-            --ris.db_max_size 1048576 \
-            --exclude_modules address osrm parking path ppr tiles tripbased gbfs transfers valhalla osr adr
+            --modules nigiri
 
       - name: Run Tests
         if: ${{ !matrix.config.skiptests }}
@@ -337,19 +281,6 @@ jobs:
         run: |
           ln -s /elm ui/web/elm-stuff
           cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
-
-      - name: Install RSL Web Interface Dependencies
-        uses: pnpm/action-setup@v3
-        if: ${{ !matrix.config.skipui }}
-        with:
-          version: ^8.15.4
-          run_install: |
-            - cwd: ./ui/rsl
-
-      - name: Compile RSL Web Interface
-        if: ${{ !matrix.config.skipui }}
-        run: pnpm run build
-        working-directory: ./ui/rsl
 
       - name: Download API Docs
         if: matrix.config.artifact
@@ -371,7 +302,6 @@ jobs:
           mv ui/web/*.js motis/web/
           mv ui/web/*.ico motis/web/
           mv ui/web/openapi motis/web/
-          mv ui/rsl/dist motis/web/rsl
           mv build/motis motis/motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
@@ -447,11 +377,12 @@ jobs:
         run: |
           ${{ matrix.config.emulator }} ./motis/motis \
             --mode test \
-            --modules routing lookup guesser ppr address intermodal osrm railviz tiles \
+            --modules nigiri osr adr tiles intermodal \
             --server.static_path motis/web \
             --import.data_dir data \
-            --import.paths schedule:data/hrd osm:data/aachen.osm.pbf \
-            --dataset.begin 20210809 \
+            --import.paths schedule-x:data/hrd osm:data/aachen.osm.pbf \
+            --nigiri.first_day 2015-10-04 \
+            --nigiri.no_cache true \
             --osrm.profiles motis/osrm-profiles/car.lua \
             --osrm.profiles motis/osrm-profiles/bike.lua \
             --ppr.profile motis/ppr-profiles/default.json \

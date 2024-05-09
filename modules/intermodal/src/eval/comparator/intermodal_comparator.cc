@@ -31,7 +31,6 @@
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/message.h"
-#include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
 
 namespace fs = std::filesystem;
@@ -285,7 +284,7 @@ bool check(int id, std::vector<msg_ptr> const& responses,
     auto const r = message_to_journeys(res[i]);
     if (r.size() != ref_cons) {
       fail(i) << "Expected " << ref_cons << " connections, has " << r.size()
-              << std::endl;
+              << '\n';
     }
 
     for (auto const& ref_con : ref) {
@@ -295,7 +294,7 @@ bool check(int id, std::vector<msg_ptr> const& responses,
                 << ", accessibility=" << std::setw(2) << ref_con.accessibility_
                 << ", start=" << format_time(departure_time(ref_con), local)
                 << ", end=" << format_time(arrival_time(ref_con), local)
-                << " missing" << std::endl;
+                << " missing" << '\n';
       }
     }
 
@@ -306,7 +305,7 @@ bool check(int id, std::vector<msg_ptr> const& responses,
                 << ", accessibility=" << std::setw(2) << con.accessibility_
                 << ", start=" << format_time(departure_time(con), local)
                 << ", end=" << format_time(arrival_time(con), local)
-                << " unexpected" << std::endl;
+                << " unexpected" << '\n';
       }
     }
 
@@ -505,7 +504,7 @@ int compare(int argc, char const** argv) {
   }
   if (!unmatched_msgs.empty()) {
     std::cout << unmatched_msgs.size()
-              << " messages are missing in some results:" << std::endl;
+              << " messages are missing in some results:" << '\n';
     for (auto const& id : unmatched_msgs) {
       std::cout << " query id " << id << " missing in:";
       for (auto file_idx = 0UL; file_idx < file_count; ++file_idx) {
@@ -520,7 +519,7 @@ int compare(int argc, char const** argv) {
           out << it->second->to_json(pretty_print
                                          ? json_format::DEFAULT_FLATBUFFERS
                                          : json_format::SINGLE_LINE)
-              << std::endl;
+              << '\n';
         }
 
         if (with_queries) {
@@ -534,11 +533,11 @@ int compare(int argc, char const** argv) {
             query_out << it->second->to_json(
                              pretty_print ? json_format::DEFAULT_FLATBUFFERS
                                           : json_format::SINGLE_LINE)
-                      << std::endl;
+                      << '\n';
           }
         }
       }
-      std::cout << std::endl;
+      std::cout << '\n';
     }
     std::cout << "\n\n\n";
   }
@@ -548,16 +547,16 @@ int compare(int argc, char const** argv) {
             << ", non-empty-error-rate: "
             << static_cast<int>(
                    (static_cast<double>(errors) / non_empty_msg_count) * 100)
-            << "%)" << std::endl;
-  std::cout << "Mismatches by file:" << std::endl;
-  std::cout << "  " << filenames[0] << ": Used as reference" << std::endl;
+            << "%)" << '\n';
+  std::cout << "Mismatches by file:" << '\n';
+  std::cout << "  " << filenames[0] << ": Used as reference" << '\n';
   for (auto i = 1UL; i < filenames.size(); ++i) {
-    std::cout << "  " << filenames[i] << ": " << file_errors[i] << std::endl;
+    std::cout << "  " << filenames[i] << ": " << file_errors[i] << '\n';
   }
 
   if (errors > 0 && !fail_path.empty()) {
     std::cout << "\nResponses that don't match written to: "
-              << fail_path.string() << std::endl;
+              << fail_path.string() << '\n';
   }
 
   return (errors == 0 && unmatched_msgs.empty()) ? 0 : 1;

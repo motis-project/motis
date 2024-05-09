@@ -1,7 +1,3 @@
-[address-typeahead]
-  url=git@github.com:motis-project/address-typeahead.git
-  branch=master
-  commit=b6b5e60faac2921f1c0b3813da9c11731a3ca31d
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,7 +5,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=3aca4248da3f67d2a31ccce358ad9ee6102ab539
+  commit=f9bf4bd83bf55a2170725707e526cbacc45dcc66
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
@@ -54,30 +50,14 @@
   url=git@github.com:motis-project/ppr.git
   branch=master
   commit=217585f424f6865693dd4aaa1a16f85daa574863
-[protobuf]
-  url=git@github.com:motis-project/protobuf.git
-  branch=main
-  commit=690e03babf0963d3da9615a2dae0891777842719
-[pugixml]
-  url=git@github.com:motis-project/pugixml.git
-  branch=master
-  commit=60175e80e2f5e97e027ac78f7e14c5acc009ce50
 [rapidjson]
   url=git@github.com:motis-project/rapidjson.git
   branch=master
   commit=e7a1ac95c7840c6f4351abead02b1f7a02874197
-[tar]
-  url=git@github.com:motis-project/tar.git
-  branch=master
-  commit=3a08b6575eb6a04e6b3d0977e6da3b61a91d62f2
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
   commit=64f297ea0f782d04c89e82c6d478a1dd453e5f70
-[transfers]
-  url=git@github.com:motis-project/transfers.git
-  branch=main
-  commit=e66556443bad898ba98d418d53c96f5f03304833
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -85,7 +65,7 @@
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
-  commit=cd2700556d69de939ea67af976cc982c9c05ee3a
+  commit=cecba85dbd6796c92a7f9c4e274849bb6ef03494
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
@@ -94,22 +74,10 @@
   url=git@github.com:motis-project/mimalloc.git
   branch=master
   commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
-[rabbitmq-c]
-  url=git@github.com:motis-project/rabbitmq-c.git
-  branch=master
-  commit=5c57cc7ebbfba2d77c4fd6adfe6644586c87b3bb
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=7f0c17b2d363a400cfad191795fb543d7b28b68f
-[osmium]
-  url=git@github.com:motis-project/libosmium.git
-  branch=master
-  commit=6e6d6b3081cc8bdf25dda89730e25c36eb995516
-[valhalla]
-  url=git@github.com:motis-project/valhalla.git
-  branch=master
-  commit=bcc77cb2746e3d234a34c73bd13880c32a96e6cc
+  commit=5def8503fa8baf36cf5fc5fd69bef4e6c59e8456
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -117,4 +85,4 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=f044654571cfe5dd4cdd5260b16d9907dc270644
+  commit=bef3f11a8c1642939e7047bcebf3d2f3528b23a3

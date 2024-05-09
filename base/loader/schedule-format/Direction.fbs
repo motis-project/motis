@@ -1,8 +1,0 @@
-include "Station.fbs";
-
-namespace motis.loader;
-
-table Direction {
-  station: Station;
-  text: string;
-}

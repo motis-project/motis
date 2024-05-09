@@ -21,7 +21,7 @@ void registry::register_op(std::string const& name, op_fn_t fn,
 }
 
 void registry::register_client_handler(
-    std::string&& target, std::function<void(client_hdl)>&& handler) {
+    std::string const& target, std::function<void(client_hdl)>&& handler) {
   auto const inserted =
       client_handlers_.emplace(target, std::move(handler)).second;
   utl::verify(inserted, "client_handler: target {} already registered", target);

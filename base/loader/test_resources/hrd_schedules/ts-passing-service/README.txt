@@ -1,2 +1,0 @@
-# Description
-The test describes a single through service. Service s_2 has two different bitfields and is splitted into two services s_2' and s_2''. Only s_2'' participates in the rule. The last stop of the first service s_1 ends in the mid of the route of the second service s_2''. The through services route is available from monday to friday. Service s_1 has remaining traffic days over the weekend. The same applies to s_1' but is not visible to the graph builder algorithm.

@@ -104,7 +104,7 @@ std::vector<parking_lot> extract_osm_parking_lots(std::string const& osm_file) {
   osmium::area::MultipolygonManager<osmium::area::Assembler> mp_manager{
       assembler_config};
 
-  std::clog << "Extract OSM parking lots: Pass 1..." << std::endl;
+  std::clog << "Extract OSM parking lots: Pass 1..." << '\n';
   osmium::relations::read_relations(input_file, mp_manager);
 
   index_type index;
@@ -112,7 +112,7 @@ std::vector<parking_lot> extract_osm_parking_lots(std::string const& osm_file) {
   std::vector<parking_lot> parking_lots;
   parking_handler data_handler{parking_lots};
 
-  std::clog << "Extract OSM parking lots: Pass 2..." << std::endl;
+  std::clog << "Extract OSM parking lots: Pass 2..." << '\n';
   osmium::io::Reader reader{input_file, osmium::io::read_meta::no};
   osmium::apply(reader, location_handler, data_handler,
                 mp_manager.handler(
@@ -123,7 +123,7 @@ std::vector<parking_lot> extract_osm_parking_lots(std::string const& osm_file) {
   reader.close();
 
   std::clog << "Extracted " << parking_lots.size() << " parking lots from OSM"
-            << std::endl;
+            << '\n';
 
   return parking_lots;
 }

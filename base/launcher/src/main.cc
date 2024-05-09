@@ -13,7 +13,6 @@
 
 #include "utl/erase_if.h"
 #include "utl/parser/cstr.h"
-#include "utl/to_vec.h"
 
 #include "net/stop_handler.h"
 
@@ -24,7 +23,6 @@
 #endif
 
 #include "motis/core/common/logging.h"
-#include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/import_settings.h"
 #include "motis/bootstrap/module_settings.h"
 #include "motis/bootstrap/motis_instance.h"
@@ -56,25 +54,19 @@ int main(int argc, char const** argv) {
   web_server server(instance.runner_.ios(), instance);
 
   server_settings server_opt;
-  dataset_settings dataset_opt;
   import_settings import_opt;
-  dataset_opt.write_serialized_ = true;
-  dataset_opt.adjust_footpaths_ = true;
 
   module_settings module_opt(instance.module_names());
   remote_settings remote_opt;
   launcher_settings launcher_opt;
 
-  std::set<std::string> disabled_by_default{
-      "cc",     "csa",    "gbfs", "nigiri", "paxforecast", "paxmon",
-      "raptor", "revise", "ris",  "rt",     "tiles",       "tripbased"};
+  std::set<std::string> disabled_by_default{"ppr", "gbfs", "parking"};
   utl::erase_if(module_opt.modules_, [&](std::string const& m) {
     return disabled_by_default.contains(m);
   });
 
-  std::vector<conf::configuration*> confs = {&server_opt,  &import_opt,
-                                             &dataset_opt, &module_opt,
-                                             &remote_opt,  &launcher_opt};
+  std::vector<conf::configuration*> confs = {
+      &server_opt, &import_opt, &module_opt, &remote_opt, &launcher_opt};
   for (auto const& module : instance.modules()) {
     confs.push_back(module);
   }
@@ -113,7 +105,7 @@ int main(int argc, char const** argv) {
   }
 
   try {
-    instance.import(module_opt, dataset_opt, import_opt);
+    instance.import(module_opt, import_opt);
     instance.init_modules(module_opt, launcher_opt.num_threads_);
     instance.init_remotes(remote_opt.get_remotes());
 
@@ -126,7 +118,7 @@ int main(int argc, char const** argv) {
           std::getline(in, json);
           auto const res =
               instance.call(make_msg(json), launcher_opt.num_threads_);
-          std::cout << res->to_json() << std::endl;
+          std::cout << res->to_json() << '\n';
         }
       } else {
         instance.call(launcher_opt.init_, launcher_opt.num_threads_);

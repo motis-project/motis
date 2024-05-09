@@ -31,7 +31,7 @@ constexpr auto const kScheduleReadAccess = ctx::access_request{
 struct registry {
   void register_op(std::string const& name, op_fn_t, ctx::accesses_t&&);
 
-  void register_client_handler(std::string&& target,
+  void register_client_handler(std::string const& target,
                                std::function<void(client_hdl)>&&);
 
   void subscribe(std::string const& topic, op_fn_t, ctx::accesses_t&&);

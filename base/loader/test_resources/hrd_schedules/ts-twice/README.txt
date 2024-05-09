@@ -1,2 +1,0 @@
-# Description
-The test describes two different through service routes. The first route covers the stops of the services s_1, s_2, and s_3. This route is only available from monday to friday. For the weekend there is a shorter through service route that excludes the stops of service s_3.

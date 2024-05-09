@@ -1,4 +1,0 @@
-"route_id","agency_id","route_short_name","route_long_name","route_type","route_color","route_text_color","route_desc"
-"17329_700",796,"164","",700,"","",""
-"17373_700",796,"269","",700,"","",""
-"17494_700",796,"N60","",700,"","",""

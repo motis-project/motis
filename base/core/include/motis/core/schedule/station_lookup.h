@@ -60,20 +60,4 @@ private:
   std::unique_ptr<geo::point_rtree> rtree_;
 };
 
-struct schedule_station_lookup : public station_lookup {
-  schedule_station_lookup(schedule const&);
-
-  schedule_station_lookup(schedule_station_lookup const&) = delete;
-  schedule_station_lookup(schedule_station_lookup&&) = delete;
-  schedule_station_lookup& operator=(schedule_station_lookup const&) = delete;
-  schedule_station_lookup& operator=(schedule_station_lookup&&) = delete;
-  virtual ~schedule_station_lookup() noexcept;
-
-  lookup_station get(std::size_t idx) const override;
-  lookup_station get(std::string_view id) const override;
-
-private:
-  schedule const& sched_;
-};
-
 }  // namespace motis

@@ -13,7 +13,7 @@ namespace n = nigiri;
 namespace motis::nigiri {
 
 std::string get_initial_permalink(n::timetable const& tt) {
-  auto const get_quantiles = [](std::vector<double>&& coords) {
+  auto const get_quantiles = [](std::vector<double> coords) {
     utl::erase_if(coords, [](auto const c) { return c == 0.; });
     if (coords.empty()) {
       return std::make_pair(0., 0.);
