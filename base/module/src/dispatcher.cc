@@ -78,7 +78,8 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
       f->set(op.fn_(msg));
       return f;
     } else {
-      return post_work(data, [&, msg] { return op.fn_(msg); }, id);
+      return post_work(
+          data, [&, msg] { return op.fn_(msg); }, id);
     }
   });
 }
