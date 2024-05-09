@@ -5,7 +5,7 @@
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
-  commit=3aca4248da3f67d2a31ccce358ad9ee6102ab539
+  commit=f9bf4bd83bf55a2170725707e526cbacc45dcc66
 [ctx]
   url=git@github.com:motis-project/ctx.git
   branch=master
