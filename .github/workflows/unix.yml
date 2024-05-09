@@ -165,8 +165,7 @@ jobs:
         run: |
           ./build/motis --mode test \
             --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
-            --nigiri.first_day 2015-10-04
-            --nigiri.no_cache true
+            --nigiri.first_day 2015-10-04 \
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
             --modules nigiri
@@ -317,8 +316,7 @@ jobs:
         run: |
           ${{ matrix.config.emulator }} ./build/motis --mode test \
             --import.paths schedule-x:base/loader/test_resources/hrd_schedules/single-ice \
-            --nigiri.first_day 2015-10-04
-            --nigiri.no_cache true
+            --nigiri.first_day 2015-10-04 \
             --nigiri.no_cache true \
             --ris.db_max_size 1048576 \
             --modules nigiri
@@ -451,8 +449,8 @@ jobs:
             --server.static_path motis/web \
             --import.data_dir data \
             --import.paths schedule-x:data/hrd osm:data/aachen.osm.pbf \
-            --nigiri.first_day 2015-10-04
-            --nigiri.no_cache true
+            --nigiri.first_day 2015-10-04 \
+            --nigiri.no_cache true \
             --osrm.profiles motis/osrm-profiles/car.lua \
             --osrm.profiles motis/osrm-profiles/bike.lua \
             --ppr.profile motis/ppr-profiles/default.json \
