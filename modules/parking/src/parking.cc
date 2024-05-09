@@ -11,10 +11,9 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "motis/core/common/constants.h"
 #include "motis/core/common/logging.h"
 #include "motis/core/common/timing.h"
-#include "motis/core/access/station_access.h"
-#include "motis/core/conv/station_conv.h"
 #include "motis/core/statistics/statistics.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_http_req.h"

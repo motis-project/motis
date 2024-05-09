@@ -8,14 +8,12 @@
 
 #include "boost/asio/io_service.hpp"
 
-#include "motis/core/schedule/schedule.h"
 #include "motis/module/controller.h"
 #include "motis/module/message.h"
 #include "motis/module/module.h"
 #include "motis/module/remote.h"
 #include "motis/bootstrap/import_settings.h"
 #include "motis/bootstrap/module_settings.h"
-#include "motis/loader/loader_options.h"
 
 namespace motis::bootstrap {
 
@@ -43,8 +41,8 @@ struct motis_instance : public motis::module::controller {
   std::vector<std::string> module_names() const;
   schedule const& sched() const;
 
-  void import(module_settings const&, loader::loader_options const&,
-              import_settings const&, bool silent = false);
+  void import(module_settings const&, import_settings const&,
+              bool silent = false);
   void init_modules(module_settings const&,
                     unsigned num_threads = std::thread::hardware_concurrency());
   void init_remotes(

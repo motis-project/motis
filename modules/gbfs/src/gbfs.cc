@@ -21,8 +21,8 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/station_lookup.h"
+#include "motis/core/schedule/time.h"
 #include "motis/core/conv/position_conv.h"
-#include "motis/core/conv/station_conv.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_parallel_for.h"

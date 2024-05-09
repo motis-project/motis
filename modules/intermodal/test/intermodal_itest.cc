@@ -9,41 +9,31 @@
 
 #include "geo/latlng.h"
 
+#include "motis/core/common/constants.h"
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/core/journey/print_journey.h"
 #include "motis/module/message.h"
 #include "motis/test/motis_instance_test.h"
-#include "motis/test/schedule/simple_realtime.h"
 
 using namespace geo;
 using namespace flatbuffers;
 using namespace motis::osrm;
 using namespace motis::test;
-using namespace motis::test::schedule;
 using namespace motis::module;
 using namespace motis::routing;
 using namespace motis::intermodal;
-using motis::test::schedule::simple_realtime::dataset_opt;
 
 namespace motis::intermodal {
-
-namespace {
-loader::loader_options add_tag(loader::loader_options opt) {
-  opt.dataset_prefix_.emplace_back("x");
-  return opt;
-}
-}  // namespace
 
 struct intermodal_itest
     : public generic_motis_instance_test<testing::TestWithParam<const char*>> {
   intermodal_itest()
       : motis::test::generic_motis_instance_test<
             testing::TestWithParam<const char*>>(
-            add_tag(dataset_opt),
-            {"intermodal", "routing", "tripbased", "nigiri", "lookup"},
-            {"--tripbased.use_data_file=false", "--nigiri.lookup=false",
-             "--nigiri.routing=false", "--nigiri.first_day=2015-11-24"}) {
+            {"intermodal", "nigiri"},
+            {"--import.paths=schedule-x:test/schedule/simple_realtime",
+             "--nigiri.first_day=2015-11-24"}) {
     instance_->register_op(
         "/osrm/one_to_many",
         [](msg_ptr const& msg) {
@@ -104,7 +94,7 @@ TEST_F(intermodal_itest, forward) {
                        router);
   };
 
-  for (auto const& router : {"/routing", "/tripbased", "/nigiri"}) {
+  for (auto const& router : {"/nigiri"}) {
     SCOPED_TRACE(router);
 
     auto res = call(make_msg(json(router)));
@@ -189,7 +179,7 @@ TEST_F(intermodal_itest, backward) {
                        router);
   };
 
-  for (auto const& router : {"/routing", "/tripbased", "/nigiri"}) {
+  for (auto const& router : {"/nigiri"}) {
     SCOPED_TRACE(router);
 
     auto res = call(make_msg(json(router)));
@@ -246,14 +236,14 @@ TEST_F(intermodal_itest, not_so_intermodal) {
         "destination": {{ "id": "x_8000031", "name": "" }},
         "destination_modes": [],
         "search_type": "Default",
-        "router": ""
+        "router": "{}"
       }}
     }}
   )",
                        router);
   };
 
-  for (auto const& router : {"/routing", "/tripbased", "/nigiri"}) {
+  for (auto const& router : {"/nigiri"}) {
     auto res = call(make_msg(json(router)));
     auto content = motis_content(RoutingResponse, res);
 

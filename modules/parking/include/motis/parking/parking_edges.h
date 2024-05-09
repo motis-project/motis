@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "motis/core/schedule/schedule.h"
 #include "motis/core/schedule/station_lookup.h"
 #include "motis/core/schedule/time.h"
 #include "motis/module/message.h"

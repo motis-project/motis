@@ -53,8 +53,6 @@ struct module : public conf::configuration {
   virtual void init_io(boost::asio::io_context&) {}
   virtual void stop_io() {}
 
-  schedule const& get_sched() const;
-
   template <typename T>
   T const& get_shared_data(ctx::res_id_t const id) const {
     return shared_data_->get<T>(id);

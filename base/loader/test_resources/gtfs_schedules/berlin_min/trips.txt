@@ -1,2 +1,0 @@
-"route_id","service_id","trip_id","trip_headsign","trip_short_name","direction_id","block_id","shape_id","wheelchair_accessible","bikes_allowed"
-"17469_700",1748,207395684,"Riesaer Str. (Berlin)","",0,,7891,1,2

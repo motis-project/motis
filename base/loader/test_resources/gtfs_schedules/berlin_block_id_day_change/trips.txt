@@ -1,4 +1,0 @@
-"route_id","service_id","trip_id","trip_headsign","trip_short_name","direction_id","block_id","shape_id","wheelchair_accessible","bikes_allowed"
-"17329_700",1722,207326501,"S Adlershof (Berlin)","",0,9976,6287,1,2
-"17373_700",1722,207343915,"S Köpenick (Berlin)","",0,9976,6908,1,2
-"17494_700",1722,207396753,"Flughafen BER - Terminal 1-2","",0,9976,8085,1,2

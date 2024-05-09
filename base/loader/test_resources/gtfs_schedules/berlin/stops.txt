@@ -1,4 +1,0 @@
-stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station
-5100071,,Zbaszynek,,52.2425040,15.8180870,,,0,
-9230005,,S Potsdam Hauptbahnhof Nord,,52.3927320,13.0668480,,,0,
-9230006,,"Potsdam, Charlottenhof Bhf",,52.3930040,13.0362980,,,0,

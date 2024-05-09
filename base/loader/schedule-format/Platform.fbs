@@ -1,6 +1,0 @@
-namespace motis.loader;
-
-table Platform {
-  name: string;
-  tracks: [string];
-}

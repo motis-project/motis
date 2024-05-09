@@ -6,7 +6,6 @@
 #include "motis/core/schedule/event_type.h"
 
 #include "motis/module/message.h"
-#include "motis/loader/loader_options.h"
 
 namespace motis::test::schedule::update_journey {
 

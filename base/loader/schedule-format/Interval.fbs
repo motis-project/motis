@@ -1,6 +1,0 @@
-namespace motis.loader;
-
-struct Interval {
-  from: long;
-  to: long;
-}

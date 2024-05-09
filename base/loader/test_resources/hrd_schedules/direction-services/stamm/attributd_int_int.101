@@ -1,7 +1,0 @@
-BB 3 300 10 Bushalt ist nicht am Bahnhof#
-BI 0 002 10 Achtung! Baumaßnahmen. Infos: www.bahn.de/bauarbeiten#
-FB 0 260 05 Fahrradmitnahme begrenzt möglich#
-FK 0 260 05 Fahrradmitnahme begrenzt möglich#
-OB 0 560 20 Niederflurfahrzeug#
-sc 0 560 22 Kleinbus; beschränkte Platzzahl#
-SV 0 810 10 Schienenersatzverkehr#

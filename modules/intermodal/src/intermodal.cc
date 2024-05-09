@@ -44,7 +44,6 @@ intermodal::intermodal() : module("Intermodal Options", "intermodal") {
 intermodal::~intermodal() = default;
 
 void intermodal::reg_subc(motis::module::subc_reg& r) {
-  r.register_cmd("generate", "generate routing queries", eval::generate);
   r.register_cmd("compare", "print difference between results", eval::compare);
 }
 

@@ -31,7 +31,6 @@
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/module/message.h"
-#include "motis/bootstrap/dataset_settings.h"
 #include "motis/bootstrap/motis_instance.h"
 
 namespace fs = std::filesystem;

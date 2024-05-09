@@ -1,8 +1,0 @@
-namespace motis.loader;
-
-table Provider {
-  short_name: string;
-  long_name: string;
-  full_name: string;
-  timezone_name: string;
-}

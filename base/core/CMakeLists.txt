@@ -10,7 +10,7 @@ target_compile_options(motis-core PRIVATE ${MOTIS_CXX_FLAGS})
 target_link_libraries(motis-core
   utl
   date
+  geo
   motis-data
-  motis-loader
   motis-module
 )

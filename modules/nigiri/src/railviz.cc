@@ -24,7 +24,6 @@
 #include "motis/nigiri/resolve_run.h"
 #include "motis/nigiri/tag_lookup.h"
 #include "motis/nigiri/unixtime_conv.h"
-#include "motis/path/path_zoom_level.h"
 
 namespace n = nigiri;
 namespace bgi = boost::geometry::index;
@@ -45,6 +44,53 @@ struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_, to_;
 };
+
+int min_zoom_level(n::clasz const clasz, float const distance) {
+  switch (clasz) {
+    // long distance
+    case n::clasz::kAir:
+    case n::clasz::kCoach:
+      if (distance < 50'000.F) {
+        return 8;  // typically long distance, maybe also quite short
+      }
+      [[fallthrough]];
+    case n::clasz::kHighSpeed:
+    case n::clasz::kLongDistance:
+    case n::clasz::kNight:
+    case n::clasz::kRegionalFast:
+    case n::clasz::kRegional: return 5;
+
+    // regional distance
+    case n::clasz::kMetro: return 8;
+
+    // metro distance
+    case n::clasz::kSubway: return 9;
+
+    // short distance
+    case n::clasz::kTram:
+    case n::clasz::kBus: return distance > 10'000.F ? 9 : 10;
+
+    // ship can be anything
+    case n::clasz::kShip:
+      if (distance > 100'000.F) {
+        return 5;
+      } else if (distance > 10'000.F) {
+        return 8;
+      } else {
+        return 10;
+      }
+
+    case n::clasz::kOther: return 11;
+
+    default:
+      throw utl::fail("unknown n::clasz {}", static_cast<int_clasz>(clasz));
+  }
+}
+
+bool should_display(n::clasz const clasz, int const zoom_level,
+                    float const distance) {
+  return zoom_level >= min_zoom_level(clasz, distance);
+}
 
 struct route_geo_index {
   route_geo_index() = default;
@@ -179,23 +225,23 @@ struct railviz::impl {
                          geo::box const& area, int const zoom_level) {
     auto runs = std::vector<stop_pair>{};
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
-      auto const sc = static_cast<service_class>(c);
-      if (!path::should_display(sc, zoom_level,
-                                std::numeric_limits<float>::infinity())) {
+      auto const cl = n::clasz{c};
+      if (!should_display(cl, zoom_level,
+                          std::numeric_limits<float>::infinity())) {
         continue;
       }
 
       if (rtt_ != nullptr) {
         for (auto const& rt_t :
              rt_geo_indices_[c].get_rt_transports(*rtt_, area)) {
-          if (path::should_display(sc, zoom_level, rt_distances_[rt_t])) {
+          if (should_display(cl, zoom_level, rt_distances_[rt_t])) {
             add_rt_transports(rt_t, time_interval, area, runs);
           }
         }
       }
 
       for (auto const& r : static_geo_indices_[c].get_routes(area)) {
-        if (path::should_display(sc, zoom_level, static_distances_[r])) {
+        if (should_display(cl, zoom_level, static_distances_[r])) {
           add_static_transports(r, time_interval, area, runs);
         }
       }
