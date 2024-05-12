@@ -24,7 +24,7 @@ public:
 private:
   motis::module::msg_ptr route(motis::module::msg_ptr const&);
 
-  std::string router_{"routing"};
+  std::string router_{"nigiri"};
   bool revise_{false};
   unsigned timeout_{0};
   ppr_profiles ppr_profiles_;
