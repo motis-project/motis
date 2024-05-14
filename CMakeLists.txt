@@ -59,7 +59,7 @@ file(GLOB_RECURSE icc-files src/*.cc)
 add_library(icc ${icc-files})
 target_include_directories(icc PUBLIC include)
 target_compile_features(icc PUBLIC cxx_std_23)
-target_link_libraries(icc nigiri osr)
+target_link_libraries(icc nigiri osr boost-json)
 
 
 # --- TEST ---

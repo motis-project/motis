@@ -299,11 +299,11 @@ TEST(a, b) {
 
   auto const m = icc::match(tt, pl, w);
 
-  for (auto const& [l, x] : m.lp_) {
-    fmt::println("{} ({})", tt.locations_.names_[l].view(),
-                 tt.locations_.ids_[l].view());
-    for (auto const& name : pl.platform_names_[x]) {
-      fmt::println("  {}", name.view());
-    }
-  }
+  //  for (auto const& [l, x] : m.lp_) {
+  //    fmt::println("{} ({})", tt.locations_.names_[l].view(),
+  //                 tt.locations_.ids_[l].view());
+  //    for (auto const& name : pl.platform_names_[x]) {
+  //      fmt::println("  {}", name.view());
+  //    }
+  //  }
 }

@@ -1,5 +1,6 @@
 #include "icc/match.h"
 
+#include "osr/geojson.h"
 #include "utl/parser/arg_parser.h"
 
 namespace n = nigiri;
@@ -43,6 +44,37 @@ bool has_number_match(Collection&& a, std::string_view b) {
                      [&](auto&& x) { return has_number_match(x.view(), b); });
 }
 
+template <typename Collection>
+bool has_exact_match(Collection&& a, std::string_view b) {
+  return std::any_of(a.begin(), a.end(),
+                     [&](auto&& x) { return x.view() == b; });
+}
+
+template <typename Collection>
+bool has_contains_match(Collection&& a, std::string_view b) {
+  return std::any_of(a.begin(), a.end(),
+                     [&](auto&& x) { return x.view().contains(b); });
+}
+
+template <typename Collection>
+double get_match_bonus(Collection&& names,
+                       std::string_view ref,
+                       std::string_view name) {
+  if (has_exact_match(names, ref)) {
+    return 500.0 - names.size();
+  }
+  if (has_contains_match(names, ref)) {
+    return 300.0 - names.size();
+  }
+  if (has_exact_match(names, name)) {
+    return 250.0 - names.size();
+  }
+  if (has_number_match(names, name)) {
+    return 200.0 - names.size();
+  }
+  return 0.0;
+}
+
 struct center {
   template <typename T>
   void add(T const& polyline) {
@@ -63,10 +95,42 @@ struct center {
   std::size_t n_;
 };
 
-matching match(nigiri::timetable const& tt,
+struct geojson_writer {
+  void add_match(n::location_idx_t const l,
+                 osr::platform_idx_t const p,
+                 geo::latlng const& p_center) {
+    writer_.features_.emplace_back(
+        boost::json::value{{"type", "Feature"},
+                           {"properties",
+                            {{"type", "location"},
+                             {"marker-color", "#53bff9"},
+                             {"name", tt_.locations_.names_[l].view()},
+                             {"id", tt_.locations_.ids_[l].view()},
+                             {"location_idx", to_idx(l)}}},
+                           {"geometry", osr::to_point(osr::point::from_latlng(
+                                            tt_.locations_.coordinates_[l]))}});
+    writer_.features_.emplace_back(boost::json::value{
+        {"type", "Feature"},
+        {"properties",
+         {{"type", "match"},
+          {"platform_idx", to_idx(p)},
+          {"location_name", tt_.locations_.ids_[l].view()},
+          {"location_id", tt_.locations_.names_[l].view()}}},
+        {"geometry", osr::to_line_string(std::initializer_list<geo::latlng>(
+                         {p_center, tt_.locations_.coordinates_[l]}))}});
+  }
+
+  osr::geojson_writer writer_;
+  n::timetable const& tt_;
+  osr::platforms const& pl_;
+  osr::ways const& w_;
+};
+
+matching match(n::timetable const& tt,
                osr::platforms const& pl,
                osr::ways const& w) {
-  auto const platform_center = [&](osr::platform_idx_t const x) {
+  auto const platform_center =
+      [&](osr::platform_idx_t const x) -> std::optional<geo::latlng> {
     auto c = center{};
     for (auto const p : pl.platform_ref_[x]) {
       std::visit(utl::overloaded{[&](osr::node_idx_t const node) {
@@ -77,9 +141,17 @@ matching match(nigiri::timetable const& tt,
                                  }},
                  osr::to_ref(p));
     }
+    if (c.n_ == 0U) {
+      return std::nullopt;
+    }
     return c.get_center();
   };
 
+  auto geojson =
+      geojson_writer{.writer_ = osr::geojson_writer{.w_ = w, .platforms_ = &pl},
+                     .tt_ = tt,
+                     .pl_ = pl,
+                     .w_ = w};
   auto m = matching{};
   for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
     auto const ref = tt.locations_.coordinates_[l];
@@ -88,21 +160,49 @@ matching match(nigiri::timetable const& tt,
 
     pl.find(ref, [&](osr::platform_idx_t const x) {
       auto const center = platform_center(x);
-      auto const dist = geo::distance(center, ref);
-      auto const is_number_match = has_number_match(
-          pl.platform_names_[x], tt.locations_.names_[l].view());
-      auto const score = dist - (is_number_match ? kNumberMatchBonus : 0.0);
+      if (!center.has_value()) {
+        return;
+      }
+
+      auto const dist = geo::distance(*center, ref);
+      auto const match_bonus =
+          get_match_bonus(pl.platform_names_[x], tt.locations_.ids_[l].view(),
+                          tt.locations_.names_[l].view());
+      auto const score = dist - match_bonus;
       if (score < best_score) {
         best = x;
         best_score = score;
       }
     });
 
-    if (best != osr::platform_idx_t ::invalid()) {
+    if (best != osr::platform_idx_t::invalid()) {
+      //      geojson.add_match(l, best, platform_center(best));
       m.pl_[best] = l;
       m.lp_[l] = best;
+    } else {
+      fmt::println("no match found for id={}, name={}, pos={}",
+                   tt.locations_.ids_[l].view(), tt.locations_.names_[l].view(),
+                   tt.locations_.coordinates_[l]);
     }
   }
+
+  for (auto p = osr::platform_idx_t{0U}; p != pl.platform_ref_.size(); ++p) {
+    auto const c = platform_center(p);
+    if (c.has_value()) {
+      geojson.writer_.features_.emplace_back(boost::json::value{
+          {"type", "Feature"},
+          {"properties",
+           {{"type", "center"},
+            {"marker-color", "#ff7800"},
+            {"platform_idx", to_idx(p)},
+            {"names", osr::platform_names(pl, p)}}},
+          {"geometry", osr::to_point(osr::point::from_latlng(*c))}});
+    }
+    geojson.writer_.write_platform(p);
+  }
+
+  fmt::println("{}", geojson.writer_.finish());
+
   return m;
 }
 
