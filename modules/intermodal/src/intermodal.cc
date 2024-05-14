@@ -536,7 +536,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
             mc, start.start_type_, start.start_, dest.station_,
             req->search_type(), req->search_dir(),
             mc.CreateVector(std::vector<Offset<Via>>{}), mc.CreateVector(edges),
-            true, true, true, 0, timeout_,
+            true, true, false, 0, timeout_,
             req->allowed_claszes() == nullptr
                 ? 0
                 : mc.CreateVector(req->allowed_claszes()->Data(),
