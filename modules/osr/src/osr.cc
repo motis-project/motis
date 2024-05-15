@@ -345,9 +345,6 @@ void osr::import(mm::import_dispatcher& reg) {
         }
 
         auto w = std::make_unique<o::ways>(dir, cista::mmap::protection::READ);
-        if (lock_) {
-          w->lock();
-        }
         auto l = std::make_unique<o::lookup>(*w);
         impl_ = std::make_unique<impl>(std::move(w), std::move(l));
 
