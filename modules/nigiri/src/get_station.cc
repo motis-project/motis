@@ -154,11 +154,11 @@ struct rt_ev_iterator : public ev_iterator {
                  n::stop_idx_t const stop_idx, n::unixtime_t const start,
                  n::event_type const ev_type, n::direction const dir)
       : rtt_{rtt},
-        finished_(dir == n::direction::kForward ? time() < start
-                                                : time() > start),
         stop_idx_{stop_idx},
         rt_t_{rt_t},
-        ev_type_{ev_type} {
+        ev_type_{ev_type},
+        finished_(dir == n::direction::kForward ? time() < start
+                                                : time() > start) {
 
     assert((ev_type == n::event_type::kDep &&
             stop_idx_ < rtt.rt_transport_location_seq_[rt_t].size() - 1U) ||
@@ -187,10 +187,10 @@ struct rt_ev_iterator : public ev_iterator {
   void increment() override { finished_ = true; }
 
   n::rt_timetable const& rtt_;
-  bool finished_{false};
   n::stop_idx_t stop_idx_;
   n::rt_transport_idx_t rt_t_;
   n::event_type ev_type_;
+  bool finished_{false};
 };
 
 std::vector<n::rt::run> get_events(
