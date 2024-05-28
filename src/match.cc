@@ -61,16 +61,16 @@ double get_match_bonus(Collection&& names,
                        std::string_view ref,
                        std::string_view name) {
   if (has_exact_match(names, ref)) {
-    return 500.0 - names.size();
+    return 200 + 500.0 - names.size();
   }
   if (has_contains_match(names, ref)) {
-    return 300.0 - names.size();
+    return 200 + 300.0 - names.size();
   }
   if (has_exact_match(names, name)) {
-    return 250.0 - names.size();
+    return 200 + 250.0 - names.size();
   }
   if (has_number_match(names, name)) {
-    return 200.0 - names.size();
+    return 200 + 200.0 - names.size();
   }
   return 0.0;
 }
@@ -114,8 +114,9 @@ struct geojson_writer {
         {"properties",
          {{"type", "match"},
           {"platform_idx", to_idx(p)},
-          {"location_name", tt_.locations_.ids_[l].view()},
-          {"location_id", tt_.locations_.names_[l].view()}}},
+          {"platform_name", osr::platform_names(pl_, p)},
+          {"location_name", tt_.locations_.names_[l].view()},
+          {"location_id", tt_.locations_.ids_[l].view()}}},
         {"geometry", osr::to_line_string(std::initializer_list<geo::latlng>(
                          {p_center, tt_.locations_.coordinates_[l]}))}});
   }
@@ -176,7 +177,9 @@ matching match(n::timetable const& tt,
     });
 
     if (best != osr::platform_idx_t::invalid()) {
-      //      geojson.add_match(l, best, platform_center(best));
+      if (auto const center = platform_center(best); center.has_value()) {
+        geojson.add_match(l, best, *center);
+      }
       m.pl_[best] = l;
       m.lp_[l] = best;
     } else {
