@@ -6,7 +6,8 @@
 		ControlGroup,
 		ControlButton,
 		GeoJSON,
-		LineLayer
+		LineLayer,
+		CircleLayer
 	} from 'svelte-maplibre';
 	import { getStyle } from '$lib/style';
 	import { createShield } from '$lib/shield';
@@ -58,7 +59,11 @@
 
 	let map = $state<maplibregl.Map | null>(null);
 	let showGraph = $state(false);
-	let graph = $derived.by(async () => (showGraph && map ? await getGraph(map.getBounds()) : null));
+	let graph = $state<null | Object>(null);
+	$effect(async () => {
+		bounds; // trigger graph reload when bounds change
+		graph = showGraph && map ? await getGraph(map.getBounds()) : null;
+	});
 
 	const [shieldData, shieldOptions] = createShield({
 		fill: 'hsl(0, 0%, 98%)',
@@ -124,6 +129,24 @@
 					'line-color': '#e55e5e',
 					'line-width': 3,
 					'line-opacity': 1
+				}}
+			/>
+			<LineLayer
+				filter={['all', ['==', 'type', 'edge'], ['any', ['!has', 'level'], ['==', 'level', level]]]}
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				paint={{
+					'line-color': '#a300d9',
+					'line-width': 3
+				}}
+			/>
+			<CircleLayer
+				filter={['all', ['==', '$type', 'Point']]}
+				paint={{
+					'circle-color': ['match', ['get', 'label'], 'unreachable', '#ff1150', '#11ffaf'],
+					'circle-radius': 6
 				}}
 			/>
 		</GeoJSON>
