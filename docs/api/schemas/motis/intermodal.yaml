@@ -134,5 +134,5 @@ IntermodalRoutingRequest:
     max_transfers:
       description: |
         The maximum number of transfers allowed per journey.
-        
+
         If set to `-1`, the internal default value is used.
