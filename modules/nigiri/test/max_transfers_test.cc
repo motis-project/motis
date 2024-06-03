@@ -22,6 +22,19 @@ namespace mn = motis::nigiri;
 
 namespace {
 
+// The schedule contains 3 connections from A to D:
+//
+// - Direct connection - 10:00 -> 11:00:
+//   T1: A (10:00) -> D (11:00)
+//
+// - One transfer - 10:00 -> 10:50:
+//   T2: A (10:00) -> B (10:10)
+//   T3: B (10:15) -> D (10:50)
+//
+// - Two transfers - 10:00 -> 10:40:
+//   T2: A (10:00) -> B (10:10)
+//   T4: B (10:13) -> C (10:20)
+//   T5: C (10:25) -> D (10:40)
 constexpr auto const test_files = R"(
 # agency.txt
 agency_id,agency_name,agency_url,agency_timezone
@@ -196,7 +209,7 @@ TEST(nigiri, max_transfers_test) {
   auto tags = mn::tag_lookup{};
   tags.add(n::source_idx_t{0U}, "tag_");
 
-  {  // Default transfer limit
+  {  // Default transfer limit -> should find all 3 connections
     auto const results = mn::route(
         tags, tt, nullptr,
         mn::make_routing_msg(
@@ -213,7 +226,7 @@ TEST(nigiri, max_transfers_test) {
     EXPECT_EQ(expected_max_transfers_default, ss.str());
   }
 
-  {  // Max 1 transfer
+  {  // Max 1 transfer -> should find 2 connections
     auto const results = mn::route(
         tags, tt, nullptr,
         mn::make_routing_msg(
@@ -230,7 +243,7 @@ TEST(nigiri, max_transfers_test) {
     EXPECT_EQ(expected_max_transfers_1, ss.str());
   }
 
-  {  // Max 0 transfers
+  {  // Max 0 transfers -> should find only the direct connection
     auto const results = mn::route(
         tags, tt, nullptr,
         mn::make_routing_msg(
