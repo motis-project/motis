@@ -37,8 +37,6 @@ struct generic_motis_instance_test : public Base {
   static std::function<module::msg_ptr(module::msg_ptr const&)> msg_sink(
       std::vector<module::msg_ptr>*);
 
-  ::motis::schedule const& sched() const;
-
   template <typename Module>
   Module& get_module(std::string const& module_name) {
     auto it = std::find_if(

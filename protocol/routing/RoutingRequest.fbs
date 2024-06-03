@@ -116,4 +116,5 @@ table RoutingRequest {
   schedule: ulong; // schedule id (0 = default)
   timeout: int = 0; // 0 = none
   allowed_claszes: [ubyte] (optional);
+  max_transfers: int = -1 (optional); // -1 = use default value
 }

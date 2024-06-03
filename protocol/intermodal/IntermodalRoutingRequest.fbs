@@ -130,4 +130,5 @@ table IntermodalRoutingRequest {
   search_dir: motis.SearchDir;
   router: string (optional);
   allowed_claszes: [ubyte] (optional);
+  max_transfers: int = -1 (optional); // -1 = use default value
 }
