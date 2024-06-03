@@ -540,7 +540,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
             req->allowed_claszes() == nullptr
                 ? 0
                 : mc.CreateVector(req->allowed_claszes()->Data(),
-                                  req->allowed_claszes()->size()))
+                                  req->allowed_claszes()->size()),
+            req->max_transfers())
             .Union(),
         router);
 

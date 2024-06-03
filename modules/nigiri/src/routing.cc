@@ -290,6 +290,14 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                          : std::vector<n::routing::offset>{
                                {destination_station, n::duration_t{0U}, 0U}};
 
+  auto max_transfers = n::routing::kMaxTransfers;
+  if (req->max_transfers() >= 0) {
+    utl::verify(req->max_transfers() < ::nigiri::routing::kMaxTransfers,
+                "unsupported max_transfers value (max supported: {})",
+                ::nigiri::routing::kMaxTransfers - 1);
+    max_transfers = static_cast<std::uint8_t>(req->max_transfers() + 1);
+  }
+
   auto q = n::routing::query{
       .start_time_ = start_time,
       .start_match_mode_ = is_intermodal_start
@@ -309,7 +317,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                     : std::vector<n::routing::offset>{{start_station,
                                                        n::duration_t{0U}, 0U}},
       .destination_ = std::move(destination),
-      .max_transfers_ = n::routing::kMaxTransfers,
+      .max_transfers_ = max_transfers,
       .min_connection_count_ = min_connection_count,
       .extend_interval_earlier_ = extend_interval_earlier,
       .extend_interval_later_ = extend_interval_later,

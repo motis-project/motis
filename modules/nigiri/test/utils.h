@@ -85,7 +85,8 @@ inline transit_realtime::FeedMessage to_feed_msg(
 
 inline motis::module::msg_ptr make_routing_msg(std::string_view from,
                                                std::string_view to,
-                                               std::int64_t const start) {
+                                               std::int64_t const start,
+                                               int max_transfers = -1) {
   using namespace motis;
   using flatbuffers::Offset;
 
@@ -105,7 +106,8 @@ inline motis::module::msg_ptr make_routing_msg(std::string_view from,
           routing::SearchType_Default, SearchDir_Forward,
           fbb.CreateVector(std::vector<Offset<routing::Via>>()),
           fbb.CreateVector(
-              std::vector<Offset<routing::AdditionalEdgeWrapper>>()))
+              std::vector<Offset<routing::AdditionalEdgeWrapper>>()),
+          true, true, true, 0, 0, 0, max_transfers)
           .Union(),
       "/nigiri");
   return make_msg(fbb);
