@@ -1,7 +1,9 @@
 #include "icc/match.h"
 
-#include "osr/geojson.h"
+#include "utl/helpers/algorithm.h"
 #include "utl/parser/arg_parser.h"
+
+#include "osr/geojson.h"
 
 namespace n = nigiri;
 
@@ -127,9 +129,9 @@ struct geojson_writer {
   osr::ways const& w_;
 };
 
-matching match(n::timetable const& tt,
-               osr::platforms const& pl,
-               osr::ways const& w) {
+matching_t match(n::timetable const& tt,
+                 osr::platforms const& pl,
+                 osr::ways const& w) {
   auto const platform_center =
       [&](osr::platform_idx_t const x) -> std::optional<geo::latlng> {
     auto c = center{};
@@ -148,12 +150,9 @@ matching match(n::timetable const& tt,
     return c.get_center();
   };
 
-  auto geojson =
-      geojson_writer{.writer_ = osr::geojson_writer{.w_ = w, .platforms_ = &pl},
-                     .tt_ = tt,
-                     .pl_ = pl,
-                     .w_ = w};
-  auto m = matching{};
+  auto m = matching_t{};
+  m.resize(tt.n_locations());
+  utl::fill(m, osr::platform_idx_t::invalid());
   for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
     auto const ref = tt.locations_.coordinates_[l];
     auto best = osr::platform_idx_t::invalid();
@@ -177,34 +176,9 @@ matching match(n::timetable const& tt,
     });
 
     if (best != osr::platform_idx_t::invalid()) {
-      if (auto const center = platform_center(best); center.has_value()) {
-        geojson.add_match(l, best, *center);
-      }
-      m.pl_[best] = l;
-      m.lp_[l] = best;
-    } else {
-      fmt::println("no match found for id={}, name={}, pos={}",
-                   tt.locations_.ids_[l].view(), tt.locations_.names_[l].view(),
-                   tt.locations_.coordinates_[l]);
+      m[l] = best;
     }
   }
-
-  for (auto p = osr::platform_idx_t{0U}; p != pl.platform_ref_.size(); ++p) {
-    auto const c = platform_center(p);
-    if (c.has_value()) {
-      geojson.writer_.features_.emplace_back(boost::json::value{
-          {"type", "Feature"},
-          {"properties",
-           {{"type", "center"},
-            {"marker-color", "#ff7800"},
-            {"platform_idx", to_idx(p)},
-            {"names", osr::platform_names(pl, p)}}},
-          {"geometry", osr::to_point(osr::point::from_latlng(*c))}});
-    }
-    geojson.writer_.write_platform(p);
-  }
-
-  fmt::println("{}", geojson.writer_.finish());
 
   return m;
 }

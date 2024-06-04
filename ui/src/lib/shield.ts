@@ -5,9 +5,9 @@ class ShieldOptions {
     stroke!: string;
 }
 
-export function createShield(opt: ShieldOptions): [ImageData | null, Object | null] {
+export function createShield(opt: ShieldOptions): [ImageData, Object] {
     if (!browser) {
-        return [null, null];
+        throw "not supported";
     }
 
     const d = 32

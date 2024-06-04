@@ -62,10 +62,16 @@ target_compile_features(icc PUBLIC cxx_std_23)
 target_link_libraries(icc nigiri osr boost-json adr)
 
 
-# --- EXE ---
+# --- PREPARE ---
 add_executable(icc-prepare exe/prepare.cc)
 target_compile_features(icc-prepare PUBLIC cxx_std_23)
 target_link_libraries(icc-prepare icc)
+
+
+# --- SERVER ---
+add_executable(icc-server exe/server.cc)
+target_compile_features(icc-server PUBLIC cxx_std_23)
+target_link_libraries(icc-server icc web-server fmt::fmt rtree geo cista)
 
 
 # --- TEST ---

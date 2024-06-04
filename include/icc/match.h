@@ -6,13 +6,11 @@
 
 namespace icc {
 
-struct matching {
-  std::map<nigiri::location_idx_t, osr::platform_idx_t> lp_;
-  std::map<osr::platform_idx_t, nigiri::location_idx_t> pl_;
-};
+using matching_t =
+    cista::offset::vector_map<nigiri::location_idx_t, osr::platform_idx_t>;
 
-matching match(nigiri::timetable const&,
-               osr::platforms const&,
-               osr::ways const&);
+matching_t match(nigiri::timetable const&,
+                 osr::platforms const&,
+                 osr::ways const&);
 
 }  // namespace icc
