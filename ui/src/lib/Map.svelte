@@ -5,14 +5,16 @@
 	import { createShield } from './shield';
 
 	let {
+		map = $bindable(),
+		zoom = $bindable(),
+		bounds = $bindable(),
 		style,
 		transformRequest,
 		center,
-		zoom = $bindable(),
 		children,
-		bounds = $bindable(),
 		...props
 	}: {
+		map: maplibregl.Map | null;
 		style: maplibregl.StyleSpecification;
 		transformRequest: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
@@ -28,11 +30,12 @@
 	$effect(() => {
 		if (style != currStyle && ctx.map) {
 			ctx.map.setStyle(style);
+			console.log('SET STYLE');
 		}
 	});
 
 	const createMap = (container: HTMLElement) => {
-		let map = new maplibregl.Map({ container, zoom, center, style, transformRequest });
+		map = new maplibregl.Map({ container, zoom, center, style, transformRequest });
 
 		map.addImage(
 			'shield',
@@ -45,7 +48,7 @@
 		map.on('load', () => {
 			currStyle = style;
 			ctx.map = map;
-			bounds = map.getBounds();
+			bounds = map?.getBounds();
 		});
 
 		map.on('moveend', async () => {

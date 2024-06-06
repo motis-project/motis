@@ -1,34 +1,39 @@
 <script lang="ts">
+	import type { Map, ControlPosition } from 'maplibre-gl';
 	import { getContext, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
 
 	let { children, ...props } = $props();
 
-	let position = 'top-right';
-
 	let el: HTMLElement | null = null;
 
-	let control = {
-		onAdd() {
-			return el;
-		},
-		onRemove() {
+	let initialized = $state(false);
+
+	class Control implements maplibregl.IControl {
+		onAdd(map: Map): HTMLElement {
+			return el!;
+		}
+		onRemove(map: Map): void {
 			el?.parentNode?.removeChild(el);
 		}
-	};
+		getDefaultPosition?: (() => ControlPosition) | undefined;
+	}
 
-	let ctx = getContext('map');
+	let ctrl = new Control();
+
+	let ctx: { map: maplibregl.Map | null } = getContext('map');
 
 	$effect(() => {
 		if (ctx.map && el) {
-			ctx.map.addControl(control, 'top-right');
+			ctx.map.addControl(ctrl, 'top-right');
+			initialized = true;
 		}
 	});
 
-	onDestroy(() => ctx.map?.removeControl(control));
+	onDestroy(() => ctx.map?.removeControl(ctrl));
 </script>
 
-<div class="maplibregl-ctrl" bind:this={el}>
+<div class:hidden={!initialized} class="maplibregl-ctrl" bind:this={el}>
 	<div class="maplibregl-ctrl-group">
 		<button {...props}>
 			{@render children()}

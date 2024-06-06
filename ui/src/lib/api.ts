@@ -4,6 +4,7 @@ import maplibregl from 'maplibre-gl';
 const baseUrl = 'https://osr.motis-project.de';
 
 export const getGraph = async (bounds: maplibregl.LngLatBounds, level: number) => {
+  console.log('FETCH GRAPH');
   const response = await fetch(`${baseUrl}/api/graph`, {
     method: 'POST',
     mode: 'cors',

@@ -111,12 +111,7 @@ int main(int ac, char** av) {
 
   fmt::println("loading platforms");
   auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
-
-  // Read matching.
-  fmt::println("reading matching buffer");
-  auto const matching_buf =
-      cista::file{matching_path.generic_string().c_str(), "r"}.content();
-  auto const* matching = cista::deserialize<icc::matching_t>(matching_buf);
+  pl.build_rtree(w);
 
   // Read timetable.
   fmt::println("reading timetable");
@@ -144,12 +139,12 @@ int main(int ac, char** av) {
     auto matches = boost::json::array{};
     loc_rtree.find(
         {q[1].as_double(), q[0].as_double()},
-        {q[3].as_double(), q[2].as_double()}, [&](n::location_idx_t const x) {
-          auto const pos = tt->locations_.coordinates_[x];
-          auto const match = (*matching)[x];
+        {q[3].as_double(), q[2].as_double()}, [&](n::location_idx_t const l) {
+          auto const pos = tt->locations_.coordinates_[l];
+          auto const match = icc::get_match(*tt, pl, w, l);
           auto props =
-              boost::json::value{{"name", tt->locations_.names_[x].view()},
-                                 {"id", tt->locations_.ids_[x].view()}}
+              boost::json::value{{"name", tt->locations_.names_[l].view()},
+                                 {"id", tt->locations_.ids_[l].view()}}
                   .as_object();
           if (match == osr::platform_idx_t::invalid()) {
             props.emplace("level", "-");
@@ -157,12 +152,12 @@ int main(int ac, char** av) {
             std::visit(
                 utl::overloaded{
                     [&](osr::way_idx_t x) {
-                      props.emplace("osm_way_idx", to_idx(w.way_osm_idx_[x]));
+                      props.emplace("osm_way_id", to_idx(w.way_osm_idx_[x]));
                       props.emplace(
                           "level", to_float(w.way_properties_[x].from_level()));
                     },
                     [&](osr::node_idx_t x) {
-                      props.emplace("osm_node_idx", to_idx(w.node_to_osm_[x]));
+                      props.emplace("osm_node_id", to_idx(w.node_to_osm_[x]));
                       props.emplace(
                           "level",
                           to_float(w.node_properties_[x].from_level()));

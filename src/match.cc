@@ -63,16 +63,16 @@ double get_match_bonus(Collection&& names,
                        std::string_view ref,
                        std::string_view name) {
   if (has_exact_match(names, ref)) {
-    return 200 + 500.0 - names.size();
-  }
-  if (has_contains_match(names, ref)) {
-    return 200 + 300.0 - names.size();
+    return 200.0 - names.size();
   }
   if (has_exact_match(names, name)) {
-    return 200 + 250.0 - names.size();
+    return 150.0 - names.size();
+  }
+  if (has_contains_match(names, ref)) {
+    return 100.0 - names.size();
   }
   if (has_number_match(names, name)) {
-    return 200 + 200.0 - names.size();
+    return 100.0 - names.size();
   }
   return 0.0;
 }
@@ -129,9 +129,10 @@ struct geojson_writer {
   osr::ways const& w_;
 };
 
-matching_t match(n::timetable const& tt,
-                 osr::platforms const& pl,
-                 osr::ways const& w) {
+osr::platform_idx_t get_match(n::timetable const& tt,
+                              osr::platforms const& pl,
+                              osr::ways const& w,
+                              n::location_idx_t const l) {
   auto const platform_center =
       [&](osr::platform_idx_t const x) -> std::optional<geo::latlng> {
     auto c = center{};
@@ -150,36 +151,41 @@ matching_t match(n::timetable const& tt,
     return c.get_center();
   };
 
+  auto const ref = tt.locations_.coordinates_[l];
+  auto best = osr::platform_idx_t::invalid();
+  auto best_score = std::numeric_limits<double>::max();
+
+  pl.find(ref, [&](osr::platform_idx_t const x) {
+    auto const center = platform_center(x);
+    if (!center.has_value()) {
+      return;
+    }
+
+    auto const dist = geo::distance(*center, ref);
+    auto const match_bonus =
+        get_match_bonus(pl.platform_names_[x], tt.locations_.ids_[l].view(),
+                        tt.locations_.names_[l].view());
+    auto const way_bonus =
+        osr::is_way(osr::is_way(pl.platform_ref_[x].front())) ? -10 : 0;
+    auto const score = dist - match_bonus - way_bonus;
+    if (score < best_score) {
+      best = x;
+      best_score = score;
+    }
+  });
+
+  return best;
+}
+
+matching_t match(n::timetable const& tt,
+                 osr::platforms const& pl,
+                 osr::ways const& w) {
   auto m = matching_t{};
   m.resize(tt.n_locations());
   utl::fill(m, osr::platform_idx_t::invalid());
   for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
-    auto const ref = tt.locations_.coordinates_[l];
-    auto best = osr::platform_idx_t::invalid();
-    auto best_score = std::numeric_limits<double>::max();
-
-    pl.find(ref, [&](osr::platform_idx_t const x) {
-      auto const center = platform_center(x);
-      if (!center.has_value()) {
-        return;
-      }
-
-      auto const dist = geo::distance(*center, ref);
-      auto const match_bonus =
-          get_match_bonus(pl.platform_names_[x], tt.locations_.ids_[l].view(),
-                          tt.locations_.names_[l].view());
-      auto const score = dist - match_bonus;
-      if (score < best_score) {
-        best = x;
-        best_score = score;
-      }
-    });
-
-    if (best != osr::platform_idx_t::invalid()) {
-      m[l] = best;
-    }
+    m[l] = get_match(tt, pl, w, l);
   }
-
   return m;
 }
 

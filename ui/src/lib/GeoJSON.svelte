@@ -14,18 +14,36 @@
 	let sourceId = $state<{ id: null | string }>({ id: null });
 	setContext('source', sourceId);
 
-	let initialized = false;
+	let currData = null;
+	const updateSource = () => {
+		if (!ctx.map || data == null) {
+			sourceId.id = null;
+			return;
+		}
+		const src = ctx.map.getSource(id);
+		const d = $state.snapshot(data);
+		if (src) {
+			if (d !== currData) {
+				console.log('SET DATA', id, data, currData, d == currData, $state.is(d, currData));
+				src.setData(data);
+			}
+		} else {
+			console.log('ADD SOURCE', id, ctx.map, data);
+			ctx.map.addSource(id, {
+				type: 'geojson',
+				data
+			});
+		}
+		currData = d;
+		sourceId.id = id;
+	};
 
+	let initialized = false;
 	$effect(() => {
-		console.log('RUN EFFECT GEOJSON');
 		if (ctx.map && id && data) {
-			if (initialized) {
-				ctx.map.getSource(id)?.setData(data);
-			} else {
-				ctx.map.addSource(id, {
-					type: 'geojson',
-					data
-				});
+			updateSource();
+			if (!initialized) {
+				ctx.map.on('styledata', updateSource);
 				sourceId.id = id;
 				initialized = true;
 			}
@@ -34,7 +52,10 @@
 
 	onDestroy(() => {
 		if (initialized) {
-			ctx.map?.removeSource(id);
+			const src = ctx.map.getSource(id);
+			if (src) {
+				ctx.map?.removeSource(id);
+			}
 		}
 	});
 </script>

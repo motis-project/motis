@@ -6,9 +6,11 @@
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
 	import { getGraph, getLevels, getMatches } from '$lib/api';
+	import { toTable } from '$lib/toTable';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
+	let map = $state<null | maplibregl.Map>(null);
 
 	let level = $state(0);
 	let levels = $derived.by(async () =>
@@ -20,7 +22,6 @@
 	let showGraph = $state(false);
 	let graph = $state<null | Object>(null);
 	$effect(async () => {
-		console.log('update graph', showGraph, bounds);
 		graph = showGraph && bounds ? await getGraph(bounds, level) : null;
 	});
 
@@ -29,9 +30,34 @@
 	$effect(async () => {
 		matches = showMatches && bounds ? await getMatches(bounds) : null;
 	});
+
+	let init = false;
+	$effect(() => {
+		if (map && !init) {
+			['graph-node', 'graph-edge', 'graph-geometry', 'matches'].forEach((layer) => {
+				map!.on('click', layer, (e) => {
+					new maplibregl.Popup()
+						.setLngLat(e.lngLat)
+						.setDOMContent(toTable(e.features[0].properties))
+						.addTo(map!);
+					e.originalEvent.stopPropagation();
+				});
+
+				map!.on('mouseenter', layer, () => {
+					map!.getCanvas().style.cursor = 'pointer';
+				});
+
+				map!.on('mouseleave', layer, () => {
+					map!.getCanvas().style.cursor = '';
+				});
+			});
+			init = true;
+		}
+	});
 </script>
 
 <Map
+	bind:map
 	bind:bounds
 	transformRequest={(url, _resourceType) => {
 		if (url.startsWith('/')) {
@@ -121,7 +147,7 @@
 			<Layer
 				id="matches"
 				type="circle"
-				filter={['all', ['==', '$type', 'Point']]}
+				filter={['boolean', true]}
 				layout={{}}
 				paint={{
 					'circle-color': '#0000ff',
