@@ -129,34 +129,35 @@ struct geojson_writer {
   osr::ways const& w_;
 };
 
+std::optional<geo::latlng> platform_center(osr::platforms const& pl,
+                                           osr::ways const& w,
+                                           osr::platform_idx_t const x) {
+  auto c = center{};
+  for (auto const p : pl.platform_ref_[x]) {
+    std::visit(utl::overloaded{[&](osr::node_idx_t const node) {
+                                 c.add(w.get_node_pos(node).as_latlng());
+                               },
+                               [&](osr::way_idx_t const way) {
+                                 c.add(w.way_polylines_[way]);
+                               }},
+               osr::to_ref(p));
+  }
+  if (c.n_ == 0U) {
+    return std::nullopt;
+  }
+  return c.get_center();
+}
+
 osr::platform_idx_t get_match(n::timetable const& tt,
                               osr::platforms const& pl,
                               osr::ways const& w,
                               n::location_idx_t const l) {
-  auto const platform_center =
-      [&](osr::platform_idx_t const x) -> std::optional<geo::latlng> {
-    auto c = center{};
-    for (auto const p : pl.platform_ref_[x]) {
-      std::visit(utl::overloaded{[&](osr::node_idx_t const node) {
-                                   c.add(w.get_node_pos(node).as_latlng());
-                                 },
-                                 [&](osr::way_idx_t const way) {
-                                   c.add(w.way_polylines_[way]);
-                                 }},
-                 osr::to_ref(p));
-    }
-    if (c.n_ == 0U) {
-      return std::nullopt;
-    }
-    return c.get_center();
-  };
-
   auto const ref = tt.locations_.coordinates_[l];
   auto best = osr::platform_idx_t::invalid();
   auto best_score = std::numeric_limits<double>::max();
 
   pl.find(ref, [&](osr::platform_idx_t const x) {
-    auto const center = platform_center(x);
+    auto const center = platform_center(pl, w, x);
     if (!center.has_value()) {
       return;
     }

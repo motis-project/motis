@@ -24,6 +24,7 @@ namespace http = boost::beast::http;
 namespace n = nigiri;
 namespace fs = std::filesystem;
 namespace bpo = boost::program_options;
+namespace json = boost::json;
 
 template <typename T>
 struct point_rtree {
@@ -77,6 +78,14 @@ struct point_rtree {
 
   rtree* rtree_{nullptr};
 };
+
+std::string get_names(osr::platforms const& pl, osr::platform_idx_t const x) {
+  auto ss = std::stringstream{};
+  for (auto const& y : pl.platform_names_[x]) {
+    ss << y.view();
+  }
+  return ss.str();
+}
 
 int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};
@@ -134,18 +143,18 @@ int main(int ac, char** av) {
   auto s = net::web_server{ioc};
 
   auto qr = net::query_router{};
-  qr.route("POST", "/matches", [&](boost::json::value const& query) {
+  qr.route("POST", "/matches", [&](json::value const& query) {
     auto const q = query.as_array();
-    auto matches = boost::json::array{};
+    auto matches = json::array{};
     loc_rtree.find(
         {q[1].as_double(), q[0].as_double()},
         {q[3].as_double(), q[2].as_double()}, [&](n::location_idx_t const l) {
           auto const pos = tt->locations_.coordinates_[l];
           auto const match = icc::get_match(*tt, pl, w, l);
-          auto props =
-              boost::json::value{{"name", tt->locations_.names_[l].view()},
-                                 {"id", tt->locations_.ids_[l].view()}}
-                  .as_object();
+          auto props = json::value{{"name", tt->locations_.names_[l].view()},
+                                   {"id", tt->locations_.ids_[l].view()},
+                                   {"type", "location"}}  //
+                           .as_object();
           if (match == osr::platform_idx_t::invalid()) {
             props.emplace("level", "-");
           } else {
@@ -154,23 +163,50 @@ int main(int ac, char** av) {
                     [&](osr::way_idx_t x) {
                       props.emplace("osm_way_id", to_idx(w.way_osm_idx_[x]));
                       props.emplace(
-                          "level", to_float(w.way_properties_[x].from_level()));
+                          "level",
+                          to_float(w.r_->way_properties_[x].from_level()));
                     },
                     [&](osr::node_idx_t x) {
                       props.emplace("osm_node_id", to_idx(w.node_to_osm_[x]));
                       props.emplace(
                           "level",
-                          to_float(w.node_properties_[x].from_level()));
+                          to_float(w.r_->node_properties_[x].from_level()));
                     }},
                 osr::to_ref(pl.platform_ref_[match][0]));
           }
-          matches.emplace_back(boost::json::value{
+          matches.emplace_back(json::value{
               {"type", "Feature"},
               {"properties", props},
               {"geometry", osr::to_point(osr::point::from_latlng(pos))}});
+
+          if (match == osr::platform_idx_t::invalid()) {
+            return;
+          }
+
+          props.emplace("platform_names",
+                        fmt::format("{}", get_names(pl, match)));
+
+          auto const center = icc::platform_center(pl, w, match);
+          if (!center.has_value()) {
+            return;
+          }
+
+          props.insert_or_assign("type", "platform");
+          matches.emplace_back(json::value{
+              {"type", "Feature"},
+              {"properties", props},
+              {"geometry", osr::to_point(osr::point::from_latlng(*center))}});
+
+          props.insert_or_assign("type", "match");
+          matches.emplace_back(json::value{
+              {"type", "Feature"},
+              {"properties", props},
+              {"geometry",
+               osr::to_line_string(std::initializer_list<osr::point>(
+                   {osr::point::from_latlng(*center),
+                    osr::point::from_latlng(pos)}))}});
         });
-    return boost::json::value{{"type", "FeatureCollection"},
-                              {"features", matches}};
+    return json::value{{"type", "FeatureCollection"}, {"features", matches}};
   });
   qr.serve_files("ui/build");
   qr.enable_cors();

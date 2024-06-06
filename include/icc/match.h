@@ -9,6 +9,10 @@ namespace icc {
 using matching_t =
     cista::offset::vector_map<nigiri::location_idx_t, osr::platform_idx_t>;
 
+std::optional<geo::latlng> platform_center(osr::platforms const&,
+                                           osr::ways const&,
+                                           osr::platform_idx_t);
+
 osr::platform_idx_t get_match(nigiri::timetable const&,
                               osr::platforms const&,
                               osr::ways const&,

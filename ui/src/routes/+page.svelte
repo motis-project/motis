@@ -34,7 +34,7 @@
 	let init = false;
 	$effect(() => {
 		if (map && !init) {
-			['graph-node', 'graph-edge', 'graph-geometry', 'matches'].forEach((layer) => {
+			['graph-node', 'graph-edge', 'graph-geometry', 'matches', 'match'].forEach((layer) => {
 				map!.on('click', layer, (e) => {
 					new maplibregl.Popup()
 						.setLngLat(e.lngLat)
@@ -147,11 +147,24 @@
 			<Layer
 				id="matches"
 				type="circle"
-				filter={['boolean', true]}
+				filter={['all', ['==', '$type', 'Point']]}
 				layout={{}}
 				paint={{
-					'circle-color': '#0000ff',
+					'circle-color': ['match', ['get', 'type'], 'location', '#ff0000', '#0000ff'],
 					'circle-radius': 5
+				}}
+			/>
+			<Layer
+				id="match"
+				type="line"
+				filter={['all', ['==', 'type', 'match']]}
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				paint={{
+					'line-color': '#00ff00',
+					'line-width': 3
 				}}
 			/>
 		</GeoJSON>
