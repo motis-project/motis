@@ -117,7 +117,7 @@
 				}}
 			/>
 			<Layer
-				id="graph-edges"
+				id="graph-edge"
 				type="line"
 				filter={['all', ['==', 'type', 'edge'], ['any', ['!has', 'level'], ['==', 'level', level]]]}
 				layout={{
@@ -130,7 +130,7 @@
 				}}
 			/>
 			<Layer
-				id="graph-nodes"
+				id="graph-node"
 				type="circle"
 				filter={['all', ['==', '$type', 'Point']]}
 				layout={{}}
