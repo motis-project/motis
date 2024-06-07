@@ -71,23 +71,20 @@ void compute_footpaths(nigiri::timetable& tt,
         auto const neighbors = in_radius(l);
         auto const results = osr::route(
             w, lookup, d, get_loc(l),
-            utl::to_vec(neighbors,
-                        [&](n::location_idx_t const l) { return get_loc(l); }),
+            utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
             kMaxDuration, osr::direction::kForward);
         for (auto const [n, r] : utl::zip(neighbors, results)) {
-          if (!r.has_value()) {
-            continue;
-          }
-
-          auto const duration = n::duration_t{r->cost_ / 60U};
-          if (duration < n::footpath::kMaxDuration) {
-            footpaths_out[l].emplace_back(n::footpath{n, duration});
+          if (r.has_value()) {
+            auto const duration = n::duration_t{r->cost_ / 60U};
+            if (duration < n::footpath::kMaxDuration) {
+              footpaths_out[l].emplace_back(n::footpath{n, duration});
+            }
           }
         }
-
         pt->update_monotonic(i);
       });
 
+  fmt::println("create ingoing footpaths");
   auto footpaths_in =
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_in.resize(tt.n_locations());

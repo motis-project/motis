@@ -19,7 +19,7 @@ namespace n = nigiri;
 int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};
   auto osr_path = fs::path{"osr"};
-  auto out_path = fs::path{"out"};
+  auto out_path = fs::path{"tt_out.bin"};
 
   auto desc = bpo::options_description{"Options"};
   desc.add_options()  //
