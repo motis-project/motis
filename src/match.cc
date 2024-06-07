@@ -148,16 +148,4 @@ osr::platform_idx_t get_match(n::timetable const& tt,
   return best;
 }
 
-matching_t match(n::timetable const& tt,
-                 osr::platforms const& pl,
-                 osr::ways const& w) {
-  auto m = matching_t{};
-  m.resize(tt.n_locations());
-  utl::fill(m, osr::platform_idx_t::invalid());
-  for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
-    m[l] = get_match(tt, pl, w, l);
-  }
-  return m;
-}
-
 }  // namespace icc

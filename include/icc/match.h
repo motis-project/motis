@@ -18,8 +18,4 @@ osr::platform_idx_t get_match(nigiri::timetable const&,
                               osr::ways const&,
                               nigiri::location_idx_t);
 
-matching_t match(nigiri::timetable const&,
-                 osr::platforms const&,
-                 osr::ways const&);
-
 }  // namespace icc

@@ -10,7 +10,7 @@
 #include "osr/routing/route.h"
 #include "osr/ways.h"
 
-#include "icc/match.h"
+#include "icc/compute_footpaths.h"
 
 namespace fs = std::filesystem;
 namespace bpo = boost::program_options;
@@ -47,18 +47,18 @@ int main(int ac, char** av) {
   fmt::println("loading ways");
   auto const w = osr::ways{osr_path, cista::mmap::protection::READ};
 
+  fmt::println("loading lookup");
+  auto const l = osr::lookup{w};
+
   fmt::println("loading platforms");
   auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
 
   fmt::println("building rtree");
   pl.build_rtree(w);
 
-  fmt::println("matching");
-  auto const m = icc::match(*tt, pl, w);
+  fmt::println("computing footpaths");
+  icc::compute_footpaths(*tt, w, l, pl);
 
-  fmt::println("writing matches");
-  auto mmap = cista::mmap{out_path.generic_string().c_str(),
-                          cista::mmap::protection::WRITE};
-  auto writer = cista::buf<cista::mmap>(std::move(mmap));
-  cista::serialize(writer, m);
+  fmt::println("writing result");
+  tt->write(out_path);
 }
