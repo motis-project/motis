@@ -65,14 +65,14 @@ double get_match_bonus(Collection&& names,
   if (has_exact_match(names, ref)) {
     return 200.0 - names.size();
   }
-  if (has_exact_match(names, name)) {
+  if (has_number_match(names, name)) {
     return 150.0 - names.size();
   }
-  if (has_contains_match(names, ref)) {
-    return 100.0 - names.size();
+  if (has_exact_match(names, name)) {
+    return 15.0 - names.size();
   }
-  if (has_number_match(names, name)) {
-    return 100.0 - names.size();
+  if (has_contains_match(names, ref)) {
+    return 5.0 - names.size();
   }
   return 0.0;
 }
@@ -97,45 +97,13 @@ struct center {
   std::size_t n_;
 };
 
-struct geojson_writer {
-  void add_match(n::location_idx_t const l,
-                 osr::platform_idx_t const p,
-                 geo::latlng const& p_center) {
-    writer_.features_.emplace_back(
-        boost::json::value{{"type", "Feature"},
-                           {"properties",
-                            {{"type", "location"},
-                             {"marker-color", "#53bff9"},
-                             {"name", tt_.locations_.names_[l].view()},
-                             {"id", tt_.locations_.ids_[l].view()},
-                             {"location_idx", to_idx(l)}}},
-                           {"geometry", osr::to_point(osr::point::from_latlng(
-                                            tt_.locations_.coordinates_[l]))}});
-    writer_.features_.emplace_back(boost::json::value{
-        {"type", "Feature"},
-        {"properties",
-         {{"type", "match"},
-          {"platform_idx", to_idx(p)},
-          {"platform_name", osr::platform_names(pl_, p)},
-          {"location_name", tt_.locations_.names_[l].view()},
-          {"location_id", tt_.locations_.ids_[l].view()}}},
-        {"geometry", osr::to_line_string(std::initializer_list<geo::latlng>(
-                         {p_center, tt_.locations_.coordinates_[l]}))}});
-  }
-
-  osr::geojson_writer writer_;
-  n::timetable const& tt_;
-  osr::platforms const& pl_;
-  osr::ways const& w_;
-};
-
-std::optional<geo::latlng> platform_center(osr::platforms const& pl,
-                                           osr::ways const& w,
-                                           osr::platform_idx_t const x) {
+std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
+                                               osr::ways const& w,
+                                               osr::platform_idx_t const x) {
   auto c = center{};
   for (auto const p : pl.platform_ref_[x]) {
     std::visit(utl::overloaded{[&](osr::node_idx_t const node) {
-                                 c.add(w.get_node_pos(node).as_latlng());
+                                 c.add(pl.get_node_pos(node).as_latlng());
                                },
                                [&](osr::way_idx_t const way) {
                                  c.add(w.way_polylines_[way]);
@@ -157,7 +125,7 @@ osr::platform_idx_t get_match(n::timetable const& tt,
   auto best_score = std::numeric_limits<double>::max();
 
   pl.find(ref, [&](osr::platform_idx_t const x) {
-    auto const center = platform_center(pl, w, x);
+    auto const center = get_platform_center(pl, w, x);
     if (!center.has_value()) {
       return;
     }
@@ -166,9 +134,11 @@ osr::platform_idx_t get_match(n::timetable const& tt,
     auto const match_bonus =
         get_match_bonus(pl.platform_names_[x], tt.locations_.ids_[l].view(),
                         tt.locations_.names_[l].view());
-    auto const way_bonus =
-        osr::is_way(osr::is_way(pl.platform_ref_[x].front())) ? -10 : 0;
-    auto const score = dist - match_bonus - way_bonus;
+    auto const lvl = pl.get_level(w, x);
+    auto const lvl_bonus =
+        lvl != osr::level_t::invalid() && osr::to_float(lvl) != 0.0F ? 5 : 0;
+    auto const way_bonus = osr::is_way(pl.platform_ref_[x].front()) ? 20 : 0;
+    auto const score = dist - match_bonus - way_bonus - lvl_bonus;
     if (score < best_score) {
       best = x;
       best_score = score;
