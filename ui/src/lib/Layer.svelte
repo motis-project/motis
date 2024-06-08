@@ -31,7 +31,7 @@
 		}
 
 		if (!l) {
-			console.log('ADD LAYER', id);
+			console.log('ADD LAYER', source.id, id, type, filter, layout, paint);
 			ctx.map.addLayer({
 				source: source.id,
 				id,
@@ -40,16 +40,16 @@
 				layout,
 				paint
 			});
-			currFilter = filter;
-			currLayout = layout;
-			currPaint = paint;
+			currFilter = $state.snapshot(filter);
+			currLayout = $state.snapshot(layout);
+			currPaint = $state.snapshot(paint);
 			return;
 		}
 
 		if (currFilter != filter) {
 			console.log('UPDATE FILTER', id);
 			ctx.map!.setFilter(id, filter);
-			currFilter = filter;
+			currFilter = $state.snapshot(filter);
 		}
 	};
 

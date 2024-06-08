@@ -24,11 +24,9 @@
 		const d = $state.snapshot(data);
 		if (src) {
 			if (d !== currData) {
-				console.log('SET DATA', id, data, currData, d == currData, $state.is(d, currData));
 				src.setData(data);
 			}
 		} else {
-			console.log('ADD SOURCE', id, ctx.map, data);
 			ctx.map.addSource(id, {
 				type: 'geojson',
 				data

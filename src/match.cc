@@ -5,6 +5,8 @@
 
 #include "osr/geojson.h"
 
+#include "icc/location_routes.h"
+
 namespace n = nigiri;
 
 namespace icc {
@@ -58,23 +60,63 @@ bool has_contains_match(Collection&& a, std::string_view b) {
                      [&](auto&& x) { return x.view().contains(b); });
 }
 
+std::optional<std::string_view> get_track(std::string_view s) {
+  if (s.size() == 0 || std::isdigit(s.back()) == 0) {
+    return std::nullopt;
+  }
+  for (auto i = 0U; i != s.size(); ++i) {
+    auto const j = s.size() - i - 1U;
+    if (std::isdigit(s[j]) == 0U) {
+      return s.substr(j + 1U);
+    }
+  }
+  return s;
+}
+
+template <typename Collection>
+double get_routes_bonus(n::timetable const& tt,
+                        n::location_idx_t const l,
+                        Collection&& names) {
+  auto matches = 0U;
+  for (auto const& r : get_location_routes(tt, l)) {
+    for (auto const& x : names) {
+      if (r == x.view()) {
+        ++matches;
+      }
+
+      utl::for_each_token(x.view(), ' ', [&](auto&& token) {
+        if (r == token) {
+          ++matches;
+        }
+      });
+    }
+  }
+
+  return matches * 20U;
+}
+
 template <typename Collection>
 double get_match_bonus(Collection&& names,
                        std::string_view ref,
                        std::string_view name) {
+  auto bonus = 0U;
   if (has_exact_match(names, ref)) {
-    return 200.0 - names.size();
+    bonus += 200.0 - names.size();
   }
   if (has_number_match(names, name)) {
-    return 150.0 - names.size();
+    bonus += 140.0 - names.size();
+  }
+  if (auto const track = get_track(ref);
+      track.has_value() && has_number_match(names, *track)) {
+    bonus += 100.0 - names.size();
   }
   if (has_exact_match(names, name)) {
-    return 15.0 - names.size();
+    bonus += 15.0 - names.size();
   }
   if (has_contains_match(names, ref)) {
-    return 5.0 - names.size();
+    bonus += 5.0 - names.size();
   }
-  return 0.0;
+  return bonus;
 }
 
 struct center {
@@ -138,7 +180,9 @@ osr::platform_idx_t get_match(n::timetable const& tt,
     auto const lvl_bonus =
         lvl != osr::level_t::invalid() && osr::to_float(lvl) != 0.0F ? 5 : 0;
     auto const way_bonus = osr::is_way(pl.platform_ref_[x].front()) ? 20 : 0;
-    auto const score = dist - match_bonus - way_bonus - lvl_bonus;
+    auto const routes_bonus = get_routes_bonus(tt, l, pl.platform_names_[x]);
+    auto const score =
+        dist - match_bonus - way_bonus - lvl_bonus - routes_bonus;
     if (score < best_score) {
       best = x;
       best_score = score;

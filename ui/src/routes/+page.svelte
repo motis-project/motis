@@ -5,7 +5,7 @@
 	import Control from '$lib/Control.svelte';
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
-	import { getGraph, getLevels, getMatches } from '$lib/api';
+	import { getElevators, getGraph, getLevels, getMatches } from '$lib/api';
 	import { toTable } from '$lib/toTable';
 
 	let zoom = $state(18);
@@ -25,35 +25,54 @@
 		graph = showGraph && bounds ? await getGraph(bounds, level) : null;
 	});
 
+	let currLevel = $state.snapshot(level);
+	$effect(() => {
+		if (currLevel != level) {
+			graph = null;
+			currLevel = level;
+		}
+	});
+
 	let showMatches = $state(false);
 	let matches = $state<null | Object>(null);
 	$effect(async () => {
 		matches = showMatches && bounds ? await getMatches(bounds) : null;
 	});
 
+	let showElevators = $state(false);
+	let elevators = $state<null | Object>(null);
+	$effect(async () => {
+		elevators = showElevators && bounds ? await getElevators(bounds) : null;
+	});
+
 	let init = false;
 	$effect(() => {
 		if (map && !init) {
-			['graph-node', 'graph-edge', 'graph-geometry', 'matches', 'match'].forEach((layer) => {
-				map!.on('click', layer, (e) => {
-					new maplibregl.Popup()
-						.setLngLat(e.lngLat)
-						.setDOMContent(toTable(e.features[0].properties))
-						.addTo(map!);
-					e.originalEvent.stopPropagation();
-				});
+			['graph-node', 'graph-edge', 'graph-geometry', 'matches', 'match', 'elevators-match'].forEach(
+				(layer) => {
+					map!.on('click', layer, (e) => {
+						new maplibregl.Popup()
+							.setLngLat(e.lngLat)
+							.setDOMContent(toTable(e.features[0].properties))
+							.addTo(map!);
+						e.originalEvent.stopPropagation();
+					});
 
-				map!.on('mouseenter', layer, () => {
-					map!.getCanvas().style.cursor = 'pointer';
-				});
+					map!.on('mouseenter', layer, () => {
+						map!.getCanvas().style.cursor = 'pointer';
+					});
 
-				map!.on('mouseleave', layer, () => {
-					map!.getCanvas().style.cursor = '';
-				});
-			});
+					map!.on('mouseleave', layer, () => {
+						map!.getCanvas().style.cursor = '';
+					});
+				}
+			);
 			init = true;
 		}
 	});
+
+	// client ID: a9b1f1ad1051790a9c6970db85710986
+	// client Secret: df987129855de70a804f146718aac956
 </script>
 
 <Map
@@ -80,6 +99,12 @@
 		onclick={() => {
 			showMatches = !showMatches;
 		}}>M</Control
+	>
+	<Control
+		class={showElevators ? '!bg-green-200' : ''}
+		onclick={() => {
+			showElevators = !showElevators;
+		}}>E</Control
 	>
 
 	{#if levels}
@@ -156,6 +181,34 @@
 			/>
 			<Layer
 				id="match"
+				type="line"
+				filter={['all', ['==', 'type', 'match']]}
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				paint={{
+					'line-color': '#00ff00',
+					'line-width': 3
+				}}
+			/>
+		</GeoJSON>
+	{/if}
+
+	{#if elevators != null}
+		<GeoJSON id="elevators" data={elevators}>
+			<Layer
+				id="elevators"
+				type="circle"
+				filter={['all', ['==', '$type', 'Point']]}
+				layout={{}}
+				paint={{
+					'circle-color': ['match', ['get', 'status'], 'ACTIVE', '#32a852', '#ff144b'],
+					'circle-radius': 5
+				}}
+			/>
+			<Layer
+				id="elevators-match"
 				type="line"
 				filter={['all', ['==', 'type', 'match']]}
 				layout={{

@@ -18,7 +18,10 @@
 
 #include "osr/geojson.h"
 
+#include "icc/location_routes.h"
 #include "icc/match.h"
+#include "icc/match_elevator.h"
+#include "icc/parse_fasta.h"
 #include "icc/point_rtree.h"
 
 namespace asio = boost::asio;
@@ -28,10 +31,12 @@ namespace fs = std::filesystem;
 namespace bpo = boost::program_options;
 namespace json = boost::json;
 
+using namespace icc;
+
 std::string get_names(osr::platforms const& pl, osr::platform_idx_t const x) {
   auto ss = std::stringstream{};
   for (auto const& y : pl.platform_names_[x]) {
-    ss << y.view();
+    ss << y.view() << ", ";
   }
   return ss.str();
 }
@@ -40,6 +45,7 @@ int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};
   auto osr_path = fs::path{"osr"};
   auto matching_path = fs::path{"matching.bin"};
+  auto fasta_path = fs::path{"fasta.json"};
 
   auto desc = bpo::options_description{"Options"};
   desc.add_options()  //
@@ -71,15 +77,31 @@ int main(int ac, char** av) {
   auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
   pl.build_rtree(w);
 
+  fmt::println("building lookup");
+  auto l = osr::lookup{w};
+
   // Read timetable.
   fmt::println("reading timetable");
   auto tt = n::timetable::read(cista::memory_holder{
       cista::file{tt_path.generic_string().c_str(), "r"}.content()});
 
+  // Read elevators.
+  fmt::println("reading elevators");
+  auto const file = cista::mmap{fasta_path.generic_string().c_str(),
+                                cista::mmap::protection::READ};
+  auto const elevators = parse_fasta(file.view());
+  auto const elevators_rtree = [&]() {
+    auto t = point_rtree<elevator_idx_t>{};
+    for (auto const& [i, e] : utl::enumerate(elevators)) {
+      t.add(e.pos_, elevator_idx_t{i});
+    }
+    return t;
+  }();
+
   // Create location r-tree.
   fmt::println("creating r-tree");
   auto const loc_rtree = [&]() {
-    auto t = icc::point_rtree<n::location_idx_t>{};
+    auto t = point_rtree<n::location_idx_t>{};
     for (auto i = n::location_idx_t{0U}; i != tt->n_locations(); ++i) {
       if (!tt->location_routes_[i].empty()) {
         t.add(tt->locations_.coordinates_[i], i);
@@ -101,7 +123,7 @@ int main(int ac, char** av) {
     auto matches = json::array{};
 
     pl.find(min, max, [&](osr::platform_idx_t const p) {
-      auto const center = icc::get_platform_center(pl, w, p);
+      auto const center = get_platform_center(pl, w, p);
       if (!center.has_value()) {
         return;
       }
@@ -116,11 +138,13 @@ int main(int ac, char** av) {
 
     loc_rtree.find(min, max, [&](n::location_idx_t const l) {
       auto const pos = tt->locations_.coordinates_[l];
-      auto const match = icc::get_match(*tt, pl, w, l);
-      auto props = json::value{{"name", tt->locations_.names_[l].view()},
-                               {"id", tt->locations_.ids_[l].view()},
-                               {"type", "location"}}  //
-                       .as_object();
+      auto const match = get_match(*tt, pl, w, l);
+      auto props =
+          json::value{{"name", tt->locations_.names_[l].view()},
+                      {"id", tt->locations_.ids_[l].view()},
+                      {"type", "location"},
+                      {"trips", fmt::format("{}", get_location_routes(*tt, l))}}
+              .as_object();
       if (match == osr::platform_idx_t::invalid()) {
         props.emplace("level", "-");
       } else {
@@ -150,7 +174,7 @@ int main(int ac, char** av) {
 
       props.emplace("platform_names", fmt::format("{}", get_names(pl, match)));
 
-      auto const center = icc::get_platform_center(pl, w, match);
+      auto const center = get_platform_center(pl, w, match);
       if (!center.has_value()) {
         return;
       }
@@ -159,10 +183,52 @@ int main(int ac, char** av) {
       matches.emplace_back(json::value{
           {"type", "Feature"},
           {"properties", props},
-          {"geometry", osr::to_line_string(std::initializer_list<osr::point>(
-                           {osr::point::from_latlng(*center),
-                            osr::point::from_latlng(pos)}))}});
+          {"geometry", osr::to_line_string({osr::point::from_latlng(*center),
+                                            osr::point::from_latlng(pos)})}});
     });
+    return json::value{{"type", "FeatureCollection"}, {"features", matches}};
+  });
+
+  qr.route("POST", "/elevators", [&](json::value const& query) {
+    auto const q = query.as_array();
+
+    auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
+    auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};
+
+    auto matches = json::array{};
+    elevators_rtree.find(min, max, [&](elevator_idx_t const i) {
+      matches.emplace_back(json::value{
+          {"type", "Feature"},
+          {"properties",
+           {{"type", "api"},
+            {"id", elevators[i].id_},
+            {"desc", elevators[i].desc_},
+            {"status",
+             (elevators[i].status_ == status::kActive ? "ACTIVE"
+                                                      : "INACTIVE")}}},
+          {"geometry",
+           osr::to_point(osr::point::from_latlng(elevators[i].pos_))}});
+    });
+
+    for (auto const n : l.find_elevators(min, max)) {
+      auto const pos = w.get_node_pos(n);
+      auto const match = match_elevator(elevators_rtree, elevators, w, n);
+      if (match != elevator_idx_t::invalid()) {
+        auto const& e = elevators[match];
+        matches.emplace_back(json::value{
+            {"type", "Feature"},
+            {"properties",
+             {{"type", "match"},
+              {"osm_node_id", to_idx(w.node_to_osm_[n])},
+              {"id", e.id_},
+              {"desc", e.desc_},
+              {"status",
+               e.status_ == status::kActive ? "ACTIVE" : "INACTIVE"}}},
+            {"geometry",
+             osr::to_line_string({pos, osr::point::from_latlng(e.pos_)})}});
+      }
+    }
+
     return json::value{{"type", "FeatureCollection"}, {"features", matches}};
   });
   qr.serve_files("ui/build");

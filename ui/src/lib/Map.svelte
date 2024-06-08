@@ -30,7 +30,6 @@
 	$effect(() => {
 		if (style != currStyle && ctx.map) {
 			ctx.map.setStyle(style);
-			console.log('SET STYLE');
 		}
 	});
 

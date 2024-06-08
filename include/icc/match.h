@@ -1,4 +1,5 @@
 #include <map>
+#include <optional>
 
 #include "nigiri/timetable.h"
 
@@ -17,5 +18,7 @@ osr::platform_idx_t get_match(nigiri::timetable const&,
                               osr::platforms const&,
                               osr::ways const&,
                               nigiri::location_idx_t);
+
+std::optional<std::string_view> get_track(std::string_view);
 
 }  // namespace icc
