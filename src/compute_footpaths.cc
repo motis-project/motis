@@ -18,7 +18,8 @@ constexpr auto const kMaxDistance = 2000;
 void compute_footpaths(nigiri::timetable& tt,
                        osr::ways const& w,
                        osr::lookup const& lookup,
-                       osr::platforms const& pl) {
+                       osr::platforms const& pl,
+                       osr::bitvec<osr::node_idx_t> const& blocked) {
   fmt::println("creating matches");
   auto const matches = [&]() {
     auto m = n::vector_map<n::location_idx_t, osr::platform_idx_t>{};
@@ -72,7 +73,7 @@ void compute_footpaths(nigiri::timetable& tt,
         auto const results = osr::route(
             w, lookup, d, get_loc(l),
             utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
-            kMaxDuration, osr::direction::kForward);
+            kMaxDuration, osr::direction::kForward, &blocked);
         for (auto const [n, r] : utl::zip(neighbors, results)) {
           if (r.has_value()) {
             auto const duration = n::duration_t{r->cost_ / 60U};

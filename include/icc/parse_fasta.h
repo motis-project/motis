@@ -45,7 +45,7 @@ nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
           id,
           {e.at("geocoordY").to_number<double>(),
            e.at("geocoordX").to_number<double>()},
-          e.at("state") == "ACTIVE" ? status::kActive : status::kInactive,
+          e.at("state") == "INACTIVE" ? status::kInactive : status::kActive,
           o.contains("description")
               ? std::string{o.at("description").as_string()}
               : ""});

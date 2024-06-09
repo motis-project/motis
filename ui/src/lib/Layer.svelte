@@ -7,10 +7,16 @@
 		filter,
 		layout,
 		paint
-	}: { id: string; type: string; filter: Object; layout: Object; paint: Object } = $props();
+	}: {
+		id: string;
+		type: string;
+		filter: maplibregl.FilterSpecification;
+		layout: Object;
+		paint: Object;
+	} = $props();
 
 	let ctx: { map: maplibregl.Map | null } = getContext('map');
-	let source = getContext('source');
+	let source: { id: string | null } = getContext('source');
 
 	let initialized = false;
 	let currFilter = filter;

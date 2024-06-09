@@ -11,6 +11,7 @@ namespace icc {
 void compute_footpaths(nigiri::timetable&,
                        osr::ways const&,
                        osr::lookup const&,
-                       osr::platforms const&);
+                       osr::platforms const&,
+                       osr::bitvec<osr::node_idx_t> const& blocked);
 
 }  // namespace icc

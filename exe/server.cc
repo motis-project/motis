@@ -112,8 +112,8 @@ int main(int ac, char** av) {
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-
-  auto qr = net::query_router{};
+  auto exec = net::default_executor{};
+  auto qr = net::query_router{exec};
   qr.route("POST", "/matches", [&](json::value const& query) {
     auto const q = query.as_array();
 
@@ -211,8 +211,8 @@ int main(int ac, char** av) {
     });
 
     for (auto const n : l.find_elevators(min, max)) {
-      auto const pos = w.get_node_pos(n);
       auto const match = match_elevator(elevators_rtree, elevators, w, n);
+      auto const pos = w.get_node_pos(n);
       if (match != elevator_idx_t::invalid()) {
         auto const& e = elevators[match];
         matches.emplace_back(json::value{
@@ -232,7 +232,7 @@ int main(int ac, char** av) {
     return json::value{{"type", "FeatureCollection"}, {"features", matches}};
   });
   qr.serve_files("ui/build");
-  qr.enable_cors();
+  qr.cors();
   s.on_http_request(std::move(qr));
 
   auto ec = boost::system::error_code{};
