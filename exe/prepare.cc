@@ -60,50 +60,19 @@ int main(int ac, char** av) {
   fmt::println("loading platforms");
   auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
 
-  fmt::println("building rtree");
+  fmt::println("building platform rtree");
   pl.build_rtree(w);
 
   fmt::println("reading elevators");
-  auto const file = cista::mmap{fasta_path.generic_string().c_str(),
-                                cista::mmap::protection::READ};
-  auto const elevators = parse_fasta(file.view());
+  auto const elevators = parse_fasta(fasta_path);
 
   fmt::println("creating elevators rtree");
-  auto const elevators_rtree = [&]() {
-    auto t = point_rtree<elevator_idx_t>{};
-    for (auto const& [i, e] : utl::enumerate(elevators)) {
-      t.add(e.pos_, elevator_idx_t{i});
-    }
-    return t;
-  }();
+  auto const elevators_rtree = create_elevator_rtree(elevators);
 
   fmt::println("mapping elevators");
-  auto const elevator_nodes = [&]() {
-    auto nodes = osr::hash_set<osr::node_idx_t>{};
-    for (auto way = osr::way_idx_t{0U}; way != w.n_ways(); ++way) {
-      for (auto const n : w.r_->way_nodes_[way]) {
-        if (w.r_->node_properties_[n].is_elevator()) {
-          nodes.emplace(n);
-        }
-      }
-    }
-    return nodes;
-  }();
-  auto inactive = osr::hash_set<osr::node_idx_t>{};
-  auto inactive_mutex = std::mutex{};
-  utl::parallel_for(elevator_nodes, [&](osr::node_idx_t const n) {
-    auto const e = match_elevator(elevators_rtree, elevators, w, n);
-    if (e != elevator_idx_t::invalid() &&
-        elevators[e].status_ == icc::status::kInactive) {
-      auto const lock = std::scoped_lock{inactive_mutex};
-      inactive.emplace(n);
-    }
-  });
-  auto blocked = osr::bitvec<osr::node_idx_t>{};
-  blocked.resize(w.n_nodes());
-  for (auto const n : inactive) {
-    blocked.set(n, true);
-  }
+  auto const elevator_nodes = get_elevator_nodes(w);
+  auto const blocked =
+      get_blocked_elevators(w, elevators, elevators_rtree, elevator_nodes);
 
   fmt::println("computing footpaths");
   compute_footpaths(*tt, w, l, pl, blocked);

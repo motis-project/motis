@@ -5,8 +5,17 @@
 	import Control from '$lib/Control.svelte';
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
-	import { getElevators, getGraph, getLevels, getMatches } from '$lib/api';
+	import { RoutingQuery, getElevators, getGraph, getLevels, getMatches, getRoute } from '$lib/api';
 	import { toTable } from '$lib/toTable';
+	import {
+		Select,
+		SelectTrigger,
+		SelectValue,
+		SelectContent,
+		SelectItem
+	} from '$lib/components/ui/select';
+	import { Toggle } from '$lib/components/ui/toggle';
+	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -25,7 +34,7 @@
 		graph = showGraph && bounds ? await getGraph(bounds, level) : null;
 	});
 
-	let currLevel = $state.snapshot(level);
+	let currLevel = 0;
 	$effect(() => {
 		if (currLevel != level) {
 			graph = null;
@@ -39,11 +48,26 @@
 		matches = showMatches && bounds ? await getMatches(bounds) : null;
 	});
 
-	let showElevators = $state(false);
+	let showElevators = $state<boolean>(false);
 	let elevators = $state<null | Object>(null);
 	$effect(async () => {
 		elevators = showElevators && bounds ? await getElevators(bounds) : null;
 	});
+
+	let profile = $state({ value: 'foot', label: 'Foot' });
+	let start = $state<[number, number]>([8.663205312233744, 50.106847864540164]);
+	let destination = $state<[number, number]>([8.665205312233744, 50.106847864540164]);
+	let start_level = $state<number>(0.0);
+	let destination_level = $state<number>(0.0);
+	let query = $derived<RoutingQuery>({
+		start,
+		destination,
+		start_level,
+		destination_level,
+		profile: profile.value,
+		direction: 'forward'
+	});
+	let route = $derived(getRoute(query));
 
 	let init = false;
 	$effect(() => {
@@ -67,6 +91,69 @@
 					});
 				}
 			);
+
+			const startMarker = new maplibregl.Marker({
+				draggable: true,
+				color: 'green'
+			})
+				.setLngLat(start)
+				.addTo(map)
+				.on('dragend', async () => {
+					const x = startMarker.getLngLat();
+					start = [x.lng, x.lat];
+					start_level = level;
+				});
+
+			const destinationMarker = new maplibregl.Marker({
+				draggable: true,
+				color: 'red'
+			})
+				.setLngLat(destination)
+				.addTo(map)
+				.on('dragend', async () => {
+					const x = destinationMarker.getLngLat();
+					destination = [x.lng, x.lat];
+					destination_level = level;
+				});
+
+			let popup: maplibregl.Popup | null = null;
+			map.on('contextmenu', (e) => {
+				if (popup != null) {
+					popup.remove();
+				}
+				popup = new maplibregl.Popup({
+					anchor: 'top-left'
+				});
+				const x = e.lngLat;
+
+				const actionsDiv = document.createElement('div');
+				const setStart = document.createElement('a');
+				setStart.classList.add('m-2');
+				setStart.href = '#';
+				setStart.innerText = 'start';
+				setStart.onclick = () => {
+					startMarker.setLngLat(x);
+					query.start = [x.lng, x.lat];
+					query.start_level = level;
+					popup!.remove();
+				};
+				actionsDiv.appendChild(setStart);
+
+				const setDest = document.createElement('a');
+				setDest.classList.add('m-2');
+				setDest.href = '#';
+				setDest.innerText = 'destination';
+				setDest.onclick = () => {
+					destinationMarker.setLngLat(x);
+					query.destination = [x.lng, x.lat];
+					query.destination_level = level;
+					popup!.remove();
+				};
+				actionsDiv.appendChild(setDest);
+
+				popup.setLngLat(x).setDOMContent(actionsDiv).addTo(map);
+			});
+
 			init = true;
 		}
 	});
@@ -88,38 +175,107 @@
 	class="h-screen"
 	style={getStyle(level)}
 >
-	<Control
-		class={showGraph ? '!bg-green-200' : ''}
-		onclick={() => {
-			showGraph = !showGraph;
-		}}>G</Control
-	>
-	<Control
-		class={showMatches ? '!bg-green-200' : ''}
-		onclick={() => {
-			showMatches = !showMatches;
-		}}>M</Control
-	>
-	<Control
-		class={showElevators ? '!bg-green-200' : ''}
-		onclick={() => {
-			showElevators = !showElevators;
-		}}>E</Control
-	>
+	<Control>
+		<div class="bg-white rounded-lg">
+			<Toggle
+				bind:pressed={showGraph}
+				variant="outline"
+				class={['h-8', 'w-8', showGraph ? 'bg-green-200' : ''].join(' ')}
+			>
+				G
+			</Toggle>
+		</div>
+	</Control>
+	<Control>
+		<div class="bg-white rounded-lg">
+			<Toggle
+				bind:pressed={showMatches}
+				variant="outline"
+				class="{['h-8', 'w-8', showMatches ? 'bg-green-200' : ''].join(' ')}}"
+			>
+				M
+			</Toggle>
+		</div>
+	</Control>
+	<Control>
+		<div class="bg-white rounded-lg">
+			<Toggle
+				bind:pressed={showElevators}
+				variant="outline"
+				class={['h-8', 'w-8', showElevators ? 'bg-green-200' : ''].join(' ')}
+			>
+				E
+			</Toggle>
+		</div>
+	</Control>
+	<Control>
+		<div class="bg-white rounded-lg">
+			<Select bind:selected={profile}>
+				<SelectTrigger>
+					<SelectValue placeholder="Theme" />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value="wheelchair">Wheelchair</SelectItem>
+					<SelectItem value="foot">Foot</SelectItem>
+					<SelectItem value="bike">Bike</SelectItem>
+					<SelectItem value="car">Car</SelectItem>
+				</SelectContent>
+			</Select>
+		</div>
+	</Control>
 
 	{#if levels}
 		{#await levels then lvls}
 			{#each lvls as l}
-				<Control
-					onclick={() => {
-						level = l;
-					}}
-				>
-					{l}
+				<Control>
+					<div class="bg-white rounded-lg">
+						<Toggle
+							variant="outline"
+							class={['h-8', 'w-8', level == l ? 'bg-green-200' : ''].join(' ')}
+							onclick={() => {
+								level = l;
+							}}
+						>
+							{l}
+						</Toggle>
+					</div>
 				</Control>
 			{/each}
 		{/await}
 	{/if}
+
+	{#await route then r}
+		<GeoJSON id="route" data={r}>
+			<Layer
+				id="path-outline"
+				type="line"
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+				paint={{
+					'line-color': '#1966a4',
+					'line-width': 7.5,
+					'line-opacity': 0.8
+				}}
+			/>
+			<Layer
+				id="path"
+				type="line"
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+				paint={{
+					'line-color': '#42a5f5',
+					'line-width': 5,
+					'line-opacity': 0.8
+				}}
+			/>
+		</GeoJSON>
+	{/await}
 
 	{#if graph != null}
 		<GeoJSON id="graph" data={graph}>

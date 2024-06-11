@@ -1,5 +1,8 @@
 #pragma once
 
+#include <filesystem>
+#include <string_view>
+
 #include "geo/latlng.h"
 
 #include "utl/enumerate.h"
@@ -9,18 +12,9 @@
 
 #include "boost/json.hpp"
 
+#include "icc/types.h"
+
 namespace icc {
-
-enum class status : bool { kActive, kInactive };
-
-using elevator_idx_t = cista::strong<std::uint32_t, struct elevator_idx_>;
-
-struct elevator {
-  std::int64_t id_;
-  geo::latlng pos_;
-  status status_;
-  std::string desc_;
-};
 
 nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
   auto ret = nigiri::vector_map<elevator_idx_t, elevator>{};
@@ -54,6 +48,13 @@ nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
     }
   }
   return ret;
+}
+
+nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
+    std::filesystem::path const& p) {
+  return parse_fasta(
+      cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ}
+          .view());
 }
 
 }  // namespace icc

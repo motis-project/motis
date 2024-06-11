@@ -24,9 +24,11 @@
 		const d = $state.snapshot(data);
 		if (src) {
 			if (d !== currData) {
+				console.log('UPDATE DATA', id);
 				src.setData(data);
 			}
 		} else {
+			console.log('ADD SOURCE', id);
 			ctx.map.addSource(id, {
 				type: 'geojson',
 				data
@@ -52,7 +54,10 @@
 		if (initialized) {
 			const src = ctx.map.getSource(id);
 			if (src) {
+				console.log('DESTROY SOURCE', id);
 				ctx.map?.removeSource(id);
+			} else {
+				console.log('DESTROY SOURCE --- NO SOURCE!', id);
 			}
 		}
 	});

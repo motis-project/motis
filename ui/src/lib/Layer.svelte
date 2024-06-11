@@ -27,6 +27,7 @@
 		const l = ctx.map?.getLayer(id);
 		if (!source.id) {
 			if (l) {
+				console.log('REMOVE', id);
 				ctx.map?.removeLayer(id);
 			}
 			return;
@@ -53,7 +54,7 @@
 		}
 
 		if (currFilter != filter) {
-			console.log('UPDATE FILTER', id);
+			console.log('UPDATE FILTER', id, filter, currFilter);
 			ctx.map!.setFilter(id, filter);
 			currFilter = $state.snapshot(filter);
 		}
@@ -73,7 +74,10 @@
 	onDestroy(() => {
 		const l = ctx.map?.getLayer(id);
 		if (l) {
+			console.log('ON DESTROY LAYER', id);
 			ctx.map?.removeLayer(id);
+		} else {
+			console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);
 		}
 	});
 </script>

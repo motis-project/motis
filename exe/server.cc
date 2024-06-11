@@ -17,6 +17,11 @@
 #include "nigiri/types.h"
 
 #include "osr/geojson.h"
+#include "osr/lookup.h"
+#include "osr/routing/profiles/bike.h"
+#include "osr/routing/profiles/car.h"
+#include "osr/routing/profiles/foot.h"
+#include "osr/routing/route.h"
 
 #include "icc/location_routes.h"
 #include "icc/match.h"
@@ -39,6 +44,14 @@ std::string get_names(osr::platforms const& pl, osr::platform_idx_t const x) {
     ss << y.view() << ", ";
   }
   return ss.str();
+}
+
+osr::location parse_location(json::value const& v) {
+  auto const& obj = v.as_object();
+  return {obj.at("lat").as_double(), obj.at("lng").as_double(),
+          obj.contains("level")
+              ? osr::to_level(obj.at("level").to_number<float>())
+              : osr::level_t::invalid()};
 }
 
 int main(int ac, char** av) {
@@ -87,16 +100,15 @@ int main(int ac, char** av) {
 
   // Read elevators.
   fmt::println("reading elevators");
-  auto const file = cista::mmap{fasta_path.generic_string().c_str(),
-                                cista::mmap::protection::READ};
-  auto const elevators = parse_fasta(file.view());
-  auto const elevators_rtree = [&]() {
-    auto t = point_rtree<elevator_idx_t>{};
-    for (auto const& [i, e] : utl::enumerate(elevators)) {
-      t.add(e.pos_, elevator_idx_t{i});
-    }
-    return t;
-  }();
+  auto const elevators = parse_fasta(fasta_path);
+
+  fmt::println("creating elevators rtree");
+  auto const elevators_rtree = create_elevator_rtree(elevators);
+
+  fmt::println("mapping elevators");
+  auto const elevator_nodes = get_elevator_nodes(w);
+  auto const blocked =
+      get_blocked_elevators(w, elevators, elevators_rtree, elevator_nodes);
 
   // Create location r-tree.
   fmt::println("creating r-tree");
@@ -113,7 +125,7 @@ int main(int ac, char** av) {
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
   auto qr = net::query_router{};
-  qr.route("POST", "/matches", [&](json::value const& query) {
+  qr.route("POST", "/api/matches", [&](json::value const& query) {
     auto const q = query.as_array();
 
     auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
@@ -188,7 +200,7 @@ int main(int ac, char** av) {
     return json::value{{"type", "FeatureCollection"}, {"features", matches}};
   });
 
-  qr.route("POST", "/elevators", [&](json::value const& query) {
+  qr.route("POST", "/api/elevators", [&](json::value const& query) {
     auto const q = query.as_array();
 
     auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
@@ -196,17 +208,16 @@ int main(int ac, char** av) {
 
     auto matches = json::array{};
     elevators_rtree.find(min, max, [&](elevator_idx_t const i) {
+      auto const& e = elevators[i];
       matches.emplace_back(json::value{
           {"type", "Feature"},
           {"properties",
            {{"type", "api"},
-            {"id", elevators[i].id_},
-            {"desc", elevators[i].desc_},
+            {"id", e.id_},
+            {"desc", e.desc_},
             {"status",
-             (elevators[i].status_ == status::kActive ? "ACTIVE"
-                                                      : "INACTIVE")}}},
-          {"geometry",
-           osr::to_point(osr::point::from_latlng(elevators[i].pos_))}});
+             (e.status_ == status::kActive ? "ACTIVE" : "INACTIVE")}}},
+          {"geometry", osr::to_point(osr::point::from_latlng(e.pos_))}});
     });
 
     for (auto const n : l.find_elevators(min, max)) {
@@ -230,6 +241,47 @@ int main(int ac, char** av) {
 
     return json::value{{"type", "FeatureCollection"}, {"features", matches}};
   });
+
+  qr.route("POST", "/api/route", [&](json::value const& query) {
+    auto const& q = query.as_object();
+    auto const profile_it = q.find("profile");
+    auto const profile = osr::to_profile(
+        profile_it == q.end() || !profile_it->value().is_string()
+            ? to_str(osr::search_profile::kFoot)
+            : profile_it->value().as_string());
+    auto const direction_it = q.find("direction");
+    auto const dir = osr::to_direction(
+        direction_it == q.end() || !direction_it->value().is_string()
+            ? to_str(osr::direction::kForward)
+            : direction_it->value().as_string());
+    auto const from = parse_location(q.at("start"));
+    auto const to = parse_location(q.at("destination"));
+    auto const max_it = q.find("max");
+    auto const max = static_cast<osr::cost_t>(
+        max_it == q.end() ? 3600 : max_it->value().as_int64());
+    auto const p = route(w, l, profile, from, to, max, dir, &blocked);
+    return p.has_value()
+               ? json::value{{"type", "FeatureCollection"},
+                             {"features",
+                              utl::all(p->segments_)  //
+                                  |
+                                  utl::transform([&](auto&& s) {
+                                    return json::value{
+                                        {"type", "Feature"},
+                                        {"properties",
+                                         {{"level", to_float(s.from_level_)},
+                                          {"way",
+                                           s.way_ == osr::way_idx_t::invalid()
+                                               ? 0U
+                                               : to_idx(
+                                                     w.way_osm_idx_[s.way_])}}},
+                                        {"geometry",
+                                         osr::to_line_string(s.polyline_)}};
+                                  })  //
+                                  | utl::emplace_back_to<json::array>()}}
+               : json::value{{"error", "no path found"}};
+  });
+
   qr.serve_files("ui/build");
   qr.enable_cors();
   s.on_http_request(std::move(qr));

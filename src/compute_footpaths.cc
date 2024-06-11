@@ -66,24 +66,23 @@ void compute_footpaths(nigiri::timetable& tt,
   auto footpaths_out =
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_out.resize(tt.n_locations());
-  utl::parallel_for_run_threadlocal<osr::dijkstra<osr::foot<false>>>(
-      tt.n_locations(), [&](auto& d, auto const i) {
-        auto const l = n::location_idx_t{i};
-        auto const neighbors = in_radius(l);
-        auto const results = osr::route(
-            w, lookup, d, get_loc(l),
-            utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
-            kMaxDuration, osr::direction::kForward, &blocked);
-        for (auto const [n, r] : utl::zip(neighbors, results)) {
-          if (r.has_value()) {
-            auto const duration = n::duration_t{r->cost_ / 60U};
-            if (duration < n::footpath::kMaxDuration) {
-              footpaths_out[l].emplace_back(n::footpath{n, duration});
-            }
-          }
+  utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
+    auto const l = n::location_idx_t{i};
+    auto const neighbors = in_radius(l);
+    auto const results =
+        osr::route(w, lookup, osr::search_profile::kFoot, get_loc(l),
+                   utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
+                   kMaxDuration, osr::direction::kForward, &blocked);
+    for (auto const [n, r] : utl::zip(neighbors, results)) {
+      if (r.has_value()) {
+        auto const duration = n::duration_t{r->cost_ / 60U};
+        if (duration < n::footpath::kMaxDuration) {
+          footpaths_out[l].emplace_back(n::footpath{n, duration});
         }
-        pt->update_monotonic(i);
-      });
+      }
+    }
+    pt->update_monotonic(i);
+  });
 
   fmt::println("create ingoing footpaths");
   auto footpaths_in =

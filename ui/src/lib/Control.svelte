@@ -33,12 +33,8 @@
 	onDestroy(() => ctx.map?.removeControl(ctrl));
 </script>
 
-<div class:hidden={!initialized} class="maplibregl-ctrl" bind:this={el}>
-	<div class="maplibregl-ctrl-group">
-		<button {...props}>
-			{@render children()}
-		</button>
-	</div>
+<div class:hidden={!initialized} class="maplibregl-ctrl" {...props} bind:this={el}>
+	{@render children()}
 </div>
 
 <style>
