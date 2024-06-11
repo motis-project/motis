@@ -112,8 +112,7 @@ int main(int ac, char** av) {
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto exec = net::default_executor{};
-  auto qr = net::query_router{exec};
+  auto qr = net::query_router{};
   qr.route("POST", "/matches", [&](json::value const& query) {
     auto const q = query.as_array();
 
@@ -232,7 +231,7 @@ int main(int ac, char** av) {
     return json::value{{"type", "FeatureCollection"}, {"features", matches}};
   });
   qr.serve_files("ui/build");
-  qr.cors();
+  qr.enable_cors();
   s.on_http_request(std::move(qr));
 
   auto ec = boost::system::error_code{};
