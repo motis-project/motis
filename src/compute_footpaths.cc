@@ -72,7 +72,7 @@ void compute_footpaths(nigiri::timetable& tt,
     auto const results =
         osr::route(w, lookup, osr::search_profile::kFoot, get_loc(l),
                    utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
-                   kMaxDuration, osr::direction::kForward, &blocked);
+                   kMaxDuration, osr::direction::kForward, 8, &blocked);
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
         auto const duration = n::duration_t{r->cost_ / 60U};

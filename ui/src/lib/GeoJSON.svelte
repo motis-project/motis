@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy, setContext, type Snippet } from 'svelte';
+	import { getContext, onDestroy, onMount, setContext, type Snippet } from 'svelte';
 
 	class Props {
 		id!: string;
@@ -17,16 +17,13 @@
 	let currData = null;
 	const updateSource = () => {
 		if (!ctx.map || data == null) {
-			sourceId.id = null;
 			return;
 		}
 		const src = ctx.map.getSource(id);
 		const d = $state.snapshot(data);
 		if (src) {
-			if (d !== currData) {
-				console.log('UPDATE DATA', id);
-				src.setData(data);
-			}
+			console.log('UPDATE DATA', id);
+			src.setData(data);
 		} else {
 			console.log('ADD SOURCE', id);
 			ctx.map.addSource(id, {
@@ -52,6 +49,8 @@
 
 	onDestroy(() => {
 		if (initialized) {
+			ctx.map?.off('styledata', updateSource);
+			sourceId.id = null;
 			const src = ctx.map.getSource(id);
 			if (src) {
 				console.log('DESTROY SOURCE', id);

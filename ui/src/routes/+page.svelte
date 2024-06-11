@@ -15,7 +15,6 @@
 		SelectItem
 	} from '$lib/components/ui/select';
 	import { Toggle } from '$lib/components/ui/toggle';
-	import * as ToggleGroup from '$lib/components/ui/toggle-group';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -245,36 +244,38 @@
 	{/if}
 
 	{#await route then r}
-		<GeoJSON id="route" data={r}>
-			<Layer
-				id="path-outline"
-				type="line"
-				layout={{
-					'line-join': 'round',
-					'line-cap': 'round'
-				}}
-				filter={['any', ['!has', 'level'], ['==', 'level', level]]}
-				paint={{
-					'line-color': '#1966a4',
-					'line-width': 7.5,
-					'line-opacity': 0.8
-				}}
-			/>
-			<Layer
-				id="path"
-				type="line"
-				layout={{
-					'line-join': 'round',
-					'line-cap': 'round'
-				}}
-				filter={['any', ['!has', 'level'], ['==', 'level', level]]}
-				paint={{
-					'line-color': '#42a5f5',
-					'line-width': 5,
-					'line-opacity': 0.8
-				}}
-			/>
-		</GeoJSON>
+		{#if r.type == 'FeatureCollection'}
+			<GeoJSON id="route" data={r}>
+				<Layer
+					id="path-outline"
+					type="line"
+					layout={{
+						'line-join': 'round',
+						'line-cap': 'round'
+					}}
+					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+					paint={{
+						'line-color': '#1966a4',
+						'line-width': 7.5,
+						'line-opacity': 0.8
+					}}
+				/>
+				<Layer
+					id="path"
+					type="line"
+					layout={{
+						'line-join': 'round',
+						'line-cap': 'round'
+					}}
+					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+					paint={{
+						'line-color': '#42a5f5',
+						'line-width': 5,
+						'line-opacity': 0.8
+					}}
+				/>
+			</GeoJSON>
+		{/if}
 	{/await}
 
 	{#if graph != null}

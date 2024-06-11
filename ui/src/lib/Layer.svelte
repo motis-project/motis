@@ -54,9 +54,10 @@
 		}
 
 		if (currFilter != filter) {
-			console.log('UPDATE FILTER', id, filter, currFilter);
-			ctx.map!.setFilter(id, filter);
+			console.log(this, id, currFilter, filter);
+			console.log('UPDATE FILTER', id, filter);
 			currFilter = $state.snapshot(filter);
+			ctx.map!.setFilter(id, filter);
 		}
 	};
 
@@ -74,7 +75,8 @@
 	onDestroy(() => {
 		const l = ctx.map?.getLayer(id);
 		if (l) {
-			console.log('ON DESTROY LAYER', id);
+			console.log('ON DESTROY LAYER', id, ctx.map);
+			ctx.map?.off('styledata', updateLayer);
 			ctx.map?.removeLayer(id);
 		} else {
 			console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);

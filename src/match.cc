@@ -85,7 +85,7 @@ double get_routes_bonus(n::timetable const& tt,
       }
 
       utl::for_each_token(x.view(), ' ', [&](auto&& token) {
-        if (r == token) {
+        if (r == token.view()) {
           ++matches;
         }
       });

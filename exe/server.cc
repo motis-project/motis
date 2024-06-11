@@ -259,7 +259,7 @@ int main(int ac, char** av) {
     auto const max_it = q.find("max");
     auto const max = static_cast<osr::cost_t>(
         max_it == q.end() ? 3600 : max_it->value().as_int64());
-    auto const p = route(w, l, profile, from, to, max, dir, &blocked);
+    auto const p = route(w, l, profile, from, to, max, dir, 8, &blocked);
     return p.has_value()
                ? json::value{{"type", "FeatureCollection"},
                              {"features",
