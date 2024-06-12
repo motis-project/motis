@@ -11,8 +11,8 @@
 #include "osr/ways.h"
 
 #include "icc/compute_footpaths.h"
-#include "icc/match_elevator.h"
-#include "icc/parse_fasta.h"
+#include "icc/elevators/match_elevator.h"
+#include "icc/elevators/parse_fasta.h"
 #include "utl/parallel_for.h"
 
 namespace fs = std::filesystem;
