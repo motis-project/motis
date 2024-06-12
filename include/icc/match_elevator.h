@@ -10,7 +10,7 @@
 
 namespace icc {
 
-point_rtree<elevator_idx_t> create_elevator_rtree(
+inline point_rtree<elevator_idx_t> create_elevator_rtree(
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators) {
   auto t = point_rtree<elevator_idx_t>{};
   for (auto const& [i, e] : utl::enumerate(elevators)) {
@@ -19,7 +19,7 @@ point_rtree<elevator_idx_t> create_elevator_rtree(
   return t;
 }
 
-osr::hash_set<osr::node_idx_t> get_elevator_nodes(osr::ways const& w) {
+inline osr::hash_set<osr::node_idx_t> get_elevator_nodes(osr::ways const& w) {
   auto nodes = osr::hash_set<osr::node_idx_t>{};
   for (auto way = osr::way_idx_t{0U}; way != w.n_ways(); ++way) {
     for (auto const n : w.r_->way_nodes_[way]) {
@@ -31,7 +31,7 @@ osr::hash_set<osr::node_idx_t> get_elevator_nodes(osr::ways const& w) {
   return nodes;
 }
 
-elevator_idx_t match_elevator(
+inline elevator_idx_t match_elevator(
     point_rtree<elevator_idx_t> const& rtree,
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators,
     osr::ways const& w,
@@ -49,7 +49,7 @@ elevator_idx_t match_elevator(
   return closest;
 }
 
-osr::bitvec<osr::node_idx_t> get_blocked_elevators(
+inline osr::bitvec<osr::node_idx_t> get_blocked_elevators(
     osr::ways const& w,
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators,
     point_rtree<elevator_idx_t> const& elevators_rtree,

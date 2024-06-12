@@ -108,7 +108,7 @@ double get_match_bonus(Collection&& names,
   }
   if (auto const track = get_track(ref);
       track.has_value() && has_number_match(names, *track)) {
-    bonus += 100.0 - names.size();
+    bonus += 60.0 - names.size();
   }
   if (has_exact_match(names, name)) {
     bonus += 15.0 - names.size();

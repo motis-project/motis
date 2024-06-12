@@ -16,7 +16,8 @@
 
 namespace icc {
 
-nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
+inline nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
+    std::string_view s) {
   auto ret = nigiri::vector_map<elevator_idx_t, elevator>{};
   for (auto const& [i, e] : utl::enumerate(boost::json::parse(s).as_array())) {
     if (e.at("type") != "ELEVATOR") {
@@ -50,7 +51,7 @@ nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
   return ret;
 }
 
-nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
+inline nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
     std::filesystem::path const& p) {
   return parse_fasta(
       cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ}
