@@ -6,28 +6,13 @@
 #include "net/web_server/query_router.h"
 #include "net/web_server/web_server.h"
 
-#include "rtree.h"
-
-#include "geo/latlng.h"
-
-#include "cista/strong.h"
-
 #include "net/run.h"
 
-#include "nigiri/types.h"
-
-#include "osr/geojson.h"
 #include "osr/lookup.h"
-#include "osr/routing/profiles/bike.h"
-#include "osr/routing/profiles/car.h"
-#include "osr/routing/profiles/foot.h"
-#include "osr/routing/route.h"
 
 #include "icc/endpoints/elevators.h"
 #include "icc/endpoints/matches.h"
 #include "icc/endpoints/osr_routing.h"
-#include "icc/location_routes.h"
-#include "icc/match.h"
 #include "icc/match_elevator.h"
 #include "icc/parse_fasta.h"
 #include "icc/point_rtree.h"
