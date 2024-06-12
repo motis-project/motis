@@ -54,7 +54,6 @@
 		}
 
 		if (currFilter != filter) {
-			console.log(this, id, currFilter, filter);
 			console.log('UPDATE FILTER', id, filter);
 			currFilter = $state.snapshot(filter);
 			ctx.map!.setFilter(id, filter);
@@ -74,9 +73,9 @@
 
 	onDestroy(() => {
 		const l = ctx.map?.getLayer(id);
+		ctx.map?.off('styledata', updateLayer);
 		if (l) {
 			console.log('ON DESTROY LAYER', id, ctx.map);
-			ctx.map?.off('styledata', updateLayer);
 			ctx.map?.removeLayer(id);
 		} else {
 			console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);

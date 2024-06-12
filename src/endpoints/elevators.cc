@@ -2,14 +2,14 @@
 
 #include "osr/geojson.h"
 
-#include "icc/match_elevator.h"
+#include "icc/elevators/match_elevator.h"
 
 namespace json = boost::json;
 
 namespace icc::ep {
 
 json::value elevators::operator()(json::value const& query) const {
-  auto const q = query.as_array();
+  auto const& q = query.as_array();
 
   auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
   auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};

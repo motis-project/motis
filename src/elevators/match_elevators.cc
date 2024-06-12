@@ -1,16 +1,11 @@
-#pragma once
+#include "icc/elevators/match_elevator.h"
 
+#include "utl/enumerate.h"
 #include "utl/parallel_for.h"
-
-#include "nigiri/types.h"
-
-#include "icc/parse_fasta.h"
-#include "icc/point_rtree.h"
-#include "icc/types.h"
 
 namespace icc {
 
-inline point_rtree<elevator_idx_t> create_elevator_rtree(
+point_rtree<elevator_idx_t> create_elevator_rtree(
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators) {
   auto t = point_rtree<elevator_idx_t>{};
   for (auto const& [i, e] : utl::enumerate(elevators)) {
@@ -19,7 +14,7 @@ inline point_rtree<elevator_idx_t> create_elevator_rtree(
   return t;
 }
 
-inline osr::hash_set<osr::node_idx_t> get_elevator_nodes(osr::ways const& w) {
+osr::hash_set<osr::node_idx_t> get_elevator_nodes(osr::ways const& w) {
   auto nodes = osr::hash_set<osr::node_idx_t>{};
   for (auto way = osr::way_idx_t{0U}; way != w.n_ways(); ++way) {
     for (auto const n : w.r_->way_nodes_[way]) {
@@ -31,7 +26,7 @@ inline osr::hash_set<osr::node_idx_t> get_elevator_nodes(osr::ways const& w) {
   return nodes;
 }
 
-inline elevator_idx_t match_elevator(
+elevator_idx_t match_elevator(
     point_rtree<elevator_idx_t> const& rtree,
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators,
     osr::ways const& w,
@@ -49,7 +44,7 @@ inline elevator_idx_t match_elevator(
   return closest;
 }
 
-inline osr::bitvec<osr::node_idx_t> get_blocked_elevators(
+osr::bitvec<osr::node_idx_t> get_blocked_elevators(
     osr::ways const& w,
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators,
     point_rtree<elevator_idx_t> const& elevators_rtree,

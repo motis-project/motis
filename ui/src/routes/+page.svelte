@@ -5,7 +5,15 @@
 	import Control from '$lib/Control.svelte';
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
-	import { RoutingQuery, getElevators, getGraph, getLevels, getMatches, getRoute } from '$lib/api';
+	import {
+		RoutingQuery,
+		getElevators,
+		getGraph,
+		getLevels,
+		getMatches,
+		getPlatforms,
+		getRoute
+	} from '$lib/api';
 	import { toTable } from '$lib/toTable';
 	import {
 		Select,
@@ -25,6 +33,11 @@
 		bounds === undefined || zoom < 18
 			? null
 			: await getLevels(maplibregl.LngLatBounds.convert(bounds))
+	);
+
+	let showPlatforms = $state(false);
+	let platforms = $derived.by(async () =>
+		showPlatforms && bounds ? getPlatforms(bounds, level) : null
 	);
 
 	let showGraph = $state(false);
@@ -132,8 +145,8 @@
 				setStart.innerText = 'start';
 				setStart.onclick = () => {
 					startMarker.setLngLat(x);
-					query.start = [x.lng, x.lat];
-					query.start_level = level;
+					start = [x.lng, x.lat];
+					start_level = level;
 					popup!.remove();
 				};
 				actionsDiv.appendChild(setStart);
@@ -144,8 +157,8 @@
 				setDest.innerText = 'destination';
 				setDest.onclick = () => {
 					destinationMarker.setLngLat(x);
-					query.destination = [x.lng, x.lat];
-					query.destination_level = level;
+					destination = [x.lng, x.lat];
+					destination_level = level;
 					popup!.remove();
 				};
 				actionsDiv.appendChild(setDest);
@@ -199,6 +212,17 @@
 	<Control>
 		<div class="bg-white rounded-lg">
 			<Toggle
+				bind:pressed={showPlatforms}
+				variant="outline"
+				class={['h-8', 'w-8', showPlatforms ? 'bg-green-200' : ''].join(' ')}
+			>
+				P
+			</Toggle>
+		</div>
+	</Control>
+	<Control>
+		<div class="bg-white rounded-lg">
+			<Toggle
 				bind:pressed={showElevators}
 				variant="outline"
 				class={['h-8', 'w-8', showElevators ? 'bg-green-200' : ''].join(' ')}
@@ -242,6 +266,34 @@
 			{/each}
 		{/await}
 	{/if}
+
+	{#await platforms then p}
+		<GeoJSON id="platforms" data={p}>
+			<Layer
+				id="platform-way"
+				type="line"
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				filter={['all', ['==', 'type', 'way'], ['any', ['!has', 'level'], ['==', 'level', level]]]}
+				paint={{
+					'line-color': '#00d924',
+					'line-width': 3
+				}}
+			/>
+			<Layer
+				id="platform-node"
+				type="circle"
+				layout={{}}
+				filter={['all', ['==', 'type', 'node'], ['any', ['!has', 'level'], ['==', 'level', level]]]}
+				paint={{
+					'circle-color': '#0700d9',
+					'circle-radius': 5
+				}}
+			/>
+		</GeoJSON>
+	{/await}
 
 	{#await route then r}
 		{#if r.type == 'FeatureCollection'}

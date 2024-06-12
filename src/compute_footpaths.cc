@@ -5,7 +5,7 @@
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 
-#include "icc/match.h"
+#include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 
 namespace n = nigiri;

@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl';
 
-const baseUrl = 'https://osr.motis-project.de';
+const baseUrl = 'http://localhost:8080';
 
 export class RoutingQuery {
 	start!: Array<number>;
@@ -11,8 +11,24 @@ export class RoutingQuery {
 	direction!: string;
 }
 
+export const getPlatforms = async (bounds: maplibregl.LngLatBounds, level: number) => {
+	const response = await fetch(`${baseUrl}/api/platforms`, {
+		method: 'POST',
+		mode: 'cors',
+		headers: {
+			'Access-Control-Allow-Origin': '*',
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			level: level,
+			waypoints: bounds.toArray().flat()
+		})
+	});
+	return await response.json();
+};
+
 export const getRoute = async (query: RoutingQuery) => {
-	const response = await fetch(`http://localhost:8080/api/route`, {
+	const response = await fetch(`${baseUrl}/api/route`, {
 		method: 'POST',
 		mode: 'cors',
 		headers: {
@@ -69,7 +85,7 @@ export const getLevels = async (bounds: maplibregl.LngLatBounds) => {
 };
 
 export const getMatches = async (bounds: maplibregl.LngLatBounds) => {
-	const response = await fetch(`http://localhost:8080/api/matches`, {
+	const response = await fetch(`${baseUrl}/api/matches`, {
 		method: 'POST',
 		mode: 'cors',
 		headers: {
@@ -82,7 +98,7 @@ export const getMatches = async (bounds: maplibregl.LngLatBounds) => {
 };
 
 export const getElevators = async (bounds: maplibregl.LngLatBounds) => {
-	const response = await fetch(`http://localhost:8080/api/elevators`, {
+	const response = await fetch(`${baseUrl}/api/elevators`, {
 		method: 'POST',
 		mode: 'cors',
 		headers: {

@@ -1,24 +1,15 @@
-#pragma once
+#include "icc/elevators/parse_fasta.h"
 
-#include <filesystem>
-#include <string_view>
-
-#include "geo/latlng.h"
-
-#include "utl/enumerate.h"
-
-#include "osr/lookup.h"
-#include "osr/ways.h"
+#include <iostream>
 
 #include "boost/json.hpp"
 
-#include "icc/types.h"
+#include "utl/enumerate.h"
 
 namespace icc {
 
-inline nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
-    std::string_view s) {
-  auto ret = nigiri::vector_map<elevator_idx_t, elevator>{};
+vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
+  auto ret = vector_map<elevator_idx_t, elevator>{};
   for (auto const& [i, e] : utl::enumerate(boost::json::parse(s).as_array())) {
     if (e.at("type") != "ELEVATOR") {
       continue;
@@ -51,7 +42,7 @@ inline nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
   return ret;
 }
 
-inline nigiri::vector_map<elevator_idx_t, elevator> parse_fasta(
+vector_map<elevator_idx_t, elevator> parse_fasta(
     std::filesystem::path const& p) {
   return parse_fasta(
       cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ}
