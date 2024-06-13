@@ -1,5 +1,7 @@
+
 #include "fmt/core.h"
 
+#include "boost/asio/deadline_timer.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/program_options.hpp"
 
@@ -28,6 +30,13 @@ namespace bpo = boost::program_options;
 namespace json = boost::json;
 
 using namespace icc;
+
+template <typename Fn>
+void run_interval(boost::asio::io_context const& ioc,
+                  std::chrono::seconds const& s,
+                  Fn&& f) {
+  auto const timer = std::make_shared<boost::asio::deadline_timer>();
+}
 
 int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};
