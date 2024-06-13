@@ -27,12 +27,22 @@ else()
   endif()
 endif()
 
-message(STATUS "${pkg-bin} -l -h -f")
-execute_process(
-  COMMAND ${pkg-bin} -l -h -f
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  RESULT_VARIABLE pkg-result
-)
+if(DEFINED ENV{GITHUB_ACTIONS})
+  message(STATUS "${pkg-bin} -l -h -f")
+  execute_process(
+          COMMAND ${pkg-bin} -l -h -f
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          RESULT_VARIABLE pkg-result
+  )
+else()
+  message(STATUS "${pkg-bin} -l")
+  execute_process(
+          COMMAND ${pkg-bin} -l
+          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          RESULT_VARIABLE pkg-result
+  )
+endif()
+
 if (NOT pkg-result EQUAL 0)
   message(FATAL_ERROR "pkg failed: ${pkg-result}")
 endif()
