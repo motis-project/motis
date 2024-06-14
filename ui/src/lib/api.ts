@@ -1,6 +1,6 @@
 import maplibregl from 'maplibre-gl';
 
-const baseUrl = 'http://localhost:8080';
+const baseUrl = 'http://hopcroft.algo.informatik.tu-darmstadt.de:8000';
 
 export class RoutingQuery {
 	start!: Array<number>;
