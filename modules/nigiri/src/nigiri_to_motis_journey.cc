@@ -56,8 +56,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   };
 
   auto const add_walk = [&](n::routing::journey::leg const& leg,
-                            n::duration_t const duration, int mumo_id,
-                            bool const is_last) {
+                            n::duration_t const duration, int mumo_id) {
     auto const is_transfer =
         leg.from_ == leg.to_ ||
         (leg.from_ == tt.locations_.parents_.at(leg.to_)) ||
@@ -68,10 +67,6 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
            n::location_type::kGeneratedTrack) ||
           (tt.locations_.types_.at(leg.to_) ==
            n::location_type::kGeneratedTrack)));
-
-    if (is_transfer && is_last) {
-      return;
-    }
 
     auto& from_stop =
         mj.stops_.empty() ? mj.stops_.emplace_back() : mj.stops_.back();
@@ -215,74 +210,74 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
   };
 
   for (auto const [i, leg] : utl::enumerate(nj.legs_)) {
-    std::visit(
-        utl::overloaded{
-            [&](n::routing::journey::run_enter_exit const& t) {
-              auto const fr = n::rt::frun{tt, rtt, t.r_};
-              for (auto const& stop_idx : t.stop_range_) {
-                auto const stp = fr[stop_idx];
-                if (stp.is_canceled()) {
-                  continue;
-                }
+    std::visit(utl::overloaded{
+                   [&](n::routing::journey::run_enter_exit const& t) {
+                     auto const fr = n::rt::frun{tt, rtt, t.r_};
+                     for (auto const& stop_idx : t.stop_range_) {
+                       auto const stp = fr[stop_idx];
+                       if (stp.is_canceled()) {
+                         continue;
+                       }
 
-                auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
-                auto const enter = (stop_idx == t.stop_range_.from_);
+                       auto const exit = (stop_idx == t.stop_range_.to_ - 1U);
+                       auto const enter = (stop_idx == t.stop_range_.from_);
 
-                auto const reuse_arrival = enter && !mj.stops_.empty();
-                auto& stop =
-                    reuse_arrival ? mj.stops_.back() : mj.stops_.emplace_back();
-                auto const l = stp.get_location_idx();
-                fill_stop_info(stop, l);
+                       auto const reuse_arrival = enter && !mj.stops_.empty();
+                       auto& stop = reuse_arrival ? mj.stops_.back()
+                                                  : mj.stops_.emplace_back();
+                       auto const l = stp.get_location_idx();
+                       fill_stop_info(stop, l);
 
-                if (exit) {
-                  stop.exit_ = true;
-                }
-                if (enter) {
-                  stop.enter_ = true;
-                }
+                       if (exit) {
+                         stop.exit_ = true;
+                       }
+                       if (enter) {
+                         stop.enter_ = true;
+                       }
 
-                if (!enter) {
-                  stop.arrival_.valid_ = true;
-                  stop.arrival_.timestamp_ =
-                      to_motis_unixtime(stp.time(n::event_type::kArr));
-                  stop.arrival_.schedule_timestamp_ = to_motis_unixtime(
-                      stp.scheduled_time(n::event_type::kArr));
-                  stop.arrival_.timestamp_reason_ =
-                      fr.is_rt() ? timestamp_reason::FORECAST
-                                 : timestamp_reason::SCHEDULE;
+                       if (!enter) {
+                         stop.arrival_.valid_ = true;
+                         stop.arrival_.timestamp_ =
+                             to_motis_unixtime(stp.time(n::event_type::kArr));
+                         stop.arrival_.schedule_timestamp_ = to_motis_unixtime(
+                             stp.scheduled_time(n::event_type::kArr));
+                         stop.arrival_.timestamp_reason_ =
+                             fr.is_rt() ? timestamp_reason::FORECAST
+                                        : timestamp_reason::SCHEDULE;
 
-                  auto const track = stp.track();
-                  stop.arrival_.track_ = std::string{track};
-                  stop.arrival_.schedule_track_ = std::string{track};
-                }
+                         auto const track = stp.track();
+                         stop.arrival_.track_ = std::string{track};
+                         stop.arrival_.schedule_track_ = std::string{track};
+                       }
 
-                if (!exit) {
-                  stop.departure_.valid_ = true;
-                  stop.departure_.timestamp_ =
-                      to_motis_unixtime(stp.time(n::event_type::kDep));
-                  stop.departure_.schedule_timestamp_ = to_motis_unixtime(
-                      stp.scheduled_time(n::event_type::kDep));
-                  stop.departure_.timestamp_reason_ =
-                      fr.is_rt() ? timestamp_reason::FORECAST
-                                 : timestamp_reason::SCHEDULE;
+                       if (!exit) {
+                         stop.departure_.valid_ = true;
+                         stop.departure_.timestamp_ =
+                             to_motis_unixtime(stp.time(n::event_type::kDep));
+                         stop.departure_.schedule_timestamp_ =
+                             to_motis_unixtime(
+                                 stp.scheduled_time(n::event_type::kDep));
+                         stop.departure_.timestamp_reason_ =
+                             fr.is_rt() ? timestamp_reason::FORECAST
+                                        : timestamp_reason::SCHEDULE;
 
-                  auto const track = stp.track();
-                  stop.departure_.track_ = std::string{track};
-                  stop.departure_.schedule_track_ = std::string{track};
-                }
+                         auto const track = stp.track();
+                         stop.departure_.track_ = std::string{track};
+                         stop.departure_.schedule_track_ = std::string{track};
+                       }
 
-                if (!exit) {
-                  add_transports(fr, stop_idx);
-                }
-              }
-            },
-            [&, i = i, leg = leg](n::footpath const fp) {
-              add_walk(leg, fp.duration(), -1, i == nj.legs_.size() - 1U);
-            },
-            [&, leg = leg](n::routing::offset const x) {
-              add_walk(leg, x.duration(), x.transport_mode_id_, false);
-            }},
-        leg.uses_);
+                       if (!exit) {
+                         add_transports(fr, stop_idx);
+                       }
+                     }
+                   },
+                   [&, leg = leg](n::footpath const fp) {
+                     add_walk(leg, fp.duration(), -1);
+                   },
+                   [&, leg = leg](n::routing::offset const x) {
+                     add_walk(leg, x.duration(), x.transport_mode_id_);
+                   }},
+               leg.uses_);
   }
 
   for (auto const& [x, ranges] : transports.get_attribute_ranges()) {

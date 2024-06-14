@@ -151,6 +151,9 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(gtfsrt_incremental_, "gtfsrt_incremental",
         "true=incremental updates, false=forget all prev. RT updates");
   param(debug_, "debug", "write protobuf JSON files for debugging");
+  param(bikes_allowed_default_, "bikes_allowed_default",
+        "whether bikes are allowed in trips where no information is "
+        "available");
 }
 
 nigiri::~nigiri() = default;
@@ -391,6 +394,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                                 adjust_footpaths_, link_stop_distance_,
                                 cista::hash(default_timezone_));
 
+        auto bitfield_indices = n::hash_map<n::bitfield, n::bitfield_idx_t>{};
         auto datasets =
             std::vector<std::tuple<n::source_idx_t,
                                    decltype(impl_->loaders_)::const_iterator,
@@ -438,10 +442,14 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                   << "loading nigiri timetable with configuration "
                   << (*loader)->name();
 
+              auto config = n::loader::loader_config{
+                  .link_stop_distance_ = link_stop_distance_,
+                  .default_tz_ = default_timezone_};
+              config.bikes_allowed_default_.fill(bikes_allowed_default_);
+
               try {
-                (*loader)->load({.link_stop_distance_ = link_stop_distance_,
-                                 .default_tz_ = default_timezone_},
-                                src, *dir, **impl_->tt_);
+                (*loader)->load(config, src, *dir, **impl_->tt_,
+                                bitfield_indices);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
                 progress_tracker->status(fmt::format("ERROR: {}", e.what()))
