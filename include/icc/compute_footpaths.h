@@ -12,6 +12,7 @@ void compute_footpaths(nigiri::timetable&,
                        osr::ways const&,
                        osr::lookup const&,
                        osr::platforms const&,
-                       osr::bitvec<osr::node_idx_t> const& blocked);
+                       osr::bitvec<osr::node_idx_t> const& blocked,
+                       bool update_coordinates);
 
 }  // namespace icc

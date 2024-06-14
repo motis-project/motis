@@ -75,7 +75,7 @@ int main(int ac, char** av) {
       get_blocked_elevators(w, elevators, elevators_rtree, elevator_nodes);
 
   fmt::println("computing footpaths");
-  compute_footpaths(*tt, w, l, pl, blocked);
+  compute_footpaths(*tt, w, l, pl, blocked, true);
 
   fmt::println("writing result");
   tt->write(out_path);
