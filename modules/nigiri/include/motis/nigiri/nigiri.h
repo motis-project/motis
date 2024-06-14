@@ -47,6 +47,7 @@ private:
   unsigned gtfsrt_update_interval_sec_{60U};
   bool gtfsrt_incremental_{false};
   bool debug_{false};
+  bool bikes_allowed_default_{false};
 };
 
 }  // namespace motis::nigiri

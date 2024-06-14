@@ -135,6 +135,12 @@ RoutingRequest:
         The maximum number of transfers allowed per journey.
 
         If set to `-1`, the internal default value is used.
+    bike_transport:
+      description: |
+        Whether only journeys where bike transport is allowed should be considered.
+
+        If set to `true`, only trips where bike transport is allowed can be
+        used.
 RoutingResponse:
   description: TODO
   fields:

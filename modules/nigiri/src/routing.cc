@@ -322,7 +322,8 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .extend_interval_earlier_ = extend_interval_earlier,
       .extend_interval_later_ = extend_interval_later,
       .prf_idx_ = prf_idx,
-      .allowed_claszes_ = to_clasz_mask(req->allowed_claszes())};
+      .allowed_claszes_ = to_clasz_mask(req->allowed_claszes()),
+      .require_bike_transport_ = req->bike_transport()};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
