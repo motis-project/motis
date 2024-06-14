@@ -204,16 +204,19 @@ void nigiri::init(motis::module::registry& reg) {
                   },
                   {});
 
-  if (!impl_->tt_->get()->profiles_.empty()) {
-    for (auto const& [prf_name, prf_idx] : impl_->tt_->get()->profiles_) {
-      reg.register_op(fmt::format("/nigiri/{}", prf_name),
-                      [&, p = prf_idx, this](mm::msg_ptr const& msg) {
-                        return route(impl_->tags_, **impl_->tt_,
-                                     impl_->get_rtt().get(), msg, p);
-                      },
-                      {});
-    }
-  }
+  reg.register_op("/nigiri/foot",
+                  [&, this](mm::msg_ptr const& msg) {
+                    return route(impl_->tags_, **impl_->tt_,
+                                 impl_->get_rtt().get(), msg, 1);
+                  },
+                  {});
+
+  reg.register_op("/nigiri/wheelchair",
+                  [&, this](mm::msg_ptr const& msg) {
+                    return route(impl_->tags_, **impl_->tt_,
+                                 impl_->get_rtt().get(), msg, 2);
+                  },
+                  {});
 
   if (lookup_) {
     reg.register_op("/lookup/geo_station",
