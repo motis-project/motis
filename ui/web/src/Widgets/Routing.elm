@@ -666,10 +666,13 @@ searchView locale model =
                 , Html.map ToModesUpdate <|
                     ModePicker.view locale locale.t.search.destinationTransports model.toModes
                 ]
-            , div [ class "pure-u-1 pure-u-sm-12-24" ]
+            , div [ class "pure-u-1 pure-u-sm-9-24" ]
                 [ Html.map TimeUpdate <|
                     TimeInput.view 4 locale.t.search.time model.time
                 ]
+            , div
+                [ class "pure-u-1 pure-u-sm-3-24 time-option" ]
+                (searchDirectionView locale model)
             ]
         ]
     , div [ id "connections" ]
