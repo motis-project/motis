@@ -222,6 +222,8 @@ update msg model =
             { model
                 | fromLocation = model.toLocation
                 , toLocation = model.fromLocation
+                , fromModes = model.toModes
+                , toModes = model.fromModes
             }
                 ! []
                 |> checkRoutingRequest
@@ -653,6 +655,7 @@ searchView locale model =
                     Typeahead.view 1 locale.t.search.start (Just "place") model.fromLocation
                 , Html.map FromModesUpdate <|
                     ModePicker.view locale locale.t.search.startTransports model.fromModes
+                , swapLocationsView model
                 ]
             , div [ class "pure-u-1 pure-u-sm-12-24" ]
                 [ Html.map DateUpdate <|
@@ -666,10 +669,13 @@ searchView locale model =
                 , Html.map ToModesUpdate <|
                     ModePicker.view locale locale.t.search.destinationTransports model.toModes
                 ]
-            , div [ class "pure-u-1 pure-u-sm-12-24" ]
+            , div [ class "pure-u-1 pure-u-sm-9-24" ]
                 [ Html.map TimeUpdate <|
                     TimeInput.view 4 locale.t.search.time model.time
                 ]
+            , div
+                [ class "pure-u-1 pure-u-sm-3-24 time-option" ]
+                (searchDirectionView locale model)
             ]
         ]
     , div [ id "connections" ]

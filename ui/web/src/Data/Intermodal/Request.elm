@@ -264,6 +264,14 @@ encodeRequest request =
 
         ( destinationType, destination ) =
             encodeIntermodalDestination fixedDestination
+
+        ( startModes, destinationModes ) =
+            case request.searchDir of
+                Forward ->
+                    ( request.startModes, request.destinationModes )
+
+                Backward ->
+                    ( request.destinationModes, request.startModes )
     in
     Encode.object
         [ "destination"
@@ -277,11 +285,11 @@ encodeRequest request =
                 [ "start_type" => startType
                 , "start" => start
                 , "start_modes"
-                    => Encode.list (List.map encodeMode request.startModes)
+                    => Encode.list (List.map encodeMode startModes)
                 , "destination_type" => destinationType
                 , "destination" => destination
                 , "destination_modes"
-                    => Encode.list (List.map encodeMode request.destinationModes)
+                    => Encode.list (List.map encodeMode destinationModes)
                 , "search_type" => encodeSearchType request.searchType
                 , "search_dir" => encodeSearchDirection request.searchDir
                 , "router" => Encode.string ""
