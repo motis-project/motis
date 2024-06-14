@@ -99,7 +99,8 @@ void compute_footpaths(nigiri::timetable& tt,
         }
       }
 
-      pt->update_monotonic(i);
+      pt->update_monotonic(
+          (mode == osr::search_profile::kFoot ? 0U : tt.n_locations()) + i);
     });
   }
 
