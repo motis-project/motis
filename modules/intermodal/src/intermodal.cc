@@ -541,7 +541,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
                 ? 0
                 : mc.CreateVector(req->allowed_claszes()->Data(),
                                   req->allowed_claszes()->size()),
-            req->max_transfers(), req->bike_transport())
+            req->max_transfers(), req->bike_transport(),
+            req->min_transfer_time(), req->transfer_time_factor())
             .Union(),
         router);
 

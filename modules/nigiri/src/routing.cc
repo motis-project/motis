@@ -323,7 +323,12 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .extend_interval_later_ = extend_interval_later,
       .prf_idx_ = prf_idx,
       .allowed_claszes_ = to_clasz_mask(req->allowed_claszes()),
-      .require_bike_transport_ = req->bike_transport()};
+      .require_bike_transport_ = req->bike_transport(),
+      .transfer_time_settings_ = n::routing::transfer_time_settings{
+          .default_ = req->min_transfer_time() <= 0 &&
+                      req->transfer_time_factor() == 1.0F,
+          .min_transfer_time_ = n::duration_t{req->min_transfer_time()},
+          .factor_ = req->transfer_time_factor()}};
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
