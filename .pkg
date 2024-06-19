@@ -1,11 +1,11 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=26303215878ce61269c12a5ec9cfb95b01c01a8b
+  commit=55cd64c43a1d9711306e596b5aa51f787dcf0db9
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=platform
-  commit=1ae7b1e2efb7ac36cb0c57773dae489d2e910889
+  commit=1b8a2e628e25248f6114cd84149aa24f27e3bb73
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
