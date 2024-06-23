@@ -1,6 +1,7 @@
 #include "icc/match_platforms.h"
 
 #include "utl/helpers/algorithm.h"
+#include "utl/parallel_for.h"
 #include "utl/parser/arg_parser.h"
 
 #include "osr/geojson.h"
@@ -180,6 +181,17 @@ std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
         osr::to_ref(p));
   }
   return closest;
+}
+
+vector_map<n::location_idx_t, osr::platform_idx_t> get_matches(
+    nigiri::timetable const& tt, osr::platforms const& pl, osr::ways const& w) {
+  auto m = n::vector_map<n::location_idx_t, osr::platform_idx_t>{};
+  m.resize(tt.n_locations());
+  utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
+    auto const l = n::location_idx_t{i};
+    m[l] = get_match(tt, pl, w, l);
+  });
+  return m;
 }
 
 osr::platform_idx_t get_match(n::timetable const& tt,

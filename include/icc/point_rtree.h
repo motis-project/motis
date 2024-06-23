@@ -8,6 +8,11 @@
 
 namespace icc {
 
+template <typename T, typename Fn>
+concept RtreePosHandler = requires(geo::latlng const& pos, T const x, Fn&& f) {
+  { std::forward<Fn>(f)(pos, x) };
+};
+
 template <typename T>
 struct point_rtree {
   point_rtree() : rtree_{rtree_new()} {}
@@ -42,6 +47,15 @@ struct point_rtree {
   }
 
   template <typename Fn>
+  void in_radius(geo::latlng const& x, double distance, Fn&& fn) const {
+    find(x, [&](geo::latlng const& pos, T const item) {
+      if (geo::distance(x, pos) < distance) {
+        fn(item);
+      }
+    });
+  }
+
+  template <typename Fn>
   void find(geo::latlng const& x, Fn&& fn) const {
     find({x.lat() - 0.01, x.lng() - 0.01}, {x.lat() + 0.01, x.lng() + 0.01},
          std::forward<Fn>(fn));
@@ -55,10 +69,17 @@ struct point_rtree {
         std::array{std::max(a.lng_, b.lng_), std::max(a.lat_, b.lat_)};
     rtree_search(
         rtree_, min.data(), max.data(),
-        [](double const* /* min */, double const* /* max */, void const* item,
+        [](double const* min, double const* /* max */, void const* item,
            void* udata) {
-          (*reinterpret_cast<Fn*>(udata))(T{static_cast<cista::base_t<T>>(
-              reinterpret_cast<std::size_t>(item))});
+          if constexpr (RtreePosHandler<T, Fn>) {
+            (*reinterpret_cast<Fn*>(udata))(
+                geo::latlng{min[1], min[0]},
+                T{static_cast<cista::base_t<T>>(
+                    reinterpret_cast<std::size_t>(item))});
+          } else {
+            (*reinterpret_cast<Fn*>(udata))(T{static_cast<cista::base_t<T>>(
+                reinterpret_cast<std::size_t>(item))});
+          }
           return true;
         },
         &fn);

@@ -5,15 +5,13 @@
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 
+#include "icc/constants.h"
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 
 namespace n = nigiri;
 
 namespace icc {
-
-constexpr auto const kMaxDuration = 15;
-constexpr auto const kMaxDistance = 2000;
 
 void compute_footpaths(nigiri::timetable& tt,
                        osr::ways const& w,
@@ -22,15 +20,7 @@ void compute_footpaths(nigiri::timetable& tt,
                        osr::bitvec<osr::node_idx_t> const& blocked,
                        bool const update_coordinates) {
   fmt::println("creating matches");
-  auto const matches = [&]() {
-    auto m = n::vector_map<n::location_idx_t, osr::platform_idx_t>{};
-    m.resize(tt.n_locations());
-    utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
-      auto const l = n::location_idx_t{i};
-      m[l] = get_match(tt, pl, w, l);
-    });
-    return m;
-  }();
+  auto const matches = get_matches(tt, pl, w);
 
   auto const get_loc = [&](n::location_idx_t const l) -> osr::location {
     return {tt.locations_.coordinates_[l],
@@ -58,17 +48,6 @@ void compute_footpaths(nigiri::timetable& tt,
     return t;
   }();
 
-  auto const in_radius = [&](n::location_idx_t const l) {
-    auto const l_pos = tt.locations_.coordinates_[l];
-    auto v = std::vector<n::location_idx_t>{};
-    loc_rtree.find(l_pos, [&](n::location_idx_t const x) {
-      if (geo::distance(l_pos, tt.locations_.coordinates_[x]) < kMaxDistance) {
-        v.emplace_back(x);
-      }
-    });
-    return v;
-  };
-
   auto const g = utl::global_progress_bars{};
   auto const pt = utl::get_active_progress_tracker_or_activate("routing");
   pt->in_high(tt.n_locations() * 2U);
@@ -83,7 +62,10 @@ void compute_footpaths(nigiri::timetable& tt,
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
       auto const l = n::location_idx_t{i};
-      auto const neighbors = in_radius(l);
+      auto neighbors = std::vector<n::location_idx_t>{};
+      loc_rtree.in_radius(
+          tt.locations_.coordinates_[l], kMaxDistance,
+          [&](n::location_idx_t const l) { neighbors.emplace_back(l); });
       auto const results = osr::route(
           w, lookup, mode, get_loc(l),
           utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
