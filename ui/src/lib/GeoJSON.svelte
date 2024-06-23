@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy, onMount, setContext, type Snippet } from 'svelte';
+	import { getContext, onDestroy, setContext, type Snippet } from 'svelte';
 
 	class Props {
 		id!: string;

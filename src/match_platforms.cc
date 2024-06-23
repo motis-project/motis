@@ -155,7 +155,31 @@ std::optional<geo::latlng> get_platform_center(osr::platforms const& pl,
   if (c.n_ == 0U) {
     return std::nullopt;
   }
-  return c.get_center();
+
+  auto const center = c.get_center();
+  auto closest = geo::latlng{};
+  auto update_closest = [&, dist = std::numeric_limits<double>::max()](
+                            geo::latlng const& candidate) mutable {
+    auto const candidate_dist = geo::distance(candidate, center);
+    if (candidate_dist < dist) {
+      closest = candidate;
+      dist = candidate_dist;
+    }
+  };
+  for (auto const p : pl.platform_ref_[x]) {
+    std::visit(
+        utl::overloaded{
+            [&](osr::node_idx_t const node) {
+              update_closest(pl.get_node_pos(node).as_latlng());
+            },
+            [&](osr::way_idx_t const way) {
+              for (auto const [a, b] : utl::pairwise(w.way_polylines_[way])) {
+                update_closest(geo::closest_on_segment(center, a, b));
+              }
+            }},
+        osr::to_ref(p));
+  }
+  return closest;
 }
 
 osr::platform_idx_t get_match(n::timetable const& tt,

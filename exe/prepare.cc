@@ -13,7 +13,6 @@
 #include "icc/compute_footpaths.h"
 #include "icc/elevators/match_elevator.h"
 #include "icc/elevators/parse_fasta.h"
-#include "utl/parallel_for.h"
 
 namespace fs = std::filesystem;
 namespace bpo = boost::program_options;

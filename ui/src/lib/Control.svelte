@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { Map, ControlPosition } from 'maplibre-gl';
-	import { getContext, onDestroy } from 'svelte';
-	import { get } from 'svelte/store';
+	import { getContext, onDestroy, type Snippet } from 'svelte';
 
-	let { children, ...props } = $props();
+	class Props {
+		children!: Snippet<[any]>;
+		position: maplibregl.ControlPosition = 'top-right';
+	}
+	let { children, position, ...props }: Props = $props();
 
 	let el: HTMLElement | null = null;
 
@@ -25,7 +28,7 @@
 
 	$effect(() => {
 		if (ctx.map && el) {
-			ctx.map.addControl(ctrl, 'top-right');
+			ctx.map.addControl(ctrl, position);
 			initialized = true;
 		}
 	});

@@ -84,25 +84,33 @@
 	let init = false;
 	$effect(() => {
 		if (map && !init) {
-			['graph-node', 'graph-edge', 'graph-geometry', 'matches', 'match', 'elevators-match'].forEach(
-				(layer) => {
-					map!.on('click', layer, (e) => {
-						new maplibregl.Popup()
-							.setLngLat(e.lngLat)
-							.setDOMContent(toTable(e.features[0].properties))
-							.addTo(map!);
-						e.originalEvent.stopPropagation();
-					});
+			[
+				'graph-node',
+				'graph-edge',
+				'graph-geometry',
+				'matches',
+				'match',
+				'elevators',
+				'elevators-match',
+				'platform-way',
+				'platform-node'
+			].forEach((layer) => {
+				map!.on('click', layer, (e) => {
+					new maplibregl.Popup()
+						.setLngLat(e.lngLat)
+						.setDOMContent(toTable(e.features[0].properties))
+						.addTo(map!);
+					e.originalEvent.stopPropagation();
+				});
 
-					map!.on('mouseenter', layer, () => {
-						map!.getCanvas().style.cursor = 'pointer';
-					});
+				map!.on('mouseenter', layer, () => {
+					map!.getCanvas().style.cursor = 'pointer';
+				});
 
-					map!.on('mouseleave', layer, () => {
-						map!.getCanvas().style.cursor = '';
-					});
-				}
-			);
+				map!.on('mouseleave', layer, () => {
+					map!.getCanvas().style.cursor = '';
+				});
+			});
 
 			const startMarker = new maplibregl.Marker({
 				draggable: true,
@@ -169,9 +177,6 @@
 			init = true;
 		}
 	});
-
-	// client ID: a9b1f1ad1051790a9c6970db85710986
-	// client Secret: df987129855de70a804f146718aac956
 </script>
 
 <Map

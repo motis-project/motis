@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "icc/match.h"
+#include "icc/match_platforms.h"
 
 TEST(icc, get_track) {
   ASSERT_FALSE(icc::get_track("a:").has_value());
