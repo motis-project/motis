@@ -7,7 +7,6 @@
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
 	import {
-		Footpath,
 		RoutingQuery,
 		Location,
 		getElevators,
@@ -105,6 +104,8 @@
 	};
 
 	let init = false;
+	let startMarker = null;
+	let destinationMarker = null;
 	$effect(() => {
 		if (map && !init) {
 			[
@@ -137,7 +138,7 @@
 				});
 			});
 
-			const startMarker = new maplibregl.Marker({
+			startMarker = new maplibregl.Marker({
 				draggable: true,
 				color: 'green'
 			})
@@ -150,7 +151,7 @@
 					start.level = level;
 				});
 
-			const destinationMarker = new maplibregl.Marker({
+			destinationMarker = new maplibregl.Marker({
 				draggable: true,
 				color: 'red'
 			})
@@ -254,32 +255,32 @@
 									<TableCell>{f.id.name}</TableCell>
 									<TableCell>{f.default}</TableCell>
 									<TableCell>
-										{#if f.foot !== undefined}
-											<Button
-												on:click={async () => {
+										<Button
+											on:click={async () => {
 													start = footpaths!.loc;
 													destination = f.loc;
 													profile.label = 'Foot';
 													profile.value = 'foot';
+													startMarker.setLngLat([start.lng, start.lat]);
+													destinationMarker.setLngLat([destination.lng, destination.lat]);
 													await showLocation(f.id);
 												}}
-												variant="outline">{f.foot}</Button
-											>
-										{/if}
+											variant="outline">{f.foot}</Button
+										>
 									</TableCell>
 									<TableCell>
-										{#if f.wheelchair !== undefined}
-											<Button
-												on:click={async () => {
+										<Button
+											on:click={async () => {
 													start = footpaths!.loc;
 													destination = f.loc;
 													profile.label = 'Wheelchair';
 													profile.value = 'wheelchair';
+													startMarker.setLngLat([start.lng, start.lat]);
+													destinationMarker.setLngLat([destination.lng, destination.lat]);
 													await showLocation(f.id);
 												}}
-												variant="outline">{f.wheelchair}</Button
-											>
-										{/if}
+											variant="outline">{f.wheelchair}</Button
+										>
 									</TableCell>
 								</TableRow>
 							{/each}

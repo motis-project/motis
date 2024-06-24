@@ -80,6 +80,7 @@ json::value footpaths::operator()(json::value const& query) const {
                    utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
                    kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
                    &blocked_);
+
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
         auto const duration =
