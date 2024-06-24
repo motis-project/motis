@@ -15,6 +15,6 @@ constexpr auto const kMaxMatchingDistance = 8;
 constexpr auto const kMaxAdjust = 45;
 
 // multiplier for transfer times
-constexpr auto const kTransferTimeMultiplier = 2;
+constexpr auto const kTransferTimeMultiplier = 1.5F;
 
 }  // namespace icc

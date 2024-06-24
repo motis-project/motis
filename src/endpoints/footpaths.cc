@@ -83,8 +83,8 @@ json::value footpaths::operator()(json::value const& query) const {
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
-        auto const duration =
-            n::duration_t{r->cost_ * kTransferTimeMultiplier / 60U};
+        auto const duration = n::duration_t{static_cast<n::duration_t::rep>(
+            std::ceil(r->cost_ * kTransferTimeMultiplier / 60U))};
         if (duration < n::footpath::kMaxDuration) {
           footpaths[n].set(mode, duration);
         }

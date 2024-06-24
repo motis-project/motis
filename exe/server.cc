@@ -32,13 +32,6 @@ namespace json = boost::json;
 
 using namespace icc;
 
-template <typename Fn>
-void run_interval(boost::asio::io_context const& ioc,
-                  std::chrono::seconds const& s,
-                  Fn&& f) {
-  auto const timer = std::make_shared<boost::asio::deadline_timer>();
-}
-
 int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};
   auto osr_path = fs::path{"osr"};
