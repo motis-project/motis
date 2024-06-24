@@ -2,110 +2,84 @@ import maplibregl from 'maplibre-gl';
 
 const baseUrl = 'http://localhost:8000';
 
+export class Location {
+	lat!: number;
+	lng!: number;
+	level!: number;
+}
+
+export class Id {
+	name!: string;
+	id!: string;
+	src!: number;
+}
+
+export class Footpath {
+	id!: Id;
+	loc!: Location;
+	default?: number;
+	foot?: number;
+	wheelchair?: number;
+}
+
+export class Footpaths {
+	loc!: Location;
+	id!: Id;
+	footpaths!: Array<Footpath>;
+}
+
 export class RoutingQuery {
-	start!: Array<number>;
-	start_level!: number;
-	destination!: Array<number>;
-	destination_level!: number;
+	start!: Location;
+	destination!: Location;
 	profile!: string;
 	direction!: string;
 }
 
-export const getPlatforms = async (bounds: maplibregl.LngLatBounds, level: number) => {
-	const response = await fetch(`${baseUrl}/api/platforms`, {
+const post = async (path: string, req: any) => {
+	const response = await fetch(`${baseUrl}${path}`, {
 		method: 'POST',
 		mode: 'cors',
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({
-			level: level,
-			waypoints: bounds.toArray().flat()
-		})
+		body: JSON.stringify(req)
 	});
 	return await response.json();
+}
+
+export const getPlatforms = async (bounds: maplibregl.LngLatBounds, level: number) => {
+	return await post('/api/platforms', {
+		level: level,
+		waypoints: bounds.toArray().flat()
+	});
 };
 
 export const getRoute = async (query: RoutingQuery) => {
-	const response = await fetch(`${baseUrl}/api/route`, {
-		method: 'POST',
-		mode: 'cors',
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			start: {
-				lat: query.start[1],
-				lng: query.start[0],
-				level: query.start_level
-			},
-			destination: {
-				lat: query.destination[1],
-				lng: query.destination[0],
-				level: query.destination_level
-			},
-			profile: query.profile,
-			direction: query.direction
-		})
-	});
-	return await response.json();
+	return await post('/api/route', query);
 };
 
 export const getGraph = async (bounds: maplibregl.LngLatBounds, level: number) => {
-	const response = await fetch(`${baseUrl}/api/graph`, {
-		method: 'POST',
-		mode: 'cors',
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			level: level,
-			waypoints: bounds.toArray().flat()
-		})
+	return await post('/api/graph', {
+		level: level,
+		waypoints: bounds.toArray().flat()
 	});
-	return await response.json();
 };
 
 export const getLevels = async (bounds: maplibregl.LngLatBounds) => {
-	const response = await fetch(`${baseUrl}/api/levels`, {
-		method: 'POST',
-		mode: 'cors',
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			waypoints: bounds.toArray().flat()
-		})
+	return await post('/api/levels', {
+		waypoints: bounds.toArray().flat()
 	});
-	return await response.json();
 };
 
 export const getMatches = async (bounds: maplibregl.LngLatBounds) => {
-	const response = await fetch(`${baseUrl}/api/matches`, {
-		method: 'POST',
-		mode: 'cors',
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(bounds.toArray().flat())
-	});
-	return await response.json();
+	return await post('/api/matches', bounds.toArray().flat());
 };
 
 export const getElevators = async (bounds: maplibregl.LngLatBounds) => {
-	const response = await fetch(`${baseUrl}/api/elevators`, {
-		method: 'POST',
-		mode: 'cors',
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(bounds.toArray().flat())
-	});
-	return await response.json();
+	return await post('/api/elevators', bounds.toArray().flat());
 };
+
+export const getFootpaths = async (station: {id: string, src: number}) : Promise<Footpaths> =>  {
+	return await post('/api/footpaths', station);
+}

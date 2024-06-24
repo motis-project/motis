@@ -3,8 +3,8 @@
 	import { getContext, onDestroy, type Snippet } from 'svelte';
 
 	class Props {
-		children!: Snippet<[any]>;
-		position: maplibregl.ControlPosition = 'top-right';
+		children!: Snippet;
+		position?: maplibregl.ControlPosition = 'top-right';
 	}
 	let { children, position, ...props }: Props = $props();
 

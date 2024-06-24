@@ -46,6 +46,7 @@ json::value matches::operator()(json::value const& query) const {
     auto props =
         json::value{{"name", tt_.locations_.names_[l].view()},
                     {"id", tt_.locations_.ids_[l].view()},
+                    {"src", to_idx(tt_.locations_.src_[l])},
                     {"type", "location"},
                     {"trips", fmt::format("{}", get_location_routes(tt_, l))}}
             .as_object();

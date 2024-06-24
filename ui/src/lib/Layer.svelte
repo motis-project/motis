@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onDestroy, getContext } from 'svelte';
+	import { onDestroy, getContext, setContext } from 'svelte';
 
 	let {
 		id,
@@ -15,8 +15,11 @@
 		paint: Object;
 	} = $props();
 
-	let ctx: { map: maplibregl.Map | null } = getContext('map');
-	let source: { id: string | null } = getContext('source');
+	let layer = $state<{ id: null | string }>({ id: null });
+	setContext('layer', layer);
+
+	let ctx: { map: maplibregl.Map | null } = getContext('map'); // from Map component
+	let source: { id: string | null } = getContext('source'); // from GeoJSON component
 
 	let initialized = false;
 	let currFilter = filter;
@@ -28,6 +31,7 @@
 		if (!source.id) {
 			if (l) {
 				console.log('REMOVE', id);
+				layer.id = null;
 				ctx.map?.removeLayer(id);
 			}
 			return;
@@ -50,6 +54,7 @@
 			currFilter = $state.snapshot(filter);
 			currLayout = $state.snapshot(layout);
 			currPaint = $state.snapshot(paint);
+			layer.id = id;
 			return;
 		}
 

@@ -31,12 +31,13 @@ void compute_footpaths(nigiri::timetable& tt,
 
   fmt::println("creating r-tree");
   auto const loc_rtree = [&]() {
-    auto t = icc::point_rtree<n::location_idx_t>{};
+    auto t = point_rtree<n::location_idx_t>{};
     for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
       if (update_coordinates && matches[i] != osr::platform_idx_t::invalid()) {
         auto const center = get_platform_center(pl, w, matches[i]);
         if (center.has_value() &&
-            geo::distance(*center, tt.locations_.coordinates_[i]) < 35) {
+            geo::distance(*center, tt.locations_.coordinates_[i]) <
+                kMaxAdjust) {
           tt.locations_.coordinates_[i] = *center;
         }
       }
@@ -69,7 +70,8 @@ void compute_footpaths(nigiri::timetable& tt,
       auto const results = osr::route(
           w, lookup, mode, get_loc(l),
           utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
-          kMaxDuration, osr::direction::kForward, 8, &blocked);
+          kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
+          &blocked);
       for (auto const [n, r] : utl::zip(neighbors, results)) {
         if (r.has_value()) {
           auto const duration = n::duration_t{r->cost_ / 60U};

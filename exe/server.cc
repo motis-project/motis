@@ -1,4 +1,3 @@
-
 #include "fmt/core.h"
 
 #include "boost/asio/deadline_timer.hpp"
@@ -15,11 +14,13 @@
 #include "icc/elevators/match_elevator.h"
 #include "icc/elevators/parse_fasta.h"
 #include "icc/endpoints/elevators.h"
+#include "icc/endpoints/footpaths.h"
 #include "icc/endpoints/graph.h"
 #include "icc/endpoints/levels.h"
 #include "icc/endpoints/matches.h"
 #include "icc/endpoints/osr_routing.h"
 #include "icc/endpoints/platforms.h"
+#include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 
 namespace asio = boost::asio;
@@ -105,6 +106,9 @@ int main(int ac, char** av) {
     return t;
   }();
 
+  fmt::println("creating matches");
+  auto const matches = get_matches(*tt, pl, w);
+
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
   auto qr =
@@ -115,7 +119,9 @@ int main(int ac, char** av) {
           .route("POST", "/api/route", ep::osr_routing{w, l, blocked})
           .route("POST", "/api/levels", ep::levels{w, l})
           .route("POST", "/api/platforms", ep::platforms{w, l, pl})
-          .route("POST", "/api/graph", ep::graph{w, l});
+          .route("POST", "/api/graph", ep::graph{w, l})
+          .route("POST", "/api/footpaths",
+                 ep::footpaths{*tt, w, l, pl, loc_rtree, matches, *blocked});
 
   qr.serve_files("ui/build");
   qr.enable_cors();

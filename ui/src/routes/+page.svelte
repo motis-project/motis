@@ -1,4 +1,5 @@
 <script lang="ts">
+	import X from 'lucide-svelte/icons/x';
 	import maplibregl from 'maplibre-gl';
 	import { getStyle } from '$lib/style';
 	import Map from '$lib/Map.svelte';
@@ -6,13 +7,17 @@
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
 	import {
+		Footpath,
 		RoutingQuery,
+		Location,
 		getElevators,
+		getFootpaths,
 		getGraph,
 		getLevels,
 		getMatches,
 		getPlatforms,
-		getRoute
+		getRoute,
+		Footpaths
 	} from '$lib/api';
 	import { toTable } from '$lib/toTable';
 	import {
@@ -23,6 +28,15 @@
 		SelectItem
 	} from '$lib/components/ui/select';
 	import { Toggle } from '$lib/components/ui/toggle';
+	import { Button } from '$lib/components/ui/button';
+	import {
+		Table,
+		TableHead,
+		TableBody,
+		TableCell,
+		TableRow,
+		TableHeader
+	} from '$lib/components/ui/table/index.js';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -41,7 +55,7 @@
 	);
 
 	let showGraph = $state(false);
-	let graph = $state<null | Object>(null);
+	let graph = $state<null | any>(null);
 	$effect(async () => {
 		graph = showGraph && bounds ? await getGraph(bounds, level) : null;
 	});
@@ -55,31 +69,40 @@
 	});
 
 	let showMatches = $state(false);
-	let matches = $state<null | Object>(null);
+	let matches = $state<null | any>(null);
 	$effect(async () => {
 		matches = showMatches && bounds ? await getMatches(bounds) : null;
 	});
 
 	let showElevators = $state<boolean>(false);
-	let elevators = $state<null | Object>(null);
+	let elevators = $state<null | any>(null);
 	$effect(async () => {
 		elevators = showElevators && bounds ? await getElevators(bounds) : null;
 	});
 
 	let profile = $state({ value: 'foot', label: 'Foot' });
-	let start = $state<[number, number]>([8.663205312233744, 50.106847864540164]);
-	let destination = $state<[number, number]>([8.665205312233744, 50.106847864540164]);
-	let start_level = $state<number>(0.0);
-	let destination_level = $state<number>(0.0);
+	let start = $state<Location>({
+		lat: 50.106847864540164,
+		lng: 8.663205312233744,
+		level: 0
+	});
+	let destination = $state<Location>({
+		lat: 50.106847864540164,
+		lng: 8.665205312233744,
+		level: 0
+	});
 	let query = $derived<RoutingQuery>({
 		start,
 		destination,
-		start_level,
-		destination_level,
 		profile: profile.value,
 		direction: 'forward'
 	});
 	let route = $derived(getRoute(query));
+
+	let footpaths = $state<Footpaths | null>();
+	const showLocation = async (props: any) => {
+		footpaths = await getFootpaths({ id: props.id, src: props.src });
+	};
 
 	let init = false;
 	$effect(() => {
@@ -95,12 +118,14 @@
 				'platform-way',
 				'platform-node'
 			].forEach((layer) => {
-				map!.on('click', layer, (e) => {
-					new maplibregl.Popup()
-						.setLngLat(e.lngLat)
-						.setDOMContent(toTable(e.features[0].properties))
-						.addTo(map!);
+				map!.on('click', layer, async (e) => {
+					const props = e.features[0].properties;
+					new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(toTable(props)).addTo(map!);
 					e.originalEvent.stopPropagation();
+
+					if (layer === 'matches' && props.type === 'location') {
+						await showLocation(props);
+					}
 				});
 
 				map!.on('mouseenter', layer, () => {
@@ -116,24 +141,26 @@
 				draggable: true,
 				color: 'green'
 			})
-				.setLngLat(start)
+				.setLngLat([start.lng, start.lat])
 				.addTo(map)
 				.on('dragend', async () => {
 					const x = startMarker.getLngLat();
-					start = [x.lng, x.lat];
-					start_level = level;
+					start.lng = x.lng;
+					start.lat = x.lat;
+					start.level = level;
 				});
 
 			const destinationMarker = new maplibregl.Marker({
 				draggable: true,
 				color: 'red'
 			})
-				.setLngLat(destination)
+				.setLngLat([destination.lng, destination.lat])
 				.addTo(map)
 				.on('dragend', async () => {
 					const x = destinationMarker.getLngLat();
-					destination = [x.lng, x.lat];
-					destination_level = level;
+					destination.lng = x.lng;
+					destination.lat = x.lat;
+					destination.level = level;
 				});
 
 			let popup: maplibregl.Popup | null = null;
@@ -153,8 +180,9 @@
 				setStart.innerText = 'start';
 				setStart.onclick = () => {
 					startMarker.setLngLat(x);
-					start = [x.lng, x.lat];
-					start_level = level;
+					start.lng = x.lng;
+					start.lat = x.lat;
+					start.level = level;
 					popup!.remove();
 				};
 				actionsDiv.appendChild(setStart);
@@ -165,8 +193,9 @@
 				setDest.innerText = 'destination';
 				setDest.onclick = () => {
 					destinationMarker.setLngLat(x);
-					destination = [x.lng, x.lat];
-					destination_level = level;
+					destination.lng = x.lng;
+					destination.lat = x.lat;
+					destination.level = level;
 					popup!.remove();
 				};
 				actionsDiv.appendChild(setDest);
@@ -192,6 +221,75 @@
 	class="h-screen"
 	style={getStyle(level)}
 >
+	{#if footpaths}
+		<Control position="top-left">
+			<div class="bg-white rounded-lg">
+				<div class="w-full flex justify-between bg-muted shadow-md items-center">
+					<h2 class="text-lg ml-2">
+						{footpaths.id.name}
+						<span class="ml-2 text-sm text-muted-foreground">
+							{footpaths.id.id}
+						</span>
+					</h2>
+					<Button
+						variant="ghost"
+						on:click={() => {
+							footpaths = null;
+						}}><X /></Button
+					>
+				</div>
+				<div class="h-[500px] overflow-y-scroll">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Station</TableHead>
+								<TableHead>Default</TableHead>
+								<TableHead>Foot</TableHead>
+								<TableHead>Wheelchair</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{#each footpaths.footpaths as f}
+								<TableRow>
+									<TableCell>{f.id.name}</TableCell>
+									<TableCell>{f.default}</TableCell>
+									<TableCell>
+										{#if f.foot !== undefined}
+											<Button
+												on:click={async () => {
+													start = footpaths!.loc;
+													destination = f.loc;
+													profile.label = 'Foot';
+													profile.value = 'foot';
+													await showLocation(f.id);
+												}}
+												variant="outline">{f.foot}</Button
+											>
+										{/if}
+									</TableCell>
+									<TableCell>
+										{#if f.wheelchair !== undefined}
+											<Button
+												on:click={async () => {
+													start = footpaths!.loc;
+													destination = f.loc;
+													profile.label = 'Wheelchair';
+													profile.value = 'wheelchair';
+													await showLocation(f.id);
+												}}
+												variant="outline">{f.wheelchair}</Button
+											>
+										{/if}
+									</TableCell>
+								</TableRow>
+							{/each}
+						</TableBody>
+					</Table>
+				</div>
+			</div>
+		</Control>
+	{/if}
+
 	<Control>
 		<div class="bg-white rounded-lg">
 			<Toggle
