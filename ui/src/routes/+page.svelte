@@ -16,7 +16,8 @@
 		getMatches,
 		getPlatforms,
 		getRoute,
-		Footpaths
+		Footpaths,
+		updateElevator
 	} from '$lib/api';
 	import { toTable } from '$lib/toTable';
 	import {
@@ -103,6 +104,8 @@
 		footpaths = await getFootpaths({ id: props.id, src: props.src });
 	};
 
+	let elevator = $state();
+
 	let init = false;
 	let startMarker = null;
 	let destinationMarker = null;
@@ -126,6 +129,10 @@
 
 					if (layer === 'matches' && props.type === 'location') {
 						await showLocation(props);
+					}
+
+					if (layer === 'elevators') {
+						elevator = props;
 					}
 				});
 
@@ -222,6 +229,25 @@
 	class="h-screen"
 	style={getStyle(level)}
 >
+	{#if elevator}
+		<Control position="bottom-left">
+			<div class="bg-white rounded-lg">
+				<Button
+					variant="ghost"
+					on:click={async () => {
+						await updateElevator(elevator.id, elevator.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
+					}}
+				>
+					{#if elevator.status === 'ACTIVE'}
+						DEACTIVATE {elevator.id}
+					{:else}
+						ACTIVATE {elevator.id}
+					{/if}
+				</Button>
+			</div>
+		</Control>
+	{/if}
+
 	{#if footpaths}
 		<Control position="top-left">
 			<div class="bg-white rounded-lg">

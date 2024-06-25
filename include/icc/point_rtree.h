@@ -37,6 +37,7 @@ struct point_rtree {
       rtree_ = o.rtree_;
       o.rtree_ = nullptr;
     }
+    return *this;
   }
 
   void add(geo::latlng const& pos, T const t) {

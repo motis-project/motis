@@ -36,6 +36,8 @@ struct fp {
 };
 
 json::value footpaths::operator()(json::value const& query) const {
+  auto const e = e_.get();
+
   auto const get_loc = [&](n::location_idx_t const l) -> osr::location {
     auto pos = tt_.locations_.coordinates_[l];
     if (matches_[l] != osr::platform_idx_t::invalid()) {
@@ -79,7 +81,7 @@ json::value footpaths::operator()(json::value const& query) const {
         osr::route(w_, l_, mode, loc,
                    utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
                    kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-                   &blocked_);
+                   &e->blocked_);
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {

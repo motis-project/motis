@@ -21,6 +21,10 @@ using hash_map = nigiri::hash_map<K, V>;
 
 enum class status : bool { kActive, kInactive };
 
+inline status status_from_str(std::string_view s) {
+  return s == "INACTIVE" ? status::kInactive : status::kActive;
+}
+
 using elevator_idx_t = cista::strong<std::uint32_t, struct elevator_idx_>;
 
 struct elevator {

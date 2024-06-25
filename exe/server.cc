@@ -7,12 +7,13 @@
 #include "net/web_server/query_router.h"
 #include "net/web_server/web_server.h"
 
+#include "utl/read_file.h"
+
 #include "net/run.h"
 
 #include "osr/lookup.h"
 
-#include "icc/elevators/match_elevator.h"
-#include "icc/elevators/parse_fasta.h"
+#include "icc/elevators/elevators.h"
 #include "icc/endpoints/elevators.h"
 #include "icc/endpoints/footpaths.h"
 #include "icc/endpoints/graph.h"
@@ -20,6 +21,7 @@
 #include "icc/endpoints/matches.h"
 #include "icc/endpoints/osr_routing.h"
 #include "icc/endpoints/platforms.h"
+#include "icc/endpoints/update_elevator.h"
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 
@@ -76,16 +78,14 @@ int main(int ac, char** av) {
       cista::file{tt_path.generic_string().c_str(), "r"}.content()});
 
   // Read elevators.
-  fmt::println("reading elevators");
-  auto const elevators = parse_fasta(fasta_path);
-
-  fmt::println("creating elevators rtree");
-  auto const elevators_rtree = create_elevator_rtree(elevators);
-
-  fmt::println("mapping elevators");
+  auto const fasta = utl::read_file(fasta_path.generic_string().c_str());
+  if (!fasta.has_value()) {
+    fmt::println("could not read fasta file {}", fasta_path);
+    return 1;
+  }
   auto const elevator_nodes = get_elevator_nodes(w);
-  auto const blocked = std::make_shared<osr::bitvec<osr::node_idx_t>>(
-      get_blocked_elevators(w, elevators, elevators_rtree, elevator_nodes));
+  auto e = shared_elevators{w, elevator_nodes,
+                            parse_fasta(std::string_view{*fasta})};
 
   // Create location r-tree.
   fmt::println("creating r-tree");
@@ -107,14 +107,15 @@ int main(int ac, char** av) {
   auto qr =
       net::query_router{}
           .route("POST", "/api/matches", ep::matches{loc_rtree, *tt, w, l, pl})
-          .route("POST", "/api/elevators",
-                 ep::elevators{elevators_rtree, elevators, w, l})
-          .route("POST", "/api/route", ep::osr_routing{w, l, blocked})
+          .route("POST", "/api/elevators", ep::elevators{e, w, l})
+          .route("POST", "/api/route", ep::osr_routing{w, l, e})
           .route("POST", "/api/levels", ep::levels{w, l})
           .route("POST", "/api/platforms", ep::platforms{w, l, pl})
           .route("POST", "/api/graph", ep::graph{w, l})
           .route("POST", "/api/footpaths",
-                 ep::footpaths{*tt, w, l, pl, loc_rtree, matches, *blocked});
+                 ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
+          .route("POST", "/api/update_elevator",
+                 ep::update_elevator{e, w, elevator_nodes});
 
   qr.serve_files("ui/build");
   qr.enable_cors();

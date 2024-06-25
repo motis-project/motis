@@ -20,7 +20,7 @@
 		center: maplibregl.LngLatLike;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		children: Snippet<[any]>;
+		children: Snippet;
 	} = $props();
 
 	let currStyle: maplibregl.StyleSpecification | null = null;

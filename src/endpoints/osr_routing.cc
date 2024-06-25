@@ -29,13 +29,13 @@ json::value osr_routing::operator()(json::value const& query) const {
                                              !direction_it->value().is_string()
                                          ? to_str(osr::direction::kForward)
                                          : direction_it->value().as_string());
+  auto const e = e_.get();
   auto const from = parse_location(q.at("start"));
   auto const to = parse_location(q.at("destination"));
   auto const max_it = q.find("max");
   auto const max = static_cast<osr::cost_t>(
       max_it == q.end() ? 3600 : max_it->value().as_int64());
-  auto const blocked = blocked_;
-  auto const p = route(w_, l_, profile, from, to, max, dir, 8, blocked.get());
+  auto const p = route(w_, l_, profile, from, to, max, dir, 8, &e->blocked_);
   return p.has_value()
              ? json::value{{"type", "FeatureCollection"},
                            {"features",

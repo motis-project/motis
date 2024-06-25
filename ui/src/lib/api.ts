@@ -83,3 +83,7 @@ export const getElevators = async (bounds: maplibregl.LngLatBounds) => {
 export const getFootpaths = async (station: {id: string, src: number}) : Promise<Footpaths> =>  {
 	return await post('/api/footpaths', station);
 }
+
+export const updateElevator = async (id: number, status: string) => {
+	return await post('/api/update_elevator', {id, status});
+}

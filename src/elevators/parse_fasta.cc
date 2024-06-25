@@ -27,14 +27,14 @@ vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
       auto const id = o.contains("equipmentnumber")
                           ? e.at("equipmentnumber").to_number<std::int64_t>()
                           : 0U;
-      ret.emplace_back(elevator{
-          id,
-          {e.at("geocoordY").to_number<double>(),
-           e.at("geocoordX").to_number<double>()},
-          e.at("state") == "INACTIVE" ? status::kInactive : status::kActive,
-          o.contains("description")
-              ? std::string{o.at("description").as_string()}
-              : ""});
+      ret.emplace_back(
+          elevator{id,
+                   {e.at("geocoordY").to_number<double>(),
+                    e.at("geocoordX").to_number<double>()},
+                   status_from_str(e.at("state").as_string()),
+                   o.contains("description")
+                       ? std::string{o.at("description").as_string()}
+                       : ""});
     } catch (std::exception const& ex) {
       std::cout << "error on value: " << e << ": " << ex.what() << "\n";
     }
