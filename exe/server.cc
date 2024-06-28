@@ -115,7 +115,12 @@ int main(int ac, char** av) {
           .route("POST", "/api/footpaths",
                  ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
           .route("POST", "/api/update_elevator",
-                 ep::update_elevator{e, w, elevator_nodes});
+                 ep::update_elevator{e, w, elevator_nodes})
+          .route("GET", "/version", [](boost::urls::url_view const& url) {
+            for (auto const p : url.params())
+              std::cout << p.key << ": " << p.value << "\n";
+            return json::value{{"version", "1.0"}};
+          });
 
   qr.serve_files("ui/build");
   qr.enable_cors();
