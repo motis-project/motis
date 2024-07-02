@@ -25,6 +25,8 @@
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 
+#include "icc-api/icc-api.h"
+
 namespace asio = boost::asio;
 namespace http = boost::beast::http;
 namespace n = nigiri;
@@ -116,11 +118,8 @@ int main(int ac, char** av) {
                  ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
           .route("POST", "/api/update_elevator",
                  ep::update_elevator{e, w, elevator_nodes})
-          .route("GET", "/version", [](boost::urls::url_view const& url) {
-            for (auto const p : url.params())
-              std::cout << p.key << ": " << p.value << "\n";
-            return json::value{{"version", "1.0"}};
-          });
+          .route("GET", "/api/route",
+                 [](api::Place const& v) { return api::StepInstruction{}; });
 
   qr.serve_files("ui/build");
   qr.enable_cors();

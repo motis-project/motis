@@ -2,6 +2,8 @@
 
 #include "boost/json/value.hpp"
 
+#include "nigiri/timetable.h"
+
 #include "osr/lookup.h"
 #include "osr/ways.h"
 
@@ -12,7 +14,7 @@ struct routing {
 
   osr::ways const& w_;
   osr::lookup const& l_;
-  osr::timetable const& tt_;
+  nigiri::timetable const& tt_;
 };
 
 }  // namespace icc::ep

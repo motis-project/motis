@@ -53,6 +53,9 @@ else ()
     endif ()
 endif ()
 
+# --- OPENAPI ---
+openapi_generate(openapi.yaml icc-api icc::api)
+
 
 # --- LIB ---
 file(GLOB_RECURSE icc-files src/*.cc)
@@ -71,7 +74,7 @@ target_link_libraries(icc-prepare icc)
 # --- SERVER ---
 add_executable(icc-server exe/server.cc)
 target_compile_features(icc-server PUBLIC cxx_std_23)
-target_link_libraries(icc-server icc web-server fmt::fmt rtree geo cista)
+target_link_libraries(icc-server icc web-server fmt::fmt rtree geo cista icc-api)
 
 
 # --- TEST ---
