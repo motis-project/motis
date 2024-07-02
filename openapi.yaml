@@ -242,23 +242,29 @@ paths:
                 type: object
                 properties:
                   requestParameters:
+                    required: true
                     description: "the routing query"
                     type: object
                     additionalProperties:
                       type: string
                   debugOutput:
+                    required: true
                     description: "debug statistics"
                     type: object
                     additionalProperties:
                       type: string
                   date:
+                    required: true
                     description: "The time and date of travel"
                     type: integer
                   from:
+                    required: true
                     $ref: '#/components/schemas/Place'
                   to:
+                    required: true
                     $ref: '#/components/schemas/Place'
                   itineraries:
+                    required: true
                     description: list of itineraries
                     type: array
                     items:
