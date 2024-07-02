@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: MOTIS API
   description: This is the MOTIS routing API.
@@ -19,6 +19,7 @@ paths:
       tags:
         - routing
       summary: Computes optimal connections from one place to another.
+      operationId: plan
       parameters:
         - name: fromPlace
           in: query
@@ -293,13 +294,14 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Itinerary'
-
-        '400':
-          description: Invalid routing parameters
 components:
   schemas:
     Place:
       type: object
+      required:
+        - name
+        - lat
+        - lng
       properties:
         name:
           description: name of the transit stop / PoI / address
@@ -348,6 +350,16 @@ components:
 
     StepInstruction:
       type: object
+      required:
+        - relativeDirection
+        - absoluteDirection
+        - distance
+        - streetName
+        - exit
+        - stayOn
+        - area
+        - lon
+        - lat
       properties:
         relativeDirection:
           $ref: '#/components/schemas/RelativeDirection'
@@ -394,6 +406,9 @@ components:
     FeedScopedId:
       title: FeedScopedId
       type: object
+      required:
+        - feedId
+        - id
       properties:
         feedId:
           type: string
@@ -403,6 +418,9 @@ components:
     EncodedPolyline:
       title: EncodedPolylineBean
       type: object
+      required:
+        - points
+        - length
       properties:
         points:
           description: The encoded points of the polyline.
@@ -413,6 +431,31 @@ components:
 
     Leg:
       type: object
+      required:
+        - startTime
+        - endTime
+        - departureDelay
+        - arrivalDelay
+        - realTime
+        - distance
+        - interlineWithPreviousLeg
+        - route
+        - headsign
+        - agencyName
+        - agencyUrl
+        - routeColor
+        - routeTextColor
+        - routeType
+        - routeId
+        - agencyId
+        - tripId
+        - serviceDate
+        - duration
+        - intermediateStops
+        - from
+        - to
+        - legGeometry
+        - steps
       properties:
         startTime:
           type: integer
@@ -470,6 +513,13 @@ components:
         duration:
           description: Leg duration in seconds
           type: integer
+        intermediateStops:
+          description: |
+            For transit legs, intermediate stops between the Place where the leg originates
+            and the Place where the leg ends. For non-transit legs, null.
+          type: array
+          items:
+            $ref: "#/components/schemas/Place"
         from:
           $ref: '#/components/schemas/Place'
         to:
@@ -501,6 +551,16 @@ components:
 
     Itinerary:
       type: object
+      required:
+        - duration
+        - startTime
+        - endTime
+        - walkTime
+        - transitTime
+        - waitingTime
+        - walkDistance
+        - transfers
+        - legs
       properties:
         duration:
           description: journey duration in seconds
