@@ -24,14 +24,14 @@ paths:
         - name: fromPlace
           in: query
           required: true
-          description: latitude, longitude pair in degrees or stop id
+          description: latitude, longitude, level pair in degrees or stop id
           schema:
             type: string
 
         - name: toPlace
           in: query
           required: true
-          description: latitude, longitude pair in degrees or stop id
+          description: latitude, longitude, level pair in degrees or stop id
           schema:
             type: string
 
