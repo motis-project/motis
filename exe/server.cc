@@ -106,22 +106,21 @@ int main(int ac, char** av) {
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto qr =
-      net::query_router{}
-          .route("POST", "/api/matches", ep::matches{loc_rtree, *tt, w, l, pl})
-          .route("POST", "/api/elevators", ep::elevators{e, w, l})
-          .route("POST", "/api/route", ep::osr_routing{w, l, e})
-          .route("POST", "/api/levels", ep::levels{w, l})
-          .route("POST", "/api/platforms", ep::platforms{w, l, pl})
-          .route("POST", "/api/graph", ep::graph{w, l})
-          .route("POST", "/api/footpaths",
-                 ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
-          .route("POST", "/api/update_elevator",
-                 ep::update_elevator{e, w, elevator_nodes})
-          .route("GET", "/api/route", [](boost::urls::url_view const& url) {
-            auto const query = api::plan_params{url};
-            return api::StepInstruction{};
-          });
+  auto qr = net::query_router{}
+                .post("/api/matches", ep::matches{loc_rtree, *tt, w, l, pl})
+                .post("/api/elevators", ep::elevators{e, w, l})
+                .post("/api/route", ep::osr_routing{w, l, e})
+                .post("/api/levels", ep::levels{w, l})
+                .post("/api/platforms", ep::platforms{w, l, pl})
+                .post("/api/graph", ep::graph{w, l})
+                .post("/api/footpaths",
+                      ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
+                .post("/api/update_elevator",
+                      ep::update_elevator{e, w, elevator_nodes})
+                .get("/api/route", [](boost::urls::url_view const& url) {
+                  auto const query = api::plan_params{url};
+                  return api::StepInstruction{};
+                });
 
   qr.serve_files("ui/build");
   qr.enable_cors();
