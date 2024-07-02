@@ -118,8 +118,10 @@ int main(int ac, char** av) {
                  ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
           .route("POST", "/api/update_elevator",
                  ep::update_elevator{e, w, elevator_nodes})
-          .route("GET", "/api/route",
-                 [](api::Place const& v) { return api::StepInstruction{}; });
+          .route("GET", "/api/route", [](boost::urls::url_view const& url) {
+            auto const query = api::plan_params{url};
+            return api::StepInstruction{};
+          });
 
   qr.serve_files("ui/build");
   qr.enable_cors();

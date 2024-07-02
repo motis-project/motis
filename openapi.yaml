@@ -144,41 +144,10 @@ paths:
               - `COACH`: long distance buses
               - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
               - `REGIONAL_RAIL`: regional train
-
           schema:
             type: array
             items:
-              type: string
-              minItems: 1
-              enum:
-                # === Street ===
-                - WALK
-                - BIKE
-                - CAR
-                - BIKE_RENTAL
-                - BIKE_TO_PARK
-                - CAR_PARK
-                - CAR_TO_PARK
-                - CAR_HAILING
-                - CAR_SHARING
-                - CAR_PICKUP
-                - CAR_RENTAL
-                - FLEXIBLE
-                - SCOOTER_RENTAL
-                # === Transit ===
-                - TRANSIT
-                - TRAM
-                - SUBWAY
-                - FERRY
-                - AIRPLANE
-                - BUS
-                - COACH
-                - RAIL
-                - HIGHSPEED_RAIL
-                - LONG_DISTANCE
-                - NIGHT_RAIL
-                - REGIONAL_FAST_RAIL
-                - REGIONAL_RAIL
+              $ref: '#/components/schemas/Mode'
           explode: false
 
         - name: numItineraries
@@ -296,6 +265,39 @@ paths:
                       $ref: '#/components/schemas/Itinerary'
 components:
   schemas:
+    Mode:
+      type: string
+      minItems: 1
+      enum:
+        # === Street ===
+        - WALK
+        - BIKE
+        - CAR
+        - BIKE_RENTAL
+        - BIKE_TO_PARK
+        - CAR_PARK
+        - CAR_TO_PARK
+        - CAR_HAILING
+        - CAR_SHARING
+        - CAR_PICKUP
+        - CAR_RENTAL
+        - FLEXIBLE
+        - SCOOTER_RENTAL
+        # === Transit ===
+        - TRANSIT
+        - TRAM
+        - SUBWAY
+        - FERRY
+        - AIRPLANE
+        - BUS
+        - COACH
+        - RAIL
+        - HIGHSPEED_RAIL
+        - LONG_DISTANCE
+        - NIGHT_RAIL
+        - REGIONAL_FAST_RAIL
+        - REGIONAL_RAIL
+
     Place:
       type: object
       required:
@@ -534,20 +536,8 @@ components:
           items:
             $ref: '#/components/schemas/StepInstruction'
         mode:
+          $ref: '#/components/schemas/Mode'
           description: Transport mode for this leg
-          type: string
-          enum:
-            - WALK
-            - BIKE
-            - CAR
-            - TRANSIT
-            - TRAM
-            - SUBWAY
-            - FERRY
-            - AIRPLANE
-            - BUS
-            - COACH
-            - RAIL
 
     Itinerary:
       type: object

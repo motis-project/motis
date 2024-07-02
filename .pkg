@@ -5,7 +5,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=platform
-  commit=eadcf1c602a74898e562724bc61b9c541bb50395
+  commit=d83779cc26ed8be187fad721ceb7e6c805b45d4a
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -25,4 +25,4 @@
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=6707f01eaeaeefd46d2bcd74b5733d4958c452b8
+  commit=478000db59b737d50d8cbadec67a008641137947

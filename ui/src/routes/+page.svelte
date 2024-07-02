@@ -214,6 +214,10 @@
 			init = true;
 		}
 	});
+
+	// client ID: a9b1f1ad1051790a9c6970db85710986
+	// client Secret: df987129855de70a804f146718aac956
+    // client Secret: 30dee8771d325304274b7c2555fae33e
 </script>
 
 <Map
