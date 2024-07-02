@@ -11,6 +11,9 @@ namespace icc::ep {
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const query = api::plan_params{url};
+
+  std::cout << json::serialize(json::value_from(query.mode_)) << "\n";
+
   return api::plan_response{};
 }
 

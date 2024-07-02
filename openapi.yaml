@@ -145,6 +145,9 @@ paths:
               - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
               - `REGIONAL_RAIL`: regional train
           schema:
+            default:
+              - WALK
+              - TRANSIT
             type: array
             items:
               $ref: '#/components/schemas/Mode'
