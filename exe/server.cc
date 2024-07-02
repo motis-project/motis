@@ -21,11 +21,10 @@
 #include "icc/endpoints/matches.h"
 #include "icc/endpoints/osr_routing.h"
 #include "icc/endpoints/platforms.h"
+#include "icc/endpoints/routing.h"
 #include "icc/endpoints/update_elevator.h"
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
-
-#include "icc-api/icc-api.h"
 
 namespace asio = boost::asio;
 namespace http = boost::beast::http;
@@ -117,10 +116,7 @@ int main(int ac, char** av) {
                       ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
                 .post("/api/update_elevator",
                       ep::update_elevator{e, w, elevator_nodes})
-                .get("/api/route", [](boost::urls::url_view const& url) {
-                  auto const query = api::plan_params{url};
-                  return api::StepInstruction{};
-                });
+                .get("/api/route", ep::routing{w, l, *tt});
 
   qr.serve_files("ui/build");
   qr.enable_cors();

@@ -62,7 +62,7 @@ file(GLOB_RECURSE icc-files src/*.cc)
 add_library(icc ${icc-files})
 target_include_directories(icc PUBLIC include)
 target_compile_features(icc PUBLIC cxx_std_23)
-target_link_libraries(icc nigiri osr boost-json adr)
+target_link_libraries(icc nigiri osr boost-json adr icc-api)
 
 
 # --- PREPARE ---
@@ -74,7 +74,7 @@ target_link_libraries(icc-prepare icc)
 # --- SERVER ---
 add_executable(icc-server exe/server.cc)
 target_compile_features(icc-server PUBLIC cxx_std_23)
-target_link_libraries(icc-server icc web-server fmt::fmt rtree geo cista icc-api)
+target_link_libraries(icc-server icc web-server fmt::fmt rtree geo cista)
 
 
 # --- TEST ---
