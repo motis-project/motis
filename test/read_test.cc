@@ -4,6 +4,7 @@
 
 using namespace icc;
 using namespace date;
+namespace n = nigiri;
 
 using namespace std::chrono_literals;
 
@@ -22,4 +23,26 @@ TEST(icc, parse_location_no_level) {
 TEST(icc, parse_date_time) {
   auto const t = get_date_time("06-28-2024", "7:06 PM");
   EXPECT_EQ(sys_days{2024_y / June / 28} + 19h + 6min, t);
+}
+
+TEST(icc, parse_cursor_earlier) {
+  auto const q = parse_cursor("EARLIER|1720036560");
+
+  ASSERT_TRUE(
+      std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_));
+
+  auto const interval = std::get<n::interval<n::unixtime_t>>(q.start_time_);
+  EXPECT_EQ(sys_days{2024_y / July / 3} + 17h + 56min, interval.from_);
+  EXPECT_EQ(sys_days{2024_y / July / 3} + 19h + 56min, interval.to_);
+}
+
+TEST(icc, parse_cursor_later) {
+  auto const q = parse_cursor("LATER|1720036560");
+
+  ASSERT_TRUE(
+      std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_));
+
+  auto const interval = std::get<n::interval<n::unixtime_t>>(q.start_time_);
+  EXPECT_EQ(sys_days{2024_y / July / 3} + 19h + 56min, interval.from_);
+  EXPECT_EQ(sys_days{2024_y / July / 3} + 21h + 56min, interval.to_);
 }

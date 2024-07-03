@@ -47,6 +47,12 @@ struct point_rtree {
         reinterpret_cast<void*>(static_cast<std::size_t>(cista::to_idx(t))));
   }
 
+  std::vector<T> in_radius(geo::latlng const& x, double distance) const {
+    auto ret = std::vector<T>{};
+    in_radius(x, distance, [&](auto&& item) { ret.emplace_back(item); });
+    return ret;
+  }
+
   template <typename Fn>
   void in_radius(geo::latlng const& x, double distance, Fn&& fn) const {
     find(x, [&](geo::latlng const& pos, T const item) {

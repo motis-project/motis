@@ -5,6 +5,8 @@
 
 #include "date/date.h"
 
+#include "utl/parser/arg_parser.h"
+
 namespace n = nigiri;
 
 namespace icc {
@@ -58,9 +60,39 @@ n::unixtime_t get_date_time(std::optional<std::string> const& date,
       ss >> date::parse("%m-%d-%Y %H:%M", t);
     }
 
-    std::cout << "INPUT: " << date_time << "\n";
-    std::cout << "OUTPUT: " << date::format("%m-%d-%Y %I:%M %p", t) << "\n";
     return t;
+  }
+}
+
+n::routing::query parse_cursor(std::string_view s) {
+  auto const split_pos = s.find("|");
+  utl::verify(split_pos != std::string_view::npos && split_pos != s.size() - 1U,
+              "invalid page cursor {}, separator '|' not found", s);
+
+  auto const time_str = s.substr(split_pos + 1U);
+  utl::verify(
+      utl::all_of(time_str, [&](auto&& c) { return std::isdigit(c) != 0U; }),
+      "invalid page cursor \"{}\", timestamp not a number", s);
+
+  auto const t = n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
+      std::chrono::seconds{utl::parse<std::int64_t>(time_str)})};
+  auto const direction = s.substr(0, split_pos);
+  switch (cista::hash(direction)) {
+    case cista::hash("EARLIER"):
+      return n::routing::query{
+          .start_time_ =
+              n::routing::start_time_t{n::interval{t - n::duration_t{120}, t}},
+          .extend_interval_earlier_ = true,
+          .extend_interval_later_ = false};
+
+    case cista::hash("LATER"):
+      return n::routing::query{
+          .start_time_ =
+              n::routing::start_time_t{n::interval{t, t + n::duration_t{120}}},
+          .extend_interval_earlier_ = false,
+          .extend_interval_later_ = true};
+
+    default: throw utl::fail("invalid page cursor {}", s);
   }
 }
 

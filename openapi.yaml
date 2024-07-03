@@ -106,6 +106,14 @@ paths:
             type: integer
             default: 1
 
+        - name: wheelchair
+          in: query
+          description: Whether the trip must be wheelchair accessible.
+          required: false
+          schema:
+            type: boolean
+            default: false
+
         - name: mode
           in: query
           required: false
@@ -116,8 +124,8 @@ paths:
             
             # Street modes
             
-              - `WALK` Walking some or all of the way of the route.
-              - `BIKE`: Cycling for the entirety of the route or taking a bicycle onto the public transport and cycling from the arrival station to the destination.
+              - `WALK`: Walking some or all of the way of the route.
+              - `BIKE`: Cycling for the entirety of the route or taking a bicycle onto the public transport (if enabled) and cycling from the arrival station to the destination.
               - `BIKE_RENTAL`: Taking a rented, shared-mobility bike for part or the entirety of the route.
               - `BIKE_TO_PARK`: Leaving the bicycle at the departure station and walking from the arrival station to the destination. This mode needs to be combined with at least one transit mode otherwise it behaves like an ordinary bicycle journey.
               - `CAR`: Driving your own car the entirety of the route. This can be combined with transit, where will return routes with a Kiss & Ride component. This means that the car is not parked in a permanent parking area but rather the passenger is dropped off (for example, at an airport) and the driver continues driving the car away from the drop off location.
@@ -297,7 +305,6 @@ components:
         - CAR
         - BIKE_RENTAL
         - BIKE_TO_PARK
-        - CAR_PARK
         - CAR_TO_PARK
         - CAR_HAILING
         - CAR_SHARING
