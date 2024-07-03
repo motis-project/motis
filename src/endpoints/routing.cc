@@ -3,6 +3,8 @@
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 
+#include "nigiri/routing/query.h"
+
 #include "icc/parse_location.h"
 
 namespace json = boost::json;
@@ -25,8 +27,19 @@ place_t to_place(n::timetable const& tt, std::string_view s) {
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const query = api::plan_params{url.params()};
+
   auto const from = to_place(tt_, query.fromPlace_);
   auto const to = to_place(tt_, query.toPlace_);
+
+  auto const t = get_date_time(query.date_, query.time_);
+  auto const window = std::chrono::duration_cast<n::duration_t>(
+      std::chrono::seconds{query.searchWindow_ * (query.arriveBy_ ? -1 : 1)});
+  auto const start_time = query.timetableView_
+                              ? n::routing::start_time_t{n::interval{
+                                    query.arriveBy_ ? t - window : t,
+                                    query.arriveBy_ ? t : t + window}}
+                              : n::routing::start_time_t{t};
+
   return api::plan_response{};
 }
 

@@ -199,6 +199,19 @@ paths:
             type: boolean
             default: false
 
+        - name: arriveBy
+          in: query
+          required: false
+          default: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+              - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
+              - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+
         - name: searchWindow
           in: query
           required: false
