@@ -29,7 +29,8 @@ api::Place to_place(n::timetable const& tt, n::location_idx_t const l) {
   auto const pos = tt.locations_.coordinates_[l];
   return {.name_ = std::string{tt.locations_.names_[l].view()},
           .lat_ = pos.lat_,
-          .lon_ = pos.lng_};
+          .lon_ = pos.lng_,
+          .vertexType_ = api::VertexTypeEnum::NORMAL};
 }
 
 std::string to_str(n::color_t const c) {

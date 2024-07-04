@@ -327,6 +327,19 @@ components:
         - REGIONAL_FAST_RAIL
         - REGIONAL_RAIL
 
+    VertexType:
+      type: string
+      description: |
+        - `NORMAL` - latitude / longitude coordinate or address
+        - `BIKESHARE` - bike sharing station
+        - `BIKEPARK` - bike parking
+        - `TRANSIT` - transit stop
+      enum:
+        - NORMAL
+        - BIKESHARE
+        - BIKEPARK
+        - TRANSIT
+
     Place:
       type: object
       required:
@@ -336,6 +349,9 @@ components:
       properties:
         name:
           description: name of the transit stop / PoI / address
+          type: string
+        stopId:
+          description: The ID of the stop. This is often something that users don't care about.
           type: string
         lat:
           description: latitude
@@ -359,6 +375,8 @@ components:
         departure:
           description: departure time, format = unixtime in milliseconds
           type: integer
+        vertexType:
+          $ref: '#/components/schemas/VertexType'
 
     RelativeDirection:
       type: string
@@ -430,19 +448,6 @@ components:
         lat:
           description: The latitude of start of the step
           type: number
-
-    VertexType:
-      type: string
-      description: |
-        - `NORMAL` - latitude / longitude coordinate or address
-        - `BIKESHARE` - bike sharing station
-        - `BIKEPARK` - bike parking
-        - `TRANSIT` - transit stop
-      enum:
-        - NORMAL
-        - BIKESHARE
-        - BIKEPARK
-        - TRANSIT
 
     FeedScopedId:
       title: FeedScopedId

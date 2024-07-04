@@ -29,17 +29,17 @@ std::string to_str(T const& t) {
   return boost::json::serialize(boost::json::value_from(t));
 }
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::search_state> search_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
-
 using place_t = std::variant<osr::location, n::location_idx_t>;
 
 std::ostream& operator<<(std::ostream& out, place_t const p) {
   return std::visit([&](auto const l) -> std::ostream& { return out << l; }, p);
 }
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+boost::thread_specific_ptr<n::routing::search_state> search_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 
 place_t to_place(n::timetable const& tt, std::string_view s) {
   if (auto const location = parse_location(s); location.has_value()) {
@@ -323,7 +323,31 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   UTL_STOP_TIMING(nigiri);
   auto const nigiri_timing = UTL_TIMING_MS(nigiri);
 
-  return {.itineraries_ = utl::to_vec(*journeys, [&](auto&& j) {
+  auto const to_place = [&](place_t const p, std::string_view name) {
+    return std::visit(
+        utl::overloaded{
+            [&](osr::location const l) {
+              return api::Place{
+                  .name_ = std::string{name},
+                  .lat_ = l.pos_.lat_,
+                  .lon_ = l.pos_.lng_,
+                  .vertexType_ = api::VertexTypeEnum::NORMAL,
+              };
+            },
+            [&](n::location_idx_t const l) {
+              auto const pos = tt_.locations_.coordinates_[l];
+              return api::Place{
+                  .name_ = std::string{tt_.locations_.names_[l].view()},
+                  .stopId_ = std::string{tt_.locations_.ids_[l].view()},
+                  .lat_ = pos.lat_,
+                  .lon_ = pos.lng_};
+            }},
+        p);
+  };
+
+  return {.from_ = to_place(from, "Origin"),
+          .to_ = to_place(to, "Destination"),
+          .itineraries_ = utl::to_vec(*journeys, [&](auto&& j) {
             return journey_to_response(tt_, rtt.get(), j);
           })};
 }
