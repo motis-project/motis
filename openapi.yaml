@@ -332,7 +332,7 @@ components:
       required:
         - name
         - lat
-        - lng
+        - lon
       properties:
         name:
           description: name of the transit stop / PoI / address
@@ -343,6 +343,16 @@ components:
         lon:
           description: longitude
           type: number
+        arrivalDelay:
+          type: integer
+          description: |
+            The offset from the scheduled arrival time of the boarding stop in this leg.
+            Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+        departureDelay:
+          type: integer
+          description: |
+            The offset from the scheduled departure time of the boarding stop in this leg.
+            Scheduled time of departure at boarding stop = startTime - departureDelay
         arrival:
           description: arrival time, format = unixtime in milliseconds
           type: integer
