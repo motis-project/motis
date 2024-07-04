@@ -21,6 +21,14 @@ namespace n = nigiri;
 
 namespace icc::ep {
 
+template <typename T>
+concept JSON = boost::json::has_value_to<T>::value && std::is_aggregate_v<T>;
+
+template <JSON T>
+std::string to_str(T const& t) {
+  return boost::json::serialize(boost::json::value_from(t));
+}
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state;
 
@@ -28,6 +36,10 @@ boost::thread_specific_ptr<n::routing::search_state> search_state;
 boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 
 using place_t = std::variant<osr::location, n::location_idx_t>;
+
+std::ostream& operator<<(std::ostream& out, place_t const p) {
+  return std::visit([&](auto const l) -> std::ostream& { return out << l; }, p);
+}
 
 place_t to_place(n::timetable const& tt, std::string_view s) {
   if (auto const location = parse_location(s); location.has_value()) {
@@ -217,6 +229,13 @@ auto run_search(n::timetable const& tt,
                 n::rt_timetable const* rtt,
                 std::optional<std::chrono::seconds> timeout,
                 n::routing::query&& q) {
+  if (search_state.get() == nullptr) {
+    search_state.reset(new n::routing::search_state{});
+  }
+  if (raptor_state.get() == nullptr) {
+    raptor_state.reset(new n::routing::raptor_state{});
+  }
+
   if (rtt == nullptr) {
     using algo_t = n::routing::raptor<SearchDir, false>;
     return n::routing::search<SearchDir, algo_t>{
@@ -270,7 +289,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     pos, dir, dest_modes, query.wheelchair_,
                     std::chrono::seconds{query.maxPostTransitTime_});
               }},
-          start),
+          dest),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.has_value() ? *query.maxTransfers_
                                           : n::routing::kMaxTransfers),

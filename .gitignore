@@ -6,3 +6,4 @@
 *.pbf
 /osr
 /delfi
+/test/test_case_osr

@@ -28,6 +28,7 @@
 #include "icc/endpoints/update_elevator.h"
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
+#include "icc/tt_location_rtree.h"
 
 namespace asio = boost::asio;
 namespace http = boost::beast::http;
@@ -97,15 +98,7 @@ int main(int ac, char** av) {
 
   // Create location r-tree.
   fmt::println("creating r-tree");
-  auto const loc_rtree = [&]() {
-    auto t = point_rtree<n::location_idx_t>{};
-    for (auto i = n::location_idx_t{0U}; i != tt->n_locations(); ++i) {
-      if (!tt->location_routes_[i].empty()) {
-        t.add(tt->locations_.coordinates_[i], i);
-      }
-    }
-    return t;
-  }();
+  auto const loc_rtree = create_location_rtree(*tt);
 
   fmt::println("creating matches");
   auto const matches = get_matches(*tt, pl, w);

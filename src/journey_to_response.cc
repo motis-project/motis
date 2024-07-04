@@ -86,7 +86,7 @@ api::Itinerary journey_to_response(n::timetable const& tt,
               leg.arrivalDelay_ = to_ms(exit_stop.delay(n::event_type::kArr));
 
               for (auto i = t.stop_range_.from_ + 1U;
-                   i < t.stop_range_.to_ - 2U; ++i) {
+                   i < t.stop_range_.to_ - 1U; ++i) {
                 auto const stop = fr[t.stop_range_.from_];
                 auto& p = leg.intermediateStops_.emplace_back(
                     to_place(tt, stop.get_location_idx()));
