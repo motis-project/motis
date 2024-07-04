@@ -25,4 +25,4 @@
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=c0e47a851ce3f8b551c2b56ae8ed5481ed0e0c68
+  commit=9703ffed6769eeb640ab6893d13eda7754ec53c8

@@ -1,16 +1,31 @@
 #include "icc/endpoints/routing.h"
 
+#include "boost/thread/tss.hpp"
+
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 
+#include "nigiri/routing/limits.h"
+#include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor/raptor.h"
+#include "nigiri/routing/raptor/raptor_state.h"
+#include "nigiri/routing/search.h"
+#include "nigiri/special_stations.h"
 
+#include "icc/journey_to_response.h"
 #include "icc/parse_location.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
 
 namespace icc::ep {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+boost::thread_specific_ptr<n::routing::search_state> search_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 
 using place_t = std::variant<osr::location, n::location_idx_t>;
 
@@ -180,36 +195,65 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
   return mask;
 }
 
+n::routing::query get_start_time(api::plan_params const& query) {
+  if (query.pageCursor_.has_value()) {
+    return parse_cursor(*query.pageCursor_);
+  } else {
+    auto const t = get_date_time(query.date_, query.time_);
+    auto const window = std::chrono::duration_cast<n::duration_t>(
+        std::chrono::seconds{query.searchWindow_ * (query.arriveBy_ ? -1 : 1)});
+    return {.start_time_ = query.timetableView_
+                               ? n::routing::start_time_t{n::interval{
+                                     query.arriveBy_ ? t - window : t,
+                                     query.arriveBy_ ? t : t + window}}
+                               : n::routing::start_time_t{t},
+            .extend_interval_earlier_ = query.arriveBy_,
+            .extend_interval_later_ = !query.arriveBy_};
+  }
+}
+
+template <n::direction SearchDir>
+auto run_search(n::timetable const& tt,
+                n::rt_timetable const* rtt,
+                std::optional<std::chrono::seconds> timeout,
+                n::routing::query&& q) {
+  if (rtt == nullptr) {
+    using algo_t = n::routing::raptor<SearchDir, false>;
+    return n::routing::search<SearchDir, algo_t>{
+        tt, nullptr, *search_state, *raptor_state, std::move(q), timeout}
+        .execute();
+  } else {
+    using algo_t = n::routing::raptor<SearchDir, true>;
+    return n::routing::search<SearchDir, algo_t>{
+        tt, rtt, *search_state, *raptor_state, std::move(q), timeout}
+        .execute();
+  }
+}
+
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const query = api::plan_params{url.params()};
   auto const from = to_place(tt_, query.fromPlace_);
   auto const to = to_place(tt_, query.toPlace_);
   auto const from_modes = get_from_modes(query.mode_);
   auto const to_modes = get_to_modes(query.mode_);
-  auto const t = get_date_time(query.date_, query.time_);
-  auto const window = std::chrono::duration_cast<n::duration_t>(
-      std::chrono::seconds{query.searchWindow_ * (query.arriveBy_ ? -1 : 1)});
-  auto const start_time = query.timetableView_
-                              ? n::routing::start_time_t{n::interval{
-                                    query.arriveBy_ ? t - window : t,
-                                    query.arriveBy_ ? t : t + window}}
-                              : n::routing::start_time_t{t};
 
   auto const& start = query.arriveBy_ ? to : from;
   auto const& dest = query.arriveBy_ ? from : to;
   auto const& start_modes = query.arriveBy_ ? to_modes : from_modes;
   auto const& dest_modes = query.arriveBy_ ? from_modes : to_modes;
+
+  auto const start_time = get_start_time(query);
   auto q = n::routing::query{
-      .start_time_ = start_time,
+      .start_time_ = start_time.start_time_,
       .start_match_mode_ = get_match_mode(start),
       .dest_match_mode_ = get_match_mode(dest),
-      .use_start_footpaths_ = false,
+      .use_start_footpaths_ = !is_intermodal(start),
       .start_ = std::visit(
           utl::overloaded{[&](n::location_idx_t const l) { return direct(l); },
                           [&](osr::location const& pos) {
                             auto const dir = query.arriveBy_
-                                                 ? osr::direction::kBackward
-                                                 : osr::direction::kForward;
+                                                 ? osr::direction::kForward
+                                                 : osr::direction::kBackward;
                             return get_offsets(
                                 pos, dir, start_modes, query.wheelchair_,
                                 std::chrono::seconds{query.maxPreTransitTime_});
@@ -230,13 +274,37 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           query.maxTransfers_.has_value() ? *query.maxTransfers_
                                           : n::routing::kMaxTransfers),
       .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),
-      .extend_interval_earlier_ = true,
-      .extend_interval_later_ = true,
+      .extend_interval_earlier_ = start_time.extend_interval_earlier_,
+      .extend_interval_later_ = start_time.extend_interval_later_,
       .prf_idx_ = static_cast<n::profile_idx_t>(query.wheelchair_ ? 2U : 1U),
       .allowed_claszes_ = to_clasz_mask(query.mode_),
       .require_bike_transport_ = require_bike_transport(query.mode_)};
 
-  return api::plan_response{};
+  UTL_START_TIMING(nigiri);
+  auto search_interval = n::interval<n::unixtime_t>{};
+  auto search_stats = n::routing::search_stats{};
+  auto raptor_stats = n::routing::raptor_stats{};
+  n::pareto_set<n::routing::journey> const* journeys{nullptr};
+  if (!query.arriveBy_) {
+    auto const r = run_search<n::direction::kForward>(
+        tt_, nullptr, std::nullopt, std::move(q));
+    journeys = r.journeys_;
+    search_stats = r.search_stats_;
+    raptor_stats = r.algo_stats_;
+    search_interval = r.interval_;
+  } else {
+    auto const r = run_search<n::direction::kBackward>(
+        tt_, nullptr, std::nullopt, std::move(q));
+    journeys = r.journeys_;
+    search_stats = r.search_stats_;
+    raptor_stats = r.algo_stats_;
+    search_interval = r.interval_;
+  }
+  UTL_STOP_TIMING(nigiri);
+  auto const nigiri_timing = UTL_TIMING_MS(nigiri);
+
+  return {.itineraries_ = utl::to_vec(
+              *journeys, [](auto&& j) { return journey_to_response(j); })};
 }
 
 }  // namespace icc::ep
