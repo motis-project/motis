@@ -150,12 +150,12 @@ RB,S1,RB,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
-S3,09:50:00,09:50:00,DA_3,0,0,0
+S3,01:00:00,01:00:00,DA_3,0,0,0
 S3,10:00:00,10:00:00,LANGEN,1,0,0
 S3,10:30:00,10:30:00,FFM_101,2,0,0
 RB,10:00:00,10:00:00,DA_10,0,0,0
-RB,10:10:00,10:10:00,LANGEN,1,0,0
-RB,10:20:00,10:20:00,FFM_12,2,0,0
+RB,10:20:00,10:20:00,LANGEN,1,0,0
+RB,10:40:00,10:40:00,FFM_12,2,0,0
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -198,7 +198,7 @@ TEST(a, b) {
   // Instantiate routing endpoint.
   auto const routing = ep::routing{w, l, pl, tt, rtt, loc_rtree, matches};
   auto const plan_response =
-      routing("/?fromPlace=DA&toPlace=FFM&date=05-01-2019&time=7:50");
+      routing("/?fromPlace=DA&toPlace=FFM&date=04-30-2019&time=23:00");
 
   std::cout << boost::json::serialize(boost::json::value_from(plan_response))
             << "\n";

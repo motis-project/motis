@@ -2,6 +2,7 @@
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
+#include "nigiri/rt/gtfsrt_resolve_run.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
@@ -35,6 +36,20 @@ api::Place to_place(n::timetable const& tt, n::location_idx_t const l) {
 
 std::string to_str(n::color_t const c) {
   return fmt::format("{:06x}", to_idx(c) & 0x00ffffff);
+}
+
+std::string get_service_date(n::timetable const& tt,
+                             n::transport const t,
+                             n::stop_idx_t const stop_idx) {
+  auto const o = tt.transport_first_dep_offset_[t.t_idx_];
+  auto const utc_dep =
+      tt.event_mam(t.t_idx_, stop_idx, n::event_type::kDep).as_duration();
+  auto const gtfs_static_dep = utc_dep + o;
+  auto const [day_offset, tz_offset_minutes] =
+      n::rt::split_rounded(gtfs_static_dep - utc_dep);
+  auto const day = (tt.internal_interval_days().from_ +
+                    std::chrono::days{to_idx(t.day_)} - day_offset);
+  return fmt::format("{:%Y-%m-%d}", day);
 }
 
 api::Itinerary journey_to_response(n::timetable const& tt,
@@ -80,6 +95,7 @@ api::Itinerary journey_to_response(n::timetable const& tt,
               leg.routeTextColor_ = to_str(color.text_color_);
               leg.realTime_ = fr.is_rt();
               leg.tripId_ = fr.id().id_;  // TODO source_idx
+              leg.serviceDate_ = get_service_date(tt, t.r_.t_, 0U),
               leg.agencyName_ = agency.long_name_;
               leg.agencyId_ = agency.short_name_;
               leg.departureDelay_ =
