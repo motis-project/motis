@@ -23,7 +23,7 @@ struct footpaths {
   osr::platforms const& pl_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;
-  shared_elevators const& e_;
+  elevators_ptr_t const& e_;
 };
 
 }  // namespace icc::ep

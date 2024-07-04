@@ -14,7 +14,7 @@ namespace icc::ep {
 struct elevators {
   boost::json::value operator()(boost::json::value const&) const;
 
-  shared_elevators const& e_;
+  elevators_ptr_t const& e_;
   osr::ways const& w_;
   osr::lookup const& l_;
 };

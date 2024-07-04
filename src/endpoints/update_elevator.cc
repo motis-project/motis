@@ -12,16 +12,16 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto const status = status_from_str(q.at("status").as_string());
 
   auto const e = e_.get();
-  auto elevators = e->elevators_;
+  auto elevators_copy = e->elevators_;
   auto const it =
-      utl::find_if(elevators, [&](auto&& x) { return x.id_ == id; });
-  if (it == end(elevators)) {
+      utl::find_if(elevators_copy, [&](auto&& x) { return x.id_ == id; });
+  if (it == end(elevators_copy)) {
     return json::value{{"error", "id not found"}};
   }
 
   it->status_ = status;
-  e_.set(
-      shared_elevators::elevators{w_, elevator_nodes_, std::move(elevators)});
+  e_ = std::make_shared<elevators>(w_, elevator_nodes_,
+                                   std::move(elevators_copy));
 
   return json::string{{"success", true}};
 }

@@ -29,6 +29,7 @@ struct routing {
   osr::lookup const& l_;
   osr::platforms const& pl_;
   nigiri::timetable const& tt_;
+  rtt_ptr_t const& rtt_;
   point_rtree<nigiri::location_idx_t> const& rtree_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;
 };

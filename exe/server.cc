@@ -13,6 +13,9 @@
 
 #include "osr/lookup.h"
 
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/rt_timetable.h"
+
 #include "icc/elevators/elevators.h"
 #include "icc/endpoints/elevators.h"
 #include "icc/endpoints/footpaths.h"
@@ -75,8 +78,12 @@ int main(int ac, char** av) {
 
   // Read timetable.
   fmt::println("reading timetable");
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
   auto tt = n::timetable::read(cista::memory_holder{
       cista::file{tt_path.generic_string().c_str(), "r"}.content()});
+  auto rtt =
+      std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(*tt, today));
 
   // Read elevators.
   auto const fasta = utl::read_file(fasta_path.generic_string().c_str());
@@ -85,8 +92,8 @@ int main(int ac, char** av) {
     return 1;
   }
   auto const elevator_nodes = get_elevator_nodes(w);
-  auto e = shared_elevators{w, elevator_nodes,
-                            parse_fasta(std::string_view{*fasta})};
+  auto e = std::make_shared<elevators>(w, elevator_nodes,
+                                       parse_fasta(std::string_view{*fasta}));
 
   // Create location r-tree.
   fmt::println("creating r-tree");
@@ -116,7 +123,8 @@ int main(int ac, char** av) {
                       ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
                 .post("/api/update_elevator",
                       ep::update_elevator{e, w, elevator_nodes})
-                .get("/api/route", ep::routing{w, l, *tt});
+                .get("/api/route",
+                     ep::routing{w, l, pl, *tt, rtt, loc_rtree, matches});
 
   qr.serve_files("ui/build");
   qr.enable_cors();

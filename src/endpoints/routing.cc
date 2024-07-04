@@ -231,6 +231,7 @@ auto run_search(n::timetable const& tt,
 }
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
+  auto const rtt = rtt_;
   auto const query = api::plan_params{url.params()};
   auto const from = to_place(tt_, query.fromPlace_);
   auto const to = to_place(tt_, query.toPlace_);
@@ -287,14 +288,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   n::pareto_set<n::routing::journey> const* journeys{nullptr};
   if (!query.arriveBy_) {
     auto const r = run_search<n::direction::kForward>(
-        tt_, nullptr, std::nullopt, std::move(q));
+        tt_, rtt.get(), std::nullopt, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
     search_interval = r.interval_;
   } else {
     auto const r = run_search<n::direction::kBackward>(
-        tt_, nullptr, std::nullopt, std::move(q));
+        tt_, rtt.get(), std::nullopt, std::move(q));
     journeys = r.journeys_;
     search_stats = r.search_stats_;
     raptor_stats = r.algo_stats_;
@@ -303,8 +304,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   UTL_STOP_TIMING(nigiri);
   auto const nigiri_timing = UTL_TIMING_MS(nigiri);
 
-  return {.itineraries_ = utl::to_vec(
-              *journeys, [](auto&& j) { return journey_to_response(j); })};
+  return {.itineraries_ = utl::to_vec(*journeys, [&](auto&& j) {
+            return journey_to_response(tt_, rtt.get(), j);
+          })};
 }
 
 }  // namespace icc::ep

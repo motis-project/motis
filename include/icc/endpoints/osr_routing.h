@@ -14,7 +14,7 @@ struct osr_routing {
 
   osr::ways const& w_;
   osr::lookup const& l_;
-  shared_elevators const& e_;
+  elevators_ptr_t const& e_;
 };
 
 }  // namespace icc::ep

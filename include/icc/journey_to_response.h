@@ -7,6 +7,8 @@
 
 namespace icc {
 
-api::Itinerary journey_to_response(nigiri::routing::journey const&);
+api::Itinerary journey_to_response(nigiri::timetable const&,
+                                   nigiri::rt_timetable const*,
+                                   nigiri::routing::journey const&);
 
 }  // namespace icc

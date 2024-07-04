@@ -13,7 +13,7 @@ namespace icc::ep {
 struct update_elevator {
   boost::json::value operator()(boost::json::value const&) const;
 
-  shared_elevators& e_;
+  elevators_ptr_t& e_;
   osr::ways const& w_;
   hash_set<osr::node_idx_t> const& elevator_nodes_;
 };

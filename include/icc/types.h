@@ -1,12 +1,17 @@
 #pragma once
 
 #include <cinttypes>
+#include <memory>
 
 #include "geo/latlng.h"
 
 #include "cista/strong.h"
 
 #include "nigiri/types.h"
+
+namespace nigiri {
+struct rt_timetable;
+}
 
 namespace icc {
 
@@ -33,5 +38,7 @@ struct elevator {
   status status_;
   std::string desc_;
 };
+
+using rtt_ptr_t = std::shared_ptr<nigiri::rt_timetable>;
 
 }  // namespace icc
