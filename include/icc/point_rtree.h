@@ -76,11 +76,11 @@ struct point_rtree {
         std::array{std::max(a.lng_, b.lng_), std::max(a.lat_, b.lat_)};
     rtree_search(
         rtree_, min.data(), max.data(),
-        [](double const* min, double const* /* max */, void const* item,
+        [](double const* pos, double const* /* max */, void const* item,
            void* udata) {
           if constexpr (RtreePosHandler<T, Fn>) {
             (*reinterpret_cast<Fn*>(udata))(
-                geo::latlng{min[1], min[0]},
+                geo::latlng{pos[1], pos[0]},
                 T{static_cast<cista::base_t<T>>(
                     reinterpret_cast<std::size_t>(item))});
           } else {

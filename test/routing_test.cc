@@ -20,6 +20,7 @@
 
 namespace n = nigiri;
 namespace nl = nigiri::loader;
+namespace json = boost::json;
 using namespace std::string_view_literals;
 using namespace icc;
 using namespace date;
@@ -200,6 +201,5 @@ TEST(a, b) {
   auto const plan_response =
       routing("/?fromPlace=DA&toPlace=FFM&date=04-30-2019&time=23:00");
 
-  std::cout << boost::json::serialize(boost::json::value_from(plan_response))
-            << "\n";
+  std::cout << json::serialize(json::value_from(plan_response)) << "\n";
 }
