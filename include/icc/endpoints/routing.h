@@ -10,6 +10,7 @@
 #include "osr/ways.h"
 
 #include "icc-api/icc-api.h"
+#include "icc/elevators/elevators.h"
 #include "icc/point_rtree.h"
 #include "icc/types.h"
 
@@ -19,6 +20,7 @@ struct routing {
   api::plan_response operator()(boost::urls::url_view const& url) const;
 
   std::vector<nigiri::routing::offset> get_offsets(
+      osr::bitvec<osr::node_idx_t> const* blocked,
       osr::location const&,
       osr::direction const,
       std::vector<api::ModeEnum> const&,
@@ -30,6 +32,7 @@ struct routing {
   osr::platforms const& pl_;
   nigiri::timetable const& tt_;
   rtt_ptr_t const& rtt_;
+  elevators_ptr_t const& e_;
   point_rtree<nigiri::location_idx_t> const& rtree_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;
 };

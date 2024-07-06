@@ -137,26 +137,35 @@ DA_10,DA Hbf,49.87336,8.62926,0,DA_HBF,10
 FFM,FFM Hbf,50.10701,8.66341,1,,
 FFM_101,FFM Hbf,50.10773,8.66322,0,FFM_HBF,101
 FFM_12,FFM Hbf,50.10658,8.66178,0,FFM_HBF,12
+FFM_U,FFM Hbf,50.107577,8.6638173,0,FFM_HBF,U4
 LANGEN,Langen,49.99359,8.65677,1,,1
+FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
+FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,
+FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
 
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
 S3,DB,S3,,,109
 RB,DB,RB,,,106
+U4,DB,U4,,,402
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 S3,S1,S3,,
 RB,S1,RB,,
+U4,S1,U4,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
-S3,01:00:00,01:00:00,DA_3,0,0,0
-S3,10:00:00,10:00:00,LANGEN,1,0,0
-S3,10:30:00,10:30:00,FFM_101,2,0,0
-RB,10:00:00,10:00:00,DA_10,0,0,0
-RB,10:20:00,10:20:00,LANGEN,1,0,0
-RB,10:40:00,10:40:00,FFM_12,2,0,0
+S3,00:30:00,00:30:00,DA_3,0,0,0
+S3,00:50:00,00:50:00,LANGEN,1,0,0
+S3,01:20:00,00:20:00,FFM_HAUPT_S,2,0,0
+S3,01:25:00,01:25:00,FFM_101,3,0,0
+RB,00:35:00,00:35:00,DA_10,0,0,0
+RB,00:45:00,00:45:00,LANGEN,1,0,0
+RB,00:55:00,00:55:00,FFM_12,2,0,0
+U4,01:05:00,01:10:00,FFM_U,0,0,0
+U4,01:10:00,01:10:00,FFM_HAUPT_U,1,0,0
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -172,7 +181,8 @@ TEST(a, b) {
   auto pl = osr::platforms{kOsrPath, cista::mmap::protection::READ};
   auto const l = osr::lookup{w};
   auto const elevator_nodes = get_elevator_nodes(w);
-  auto const e = elevators{w, elevator_nodes, parse_fasta(kFastaJson)};
+  auto const e =
+      std::make_shared<elevators>(w, elevator_nodes, parse_fasta(kFastaJson));
   pl.build_rtree(w);
 
   // Load timetable.
@@ -182,11 +192,10 @@ TEST(a, b) {
   nl::register_special_stations(tt);
   nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(kGTFS), tt);
   nl::finalize(tt);
-  std::cout << tt << "\n";
   auto const loc_rtree = create_location_rtree(tt);
 
   // Compute footpaths.
-  compute_footpaths(tt, w, l, pl, e.blocked_, true);
+  compute_footpaths(tt, w, l, pl, e->blocked_, true);
 
   // Init real-time timetable.
   auto const today = date::sys_days{2019_y / May / 1};
@@ -197,9 +206,9 @@ TEST(a, b) {
   auto const matches = get_matches(tt, pl, w);
 
   // Instantiate routing endpoint.
-  auto const routing = ep::routing{w, l, pl, tt, rtt, loc_rtree, matches};
+  auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};
   auto const plan_response =
-      routing("/?fromPlace=DA&toPlace=FFM&date=04-30-2019&time=23:00");
+      routing("/?fromPlace=DA&toPlace=FFM_HAUPT&date=04-30-2019&time=22:00");
 
   std::cout << json::serialize(json::value_from(plan_response)) << "\n";
 }

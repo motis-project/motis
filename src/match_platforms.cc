@@ -99,17 +99,18 @@ double get_routes_bonus(n::timetable const& tt,
 template <typename Collection>
 double get_match_bonus(Collection&& names,
                        std::string_view ref,
-                       std::string_view name) {
+                       std::string_view name,
+                       bool const debug = false) {
   auto bonus = 0U;
   if (has_exact_match(names, ref)) {
     bonus += 200.0 - names.size();
   }
   if (has_number_match(names, name)) {
-    bonus += 140.0 - names.size();
+    bonus += 60.0 - names.size();
   }
   if (auto const track = get_track(ref);
       track.has_value() && has_number_match(names, *track)) {
-    bonus += 60.0 - names.size();
+    bonus += 20.0 - names.size();
   }
   if (has_exact_match(names, name)) {
     bonus += 15.0 - names.size();
@@ -224,6 +225,11 @@ osr::platform_idx_t get_match(n::timetable const& tt,
       best_score = score;
     }
   });
+
+  if (best != osr::platform_idx_t::invalid()) {
+    get_match_bonus(pl.platform_names_[best], tt.locations_.ids_[l].view(),
+                    tt.locations_.names_[l].view(), true);
+  }
 
   return best;
 }

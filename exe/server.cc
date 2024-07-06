@@ -117,7 +117,7 @@ int main(int ac, char** av) {
                 .post("/api/update_elevator",
                       ep::update_elevator{e, w, elevator_nodes})
                 .get("/api/route",
-                     ep::routing{w, l, pl, *tt, rtt, loc_rtree, matches});
+                     ep::routing{w, l, pl, *tt, rtt, e, loc_rtree, matches});
 
   qr.serve_files("ui/build");
   qr.enable_cors();

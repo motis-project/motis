@@ -450,7 +450,6 @@ components:
           type: number
 
     FeedScopedId:
-      title: FeedScopedId
       type: object
       required:
         - feedId
@@ -462,7 +461,6 @@ components:
           type: string
 
     EncodedPolyline:
-      title: EncodedPolylineBean
       type: object
       required:
         - points
@@ -474,6 +472,25 @@ components:
         length:
           description: The number of points in the string
           type: integer
+
+    LevelEncodedPolyline:
+      type: object
+      required:
+        - from_level
+        - to_level
+        - polyline
+      properties:
+        from_level:
+          description: level where this segment starts, based on OpenStreetMap data
+          type: number
+        to_level:
+          description: level where this segment starts, based on OpenStreetMap data
+          type: number
+        osm_way:
+          description: OpenStreetMap way index
+          type: integer
+        polyline:
+          $ref: '#/components/schemas/EncodedPolyline'
 
     Leg:
       type: object
@@ -572,6 +589,11 @@ components:
           $ref: '#/components/schemas/Place'
         legGeometry:
           $ref: '#/components/schemas/EncodedPolyline'
+        legGeometryWithLevels:
+          description: Like `legGeometry`, but split at level changes
+          type: array
+          items:
+            $ref: "#/components/schemas/LevelEncodedPolyline"
         steps:
           description: |
             A series of turn by turn instructions

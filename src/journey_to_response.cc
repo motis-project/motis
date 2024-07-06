@@ -1,12 +1,16 @@
 #include "icc/journey_to_response.h"
 
+#include "utl/enumerate.h"
+
+#include "osr/routing/route.h"
+
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
-
-#include "utl/enumerate.h"
+#include "geo/polyline_format.h"
+#include "icc/constants.h"
 
 namespace n = nigiri;
 
@@ -52,9 +56,60 @@ std::string get_service_date(n::timetable const& tt,
   return fmt::format("{:%Y-%m-%d}", day);
 }
 
-api::Itinerary journey_to_response(n::timetable const& tt,
-                                   n::rt_timetable const* rtt,
-                                   n::routing::journey const& j) {
+void add_polyline(osr::ways const& w,
+                  osr::lookup const& l,
+                  osr::bitvec<osr::node_idx_t> const* blocked,
+                  osr::search_profile const profile,
+                  osr::location const& from,
+                  osr::location const& to,
+                  api::Leg& leg) {
+  auto const path =
+      osr::route(w, l, profile, from, to, 3600, osr::direction::kForward,
+                 kMaxMatchingDistance, blocked);
+
+  if (!path.has_value()) {
+    std::cout << "no path found: " << from << " -> " << to
+              << ", profile=" << to_str(profile) << "\n";
+    return;
+  }
+
+  leg.legGeometryWithLevels_ =
+      utl::to_vec(path->segments_, [&](osr::path::segment const& s) {
+        return api::LevelEncodedPolyline{
+            .from_level_ = to_float(s.from_level_),
+            .to_level_ = to_float(s.to_level_),
+            .osm_way_ = s.way_ == osr::way_idx_t ::invalid()
+                            ? std::nullopt
+                            : std::optional{static_cast<std::int64_t>(
+                                  to_idx(w.way_osm_idx_[s.way_]))},
+            .polyline_ = {encode_polyline(s.polyline_),
+                          static_cast<std::int64_t>(s.polyline_.size())},
+        };
+      });
+
+  auto concat = std::vector<geo::latlng>{};
+  for (auto const& p : path->segments_) {
+    utl::concat(concat, p.polyline_);
+  }
+  leg.legGeometry_.points_ = encode_polyline(concat);
+  leg.legGeometry_.length_ = concat.size();
+}
+
+api::Itinerary journey_to_response(
+    osr::ways const& w,
+    osr::lookup const& l,
+    n::timetable const& tt,
+    osr::platforms const& pl,
+    n::rt_timetable const* rtt,
+    osr::bitvec<osr::node_idx_t> const* blocked,
+    vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
+    bool const wheelchair,
+    n::routing::journey const& j) {
+  auto const to_location = [&](n::location_idx_t const l) {
+    return osr::location{tt.locations_.coordinates_[l],
+                         pl.get_level(w, matches[l])};
+  };
+
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
       .startTime_ = to_ms(j.departure_time()),
@@ -113,9 +168,20 @@ api::Itinerary journey_to_response(n::timetable const& tt,
                 p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kDep));
               }
             },
-            [&](n::footpath const fp) { write_leg(fp, api::ModeEnum::WALK); },
+            [&](n::footpath const fp) {
+              auto& leg = write_leg(fp, api::ModeEnum::WALK);
+              add_polyline(w, l, blocked,
+                           wheelchair ? osr::search_profile::kWheelchair
+                                      : osr::search_profile::kFoot,
+                           to_location(j_leg.from_), to_location(j_leg.to_),
+                           leg);
+            },
             [&](n::routing::offset const x) {
-              write_leg(x, api::ModeEnum{x.transport_mode_id_});
+              auto& leg = write_leg(x, api::ModeEnum{x.transport_mode_id_});
+              add_polyline(
+                  w, l, blocked,
+                  static_cast<osr::search_profile>(x.transport_mode_id_),
+                  to_location(j_leg.from_), to_location(j_leg.to_), leg);
             }},
         j_leg.uses_);
   }

@@ -13,6 +13,8 @@
 #include "nigiri/routing/search.h"
 #include "nigiri/special_stations.h"
 
+#include "icc/constants.h"
+#include "icc/endpoints/routing.h"
 #include "icc/journey_to_response.h"
 #include "icc/parse_location.h"
 
@@ -93,6 +95,7 @@ double get_max_distance(osr::search_profile const profile,
 }
 
 std::vector<n::routing::offset> routing::get_offsets(
+    osr::bitvec<osr::node_idx_t> const* blocked,
     osr::location const& pos,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
@@ -108,13 +111,14 @@ std::vector<n::routing::offset> routing::get_offsets(
           return osr::location{tt_.locations_.coordinates_[l],
                                pl_.get_level(w_, matches_[l])};
         });
-    auto const paths = osr::route(w_, l_, profile, pos, near_stop_locations,
-                                  max.count(), dir, 8, nullptr);
+    auto const paths =
+        osr::route(w_, l_, profile, pos, near_stop_locations, max.count(), dir,
+                   kMaxMatchingDistance, blocked);
     for (auto const [p, l] : utl::zip(paths, near_stops)) {
       if (p.has_value()) {
         offsets.emplace_back(
             n::routing::offset{l, n::duration_t{p->cost_ / 60},
-                               static_cast<n::transport_mode_id_t>(m)});
+                               static_cast<n::transport_mode_id_t>(profile)});
       }
     }
   }
@@ -251,6 +255,8 @@ auto run_search(n::timetable const& tt,
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rtt_;
+  auto const e = e_;
+
   auto const query = api::plan_params{url.params()};
   auto const from = to_place(tt_, query.fromPlace_);
   auto const to = to_place(tt_, query.toPlace_);
@@ -275,7 +281,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                                  ? osr::direction::kForward
                                                  : osr::direction::kBackward;
                             return get_offsets(
-                                pos, dir, start_modes, query.wheelchair_,
+                                &e->blocked_, pos, dir, start_modes,
+                                query.wheelchair_,
                                 std::chrono::seconds{query.maxPreTransitTime_});
                           }},
           start),
@@ -286,7 +293,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 auto const dir = query.arriveBy_ ? osr::direction::kBackward
                                                  : osr::direction::kForward;
                 return get_offsets(
-                    pos, dir, dest_modes, query.wheelchair_,
+                    &e->blocked_, pos, dir, dest_modes, query.wheelchair_,
                     std::chrono::seconds{query.maxPostTransitTime_});
               }},
           dest),
@@ -348,7 +355,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   return {.from_ = to_place(from, "Origin"),
           .to_ = to_place(to, "Destination"),
           .itineraries_ = utl::to_vec(*journeys, [&](auto&& j) {
-            return journey_to_response(tt_, rtt.get(), j);
+            return journey_to_response(w_, l_, tt_, pl_, rtt.get(),
+                                       &e->blocked_, matches_,
+                                       query.wheelchair_, j);
           })};
 }
 
