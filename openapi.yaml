@@ -157,6 +157,7 @@ paths:
               - WALK
               - TRANSIT
             type: array
+            minItems: 1
             items:
               $ref: '#/components/schemas/Mode'
           explode: false
@@ -210,7 +211,6 @@ paths:
         - name: arriveBy
           in: query
           required: false
-          default: false
           schema:
             type: boolean
             default: false
@@ -264,31 +264,32 @@ paths:
             application/json:
               schema:
                 type: object
+                required:
+                  - requestParameters
+                  - debugOutput
+                  - date
+                  - from
+                  - to
+                  - itineraries
                 properties:
                   requestParameters:
-                    required: true
                     description: "the routing query"
                     type: object
                     additionalProperties:
                       type: string
                   debugOutput:
-                    required: true
                     description: "debug statistics"
                     type: object
                     additionalProperties:
                       type: string
                   date:
-                    required: true
                     description: "The time and date of travel"
                     type: integer
                   from:
-                    required: true
                     $ref: '#/components/schemas/Place'
                   to:
-                    required: true
                     $ref: '#/components/schemas/Place'
                   itineraries:
-                    required: true
                     description: list of itineraries
                     type: array
                     items:
@@ -297,7 +298,6 @@ components:
   schemas:
     Mode:
       type: string
-      minItems: 1
       enum:
         # === Street ===
         - WALK
@@ -495,31 +495,28 @@ components:
     Leg:
       type: object
       required:
+        - mode
         - startTime
         - endTime
         - departureDelay
         - arrivalDelay
         - realTime
         - distance
-        - interlineWithPreviousLeg
-        - route
-        - headsign
-        - agencyName
-        - agencyUrl
-        - routeColor
-        - routeTextColor
-        - routeType
-        - routeId
-        - agencyId
-        - tripId
-        - serviceDate
         - duration
-        - intermediateStops
         - from
         - to
         - legGeometry
-        - steps
       properties:
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this leg
+        from:
+          $ref: '#/components/schemas/Place'
+        to:
+          $ref: '#/components/schemas/Place'
+        duration:
+          description: Leg duration in seconds
+          type: integer
         startTime:
           type: integer
           description: leg departure time, format = unixtime in milliseconds
@@ -573,9 +570,11 @@ components:
           type: string
         serviceDate:
           type: string
-        duration:
-          description: Leg duration in seconds
-          type: integer
+        routeShortName:
+          type: string
+        source:
+          description: Filename and line number where this trip is from
+          type: string
         intermediateStops:
           description: |
             For transit legs, intermediate stops between the Place where the leg originates
@@ -583,10 +582,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Place"
-        from:
-          $ref: '#/components/schemas/Place'
-        to:
-          $ref: '#/components/schemas/Place'
         legGeometry:
           $ref: '#/components/schemas/EncodedPolyline'
         legGeometryWithLevels:
@@ -601,9 +596,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StepInstruction'
-        mode:
-          $ref: '#/components/schemas/Mode'
-          description: Transport mode for this leg
 
     Itinerary:
       type: object

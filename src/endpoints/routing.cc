@@ -31,12 +31,6 @@ std::string to_str(T const& t) {
   return boost::json::serialize(boost::json::value_from(t));
 }
 
-using place_t = std::variant<osr::location, n::location_idx_t>;
-
-std::ostream& operator<<(std::ostream& out, place_t const p) {
-  return std::visit([&](auto const l) -> std::ostream& { return out << l; }, p);
-}
-
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state;
 
@@ -357,7 +351,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           .itineraries_ = utl::to_vec(*journeys, [&](auto&& j) {
             return journey_to_response(w_, l_, tt_, pl_, rtt.get(),
                                        &e->blocked_, matches_,
-                                       query.wheelchair_, j);
+                                       query.wheelchair_, j, start, dest);
           })};
 }
 

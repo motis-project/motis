@@ -40,7 +40,7 @@ namespace json = boost::json;
 using namespace icc;
 
 int main(int ac, char** av) {
-  auto tt_path = fs::path{"tt.bin"};
+  auto tt_path = fs::path{"tt_out.bin"};
   auto osr_path = fs::path{"osr"};
   auto fasta_path = fs::path{"fasta.json"};
 
@@ -116,7 +116,7 @@ int main(int ac, char** av) {
                       ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
                 .post("/api/update_elevator",
                       ep::update_elevator{e, w, elevator_nodes})
-                .get("/api/route",
+                .get("/api/v1/plan",
                      ep::routing{w, l, pl, *tt, rtt, e, loc_rtree, matches});
 
   qr.serve_files("ui/build");

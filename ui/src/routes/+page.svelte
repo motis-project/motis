@@ -37,6 +37,8 @@
 		TableRow,
 		TableHeader
 	} from '$lib/components/ui/table/index.js';
+	import { plan } from '$lib/openapi';
+	import { Separator } from '$lib/components/ui/separator';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -82,13 +84,13 @@
 
 	let profile = $state({ value: 'foot', label: 'Foot' });
 	let start = $state<Location>({
-		lat: 50.106847864540164,
-		lng: 8.663205312233744,
+		lat: 50.106847864,
+		lng: 8.6632053122,
 		level: 0
 	});
 	let destination = $state<Location>({
-		lat: 50.106847864540164,
-		lng: 8.665205312233744,
+		lat: 49.872584079,
+		lng: 8.6312708899,
 		level: 0
 	});
 	let query = $derived<RoutingQuery>({
@@ -215,9 +217,16 @@
 		}
 	});
 
+	let routingResponse = $derived(
+		plan({
+			fromPlace: `${query.start.lat},${query.start.lng},${query.start.level}`,
+			toPlace: `${query.destination.lat},${query.destination.lng},${query.destination.level}`
+		})
+	);
+
 	// client ID: a9b1f1ad1051790a9c6970db85710986
 	// client Secret: df987129855de70a804f146718aac956
-    // client Secret: 30dee8771d325304274b7c2555fae33e
+	// client Secret: 30dee8771d325304274b7c2555fae33e
 </script>
 
 <Map
@@ -228,8 +237,8 @@
 			return { url: `https://europe.motis-project.de/tiles${url}` };
 		}
 	}}
-	center={[8.663351200419433, 50.10680913598618]}
-	zoom={18}
+	center={[8.563351200419433, 50]}
+	zoom={10}
 	class="h-screen"
 	style={getStyle(level)}
 >
@@ -251,6 +260,41 @@
 			</div>
 		</Control>
 	{/if}
+
+	<Control position="bottom-left">
+		<div class="h-[500px] w-[400px] overflow-y-scroll bg-white rounded-lg">
+			{#await routingResponse}
+				<div>ROUTING...</div>
+			{:then r}
+				<div class="flex flex-col space-y-8 w-full p-8">
+					{#each r.itineraries as i}
+						<div>
+							<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
+								<div>{new Date(i.startTime).toLocaleTimeString()}</div>
+								<Separator orientation="vertical" />
+								<div>{new Date(i.endTime).toLocaleTimeString()}</div>
+								<Separator orientation="vertical" />
+								<div>{i.transfers} transfers</div>
+							</div>
+							<Separator class="my-2" />
+							<div class="flex space-x-4">
+								{#each i.legs.filter((l) => l.routeShortName) as l}
+									<div
+										class="p-1 rounded-lg font-bold"
+										style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
+									>
+										{l.routeShortName}
+									</div>
+								{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+			{:catch e}
+				<div>Error: {e}</div>
+			{/await}
+		</div>
+	</Control>
 
 	{#if footpaths}
 		<Control position="top-left">
