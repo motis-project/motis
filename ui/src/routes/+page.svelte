@@ -39,6 +39,7 @@
 	} from '$lib/components/ui/table/index.js';
 	import { plan } from '$lib/openapi';
 	import { Separator } from '$lib/components/ui/separator';
+	import { Card } from '$lib/components/ui/card';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -262,38 +263,47 @@
 	{/if}
 
 	<Control position="bottom-left">
-		<div class="h-[500px] w-[400px] overflow-y-scroll bg-white rounded-lg">
+		<Card class="h-[500px] w-[400px] overflow-y-scroll bg-white rounded-lg">
 			{#await routingResponse}
 				<div>ROUTING...</div>
 			{:then r}
 				<div class="flex flex-col space-y-8 w-full p-8">
 					{#each r.itineraries as i}
-						<div>
+						<Card class="p-4">
 							<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
-								<div>{new Date(i.startTime).toLocaleTimeString()}</div>
+								<div>
+									<div class="text-xs text-muted-foreground">Departure Time</div>
+									{new Date(i.startTime).toLocaleTimeString()}
+								</div>
 								<Separator orientation="vertical" />
-								<div>{new Date(i.endTime).toLocaleTimeString()}</div>
+								<div>
+									<div class="text-xs text-muted-foreground">Arrival Time</div>
+									{new Date(i.endTime).toLocaleTimeString()}
+								</div>
 								<Separator orientation="vertical" />
-								<div>{i.transfers} transfers</div>
+								<div>
+									<div class="text-xs text-muted-foreground">Transfers</div>
+									<div>{i.transfers}</div>
+								</div>
 							</div>
 							<Separator class="my-2" />
-							<div class="flex space-x-4">
+							<div class="mt-4 flex space-x-4">
 								{#each i.legs.filter((l) => l.routeShortName) as l}
 									<div
-										class="p-1 rounded-lg font-bold"
+										class="py-1 px-2 rounded-lg font-bold"
 										style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
 									>
 										{l.routeShortName}
 									</div>
 								{/each}
 							</div>
-						</div>
+						</Card>
 					{/each}
 				</div>
 			{:catch e}
 				<div>Error: {e}</div>
 			{/await}
-		</div>
+		</Card>
 	</Control>
 
 	{#if footpaths}
