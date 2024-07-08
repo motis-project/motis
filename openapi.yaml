@@ -24,14 +24,14 @@ paths:
         - name: fromPlace
           in: query
           required: true
-          description: latitude, longitude, level pair in degrees or stop id
+          description: latitude, longitude, level tuple in degrees or stop id
           schema:
             type: string
 
         - name: toPlace
           in: query
           required: true
-          description: latitude, longitude, level pair in degrees or stop id
+          description: latitude, longitude, level tuple in degrees or stop id
           schema:
             type: string
 
@@ -375,6 +375,9 @@ components:
         departure:
           description: departure time, format = unixtime in milliseconds
           type: integer
+        track:
+          description: track/platform information, if available
+          type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
 

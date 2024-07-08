@@ -35,9 +35,17 @@ std::int64_t to_ms(n::i32_minutes const t) {
 
 api::Place to_place(n::timetable const& tt, n::location_idx_t const l) {
   auto const pos = tt.locations_.coordinates_[l];
-  return {.name_ = std::string{tt.locations_.names_[l].view()},
+  auto const type = tt.locations_.types_.at(l);
+  auto const is_track = (type == n::location_type::kGeneratedTrack ||
+                         type == n::location_type::kTrack);
+  auto const p = is_track ? tt.locations_.parents_.at(l) : l;
+  auto const track =
+      is_track ? std::optional{std::string{tt.locations_.names_.at(l).view()}}
+               : std::nullopt;
+  return {.name_ = std::string{tt.locations_.names_[p].view()},
           .lat_ = pos.lat_,
           .lon_ = pos.lng_,
+          .track_ = track,
           .vertexType_ = api::VertexTypeEnum::NORMAL};
 }
 

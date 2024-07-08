@@ -38,9 +38,11 @@
 		TableRow,
 		TableHeader
 	} from '$lib/components/ui/table/index.js';
-	import { plan } from '$lib/openapi';
+	import { plan, type Itinerary } from '$lib/openapi';
 	import { Separator } from '$lib/components/ui/separator';
 	import { Card } from '$lib/components/ui/card';
+	import ConnectionDetail from './ConnectionDetail.svelte';
+	import Time from './Time.svelte';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -226,19 +228,14 @@
 		})
 	);
 
+	let itinerary = $state<Itinerary | null>(null);
+
 	// client ID: a9b1f1ad1051790a9c6970db85710986
 	// client Secret: df987129855de70a804f146718aac956
 	// client Secret: 30dee8771d325304274b7c2555fae33e
 </script>
 
-{#snippet time(t, text)}
-	{@const d = new Date(t)}
-	{@const pad = (x: number) => ('0' + x).slice(-2)}
-	<div>
-		<div class="text-xs text-muted-foreground">{text}</div>
-		{pad(d.getHours())}:{pad(d.getMinutes())}
-	</div>
-{/snippet}
+{#snippet time(t, text)}{/snippet}
 
 <Map
 	bind:map
@@ -279,35 +276,61 @@
 					<LoaderCircle class="animate-spin w-12 h-12" />
 				</div>
 			{:then r}
-				<div class="flex flex-col space-y-8 w-full p-8">
-					{#each r.itineraries as i}
-						<a href="#">
-							<Card class="p-4">
-								<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
-									{@render time(i.startTime, 'Departure Time')}
-									<Separator orientation="vertical" />
-									{@render time(i.endTime, 'Arrival Time')}
-									<Separator orientation="vertical" />
-									<div>
-										<div class="text-xs text-muted-foreground">Transfers</div>
-										<div class="flex justify-center w-full">{i.transfers}</div>
-									</div>
-								</div>
-								<Separator class="my-2" />
-								<div class="mt-4 flex space-x-4">
-									{#each i.legs.filter((l) => l.routeShortName) as l}
-										<div
-											class="py-1 px-2 rounded-lg font-bold"
-											style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
-										>
-											{l.routeShortName}
+				{#if itinerary !== null}
+					<div class="w-full flex justify-between bg-muted shadow-md items-center">
+						<h2 class="text-lg ml-2">Journey Details</h2>
+						<Button
+							variant="ghost"
+							on:click={() => {
+								itinerary = null;
+							}}><X /></Button
+						>
+					</div>
+					<div>
+						<ConnectionDetail {itinerary} />
+					</div>
+				{:else}
+					<div class="flex flex-col space-y-8 w-full p-8">
+						{#each r.itineraries as i}
+							<a
+								href="#"
+								onclick={() => {
+									itinerary = i;
+								}}
+							>
+								<Card class="p-4">
+									<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
+										<div>
+											<div class="text-xs text-muted-foreground">Departure Time</div>
+											<Time timestamp={i.startTime} />
 										</div>
-									{/each}
-								</div>
-							</Card>
-						</a>
-					{/each}
-				</div>
+										<Separator orientation="vertical" />
+										<div>
+											<div class="text-xs text-muted-foreground">Arrival Time</div>
+											<Time timestamp={i.endTime} />
+										</div>
+										<Separator orientation="vertical" />
+										<div>
+											<div class="text-xs text-muted-foreground">Transfers</div>
+											<div class="flex justify-center w-full">{i.transfers}</div>
+										</div>
+									</div>
+									<Separator class="my-2" />
+									<div class="mt-4 flex space-x-4">
+										{#each i.legs.filter((l) => l.routeShortName) as l}
+											<div
+												class="py-1 px-2 rounded-lg font-bold"
+												style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
+											>
+												{l.routeShortName}
+											</div>
+										{/each}
+									</div>
+								</Card>
+							</a>
+						{/each}
+					</div>
+				{/if}
 			{:catch e}
 				<div>Error: {e}</div>
 			{/await}
