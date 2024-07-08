@@ -53,6 +53,24 @@ std::string to_str(n::color_t const c) {
   return fmt::format("{:06x}", to_idx(c) & 0x00ffffff);
 }
 
+api::ModeEnum to_mode(n::clasz const c) {
+  switch (c) {
+    case n::clasz::kAir: return api::ModeEnum::AIRPLANE;
+    case n::clasz::kHighSpeed: return api::ModeEnum::HIGHSPEED_RAIL;
+    case n::clasz::kLongDistance: return api::ModeEnum::LONG_DISTANCE;
+    case n::clasz::kCoach: return api::ModeEnum::COACH;
+    case n::clasz::kNight: return api::ModeEnum::NIGHT_RAIL;
+    case n::clasz::kRegionalFast: return api::ModeEnum::REGIONAL_FAST_RAIL;
+    case n::clasz::kRegional: return api::ModeEnum::REGIONAL_RAIL;
+    case n::clasz::kMetro: return api::ModeEnum::METRO;
+    case n::clasz::kSubway: return api::ModeEnum::SUBWAY;
+    case n::clasz::kTram: return api::ModeEnum::TRAM;
+    case n::clasz::kBus: return api::ModeEnum::BUS;
+    case n::clasz::kShip: return api::ModeEnum::FERRY;
+    case n::clasz::kOther: return api::ModeEnum::OTHER;
+  }
+}
+
 std::string get_service_date(n::timetable const& tt,
                              n::transport const t,
                              n::stop_idx_t const stop_idx) {
@@ -178,6 +196,7 @@ api::Itinerary journey_to_response(
               leg.headsign_ = enter_stop.direction();
               leg.routeColor_ = to_str(color.color_);
               leg.routeTextColor_ = to_str(color.text_color_);
+              leg.mode_ = to_mode(enter_stop.get_clasz());
               leg.realTime_ = fr.is_rt();
               leg.tripId_ = fr.id().id_;  // TODO source_idx
               leg.serviceDate_ = get_service_date(tt, t.r_.t_, 0U),
@@ -192,7 +211,7 @@ api::Itinerary journey_to_response(
               auto polyline = geo::polyline{};
               for (auto i = t.stop_range_.from_ + 1U;
                    i < t.stop_range_.to_ - 1U; ++i) {
-                auto const stop = fr[t.stop_range_.from_];
+                auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
                     to_place(tt, stop.get_location_idx()));
                 p.departure_ = to_ms(stop.time(n::event_type::kDep));

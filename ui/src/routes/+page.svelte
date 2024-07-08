@@ -43,6 +43,8 @@
 	import { Card } from '$lib/components/ui/card';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import Time from './Time.svelte';
+	import { routeColor } from '$lib/routeColor';
+	import { getModeStyle } from '$lib/modeStyle';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -270,23 +272,25 @@
 	{/if}
 
 	<Control position="bottom-left">
-		<Card class="h-[500px] w-[400px] overflow-y-scroll bg-white rounded-lg">
+		<Card class="h-[800px] w-[560px] overflow-y-auto overflow-x-hidden bg-white rounded-lg">
 			{#await routingResponse}
 				<div class="flex items-center justify-center h-full w-full">
 					<LoaderCircle class="animate-spin w-12 h-12" />
 				</div>
 			{:then r}
 				{#if itinerary !== null}
-					<div class="w-full flex justify-between bg-muted shadow-md items-center">
-						<h2 class="text-lg ml-2">Journey Details</h2>
+					<div class="w-full flex justify-between bg-muted items-center">
+						<h2 class="text-lg ml-2 font-bold">Journey Details</h2>
 						<Button
 							variant="ghost"
 							on:click={() => {
 								itinerary = null;
-							}}><X /></Button
+							}}
 						>
+							<X />
+						</Button>
 					</div>
-					<div>
+					<div class="p-4">
 						<ConnectionDetail {itinerary} />
 					</div>
 				{:else}
@@ -299,19 +303,19 @@
 								}}
 							>
 								<Card class="p-4">
-									<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
+									<div class="text-lg h-8 flex justify-between items-center space-x-4 w-full">
 										<div>
-											<div class="text-xs text-muted-foreground">Departure Time</div>
+											<div class="text-xs font-bold uppercase text-slate-400">Departure Time</div>
 											<Time timestamp={i.startTime} />
 										</div>
 										<Separator orientation="vertical" />
 										<div>
-											<div class="text-xs text-muted-foreground">Arrival Time</div>
+											<div class="text-xs font-bold uppercase text-slate-400">Arrival Time</div>
 											<Time timestamp={i.endTime} />
 										</div>
 										<Separator orientation="vertical" />
 										<div>
-											<div class="text-xs text-muted-foreground">Transfers</div>
+											<div class="text-xs font-bold uppercase text-slate-400">Transfers</div>
 											<div class="flex justify-center w-full">{i.transfers}</div>
 										</div>
 									</div>
@@ -319,9 +323,12 @@
 									<div class="mt-4 flex space-x-4">
 										{#each i.legs.filter((l) => l.routeShortName) as l}
 											<div
-												class="py-1 px-2 rounded-lg font-bold"
-												style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
+												class="flex items-center py-1 px-2 rounded-lg font-bold"
+												style={routeColor(l)}
 											>
+												<svg class="relative mr-1 w-4 h-4 fill-white rounded-full">
+													<use xlink:href={`#${getModeStyle(l.mode)[0]}`}></use>
+												</svg>
 												{l.routeShortName}
 											</div>
 										{/each}
