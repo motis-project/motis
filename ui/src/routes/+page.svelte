@@ -1,5 +1,6 @@
 <script lang="ts">
 	import X from 'lucide-svelte/icons/x';
+	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import maplibregl from 'maplibre-gl';
 	import { getStyle } from '$lib/style';
 	import Map from '$lib/Map.svelte';
@@ -230,6 +231,15 @@
 	// client Secret: 30dee8771d325304274b7c2555fae33e
 </script>
 
+{#snippet time(t, text)}
+	{@const d = new Date(t)}
+	{@const pad = (x: number) => ('0' + x).slice(-2)}
+	<div>
+		<div class="text-xs text-muted-foreground">{text}</div>
+		{pad(d.getHours())}:{pad(d.getMinutes())}
+	</div>
+{/snippet}
+
 <Map
 	bind:map
 	bind:bounds
@@ -265,39 +275,37 @@
 	<Control position="bottom-left">
 		<Card class="h-[500px] w-[400px] overflow-y-scroll bg-white rounded-lg">
 			{#await routingResponse}
-				<div>ROUTING...</div>
+				<div class="flex items-center justify-center h-full w-full">
+					<LoaderCircle class="animate-spin w-12 h-12" />
+				</div>
 			{:then r}
 				<div class="flex flex-col space-y-8 w-full p-8">
 					{#each r.itineraries as i}
-						<Card class="p-4">
-							<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
-								<div>
-									<div class="text-xs text-muted-foreground">Departure Time</div>
-									{new Date(i.startTime).toLocaleTimeString()}
-								</div>
-								<Separator orientation="vertical" />
-								<div>
-									<div class="text-xs text-muted-foreground">Arrival Time</div>
-									{new Date(i.endTime).toLocaleTimeString()}
-								</div>
-								<Separator orientation="vertical" />
-								<div>
-									<div class="text-xs text-muted-foreground">Transfers</div>
-									<div>{i.transfers}</div>
-								</div>
-							</div>
-							<Separator class="my-2" />
-							<div class="mt-4 flex space-x-4">
-								{#each i.legs.filter((l) => l.routeShortName) as l}
-									<div
-										class="py-1 px-2 rounded-lg font-bold"
-										style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
-									>
-										{l.routeShortName}
+						<a href="#">
+							<Card class="p-4">
+								<div class="h-8 flex justify-between items-center space-x-4 text-sm w-full">
+									{@render time(i.startTime, 'Departure Time')}
+									<Separator orientation="vertical" />
+									{@render time(i.endTime, 'Arrival Time')}
+									<Separator orientation="vertical" />
+									<div>
+										<div class="text-xs text-muted-foreground">Transfers</div>
+										<div class="flex justify-center w-full">{i.transfers}</div>
 									</div>
-								{/each}
-							</div>
-						</Card>
+								</div>
+								<Separator class="my-2" />
+								<div class="mt-4 flex space-x-4">
+									{#each i.legs.filter((l) => l.routeShortName) as l}
+										<div
+											class="py-1 px-2 rounded-lg font-bold"
+											style={`background: #${l.routeColor}; color: #${l.routeColor == '000000' ? 'FFF' : l.routeTextColor}`}
+										>
+											{l.routeShortName}
+										</div>
+									{/each}
+								</div>
+							</Card>
+						</a>
 					{/each}
 				</div>
 			{:catch e}
