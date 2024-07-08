@@ -153,7 +153,7 @@
 			class="relative left-[12px] w-3 h-3 rounded-full"
 			style={`background-color: #${getModeStyle(lastLeg!.mode)[1]}`}
 		></div>
-		<div class="relative left-1 bottom-1 pl-6 flex">
+		<div class="relative left-2 bottom-[7px] pl-6 flex">
 			<Time class="font-semibold mr-2" timestamp={lastLeg.endTime} />
 			<Time class="font-semibold" timestamp={lastLeg.endTime} delay={lastLeg.arrivalDelay} />
 			<span class="ml-8">{lastLeg.to.name}</span>
