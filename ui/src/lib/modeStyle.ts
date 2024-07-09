@@ -1,6 +1,6 @@
 import type { Mode } from './openapi';
 
-export const getModeStyle = (mode: Mode) => {
+export const getModeStyle = (mode: Mode): [string, string] => {
 	switch (mode) {
 		case 'WALK':
 		case 'FLEXIBLE':
@@ -55,4 +55,6 @@ export const getModeStyle = (mode: Mode) => {
 		case 'RAIL':
 			return ['train', 'f44336'];
 	}
+
+	return ['train', '000000'];
 };

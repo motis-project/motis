@@ -17,7 +17,9 @@
 	const formatDurationSec = (t: number) => {
 		let hours = Math.floor(t / 3600);
 		let minutes = (t - hours * 3600) / 60;
-		let str = [hours !== 0 ? hours + 'h' : '', minutes !== 0 ? minutes + 'min' : ''].join(' ');
+		let str = [hours !== 0 ? hours + 'h' : '', minutes !== 0 ? minutes + 'min' : '']
+			.join(' ')
+			.trim();
 		return str;
 	};
 </script>
@@ -154,9 +156,9 @@
 			style={`background-color: #${getModeStyle(lastLeg!.mode)[1]}`}
 		></div>
 		<div class="relative left-2 bottom-[7px] pl-6 flex">
-			<Time class="font-semibold mr-2" timestamp={lastLeg.endTime} />
-			<Time class="font-semibold" timestamp={lastLeg.endTime} delay={lastLeg.arrivalDelay} />
-			<span class="ml-8">{lastLeg.to.name}</span>
+			<Time class="font-semibold mr-2" timestamp={lastLeg!.endTime} />
+			<Time class="font-semibold" timestamp={lastLeg!.endTime} delay={lastLeg!.arrivalDelay} />
+			<span class="ml-8">{lastLeg!.to.name}</span>
 		</div>
 	</div>
 </div>
