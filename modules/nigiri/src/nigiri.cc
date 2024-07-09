@@ -434,6 +434,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             (*impl_->tt_)->date_range_ = interval;
             n::loader::register_special_stations(**impl_->tt_);
 
+            auto traffic_day_bitfields =
+                n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
                   fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
@@ -442,14 +444,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                   << "loading nigiri timetable with configuration "
                   << (*loader)->name();
 
-              auto config = n::loader::loader_config{
-                  .link_stop_distance_ = link_stop_distance_,
-                  .default_tz_ = default_timezone_};
-              config.bikes_allowed_default_.fill(bikes_allowed_default_);
-
               try {
-                (*loader)->load(config, src, *dir, **impl_->tt_,
-                                bitfield_indices);
+                (*loader)->load({.link_stop_distance_ = link_stop_distance_,
+                                 .default_tz_ = default_timezone_},
+                                src, *dir, **impl_->tt_, traffic_day_bitfields);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
                 progress_tracker->status(fmt::format("ERROR: {}", e.what()))
