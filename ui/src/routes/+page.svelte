@@ -45,6 +45,7 @@
 	import Time from './Time.svelte';
 	import { routeColor } from '$lib/routeColor';
 	import { getModeStyle } from '$lib/modeStyle';
+	import { itineraryToGeoJSON } from '$lib/ItineraryToGeoJSON';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -90,13 +91,13 @@
 
 	let profile = $state({ value: 'foot', label: 'Foot' });
 	let start = $state<Location>({
-		lat: 50.106847864,
-		lng: 8.6632053122,
+		lat: 49.872584079,
+		lng: 8.6312708899,
 		level: 0
 	});
 	let destination = $state<Location>({
-		lat: 49.872584079,
-		lng: 8.6312708899,
+		lat: 50.11352164499803,
+		lng: 8.677728968355844,
 		level: 0
 	});
 	let query = $derived<RoutingQuery>({
@@ -105,7 +106,7 @@
 		profile: profile.value,
 		direction: 'forward'
 	});
-	let route = $derived(getRoute(query));
+	// let route = $derived(getRoute(query));
 
 	let footpaths = $state<Footpaths | null>();
 	const showLocation = async (props: any) => {
@@ -226,18 +227,18 @@
 	let routingResponse = $derived(
 		plan({
 			fromPlace: `${query.start.lat},${query.start.lng},${query.start.level}`,
-			toPlace: `${query.destination.lat},${query.destination.lng},${query.destination.level}`
+			toPlace: `${query.destination.lat},${query.destination.lng},${query.destination.level}`,
+			wheelchair: profile.value == 'wheelchair'
 		})
 	);
 
 	let itinerary = $state<Itinerary | null>(null);
+	let route = $derived(itineraryToGeoJSON(itinerary));
 
 	// client ID: a9b1f1ad1051790a9c6970db85710986
 	// client Secret: df987129855de70a804f146718aac956
 	// client Secret: 30dee8771d325304274b7c2555fae33e
 </script>
-
-{#snippet time(t, text)}{/snippet}
 
 <Map
 	bind:map
@@ -533,7 +534,7 @@
 					}}
 					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
 					paint={{
-						'line-color': '#1966a4',
+						'line-color': ['get', 'outlineColor'],
 						'line-width': 7.5,
 						'line-opacity': 0.8
 					}}
@@ -547,7 +548,7 @@
 					}}
 					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
 					paint={{
-						'line-color': '#42a5f5',
+						'line-color': ['get', 'color'],
 						'line-width': 5,
 						'line-opacity': 0.8
 					}}

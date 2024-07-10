@@ -42,7 +42,7 @@
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<div
-					class="flex items-center text-nowrap rounded-full px-2 h-8 py-[1px] font-bold"
+					class="flex items-center text-nowrap rounded-full pl-2 pr-3 h-8 py-[1px] font-bold"
 					style={routeColor(l, modeColor)}
 				>
 					<svg class="relative mr-2 w-6 h-6 fill-white rounded-full">
@@ -114,7 +114,7 @@
 				{/if}
 
 				{#if !isLast && !(isLastPred && next!.duration === 0)}
-					<div class="flex items-center pb-4">
+					<div class="flex items-center pb-3">
 						<Time class="font-semibold mr-2" timestamp={l.endTime} />
 						<Time class="font-semibold" timestamp={l.endTime} delay={l.arrivalDelay} />
 						<span class="ml-8">{l.to.name}</span>

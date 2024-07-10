@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=2f2e403708ac481d94b5584626ac0a6c4afae4fa
+  commit=d3d94bedc9a21b7e7190dc37326e113a93d3534c
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=platform

@@ -69,6 +69,7 @@ api::ModeEnum to_mode(n::clasz const c) {
     case n::clasz::kShip: return api::ModeEnum::FERRY;
     case n::clasz::kOther: return api::ModeEnum::OTHER;
   }
+  std::unreachable();
 }
 
 std::string get_service_date(n::timetable const& tt,
@@ -131,7 +132,7 @@ api::Itinerary journey_to_response(
     if (!path.has_value()) {
       if (it == end(cache)) {
         std::cout << "no path found: " << from << " -> " << to
-                  << ", profile=" << to_str(profile) << "\n";
+                  << ", profile=" << to_str(profile) << std::endl;
       }
       return;
     }
@@ -145,7 +146,7 @@ api::Itinerary journey_to_response(
                               ? std::nullopt
                               : std::optional{static_cast<std::int64_t>(
                                     to_idx(w.way_osm_idx_[s.way_]))},
-              .polyline_ = {encode_polyline(s.polyline_),
+              .polyline_ = {encode_polyline<7>(s.polyline_),
                             static_cast<std::int64_t>(s.polyline_.size())},
           };
         });
@@ -154,7 +155,7 @@ api::Itinerary journey_to_response(
     for (auto const& p : path->segments_) {
       utl::concat(concat, p.polyline_);
     }
-    leg.legGeometry_.points_ = encode_polyline(concat);
+    leg.legGeometry_.points_ = encode_polyline<7>(concat);
     leg.legGeometry_.length_ = concat.size();
   };
 
@@ -207,8 +208,15 @@ api::Itinerary journey_to_response(
                   to_ms(enter_stop.delay(n::event_type::kDep));
               leg.arrivalDelay_ = to_ms(exit_stop.delay(n::event_type::kArr));
 
-              leg.intermediateStops_ = std::vector<api::Place>{};
               auto polyline = geo::polyline{};
+              for (auto i = t.stop_range_.from_; i < t.stop_range_.to_; ++i) {
+                auto const stop = fr[i];
+                polyline.emplace_back(stop.pos());
+              }
+              leg.legGeometry_.points_ = geo::encode_polyline<7>(polyline);
+              leg.legGeometry_.length_ = polyline.size();
+
+              leg.intermediateStops_ = std::vector<api::Place>{};
               for (auto i = t.stop_range_.from_ + 1U;
                    i < t.stop_range_.to_ - 1U; ++i) {
                 auto const stop = fr[i];
@@ -218,10 +226,7 @@ api::Itinerary journey_to_response(
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
                 p.arrival_ = to_ms(stop.time(n::event_type::kDep));
                 p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kDep));
-                polyline.emplace_back(stop.pos());
               }
-              leg.legGeometry_.points_ = geo::encode_polyline(polyline);
-              leg.legGeometry_.length_ = polyline.size();
             },
             [&](n::footpath const fp) {
               auto& leg = write_leg(fp, api::ModeEnum::WALK);
