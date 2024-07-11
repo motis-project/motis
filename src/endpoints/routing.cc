@@ -346,13 +346,25 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         p);
   };
 
-  return {.from_ = to_place(from, "Origin"),
-          .to_ = to_place(to, "Destination"),
-          .itineraries_ = utl::to_vec(*journeys, [&](auto&& j) {
-            return journey_to_response(w_, l_, tt_, pl_, rtt.get(),
-                                       &e->blocked_, matches_,
-                                       query.wheelchair_, j, start, dest);
-          })};
+  return {
+      .from_ = to_place(from, "Origin"),
+      .to_ = to_place(to, "Destination"),
+      .itineraries_ = utl::to_vec(*journeys,
+                                  [&](auto&& j) {
+                                    return journey_to_response(
+                                        w_, l_, tt_, pl_, rtt.get(),
+                                        &e->blocked_, matches_,
+                                        query.wheelchair_, j, start, dest);
+                                  }),
+      .previousPageCursor_ = fmt::format(
+          "EARLIER|{}", std::chrono::duration_cast<std::chrono::seconds>(
+                            search_interval.from_.time_since_epoch())
+                            .count()),
+      .nextPageCursor_ = fmt::format(
+          "LATER|{}", std::chrono::duration_cast<std::chrono::seconds>(
+                          search_interval.to_.time_since_epoch())
+                          .count()),
+  };
 }
 
 }  // namespace icc::ep

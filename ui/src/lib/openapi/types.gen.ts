@@ -450,6 +450,18 @@ export type PlanResponse = {
      * list of itineraries
      */
     itineraries: Array<Itinerary>;
+    /**
+     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+     * The previous page is a set of itineraries departing BEFORE the first itinerary in the result for a depart after search. When using the default sort order the previous set of itineraries is inserted before the current result.
+     *
+     */
+    previousPageCursor: string;
+    /**
+     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+     * The next page is a set of itineraries departing AFTER the last itinerary in this result.
+     *
+     */
+    nextPageCursor: string;
 };
 
 export type $OpenApiTs = {
@@ -483,6 +495,18 @@ export type $OpenApiTs = {
                      * list of itineraries
                      */
                     itineraries: Array<Itinerary>;
+                    /**
+                     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+                     * The previous page is a set of itineraries departing BEFORE the first itinerary in the result for a depart after search. When using the default sort order the previous set of itineraries is inserted before the current result.
+                     *
+                     */
+                    previousPageCursor: string;
+                    /**
+                     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+                     * The next page is a set of itineraries departing AFTER the last itinerary in this result.
+                     *
+                     */
+                    nextPageCursor: string;
                 };
             };
         };

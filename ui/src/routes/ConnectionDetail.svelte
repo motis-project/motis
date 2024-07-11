@@ -2,8 +2,9 @@
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import type { Itinerary, Mode } from '$lib/openapi';
 	import Time from './Time.svelte';
-	import { routeColor } from '$lib/routeColor';
+	import { routeBorderColor, routeColor } from '$lib/routeColor';
 	import { getModeStyle } from '$lib/modeStyle';
+	import { formatDurationSec } from '$lib/formatDuration';
 
 	class Props {
 		itinerary!: Itinerary;
@@ -12,25 +13,7 @@
 	let { itinerary }: Props = $props();
 
 	const lastLeg = itinerary.legs.findLast((l) => l.duration !== 0);
-	console.log(lastLeg);
-
-	const formatDurationSec = (t: number) => {
-		let hours = Math.floor(t / 3600);
-		let minutes = (t - hours * 3600) / 60;
-		let str = [hours !== 0 ? hours + 'h' : '', minutes !== 0 ? minutes + 'min' : '']
-			.join(' ')
-			.trim();
-		return str;
-	};
 </script>
-
-{#snippet train()}
-	<svg viewBox="0 0 24 24">
-		<path
-			d="M4,15.5C4,17.43 5.57,19 7.5,19L6,20.5v0.5h12v-0.5L16.5,19c1.93,0 3.5,-1.57 3.5,-3.5L20,5c0,-3.5 -3.58,-4 -8,-4s-8,0.5 -8,4v10.5zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2zM18,10L6,10L6,5h12v5z"
-		/>
-	</svg>
-{/snippet}
 
 <div class="p-2 text-lg">
 	{#each itinerary.legs as l, i}
@@ -43,7 +26,7 @@
 			<div class="w-full flex justify-between items-center space-x-1">
 				<div
 					class="flex items-center text-nowrap rounded-full pl-2 pr-3 h-8 py-[1px] font-bold"
-					style={routeColor(l, modeColor)}
+					style={routeColor(l)}
 				>
 					<svg class="relative mr-2 w-6 h-6 fill-white rounded-full">
 						<use xlink:href={`#${modeIcon}`}></use>
@@ -69,7 +52,7 @@
 				{/if}
 			</div>
 
-			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={`border-color: #${modeColor}`}>
+			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="flex items-center">
 					<Time class="font-semibold mr-2" timestamp={l.startTime} />
 					<Time class="font-semibold" timestamp={l.startTime} delay={l.departureDelay} />
@@ -131,7 +114,7 @@
 				<div class="border-t w-full h-0"></div>
 			</div>
 
-			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={`border-color: #${modeColor}`}>
+			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="flex items-center">
 					<Time class="font-semibold mr-2" timestamp={l.startTime} />
 					<Time class="font-semibold" timestamp={l.startTime} delay={l.departureDelay} />
@@ -151,10 +134,7 @@
 		{/if}
 	{/each}
 	<div class="flex pb-4">
-		<div
-			class="relative left-[12px] w-3 h-3 rounded-full"
-			style={`background-color: #${getModeStyle(lastLeg!.mode)[1]}`}
-		></div>
+		<div class="relative left-[12px] w-3 h-3 rounded-full" style={routeColor(lastLeg!)}></div>
 		<div class="relative left-2 bottom-[7px] pl-6 flex">
 			<Time class="font-semibold mr-2" timestamp={lastLeg!.endTime} />
 			<Time class="font-semibold" timestamp={lastLeg!.endTime} delay={lastLeg!.arrivalDelay} />
