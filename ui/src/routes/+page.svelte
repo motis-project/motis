@@ -43,10 +43,9 @@
 	import { Card } from '$lib/components/ui/card';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import Time from './Time.svelte';
-	import { routeColor } from '$lib/routeColor';
+	import { routeColor } from '$lib/modeStyle';
 	import { getModeStyle } from '$lib/modeStyle';
 	import { itineraryToGeoJSON } from '$lib/ItineraryToGeoJSON';
-	import { onMount } from 'svelte';
 	import { formatDurationSec } from '$lib/formatDuration';
 
 	let zoom = $state(18);

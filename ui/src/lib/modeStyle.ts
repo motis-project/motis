@@ -1,4 +1,4 @@
-import type { Mode } from './openapi';
+import type { Leg, Mode } from './openapi';
 
 export const getModeStyle = (mode: Mode): [string, string] => {
 	switch (mode) {
@@ -57,4 +57,17 @@ export const getModeStyle = (mode: Mode): [string, string] => {
 	}
 
 	return ['train', '000000'];
+};
+
+export const getColor = (l: Leg): string => {
+	const defaultColor = getModeStyle(l.mode)[1];
+	return !l.routeColor || l.routeColor === '000000' ? defaultColor || '000000' : l.routeColor;
+};
+
+export const routeBorderColor = (l: Leg) => {
+	return `border-color: #${getColor(l)}`;
+};
+
+export const routeColor = (l: Leg) => {
+	return `background-color: #${getColor(l)}; color: #FFF;`;
 };

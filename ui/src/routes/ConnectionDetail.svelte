@@ -2,7 +2,7 @@
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import type { Itinerary, Mode } from '$lib/openapi';
 	import Time from './Time.svelte';
-	import { routeBorderColor, routeColor } from '$lib/routeColor';
+	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { getModeStyle } from '$lib/modeStyle';
 	import { formatDurationSec } from '$lib/formatDuration';
 
@@ -21,7 +21,7 @@
 		{@const isLastPred = i == itinerary.legs.length - 2}
 		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
 		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
-		{@const [modeIcon, modeColor] = getModeStyle(l.mode)}
+		{@const modeIcon = getModeStyle(l.mode)[0]}
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<div

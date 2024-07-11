@@ -1,7 +1,7 @@
+import { getColor } from './modeStyle';
 import { type Itinerary } from './openapi/types.gen';
 import polyline from 'polyline';
 import { colord } from 'colord';
-import { getColor } from './routeColor';
 
 export function itineraryToGeoJSON(i: Itinerary | null) {
 	return {
