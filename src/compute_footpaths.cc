@@ -6,6 +6,7 @@
 #include "osr/routing/route.h"
 
 #include "icc/constants.h"
+#include "icc/get_loc.h"
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 
@@ -21,13 +22,6 @@ void compute_footpaths(nigiri::timetable& tt,
                        bool const update_coordinates) {
   fmt::println("creating matches");
   auto const matches = get_matches(tt, pl, w);
-
-  auto const get_loc = [&](n::location_idx_t const l) -> osr::location {
-    return {tt.locations_.coordinates_[l],
-            matches[l] == osr::platform_idx_t::invalid()
-                ? osr::to_level(0.0F)
-                : pl.get_level(w, matches[l])};
-  };
 
   fmt::println("creating r-tree");
   auto const loc_rtree = [&]() {
@@ -68,8 +62,9 @@ void compute_footpaths(nigiri::timetable& tt,
           tt.locations_.coordinates_[l], kMaxDistance,
           [&](n::location_idx_t const l) { neighbors.emplace_back(l); });
       auto const results = osr::route(
-          w, lookup, mode, get_loc(l),
-          utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
+          w, lookup, mode, get_loc(tt, w, pl, matches, l),
+          utl::to_vec(neighbors,
+                      [&](auto&& l) { return get_loc(tt, w, pl, matches, l); }),
           kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
           &blocked);
       for (auto const [n, r] : utl::zip(neighbors, results)) {
@@ -82,6 +77,9 @@ void compute_footpaths(nigiri::timetable& tt,
           }
         }
       }
+
+      utl::sort(footpaths_out_foot);
+      utl::sort(footpaths_out_wheelchair);
 
       pt->update_monotonic(
           (mode == osr::search_profile::kFoot ? 0U : tt.n_locations()) + i);
