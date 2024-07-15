@@ -5,6 +5,7 @@
 
 #include "icc/constants.h"
 #include "icc/elevators/match_elevator.h"
+#include "icc/get_loc.h"
 #include "icc/match_platforms.h"
 
 namespace json = boost::json;
@@ -36,22 +37,7 @@ struct fp {
 };
 
 json::value footpaths::operator()(json::value const& query) const {
-  auto const e = e_.get();
-
-  auto const get_loc = [&](n::location_idx_t const l) -> osr::location {
-    auto pos = tt_.locations_.coordinates_[l];
-    if (matches_[l] != osr::platform_idx_t::invalid()) {
-      auto const center = get_platform_center(pl_, w_, matches_[l]);
-      if (center.has_value() && geo::distance(*center, pos) < kMaxAdjust) {
-        pos = *center;
-      }
-    }
-    auto const lvl = matches_[l] == osr::platform_idx_t::invalid()
-                         ? osr::to_level(0.0F)
-                         : pl_.get_level(w_, matches_[l]);
-    return {pos, lvl};
-  };
-
+  auto const e = e_;
   auto const q = query.as_object();
   auto const l =
       tt_.locations_
@@ -74,14 +60,16 @@ json::value footpaths::operator()(json::value const& query) const {
     footpaths[fp.target()].default_ = fp.duration();
   }
 
-  auto const loc = get_loc(l);
+  auto const loc = get_loc(tt_, w_, pl_, matches_, l);
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
-    auto const results =
-        osr::route(w_, l_, mode, loc,
-                   utl::to_vec(neighbors, [&](auto&& l) { return get_loc(l); }),
-                   kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-                   &e->blocked_);
+    auto const results = osr::route(
+        w_, l_, mode, loc,
+        utl::to_vec(
+            neighbors,
+            [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
+        kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
+        &e->blocked_);
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
@@ -101,7 +89,7 @@ json::value footpaths::operator()(json::value const& query) const {
        utl::all(footpaths)  //
            | utl::transform([&](auto&& fp) {
                auto const& [to, durations] = fp;
-               auto const to_loc = get_loc(to);
+               auto const to_loc = get_loc(tt_, w_, pl_, matches_, to);
                auto val = json::value{{"id", to_json(tt_, to)},
                                       {"loc", to_json(to_loc)}}
                               .as_object();
