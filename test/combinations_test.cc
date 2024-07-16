@@ -37,9 +37,7 @@ TEST(icc, int_state_changes) {
       std::pair<int, std::vector<bool>>{30, {true, false}}};
   auto i = 0U;
   while (g) {
-    auto const [t, states] = g();
-    std::cerr << t << ": " << states << " VS " << expected[i++] << "\n";
-    //    EXPECT_EQ(expected[i++], g());
+    EXPECT_EQ(expected[i++], g());
   }
   EXPECT_EQ(i, expected.size());
 }
