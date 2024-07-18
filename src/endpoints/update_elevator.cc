@@ -85,7 +85,7 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto const updated = std::make_shared<elevators>(w_, elevator_nodes_,
                                                    std::move(elevators_copy));
 
-  update_elevators(w_, l_, pl_, *e_, *updated);
+  //  update_elevators(w_, l_, pl_, *e_, *updated);
 
   e_ = updated;
 

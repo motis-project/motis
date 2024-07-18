@@ -3,6 +3,8 @@
 #include <ranges>
 #include <vector>
 
+#include "nigiri/common/interval.h"
+
 #include "utl/enumerate.h"
 #include "utl/generator.h"
 #include "utl/to_vec.h"
@@ -12,9 +14,23 @@ namespace icc {
 
 template <typename Time>
 struct state_change {
+  friend bool operator==(state_change const&, state_change const&) = default;
   Time valid_from_;
   bool state_;
 };
+
+template <typename Time, bool Default = true>
+std::vector<state_change<Time>> intervals_to_state_changes(
+    std::vector<nigiri::interval<Time>> const& iv) {
+  using Duration = typename Time::duration;
+  auto ret = std::vector<state_change<Time>>{};
+  ret.emplace_back(Time{Duration{0}}, Default);
+  for (auto const& i : iv) {
+    ret.emplace_back(i.from_, !Default);
+    ret.emplace_back(i.to_, Default);
+  }
+  return ret;
+}
 
 template <typename Time>
 utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
@@ -68,7 +84,7 @@ utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
     }
     pred_t = state;
   }
-  
+
   if (pred_t.has_value()) {
     co_yield *pred_t;
   }
