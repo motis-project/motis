@@ -115,7 +115,8 @@ int main(int ac, char** av) {
                 .post("/api/footpaths",
                       ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
                 .post("/api/update_elevator",
-                      ep::update_elevator{e, w, elevator_nodes})
+                      ep::update_elevator{*tt, w, l, pl, loc_rtree,
+                                          elevator_nodes, matches, e, rtt})
                 .get("/api/v1/plan",
                      ep::routing{w, l, pl, *tt, rtt, e, loc_rtree, matches});
 

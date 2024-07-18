@@ -107,7 +107,7 @@
 		profile: profile.value,
 		direction: 'forward'
 	});
-	// let route = $derived(getRoute(query));
+	let footRoute = $derived(getRoute(query));
 
 	let footpaths = $state<Footpaths | null>();
 	const showLocation = async (props: any) => {
@@ -602,6 +602,60 @@
 					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
 					paint={{
 						'line-color': ['get', 'color'],
+						'line-width': 5,
+						'line-opacity': 0.8
+					}}
+				/>
+			</GeoJSON>
+		{/if}
+	{/await}
+
+	<Control position="bottom-right">
+		<div class="bg-black/50 p-4 rounded-md text-center font-bold text-lg text-white">
+			{#await footRoute}
+				Loading...
+			{:then r}
+				{#if r.metadata}
+					{formatDurationSec(r.metadata.duration)}
+					<br />
+					{Math.round(r.metadata.distance)} m
+					{#if r.metadata.uses_elevator}
+						<div>mit Fahrstuhl</div>
+					{/if}
+				{:else}
+					No foot route found.
+				{/if}
+			{/await}
+		</div>
+	</Control>
+
+	{#await footRoute then r}
+		{#if r.type == 'FeatureCollection'}
+			<GeoJSON id="foot-route" data={r}>
+				<Layer
+					id="foot-route-path-outline"
+					type="line"
+					layout={{
+						'line-join': 'round',
+						'line-cap': 'round'
+					}}
+					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+					paint={{
+						'line-color': '#1966a4',
+						'line-width': 7.5,
+						'line-opacity': 0.8
+					}}
+				/>
+				<Layer
+					id="foot-route-path"
+					type="line"
+					layout={{
+						'line-join': 'round',
+						'line-cap': 'round'
+					}}
+					filter={['any', ['!has', 'level'], ['==', 'level', level]]}
+					paint={{
+						'line-color': '#42a5f5',
 						'line-width': 5,
 						'line-opacity': 0.8
 					}}

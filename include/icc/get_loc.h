@@ -11,7 +11,7 @@
 
 namespace icc {
 
-osr::location get_loc(
+inline osr::location get_loc(
     nigiri::timetable const& tt,
     osr::ways const& w,
     osr::platforms const& pl,

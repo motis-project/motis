@@ -18,7 +18,6 @@ void compute_footpaths(nigiri::timetable& tt,
                        osr::ways const& w,
                        osr::lookup const& lookup,
                        osr::platforms const& pl,
-                       osr::bitvec<osr::node_idx_t> const& blocked,
                        bool const update_coordinates) {
   fmt::println("creating matches");
   auto const matches = get_matches(tt, pl, w);
@@ -66,7 +65,7 @@ void compute_footpaths(nigiri::timetable& tt,
           utl::to_vec(neighbors,
                       [&](auto&& l) { return get_loc(tt, w, pl, matches, l); }),
           kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-          &blocked);
+          nullptr);
       for (auto const [n, r] : utl::zip(neighbors, results)) {
         if (r.has_value()) {
           auto const duration = n::duration_t{r->cost_ / 60U};

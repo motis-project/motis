@@ -38,6 +38,10 @@ json::value osr_routing::operator()(json::value const& query) const {
   auto const p = route(w_, l_, profile, from, to, max, dir, 8, &e->blocked_);
   return p.has_value()
              ? json::value{{"type", "FeatureCollection"},
+                           {"metadata",
+                            {{"duration", p->cost_},
+                             {"distance", p->dist_},
+                             {"uses_elevator", p->uses_elevator_}}},
                            {"features",
                             utl::all(p->segments_)  //
                                 |

@@ -62,19 +62,8 @@ int main(int ac, char** av) {
   fmt::println("building platform rtree");
   pl.build_rtree(w);
 
-  fmt::println("reading elevators");
-  auto const elevators = parse_fasta(fasta_path);
-
-  fmt::println("creating elevators rtree");
-  auto const elevators_rtree = create_elevator_rtree(elevators);
-
-  fmt::println("mapping elevators");
-  auto const elevator_nodes = get_elevator_nodes(w);
-  auto const blocked =
-      get_blocked_elevators(w, elevators, elevators_rtree, elevator_nodes);
-
   fmt::println("computing footpaths");
-  compute_footpaths(*tt, w, l, pl, blocked, true);
+  compute_footpaths(*tt, w, l, pl, true);
 
   fmt::println("writing result");
   tt->write(out_path);

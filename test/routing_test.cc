@@ -195,7 +195,7 @@ TEST(a, b) {
   auto const loc_rtree = create_location_rtree(tt);
 
   // Compute footpaths.
-  compute_footpaths(tt, w, l, pl, e->blocked_, true);
+  compute_footpaths(tt, w, l, pl, true);
 
   // Init real-time timetable.
   auto const today = date::sys_days{2019_y / May / 1};
