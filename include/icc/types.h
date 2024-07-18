@@ -40,6 +40,11 @@ using elevator_idx_t = cista::strong<std::uint32_t, struct elevator_idx_>;
 struct elevator {
   friend bool operator==(elevator const&, elevator const&) = default;
 
+  std::vector<state_change<nigiri::unixtime_t>> const& get_state_changes()
+      const {
+    return state_changes_;
+  }
+
   std::int64_t id_;
   geo::latlng pos_;
   status status_;

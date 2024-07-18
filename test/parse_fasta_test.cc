@@ -66,4 +66,30 @@ TEST(icc, parse_fasta) {
                 {sys_days{2023_y / July / 19} + 11h, false},
                 {sys_days{2023_y / July / 19} + 14h, true}}),
             elevators[elevator_idx_t{1}].state_changes_);
+
+  auto const expected =
+      std::array<std::pair<n::unixtime_t, std::vector<bool>>, 7>{
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              n::unixtime_t{n::unixtime_t::duration{0}}, {true, true}},
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              sys_days{2023_y / July / 18} + 11h, {true, false}},
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              sys_days{2023_y / July / 18} + 12h, {false, false}},
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              sys_days{2023_y / July / 18} + 14h, {false, true}},
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              sys_days{2023_y / July / 19} + 11h, {false, false}},
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              sys_days{2023_y / July / 19} + 12h, {true, false}},
+          std::pair<n::unixtime_t, std::vector<bool>>{
+              sys_days{2023_y / July / 19} + 14h, {true, true}}};
+  auto state_changes = get_state_changes<n::unixtime_t>(elevators);
+  auto i = 0U;
+  while (state_changes) {
+    auto const x = state_changes();
+    ASSERT_LT(i, expected.size());
+    EXPECT_EQ(expected[i], x) << "i=" << i;
+    ++i;
+  }
+  EXPECT_EQ(expected.size(), i);
 }

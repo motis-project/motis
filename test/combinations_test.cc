@@ -1,8 +1,15 @@
 #include "gtest/gtest.h"
 
+#include "date/date.h"
+
+#include "nigiri/types.h"
+
 #include "icc/elevators/get_state_changes.h"
 
+using namespace date;
+using namespace std::chrono_literals;
 using namespace icc;
+namespace n = nigiri;
 
 std::ostream& operator<<(std::ostream& out, std::vector<bool> const& v) {
   auto first = true;
@@ -17,15 +24,21 @@ std::ostream& operator<<(std::ostream& out, std::vector<bool> const& v) {
 }
 
 TEST(icc, int_state_changes) {
-  auto const changes = std::vector<std::vector<state_change<int>>>{
-      {{0, true}, {10, false}, {20, true}},
-      {{0, false},
-       {5, true},
-       {10, false},
-       {15, true},
-       {20, false},
-       {25, true},
-       {30, false}}};
+  struct x {
+    std::vector<state_change<int>> const& get_state_changes() const {
+      return state_changes_;
+    }
+    std::vector<state_change<int>> state_changes_;
+  };
+  auto const changes =
+      std::vector<x>{{.state_changes_ = {{0, true}, {10, false}, {20, true}}},
+                     {.state_changes_ = {{0, false},
+                                         {5, true},
+                                         {10, false},
+                                         {15, true},
+                                         {20, false},
+                                         {25, true},
+                                         {30, false}}}};
   auto g = get_state_changes<int>(changes);
   auto const expected = std::array<std::pair<int, std::vector<bool>>, 7>{
       std::pair<int, std::vector<bool>>{0, {true, false}},

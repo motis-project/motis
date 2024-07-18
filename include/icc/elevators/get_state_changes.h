@@ -32,9 +32,15 @@ std::vector<state_change<Time>> intervals_to_state_changes(
   return ret;
 }
 
-template <typename Time>
+template <typename T>
+concept HasStateChanges = requires(T const& t) {
+  { t.get_state_changes() };
+};
+
+template <typename Time, typename Collection>
+  requires(HasStateChanges<typename Collection::value_type>)
 utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
-    std::vector<std::vector<state_change<Time>>> const& c) {
+    Collection const& c) {
   using It = std::vector<state_change<Time>>::const_iterator;
 
   struct range {
@@ -44,8 +50,10 @@ utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
   };
 
   auto its = utl::to_vec(c, [](auto&& v) {
-    utl::verify(!v.empty(), "empty state vector not allowed");
-    return range{v[0].state_, v.begin(), v.end()};
+    utl::verify(!v.get_state_changes().empty(),
+                "empty state vector not allowed");
+    return range{v.get_state_changes()[0].state_, v.get_state_changes().begin(),
+                 v.get_state_changes().end()};
   });
 
   auto const all_finished = [&]() {
@@ -53,9 +61,17 @@ utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
   };
 
   auto const next = [&]() -> range& {
-    return *std::ranges::min_element(its, [&](auto&& a, auto&& b) {
-      return a.curr_->valid_from_ < b.curr_->valid_from_;
+    auto const it = std::ranges::min_element(its, [&](auto&& a, auto&& b) {
+      if (a.curr_ == a.end_) {
+        return false;
+      } else if (b.curr_ == b.end_) {
+        return true;
+      } else {
+        return a.curr_->valid_from_ < b.curr_->valid_from_;
+      }
     });
+    assert(it != end(its));
+    return *it;
   };
 
   auto const get_state = [&]() -> std::vector<bool> {
@@ -88,6 +104,8 @@ utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
   if (pred_t.has_value()) {
     co_yield *pred_t;
   }
+
+  co_return;
 }
 
 }  // namespace icc
