@@ -33,16 +33,18 @@
 					</svg>
 					{l.routeShortName}
 				</div>
-				<div class="border-t w-full h-0"></div>
-				{#if pred && (pred.from.track || pred.duration !== 0)}
-					<div class="text-sm text-muted-foreground text-nowrap px-2">
-						{#if pred.from.track}
-							Ankunft auf Gleis {pred.from.track},
-						{/if}
-						{#if pred.duration !== 0}
-							{formatDurationSec(pred.duration)} Fußweg
-						{/if}
-					</div>
+				{#if i !== 1}
+					<div class="border-t w-full h-0"></div>
+					{#if pred && (pred.from.track || pred.duration !== 0)}
+						<div class="text-sm text-muted-foreground text-nowrap px-2">
+							{#if pred.from.track}
+								Ankunft auf Gleis {pred.from.track},
+							{/if}
+							{#if pred.duration !== 0}
+								{formatDurationSec(pred.duration)} Fußweg
+							{/if}
+						</div>
+					{/if}
 				{/if}
 				<div class="border-t w-full h-0"></div>
 				{#if l.from.track}
