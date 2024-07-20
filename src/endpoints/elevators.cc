@@ -24,7 +24,7 @@ json::value elevators::operator()(json::value const& query) const {
          {{"type", "api"},
           {"id", x.id_},
           {"desc", x.desc_},
-          {"status", (x.status_ == status::kActive ? "ACTIVE" : "INACTIVE")}}},
+          {"status", (x.status_ ? "ACTIVE" : "INACTIVE")}}},
         {"geometry", osr::to_point(osr::point::from_latlng(x.pos_))}});
   });
 
@@ -41,7 +41,7 @@ json::value elevators::operator()(json::value const& query) const {
             {"osm_node_id", to_idx(w_.node_to_osm_[n])},
             {"id", x.id_},
             {"desc", x.desc_},
-            {"status", x.status_ == status::kActive ? "ACTIVE" : "INACTIVE"}}},
+            {"status", x.status_ ? "ACTIVE" : "INACTIVE"}}},
           {"geometry",
            osr::to_line_string({pos, osr::point::from_latlng(x.pos_)})}});
     }

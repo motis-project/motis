@@ -70,7 +70,7 @@ void update_elevator::update_elevators(elevators const& pred,
 json::value update_elevator::operator()(json::value const& query) const {
   auto const& q = query.as_object();
   auto const id = q.at("id").to_number<std::int64_t>();
-  auto const status = status_from_str(q.at("status").as_string());
+  auto const status = q.at("status").as_string() != "INACTIVE";
 
   auto const e = e_.get();
   auto elevators_copy = e->elevators_;

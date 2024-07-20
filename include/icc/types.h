@@ -29,12 +29,6 @@ using hash_set = nigiri::hash_set<T>;
 template <typename K, typename V>
 using hash_map = nigiri::hash_map<K, V>;
 
-enum class status : bool { kActive, kInactive };
-
-inline status status_from_str(std::string_view s) {
-  return s == "INACTIVE" ? status::kInactive : status::kActive;
-}
-
 using elevator_idx_t = cista::strong<std::uint32_t, struct elevator_idx_>;
 
 struct elevator {
@@ -47,11 +41,11 @@ struct elevator {
 
   std::int64_t id_;
   geo::latlng pos_;
-  status status_;
+  bool status_;
   std::string desc_;
   std::vector<nigiri::interval<nigiri::unixtime_t>> out_of_service_;
   std::vector<state_change<nigiri::unixtime_t>> state_changes_{
-      intervals_to_state_changes(out_of_service_)};
+      intervals_to_state_changes(out_of_service_, status_)};
 };
 
 using rtt_ptr_t = std::shared_ptr<nigiri::rt_timetable>;

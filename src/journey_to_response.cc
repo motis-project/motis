@@ -1,5 +1,6 @@
 #include "icc/journey_to_response.h"
 
+#include "utl/concat.h"
 #include "utl/enumerate.h"
 
 #include "osr/routing/route.h"

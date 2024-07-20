@@ -62,7 +62,7 @@ vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
           elevator{id,
                    {e.at("geocoordY").to_number<double>(),
                     e.at("geocoordX").to_number<double>()},
-                   status_from_str(e.at("state").as_string()),
+                   e.at("state").as_string() != "INACTIVE",
                    o.contains("description")
                        ? std::string{o.at("description").as_string()}
                        : "",

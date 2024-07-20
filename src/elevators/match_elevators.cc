@@ -53,8 +53,7 @@ osr::bitvec<osr::node_idx_t> get_blocked_elevators(
   auto inactive_mutex = std::mutex{};
   utl::parallel_for(elevator_nodes, [&](osr::node_idx_t const n) {
     auto const e = match_elevator(elevators_rtree, elevators, w, n);
-    if (e != elevator_idx_t::invalid() &&
-        elevators[e].status_ == icc::status::kInactive) {
+    if (e != elevator_idx_t::invalid() && !elevators[e].status_) {
       auto const lock = std::scoped_lock{inactive_mutex};
       inactive.emplace(n);
     }

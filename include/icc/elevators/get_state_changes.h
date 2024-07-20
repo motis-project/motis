@@ -3,6 +3,8 @@
 #include <ranges>
 #include <vector>
 
+#include "fmt/ranges.h"
+
 #include "nigiri/common/interval.h"
 
 #include "utl/enumerate.h"
@@ -21,13 +23,17 @@ struct state_change {
 
 template <typename Time, bool Default = true>
 std::vector<state_change<Time>> intervals_to_state_changes(
-    std::vector<nigiri::interval<Time>> const& iv) {
+    std::vector<nigiri::interval<Time>> const& iv, bool const status) {
   using Duration = typename Time::duration;
   auto ret = std::vector<state_change<Time>>{};
-  ret.emplace_back(Time{Duration{0}}, Default);
-  for (auto const& i : iv) {
-    ret.emplace_back(i.from_, !Default);
-    ret.emplace_back(i.to_, Default);
+  if (iv.empty()) {
+    ret.emplace_back(Time{Duration{0}}, status);
+  } else {
+    ret.emplace_back(Time{Duration{0}}, Default);
+    for (auto const& i : iv) {
+      ret.emplace_back(i.from_, !Default);
+      ret.emplace_back(i.to_, Default);
+    }
   }
   return ret;
 }
@@ -45,7 +51,7 @@ utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
 
   struct range {
     bool is_finished() const { return curr_ == end_; }
-    bool state_;
+    bool state_{false};
     It curr_, end_;
   };
 
