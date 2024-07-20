@@ -69,6 +69,7 @@ api::ModeEnum to_mode(n::clasz const c) {
     case n::clasz::kBus: return api::ModeEnum::BUS;
     case n::clasz::kShip: return api::ModeEnum::FERRY;
     case n::clasz::kOther: return api::ModeEnum::OTHER;
+    case n::clasz::kNumClasses:;
   }
   std::unreachable();
 }

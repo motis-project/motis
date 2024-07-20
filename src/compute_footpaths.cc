@@ -14,11 +14,11 @@ namespace n = nigiri;
 
 namespace icc {
 
-void compute_footpaths(nigiri::timetable& tt,
-                       osr::ways const& w,
-                       osr::lookup const& lookup,
-                       osr::platforms const& pl,
-                       bool const update_coordinates) {
+elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
+                                          osr::ways const& w,
+                                          osr::lookup const& lookup,
+                                          osr::platforms const& pl,
+                                          bool const update_coordinates) {
   fmt::println("creating matches");
   auto const matches = get_matches(tt, pl, w);
 
@@ -52,6 +52,18 @@ void compute_footpaths(nigiri::timetable& tt,
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_out_wheelchair.resize(tt.n_locations());
 
+  auto elevator_in_paths_mutex = std::mutex{};
+  auto elevator_in_paths = elevator_footpath_map_t{};
+  auto const add_if_elevator = [&](osr::node_idx_t const n,
+                                   n::location_idx_t const a,
+                                   n::location_idx_t const b) {
+    if (n != osr::node_idx_t::invalid() &&
+        w.r_->node_properties_[n].is_elevator()) {
+      auto l = std::unique_lock{elevator_in_paths_mutex};
+      elevator_in_paths[n].emplace(a, b);
+    }
+  };
+
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
@@ -64,8 +76,8 @@ void compute_footpaths(nigiri::timetable& tt,
           w, lookup, mode, get_loc(tt, w, pl, matches, l),
           utl::to_vec(neighbors,
                       [&](auto&& l) { return get_loc(tt, w, pl, matches, l); }),
-          kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-          nullptr);
+          kMaxDuration, osr::direction::kForward, kMaxMatchingDistance, nullptr,
+          [](osr::path const& p) { return p.uses_elevator_; });
       for (auto const [n, r] : utl::zip(neighbors, results)) {
         if (r.has_value()) {
           auto const duration = n::duration_t{r->cost_ / 60U};
@@ -73,6 +85,10 @@ void compute_footpaths(nigiri::timetable& tt,
             (mode == osr::search_profile::kFoot ? footpaths_out_foot[l]
                                                 : footpaths_out_wheelchair[l])
                 .emplace_back(n::footpath{n, duration});
+          }
+          for (auto const& s : r->segments_) {
+            add_if_elevator(s.from_, l, n);
+            add_if_elevator(s.from_, n, l);
           }
         }
       }
@@ -121,6 +137,8 @@ void compute_footpaths(nigiri::timetable& tt,
   for (auto const& x : footpaths_in_wheelchair) {
     tt.locations_.footpaths_in_[2].emplace_back(x);
   }
+
+  return elevator_in_paths;
 }
 
 }  // namespace icc

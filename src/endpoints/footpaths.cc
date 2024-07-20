@@ -26,14 +26,20 @@ json::value to_json(n::timetable const& tt, n::location_idx_t const l) {
 }
 
 struct fp {
-  void set(osr::search_profile const p, n::duration_t const d) {
+  void set(osr::search_profile const p,
+           n::duration_t const d,
+           bool const uses_elevator) {
     switch (p) {
       case osr::search_profile::kFoot: foot_ = d; break;
-      case osr::search_profile::kWheelchair: wheelchair_ = d; break;
+      case osr::search_profile::kWheelchair:
+        wheelchair_ = d;
+        wheelchair_uses_elevator_ = uses_elevator;
+        break;
       default: std::unreachable();
     }
   }
   std::optional<n::duration_t> default_, foot_, wheelchair_;
+  bool wheelchair_uses_elevator_;
 };
 
 json::value footpaths::operator()(json::value const& query) const {
@@ -69,14 +75,14 @@ json::value footpaths::operator()(json::value const& query) const {
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
         kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-        &e->blocked_);
+        &e->blocked_, [](osr::path const& p) { return p.uses_elevator_; });
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
         auto const duration = n::duration_t{static_cast<n::duration_t::rep>(
             std::ceil(r->cost_ * kTransferTimeMultiplier / 60U))};
         if (duration < n::footpath::kMaxDuration) {
-          footpaths[n].set(mode, duration);
+          footpaths[n].set(mode, duration, r->uses_elevator_);
         }
       }
     }
@@ -101,6 +107,8 @@ json::value footpaths::operator()(json::value const& query) const {
                }
                if (durations.wheelchair_) {
                  val.emplace("wheelchair", durations.wheelchair_->count());
+                 val.emplace("wheelchair_uses_elevator",
+                             durations.wheelchair_uses_elevator_);
                }
                return val;
              })  //

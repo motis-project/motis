@@ -83,7 +83,9 @@ double get_max_distance(osr::search_profile const profile,
     case osr::search_profile::kWheelchair: return t.count() * 0.8;
     case osr::search_profile::kFoot: return t.count() * 1.1;
     case osr::search_profile::kBike: return t.count() * 2.8;
-    case osr::search_profile::kCar: return t.count() * 28.0;
+    case osr::search_profile::kCar:
+    case osr::search_profile::kCarParking: [[fallthrough]];
+    case osr::search_profile::kCarParkingWheelchair: return t.count() * 28.0;
   }
   std::unreachable();
 }

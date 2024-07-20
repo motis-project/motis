@@ -172,7 +172,7 @@ service_id,date,exception_type
 S1,20190501,1
 )"sv;
 
-TEST(a, b) {
+TEST(icc, routing) {
   constexpr auto const kOsrPath = "test/test_case_osr";
 
   // Load OSR.
@@ -195,7 +195,16 @@ TEST(a, b) {
   auto const loc_rtree = create_location_rtree(tt);
 
   // Compute footpaths.
-  compute_footpaths(tt, w, l, pl, true);
+  auto const elevator_in_paths = compute_footpaths(tt, w, l, pl, true);
+  for (auto const& [elevator, l_pairs] : elevator_in_paths) {
+    std::cout << elevator << ":\n";
+    for (auto const& [from, to] : l_pairs) {
+      std::cout << "  " << std::setw(30) << tt.locations_.names_[from].view()
+                << " [" << tt.locations_.ids_[from].view() << "\t]\t\t->\t\t"
+                << std::setw(30) << tt.locations_.names_[to].view() << " ["
+                << tt.locations_.ids_[to].view() << "\t]\n";
+    }
+  }
 
   // Init real-time timetable.
   auto const today = date::sys_days{2019_y / May / 1};

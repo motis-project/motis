@@ -281,7 +281,7 @@
 	{/if}
 
 	<Control position="bottom-left">
-		<Card class="h-[800px] w-[560px] overflow-y-auto overflow-x-hidden bg-white rounded-lg">
+		<Card class="h-[45vh] w-[560px] overflow-y-auto overflow-x-hidden bg-white rounded-lg">
 			{#if itinerary !== null}
 				<div class="w-full flex justify-between bg-muted items-center">
 					<h2 class="text-lg ml-2 font-bold">Journey Details</h2>
@@ -400,7 +400,7 @@
 
 	{#if footpaths}
 		<Control position="top-left">
-			<div class="bg-white rounded-lg">
+			<div class="h-[45vh] bg-white rounded-lg">
 				<div class="w-full flex justify-between bg-muted shadow-md items-center">
 					<h2 class="text-lg ml-2">
 						{footpaths.id.name}
@@ -415,7 +415,7 @@
 						}}><X /></Button
 					>
 				</div>
-				<div class="h-[500px] overflow-y-scroll">
+				<div class="h-full bg-white overflow-y-scroll">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -431,8 +431,9 @@
 									<TableCell>{f.id.name}</TableCell>
 									<TableCell>{f.default}</TableCell>
 									<TableCell>
-										<Button
-											on:click={async () => {
+										{#if f.foot !== undefined}
+											<Button
+												on:click={async () => {
 													start = footpaths!.loc;
 													destination = f.loc;
 													profile.label = 'Foot';
@@ -441,12 +442,15 @@
 													destinationMarker.setLngLat([destination.lng, destination.lat]);
 													await showLocation(f.id);
 												}}
-											variant="outline">{f.foot}</Button
-										>
+												variant="outline">{f.foot}</Button
+											>
+										{/if}
 									</TableCell>
 									<TableCell>
-										<Button
-											on:click={async () => {
+										{#if f.wheelchair !== undefined}
+											<Button
+												class={f.wheelchair_uses_elevator ? 'text-red-500' : 'text-green-500'}
+												on:click={async () => {
 													start = footpaths!.loc;
 													destination = f.loc;
 													profile.label = 'Wheelchair';
@@ -455,8 +459,9 @@
 													destinationMarker.setLngLat([destination.lng, destination.lat]);
 													await showLocation(f.id);
 												}}
-											variant="outline">{f.wheelchair}</Button
-										>
+												variant="outline">{f.wheelchair}</Button
+											>
+										{/if}
 									</TableCell>
 								</TableRow>
 							{/each}
