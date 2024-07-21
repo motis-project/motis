@@ -2,6 +2,10 @@
   url=git@github.com:motis-project/nigiri.git
   branch=master
   commit=d5b6cadb2cad80871f3fa76c6e9dde5d9c71c9d0
+[cista]
+  url=git@github.com:felixguendling/cista.git
+  branch=master
+  commit=69dcc5fc389daa8c03aa286a43d82405a222275a
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=platform
