@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 
+#include <map>
+
 #include "nigiri/loader/gtfs/load_timetable.h"
 #include "nigiri/loader/init_finish.h"
 #include "nigiri/rt/create_rt_timetable.h"
@@ -19,46 +21,6 @@
 #include "icc/get_loc.h"
 #include "icc/match_platforms.h"
 #include "icc/tt_location_rtree.h"
-
-/*
-#include "fmt/core.h"
-
-#include "boost/asio/deadline_timer.hpp"
-#include "boost/asio/io_context.hpp"
-#include "boost/program_options.hpp"
-
-#include "net/web_server/query_router.h"
-#include "net/web_server/web_server.h"
-
-#include "utl/read_file.h"
-
-#include "net/run.h"
-
-#include "osr/lookup.h"
-
-#include "nigiri/rt/create_rt_timetable.h"
-#include "nigiri/rt/rt_timetable.h"
-
-#include "icc/elevators/elevators.h"
-#include "icc/endpoints/elevators.h"
-#include "icc/endpoints/footpaths.h"
-#include "icc/endpoints/graph.h"
-#include "icc/endpoints/levels.h"
-#include "icc/endpoints/matches.h"
-#include "icc/endpoints/osr_routing.h"
-#include "icc/endpoints/platforms.h"
-#include "icc/endpoints/routing.h"
-#include "icc/endpoints/update_elevator.h"
-#include "icc/match_platforms.h"
-#include "icc/point_rtree.h"
-#include "icc/tt_location_rtree.h"
-
-namespace asio = boost::asio;
-namespace n = nigiri;
-namespace fs = std::filesystem;
-namespace bpo = boost::program_options;
-namespace json = boost::json;
-*/
 
 namespace n = nigiri;
 namespace nl = nigiri::loader;
@@ -253,6 +215,10 @@ TEST(icc, routing) {
   auto rtt =
       std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(tt, today));
 
+  auto td_footpaths_out =
+      std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
+  auto td_footpaths_in =
+      std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
   for (auto const& [e_in_path, from_to] : elevator_in_paths) {
     auto const e_idx =
         match_elevator(e->elevators_rtree_, e->elevators_, w, e_in_path);
@@ -301,10 +267,17 @@ TEST(icc, routing) {
       }
 
       for (auto const& [from, to] : from_to) {
-        auto const p = osr::route(
-            w, l, osr::search_profile::kWheelchair,
-            get_loc(tt, w, pl, matches, from), get_loc(tt, w, pl, matches, to),
-            3600, osr::direction::kForward, kMaxMatchingDistance, &blocked);
+        auto const p = osr::route(w, l, osr::search_profile::kWheelchair,
+                                  get_loc(tt, w, pl, matches, from),
+                                  get_loc(tt, w, pl, matches, to), kMaxDuration,
+                                  osr::direction::kForward,
+                                  kMaxMatchingDistance, &blocked);
+        if (p.has_value()) {
+          td_footpaths_out[from].emplace_back(to, t,
+                                              n::duration_t{p->cost_ / 60});
+          td_footpaths_out[to].emplace_back(from, t,
+                                            n::duration_t{p->cost_ / 60});
+        }
 
         std::cout << tt.locations_.names_[from].view() << " -> "
                   << tt.locations_.names_[to].view() << ": "
@@ -323,36 +296,21 @@ TEST(icc, routing) {
     }
   }
 
-  //  auto ioc = asio::io_context{};
-  //  auto s = net::web_server{ioc};
-  //  auto qr = net::query_router{}
-  //                .post("/api/matches", ep::matches{loc_rtree, tt, w, l, pl})
-  //                .post("/api/elevators", ep::elevators{e, w, l})
-  //                .post("/api/route", ep::osr_routing{w, l, e})
-  //                .post("/api/levels", ep::levels{w, l})
-  //                .post("/api/platforms", ep::platforms{w, l, pl})
-  //                .post("/api/graph", ep::graph{w, l})
-  //                .post("/api/footpaths",
-  //                      ep::footpaths{tt, w, l, pl, loc_rtree, matches, e})
-  //                .post("/api/update_elevator",
-  //                      ep::update_elevator{tt, w, l, pl, loc_rtree,
-  //                                          elevator_nodes, matches, e, rtt})
-  //                .get("/api/v1/plan",
-  //                     ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches});
-  //
-  //  qr.serve_files("ui/build");
-  //  qr.enable_cors();
-  //  s.on_http_request(std::move(qr));
-  //
-  //  auto ec = boost::system::error_code{};
-  //  s.init("0.0.0.0", "8000", ec);
-  //  s.run();
-  //  if (ec) {
-  //    std::cerr << "error: " << ec << "\n";
-  //  }
-  //
-  //  std::cout << "listening on 0.0.0.0:8000\n";
-  //  net::run(ioc)();
+  for (auto& [from, footpaths] : td_footpaths_out) {
+    utl::sort(footpaths);
+    for (auto const& fp : footpaths) {
+      rtt->has_td_footpaths_[2].set(from, true);
+      rtt->td_footpaths_out_[2][from].push_back(fp);
+    }
+  }
+
+  for (auto& [from, footpaths] : td_footpaths_in) {
+    utl::sort(footpaths);
+    for (auto const& fp : footpaths) {
+      rtt->has_td_footpaths_[2].set(from, true);
+      rtt->td_footpaths_in_[2][from].push_back(fp);
+    }
+  }
 
   // Instantiate routing endpoint.
   auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};

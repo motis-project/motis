@@ -7,6 +7,7 @@
 	import Control from '$lib/Control.svelte';
 	import GeoJSON from '$lib/GeoJSON.svelte';
 	import Layer from '$lib/Layer.svelte';
+	import { Button } from '$lib/components/ui/button/index.js';
 	import {
 		RoutingQuery,
 		Location,
@@ -29,7 +30,6 @@
 		SelectItem
 	} from '$lib/components/ui/select';
 	import { Toggle } from '$lib/components/ui/toggle';
-	import { Button } from '$lib/components/ui/button';
 	import {
 		Table,
 		TableHead,
@@ -47,6 +47,9 @@
 	import { getModeStyle } from '$lib/modeStyle';
 	import { itineraryToGeoJSON } from '$lib/ItineraryToGeoJSON';
 	import { formatDurationSec } from '$lib/formatDuration';
+	import Input from '$lib/components/ui/input/input.svelte';
+	import DateInput from '$lib/DateInput.svelte';
+	import ComboBox from '$lib/ComboBox.svelte';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -225,16 +228,18 @@
 		}
 	});
 
+	let date = $state(new Date());
+	let time = $state(new Date());
 	let arriveBy = $state(false);
 	let baseQuery = $derived({
-		date: '04-30-2019',
-		time: '22:00',
 		fromPlace: `${query.start.lat},${query.start.lng},${query.start.level}`,
 		toPlace: `${query.destination.lat},${query.destination.lng},${query.destination.level}`,
 		wheelchair: profile.value == 'wheelchair',
 		timetableView: true,
 		arriveBy
 	});
+
+	$inspect(date, time);
 
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 
@@ -301,6 +306,12 @@
 				</div>
 			{:else}
 				<div class="flex flex-col space-y-8 w-full p-8">
+					<div class="grid grid-cols-2 grid-rows-2 gap-8">
+						<ComboBox placeholder="From" />
+						<ComboBox placeholder="To" />
+						<DateInput type="date" bind:value={date} />
+						<DateInput type="time" bind:value={time} />
+					</div>
 					{#each routingResponses as routingResponse, rI}
 						{#await routingResponse}
 							<div class="flex items-center justify-center w-full">
