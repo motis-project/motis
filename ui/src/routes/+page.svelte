@@ -227,6 +227,8 @@
 
 	let arriveBy = $state(false);
 	let baseQuery = $derived({
+		date: '04-30-2019',
+		time: '22:00',
 		fromPlace: `${query.start.lat},${query.start.lng},${query.start.level}`,
 		toPlace: `${query.destination.lat},${query.destination.lng},${query.destination.level}`,
 		wheelchair: profile.value == 'wheelchair',

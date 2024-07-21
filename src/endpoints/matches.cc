@@ -40,7 +40,7 @@ json::value matches::operator()(json::value const& query) const {
         {"geometry", osr::to_point(osr::point::from_latlng(*center))}});
   });
 
-  loc_rtree_.find(min, max, [&](n::location_idx_t const l) {
+  loc_rtree_.find({min, max}, [&](n::location_idx_t const l) {
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l);
     auto props =

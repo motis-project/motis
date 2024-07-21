@@ -20,7 +20,7 @@ constexpr auto const kFastaJson = R"__(
     "stateExplanation" : "available",
     "stationnumber" : 1866,
     "type" : "ELEVATOR",
-    "outOfService": [["2023-07-18T12:00:00Z", "2023-07-19T12:00:00Z"]]
+    "outOfService": [["2024-07-18T12:00:00Z", "2024-07-19T12:00:00Z"]]
   },
   {
     "description": "FFM HBF zu Gleis 103/104 (S-Bahn)",
@@ -33,8 +33,8 @@ constexpr auto const kFastaJson = R"__(
     "stationnumber": 1866,
     "type": "ELEVATOR",
     "outOfService": [
-      ["2023-07-18T11:00:00Z", "2023-07-18T14:00:00Z"],
-      ["2023-07-19T11:00:00Z", "2023-07-19T14:00:00Z"]
+      ["2024-07-18T11:00:00Z", "2024-07-18T14:00:00Z"],
+      ["2024-07-19T11:00:00Z", "2024-07-19T14:00:00Z"]
     ]
   },
   {
@@ -57,26 +57,26 @@ TEST(icc, parse_fasta) {
   ASSERT_EQ(1, elevators[elevator_idx_t{0}].out_of_service_.size());
   ASSERT_EQ(2, elevators[elevator_idx_t{1}].out_of_service_.size());
   ASSERT_EQ(0, elevators[elevator_idx_t{2}].out_of_service_.size());
-  EXPECT_EQ((n::interval<n::unixtime_t>{sys_days{2023_y / July / 18} + 12h,
-                                        sys_days{2023_y / July / 19} + 12h}),
+  EXPECT_EQ((n::interval<n::unixtime_t>{sys_days{2024_y / July / 18} + 12h,
+                                        sys_days{2024_y / July / 19} + 12h}),
             elevators[elevator_idx_t{0}].out_of_service_[0]);
-  EXPECT_EQ((n::interval<n::unixtime_t>{sys_days{2023_y / July / 18} + 11h,
-                                        sys_days{2023_y / July / 18} + 14h}),
+  EXPECT_EQ((n::interval<n::unixtime_t>{sys_days{2024_y / July / 18} + 11h,
+                                        sys_days{2024_y / July / 18} + 14h}),
             elevators[elevator_idx_t{1}].out_of_service_[0]);
-  EXPECT_EQ((n::interval<n::unixtime_t>{sys_days{2023_y / July / 19} + 11h,
-                                        sys_days{2023_y / July / 19} + 14h}),
+  EXPECT_EQ((n::interval<n::unixtime_t>{sys_days{2024_y / July / 19} + 11h,
+                                        sys_days{2024_y / July / 19} + 14h}),
             elevators[elevator_idx_t{1}].out_of_service_[1]);
   EXPECT_EQ((std::vector<state_change<n::unixtime_t>>{
                 {n::unixtime_t{n::unixtime_t::duration{0}}, true},
-                {sys_days{2023_y / July / 18} + 12h, false},
-                {sys_days{2023_y / July / 19} + 12h, true}}),
+                {sys_days{2024_y / July / 18} + 12h, false},
+                {sys_days{2024_y / July / 19} + 12h, true}}),
             elevators[elevator_idx_t{0}].state_changes_);
   EXPECT_EQ((std::vector<state_change<n::unixtime_t>>{
                 {n::unixtime_t{n::unixtime_t::duration{0}}, true},
-                {sys_days{2023_y / July / 18} + 11h, false},
-                {sys_days{2023_y / July / 18} + 14h, true},
-                {sys_days{2023_y / July / 19} + 11h, false},
-                {sys_days{2023_y / July / 19} + 14h, true}}),
+                {sys_days{2024_y / July / 18} + 11h, false},
+                {sys_days{2024_y / July / 18} + 14h, true},
+                {sys_days{2024_y / July / 19} + 11h, false},
+                {sys_days{2024_y / July / 19} + 14h, true}}),
             elevators[elevator_idx_t{1}].state_changes_);
 
   auto const expected =
@@ -84,18 +84,19 @@ TEST(icc, parse_fasta) {
           std::pair<n::unixtime_t, std::vector<bool>>{
               n::unixtime_t{n::unixtime_t::duration{0}}, {true, true, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
-              sys_days{2023_y / July / 18} + 11h, {true, false, false}},
+              sys_days{2024_y / July / 18} + 11h, {true, false, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
-              sys_days{2023_y / July / 18} + 12h, {false, false, false}},
+              sys_days{2024_y / July / 18} + 12h, {false, false, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
-              sys_days{2023_y / July / 18} + 14h, {false, true, false}},
+              sys_days{2024_y / July / 18} + 14h, {false, true, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
-              sys_days{2023_y / July / 19} + 11h, {false, false, false}},
+              sys_days{2024_y / July / 19} + 11h, {false, false, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
-              sys_days{2023_y / July / 19} + 12h, {true, false, false}},
+              sys_days{2024_y / July / 19} + 12h, {true, false, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
-              sys_days{2023_y / July / 19} + 14h, {true, true, false}}};
-  auto state_changes = get_state_changes<n::unixtime_t>(elevators);
+              sys_days{2024_y / July / 19} + 14h, {true, true, false}}};
+  auto state_changes = get_state_changes(utl::to_vec(
+      elevators, [&](elevator const& e) { return e.get_state_changes(); }));
   auto i = 0U;
   while (state_changes) {
     auto const x = state_changes();

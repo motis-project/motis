@@ -45,6 +45,7 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
   auto const g = utl::global_progress_bars{};
   auto const pt = utl::get_active_progress_tracker_or_activate("routing");
   pt->in_high(tt.n_locations() * 2U);
+
   auto footpaths_out_foot =
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_out_foot.resize(tt.n_locations());
@@ -64,10 +65,14 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
     }
   };
 
+  auto m = std::mutex{};
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
       auto const l = n::location_idx_t{i};
+      auto& footpaths =
+          (mode == osr::search_profile::kFoot ? footpaths_out_foot[l]
+                                              : footpaths_out_wheelchair[l]);
       auto neighbors = std::vector<n::location_idx_t>{};
       loc_rtree.in_radius(
           tt.locations_.coordinates_[l], kMaxDistance,
@@ -80,11 +85,10 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
           [](osr::path const& p) { return p.uses_elevator_; });
       for (auto const [n, r] : utl::zip(neighbors, results)) {
         if (r.has_value()) {
+          auto lock = std::scoped_lock{m};
           auto const duration = n::duration_t{r->cost_ / 60U};
           if (duration < n::footpath::kMaxDuration) {
-            (mode == osr::search_profile::kFoot ? footpaths_out_foot[l]
-                                                : footpaths_out_wheelchair[l])
-                .emplace_back(n::footpath{n, duration});
+            footpaths.emplace_back(n::footpath{n, duration});
           }
           for (auto const& s : r->segments_) {
             add_if_elevator(s.from_, l, n);
@@ -93,8 +97,8 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
         }
       }
 
-      utl::sort(footpaths_out_foot);
-      utl::sort(footpaths_out_wheelchair);
+      utl::sort(footpaths_out_foot[l]);
+      utl::sort(footpaths_out_wheelchair[l]);
 
       pt->update_monotonic(
           (mode == osr::search_profile::kFoot ? 0U : tt.n_locations()) + i);
@@ -108,6 +112,7 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
   for (auto const [i, out] : utl::enumerate(footpaths_out_foot)) {
     auto const l = n::location_idx_t{i};
     for (auto const fp : out) {
+      assert(fp.target() < tt.n_locations());
       footpaths_in_foot[fp.target()].emplace_back(
           n::footpath{l, fp.duration()});
     }
@@ -119,6 +124,7 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
   for (auto const [i, out] : utl::enumerate(footpaths_out_wheelchair)) {
     auto const l = n::location_idx_t{i};
     for (auto const fp : out) {
+      assert(fp.target() < tt.n_locations());
       footpaths_in_wheelchair[fp.target()].emplace_back(
           n::footpath{l, fp.duration()});
     }

@@ -15,7 +15,7 @@ json::value levels::operator()(json::value const& query) const {
   auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
   auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};
   auto levels = hash_set<osr::level_t>{};
-  l_.find(min, max, [&](osr::way_idx_t const x) {
+  l_.find({min, max}, [&](osr::way_idx_t const x) {
     auto const p = w_.r_->way_properties_[x];
     levels.emplace(p.from_level());
     if (p.from_level() != p.to_level()) {

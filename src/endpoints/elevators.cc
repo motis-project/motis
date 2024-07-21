@@ -16,7 +16,7 @@ json::value elevators::operator()(json::value const& query) const {
   auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};
 
   auto matches = json::array{};
-  e->elevators_rtree_.find(min, max, [&](elevator_idx_t const i) {
+  e->elevators_rtree_.find(geo::box{min, max}, [&](elevator_idx_t const i) {
     auto const& x = e->elevators_[i];
     matches.emplace_back(json::value{
         {"type", "Feature"},
@@ -28,7 +28,7 @@ json::value elevators::operator()(json::value const& query) const {
         {"geometry", osr::to_point(osr::point::from_latlng(x.pos_))}});
   });
 
-  for (auto const n : l_.find_elevators(min, max)) {
+  for (auto const n : l_.find_elevators({min, max})) {
     auto const match =
         match_elevator(e->elevators_rtree_, e->elevators_, w_, n);
     auto const pos = w_.get_node_pos(n);

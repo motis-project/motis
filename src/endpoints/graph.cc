@@ -18,7 +18,7 @@ json::value graph::operator()(json::value const& query) const {
                          : osr::level_t::invalid();
 
   auto gj = osr::geojson_writer{.w_ = w_};
-  l_.find(min, max, [&](osr::way_idx_t const w) {
+  l_.find({min, max}, [&](osr::way_idx_t const w) {
     if (level == osr::level_t::invalid()) {
       gj.write_way(w);
       return;
@@ -47,7 +47,7 @@ json::value graph::operator()(json::value const& query) const {
   });
 
   gj.finish(&osr::get_dijkstra<osr::foot<true>>());
-  
+
   return gj.json();
 }
 

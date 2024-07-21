@@ -86,5 +86,5 @@ configure_file(
 )
 file(GLOB_RECURSE icc-test-files test/*.cc)
 add_executable(icc-test ${icc-test-files})
-target_link_libraries(icc-test icc gtest ianatzdb-res icc-generated)
+target_link_libraries(icc-test icc gtest web-server ianatzdb-res icc-generated)
 target_compile_options(icc-test PRIVATE ${icc-compile-options})

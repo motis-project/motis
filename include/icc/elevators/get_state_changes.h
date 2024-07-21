@@ -38,15 +38,9 @@ std::vector<state_change<Time>> intervals_to_state_changes(
   return ret;
 }
 
-template <typename T>
-concept HasStateChanges = requires(T const& t) {
-  { t.get_state_changes() };
-};
-
-template <typename Time, typename Collection>
-  requires(HasStateChanges<typename Collection::value_type>)
+template <typename Time>
 utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
-    Collection const& c) {
+    std::vector<std::vector<state_change<Time>>> const& c) {
   using It = std::vector<state_change<Time>>::const_iterator;
 
   struct range {
@@ -56,10 +50,8 @@ utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
   };
 
   auto its = utl::to_vec(c, [](auto&& v) {
-    utl::verify(!v.get_state_changes().empty(),
-                "empty state vector not allowed");
-    return range{v.get_state_changes()[0].state_, v.get_state_changes().begin(),
-                 v.get_state_changes().end()};
+    utl::verify(!v.empty(), "empty state vector not allowed");
+    return range{v[0].state_, v.begin(), v.end()};
   });
 
   auto const all_finished = [&]() {
