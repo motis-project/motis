@@ -38,6 +38,7 @@
 		TableRow,
 		TableHeader
 	} from '$lib/components/ui/table/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import { plan, type Itinerary, type PlanResponse } from '$lib/openapi';
 	import { Separator } from '$lib/components/ui/separator';
 	import { Card } from '$lib/components/ui/card';
@@ -47,9 +48,10 @@
 	import { getModeStyle } from '$lib/modeStyle';
 	import { itineraryToGeoJSON } from '$lib/ItineraryToGeoJSON';
 	import { formatDurationSec } from '$lib/formatDuration';
-	import Input from '$lib/components/ui/input/input.svelte';
 	import DateInput from '$lib/DateInput.svelte';
 	import ComboBox from '$lib/ComboBox.svelte';
+	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
+	import { ArrowRightFromLine, ArrowRightToLine } from 'lucide-svelte';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -288,7 +290,7 @@
 	{/if}
 
 	<Control position="bottom-left">
-		<Card class="h-[45vh] w-[560px] overflow-y-auto overflow-x-hidden bg-white rounded-lg">
+		<Card class="w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden bg-white rounded-lg">
 			{#if itinerary !== null}
 				<div class="w-full flex justify-between bg-muted items-center">
 					<h2 class="text-lg ml-2 font-bold">Journey Details</h2>
@@ -305,107 +307,139 @@
 					<ConnectionDetail {itinerary} />
 				</div>
 			{:else}
-				<div class="flex flex-col space-y-8 w-full p-8">
-					<div class="grid grid-cols-2 grid-rows-2 gap-8">
+				<div class="flex flex-col w-full">
+					<div class="grid grid-cols-2 grid-rows-2 gap-4 p-8 shadow-md rounded">
 						<ComboBox placeholder="From" />
 						<ComboBox placeholder="To" />
 						<DateInput type="date" bind:value={date} />
-						<DateInput type="time" bind:value={time} />
-					</div>
-					{#each routingResponses as routingResponse, rI}
-						{#await routingResponse}
-							<div class="flex items-center justify-center w-full">
-								<LoaderCircle class="animate-spin w-12 h-12 m-20" />
-							</div>
-						{:then r}
-							{#if rI === 0}
-								<div class="w-full flex justify-between items-center space-x-4">
-									<div class="border-t w-full h-0"></div>
-									<button
-										onclick={() => {
-											routingResponses.splice(
-												0,
-												0,
-												plan({ ...baseQuery, pageCursor: r.previousPageCursor })
-											);
-										}}
-										class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold border rounded-lg"
-									>
-										früher
-									</button>
-									<div class="border-t w-full h-0"></div>
-								</div>
-							{/if}
-							{#each r.itineraries as it, i}
-								{@const date = new Date(it.startTime).toLocaleDateString()}
-								{@const predDate = new Date(
-									r.itineraries[i == 0 ? 0 : i - 1].startTime
-								).toLocaleDateString()}
-								<a
-									href="#"
-									onclick={() => {
-										itinerary = it;
-									}}
+						<div class="flex">
+							<DateInput type="time" bind:value={time} />
+							<RadioGroup.Root class="flex space-x-1 ml-1" value="departure">
+								<Label
+									for="departure"
+									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 								>
-									<Card class="p-4">
-										<div class="text-base h-8 flex justify-between items-center space-x-4 w-full">
-											<div>
-												<div class="text-xs font-bold uppercase text-slate-400">Departure Time</div>
-												<Time timestamp={it.startTime} />
-											</div>
-											<Separator orientation="vertical" />
-											<div>
-												<div class="text-xs font-bold uppercase text-slate-400">Arrival Time</div>
-												<Time timestamp={it.endTime} />
-											</div>
-											<Separator orientation="vertical" />
-											<div>
-												<div class="text-xs font-bold uppercase text-slate-400">Transfers</div>
-												<div class="flex justify-center w-full">{it.transfers}</div>
-											</div>
-											<Separator orientation="vertical" />
-											<div>
-												<div class="text-xs font-bold uppercase text-slate-400">Duration</div>
-												<div class="flex justify-center w-full">
-													{formatDurationSec(it.duration)}
-												</div>
-											</div>
-										</div>
-										<Separator class="my-2" />
-										<div class="mt-4 flex space-x-4">
-											{#each it.legs.filter((l) => l.routeShortName) as l}
-												<div
-													class="flex items-center py-1 px-2 rounded-lg font-bold"
-													style={routeColor(l)}
-												>
-													<svg class="relative mr-1 w-4 h-4 fill-white rounded-full">
-														<use xlink:href={`#${getModeStyle(l.mode)[0]}`}></use>
-													</svg>
-													{l.routeShortName}
-												</div>
-											{/each}
-										</div>
-									</Card>
-								</a>
-							{/each}
-							{#if rI === routingResponses.length - 1}
-								<div class="w-full flex justify-between items-center space-x-4">
-									<div class="border-t w-full h-0"></div>
-									<button
-										onclick={() => {
-											routingResponses.push(plan({ ...baseQuery, pageCursor: r.nextPageCursor }));
-										}}
-										class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold border rounded-lg"
-									>
-										später
-									</button>
-									<div class="border-t w-full h-0"></div>
+									<RadioGroup.Item
+										value="departure"
+										id="departure"
+										class="sr-only"
+										aria-label="Abfahrt"
+									/>
+									<span class="text-xs">Abfahrt</span>
+								</Label>
+								<Label
+									for="arrival"
+									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+								>
+									<RadioGroup.Item
+										value="arrival"
+										id="arrival"
+										class="sr-only"
+										aria-label="Ankunft"
+									/>
+									<span class="text-xs">Ankunft</span>
+								</Label>
+							</RadioGroup.Root>
+						</div>
+					</div>
+					<div class="flex flex-col space-y-8 h-[45vh] overflow-y-auto px-4 py-8">
+						{#each routingResponses as routingResponse, rI}
+							{#await routingResponse}
+								<div class="flex items-center justify-center w-full">
+									<LoaderCircle class="animate-spin w-12 h-12 m-20" />
 								</div>
-							{/if}
-						{:catch e}
-							<div>Error: {e}</div>
-						{/await}
-					{/each}
+							{:then r}
+								{#if rI === 0}
+									<div class="w-full flex justify-between items-center space-x-4">
+										<div class="border-t w-full h-0"></div>
+										<button
+											onclick={() => {
+												routingResponses.splice(
+													0,
+													0,
+													plan({ ...baseQuery, pageCursor: r.previousPageCursor })
+												);
+											}}
+											class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold border rounded-lg"
+										>
+											früher
+										</button>
+										<div class="border-t w-full h-0"></div>
+									</div>
+								{/if}
+								{#each r.itineraries as it, i}
+									{@const date = new Date(it.startTime).toLocaleDateString()}
+									{@const predDate = new Date(
+										r.itineraries[i == 0 ? 0 : i - 1].startTime
+									).toLocaleDateString()}
+									<a
+										href="#"
+										onclick={() => {
+											itinerary = it;
+										}}
+									>
+										<Card class="p-4">
+											<div class="text-base h-8 flex justify-between items-center space-x-4 w-full">
+												<div>
+													<div class="text-xs font-bold uppercase text-slate-400">
+														Departure Time
+													</div>
+													<Time timestamp={it.startTime} />
+												</div>
+												<Separator orientation="vertical" />
+												<div>
+													<div class="text-xs font-bold uppercase text-slate-400">Arrival Time</div>
+													<Time timestamp={it.endTime} />
+												</div>
+												<Separator orientation="vertical" />
+												<div>
+													<div class="text-xs font-bold uppercase text-slate-400">Transfers</div>
+													<div class="flex justify-center w-full">{it.transfers}</div>
+												</div>
+												<Separator orientation="vertical" />
+												<div>
+													<div class="text-xs font-bold uppercase text-slate-400">Duration</div>
+													<div class="flex justify-center w-full">
+														{formatDurationSec(it.duration)}
+													</div>
+												</div>
+											</div>
+											<Separator class="my-2" />
+											<div class="mt-4 flex space-x-4">
+												{#each it.legs.filter((l) => l.routeShortName) as l}
+													<div
+														class="flex items-center py-1 px-2 rounded-lg font-bold"
+														style={routeColor(l)}
+													>
+														<svg class="relative mr-1 w-4 h-4 fill-white rounded-full">
+															<use xlink:href={`#${getModeStyle(l.mode)[0]}`}></use>
+														</svg>
+														{l.routeShortName}
+													</div>
+												{/each}
+											</div>
+										</Card>
+									</a>
+								{/each}
+								{#if rI === routingResponses.length - 1}
+									<div class="w-full flex justify-between items-center space-x-4">
+										<div class="border-t w-full h-0"></div>
+										<button
+											onclick={() => {
+												routingResponses.push(plan({ ...baseQuery, pageCursor: r.nextPageCursor }));
+											}}
+											class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold border rounded-lg"
+										>
+											später
+										</button>
+										<div class="border-t w-full h-0"></div>
+									</div>
+								{/if}
+							{:catch e}
+								<div>Error: {e}</div>
+							{/await}
+						{/each}
+					</div>
 				</div>
 			{/if}
 		</Card>

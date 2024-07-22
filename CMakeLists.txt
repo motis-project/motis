@@ -74,7 +74,7 @@ target_link_libraries(icc-prepare icc)
 # --- SERVER ---
 add_executable(icc-server exe/server.cc)
 target_compile_features(icc-server PUBLIC cxx_std_23)
-target_link_libraries(icc-server icc web-server fmt::fmt rtree geo cista ianatzdb-res)
+target_link_libraries(icc-server icc web-server adr fmt::fmt rtree geo cista ianatzdb-res)
 
 
 # --- TEST ---
