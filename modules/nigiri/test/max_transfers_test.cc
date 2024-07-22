@@ -90,7 +90,7 @@ Stops:
  1: tag_D   D............................................... a: 01.05. 09:00        d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 1                     duration=60, provider="Deutsche Bahn", direction="", line="1", clasz=3, duration="60"
+ 0: 0  -> 1  TRAIN Bus 1                     duration=60, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="1", clasz=3, duration="60"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 08:00} -> {  tag_D, 2019-05-01 09:00}, line_id=1, id=tag_T1
@@ -105,8 +105,8 @@ Stops:
  2: tag_D   D............................................... a: 01.05. 08:50        d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 2                     duration=10, provider="Deutsche Bahn", direction="", line="2", clasz=3, duration="10"
- 1: 1  -> 2  TRAIN Bus 3                     duration=35, provider="Deutsche Bahn", direction="", line="3", clasz=3, duration="35"
+ 0: 0  -> 1  TRAIN Bus 2                     duration=10, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="2", clasz=3, duration="10"
+ 1: 1  -> 2  TRAIN Bus 3                     duration=35, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="3", clasz=3, duration="35"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 08:00} -> {  tag_B, 2019-05-01 08:10}, line_id=2, id=tag_T2
@@ -124,9 +124,9 @@ Stops:
  3: tag_D   D............................................... a: 01.05. 08:40        d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 2                     duration=10, provider="Deutsche Bahn", direction="", line="2", clasz=3, duration="10"
- 1: 1  -> 2  TRAIN Bus 4                     duration=7, provider="Deutsche Bahn", direction="", line="4", clasz=3, duration="7"
- 2: 2  -> 3  TRAIN Bus 5                     duration=15, provider="Deutsche Bahn", direction="", line="5", clasz=3, duration="15"
+ 0: 0  -> 1  TRAIN Bus 2                     duration=10, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="2", clasz=3, duration="10"
+ 1: 1  -> 2  TRAIN Bus 4                     duration=7, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="4", clasz=3, duration="7"
+ 2: 2  -> 3  TRAIN Bus 5                     duration=15, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="5", clasz=3, duration="15"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 08:00} -> {  tag_B, 2019-05-01 08:10}, line_id=2, id=tag_T2
@@ -147,7 +147,7 @@ Stops:
  1: tag_D   D............................................... a: 01.05. 09:00        d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 1                     duration=60, provider="Deutsche Bahn", direction="", line="1", clasz=3, duration="60"
+ 0: 0  -> 1  TRAIN Bus 1                     duration=60, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="1", clasz=3, duration="60"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 08:00} -> {  tag_D, 2019-05-01 09:00}, line_id=1, id=tag_T1
@@ -162,8 +162,8 @@ Stops:
  2: tag_D   D............................................... a: 01.05. 08:50        d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 2                     duration=10, provider="Deutsche Bahn", direction="", line="2", clasz=3, duration="10"
- 1: 1  -> 2  TRAIN Bus 3                     duration=35, provider="Deutsche Bahn", direction="", line="3", clasz=3, duration="35"
+ 0: 0  -> 1  TRAIN Bus 2                     duration=10, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="2", clasz=3, duration="10"
+ 1: 1  -> 2  TRAIN Bus 3                     duration=35, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="3", clasz=3, duration="35"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 08:00} -> {  tag_B, 2019-05-01 08:10}, line_id=2, id=tag_T2
@@ -182,7 +182,7 @@ Stops:
  1: tag_D   D............................................... a: 01.05. 09:00        d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 1                     duration=60, provider="Deutsche Bahn", direction="", line="1", clasz=3, duration="60"
+ 0: 0  -> 1  TRAIN Bus 1                     duration=60, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="1", clasz=3, duration="60"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 08:00} -> {  tag_D, 2019-05-01 09:00}, line_id=1, id=tag_T1

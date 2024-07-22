@@ -91,6 +91,7 @@ type alias TransportInfo =
     , line_id : String
     , name : String
     , provider : String
+    , provider_url : String
     , direction : String
     }
 

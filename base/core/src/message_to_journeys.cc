@@ -72,6 +72,7 @@ journey::transport to_transport(Transport const& transport, uint16_t duration) {
   t.line_identifier_ = transport.line_id()->view();
   t.name_ = transport.name()->view();
   t.provider_ = transport.provider()->view();
+  t.provider_url_ = transport.provider_url()->view();
   t.mumo_id_ = 0;
   t.route_color_ = transport.route_color() != nullptr
                        ? to_color(transport.route_color()->view())

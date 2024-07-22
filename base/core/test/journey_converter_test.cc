@@ -100,6 +100,7 @@ journey create_journey1() {
     transport.line_identifier_ = "l1";
     transport.name_ = "ICE 111";
     transport.provider_ = "DB1";
+    transport.provider_url_ = "https://example.com";
     transport.mumo_id_ = 0;
     transport.to_ = 1;
     transport.is_walk_ = false;
@@ -112,6 +113,7 @@ journey create_journey1() {
     transport.line_identifier_ = "l2";
     transport.name_ = "IC 222";
     transport.provider_ = "DB2";
+    transport.provider_url_ = "https://example.org";
     transport.mumo_id_ = 0;
     transport.to_ = 2;
     transport.is_walk_ = false;
@@ -126,6 +128,7 @@ journey create_journey1() {
     transport.line_identifier_ = "";
     transport.name_ = "";
     transport.provider_ = "";
+    transport.provider_url_ = "";
     transport.mumo_id_ = 0;
   }
 
@@ -228,6 +231,7 @@ journey create_journey2() {
     transport.line_identifier_ = "l1";
     transport.name_ = "ICE 111";
     transport.provider_ = "DB1";
+    transport.provider_url_ = "https://www.example.com";
     transport.mumo_id_ = 0;
     transport.to_ = 1;
     transport.is_walk_ = false;
@@ -298,6 +302,7 @@ TEST(core_convert_journey, journey_message_journey) {
       ASSERT_EQ(ot.line_identifier_, jt.line_identifier_);
       ASSERT_EQ(ot.name_, jt.name_);
       ASSERT_EQ(ot.provider_, jt.provider_);
+      ASSERT_EQ(ot.provider_url_, jt.provider_url_);
       ASSERT_EQ(ot.mumo_id_, jt.mumo_id_);
       ASSERT_EQ(ot.to_, jt.to_);
       ASSERT_EQ(ot.is_walk_, jt.is_walk_);
