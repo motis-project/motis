@@ -310,6 +310,8 @@
 			{:else}
 				<div class="flex flex-col w-full">
 					<div class="grid grid-cols-2 grid-rows-1 gap-4 p-8 shadow-md rounded">
+						<!-- <ComboBox placeholder="From" /> -->
+						<!-- <ComboBox placeholder="To" /> -->
 						<DateInput bind:value={dateTime} />
 						<div class="flex">
 							<RadioGroup.Root class="flex space-x-1 ml-1" bind:value={timeType}>
