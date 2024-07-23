@@ -2,9 +2,57 @@
 
 #include "osr/geojson.h"
 
+#include "boost/json.hpp"
+
+#include "fmt/chrono.h"
+#include "fmt/format.h"
+
 #include "icc/elevators/match_elevator.h"
 
 namespace json = boost::json;
+namespace n = nigiri;
+
+namespace std {
+
+n::unixtime_t tag_invoke(boost::json::value_to_tag<n::unixtime_t>,
+                         boost::json::value const& jv) {
+  auto x = n::unixtime_t{};
+  auto ss = std::stringstream{std::string{jv.as_string()}};
+  ss >> date::parse("%FT%T", x);
+  return x;
+}
+
+void tag_invoke(boost::json::value_from_tag,
+                boost::json::value& jv,
+                n::unixtime_t const& v) {
+  auto ss = std::stringstream{};
+  ss << date::format("%FT%T", v);
+  jv = json::string{ss.str()};
+}
+
+}  // namespace std
+
+namespace nigiri {
+
+template <typename T>
+n::interval<T> tag_invoke(boost::json::value_to_tag<n::interval<T>>,
+                          boost::json::value const& jv) {
+  auto x = n::interval<T>{};
+  x.from_ = json::value_to<T>(jv.as_array().at(0));
+  x.to_ = json::value_to<T>(jv.as_array().at(1));
+  return x;
+}
+
+template <typename T>
+void tag_invoke(boost::json::value_from_tag,
+                boost::json::value& jv,
+                n::interval<T> const& v) {
+  auto& a = (jv = boost::json::array{}).as_array();
+  a.emplace_back(json::value_from(v.from_));
+  a.emplace_back(json::value_from(v.to_));
+}
+
+}  // namespace nigiri
 
 namespace icc::ep {
 
@@ -24,7 +72,8 @@ json::value elevators::operator()(json::value const& query) const {
          {{"type", "api"},
           {"id", x.id_},
           {"desc", x.desc_},
-          {"status", (x.status_ ? "ACTIVE" : "INACTIVE")}}},
+          {"status", (x.status_ ? "ACTIVE" : "INACTIVE")},
+          {"outOfService", json::value_from(x.out_of_service_)}}},
         {"geometry", osr::to_point(osr::point::from_latlng(x.pos_))}});
   });
 
@@ -34,18 +83,20 @@ json::value elevators::operator()(json::value const& query) const {
     auto const pos = w_.get_node_pos(n);
     if (match != elevator_idx_t::invalid()) {
       auto const& x = e->elevators_[match];
-      matches.emplace_back(json::value{
+      auto const& v = matches.emplace_back(json::value{
           {"type", "Feature"},
           {"properties",
            {{"type", "match"},
             {"osm_node_id", to_idx(w_.node_to_osm_[n])},
             {"id", x.id_},
             {"desc", x.desc_},
-            {"status", x.status_ ? "ACTIVE" : "INACTIVE"}}},
+            {"status", x.status_ ? "ACTIVE" : "INACTIVE"},
+            {"outOfService", json::value_from(x.out_of_service_)}}},
           {"geometry",
            osr::to_line_string({pos, osr::point::from_latlng(x.pos_)})}});
     }
   }
+  std::cout << std::endl;
 
   return json::value{{"type", "FeatureCollection"}, {"features", matches}};
 }

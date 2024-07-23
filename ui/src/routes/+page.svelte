@@ -18,8 +18,7 @@
 		getMatches,
 		getPlatforms,
 		getRoute,
-		Footpaths,
-		updateElevator
+		Footpaths
 	} from '$lib/api';
 	import { toTable } from '$lib/toTable';
 	import {
@@ -49,9 +48,7 @@
 	import { itineraryToGeoJSON } from '$lib/ItineraryToGeoJSON';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import DateInput from '$lib/DateInput.svelte';
-	import ComboBox from '$lib/ComboBox.svelte';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
-	import { ArrowRightFromLine, ArrowRightToLine } from 'lucide-svelte';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -119,7 +116,15 @@
 		footpaths = await getFootpaths({ id: props.id, src: props.src });
 	};
 
-	let elevator = $state();
+	type Elevator = {
+		id: string;
+		desc: string;
+		state: 'ACTIVE' | 'INACTIVE';
+		outOfService: Array<[string, string]>;
+	};
+
+	let elevator = $state<Elevator | null>();
+	$inspect(elevator);
 
 	let init = false;
 	let startMarker = null;
@@ -147,7 +152,8 @@
 					}
 
 					if (layer === 'elevators') {
-						elevator = props;
+						elevator = elevators.features.find((f) => f.properties.id === props.id).properties;
+						console.log(props, $state.snapshot(elevator));
 					}
 				});
 
@@ -230,10 +236,10 @@
 		}
 	});
 
+	const pad = (x: number) => ('0' + x).slice(-2);
 	let timeType = $state('departure');
 	let dateTime = $state(new Date());
 	let arriveBy = $derived(timeType === 'arrival');
-	let pad = (x: number) => ('0' + x).slice(-2);
 	let baseQuery = $derived({
 		date: `${pad(dateTime.getUTCMonth() + 1)}-${pad(dateTime.getUTCDate())}-${dateTime.getUTCFullYear()}`,
 		time: `${pad(dateTime.getUTCHours())}:${pad(dateTime.getUTCMinutes())}`,
@@ -273,20 +279,40 @@
 >
 	{#if elevator}
 		<Control position="bottom-left">
-			<div class="bg-white rounded-lg">
-				<Button
-					variant="ghost"
-					on:click={async () => {
-						await updateElevator(elevator.id, elevator.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE');
-					}}
-				>
-					{#if elevator.status === 'ACTIVE'}
-						DEACTIVATE {elevator.id}
-					{:else}
-						ACTIVATE {elevator.id}
-					{/if}
-				</Button>
-			</div>
+			<Card class="flex flex-col">
+				<div class="w-full flex justify-between bg-muted items-center">
+					<h2 class="text-lg ml-2 font-bold">
+						Fahrstuhl {elevator.desc}
+						<span class="ml-2 text-sm text-muted-foreground">
+							{elevator.id}
+						</span>
+					</h2>
+					<Button
+						variant="ghost"
+						on:click={() => {
+							elevator = null;
+						}}
+					>
+						<X />
+					</Button>
+				</div>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Nicht verfügbar von</TableHead>
+							<TableHead>bis</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{#each elevator.outOfService as [from, to]}
+							<TableRow>
+								<TableCell>{new Date(from).toLocaleString('de-de').slice(0, -3)}</TableCell>
+								<TableCell>{new Date(to).toLocaleString('de-de').slice(0, -3)}</TableCell>
+							</TableRow>
+						{/each}
+					</TableBody>
+				</Table>
+			</Card>
 		</Control>
 	{/if}
 
