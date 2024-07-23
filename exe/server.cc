@@ -43,12 +43,14 @@ int main(int ac, char** av) {
   auto tt_path = fs::path{"tt_out.bin"};
   auto osr_path = fs::path{"osr"};
   auto fasta_path = fs::path{"fasta.json"};
+  auto adr_path = fs::path{"adr.cista"};
 
   auto desc = bpo::options_description{"Options"};
   desc.add_options()  //
       ("help,h", "produce this help message")  //
       ("tt", bpo::value(&tt_path)->default_value(tt_path), "timetable path")  //
       ("osr", bpo::value(&osr_path)->default_value(osr_path), "osr data")  //
+      ("adr", bpo::value(&adr_path)->default_value(adr_path), "adr path")  //
       ("fasta", bpo::value(&fasta_path)->default_value(fasta_path),
        "fasta path");
   auto const pos = bpo::positional_options_description{}

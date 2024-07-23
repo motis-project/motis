@@ -14,6 +14,29 @@ externalDocs:
 servers:
   - url: https://demo.triptix.tech
 paths:
+  /api/v1/geocode:
+    get:
+      tags:
+        - geocode
+      summary: Autocompletion & geocoding that resolves user input addresses including coordinates
+      operationId: geocode
+      parameters:
+        - name: text
+          in: query
+          required: true
+          description: the (potentially partially typed) address to resolve
+          schema:
+            type: string
+      responses:
+        200:
+          description: A list of guesses to resolve the text to a location
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+
   /api/v1/plan:
     get:
       tags:
@@ -278,6 +301,79 @@ paths:
 
 components:
   schemas:
+    Area:
+      description: Administrative area
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the area
+        admin_level:
+          type: string
+          description: |
+            [OpenStreetMap `admin_level`](https://wiki.openstreetmap.org/wiki/Key:admin_level)
+            of the area
+        matched:
+          type: boolean
+          description: Whether this area was matched by the input text
+
+    Token:
+      description: Matched token range (from index, length)
+      type: array
+      minItems: 2
+      maxItems: 2
+      items:
+        type: number
+
+    Match:
+      description: GeoCoding match
+      type: object
+      required:
+        - type
+        - name
+        - id
+        - lat
+        - lng
+        - tokens
+      properties:
+        type:
+          description: location type
+          type: string
+          enum:
+            - ADDRESS
+            - PLACE
+        tokens:
+          description: list of non-overlapping tokens that were matched
+          type: array
+          items:
+            $ref: '#/components/schemas/Token'
+        name:
+          description: name of the location (transit stop / PoI / address)
+          type: string
+        id:
+          description: unique ID of the location
+          type: string
+        lat:
+          description: latitude
+          type: number
+        lon:
+          description: longitude
+          type: number
+        street:
+          description: street name
+          type: string
+        housenumber:
+          description: housenumber
+          type: string
+        zip:
+          description: zip code
+          type: string
+        areas:
+          description: list of areas
+          type: array
+          items:
+            $ref: '#/components/schemas/Area'
+
     Mode:
       description: |
         # Street modes

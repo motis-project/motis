@@ -230,18 +230,19 @@
 		}
 	});
 
-	let date = $state(new Date());
-	let time = $state(new Date());
-	let arriveBy = $state(false);
+	let timeType = $state('departure');
+	let dateTime = $state(new Date());
+	let arriveBy = $derived(timeType === 'arrival');
+	let pad = (x: number) => ('0' + x).slice(-2);
 	let baseQuery = $derived({
+		date: `${pad(dateTime.getUTCMonth() + 1)}-${pad(dateTime.getUTCDate())}-${dateTime.getUTCFullYear()}`,
+		time: `${pad(dateTime.getUTCHours())}:${pad(dateTime.getUTCMinutes())}`,
 		fromPlace: `${query.start.lat},${query.start.lng},${query.start.level}`,
 		toPlace: `${query.destination.lat},${query.destination.lng},${query.destination.level}`,
 		wheelchair: profile.value == 'wheelchair',
 		timetableView: true,
 		arriveBy
 	});
-
-	$inspect(date, time);
 
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 
@@ -308,13 +309,10 @@
 				</div>
 			{:else}
 				<div class="flex flex-col w-full">
-					<div class="grid grid-cols-2 grid-rows-2 gap-4 p-8 shadow-md rounded">
-						<ComboBox placeholder="From" />
-						<ComboBox placeholder="To" />
-						<DateInput type="date" bind:value={date} />
+					<div class="grid grid-cols-2 grid-rows-1 gap-4 p-8 shadow-md rounded">
+						<DateInput bind:value={dateTime} />
 						<div class="flex">
-							<DateInput type="time" bind:value={time} />
-							<RadioGroup.Root class="flex space-x-1 ml-1" value="departure">
+							<RadioGroup.Root class="flex space-x-1 ml-1" bind:value={timeType}>
 								<Label
 									for="departure"
 									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
