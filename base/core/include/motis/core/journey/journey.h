@@ -40,6 +40,7 @@ struct journey {
     int mumo_id_{0};
     std::string direction_;
     std::string provider_;
+    std::string provider_url_;
     unsigned mumo_price_{0};
     unsigned mumo_accessibility_{0};
     std::string mumo_type_;

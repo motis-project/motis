@@ -29,6 +29,7 @@ struct transport_display_info {
   std::string display_name_;
   std::string direction_;
   std::string provider_;
+  std::string provider_url_;
   std::string line_;
   n::color_t route_color_;
   n::color_t route_text_color_;
@@ -126,6 +127,8 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
         provider_sections.at(provider_sections.size() == 1U ? 0U : section_idx);
     auto const provider =
         std::string{tt.providers_.at(provider_idx).long_name_.view()};
+    auto const provider_url =
+        std::string{tt.providers_.at(provider_idx).url_.view()};
 
     auto const direction_sections =
         tt.transport_section_directions_.at(t.t_idx_);
@@ -191,6 +194,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
                   std::string{tt.trip_display_names_.at(trip).view()},
               .direction_ = direction,
               .provider_ = provider,
+              .provider_url_ = provider_url,
               .line_ = line,
               .route_color_ = route_color,
               .route_text_color_ = route_text_color},
@@ -288,6 +292,7 @@ motis::journey nigiri_to_motis_journey(n::timetable const& tt,
       t.clasz_ = static_cast<std::underlying_type_t<n::clasz>>(x.clasz_);
       t.name_ = x.display_name_;
       t.provider_ = x.provider_;
+      t.provider_url_ = x.provider_url_;
       t.direction_ = x.direction_;
       t.line_identifier_ = x.line_;
       t.route_color_ = x.route_color_.v_;

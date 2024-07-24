@@ -95,6 +95,7 @@ decodeTransportInfo =
         |> required "line_id" string
         |> required "name" string
         |> required "provider" string
+        |> required "provider_url" string
         |> required "direction" string
 
 

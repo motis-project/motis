@@ -84,11 +84,11 @@ std::vector<Offset<MoveWrapper>> convert_moves(
     } else {
       moves.push_back(CreateMoveWrapper(
           b, Move_Transport,
-          CreateTransport(b, &r, t.clasz_, b.CreateString(t.line_identifier_),
-                          b.CreateString(t.name_), b.CreateString(t.provider_),
-                          b.CreateString(t.direction_),
-                          convert_color(t.route_color_),
-                          convert_color(t.route_text_color_))
+          CreateTransport(
+              b, &r, t.clasz_, b.CreateString(t.line_identifier_),
+              b.CreateString(t.name_), b.CreateString(t.provider_),
+              b.CreateString(t.provider_url_), b.CreateString(t.direction_),
+              convert_color(t.route_color_), convert_color(t.route_text_color_))
               .Union()));
     }
   }

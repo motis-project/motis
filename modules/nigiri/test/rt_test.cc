@@ -113,9 +113,9 @@ Stops:
  4: tag_E   E............................................... a: 01.05. 08:45 +15 F  d:                     exit
 
 Transports:
- 0: 0  -> 2  TRAIN Bus 1                     duration=35, provider="Deutsche Bahn", direction="", line="1", clasz=3, duration="35"
+ 0: 0  -> 2  TRAIN Bus 1                     duration=35, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="1", clasz=3, duration="35"
  1: 2  -> 3  WALK  type=          id=-1      duration=2   accessibility=0
- 2: 3  -> 4  TRAIN Bus 2                     duration=20, provider="Deutsche Bahn", direction="", line="2", clasz=3, duration="20"
+ 2: 3  -> 4  TRAIN Bus 2                     duration=20, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="2", clasz=3, duration="20"
 
 Trips:
  0: 0  -> 2  {tag_A  ,      0, 2019-05-01 07:50} -> {  tag_C, 2019-05-01 08:30}, line_id=1, id=tag_T1
@@ -133,9 +133,9 @@ Stops:
  3: tag_E   E............................................... a: 01.05. 08:45 +0  F  d:                     exit
 
 Transports:
- 0: 0  -> 1  TRAIN Bus 1                     duration=10, provider="Deutsche Bahn", direction="", line="1", clasz=3, duration="10"
- 1: 1  -> 2  TRAIN Bus 3                     duration=10, provider="Deutsche Bahn", direction="", line="3", clasz=3, duration="10"
- 2: 2  -> 3  TRAIN Bus 4                     duration=10, provider="Deutsche Bahn", direction="", line="4", clasz=3, duration="10"
+ 0: 0  -> 1  TRAIN Bus 1                     duration=10, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="1", clasz=3, duration="10"
+ 1: 1  -> 2  TRAIN Bus 3                     duration=10, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="3", clasz=3, duration="10"
+ 2: 2  -> 3  TRAIN Bus 4                     duration=10, provider="Deutsche Bahn", provider_url="https://deutschebahn.com", direction="", line="4", clasz=3, duration="10"
 
 Trips:
  0: 0  -> 1  {tag_A  ,      0, 2019-05-01 07:50} -> {  tag_C, 2019-05-01 08:30}, line_id=1, id=tag_T1
