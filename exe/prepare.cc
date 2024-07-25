@@ -22,7 +22,7 @@ using namespace icc;
 int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};
   auto osr_path = fs::path{"osr"};
-  auto out_path = fs::path{"tt_out.bin"};
+  auto out_path = fs::path{"out"};
   auto fasta_path = fs::path{"fasta.json"};
 
   auto desc = bpo::options_description{"Options"};
@@ -63,8 +63,12 @@ int main(int ac, char** av) {
   pl.build_rtree(w);
 
   fmt::println("computing footpaths");
-  compute_footpaths(*tt, w, l, pl, true);
+  auto const elevator_footpath_map = compute_footpaths(*tt, w, l, pl, true);
 
-  fmt::println("writing result");
-  tt->write(out_path);
+  fmt::println("writing timetable");
+  auto e = std::error_code{};
+  fs::create_directories(out_path, e);
+  tt->write(out_path / "tt.bin");
+
+  fmt::println("writing elevator footpaths");
 }

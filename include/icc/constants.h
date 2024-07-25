@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cista/serialization.h"
+
 namespace icc {
 
 // search radius for neighbors to route to [seconds]

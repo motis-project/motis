@@ -20,4 +20,8 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable&,
                                           osr::platforms const&,
                                           bool update_coordinates);
 
+void write(std::filesystem::path const&, elevator_footpath_map_t const&);
+
+cista::wrapped<elevator_footpath_map_t> read(std::filesystem::path const&);
+
 }  // namespace icc

@@ -21,6 +21,7 @@
 #include "icc/get_loc.h"
 #include "icc/match_platforms.h"
 #include "icc/tt_location_rtree.h"
+#include "icc/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 namespace nl = nigiri::loader;
@@ -214,103 +215,7 @@ TEST(icc, routing) {
   auto const today = date::sys_days{2019_y / May / 1};
   auto rtt =
       std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(tt, today));
-
-  auto td_footpaths_out =
-      std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
-  auto td_footpaths_in =
-      std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
-  for (auto const& [e_in_path, from_to] : elevator_in_paths) {
-    auto const e_idx =
-        match_elevator(e->elevators_rtree_, e->elevators_, w, e_in_path);
-    if (e_idx == elevator_idx_t::invalid()) {
-      std::cout << "no matching elevator found for osm_node_id="
-                << w.node_to_osm_[e_in_path] << "\n";
-      continue;
-    }
-
-    auto const& el = e->elevators_[e_idx];
-
-    auto const e_nodes = l.find_elevators(geo::box{el.pos_, 1000});
-    auto const e_elevators = utl::to_vec(e_nodes, [&](auto&& x) {
-      return match_elevator(e->elevators_rtree_, e->elevators_, w, x);
-    });
-    auto const e_state_changes =
-        get_state_changes(
-            utl::to_vec(e_elevators,
-                        [&](elevator_idx_t const ne)
-                            -> std::vector<state_change<n::unixtime_t>> {
-                          if (ne == elevator_idx_t::invalid()) {
-                            return {
-                                {.valid_from_ =
-                                     n::unixtime_t{n::unixtime_t::duration{0}},
-                                 .state_ = true}};
-                          }
-                          return e->elevators_[ne].get_state_changes();
-                        }))
-            .to_vec();
-
-    auto blocked = osr::bitvec<osr::node_idx_t>{w.n_nodes()};
-    for (auto const& [t, states] : e_state_changes) {
-      blocked.zero_out();
-      for (auto const [n, s] : utl::zip(e_nodes, states)) {
-        blocked.set(n, !s);
-      }
-
-      std::cout << t << ":\n";
-      for (auto const [e_node, ele_idx, state] :
-           utl::zip(e_nodes, e_elevators, states)) {
-        std::cout << "  osm_node_id=" << w.node_to_osm_[e_node] << ", elevator="
-                  << (ele_idx != elevator_idx_t::invalid()
-                          ? e->elevators_[ele_idx].desc_
-                          : "INVALID")
-                  << ", state=" << state << "\n";
-      }
-
-      for (auto const& [from, to] : from_to) {
-        auto const p = osr::route(w, l, osr::search_profile::kWheelchair,
-                                  get_loc(tt, w, pl, matches, from),
-                                  get_loc(tt, w, pl, matches, to), kMaxDuration,
-                                  osr::direction::kForward,
-                                  kMaxMatchingDistance, &blocked);
-        if (p.has_value()) {
-          td_footpaths_out[from].emplace_back(to, t,
-                                              n::duration_t{p->cost_ / 60});
-          td_footpaths_out[to].emplace_back(from, t,
-                                            n::duration_t{p->cost_ / 60});
-        }
-
-        std::cout << tt.locations_.names_[from].view() << " -> "
-                  << tt.locations_.names_[to].view() << ": "
-                  << (p.has_value() ? p->cost_
-                                    : std::numeric_limits<osr::cost_t>::max())
-                  << "\n";
-      }
-    }
-
-    for (auto const& [from, to] : from_to) {
-      std::cout << "  " << tt.locations_.names_[from].view() << " -> "
-                << tt.locations_.names_[to].view() << "\n";
-      for (auto const& s : el.state_changes_) {
-        std::cout << "    " << s.valid_from_ << " -> " << s.state_ << "\n";
-      }
-    }
-  }
-
-  for (auto& [from, footpaths] : td_footpaths_out) {
-    utl::sort(footpaths);
-    for (auto const& fp : footpaths) {
-      rtt->has_td_footpaths_[2].set(from, true);
-      rtt->td_footpaths_out_[2][from].push_back(fp);
-    }
-  }
-
-  for (auto& [from, footpaths] : td_footpaths_in) {
-    utl::sort(footpaths);
-    for (auto const& fp : footpaths) {
-      rtt->has_td_footpaths_[2].set(from, true);
-      rtt->td_footpaths_in_[2][from].push_back(fp);
-    }
-  }
+  update_rtt_td_footpaths(w, l, pl, tt, *e, elevator_in_paths, matches, *rtt);
 
   // Instantiate routing endpoint.
   auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};

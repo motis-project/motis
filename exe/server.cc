@@ -29,6 +29,7 @@
 #include "icc/match_platforms.h"
 #include "icc/point_rtree.h"
 #include "icc/tt_location_rtree.h"
+#include "icc/update_rtt_td_footpaths.h"
 
 namespace asio = boost::asio;
 namespace http = boost::beast::http;
@@ -79,15 +80,6 @@ int main(int ac, char** av) {
   fmt::println("building lookup");
   auto l = osr::lookup{w};
 
-  // Read timetable.
-  fmt::println("reading timetable");
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
-  auto tt = n::timetable::read(cista::memory_holder{
-      cista::file{tt_path.generic_string().c_str(), "r"}.content()});
-  auto rtt =
-      std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(*tt, today));
-
   // Read elevators.
   auto const fasta = utl::read_file(fasta_path.generic_string().c_str());
   if (!fasta.has_value()) {
@@ -97,6 +89,17 @@ int main(int ac, char** av) {
   auto const elevator_nodes = get_elevator_nodes(w);
   auto e = std::make_shared<elevators>(w, elevator_nodes,
                                        parse_fasta(std::string_view{*fasta}));
+
+  // Read timetable.
+  fmt::println("reading timetable");
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  auto tt = n::timetable::read(cista::memory_holder{
+      cista::file{tt_path.generic_string().c_str(), "r"}.content()});
+  auto rtt =
+      std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(*tt, today));
+  icc::update_rtt_td_footpaths(w, l, pl, tt, *e, elevator_footpath_map, matches,
+                               *rtt);
 
   // Create location r-tree.
   fmt::println("creating r-tree");
