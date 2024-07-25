@@ -34,12 +34,18 @@ constexpr auto const kFastaJson = R"__(
 [
   {
     "description": "FFM HBF zu Gleis 101/102 (S-Bahn)",
-    "equipmentnumber" : 10561326, "geocoordX" : 8.6628995,
-    "geocoordY" : 50.1072933, "operatorname" : "DB InfraGO",
+    "equipmentnumber" : 10561326,
+    "geocoordX" : 8.6628995,
+    "geocoordY" : 50.1072933,
+    "operatorname" : "DB InfraGO",
     "state" : "ACTIVE",
     "stateExplanation" : "available",
     "stationnumber" : 1866,
-    "type" : "ELEVATOR"
+    "type" : "ELEVATOR",
+    "outOfService": [
+      ["2024-07-18T11:00:00Z", "2024-07-18T14:00:00Z"],
+      ["2024-07-19T11:00:00Z", "2024-07-19T14:00:00Z"]
+    ]
   },
   {
     "description": "FFM HBF zu Gleis 103/104 (S-Bahn)",
@@ -50,7 +56,8 @@ constexpr auto const kFastaJson = R"__(
     "state": "ACTIVE",
     "stateExplanation": "available",
     "stationnumber": 1866,
-    "type": "ELEVATOR"
+    "type": "ELEVATOR",
+    "outOfService": [["2024-07-18T12:00:00Z", "2024-07-19T12:00:00Z"]]
   },
   {
     "description": "HAUPTWACHE zu Gleis 2/3 (S-Bahn)",
@@ -80,8 +87,7 @@ constexpr auto const kFastaJson = R"__(
     "state": "ACTIVE",
     "stateExplanation": "available",
     "stationnumber": 1126,
-    "type": "ELEVATOR",
-    "outOfService": [["2024-07-18T12:00:00Z", "2024-07-19T12:00:00Z"]]
+    "type": "ELEVATOR"
   },
   {
     "description": "zu Gleis 5/6",
@@ -114,11 +120,7 @@ constexpr auto const kFastaJson = R"__(
     "state": "ACTIVE",
     "stateExplanation": "available",
     "stationnumber": 1126,
-    "type": "ELEVATOR",
-    "outOfService": [
-      ["2024-07-18T11:00:00Z", "2024-07-18T14:00:00Z"],
-      ["2024-07-19T11:00:00Z", "2024-07-19T14:00:00Z"]
-    ]
+    "type": "ELEVATOR"
   },
   {
     "description": "zu Gleis 11/12",

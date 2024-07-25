@@ -31,6 +31,9 @@ void update_rtt_td_footpaths(osr::ways const& w,
     }
 
     auto const& el = e.elevators_[e_idx];
+    if (el.out_of_service_.empty() && el.status_) {
+      continue;
+    }
 
     auto const e_nodes = l.find_elevators(geo::box{el.pos_, 1000});
     auto const e_elevators = utl::to_vec(e_nodes, [&](auto&& x) {

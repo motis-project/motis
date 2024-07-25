@@ -41,7 +41,7 @@ namespace json = boost::json;
 using namespace icc;
 
 int main(int ac, char** av) {
-  auto tt_path = fs::path{"tt_out.bin"};
+  auto tt_path = fs::path{"out"};
   auto osr_path = fs::path{"osr"};
   auto fasta_path = fs::path{"fasta.json"};
   auto adr_path = fs::path{"adr.cista"};
@@ -92,21 +92,28 @@ int main(int ac, char** av) {
 
   // Read timetable.
   fmt::println("reading timetable");
+  auto const elevator_footpath_map =
+      read_elevator_footpath_map(tt_path / "elevator_footpath_map.bin");
+  auto tt = n::timetable::read(cista::memory_holder{
+      cista::file{(tt_path / "tt.bin").generic_string().c_str(), "r"}
+          .content()});
+
+  // Create matches location_idx_t => platform_idx_t
+  fmt::println("creating matches");
+  auto const matches = get_matches(*tt, pl, w);
+
+  // Create time-dependent footpaths.
+  fmt::println("updating time-dependent footpaths");
   auto const today = std::chrono::time_point_cast<date::days>(
       std::chrono::system_clock::now());
-  auto tt = n::timetable::read(cista::memory_holder{
-      cista::file{tt_path.generic_string().c_str(), "r"}.content()});
   auto rtt =
       std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(*tt, today));
-  icc::update_rtt_td_footpaths(w, l, pl, tt, *e, elevator_footpath_map, matches,
-                               *rtt);
+  icc::update_rtt_td_footpaths(w, l, pl, *tt, *e, *elevator_footpath_map,
+                               matches, *rtt);
 
   // Create location r-tree.
   fmt::println("creating r-tree");
   auto const loc_rtree = create_location_rtree(*tt);
-
-  fmt::println("creating matches");
-  auto const matches = get_matches(*tt, pl, w);
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};

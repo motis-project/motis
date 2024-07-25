@@ -46,6 +46,9 @@ int main(int ac, char** av) {
     return 0;
   }
 
+  auto e = std::error_code{};
+  fs::create_directories(out_path, e);
+
   fmt::println("loading timetable");
   auto tt = n::timetable::read(cista::memory_holder{
       cista::file{tt_path.generic_string().c_str(), "r"}.content()});
@@ -65,10 +68,9 @@ int main(int ac, char** av) {
   fmt::println("computing footpaths");
   auto const elevator_footpath_map = compute_footpaths(*tt, w, l, pl, true);
 
-  fmt::println("writing timetable");
-  auto e = std::error_code{};
-  fs::create_directories(out_path, e);
-  tt->write(out_path / "tt.bin");
-
   fmt::println("writing elevator footpaths");
+  write(out_path / "elevator_footpath_map.bin", elevator_footpath_map);
+
+  fmt::println("writing timetable");
+  tt->write(out_path / "tt.bin");
 }
