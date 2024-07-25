@@ -169,7 +169,6 @@ U4,S1,U4,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
-S3,00:30:00,00:30:00,DA_3,0,0,0
 S3,00:50:00,00:50:00,LANGEN,1,0,0
 S3,01:20:00,00:20:00,FFM_HAUPT_S,2,0,0
 S3,01:25:00,01:25:00,FFM_101,3,0,0
@@ -182,6 +181,12 @@ U4,01:10:00,01:10:00,FFM_HAUPT_U,1,0,0
 # calendar_dates.txt
 service_id,date,exception_type
 S1,20190501,1
+
+# frequencies.txt
+trip_id,start_time,end_time,headway_secs
+S3,00:50:00,24:50:00,3600
+RB,00:35:00,24:35:00,3600
+U4,01:05:00,25:01:00,3600
 )"sv;
 
 TEST(icc, routing) {
@@ -223,7 +228,7 @@ TEST(icc, routing) {
   auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};
   auto const plan_response = routing(
       "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
-      "&date=04-30-2019&time=22:00");
+      "&date=04-30-2019&time=22:00&wheelchair=true");
 
   std::cout << json::serialize(json::value_from(plan_response)) << "\n";
 }

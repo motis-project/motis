@@ -74,6 +74,18 @@ api::ModeEnum to_mode(n::clasz const c) {
   std::unreachable();
 }
 
+api::ModeEnum to_mode(osr::search_profile const m) {
+  switch (m) {
+    case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
+    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_TO_PARK;
+    case osr::search_profile::kFoot: [[fallthrough]];
+    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
+    case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kBike: return api::ModeEnum::BIKE;
+  }
+  std::unreachable();
+}
+
 std::string get_service_date(n::timetable const& tt,
                              n::transport const t,
                              n::stop_idx_t const stop_idx) {
@@ -238,10 +250,11 @@ api::Itinerary journey_to_response(
                                   to_location(j_leg.to_), leg);
             },
             [&](n::routing::offset const x) {
-              auto& leg = write_leg(x, api::ModeEnum{x.transport_mode_id_});
-              add_routed_polyline(
-                  static_cast<osr::search_profile>(x.transport_mode_id_),
-                  to_location(j_leg.from_), to_location(j_leg.to_), leg);
+              auto const profile =
+                  static_cast<osr::search_profile>(x.transport_mode_id_);
+              auto& leg = write_leg(x, to_mode(profile));
+              add_routed_polyline(profile, to_location(j_leg.from_),
+                                  to_location(j_leg.to_), leg);
             }},
         j_leg.uses_);
   }
