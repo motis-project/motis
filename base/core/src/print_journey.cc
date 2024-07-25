@@ -156,9 +156,8 @@ bool print_journey(journey const& j, std::ostream& out, bool local_time,
     } else {
       out << std::left << std::setw(10) << trans.name_
           << "                duration=" << trans.duration_ << ", provider=\""
-          << trans.provider_ << "\", provider_url=\"" << trans.provider_url_
-          << "\", direction=\"" << trans.direction_ << "\", line=\""
-          << trans.line_identifier_
+          << trans.provider_ << "\", direction=\"" << trans.direction_
+          << "\", line=\"" << trans.line_identifier_
           << "\", clasz=" << static_cast<int>(trans.clasz_) << ", duration=\""
           << trans.duration_ << "\"\n";
     }
