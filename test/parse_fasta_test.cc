@@ -95,11 +95,12 @@ TEST(icc, parse_fasta) {
               sys_days{2024_y / July / 19} + 12h, {true, false, false}},
           std::pair<n::unixtime_t, std::vector<bool>>{
               sys_days{2024_y / July / 19} + 14h, {true, true, false}}};
-  auto state_changes = get_state_changes(utl::to_vec(
-      elevators, [&](elevator const& e) { return e.get_state_changes(); }));
+  auto const single_state_changes = utl::to_vec(
+      elevators, [&](elevator const& e) { return e.get_state_changes(); });
+  auto g = get_state_changes(single_state_changes);
   auto i = 0U;
-  while (state_changes) {
-    auto const x = state_changes();
+  while (g) {
+    auto const x = g();
     ASSERT_LT(i, expected.size());
     EXPECT_EQ(expected[i], x) << "i=" << i;
     ++i;
