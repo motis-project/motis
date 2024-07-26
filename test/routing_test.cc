@@ -43,8 +43,7 @@ constexpr auto const kFastaJson = R"__(
     "stationnumber" : 1866,
     "type" : "ELEVATOR",
     "outOfService": [
-      ["2024-07-18T11:00:00Z", "2024-07-18T14:00:00Z"],
-      ["2024-07-19T11:00:00Z", "2024-07-19T14:00:00Z"]
+      ["2019-05-01T01:30:00Z", "2019-05-01T02:30:00Z"]
     ]
   },
   {
@@ -56,8 +55,7 @@ constexpr auto const kFastaJson = R"__(
     "state": "ACTIVE",
     "stateExplanation": "available",
     "stationnumber": 1866,
-    "type": "ELEVATOR",
-    "outOfService": [["2024-07-18T12:00:00Z", "2024-07-19T12:00:00Z"]]
+    "type": "ELEVATOR"
   },
   {
     "description": "HAUPTWACHE zu Gleis 2/3 (S-Bahn)",
@@ -147,7 +145,7 @@ DA,DA Hbf,49.87260,8.63085,1,,
 DA_3,DA Hbf,49.87355,8.63003,0,DA,3
 DA_10,DA Hbf,49.87336,8.62926,0,DA,10
 FFM,FFM Hbf,50.10701,8.66341,1,,
-FFM_101,FFM Hbf,50.10773,8.66322,0,FFM,101
+FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
 FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12
 FFM_U,FFM Hbf,50.107577,8.6638173,0,FFM,U4
 LANGEN,Langen,49.99359,8.65677,1,,1
@@ -169,9 +167,8 @@ U4,S1,U4,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
-S3,00:50:00,00:50:00,LANGEN,1,0,0
-S3,01:20:00,00:20:00,FFM_HAUPT_S,2,0,0
-S3,01:25:00,01:25:00,FFM_101,3,0,0
+S3,01:15:00,01:15:00,FFM_101,1,0,0
+S3,01:20:00,01:20:00,FFM_HAUPT_S,2,0,0
 RB,00:35:00,00:35:00,DA_10,0,0,0
 RB,00:45:00,00:45:00,LANGEN,1,0,0
 RB,00:55:00,00:55:00,FFM_12,2,0,0
@@ -184,10 +181,49 @@ S1,20190501,1
 
 # frequencies.txt
 trip_id,start_time,end_time,headway_secs
-S3,00:50:00,24:50:00,3600
+S3,01:15:00,25:15:00,3600
 RB,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
+
+void print_short(std::ostream& out, api::Itinerary const& j) {
+  auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
+    auto const u = std::chrono::time_point<std::chrono::system_clock>{
+        std::chrono::milliseconds{t}};
+    out << date::format(fmt, u);
+  };
+
+  out << "date=";
+  format_time(j.startTime_, "%F");
+  out << ", start=";
+  format_time(j.startTime_, "%H:%M");
+  out << ", end=";
+  format_time(j.endTime_, "%H:%M");
+
+  out << ", duration=";
+  format_time(j.duration_ * 1000U, "%H:%M");
+  out << ", transfers=" << j.transfers_;
+
+  out << ", legs=[\n";
+  auto first = true;
+  for (auto const& leg : j.legs_) {
+    if (!first) {
+      out << ",\n    ";
+    } else {
+      out << "    ";
+    }
+    first = false;
+    out << "(";
+    out << "start=";
+    format_time(leg.startTime_);
+    out << ", mode=";
+    out << json::serialize(json::value_from(leg.mode_));
+    out << ", end=";
+    format_time(leg.endTime_);
+    out << ")";
+  }
+  out << "\n]\n";
+}
 
 TEST(icc, routing) {
   constexpr auto const kOsrPath = "test/test_case_osr";
@@ -226,9 +262,30 @@ TEST(icc, routing) {
 
   // Instantiate routing endpoint.
   auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};
-  auto const plan_response = routing(
-      "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
-      "&date=04-30-2019&time=22:00&wheelchair=true");
 
-  std::cout << json::serialize(json::value_from(plan_response)) << "\n";
+  // Route with wheelchair.
+  {
+    auto const plan_response = routing(
+        "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
+        "&date=05-01-2019&time=01:25&wheelchair=true");
+
+    std::cout << "With wheelchair:\n";
+    for (auto const& j : plan_response.itineraries_) {
+      print_short(std::cout, j);
+      std::cout << "\n";
+    }
+  }
+
+  // Route without wheelchair.
+  {
+    auto const plan_response = routing(
+        "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
+        "&date=05-01-2019&time=01:25");
+
+    std::cout << "Without wheelchair:\n";
+    for (auto const& j : plan_response.itineraries_) {
+      print_short(std::cout, j);
+      std::cout << "\n";
+    }
+  }
 }

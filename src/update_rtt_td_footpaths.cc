@@ -27,12 +27,35 @@ void update_rtt_td_footpaths(osr::ways const& w,
     auto const e_idx =
         match_elevator(e.elevators_rtree_, e.elevators_, w, e_in_path);
     if (e_idx == elevator_idx_t::invalid()) {
+      std::cout << "  elevator not matched: " << w.node_to_osm_[e_in_path]
+                << "\n";
+      std::cout << "  location pairs\n";
+      for (auto const& [from, to] : from_to) {
+        std::cout << "    " << tt.locations_.ids_[from].view() << " -  "
+                  << tt.locations_.ids_[to].view() << "\n";
+      }
       continue;
     }
 
     auto const& el = e.elevators_[e_idx];
     if (el.out_of_service_.empty() && el.status_) {
+      std::cout << el.desc_ << "\n";
+      std::cout << "  -> no out of service, status=ACTIVE\n";
+      for (auto const& [from, to] : el.out_of_service_) {
+        std::cout << "  " << from << " - " << to << "\n";
+      }
+      std::cout << "  location pairs\n";
+      for (auto const& [from, to] : from_to) {
+        std::cout << "    " << tt.locations_.ids_[from].view() << " -  "
+                  << tt.locations_.ids_[to].view() << "\n";
+      }
       continue;
+    }
+
+    std::cout << el.desc_ << "\n";
+    std::cout << "  out_of_service: " << el.out_of_service_.size() << "\n";
+    for (auto const& [from, to] : el.out_of_service_) {
+      std::cout << "  " << from << " - " << to << "\n";
     }
 
     auto const e_nodes = l.find_elevators(geo::box{el.pos_, 1000});
@@ -56,10 +79,15 @@ void update_rtt_td_footpaths(osr::ways const& w,
 
     auto blocked = osr::bitvec<osr::node_idx_t>{w.n_nodes()};
     for (auto const& [t, states] : e_state_changes) {
+      std::cout << "t=" << t << "\n";
+
       blocked.zero_out();
       for (auto const [n, s] : utl::zip(e_nodes, states)) {
         blocked.set(n, !s);
+        std::cout << "   " << w.node_to_osm_[n] << ": "
+                  << (s ? "ACTIVE" : "INACTIVE") << "\n";
       }
+
       for (auto const& [from, to] : from_to) {
         auto const p = osr::route(w, l, osr::search_profile::kWheelchair,
                                   get_loc(tt, w, pl, matches, from),
@@ -71,6 +99,9 @@ void update_rtt_td_footpaths(osr::ways const& w,
                                               n::duration_t{p->cost_ / 60});
           td_footpaths_in[to].emplace_back(from, t,
                                            n::duration_t{p->cost_ / 60});
+        } else {
+          td_footpaths_out[from].emplace_back(to, t, n::kInfeasible);
+          td_footpaths_in[to].emplace_back(from, t, n::kInfeasible);
         }
       }
     }
