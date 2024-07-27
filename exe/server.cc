@@ -102,18 +102,18 @@ int main(int ac, char** av) {
   fmt::println("creating matches");
   auto const matches = get_matches(*tt, pl, w);
 
+  // Create location r-tree.
+  fmt::println("creating r-tree");
+  auto const loc_rtree = create_location_rtree(*tt);
+
   // Create time-dependent footpaths.
   fmt::println("updating time-dependent footpaths");
   auto const today = std::chrono::time_point_cast<date::days>(
       std::chrono::system_clock::now());
   auto rtt =
       std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(*tt, today));
-  icc::update_rtt_td_footpaths(w, l, pl, *tt, *e, *elevator_footpath_map,
-                               matches, *rtt);
-
-  // Create location r-tree.
-  fmt::println("creating r-tree");
-  auto const loc_rtree = create_location_rtree(*tt);
+  icc::update_rtt_td_footpaths(w, l, pl, *tt, loc_rtree, *e,
+                               *elevator_footpath_map, matches, *rtt);
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};

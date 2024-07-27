@@ -258,7 +258,8 @@ TEST(icc, routing) {
   auto const today = date::sys_days{2019_y / May / 1};
   auto rtt =
       std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(tt, today));
-  update_rtt_td_footpaths(w, l, pl, tt, *e, elevator_in_paths, matches, *rtt);
+  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, *e, elevator_in_paths,
+                          matches, *rtt);
 
   // Instantiate routing endpoint.
   auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};

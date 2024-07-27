@@ -26,7 +26,7 @@ void tag_invoke(boost::json::value_from_tag,
                 boost::json::value& jv,
                 n::unixtime_t const& v) {
   auto ss = std::stringstream{};
-  ss << date::format("%FT%T", v);
+  ss << date::format("%FT%TZ", v);
   jv = json::string{ss.str()};
 }
 
