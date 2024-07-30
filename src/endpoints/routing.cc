@@ -17,11 +17,15 @@
 #include "icc/endpoints/routing.h"
 #include "icc/journey_to_response.h"
 #include "icc/parse_location.h"
+#include "icc/update_rtt_td_footpaths.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
 
 namespace icc::ep {
+
+using td_offsets_t =
+    n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 template <typename T>
 concept JSON = boost::json::has_value_to<T>::value && std::is_aggregate_v<T>;
@@ -36,6 +40,9 @@ boost::thread_specific_ptr<n::routing::search_state> search_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t to_place(n::timetable const& tt, std::string_view s) {
   if (auto const location = parse_location(s); location.has_value()) {
@@ -90,8 +97,52 @@ double get_max_distance(osr::search_profile const profile,
   std::unreachable();
 }
 
+td_offsets_t routing::get_td_offsets(elevators const& e,
+                                     osr::location const& pos,
+                                     osr::direction const dir,
+                                     std::vector<api::ModeEnum> const& modes,
+                                     bool const wheelchair,
+                                     std::chrono::seconds const max) const {
+  auto ret = hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
+  for (auto const m : modes) {
+    auto const profile = to_profile(m, wheelchair);
+
+    if (profile != osr::search_profile::kWheelchair) {
+      continue;  // handled by get_offsets
+    }
+
+    utl::equal_ranges_linear(
+        get_td_footpaths(w_, l_, pl_, tt_, loc_tree_, e, elevators_in_paths_,
+                         matches_, pos, dir, profile, *blocked),
+        [](n::td_footpath const& a, n::td_footpath const& b) {
+          return a.target_ == b.target_;
+        },
+        [&](auto&& from, auto&& to) {
+          ret.emplace(from->target_,
+                      utl::to_vec(from, to, [&](n::td_footpath const fp) {
+                        return n::routing::td_offset{
+                            .valid_from_ = fp.valid_from_,
+                            .duration_ = fp.duration_,
+                            .transport_mode_id_ =
+                                static_cast<n::transport_mode_id_t>(profile)};
+                      }));
+        });
+  }
+
+  for (auto const& [l, td] : ret) {
+    std::cout << tt_.locations_.names_[l].view() << " ["
+              << tt_.locations_.ids_[l].view() << "]\n";
+    for (auto const& x : td) {
+      std::cout << "  valid_from=" << x.valid_from_
+                << ", duration=" << x.duration_
+                << ", mode=" << x.transport_mode_id_ << "\n";
+    }
+  }
+
+  return ret;
+}
+
 std::vector<n::routing::offset> routing::get_offsets(
-    osr::bitvec<osr::node_idx_t> const* blocked,
     osr::location const& pos,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
@@ -100,6 +151,11 @@ std::vector<n::routing::offset> routing::get_offsets(
   auto offsets = std::vector<n::routing::offset>{};
   for (auto const m : modes) {
     auto const profile = to_profile(m, wheelchair);
+
+    if (profile == osr::search_profile::kWheelchair) {
+      continue;  // handled by get_td_offsets
+    }
+
     auto const near_stops =
         rtree_.in_radius(pos.pos_, get_max_distance(profile, max));
     auto const near_stop_locations =
@@ -107,9 +163,8 @@ std::vector<n::routing::offset> routing::get_offsets(
           return osr::location{tt_.locations_.coordinates_[l],
                                pl_.get_level(w_, matches_[l])};
         });
-    auto const paths =
-        osr::route(w_, l_, profile, pos, near_stop_locations, max.count(), dir,
-                   kMaxMatchingDistance, blocked);
+    auto const paths = osr::route(w_, l_, profile, pos, near_stop_locations,
+                                  max.count(), dir, kMaxMatchingDistance);
     for (auto const [p, l] : utl::zip(paths, near_stops)) {
       if (p.has_value()) {
         offsets.emplace_back(
@@ -252,6 +307,9 @@ auto run_search(n::timetable const& tt,
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rtt_;
   auto const e = e_;
+  if (blocked.get() == nullptr) {
+    blocked.reset(new osr::bitvec<osr::node_idx_t>{});
+  }
 
   auto const query = api::plan_params{url.params()};
   auto const from = to_place(tt_, query.fromPlace_);
@@ -277,8 +335,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                                  ? osr::direction::kForward
                                                  : osr::direction::kBackward;
                             return get_offsets(
-                                &e->blocked_, pos, dir, start_modes,
-                                query.wheelchair_,
+                                pos, dir, start_modes, query.wheelchair_,
                                 std::chrono::seconds{query.maxPreTransitTime_});
                           }},
           start),
@@ -289,7 +346,29 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 auto const dir = query.arriveBy_ ? osr::direction::kBackward
                                                  : osr::direction::kForward;
                 return get_offsets(
-                    &e->blocked_, pos, dir, dest_modes, query.wheelchair_,
+                    pos, dir, dest_modes, query.wheelchair_,
+                    std::chrono::seconds{query.maxPostTransitTime_});
+              }},
+          dest),
+      .td_start_ = std::visit(
+          utl::overloaded{
+              [&](n::location_idx_t const l) { return td_offsets_t{}; },
+              [&](osr::location const& pos) {
+                auto const dir = query.arriveBy_ ? osr::direction::kForward
+                                                 : osr::direction::kBackward;
+                return get_td_offsets(
+                    *e, pos, dir, start_modes, query.wheelchair_,
+                    std::chrono::seconds{query.maxPreTransitTime_});
+              }},
+          start),
+      .td_dest_ = std::visit(
+          utl::overloaded{
+              [&](n::location_idx_t const l) { return td_offsets_t{}; },
+              [&](osr::location const& pos) {
+                auto const dir = query.arriveBy_ ? osr::direction::kBackward
+                                                 : osr::direction::kForward;
+                return get_td_offsets(
+                    *e, pos, dir, dest_modes, query.wheelchair_,
                     std::chrono::seconds{query.maxPostTransitTime_});
               }},
           dest),

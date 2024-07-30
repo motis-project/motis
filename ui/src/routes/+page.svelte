@@ -366,6 +366,19 @@
 									<span class="text-xs">Ankunft</span>
 								</Label>
 							</RadioGroup.Root>
+							<div class="ml-1 text-xs">
+								<Select bind:selected={profile}>
+									<SelectTrigger>
+										<SelectValue placeholder="Profile" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="wheelchair">Wheelchair</SelectItem>
+										<SelectItem value="foot">Foot</SelectItem>
+										<SelectItem value="bike">Bike</SelectItem>
+										<SelectItem value="car">Car</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
 					</div>
 					<div class="flex flex-col space-y-8 h-[45vh] overflow-y-auto px-4 py-8">

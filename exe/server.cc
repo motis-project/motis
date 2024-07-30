@@ -97,6 +97,7 @@ int main(int ac, char** av) {
   auto tt = n::timetable::read(cista::memory_holder{
       cista::file{(tt_path / "tt.bin").generic_string().c_str(), "r"}
           .content()});
+  tt->locations_.resolve_timezones();
 
   // Create matches location_idx_t => platform_idx_t
   fmt::println("creating matches");
@@ -129,8 +130,9 @@ int main(int ac, char** av) {
                 .post("/api/update_elevator",
                       ep::update_elevator{*tt, w, l, pl, loc_rtree,
                                           elevator_nodes, matches, e, rtt})
-                .get("/api/v1/plan",
-                     ep::routing{w, l, pl, *tt, rtt, e, loc_rtree, matches});
+                .get("/api/v1/plan", ep::routing{w, l, pl, *tt, loc_rtree,
+                                                 *elevator_footpath_map, rtt, e,
+                                                 loc_rtree, matches});
 
   qr.serve_files("ui/build");
   qr.enable_cors();
