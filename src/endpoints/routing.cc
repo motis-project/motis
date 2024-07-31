@@ -423,9 +423,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .itineraries_ = utl::to_vec(*journeys,
                                   [&](auto&& j) {
                                     return journey_to_response(
-                                        w_, l_, tt_, pl_, rtt.get(),
-                                        &e->blocked_, matches_,
-                                        query.wheelchair_, j, start, dest);
+                                        w_, l_, tt_, pl_, rtt.get(), matches_,
+                                        query.wheelchair_, j, start, dest,
+                                        *blocked);
                                   }),
       .previousPageCursor_ = fmt::format(
           "EARLIER|{}", std::chrono::duration_cast<std::chrono::seconds>(

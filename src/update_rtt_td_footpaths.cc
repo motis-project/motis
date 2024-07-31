@@ -14,6 +14,63 @@ using namespace std::chrono_literals;
 
 namespace icc {
 
+using node_states_t =
+    std::pair<nodes_t, std::vector<std::pair<n::unixtime_t, states_t>>>;
+
+node_states_t get_node_states(osr::ways const& w,
+                              osr::lookup const& l,
+                              elevators const& e,
+                              geo::latlng const& pos) {
+  auto e_nodes =
+      utl::to_vec(l.find_elevators(geo::box{pos, kElevatorUpdateRadius}));
+  auto e_state_changes =
+      get_state_changes(
+          utl::to_vec(
+              e_nodes,
+              [&](osr::node_idx_t const n)
+                  -> std::vector<state_change<n::unixtime_t>> {
+                auto const ne =
+                    match_elevator(e.elevators_rtree_, e.elevators_, w, n);
+                if (ne == elevator_idx_t::invalid()) {
+                  return {
+                      {.valid_from_ = n::unixtime_t{n::unixtime_t::duration{0}},
+                       .state_ = true}};
+                }
+                return e.elevators_[ne].get_state_changes();
+              }))
+          .to_vec();
+  return {std::move(e_nodes), std::move(e_state_changes)};
+}
+
+osr::bitvec<osr::node_idx_t>& set_blocked(
+    nodes_t const& e_nodes,
+    states_t const& states,
+    osr::bitvec<osr::node_idx_t>& blocked_mem) {
+  blocked_mem.zero_out();
+  for (auto const [n, s] : utl::zip(e_nodes, states)) {
+    blocked_mem.set(n, !s);
+  }
+  return blocked_mem;
+}
+
+std::optional<std::pair<nodes_t, states_t>> get_states_at(
+    osr::ways const& w,
+    osr::lookup const& l,
+    elevators const& e,
+    n::unixtime_t const t,
+    geo::latlng const& pos) {
+  auto const [e_nodes, e_state_changes] = get_node_states(w, l, e, pos);
+
+  auto const it = std::lower_bound(
+      begin(e_state_changes), end(e_state_changes), t,
+      [&](auto&& a, n::unixtime_t const b) { return a.first < b; });
+  if (it == end(e_state_changes)) {
+    return std::nullopt;
+  }
+
+  return std::pair{e_nodes, it->second};
+}
+
 std::vector<n::td_footpath> get_td_footpaths(
     osr::ways const& w,
     osr::lookup const& l,
@@ -25,34 +82,14 @@ std::vector<n::td_footpath> get_td_footpaths(
     osr::location const start,
     osr::direction const dir,
     osr::search_profile const profile,
-    osr::bitvec<osr::node_idx_t>& blocked) {
-  blocked.resize(w.n_nodes());
+    osr::bitvec<osr::node_idx_t>& blocked_mem) {
+  blocked_mem.resize(w.n_nodes());
 
-  auto const e_nodes = l.find_elevators(geo::box{start.pos_, 1000});
-  auto const e_elevators = utl::to_vec(e_nodes, [&](auto&& x) {
-    return match_elevator(e.elevators_rtree_, e.elevators_, w, x);
-  });
-  auto const e_state_changes =
-      get_state_changes(
-          utl::to_vec(
-              e_elevators,
-              [&](elevator_idx_t const ne)
-                  -> std::vector<state_change<n::unixtime_t>> {
-                if (ne == elevator_idx_t::invalid()) {
-                  return {
-                      {.valid_from_ = n::unixtime_t{n::unixtime_t::duration{0}},
-                       .state_ = true}};
-                }
-                return e.elevators_[ne].get_state_changes();
-              }))
-          .to_vec();
+  auto const [e_nodes, e_state_changes] = get_node_states(w, l, e, start.pos_);
 
   auto fps = std::vector<n::td_footpath>{};
   for (auto const& [t, states] : e_state_changes) {
-    blocked.zero_out();
-    for (auto const [n, s] : utl::zip(e_nodes, states)) {
-      blocked.set(n, !s);
-    }
+    set_blocked(e_nodes, states, blocked_mem);
 
     auto neighbors = std::vector<n::location_idx_t>{};
     loc_rtree.in_radius(
@@ -62,7 +99,7 @@ std::vector<n::td_footpath> get_td_footpaths(
         w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
-        kMaxDuration, dir, kMaxMatchingDistance, &blocked);
+        kMaxDuration, dir, kMaxMatchingDistance, &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
       auto const duration = p.has_value() && (n::duration_t{p->cost_ / 60U} <

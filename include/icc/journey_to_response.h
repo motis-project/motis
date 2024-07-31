@@ -22,13 +22,13 @@ api::Itinerary journey_to_response(
     osr::ways const&,
     osr::lookup const&,
     nigiri::timetable const&,
-    osr::platforms const& pl,
+    osr::platforms const&,
     nigiri::rt_timetable const*,
-    osr::bitvec<osr::node_idx_t> const* blocked,
     vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
     bool const wheelchair,
     nigiri::routing::journey const&,
     place_t const& start,
-    place_t const& dest);
+    place_t const& dest,
+    osr::bitvec<osr::node_idx_t>& blocked_mem);
 
 }  // namespace icc

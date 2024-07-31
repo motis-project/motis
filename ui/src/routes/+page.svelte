@@ -370,7 +370,7 @@
 				</div>
 			{:else}
 				<div class="flex flex-col w-full">
-					<div class="flex flex-row space-x-4 p-8 shadow-md rounded">
+					<div class="flex flex-row space-x-4 p-4 shadow-md rounded">
 						<!-- <ComboBox placeholder="From" /> -->
 						<!-- <ComboBox placeholder="To" /> -->
 						<DateInput bind:value={dateTime} />
@@ -402,7 +402,7 @@
 								</Label>
 							</RadioGroup.Root>
 						</div>
-						<div class="min-w-28">
+						<div class="min-w-24">
 							<Select bind:selected={profile}>
 								<SelectTrigger>
 									<SelectValue placeholder="Profile" />

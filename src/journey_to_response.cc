@@ -15,6 +15,7 @@
 #include "nigiri/types.h"
 
 #include "icc/constants.h"
+#include "icc/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
@@ -105,13 +106,14 @@ api::Itinerary journey_to_response(
     osr::lookup const& l,
     n::timetable const& tt,
     osr::platforms const& pl,
+    elevators const& e,
     n::rt_timetable const* rtt,
-    osr::bitvec<osr::node_idx_t> const* blocked,
     vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
     bool const wheelchair,
     n::routing::journey const& j,
     place_t const& start,
-    place_t const& dest) {
+    place_t const& dest,
+    osr::bitvec<osr::node_idx_t>& blocked_mem) {
   auto const to_location = [&](n::location_idx_t const l) {
     switch (to_idx(l)) {
       case static_cast<n::location_idx_t::value_t>(n::special_station::kStart):
@@ -126,19 +128,30 @@ api::Itinerary journey_to_response(
     }
   };
 
-  auto cache =
-      hash_map<std::tuple<osr::location, osr::location, osr::search_profile>,
-               std::optional<osr::path>>{};
+  auto cache = hash_map<
+      std::tuple<osr::location, osr::location, osr::search_profile, states_t>,
+      std::optional<osr::path>>{};
   auto const add_routed_polyline = [&](osr::search_profile const profile,
                                        osr::location const& from,
                                        osr::location const& to, api::Leg& leg) {
-    auto const key = std::tuple{from, to, profile};
+    auto const t = n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
+        std::chrono::milliseconds{leg.startTime_})};
+
+    auto const s = get_states_at(w, l, e, t, from.pos_);
+    if (!s.has_value()) {
+      std::cout << "no state found\n";
+      return;
+    }
+
+    auto const& [e_nodes, e_states] = *s;
+    auto const key = std::tuple{from, to, profile, e_states};
     auto const it = cache.find(key);
-    auto const path = it != end(cache)
-                          ? it->second
-                          : osr::route(w, l, profile, from, to, 3600,
-                                       osr::direction::kForward,
-                                       kMaxMatchingDistance, blocked);
+    auto const path =
+        it != end(cache)
+            ? it->second
+            : osr::route(w, l, profile, from, to, 3600,
+                         osr::direction::kForward, kMaxMatchingDistance,
+                         &set_blocked(e_nodes, e_states, blocked_mem));
     if (it == end(cache)) {
       cache.emplace(std::pair{key, path});
     }
