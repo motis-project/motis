@@ -15,8 +15,6 @@
 namespace icc::ep {
 
 struct update_elevator {
-  void update_elevators(elevators const& pred, elevators const& next) const;
-
   boost::json::value operator()(boost::json::value const&) const;
 
   nigiri::timetable const& tt_;

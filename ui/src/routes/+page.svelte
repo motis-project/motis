@@ -18,7 +18,9 @@
 		getMatches,
 		getPlatforms,
 		getRoute,
-		Footpaths
+		Footpaths,
+		updateElevator,
+		type Elevator
 	} from '$lib/api';
 	import { toTable } from '$lib/toTable';
 	import {
@@ -111,20 +113,13 @@
 	});
 	let footRoute = $derived(getRoute(query));
 
-	let footpaths = $state<Footpaths | null>();
+	let footpaths = $state<Footpaths | null>(null);
 	const showLocation = async (props: any) => {
 		footpaths = await getFootpaths({ id: props.id, src: props.src });
 	};
 
-	type Elevator = {
-		id: string;
-		desc: string;
-		state: 'ACTIVE' | 'INACTIVE';
-		outOfService: Array<[string, string]>;
-	};
-
 	let elevator = $state<Elevator | null>();
-	$inspect(elevator);
+	let elevatorUpdate = $state<Promise<Response> | null>(null);
 
 	let init = false;
 	let startMarker = null;
@@ -152,8 +147,12 @@
 					}
 
 					if (layer === 'elevators') {
-						elevator = elevators.features.find((f) => f.properties.id === props.id).properties;
-						console.log(props, $state.snapshot(elevator));
+						const e = elevators.features.find((f) => f.properties.id === props.id).properties;
+						elevator = {
+							...e,
+							outOfService: e.outOfService.map(([from, to]) => [new Date(from), new Date(to)])
+						};
+						console.log('elevator: ', elevator);
 					}
 				});
 
@@ -299,19 +298,55 @@
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Nicht verfügbar von</TableHead>
-							<TableHead>bis</TableHead>
+							<TableHead class="font-semibold">Nicht verfügbar von</TableHead>
+							<TableHead class="font-semibold">bis</TableHead>
+							<TableHead></TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{#each elevator.outOfService as [from, to]}
+						{#each elevator.outOfService as _, i}
 							<TableRow>
-								<TableCell>{new Date(from).toLocaleString('de-de').slice(0, -3)}</TableCell>
-								<TableCell>{new Date(to).toLocaleString('de-de').slice(0, -3)}</TableCell>
+								<TableCell><DateInput bind:value={elevator.outOfService[i][0]} /></TableCell>
+								<TableCell><DateInput bind:value={elevator.outOfService[i][1]} /></TableCell>
+								<TableCell>
+									<Button
+										variant="outline"
+										on:click={() => { elevator!.outOfService.splice(i, 1); }}
+									>
+										<X />
+									</Button>
+								</TableCell>
 							</TableRow>
 						{/each}
 					</TableBody>
 				</Table>
+				<div class="flex space-x-2 m-2 justify-end">
+					<Button
+						variant="outline"
+						on:click={() => {
+							elevator!.outOfService.push([new Date(), new Date()]);
+						}}
+					>
+						Wartungsfenster hinzufügen
+					</Button>
+					<Button
+						class="w-48"
+						variant="outline"
+						on:click={async () => {
+						elevatorUpdate = updateElevator(elevator!);
+					}}
+					>
+						{#if elevatorUpdate != null}
+							{#await elevatorUpdate}
+								<LoaderCircle class="animate-spin w-4 h-4" />
+							{:then _}
+								Aktualisieren
+							{/await}
+						{:else}
+							Aktualisieren
+						{/if}
+					</Button>
+				</div>
 			</Card>
 		</Control>
 	{/if}
@@ -335,7 +370,7 @@
 				</div>
 			{:else}
 				<div class="flex flex-col w-full">
-					<div class="grid grid-cols-2 grid-rows-1 gap-4 p-8 shadow-md rounded">
+					<div class="flex flex-row space-x-4 p-8 shadow-md rounded">
 						<!-- <ComboBox placeholder="From" /> -->
 						<!-- <ComboBox placeholder="To" /> -->
 						<DateInput bind:value={dateTime} />
@@ -343,7 +378,7 @@
 							<RadioGroup.Root class="flex space-x-1 ml-1" bind:value={timeType}>
 								<Label
 									for="departure"
-									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 								>
 									<RadioGroup.Item
 										value="departure"
@@ -351,11 +386,11 @@
 										class="sr-only"
 										aria-label="Abfahrt"
 									/>
-									<span class="text-xs">Abfahrt</span>
+									<span>Abfahrt</span>
 								</Label>
 								<Label
 									for="arrival"
-									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 								>
 									<RadioGroup.Item
 										value="arrival"
@@ -363,22 +398,22 @@
 										class="sr-only"
 										aria-label="Ankunft"
 									/>
-									<span class="text-xs">Ankunft</span>
+									<span>Ankunft</span>
 								</Label>
 							</RadioGroup.Root>
-							<div class="ml-1 text-xs">
-								<Select bind:selected={profile}>
-									<SelectTrigger>
-										<SelectValue placeholder="Profile" />
-									</SelectTrigger>
-									<SelectContent>
-										<SelectItem value="wheelchair">Wheelchair</SelectItem>
-										<SelectItem value="foot">Foot</SelectItem>
-										<SelectItem value="bike">Bike</SelectItem>
-										<SelectItem value="car">Car</SelectItem>
-									</SelectContent>
-								</Select>
-							</div>
+						</div>
+						<div class="min-w-28">
+							<Select bind:selected={profile}>
+								<SelectTrigger>
+									<SelectValue placeholder="Profile" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="wheelchair">Wheelchair</SelectItem>
+									<SelectItem value="foot">Foot</SelectItem>
+									<SelectItem value="bike">Bike</SelectItem>
+									<SelectItem value="car">Car</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
 					</div>
 					<div class="flex flex-col space-y-8 h-[45vh] overflow-y-auto px-4 py-8">
@@ -515,7 +550,22 @@
 							{#each footpaths.footpaths as f}
 								<TableRow>
 									<TableCell>{f.id.name}</TableCell>
-									<TableCell>{f.default}</TableCell>
+									<TableCell>
+										{#if f.default !== undefined}
+											<Button
+												on:click={async () => {
+													start = footpaths!.loc;
+													destination = f.loc;
+													profile.label = 'Foot';
+													profile.value = 'foot';
+													startMarker.setLngLat([start.lng, start.lat]);
+													destinationMarker.setLngLat([destination.lng, destination.lat]);
+													await showLocation(f.id);
+												}}
+												variant="outline">{f.foot}</Button
+											>
+										{/if}
+									</TableCell>
 									<TableCell>
 										{#if f.foot !== undefined}
 											<Button
@@ -721,7 +771,7 @@
 	</Control>
 
 	{#await footRoute then r}
-		{#if r.type == 'FeatureCollection'}
+		{#if itinerary == null && r.type == 'FeatureCollection'}
 			<GeoJSON id="foot-route" data={r}>
 				<Layer
 					id="foot-route-path-outline"

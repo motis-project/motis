@@ -22,12 +22,23 @@ std::vector<nigiri::td_footpath> get_td_footpaths(
     nigiri::timetable const&,
     point_rtree<nigiri::location_idx_t> const&,
     elevators const&,
-    elevator_footpath_map_t const&,
     platform_matches_t const&,
     osr::location start,
     osr::direction,
     osr::search_profile,
     osr::bitvec<osr::node_idx_t>& blocked);
+
+void update_rtt_td_footpaths(
+    osr::ways const&,
+    osr::lookup const&,
+    osr::platforms const&,
+    nigiri::timetable const&,
+    point_rtree<nigiri::location_idx_t> const&,
+    elevators const&,
+    platform_matches_t const&,
+    hash_set<std::pair<nigiri::location_idx_t, osr::direction>> const& tasks,
+    nigiri::rt_timetable const* old_rtt,
+    nigiri::rt_timetable&);
 
 void update_rtt_td_footpaths(osr::ways const&,
                              osr::lookup const&,

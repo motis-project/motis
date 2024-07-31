@@ -36,6 +36,13 @@ export class RoutingQuery {
 	direction!: string;
 }
 
+export type Elevator = {
+	id: string;
+	desc: string;
+	state: 'ACTIVE' | 'INACTIVE';
+	outOfService: Array<[Date, Date]>;
+};
+
 const post = async (path: string, req: any) => {
 	const response = await fetch(`${baseUrl}${path}`, {
 		method: 'POST',
@@ -85,6 +92,6 @@ export const getFootpaths = async (station: { id: string, src: number }): Promis
 	return await post('/api/footpaths', station);
 }
 
-export const updateElevator = async (id: number, status: string) => {
-	return await post('/api/update_elevator', { id, status });
+export const updateElevator = async (elevator: Elevator) => {
+	return await post('/api/update_elevator', elevator);
 }

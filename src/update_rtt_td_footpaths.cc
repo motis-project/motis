@@ -21,7 +21,6 @@ std::vector<n::td_footpath> get_td_footpaths(
     nigiri::timetable const& tt,
     point_rtree<n::location_idx_t> const& loc_rtree,
     elevators const& e,
-    elevator_footpath_map_t const& elevators_in_paths,
     platform_matches_t const& matches,
     osr::location const start,
     osr::direction const dir,
@@ -81,6 +80,69 @@ std::vector<n::td_footpath> get_td_footpaths(
   return fps;
 }
 
+void update_rtt_td_footpaths(
+    osr::ways const& w,
+    osr::lookup const& l,
+    osr::platforms const& pl,
+    nigiri::timetable const& tt,
+    point_rtree<n::location_idx_t> const& loc_rtree,
+    elevators const& e,
+    platform_matches_t const& matches,
+    hash_set<std::pair<n::location_idx_t, osr::direction>> const& tasks,
+    nigiri::rt_timetable const* old_rtt,
+    nigiri::rt_timetable& rtt) {
+  fmt::println("  -> {} routing tasks tasks", tasks.size());
+
+  auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
+  auto out = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
+  auto in = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
+  utl::parallel_for_run_threadlocal<osr::bitvec<osr::node_idx_t>>(
+      tasks.size(),
+      [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
+        auto const [start, dir] = *(begin(tasks) + task_idx);
+        auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches,
+                                    get_loc(tt, w, pl, matches, start), dir,
+                                    osr::search_profile::kWheelchair, blocked);
+        {
+          auto const lock = std::unique_lock{
+              dir == osr::direction::kForward ? out_mutex : in_mutex};
+          (dir == osr::direction::kForward ? out : in)[start] = std::move(fps);
+        }
+      });
+
+  rtt.td_footpaths_out_[2].clear();
+  for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
+    auto const it = out.find(i);
+    if (it != end(out)) {
+      rtt.has_td_footpaths_[2].set(i, true);
+      rtt.td_footpaths_out_[2].emplace_back(it->second);
+    } else if (old_rtt != nullptr) {
+      rtt.has_td_footpaths_[2].set(i, old_rtt->has_td_footpaths_[2].test(i));
+      rtt.td_footpaths_out_[2].emplace_back(old_rtt->td_footpaths_out_[2][i]);
+    } else {
+      rtt.has_td_footpaths_[2].set(i, false);
+      rtt.td_footpaths_out_[2].emplace_back(
+          std::initializer_list<n::td_footpath>{});
+    }
+  }
+
+  rtt.td_footpaths_in_[2].clear();
+  for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
+    auto const it = in.find(i);
+    if (it != end(in)) {
+      rtt.has_td_footpaths_[2].set(i, true);
+      rtt.td_footpaths_in_[2].emplace_back(it->second);
+    } else if (old_rtt != nullptr) {
+      rtt.has_td_footpaths_[2].set(i, old_rtt->has_td_footpaths_[2].test(i));
+      rtt.td_footpaths_in_[2].emplace_back(old_rtt->td_footpaths_in_[2][i]);
+    } else {
+      rtt.has_td_footpaths_[2].set(i, false);
+      rtt.td_footpaths_in_[2].emplace_back(
+          std::initializer_list<n::td_footpath>{});
+    }
+  }
+}
+
 void update_rtt_td_footpaths(osr::ways const& w,
                              osr::lookup const& l,
                              osr::platforms const& pl,
@@ -107,39 +169,8 @@ void update_rtt_td_footpaths(osr::ways const& w,
       tasks.emplace(to, osr::direction::kBackward);
     }
   }
-  fmt::println("  -> {} routing tasks tasks", tasks.size());
-
-  auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
-  auto out = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
-  auto in = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
-  utl::parallel_for_run_threadlocal<osr::bitvec<osr::node_idx_t>>(
-      tasks.size(),
-      [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
-        auto const [start, dir] = *(begin(tasks) + task_idx);
-        auto fps =
-            get_td_footpaths(w, l, pl, tt, loc_rtree, e, elevators_in_paths,
-                             matches, get_loc(tt, w, pl, matches, start), dir,
-                             osr::search_profile::kWheelchair, blocked);
-        {
-          auto const lock = std::unique_lock{
-              dir == osr::direction::kForward ? out_mutex : in_mutex};
-          (dir == osr::direction::kForward ? out : in)[start] = std::move(fps);
-        }
-      });
-
-  for (auto& [from, footpaths] : out) {
-    for (auto const& fp : footpaths) {
-      rtt.has_td_footpaths_[2].set(from, true);
-      rtt.td_footpaths_out_[2][from].push_back(fp);
-    }
-  }
-
-  for (auto& [from, footpaths] : in) {
-    for (auto const& fp : footpaths) {
-      rtt.has_td_footpaths_[2].set(from, true);
-      rtt.td_footpaths_in_[2][from].push_back(fp);
-    }
-  }
+  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,
+                          rtt);
 }
 
 }  // namespace icc

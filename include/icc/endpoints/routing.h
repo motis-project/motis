@@ -41,7 +41,6 @@ struct routing {
   osr::platforms const& pl_;
   nigiri::timetable const& tt_;
   point_rtree<nigiri::location_idx_t> const& loc_tree_;
-  elevator_footpath_map_t const& elevators_in_paths_;
   rtt_ptr_t const& rtt_;
   elevators_ptr_t const& e_;
   point_rtree<nigiri::location_idx_t> const& rtree_;

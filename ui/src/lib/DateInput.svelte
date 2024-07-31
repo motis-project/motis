@@ -11,7 +11,6 @@
 
 	$effect(() => {
 		if (el !== undefined) {
-			console.log(value);
 			value.setSeconds(0, 0);
 			const dateTimeLocalValue = new Date(value.getTime() - value.getTimezoneOffset() * 60000)
 				.toISOString()

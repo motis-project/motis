@@ -23,9 +23,14 @@ n::unixtime_t parse_date_time(std::string_view s) {
 }
 
 std::vector<n::interval<n::unixtime_t>> parse_out_of_service(
-    json::array const& o) {
+    json::object const& o) {
   auto ret = std::vector<n::interval<n::unixtime_t>>{};
-  for (auto const& entry : o) {
+
+  if (!o.contains("outOfService")) {
+    return ret;
+  }
+
+  for (auto const& entry : o.at("outOfService").as_array()) {
     auto const& interval = entry.as_array();
     if (interval.size() != 2U ||
         !(interval[0].is_string() && interval[1].is_string())) {
@@ -36,41 +41,46 @@ std::vector<n::interval<n::unixtime_t>> parse_out_of_service(
     ret.emplace_back(parse_date_time(interval[0].as_string()),
                      parse_date_time(interval[1].as_string()));
   }
+
   return ret;
+}
+
+std::optional<elevator> parse_elevator(json::value const& e) {
+  if (e.at("type") != "ELEVATOR") {
+    return std::nullopt;
+  }
+
+  try {
+    auto const& o = e.as_object();
+
+    if (!o.contains("geocoordY") || !o.contains("geocoordX") ||
+        !o.contains("state")) {
+      std::cout << "skip: missing attributes: " << o << "\n";
+      return std::nullopt;
+    }
+
+    auto const id = o.contains("equipmentnumber")
+                        ? e.at("equipmentnumber").to_number<std::int64_t>()
+                        : 0U;
+    return elevator{id,
+                    {e.at("geocoordY").to_number<double>(),
+                     e.at("geocoordX").to_number<double>()},
+                    e.at("state").as_string() != "INACTIVE",
+                    o.contains("description")
+                        ? std::string{o.at("description").as_string()}
+                        : "",
+                    parse_out_of_service(o)};
+  } catch (std::exception const& ex) {
+    std::cout << "error on value: " << e << ": " << ex.what() << "\n";
+    return std::nullopt;
+  }
 }
 
 vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
   auto ret = vector_map<elevator_idx_t, elevator>{};
   for (auto const& [i, e] : utl::enumerate(json::parse(s).as_array())) {
-    if (e.at("type") != "ELEVATOR") {
-      continue;
-    }
-
-    try {
-      auto const& o = e.as_object();
-
-      if (!o.contains("geocoordY") || !o.contains("geocoordX") ||
-          !o.contains("state")) {
-        std::cout << "skip: missing attributes: " << o << "\n";
-        continue;
-      }
-
-      auto const id = o.contains("equipmentnumber")
-                          ? e.at("equipmentnumber").to_number<std::int64_t>()
-                          : 0U;
-      ret.emplace_back(
-          elevator{id,
-                   {e.at("geocoordY").to_number<double>(),
-                    e.at("geocoordX").to_number<double>()},
-                   e.at("state").as_string() != "INACTIVE",
-                   o.contains("description")
-                       ? std::string{o.at("description").as_string()}
-                       : "",
-                   o.contains("outOfService")
-                       ? parse_out_of_service(o.at("outOfService").as_array())
-                       : std::vector<n::interval<n::unixtime_t>>{}});
-    } catch (std::exception const& ex) {
-      std::cout << "error on value: " << e << ": " << ex.what() << "\n";
+    if (auto x = parse_elevator(e); x.has_value()) {
+      ret.emplace_back(std::move(*x));
     }
   }
   return ret;

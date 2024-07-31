@@ -112,8 +112,8 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
     }
 
     utl::equal_ranges_linear(
-        get_td_footpaths(w_, l_, pl_, tt_, loc_tree_, e, elevators_in_paths_,
-                         matches_, pos, dir, profile, *blocked),
+        get_td_footpaths(w_, l_, pl_, tt_, loc_tree_, e, matches_, pos, dir,
+                         profile, *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
           return a.target_ == b.target_;
         },
@@ -127,16 +127,6 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
                                 static_cast<n::transport_mode_id_t>(profile)};
                       }));
         });
-  }
-
-  for (auto const& [l, td] : ret) {
-    std::cout << tt_.locations_.names_[l].view() << " ["
-              << tt_.locations_.ids_[l].view() << "]\n";
-    for (auto const& x : td) {
-      std::cout << "  valid_from=" << x.valid_from_
-                << ", duration=" << x.duration_
-                << ", mode=" << x.transport_mode_id_ << "\n";
-    }
   }
 
   return ret;

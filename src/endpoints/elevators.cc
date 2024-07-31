@@ -96,7 +96,6 @@ json::value elevators::operator()(json::value const& query) const {
            osr::to_line_string({pos, osr::point::from_latlng(x.pos_)})}});
     }
   }
-  std::cout << std::endl;
 
   return json::value{{"type", "FeatureCollection"}, {"features", matches}};
 }
