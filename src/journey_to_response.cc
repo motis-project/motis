@@ -113,6 +113,7 @@ api::Itinerary journey_to_response(
     n::routing::journey const& j,
     place_t const& start,
     place_t const& dest,
+    street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
   auto const to_location = [&](n::location_idx_t const l) {
     switch (to_idx(l)) {
@@ -127,10 +128,6 @@ api::Itinerary journey_to_response(
                              pl.get_level(w, matches[l])};
     }
   };
-
-  auto cache = hash_map<
-      std::tuple<osr::location, osr::location, osr::search_profile, states_t>,
-      std::optional<osr::path>>{};
   auto const add_routed_polyline = [&](osr::search_profile const profile,
                                        osr::location const& from,
                                        osr::location const& to, api::Leg& leg) {

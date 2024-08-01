@@ -298,7 +298,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rtt_;
   auto const e = e_;
   if (blocked.get() == nullptr) {
-    blocked.reset(new osr::bitvec<osr::node_idx_t>{});
+    blocked.reset(new osr::bitvec<osr::node_idx_t>{w_.n_nodes()});
   }
 
   auto const query = api::plan_params{url.params()};
@@ -420,13 +420,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   return {
       .from_ = to_place(from, "Origin"),
       .to_ = to_place(to, "Destination"),
-      .itineraries_ = utl::to_vec(*journeys,
-                                  [&](auto&& j) {
-                                    return journey_to_response(
-                                        w_, l_, tt_, pl_, *e, rtt.get(),
-                                        matches_, query.wheelchair_, j, start,
-                                        dest, *blocked);
-                                  }),
+      .itineraries_ =
+          utl::to_vec(*journeys,
+                      [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+                        return journey_to_response(
+                            w_, l_, tt_, pl_, *e, rtt.get(), matches_,
+                            query.wheelchair_, j, start, dest, cache, *blocked);
+                      }),
       .previousPageCursor_ = fmt::format(
           "EARLIER|{}", std::chrono::duration_cast<std::chrono::seconds>(
                             search_interval.from_.time_since_epoch())
