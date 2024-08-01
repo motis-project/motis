@@ -60,15 +60,13 @@ std::optional<std::pair<nodes_t, states_t>> get_states_at(
     n::unixtime_t const t,
     geo::latlng const& pos) {
   auto const [e_nodes, e_state_changes] = get_node_states(w, l, e, pos);
-
   auto const it = std::lower_bound(
       begin(e_state_changes), end(e_state_changes), t,
       [&](auto&& a, n::unixtime_t const b) { return a.first < b; });
-  if (it == end(e_state_changes)) {
+  if (it == begin(e_state_changes)) {
     return std::nullopt;
   }
-
-  return std::pair{e_nodes, it->second};
+  return std::pair{e_nodes, std::prev(it)->second};
 }
 
 std::vector<n::td_footpath> get_td_footpaths(
