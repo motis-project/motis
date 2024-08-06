@@ -136,6 +136,7 @@ api::Itinerary journey_to_response(
 
     auto const s = get_states_at(w, l, e, t, from.pos_);
     if (!s.has_value()) {
+      // TODO(felix)
       std::cout << "no state found\n";
       return;
     }
