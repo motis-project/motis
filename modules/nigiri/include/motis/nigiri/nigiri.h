@@ -6,6 +6,8 @@
 
 #include "motis/module/module.h"
 
+#include "vdv/vdv_client.h"
+
 namespace motis::nigiri {
 
 struct nigiri : public motis::module::module {
@@ -48,6 +50,7 @@ private:
   bool gtfsrt_incremental_{false};
   bool debug_{false};
   bool bikes_allowed_default_{false};
+  std::unique_ptr<vdv::vdv_client> vdv_client_;
 };
 
 }  // namespace motis::nigiri

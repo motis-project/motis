@@ -159,6 +159,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
 nigiri::~nigiri() = default;
 
 void nigiri::init(motis::module::registry& reg) {
+  vdv_client_ = std::make_unique<vdv::vdv_client>(vdv::vdv_client{});
+
   if (!gtfsrt_paths_.empty()) {
     auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
     auto statistics = std::vector<n::rt::statistics>{};

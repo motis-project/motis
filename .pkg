@@ -41,7 +41,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=785b39c08212732e510305f0eef18de70f19b15e
+  commit=00e7ebc3e62b80d2f31672247dc550f2feb363aa
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -61,7 +61,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=930d194f32a5da6c7d00e69bc53090548611c735
+  commit=8c61dcaa74a7f49695d58ce7aae9de7ecb566aa1
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -75,9 +75,9 @@
   branch=master
   commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
 [nigiri]
-  url=git@github.com:motis-project/nigiri.git
-  branch=master
-  commit=22e62a7e59dcac2b1f494d4a3c46f65209e02d77
+  url=git@github.com:mority/nigiri.git
+  branch=vdv
+  commit=6e011ec831f1b2e70159c4b372521b79879d1b8c
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -86,3 +86,7 @@
   url=git@github.com:triptix-tech/adr.git
   branch=master
   commit=bef3f11a8c1642939e7047bcebf3d2f3528b23a3
+[vdv]
+  url=git@github.com:motis-project/vdv.git
+  branch=master
+  commit=e7557c750858f1f7627392d0de8764ffea4bf389
