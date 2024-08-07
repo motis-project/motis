@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=bd4e1ad351ec9895973f21a3b772ae64e8849c4f
+  commit=9dd5681e3cc2b8147aaf750686d8748a911b144a
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
