@@ -27,6 +27,8 @@
 #include "nigiri/rt/util.h"
 #include "nigiri/timetable.h"
 
+#include "vdv/vdv_client.h"
+
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
 #include "motis/nigiri/geo_station_lookup.h"
@@ -123,6 +125,7 @@ struct nigiri::impl {
   std::string initial_permalink_;
   std::vector<schedule_info> schedules_{};
   cista::hash_t hash_{0U};
+  std::unique_ptr<vdv::vdv_client> vdv_client_{};
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -154,13 +157,30 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(bikes_allowed_default_, "bikes_allowed_default",
         "whether bikes are allowed in trips where no information is "
         "available");
+  param(vdv_cfg_.client_name_, "vdv_client_name",
+        "the name of this vdv client");
+  param(vdv_cfg_.client_ip_, "vdv_client_ip",
+        "the ip address of this vdv client");
+  param(vdv_cfg_.client_port_, "vdv_client_port",
+        "the listening port of this vdv client");
+  param(vdv_cfg_.server_name_, "vdv_server_name", "the name of the vdv server");
+  param(vdv_cfg_.server_addr_, "vdv_server_addr",
+        "the address of the vdv server, format: http://<ip_address>:<port>");
+  if (!vdv_cfg_.client_name_.empty() && !vdv_cfg_.client_ip_.empty() &&
+      !vdv_cfg_.client_port_.empty() && !vdv_cfg_.server_name_.empty() &&
+      !vdv_cfg_.server_addr_.empty()) {
+    use_vdv_ = true;
+    vdv_cfg_.derive_endpoints();
+  } else if (!vdv_cfg_.client_name_.empty() || !vdv_cfg_.client_ip_.empty() ||
+             !vdv_cfg_.client_port_.empty() || !vdv_cfg_.server_name_.empty() ||
+             !vdv_cfg_.server_addr_.empty()) {
+    std::cout << "Warning: Not all required vdv parameters are specified\n";
+  }
 }
 
 nigiri::~nigiri() = default;
 
 void nigiri::init(motis::module::registry& reg) {
-  vdv_client_ = std::make_unique<vdv::vdv_client>(vdv::vdv_client{});
-
   if (!gtfsrt_paths_.empty()) {
     auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
     auto statistics = std::vector<n::rt::statistics>{};
@@ -566,5 +586,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                            });
       });
 }
+
+void nigiri::init_io(boost::asio::io_context& ioc) {
+  impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(ioc, "motis", );
+}
+
+void nigiri::stop_io() {}
 
 }  // namespace motis::nigiri

@@ -6,7 +6,7 @@
 
 #include "motis/module/module.h"
 
-#include "vdv/vdv_client.h"
+#include "vdv/vdv_config.h"
 
 namespace motis::nigiri {
 
@@ -23,6 +23,9 @@ struct nigiri : public motis::module::module {
   void init(motis::module::registry&) override;
   void import(motis::module::import_dispatcher&) override;
   bool import_successful() const override { return import_successful_; }
+
+  void init_io(boost::asio::io_context&) override;
+  void stop_io() override;
 
 private:
   void register_gtfsrt_timer(motis::module::dispatcher&);
@@ -50,7 +53,8 @@ private:
   bool gtfsrt_incremental_{false};
   bool debug_{false};
   bool bikes_allowed_default_{false};
-  std::unique_ptr<vdv::vdv_client> vdv_client_;
+  vdv::vdv_config vdv_cfg_;
+  bool use_vdv_{false};
 };
 
 }  // namespace motis::nigiri
