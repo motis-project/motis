@@ -26,6 +26,7 @@
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/util.h"
+#include "nigiri/rt/vdv/vdv_update.h"
 #include "nigiri/timetable.h"
 
 #include "vdv/vdv_client.h"
@@ -158,6 +159,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(bikes_allowed_default_, "bikes_allowed_default",
         "whether bikes are allowed in trips where no information is "
         "available");
+  param(vdv_cfg_.tag_, "vdv_tag",
+        "the tag of the schedule which will be updated by vdv rt updates");
   param(vdv_cfg_.client_name_, "vdv_client_name",
         "the name of this vdv client");
   param(vdv_cfg_.client_ip_, "vdv_client_ip",
@@ -167,14 +170,14 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(vdv_cfg_.server_name_, "vdv_server_name", "the name of the vdv server");
   param(vdv_cfg_.server_addr_, "vdv_server_addr",
         "the address of the vdv server, format: http://<ip_address>:<port>");
-  if (!vdv_cfg_.client_name_.empty() && !vdv_cfg_.client_ip_.empty() &&
-      !vdv_cfg_.client_port_.empty() && !vdv_cfg_.server_name_.empty() &&
-      !vdv_cfg_.server_addr_.empty()) {
+  if (!vdv_cfg_.tag_.empty() && !vdv_cfg_.client_name_.empty() &&
+      !vdv_cfg_.client_ip_.empty() && !vdv_cfg_.client_port_.empty() &&
+      !vdv_cfg_.server_name_.empty() && !vdv_cfg_.server_addr_.empty()) {
     use_vdv_ = true;
     vdv_cfg_.derive_endpoints();
-  } else if (!vdv_cfg_.client_name_.empty() || !vdv_cfg_.client_ip_.empty() ||
-             !vdv_cfg_.client_port_.empty() || !vdv_cfg_.server_name_.empty() ||
-             !vdv_cfg_.server_addr_.empty()) {
+  } else if (!vdv_cfg_.tag_.empty() || !vdv_cfg_.client_name_.empty() ||
+             !vdv_cfg_.client_ip_.empty() || !vdv_cfg_.client_port_.empty() ||
+             !vdv_cfg_.server_name_.empty() || !vdv_cfg_.server_addr_.empty()) {
     std::cout << "Warning: Not all required vdv parameters are specified\n";
   }
 }
@@ -379,7 +382,10 @@ void nigiri::rt_update() {
   }
 
   if (use_vdv_) {
-    impl_->vdv_client_->fetch();
+    auto const vdv_stats = impl_->vdv_client_->update(
+        **impl_->tt_, *rtt, impl_->tags_.get_src(vdv_cfg_.tag_));
+    LOG(logging::info) << "VDV Update of " << vdv_cfg_.tag_ << ": "
+                       << vdv_stats;
   }
 
   impl_->update_rtt(rtt);
