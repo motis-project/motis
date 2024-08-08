@@ -1,5 +1,6 @@
 #include "motis/nigiri/nigiri.h"
 
+#include <chrono>
 #include <fstream>
 #include <utility>
 
@@ -316,63 +317,73 @@ void nigiri::init(motis::module::registry& reg) {
                     {});
   }
 
-  reg.subscribe("/init", [&]() { register_gtfsrt_timer(*shared_data_); }, {});
+  reg.subscribe("/init", [&]() { register_rt_update_timer(*shared_data_); },
+                {});
 }
 
-void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
+void nigiri::register_rt_update_timer(mm::dispatcher& d) {
   if (!gtfsrt_urls_.empty()) {
     impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](auto&& config) {
       return gtfsrt{impl_->tags_, config};
     });
-    d.register_timer("RIS GTFS-RT Update",
-                     boost::posix_time::seconds{gtfsrt_update_interval_sec_},
-                     [&]() { update_gtfsrt(); }, {});
-    update_gtfsrt();
+  }
+  if (!gtfsrt_urls_.empty() || use_vdv_) {
+    d.register_timer("RIS RT Update",
+                     boost::posix_time::seconds{rt_update_interval_sec_},
+                     [&]() { rt_update(); }, {});
+    rt_update();
   }
 }
 
-void nigiri::update_gtfsrt() {
-  LOG(logging::info) << "Starting GTFS-RT update: fetch URLs";
-
-  auto const futures = utl::to_vec(
-      impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
+void nigiri::rt_update() {
   auto const today = std::chrono::time_point_cast<date::days>(
       std::chrono::system_clock::now());
-  auto const rtt = gtfsrt_incremental_
+  auto const rtt = (gtfsrt_incremental_ || use_vdv_)
                        ? std::make_shared<n::rt_timetable>(
                              n::rt_timetable{*impl_->get_rtt()})
                        : std::make_shared<n::rt_timetable>(
                              n::rt::create_rt_timetable(**impl_->tt_, today));
-  auto statistics = std::vector<n::rt::statistics>{};
-  for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
-    auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
-    auto stats = n::rt::statistics{};
-    try {
-      auto const& body = f->val().body;
-      if (debug_) {
-        std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
-            << n::rt::protobuf_to_json(body);
+
+  if (!gtfsrt_urls_.empty()) {
+    LOG(logging::info) << "Starting GTFS-RT update: fetch URLs";
+    auto const futures = utl::to_vec(
+        impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
+    auto statistics = std::vector<n::rt::statistics>{};
+    for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
+      auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
+      auto stats = n::rt::statistics{};
+      try {
+        auto const& body = f->val().body;
+        if (debug_) {
+          std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
+              << n::rt::protobuf_to_json(body);
+        }
+        stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(),
+                                         tag, body);
+      } catch (std::exception const& e) {
+        stats.parser_error_ = true;
+        LOG(logging::error)
+            << "GTFS-RT update error (tag=" << tag << ") " << e.what();
+      } catch (...) {
+        stats.parser_error_ = true;
+        LOG(logging::error)
+            << "Unknown GTFS-RT update error (tag= " << tag << ")";
       }
-      stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
-                                       body);
-    } catch (std::exception const& e) {
-      stats.parser_error_ = true;
-      LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
-                          << e.what();
-    } catch (...) {
-      stats.parser_error_ = true;
-      LOG(logging::error) << "Unknown GTFS-RT update error (tag= " << tag
-                          << ")";
+      statistics.emplace_back(stats);
     }
-    statistics.emplace_back(stats);
+
+    for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
+      LOG(logging::info) << impl_->tags_.get_tag_clean(endpoint.src()) << ": "
+                         << stats;
+    }
   }
+
+  if (use_vdv_) {
+    impl_->vdv_client_->fetch();
+  }
+
   impl_->update_rtt(rtt);
   impl_->railviz_->update(rtt);
-
-  for (auto const [endpoint, stats] : utl::zip(impl_->gtfsrt_, statistics)) {
-    LOG(logging::info) << impl_->tags_.get_tag_clean(endpoint.src()) << ": "
-                       << stats;
-  }
 }
 
 void nigiri::import(motis::module::import_dispatcher& reg) {
@@ -588,9 +599,32 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 }
 
 void nigiri::init_io(boost::asio::io_context& ioc) {
-  impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(ioc, "motis", );
+  if (use_vdv_) {
+    impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(vdv_cfg_, ioc);
+    impl_->vdv_client_->run();
+    register_vdv_sub_renewal_timer(*shared_data_);
+  }
 }
 
-void nigiri::stop_io() {}
+void nigiri::stop_io() {
+  if (use_vdv_) {
+    impl_->vdv_client_->stop();
+  }
+}
+
+void nigiri::vdv_sub_renewal() {
+  using namespace std::chrono_literals;
+  impl_->vdv_client_->subscribe(std::chrono::system_clock::now(),
+                                std::chrono::system_clock::now() + 30h, 30s,
+                                30h);
+}
+
+void nigiri::register_vdv_sub_renewal_timer(mm::dispatcher& d) {
+  d.register_timer(
+      "RIS VDV Subscription Renewal",
+      boost::posix_time::hours{vdv_subscription_renewal_interval_hours_},
+      [&]() { vdv_sub_renewal(); }, {});
+  vdv_sub_renewal();
+}
 
 }  // namespace motis::nigiri

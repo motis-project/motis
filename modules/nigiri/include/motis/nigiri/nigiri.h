@@ -6,6 +6,7 @@
 
 #include "motis/module/module.h"
 
+#include "motis/module/dispatcher.h"
 #include "vdv/vdv_config.h"
 
 namespace motis::nigiri {
@@ -28,8 +29,11 @@ struct nigiri : public motis::module::module {
   void stop_io() override;
 
 private:
-  void register_gtfsrt_timer(motis::module::dispatcher&);
-  void update_gtfsrt();
+  void register_rt_update_timer(motis::module::dispatcher& d);
+  void rt_update();
+
+  void vdv_sub_renewal();
+  void register_vdv_sub_renewal_timer(motis::module::dispatcher& d);
 
   bool import_successful_{false};
 
@@ -49,12 +53,13 @@ private:
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;
   std::vector<std::string> gtfsrt_paths_;
-  unsigned gtfsrt_update_interval_sec_{60U};
+  unsigned rt_update_interval_sec_{60U};
   bool gtfsrt_incremental_{false};
   bool debug_{false};
   bool bikes_allowed_default_{false};
   vdv::vdv_config vdv_cfg_;
   bool use_vdv_{false};
+  unsigned vdv_subscription_renewal_interval_hours_{6U};
 };
 
 }  // namespace motis::nigiri

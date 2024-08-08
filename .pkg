@@ -39,9 +39,9 @@
   branch=master
   commit=1edbdece9d71dc65c6ff405572ee37cbdcef7af4
 [net]
-  url=git@github.com:mority/net.git
+  url=git@github.com:motis-project/net.git
   branch=master
-  commit=e14f4c6ba0c80df92cfd659389f561440f381d69
+  commit=6b7d60453a2c06c3b0b3ca260edcd1dd607ff964
 [osrm-backend]
   url=git@github.com:motis-project/osrm-backend.git
   branch=motis
@@ -89,4 +89,4 @@
 [vdv]
   url=git@github.com:motis-project/vdv.git
   branch=master
-  commit=a932855c79df53320fbaf018e3bdcb3bf6768738
+  commit=17c006a6cd3bac51955a0e43c85422c44a7f3500
