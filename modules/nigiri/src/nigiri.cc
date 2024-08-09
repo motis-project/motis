@@ -131,6 +131,7 @@ struct nigiri::impl {
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
+  LOG(logging::info) << "nigiri module ctor\n";
   param(no_cache_, "no_cache", "disable timetable caching");
   param(adjust_footpaths_, "adjust_footpaths",
         "adjust footpaths if they are too fast for the distance");
@@ -170,16 +171,6 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(vdv_cfg_.server_name_, "vdv_server_name", "the name of the vdv server");
   param(vdv_cfg_.server_addr_, "vdv_server_addr",
         "the address of the vdv server, format: http://<ip_address>:<port>");
-  if (!vdv_cfg_.tag_.empty() && !vdv_cfg_.client_name_.empty() &&
-      !vdv_cfg_.client_ip_.empty() && !vdv_cfg_.client_port_.empty() &&
-      !vdv_cfg_.server_name_.empty() && !vdv_cfg_.server_addr_.empty()) {
-    use_vdv_ = true;
-    vdv_cfg_.derive_endpoints();
-  } else if (!vdv_cfg_.tag_.empty() || !vdv_cfg_.client_name_.empty() ||
-             !vdv_cfg_.client_ip_.empty() || !vdv_cfg_.client_port_.empty() ||
-             !vdv_cfg_.server_name_.empty() || !vdv_cfg_.server_addr_.empty()) {
-    std::cout << "Warning: Not all required vdv parameters are specified\n";
-  }
 }
 
 nigiri::~nigiri() = default;
@@ -339,6 +330,10 @@ void nigiri::register_rt_update_timer(mm::dispatcher& d) {
 }
 
 void nigiri::rt_update() {
+  LOG(logging::info) << ((impl_->rtt_ != nullptr) ? "rtt ptr is valid"
+                                                  : "rtt ptr is null")
+                     << "\n";
+
   auto const today = std::chrono::time_point_cast<date::days>(
       std::chrono::system_clock::now());
   auto const rtt = (gtfsrt_incremental_ || use_vdv_)
@@ -393,6 +388,19 @@ void nigiri::rt_update() {
 }
 
 void nigiri::import(motis::module::import_dispatcher& reg) {
+
+  if (!vdv_cfg_.tag_.empty() && !vdv_cfg_.client_name_.empty() &&
+      !vdv_cfg_.client_ip_.empty() && !vdv_cfg_.client_port_.empty() &&
+      !vdv_cfg_.server_name_.empty() && !vdv_cfg_.server_addr_.empty()) {
+    use_vdv_ = true;
+    vdv_cfg_.derive_endpoints();
+    LOG(logging::info) << "Using VDV RT Updates\n";
+  } else if (!vdv_cfg_.tag_.empty() || !vdv_cfg_.client_name_.empty() ||
+             !vdv_cfg_.client_ip_.empty() || !vdv_cfg_.client_port_.empty() ||
+             !vdv_cfg_.server_name_.empty() || !vdv_cfg_.server_addr_.empty()) {
+    LOG(logging::warn) << "Not all required vdv parameters are specified\n";
+  }
+
   impl_ = std::make_unique<impl>();
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "nigiri", reg,
@@ -521,7 +529,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                       cista::file{dump_file_path.string().c_str(), "r"}
                           .content()}));
               (**impl_->tt_).locations_.resolve_timezones();
-              if (!gtfsrt_urls_.empty() || !gtfsrt_paths_.empty()) {
+              if (!gtfsrt_urls_.empty() || !gtfsrt_paths_.empty() || use_vdv_) {
                 impl_->update_rtt(std::make_shared<n::rt_timetable>(
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
@@ -605,7 +613,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 }
 
 void nigiri::init_io(boost::asio::io_context& ioc) {
+  LOG(logging::info) << "nigiri::init_io\n";
+  LOG(logging::info) << "nigiri::init_io: use_vdv_ = " << std::boolalpha
+                     << use_vdv_ << "\n";
   if (use_vdv_) {
+    LOG(logging::info) << "nigiri::init_io: using vdv\n";
     impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(vdv_cfg_, ioc);
     impl_->vdv_client_->run();
     register_vdv_sub_renewal_timer(*shared_data_);
@@ -613,12 +625,15 @@ void nigiri::init_io(boost::asio::io_context& ioc) {
 }
 
 void nigiri::stop_io() {
+  LOG(logging::info) << "nigiri::stop_io\n";
   if (use_vdv_) {
+    LOG(logging::info) << "nigiri::stop_io: using vdv\n";
     impl_->vdv_client_->stop();
   }
 }
 
 void nigiri::vdv_sub_renewal() {
+  LOG(logging::info) << "nigiri::vdv_sub_renewal\n";
   using namespace std::chrono_literals;
   impl_->vdv_client_->subscribe(std::chrono::system_clock::now(),
                                 std::chrono::system_clock::now() + 30h, 30s,
