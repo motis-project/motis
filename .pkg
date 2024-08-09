@@ -77,7 +77,7 @@
 [nigiri]
   url=git@github.com:mority/nigiri.git
   branch=vdv
-  commit=6e011ec831f1b2e70159c4b372521b79879d1b8c
+  commit=c89bce5fc202ff0392fc26f11f738310ba5f05a6
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
