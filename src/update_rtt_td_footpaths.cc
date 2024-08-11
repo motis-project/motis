@@ -149,13 +149,14 @@ void update_rtt_td_footpaths(
   for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
     auto const it = out.find(i);
     if (it != end(out)) {
-      rtt.has_td_footpaths_[2].set(i, true);
+      rtt.has_td_footpaths_out_[2].set(i, true);
       rtt.td_footpaths_out_[2].emplace_back(it->second);
     } else if (old_rtt != nullptr) {
-      rtt.has_td_footpaths_[2].set(i, old_rtt->has_td_footpaths_[2].test(i));
+      rtt.has_td_footpaths_out_[2].set(
+          i, old_rtt->has_td_footpaths_out_[2].test(i));
       rtt.td_footpaths_out_[2].emplace_back(old_rtt->td_footpaths_out_[2][i]);
     } else {
-      rtt.has_td_footpaths_[2].set(i, false);
+      rtt.has_td_footpaths_out_[2].set(i, false);
       rtt.td_footpaths_out_[2].emplace_back(
           std::initializer_list<n::td_footpath>{});
     }
@@ -165,13 +166,14 @@ void update_rtt_td_footpaths(
   for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
     auto const it = in.find(i);
     if (it != end(in)) {
-      rtt.has_td_footpaths_[2].set(i, true);
+      rtt.has_td_footpaths_in_[2].set(i, true);
       rtt.td_footpaths_in_[2].emplace_back(it->second);
     } else if (old_rtt != nullptr) {
-      rtt.has_td_footpaths_[2].set(i, old_rtt->has_td_footpaths_[2].test(i));
+      rtt.has_td_footpaths_in_[2].set(i,
+                                      old_rtt->has_td_footpaths_in_[2].test(i));
       rtt.td_footpaths_in_[2].emplace_back(old_rtt->td_footpaths_in_[2][i]);
     } else {
-      rtt.has_td_footpaths_[2].set(i, false);
+      rtt.has_td_footpaths_in_[2].set(i, false);
       rtt.td_footpaths_in_[2].emplace_back(
           std::initializer_list<n::td_footpath>{});
     }
