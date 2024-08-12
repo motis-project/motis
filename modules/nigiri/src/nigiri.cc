@@ -310,9 +310,6 @@ void nigiri::init(motis::module::registry& reg) {
                     },
                     {});
   }
-
-  reg.subscribe("/init", [&]() { register_rt_update_timer(*shared_data_); },
-                {});
 }
 
 void nigiri::register_rt_update_timer(mm::dispatcher& d) {
@@ -325,7 +322,6 @@ void nigiri::register_rt_update_timer(mm::dispatcher& d) {
     d.register_timer("RIS RT Update",
                      boost::posix_time::seconds{rt_update_interval_sec_},
                      [&]() { rt_update(); }, {});
-    rt_update();
   }
 }
 
@@ -377,10 +373,19 @@ void nigiri::rt_update() {
   }
 
   if (use_vdv_) {
-    auto const vdv_stats = impl_->vdv_client_->update(
-        **impl_->tt_, *rtt, impl_->tags_.get_src(vdv_cfg_.tag_));
-    LOG(logging::info) << "VDV Update of " << vdv_cfg_.tag_ << ": "
-                       << vdv_stats;
+    auto f = motis_http(impl_->vdv_client_->make_fetch_req());
+    try {
+      auto doc = pugi::xml_document{};
+      doc.load_string(f->val().body.c_str());
+      if (doc.select_node("DatenAbrufenAntwort/AUSNachricht")) {
+        LOG(logging::info) << "VDV Stats:\n"
+                           << ::n::rt::vdv::vdv_update(
+                                  **impl_->tt_, *rtt,
+                                  impl_->tags_.get_src(vdv_cfg_.tag_), doc);
+      }
+    } catch (std::runtime_error const& e) {
+      std::cout << e.what() << "\n";
+    }
   }
 
   impl_->update_rtt(rtt);
@@ -613,27 +618,22 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 }
 
 void nigiri::init_io(boost::asio::io_context& ioc) {
-  LOG(logging::info) << "nigiri::init_io\n";
-  LOG(logging::info) << "nigiri::init_io: use_vdv_ = " << std::boolalpha
-                     << use_vdv_ << "\n";
   if (use_vdv_) {
-    LOG(logging::info) << "nigiri::init_io: using vdv\n";
     impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(vdv_cfg_, ioc);
     impl_->vdv_client_->run();
     register_vdv_sub_renewal_timer(*shared_data_);
   }
+
+  register_rt_update_timer(*shared_data_);
 }
 
 void nigiri::stop_io() {
-  LOG(logging::info) << "nigiri::stop_io\n";
   if (use_vdv_) {
-    LOG(logging::info) << "nigiri::stop_io: using vdv\n";
     impl_->vdv_client_->stop();
   }
 }
 
 void nigiri::vdv_sub_renewal() {
-  LOG(logging::info) << "nigiri::vdv_sub_renewal\n";
   using namespace std::chrono_literals;
   impl_->vdv_client_->subscribe(std::chrono::system_clock::now(),
                                 std::chrono::system_clock::now() + 30h, 30s,
