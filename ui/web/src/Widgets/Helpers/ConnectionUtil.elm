@@ -129,7 +129,7 @@ trainBox viewMode locale t =
 
         providerTooltip =
             if not (String.isEmpty t.provider) then
-                Just (locale.t.connections.provider ++ ": " ++ t.provider)
+                Just (locale.t.connections.provider ++ ": " ++ provider_link t.provider t.provider_url)
 
             else
                 Nothing
@@ -161,6 +161,12 @@ trainBox viewMode locale t =
             span [ class "train-name" ] [ text name ]
         ]
 
+provider_link : String -> String -> String
+provider_link provider url =
+    if String.isEmpty url then
+        provider
+    else
+        provider ++ " (" ++ url ++ ")"
 
 walkBox : String -> Html msg
 walkBox mumoType =

@@ -83,7 +83,7 @@ int main(int argc, char const** argv) {
           module_names.empty()) {
         fmt::print("\nNo modules available.\n");
       } else {
-        fmt::print("Available moduels: {}\n\n", module_names);
+        fmt::print("Available modules: {}\n\n", module_names);
       }
       parser.print_help(std::cout);
       return 0;
