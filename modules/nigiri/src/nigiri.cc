@@ -131,7 +131,6 @@ struct nigiri::impl {
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
-  LOG(logging::info) << "nigiri module ctor\n";
   param(no_cache_, "no_cache", "disable timetable caching");
   param(adjust_footpaths_, "adjust_footpaths",
         "adjust footpaths if they are too fast for the distance");
@@ -326,10 +325,6 @@ void nigiri::register_rt_update_timer(mm::dispatcher& d) {
 }
 
 void nigiri::rt_update() {
-  LOG(logging::info) << ((impl_->rtt_ != nullptr) ? "rtt ptr is valid"
-                                                  : "rtt ptr is null")
-                     << "\n";
-
   auto const today = std::chrono::time_point_cast<date::days>(
       std::chrono::system_clock::now());
   auto const rtt = (gtfsrt_incremental_ || use_vdv_)
@@ -373,6 +368,7 @@ void nigiri::rt_update() {
   }
 
   if (use_vdv_) {
+    LOG(logging::info) << "Starting VDV update";
     auto f = motis_http(impl_->vdv_client_->make_fetch_req());
     try {
       auto doc = pugi::xml_document{};
@@ -384,7 +380,7 @@ void nigiri::rt_update() {
                                   impl_->tags_.get_src(vdv_cfg_.tag_), doc);
       }
     } catch (std::runtime_error const& e) {
-      std::cout << e.what() << "\n";
+      LOG(logging::error) << e.what() << "\n";
     }
   }
 
@@ -403,7 +399,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
   } else if (!vdv_cfg_.tag_.empty() || !vdv_cfg_.client_name_.empty() ||
              !vdv_cfg_.client_ip_.empty() || !vdv_cfg_.client_port_.empty() ||
              !vdv_cfg_.server_name_.empty() || !vdv_cfg_.server_addr_.empty()) {
-    LOG(logging::warn) << "Not all required vdv parameters are specified\n";
+    LOG(logging::warn) << "Not all required VDV parameters are specified\n";
   }
 
   impl_ = std::make_unique<impl>();
