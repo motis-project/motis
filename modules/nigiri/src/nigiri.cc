@@ -128,6 +128,7 @@ struct nigiri::impl {
   std::vector<schedule_info> schedules_{};
   cista::hash_t hash_{0U};
   std::unique_ptr<vdv::vdv_client> vdv_client_{};
+  ::n::rt::vdv::statistics vdv_stats_{};
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -371,13 +372,14 @@ void nigiri::rt_update() {
     LOG(logging::info) << "Starting VDV update";
     auto f = motis_http(impl_->vdv_client_->make_fetch_req());
     try {
+      auto vdv_raw_xml = std::ofstream("vdv_raw_xml.txt", std::ios::app);
+      vdv_raw_xml << f->val().body << "\n\n";
       auto doc = pugi::xml_document{};
       doc.load_string(f->val().body.c_str());
       if (doc.select_node("DatenAbrufenAntwort/AUSNachricht")) {
-        LOG(logging::info) << "VDV Stats:\n"
-                           << ::n::rt::vdv::vdv_update(
-                                  **impl_->tt_, *rtt,
-                                  impl_->tags_.get_src(vdv_cfg_.tag_), doc);
+        impl_->vdv_stats_ += ::n::rt::vdv::vdv_update(
+            **impl_->tt_, *rtt, impl_->tags_.get_src(vdv_cfg_.tag_), doc);
+        LOG(logging::info) << "VDV Stats:\n" << impl_->vdv_stats_;
       }
     } catch (std::runtime_error const& e) {
       LOG(logging::error) << e.what() << "\n";
