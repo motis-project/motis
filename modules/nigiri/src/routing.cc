@@ -2,6 +2,7 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "utl/erase_if.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
@@ -43,9 +44,14 @@ mm::msg_ptr to_routing_response(
   mm::message_creator fbb;
   MOTIS_START_TIMING(conversion);
   auto const connections =
-      utl::to_vec(*journeys, [&](n::routing::journey const& j) {
-        return to_connection(fbb, nigiri_to_motis_journey(tt, rtt, tags, j));
-      });
+      utl::all(*journeys)  //
+      | utl::remove_if([&](n::routing::journey const& j) {  //
+          return j.error_;
+        })  //
+      | utl::transform([&](n::routing::journey const& j) {
+          return to_connection(fbb, nigiri_to_motis_journey(tt, rtt, tags, j));
+        })  //
+      | utl::vec();
   MOTIS_STOP_TIMING(conversion);
 
   auto entries = std::vector<fbs::Offset<StatisticsEntry>>{
