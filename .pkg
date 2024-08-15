@@ -29,7 +29,7 @@
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=34a46558609e05865c197f0260ab36daa7cbbb6e
+  commit=7b64fca6ea0833628d6f86255a81424365f7cc0c
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
@@ -61,7 +61,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=930d194f32a5da6c7d00e69bc53090548611c735
+  commit=77aac494c45d2b070e65fe712abc34ac74a91d0f
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master
@@ -77,7 +77,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=14dd54b7a25240c55586fc1c8e89aafab1f6b0d4
+  commit=6c19c9682bacd1d532afb24baa9bdc6a3ea36768
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master

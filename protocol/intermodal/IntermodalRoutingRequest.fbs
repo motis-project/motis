@@ -126,6 +126,7 @@ table IntermodalRoutingRequest {
   start_modes: [ModeWrapper];
   destination: IntermodalDestination;
   destination_modes: [ModeWrapper];
+  via: [routing.Via] (optional);
   search_type: routing.SearchType;
   search_dir: motis.SearchDir;
   router: string (optional);

@@ -447,7 +447,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               try {
                 (*loader)->load({.link_stop_distance_ = link_stop_distance_,
                                  .default_tz_ = default_timezone_},
-                                src, *dir, **impl_->tt_, traffic_day_bitfields);
+                                src, *dir, **impl_->tt_, traffic_day_bitfields,
+                                nullptr);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
                 progress_tracker->status(fmt::format("ERROR: {}", e.what()))

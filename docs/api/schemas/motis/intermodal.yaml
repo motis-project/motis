@@ -156,3 +156,5 @@ IntermodalRoutingRequest:
 
         Set to `1.0` (the default value if not specified) to use the default
         transfer times from the timetable.
+    via:
+      description: TODO
