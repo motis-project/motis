@@ -3,6 +3,7 @@
 #include <chrono>
 #include <fstream>
 #include <utility>
+#include <vector>
 
 #include "boost/filesystem.hpp"
 
@@ -111,6 +112,14 @@ struct nigiri::impl {
 #endif
   }
 
+  void vdv_update(char const* s, ::n::rt_timetable& rtt) {
+    auto doc = pugi::xml_document{};
+    doc.load_string(s);
+    vdv_stats_ += ::n::rt::vdv::vdv_update(
+        **tt_, rtt, tags_.get_src(vdv_client_->cfg_.tag_), doc);
+    LOG(logging::info) << "VDV Stats:\n" << vdv_stats_;
+  }
+
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_{};
   std::shared_ptr<cista::wrapped<n::timetable>> tt_;
 #if __cpp_lib_atomic_shared_ptr  // not yet supported on macos
@@ -129,6 +138,8 @@ struct nigiri::impl {
   cista::hash_t hash_{0U};
   std::unique_ptr<vdv::vdv_client> vdv_client_{};
   ::n::rt::vdv::statistics vdv_stats_{};
+  std::filesystem::path vdv_dir_{};
+  std::uint32_t vdv_update_id_{0U};
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -176,45 +187,75 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
 nigiri::~nigiri() = default;
 
 void nigiri::init(motis::module::registry& reg) {
-  if (!gtfsrt_paths_.empty()) {
+  if (!gtfsrt_paths_.empty() || use_vdv_) {
     auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
-    auto statistics = std::vector<n::rt::statistics>{};
-    for (auto const& p : gtfsrt_paths_) {
-      auto const [tag, path] = utl::split<'|', utl::cstr, utl::cstr>(p);
-      if (path.empty()) {
-        throw utl::fail("bad GTFS-RT path: {} (required: tag|path/to/file)", p);
+
+    if (!gtfsrt_paths_.empty()) {
+      auto statistics = std::vector<n::rt::statistics>{};
+      for (auto const& p : gtfsrt_paths_) {
+        auto const [tag, path] = utl::split<'|', utl::cstr, utl::cstr>(p);
+        if (path.empty()) {
+          throw utl::fail("bad GTFS-RT path: {} (required: tag|path/to/file)",
+                          p);
+        }
+        auto const src = impl_->tags_.get_src(tag.to_str() + '_');
+        if (src == n::source_idx_t::invalid()) {
+          throw utl::fail("bad GTFS-RT path: tag {} not found", tag.view());
+        }
+        auto const file =
+            cista::mmap{path.c_str(), cista::mmap::protection::READ};
+        auto stats = n::rt::statistics{};
+        try {
+          stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, src,
+                                           tag.view(), file.view());
+        } catch (std::exception const& e) {
+          stats.parser_error_ = true;
+          LOG(logging::error)
+              << "GTFS-RT update error (tag=" << tag.view() << ") " << e.what();
+        } catch (...) {
+          stats.parser_error_ = true;
+          LOG(logging::error)
+              << "Unknown GTFS-RT update error (tag= " << tag.view() << ")";
+        }
+        statistics.emplace_back(stats);
       }
-      auto const src = impl_->tags_.get_src(tag.to_str() + '_');
-      if (src == n::source_idx_t::invalid()) {
-        throw utl::fail("bad GTFS-RT path: tag {} not found", tag.view());
+
+      for (auto const [path, stats] : utl::zip(gtfsrt_paths_, statistics)) {
+        LOG(logging::info) << "init " << path << ": "
+                           << stats.total_entities_success_ << "/"
+                           << stats.total_entities_ << " ("
+                           << static_cast<double>(
+                                  stats.total_entities_success_) /
+                                  stats.total_entities_ * 100
+                           << "%)";
       }
-      auto const file =
-          cista::mmap{path.c_str(), cista::mmap::protection::READ};
-      auto stats = n::rt::statistics{};
-      try {
-        stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt_copy, src,
-                                         tag.view(), file.view());
-      } catch (std::exception const& e) {
-        stats.parser_error_ = true;
-        LOG(logging::error)
-            << "GTFS-RT update error (tag=" << tag.view() << ") " << e.what();
-      } catch (...) {
-        stats.parser_error_ = true;
-        LOG(logging::error)
-            << "Unknown GTFS-RT update error (tag= " << tag.view() << ")";
-      }
-      statistics.emplace_back(stats);
     }
+
+    if (use_vdv_) {
+      auto vdv_files = std::vector<fs::path>{};
+      for (auto const& dir_entry : fs::directory_iterator{impl_->vdv_dir_}) {
+        if (dir_entry.is_regular_file()) {
+          vdv_files.emplace_back(dir_entry);
+        }
+      }
+      std::sort(begin(vdv_files), end(vdv_files));
+      for (auto const& f : vdv_files) {
+        LOG(logging::info) << "Replaying VDV update file: " << f;
+        try {
+          auto ifs = std::ifstream{f, std::ios::in};
+          auto vdv_xml = std::string{std::istreambuf_iterator<char>{ifs},
+                                     std::istreambuf_iterator<char>{}};
+          impl_->vdv_update(vdv_xml.c_str(), *rtt_copy);
+          impl_->vdv_update_id_ = std::stoul(f.filename()) + 1U;
+        } catch (std::exception const& e) {
+          LOG(logging::error)
+              << "Error while replaying VDV Update: " << e.what();
+        }
+      }
+    }
+
     impl_->update_rtt(rtt_copy);
     impl_->railviz_->update(rtt_copy);
-    for (auto const [path, stats] : utl::zip(gtfsrt_paths_, statistics)) {
-      LOG(logging::info) << "init " << path << ": "
-                         << stats.total_entities_success_ << "/"
-                         << stats.total_entities_ << " ("
-                         << static_cast<double>(stats.total_entities_success_) /
-                                stats.total_entities_ * 100
-                         << "%)";
-    }
   }
 
   reg.register_op("/nigiri",
@@ -372,15 +413,10 @@ void nigiri::rt_update() {
     LOG(logging::info) << "Starting VDV update";
     auto f = motis_http(impl_->vdv_client_->make_fetch_req());
     try {
-      auto vdv_raw_xml = std::ofstream("vdv_raw_xml.txt", std::ios::app);
-      vdv_raw_xml << f->val().body << "\n\n";
-      auto doc = pugi::xml_document{};
-      doc.load_string(f->val().body.c_str());
-      if (doc.select_node("DatenAbrufenAntwort/AUSNachricht")) {
-        impl_->vdv_stats_ += ::n::rt::vdv::vdv_update(
-            **impl_->tt_, *rtt, impl_->tags_.get_src(vdv_cfg_.tag_), doc);
-        LOG(logging::info) << "VDV Stats:\n" << impl_->vdv_stats_;
-      }
+      std::ofstream{impl_->vdv_dir_ / std::to_string(impl_->vdv_update_id_++),
+                    std::ios::out}
+          << f->val().body;
+      impl_->vdv_update(f->val().body.c_str(), *rtt);
     } catch (std::runtime_error const& e) {
       LOG(logging::error) << e.what() << "\n";
     }
@@ -573,6 +609,12 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
         }
 
+        if (use_vdv_) {
+          impl_->vdv_dir_ = get_data_directory() / fs::path{"vdv"};
+          fs::create_directory(impl_->vdv_dir_);
+          impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(vdv_cfg_);
+        }
+
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
                         impl_->tt_->get());
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TAGS),
@@ -617,8 +659,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
 void nigiri::init_io(boost::asio::io_context& ioc) {
   if (use_vdv_) {
-    impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(vdv_cfg_, ioc);
-    impl_->vdv_client_->run();
+    impl_->vdv_client_->run(ioc);
     register_vdv_sub_renewal_timer(*shared_data_);
   }
 
@@ -627,15 +668,16 @@ void nigiri::init_io(boost::asio::io_context& ioc) {
 
 void nigiri::stop_io() {
   if (use_vdv_) {
-    impl_->vdv_client_->stop();
+    impl_->vdv_client_->stop(shared_data_->runner_.ios());
   }
 }
 
 void nigiri::vdv_sub_renewal() {
   using namespace std::chrono_literals;
-  impl_->vdv_client_->subscribe(std::chrono::system_clock::now(),
-                                std::chrono::system_clock::now() + 30h, 30s,
-                                30h);
+  impl_->vdv_client_->unsubscribe(shared_data_->runner_.ios());
+  impl_->vdv_client_->subscribe(
+      shared_data_->runner_.ios(), std::chrono::system_clock::now(),
+      std::chrono::system_clock::now() + 30h, 30s, 30h);
 }
 
 void nigiri::register_vdv_sub_renewal_timer(mm::dispatcher& d) {
