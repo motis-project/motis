@@ -668,16 +668,19 @@ void nigiri::init_io(boost::asio::io_context& ioc) {
 
 void nigiri::stop_io() {
   if (use_vdv_) {
-    impl_->vdv_client_->stop(shared_data_->runner_.ios());
+    impl_->vdv_client_->stop();
   }
 }
 
 void nigiri::vdv_sub_renewal() {
   using namespace std::chrono_literals;
-  impl_->vdv_client_->unsubscribe(shared_data_->runner_.ios());
-  impl_->vdv_client_->subscribe(
-      shared_data_->runner_.ios(), std::chrono::system_clock::now(),
-      std::chrono::system_clock::now() + 30h, 30s, 30h);
+  auto res_unsub = motis_http(
+      impl_->vdv_client_->make_unsub_req(std::chrono::system_clock::now()));
+  LOG(logging::info) << res_unsub->val().body;
+  auto const now = std::chrono::system_clock::now();
+  auto res_sub =
+      motis_http(impl_->vdv_client_->make_sub_req(now, now + 30h, 1, 30s, 30h));
+  LOG(logging::info) << res_sub->val().body;
 }
 
 void nigiri::register_vdv_sub_renewal_timer(mm::dispatcher& d) {
@@ -685,7 +688,6 @@ void nigiri::register_vdv_sub_renewal_timer(mm::dispatcher& d) {
       "RIS VDV Subscription Renewal",
       boost::posix_time::hours{vdv_subscription_renewal_interval_hours_},
       [&]() { vdv_sub_renewal(); }, {});
-  vdv_sub_renewal();
 }
 
 }  // namespace motis::nigiri
