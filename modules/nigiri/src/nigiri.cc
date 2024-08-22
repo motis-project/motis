@@ -115,9 +115,8 @@ struct nigiri::impl {
   void vdv_update(char const* s, ::n::rt_timetable& rtt) {
     auto doc = pugi::xml_document{};
     doc.load_string(s);
-    vdv_stats_ += ::n::rt::vdv::vdv_update(
-        **tt_, rtt, tags_.get_src(vdv_client_->cfg_.tag_), doc);
-    LOG(logging::info) << "VDV Stats:\n" << vdv_stats_;
+    vdv_updater_->update(rtt, doc);
+    LOG(logging::info) << "VDV Stats:\n" << vdv_updater_->get_stats();
   }
 
   std::vector<std::unique_ptr<n::loader::loader_interface>> loaders_{};
@@ -137,7 +136,7 @@ struct nigiri::impl {
   std::vector<schedule_info> schedules_{};
   cista::hash_t hash_{0U};
   std::unique_ptr<vdv::vdv_client> vdv_client_{};
-  ::n::rt::vdv::statistics vdv_stats_{};
+  std::unique_ptr<::nigiri::rt::vdv::updater> vdv_updater_{};
   std::filesystem::path vdv_dir_{};
   std::uint32_t vdv_update_id_{0U};
 };
@@ -613,6 +612,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           impl_->vdv_dir_ = get_data_directory() / fs::path{"vdv"};
           fs::create_directory(impl_->vdv_dir_);
           impl_->vdv_client_ = std::make_unique<vdv::vdv_client>(vdv_cfg_);
+          impl_->vdv_updater_ = std::make_unique<::nigiri::rt::vdv::updater>(
+              **impl_->tt_, impl_->tags_.get_src(vdv_cfg_.tag_));
         }
 
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
@@ -674,6 +675,7 @@ void nigiri::stop_io() {
 
 void nigiri::vdv_sub_renewal() {
   using namespace std::chrono_literals;
+  impl_->vdv_updater_->reset_vdv_run_ids_();
   auto res_unsub = motis_http(
       impl_->vdv_client_->make_unsub_req(std::chrono::system_clock::now()));
   LOG(logging::info) << res_unsub->val().body;
