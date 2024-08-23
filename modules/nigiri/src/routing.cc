@@ -2,6 +2,7 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "utl/erase_if.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/pipes.h"
 #include "utl/to_vec.h"
@@ -9,8 +10,8 @@
 
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
-#include "nigiri/routing/raptor/raptor.h"
 #include "nigiri/routing/raptor/raptor_state.h"
+#include "nigiri/routing/raptor_search.h"
 #include "nigiri/routing/search.h"
 #include "nigiri/special_stations.h"
 
@@ -43,9 +44,14 @@ mm::msg_ptr to_routing_response(
   mm::message_creator fbb;
   MOTIS_START_TIMING(conversion);
   auto const connections =
-      utl::to_vec(*journeys, [&](n::routing::journey const& j) {
-        return to_connection(fbb, nigiri_to_motis_journey(tt, rtt, tags, j));
-      });
+      utl::all(*journeys)  //
+      | utl::remove_if([&](n::routing::journey const& j) {  //
+          return j.error_;
+        })  //
+      | utl::transform([&](n::routing::journey const& j) {
+          return to_connection(fbb, nigiri_to_motis_journey(tt, rtt, tags, j));
+        })  //
+      | utl::vec();
   MOTIS_STOP_TIMING(conversion);
 
   auto entries = std::vector<fbs::Offset<StatisticsEntry>>{
@@ -124,25 +130,6 @@ std::vector<n::routing::offset> get_offsets(
                  e->mumo_id()};
            })  //
          | utl::vec();
-}
-
-template <n::direction SearchDir>
-auto run_search(n::routing::search_state& search_state,
-                n::routing::raptor_state& raptor_state, n::timetable const& tt,
-                n::rt_timetable const* rtt,
-                std::optional<std::chrono::seconds> timeout,
-                n::routing::query&& q) {
-  if (rtt == nullptr) {
-    using algo_t = n::routing::raptor<SearchDir, false>;
-    return n::routing::search<SearchDir, algo_t>{
-        tt, nullptr, search_state, raptor_state, std::move(q), timeout}
-        .execute();
-  } else {
-    using algo_t = n::routing::raptor<SearchDir, true>;
-    return n::routing::search<SearchDir, algo_t>{
-        tt, rtt, search_state, raptor_state, std::move(q), timeout}
-        .execute();
-  }
 }
 
 n::routing::clasz_mask_t to_clasz_mask(fbs::Vector<std::uint8_t> const* v) {
@@ -323,7 +310,21 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
       .extend_interval_later_ = extend_interval_later,
       .prf_idx_ = prf_idx,
       .allowed_claszes_ = to_clasz_mask(req->allowed_claszes()),
-      .require_bike_transport_ = req->bike_transport()};
+      .require_bike_transport_ = req->bike_transport(),
+      .transfer_time_settings_ = n::routing::transfer_time_settings{
+          .default_ = req->min_transfer_time() <= 0 &&
+                      req->transfer_time_factor() == 1.0F,
+          .min_transfer_time_ = n::duration_t{req->min_transfer_time()},
+          .factor_ = req->transfer_time_factor()}};
+
+  for (auto const& via : *req->via()) {
+    auto const station =
+        get_location_idx(tags, tt, via->station()->id()->view());
+    utl::verify(station != n::location_idx_t::invalid(),
+                "unknown via station {}", via->station()->id()->view());
+    q.via_stops_.emplace_back(n::routing::via_stop{
+        .location_ = station, .stay_ = n::duration_t{via->stay_duration()}});
+  }
 
   utl::verify(!q.start_.empty(), "no start edges");
   utl::verify(!q.destination_.empty(), "no destination edges");
@@ -340,21 +341,15 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   n::pareto_set<n::routing::journey> const* journeys{nullptr};
   n::routing::search_stats search_stats;
   n::routing::raptor_stats raptor_stats;
-  if (req->search_dir() == SearchDir_Forward) {
-    auto const r = run_search<n::direction::kForward>(
-        *search_state, *raptor_state, tt, rtt, timeout, std::move(q));
-    journeys = r.journeys_;
-    search_stats = r.search_stats_;
-    raptor_stats = r.algo_stats_;
-    search_interval = r.interval_;
-  } else {
-    auto const r = run_search<n::direction::kBackward>(
-        *search_state, *raptor_state, tt, rtt, timeout, std::move(q));
-    journeys = r.journeys_;
-    search_stats = r.search_stats_;
-    raptor_stats = r.algo_stats_;
-    search_interval = r.interval_;
-  }
+  auto const dir = req->search_dir() == SearchDir_Forward
+                       ? n::direction::kForward
+                       : n::direction::kBackward;
+  auto const r = n::routing::raptor_search(
+      tt, rtt, *search_state, *raptor_state, std::move(q), dir, timeout);
+  journeys = r.journeys_;
+  search_stats = r.search_stats_;
+  raptor_stats = r.algo_stats_;
+  search_interval = r.interval_;
   MOTIS_STOP_TIMING(routing);
 
   return to_routing_response(tt, rtt, tags, journeys, search_interval,

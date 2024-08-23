@@ -29,7 +29,7 @@
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=34a46558609e05865c197f0260ab36daa7cbbb6e
+  commit=7b64fca6ea0833628d6f86255a81424365f7cc0c
 [lmdb]
   url=git@github.com:motis-project/lmdb.git
   branch=master
@@ -61,7 +61,7 @@
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=8c61dcaa74a7f49695d58ce7aae9de7ecb566aa1
+  commit=77aac494c45d2b070e65fe712abc34ac74a91d0f
 [guess]
   url=git@github.com:motis-project/guess.git
   branch=master

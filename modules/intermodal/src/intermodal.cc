@@ -530,18 +530,26 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
                   : "/routing"
             : req->router()->str();
 
+    auto const via = mc.CreateVector(
+        req->via() != nullptr
+            ? utl::to_vec(*req->via(),
+                          [&mc](Via const* via) {
+                            return motis_copy_table(Via, mc, via);
+                          })
+            : std::vector<Offset<Via>>{});
+
     mc.create_and_finish(
         MsgContent_RoutingRequest,
         CreateRoutingRequest(
             mc, start.start_type_, start.start_, dest.station_,
-            req->search_type(), req->search_dir(),
-            mc.CreateVector(std::vector<Offset<Via>>{}), mc.CreateVector(edges),
+            req->search_type(), req->search_dir(), via, mc.CreateVector(edges),
             true, true, false, 0, timeout_,
             req->allowed_claszes() == nullptr
                 ? 0
                 : mc.CreateVector(req->allowed_claszes()->Data(),
                                   req->allowed_claszes()->size()),
-            req->max_transfers(), req->bike_transport())
+            req->max_transfers(), req->bike_transport(),
+            req->min_transfer_time(), req->transfer_time_factor())
             .Union(),
         router);
 

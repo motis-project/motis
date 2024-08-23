@@ -135,6 +135,8 @@ Transport:
       description: TODO
     route_text_color:
       description: TODO
+    provider_url:
+      description: TODO
 Walk:
   description: TODO
   fields:

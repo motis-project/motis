@@ -135,10 +135,26 @@ IntermodalRoutingRequest:
       description: |
         The maximum number of transfers allowed per journey.
 
-        If set to `-1`, the internal default value is used.
+        If set to `-1` (the default value if not specified), the internal
+        default value is used.
     bike_transport:
       description: |
         Whether only journeys where bike transport is allowed should be considered.
 
         If set to `true`, only trips where bike transport is allowed can be
         used.
+    min_transfer_time:
+      description: |
+        The minimum transfer time in minutes.
+
+        Set to `0` (the default value if not specified) to use the default
+        transfer times from the timetable.
+    transfer_time_factor:
+      description: |
+        Multiply all transfer times by this factor. Must be >= 1.0.
+        The minimum transfer time is not multiplied by this factor.
+
+        Set to `1.0` (the default value if not specified) to use the default
+        transfer times from the timetable.
+    via:
+      description: TODO

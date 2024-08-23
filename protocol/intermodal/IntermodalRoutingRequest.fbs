@@ -126,10 +126,13 @@ table IntermodalRoutingRequest {
   start_modes: [ModeWrapper];
   destination: IntermodalDestination;
   destination_modes: [ModeWrapper];
+  via: [routing.Via] (optional);
   search_type: routing.SearchType;
   search_dir: motis.SearchDir;
   router: string (optional);
   allowed_claszes: [ubyte] (optional);
   max_transfers: int = -1 (optional); // -1 = use default value
   bike_transport: bool = false (optional);
+  min_transfer_time: int = 0 (optional); // minutes
+  transfer_time_factor: float = 1.0 (optional);
 }
