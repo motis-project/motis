@@ -262,7 +262,7 @@ TEST(icc, routing) {
                           matches, *rtt);
 
   // Instantiate routing endpoint.
-  auto const routing = ep::routing{w, l, pl, tt, rtt, e, loc_rtree, matches};
+  auto const routing = ep::routing{w, l, pl, tt, loc_rtree, rtt, e, matches};
 
   // Route with wheelchair.
   {

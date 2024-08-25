@@ -7,6 +7,7 @@
 
 #include "geo/polyline_format.h"
 
+#include "nigiri/common/split_duration.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"

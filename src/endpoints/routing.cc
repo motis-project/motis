@@ -8,9 +8,8 @@
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/routing/query.h"
-#include "nigiri/routing/raptor/raptor.h"
 #include "nigiri/routing/raptor/raptor_state.h"
-#include "nigiri/routing/search.h"
+#include "nigiri/routing/raptor_search.h"
 #include "nigiri/special_stations.h"
 
 #include "icc/constants.h"
@@ -147,7 +146,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     }
 
     auto const near_stops =
-        rtree_.in_radius(pos.pos_, get_max_distance(profile, max));
+        loc_tree_.in_radius(pos.pos_, get_max_distance(profile, max));
     auto const near_stop_locations =
         utl::to_vec(near_stops, [&](n::location_idx_t const l) {
           return osr::location{tt_.locations_.coordinates_[l],
@@ -269,31 +268,6 @@ n::routing::query get_start_time(api::plan_params const& query) {
   }
 }
 
-template <n::direction SearchDir>
-auto run_search(n::timetable const& tt,
-                n::rt_timetable const* rtt,
-                std::optional<std::chrono::seconds> timeout,
-                n::routing::query&& q) {
-  if (search_state.get() == nullptr) {
-    search_state.reset(new n::routing::search_state{});
-  }
-  if (raptor_state.get() == nullptr) {
-    raptor_state.reset(new n::routing::raptor_state{});
-  }
-
-  if (rtt == nullptr) {
-    using algo_t = n::routing::raptor<SearchDir, false>;
-    return n::routing::search<SearchDir, algo_t>{
-        tt, nullptr, *search_state, *raptor_state, std::move(q), timeout}
-        .execute();
-  } else {
-    using algo_t = n::routing::raptor<SearchDir, true>;
-    return n::routing::search<SearchDir, algo_t>{
-        tt, rtt, *search_state, *raptor_state, std::move(q), timeout}
-        .execute();
-  }
-}
-
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rtt_;
   auto const e = e_;
@@ -372,26 +346,18 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .allowed_claszes_ = to_clasz_mask(query.mode_),
       .require_bike_transport_ = require_bike_transport(query.mode_)};
 
-  UTL_START_TIMING(nigiri);
-  auto search_interval = n::interval<n::unixtime_t>{};
-  auto search_stats = n::routing::search_stats{};
-  auto raptor_stats = n::routing::raptor_stats{};
-  n::pareto_set<n::routing::journey> const* journeys{nullptr};
-  if (!query.arriveBy_) {
-    auto const r = run_search<n::direction::kForward>(
-        tt_, rtt.get(), std::nullopt, std::move(q));
-    journeys = r.journeys_;
-    search_stats = r.search_stats_;
-    raptor_stats = r.algo_stats_;
-    search_interval = r.interval_;
-  } else {
-    auto const r = run_search<n::direction::kBackward>(
-        tt_, rtt.get(), std::nullopt, std::move(q));
-    journeys = r.journeys_;
-    search_stats = r.search_stats_;
-    raptor_stats = r.algo_stats_;
-    search_interval = r.interval_;
+  if (search_state.get() == nullptr) {
+    search_state.reset(new n::routing::search_state{});
   }
+  if (raptor_state.get() == nullptr) {
+    raptor_state.reset(new n::routing::raptor_state{});
+  }
+
+  UTL_START_TIMING(nigiri);
+  auto const r = n::routing::raptor_search(
+      tt_, rtt.get(), *search_state, *raptor_state, std::move(q),
+      query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+      std::nullopt);
   UTL_STOP_TIMING(nigiri);
   auto const nigiri_timing = UTL_TIMING_MS(nigiri);
 
@@ -421,7 +387,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .from_ = to_place(from, "Origin"),
       .to_ = to_place(to, "Destination"),
       .itineraries_ =
-          utl::to_vec(*journeys,
+          utl::to_vec(*r.journeys_,
                       [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                         return journey_to_response(
                             w_, l_, tt_, pl_, *e, rtt.get(), matches_,
@@ -429,11 +395,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       }),
       .previousPageCursor_ = fmt::format(
           "EARLIER|{}", std::chrono::duration_cast<std::chrono::seconds>(
-                            search_interval.from_.time_since_epoch())
+                            r.interval_.from_.time_since_epoch())
                             .count()),
       .nextPageCursor_ = fmt::format(
           "LATER|{}", std::chrono::duration_cast<std::chrono::seconds>(
-                          search_interval.to_.time_since_epoch())
+                          r.interval_.to_.time_since_epoch())
                           .count()),
   };
 }
