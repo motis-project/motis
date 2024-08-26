@@ -16,6 +16,7 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
 
+#include "icc/data.h"
 #include "icc/elevators/elevators.h"
 #include "icc/endpoints/elevators.h"
 #include "icc/endpoints/footpaths.h"
