@@ -38,8 +38,8 @@ std::vector<n::interval<n::unixtime_t>> parse_out_of_service(
                    json::serialize(entry));
       continue;
     }
-    ret.emplace_back(parse_date_time(interval[0].as_string()),
-                     parse_date_time(interval[1].as_string()));
+    ret.emplace_back(n::interval{parse_date_time(interval[0].as_string()),
+                                 parse_date_time(interval[1].as_string())});
   }
 
   return ret;

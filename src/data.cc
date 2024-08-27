@@ -43,13 +43,15 @@ data::data(std::filesystem::path const& p) {
     rt_ = std::make_shared<rt>();
   }
 
+  // TODO(felix) init rt->e
+
   if (has_tt() && has_osr()) {
     matches_ =
         std::make_unique<platform_matches_t>(get_matches(tt(), *pl_, *w_));
     auto const elevator_footpath_map =
         read_elevator_footpath_map(p / "elevator_footpath_map.bin");
     icc::update_rtt_td_footpaths(*w_, *l_, *pl_, tt(), *location_rtee_,
-                                 *elevator_footpath_map, matches_, *rt_);
+                                 *elevator_footpath_map, *matches_, *rt_);
   }
 }
 

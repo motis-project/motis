@@ -104,9 +104,9 @@ std::vector<n::td_footpath> get_td_footpaths(
                                               n::footpath::kMaxDuration)
                                 ? n::duration_t{p->cost_ / 60U}
                                 : n::footpath::kMaxDuration;
-      fps.emplace_back(
+      fps.push_back(n::td_footpath{
           to, t,
-          n::duration_t{std::max(n::duration_t::rep{1}, duration.count())});
+          n::duration_t{std::max(n::duration_t::rep{1}, duration.count())}});
     }
   }
 
@@ -121,13 +121,13 @@ void update_rtt_td_footpaths(
     osr::platforms const& pl,
     nigiri::timetable const& tt,
     point_rtree<n::location_idx_t> const& loc_rtree,
-    elevators const& e,
     platform_matches_t const& matches,
     hash_set<std::pair<n::location_idx_t, osr::direction>> const& tasks,
     nigiri::rt_timetable const* old_rtt,
-    nigiri::rt_timetable& rtt) {
+    rt& rt) {
   fmt::println("  -> {} routing tasks tasks", tasks.size());
 
+  auto& rtt = *rt.rtt_;
   auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
   auto out = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
   auto in = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
@@ -135,7 +135,7 @@ void update_rtt_td_footpaths(
       tasks.size(),
       [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
         auto const [start, dir] = *(begin(tasks) + task_idx);
-        auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches,
+        auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, *rt.e_, matches,
                                     get_loc(tt, w, pl, matches, start), dir,
                                     osr::search_profile::kWheelchair, blocked);
         {
@@ -185,19 +185,17 @@ void update_rtt_td_footpaths(osr::ways const& w,
                              osr::platforms const& pl,
                              nigiri::timetable const& tt,
                              point_rtree<n::location_idx_t> const& loc_rtree,
-                             elevators const& e,
                              elevator_footpath_map_t const& elevators_in_paths,
                              platform_matches_t const& matches,
-                             nigiri::rt_timetable& rtt) {
+                             rt& rt) {
   auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
-  auto n_sources = 0U, n_sinks = 0U;
   for (auto const& [e_in_path, from_to] : elevators_in_paths) {
-    auto const e_idx =
-        match_elevator(e.elevators_rtree_, e.elevators_, w, e_in_path);
+    auto const e_idx = match_elevator(rt.e_->elevators_rtree_,
+                                      rt.e_->elevators_, w, e_in_path);
     if (e_idx == elevator_idx_t::invalid()) {
       continue;
     }
-    auto const& el = e.elevators_[e_idx];
+    auto const& el = rt.e_->elevators_[e_idx];
     if (el.out_of_service_.empty() && el.status_) {
       continue;
     }
@@ -206,8 +204,7 @@ void update_rtt_td_footpaths(osr::ways const& w,
       tasks.emplace(to, osr::direction::kBackward);
     }
   }
-  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,
-                          rtt);
+  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, matches, tasks, nullptr, rt);
 }
 
 }  // namespace icc

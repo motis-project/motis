@@ -195,7 +195,10 @@ api::Itinerary journey_to_response(
                     leg.uses_);
               }) - 1)};
 
-  for (auto const [leg_i, j_leg] : utl::enumerate(j.legs_)) {
+  for (auto const [_leg_i, _j_leg] : utl::enumerate(j.legs_)) {
+    auto const& leg_i = _leg_i;
+    auto const& j_leg = _j_leg;
+
     auto const write_leg = [&](auto&& x,
                                api::ModeEnum const mode) -> api::Leg& {
       auto& leg = itinerary.legs_.emplace_back();

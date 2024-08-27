@@ -27,12 +27,12 @@ std::vector<state_change<Time>> intervals_to_state_changes(
   using Duration = typename Time::duration;
   auto ret = std::vector<state_change<Time>>{};
   if (iv.empty()) {
-    ret.emplace_back(Time{Duration{0}}, status);
+    ret.push_back({Time{Duration{0}}, status});
   } else {
-    ret.emplace_back(Time{Duration{0}}, Default);
+    ret.push_back({Time{Duration{0}}, Default});
     for (auto const& i : iv) {
-      ret.emplace_back(i.from_, !Default);
-      ret.emplace_back(i.to_, Default);
+      ret.push_back({i.from_, !Default});
+      ret.push_back({i.to_, Default});
     }
   }
   return ret;
