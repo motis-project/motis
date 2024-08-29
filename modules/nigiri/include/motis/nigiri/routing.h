@@ -12,10 +12,11 @@ struct rt_timetable;
 namespace motis::nigiri {
 
 struct tag_lookup;
+struct metrics;
 
 motis::module::msg_ptr route(
     tag_lookup const&, ::nigiri::timetable const&,
-    ::nigiri::rt_timetable const*, motis::module::msg_ptr const&,
+    ::nigiri::rt_timetable const*, motis::module::msg_ptr const&, metrics&,
     ::nigiri::profile_idx_t const prf_idx = ::nigiri::profile_idx_t{0U});
 
 }  // namespace motis::nigiri

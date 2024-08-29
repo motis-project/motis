@@ -9,6 +9,11 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
+#include "prometheus/family.h"
+#include "prometheus/gauge.h"
+#include "prometheus/histogram.h"
+#include "prometheus/registry.h"
+
 #include "motis/core/common/constants.h"
 #include "motis/core/common/timing.h"
 #include "motis/core/access/time_access.h"
@@ -20,6 +25,7 @@
 #include "motis/intermodal/direct_connections.h"
 #include "motis/intermodal/error.h"
 #include "motis/intermodal/eval/commands.h"
+#include "motis/intermodal/metrics.h"
 #include "motis/intermodal/mumo_edge.h"
 #include "motis/intermodal/query_bounds.h"
 #include "motis/intermodal/statistics.h"
@@ -48,6 +54,47 @@ void intermodal::reg_subc(motis::module::subc_reg& r) {
 }
 
 void intermodal::init(motis::module::registry& r) {
+  auto prometheus_registry =
+      get_shared_data<std::shared_ptr<prometheus::Registry>>(
+          to_res_id(global_res_id::METRICS));
+
+  auto& request_counter_family =
+      prometheus::BuildCounter()
+          .Name("intermodal_requests_total")
+          .Help("Number of intermodal routing requests")
+          .Register(*prometheus_registry);
+
+  auto& mode_counter_family = prometheus::BuildCounter()
+                                  .Name("intermodal_modes_total")
+                                  .Help("Number of intermodal routing requests")
+                                  .Register(*prometheus_registry);
+
+  auto const time_buckets = prometheus::Histogram::BucketBoundaries{
+      .05, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, 20.0, 30.0};
+
+  metrics_ = std::make_unique<metrics>(metrics{
+      .registry_ = *prometheus_registry,
+      .fwd_requests_ = request_counter_family.Add({{"direction", "forward"}}),
+      .bwd_requests_ = request_counter_family.Add({{"direction", "backward"}}),
+      .foot_modes_ = mode_counter_family.Add({{"mode", "foot"}}),
+      .foot_ppr_modes_ = mode_counter_family.Add({{"mode", "foot_ppr"}}),
+      .bike_modes_ = mode_counter_family.Add({{"mode", "bike"}}),
+      .car_modes_ = mode_counter_family.Add({{"mode", "car"}}),
+      .car_parking_modes_ = mode_counter_family.Add({{"mode", "car_parking"}}),
+      .gbfs_modes_ = mode_counter_family.Add({{"mode", "gbfs"}}),
+      .mumo_edges_time_ =
+          prometheus::BuildHistogram()
+              .Name("intermodal_mumo_edges_time_seconds")
+              .Help("Total time to calculate mumo edges per routing request")
+              .Register(*prometheus_registry)
+              .Add({}, time_buckets),
+      .total_time_ = prometheus::BuildHistogram()
+                         .Name("intermodal_total_time_seconds")
+                         .Help("Total time per intermodal routing request")
+                         .Register(*prometheus_registry)
+                         .Add({}, time_buckets),
+  });
+
   r.register_op("/intermodal", [this](msg_ptr const& m) { return route(m); },
                 {});
   if (router_.empty()) {
@@ -441,6 +488,8 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   message_creator mc;
   statistics stats{};
 
+  MOTIS_START_TIMING(total_timing);
+
   auto const start = parse_query_start(mc, req);
   auto const dest = parse_query_dest(mc, req);
 
@@ -470,13 +519,14 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
 
   using namespace std::placeholders;
   if (req->search_dir() == SearchDir_Forward) {
+    metrics_->fwd_requests_.Increment();
     if (start.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
         make_starts(
             req, start.pos_, dest.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       STATION_START, _1, start.pos_, _2, _3, _4, _5, _6),
-            mumo_stats_appender, ppr_profiles_);
+            mumo_stats_appender, ppr_profiles_, *metrics_);
       }));
     }
     if (dest.is_intermodal_) {
@@ -484,17 +534,18 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         make_dests(req, dest.pos_, start.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              _1, STATION_END, _2, dest.pos_, _3, _4, _5, _6),
-                   mumo_stats_appender, ppr_profiles_);
+                   mumo_stats_appender, ppr_profiles_, *metrics_);
       }));
     }
   } else {
+    metrics_->bwd_requests_.Increment();
     if (start.is_intermodal_) {
       futures.emplace_back(spawn_job_void([&]() {
         make_starts(
             req, start.pos_, dest.pos_,
             std::bind(appender, std::ref(deps),  // NOLINT
                       _1, STATION_START, _2, start.pos_, _3, _4, _5, _6),
-            mumo_stats_appender, ppr_profiles_);
+            mumo_stats_appender, ppr_profiles_, *metrics_);
       }));
     }
     if (dest.is_intermodal_) {
@@ -502,13 +553,14 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         make_dests(req, dest.pos_, start.pos_,
                    std::bind(appender, std::ref(arrs),  // NOLINT
                              STATION_END, _1, dest.pos_, _2, _3, _4, _5, _6),
-                   mumo_stats_appender, ppr_profiles_);
+                   mumo_stats_appender, ppr_profiles_, *metrics_);
       }));
     }
   }
 
   ctx::await_all(futures);
   MOTIS_STOP_TIMING(mumo_edge_timing);
+  metrics_->mumo_edges_time_.Observe(MOTIS_TIMING_S(mumo_edge_timing));
 
   stats.start_edges_ = deps.size();
   stats.destination_edges_ = arrs.size();
@@ -561,8 +613,14 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         static_cast<uint64_t>(MOTIS_TIMING_MS(routing_timing));
   }
 
-  return postprocess_response(routing_resp, start, dest, req, edge_mapping,
-                              stats, revise_, mumo_stats, ppr_profiles_);
+  auto const response =
+      postprocess_response(routing_resp, start, dest, req, edge_mapping, stats,
+                           revise_, mumo_stats, ppr_profiles_);
+
+  MOTIS_STOP_TIMING(total_timing);
+  metrics_->total_time_.Observe(MOTIS_TIMING_S(total_timing));
+
+  return response;
 }
 
 }  // namespace motis::intermodal

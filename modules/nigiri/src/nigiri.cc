@@ -1,6 +1,7 @@
 #include "motis/nigiri/nigiri.h"
 
 #include <fstream>
+#include <memory>
 #include <utility>
 
 #include "boost/filesystem.hpp"
@@ -10,6 +11,9 @@
 #include "cista/memory_holder.h"
 
 #include "conf/date_time.h"
+
+#include "prometheus/counter.h"
+#include "prometheus/registry.h"
 
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
@@ -34,6 +38,7 @@
 #include "motis/nigiri/gtfsrt.h"
 #include "motis/nigiri/guesser.h"
 #include "motis/nigiri/initial_permalink.h"
+#include "motis/nigiri/metrics.h"
 #include "motis/nigiri/railviz.h"
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/station_lookup.h"
@@ -73,7 +78,7 @@ struct schedule_info {
 };
 
 struct nigiri::impl {
-  impl() {
+  impl(std::shared_ptr<prometheus::Registry> prometheus_registry) {
     loaders_.emplace_back(std::make_unique<n::loader::gtfs::gtfs_loader>());
     loaders_.emplace_back(
         std::make_unique<n::loader::hrd::hrd_5_00_8_loader>());
@@ -83,6 +88,134 @@ struct nigiri::impl {
         std::make_unique<n::loader::hrd::hrd_5_20_39_loader>());
     loaders_.emplace_back(
         std::make_unique<n::loader::hrd::hrd_5_20_avv_loader>());
+
+    auto& request_counter_family = prometheus::BuildCounter()
+                                       .Name("nigiri_routing_requests_total")
+                                       .Help("Number of routing requests")
+                                       .Register(*prometheus_registry);
+
+    auto& routing_time_family = prometheus::BuildHistogram()
+                                    .Name("nigiri_routing_time_seconds")
+                                    .Help("Total time per routing request")
+                                    .Register(*prometheus_registry);
+
+    auto const routing_time_buckets = prometheus::Histogram::BucketBoundaries{
+        .05, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, 20.0, 30.0};
+
+    metrics_ = std::make_unique<metrics>(metrics{
+        .registry_ = *prometheus_registry,
+        .pretrip_requests_ = request_counter_family.Add({{"type", "pretrip"}}),
+        .ontrip_station_requests_ =
+            request_counter_family.Add({{"type", "ontrip_station"}}),
+        .via_count_ =
+            prometheus::BuildHistogram()
+                .Name("nigiri_via_count")
+                .Help("Number of via stops per routing request")
+                .Register(*prometheus_registry)
+                .Add({}, prometheus::Histogram::BucketBoundaries{0, 1, 2}),
+        .pretrip_routing_time_ = routing_time_family.Add({{"type", "pretrip"}},
+                                                         routing_time_buckets),
+        .ontrip_station_routing_time_ = routing_time_family.Add(
+            {{"type", "ontrip_station"}}, routing_time_buckets),
+        .pretrip_interval_extensions_ =
+            prometheus::BuildHistogram()
+                .Name("nigiri_interval_extensions")
+                .Help("Number of interval extensions per routing request")
+                .Register(*prometheus_registry)
+                .Add({{"type", "pretrip"}},
+                     prometheus::Histogram::BucketBoundaries{0, 1, 2, 3, 4, 5,
+                                                             6, 7, 8, 9, 10}),
+        .gtfsrt_updates_requested_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_updates_requested_total")
+                .Help("Number of update attempts of the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_updates_successful_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_updates_successful_total")
+                .Help("Number of successful updates of the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_updates_error_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_updates_error_total")
+                .Help("Number of failed updates of the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_total_entities_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_total_entities_total")
+                .Help("Total number of entities in the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_total_entities_success_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_total_entities_success_total")
+                .Help("Number of entities in the GTFS-RT feed that were "
+                      "successfully processed")
+                .Register(*prometheus_registry),
+        .gtfsrt_total_entities_fail_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_total_entities_fail_total")
+                .Help("Number of entities in the GTFS-RT feed that could not "
+                      "be processed")
+                .Register(*prometheus_registry),
+        .gtfsrt_unsupported_deleted_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_unsupported_deleted_total")
+                .Help("Number of unsupported deleted entities in the GTFS-RT "
+                      "feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_unsupported_vehicle_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_unsupported_vehicle_total")
+                .Help("Number of unsupported vehicle entities in the GTFS-RT "
+                      "feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_unsupported_alert_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_unsupported_alert_total")
+                .Help(
+                    "Number of unsupported alert entities in the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_unsupported_no_trip_id_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_unsupported_no_trip_id_total")
+                .Help("Number of unsupported trips without trip id in the "
+                      "GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_no_trip_update_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_no_trip_update_total")
+                .Help("Number of unsupported trips without trip update in the "
+                      "GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_trip_update_without_trip_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_trip_update_without_trip_total")
+                .Help("Number of unsupported trip updates without trip in the "
+                      "GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_trip_resolve_error_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_trip_resolve_error_total")
+                .Help("Number of unresolved trips in the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_unsupported_schedule_relationship_ =
+            prometheus::BuildCounter()
+                .Name("nigiri_gtfsrt_unsupported_schedule_relationship_total")
+                .Help("Number of unsupported schedule relationships in the "
+                      "GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_feed_timestamp_ =
+            prometheus::BuildGauge()
+                .Name("nigiri_gtfsrt_feed_timestamp_seconds")
+                .Help("Timestamp of the GTFS-RT feed")
+                .Register(*prometheus_registry),
+        .gtfsrt_last_update_timestamp_ =
+            prometheus::BuildGauge()
+                .Name("nigiri_gtfsrt_last_update_timestamp_seconds")
+                .Help("Last update timestamp of the GTFS-RT feed")
+                .Register(*prometheus_registry)
+        //
+    });
   }
 
   void update_rtt(std::shared_ptr<n::rt_timetable> rtt) {
@@ -123,6 +256,7 @@ struct nigiri::impl {
   std::string initial_permalink_;
   std::vector<schedule_info> schedules_{};
   cista::hash_t hash_{0U};
+  std::unique_ptr<metrics> metrics_{};
 };
 
 nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
@@ -203,7 +337,7 @@ void nigiri::init(motis::module::registry& reg) {
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
                     return route(impl_->tags_, **impl_->tt_,
-                                 impl_->get_rtt().get(), msg);
+                                 impl_->get_rtt().get(), msg, *impl_->metrics_);
                   },
                   {});
 
@@ -212,7 +346,8 @@ void nigiri::init(motis::module::registry& reg) {
       reg.register_op(fmt::format("/nigiri/{}", prf_name),
                       [&, p = prf_idx, this](mm::msg_ptr const& msg) {
                         return route(impl_->tags_, **impl_->tt_,
-                                     impl_->get_rtt().get(), msg, p);
+                                     impl_->get_rtt().get(), msg,
+                                     *impl_->metrics_, p);
                       },
                       {});
     }
@@ -300,7 +435,7 @@ void nigiri::init(motis::module::registry& reg) {
 void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
   if (!gtfsrt_urls_.empty()) {
     impl_->gtfsrt_ = utl::to_vec(gtfsrt_urls_, [&](auto&& config) {
-      return gtfsrt{impl_->tags_, config};
+      return gtfsrt{impl_->tags_, config, *impl_->metrics_};
     });
     d.register_timer("RIS GTFS-RT Update",
                      boost::posix_time::seconds{gtfsrt_update_interval_sec_},
@@ -325,6 +460,7 @@ void nigiri::update_gtfsrt() {
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
     auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
     auto stats = n::rt::statistics{};
+    endpoint.metrics_->updates_requested_.Increment();
     try {
       auto const& body = f->val().body;
       if (debug_) {
@@ -333,15 +469,20 @@ void nigiri::update_gtfsrt() {
       }
       stats = n::rt::gtfsrt_update_buf(**impl_->tt_, *rtt, endpoint.src(), tag,
                                        body);
+      endpoint.metrics_->updates_successful_.Increment();
+      endpoint.metrics_->last_update_timestamp_.SetToCurrentTime();
     } catch (std::exception const& e) {
       stats.parser_error_ = true;
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
                           << e.what();
+      endpoint.metrics_->updates_error_.Increment();
     } catch (...) {
       stats.parser_error_ = true;
       LOG(logging::error) << "Unknown GTFS-RT update error (tag= " << tag
                           << ")";
+      endpoint.metrics_->updates_error_.Increment();
     }
+    endpoint.update_metrics(stats);
     statistics.emplace_back(stats);
   }
   impl_->update_rtt(rtt);
@@ -354,7 +495,9 @@ void nigiri::update_gtfsrt() {
 }
 
 void nigiri::import(motis::module::import_dispatcher& reg) {
-  impl_ = std::make_unique<impl>();
+  impl_ = std::make_unique<impl>(
+      get_shared_data<std::shared_ptr<prometheus::Registry>>(
+          to_res_id(mm::global_res_id::METRICS)));
   std::make_shared<mm::event_collector>(
       get_data_directory().generic_string(), "nigiri", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,

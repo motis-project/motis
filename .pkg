@@ -76,8 +76,8 @@
   commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=master
-  commit=6c19c9682bacd1d532afb24baa9bdc6a3ea36768
+  branch=metrics
+  commit=23d28a64f38866987da7c5b3b96b7237c16b3ddd
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -86,3 +86,11 @@
   url=git@github.com:triptix-tech/adr.git
   branch=master
   commit=bef3f11a8c1642939e7047bcebf3d2f3528b23a3
+[prometheus-cpp]
+  url=git@github.com:motis-project/prometheus-cpp.git
+  branch=master
+  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[opentelemetry-cpp]
+  url=git@github.com:motis-project/opentelemetry-cpp.git
+  branch=main
+  commit=63ce4f99419b01bd969514a7cd7a5ba64c075c0d

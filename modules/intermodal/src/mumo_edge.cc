@@ -10,6 +10,7 @@
 #include "motis/module/message.h"
 
 #include "motis/intermodal/error.h"
+#include "motis/intermodal/metrics.h"
 
 using namespace geo;
 using namespace flatbuffers;
@@ -259,13 +260,14 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
                 appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 std::string const& mumo_stats_prefix,
-                ppr_profiles const& profiles) {
+                ppr_profiles const& profiles, metrics& metrics) {
   for (auto const& wrapper : *modes) {
     switch (wrapper->mode_type()) {
       case Mode_Foot: {
         auto const max_dur =
             reinterpret_cast<Foot const*>(wrapper->mode())->max_duration();
         auto const max_dist = max_dur * WALK_SPEED;
+        metrics.foot_modes_.Increment();
         osrm_edges(pos, max_dur, max_dist, mumo_type::FOOT, search_dir,
                    appender);
         break;
@@ -275,6 +277,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto const max_dur =
             reinterpret_cast<Bike const*>(wrapper->mode())->max_duration();
         auto const max_dist = max_dur * BIKE_SPEED;
+        metrics.bike_modes_.Increment();
         osrm_edges(pos, max_dur, max_dist, mumo_type::BIKE, search_dir,
                    appender);
         break;
@@ -284,6 +287,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto const max_dur =
             reinterpret_cast<Car const*>(wrapper->mode())->max_duration();
         auto const max_dist = max_dur * CAR_SPEED;
+        metrics.car_modes_.Increment();
         osrm_edges(pos, max_dur, max_dist, mumo_type::CAR, search_dir,
                    appender);
         break;
@@ -292,12 +296,14 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
       case Mode_FootPPR: {
         auto const options =
             reinterpret_cast<FootPPR const*>(wrapper->mode())->search_options();
+        metrics.foot_ppr_modes_.Increment();
         ppr_edges(pos, options, search_dir, appender, profiles);
         break;
       }
 
       case Mode_CarParking: {
         auto const cp = reinterpret_cast<CarParking const*>(wrapper->mode());
+        metrics.car_parking_modes_.Increment();
         car_parking_edges(pos, cp->max_car_duration(), cp->ppr_search_options(),
                           search_dir, appender, mumo_stats_appender,
                           mumo_stats_prefix);
@@ -306,6 +312,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
 
       case Mode_GBFS: {
         auto const gbfs = reinterpret_cast<GBFS const*>(wrapper->mode());
+        metrics.gbfs_modes_.Increment();
         gbfs_edges(appender, search_dir, pos, direct_target,
                    gbfs->provider()->str(), gbfs->max_walk_duration() / 60.0,
                    gbfs->max_vehicle_duration() / 60.0);
@@ -320,17 +327,19 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
 void make_starts(IntermodalRoutingRequest const* req, latlng const& pos,
                  latlng const& direct_target, appender_fun const& appender,
                  mumo_stats_appender_fun const& mumo_stats_appender,
-                 ppr_profiles const& profiles) {
+                 ppr_profiles const& profiles, metrics& metrics) {
   make_edges(req->start_modes(), pos, direct_target, SearchDir_Forward,
-             appender, mumo_stats_appender, "intermodal.start.", profiles);
+             appender, mumo_stats_appender, "intermodal.start.", profiles,
+             metrics);
 }
 
 void make_dests(IntermodalRoutingRequest const* req, latlng const& pos,
                 latlng const& direct_target, appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
-                ppr_profiles const& profiles) {
+                ppr_profiles const& profiles, metrics& metrics) {
   make_edges(req->destination_modes(), pos, direct_target, SearchDir_Backward,
-             appender, mumo_stats_appender, "intermodal.dest.", profiles);
+             appender, mumo_stats_appender, "intermodal.dest.", profiles,
+             metrics);
 }
 
 void remove_intersection(std::vector<mumo_edge>& starts,

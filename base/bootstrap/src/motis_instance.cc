@@ -4,8 +4,11 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 
 #include "fmt/ranges.h"
+
+#include "prometheus/registry.h"
 
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"
@@ -25,6 +28,8 @@ using namespace motis::logging;
 namespace motis::bootstrap {
 
 motis_instance::motis_instance() : controller{build_modules()} {
+  emplace_data(to_res_id(global_res_id::METRICS),
+               std::make_shared<prometheus::Registry>());
   for (auto& m : modules_) {
     m->set_shared_data(this);
   }

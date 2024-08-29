@@ -19,6 +19,7 @@
 #include "motis/core/access/error.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/nigiri/location.h"
+#include "motis/nigiri/metrics.h"
 #include "motis/nigiri/nigiri_to_motis_journey.h"
 #include "motis/nigiri/unixtime_conv.h"
 
@@ -149,7 +150,7 @@ n::routing::clasz_mask_t to_clasz_mask(fbs::Vector<std::uint8_t> const* v) {
 motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                              n::rt_timetable const* rtt,
                              motis::module::msg_ptr const& msg,
-                             n::profile_idx_t const prf_idx) {
+                             metrics& metrics, n::profile_idx_t const prf_idx) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
 
@@ -167,6 +168,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   }();
 
   if (req->start_type() == routing::Start_PretripStart) {
+    metrics.pretrip_requests_.Increment();
     auto const start =
         reinterpret_cast<routing::PretripStart const*>(req->start());
     start_time = n::interval<n::unixtime_t>{
@@ -177,6 +179,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
     extend_interval_earlier = start->extend_interval_earlier();
     extend_interval_later = start->extend_interval_later();
   } else if (req->start_type() == routing::Start_OntripStationStart) {
+    metrics.ontrip_station_requests_.Increment();
     auto const start =
         reinterpret_cast<routing::OntripStationStart const*>(req->start());
     start_time = to_nigiri_unixtime(start->departure_time());
@@ -186,6 +189,7 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   } else {
     throw utl::fail("OntripTrainStart not supported");
   }
+  metrics.via_count_.Observe(req->via()->size());
   auto const destination_station =
       get_location_idx(tags, tt, req->destination()->id()->str());
 
@@ -351,6 +355,17 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   raptor_stats = r.algo_stats_;
   search_interval = r.interval_;
   MOTIS_STOP_TIMING(routing);
+
+  auto const reconstruction_errors = utl::count_if(
+      *r.journeys_, [](n::routing::journey const& j) { return j.error_; });
+
+  if (req->start_type() == routing::Start_PretripStart) {
+    metrics.pretrip_routing_time_.Observe(MOTIS_TIMING_S(routing));
+    metrics.pretrip_interval_extensions_.Observe(
+        static_cast<double>(search_stats.interval_extensions_));
+  } else if (req->start_type() == routing::Start_OntripStationStart) {
+    metrics.ontrip_station_routing_time_.Observe(MOTIS_TIMING_S(routing));
+  }
 
   return to_routing_response(tt, rtt, tags, journeys, search_interval,
                              search_stats, raptor_stats,
