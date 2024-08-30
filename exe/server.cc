@@ -41,98 +41,62 @@ namespace json = boost::json;
 
 using namespace icc;
 
-int main(int ac, char** av) {
-  auto tt_path = fs::path{"out"};
-  auto osr_path = fs::path{"osr"};
-  auto fasta_path = fs::path{"fasta.json"};
-  auto adr_path = fs::path{"adr.cista"};
-
-  auto desc = bpo::options_description{"Options"};
-  desc.add_options()  //
-      ("help,h", "produce this help message")  //
-      ("tt", bpo::value(&tt_path)->default_value(tt_path), "timetable path")  //
-      ("osr", bpo::value(&osr_path)->default_value(osr_path), "osr data")  //
-      ("adr", bpo::value(&adr_path)->default_value(adr_path), "adr path")  //
-      ("fasta", bpo::value(&fasta_path)->default_value(fasta_path),
-       "fasta path");
-  auto const pos = bpo::positional_options_description{}
-                       .add("fasta", 1)
-                       .add("osr", 2)
-                       .add("tt", 3);
-
-  auto vm = bpo::variables_map{};
-  bpo::store(
-      bpo::command_line_parser(ac, av).options(desc).positional(pos).run(), vm);
-  bpo::notify(vm);
-
-  if (vm.count("help") != 0U) {
-    std::cout << desc << "\n";
-    return 0;
+template <typename T>
+bool is_not_null(T const& x) {
+  if constexpr (std::is_pointer_v<std::decay_t<T>>) {
+    return x != nullptr;
+  } else {
+    return true;
   }
+}
 
-  // Read osr.
-  fmt::println("loading ways");
-  auto const w = osr::ways{osr_path, cista::mmap::protection::READ};
+template <typename T>
+concept HasDeref = requires(T t) { *t; };
 
-  fmt::println("loading platforms");
-  auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
-  pl.build_rtree(w);
+template <typename T>
+auto& deref(T& t) {
+  if constexpr (HasDeref<T>) {
+    return *t;
+  } else {
+    return t;
+  }
+}
 
-  fmt::println("building lookup");
-  auto l = osr::lookup{w};
+template <typename T, typename... Args>
+void GET(net::query_router& r, std::string target, Args&&... args) {
+  if ((is_not_null(args) && ...)) {
+    r.get(std::move(target), T{deref(args)...});
+  }
+}
 
-  // Read elevators.
-  auto const fasta = utl::read_file(fasta_path.generic_string().c_str());
-  if (!fasta.has_value()) {
-    fmt::println("could not read fasta file {}", fasta_path);
+template <typename T, typename... Args>
+void POST(net::query_router& r, std::string target, Args&&... args) {
+  if ((is_not_null(args) && ...)) {
+    r.post(std::move(target), T{deref(args)...});
+  }
+}
+
+int main(int ac, char** av) {
+  if (ac != 2U) {
     return 1;
   }
-  auto const elevator_nodes = get_elevator_nodes(w);
-  auto e = std::make_shared<elevators>(w, elevator_nodes,
-                                       parse_fasta(std::string_view{*fasta}));
 
-  // Read timetable.
-  fmt::println("reading timetable");
-  auto const elevator_footpath_map =
-      read_elevator_footpath_map(tt_path / "elevator_footpath_map.bin");
-  auto tt = n::timetable::read(cista::memory_holder{
-      cista::file{(tt_path / "tt.bin").generic_string().c_str(), "r"}
-          .content()});
-  tt->locations_.resolve_timezones();
-
-  // Create matches location_idx_t => platform_idx_t
-  fmt::println("creating matches");
-  auto const matches = get_matches(*tt, pl, w);
-
-  // Create location r-tree.
-  fmt::println("creating r-tree");
-  auto const loc_rtree = create_location_rtree(*tt);
-
-  // Create time-dependent footpaths.
-  fmt::println("updating time-dependent footpaths");
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
-  auto rtt =
-      std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(*tt, today));
-  icc::update_rtt_td_footpaths(w, l, pl, *tt, loc_rtree, *e,
-                               *elevator_footpath_map, matches, *rtt);
-
+  auto d = data{av[1]};
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto qr = net::query_router{}
-                .post("/api/matches", ep::matches{loc_rtree, *tt, w, l, pl})
-                .post("/api/elevators", ep::elevators{e, w, l})
-                .post("/api/route", ep::osr_routing{w, l, e})
-                .post("/api/levels", ep::levels{w, l})
-                .post("/api/platforms", ep::platforms{w, l, pl})
-                .post("/api/graph", ep::graph{w, l})
-                .post("/api/footpaths",
-                      ep::footpaths{*tt, w, l, pl, loc_rtree, matches, e})
-                .post("/api/update_elevator",
-                      ep::update_elevator{*tt, w, l, pl, loc_rtree,
-                                          elevator_nodes, matches, e, rtt})
-                .get("/api/v1/plan",
-                     ep::routing{w, l, pl, *tt, loc_rtree, rtt, e, matches});
+  auto qr = net::query_router{};
+  //                .post("/api/matches", ep::matches{d})
+  //                .post("/api/elevators", ep::elevators{d})
+  //                .post("/api/route", ep::osr_routing{d})
+  //                .post("/api/levels", ep::levels{d})
+  //                .post("/api/platforms", ep::platforms{d})
+  //                .post("/api/graph", ep::graph{d})
+  //                .post("/api/footpaths", ep::footpaths{d})
+  //                .post("/api/update_elevator", ep::update_elevator{d})
+  //                .get("/api/v1/plan", ep::routing{d});
+
+  POST<ep::matches>(qr, "/api/matches", d.location_rtee_, d.tt(), d.w_, d.l_,
+                    d.pl_);
 
   qr.serve_files("ui/build");
   qr.enable_cors();

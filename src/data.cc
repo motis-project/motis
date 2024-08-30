@@ -26,7 +26,7 @@ data::data(std::filesystem::path const& p) {
                 .content()}));
     (*tt_)->locations_.resolve_timezones();
     location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
-        create_location_rtree(tt()));
+        create_location_rtree(*tt()));
   }
 
   if (fs::is_directory(p / "osr")) {
@@ -47,10 +47,10 @@ data::data(std::filesystem::path const& p) {
 
   if (has_tt() && has_osr()) {
     matches_ =
-        std::make_unique<platform_matches_t>(get_matches(tt(), *pl_, *w_));
+        std::make_unique<platform_matches_t>(get_matches(*tt(), *pl_, *w_));
     auto const elevator_footpath_map =
         read_elevator_footpath_map(p / "elevator_footpath_map.bin");
-    icc::update_rtt_td_footpaths(*w_, *l_, *pl_, tt(), *location_rtee_,
+    icc::update_rtt_td_footpaths(*w_, *l_, *pl_, *tt(), *location_rtee_,
                                  *elevator_footpath_map, *matches_, *rt_);
   }
 }

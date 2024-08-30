@@ -46,7 +46,13 @@ struct data {
   bool has_osr() const { return w_ != nullptr; }
   bool has_platforms() const { return pl_ != nullptr; }
 
-  nigiri::timetable const& tt() const { return **tt_; }
+  nigiri::timetable const* tt() const {
+    return tt_ != nullptr ? tt_->get() : nullptr;
+  }
+
+  auto cista_members() const {
+    return std::tie(w_, pl_, l_, tt_, location_rtee_, matches_, rt_);
+  }
 
   ptr<osr::ways> w_;
   ptr<osr::platforms> pl_;
