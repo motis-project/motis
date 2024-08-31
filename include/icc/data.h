@@ -39,16 +39,14 @@ struct rt {
 };
 
 struct data {
-  explicit data(std::filesystem::path const&);
+  static void load(std::filesystem::path const&, data&);
   ~data();
 
-  bool has_tt() const { return tt_ != nullptr; }
+  bool has_tt() const { return tt_.get() != nullptr; }
   bool has_osr() const { return w_ != nullptr; }
   bool has_platforms() const { return pl_ != nullptr; }
 
-  nigiri::timetable const* tt() const {
-    return tt_ != nullptr ? tt_->get() : nullptr;
-  }
+  nigiri::timetable const* tt() const { return tt_.get(); }
 
   auto cista_members() const {
     return std::tie(w_, pl_, l_, tt_, location_rtee_, matches_, rt_);
@@ -57,7 +55,7 @@ struct data {
   ptr<osr::ways> w_;
   ptr<osr::platforms> pl_;
   ptr<osr::lookup> l_;
-  ptr<cista::wrapped<nigiri::timetable>> tt_;
+  cista::wrapped<nigiri::timetable> tt_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
   ptr<platform_matches_t> matches_;
   std::shared_ptr<rt> rt_;

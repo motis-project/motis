@@ -18,40 +18,40 @@ namespace n = nigiri;
 
 namespace icc {
 
-data::data(std::filesystem::path const& p) {
+void data::load(std::filesystem::path const& p, data& d) {
   if (fs::is_regular_file(p / "tt.bin")) {
-    tt_ = std::make_unique<cista::wrapped<n::timetable>>(
-        n::timetable::read(cista::memory_holder{
-            cista::file{(p / "tt.bin").generic_string().c_str(), "r"}
-                .content()}));
-    (*tt_)->locations_.resolve_timezones();
-    location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
-        create_location_rtree(*tt()));
+    d.tt_ = n::timetable::read(cista::memory_holder{
+        cista::file{(p / "tt.bin").generic_string().c_str(), "r"}.content()});
+    d.tt_->locations_.resolve_timezones();
+    d.location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
+        create_location_rtree(*d.tt()));
   }
 
   if (fs::is_directory(p / "osr")) {
-    w_ = std::make_unique<osr::ways>(p / "osr", cista::mmap::protection::READ);
-    l_ = std::make_unique<osr::lookup>(*w_);
+    d.w_ =
+        std::make_unique<osr::ways>(p / "osr", cista::mmap::protection::READ);
+    d.l_ = std::make_unique<osr::lookup>(*d.w_);
 
     if (fs::is_regular_file(p / "osr" / "node_pos.bin")) {
-      pl_ = std::make_unique<osr::platforms>(p / "osr",
-                                             cista::mmap::protection::READ);
+      d.pl_ = std::make_unique<osr::platforms>(p / "osr",
+                                               cista::mmap::protection::READ);
     }
   }
 
-  if (has_tt() || has_osr()) {
-    rt_ = std::make_shared<rt>();
+  if (d.has_tt() || d.has_osr()) {
+    d.rt_ = std::make_shared<rt>();
   }
 
   // TODO(felix) init rt->e
 
-  if (has_tt() && has_osr()) {
-    matches_ =
-        std::make_unique<platform_matches_t>(get_matches(*tt(), *pl_, *w_));
+  if (d.has_tt() && d.has_osr()) {
+    d.matches_ = std::make_unique<platform_matches_t>(
+        get_matches(*d.tt(), *d.pl_, *d.w_));
     auto const elevator_footpath_map =
         read_elevator_footpath_map(p / "elevator_footpath_map.bin");
-    icc::update_rtt_td_footpaths(*w_, *l_, *pl_, *tt(), *location_rtee_,
-                                 *elevator_footpath_map, *matches_, *rt_);
+    icc::update_rtt_td_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt(),
+                                 *d.location_rtee_, *elevator_footpath_map,
+                                 *d.matches_, *d.rt_);
   }
 }
 

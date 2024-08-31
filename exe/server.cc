@@ -7,6 +7,7 @@
 #include "net/web_server/query_router.h"
 #include "net/web_server/web_server.h"
 
+#include "utl/init_from.h"
 #include "utl/read_file.h"
 
 #include "net/run.h"
@@ -48,10 +49,10 @@ void GET(net::query_router& r, std::string target, Args&&... args) {
   }
 }
 
-template <typename T, typename... Args>
-void POST(net::query_router& r, std::string target, Args&&... args) {
-  if ((is_not_null(args) && ...)) {
-    r.post(std::move(target), T{deref(args)...});
+template <typename T, typename From>
+void POST(net::query_router& r, std::string target, From& from) {
+  if (auto const x = utl::init_from<T>(from); x.has_value()) {
+    r.post(std::move(target), std::move(*x));
   }
 }
 
@@ -60,7 +61,9 @@ int main(int ac, char** av) {
     return 1;
   }
 
-  auto d = data{av[1]};
+  auto d = data{};
+  data::load(av[1], d);
+
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
   auto qr = net::query_router{};
