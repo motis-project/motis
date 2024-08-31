@@ -269,8 +269,9 @@ n::routing::query get_start_time(api::plan_params const& query) {
 }
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
-  auto const rtt = rtt_;
-  auto const e = e_;
+  auto const rt = rt_;
+  auto const rtt = rt->rtt_.get();
+  auto const e = rt_->e_.get();
   if (blocked.get() == nullptr) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_.n_nodes()});
   }
@@ -355,7 +356,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   UTL_START_TIMING(nigiri);
   auto const r = n::routing::raptor_search(
-      tt_, rtt.get(), *search_state, *raptor_state, std::move(q),
+      tt_, rtt, *search_state, *raptor_state, std::move(q),
       query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
       std::nullopt);
   UTL_STOP_TIMING(nigiri);
@@ -390,7 +391,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           utl::to_vec(*r.journeys_,
                       [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                         return journey_to_response(
-                            w_, l_, tt_, pl_, *e, rtt.get(), matches_,
+                            w_, l_, tt_, pl_, *e, rtt, matches_,
                             query.wheelchair_, j, start, dest, cache, *blocked);
                       }),
       .previousPageCursor_ = fmt::format(

@@ -2,15 +2,7 @@
 
 #include "boost/json/value.hpp"
 
-#include "nigiri/timetable.h"
-
-#include "osr/lookup.h"
-#include "osr/platforms.h"
-#include "osr/ways.h"
-
-#include "icc/elevators/elevators.h"
-#include "icc/point_rtree.h"
-#include "icc/types.h"
+#include "icc/data.h"
 
 namespace icc::ep {
 
@@ -23,7 +15,7 @@ struct footpaths {
   osr::platforms const& pl_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;
-  elevators_ptr_t const& e_;
+  std::shared_ptr<rt> rt_;
 };
 
 }  // namespace icc::ep

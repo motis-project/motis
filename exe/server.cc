@@ -8,14 +8,8 @@
 #include "net/web_server/web_server.h"
 
 #include "utl/init_from.h"
-#include "utl/read_file.h"
 
 #include "net/run.h"
-
-#include "osr/lookup.h"
-
-#include "nigiri/rt/create_rt_timetable.h"
-#include "nigiri/rt/rt_timetable.h"
 
 #include "icc/data.h"
 #include "icc/elevators/elevators.h"
@@ -28,24 +22,16 @@
 #include "icc/endpoints/platforms.h"
 #include "icc/endpoints/routing.h"
 #include "icc/endpoints/update_elevator.h"
-#include "icc/match_platforms.h"
-#include "icc/point_rtree.h"
-#include "icc/tt_location_rtree.h"
-#include "icc/update_rtt_td_footpaths.h"
 
 namespace asio = boost::asio;
-namespace http = boost::beast::http;
-namespace n = nigiri;
-namespace fs = std::filesystem;
 namespace bpo = boost::program_options;
-namespace json = boost::json;
 
 using namespace icc;
 
-template <typename T, typename... Args>
-void GET(net::query_router& r, std::string target, Args&&... args) {
-  if ((is_not_null(args) && ...)) {
-    r.get(std::move(target), T{deref(args)...});
+template <typename T, typename From>
+void GET(net::query_router& r, std::string target, From& from) {
+  if (auto const x = utl::init_from<T>(from); x.has_value()) {
+    r.get(std::move(target), std::move(*x));
   }
 }
 
@@ -67,17 +53,16 @@ int main(int ac, char** av) {
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
   auto qr = net::query_router{};
-  //                .post("/api/matches", ep::matches{d})
-  //                .post("/api/elevators", ep::elevators{d})
-  //                .post("/api/route", ep::osr_routing{d})
-  //                .post("/api/levels", ep::levels{d})
-  //                .post("/api/platforms", ep::platforms{d})
-  //                .post("/api/graph", ep::graph{d})
-  //                .post("/api/footpaths", ep::footpaths{d})
-  //                .post("/api/update_elevator", ep::update_elevator{d})
-  //                .get("/api/v1/plan", ep::routing{d});
 
   POST<ep::matches>(qr, "/api/matches", d);
+  POST<ep::elevators>(qr, "/api/elevators", d);
+  POST<ep::osr_routing>(qr, "/api/route", d);
+  POST<ep::levels>(qr, "/api/levels", d);
+  POST<ep::platforms>(qr, "/api/platforms", d);
+  POST<ep::graph>(qr, "/api/graph", d);
+  POST<ep::footpaths>(qr, "/api/footpaths", d);
+  POST<ep::update_elevator>(qr, "/api/update_elevator", d);
+  GET<ep::routing>(qr, "/api/v1/plan", d);
 
   qr.serve_files("ui/build");
   qr.enable_cors();

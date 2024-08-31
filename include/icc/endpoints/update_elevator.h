@@ -2,15 +2,7 @@
 
 #include "boost/json/value.hpp"
 
-#include "osr/lookup.h"
-#include "osr/platforms.h"
-#include "osr/types.h"
-#include "osr/ways.h"
-
-#include "nigiri/timetable.h"
-
-#include "icc/elevators/elevators.h"
-#include "icc/types.h"
+#include "icc/data.h"
 
 namespace icc::ep {
 
@@ -23,9 +15,8 @@ struct update_elevator {
   osr::platforms const& pl_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   hash_set<osr::node_idx_t> const& elevator_nodes_;
-  vector_map<nigiri::location_idx_t, osr::platform_idx_t> matches_;
-  elevators_ptr_t& e_;
-  rtt_ptr_t& rtt_;
+  platform_matches_t matches_;
+  std::shared_ptr<rt>& rt_;
 };
 
 }  // namespace icc::ep

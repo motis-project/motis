@@ -2,9 +2,7 @@
 
 #include "boost/json/value.hpp"
 
-#include "osr/lookup.h"
-#include "osr/platforms.h"
-#include "osr/ways.h"
+#include "icc/data.h"
 
 namespace icc::ep {
 

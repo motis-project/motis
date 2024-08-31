@@ -2,9 +2,7 @@
 
 #include "boost/json/value.hpp"
 
-#include "osr/lookup.h"
-#include "osr/ways.h"
-
+#include "icc/data.h"
 #include "icc/elevators/elevators.h"
 
 namespace icc::ep {
@@ -14,7 +12,7 @@ struct osr_routing {
 
   osr::ways const& w_;
   osr::lookup const& l_;
-  elevators_ptr_t const& e_;
+  std::shared_ptr<rt> const& rt_;
 };
 
 }  // namespace icc::ep

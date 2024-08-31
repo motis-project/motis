@@ -3,17 +3,9 @@
 #include "boost/json/value.hpp"
 
 #include "nigiri/routing/query.h"
-#include "nigiri/timetable.h"
-
-#include "osr/lookup.h"
-#include "osr/platforms.h"
-#include "osr/ways.h"
 
 #include "icc-api/icc-api.h"
-#include "icc/compute_footpaths.h"
-#include "icc/elevators/elevators.h"
-#include "icc/point_rtree.h"
-#include "icc/types.h"
+#include "icc/data.h"
 
 namespace icc::ep {
 
@@ -41,9 +33,8 @@ struct routing {
   osr::platforms const& pl_;
   nigiri::timetable const& tt_;
   point_rtree<nigiri::location_idx_t> const& loc_tree_;
-  rtt_ptr_t const& rtt_;
-  elevators_ptr_t const& e_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;
+  std::shared_ptr<rt> const& rt_;
 };
 
 }  // namespace icc::ep

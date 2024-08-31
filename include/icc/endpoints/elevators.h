@@ -4,9 +4,7 @@
 
 #include "nigiri/types.h"
 
-#include "osr/lookup.h"
-#include "osr/ways.h"
-
+#include "icc/data.h"
 #include "icc/elevators/elevators.h"
 
 namespace icc::ep {
@@ -14,7 +12,7 @@ namespace icc::ep {
 struct elevators {
   boost::json::value operator()(boost::json::value const&) const;
 
-  elevators_ptr_t const& e_;
+  std::shared_ptr<rt> const& rt_;
   osr::ways const& w_;
   osr::lookup const& l_;
 };

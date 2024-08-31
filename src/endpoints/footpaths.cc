@@ -4,6 +4,7 @@
 #include "osr/routing/route.h"
 
 #include "icc/constants.h"
+#include "icc/elevators/elevators.h"
 #include "icc/elevators/match_elevator.h"
 #include "icc/get_loc.h"
 #include "icc/match_platforms.h"
@@ -43,7 +44,9 @@ struct fp {
 };
 
 json::value footpaths::operator()(json::value const& query) const {
-  auto const e = e_;
+  auto const rt = rt_;
+  auto const e = rt->e_.get();
+
   auto const q = query.as_object();
   auto const l =
       tt_.locations_

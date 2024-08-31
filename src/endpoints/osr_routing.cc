@@ -18,6 +18,9 @@ osr::location parse_location(json::value const& v) {
 }
 
 json::value osr_routing::operator()(json::value const& query) const {
+  auto const rt = rt_;
+  auto const e = rt->e_.get();
+
   auto const& q = query.as_object();
   auto const profile_it = q.find("profile");
   auto const profile =
@@ -29,7 +32,6 @@ json::value osr_routing::operator()(json::value const& query) const {
                                              !direction_it->value().is_string()
                                          ? to_str(osr::direction::kForward)
                                          : direction_it->value().as_string());
-  auto const e = e_.get();
   auto const from = parse_location(q.at("start"));
   auto const to = parse_location(q.at("destination"));
   auto const max_it = q.find("max");

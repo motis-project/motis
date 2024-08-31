@@ -1,16 +1,9 @@
 #include "icc/endpoints/update_elevator.h"
 
-#include "utl/helpers/algorithm.h"
-#include "utl/parallel_for.h"
-#include "utl/zip.h"
-
-#include "osr/routing/profiles/foot.h"
-#include "osr/routing/route.h"
-
-#include "nigiri/footpath.h"
 #include "nigiri/rt/create_rt_timetable.h"
 
 #include "icc/constants.h"
+#include "icc/elevators/elevators.h"
 #include "icc/get_loc.h"
 #include "icc/update_rtt_td_footpaths.h"
 
@@ -25,7 +18,10 @@ json::value update_elevator::operator()(json::value const& query) const {
   auto const new_status = q.at("status").as_string() != "INACTIVE";
   auto const new_out_of_service = parse_out_of_service(q);
 
-  auto const e = e_.get();
+  auto const rt_copy = rt_;
+  auto const e = rt_copy->e_.get();
+  auto const rtt = rt_copy->rtt_.get();
+
   auto elevators_copy = e->elevators_;
   auto const it =
       utl::find_if(elevators_copy, [&](auto&& x) { return x.id_ == id; });
@@ -45,15 +41,14 @@ json::value update_elevator::operator()(json::value const& query) const {
                          tasks.emplace(l, osr::direction::kBackward);
                        });
 
-  auto new_e = std::make_shared<elevators>(w_, elevator_nodes_,
-                                           std::move(elevators_copy));
-  auto new_rtt = std::make_shared<n::rt_timetable>(
-      n::rt::create_rt_timetable(tt_, rtt_->base_day_));
-  update_rtt_td_footpaths(w_, l_, pl_, tt_, loc_rtree_, *new_e, matches_, tasks,
-                          rtt_.get(), *new_rtt);
+  auto new_e = elevators{w_, elevator_nodes_, std::move(elevators_copy)};
+  auto new_rtt = n::rt::create_rt_timetable(tt_, rtt->base_day_);
+  update_rtt_td_footpaths(w_, l_, pl_, tt_, loc_rtree_, new_e, matches_, tasks,
+                          rtt, new_rtt);
 
-  e_ = std::move(new_e);
-  rtt_ = std::move(new_rtt);
+  rt_ = std::make_shared<rt>(
+      rt{.rtt_ = std::make_unique<n::rt_timetable>(std::move(new_rtt)),
+         .e_ = std::make_unique<elevators>(std::move(new_e))});
 
   return json::string{{"success", true}};
 }
