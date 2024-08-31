@@ -41,27 +41,6 @@ namespace json = boost::json;
 
 using namespace icc;
 
-template <typename T>
-bool is_not_null(T const& x) {
-  if constexpr (std::is_pointer_v<std::decay_t<T>>) {
-    return x != nullptr;
-  } else {
-    return true;
-  }
-}
-
-template <typename T>
-concept HasDeref = requires(T t) { *t; };
-
-template <typename T>
-auto& deref(T& t) {
-  if constexpr (HasDeref<T>) {
-    return *t;
-  } else {
-    return t;
-  }
-}
-
 template <typename T, typename... Args>
 void GET(net::query_router& r, std::string target, Args&&... args) {
   if ((is_not_null(args) && ...)) {
@@ -95,8 +74,7 @@ int main(int ac, char** av) {
   //                .post("/api/update_elevator", ep::update_elevator{d})
   //                .get("/api/v1/plan", ep::routing{d});
 
-  POST<ep::matches>(qr, "/api/matches", d.location_rtee_, d.tt(), d.w_, d.l_,
-                    d.pl_);
+  POST<ep::matches>(qr, "/api/matches", d);
 
   qr.serve_files("ui/build");
   qr.enable_cors();
