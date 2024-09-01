@@ -43,12 +43,8 @@ void POST(net::query_router& r, std::string target, From& from) {
 }
 
 int main(int ac, char** av) {
-  if (ac != 2U) {
-    return 1;
-  }
-
   auto d = data{};
-  data::load(av[1], d);
+  data::load(ac == 2U ? av[1] : "data", d);
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};

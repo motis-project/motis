@@ -4,6 +4,7 @@
 
 #include "icc/constants.h"
 #include "icc/elevators/elevators.h"
+#include "icc/elevators/parse_fasta.h"
 #include "icc/get_loc.h"
 #include "icc/update_rtt_td_footpaths.h"
 

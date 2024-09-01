@@ -57,7 +57,7 @@ struct data {
   ptr<osr::lookup> l_;
   cista::wrapped<nigiri::timetable> tt_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
-  hash_set<osr::node_idx_t> elevator_nodes_;
+  ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<platform_matches_t> matches_;
   std::shared_ptr<rt> rt_;
 };

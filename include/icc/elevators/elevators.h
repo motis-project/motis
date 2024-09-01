@@ -1,12 +1,8 @@
 #pragma once
 
-#include <memory>
-#include <string_view>
-
-#include "osr/ways.h"
-
+#include "icc/data.h"
 #include "icc/elevators/match_elevator.h"
-#include "icc/elevators/parse_fasta.h"
+#include "icc/point_rtree.h"
 
 namespace icc {
 
@@ -23,7 +19,5 @@ struct elevators {
   point_rtree<elevator_idx_t> elevators_rtree_;
   osr::bitvec<osr::node_idx_t> blocked_;
 };
-
-using elevators_ptr_t = std::shared_ptr<elevators>;
 
 }  // namespace icc
