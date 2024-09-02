@@ -46,6 +46,7 @@ api::Place to_place(n::timetable const& tt, n::location_idx_t const l) {
       is_track ? std::optional{std::string{tt.locations_.names_.at(l).view()}}
                : std::nullopt;
   return {.name_ = std::string{tt.locations_.names_[p].view()},
+          .stopId_ = std::string{tt.locations_.ids_[l].view()},
           .lat_ = pos.lat_,
           .lon_ = pos.lng_,
           .track_ = track,

@@ -196,6 +196,42 @@ ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
 
+constexpr auto const kTest = R"(
+# agency.txt
+agency_id,agency_name,agency_url,agency_timezone,agency_phone
+12681,DB Fernverkehr AG,https://www.delfi.de,Europe/Berlin,
+
+# routes.txt
+route_long_name,route_short_name,agency_id,route_desc,route_type,route_id,route_color,route_text_color
+,11,12681,,101,162289_101,,
+
+# trips.txt
+route_id,service_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id,trip_id,bikes_allowed
+162289_101,13476,S+U Gesundbrunnen Bhf (Berlin),00698,1,,17410,2489005706,
+
+# stop_times.txt
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type
+2489005706,21:51:00,21:51:00,de:09162:100:11:15,0,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,22:16:00,22:18:00,de:09761:100,1,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,22:47:00,22:49:00,de:09774:2600,2,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,23:01:00,23:03:00,de:08421:1008,3,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,24:01:00,24:11:00,de:08111:6115_G,4,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,25:23:00,25:27:00,de:08221:1160,5,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,26:12:00,26:15:00,de:06411:4734:62:62,6,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,26:36:00,26:49:00,de:06412:10:15:3,7,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,28:45:00,28:47:00,de:16056:8010097,8,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,29:23:00,30:08:00,de:16051:8010101,9,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,30:38:00,30:40:00,de:15002:8010159,10,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,30:54:00,30:56:00,de:15082:8010050,11,S+U Gesundbrunnen Bhf (Berlin),,
+2489005706,31:47:00,31:49:00,de:11000:900058101:3:55,12,S+U Gesundbrunnen Bhf (Berlin),1,
+2489005706,31:55:00,31:59:00,de:11000:900003200:2:52,13,S+U Gesundbrunnen Bhf (Berlin),1,
+2489005706,32:03:00,32:03:00,de:11000:900007102:4:57,14,S+U Gesundbrunnen Bhf (Berlin),,
+
+# calendar.txt
+monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date,service_id
+1,1,1,1,1,1,1,20240429,20241207,13476
+)";
+
 void print_short(std::ostream& out, api::Itinerary const& j) {
   auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
     auto const u = std::chrono::time_point<std::chrono::system_clock>{
