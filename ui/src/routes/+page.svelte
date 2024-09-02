@@ -64,9 +64,11 @@
 	);
 
 	let showPlatforms = $state(false);
-	let platforms = $derived.by(async () =>
-		showPlatforms && bounds ? getPlatforms(bounds, level) : null
-	);
+	let platforms = $state<null | any>(null);
+	$effect(async () => {
+		platforms = showPlatforms && bounds ? getPlatforms(bounds, level) : null;
+	});
+	$inspect(showPlatforms, platforms);
 
 	let showGraph = $state(false);
 	let graph = $state<null | any>(null);
@@ -688,33 +690,43 @@
 		{/await}
 	{/if}
 
-	{#await platforms then p}
-		<GeoJSON id="platforms" data={p}>
-			<Layer
-				id="platform-way"
-				type="line"
-				layout={{
-					'line-join': 'round',
-					'line-cap': 'round'
-				}}
-				filter={['all', ['==', 'type', 'way'], ['any', ['!has', 'level'], ['==', 'level', level]]]}
-				paint={{
-					'line-color': '#00d924',
-					'line-width': 3
-				}}
-			/>
-			<Layer
-				id="platform-node"
-				type="circle"
-				layout={{}}
-				filter={['all', ['==', 'type', 'node'], ['any', ['!has', 'level'], ['==', 'level', level]]]}
-				paint={{
-					'circle-color': '#0700d9',
-					'circle-radius': 5
-				}}
-			/>
-		</GeoJSON>
-	{/await}
+	{#if platforms !== null}
+		{#await platforms then p}
+			<GeoJSON id="platforms" data={p}>
+				<Layer
+					id="platform-way"
+					type="line"
+					layout={{
+						'line-join': 'round',
+						'line-cap': 'round'
+					}}
+					filter={[
+						'all',
+						['==', 'type', 'way'],
+						['any', ['!has', 'level'], ['==', 'level', level]]
+					]}
+					paint={{
+						'line-color': '#00d924',
+						'line-width': 3
+					}}
+				/>
+				<Layer
+					id="platform-node"
+					type="circle"
+					layout={{}}
+					filter={[
+						'all',
+						['==', 'type', 'node'],
+						['any', ['!has', 'level'], ['==', 'level', level]]
+					]}
+					paint={{
+						'circle-color': '#0700d9',
+						'circle-radius': 5
+					}}
+				/>
+			</GeoJSON>
+		{/await}
+	{/if}
 
 	{#await route then r}
 		{#if r.type == 'FeatureCollection'}

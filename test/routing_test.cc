@@ -2,6 +2,8 @@
 
 #include <map>
 
+#include "utl/init_from.h"
+
 #include "nigiri/loader/gtfs/load_timetable.h"
 #include "nigiri/loader/init_finish.h"
 #include "nigiri/rt/create_rt_timetable.h"
@@ -15,8 +17,10 @@
 #include "osr/ways.h"
 
 #include "icc/compute_footpaths.h"
+#include "icc/data.h"
 #include "icc/elevators/elevators.h"
 #include "icc/elevators/match_elevator.h"
+#include "icc/elevators/parse_fasta.h"
 #include "icc/endpoints/routing.h"
 #include "icc/get_loc.h"
 #include "icc/match_platforms.h"
@@ -26,6 +30,7 @@
 namespace n = nigiri;
 namespace nl = nigiri::loader;
 namespace json = boost::json;
+namespace fs = std::filesystem;
 using namespace std::string_view_literals;
 using namespace icc;
 using namespace date;
@@ -147,7 +152,7 @@ DA_10,DA Hbf,49.87336,8.62926,0,DA,10
 FFM,FFM Hbf,50.10701,8.66341,1,,
 FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
 FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12
-FFM_U,FFM Hbf,50.107577,8.6638173,0,FFM,U4
+de:6412:10:6:1,FFM Hbf U-Bahn,50.107577,8.6638173,0,FFM,U4
 LANGEN,Langen,49.99359,8.65677,1,,1
 FFM_HAUPT,FFM Hauptwache,50.11403,8.67835,1,,
 FFM_HAUPT_U,Hauptwache U1/U2/U3/U8,50.11385,8.67912,0,FFM_HAUPT,
@@ -158,12 +163,14 @@ route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
 S3,DB,S3,,,109
 RB,DB,RB,,,106
 U4,DB,U4,,,402
+ICE,DB,ICE,,,101
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 S3,S1,S3,,
 RB,S1,RB,,
 U4,S1,U4,,
+ICE,S1,ICE,,
 
 # stop_times.txt
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
@@ -172,8 +179,10 @@ S3,01:20:00,01:20:00,FFM_HAUPT_S,2,0,0
 RB,00:35:00,00:35:00,DA_10,0,0,0
 RB,00:45:00,00:45:00,LANGEN,1,0,0
 RB,00:55:00,00:55:00,FFM_12,2,0,0
-U4,01:05:00,01:05:00,FFM_U,0,0,0
+U4,01:05:00,01:05:00,de:6412:10:6:1,0,0,0
 U4,01:10:00,01:10:00,FFM_HAUPT_U,1,0,0
+ICE,00:45:00,00:45:00,DA_10,0,0,0
+ICE,00:55:00,00:55:00,FFM_12,1,0,0
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -183,6 +192,7 @@ S1,20190501,1
 trip_id,start_time,end_time,headway_secs
 S3,01:15:00,25:15:00,3600
 RB,00:35:00,24:35:00,3600
+ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
 
@@ -226,43 +236,53 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
 }
 
 TEST(icc, routing) {
-  constexpr auto const kOsrPath = "test/test_case_osr";
+  CISTA_UNUSED_PARAM(kFastaJson)
 
-  // Load OSR.
-  osr::extract(true, "test/resources/test_case.osm.pbf", kOsrPath);
-  auto const w = osr::ways{kOsrPath, cista::mmap::protection::READ};
-  auto pl = osr::platforms{kOsrPath, cista::mmap::protection::READ};
-  auto const l = osr::lookup{w};
-  auto const elevator_nodes = get_elevator_nodes(w);
-  auto e =
-      std::make_shared<elevators>(w, elevator_nodes, parse_fasta(kFastaJson));
-  pl.build_rtree(w);
+  auto const data_path = fs::path{"test/data"};
 
-  // Load timetable.
-  auto tt = n::timetable{};
-  tt.date_range_ = {date::sys_days{2019_y / March / 25},
-                    date::sys_days{2019_y / November / 1}};
-  nl::register_special_stations(tt);
-  nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(kGTFS), tt);
-  nl::finalize(tt);
+  std::ofstream{data_path / "fasta.json"}.write(kFastaJson.data(),
+                                                kFastaJson.size());
 
-  auto const loc_rtree = create_location_rtree(tt);
+  {
+    // Load OSR.
+    auto const osr_path = data_path / "osr";
+    osr::extract(true, "test/resources/test_case.osm.pbf", osr_path);
+    auto const w = osr::ways{osr_path, cista::mmap::protection::READ};
+    auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
+    auto const l = osr::lookup{w};
+    auto const elevator_nodes = get_elevator_nodes(w);
+    pl.build_rtree(w);
 
-  // Compute footpaths.
-  auto const elevator_in_paths = compute_footpaths(tt, w, l, pl, true);
+    // Load assistance times.
+    auto assistance = n::loader::read_assistance(R"(name,lat,lng,time
+DA HBF,49.87260,8.63085,06:15-22:30
+FFM,50.10701,8.66341,06:15-22:30
+)");
 
-  // Match platforms.
-  auto const matches = get_matches(tt, pl, w);
+    // Load timetable.
+    auto tt = n::timetable{};
+    tt.date_range_ = {date::sys_days{2019_y / March / 25},
+                      date::sys_days{2019_y / November / 1}};
+    nl::register_special_stations(tt);
+    nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(kGTFS),
+                             tt, &assistance);
+    nl::finalize(tt);
 
-  // Init real-time timetable.
-  auto const today = date::sys_days{2019_y / May / 1};
-  auto rtt =
-      std::make_shared<n::rt_timetable>(n::rt::create_rt_timetable(tt, today));
-  update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, *e, elevator_in_paths,
-                          matches, *rtt);
+    fmt::println("computing footpaths");
+    auto const elevator_footpath_map = compute_footpaths(tt, w, l, pl, true);
 
-  // Instantiate routing endpoint.
-  auto const routing = ep::routing{w, l, pl, tt, loc_rtree, rtt, e, matches};
+    fmt::println("writing elevator footpaths");
+    write(data_path / "elevator_footpath_map.bin", elevator_footpath_map);
+
+    fmt::println("writing timetable");
+    tt.write(data_path / "tt.bin");
+  }
+
+  auto d = data{};
+  data::load(data_path, d);
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  std::cout << *d.tt() << "\n";
 
   // Route with wheelchair.
   {

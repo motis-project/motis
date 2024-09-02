@@ -138,7 +138,8 @@ api::Itinerary journey_to_response(
     auto const s = get_states_at(w, l, e, t, from.pos_);
     if (!s.has_value()) {
       // TODO(felix)
-      std::cout << "no state found\n";
+      fmt::println("no state found: profile={}, from={}, to={}\n",
+                   to_str(profile), fmt::streamed(from), fmt::streamed(to));
       return;
     }
 
@@ -187,8 +188,8 @@ api::Itinerary journey_to_response(
 
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
-      .startTime_ = to_ms(j.departure_time()),
-      .endTime_ = to_ms(j.arrival_time()),
+      .startTime_ = to_ms(j.legs_.front().dep_time_),
+      .endTime_ = to_ms(j.legs_.back().arr_time_),
       .transfers_ = std::max(
           0L, utl::count_if(j.legs_, [](auto&& leg) {
                 return holds_alternative<n::routing::journey::run_enter_exit>(

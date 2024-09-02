@@ -60,6 +60,9 @@ std::optional<std::pair<nodes_t, states_t>> get_states_at(
     n::unixtime_t const t,
     geo::latlng const& pos) {
   auto const [e_nodes, e_state_changes] = get_node_states(w, l, e, pos);
+  if (e_nodes.empty()) {
+    return std::pair{nodes_t{}, states_t{}};
+  }
   auto const it = std::lower_bound(
       begin(e_state_changes), end(e_state_changes), t,
       [&](auto&& a, n::unixtime_t const b) { return a.first < b; });

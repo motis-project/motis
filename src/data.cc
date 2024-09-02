@@ -36,6 +36,8 @@ void data::load(std::filesystem::path const& p, data& d) {
         std::chrono::system_clock::now());
     d.rt_->rtt_ = std::make_unique<n::rt_timetable>(
         n::rt::create_rt_timetable(*d.tt_, today));
+  } else {
+    fmt::println("{} not found -> not loading timetable", p / "tt.bin");
   }
 
   if (fs::is_directory(p / "osr")) {
@@ -50,6 +52,8 @@ void data::load(std::filesystem::path const& p, data& d) {
                                                cista::mmap::protection::READ);
       d.pl_->build_rtree(*d.w_);
     }
+  } else {
+    fmt::println("{} not found -> not loading street routing", p / "osr");
   }
 
   if (fs::is_regular_file(p / "fasta.json")) {
@@ -59,6 +63,9 @@ void data::load(std::filesystem::path const& p, data& d) {
 
     d.rt_->e_ = std::make_unique<elevators>(
         *d.w_, *d.elevator_nodes_, parse_fasta(std::string_view{*fasta}));
+  } else {
+    fmt::println("{} not found -> not loading elevator status",
+                 p / "fasta.json");
   }
 
   if (d.has_tt() && d.has_osr() && d.pl_ != nullptr && d.rt_->e_ != nullptr &&
@@ -70,6 +77,8 @@ void data::load(std::filesystem::path const& p, data& d) {
     icc::update_rtt_td_footpaths(
         *d.w_, *d.l_, *d.pl_, *d.tt(), *d.location_rtee_, *d.rt_->e_,
         *elevator_footpath_map, *d.matches_, *d.rt_->rtt_);
+  } else {
+    fmt::println("not updating footpaths according to elevator status");
   }
 }
 
