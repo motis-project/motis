@@ -227,6 +227,24 @@ trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_t
 2489005706,31:55:00,31:59:00,de:11000:900003200:2:52,13,S+U Gesundbrunnen Bhf (Berlin),1,
 2489005706,32:03:00,32:03:00,de:11000:900007102:4:57,14,S+U Gesundbrunnen Bhf (Berlin),,
 
+# stops.txt
+stop_name,parent_station,stop_id,stop_desc,stop_lat,stop_lon,location_type,stop_timezone,wheelchair_boarding,level_id,platform_code
+München Hbf,de:09162:100,de:09162:100:11:15,Gleis 14-15,48.140163,11.557841,,UTC,,5,15
+Augsburg Hbf,,de:09761:100,,48.36544,10.88557,,UTC,,,
+Günzburg,,de:09774:2600,,48.460564,10.279262,,UTC,,,
+Ulm Hauptbahnhof,,de:08421:1008,,48.399437,9.982227,,UTC,,,
+Hauptbahnhof (oben),,de:08111:6115_G,,48.784084,9.181635,,UTC,,,
+"Heidelberg, Hauptbahnhof",,de:08221:1160,,49.40357,8.675442,,UTC,,,
+Darmstadt Hauptbahnhof,de:06411:4734,de:06411:4734:62:62,Gleis 1,49.873035,8.629159,,UTC,,1,1
+Frankfurt (Main) Hauptbahnhof,de:06412:10,de:06412:10:15:3,Gleis 8,50.1062,8.663011,,UTC,,5,8
+Eisenach,,de:16056:8010097,,50.97692,10.331986,,UTC,,,
+Erfurt Hbf,,de:16051:8010101,,50.972355,11.037993,,UTC,,,
+Halle(Saale)Hbf,,de:15002:8010159,,51.47751,11.987085,,UTC,,,
+Bitterfeld,,de:15082:8010050,,51.62286,12.31685,,UTC,,,
+S Südkreuz Bhf (Berlin),de:11000:900058101,de:11000:900058101:3:55,Bahnsteig Gleis 6,52.47565,13.365612,,UTC,,2,6
+S+U Berlin Hauptbahnhof,de:11000:900003201,de:11000:900003200:2:52,Bahnsteig Gleis 3,52.52506,13.369167,,UTC,,4,3
+S+U Gesundbrunnen Bhf (Berlin),de:11000:900007102,de:11000:900007102:4:57,Bahnsteig Gleis 8,52.548573,13.390519,,UTC,,4,8
+
 # calendar.txt
 monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date,service_id
 1,1,1,1,1,1,1,20240429,20241207,13476
@@ -271,48 +289,56 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
   out << "\n]\n";
 }
 
-TEST(icc, routing) {
-  CISTA_UNUSED_PARAM(kFastaJson)
+void load(fs::path const& data_path,
+          n::interval<date::sys_days> const interval,
+          std::string_view gtfs) {
+  auto ec = std::error_code{};
+  fs::remove_all(data_path, ec);
+  fs::create_directories(data_path, ec);
 
-  auto const data_path = fs::path{"test/data"};
+  // Load OSR.
+  auto const osr_path = data_path / "osr";
+  osr::extract(true, "test/resources/test_case.osm.pbf", osr_path);
+  auto const w = osr::ways{osr_path, cista::mmap::protection::READ};
+  auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
+  auto const l = osr::lookup{w};
+  auto const elevator_nodes = get_elevator_nodes(w);
+  pl.build_rtree(w);
 
-  std::ofstream{data_path / "fasta.json"}.write(kFastaJson.data(),
-                                                kFastaJson.size());
-
-  {
-    // Load OSR.
-    auto const osr_path = data_path / "osr";
-    osr::extract(true, "test/resources/test_case.osm.pbf", osr_path);
-    auto const w = osr::ways{osr_path, cista::mmap::protection::READ};
-    auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
-    auto const l = osr::lookup{w};
-    auto const elevator_nodes = get_elevator_nodes(w);
-    pl.build_rtree(w);
-
-    // Load assistance times.
-    auto assistance = n::loader::read_assistance(R"(name,lat,lng,time
+  // Load assistance times.
+  auto assistance = n::loader::read_assistance(R"(name,lat,lng,time
 DA HBF,49.87260,8.63085,06:15-22:30
 FFM,50.10701,8.66341,06:15-22:30
 )");
 
-    // Load timetable.
-    auto tt = n::timetable{};
-    tt.date_range_ = {date::sys_days{2019_y / March / 25},
-                      date::sys_days{2019_y / November / 1}};
-    nl::register_special_stations(tt);
-    nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(kGTFS),
-                             tt, &assistance);
-    nl::finalize(tt);
+  // Load timetable.
+  auto tt = n::timetable{};
+  tt.date_range_ = interval;
+  nl::register_special_stations(tt);
+  nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(gtfs), tt,
+                           &assistance);
+  nl::finalize(tt);
 
-    fmt::println("computing footpaths");
-    auto const elevator_footpath_map = compute_footpaths(tt, w, l, pl, true);
+  fmt::println("computing footpaths");
+  auto const elevator_footpath_map = compute_footpaths(tt, w, l, pl, true);
 
-    fmt::println("writing elevator footpaths");
-    write(data_path / "elevator_footpath_map.bin", elevator_footpath_map);
+  fmt::println("writing elevator footpaths");
+  write(data_path / "elevator_footpath_map.bin", elevator_footpath_map);
 
-    fmt::println("writing timetable");
-    tt.write(data_path / "tt.bin");
-  }
+  fmt::println("writing timetable");
+  tt.write(data_path / "tt.bin");
+
+  std::ofstream{data_path / "fasta.json"}.write(kFastaJson.data(),
+                                                kFastaJson.size());
+}
+
+TEST(icc, routing) {
+  auto const data_path = fs::path{"test/data"};
+
+  load(data_path,
+       {date::sys_days{2019_y / March / 25},
+        date::sys_days{2019_y / November / 1}},
+       kGTFS);
 
   auto d = data{};
   data::load(data_path, d);
@@ -338,6 +364,47 @@ FFM,50.10701,8.66341,06:15-22:30
     auto const plan_response = routing(
         "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
         "&date=05-01-2019&time=01:25");
+
+    std::cout << "Without wheelchair:\n";
+    for (auto const& j : plan_response.itineraries_) {
+      print_short(std::cout, j);
+      std::cout << "\n";
+    }
+  }
+}
+
+TEST(icc, routing1) {
+  auto const data_path = fs::path{"test/data1"};
+
+  load(data_path,
+       {date::sys_days{2024_y / September / 1},
+        date::sys_days{2024_y / September / 5}},
+       kTest);
+
+  auto d = data{};
+  data::load(data_path, d);
+  auto const routing = utl::init_from<ep::routing>(d).value();
+
+  std::cout << *d.tt() << "\n";
+
+  // Route with wheelchair.
+  {
+    auto const plan_response = routing(
+        "/?fromPlace=49.87263,8.63127&toPlace=50.10693421,8.6634085"
+        "&date=09-02-2024&time=00:05&wheelchair=true");
+
+    std::cout << "With wheelchair:\n";
+    for (auto const& j : plan_response.itineraries_) {
+      print_short(std::cout, j);
+      std::cout << "\n";
+    }
+  }
+
+  // Route without wheelchair.
+  {
+    auto const plan_response = routing(
+        "/?fromPlace=49.87263,8.63127&toPlace=50.10693421,8.6634085"
+        "&date=09-02-2024&time=00:05");
 
     std::cout << "Without wheelchair:\n";
     for (auto const& j : plan_response.itineraries_) {
