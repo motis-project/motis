@@ -8,8 +8,8 @@
   commit=f31ba8a4a10cdc16e7173ce940d20bed46f68929
 [osr]
   url=git@github.com:motis-project/osr.git
-  branch=platform
-  commit=a6481a502e35d2f017545325d17d9234db414574
+  branch=master
+  commit=c12b001ed6a1f735a24601f43a9b6e616e781e4a
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
