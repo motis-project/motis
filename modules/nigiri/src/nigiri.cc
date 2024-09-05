@@ -112,7 +112,7 @@ struct nigiri::impl {
 #endif
   }
 
-  void vdv_update(char const* s, ::n::rt_timetable& rtt) {
+  void vdv_update(char const* s, ::n::rt_timetable& rtt) const {
     auto doc = pugi::xml_document{};
     doc.load_string(s);
     vdv_updater_->update(rtt, doc);
