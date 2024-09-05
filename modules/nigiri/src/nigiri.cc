@@ -240,7 +240,9 @@ void nigiri::init(motis::module::registry& reg) {
           vdv_files.emplace_back(dir_entry);
         }
       }
-      std::sort(begin(vdv_files), end(vdv_files));
+      std::sort(begin(vdv_files), end(vdv_files), [](auto&& a, auto&& b) {
+        return std::stoi(a.filename()) < std::stoi(b.filename());
+      });
       for (auto const& f : vdv_files) {
         LOG(logging::info) << "Replaying VDV update file: " << f;
         try {
