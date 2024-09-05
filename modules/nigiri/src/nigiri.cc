@@ -145,8 +145,10 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(no_cache_, "no_cache", "disable timetable caching");
   param(adjust_footpaths_, "adjust_footpaths",
         "adjust footpaths if they are too fast for the distance");
-  param(merge_duplicates_, "match_duplicates",
-        "match and merge duplicate trips");
+  param(merge_dupes_intra_src_, "merge_dupes_intra_src",
+        "match and merge duplicate trips with a single timetable source");
+  param(merge_dupes_inter_src_, "merge_dupes_inter_src",
+        "match and merge duplicate trips from different timetable sources");
   param(max_footpath_length_, "max_footpath_length",
         "maximum footpath length in minutes");
   param(first_day_, "first_day",
@@ -180,7 +182,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
         "the listening port of this vdv client");
   param(vdv_cfg_.server_name_, "vdv_server_name", "the name of the vdv server");
   param(vdv_cfg_.server_addr_, "vdv_server_addr",
-        "the address of the vdv server, format: http://<ip_address>:<port>");
+        "the address of the vdv server, format: "
+        "http://<ip_address>:<port>");
 }
 
 nigiri::~nigiri() = default;
@@ -547,7 +550,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             }
 
             n::loader::finalize(**impl_->tt_, adjust_footpaths_,
-                                merge_duplicates_, max_footpath_length_);
+                                merge_dupes_intra_src_, merge_dupes_inter_src_,
+                                max_footpath_length_);
 
             if (no_cache_) {
               loaded = true;
