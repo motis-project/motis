@@ -9,23 +9,23 @@ if (MSVC)
     option(MOTIS_DEBUG_SYMBOLS "generate debug symbols (debug builds)" ON)
     if (MOTIS_DEBUG_SYMBOLS)
         set(MOTIS_MSVC_DEBUG_FLAGS "/Z7")
-    else ()
+    else()
         set(MOTIS_MSVC_DEBUG_FLAGS "")
-    endif ()
+    endif()
     string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
     string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
     string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
     string(REPLACE "/Zi" "${MOTIS_MSVC_DEBUG_FLAGS}" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
-endif ()
+endif()
 include(cmake/buildcache.cmake)
 
 if (APPLE)
     # prevents ar from invoking ranlib, let CMake do it
-    set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_C_ARCHIVE_CREATE   "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
 
     # tell ranlib to ignore empty compilation units
-    set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
+    set(CMAKE_C_ARCHIVE_FINISH   "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
     set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
 
     # Allow deprecated auto_ptr (e.g. in luabind)
@@ -33,7 +33,7 @@ if (APPLE)
 
     # Silence linking warnings.
     add_compile_options(-fvisibility-inlines-hidden -fvisibility=hidden)
-endif ()
+endif()
 
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 option(MOTIS_AVX "enable AVX functions" ON)
@@ -43,22 +43,22 @@ option(MOTIS_LINT "enable lint (clang-tidy) target" OFF)
 option(MOTIS_COV "enable coverage (coverage) target" OFF)
 option(MOTIS_WITH_WEBUI "enable motis-web-ui target" OFF)
 
-if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
-    if (MOTIS_MIMALLOC)
+if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+    if(MOTIS_MIMALLOC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    else ()
+    else()
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    endif ()
-endif ()
+    endif()
+endif()
 
 if (MOTIS_CUDA)
     if (MSVC)
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -lcudadevrt")
-    else ()
+    else()
         set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --compiler-options -static")
-    endif ()
+    endif()
     enable_language(CUDA)
-endif ()
+endif()
 
 add_library(motis-generated INTERFACE)
 target_include_directories(motis-generated INTERFACE ${CMAKE_BINARY_DIR}/generated)
@@ -90,7 +90,7 @@ execute_process(
         OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-configure_file(
+configure_file (
         "base/core/include/motis/core/version.h.in"
         "${CMAKE_BINARY_DIR}/generated/version.h"
 )
@@ -103,25 +103,25 @@ if (MOTIS_MIMALLOC)
     set(PPR_MIMALLOC ON)
     set(ADR_MIMALLOC ON)
     set(OSR_MIMALLOC ON)
-    if (WIN32)
+    if(WIN32)
         set(MI_BUILD_SHARED ON)
-    endif ()
-endif ()
+    endif()
+endif()
 
 find_package(Threads)
 include(cmake/pkg.cmake)
 
 if (MOTIS_MIMALLOC)
-    if (WIN32)
+    if(WIN32)
         set(motis-mimalloc-lib mimalloc)
         target_link_libraries(cista INTERFACE mimalloc)
-    else ()
+    else()
         set(motis-mimalloc-lib mimalloc-obj)
         target_link_libraries(cista INTERFACE mimalloc-static)
-    endif ()
+    endif()
     target_compile_definitions(cista INTERFACE CISTA_USE_MIMALLOC=1)
     target_compile_definitions(boost INTERFACE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
-endif ()
+endif()
 
 
 ################################
@@ -131,22 +131,22 @@ if (NOT MSVC)
     set(MOTIS_CXX_FLAGS -Wall -Wextra -Wno-sign-compare)
     if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
         set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -Wno-maybe-uninitialized -Wno-unused-but-set-parameter)
-    endif ()
+    endif()
     if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
             set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -Wno-unsafe-buffer-usage)
-        endif ()
-    endif ()
+        endif()
+    endif()
     if (MOTIS_COV)
         set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} --coverage)
-        set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} --coverage)
-    endif ()
-endif ()
+        set(CMAKE_EXE_LINKER_FLAGS  ${CMAKE_EXE_LINKER_FLAGS} --coverage)
+    endif()
+endif()
 
 # Quickfix for GCC 7
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -Wno-implicit-fallthrough")
-endif ()
+endif()
 
 # Quickfix for MSVC
 if (MSVC)
@@ -156,40 +156,40 @@ if (MSVC)
             _USE_MATH_DEFINES
             NOMINMAX
             ${MOTIS_COMPILE_DEFINITIONS})
-endif ()
+endif()
 
 # MOTIS Compile Definitions
 if (MOTIS_CUDA)
     set(MOTIS_COMPILE_DEFINITIONS MOTIS_CUDA ${MOTIS_COMPILE_DEFINITIONS})
-endif ()
+endif()
 if (MOTIS_AVX)
     set(MOTIS_COMPILE_DEFINITIONS MOTIS_AVX ${MOTIS_COMPILE_DEFINITIONS})
     if (MSVC)
         set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX)
-    else ()
+    else()
         set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx)
-    endif ()
-endif ()
+    endif()
+endif()
 if (MOTIS_AVX2)
     set(MOTIS_COMPILE_DEFINITIONS MOTIS_AVX2 ${MOTIS_COMPILE_DEFINITIONS})
     if (MSVC)
         set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} /arch:AVX2)
-    else ()
+    else()
         set(MOTIS_CXX_FLAGS ${MOTIS_CXX_FLAGS} -mavx2 -mfma -mbmi)
-    endif ()
-endif ()
+    endif()
+endif()
 
 
 ################################
 # Linter
 ################################
 option(MOTIS_LINT "Run clang-tidy with the compiler." OFF)
-if (MOTIS_LINT)
+if(MOTIS_LINT)
     # clang-tidy will be run on all targets defined hereafter
     set(MOTIS_SCHEDULE_MODE "raw")
     add_definitions(-DMOTIS_LINT=1)
     include(cmake/clang-tidy.cmake)
-endif ()
+endif()
 
 ################################
 # MOTIS
@@ -203,23 +203,23 @@ list(REMOVE_ITEM all-modules ".DS_Store")
 string(REPLACE ";" " " modules-option "${all-modules}")
 set(MODULES ${modules-option} CACHE STRING "Modules to load")
 
-if (MODULES STREQUAL "all")
+if(MODULES STREQUAL "all")
     set(modules ${all-modules})
-else ()
+else()
     string(REPLACE " " ";" modules "${MODULES}")
-endif ()
+endif()
 message(STATUS "compiling modules: ${modules}")
 
 add_subdirectory(libs)
 
 set(module-targets "")
 set(module-test-files "")
-foreach (module ${modules})
+foreach(module ${modules})
     add_subdirectory(modules/${module})
     list(APPEND module-targets "motis-${module}")
     list(APPEND module-test-files "modules/${module}/*_test.cc")
     list(APPEND module-itest-files "modules/${module}/*_itest.cc")
-endforeach (module)
+endforeach(module)
 
 add_subdirectory(base/bootstrap EXCLUDE_FROM_ALL)
 
@@ -232,6 +232,7 @@ target_link_libraries(motis
         boost-system
         conf
         motis-bootstrap
+        web-server-tls
         ianatzdb-res
         pbf_sdf_fonts_res-res
         tiles_server_res-res
@@ -247,12 +248,12 @@ if (NOT MSVC)
                 POST_BUILD
                 COMMAND ${CMAKE_STRIP} ${CMAKE_BINARY_DIR}/motis
         )
-    endif ()
-endif ()
+    endif()
+endif()
 
 if (MOTIS_MIMALLOC)
     target_link_libraries(motis ${motis-mimalloc-lib})
-    if (WIN32)
+    if(WIN32)
         add_custom_command(
                 TARGET motis POST_BUILD
                 COMMAND "${CMAKE_COMMAND}" -E copy
@@ -267,18 +268,18 @@ if (MOTIS_MIMALLOC)
                 $<TARGET_FILE_DIR:motis>
                 COMMENT "Copy mimalloc-redirect.dll to output directory"
         )
-    endif ()
-endif ()
+    endif()
+endif()
 
-if (MOTIS_WITH_WEBUI)
+if(MOTIS_WITH_WEBUI)
     add_subdirectory(ui/web)
-endif ()
+endif()
 
 
 ################################
 # Tests
 ################################
-configure_file(
+configure_file (
         ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
         ${CMAKE_BINARY_DIR}/generated/test_dir.h
 )
@@ -293,12 +294,12 @@ add_executable(motis-test EXCLUDE_FROM_ALL
 target_include_directories(motis-test PRIVATE test/include)
 if (MSVC)
     target_compile_features(motis-test PUBLIC cxx_std_20)
-endif ()
+endif()
 
 list(FIND modules "path" MOTIS_PATH_MODULE_ENABLE)
-if (${MOTIS_PATH_MODULE_ENABLE} GREATER -1)
+if(${MOTIS_PATH_MODULE_ENABLE} GREATER -1)
     set(motis-test-extra-dependencies "motis-path-prepare")
-endif ()
+endif()
 
 target_compile_options(motis-test PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-test PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
@@ -316,7 +317,7 @@ target_link_libraries(motis-test gtest gtest_main gmock)
 ################################
 # Integration Tests
 ################################
-configure_file(
+configure_file (
         ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
         ${CMAKE_BINARY_DIR}/generated/test_dir.h
 )
@@ -330,7 +331,7 @@ add_executable(motis-itest EXCLUDE_FROM_ALL
 target_include_directories(motis-itest PRIVATE test/include)
 if (MSVC)
     target_compile_features(motis-itest PUBLIC cxx_std_20)
-endif ()
+endif()
 target_compile_options(motis-itest PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-itest PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
 target_link_libraries(motis-itest
@@ -369,7 +370,7 @@ add_custom_target(oclint
 add_dependencies(oclint motis motis-test motis-itest)
 if (TARGET motis-eval)
     add_dependencies(oclint motis-eval)
-endif ()
+endif()
 
 
 ################################
@@ -404,7 +405,7 @@ if (MOTIS_COV)
     set(LCOV_OPTS "")
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         set(LCOV_OPTS "--gcov-tool=${CMAKE_CURRENT_SOURCE_DIR}/tools/llvm-gcov.sh")
-    endif ()
+    endif()
 
     add_custom_target(coverage
             # clean previous files
@@ -444,4 +445,4 @@ if (MOTIS_COV)
             VERBATIM
     )
     add_dependencies(coverage motis-test motis-itest)
-endif ()
+endif()
