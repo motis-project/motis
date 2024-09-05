@@ -232,7 +232,6 @@ target_link_libraries(motis
   boost-system
   conf
   motis-bootstrap
-  web-server-tls
   ianatzdb-res
   pbf_sdf_fonts_res-res
   tiles_server_res-res
