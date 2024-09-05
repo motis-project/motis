@@ -29,11 +29,11 @@ struct nigiri : public motis::module::module {
   void stop_io() override;
 
 private:
-  void register_rt_update_timer(motis::module::dispatcher& d);
+  void register_rt_update_timer(motis::module::dispatcher&);
   void rt_update();
 
   void vdv_sub_renewal();
-  void register_vdv_sub_renewal_timer(motis::module::dispatcher& d);
+  void register_vdv_sub_renewal_timer(motis::module::dispatcher&);
 
   bool import_successful_{false};
 
