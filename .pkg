@@ -89,4 +89,4 @@
 [vdv]
   url=git@github.com:motis-project/vdv.git
   branch=master
-  commit=e3ee4fbed90522aa83c3b0f27b007dac5029bf01
+  commit=60ce94c34d64250cc9ab15438592e408f2bbf1f0
