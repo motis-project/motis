@@ -26,11 +26,6 @@
 #include "opentelemetry/context/propagation/text_map_propagator.h"
 #include "opentelemetry/context/runtime_context.h"
 #include "opentelemetry/exporters/otlp/otlp_http_exporter_factory.h"
-#include "opentelemetry/exporters/otlp/otlp_http_log_record_exporter_factory.h"
-#include "opentelemetry/logs/provider.h"
-#include "opentelemetry/sdk/logs/logger_provider.h"
-#include "opentelemetry/sdk/logs/logger_provider_factory.h"
-#include "opentelemetry/sdk/logs/simple_log_record_processor_factory.h"
 #include "opentelemetry/sdk/trace/processor.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/sdk/trace/simple_processor_factory.h"
@@ -79,27 +74,6 @@ void init_opentelemetry_tracer(
   opentelemetry::trace::Provider::SetTracerProvider(provider);
 }
 
-void init_opentelemetry_logger(
-    opentelemetry::sdk::resource::Resource const& resource) {
-  auto logger_opts =
-      opentelemetry::exporter::otlp::OtlpHttpLogRecordExporterOptions{};
-  logger_opts.console_debug = true;
-
-  auto exporter =
-      opentelemetry::exporter::otlp::OtlpHttpLogRecordExporterFactory::Create(
-          logger_opts);
-
-  auto processor =
-      opentelemetry::sdk::logs::SimpleLogRecordProcessorFactory::Create(
-          std::move(exporter));
-
-  auto provider =
-      std::shared_ptr{opentelemetry::sdk::logs::LoggerProviderFactory::Create(
-          std::move(processor), resource)};
-
-  opentelemetry::logs::Provider::SetLoggerProvider(provider);
-}
-
 void init_opentelemetry(motis_instance& instance,
                         launcher_settings const& launcher_opt) {
   auto resource_attributes = opentelemetry::sdk::resource::ResourceAttributes{
@@ -112,9 +86,6 @@ void init_opentelemetry(motis_instance& instance,
 
   if (launcher_opt.otlp_http_) {
     init_opentelemetry_tracer(resource);
-  }
-  if (launcher_opt.otlp_http_log_) {
-    init_opentelemetry_logger(resource);
   }
 
   opentelemetry::context::propagation::GlobalTextMapPropagator::

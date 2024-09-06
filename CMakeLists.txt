@@ -239,7 +239,6 @@ target_link_libraries(motis
   pbf_sdf_fonts_res-res
   tiles_server_res-res
   opentelemetry_exporter_otlp_http
-  opentelemetry_exporter_otlp_http_log
 )
 target_compile_options(motis PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

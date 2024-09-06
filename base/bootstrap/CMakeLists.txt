@@ -31,7 +31,6 @@ target_link_libraries(motis-bootstrap
   utl
   prometheus-cpp::core
   opentelemetry_trace
-  opentelemetry_logs
   motis-module
   ${module-targets}
 )

@@ -52,8 +52,6 @@ public:
     param(num_threads_, "num_threads", "number of worker threads");
     param(direct_mode_, "direct", "no ctx/multi-threading");
     param(otlp_http_, "otlp_http", "enable OTLP HTTP exporter");
-    param(otlp_http_log_, "otlp_http_log",
-          "enable OTLP HTTP exporter for logs");
   }
 
   motis_mode_t mode_{launcher_settings::motis_mode_t::SERVER};
@@ -63,7 +61,6 @@ public:
   unsigned num_threads_{std::thread::hardware_concurrency()};
   bool direct_mode_{sizeof(void*) >= 8 ? false : true};
   bool otlp_http_{};
-  bool otlp_http_log_{};
 };
 
 }  // namespace motis::launcher
