@@ -32,7 +32,8 @@ private:
   std::unique_ptr<impl> impl_;
   bool no_cache_{false};
   bool adjust_footpaths_{true};
-  bool merge_duplicates_{false};
+  bool merge_dupes_intra_src_{false};
+  bool merge_dupes_inter_src_{false};
   unsigned max_footpath_length_{std::numeric_limits<std::uint16_t>::max()};
   std::string first_day_{"TODAY"};
   std::string default_timezone_;
