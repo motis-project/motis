@@ -462,7 +462,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             }
 
             n::loader::finalize(**impl_->tt_, adjust_footpaths_,
-                                merge_duplicates_, max_footpath_length_);
+                                merge_duplicates_, merge_duplicates_,
+                                max_footpath_length_);
 
             if (no_cache_) {
               loaded = true;
