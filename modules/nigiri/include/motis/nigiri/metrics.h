@@ -20,6 +20,8 @@ struct metrics {
   prometheus::Histogram& ontrip_station_routing_time_;
   prometheus::Histogram& pretrip_interval_extensions_;
 
+  prometheus::Histogram& reconstruction_errors_;
+
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_requested_;
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_successful_;
   prometheus::Family<prometheus::Counter>& gtfsrt_updates_error_;

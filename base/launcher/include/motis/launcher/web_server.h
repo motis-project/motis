@@ -5,12 +5,12 @@
 
 #include "boost/asio/io_service.hpp"
 
-#include "motis/module/receiver.h"
+#include "motis/module/controller.h"
 
 namespace motis::launcher {
 
 struct web_server {
-  web_server(boost::asio::io_service&, motis::module::receiver&);
+  web_server(boost::asio::io_service&, motis::module::controller&);
   ~web_server();
 
   web_server(web_server&&) = default;

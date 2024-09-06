@@ -2,9 +2,14 @@
 
 #include <filesystem>
 
+#include "fmt/format.h"
 #include "fmt/ranges.h"
 
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/clog_redirect.h"
 #include "motis/module/context/motis_publish.h"
 
@@ -66,6 +71,8 @@ event_collector* event_collector::require(
     }
 
     // All messages arrived -> start.
+    auto span = motis_tracer->StartSpan(fmt::format("import {}", module_name_));
+    auto scope = opentelemetry::trace::Scope{span};
     activate_progress_tracker(progress_tracker_);
     progress_tracker_->status("RUNNING").show_progress(true);
     try {
@@ -75,9 +82,13 @@ event_collector* event_collector::require(
     } catch (std::exception const& e) {
       progress_tracker_->status(fmt::format("ERROR: {}", e.what()))
           .show_progress(false);
+      span->AddEvent("exception", {{"exception.message", e.what()}});
+      span->SetStatus(opentelemetry::trace::StatusCode::kError, "exception");
     } catch (...) {
       progress_tracker_->status("ERROR: UNKNOWN EXCEPTION")
           .show_progress(false);
+      span->AddEvent("exception");
+      span->SetStatus(opentelemetry::trace::StatusCode::kError, "exception");
     }
 
     return nullptr;

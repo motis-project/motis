@@ -4,9 +4,13 @@
 #include <filesystem>
 #include <limits>
 #include <map>
+#include <memory>
 
 #include "cista/hash.h"
 #include "cista/mmap.h"
+
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
 
 #include "utl/progress_tracker.h"
 #include "utl/to_vec.h"
@@ -21,6 +25,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/schedule/time.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -177,6 +182,9 @@ struct ppr::impl {
   }
 
   msg_ptr route(msg_ptr const& msg) const {
+    auto span = motis_tracer->StartSpan("ppr::route");
+    auto scope = opentelemetry::trace::Scope{span};
+
     switch (msg->get()->content_type()) {
       case MsgContent_FootRoutingRequest: return route_normal(msg);
       case MsgContent_FootRoutingSimpleRequest: return route_simple(msg);
@@ -203,6 +211,9 @@ struct ppr::impl {
 
 private:
   msg_ptr route_normal(msg_ptr const& msg) const {
+    auto span = motis_tracer->StartSpan("ppr::route_normal");
+    auto scope = opentelemetry::trace::Scope{span};
+
     auto const req = motis_content(FootRoutingRequest, msg);
 
     auto start = to_location(req->start());
@@ -211,10 +222,18 @@ private:
       destinations.emplace_back(to_location(dest));
     }
 
-    auto const profile = get_search_profile(req->search_options());
     auto const dir = req->search_direction() == SearchDir_Forward
                          ? search_direction::FWD
                          : search_direction::BWD;
+
+    span->SetAttribute("motis.ppr.request.profile",
+                       req->search_options()->profile()->view());
+    span->SetAttribute("motis.ppr.request.duration_limit",
+                       req->search_options()->duration_limit());
+    span->SetAttribute("motis.ppr.request.direction",
+                       dir == search_direction::FWD ? "forward" : "backward");
+
+    auto const profile = get_search_profile(req->search_options());
 
     auto const result =
         find_routes(data_.rg_, start, destinations, profile, dir);
@@ -238,6 +257,9 @@ private:
   }
 
   msg_ptr route_simple(msg_ptr const& msg) const {
+    auto span = motis_tracer->StartSpan("ppr::route_simple");
+    auto scope = opentelemetry::trace::Scope{span};
+
     auto const req = motis_content(FootRoutingSimpleRequest, msg);
 
     auto start = to_location(req->start());
@@ -310,9 +332,15 @@ void ppr::import(import_dispatcher& reg) {
         using import::OSMEvent;
         using import::DEMEvent;
 
+        auto span = motis_tracer->StartSpan("ppr::import");
+        auto scope = opentelemetry::trace::Scope{span};
+
         auto const dir = get_data_directory() / "ppr";
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const osm_path = osm->path()->str();
+
+        span->SetAttribute("motis.osm.file", osm_path);
+        span->SetAttribute("motis.osm.size", osm->size());
 
         auto dem_path = std::string{};
         auto dem_hash = cista::hash_t{};
@@ -320,6 +348,7 @@ void ppr::import(import_dispatcher& reg) {
           auto const dem = motis_content(DEMEvent, dependencies.at("DEM"));
           dem_path = data_path(dem->path()->str());
           dem_hash = dem->hash();
+          span->SetAttribute("motis.dem.path", dem->path()->str());
         }
 
         auto progress_tracker = utl::get_active_progress_tracker();
@@ -329,6 +358,9 @@ void ppr::import(import_dispatcher& reg) {
                          data_path(dem_path), dem_hash};
         auto const state_changed =
             read_ini<import_state>(dir / "import.ini") != state;
+
+        span->SetAttribute("motis.import.state",
+                           state_changed ? "changed" : "unchanged");
 
         auto const rtree_opt =
             lock_rtrees_ ? rtree_options::LOCK
@@ -347,6 +379,7 @@ void ppr::import(import_dispatcher& reg) {
         auto graph_size = std::size_t{};
 
         auto const load_graph = [&]() {
+          span->AddEvent("load graph", {{"file", graph_file()}});
           impl_ = std::make_unique<impl>(
               graph_file(), profiles, edge_rtree_max_size_,
               area_rtree_max_size_, rtree_opt, verify_graph_, check_integrity_);
@@ -369,6 +402,8 @@ void ppr::import(import_dispatcher& reg) {
           try {
             load_graph();
           } catch (std::exception const& e) {
+            span->AddEvent("exception", {{"exception.message", e.what()},
+                                         {"during", "load_graph"}});
             impl_.reset();
             LOG(logging::error) << "loading existing ppr routing graph failed ("
                                 << e.what() << "), will be re-created";
@@ -376,6 +411,7 @@ void ppr::import(import_dispatcher& reg) {
         }
 
         if (!impl_) {
+          span->AddEvent("import");
           fs::create_directories(dir);
 
           pp::options opt;
@@ -391,22 +427,32 @@ void ppr::import(import_dispatcher& reg) {
           log.out_ = &std::clog;
           log.total_progress_updates_only_ = true;
 
-          log.step_started_ = [&progress_tracker](pp::logging const& log,
-                                                  pp::step_info const& step) {
+          auto step_span = std::shared_ptr<opentelemetry::trace::Span>{};
+          auto step_scope = std::unique_ptr<opentelemetry::trace::Scope>{};
+
+          log.step_started_ = [&](pp::logging const& log,
+                                  pp::step_info const& step) {
+            step_span = motis_tracer->StartSpan(
+                step.name(), {{"step.current", (log.current_step() + 1)},
+                              {"step.total", log.step_count()}});
+            step_scope =
+                std::make_unique<opentelemetry::trace::Scope>(step_span);
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name() << ": Starting"
                       << '\n';
             progress_tracker->status(step.name());
           };
 
-          log.step_progress_ = [&progress_tracker](pp::logging const& log,
-                                                   pp::step_info const&) {
+          log.step_progress_ = [&](pp::logging const& log,
+                                   pp::step_info const&) {
             progress_tracker->update(
                 static_cast<int>(log.total_progress() * 100));
           };
 
-          log.step_finished_ = [](pp::logging const& log,
-                                  pp::step_info const& step) {
+          log.step_finished_ = [&](pp::logging const& log,
+                                   pp::step_info const& step) {
+            step_scope.reset(nullptr);
+            step_span.reset();
             std::clog << "Step " << (log.current_step() + 1) << "/"
                       << log.step_count() << ": " << step.name()
                       << ": Finished in " << static_cast<int>(step.duration_)

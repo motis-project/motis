@@ -27,6 +27,8 @@ gtfsrt::gtfsrt(tag_lookup const& tags, std::string_view config,
                metrics& metrics) {
   auto const [tag, url, auth] =
       utl::split<'|', utl::cstr, utl::cstr, utl::cstr>(config);
+  tag_ = tag.to_str();
+  url_ = url.to_str();
   auto const src = tags.get_src(tag.to_str() + "_");
   utl::verify(
       src != n::source_idx_t::invalid(),

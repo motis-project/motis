@@ -88,6 +88,24 @@ std::optional<op> registry::get_operation(std::string const& prefix) {
   }
 }
 
+std::optional<std::string_view> registry::get_operation_name(
+    std::string const& prefix) {
+  if (auto const it = operations_.upper_bound(prefix);
+      it != begin(operations_) &&
+      boost::algorithm::starts_with(prefix, std::next(it, -1)->first)) {
+    return std::string_view{std::next(it, -1)->first};
+  } else {
+    std::lock_guard const g{remote_op_mutex_};
+    if (auto const it = remote_operations_.upper_bound(prefix);
+        it != begin(remote_operations_) &&
+        boost::algorithm::starts_with(prefix, std::next(it, -1)->first)) {
+      return std::string_view{std::next(it, -1)->first};
+    } else {
+      return std::nullopt;
+    }
+  }
+}
+
 void registry::reset() {
   operations_.clear();
   topic_subscriptions_.clear();

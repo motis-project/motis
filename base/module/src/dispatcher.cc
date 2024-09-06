@@ -6,11 +6,19 @@
 #include "boost/asio/post.hpp"
 #include "boost/system/system_error.hpp"
 
+#include "fmt/format.h"
+
+#include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+#include "opentelemetry/trace/tracer.h"
+
 #include "ctx/ctx.h"
 
 #include "utl/to_vec.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/error.h"
 #include "motis/module/global_res_ids.h"
 #include "motis/module/module.h"
@@ -78,8 +86,7 @@ std::vector<future> dispatcher::publish(msg_ptr const& msg,
       f->set(op.fn_(msg));
       return f;
     } else {
-      return post_work(
-          data, [&, msg] { return op.fn_(msg); }, id);
+      return post_work(data, [&, msg] { return op.fn_(msg); }, id);
     }
   });
 }
@@ -106,11 +113,24 @@ future dispatcher::req(msg_ptr const& msg, ctx_data const& data,
 void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
                           ctx::op_type_t const op_type, ctx_data const* data) {
   id.name = msg->get()->destination()->target()->str();
+
+  auto op_name = registry_.get_operation_name(id.name);
+  if (id.name == "/api") {
+    op_name = id.name;
+  }
+  auto span = motis_tracer->StartSpan(
+      op_name.value_or(std::string_view{"unknown target"}),
+      {{"ctx.op_id.name", id.name},
+       {"ctx.op_id.index", id.index},
+       {"ctx.op_id.created_at", id.created_at},
+       {"ctx.op_id.parent_index", id.parent_index}});
+  auto scope = opentelemetry::trace::Scope{span};
+
   if (id.name == "/api") {
     return cb(api_desc(msg->id()), std::error_code{});
   }
 
-  auto const run = [this, id, cb, msg]() {
+  auto const run = [this, id, cb, msg, span]() {
     try {
       if (auto const op = registry_.get_operation(id.name)) {
         return cb(op->fn_(msg), std::error_code());
@@ -121,14 +141,30 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
         return;
       } else {
         LOG(logging::warn) << "target not found: " << id.name;
+        span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                        "target not found");
         return handle_no_target(msg, cb);
       }
     } catch (std::system_error const& e) {
+      span->AddEvent("exception",
+                     {{"exception.message", e.what()},
+                      {"exception.error.code", e.code().value()},
+                      {"exception.error.category", e.code().category().name()},
+                      {"exception.error.message", e.code().message()}});
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "system error exception");
       return cb(nullptr, e.code());
     } catch (std::exception const& e) {
+      span->AddEvent("exception", {
+                                      {"exception.message", e.what()},
+                                  });
+      span->SetStatus(opentelemetry::trace::StatusCode::kError, "exception");
       LOG(logging::error) << "error executing " << id.name << ": " << e.what();
       return cb(nullptr, error::unknown_error);
     } catch (...) {
+      span->AddEvent("exception", {{"exception.type", "unknown"}});
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "unknown error");
       LOG(logging::error) << "unknown error executing " << id.name;
       return cb(nullptr, error::unknown_error);
     }
@@ -142,9 +178,12 @@ void dispatcher::dispatch(msg_ptr const& msg, callback const& cb, ctx::op_id id,
       access = op->access_;
     }
 
+    auto new_data = data != nullptr ? ctx_data{*data} : ctx_data{this};
+    new_data.otel_context_stack_.push_back(
+        opentelemetry::context::RuntimeContext::GetCurrent());
     enqueue(
-        data != nullptr ? ctx_data{*data} : ctx_data{this}, [run]() { run(); },
-        id, op_type, std::move(access));
+        std::move(new_data), [run]() { run(); }, id, op_type,
+        std::move(access));
   }
 }
 

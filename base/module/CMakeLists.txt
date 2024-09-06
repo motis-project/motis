@@ -40,5 +40,9 @@ target_link_libraries(motis-module
   cista
   utl
   boost-url
+  opentelemetry_trace
+  opentelemetry_logs
+  opentelemetry_exporter_otlp_http
+  opentelemetry_exporter_otlp_http_log
 )
 target_compile_options(motis-module PRIVATE ${MOTIS_CXX_FLAGS})

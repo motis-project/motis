@@ -14,11 +14,16 @@
 #include "prometheus/histogram.h"
 #include "prometheus/registry.h"
 
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+#include "opentelemetry/trace/tracer.h"
+
 #include "motis/core/common/constants.h"
 #include "motis/core/common/timing.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_spawn.h"
 
@@ -487,6 +492,9 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
   auto const req = motis_content(IntermodalRoutingRequest, msg);
   message_creator mc;
   statistics stats{};
+
+  auto span = motis_tracer->StartSpan("intermodal::route");
+  auto scope = opentelemetry::trace::Scope{span};
 
   MOTIS_START_TIMING(total_timing);
 

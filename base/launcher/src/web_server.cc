@@ -8,6 +8,15 @@
 #include <utility>
 
 #include "boost/beast/version.hpp"
+#include "boost/url/url_view.hpp"
+
+#include "fmt/format.h"
+
+#include "opentelemetry/context/propagation/global_propagator.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+#include "opentelemetry/trace/tracer.h"
 
 #include "utl/helpers/algorithm.h"
 #include "utl/to_vec.h"
@@ -18,7 +27,9 @@
 #include "net/web_server/web_server.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/client.h"
+#include "motis/launcher/http_text_map_carrier.h"
 #include "motis/launcher/load_server_certificate.h"
 
 #if defined(NET_TLS)
@@ -145,14 +156,14 @@ struct ws_client : public client,
 
 struct web_server::impl {
 #if defined(NET_TLS)
-  impl(boost::asio::io_service& ios, receiver& recvr)
+  impl(boost::asio::io_service& ios, controller& ctr)
       : ctx_{ssl::context::tlsv12},
         ios_{ios},
-        receiver_{recvr},
+        receiver_{ctr},
         server_{ios, ctx_} {}
 #else
-  impl(boost::asio::io_service& ios, receiver& recvr)
-      : ios_{ios}, receiver_{recvr}, server_{ios} {}
+  impl(boost::asio::io_service& ios, controller& ctr)
+      : ios_{ios}, receiver_{ctr}, server_{ios} {}
 #endif
 
   void listen(std::string const& host, std::string const& port,
@@ -208,10 +219,36 @@ struct web_server::impl {
   void on_http_request(net::web_server::http_req_t const& req,
                        net::web_server::http_res_cb_t const& cb) {
     using namespace boost::beast::http;
+    using namespace opentelemetry::sdk::resource;
 
-    auto const build_response = [req](msg_ptr const& response,
-                                      std::optional<json_format> jf =
-                                          std::nullopt) {
+    auto otel_propagator = opentelemetry::context::propagation::
+        GlobalTextMapPropagator::GetGlobalPropagator();
+    auto carrier = http_text_map_carrier{req};
+    auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
+    auto new_ctx = otel_propagator->Extract(carrier, current_ctx);
+
+    auto const url = boost::urls::url_view{req.target()};
+
+    auto span = motis_tracer->StartSpan(
+        req.method_string(),
+        {
+            {SemanticConventions::kHttpRequestMethod, req.method_string()},
+            {SemanticConventions::kUrlPath, url.path()},
+            {SemanticConventions::kUrlQuery, url.query()},
+            {SemanticConventions::kUrlScheme, "http"},
+        },
+        opentelemetry::trace::StartSpanOptions{
+            .parent = opentelemetry::trace::GetSpan(new_ctx)->GetContext(),
+            .kind = opentelemetry::trace::SpanKind::kServer});
+    auto scope = opentelemetry::trace::Scope{span};
+
+    if (auto const user_agent = req[field::user_agent]; !user_agent.empty()) {
+      span->SetAttribute(SemanticConventions::kUserAgentOriginal, user_agent);
+    }
+
+    auto const build_response = [req, span](msg_ptr const& response,
+                                            std::optional<json_format> jf =
+                                                std::nullopt) {
       net::web_server::string_res_t res{
           response == nullptr ? status::ok
           : response->get()->content_type() == MsgContent_MotisError
@@ -225,6 +262,14 @@ struct web_server::impl {
       res.set(field::access_control_max_age, "3600");
       res.keep_alive(req.keep_alive());
       res.set(field::server, BOOST_BEAST_VERSION_STRING);
+
+      span->SetAttribute(SemanticConventions::kHttpResponseStatusCode,
+                         res.result_int());
+      if (res.result() == status::internal_server_error) {
+        span->SetStatus(opentelemetry::trace::StatusCode::kError);
+        span->SetAttribute(SemanticConventions::kErrorType,
+                           fmt::to_string(res.result_int()));
+      }
 
       std::string content;
       auto has_already_content_encoding = false;
@@ -279,6 +324,9 @@ struct web_server::impl {
           return on_generic_req(req, res_cb);
         }
         req_msg = req.body();
+        span->SetAttribute(SemanticConventions::kHttpRequestBodySize,
+                           req_msg.size());
+        span->SetAttribute("motis.http.request.body", req_msg);
         if (req_msg.empty()) {
           req_msg = make_no_msg(std::string{req.target()})
                         ->to_json(kDefaultOuputJsonFormat);
@@ -289,6 +337,10 @@ struct web_server::impl {
       case verb::get:
         if (serve_static_files_ &&
             net::serve_static_file(static_file_path_, req, cb)) {
+          span->UpdateName(fmt::format("{} /{{static}}", req.method_string()));
+          span->SetAttribute(
+              opentelemetry::sdk::resource::SemanticConventions::kHttpRoute,
+              "/{static}");
           return;
         } else {
           req_msg = make_no_msg(std::string{req.target()})
@@ -300,7 +352,8 @@ struct web_server::impl {
             std::make_error_code(std::errc::operation_not_supported))));
     }
 
-    return on_msg_req(req_msg, false, to_sv(req.target()), res_cb);
+    return on_msg_req(req_msg, false, to_sv(req.method_string()),
+                      to_sv(req.target()), res_cb);
   }
 
   void on_ws_open(net::ws_session_ptr session, std::string const& target) {
@@ -319,8 +372,16 @@ struct web_server::impl {
   void on_ws_msg(net::ws_session_ptr const& session, std::string const& msg,
                  net::ws_msg_type type) {
     auto const is_binary = type == net::ws_msg_type::BINARY;
+    auto span = motis_tracer->StartSpan(
+        "WebSocket",
+        {
+            {"format", is_binary ? "binary" : "text"},
+        },
+        opentelemetry::trace::StartSpanOptions{
+            .kind = opentelemetry::trace::SpanKind::kServer});
+    auto scope = opentelemetry::trace::Scope{span};
     return on_msg_req(
-        msg, is_binary, {},
+        msg, is_binary, "WebSocket", {},
         [session, type, is_binary](msg_ptr const& response,
                                    std::optional<json_format> jf) {
           if (auto s = session.lock()) {
@@ -332,7 +393,8 @@ struct web_server::impl {
   }
 
   void on_msg_req(
-      std::string const& request, bool binary, std::string_view const target,
+      std::string const& request, bool binary, std::string_view const method,
+      std::string_view const target,
       std::function<void(msg_ptr const&, std::optional<json_format>)> const& cb,
       std::optional<json_format> jf = std::nullopt) {
     msg_ptr err;
@@ -342,8 +404,26 @@ struct web_server::impl {
       if (!jf) {
         jf = detected_jf;
       }
+
       log_request(req);
-      req_id = req->get()->id();
+      auto const* msg = req->get();
+      req_id = msg->id();
+
+      auto span = motis_tracer->GetCurrentSpan();
+      auto const op_name =
+          receiver_.get_operation_name(msg->destination()->target()->str());
+      if (op_name) {
+        span->UpdateName(fmt::format("{} {}", method, *op_name));
+        span->SetAttribute(
+            opentelemetry::sdk::resource::SemanticConventions::kHttpRoute,
+            *op_name);
+      }
+      span->SetAttribute("motis.message.id", req_id);
+      span->SetAttribute("motis.message.target",
+                         msg->destination()->target()->view());
+      span->SetAttribute("motis.message.type",
+                         EnumNameMsgContent(msg->content_type()));
+
       return receiver_.on_msg(
           req, ios_.wrap([cb, req_id, jf](msg_ptr const& res,
                                           std::error_code const& ec) {
@@ -434,7 +514,7 @@ private:
   ssl::context ctx_;
 #endif
   boost::asio::io_service& ios_;
-  receiver& receiver_;
+  controller& receiver_;
   net::web_server server_;
   bool logging_enabled_{false};
   std::string log_path_;
@@ -443,8 +523,8 @@ private:
   bool serve_static_files_{false};
 };
 
-web_server::web_server(boost::asio::io_service& ios, receiver& recvr)
-    : impl_(new impl(ios, recvr)) {}
+web_server::web_server(boost::asio::io_service& ios, controller& ctr)
+    : impl_(new impl(ios, ctr)) {}
 
 web_server::~web_server() = default;
 

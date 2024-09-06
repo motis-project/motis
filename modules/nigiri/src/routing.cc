@@ -2,6 +2,9 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+
 #include "utl/erase_if.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/pipes.h"
@@ -18,6 +21,7 @@
 #include "motis/core/common/timing.h"
 #include "motis/core/access/error.h"
 #include "motis/core/journey/journeys_to_message.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/nigiri/location.h"
 #include "motis/nigiri/metrics.h"
 #include "motis/nigiri/nigiri_to_motis_journey.h"
@@ -153,6 +157,9 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
                              metrics& metrics, n::profile_idx_t const prf_idx) {
   using motis::routing::RoutingRequest;
   auto const req = motis_content(RoutingRequest, msg);
+
+  auto span = motis_tracer->StartSpan("nigiri::route");
+  auto scope = opentelemetry::trace::Scope{span};
 
   auto min_connection_count = static_cast<std::uint8_t>(0U);
   auto extend_interval_earlier = false;
@@ -356,8 +363,9 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   search_interval = r.interval_;
   MOTIS_STOP_TIMING(routing);
 
-  auto const reconstruction_errors = utl::count_if(
-      *r.journeys_, [](n::routing::journey const& j) { return j.error_; });
+  auto const reconstruction_errors = static_cast<std::int64_t>(utl::count_if(
+      *r.journeys_, [](n::routing::journey const& j) { return j.error_; }));
+  metrics.reconstruction_errors_.Observe(reconstruction_errors);
 
   if (req->start_type() == routing::Start_PretripStart) {
     metrics.pretrip_routing_time_.Observe(MOTIS_TIMING_S(routing));
@@ -366,6 +374,16 @@ motis::module::msg_ptr route(tag_lookup const& tags, n::timetable const& tt,
   } else if (req->start_type() == routing::Start_OntripStationStart) {
     metrics.ontrip_station_routing_time_.Observe(MOTIS_TIMING_S(routing));
   }
+
+  span->AddEvent("routing done",
+                 {{"journeys", r.journeys_->size()},
+                  {"reconstruction_errors", reconstruction_errors}});
+
+  span->SetAttribute("motis.nigiri.result.journeys",
+                     static_cast<std::int64_t>(r.journeys_->size()));
+
+  span->SetAttribute("motis.nigiri.result.reconstruction_errors",
+                     reconstruction_errors);
 
   return to_routing_response(tt, rtt, tags, journeys, search_interval,
                              search_stats, raptor_stats,

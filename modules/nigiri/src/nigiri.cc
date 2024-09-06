@@ -15,6 +15,9 @@
 #include "prometheus/counter.h"
 #include "prometheus/registry.h"
 
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+
 #include "utl/enumerate.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/verify.h"
@@ -32,7 +35,9 @@
 #include "nigiri/timetable.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/event_collector.h"
+#include "motis/module/global_res_ids.h"
 #include "motis/nigiri/geo_station_lookup.h"
 #include "motis/nigiri/get_station.h"
 #include "motis/nigiri/gtfsrt.h"
@@ -123,6 +128,15 @@ struct nigiri::impl {
                 .Help("Number of interval extensions per routing request")
                 .Register(*prometheus_registry)
                 .Add({{"type", "pretrip"}},
+                     prometheus::Histogram::BucketBoundaries{0, 1, 2, 3, 4, 5,
+                                                             6, 7, 8, 9, 10}),
+        .reconstruction_errors_ =
+            prometheus::BuildHistogram()
+                .Name("nigiri_reconstruction_errors")
+                .Help("Number of journey reconstruction errors per routing "
+                      "request")
+                .Register(*prometheus_registry)
+                .Add({},
                      prometheus::Histogram::BucketBoundaries{0, 1, 2, 3, 4, 5,
                                                              6, 7, 8, 9, 10}),
         .gtfsrt_updates_requested_ =
@@ -293,16 +307,30 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
 nigiri::~nigiri() = default;
 
 void nigiri::init(motis::module::registry& reg) {
+  auto span = motis_tracer->StartSpan("nigiri::init");
+  auto scope = opentelemetry::trace::Scope{span};
   if (!gtfsrt_paths_.empty()) {
     auto const rtt_copy = std::make_shared<n::rt_timetable>(*impl_->get_rtt());
     auto statistics = std::vector<n::rt::statistics>{};
     for (auto const& p : gtfsrt_paths_) {
       auto const [tag, path] = utl::split<'|', utl::cstr, utl::cstr>(p);
       if (path.empty()) {
+        span->AddEvent(
+            "config error",
+            {{"message", "bad GTFS-RT path (required: tag|path/to/file)"},
+             {"path", p}});
+        span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                        "config error");
         throw utl::fail("bad GTFS-RT path: {} (required: tag|path/to/file)", p);
       }
       auto const src = impl_->tags_.get_src(tag.to_str() + '_');
       if (src == n::source_idx_t::invalid()) {
+        span->AddEvent("config error",
+                       {{"message", "bad GTFS-RT path: tag not found"},
+                        {"path", p},
+                        {"tag", tag.view()}});
+        span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                        "config error");
         throw utl::fail("bad GTFS-RT path: tag {} not found", tag.view());
       }
       auto const file =
@@ -315,10 +343,18 @@ void nigiri::init(motis::module::registry& reg) {
         stats.parser_error_ = true;
         LOG(logging::error)
             << "GTFS-RT update error (tag=" << tag.view() << ") " << e.what();
+        span->AddEvent("exception", {{"exception.message", e.what()},
+                                     {"tag", tag.view()},
+                                     {"path", path.view()},
+                                     {"during", "GTFS-RT update"}});
       } catch (...) {
         stats.parser_error_ = true;
         LOG(logging::error)
             << "Unknown GTFS-RT update error (tag= " << tag.view() << ")";
+        span->AddEvent("exception", {{"exception.type", "unknown"},
+                                     {"tag", tag.view()},
+                                     {"path", path.view()},
+                                     {"during", "GTFS-RT update"}});
       }
       statistics.emplace_back(stats);
     }
@@ -331,6 +367,10 @@ void nigiri::init(motis::module::registry& reg) {
                          << static_cast<double>(stats.total_entities_success_) /
                                 stats.total_entities_ * 100
                          << "%)";
+      span->AddEvent("GTFS-RT init",
+                     {{"path", path},
+                      {"total_entities_success", stats.total_entities_success_},
+                      {"total_entities", stats.total_entities_}});
     }
   }
 
@@ -447,8 +487,15 @@ void nigiri::register_gtfsrt_timer(mm::dispatcher& d) {
 void nigiri::update_gtfsrt() {
   LOG(logging::info) << "Starting GTFS-RT update: fetch URLs";
 
-  auto const futures = utl::to_vec(
-      impl_->gtfsrt_, [](auto& endpoint) { return endpoint.fetch(); });
+  auto outer_span = motis_tracer->StartSpan("nigiri::update_gtfsrt");
+  auto outer_scope = opentelemetry::trace::Scope{outer_span};
+
+  auto const futures = utl::to_vec(impl_->gtfsrt_, [](auto& endpoint) {
+    auto span = motis_tracer->StartSpan(
+        "fetch", {{"tag", endpoint.tag_}, {"url", endpoint.url_}});
+    auto scope = opentelemetry::trace::Scope{span};
+    return endpoint.fetch();
+  });
   auto const today = std::chrono::time_point_cast<date::days>(
       std::chrono::system_clock::now());
   auto const rtt = gtfsrt_incremental_
@@ -458,11 +505,16 @@ void nigiri::update_gtfsrt() {
                              n::rt::create_rt_timetable(**impl_->tt_, today));
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto const [f, endpoint] : utl::zip(futures, impl_->gtfsrt_)) {
+    auto span = motis_tracer->StartSpan(
+        "process", {{"tag", endpoint.tag_}, {"url", endpoint.url_}});
+    auto scope = opentelemetry::trace::Scope{span};
+
     auto const tag = impl_->tags_.get_tag_clean(endpoint.src());
     auto stats = n::rt::statistics{};
     endpoint.metrics_->updates_requested_.Increment();
     try {
       auto const& body = f->val().body;
+      span->AddEvent("received", {{"http.response.length", body.size()}});
       if (debug_) {
         std::ofstream{fmt::format("{}/{}.json", get_data_directory(), tag)}
             << n::rt::protobuf_to_json(body);
@@ -471,13 +523,45 @@ void nigiri::update_gtfsrt() {
                                        body);
       endpoint.metrics_->updates_successful_.Increment();
       endpoint.metrics_->last_update_timestamp_.SetToCurrentTime();
+      span->SetAttribute("motis.gtfsrt.feed.timestamp",
+                         static_cast<std::int64_t>(
+                             stats.feed_timestamp_.time_since_epoch().count()));
+      span->SetAttribute("motis.gtfsrt.feed.total_entities",
+                         stats.total_entities_);
+      span->SetAttribute("motis.gtfsrt.feed.total_entities_success",
+                         stats.total_entities_success_);
+      span->SetAttribute("motis.gtfsrt.feed.total_entities_fail",
+                         stats.total_entities_fail_);
+      span->SetAttribute("motis.gtfsrt.feed.unsupported_deleted",
+                         stats.unsupported_deleted_);
+      span->SetAttribute("motis.gtfsrt.feed.unsupported_vehicle",
+                         stats.unsupported_vehicle_);
+      span->SetAttribute("motis.gtfsrt.feed.unsupported_alert",
+                         stats.unsupported_alert_);
+      span->SetAttribute("motis.gtfsrt.feed.unsupported_no_trip_id",
+                         stats.unsupported_no_trip_id_);
+      span->SetAttribute("motis.gtfsrt.feed.no_trip_update",
+                         stats.no_trip_update_);
+      span->SetAttribute("motis.gtfsrt.feed.trip_update_without_trip",
+                         stats.trip_update_without_trip_);
+      span->SetAttribute("motis.gtfsrt.feed.trip_resolve_error",
+                         stats.trip_resolve_error_);
+      span->SetAttribute("motis.gtfsrt.feed.unsupported_schedule_relationship",
+                         stats.unsupported_schedule_relationship_);
     } catch (std::exception const& e) {
       stats.parser_error_ = true;
+      span->AddEvent("exception", {
+                                      {"exception.message", e.what()},
+                                  });
+      span->SetStatus(opentelemetry::trace::StatusCode::kError, "exception");
       LOG(logging::error) << "GTFS-RT update error (tag=" << tag << ") "
                           << e.what();
       endpoint.metrics_->updates_error_.Increment();
     } catch (...) {
       stats.parser_error_ = true;
+      span->AddEvent("exception", {{"exception.type", "unknown"}});
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "unknown error");
       LOG(logging::error) << "Unknown GTFS-RT update error (tag= " << tag
                           << ")";
       endpoint.metrics_->updates_error_.Increment();
@@ -503,6 +587,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
       [this](mm::event_collector::dependencies_map_t const& dependencies,
              mm::event_collector::publish_fn_t const& publish) {
         using import::FileEvent;
+
+        auto span = motis_tracer->StartSpan("nigiri::import");
+        auto scope = opentelemetry::trace::Scope{span};
 
         auto const& msg = dependencies.at("SCHEDULE");
 
@@ -530,6 +617,11 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         LOG(logging::info) << "interval: " << interval.from_ << " - "
                            << interval.to_;
 
+        span->SetAttribute("motis.nigiri.import.interval.from",
+                           date::format("%F", interval.from_));
+        span->SetAttribute("motis.nigiri.import.interval.to",
+                           date::format("%F", interval.to_));
+
         auto h =
             cista::hash_combine(cista::BASE_HASH,
                                 interval.from_.time_since_epoch().count(),  //
@@ -548,6 +640,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             continue;
           }
           auto const path = fs::path{p->path()->str()};
+
+          span->AddEvent("add dataset", {{"tag", p->options()->str()},
+                                         {"path", path.string()}});
+
           auto d = n::loader::make_dir(path);
           auto const c = utl::find_if(
               impl_->loaders_, [&](auto&& c) { return c->applicable(*d); });
@@ -567,10 +663,16 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
 
+        span->SetAttribute("motis.nigiri.import.dump_file",
+                           dump_file_path.string());
+
         auto loaded = false;
         for (auto i = 0U; i != 2; ++i) {
           // Parse from input files and write memory image.
           if (no_cache_ || !fs::is_regular_file(dump_file_path)) {
+            auto parse_span = motis_tracer->StartSpan("parse timetable");
+            auto parse_scope = opentelemetry::trace::Scope{parse_span};
+
             impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
                 cista::raw::make_unique<n::timetable>());
 
@@ -580,8 +682,14 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             for (auto const& [src, loader, dir] : datasets) {
-              auto progress_tracker = utl::activate_progress_tracker(
-                  fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
+              auto const tag = impl_->tags_.get_tag(src);
+              auto progress_tracker =
+                  utl::activate_progress_tracker(fmt::format("{}nigiri", tag));
+
+              auto inner_span = motis_tracer->StartSpan(
+                  "load timetable",
+                  {{"tag", tag}, {"loader", (*loader)->name()}});
+              auto inner_scope = opentelemetry::trace::Scope{inner_span};
 
               LOG(logging::info)
                   << "loading nigiri timetable with configuration "
@@ -594,24 +702,38 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                                 nullptr);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
+                inner_span->AddEvent("exception",
+                                     {{"exception.message", e.what()}});
+                inner_span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                                      "exception");
                 progress_tracker->status(fmt::format("ERROR: {}", e.what()))
                     .show_progress(false);
                 throw;
               } catch (...) {
+                inner_span->AddEvent("exception");
+                inner_span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                                      "exception");
                 progress_tracker->status("ERROR: UNKNOWN EXCEPTION")
                     .show_progress(false);
                 throw;
               }
             }
 
-            n::loader::finalize(**impl_->tt_, adjust_footpaths_,
-                                merge_duplicates_, max_footpath_length_);
+            {
+              auto const fin_span = motis_tracer->StartSpan("finalize");
+              auto const fin_scope = opentelemetry::trace::Scope{fin_span};
+              n::loader::finalize(**impl_->tt_, adjust_footpaths_,
+                                  merge_duplicates_, max_footpath_length_);
+            }
 
             if (no_cache_) {
               loaded = true;
               break;
             } else {
               // Write to disk, next step: read from disk.
+              auto const write_span =
+                  motis_tracer->StartSpan("write cached timetable image");
+              auto const write_scope = opentelemetry::trace::Scope{write_span};
               std::filesystem::create_directories(data_dir);
               (*impl_->tt_)->write(dump_file_path);
             }
@@ -620,6 +742,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           // Read memory image from disk.
           impl_->hash_ = h;
           if (!no_cache_) {
+            auto const read_span =
+                motis_tracer->StartSpan("read cached timetable image");
+            auto const read_scope = opentelemetry::trace::Scope{read_span};
             try {
               impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
                   n::timetable::read(cista::memory_holder{
@@ -635,6 +760,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             } catch (std::exception const& e) {
               LOG(logging::error)
                   << "cannot read cached timetable image: " << e.what();
+              read_span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                                   "exception");
+              read_span->AddEvent("exception",
+                                  {{"exception.message", e.what()}});
               std::filesystem::remove(dump_file_path);
               continue;
             }
@@ -649,6 +778,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                            << "\n";
 
         if (lookup_) {
+          auto lookup_scope = opentelemetry::trace::Scope{
+              motis_tracer->StartSpan("init lookup")};
           impl_->station_lookup_ = std::make_shared<nigiri_station_lookup>(
               impl_->tags_, **impl_->tt_);
           auto copy = impl_->station_lookup_;
@@ -657,11 +788,15 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         }
 
         if (guesser_) {
+          auto lookup_scope = opentelemetry::trace::Scope{
+              motis_tracer->StartSpan("init guesser")};
           impl_->guesser_ =
               std::make_unique<guesser>(impl_->tags_, (**impl_->tt_));
         }
 
         if (railviz_) {
+          auto lookup_scope = opentelemetry::trace::Scope{
+              motis_tracer->StartSpan("init railviz")};
           impl_->initial_permalink_ = get_initial_permalink(**impl_->tt_);
           impl_->railviz_ =
               std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));

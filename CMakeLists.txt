@@ -3,6 +3,8 @@ project(motis)
 
 enable_language(CXX C ASM)
 
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+
 if (MSVC)
   # PDB debug information is not supported by buildcache.
   # Store debug info in the object files.
@@ -236,6 +238,8 @@ target_link_libraries(motis
   ianatzdb-res
   pbf_sdf_fonts_res-res
   tiles_server_res-res
+  opentelemetry_exporter_otlp_http
+  opentelemetry_exporter_otlp_http_log
 )
 target_compile_options(motis PRIVATE ${MOTIS_CXX_FLAGS})
 set_target_properties(motis PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

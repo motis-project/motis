@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <string_view>
 
 #include "prometheus/counter.h"
@@ -53,6 +54,8 @@ struct gtfsrt {
   struct impl;
   std::unique_ptr<impl> impl_;
 
+  std::string tag_;
+  std::string url_;
   std::unique_ptr<gtfsrt_metrics> metrics_;
 };
 
