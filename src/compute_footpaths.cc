@@ -7,6 +7,8 @@
 
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
+#include "osr/util/infinite.h"
+#include "osr/util/reverse.h"
 
 #include "icc/constants.h"
 #include "icc/get_loc.h"
@@ -19,6 +21,34 @@ namespace icc {
 
 constexpr auto const kMode =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_STATIC_VERSION;
+
+vector_map<n::location_idx_t, osr::match_t> lookup_locations(
+    osr::ways const& w,
+    osr::lookup const& lookup,
+    osr::platforms const& pl,
+    n::timetable const& tt,
+    platform_matches_t const& matches,
+    osr::search_profile const profile) {
+  auto const timer = utl::scoped_timer{fmt::format(
+      "matching timetable locations for profile={}", to_str(profile))};
+
+  auto ret = vector_map<n::location_idx_t, osr::match_t>{};
+  ret.resize(tt.n_locations());
+
+  utl::parallel_for_run(tt.n_locations(), [&](std::size_t const x) {
+    auto const l =
+        n::location_idx_t{static_cast<n::location_idx_t::value_t>(x)};
+    // - fixed `direction=forward` only works because we don't reconstruct and
+    //   because foot/wheelchair can use ways
+    // - fixed `reverse=false` only works because foot/wheelchair can use ways
+    //   in both directions.
+    ret[l] = lookup.match(get_loc(tt, w, pl, matches, l), false,
+                          osr::direction::kForward, kMaxMatchingDistance,
+                          nullptr, profile);
+  });
+
+  return ret;
+}
 
 elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
                                           osr::ways const& w,
@@ -71,9 +101,17 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
     }
   };
 
+  auto const foot_candidates =
+      lookup_locations(w, lookup, pl, tt, matches, osr::search_profile::kFoot);
+  auto const wheelchair_candidates = lookup_locations(
+      w, lookup, pl, tt, matches, osr::search_profile::kWheelchair);
+
   auto m = std::mutex{};
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
+    auto const& candidates = mode == osr::search_profile::kFoot
+                                 ? foot_candidates
+                                 : wheelchair_candidates;
     utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
       auto const l = n::location_idx_t{i};
       auto& footpaths =
@@ -84,10 +122,12 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
           tt.locations_.coordinates_[l], kMaxDistance,
           [&](n::location_idx_t const l) { neighbors.emplace_back(l); });
       auto const results = osr::route(
-          w, lookup, mode, get_loc(tt, w, pl, matches, l),
+          w, mode, get_loc(tt, w, pl, matches, l),
           utl::to_vec(neighbors,
                       [&](auto&& l) { return get_loc(tt, w, pl, matches, l); }),
-          kMaxDuration, osr::direction::kForward, kMaxMatchingDistance, nullptr,
+          candidates[l],
+          utl::to_vec(neighbors, [&](auto&& l) { return candidates[l]; }),
+          kMaxDuration, osr::direction::kForward, nullptr,
           [](osr::path const& p) { return p.uses_elevator_; });
       for (auto const [n, r] : utl::zip(neighbors, results)) {
         if (r.has_value()) {
