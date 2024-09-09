@@ -22,7 +22,7 @@ struct http_text_map_carrier
   }
 
   virtual void Set(opentelemetry::nostd::string_view key,
-                   opentelemetry::nostd::string_view value) noexcept {
+                   opentelemetry::nostd::string_view value) noexcept override {
     if constexpr (!std::is_const_v<T>) {
       header_.set(key, value);
     }

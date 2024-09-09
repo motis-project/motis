@@ -74,8 +74,7 @@ void init_opentelemetry_tracer(
   opentelemetry::trace::Provider::SetTracerProvider(provider);
 }
 
-void init_opentelemetry(motis_instance& instance,
-                        launcher_settings const& launcher_opt) {
+void init_opentelemetry(launcher_settings const& launcher_opt) {
   auto resource_attributes = opentelemetry::sdk::resource::ResourceAttributes{
       {"service.name", "motis"}, {"service.version", short_version()}};
   auto resource =
@@ -163,7 +162,7 @@ int main(int argc, char const** argv) {
     dispatcher::direct_mode_dispatcher_ = &instance;
   }
 
-  init_opentelemetry(instance, launcher_opt);
+  init_opentelemetry(launcher_opt);
 
   try {
     instance.import(module_opt, import_opt);
