@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 
 #include "opentelemetry/context/context.h"
 #include "opentelemetry/context/runtime_context.h"
@@ -61,8 +62,9 @@ struct otel_runtime_context_storage
   }
 
 private:
-  opentelemetry::context::RuntimeContextStorage* default_storage_{
-      opentelemetry::context::GetDefaultStorage()};
+  std::unique_ptr<opentelemetry::context::ThreadLocalContextStorage>
+      default_storage_{std::make_unique<
+          opentelemetry::context::ThreadLocalContextStorage>()};
 };
 
 }  // namespace motis::module
