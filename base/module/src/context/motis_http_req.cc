@@ -39,6 +39,7 @@ struct http_request_executor
       switch (url.scheme_id()) {
         case boost::urls::scheme::http: port = 80; break;
         case boost::urls::scheme::https: port = 443; break;
+        default: break;
       }
     }
 
