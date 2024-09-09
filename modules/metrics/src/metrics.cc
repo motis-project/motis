@@ -17,7 +17,7 @@ void metrics::init(mm::registry& reg) {
                   [&](mm::msg_ptr const& msg) { return request(msg); }, {});
 }
 
-mm::msg_ptr metrics::request(mm::msg_ptr const& msg) const {
+mm::msg_ptr metrics::request(mm::msg_ptr const&) const {
   auto registry = get_shared_data<std::shared_ptr<prometheus::Registry>>(
                       to_res_id(mm::global_res_id::METRICS))
                       .get();

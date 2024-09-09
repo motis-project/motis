@@ -82,7 +82,7 @@ struct schedule_info {
 };
 
 struct nigiri::impl {
-  impl(std::shared_ptr<prometheus::Registry> prometheus_registry) {
+  explicit impl(std::shared_ptr<prometheus::Registry> prometheus_registry) {
     loaders_.emplace_back(std::make_unique<n::loader::gtfs::gtfs_loader>());
     loaders_.emplace_back(
         std::make_unique<n::loader::hrd::hrd_5_00_8_loader>());
