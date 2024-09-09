@@ -3,7 +3,11 @@
 
 #include "gtest/gtest.h"
 
+#include "opentelemetry/trace/provider.h"
+
 #include "utl/progress_tracker.h"
+
+#include "motis/core/otel/tracer.h"
 
 #include "test_dir.h"
 
@@ -20,6 +24,9 @@ int main(int argc, char** argv) {
 
   fs::current_path(MOTIS_TEST_EXECUTION_DIR);
   std::cout << "executing tests in " << fs::current_path() << '\n';
+
+  auto tracer_provider = opentelemetry::trace::Provider::GetTracerProvider();
+  motis::motis_tracer = tracer_provider->GetTracer("motis-test");
 
   ::testing::InitGoogleTest(&argc, argv);
   auto test_result = RUN_ALL_TESTS();

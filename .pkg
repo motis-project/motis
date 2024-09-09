@@ -77,7 +77,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=metrics
-  commit=97ae69838116d57f6552a6d1e1e94b4e7cff66ce
+  commit=aca6198ae550dd9a7eab451ad47d8ea0c0ae9a54
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -93,4 +93,4 @@
 [opentelemetry-cpp]
   url=git@github.com:motis-project/opentelemetry-cpp.git
   branch=main
-  commit=63ce4f99419b01bd969514a7cd7a5ba64c075c0d
+  commit=6f7d69a1353d518eda1b691da1008c6cc5abad33

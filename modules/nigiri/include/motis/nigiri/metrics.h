@@ -9,15 +9,20 @@
 namespace motis::nigiri {
 
 struct metrics {
+  explicit metrics(prometheus::Registry& registry);
+
   prometheus::Registry& registry_;
 
+  prometheus::Family<prometheus::Counter>& request_counter_family_;
   prometheus::Counter& pretrip_requests_;
   prometheus::Counter& ontrip_station_requests_;
 
   prometheus::Histogram& via_count_;
 
+  prometheus::Family<prometheus::Histogram>& routing_time_family_;
   prometheus::Histogram& pretrip_routing_time_;
   prometheus::Histogram& ontrip_station_routing_time_;
+
   prometheus::Histogram& pretrip_interval_extensions_;
 
   prometheus::Histogram& reconstruction_errors_;
