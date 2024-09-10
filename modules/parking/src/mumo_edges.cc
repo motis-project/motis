@@ -80,11 +80,9 @@ msg_ptr make_ppr_request(::ppr::location const& start,
       MsgContent_FootRoutingRequest,
       CreateFootRoutingRequest(
           mc, &fbs_position,
-          mc.CreateVectorOfStructs(
-              utl::to_vec(destinations,
-                          [](auto const& loc) {
-                            return Position{loc.lat(), loc.lon()};
-                          })),
+          mc.CreateVectorOfStructs(utl::to_vec(
+              destinations,
+              [](auto const& loc) { return Position{loc.lat(), loc.lon()}; })),
           CreateSearchOptions(mc, mc.CreateString(profile_name),
                               duration_limit),
           dir, include_steps, include_edges, include_path)

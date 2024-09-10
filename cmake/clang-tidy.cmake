@@ -11,7 +11,7 @@ endif()
 if(MOTIS_CLANG_TIDY_COMMAND)
   set(CLANG_TIDY_COMMAND "${MOTIS_CLANG_TIDY_COMMAND}")
 else()
-  find_program(CLANG_TIDY_COMMAND NAMES clang-tidy clang-tidy-17)
+  find_program(CLANG_TIDY_COMMAND NAMES clang-tidy clang-tidy-18)
 endif()
 
 if(NOT CLANG_TIDY_COMMAND)
