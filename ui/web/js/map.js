@@ -262,14 +262,16 @@ function initPorts(app, apiEndpoint, tilesEndpoint, initialPermalink, style) {
     syncMaps(map_bg, map_fg);
 
     map_fg.on("load", () => {
-      RailViz.Path.Base.init(map_fg, apiEndpoint);
+      //RailViz.Path.Base.init(map_fg, apiEndpoint);
       RailViz.GBFS.init(map_fg, apiEndpoint);
 
       map_fg.addLayer(new RailVizCustomLayer());
 
-      RailViz.Path.Extra.init(map_fg, "railviz-base-stations");
-      RailViz.Path.Detail.init(map_fg, "railviz-base-stations");
-      RailViz.Path.Connections.init(map_fg, "railviz-base-stations");
+      //const before = "railviz-base-stations";
+      const before = null;
+      RailViz.Path.Extra.init(map_fg, before);
+      RailViz.Path.Detail.init(map_fg, before);
+      RailViz.Path.Connections.init(map_fg, before);
     });
 
     ["click", "mousemove", "mouseout"].forEach((t) =>
