@@ -186,7 +186,7 @@ RailViz.Main = (function () {
 
   function showFullData() {
     showingDetailData = false;
-    RailViz.Path.Base.setEnabled(trainsEnabled);
+    //RailViz.Path.Base.setEnabled(trainsEnabled);
     RailViz.Path.Extra.setData(fullData);
     RailViz.Path.Extra.setEnabled(trainsEnabled);
     RailViz.Path.Detail.setEnabled(false);
@@ -199,7 +199,7 @@ RailViz.Main = (function () {
 
   function showDetailData() {
     showingDetailData = true;
-    RailViz.Path.Base.setEnabled(false);
+    //RailViz.Path.Base.setEnabled(false);
     RailViz.Path.Extra.setEnabled(false);
     RailViz.Path.Detail.setData(detailFilter, detailTrips);
     RailViz.Path.Detail.setEnabled(true);
@@ -214,7 +214,7 @@ RailViz.Main = (function () {
 
   function showTrains(b) {
     trainsEnabled = b;
-    RailViz.Path.Base.setEnabled(!showingDetailData && trainsEnabled);
+    //RailViz.Path.Base.setEnabled(!showingDetailData && trainsEnabled);
     RailViz.Path.Extra.setEnabled(!showingDetailData && trainsEnabled);
     RailViz.Path.Detail.setEnabled(showingDetailData && trainsEnabled);
     RailViz.Render.setTrainsEnabled(trainsEnabled);
