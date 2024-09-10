@@ -75,7 +75,8 @@ void intermodal::init(motis::module::registry& r) {
                                   .Register(*prometheus_registry);
 
   auto const time_buckets = prometheus::Histogram::BucketBoundaries{
-      .05, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, 20.0, 30.0};
+      .05, .1,  .25, .5,  .75,  1.0,  2.0,  3.0,  4.0, 5.0,
+      6.0, 7.0, 8.0, 9.0, 10.0, 20.0, 30.0, 45.0, 60.0};
 
   metrics_ = std::make_unique<metrics>(metrics{
       .registry_ = *prometheus_registry,
