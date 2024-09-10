@@ -11,6 +11,7 @@
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/core/journey/print_journey.h"
+#include "motis/nigiri/metrics.h"
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/tag_lookup.h"
 
@@ -168,12 +169,16 @@ TEST(nigiri, rt_test) {
   auto tags = mn::tag_lookup{};
   tags.add(n::source_idx_t{0U}, "tag_");
 
+  auto prometheus_registry = prometheus::Registry{};
+  auto metrics = mn::metrics{prometheus_registry};
+
   /*** BASE LINE:  A@09:00 -> E@09:55 direct via T1 ***/
-  auto const r0 = mn::route(
-      tags, tt, &rtt,
-      mn::make_routing_msg(
-          "tag_A", "tag_E",
-          mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
+  auto const r0 =
+      mn::route(tags, tt, &rtt,
+                mn::make_routing_msg(
+                    "tag_A", "tag_E",
+                    mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)),
+                metrics);
   auto const j0 = message_to_journeys(motis_content(RoutingResponse, r0));
   ASSERT_EQ(1U, j0.size());
   EXPECT_EQ(0U, j0[0].transfers_);
@@ -186,11 +191,12 @@ TEST(nigiri, rt_test) {
                         .stop_updates_ = {{.stop_id_ = "E", .skip_ = true}}}},
                       date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats0.total_entities_success_);
-  auto const r1 = mn::route(
-      tags, tt, &rtt,
-      mn::make_routing_msg(
-          "tag_A", "tag_E",
-          mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
+  auto const r1 =
+      mn::route(tags, tt, &rtt,
+                mn::make_routing_msg(
+                    "tag_A", "tag_E",
+                    mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)),
+                metrics);
   auto const j1 = message_to_journeys(motis_content(RoutingResponse, r1));
   ASSERT_EQ(1U, j1.size());
   EXPECT_EQ(0U, j1[0].transfers_);
@@ -238,7 +244,8 @@ TEST(nigiri, rt_test) {
   auto const routing_response = mn::route(
       tags, tt, &rtt,
       mn::make_routing_msg("tag_A", "tag_E",
-                           mn::to_unix(date::sys_days{2019_y / May / 1} + 8h)));
+                           mn::to_unix(date::sys_days{2019_y / May / 1} + 8h)),
+      metrics);
 
   auto const journeys =
       message_to_journeys(motis_content(RoutingResponse, routing_response));
@@ -255,11 +262,12 @@ TEST(nigiri, rt_test) {
       mn::to_feed_msg({{.trip_id_ = "TX", .cancelled_ = false}},
                       date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats2.total_entities_success_);
-  auto const r2 = mn::route(
-      tags, tt, &rtt,
-      mn::make_routing_msg(
-          "tag_A", "tag_E",
-          mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
+  auto const r2 =
+      mn::route(tags, tt, &rtt,
+                mn::make_routing_msg(
+                    "tag_A", "tag_E",
+                    mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)),
+                metrics);
   auto const j2 = message_to_journeys(motis_content(RoutingResponse, r2));
   ASSERT_EQ(1U, j2.size());
   EXPECT_EQ(0U, j2[0].transfers_);
@@ -275,11 +283,12 @@ TEST(nigiri, rt_test) {
                  {.stop_id_ = "E", .delay_minutes_ = 0, .skip_ = false}}}},
           date::sys_days{2019_y / May / 1} + 9h));
   EXPECT_EQ(1U, stats3.total_entities_success_);
-  auto const r3 = mn::route(
-      tags, tt, &rtt,
-      mn::make_routing_msg(
-          "tag_A", "tag_E",
-          mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
+  auto const r3 =
+      mn::route(tags, tt, &rtt,
+                mn::make_routing_msg(
+                    "tag_A", "tag_E",
+                    mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)),
+                metrics);
   auto const j3 = message_to_journeys(motis_content(RoutingResponse, r3));
   ASSERT_EQ(1U, j3.size());
   EXPECT_EQ(0U, j3[0].transfers_);

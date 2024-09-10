@@ -1,6 +1,12 @@
 #include "motis/module/timer.h"
 
+#include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+#include "opentelemetry/trace/tracer.h"
+
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/ctx_data.h"
 #include "motis/module/dispatcher.h"
 
@@ -40,16 +46,31 @@ void timer::exec(boost::system::error_code const& ec) {
     return;
   }
 
+  auto span =
+      motis_tracer->StartSpan(name_, {{"timer.interval", interval_.seconds()}});
+  auto scope = opentelemetry::trace::Scope{span};
+
   auto access_copy = access_;
+  auto data = ctx_data{dispatcher_};
+  data.otel_context_stack_.push_back(
+      opentelemetry::context::RuntimeContext::GetCurrent());
   dispatcher_->enqueue(
-      ctx_data{dispatcher_},
-      [self = shared_from_this()]() {
+      std::move(data),
+      [self = shared_from_this(), span]() {
         try {
           self->fn_();
         } catch (std::exception const& e) {
+          span->AddEvent("exception", {
+                                          {"exception.message", e.what()},
+                                      });
+          span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                          "exception");
           LOG(logging::error)
               << "error in timer " << self->name_ << ": " << e.what();
         } catch (...) {
+          span->AddEvent("exception", {{"exception.type", "unknown"}});
+          span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                          "unknown error");
           LOG(logging::error) << "unknown error in timer " << self->name_;
         }
       },

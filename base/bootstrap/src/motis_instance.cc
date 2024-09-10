@@ -4,8 +4,14 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <memory>
 
+#include "fmt/format.h"
 #include "fmt/ranges.h"
+
+#include "prometheus/registry.h"
+
+#include "opentelemetry/trace/tracer.h"
 
 #include "utl/pipes.h"
 #include "utl/progress_tracker.h"
@@ -13,6 +19,7 @@
 #include "utl/verify.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/context/motis_call.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/bootstrap/import_files.h"
@@ -25,6 +32,8 @@ using namespace motis::logging;
 namespace motis::bootstrap {
 
 motis_instance::motis_instance() : controller{build_modules()} {
+  emplace_data(to_res_id(global_res_id::METRICS),
+               std::make_shared<prometheus::Registry>());
   for (auto& m : modules_) {
     m->set_shared_data(this);
   }
@@ -66,6 +75,9 @@ void motis_instance::import(module_settings const& module_opt,
                             bool const silent) {
   auto bars = utl::global_progress_bars{silent};
 
+  auto span = motis_tracer->StartSpan("import");
+  auto scope = opentelemetry::trace::Scope{span};
+
   auto dispatcher = import_dispatcher{};
 
   register_import_files(dispatcher);
@@ -103,23 +115,39 @@ void motis_instance::import(module_settings const& module_opt,
 
 void motis_instance::init_modules(module_settings const& module_opt,
                                   unsigned num_threads) {
+  auto outer_span = motis_tracer->StartSpan("init_modules");
+  auto outer_scope = opentelemetry::trace::Scope{outer_span};
+
   for (auto const& module : modules_) {
     if (!module_opt.is_module_active(module->prefix())) {
       continue;
     }
 
+    auto span =
+        motis_tracer->StartSpan(fmt::format("init {}", module->module_name()));
+    auto scope = opentelemetry::trace::Scope{outer_span};
+
     if (!module->import_successful()) {
       LOG(info) << module->module_name() << ": import was not successful";
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "import failed");
       continue;
     }
 
     try {
       module->init(registry_);
     } catch (std::exception const& e) {
+      span->AddEvent("exception", {
+                                      {"exception.message", e.what()},
+                                  });
+      span->SetStatus(opentelemetry::trace::StatusCode::kError, "exception");
       LOG(emrg) << "module " << module->module_name()
                 << ": unhandled init error: " << e.what();
       throw;
     } catch (...) {
+      span->AddEvent("exception", {{"exception.type", "unknown"}});
+      span->SetStatus(opentelemetry::trace::StatusCode::kError,
+                      "unknown error");
       LOG(emrg) << "module " << module->module_name()
                 << "unhandled unknown init error";
       throw;

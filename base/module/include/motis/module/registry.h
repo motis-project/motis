@@ -3,6 +3,8 @@
 #include <map>
 #include <mutex>
 #include <optional>
+#include <string>
+#include <string_view>
 
 #include "ctx/access_request.h"
 
@@ -45,6 +47,8 @@ struct registry {
   std::optional<remote_op_fn_t> get_remote_op(std::string const& prefix);
 
   std::optional<op> get_operation(std::string const& prefix);
+
+  std::optional<std::string_view> get_operation_name(std::string const& prefix);
 
   void reset();
 

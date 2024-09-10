@@ -1,11 +1,14 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include "motis/module/module.h"
 #include "motis/intermodal/ppr_profiles.h"
 
 namespace motis::intermodal {
+
+struct metrics;
 
 struct intermodal : public motis::module::module {
 public:
@@ -28,6 +31,7 @@ private:
   bool revise_{false};
   unsigned timeout_{0};
   ppr_profiles ppr_profiles_;
+  std::unique_ptr<metrics> metrics_;
 };
 
 }  // namespace motis::intermodal

@@ -12,6 +12,7 @@
 
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/extern_trip.h"
+#include "motis/nigiri/metrics.h"
 #include "motis/nigiri/resolve_run.h"
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/tag_lookup.h"
@@ -75,11 +76,14 @@ TEST(nigiri, dst_test) {
   auto tags = mn::tag_lookup{};
   tags.add(n::source_idx_t{0U}, "swiss_");
 
+  auto prometheus_registry = prometheus::Registry{};
+  auto metrics = mn::metrics{prometheus_registry};
   auto const routing_response = mn::route(
       tags, tt, nullptr,
       mn::make_routing_msg(
           "swiss_8101236", "swiss_8503000:0:9",
-          mn::to_unix(date::sys_days{2023_y / October / 29} + 14h + 48min)));
+          mn::to_unix(date::sys_days{2023_y / October / 29} + 14h + 48min)),
+      metrics);
 
   using namespace motis;
   using motis::routing::RoutingResponse;

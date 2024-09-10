@@ -4,15 +4,22 @@
 #include "boost/url/url.hpp"
 #include "boost/url/url_view.hpp"
 
+#include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/sdk/resource/semantic_conventions.h"
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+
 #include "net/http/client/http_client.h"
 #include "net/http/client/https_client.h"
 
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 
 #include "motis/module/context/get_io_service.h"
 
 using namespace motis::logging;
 using namespace net::http::client;
+using namespace opentelemetry::sdk::resource;
 
 namespace motis::module {
 
@@ -26,6 +33,31 @@ struct http_request_executor
             std::move(id))} {}
 
   void make_request(net::http::client::request req) {
+    auto const url = boost::urls::url_view{req.address.str()};
+    auto port = url.port_number();
+    if (port == 0) {
+      switch (url.scheme_id()) {
+        case boost::urls::scheme::http: port = 80; break;
+        case boost::urls::scheme::https: port = 443; break;
+        default: break;
+      }
+    }
+
+    auto span_options = opentelemetry::trace::StartSpanOptions{};
+    span_options.kind = opentelemetry::trace::SpanKind::kClient;
+
+    span_ = motis_tracer->StartSpan(
+        "HTTP Request",
+        {
+            {SemanticConventions::kHttpRequestMethod,
+             net::http::client::method_to_str(req.req_method)},
+            {SemanticConventions::kUrlFull, req.address.str()},
+            {SemanticConventions::kServerAddress, req.address.host()},
+            {SemanticConventions::kServerPort, port},
+        },
+        span_options);
+    auto scope = opentelemetry::trace::Scope{span_};
+
     l(debug, "http request {} {}",
       net::http::client::method_to_str(req.req_method),
       fmt::streamed(req.address));
@@ -44,6 +76,8 @@ struct http_request_executor
       make_http(ios_, req.peer())->query(req, std::move(cb));
     } else {
       try {
+        span_->SetStatus(opentelemetry::trace::StatusCode::kError,
+                         "unexpected port (not https or http)");
         throw utl::fail("unexpected port {} (not https or http)",
                         req.address.port());
       } catch (...) {
@@ -55,7 +89,14 @@ struct http_request_executor
   template <typename T>
   void on_response(T, net::http::client::response&& res,
                    boost::system::error_code ec) {
+    if (res.status_code != 0) {
+      span_->SetAttribute(SemanticConventions::kHttpResponseStatusCode,
+                          res.status_code);
+    }
     if (ec.failed()) {
+      span_->AddEvent("exception", {{"exception.message", ec.what()}});
+      span_->SetStatus(opentelemetry::trace::StatusCode::kError,
+                       "system error exception");
       try {
         throw std::system_error{ec};
       } catch (...) {
@@ -64,6 +105,7 @@ struct http_request_executor
     } else {
       if (auto const it = res.headers.find("location");
           it != end(res.headers)) {
+        span_->AddEvent("redirect", {{"location", it->second}});
         redirect(it->second);
       } else {
         f_->set(std::move(res));
@@ -91,6 +133,7 @@ struct http_request_executor
   boost::asio::io_service& ios_;
   http_future_t f_;
   url request_url_;
+  std::shared_ptr<opentelemetry::trace::Span> span_;
 };
 
 std::shared_ptr<ctx::future<ctx_data, net::http::client::response>>

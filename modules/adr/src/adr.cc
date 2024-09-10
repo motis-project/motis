@@ -9,6 +9,9 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+
 #include "cista/reflection/comparable.h"
 
 #include "utl/to_vec.h"
@@ -18,6 +21,7 @@
 
 #include "motis/core/common/logging.h"
 #include "motis/core/conv/position_conv.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -61,15 +65,24 @@ void adr::import(motis::module::import_dispatcher& reg) {
              mm::event_collector::publish_fn_t const&) {
         using import::OSMEvent;
 
+        auto span = motis_tracer->StartSpan("adr::import");
+        auto scope = opentelemetry::trace::Scope{span};
+
         auto const dir = get_data_directory() / "adr";
         auto const osm = motis_content(OSMEvent, dependencies.at("OSM"));
         auto const state = import_state{data_path(osm->path()->str()),
                                         osm->hash(), osm->size()};
 
+        span->SetAttribute("motis.osm.file", osm->path()->str());
+        span->SetAttribute("motis.osm.size", osm->size());
+
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
+          span->SetAttribute("motis.import.state", "changed");
           fs::create_directories(dir);
           a::extract(osm->path()->str(), (dir / "adr"), dir);
           mm::write_ini(dir / "import.ini", state);
+        } else {
+          span->SetAttribute("motis.import.state", "unchanged");
         }
 
         impl_ = std::make_unique<impl>(a::read(dir / "adr.t.adr", false));

@@ -9,6 +9,7 @@
 #include "motis/core/journey/journey.h"
 #include "motis/core/journey/message_to_journeys.h"
 #include "motis/core/journey/print_journey.h"
+#include "motis/nigiri/metrics.h"
 #include "motis/nigiri/routing.h"
 #include "motis/nigiri/tag_lookup.h"
 
@@ -209,12 +210,16 @@ TEST(nigiri, max_transfers_test) {
   auto tags = mn::tag_lookup{};
   tags.add(n::source_idx_t{0U}, "tag_");
 
+  auto prometheus_registry = prometheus::Registry{};
+  auto metrics = mn::metrics{prometheus_registry};
+
   {  // Default transfer limit -> should find all 3 connections
     auto const results = mn::route(
         tags, tt, nullptr,
         mn::make_routing_msg(
             "tag_A", "tag_D",
-            mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)));
+            mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min)),
+        metrics);
 
     auto const journeys =
         message_to_journeys(motis_content(RoutingResponse, results));
@@ -231,7 +236,8 @@ TEST(nigiri, max_transfers_test) {
         tags, tt, nullptr,
         mn::make_routing_msg(
             "tag_A", "tag_D",
-            mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min), 1));
+            mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min), 1),
+        metrics);
 
     auto const journeys =
         message_to_journeys(motis_content(RoutingResponse, results));
@@ -248,7 +254,8 @@ TEST(nigiri, max_transfers_test) {
         tags, tt, nullptr,
         mn::make_routing_msg(
             "tag_A", "tag_D",
-            mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min), 0));
+            mn::to_unix(date::sys_days{2019_y / May / 1} + 7h + 50min), 0),
+        metrics);
 
     auto const journeys =
         message_to_journeys(motis_content(RoutingResponse, results));

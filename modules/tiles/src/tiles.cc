@@ -5,6 +5,9 @@
 
 #include "lmdb/lmdb.hpp"
 
+#include "opentelemetry/trace/scope.h"
+#include "opentelemetry/trace/span.h"
+
 #include "net/web_server/url_decode.h"
 
 #include "cista/reflection/comparable.h"
@@ -24,6 +27,7 @@
 #include "utl/progress_tracker.h"
 #include "utl/verify.h"
 
+#include "motis/core/otel/tracer.h"
 #include "motis/module/event_collector.h"
 #include "motis/module/ini_io.h"
 
@@ -78,6 +82,9 @@ void tiles::import(mm::import_dispatcher& reg) {
       get_data_directory().generic_string(), "tiles", reg,
       [this](mm::event_collector::dependencies_map_t const& dependencies,
              mm::event_collector::publish_fn_t const&) {
+        auto span = motis_tracer->StartSpan("tiles::import");
+        auto scope = opentelemetry::trace::Scope{span};
+
         auto const profile_path = fs::path{profile_path_};
         auto const profile_str = utl::read_file(profile_path.string().c_str());
         utl::verify(profile_str.has_value(), "tiles::import cant read profile");

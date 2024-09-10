@@ -13,4 +13,5 @@ target_link_libraries(motis-core
   geo
   motis-data
   motis-module
+  opentelemetry_api
 )

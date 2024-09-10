@@ -22,7 +22,21 @@
 #include "google/protobuf/stubs/common.h"
 #endif
 
+#include "opentelemetry/context/propagation/global_propagator.h"
+#include "opentelemetry/context/propagation/text_map_propagator.h"
+#include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/exporters/otlp/otlp_http_exporter_factory.h"
+#include "opentelemetry/sdk/trace/processor.h"
+#include "opentelemetry/sdk/trace/recordable.h"
+#include "opentelemetry/sdk/trace/simple_processor_factory.h"
+#include "opentelemetry/sdk/trace/tracer_provider.h"
+#include "opentelemetry/sdk/trace/tracer_provider_factory.h"
+#include "opentelemetry/trace/propagation/http_trace_context.h"
+#include "opentelemetry/trace/provider.h"
+#include "opentelemetry/trace/tracer_provider.h"
+
 #include "motis/core/common/logging.h"
+#include "motis/core/otel/tracer.h"
 #include "motis/bootstrap/import_settings.h"
 #include "motis/bootstrap/module_settings.h"
 #include "motis/bootstrap/motis_instance.h"
@@ -32,6 +46,8 @@
 #include "motis/launcher/server_settings.h"
 #include "motis/launcher/web_server.h"
 
+#include "motis/module/otel_runtime_context.h"
+
 #include "version.h"
 
 using namespace motis::bootstrap;
@@ -39,6 +55,48 @@ using namespace motis::launcher;
 using namespace motis::module;
 using namespace motis::logging;
 using namespace motis;
+
+namespace {
+
+void init_opentelemetry_tracer(
+    opentelemetry::sdk::resource::Resource const& resource) {
+  auto exporter =
+      opentelemetry::exporter::otlp::OtlpHttpExporterFactory::Create();
+
+  auto processor =
+      opentelemetry::sdk::trace::SimpleSpanProcessorFactory::Create(
+          std::move(exporter));
+
+  auto provider =
+      std::shared_ptr{opentelemetry::sdk::trace::TracerProviderFactory::Create(
+          std::move(processor), resource)};
+
+  opentelemetry::trace::Provider::SetTracerProvider(provider);
+}
+
+void init_opentelemetry(launcher_settings const& launcher_opt) {
+  auto resource_attributes = opentelemetry::sdk::resource::ResourceAttributes{
+      {"service.name", "motis"}, {"service.version", short_version()}};
+  auto resource =
+      opentelemetry::sdk::resource::Resource::Create(resource_attributes);
+
+  opentelemetry::context::RuntimeContext::SetRuntimeContextStorage(
+      std::make_shared<otel_runtime_context_storage>());
+
+  if (launcher_opt.otlp_http_) {
+    init_opentelemetry_tracer(resource);
+  }
+
+  opentelemetry::context::propagation::GlobalTextMapPropagator::
+      SetGlobalPropagator(
+          std::make_shared<
+              opentelemetry::trace::propagation::HttpTraceContext>());
+
+  auto tracer_provider = opentelemetry::trace::Provider::GetTracerProvider();
+  motis_tracer = tracer_provider->GetTracer("motis", short_version());
+}
+
+}  // namespace
 
 int main(int argc, char const** argv) {
   motis_instance instance;
@@ -103,6 +161,8 @@ int main(int argc, char const** argv) {
   if (launcher_opt.direct_mode_) {
     dispatcher::direct_mode_dispatcher_ = &instance;
   }
+
+  init_opentelemetry(launcher_opt);
 
   try {
     instance.import(module_opt, import_opt);
