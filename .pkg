@@ -49,7 +49,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=217585f424f6865693dd4aaa1a16f85daa574863
+  commit=512cfefe0fe7c7a64ef0adefbf7af2adfe5200c4
 [rapidjson]
   url=git@github.com:motis-project/rapidjson.git
   branch=master
