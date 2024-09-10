@@ -145,8 +145,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/sanitizer",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-17",
-        "CMAKE_CXX_COMPILER": "clang++-17",
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi -B/opt/mold",
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
@@ -194,8 +194,8 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/clang-tidy",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-17",
-        "CMAKE_CXX_COMPILER": "clang++-17",
+        "CMAKE_C_COMPILER": "clang-18",
+        "CMAKE_CXX_COMPILER": "clang++-18",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
         "MOTIS_LINT": "ON",

@@ -35,6 +35,7 @@ namespace o = osr;
 namespace motis::osr {
 
 constexpr auto const kMaxDist = o::cost_t{3600U};  // = 1h
+constexpr auto const kMaxMatchDist = 200.0;
 
 struct import_state {
   CISTA_COMPARABLE()
@@ -47,15 +48,6 @@ struct import_state {
 struct osr::impl {
   impl(std::unique_ptr<o::ways> w, std::unique_ptr<o::lookup> l)
       : w_{std::move(w)}, l_{std::move(l)} {}
-
-  template <typename Profile>
-  o::dijkstra<Profile>& get_dijkstra() {
-    static auto s = boost::thread_specific_ptr<o::dijkstra<Profile>>{};
-    if (s.get() == nullptr) {
-      s.reset(new o::dijkstra<Profile>{});
-    }
-    return *s;
-  }
 
   std::unique_ptr<o::ways> w_;
   std::unique_ptr<o::lookup> l_;
@@ -93,32 +85,9 @@ mm::msg_ptr osr::table(mm::msg_ptr const& msg) const {
   });
   auto const fut = utl::to_vec(*req->from(), [&](auto&& from) {
     return mm::spawn_job([&]() {
-      switch (profile) {
-        case o::search_profile::kWheelchair:
-          return o::route(*impl_->w_, *impl_->l_,
-                          impl_->get_dijkstra<o::foot<true>>(),
-                          {from_fbs(from), o::level_t::invalid()}, {to},
-                          kMaxDist, o::direction::kForward);
-          break;
-        case o::search_profile::kFoot:
-          return o::route(*impl_->w_, *impl_->l_,
-                          impl_->get_dijkstra<o::foot<false>>(),
-                          {from_fbs(from), o::level_t::invalid()}, {to},
-                          kMaxDist, o::direction::kForward);
-          break;
-        case o::search_profile::kBike:
-          return o::route(*impl_->w_, *impl_->l_,
-                          impl_->get_dijkstra<o::bike>(),
-                          {from_fbs(from), o::level_t::invalid()}, {to},
-                          kMaxDist, o::direction::kForward);
-          break;
-        case o::search_profile::kCar:
-          return o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::car>(),
-                          {from_fbs(from), o::level_t::invalid()}, {to},
-                          kMaxDist, o::direction::kForward);
-          break;
-        default: throw utl::fail("not implemented");
-      }
+      return o::route(*impl_->w_, *impl_->l_, profile,
+                      {from_fbs(from), o::level_t::invalid()}, to, kMaxDist,
+                      o::direction::kForward, kMaxMatchDist);
     });
   });
 
@@ -165,36 +134,14 @@ mm::msg_ptr osr::one_to_many(mm::msg_ptr const& msg) const {
   span->SetAttribute("motis.osr.request.direction",
                      dir == o::direction::kForward ? "forward" : "backward");
 
-  auto result = std::vector<std::optional<o::path>>{};
-  switch (profile) {
-    case o::search_profile::kWheelchair:
-      result =
-          o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::foot<true>>(),
-                   from, to, kMaxDist, dir);
-      break;
-    case o::search_profile::kFoot:
-      result = o::route(*impl_->w_, *impl_->l_,
-                        impl_->get_dijkstra<o::foot<false>>(), from, to,
-                        kMaxDist, dir);
-      break;
-    case o::search_profile::kBike:
-      result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::bike>(),
-                        from, to, kMaxDist, dir);
-      break;
-    case o::search_profile::kCar:
-      result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::car>(),
-                        from, to, kMaxDist, dir);
-      break;
-    default: throw utl::fail("not implemented");
-  }
-
   mm::message_creator fbb;
   fbb.create_and_finish(
       MsgContent_OSRMOneToManyResponse,
       CreateOSRMOneToManyResponse(
           fbb,
           fbb.CreateVectorOfStructs(utl::to_vec(
-              result,
+              o::route(*impl_->w_, *impl_->l_, profile, from, to, kMaxDist, dir,
+                       kMaxMatchDist),
               [&](auto const& r) {
                 return r.has_value()
                            ? motis::osrm::Cost{static_cast<double>(r->cost_),
@@ -222,34 +169,13 @@ mm::msg_ptr osr::via(mm::msg_ptr const& msg) const {
       o::location{from_fbs(req->waypoints()->Get(0)), o::level_t::invalid()};
   auto const to =
       o::location{from_fbs(req->waypoints()->Get(1)), o::level_t::invalid()};
-  auto result = std::optional<o::path>{};
 
   span->SetAttribute("motis.osr.request.profile", req->profile()->view());
   span->SetAttribute("motis.osr.request.from", fmt::format("{}", from.pos_));
   span->SetAttribute("motis.osr.request.to", fmt::format("{}", to.pos_));
 
-  switch (profile) {
-    case o::search_profile::kWheelchair:
-      result =
-          o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::foot<true>>(),
-                   from, to, kMaxDist, o::direction::kForward);
-      break;
-    case o::search_profile::kFoot:
-      result = o::route(*impl_->w_, *impl_->l_,
-                        impl_->get_dijkstra<o::foot<false>>(), from, to,
-                        kMaxDist, o::direction::kForward);
-      break;
-    case o::search_profile::kBike:
-      result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::bike>(),
-                        from, to, kMaxDist, o::direction::kForward);
-      break;
-    case o::search_profile::kCar:
-      result = o::route(*impl_->w_, *impl_->l_, impl_->get_dijkstra<o::car>(),
-                        from, to, kMaxDist, o::direction::kForward);
-      break;
-    default: throw utl::fail("not implemented");
-  }
-
+  auto const result = o::route(*impl_->w_, *impl_->l_, profile, from, to,
+                               kMaxDist, o::direction::kForward, kMaxMatchDist);
   utl::verify(result.has_value(), "no path found");
 
   span->SetAttribute("motis.osr.result.segments", result->segments_.size());
@@ -309,12 +235,14 @@ mm::msg_ptr osr::ppr(mm::msg_ptr const& msg) const {
                           .Union());
                   auto const res_msg = via(make_msg(req_fbb));
                   auto const res = motis_content(OSRMViaRouteResponse, res_msg);
+                  auto const duration =
+                      (res->time() > kMaxDist ? res->time()
+                                              : res->time() / 60.0);
                   return ppr::CreateRoutes(
                       fbb,
                       fbb.CreateVector(std::vector{ppr::CreateRoute(
-                          fbb, res->distance(), res->time() / 60.0,
-                          res->time() / 60.0, 0.0, 0U, 0.0, 0.0, req->start(),
-                          dest,
+                          fbb, res->distance(), duration, duration, 0.0, 0U,
+                          0.0, 0.0, req->start(), dest,
                           fbb.CreateVector(
                               std::vector<
                                   flatbuffers::Offset<ppr::RouteStep>>{}),
@@ -386,7 +314,7 @@ void osr::import(mm::import_dispatcher& reg) {
 
         if (mm::read_ini<import_state>(dir / "import.ini") != state) {
           span->SetAttribute("motis.import.state", "changed");
-          o::extract(osm->path()->str(), dir);
+          o::extract(false, osm->path()->str(), dir);
           mm::write_ini(dir / "import.ini", state);
         } else {
           span->SetAttribute("motis.import.state", "unchanged");

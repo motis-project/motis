@@ -21,7 +21,7 @@
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
-  commit=edb385ac526c24bc917ec4a41bb0edb28f0ca59e
+  commit=dc10f83be70ac2873d5f8d1ce317596f1fd318a2
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
@@ -49,7 +49,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=217585f424f6865693dd4aaa1a16f85daa574863
+  commit=512cfefe0fe7c7a64ef0adefbf7af2adfe5200c4
 [rapidjson]
   url=git@github.com:motis-project/rapidjson.git
   branch=master
@@ -76,12 +76,12 @@
   commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
-  branch=metrics
-  commit=6b9212b8ab89259a67b8291d86bdb95acf0bfa55
+  branch=master
+  commit=af032f4d5565de295f8dfa306637532d95a2a8f8
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=ef958750e251bf0204b61a77e1c4d941b3c41f05
+  commit=26a6933ba7b61aa93d18ff9d3aea3ed743d69ce5
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
