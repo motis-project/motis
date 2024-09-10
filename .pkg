@@ -77,11 +77,11 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=acb6efbbff7da7ba63e8b8300dd5017ecf7de2a9
+  commit=ada780c39ab11cfd6a1dd6e8b972f6b877f07d1b
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=ef958750e251bf0204b61a77e1c4d941b3c41f05
+  commit=fc96b2a62ae9ae9a34ec31275d8812b1d0bc87e8
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
