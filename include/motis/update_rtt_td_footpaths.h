@@ -8,13 +8,13 @@
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
 
-#include "icc/compute_footpaths.h"
-#include "icc/data.h"
-#include "icc/elevators/elevators.h"
-#include "icc/fwd.h"
-#include "icc/match_platforms.h"
+#include "motis/compute_footpaths.h"
+#include "motis/data.h"
+#include "motis/elevators/elevators.h"
+#include "motis/fwd.h"
+#include "motis/match_platforms.h"
 
-namespace icc {
+namespace motis {
 
 using nodes_t = std::vector<osr::node_idx_t>;
 using states_t = std::vector<bool>;
@@ -64,4 +64,4 @@ void update_rtt_td_footpaths(osr::ways const&,
                              platform_matches_t const&,
                              nigiri::rt_timetable&);
 
-}  // namespace icc
+}  // namespace motis

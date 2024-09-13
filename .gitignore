@@ -1,4 +1,5 @@
 /*build*
+/.clang-tidy
 /.idea
 /deps
 *.zip

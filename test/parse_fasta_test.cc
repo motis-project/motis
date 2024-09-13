@@ -1,11 +1,11 @@
 #include "gtest/gtest.h"
 
-#include "icc/elevators/parse_fasta.h"
+#include "motis/elevators/parse_fasta.h"
 
 using namespace date;
 using namespace std::chrono_literals;
 using namespace std::string_view_literals;
-using namespace icc;
+using namespace motis;
 namespace n = nigiri;
 
 constexpr auto const kFastaJson = R"__(
@@ -51,7 +51,7 @@ constexpr auto const kFastaJson = R"__(
 ]
 )__"sv;
 
-TEST(icc, parse_fasta) {
+TEST(motis, parse_fasta) {
   auto const elevators = parse_fasta(kFastaJson);
   ASSERT_EQ(3, elevators.size());
   ASSERT_EQ(1, elevators[elevator_idx_t{0}].out_of_service_.size());

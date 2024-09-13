@@ -1,4 +1,4 @@
-#include "icc/endpoints/routing.h"
+#include "motis/endpoints/routing.h"
 
 #include "boost/thread/tss.hpp"
 
@@ -13,16 +13,16 @@
 #include "nigiri/routing/raptor_search.h"
 #include "nigiri/special_stations.h"
 
-#include "icc/constants.h"
-#include "icc/endpoints/routing.h"
-#include "icc/journey_to_response.h"
-#include "icc/parse_location.h"
-#include "icc/update_rtt_td_footpaths.h"
+#include "motis/constants.h"
+#include "motis/endpoints/routing.h"
+#include "motis/journey_to_response.h"
+#include "motis/parse_location.h"
+#include "motis/update_rtt_td_footpaths.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
 
-namespace icc::ep {
+namespace motis::ep {
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -406,4 +406,4 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   };
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

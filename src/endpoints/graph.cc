@@ -1,4 +1,4 @@
-#include "icc/endpoints/graph.h"
+#include "motis/endpoints/graph.h"
 
 #include "osr/geojson.h"
 #include "osr/routing/profiles/foot.h"
@@ -6,7 +6,7 @@
 
 namespace json = boost::json;
 
-namespace icc::ep {
+namespace motis::ep {
 
 json::value graph::operator()(json::value const& query) const {
   auto const& q = query.as_object();
@@ -51,4 +51,4 @@ json::value graph::operator()(json::value const& query) const {
   return gj.json();
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

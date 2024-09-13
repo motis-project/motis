@@ -1,14 +1,14 @@
-#include "icc/endpoints/matches.h"
+#include "motis/endpoints/matches.h"
 
 #include "osr/geojson.h"
 
-#include "icc/location_routes.h"
-#include "icc/match_platforms.h"
+#include "motis/location_routes.h"
+#include "motis/match_platforms.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
 
-namespace icc::ep {
+namespace motis::ep {
 
 std::string get_names(osr::platforms const& pl, osr::platform_idx_t const x) {
   auto ss = std::stringstream{};
@@ -93,4 +93,4 @@ json::value matches::operator()(json::value const& query) const {
   return json::value{{"type", "FeatureCollection"}, {"features", matches}};
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

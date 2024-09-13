@@ -2,7 +2,7 @@
 
 #include "cista/serialization.h"
 
-namespace icc {
+namespace motis {
 
 // search radius for neighbors to route to [seconds]
 constexpr auto const kMaxDuration = 15 * 60;
@@ -23,4 +23,4 @@ constexpr auto const kTransferTimeMultiplier = 1.5F;
 // are updated on elevator status changes [meters]
 constexpr auto const kElevatorUpdateRadius = 1000.;
 
-}  // namespace icc
+}  // namespace motis

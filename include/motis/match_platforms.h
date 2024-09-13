@@ -3,10 +3,10 @@
 
 #include "osr/types.h"
 
-#include "icc/data.h"
-#include "icc/types.h"
+#include "motis/data.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 using platform_matches_t =
     vector_map<nigiri::location_idx_t, osr::platform_idx_t>;
@@ -26,4 +26,4 @@ platform_matches_t get_matches(nigiri::timetable const&,
 
 std::optional<std::string_view> get_track(std::string_view);
 
-}  // namespace icc
+}  // namespace motis

@@ -1,4 +1,4 @@
-#include "icc/endpoints/footpaths.h"
+#include "motis/endpoints/footpaths.h"
 
 #include "osr/geojson.h"
 #include "osr/routing/route.h"
@@ -7,16 +7,16 @@
 #include "utl/pipes/transform.h"
 #include "utl/pipes/vec.h"
 
-#include "icc/constants.h"
-#include "icc/elevators/elevators.h"
-#include "icc/elevators/match_elevator.h"
-#include "icc/get_loc.h"
-#include "icc/match_platforms.h"
+#include "motis/constants.h"
+#include "motis/elevators/elevators.h"
+#include "motis/elevators/match_elevator.h"
+#include "motis/get_loc.h"
+#include "motis/match_platforms.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
 
-namespace icc::ep {
+namespace motis::ep {
 
 json::value to_json(osr::location const& loc) {
   return json::value{{"lat", loc.pos_.lat_},
@@ -122,4 +122,4 @@ json::value footpaths::operator()(json::value const& query) const {
            | utl::emplace_back_to<json::array>()}};
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

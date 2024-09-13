@@ -4,11 +4,11 @@
 
 #include "osr/types.h"
 
-#include "icc/fwd.h"
-#include "icc/point_rtree.h"
-#include "icc/types.h"
+#include "motis/fwd.h"
+#include "motis/point_rtree.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 point_rtree<elevator_idx_t> create_elevator_rtree(
     nigiri::vector_map<elevator_idx_t, elevator> const&);
@@ -27,4 +27,4 @@ osr::bitvec<osr::node_idx_t> get_blocked_elevators(
     point_rtree<elevator_idx_t> const&,
     osr::hash_set<osr::node_idx_t> const&);
 
-}  // namespace icc
+}  // namespace motis

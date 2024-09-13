@@ -1,4 +1,4 @@
-#include "icc/update_rtt_td_footpaths.h"
+#include "motis/update_rtt_td_footpaths.h"
 
 #include <map>
 
@@ -6,13 +6,13 @@
 
 #include "osr/routing/route.h"
 
-#include "icc/constants.h"
-#include "icc/get_loc.h"
+#include "motis/constants.h"
+#include "motis/get_loc.h"
 
 namespace n = nigiri;
 using namespace std::chrono_literals;
 
-namespace icc {
+namespace motis {
 
 using node_states_t =
     std::pair<nodes_t, std::vector<std::pair<n::unixtime_t, states_t>>>;
@@ -213,4 +213,4 @@ void update_rtt_td_footpaths(osr::ways const& w,
                           rtt);
 }
 
-}  // namespace icc
+}  // namespace motis

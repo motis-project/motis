@@ -1,4 +1,4 @@
-#include "icc/data.h"
+#include "motis/data.h"
 
 #include <filesystem>
 
@@ -11,16 +11,16 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/timetable.h"
 
-#include "icc/elevators/parse_fasta.h"
-#include "icc/match_platforms.h"
-#include "icc/point_rtree.h"
-#include "icc/tt_location_rtree.h"
-#include "icc/update_rtt_td_footpaths.h"
+#include "motis/elevators/parse_fasta.h"
+#include "motis/match_platforms.h"
+#include "motis/point_rtree.h"
+#include "motis/tt_location_rtree.h"
+#include "motis/update_rtt_td_footpaths.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
 
-namespace icc {
+namespace motis {
 
 data::data() {}
 data::~data() = default;
@@ -77,7 +77,7 @@ void data::load(std::filesystem::path const& p, data& d) {
         get_matches(*d.tt(), *d.pl_, *d.w_));
     auto const elevator_footpath_map =
         read_elevator_footpath_map(p / "elevator_footpath_map.bin");
-    icc::update_rtt_td_footpaths(
+    motis::update_rtt_td_footpaths(
         *d.w_, *d.l_, *d.pl_, *d.tt(), *d.location_rtee_, *d.rt_->e_,
         *elevator_footpath_map, *d.matches_, *d.rt_->rtt_);
   } else {
@@ -85,4 +85,4 @@ void data::load(std::filesystem::path const& p, data& d) {
   }
 }
 
-}  // namespace icc
+}  // namespace motis

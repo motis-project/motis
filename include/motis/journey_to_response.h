@@ -7,12 +7,12 @@
 #include "osr/routing/route.h"
 #include "osr/types.h"
 
-#include "icc-api/icc-api.h"
-#include "icc/elevators/elevators.h"
-#include "icc/fwd.h"
-#include "icc/types.h"
+#include "motis-api/motis-api.h"
+#include "motis/elevators/elevators.h"
+#include "motis/fwd.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 using place_t = std::variant<osr::location, nigiri::location_idx_t>;
 
@@ -41,4 +41,4 @@ api::Itinerary journey_to_response(
     street_routing_cache_t&,
     osr::bitvec<osr::node_idx_t>& blocked_mem);
 
-}  // namespace icc
+}  // namespace motis

@@ -4,10 +4,10 @@
 
 #include "osr/types.h"
 
-#include "icc/fwd.h"
-#include "icc/types.h"
+#include "motis/fwd.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 using elevator_footpath_map_t = hash_map<
     osr::node_idx_t,
@@ -24,4 +24,4 @@ void write(std::filesystem::path const&, elevator_footpath_map_t const&);
 cista::wrapped<elevator_footpath_map_t> read_elevator_footpath_map(
     std::filesystem::path const&);
 
-}  // namespace icc
+}  // namespace motis

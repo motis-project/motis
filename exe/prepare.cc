@@ -10,14 +10,14 @@
 #include "osr/routing/route.h"
 #include "osr/ways.h"
 
-#include "icc/compute_footpaths.h"
-#include "icc/elevators/match_elevator.h"
-#include "icc/elevators/parse_fasta.h"
+#include "motis/compute_footpaths.h"
+#include "motis/elevators/match_elevator.h"
+#include "motis/elevators/parse_fasta.h"
 
 namespace fs = std::filesystem;
 namespace bpo = boost::program_options;
 namespace n = nigiri;
-using namespace icc;
+using namespace motis;
 
 int main(int ac, char** av) {
   auto tt_path = fs::path{"tt.bin"};

@@ -1,4 +1,4 @@
-#include "icc/parse_location.h"
+#include "motis/parse_location.h"
 
 #include "boost/phoenix/core/reference.hpp"
 #include "boost/spirit/include/qi.hpp"
@@ -9,7 +9,7 @@
 
 namespace n = nigiri;
 
-namespace icc {
+namespace motis {
 
 std::optional<osr::location> parse_location(std::string_view s) {
   using boost::phoenix::ref;
@@ -96,4 +96,4 @@ n::routing::query parse_cursor(std::string_view s) {
   }
 }
 
-}  // namespace icc
+}  // namespace motis

@@ -4,10 +4,10 @@
 
 #include "nigiri/timetable.h"
 
-#include "icc/fwd.h"
-#include "icc/point_rtree.h"
+#include "motis/fwd.h"
+#include "motis/point_rtree.h"
 
-namespace icc::ep {
+namespace motis::ep {
 
 struct matches {
   boost::json::value operator()(boost::json::value const&) const;
@@ -19,4 +19,4 @@ struct matches {
   osr::platforms const& pl_;
 };
 
-}  // namespace icc::ep
+}  // namespace motis::ep

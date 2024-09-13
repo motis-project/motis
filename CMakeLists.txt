@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(icc)
+project(motis)
 
 if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     if (ICC_MIMALLOC)
@@ -24,7 +24,7 @@ if (ICC_LINT)
 endif ()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(icc-compile-options
+    set(motis-compile-options
             -Weverything
             -Wno-c++98-compat
             -Wno-c++98-compat-pedantic
@@ -54,51 +54,51 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-unused-template
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(icc-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
+    set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
 elseif (MSVC)
-    set(icc-compile-options /WX)
+    set(motis-compile-options /WX)
 else ()
-    set(icc-compile-options
+    set(motis-compile-options
             -Wall
             -Wextra
             -Wno-maybe-uninitialized)
     if (NOT CMAKE_CROSSCOMPILING)
-        set(icc-compile-options ${icc-compile-options} -Werror)
+        set(motis-compile-options ${motis-compile-options} -Werror)
     endif ()
 endif ()
 
 # --- OPENAPI ---
-openapi_generate(openapi.yaml icc-api icc::api)
+openapi_generate(openapi.yaml motis-api motis::api)
 
 
 # --- LIB ---
-file(GLOB_RECURSE icc-files src/*.cc)
-add_library(icc ${icc-files})
-target_include_directories(icc PUBLIC include)
-target_compile_features(icc PUBLIC cxx_std_23)
-target_link_libraries(icc nigiri osr boost-json adr icc-api)
+file(GLOB_RECURSE motis-files src/*.cc)
+add_library(motis ${motis-files})
+target_include_directories(motis PUBLIC include)
+target_compile_features(motis PUBLIC cxx_std_23)
+target_link_libraries(motis nigiri osr boost-json adr motis-api)
 
 
 # --- PREPARE ---
-add_executable(icc-prepare exe/prepare.cc)
-target_compile_features(icc-prepare PUBLIC cxx_std_23)
-target_link_libraries(icc-prepare icc)
+add_executable(motis-prepare exe/prepare.cc)
+target_compile_features(motis-prepare PUBLIC cxx_std_23)
+target_link_libraries(motis-prepare motis)
 
 
 # --- SERVER ---
-add_executable(icc-server exe/server.cc)
-target_compile_features(icc-server PUBLIC cxx_std_23)
-target_link_libraries(icc-server icc web-server adr fmt::fmt rtree geo cista ianatzdb-res)
+add_executable(motis-server exe/server.cc)
+target_compile_features(motis-server PUBLIC cxx_std_23)
+target_link_libraries(motis-server motis web-server adr fmt::fmt rtree geo cista ianatzdb-res)
 
 
 # --- TEST ---
-add_library(icc-generated INTERFACE)
-target_include_directories(icc-generated INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+add_library(motis-generated INTERFACE)
+target_include_directories(motis-generated INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/test/test_dir.h.in
         ${CMAKE_CURRENT_BINARY_DIR}/generated/test_dir.h
 )
-file(GLOB_RECURSE icc-test-files test/*.cc)
-add_executable(icc-test ${icc-test-files})
-target_link_libraries(icc-test icc gtest web-server ianatzdb-res icc-generated)
-target_compile_options(icc-test PRIVATE ${icc-compile-options})
+file(GLOB_RECURSE motis-test-files test/*.cc)
+add_executable(motis-test ${motis-test-files})
+target_link_libraries(motis-test motis gtest web-server ianatzdb-res motis-generated)
+target_compile_options(motis-test PRIVATE ${motis-compile-options})

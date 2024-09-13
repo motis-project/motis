@@ -2,17 +2,15 @@
 
 #include "boost/json/value.hpp"
 
-#include "icc/elevators/elevators.h"
-#include "icc/fwd.h"
+#include "motis/fwd.h"
 
-namespace icc::ep {
+namespace motis::ep {
 
-struct osr_routing {
+struct graph {
   boost::json::value operator()(boost::json::value const&) const;
 
   osr::ways const& w_;
   osr::lookup const& l_;
-  std::shared_ptr<rt> const& rt_;
 };
 
-}  // namespace icc::ep
+}  // namespace motis::ep

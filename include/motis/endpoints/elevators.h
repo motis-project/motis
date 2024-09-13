@@ -4,10 +4,10 @@
 
 #include "nigiri/types.h"
 
-#include "icc/elevators/elevators.h"
-#include "icc/fwd.h"
+#include "motis/elevators/elevators.h"
+#include "motis/fwd.h"
 
-namespace icc::ep {
+namespace motis::ep {
 
 struct elevators {
   boost::json::value operator()(boost::json::value const&) const;
@@ -17,4 +17,4 @@ struct elevators {
   osr::lookup const& l_;
 };
 
-}  // namespace icc::ep
+}  // namespace motis::ep

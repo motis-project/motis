@@ -2,9 +2,9 @@
 
 #include "boost/json/value.hpp"
 
-#include "icc/fwd.h"
+#include "motis/fwd.h"
 
-namespace icc::ep {
+namespace motis::ep {
 
 struct platforms {
   boost::json::value operator()(boost::json::value const&) const;
@@ -14,4 +14,4 @@ struct platforms {
   osr::platforms const& pl_;
 };
 
-}  // namespace icc::ep
+}  // namespace motis::ep

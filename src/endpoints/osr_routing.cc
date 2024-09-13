@@ -1,4 +1,4 @@
-#include "icc/endpoints/osr_routing.h"
+#include "motis/endpoints/osr_routing.h"
 
 #include "utl/pipes.h"
 
@@ -7,7 +7,7 @@
 
 namespace json = boost::json;
 
-namespace icc::ep {
+namespace motis::ep {
 
 osr::location parse_location(json::value const& v) {
   auto const& obj = v.as_object();
@@ -64,4 +64,4 @@ json::value osr_routing::operator()(json::value const& query) const {
              : json::value{{"error", "no path found"}};
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

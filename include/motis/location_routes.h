@@ -2,7 +2,7 @@
 
 #include "nigiri/timetable.h"
 
-namespace icc {
+namespace motis {
 
 inline nigiri::hash_set<std::string_view> get_location_routes(
     nigiri::timetable const& tt, nigiri::location_idx_t const l) {
@@ -15,4 +15,4 @@ inline nigiri::hash_set<std::string_view> get_location_routes(
   return names;
 }
 
-}  // namespace icc
+}  // namespace motis

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "icc/data.h"
-#include "icc/elevators/match_elevator.h"
-#include "icc/point_rtree.h"
+#include "motis/data.h"
+#include "motis/elevators/match_elevator.h"
+#include "motis/point_rtree.h"
 
-namespace icc {
+namespace motis {
 
 struct elevators {
   elevators(osr::ways const& w,
@@ -20,4 +20,4 @@ struct elevators {
   osr::bitvec<osr::node_idx_t> blocked_;
 };
 
-}  // namespace icc
+}  // namespace motis

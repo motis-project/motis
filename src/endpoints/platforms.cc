@@ -1,10 +1,10 @@
-#include "icc/endpoints/platforms.h"
+#include "motis/endpoints/platforms.h"
 
 #include "osr/geojson.h"
 
 namespace json = boost::json;
 
-namespace icc::ep {
+namespace motis::ep {
 
 json::value platforms::operator()(json::value const& query) const {
   auto const& q = query.as_object();
@@ -27,4 +27,4 @@ json::value platforms::operator()(json::value const& query) const {
   return gj.json();
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

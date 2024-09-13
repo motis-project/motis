@@ -16,23 +16,23 @@
 #include "osr/routing/route.h"
 #include "osr/ways.h"
 
-#include "icc/compute_footpaths.h"
-#include "icc/data.h"
-#include "icc/elevators/elevators.h"
-#include "icc/elevators/match_elevator.h"
-#include "icc/elevators/parse_fasta.h"
-#include "icc/endpoints/routing.h"
-#include "icc/get_loc.h"
-#include "icc/match_platforms.h"
-#include "icc/tt_location_rtree.h"
-#include "icc/update_rtt_td_footpaths.h"
+#include "motis/compute_footpaths.h"
+#include "motis/data.h"
+#include "motis/elevators/elevators.h"
+#include "motis/elevators/match_elevator.h"
+#include "motis/elevators/parse_fasta.h"
+#include "motis/endpoints/routing.h"
+#include "motis/get_loc.h"
+#include "motis/match_platforms.h"
+#include "motis/tt_location_rtree.h"
+#include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 namespace nl = nigiri::loader;
 namespace json = boost::json;
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
-using namespace icc;
+using namespace motis;
 using namespace date;
 
 constexpr auto const kFastaJson = R"__(
@@ -278,7 +278,7 @@ FFM,50.10701,8.66341,06:15-22:30
                                                 kFastaJson.size());
 }
 
-TEST(icc, routing) {
+TEST(motis, routing) {
   auto const data_path = fs::path{"test/data"};
 
   load(data_path,

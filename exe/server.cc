@@ -10,22 +10,22 @@
 
 #include "net/run.h"
 
-#include "icc/data.h"
-#include "icc/elevators/elevators.h"
-#include "icc/endpoints/elevators.h"
-#include "icc/endpoints/footpaths.h"
-#include "icc/endpoints/graph.h"
-#include "icc/endpoints/levels.h"
-#include "icc/endpoints/matches.h"
-#include "icc/endpoints/osr_routing.h"
-#include "icc/endpoints/platforms.h"
-#include "icc/endpoints/routing.h"
-#include "icc/endpoints/update_elevator.h"
+#include "motis/data.h"
+#include "motis/elevators/elevators.h"
+#include "motis/endpoints/elevators.h"
+#include "motis/endpoints/footpaths.h"
+#include "motis/endpoints/graph.h"
+#include "motis/endpoints/levels.h"
+#include "motis/endpoints/matches.h"
+#include "motis/endpoints/osr_routing.h"
+#include "motis/endpoints/platforms.h"
+#include "motis/endpoints/routing.h"
+#include "motis/endpoints/update_elevator.h"
 
 namespace asio = boost::asio;
 namespace bpo = boost::program_options;
 
-using namespace icc;
+using namespace motis;
 
 template <typename T, typename From>
 void GET(net::query_router& r, std::string target, From& from) {

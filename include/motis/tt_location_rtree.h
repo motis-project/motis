@@ -2,9 +2,9 @@
 
 #include "nigiri/timetable.h"
 
-#include "icc/point_rtree.h"
+#include "motis/point_rtree.h"
 
-namespace icc {
+namespace motis {
 
 inline point_rtree<nigiri::location_idx_t> create_location_rtree(
     nigiri::timetable const& tt) {
@@ -17,4 +17,4 @@ inline point_rtree<nigiri::location_idx_t> create_location_rtree(
   return t;
 }
 
-}  // namespace icc
+}  // namespace motis

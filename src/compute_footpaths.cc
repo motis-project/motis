@@ -1,4 +1,4 @@
-#include "icc/compute_footpaths.h"
+#include "motis/compute_footpaths.h"
 
 #include "cista/mmap.h"
 #include "cista/serialization.h"
@@ -10,14 +10,14 @@
 #include "osr/util/infinite.h"
 #include "osr/util/reverse.h"
 
-#include "icc/constants.h"
-#include "icc/get_loc.h"
-#include "icc/match_platforms.h"
-#include "icc/point_rtree.h"
+#include "motis/constants.h"
+#include "motis/get_loc.h"
+#include "motis/match_platforms.h"
+#include "motis/point_rtree.h"
 
 namespace n = nigiri;
 
-namespace icc {
+namespace motis {
 
 constexpr auto const kMode =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_STATIC_VERSION;
@@ -208,4 +208,4 @@ cista::wrapped<elevator_footpath_map_t> read_elevator_footpath_map(
   return cista::wrapped{std::move(mem), ptr};
 }
 
-}  // namespace icc
+}  // namespace motis

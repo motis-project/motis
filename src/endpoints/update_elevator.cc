@@ -1,17 +1,17 @@
-#include "icc/endpoints/update_elevator.h"
+#include "motis/endpoints/update_elevator.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
 
-#include "icc/constants.h"
-#include "icc/elevators/elevators.h"
-#include "icc/elevators/parse_fasta.h"
-#include "icc/get_loc.h"
-#include "icc/update_rtt_td_footpaths.h"
+#include "motis/constants.h"
+#include "motis/elevators/elevators.h"
+#include "motis/elevators/parse_fasta.h"
+#include "motis/get_loc.h"
+#include "motis/update_rtt_td_footpaths.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
 
-namespace icc::ep {
+namespace motis::ep {
 
 json::value update_elevator::operator()(json::value const& query) const {
   auto const& q = query.as_object();
@@ -54,4 +54,4 @@ json::value update_elevator::operator()(json::value const& query) const {
   return json::string{{"success", true}};
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

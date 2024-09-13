@@ -4,11 +4,11 @@
 
 #include "nigiri/types.h"
 
-#include "icc/elevators/get_state_changes.h"
+#include "motis/elevators/get_state_changes.h"
 
 using namespace date;
 using namespace std::chrono_literals;
-using namespace icc;
+using namespace motis;
 namespace n = nigiri;
 
 std::ostream& operator<<(std::ostream& out, std::vector<bool> const& v) {
@@ -23,7 +23,7 @@ std::ostream& operator<<(std::ostream& out, std::vector<bool> const& v) {
   return out;
 }
 
-TEST(icc, int_state_changes) {
+TEST(motis, int_state_changes) {
   auto const changes = std::vector<std::vector<state_change<int>>>{
       {{{0, true}, {10, false}, {20, true}}},
       {{{0, false},

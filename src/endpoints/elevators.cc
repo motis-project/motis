@@ -1,4 +1,4 @@
-#include "icc/endpoints/elevators.h"
+#include "motis/endpoints/elevators.h"
 
 #include "osr/geojson.h"
 
@@ -7,7 +7,7 @@
 #include "fmt/chrono.h"
 #include "fmt/format.h"
 
-#include "icc/elevators/match_elevator.h"
+#include "motis/elevators/match_elevator.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
@@ -54,7 +54,7 @@ void tag_invoke(boost::json::value_from_tag,
 
 }  // namespace nigiri
 
-namespace icc::ep {
+namespace motis::ep {
 
 json::value elevators::operator()(json::value const& query) const {
   auto const rt = rt_;
@@ -102,4 +102,4 @@ json::value elevators::operator()(json::value const& query) const {
   return json::value{{"type", "FeatureCollection"}, {"features", matches}};
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

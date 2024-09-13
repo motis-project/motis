@@ -7,7 +7,7 @@
 #include "geo/box.h"
 #include "geo/latlng.h"
 
-namespace icc {
+namespace motis {
 
 template <typename T, typename Fn>
 concept RtreePosHandler = requires(geo::latlng const& pos, T const x, Fn&& f) {
@@ -94,4 +94,4 @@ struct point_rtree {
   rtree* rtree_{nullptr};
 };
 
-}  // namespace icc
+}  // namespace motis

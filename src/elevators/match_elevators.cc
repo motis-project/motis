@@ -1,11 +1,11 @@
-#include "icc/elevators/match_elevator.h"
+#include "motis/elevators/match_elevator.h"
 
 #include "utl/enumerate.h"
 #include "utl/parallel_for.h"
 
 #include "osr/ways.h"
 
-namespace icc {
+namespace motis {
 
 point_rtree<elevator_idx_t> create_elevator_rtree(
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators) {
@@ -68,4 +68,4 @@ osr::bitvec<osr::node_idx_t> get_blocked_elevators(
   return blocked;
 }
 
-}  // namespace icc
+}  // namespace motis

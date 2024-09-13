@@ -1,4 +1,4 @@
-#include "icc/elevators/parse_fasta.h"
+#include "motis/elevators/parse_fasta.h"
 
 #include <iostream>
 
@@ -11,7 +11,7 @@
 namespace n = nigiri;
 namespace json = boost::json;
 
-namespace icc {
+namespace motis {
 
 n::unixtime_t parse_date_time(std::string_view s) {
   auto t = n::unixtime_t{};
@@ -93,4 +93,4 @@ vector_map<elevator_idx_t, elevator> parse_fasta(
           .view());
 }
 
-}  // namespace icc
+}  // namespace motis

@@ -1,4 +1,4 @@
-#include "icc/endpoints/levels.h"
+#include "motis/endpoints/levels.h"
 
 #include "utl/pipes/all.h"
 #include "utl/pipes/vec.h"
@@ -6,11 +6,11 @@
 
 #include "osr/lookup.h"
 
-#include "icc/types.h"
+#include "motis/types.h"
 
 namespace json = boost::json;
 
-namespace icc::ep {
+namespace motis::ep {
 
 json::value levels::operator()(json::value const& query) const {
   auto const& q = query.at("waypoints").as_array();
@@ -30,4 +30,4 @@ json::value levels::operator()(json::value const& query) const {
   return utl::all(levels_sorted) | utl::emplace_back_to<json::array>();
 }
 
-}  // namespace icc::ep
+}  // namespace motis::ep

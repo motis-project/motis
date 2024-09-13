@@ -12,7 +12,7 @@
 #include "utl/to_vec.h"
 #include "utl/verify.h"
 
-namespace icc {
+namespace motis {
 
 template <typename Time>
 struct state_change {
@@ -106,4 +106,4 @@ static utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
   co_return;
 }
 
-}  // namespace icc
+}  // namespace motis

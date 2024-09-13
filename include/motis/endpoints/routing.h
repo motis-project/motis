@@ -7,11 +7,11 @@
 #include "osr/location.h"
 #include "osr/types.h"
 
-#include "icc-api/icc-api.h"
-#include "icc/elevators/elevators.h"
-#include "icc/fwd.h"
+#include "motis-api/motis-api.h"
+#include "motis/elevators/elevators.h"
+#include "motis/fwd.h"
 
-namespace icc::ep {
+namespace motis::ep {
 
 struct routing {
   api::plan_response operator()(boost::urls::url_view const& url) const;
@@ -41,4 +41,4 @@ struct routing {
   std::shared_ptr<rt> const& rt_;
 };
 
-}  // namespace icc::ep
+}  // namespace motis::ep

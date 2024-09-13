@@ -8,12 +8,12 @@
 
 #include "osr/types.h"
 
-#include "icc/compute_footpaths.h"
-#include "icc/fwd.h"
-#include "icc/match_platforms.h"
-#include "icc/types.h"
+#include "motis/compute_footpaths.h"
+#include "motis/fwd.h"
+#include "motis/match_platforms.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 struct elevators;
 
@@ -61,4 +61,4 @@ struct data {
   std::shared_ptr<rt> rt_;
 };
 
-}  // namespace icc
+}  // namespace motis

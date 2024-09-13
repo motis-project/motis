@@ -12,13 +12,13 @@
 #include "nigiri/common/interval.h"
 #include "nigiri/types.h"
 
-#include "icc/elevators/get_state_changes.h"
+#include "motis/elevators/get_state_changes.h"
 
 namespace nigiri {
 struct rt_timetable;
 }
 
-namespace icc {
+namespace motis {
 
 template <typename K, typename V>
 using vector_map = nigiri::vector_map<K, V>;
@@ -50,4 +50,4 @@ struct elevator {
 
 using rtt_ptr_t = std::shared_ptr<nigiri::rt_timetable>;
 
-}  // namespace icc
+}  // namespace motis

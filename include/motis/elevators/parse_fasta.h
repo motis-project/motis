@@ -5,13 +5,13 @@
 
 #include "boost/json/object.hpp"
 
-#include "icc/types.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 std::vector<nigiri::interval<nigiri::unixtime_t>> parse_out_of_service(
     boost::json::object const&);
 vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view);
 vector_map<elevator_idx_t, elevator> parse_fasta(std::filesystem::path const&);
 
-}  // namespace icc
+}  // namespace motis

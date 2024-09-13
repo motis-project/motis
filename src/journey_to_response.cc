@@ -1,4 +1,4 @@
-#include "icc/journey_to_response.h"
+#include "motis/journey_to_response.h"
 
 #include <cmath>
 
@@ -18,12 +18,12 @@
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
-#include "icc/constants.h"
-#include "icc/update_rtt_td_footpaths.h"
+#include "motis/constants.h"
+#include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
-namespace icc {
+namespace motis {
 
 std::int64_t to_ms(n::unixtime_t const t) {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -284,4 +284,4 @@ api::Itinerary journey_to_response(
   return itinerary;
 }
 
-}  // namespace icc
+}  // namespace motis

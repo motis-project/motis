@@ -5,11 +5,11 @@
 
 #include "nigiri/timetable.h"
 
-#include "icc/constants.h"
-#include "icc/match_platforms.h"
-#include "icc/types.h"
+#include "motis/constants.h"
+#include "motis/match_platforms.h"
+#include "motis/types.h"
 
-namespace icc {
+namespace motis {
 
 inline osr::location get_loc(
     nigiri::timetable const& tt,
@@ -30,4 +30,4 @@ inline osr::location get_loc(
   return {pos, lvl};
 }
 
-}  // namespace icc
+}  // namespace motis

@@ -1,4 +1,4 @@
-#include "icc/match_platforms.h"
+#include "motis/match_platforms.h"
 
 #include "utl/helpers/algorithm.h"
 #include "utl/parallel_for.h"
@@ -6,11 +6,11 @@
 
 #include "osr/geojson.h"
 
-#include "icc/location_routes.h"
+#include "motis/location_routes.h"
 
 namespace n = nigiri;
 
-namespace icc {
+namespace motis {
 
 constexpr auto const kNumberMatchBonus = 200.0;
 
@@ -234,4 +234,4 @@ osr::platform_idx_t get_match(n::timetable const& tt,
   return best;
 }
 
-}  // namespace icc
+}  // namespace motis
