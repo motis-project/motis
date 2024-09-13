@@ -18,7 +18,7 @@ bool is_number(char const x) { return x >= '0' && x <= '9'; }
 
 template <typename Fn>
 void for_each_number(std::string_view x, Fn&& fn) {
-  for (auto i = 0U; i <= x.size(); ++i) {
+  for (auto i = 0U; i < x.size(); ++i) {
     if (!is_number(x[i])) {
       continue;
     }
