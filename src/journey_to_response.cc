@@ -195,10 +195,12 @@ api::Itinerary journey_to_response(
       .startTime_ = to_ms(j.legs_.front().dep_time_),
       .endTime_ = to_ms(j.legs_.back().arr_time_),
       .transfers_ = std::max(
-          0, utl::count_if(j.legs_, [](auto&& leg) {
-               return holds_alternative<n::routing::journey::run_enter_exit>(
-                   leg.uses_);
-             }) - 1)};
+          static_cast<std::iterator_traits<
+              decltype(j.legs_)::iterator>::difference_type>(0),
+          utl::count_if(j.legs_, [](auto&& leg) {
+            return holds_alternative<n::routing::journey::run_enter_exit>(
+                leg.uses_);
+          }) - 1)};
 
   for (auto const [_leg_i, _j_leg] : utl::enumerate(j.legs_)) {
     auto const& leg_i = _leg_i;
