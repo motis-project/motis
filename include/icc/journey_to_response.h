@@ -1,15 +1,15 @@
 #pragma once
 
 #include "nigiri/routing/journey.h"
-#include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
-#include "osr/lookup.h"
-#include "osr/platforms.h"
+#include "osr/location.h"
 #include "osr/routing/route.h"
-#include "osr/ways.h"
+#include "osr/types.h"
 
 #include "icc-api/icc-api.h"
 #include "icc/elevators/elevators.h"
+#include "icc/fwd.h"
 #include "icc/types.h"
 
 namespace icc {

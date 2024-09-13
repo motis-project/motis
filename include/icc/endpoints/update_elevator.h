@@ -2,7 +2,16 @@
 
 #include "boost/json/value.hpp"
 
-#include "icc/data.h"
+#include "utl/init_from.h"
+
+#include "nigiri/types.h"
+
+#include "osr/types.h"
+
+#include "icc/fwd.h"
+#include "icc/match_platforms.h"
+#include "icc/point_rtree.h"
+#include "icc/types.h"
 
 namespace icc::ep {
 
@@ -15,7 +24,7 @@ struct update_elevator {
   osr::platforms const& pl_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   hash_set<osr::node_idx_t> const& elevator_nodes_;
-  platform_matches_t matches_;
+  platform_matches_t const& matches_;
   std::shared_ptr<rt>& rt_;
 };
 

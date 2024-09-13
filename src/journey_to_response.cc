@@ -1,8 +1,11 @@
 #include "icc/journey_to_response.h"
 
+#include <cmath>
+
 #include "utl/concat.h"
 #include "utl/enumerate.h"
 
+#include "osr/platforms.h"
 #include "osr/routing/route.h"
 
 #include "geo/polyline_format.h"

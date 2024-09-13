@@ -3,6 +3,10 @@
 #include "osr/geojson.h"
 #include "osr/routing/route.h"
 
+#include "utl/pipes/transform.h"
+#include "utl/pipes/all.h"
+#include "utl/pipes/vec.h"
+
 #include "icc/constants.h"
 #include "icc/elevators/elevators.h"
 #include "icc/elevators/match_elevator.h"

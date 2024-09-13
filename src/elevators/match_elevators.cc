@@ -3,6 +3,8 @@
 #include "utl/enumerate.h"
 #include "utl/parallel_for.h"
 
+#include "osr/ways.h"
+
 namespace icc {
 
 point_rtree<elevator_idx_t> create_elevator_rtree(

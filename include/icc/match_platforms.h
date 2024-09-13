@@ -1,10 +1,9 @@
 #include <map>
 #include <optional>
 
-#include "nigiri/timetable.h"
+#include "osr/types.h"
 
-#include "osr/platforms.h"
-
+#include "icc/data.h"
 #include "icc/types.h"
 
 namespace icc {

@@ -2,6 +2,7 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "osr/platforms.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
 

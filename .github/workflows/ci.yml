@@ -1,0 +1,212 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  release:
+    types:
+      - published
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  formatting:
+    runs-on: ubuntu-latest
+    container: ghcr.io/motis-project/docker-cpp-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Format files
+        run: |
+          find include src test \
+            -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
+            -print0 | xargs -0 clang-format-18 -i
+
+      - name: Check for differences
+        run: |
+          git config --global --add safe.directory `pwd`
+          git status --porcelain
+          git status --porcelain | xargs -I {} -0 test -z \"{}\"
+
+  msvc:
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - mode: Debug
+          - mode: Release
+
+    env:
+      CXX: cl.exe
+      CC: cl.exe
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      CLICOLOR_FORCE: 1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ninja
+        run: choco install ninja
+
+      - name: Restore buildcache Cache
+        uses: actions/cache/restore@v3
+        id: restore-buildcache
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
+            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-
+            buildcache-wnds-${{ matrix.config.mode }}-
+
+      - name: Dependencies Cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/deps
+          key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: deps-
+
+      - uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build
+        run: |
+          cmake `
+            -GNinja -S . -B build `
+            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
+          .\build\buildcache\bin\buildcache.exe -z
+          cmake --build build --target icc-test
+          $CompilerExitCode = $LastExitCode
+          .\build\buildcache\bin\buildcache.exe -s
+          exit $CompilerExitCode
+
+      # ==== TESTS ====
+      - name: Run Tests
+        run: .\build\icc-test.exe
+
+      # ==== SAVE CACHE ====
+      - name: Save buildcache Cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - preset: macos-x86_64
+            tests: On
+          - preset: macos-arm64
+    env:
+      BUILDCACHE_COMPRESS: true
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_ACCURACY: SLOPPY
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
+      ASAN_OPTIONS: alloc_dealloc_mismatch=0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ninja
+        run: brew install ninja
+
+      # ==== RESTORE CACHE ====
+      - name: Restore buildcache Cache
+        uses: actions/cache/restore@v3
+        id: restore-buildcache
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
+          restore-keys: |
+            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.preset }}-
+
+      - name: Dependencies Cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/deps
+          key: deps-${{ hashFiles('.pkg') }}
+          restore-keys: deps-
+
+      # ==== BUILD ====
+      - name: CMake
+        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+
+      - name: Build
+        run: |
+          ./build/buildcache/bin/buildcache -z
+          cmake --build build --target icc-test
+          ./build/buildcache/bin/buildcache -s
+
+      # ==== TESTS ====
+      - name: Run Tests
+        if: matrix.config.tests == 'On'
+        run: build/icc-test
+
+      # ==== SAVE CACHE ====
+      - name: Save buildcache cache
+        if: always()
+        uses: actions/cache/save@v3
+        with:
+          path: ${{ github.workspace }}/.buildcache
+          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
+
+  linux:
+    runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
+    container:
+      image: ghcr.io/motis-project/docker-cpp-build
+      volumes:
+        - ${{ github.event.repository.name }}-${{ matrix.config.preset }}-deps:/deps
+        - ${{ github.event.repository.name }}-${{ matrix.config.preset }}-buildcache:/buildcache
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - preset: linux-amd64-release
+            artifact: linux-amd64
+          - preset: linux-arm64-release
+            artifact: linux-arm64
+            emulator: qemu-aarch64-static
+          - preset: clang-tidy
+          - preset: linux-sanitizer
+          - preset: linux-debug
+            emulator: valgrind --leak-check=full --error-exitcode=1
+    env:
+      BUILDCACHE_DIR: /buildcache
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_MAX_CACHE_SIZE: 26843545600
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get deps
+        run: ln -s /deps deps
+
+      - name: CMake
+        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+
+      # ==== BUILD ====
+      - name: Build
+        run: |
+          buildcache -z
+          cmake --build build --target icc-test
+          buildcache -s
+
+      # ==== TESTS ====
+      - name: Run Integration Tests
+        run: ${{ matrix.config.emulator }} build/icc-test

@@ -4,6 +4,8 @@
 #include "utl/pipes/vec.h"
 #include "utl/to_vec.h"
 
+#include "osr/lookup.h"
+
 #include "icc/types.h"
 
 namespace json = boost::json;

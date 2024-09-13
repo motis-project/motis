@@ -1,9 +1,10 @@
 #pragma once
 
-#include "osr/ways.h"
-
 #include "nigiri/types.h"
 
+#include "osr/types.h"
+
+#include "icc/fwd.h"
 #include "icc/point_rtree.h"
 #include "icc/types.h"
 
