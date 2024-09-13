@@ -59,7 +59,7 @@ namespace icc::ep {
 json::value elevators::operator()(json::value const& query) const {
   auto const rt = rt_;
   auto const e = rt->e_.get();
-  
+
   auto const& q = query.as_array();
 
   auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
