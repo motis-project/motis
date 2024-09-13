@@ -84,7 +84,7 @@ jobs:
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
           .\build\buildcache\bin\buildcache.exe -z
-          cmake --build build --target icc-test
+          cmake --build build --target icc-test icc-server
           $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s
           exit $CompilerExitCode
@@ -150,7 +150,7 @@ jobs:
       - name: Build
         run: |
           ./build/buildcache/bin/buildcache -z
-          cmake --build build --target icc-test
+          cmake --build build --target icc-test icc-server
           ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
@@ -204,7 +204,7 @@ jobs:
       - name: Build
         run: |
           buildcache -z
-          cmake --build build --target icc-test
+          cmake --build build --target icc-test icc-server
           buildcache -s
 
       # ==== TESTS ====
