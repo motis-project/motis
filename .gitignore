@@ -1,4 +1,5 @@
 /*build*
+/.pkg.mutex
 /.clang-tidy
 /.idea
 /deps
