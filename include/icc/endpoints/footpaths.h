@@ -2,7 +2,13 @@
 
 #include "boost/json/value.hpp"
 
+#include "nigiri/types.h"
+
+#include "osr/types.h"
+
 #include "icc/data.h"
+#include "icc/point_rtree.h"
+#include "icc/types.h"
 
 namespace icc::ep {
 

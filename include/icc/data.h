@@ -9,19 +9,9 @@
 #include "osr/types.h"
 
 #include "icc/compute_footpaths.h"
+#include "icc/fwd.h"
 #include "icc/match_platforms.h"
 #include "icc/types.h"
-
-namespace osr {
-struct ways;
-struct platforms;
-struct lookup;
-}  // namespace osr
-
-namespace nigiri {
-struct timetable;
-struct rt_timetable;
-}  // namespace nigiri
 
 namespace icc {
 
@@ -39,8 +29,16 @@ struct rt {
 };
 
 struct data {
-  static void load(std::filesystem::path const&, data&);
+  data();
   ~data();
+
+  data(data const&) = delete;
+  data(data&&) = delete;
+
+  data& operator=(data const&) = delete;
+  data& operator=(data&&) = delete;
+
+  static void load(std::filesystem::path const&, data&);
 
   bool has_tt() const { return tt_.get() != nullptr; }
   bool has_osr() const { return w_ != nullptr; }
@@ -48,8 +46,9 @@ struct data {
 
   nigiri::timetable const* tt() const { return tt_.get(); }
 
-  auto cista_members() const {
-    return std::tie(w_, pl_, l_, tt_, location_rtee_, matches_, rt_);
+  auto cista_members() {
+    return std::tie(w_, pl_, l_, tt_, location_rtee_, elevator_nodes_, matches_,
+                    rt_);
   }
 
   ptr<osr::ways> w_;

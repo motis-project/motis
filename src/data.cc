@@ -22,6 +22,9 @@ namespace n = nigiri;
 
 namespace icc {
 
+data::data() {}
+data::~data() = default;
+
 void data::load(std::filesystem::path const& p, data& d) {
   d.rt_ = std::make_shared<rt>();
 
@@ -81,7 +84,5 @@ void data::load(std::filesystem::path const& p, data& d) {
     fmt::println("not updating footpaths according to elevator status");
   }
 }
-
-data::~data() = default;
 
 }  // namespace icc

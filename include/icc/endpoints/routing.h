@@ -4,8 +4,12 @@
 
 #include "nigiri/routing/query.h"
 
+#include "osr/location.h"
+#include "osr/types.h"
+
 #include "icc-api/icc-api.h"
-#include "icc/data.h"
+#include "icc/elevators/elevators.h"
+#include "icc/fwd.h"
 
 namespace icc::ep {
 

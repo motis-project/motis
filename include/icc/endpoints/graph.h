@@ -2,7 +2,7 @@
 
 #include "boost/json/value.hpp"
 
-#include "icc/data.h"
+#include "icc/fwd.h"
 
 namespace icc::ep {
 

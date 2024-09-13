@@ -2,10 +2,9 @@
 
 #include "nigiri/timetable.h"
 
-#include "osr/lookup.h"
-#include "osr/platforms.h"
-#include "osr/ways.h"
+#include "osr/types.h"
 
+#include "icc/fwd.h"
 #include "icc/types.h"
 
 namespace icc {

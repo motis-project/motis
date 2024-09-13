@@ -4,7 +4,6 @@
 
 #include "osr/lookup.h"
 #include "osr/routing/route.h"
-#include "osr/ways.h"
 
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/timetable.h"
@@ -12,6 +11,7 @@
 #include "icc/compute_footpaths.h"
 #include "icc/data.h"
 #include "icc/elevators/elevators.h"
+#include "icc/fwd.h"
 #include "icc/match_platforms.h"
 
 namespace icc {
