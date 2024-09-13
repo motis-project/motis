@@ -196,60 +196,6 @@ ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
 
-constexpr auto const kTest = R"(
-# agency.txt
-agency_id,agency_name,agency_url,agency_timezone,agency_phone
-12681,DB Fernverkehr AG,https://www.delfi.de,Europe/Berlin,
-
-# routes.txt
-route_long_name,route_short_name,agency_id,route_desc,route_type,route_id,route_color,route_text_color
-,11,12681,,101,162289_101,,
-
-# trips.txt
-route_id,service_id,trip_headsign,trip_short_name,direction_id,block_id,shape_id,trip_id,bikes_allowed
-162289_101,13476,S+U Gesundbrunnen Bhf (Berlin),00698,1,,17410,2489005706,
-
-# stop_times.txt
-trip_id,arrival_time,departure_time,stop_id,stop_sequence,stop_headsign,pickup_type,drop_off_type
-2489005706,21:51:00,21:51:00,de:09162:100:11:15,0,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,22:16:00,22:18:00,de:09761:100,1,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,22:47:00,22:49:00,de:09774:2600,2,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,23:01:00,23:03:00,de:08421:1008,3,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,24:01:00,24:11:00,de:08111:6115_G,4,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,25:23:00,25:27:00,de:08221:1160,5,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,26:12:00,26:15:00,de:06411:4734:62:62,6,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,26:36:00,26:49:00,de:06412:10:15:3,7,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,28:45:00,28:47:00,de:16056:8010097,8,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,29:23:00,30:08:00,de:16051:8010101,9,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,30:38:00,30:40:00,de:15002:8010159,10,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,30:54:00,30:56:00,de:15082:8010050,11,S+U Gesundbrunnen Bhf (Berlin),,
-2489005706,31:47:00,31:49:00,de:11000:900058101:3:55,12,S+U Gesundbrunnen Bhf (Berlin),1,
-2489005706,31:55:00,31:59:00,de:11000:900003200:2:52,13,S+U Gesundbrunnen Bhf (Berlin),1,
-2489005706,32:03:00,32:03:00,de:11000:900007102:4:57,14,S+U Gesundbrunnen Bhf (Berlin),,
-
-# stops.txt
-stop_name,parent_station,stop_id,stop_desc,stop_lat,stop_lon,location_type,stop_timezone,wheelchair_boarding,level_id,platform_code
-München Hbf,de:09162:100,de:09162:100:11:15,Gleis 14-15,48.140163,11.557841,,UTC,,5,15
-Augsburg Hbf,,de:09761:100,,48.36544,10.88557,,UTC,,,
-Günzburg,,de:09774:2600,,48.460564,10.279262,,UTC,,,
-Ulm Hauptbahnhof,,de:08421:1008,,48.399437,9.982227,,UTC,,,
-Hauptbahnhof (oben),,de:08111:6115_G,,48.784084,9.181635,,UTC,,,
-"Heidelberg, Hauptbahnhof",,de:08221:1160,,49.40357,8.675442,,UTC,,,
-Darmstadt Hauptbahnhof,de:06411:4734,de:06411:4734:62:62,Gleis 1,49.873035,8.629159,,UTC,,1,1
-Frankfurt (Main) Hauptbahnhof,de:06412:10,de:06412:10:15:3,Gleis 8,50.1062,8.663011,,UTC,,5,8
-Eisenach,,de:16056:8010097,,50.97692,10.331986,,UTC,,,
-Erfurt Hbf,,de:16051:8010101,,50.972355,11.037993,,UTC,,,
-Halle(Saale)Hbf,,de:15002:8010159,,51.47751,11.987085,,UTC,,,
-Bitterfeld,,de:15082:8010050,,51.62286,12.31685,,UTC,,,
-S Südkreuz Bhf (Berlin),de:11000:900058101,de:11000:900058101:3:55,Bahnsteig Gleis 6,52.47565,13.365612,,UTC,,2,6
-S+U Berlin Hauptbahnhof,de:11000:900003201,de:11000:900003200:2:52,Bahnsteig Gleis 3,52.52506,13.369167,,UTC,,4,3
-S+U Gesundbrunnen Bhf (Berlin),de:11000:900007102,de:11000:900007102:4:57,Bahnsteig Gleis 8,52.548573,13.390519,,UTC,,4,8
-
-# calendar.txt
-monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date,service_id
-1,1,1,1,1,1,1,20240429,20241207,13476
-)";
-
 void print_short(std::ostream& out, api::Itinerary const& j) {
   auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
     auto const u = std::chrono::time_point<std::chrono::system_clock>{
@@ -344,8 +290,6 @@ TEST(icc, routing) {
   data::load(data_path, d);
   auto const routing = utl::init_from<ep::routing>(d).value();
 
-  std::cout << *d.tt() << "\n";
-
   // Route with wheelchair.
   {
     auto const plan_response = routing(
@@ -364,47 +308,6 @@ TEST(icc, routing) {
     auto const plan_response = routing(
         "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
         "&date=05-01-2019&time=01:25");
-
-    std::cout << "Without wheelchair:\n";
-    for (auto const& j : plan_response.itineraries_) {
-      print_short(std::cout, j);
-      std::cout << "\n";
-    }
-  }
-}
-
-TEST(icc, routing1) {
-  auto const data_path = fs::path{"test/data1"};
-
-  load(data_path,
-       {date::sys_days{2024_y / September / 1},
-        date::sys_days{2024_y / September / 5}},
-       kTest);
-
-  auto d = data{};
-  data::load(data_path, d);
-  auto const routing = utl::init_from<ep::routing>(d).value();
-
-  std::cout << *d.tt() << "\n";
-
-  // Route with wheelchair.
-  {
-    auto const plan_response = routing(
-        "/?fromPlace=49.87263,8.63127&toPlace=50.10693421,8.6634085"
-        "&date=09-02-2024&time=00:05&wheelchair=true");
-
-    std::cout << "With wheelchair:\n";
-    for (auto const& j : plan_response.itineraries_) {
-      print_short(std::cout, j);
-      std::cout << "\n";
-    }
-  }
-
-  // Route without wheelchair.
-  {
-    auto const plan_response = routing(
-        "/?fromPlace=49.87263,8.63127&toPlace=50.10693421,8.6634085"
-        "&date=09-02-2024&time=00:05");
 
     std::cout << "Without wheelchair:\n";
     for (auto const& j : plan_response.itineraries_) {
