@@ -39,7 +39,7 @@ std::vector<state_change<Time>> intervals_to_state_changes(
 }
 
 template <typename Time>
-utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
+static utl::generator<std::pair<Time, std::vector<bool>>> get_state_changes(
     std::vector<std::vector<state_change<Time>>> const& c) {
   using It = std::vector<state_change<Time>>::const_iterator;
 
