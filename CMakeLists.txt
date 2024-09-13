@@ -2,15 +2,15 @@ cmake_minimum_required(VERSION 3.20)
 
 project(icc)
 
-if(NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
-    if(ICC_MIMALLOC)
+if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+    if (ICC_MIMALLOC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
         set(protobuf_MSVC_STATIC_RUNTIME OFF)
-    else()
+    else ()
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
         set(protobuf_MSVC_STATIC_RUNTIME ON)
-    endif()
-endif()
+    endif ()
+endif ()
 
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
@@ -51,6 +51,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-unknown-pragmas
             -Wno-c++20-extensions
             -Wno-switch-default
+            -Wno-unused-template
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(icc-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
