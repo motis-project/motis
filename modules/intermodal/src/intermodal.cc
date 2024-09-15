@@ -604,7 +604,7 @@ msg_ptr intermodal::route(msg_ptr const& msg) {
         CreateRoutingRequest(
             mc, start.start_type_, start.start_, dest.station_,
             req->search_type(), req->search_dir(), via, mc.CreateVector(edges),
-            true, true, false, 0, timeout_,
+            true, true, !start.is_intermodal_, 0, timeout_,
             req->allowed_claszes() == nullptr
                 ? 0
                 : mc.CreateVector(req->allowed_claszes()->Data(),
