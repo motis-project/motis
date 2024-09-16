@@ -9,6 +9,7 @@
 #include "fmt/std.h"
 
 #include "cista/memory_holder.h"
+#include "cista/mmap.h"
 
 #include "conf/date_time.h"
 
@@ -31,7 +32,9 @@
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/util.h"
+#include "nigiri/shape.h"
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/otel/tracer.h"
@@ -529,7 +532,13 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
         auto const data_dir = get_data_directory() / "nigiri";
-        auto const dump_file_path = data_dir / fmt::to_string(h);
+        auto const filename = fmt::to_string(h);
+        auto const dump_file_path = data_dir / filename;
+        auto const shapes_dump_file_prefix = data_dir / (filename + "-shapes");
+        auto shapes_data = n::shapes_storage{};
+        if (railviz_ || !no_cache_) {
+          std::filesystem::create_directories(data_dir);
+        }
 
         span->SetAttribute("motis.nigiri.import.dump_file",
                            dump_file_path.string());
@@ -549,6 +558,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
+            if (railviz_) {
+              shapes_data = n::shapes_storage(shapes_dump_file_prefix,
+                                              cista::mmap::protection::WRITE);
+            }
             for (auto const& [src, loader, dir] : datasets) {
               auto const tag = impl_->tags_.get_tag(src);
               auto progress_tracker =
@@ -567,7 +580,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 (*loader)->load({.link_stop_distance_ = link_stop_distance_,
                                  .default_tz_ = default_timezone_},
                                 src, *dir, **impl_->tt_, traffic_day_bitfields,
-                                nullptr, nullptr);
+                                shapes_data, nullptr);
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
                 inner_span->AddEvent("exception",
@@ -624,6 +637,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 impl_->update_rtt(std::make_shared<n::rt_timetable>(
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
+              if (railviz_) {
+                shapes_data = n::shapes_storage(shapes_dump_file_prefix,
+                                                cista::mmap::protection::READ);
+              }
               loaded = true;
               break;
             } catch (std::exception const& e) {
@@ -634,6 +651,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               read_span->AddEvent("exception",
                                   {{"exception.message", e.what()}});
               std::filesystem::remove(dump_file_path);
+              shapes_data = {};
               continue;
             }
           }
@@ -667,8 +685,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
           auto lookup_scope = opentelemetry::trace::Scope{
               motis_tracer->StartSpan("init railviz")};
           impl_->initial_permalink_ = get_initial_permalink(**impl_->tt_);
-          impl_->railviz_ =
-              std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
+          impl_->railviz_ = std::make_unique<railviz>(
+              impl_->tags_, (**impl_->tt_), std::move(shapes_data));
         }
 
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),

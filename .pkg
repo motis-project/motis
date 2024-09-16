@@ -25,7 +25,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=03bee0de6cbcbf34a3445bdb19ab90b07a67e9df
+  commit=9ef1eddff4df3c485a3ec2c8872e03ee22ff5973
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -75,9 +75,9 @@
   branch=master
   commit=0087f000848de31b0090cb6f282348bd2fd3a9b8
 [nigiri]
-  url=git@github.com:motis-project/nigiri.git
+  url=git@github.com:MichaelKutzner/nigiri.git
   branch=master
-  commit=d6e1c8f5c0a8264e568fa85a34622e105a975315
+  commit=c9159501111b557d546109208c63cb46a18ebf4f
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
