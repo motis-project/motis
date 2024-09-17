@@ -535,7 +535,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const filename = fmt::to_string(h);
         auto const dump_file_path = data_dir / filename;
         auto const shapes_dump_file_prefix = data_dir / (filename + "-shapes");
-        auto shapes_data = n::shapes_storage{};
+        auto shapes_data = std::unique_ptr<n::shapes_storage>{};
         if (railviz_ || !no_cache_) {
           std::filesystem::create_directories(data_dir);
         }
@@ -559,8 +559,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             if (railviz_) {
-              shapes_data = n::shapes_storage(shapes_dump_file_prefix,
-                                              cista::mmap::protection::WRITE);
+              shapes_data =
+                  std::make_unique<n::shapes_storage>(n::shapes_storage(
+                      shapes_dump_file_prefix, cista::mmap::protection::WRITE));
             }
             for (auto const& [src, loader, dir] : datasets) {
               auto const tag = impl_->tags_.get_tag(src);
@@ -580,7 +581,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 (*loader)->load({.link_stop_distance_ = link_stop_distance_,
                                  .default_tz_ = default_timezone_},
                                 src, *dir, **impl_->tt_, traffic_day_bitfields,
-                                shapes_data, nullptr);
+                                nullptr, shapes_data.get());
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
                 inner_span->AddEvent("exception",
@@ -638,8 +639,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
               if (railviz_) {
-                shapes_data = n::shapes_storage(shapes_dump_file_prefix,
-                                                cista::mmap::protection::READ);
+                shapes_data = std::make_unique<n::shapes_storage>(
+                    n::shapes_storage(shapes_dump_file_prefix,
+                                      cista::mmap::protection::READ));
               }
               loaded = true;
               break;
@@ -651,7 +653,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               read_span->AddEvent("exception",
                                   {{"exception.message", e.what()}});
               std::filesystem::remove(dump_file_path);
-              shapes_data = {};
+              shapes_data.reset();
               continue;
             }
           }
