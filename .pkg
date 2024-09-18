@@ -77,7 +77,7 @@
 [nigiri]
   url=git@github.com:MichaelKutzner/nigiri.git
   branch=master
-  commit=cdde009e926c76a5875024894b53de71b28babd5
+  commit=7ecb0e3a4e3d06292fde5b71560639264b5516fc
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master

@@ -258,24 +258,6 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  template <std::int64_t N>
-  constexpr static void encode_shape(
-      geo::polyline_encoder<N>& enc,
-      std::variant<std::span<geo::latlng const>,
-                   std::array<geo::latlng const, 2>> const&& shape_var) {
-    if (auto const* shape =
-            std::get_if<std::span<geo::latlng const>>(&shape_var)) {
-      for (auto const& p : *shape) {
-        enc.push(p);
-      }
-    } else {
-      for (auto const& p :
-           std::get<std::array<geo::latlng const, 2>>(shape_var)) {
-        enc.push(p);
-      }
-    }
-  }
-
   mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
     geo::polyline_encoder<6> enc;
 
@@ -313,8 +295,13 @@ struct railviz::impl {
 
       auto const polyline_indices = std::vector<std::int64_t>{
           static_cast<std::int64_t>(fbs_polylines.size())};
-      encode_shape(
-          enc, fr.get_shape(shapes_data_.get(), n::interval{r.from_, r.to_}));
+      std::visit(
+          [&](auto&& shape) {
+            for (auto const& pos : shape) {
+              enc.push(pos);
+            }
+          },
+          fr.get_shape(shapes_data_.get(), n::interval{r.from_, r.to_}));
       fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
       enc.reset();
 
