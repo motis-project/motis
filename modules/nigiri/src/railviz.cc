@@ -296,7 +296,7 @@ struct railviz::impl {
       auto const polyline_indices = std::vector<std::int64_t>{
           static_cast<std::int64_t>(fbs_polylines.size())};
       std::visit(
-          [&](auto&& shape) {
+          [&](std::ranges::range auto const&& shape) {
             for (auto const& pos : shape) {
               enc.push(pos);
             }
