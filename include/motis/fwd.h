@@ -1,5 +1,10 @@
 #pragma once
 
+namespace adr {
+struct typeahead;
+struct cache;
+}  // namespace adr
+
 namespace osr {
 struct ways;
 struct platforms;

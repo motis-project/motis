@@ -12,6 +12,7 @@
 
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
+#include "motis/endpoints/adr.h"
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/footpaths.h"
 #include "motis/endpoints/graph.h"
@@ -57,6 +58,7 @@ int main(int ac, char** av) {
   POST<ep::graph>(qr, "/api/graph", d);
   POST<ep::footpaths>(qr, "/api/footpaths", d);
   POST<ep::update_elevator>(qr, "/api/update_elevator", d);
+  GET<ep::adr>(qr, "/api/v1/geocode", d);
   GET<ep::routing>(qr, "/api/v1/plan", d);
 
   qr.serve_files("ui/build");

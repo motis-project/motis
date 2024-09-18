@@ -10,7 +10,7 @@ info:
   version: v1
 externalDocs:
   description: Find out more about MOTIS
-  url: http://triptix.tech
+  url: https://triptix.tech
 servers:
   - url: https://demo.triptix.tech
 paths:
@@ -27,6 +27,16 @@ paths:
           description: the (potentially partially typed) address to resolve
           schema:
             type: string
+
+        - name: language
+          in: query
+          required: false
+          description: |
+            language tags as used in OpenStreetMap
+            (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+          schema:
+            type: string
+
       responses:
         200:
           description: A list of guesses to resolve the text to a location
@@ -304,12 +314,16 @@ components:
     Area:
       description: Administrative area
       type: object
+      required:
+        - name
+        - admin_level
+        - matched
       properties:
         name:
           type: string
           description: Name of the area
         admin_level:
-          type: string
+          type: number
           description: |
             [OpenStreetMap `admin_level`](https://wiki.openstreetmap.org/wiki/Key:admin_level)
             of the area
@@ -333,8 +347,10 @@ components:
         - name
         - id
         - lat
-        - lng
+        - lon
         - tokens
+        - areas
+        - score
       properties:
         type:
           description: location type
@@ -362,8 +378,8 @@ components:
         street:
           description: street name
           type: string
-        housenumber:
-          description: housenumber
+        house_number:
+          description: house number
           type: string
         zip:
           description: zip code
@@ -373,6 +389,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Area'
+        score:
+          description: score according to the internal scoring system (the scoring algorithm might change in the future)
+          type: number
 
     Mode:
       description: |

@@ -47,10 +47,12 @@ struct data {
   nigiri::timetable const* tt() const { return tt_.get(); }
 
   auto cista_members() {
-    return std::tie(w_, pl_, l_, tt_, location_rtee_, elevator_nodes_, matches_,
-                    rt_);
+    return std::tie(t_, tc_, w_, pl_, l_, tt_, location_rtee_, elevator_nodes_,
+                    matches_, rt_);
   }
 
+  cista::wrapped<adr::typeahead> t_;
+  ptr<adr::cache> tc_;
   ptr<osr::ways> w_;
   ptr<osr::platforms> pl_;
   ptr<osr::lookup> l_;

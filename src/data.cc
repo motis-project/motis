@@ -4,6 +4,10 @@
 
 #include "utl/read_file.h"
 
+#include "adr/adr.h"
+#include "adr/cache.h"
+#include "adr/typeahead.h"
+
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/ways.h"
@@ -27,6 +31,13 @@ data::~data() = default;
 
 void data::load(std::filesystem::path const& p, data& d) {
   d.rt_ = std::make_shared<rt>();
+
+  if (fs::is_regular_file(p / "adr.cista.t.adr")) {
+    d.t_ = adr::read(p / "adr.cista.t.adr", false);
+    d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+  } else {
+    fmt::println("{} not found -> not loading geo coder", p / "adr.bin");
+  }
 
   if (fs::is_regular_file(p / "tt.bin")) {
     d.tt_ = n::timetable::read(cista::memory_holder{

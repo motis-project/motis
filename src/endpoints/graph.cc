@@ -30,7 +30,7 @@ json::value graph::operator()(json::value const& query) const {
       auto const np = w_.r_->node_properties_[n];
       if (np.is_multi_level()) {
         auto has_level = false;
-        osr::for_each_set_bit(
+        utl::for_each_set_bit(
             osr::foot<true>::get_elevator_multi_levels(*w_.r_, n),
             [&](auto&& bit) { has_level |= (level == osr::level_t{bit}); });
         if (has_level) {
