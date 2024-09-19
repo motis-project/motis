@@ -80,10 +80,10 @@
 		const l = ctx.map?.getLayer(id);
 		ctx.map?.off('styledata', updateLayer);
 		if (l) {
-			console.log('ON DESTROY LAYER', id, ctx.map);
+			// console.log('ON DESTROY LAYER', id, ctx.map);
 			ctx.map?.removeLayer(id);
 		} else {
-			console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);
+			// console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);
 		}
 	});
 </script>

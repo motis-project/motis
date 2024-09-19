@@ -15,6 +15,7 @@
 		"test:unit": "vitest"
 	},
 	"devDependencies": {
+		"@hey-api/openapi-ts": "^0.53.2",
 		"@playwright/test": "^1.28.1",
 		"@sveltejs/adapter-auto": "^3.0.0",
 		"@sveltejs/adapter-static": "^3.0.1",
@@ -27,11 +28,11 @@
 		"autoprefixer": "^10.4.19",
 		"eslint": "^8.56.0",
 		"eslint-config-prettier": "^9.1.0",
-		"eslint-plugin-svelte": "^2.36.0-next.13",
+		"eslint-plugin-svelte": "^2.44.0",
 		"postcss": "^8.4.38",
 		"prettier": "^3.1.1",
 		"prettier-plugin-svelte": "^3.1.2",
-		"svelte": "^5.0.0-next.196",
+		"svelte": "^5.0.0-next.254",
 		"svelte-check": "^3.6.0",
 		"tailwindcss": "^3.4.3",
 		"tslib": "^2.4.1",
@@ -41,6 +42,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@hey-api/client-fetch": "^0.3.1",
 		"bits-ui": "^0.21.12",
 		"clsx": "^2.1.1",
 		"colord": "^2.9.3",

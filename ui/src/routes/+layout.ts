@@ -1,8 +1,10 @@
-import { OpenAPI } from "$lib/openapi";
+import { client } from '$lib/openapi';
 import { browser } from '$app/environment';
 
 export const prerender = true;
 
+const baseUrl = 'http://localhost:7999';
+
 if (browser) {
-  OpenAPI.BASE = 'http://localhost:8000'; //`${window.location}`
+	client.setConfig({ baseUrl }); //`${window.location}`
 }

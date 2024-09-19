@@ -330,6 +330,9 @@ components:
         matched:
           type: boolean
           description: Whether this area was matched by the input text
+        default:
+          type: boolean
+          description: Whether this area should be displayed as default area (area with admin level closest 7)
 
     Token:
       description: Matched token range (from index, length)

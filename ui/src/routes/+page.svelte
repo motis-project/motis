@@ -40,7 +40,7 @@
 		TableHeader
 	} from '$lib/components/ui/table/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { plan, type Itinerary, type PlanResponse } from '$lib/openapi';
+	import { plan, type Itinerary, type Match, type PlanResponse } from '$lib/openapi';
 	import { Separator } from '$lib/components/ui/separator';
 	import { Card } from '$lib/components/ui/card';
 	import ConnectionDetail from './ConnectionDetail.svelte';
@@ -51,6 +51,8 @@
 	import { formatDurationSec } from '$lib/formatDuration';
 	import DateInput from '$lib/DateInput.svelte';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
+	import ComboBox from '$lib/ComboBox.svelte';
+	import { type Selected } from 'bits-ui';
 
 	let zoom = $state(18);
 	let bounds = $state<undefined | maplibregl.LngLatBounds>(undefined);
@@ -68,7 +70,6 @@
 	$effect(async () => {
 		platforms = showPlatforms && bounds ? getPlatforms(bounds, level) : null;
 	});
-	$inspect(showPlatforms, platforms);
 
 	let showGraph = $state(false);
 	let graph = $state<null | any>(null);
@@ -254,7 +255,7 @@
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 
 	$effect(() => {
-		routingResponses = [plan(baseQuery)];
+		routingResponses = [plan<true>({ query: baseQuery }).then((response) => response.data)];
 	});
 
 	let itinerary = $state<Itinerary | null>(null);
@@ -308,8 +309,12 @@
 					<TableBody>
 						{#each elevator.outOfService as _, i}
 							<TableRow>
-								<TableCell><DateInput bind:value={elevator.outOfService[i][0]} /></TableCell>
-								<TableCell><DateInput bind:value={elevator.outOfService[i][1]} /></TableCell>
+								<TableCell>
+									<DateInput bind:value={elevator.outOfService[i][0]} />
+								</TableCell>
+								<TableCell>
+									<DateInput bind:value={elevator.outOfService[i][1]} />
+								</TableCell>
 								<TableCell>
 									<Button
 										variant="outline"
@@ -372,50 +377,74 @@
 				</div>
 			{:else}
 				<div class="flex flex-col w-full">
-					<div class="flex flex-row space-x-4 p-4 shadow-md rounded">
-						<!-- <ComboBox placeholder="From" /> -->
-						<!-- <ComboBox placeholder="To" /> -->
-						<DateInput bind:value={dateTime} />
-						<div class="flex">
-							<RadioGroup.Root class="flex space-x-1 ml-1" bind:value={timeType}>
-								<Label
-									for="departure"
-									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
-								>
-									<RadioGroup.Item
-										value="departure"
-										id="departure"
-										class="sr-only"
-										aria-label="Abfahrt"
-									/>
-									<span>Abfahrt</span>
-								</Label>
-								<Label
-									for="arrival"
-									class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
-								>
-									<RadioGroup.Item
-										value="arrival"
-										id="arrival"
-										class="sr-only"
-										aria-label="Ankunft"
-									/>
-									<span>Ankunft</span>
-								</Label>
-							</RadioGroup.Root>
-						</div>
-						<div class="min-w-24">
-							<Select bind:selected={profile}>
-								<SelectTrigger>
-									<SelectValue placeholder="Profile" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="wheelchair">Wheelchair</SelectItem>
-									<SelectItem value="foot">Foot</SelectItem>
-									<SelectItem value="bike">Bike</SelectItem>
-									<SelectItem value="car">Car</SelectItem>
-								</SelectContent>
-							</Select>
+					<div class="flex flex-col space-y-4 p-4 shadow-md rounded bg-neutral-50">
+						<ComboBox
+							name="from"
+							inputClass="w-full bg-white"
+							placeholder="From"
+							onSelectedChange={(match: Selected<Match> | undefined) => {
+								if (match) {
+									start.lng = match.value.lon;
+									start.lat = match.value.lat;
+									startMarker.setLngLat([start.lng, start.lat]);
+								}
+							}}
+						/>
+						<ComboBox
+							name="to"
+							inputClass="w-full bg-white"
+							placeholder="To"
+							onSelectedChange={(match: Selected<Match> | undefined) => {
+								if (match) {
+									destination.lng = match.value.lon;
+									destination.lat = match.value.lat;
+									destinationMarker.setLngLat([destination.lng, destination.lat]);
+								}
+							}}
+						/>
+						<div class="flex flex-row space-x-4 justify-between">
+							<div class="flex">
+								<DateInput class="bg-white" bind:value={dateTime} />
+								<RadioGroup.Root class="flex space-x-1 ml-1" bind:value={timeType}>
+									<Label
+										for="departure"
+										class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+									>
+										<RadioGroup.Item
+											value="departure"
+											id="departure"
+											class="sr-only"
+											aria-label="Abfahrt"
+										/>
+										<span>Abfahrt</span>
+									</Label>
+									<Label
+										for="arrival"
+										class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+									>
+										<RadioGroup.Item
+											value="arrival"
+											id="arrival"
+											class="sr-only"
+											aria-label="Ankunft"
+										/>
+										<span>Ankunft</span>
+									</Label>
+								</RadioGroup.Root>
+							</div>
+							<div class="min-w-24">
+								<Select bind:selected={profile}>
+									<SelectTrigger class="bg-white">
+										<SelectValue placeholder="Profile" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="wheelchair">Wheelchair</SelectItem>
+										<SelectItem value="foot">Foot</SelectItem>
+										<SelectItem value="bike">Bike</SelectItem>
+										<SelectItem value="car">Car</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 						</div>
 					</div>
 					<div class="flex flex-col space-y-8 h-[45vh] overflow-y-auto px-4 py-8">
@@ -433,7 +462,7 @@
 												routingResponses.splice(
 													0,
 													0,
-													plan({ ...baseQuery, pageCursor: r.previousPageCursor })
+													plan({query: { ...baseQuery, pageCursor: r.previousPageCursor }}).then(x => x.data!)
 												);
 											}}
 											class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold border rounded-lg"
@@ -502,7 +531,7 @@
 										<div class="border-t w-full h-0"></div>
 										<button
 											onclick={() => {
-												routingResponses.push(plan({ ...baseQuery, pageCursor: r.nextPageCursor }));
+												routingResponses.push(plan({query: { ...baseQuery, pageCursor: r.nextPageCursor }}).then((x) => x.data!));
 											}}
 											class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold border rounded-lg"
 										>

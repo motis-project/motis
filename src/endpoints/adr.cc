@@ -1,19 +1,11 @@
 #include "motis/endpoints/adr.h"
 
-#include <ranges>
-
-#include "osr/geojson.h"
-
-#include "boost/json.hpp"
 #include "boost/thread/tss.hpp"
 
-#include "fmt/chrono.h"
 #include "fmt/format.h"
 
 #include "adr/adr.h"
 #include "adr/typeahead.h"
-
-#include "motis/elevators/match_elevator.h"
 
 namespace a = adr;
 
@@ -72,8 +64,10 @@ api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
 
     auto const city_it =
         std::min_element(begin(areas), end(areas), [&](auto&& a, auto&& b) {
-          return std::abs(to_idx(t_.area_admin_level_[a]) - 7) <
-                 std::abs(to_idx(t_.area_admin_level_[b]) - 7);
+          auto const x = to_idx(t_.area_admin_level_[a]);
+          auto const y = to_idx(t_.area_admin_level_[b]);
+          return (x > 7 ? 10 : 1) * std::abs(x - 7) <
+                 (y > 7 ? 10 : 1) * std::abs(y - 7);
         });
     auto const city_idx =
         city_it == end(areas) ? -1 : std::distance(begin(areas), city_it);
@@ -142,7 +136,8 @@ api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
               return api::Area{
                   .name_ = std::string{name},
                   .admin_level_ = static_cast<double>(to_idx(admin_lvl)),
-                  .matched_ = is_matched};
+                  .matched_ = is_matched,
+                  .default_ = i == city_idx};
             }),
         .score_ = s.score_};
   });
