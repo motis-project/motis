@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=f31ba8a4a10cdc16e7173ce940d20bed46f68929
+  commit=3241913bddf8c4202c48644466e8d1edf92755c5
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -17,7 +17,7 @@
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
-  commit=bf89e75886c91fed6e90fc5f78924c3f16e8e412
+  commit=c95f7ef87f53f01cc0770692aaec7315f0f29c50
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master

@@ -39,7 +39,7 @@ export type Match = {
     /**
      * location type
      */
-    type: 'ADDRESS' | 'PLACE';
+    type: 'ADDRESS' | 'PLACE' | 'STOP';
     /**
      * list of non-overlapping tokens that were matched
      */
@@ -85,7 +85,7 @@ export type Match = {
 /**
  * location type
  */
-export type type = 'ADDRESS' | 'PLACE';
+export type type = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
  * # Street modes

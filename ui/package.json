@@ -46,7 +46,7 @@
 		"bits-ui": "^0.21.12",
 		"clsx": "^2.1.1",
 		"colord": "^2.9.3",
-		"lucide-svelte": "^0.396.0",
+		"lucide-svelte": "^0.445.0",
 		"maplibre-gl": "^4.3.2",
 		"polyline": "^0.2.0",
 		"svelte-radix": "^1.1.0",

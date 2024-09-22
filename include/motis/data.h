@@ -52,6 +52,7 @@ struct data {
   }
 
   cista::wrapped<adr::typeahead> t_;
+  cista::wrapped<adr::reverse> r_;
   ptr<adr::cache> tc_;
   ptr<osr::ways> w_;
   ptr<osr::platforms> pl_;

@@ -4,9 +4,12 @@
 
 #include "fmt/format.h"
 
+#include "nigiri/timetable.h"
+
 #include "adr/adr.h"
 #include "adr/typeahead.h"
 
+namespace n = nigiri;
 namespace a = adr;
 
 namespace motis::ep {
@@ -79,10 +82,17 @@ api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
     auto name = std::visit(
         utl::overloaded{
             [&](a::place_idx_t const p) {
-              id = fmt::format("{}/{}",
-                               t_.place_is_way_[to_idx(p)] ? "way" : "node",
-                               t_.place_osm_ids_[p]);
-              type = api::typeEnum::PLACE;
+              type = t_.place_type_[p] == a::place_type::kExtra
+                         ? api::typeEnum::STOP
+                         : api::typeEnum::PLACE;
+              id = type == api::typeEnum::STOP
+                       ? tt_.locations_
+                             .ids_[n::location_idx_t{t_.place_osm_ids_[p]}]
+                             .view()
+                       : fmt::format(
+                             "{}/{}",
+                             t_.place_is_way_[to_idx(p)] ? "way" : "node",
+                             t_.place_osm_ids_[p]);
               return std::string{t_.strings_[s.str_].view()};
             },
             [&](a::address const addr) {

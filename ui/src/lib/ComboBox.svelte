@@ -3,6 +3,9 @@
 	import { cn } from './utils';
 	import { geocode, type Match } from './openapi';
 	import { browser } from '$app/environment';
+	import Bus from 'lucide-svelte/icons/bus-front';
+	import House from 'lucide-svelte/icons/map-pin-house';
+	import Place from 'lucide-svelte/icons/map-pin';
 
 	let {
 		placeholder,
@@ -21,9 +24,10 @@
 
 	const language = browser ? navigator.languages.find((l) => l.length == 2) : '';
 
-	type Item = { label: string; value: Match; area: string };
+	type Item = { label: string; value: Match; area: string | undefined };
 
 	let items = $state.raw<Array<Item>>([]);
+	$inspect(items);
 	const updateGuesses = async () => {
 		items = (
 			await geocode<true>({
@@ -35,11 +39,11 @@
 			if (matchedArea?.name.match(/^[0-9]*$/)) {
 				matchedArea.name += ' ' + defaultArea?.name;
 			}
-			let area = (matchedArea ?? defaultArea)!.name;
+			let area = (matchedArea ?? defaultArea)?.name;
 			if (area == match.name) {
 				area = match.areas[0]!.name;
 			}
-			return { label: match.name + ', ' + area, area, value: match };
+			return { label: area ? match.name + ', ' + area : match.name, area, value: match };
 		});
 		const shown = new Set<string>();
 		items = items.filter((x) => {
@@ -57,7 +61,7 @@
 			clearTimeout(timer);
 			timer = setTimeout(() => {
 				updateGuesses();
-			}, 250);
+			}, 150);
 		}
 	});
 </script>
@@ -77,11 +81,18 @@
 		>
 			{#each items as item (item.value)}
 				<Combobox.Item
-					class="relative flex w-full cursor-default select-none items-center rounded-sm py-2 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
+					class="relative flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
 					value={item.value}
 					label={item.label}
 				>
-					<span class="font-semibold text-nowrap text-ellipsis overflow-hidden">
+					{#if item.value.type == 'STOP'}
+						<Bus />
+					{:else if item.value.type == 'ADDRESS'}
+						<House />
+					{:else if item.value.type == 'PLACE'}
+						<Place />
+					{/if}
+					<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
 						{item.value.name}
 					</span>
 					<span class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden">

@@ -6,6 +6,8 @@
 
 #include "adr/adr.h"
 #include "adr/cache.h"
+#include "adr/cista_read.h"
+#include "adr/reverse.h"
 #include "adr/typeahead.h"
 
 #include "osr/lookup.h"
@@ -32,16 +34,25 @@ data::~data() = default;
 void data::load(std::filesystem::path const& p, data& d) {
   d.rt_ = std::make_shared<rt>();
 
-  if (fs::is_regular_file(p / "adr.cista.t.adr")) {
-    d.t_ = adr::read(p / "adr.cista.t.adr", false);
+  auto const t_path = p / "adr" / "t.bin";
+  if (fs::is_regular_file(t_path)) {
+    d.t_ = adr::read(t_path, false);
     d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
   } else {
-    fmt::println("{} not found -> not loading geo coder", p / "adr.bin");
+    fmt::println("{} not found -> not loading geo coder", t_path);
   }
 
-  if (fs::is_regular_file(p / "tt.bin")) {
+  auto const r_path = p / "adr" / "r.bin";
+  if (fs::is_regular_file(r_path)) {
+    d.r_ = adr::cista_read<adr::reverse>(r_path, true);
+  } else {
+    fmt::println("{} not found -> not loading reverse geo coder", r_path);
+  }
+
+  auto const tt_path = p / "tt.bin";
+  if (fs::is_regular_file(tt_path)) {
     d.tt_ = n::timetable::read(cista::memory_holder{
-        cista::file{(p / "tt.bin").generic_string().c_str(), "r"}.content()});
+        cista::file{(tt_path).generic_string().c_str(), "r"}.content()});
     d.tt_->locations_.resolve_timezones();
     d.location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
         create_location_rtree(*d.tt()));
@@ -51,35 +62,35 @@ void data::load(std::filesystem::path const& p, data& d) {
     d.rt_->rtt_ = std::make_unique<n::rt_timetable>(
         n::rt::create_rt_timetable(*d.tt_, today));
   } else {
-    fmt::println("{} not found -> not loading timetable", p / "tt.bin");
+    fmt::println("{} not found -> not loading timetable", tt_path);
   }
 
-  if (fs::is_directory(p / "osr")) {
+  auto const osr_path = p / "osr";
+  if (fs::is_directory(osr_path)) {
     d.w_ =
         std::make_unique<osr::ways>(p / "osr", cista::mmap::protection::READ);
     d.l_ = std::make_unique<osr::lookup>(*d.w_);
     d.elevator_nodes_ =
         std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*d.w_));
 
-    if (fs::is_regular_file(p / "osr" / "node_pos.bin")) {
+    if (fs::is_regular_file(osr_path / "node_pos.bin")) {
       d.pl_ = std::make_unique<osr::platforms>(p / "osr",
                                                cista::mmap::protection::READ);
       d.pl_->build_rtree(*d.w_);
     }
   } else {
-    fmt::println("{} not found -> not loading street routing", p / "osr");
+    fmt::println("{} not found -> not loading street routing", osr_path);
   }
 
-  if (fs::is_regular_file(p / "fasta.json")) {
-    auto const fasta =
-        utl::read_file((p / "fasta.json").generic_string().c_str());
+  auto const fasta_path = p / "fasta.json";
+  if (fs::is_regular_file(fasta_path)) {
+    auto const fasta = utl::read_file((fasta_path).generic_string().c_str());
     utl::verify(fasta.has_value(), "could not read fasta.json");
 
     d.rt_->e_ = std::make_unique<elevators>(
         *d.w_, *d.elevator_nodes_, parse_fasta(std::string_view{*fasta}));
   } else {
-    fmt::println("{} not found -> not loading elevator status",
-                 p / "fasta.json");
+    fmt::println("{} not found -> not loading elevator status", fasta_path);
   }
 
   if (d.has_tt() && d.has_osr() && d.pl_ != nullptr && d.rt_->e_ != nullptr &&

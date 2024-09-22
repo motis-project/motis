@@ -33,7 +33,7 @@ jobs:
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
   msvc:
-    runs-on: windows-latest
+    runs-on: [ self-hosted, windows, x64 ]
 
     strategy:
       fail-fast: false
@@ -50,33 +50,25 @@ jobs:
       BUILDCACHE_ACCURACY: SLOPPY # not suitable for coverage/debugging
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      BUILDCACHE_MAX_CACHE_SIZE: 1073741824
       CLICOLOR_FORCE: 1
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install ninja
-        run: choco install ninja
-
-      - name: Restore buildcache Cache
-        uses: actions/cache/restore@v3
-        id: restore-buildcache
-        with:
-          path: ${{ github.workspace }}/.buildcache
-          key: buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
-          restore-keys: |
-            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}
-            buildcache-wnds-${{ matrix.config.mode }}-${{ hashFiles('.pkg') }}-
-            buildcache-wnds-${{ matrix.config.mode }}-
-
-      - name: Dependencies Cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/deps
-          key: deps-${{ hashFiles('.pkg') }}
-          restore-keys: deps-
-
       - uses: ilammy/msvc-dev-cmd@v1
+
+      # ==== RESTORE CACHE ====
+      - name: Restore buildcache Cache
+        run: |
+          $buildcachePath = "${{ runner.tool_cache }}\${{ github.event.repository.name }}\buildcache-${{ matrix.config.mode }}"
+          New-Item -ItemType Directory -Force -Path $buildcachePath
+          New-Item -Path ${{ github.workspace }}/.buildcache -ItemType SymbolicLink -Value $buildcachePath
+
+      - name: Restore Dependencies Cache
+        run: |
+          $depsPath = "${{ runner.tool_cache }}\${{ github.event.repository.name }}\deps"
+          New-Item -ItemType Directory -Force -Path $depsPath
+          New-Item -Path ${{ github.workspace }}\deps\ -ItemType SymbolicLink -Value $depsPath
 
       - name: Build
         run: |
@@ -92,14 +84,6 @@ jobs:
       # ==== TESTS ====
       - name: Run Tests
         run: .\build\motis-test.exe
-
-      # ==== SAVE CACHE ====
-      - name: Save buildcache Cache
-        if: always()
-        uses: actions/cache/save@v3
-        with:
-          path: ${{ github.workspace }}/.buildcache
-          key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
 
   macos:
     runs-on: macos-latest

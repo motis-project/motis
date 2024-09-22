@@ -361,6 +361,7 @@ components:
           enum:
             - ADDRESS
             - PLACE
+            - STOP
         tokens:
           description: list of non-overlapping tokens that were matched
           type: array

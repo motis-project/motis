@@ -44,7 +44,7 @@ export const MatchSchema = {
         type: {
             description: 'location type',
             type: 'string',
-            enum: ['ADDRESS', 'PLACE']
+            enum: ['ADDRESS', 'PLACE', 'STOP']
         },
         tokens: {
             description: 'list of non-overlapping tokens that were matched',

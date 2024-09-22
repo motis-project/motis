@@ -78,6 +78,10 @@ target_include_directories(motis PUBLIC include)
 target_compile_features(motis PUBLIC cxx_std_23)
 target_link_libraries(motis nigiri osr boost-json adr motis-api)
 
+# --- ADR EXTEND ---
+add_executable(motis-adr-extend exe/adr_extend.cc)
+target_compile_features(motis-adr-extend PUBLIC cxx_std_23)
+target_link_libraries(motis-adr-extend motis)
 
 # --- PREPARE ---
 add_executable(motis-prepare exe/prepare.cc)
