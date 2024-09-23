@@ -6,6 +6,7 @@ export class Location {
 	lat!: number;
 	lng!: number;
 	level!: number;
+	zoom!: number;
 }
 
 export class Id {

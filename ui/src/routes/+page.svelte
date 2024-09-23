@@ -51,7 +51,7 @@
 	import { formatDurationSec } from '$lib/formatDuration';
 	import DateInput from '$lib/DateInput.svelte';
 	import * as RadioGroup from '$lib/components/ui/radio-group/index.js';
-	import ComboBox from '$lib/ComboBox.svelte';
+	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import { type Selected } from 'bits-ui';
 
 	let zoom = $state(18);
@@ -101,12 +101,14 @@
 	let start = $state<Location>({
 		lat: 49.872584079,
 		lng: 8.6312708899,
-		level: 0
+		level: 0,
+		zoom: 0
 	});
 	let destination = $state<Location>({
 		lat: 50.11352164499803,
 		lng: 8.677728968355844,
-		level: 0
+		level: 0,
+		zoom: 0
 	});
 	let query = $derived<RoutingQuery>({
 		start,
@@ -179,6 +181,7 @@
 					start.lng = x.lng;
 					start.lat = x.lat;
 					start.level = level;
+					start.zoom = map?.getZoom();
 				});
 
 			destinationMarker = new maplibregl.Marker({
@@ -192,6 +195,7 @@
 					destination.lng = x.lng;
 					destination.lat = x.lat;
 					destination.level = level;
+					destination.zoom = map?.getZoom();
 				});
 
 			let popup: maplibregl.Popup | null = null;
@@ -214,6 +218,7 @@
 					start.lng = x.lng;
 					start.lat = x.lat;
 					start.level = level;
+					start.zoom = map?.getZoom();
 					popup!.remove();
 				};
 				actionsDiv.appendChild(setStart);
@@ -227,6 +232,7 @@
 					destination.lng = x.lng;
 					destination.lat = x.lat;
 					destination.level = level;
+					destination.zoom = map?.getZoom();
 					popup!.remove();
 				};
 				actionsDiv.appendChild(setDest);
@@ -381,7 +387,7 @@
 
 			<div class="flex flex-col w-full" class:hidden={itinerary}>
 				<div class="flex flex-col space-y-4 p-4 shadow-md rounded">
-					<ComboBox
+					<AddressTypeahead
 						name="from"
 						inputClass="w-full bg-white"
 						placeholder="From"
@@ -393,7 +399,7 @@
 							}
 						}}
 					/>
-					<ComboBox
+					<AddressTypeahead
 						name="to"
 						inputClass="w-full bg-white"
 						placeholder="To"

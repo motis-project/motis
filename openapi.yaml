@@ -14,6 +14,29 @@ externalDocs:
 servers:
   - url: https://demo.triptix.tech
 paths:
+  /api/v1/reverse-geocode:
+    get:
+      tags:
+        - geocode
+      summary: Translate coordinates to the closest address(es)/places/stops.
+      operationId: reverseGeocode
+      parameters:
+        - name: place
+          in: query
+          required: true
+          description: latitude, longitude in degrees
+          schema:
+            type: string
+      responses:
+        200:
+          description: A list of guesses to resolve the coordinates to a location
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Match'
+
   /api/v1/geocode:
     get:
       tags:

@@ -42,11 +42,15 @@ void data::load(std::filesystem::path const& p, data& d) {
     fmt::println("{} not found -> not loading geo coder", t_path);
   }
 
-  auto const r_path = p / "adr" / "r.bin";
-  if (fs::is_regular_file(r_path)) {
-    d.r_ = adr::cista_read<adr::reverse>(r_path, true);
+  auto const r_path = p / "adr" / "street_segments_data.bin";
+  if (d.t_ != nullptr && fs::is_regular_file(r_path)) {
+    d.r_ = std::make_unique<adr::reverse>(p / "adr",
+                                          cista::mmap::protection::READ);
+    d.r_->build_rtree(*d.t_);
   } else {
-    fmt::println("{} not found -> not loading reverse geo coder", r_path);
+    fmt::println(
+        "{} not found, typeahead loaded: {} -> not loading reverse geo coder",
+        r_path, d.t_ != nullptr);
   }
 
   auto const tt_path = p / "tt.bin";

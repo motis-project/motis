@@ -1,27 +1,18 @@
-#include "motis/endpoints/adr.h"
+#include "motis/endpoints/adr/suggestions_to_response.h"
 
-#include "boost/thread/tss.hpp"
-
-#include "fmt/format.h"
+#include "utl/for_each_bit_set.h"
+#include "utl/helpers/algorithm.h"
+#include "utl/overloaded.h"
+#include "utl/to_vec.h"
 
 #include "nigiri/timetable.h"
 
-#include "adr/adr.h"
 #include "adr/typeahead.h"
 
-namespace n = nigiri;
 namespace a = adr;
+namespace n = nigiri;
 
-namespace motis::ep {
-
-a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
-  auto static ctx = boost::thread_specific_ptr<a::guess_context>{};
-  if (ctx.get() == nullptr) {
-    ctx.reset(new a::guess_context{cache});
-  }
-  ctx->resize(t);
-  return *ctx;
-}
+namespace motis {
 
 std::int16_t get_area_lang_idx(a::typeahead const& t,
                                a::language_list_t const& languages,
@@ -37,38 +28,28 @@ std::int16_t get_area_lang_idx(a::typeahead const& t,
   return -1;
 }
 
-api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
-  auto const params = api::geocode_params{url.params()};
-
-  auto& ctx = get_guess_context(t_, cache_);
-
-  auto lang_indices = std::basic_string<a::language_idx_t>{{a::kDefaultLang}};
-  if (params.language_.has_value()) {
-    auto const l_idx = t_.resolve_language(*params.language_);
-    if (l_idx != a::language_idx_t::invalid()) {
-      lang_indices.push_back(l_idx);
-    }
-  }
-
-  auto const token_pos = a::get_suggestions<false>(
-      t_, geo::latlng{0, 0}, params.text_, 10U, lang_indices, ctx);
-
-  return utl::to_vec(ctx.suggestions_, [&](a::suggestion const& s) {
-    auto const areas = t_.area_sets_[s.area_set_];
+api::geocode_response suggestions_to_response(
+    adr::typeahead const& t,
+    n::timetable const& tt,
+    std::basic_string<a::language_idx_t> const& lang_indices,
+    std::vector<adr::token> const& token_pos,
+    std::vector<adr::suggestion> const& suggestions) {
+  return utl::to_vec(suggestions, [&](a::suggestion const& s) {
+    auto const areas = t.area_sets_[s.area_set_];
 
     auto const zip_it = utl::find_if(
-        areas, [&](auto&& a) { return t_.area_admin_level_[a] == 11; });
+        areas, [&](auto&& a) { return t.area_admin_level_[a] == 11; });
     auto const zip =
         zip_it == end(areas)
             ? std::nullopt
             : std::optional{std::string{
-                  t_.strings_[t_.area_names_[*zip_it][a::kDefaultLangIdx]]
+                  t.strings_[t.area_names_[*zip_it][a::kDefaultLangIdx]]
                       .view()}};
 
     auto const city_it =
         std::min_element(begin(areas), end(areas), [&](auto&& a, auto&& b) {
-          auto const x = to_idx(t_.area_admin_level_[a]);
-          auto const y = to_idx(t_.area_admin_level_[b]);
+          auto const x = to_idx(t.area_admin_level_[a]);
+          auto const y = to_idx(t.area_admin_level_[b]);
           return (x > 7 ? 10 : 1) * std::abs(x - 7) <
                  (y > 7 ? 10 : 1) * std::abs(y - 7);
         });
@@ -82,30 +63,29 @@ api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
     auto name = std::visit(
         utl::overloaded{
             [&](a::place_idx_t const p) {
-              type = t_.place_type_[p] == a::place_type::kExtra
+              type = t.place_type_[p] == a::place_type::kExtra
                          ? api::typeEnum::STOP
                          : api::typeEnum::PLACE;
-              id = type == api::typeEnum::STOP
-                       ? tt_.locations_
-                             .ids_[n::location_idx_t{t_.place_osm_ids_[p]}]
-                             .view()
-                       : fmt::format(
-                             "{}/{}",
-                             t_.place_is_way_[to_idx(p)] ? "way" : "node",
-                             t_.place_osm_ids_[p]);
-              return std::string{t_.strings_[s.str_].view()};
+              id =
+                  type == api::typeEnum::STOP
+                      ? tt.locations_
+                            .ids_[n::location_idx_t{t.place_osm_ids_[p]}]
+                            .view()
+                      : fmt::format("{}/{}",
+                                    t.place_is_way_[to_idx(p)] ? "way" : "node",
+                                    t.place_osm_ids_[p]);
+              return std::string{t.strings_[s.str_].view()};
             },
             [&](a::address const addr) {
               type = api::typeEnum::ADDRESS;
               if (addr.house_number_ != a::address::kNoHouseNumber) {
-                street = t_.strings_[s.str_].view();
-                house_number =
-                    t_.strings_[t_.house_numbers_[addr.street_]
-                                                 [addr.house_number_]]
-                        .view();
+                street = t.strings_[s.str_].view();
+                house_number = t.strings_[t.house_numbers_[addr.street_]
+                                                          [addr.house_number_]]
+                                   .view();
                 return fmt::format("{} {}", *street, *house_number);
               } else {
-                return std::string{t_.strings_[s.str_].view()};
+                return std::string{t.strings_[s.str_].view()};
               }
             }},
         s.location_);
@@ -132,16 +112,16 @@ api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
             utl::enumerate(areas),
             [&](auto&& el) {
               auto const [i, a] = el;
-              auto const admin_lvl = t_.area_admin_level_[a];
+              auto const admin_lvl = t.area_admin_level_[a];
               auto const is_matched = (((1U << i) & s.matched_areas_) != 0U);
               auto const language =
                   is_matched ? s.matched_area_lang_[i]
-                             : get_area_lang_idx(t_, lang_indices,
+                             : get_area_lang_idx(t, lang_indices,
                                                  s.matched_area_lang_, a);
               auto const name =
-                  t_.strings_[t_.area_names_[a][language == -1
-                                                    ? a::kDefaultLangIdx
-                                                    : language]]
+                  t.strings_[t.area_names_[a][language == -1
+                                                  ? a::kDefaultLangIdx
+                                                  : language]]
                       .view();
               return api::Area{
                   .name_ = std::string{name},
@@ -153,4 +133,4 @@ api::geocode_response adr::operator()(boost::urls::url_view const& url) const {
   });
 }
 
-}  // namespace motis::ep
+}  // namespace motis
