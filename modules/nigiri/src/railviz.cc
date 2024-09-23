@@ -13,6 +13,7 @@
 #include "geo/latlng.h"
 #include "geo/polyline_format.h"
 
+#include "nigiri/common/interval.h"
 #include "nigiri/common/linear_lower_bound.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
@@ -295,13 +296,10 @@ struct railviz::impl {
 
       auto const polyline_indices = std::vector<std::int64_t>{
           static_cast<std::int64_t>(fbs_polylines.size())};
-      std::visit(
-          [&](std::ranges::range auto const&& shape) {
-            for (auto const& pos : shape) {
-              enc.push(pos);
-            }
-          },
-          fr.get_shape(shapes_data_.get(), n::interval{r.from_, r.to_}));
+      fr.for_each_shape_point(
+          shapes_data_.get(),
+          n::interval{r.from_, static_cast<n::stop_idx_t>(r.to_ + 1)},
+          [&enc](geo::latlng const& point) { enc.push(point); });
       fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
       enc.reset();
 
