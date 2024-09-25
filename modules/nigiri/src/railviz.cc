@@ -393,7 +393,7 @@ struct railviz::impl {
               is_active(t)) {
             runs.emplace_back(stop_pair{
                 .r_ = n::rt::run{.t_ = t,
-                                 .stop_range_ = {from, to},
+                                 .stop_range_ = {from, static_cast<n::stop_idx_t>(to + 1U)},
                                  .rt_ = n::rt_transport_idx_t::invalid()},
                 .from_ = 0,
                 .to_ = 1});
