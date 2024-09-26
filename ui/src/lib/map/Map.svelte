@@ -7,24 +7,26 @@
 	let {
 		map = $bindable(),
 		zoom = $bindable(),
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		bounds = $bindable(),
 		style,
 		transformRequest,
 		center,
 		children,
-		...props
+		class: className
 	}: {
-		map: maplibregl.Map | null;
+		map?: maplibregl.Map;
 		style: maplibregl.StyleSpecification;
 		transformRequest: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
-		bounds: maplibregl.LngLatBoundsLike | undefined;
+		bounds?: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		children: Snippet;
+		children?: Snippet;
+		class: string;
 	} = $props();
 
 	let currStyle: maplibregl.StyleSpecification | null = null;
-	let ctx = $state<{ map: maplibregl.Map | null }>({ map: null });
+	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
 	$effect(() => {
@@ -33,6 +35,7 @@
 		}
 	});
 
+	let currentCenter = center;
 	const createMap = (container: HTMLElement) => {
 		map = new maplibregl.Map({ container, zoom, center, style, transformRequest });
 
@@ -41,6 +44,14 @@
 			...createShield({
 				fill: 'hsl(0, 0%, 98%)',
 				stroke: 'hsl(0, 0%, 75%)'
+			})
+		);
+
+		map.addImage(
+			'shield-dark',
+			...createShield({
+				fill: 'hsl(0, 0%, 16%)',
+				stroke: 'hsl(0, 0%, 30%)'
 			})
 		);
 
@@ -58,12 +69,21 @@
 		return {
 			destroy() {
 				ctx.map?.remove();
-				ctx.map = null;
+				ctx.map = undefined;
 			}
 		};
 	};
+
+	$effect(() => {
+		if (center != currentCenter) {
+			map?.setCenter(center);
+			currentCenter = center;
+		}
+	});
 </script>
 
-<div use:createMap {...props}>
-	{@render children()}
+<div use:createMap class={className}>
+	{#if children}
+		{@render children()}
+	{/if}
 </div>

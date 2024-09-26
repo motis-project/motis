@@ -1,17 +1,12 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import type { Itinerary, Mode } from '$lib/openapi';
-	import Time from './Time.svelte';
+	import type { Itinerary } from '$lib/openapi';
+	import Time from '../lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { getModeStyle } from '$lib/modeStyle';
 	import { formatDurationSec } from '$lib/formatDuration';
 
-	class Props {
-		itinerary!: Itinerary;
-	}
-
-	let { itinerary }: Props = $props();
-
+	const { itinerary }: { itinerary: Itinerary } = $props();
 	const lastLeg = itinerary.legs.findLast((l) => l.duration !== 0);
 </script>
 
@@ -90,8 +85,8 @@
 						</summary>
 						{#each l.intermediateStops! as s}
 							<div class="flex items-center mb-6">
-								<Time class="font-semibold mr-2" timestamp={s.arrival} />
-								<Time class="font-semibold" timestamp={s.arrival} delay={l.arrivalDelay} />
+								<Time class="font-semibold mr-2" timestamp={s.arrival!} />
+								<Time class="font-semibold" timestamp={s.arrival!} delay={l.arrivalDelay} />
 								<span class="ml-8">{s.name}</span>
 							</div>
 						{/each}
@@ -109,7 +104,7 @@
 		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName)}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<div>
-					<svg class="relative left-[7px] w-6 h-6 fill-white rounded-full bg-black p-1">
+					<svg class="relative left-[7px] w-6 h-6 fill-background rounded-full bg-foreground p-1">
 						<use xlink:href={`#${modeIcon}`}></use>
 					</svg>
 				</div>

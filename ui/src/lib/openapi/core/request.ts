@@ -45,7 +45,7 @@ export const getQueryString = (params: Record<string, unknown>): string => {
 		if (value instanceof Date) {
 			append(key, value.toISOString());
 		} else if (Array.isArray(value)) {
-			value.forEach(v => encodePair(key, v));
+			value.forEach((v) => encodePair(key, v));
 		} else if (typeof value === 'object') {
 			Object.entries(value).forEach(([k, v]) => encodePair(`${key}[${k}]`, v));
 		} else {
@@ -90,7 +90,7 @@ export const getFormData = (options: ApiRequestOptions): FormData | undefined =>
 			.filter(([, value]) => value !== undefined && value !== null)
 			.forEach(([key, value]) => {
 				if (Array.isArray(value)) {
-					value.forEach(v => process(key, v));
+					value.forEach((v) => process(key, v));
 				} else {
 					process(key, value);
 				}
@@ -103,14 +103,20 @@ export const getFormData = (options: ApiRequestOptions): FormData | undefined =>
 
 type Resolver<T> = (options: ApiRequestOptions<T>) => Promise<T>;
 
-export const resolve = async <T>(options: ApiRequestOptions<T>, resolver?: T | Resolver<T>): Promise<T | undefined> => {
+export const resolve = async <T>(
+	options: ApiRequestOptions<T>,
+	resolver?: T | Resolver<T>
+): Promise<T | undefined> => {
 	if (typeof resolver === 'function') {
 		return (resolver as Resolver<T>)(options);
 	}
 	return resolver;
 };
 
-export const getHeaders = async <T>(config: OpenAPIConfig, options: ApiRequestOptions<T>): Promise<Headers> => {
+export const getHeaders = async <T>(
+	config: OpenAPIConfig,
+	options: ApiRequestOptions<T>
+): Promise<Headers> => {
 	const [token, username, password, additionalHeaders] = await Promise.all([
 		// @ts-ignore
 		resolve(options, config.TOKEN),
@@ -119,19 +125,22 @@ export const getHeaders = async <T>(config: OpenAPIConfig, options: ApiRequestOp
 		// @ts-ignore
 		resolve(options, config.PASSWORD),
 		// @ts-ignore
-		resolve(options, config.HEADERS),
+		resolve(options, config.HEADERS)
 	]);
 
 	const headers = Object.entries({
 		Accept: 'application/json',
 		...additionalHeaders,
-		...options.headers,
+		...options.headers
 	})
 		.filter(([, value]) => value !== undefined && value !== null)
-		.reduce((headers, [key, value]) => ({
-			...headers,
-			[key]: String(value),
-		}), {} as Record<string, string>);
+		.reduce(
+			(headers, [key, value]) => ({
+				...headers,
+				[key]: String(value)
+			}),
+			{} as Record<string, string>
+		);
 
 	if (isStringWithValue(token)) {
 		headers['Authorization'] = `Bearer ${token}`;
@@ -185,7 +194,7 @@ export const sendRequest = async (
 		headers,
 		body: body ?? formData,
 		method: options.method,
-		signal: controller.signal,
+		signal: controller.signal
 	};
 
 	if (config.WITH_CREDENTIALS) {
@@ -201,7 +210,10 @@ export const sendRequest = async (
 	return await fetch(url, request);
 };
 
-export const getResponseHeader = (response: Response, responseHeader?: string): string | undefined => {
+export const getResponseHeader = (
+	response: Response,
+	responseHeader?: string
+): string | undefined => {
 	if (responseHeader) {
 		const content = response.headers.get(responseHeader);
 		if (isString(content)) {
@@ -216,10 +228,17 @@ export const getResponseBody = async (response: Response): Promise<unknown> => {
 		try {
 			const contentType = response.headers.get('Content-Type');
 			if (contentType) {
-				const binaryTypes = ['application/octet-stream', 'application/pdf', 'application/zip', 'audio/', 'image/', 'video/'];
+				const binaryTypes = [
+					'application/octet-stream',
+					'application/pdf',
+					'application/zip',
+					'audio/',
+					'image/',
+					'video/'
+				];
 				if (contentType.includes('application/json') || contentType.includes('+json')) {
 					return await response.json();
-				} else if (binaryTypes.some(type => contentType.includes(type))) {
+				} else if (binaryTypes.some((type) => contentType.includes(type))) {
 					return await response.blob();
 				} else if (contentType.includes('multipart/form-data')) {
 					return await response.formData();
@@ -276,8 +295,8 @@ export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): 
 		508: 'Loop Detected',
 		510: 'Not Extended',
 		511: 'Network Authentication Required',
-		...options.errors,
-	}
+		...options.errors
+	};
 
 	const error = errors[result.status];
 	if (error) {
@@ -295,7 +314,9 @@ export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): 
 			}
 		})();
 
-		throw new ApiError(options, result,
+		throw new ApiError(
+			options,
+			result,
 			`Generic Error: status: ${errorStatus}; status text: ${errorStatusText}; body: ${errorBody}`
 		);
 	}
@@ -308,7 +329,10 @@ export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): 
  * @returns CancelablePromise<T>
  * @throws ApiError
  */
-export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions<T>): CancelablePromise<T> => {
+export const request = <T>(
+	config: OpenAPIConfig,
+	options: ApiRequestOptions<T>
+): CancelablePromise<T> => {
 	return new CancelablePromise(async (resolve, reject, onCancel) => {
 		try {
 			const url = getUrl(config, options);
@@ -328,7 +352,7 @@ export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions<T>)
 
 				let transformedBody = responseBody;
 				if (options.responseTransformer && response.ok) {
-					transformedBody = await options.responseTransformer(responseBody)
+					transformedBody = await options.responseTransformer(responseBody);
 				}
 
 				const result: ApiResult = {
@@ -336,7 +360,7 @@ export const request = <T>(config: OpenAPIConfig, options: ApiRequestOptions<T>)
 					ok: response.ok,
 					status: response.status,
 					statusText: response.statusText,
-					body: responseHeader ?? transformedBody,
+					body: responseHeader ?? transformedBody
 				};
 
 				catchErrorCodes(options, result);

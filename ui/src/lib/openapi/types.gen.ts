@@ -375,6 +375,19 @@ export type Itinerary = {
     legs: Array<Leg>;
 };
 
+export type ReverseGeocodeData = {
+    query: {
+        /**
+         * latitude, longitude in degrees
+         */
+        place: string;
+    };
+};
+
+export type ReverseGeocodeResponse = (Array<Match>);
+
+export type ReverseGeocodeError = unknown;
+
 export type GeocodeData = {
     query: {
         /**

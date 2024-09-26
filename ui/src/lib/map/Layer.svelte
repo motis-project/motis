@@ -1,4 +1,5 @@
 <script lang="ts">
+	import maplibregl from 'maplibre-gl';
 	import { onDestroy, getContext, setContext } from 'svelte';
 
 	let {
@@ -9,10 +10,10 @@
 		paint
 	}: {
 		id: string;
-		type: string;
+		type: 'symbol' | 'fill' | 'line' | 'circle';
 		filter: maplibregl.FilterSpecification;
-		layout: Object;
-		paint: Object;
+		layout: Object; // eslint-disable-line
+		paint: Object; // eslint-disable-line
 	} = $props();
 
 	let layer = $state<{ id: null | string }>({ id: null });
@@ -22,9 +23,9 @@
 	let source: { id: string | null } = getContext('source'); // from GeoJSON component
 
 	let initialized = false;
-	let currFilter = filter;
-	let currLayout = layout;
-	let currPaint = paint;
+	let currFilter = $state.snapshot(filter);
+	let currLayout = $state.snapshot(layout);
+	let currPaint = $state.snapshot(paint);
 
 	let updateLayer = () => {
 		const l = ctx.map?.getLayer(id);
@@ -43,7 +44,8 @@
 
 		if (!l) {
 			console.log('ADD LAYER', source.id, id, type, filter, layout, paint);
-			ctx.map.addLayer({
+			// @ts-expect-error not assignable
+			ctx.map!.addLayer({
 				source: source.id,
 				id,
 				type,
@@ -67,8 +69,7 @@
 
 	$effect(() => {
 		if (ctx.map && source.id) {
-			if (initialized) {
-			} else {
+			if (!initialized) {
 				ctx.map.on('styledata', updateLayer);
 				updateLayer();
 				initialized = true;
@@ -80,10 +81,10 @@
 		const l = ctx.map?.getLayer(id);
 		ctx.map?.off('styledata', updateLayer);
 		if (l) {
-			// console.log('ON DESTROY LAYER', id, ctx.map);
+			console.log('ON DESTROY LAYER', id, ctx.map);
 			ctx.map?.removeLayer(id);
 		} else {
-			// console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);
+			console.log('ON DESTROY LAYER --- NO LAYER FOUND!!', id);
 		}
 	});
 </script>

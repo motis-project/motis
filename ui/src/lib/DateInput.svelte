@@ -6,7 +6,7 @@
 		class: className
 	}: {
 		value: Date;
-		class: string | undefined;
+		class?: string;
 	} = $props();
 
 	let el: undefined | HTMLInputElement;
@@ -30,7 +30,8 @@
 	)}
 	bind:this={el}
 	onchange={(e) => {
-		const dateTimeLocalValue = e.target.value;
+		// @ts-expect-error target exists, value exists
+		const dateTimeLocalValue = e.target!.value!;
 		const fakeUtcTime = new Date(`${dateTimeLocalValue}Z`);
 		value = new Date(fakeUtcTime.getTime() + fakeUtcTime.getTimezoneOffset() * 60000);
 	}}

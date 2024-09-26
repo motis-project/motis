@@ -1,16 +1,122 @@
 import type { StyleSpecification } from 'maplibre-gl';
 
-const water = '#99ddff';
-const rail = '#a8a8a8';
-const pedestrian = '#e8e7eb';
+const colors = {
+	light: {
+		background: '#f8f4f0',
 
-const sport = '#d0f4be';
-const sport_outline = '#b3e998';
+		water: '#99ddff',
+		rail: '#a8a8a8',
+		pedestrian: '#e8e7eb',
 
-const building = '#ded7d3';
-const building_outline = '#cfc8c4';
+		sport: '#d0f4be',
+		sportOutline: '#b3e998',
 
-export const getStyle = (level: number): StyleSpecification => {
+		building: '#ded7d3',
+		buildingOutline: '#cfc8c4',
+
+		landuseComplex: '#f0e6d1',
+		landuseCommercial: 'hsla(0, 60%, 87%, 0.23)',
+		landuseIndustrial: '#e0e2eb',
+		landuseResidential: '#ece7e4',
+		landuseRetail: 'hsla(0, 60%, 87%, 0.23)',
+		landuseConstruction: '#aaa69d',
+
+		landusePark: '#b8ebad',
+		landuseNatureLight: '#ddecd7',
+		landuseNatureHeavy: '#a3e39c',
+		landuseCemetery: '#e0e4dd',
+		landuseBeach: '#fffcd3',
+
+		indoorCorridor: '#fdfcfa',
+		indoor: '#d4edff',
+		indoorOutline: '#808080',
+		indoorText: '#333333',
+
+		publicTransport: 'rgba(218,140,140,0.3)',
+
+		footway: '#fff',
+		steps: '#ff4524',
+
+		elevatorOutline: '#808080',
+		elevator: '#bcf1ba',
+
+		roadBackResidential: '#ffffff',
+		roadBackNonResidential: '#ffffff',
+
+		motorway: '#ffb366',
+		motorwayLink: '#f7e06e',
+		primarySecondary: '#fffbf8',
+		linkTertiary: '#ffffff',
+		residential: '#ffffff',
+		road: '#ffffff',
+
+		text: '#333333',
+		textHalo: 'white',
+		citiesText: '#111111',
+		citiesTextHalo: 'white',
+
+		shield: 'shield'
+	},
+	dark: {
+		background: '#292929',
+
+		water: '#1F1F1F',
+		rail: '#232323',
+		pedestrian: '#292929',
+
+		sport: '#272525',
+		sportOutline: '#272525',
+
+		building: '#1F1F1F',
+		buildingOutline: '#1A1A1A',
+
+		landuseComplex: '#292929',
+		landuseCommercial: '#292929',
+		landuseIndustrial: '#353538',
+		landuseResidential: '#292929',
+		landuseRetail: '#292929',
+		landuseConstruction: 'red',
+
+		landusePark: '#272525',
+		landuseNatureLight: '#272525',
+		landuseNatureHeavy: '#272525',
+		landuseCemetery: '#272525',
+		landuseBeach: '#4c4b3e',
+
+		indoorCorridor: '#494949',
+		indoor: '#1a1a1a',
+		indoorOutline: '#0d0d0d',
+		indoorText: '#eeeeee',
+
+		publicTransport: 'rgba(65, 48, 48, 0.3)',
+
+		footway: '#3D3D3D',
+		steps: '#70504b',
+
+		elevatorOutline: '#808080',
+		elevator: '#3b423b',
+
+		roadBackResidential: '#414141',
+		roadBackNonResidential: '#414141',
+
+		motorway: '#414141',
+		motorwayLink: '#414141',
+		primarySecondary: '#414141',
+		linkTertiary: '#414141',
+		residential: '#414141',
+		road: '#414141',
+
+		text: '#787878',
+		textHalo: '#151515',
+		citiesText: '#A8A8A8',
+		citiesTextHalo: '#1A1A1A',
+
+		shield: 'shield-dark'
+	}
+};
+
+export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecification => {
+	const c = colors[theme];
 	return {
 		version: 8,
 		sources: {
@@ -26,14 +132,14 @@ export const getStyle = (level: number): StyleSpecification => {
 			{
 				id: 'background',
 				type: 'background',
-				paint: { 'background-color': '#f8f4f0' }
+				paint: { 'background-color': c.background }
 			},
 			{
 				id: 'coastline',
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'coastline',
-				paint: { 'fill-color': water }
+				paint: { 'fill-color': c.water }
 			},
 			{
 				id: 'landuse_park',
@@ -42,8 +148,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				'source-layer': 'landuse',
 				filter: ['==', ['get', 'landuse'], 'park'],
 				paint: {
-					'fill-color': '#b8ebad'
-					// "fill-outline-color": "rgba(95, 208, 100, 1)"
+					'fill-color': c.landusePark
 				}
 			},
 			{
@@ -57,26 +162,26 @@ export const getStyle = (level: number): StyleSpecification => {
 						'match',
 						['get', 'landuse'],
 						'complex',
-						'#f0e6d1',
+						c.landuseComplex,
 						'commercial',
-						'hsla(0, 60%, 87%, 0.23)',
+						c.landuseCommercial,
 						'industrial',
-						'#e0e2eb',
+						c.landuseIndustrial,
 						'residential',
-						'#ece7e4',
+						c.landuseResidential,
 						'retail',
-						'hsla(0, 60%, 87%, 0.23)',
+						c.landuseRetail,
 						'construction',
-						'#aaa69d',
+						c.landuseConstruction,
 
 						'nature_light',
-						'#ddecd7',
+						c.landuseNatureLight,
 						'nature_heavy',
-						'#a3e39c',
+						c.landuseNatureHeavy,
 						'cemetery',
-						'#e0e4dd',
+						c.landuseCemetery,
 						'beach',
-						'#fffcd3',
+						c.landuseBeach,
 
 						'magenta'
 					]
@@ -87,7 +192,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'water',
-				paint: { 'fill-color': water }
+				paint: { 'fill-color': c.water }
 			},
 			{
 				id: 'sport',
@@ -95,8 +200,8 @@ export const getStyle = (level: number): StyleSpecification => {
 				source: 'osm',
 				'source-layer': 'sport',
 				paint: {
-					'fill-color': sport,
-					'fill-outline-color': sport_outline
+					'fill-color': c.sport,
+					'fill-outline-color': c.sportOutline
 				}
 			},
 			{
@@ -104,14 +209,14 @@ export const getStyle = (level: number): StyleSpecification => {
 				type: 'fill',
 				source: 'osm',
 				'source-layer': 'pedestrian',
-				paint: { 'fill-color': pedestrian }
+				paint: { 'fill-color': c.pedestrian }
 			},
 			{
 				id: 'waterway',
 				type: 'line',
 				source: 'osm',
 				'source-layer': 'waterway',
-				paint: { 'line-color': water }
+				paint: { 'line-color': c.water }
 			},
 			{
 				id: 'building',
@@ -119,8 +224,8 @@ export const getStyle = (level: number): StyleSpecification => {
 				source: 'osm',
 				'source-layer': 'building',
 				paint: {
-					'fill-color': building,
-					'fill-outline-color': building_outline,
+					'fill-color': c.building,
+					'fill-outline-color': c.buildingOutline,
 					'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 16, 0.8]
 				}
 			},
@@ -131,7 +236,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				'source-layer': 'indoor',
 				filter: ['all', ['==', 'indoor', 'corridor'], ['==', 'level', level]],
 				paint: {
-					'fill-color': '#fdfcfa',
+					'fill-color': c.indoorCorridor,
 					'fill-opacity': 0.8
 				}
 			},
@@ -142,7 +247,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				'source-layer': 'indoor',
 				filter: ['all', ['!in', 'indoor', 'corridor', 'wall', 'elevator'], ['==', 'level', level]],
 				paint: {
-					'fill-color': '#d4edff',
+					'fill-color': c.indoor,
 					'fill-opacity': 0.8
 				}
 			},
@@ -154,7 +259,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				filter: ['all', ['!in', 'indoor', 'corridor', 'wall', 'elevator'], ['==', 'level', level]],
 				minzoom: 18,
 				paint: {
-					'line-color': '#808080',
+					'line-color': c.indoorOutline,
 					'line-width': 2
 				}
 			},
@@ -172,7 +277,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					'text-size': 12
 				},
 				paint: {
-					'text-color': '#333333'
+					'text-color': c.indoorText
 				}
 			},
 			{
@@ -186,7 +291,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					['any', ['!has', 'level'], ['==', 'level', level]]
 				],
 				paint: {
-					'fill-color': 'rgba(218,140,140,0.3)'
+					'fill-color': c.publicTransport
 				}
 			},
 			{
@@ -205,7 +310,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				minzoom: 14,
 				paint: {
 					'line-dasharray': [0.75, 1.5],
-					'line-color': '#fff',
+					'line-color': c.footway,
 					'line-opacity': 0.5,
 					'line-width': [
 						'let',
@@ -248,7 +353,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				],
 				paint: {
 					'line-dasharray': [0.5, 0.5],
-					'line-color': '#ff4524',
+					'line-color': c.steps,
 					'line-opacity': 1,
 					'line-width': [
 						'let',
@@ -285,7 +390,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					['>=', 'to_level', level]
 				],
 				paint: {
-					'circle-color': '#808080',
+					'circle-color': c.elevatorOutline,
 					'circle-radius': 16
 				}
 			},
@@ -302,7 +407,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					['>=', 'to_level', level]
 				],
 				paint: {
-					'circle-color': '#bcf1ba',
+					'circle-color': c.elevator,
 					'circle-radius': 14
 				}
 			},
@@ -333,7 +438,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					'line-cap': 'round'
 				},
 				paint: {
-					'line-color': '#ffffff',
+					'line-color': c.roadBackResidential,
 					'line-width': ['interpolate', ['linear'], ['zoom'], 5, 0, 9, 0.5, 12, 1, 16, 4, 20, 20],
 					'line-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0.4, 15, 1]
 				}
@@ -359,7 +464,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					'line-cap': 'round'
 				},
 				paint: {
-					'line-color': '#ffffff',
+					'line-color': c.roadBackNonResidential,
 					'line-width': [
 						'let',
 						'base',
@@ -418,16 +523,16 @@ export const getStyle = (level: number): StyleSpecification => {
 						'match',
 						['get', 'highway'],
 						'motorway',
-						'#ffb366',
+						c.motorway,
 						['trunk', 'motorway_link'],
-						'#f7e06e',
+						c.motorwayLink,
 						['primary', 'secondary', 'aeroway', 'trunk_link'],
-						'#fffbf8',
+						c.primarySecondary,
 						['primary_link', 'secondary_link', 'tertiary', 'tertiary_link'],
-						'#ffffff',
+						c.linkTertiary,
 						'residential',
-						'#ffffff',
-						'#ffffff'
+						c.residential,
+						c.road
 					],
 					'line-width': [
 						'let',
@@ -472,7 +577,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				'source-layer': 'rail',
 				filter: ['==', 'rail', 'old'],
 				paint: {
-					'line-color': rail
+					'line-color': c.rail
 				}
 			},
 			{
@@ -482,7 +587,7 @@ export const getStyle = (level: number): StyleSpecification => {
 				'source-layer': 'rail',
 				filter: ['==', 'rail', 'detail'],
 				paint: {
-					'line-color': rail
+					'line-color': c.rail
 				}
 			},
 			{
@@ -496,7 +601,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					['any', ['!has', 'level'], ['==', 'level', level]]
 				],
 				paint: {
-					'line-color': rail,
+					'line-color': c.rail,
 					'line-width': 1.15
 				}
 			},
@@ -511,7 +616,7 @@ export const getStyle = (level: number): StyleSpecification => {
 					['any', ['!has', 'level'], ['==', 'level', level]]
 				],
 				paint: {
-					'line-color': rail,
+					'line-color': c.rail,
 					'line-width': 1.3
 				}
 			},
@@ -540,14 +645,14 @@ export const getStyle = (level: number): StyleSpecification => {
 					'text-justify': 'center',
 					'text-rotation-alignment': 'viewport',
 					'text-pitch-alignment': 'viewport',
-					'icon-image': 'shield',
+					'icon-image': c.shield,
 					'icon-text-fit': 'both',
 					'icon-text-fit-padding': [0.5, 4, 0.5, 4],
 					'icon-rotation-alignment': 'viewport',
 					'icon-pitch-alignment': 'viewport'
 				},
 				paint: {
-					'text-color': '#333333'
+					'text-color': c.text
 				}
 			},
 			{
@@ -564,8 +669,8 @@ export const getStyle = (level: number): StyleSpecification => {
 				},
 				paint: {
 					'text-halo-width': 11,
-					'text-halo-color': 'white',
-					'text-color': '#333333'
+					'text-halo-color': c.textHalo,
+					'text-color': c.text
 				}
 			},
 			{
@@ -582,8 +687,8 @@ export const getStyle = (level: number): StyleSpecification => {
 				},
 				paint: {
 					'text-halo-width': 1,
-					'text-halo-color': 'white',
-					'text-color': '#333333'
+					'text-halo-color': c.textHalo,
+					'text-color': c.text
 				}
 			},
 			{
@@ -600,8 +705,8 @@ export const getStyle = (level: number): StyleSpecification => {
 				},
 				paint: {
 					'text-halo-width': 2,
-					'text-halo-color': 'white',
-					'text-color': '#111111'
+					'text-halo-color': c.citiesTextHalo,
+					'text-color': c.citiesText
 				}
 			}
 		]

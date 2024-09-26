@@ -1,11 +1,12 @@
 import { browser } from '$app/environment';
+import type { StyleImageMetadata } from 'maplibre-gl';
 
 class ShieldOptions {
 	fill!: string;
 	stroke!: string;
 }
 
-export function createShield(opt: ShieldOptions): [ImageData, Object] {
+export function createShield(opt: ShieldOptions): [ImageData, Partial<StyleImageMetadata>] {
 	if (!browser) {
 		throw 'not supported';
 	}
@@ -29,7 +30,7 @@ export function createShield(opt: ShieldOptions): [ImageData, Object] {
 	const lp_front = l_front + 1;
 	const lp_back = l_back - 1;
 
-	let p = new Path2D();
+	const p = new Path2D();
 	p.moveTo(lr_front, l_front);
 
 	// top line
