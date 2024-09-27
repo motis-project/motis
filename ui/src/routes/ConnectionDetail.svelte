@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import type { Itinerary } from '$lib/openapi';
+	import type { Itinerary, Place } from '$lib/openapi';
 	import Time from '../lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { getModeStyle } from '$lib/modeStyle';
@@ -10,6 +10,12 @@
 	const lastLeg = itinerary.legs.findLast((l) => l.duration !== 0);
 </script>
 
+{#snippet stopTimes(timestamp: number, delay: number, name: string)}
+	<Time class="font-semibold mr-2" {timestamp} />
+	<Time class="font-semibold" {timestamp} {delay} />
+	<span class="col-span-5 mr-6">{name}</span>
+{/snippet}
+
 <div class="p-2 text-lg">
 	{#each itinerary.legs as l, i}
 		{@const isLast = i == itinerary.legs.length - 1}
@@ -17,6 +23,7 @@
 		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
 		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
 		{@const modeIcon = getModeStyle(l.mode)[0]}
+
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<div
@@ -50,13 +57,11 @@
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div class="flex items-center">
-					<Time class="font-semibold mr-2" timestamp={l.startTime} />
-					<Time class="font-semibold" timestamp={l.startTime} delay={l.departureDelay} />
-					<span class="ml-8">{l.from.name}</span>
+				<div class="grid gap-y-6 grid-cols-7 items-center">
+					{@render stopTimes(l.startTime, l.departureDelay, l.from.name)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground">
-					<ArrowRight class="stroke-slate-400 h-4 w-4" />
+					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
 					<span class="ml-1">{l.headsign}</span>
 				</div>
 				{#if l.intermediateStops?.length === 0}
@@ -83,21 +88,17 @@
 								Fahrt {l.intermediateStops?.length} Station ({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						{#each l.intermediateStops! as s}
-							<div class="flex items-center mb-6">
-								<Time class="font-semibold mr-2" timestamp={s.arrival!} />
-								<Time class="font-semibold" timestamp={s.arrival!} delay={l.arrivalDelay} />
-								<span class="ml-8">{s.name}</span>
-							</div>
-						{/each}
+						<div class="mb-6 grid gap-y-6 grid-cols-7 items-center">
+							{#each l.intermediateStops! as s}
+								{@render stopTimes(s.arrival!, s.arrivalDelay!, s.name)}
+							{/each}
+						</div>
 					</details>
 				{/if}
 
 				{#if !isLast && !(isLastPred && next!.duration === 0)}
-					<div class="flex items-center pb-3">
-						<Time class="font-semibold mr-2" timestamp={l.endTime} />
-						<Time class="font-semibold" timestamp={l.endTime} delay={l.arrivalDelay} />
-						<span class="ml-8">{l.to.name}</span>
+					<div class="grid gap-y-6 grid-cols-7 items-center pb-3">
+						{@render stopTimes(l.endTime!, l.arrivalDelay!, l.to.name)}
 					</div>
 				{/if}
 
@@ -117,30 +118,24 @@
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div class="flex items-center">
-					<Time class="font-semibold mr-2" timestamp={l.startTime} />
-					<Time class="font-semibold" timestamp={l.startTime} delay={l.departureDelay} />
-					<span class="ml-8">{l.from.name}</span>
+				<div class="grid gap-y-6 grid-cols-7 items-center">
+					{@render stopTimes(l.startTime, l.departureDelay, l.from.name)}
 				</div>
 				<div class="py-12 pl-8 flex items-center text-muted-foreground">
 					<span class="ml-6">Fußweg ({formatDurationSec(l.duration)})</span>
 				</div>
 				{#if !isLast}
-					<div class="flex pb-4">
-						<Time class="font-semibold mr-2" timestamp={l.endTime} />
-						<Time class="font-semibold" timestamp={l.endTime} delay={l.arrivalDelay} />
-						<span class="ml-8">{l.to.name}</span>
+					<div class="grid gap-y-6 grid-cols-7 items-center pb-4">
+						{@render stopTimes(l.endTime, l.arrivalDelay, l.to.name)}
 					</div>
 				{/if}
 			</div>
 		{/if}
 	{/each}
 	<div class="flex pb-4">
-		<div class="relative left-[12px] w-3 h-3 rounded-full" style={routeColor(lastLeg!)}></div>
-		<div class="relative left-2 bottom-[7px] pl-6 flex">
-			<Time class="font-semibold mr-2" timestamp={lastLeg!.endTime} />
-			<Time class="font-semibold" timestamp={lastLeg!.endTime} delay={lastLeg!.arrivalDelay} />
-			<span class="ml-8">{lastLeg!.to.name}</span>
+		<div class="relative left-[13px] w-3 h-3 rounded-full" style={routeColor(lastLeg!)}></div>
+		<div class="relative left-3 bottom-[7px] pl-6 grid gap-y-6 grid-cols-7 items-center">
+			{@render stopTimes(lastLeg!.endTime, lastLeg!.arrivalDelay, lastLeg!.to.name)}
 		</div>
 	</div>
 </div>
