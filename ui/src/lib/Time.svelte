@@ -15,7 +15,11 @@
 	const pad = (x: number) => ('0' + x).slice(-2);
 </script>
 
-<div class={cn('w-16', className)}>
+<div
+	class={cn('w-16', className)}
+	class:text-destructive={delay && delay >= 180000}
+	class:text-green-600={delay && delay < 180000}
+>
 	{#if delay === undefined || (delay !== undefined && delay !== 0)}
 		{pad(d.getHours())}:{pad(d.getMinutes())}
 	{/if}
