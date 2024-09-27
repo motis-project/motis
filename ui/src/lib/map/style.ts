@@ -63,7 +63,7 @@ const colors = {
 		background: '#292929',
 
 		water: '#313539',
-		rail: '#232323',
+		rail: '#808080',
 		pedestrian: '#292929',
 
 		sport: '#272525',
