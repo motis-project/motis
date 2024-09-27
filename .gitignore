@@ -6,6 +6,7 @@
 *.zip
 *.bin
 *.pbf
+*.csv
 /osr
 /delfi
 /test/test_case_osr
@@ -13,3 +14,4 @@
 /adr.cista*
 /data
 fasta.json
+

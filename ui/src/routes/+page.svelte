@@ -50,7 +50,9 @@
 
 	const pad = (x: number) => ('0' + x).slice(-2);
 	const toPlaceString = (l: Location) => {
-		if (l.value.level) {
+		if (l.value.match?.type === 'STOP') {
+			return l.value.match.id;
+		} else if (l.value.level) {
 			return `${l.value.match?.lat},${l.value.match?.lon},${l.value.level}`;
 		} else {
 			return `${l.value.match?.lat},${l.value.match?.lon},0`;
