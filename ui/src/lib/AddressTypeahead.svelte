@@ -9,6 +9,8 @@
 	import type { Location } from './Location';
 	import { GEOCODER_PRECISION } from './Precision';
 
+	const COORD_REGEX = /([0-9]{1,3}\.[0-9]{3,}),([0-9]{1,3}\.[0-9]{3,})/;
+
 	let {
 		items = $bindable([]),
 		selected = $bindable(),
@@ -52,6 +54,25 @@
 	};
 
 	const updateGuesses = async () => {
+		const coordinate = inputValue.match(COORD_REGEX);
+		if (coordinate) {
+			selected.label = inputValue;
+			selected.value = {
+				match: {
+					lat: Number(coordinate[1]),
+					lon: Number(coordinate[2]),
+					id: '',
+					areas: [],
+					type: 'PLACE',
+					name: inputValue,
+					tokens: [],
+					score: 0
+				}
+			};
+			items = [];
+			return;
+		}
+
 		items = (
 			await geocode<true>({
 				query: { text: inputValue, language }
