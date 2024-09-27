@@ -349,10 +349,10 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 					['==', 'highway', 'steps'],
 					level === 0
 						? [
-							'any',
-							['!has', 'from_level'],
-							['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-						]
+								'any',
+								['!has', 'from_level'],
+								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+							]
 						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
 				],
 				paint: {
