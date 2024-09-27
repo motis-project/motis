@@ -100,6 +100,11 @@
 						<span class="ml-8">{l.to.name}</span>
 					</div>
 				{/if}
+
+				{#if isLast}
+					<!-- fill visual gap -->
+					<div class="pb-1"></div>
+				{/if}
 			</div>
 		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName)}
 			<div class="w-full flex justify-between items-center space-x-1">

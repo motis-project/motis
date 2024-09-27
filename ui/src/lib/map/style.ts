@@ -50,6 +50,8 @@ const colors = {
 		residential: '#ffffff',
 		road: '#ffffff',
 
+		townText: '#333333',
+		townTextHalo: 'white',
 		text: '#333333',
 		textHalo: 'white',
 		citiesText: '#111111',
@@ -60,7 +62,7 @@ const colors = {
 	dark: {
 		background: '#292929',
 
-		water: '#1F1F1F',
+		water: '#313539',
 		rail: '#232323',
 		pedestrian: '#292929',
 
@@ -106,9 +108,11 @@ const colors = {
 		residential: '#414141',
 		road: '#414141',
 
-		text: '#787878',
+		text: '#9a9a9a',
 		textHalo: '#151515',
-		citiesText: '#A8A8A8',
+		townText: '#bebebe',
+		townTextHalo: '#1A1A1A',
+		citiesText: '#bebebe',
 		citiesTextHalo: '#1A1A1A',
 
 		shield: 'shield-dark'
@@ -345,10 +349,10 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 					['==', 'highway', 'steps'],
 					level === 0
 						? [
-								'any',
-								['!has', 'from_level'],
-								['any', ['==', 'from_level', level], ['==', 'to_level', level]]
-							]
+							'any',
+							['!has', 'from_level'],
+							['any', ['==', 'from_level', level], ['==', 'to_level', level]]
+						]
 						: ['any', ['==', 'from_level', level], ['==', 'to_level', level]]
 				],
 				paint: {
