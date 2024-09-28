@@ -15,13 +15,13 @@
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
 	import { cn } from '$lib/utils';
-	import ThemeToggle from '$lib/ThemeToggle.svelte';
+	// import ThemeToggle from '$lib/ThemeToggle.svelte';
 	import Debug from './Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
-	import { page } from '$app/stores';
 
-	const hasDebug = $page.url.searchParams.has('debug');
+	const urlParams = browser && new URLSearchParams(window.location.search);
+	const hasDebug = urlParams && urlParams.has('debug');
 
 	let theme = $state<'dark' | 'light'>(
 		browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
