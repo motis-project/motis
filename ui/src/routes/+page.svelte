@@ -23,22 +23,25 @@
 
 	const hasDebug = $page.url.searchParams.has('debug');
 
+	let theme = $state<'dark' | 'light'>(
+		browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+			? 'dark'
+			: 'light'
+	);
 	const updateBodyTheme = (theme: 'dark' | 'light') => {
 		document.documentElement.classList.remove('dark');
 		if (theme === 'dark') {
 			document.documentElement.classList.add('dark');
 		}
 	};
-	let theme = $state<'dark' | 'light'>(
-		browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-			? 'dark'
-			: 'light'
-	);
-	if (browser) {
-		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
-			theme = event.matches ? 'dark' : 'light';
-		});
-	}
+	// Creates bad interaction with markers
+	// Map becomes scrollable so markers stay visible
+	// after theme change
+	// if (browser) {
+	// 	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+	// 		theme = event.matches ? 'dark' : 'light';
+	// 	});
+	// }
 	$effect(() => {
 		updateBodyTheme(theme);
 	});
@@ -130,9 +133,14 @@
 	class={cn('h-screen overflow-clip', theme)}
 	style={getStyle(theme, level)}
 >
+	<!--
+	Creates bad interaction with markers
+	Map becomes scrollable so markers stay visible
+	after theme change
 	<Control position="top-right">
 		<ThemeToggle bind:theme />
 	</Control>
+	-->
 
 	{#if hasDebug}
 		<Control position="top-right">

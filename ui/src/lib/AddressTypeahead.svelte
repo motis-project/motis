@@ -9,7 +9,7 @@
 	import { posToLocation, type Location } from './Location';
 	import { GEOCODER_PRECISION } from './Precision';
 
-	const COORD_REGEX = /([0-9]{1,3}\.[0-9]{3,}),([0-9]{1,3}\.[0-9]{3,})/;
+	const COORD_REGEX = /([0-9]{1,3}\.[0-9]{3,})\s*,?\s*([0-9]{1,3}\.[0-9]{3,})/;
 
 	let {
 		items = $bindable([]),
@@ -56,7 +56,7 @@
 	const updateGuesses = async () => {
 		const coordinate = inputValue.match(COORD_REGEX);
 		if (coordinate) {
-			selected = posToLocation([Number(coordinate[1]), Number(coordinate[0])]);
+			selected = posToLocation([Number(coordinate[2]), Number(coordinate[1])]);
 			items = [];
 			return;
 		}
