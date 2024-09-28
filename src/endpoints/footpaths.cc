@@ -18,62 +18,26 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
-json::value to_json(osr::location const& loc) {
-  return json::value{{"lat", loc.pos_.lat_},
-                     {"lng", loc.pos_.lng_},
-                     {"level", to_float(loc.lvl_)}};
-}
-
-json::value to_json(n::timetable const& tt, n::location_idx_t const l) {
-  return json::value{{"name", tt.locations_.names_[l].view()},
-                     {"id", tt.locations_.ids_[l].view()},
-                     {"src", to_idx(tt.locations_.src_[l])}};
-}
-
-struct fp {
-  void set(osr::search_profile const p,
-           n::duration_t const d,
-           bool const uses_elevator) {
-    switch (p) {
-      case osr::search_profile::kFoot: foot_ = d; break;
-      case osr::search_profile::kWheelchair:
-        wheelchair_ = d;
-        wheelchair_uses_elevator_ = uses_elevator;
-        break;
-      default: std::unreachable();
-    }
-  }
-  std::optional<n::duration_t> default_, foot_, wheelchair_;
-  bool wheelchair_uses_elevator_;
-};
-
-json::value footpaths::operator()(json::value const& query) const {
+api::footpaths_response footpaths::operator()(
+    boost::urls::url_view const& url) const {
+  auto const q = motis::api::footpaths_params{url.params()};
   auto const rt = rt_;
   auto const e = rt->e_.get();
+  auto const l = tt_.locations_.get({q.id_, n::source_idx_t{}});
 
-  auto const q = query.as_object();
-  auto const l =
-      tt_.locations_
-          .get({std::string_view{q.at("id").as_string()},
-                n::source_idx_t{
-                    q.at("src").to_number<n::source_idx_t::value_t>()}})
-          .l_;
+  auto const neighbors =
+      loc_rtree_.in_radius(tt_.locations_.coordinates_[l.l_], kMaxDistance);
 
-  auto neighbors = std::vector<n::location_idx_t>{};
-  loc_rtree_.in_radius(
-      tt_.locations_.coordinates_[l], kMaxDistance,
-      [&](n::location_idx_t const l) { neighbors.emplace_back(l); });
+  auto footpaths = hash_map<n::location_idx_t, api::Footpath>{};
 
-  auto footpaths = hash_map<n::location_idx_t, fp>{};
-
-  for (auto const fp : tt_.locations_.footpaths_out_[0][l]) {
+  for (auto const fp : tt_.locations_.footpaths_out_[0][l.l_]) {
     if (tt_.location_routes_[fp.target()].empty()) {
       continue;
     }
-    footpaths[fp.target()].default_ = fp.duration();
+    footpaths[fp.target()].default_ = fp.duration().count();
   }
 
-  auto const loc = get_loc(tt_, w_, pl_, matches_, l);
+  auto const loc = get_loc(tt_, w_, pl_, matches_, l.l_);
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     auto const results = osr::route(
@@ -82,44 +46,42 @@ json::value footpaths::operator()(json::value const& query) const {
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
         kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-        &e->blocked_, [](osr::path const& p) { return p.uses_elevator_; });
+        e == nullptr ? nullptr : &e->blocked_,
+        [](osr::path const& p) { return p.uses_elevator_; });
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
-        auto const duration = n::duration_t{static_cast<n::duration_t::rep>(
-            std::ceil(r->cost_ * kTransferTimeMultiplier / 60U))};
-        if (duration < n::footpath::kMaxDuration) {
-          footpaths[n].set(mode, duration, r->uses_elevator_);
+        auto& fp = footpaths[n];
+        auto const duration =
+            std::ceil(r->cost_ * kTransferTimeMultiplier / 60U);
+        if (duration < n::footpath::kMaxDuration.count()) {
+          switch (mode) {
+            case osr::search_profile::kFoot: fp.foot_ = duration; break;
+            case osr::search_profile::kWheelchair:
+              fp.wheelchair_ = duration;
+              fp.wheelchairUsesElevator_ = r->uses_elevator_;
+              break;
+            default: std::unreachable();
+          }
         }
       }
     }
   }
 
-  return json::value{
-      {"id", to_json(tt_, l)},
-      {"loc", to_json(loc)},
-      {"footpaths",
-       utl::all(footpaths)  //
-           | utl::transform([&](auto&& fp) {
-               auto const& [to, durations] = fp;
-               auto const to_loc = get_loc(tt_, w_, pl_, matches_, to);
-               auto val = json::value{{"id", to_json(tt_, to)},
-                                      {"loc", to_json(to_loc)}}
-                              .as_object();
-               if (durations.default_) {
-                 val.emplace("default", durations.default_->count());
-               }
-               if (durations.foot_) {
-                 val.emplace("foot", durations.foot_->count());
-               }
-               if (durations.wheelchair_) {
-                 val.emplace("wheelchair", durations.wheelchair_->count());
-                 val.emplace("wheelchair_uses_elevator",
-                             durations.wheelchair_uses_elevator_);
-               }
-               return val;
-             })  //
-           | utl::emplace_back_to<json::array>()}};
+  auto const to_place = [&](n::location const l) -> api::Place {
+    return {.name_ = std::string{l.name_},
+            .stopId_ = std::string{l.id_},
+            .lat_ = l.pos_.lat(),
+            .lon_ = l.pos_.lng(),
+            .level_ = osr::to_float(pl_.get_level(w_, matches_[l.l_])),
+            .vertexType_ = api::VertexTypeEnum::NORMAL};
+  };
+
+  return {.place_ = to_place(l),
+          .footpaths_ = utl::to_vec(footpaths, [&](auto&& e) {
+            e.second.to_ = to_place(tt_.locations_.get(e.first));
+            return e.second;
+          })};
 }
 
 }  // namespace motis::ep

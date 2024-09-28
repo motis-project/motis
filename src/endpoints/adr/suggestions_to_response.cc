@@ -105,6 +105,7 @@ api::geocode_response suggestions_to_response(
         .id_ = std::move(id),
         .lat_ = s.coordinates_.as_latlng().lat_,
         .lon_ = s.coordinates_.as_latlng().lng_,
+        .level_ = 0.0,  // TODO
         .street_ = std::move(street),
         .house_number_ = std::move(house_number),
         .zip_ = std::move(zip),

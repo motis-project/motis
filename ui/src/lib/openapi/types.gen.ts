@@ -61,6 +61,12 @@ export type Match = {
      */
     lon: number;
     /**
+     * level according to OpenStreetMap
+     * (at the moment only for public transport)
+     *
+     */
+    level: number;
+    /**
      * street name
      */
     street?: string;
@@ -149,6 +155,10 @@ export type Place = {
      * longitude
      */
     lon: number;
+    /**
+     * level according to OpenStreetMap
+     */
+    level: number;
     /**
      * The offset from the scheduled arrival time of the boarding stop in this leg.
      * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
@@ -375,6 +385,37 @@ export type Itinerary = {
     legs: Array<Leg>;
 };
 
+/**
+ * footpath from one location to another
+ */
+export type Footpath = {
+    to: Place;
+    /**
+     * optional; missing if the GTFS did not contain a footpath
+     * footpath duration in minutes according to GTFS (+heuristics)
+     *
+     */
+    default?: number;
+    /**
+     * optional; missing if no path was found with the foot profile
+     * footpath duration in minutes for the foot profile
+     *
+     */
+    foot?: number;
+    /**
+     * optional; missing if no path was found with the wheelchair profile
+     * footpath duration in minutes for the wheelchair profile
+     *
+     */
+    wheelchair?: number;
+    /**
+     * optional; missing if no path was found with the wheelchair profile
+     * true if the wheelchair path uses an elevator
+     *
+     */
+    wheelchairUsesElevator?: boolean;
+};
+
 export type ReverseGeocodeData = {
     query: {
         /**
@@ -586,3 +627,22 @@ export type PlanResponse = ({
 });
 
 export type PlanError = unknown;
+
+export type FootpathsData = {
+    query: {
+        /**
+         * location id
+         */
+        id: string;
+    };
+};
+
+export type FootpathsResponse = ({
+    place: Place;
+    /**
+     * all outgoing footpaths of this location
+     */
+    footpaths: Array<Footpath>;
+});
+
+export type FootpathsError = unknown;

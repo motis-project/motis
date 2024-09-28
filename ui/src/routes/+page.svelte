@@ -4,7 +4,7 @@
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
 	import SearchMask from './SearchMask.svelte';
-	import { type Location } from '$lib/Location';
+	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
 	import type { Selected } from 'bits-ui';
 	import { type Itinerary, plan, type PlanResponse } from '$lib/openapi';
@@ -16,6 +16,12 @@
 	import { browser } from '$app/environment';
 	import { cn } from '$lib/utils';
 	import ThemeToggle from '$lib/ThemeToggle.svelte';
+	import Debug from './Debug.svelte';
+	import Marker from '$lib/map/Marker.svelte';
+	import Popup from '$lib/map/Popup.svelte';
+	import { page } from '$app/stores';
+
+	const hasDebug = $page.url.searchParams.has('debug');
 
 	const updateBodyTheme = (theme: 'dark' | 'light') => {
 		document.documentElement.classList.remove('dark');
@@ -52,8 +58,8 @@
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
 			return l.value.match.id;
-		} else if (l.value.level) {
-			return `${l.value.match?.lat},${l.value.match?.lon},${l.value.level}`;
+		} else if (l.value.match?.level) {
+			return `${l.value.match?.lat},${l.value.match?.lon},${l.value.match.level}`;
 		} else {
 			return `${l.value.match?.lat},${l.value.match?.lon},0`;
 		}
@@ -82,7 +88,34 @@
 	});
 
 	let selectedItinerary = $state<Itinerary>();
+
+	type CloseFn = () => void;
 </script>
+
+{#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
+	<Button
+		variant="outline"
+		on:click={() => {
+			let x = posToLocation(e.lngLat);
+			from.value = x.value;
+			from.label = x.label;
+			close();
+		}}
+	>
+		From
+	</Button>
+	<Button
+		variant="outline"
+		on:click={() => {
+			let x = posToLocation(e.lngLat);
+			to.value = x.value;
+			to.label = x.label;
+			close();
+		}}
+	>
+		To
+	</Button>
+{/snippet}
 
 <Map
 	bind:map
@@ -94,12 +127,18 @@
 		}
 	}}
 	center={[8.652235, 49.876908]}
-	class={cn('h-screen', theme)}
+	class={cn('h-screen overflow-clip', theme)}
 	style={getStyle(theme, level)}
 >
 	<Control position="top-right">
 		<ThemeToggle bind:theme />
 	</Control>
+
+	{#if hasDebug}
+		<Control position="top-right">
+			<Debug {bounds} {level} />
+		</Control>
+	{/if}
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
@@ -137,5 +176,15 @@
 			</Card>
 		</Control>
 		<ItineraryGeoJson itinerary={selectedItinerary} {level} />
+	{/if}
+
+	<Popup trigger="contextmenu" children={contextMenu} />
+
+	{#if from}
+		<Marker color="green" draggable={true} bind:location={from} />
+	{/if}
+
+	{#if to}
+		<Marker color="red" draggable={true} bind:location={to} />
 	{/if}
 </Map>

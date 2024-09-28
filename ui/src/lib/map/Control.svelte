@@ -38,7 +38,7 @@
 
 <div
 	class:hidden={!initialized}
-	class="clear-both pointer-events-auto p-4"
+	class="clear-both pointer-events-auto pt-4 px-4"
 	{...props}
 	bind:this={el}
 >

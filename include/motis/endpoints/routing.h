@@ -1,7 +1,5 @@
 #pragma once
 
-#include "boost/json/value.hpp"
-
 #include "nigiri/routing/query.h"
 
 #include "osr/location.h"
@@ -14,7 +12,7 @@
 namespace motis::ep {
 
 struct routing {
-  api::plan_response operator()(boost::urls::url_view const& url) const;
+  api::plan_response operator()(boost::urls::url_view const&) const;
 
   std::vector<nigiri::routing::offset> get_offsets(
       osr::location const&,

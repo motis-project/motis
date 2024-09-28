@@ -39,7 +39,7 @@ export const TokenSchema = {
 export const MatchSchema = {
     description: 'GeoCoding match',
     type: 'object',
-    required: ['type', 'name', 'id', 'lat', 'lon', 'tokens', 'areas', 'score'],
+    required: ['type', 'name', 'id', 'lat', 'lon', 'level', 'tokens', 'areas', 'score'],
     properties: {
         type: {
             description: 'location type',
@@ -67,6 +67,12 @@ export const MatchSchema = {
         },
         lon: {
             description: 'longitude',
+            type: 'number'
+        },
+        level: {
+            description: `level according to OpenStreetMap
+(at the moment only for public transport)
+`,
             type: 'number'
         },
         street: {
@@ -144,7 +150,7 @@ export const VertexTypeSchema = {
 
 export const PlaceSchema = {
     type: 'object',
-    required: ['name', 'lat', 'lon'],
+    required: ['name', 'lat', 'lon', 'level'],
     properties: {
         name: {
             description: 'name of the transit stop / PoI / address',
@@ -160,6 +166,10 @@ export const PlaceSchema = {
         },
         lon: {
             description: 'longitude',
+            type: 'number'
+        },
+        level: {
+            description: 'level according to OpenStreetMap',
             type: 'number'
         },
         arrivalDelay: {
@@ -465,6 +475,41 @@ export const ItinerarySchema = {
             items: {
                 '$ref': '#/components/schemas/Leg'
             }
+        }
+    }
+} as const;
+
+export const FootpathSchema = {
+    description: 'footpath from one location to another',
+    type: 'object',
+    required: ['to'],
+    properties: {
+        to: {
+            '$ref': '#/components/schemas/Place'
+        },
+        default: {
+            type: 'number',
+            description: `optional; missing if the GTFS did not contain a footpath
+footpath duration in minutes according to GTFS (+heuristics)
+`
+        },
+        foot: {
+            type: 'number',
+            description: `optional; missing if no path was found with the foot profile
+footpath duration in minutes for the foot profile
+`
+        },
+        wheelchair: {
+            type: 'number',
+            description: `optional; missing if no path was found with the wheelchair profile 
+footpath duration in minutes for the wheelchair profile
+`
+        },
+        wheelchairUsesElevator: {
+            type: 'boolean',
+            description: `optional; missing if no path was found with the wheelchair profile
+true if the wheelchair path uses an elevator
+`
         }
     }
 } as const;

@@ -20,10 +20,10 @@ namespace n = nigiri;
 using namespace motis;
 
 int main(int ac, char** av) {
-  auto tt_path = fs::path{"tt.bin"};
-  auto osr_path = fs::path{"osr"};
-  auto out_path = fs::path{"out"};
-  auto fasta_path = fs::path{"fasta.json"};
+  auto tt_path = fs::path{"data/tt.bin"};
+  auto osr_path = fs::path{"data/osr"};
+  auto out_path = fs::path{"data"};
+  auto fasta_path = fs::path{"data/fasta.json"};
 
   auto desc = bpo::options_description{"Options"};
   desc.add_options()  //

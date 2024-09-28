@@ -1,20 +1,29 @@
 <script lang="ts">
 	import maplibregl from 'maplibre-gl';
 	import { onDestroy, getContext, setContext } from 'svelte';
+	import type { MapMouseEvent, MapGeoJSONFeature } from 'maplibre-gl';
+
+	type ClickHandler = (e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) => void;
 
 	let {
 		id,
 		type,
 		filter,
 		layout,
-		paint
+		paint,
+		onclick
 	}: {
 		id: string;
 		type: 'symbol' | 'fill' | 'line' | 'circle';
 		filter: maplibregl.FilterSpecification;
 		layout: Object; // eslint-disable-line
 		paint: Object; // eslint-disable-line
+		onclick?: ClickHandler;
 	} = $props();
+
+	function click(e: MapMouseEvent & { features?: MapGeoJSONFeature[] }) {
+		onclick && onclick(e);
+	}
 
 	let layer = $state<{ id: null | string }>({ id: null });
 	setContext('layer', layer);
@@ -70,6 +79,7 @@
 	$effect(() => {
 		if (ctx.map && source.id) {
 			if (!initialized) {
+				ctx.map.on('click', id, click);
 				ctx.map.on('styledata', updateLayer);
 				updateLayer();
 				initialized = true;
@@ -80,6 +90,7 @@
 	onDestroy(() => {
 		const l = ctx.map?.getLayer(id);
 		ctx.map?.off('styledata', updateLayer);
+		ctx.map?.off('click', id, click);
 		if (l) {
 			console.log('ON DESTROY LAYER', id, ctx.map);
 			ctx.map?.removeLayer(id);
