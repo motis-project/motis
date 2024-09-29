@@ -628,6 +628,23 @@ export type PlanResponse = ({
 
 export type PlanError = unknown;
 
+export type LevelsData = {
+    query: {
+        /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min: string;
+    };
+};
+
+export type LevelsResponse = (Array<(number)>);
+
+export type LevelsError = unknown;
+
 export type FootpathsData = {
     query: {
         /**

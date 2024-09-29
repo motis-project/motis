@@ -11,7 +11,7 @@ constexpr auto const kMaxDuration = 15 * 60;
 constexpr auto const kMaxDistance = 2000;
 
 // max distance from start/destination coordinate to way segment [meters]
-constexpr auto const kMaxMatchingDistance = 8;
+constexpr auto const kMaxMatchingDistance = 25;
 
 // distance between location in timetable and OSM platform coordinate [meters]
 constexpr auto const kMaxAdjust = 200;

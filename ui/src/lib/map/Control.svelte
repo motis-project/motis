@@ -1,13 +1,17 @@
 <script lang="ts">
+	import { cn } from '$lib/utils';
 	import type { Map, ControlPosition, IControl } from 'maplibre-gl';
 	import { getContext, onDestroy, type Snippet } from 'svelte';
 
-	class Props {
+	let {
+		children,
+		position = 'top-right',
+		class: className
+	}: {
 		children?: Snippet;
-		position?: ControlPosition = 'top-right';
-	}
-
-	let { children, position, ...props }: Props = $props();
+		position?: ControlPosition;
+		class?: string;
+	} = $props();
 	let el: HTMLElement | null = null;
 	let initialized = $state(false);
 
@@ -38,8 +42,7 @@
 
 <div
 	class:hidden={!initialized}
-	class="clear-both pointer-events-auto pt-4 px-4"
-	{...props}
+	class={cn('clear-both pointer-events-auto pt-4 px-4', className)}
 	bind:this={el}
 >
 	{#if children}

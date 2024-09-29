@@ -54,11 +54,11 @@ int main(int ac, char** av) {
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
   POST<ep::osr_routing>(qr, "/api/route", d);
-  POST<ep::levels>(qr, "/api/levels", d);
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
   POST<ep::update_elevator>(qr, "/api/update_elevator", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
+  GET<ep::levels>(qr, "/api/v1/levels", d);
   GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);
   GET<ep::geocode>(qr, "/api/v1/geocode", d);
   GET<ep::routing>(qr, "/api/v1/plan", d);

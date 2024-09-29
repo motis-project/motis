@@ -112,8 +112,9 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
     }
 
     utl::equal_ranges_linear(
-        get_td_footpaths(w_, l_, pl_, tt_, loc_tree_, e, matches_, pos, dir,
-                         profile, *blocked),
+        get_td_footpaths(w_, l_, pl_, tt_, loc_tree_, e, matches_,
+                         n::location_idx_t::invalid(), pos, dir, profile,
+                         *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
           return a.target_ == b.target_;
         },

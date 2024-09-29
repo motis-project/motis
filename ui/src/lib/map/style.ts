@@ -90,7 +90,7 @@ const colors = {
 		indoorOutline: '#0d0d0d',
 		indoorText: '#eeeeee',
 
-		publicTransport: 'rgba(65, 48, 48, 0.3)',
+		publicTransport: 'rgba(89, 45, 45, 0.405)',
 
 		footway: '#3D3D3D',
 		steps: '#70504b',

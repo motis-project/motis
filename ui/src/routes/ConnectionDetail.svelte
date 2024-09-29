@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import type { Itinerary, Place } from '$lib/openapi';
+	import type { Itinerary } from '$lib/openapi';
 	import Time from '../lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { getModeStyle } from '$lib/modeStyle';

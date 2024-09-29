@@ -19,14 +19,18 @@
 	import Debug from './Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
+	import LevelSelect from './LevelSelect.svelte';
+	import { lngLatToStr } from '$lib/lngLatToStr';
 
 	const urlParams = browser && new URLSearchParams(window.location.search);
 	const hasDebug = urlParams && urlParams.has('debug');
+	const hasDark = urlParams && urlParams.has('dark');
 
 	let theme = $state<'dark' | 'light'>(
-		browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-			? 'dark'
-			: 'light'
+		(hasDark ? 'dark' : undefined) ??
+			(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+				? 'dark'
+				: 'light')
 	);
 	const updateBodyTheme = (theme: 'dark' | 'light') => {
 		document.documentElement.classList.remove('dark');
@@ -62,9 +66,9 @@
 		if (l.value.match?.type === 'STOP') {
 			return l.value.match.id;
 		} else if (l.value.match?.level) {
-			return `${l.value.match?.lat},${l.value.match?.lon},${l.value.match.level}`;
+			return `${lngLatToStr(l.value.match!)},${l.value.match.level}`;
 		} else {
-			return `${l.value.match?.lat},${l.value.match?.lon},0`;
+			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
 	let baseQuery = $derived(
@@ -153,6 +157,8 @@
 			<SearchMask bind:from bind:to bind:dateTime bind:timeType bind:profile {theme} />
 		</Card>
 	</Control>
+
+	<LevelSelect {bounds} {zoom} bind:level />
 
 	{#if !selectedItinerary && baseQuery && routingResponses.length !== 0}
 		<Control position="top-left">

@@ -1,13 +1,14 @@
 #pragma once
 
-#include "boost/json/value.hpp"
+#include "boost/url/url_view.hpp"
 
+#include "motis-api/motis-api.h"
 #include "motis/fwd.h"
 
 namespace motis::ep {
 
 struct levels {
-  boost::json::value operator()(boost::json::value const&) const;
+  api::levels_response operator()(boost::urls::url_view const&) const;
 
   osr::ways const& w_;
   osr::lookup const& l_;

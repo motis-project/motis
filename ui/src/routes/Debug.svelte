@@ -20,7 +20,7 @@
 
 	const baseUrl = 'http://localhost:7999';
 
-	const post = async (path: string, req: any) => {
+	const post = async (path: string, req: unknown) => {
 		console.log(`FETCH ${path}: ${JSON.stringify(req)}`);
 		const response = await fetch(`${baseUrl}${path}`, {
 			method: 'POST',
@@ -109,40 +109,6 @@
 	<Bug size="icon" class="h-[1.2rem] w-[1.2rem]" />
 </Button>
 
-{#if matches}
-	{#await matches then m}
-		<GeoJSON id="matches" data={m}>
-			<Layer
-				onclick={(e) => {
-					const props = e.features![0].properties;
-					id = props.id;
-				}}
-				id="matches"
-				type="circle"
-				filter={['all', ['==', '$type', 'Point']]}
-				layout={{}}
-				paint={{
-					'circle-color': ['match', ['get', 'type'], 'location', '#ff0000', '#0000ff'],
-					'circle-radius': 5
-				}}
-			/>
-			<Layer
-				id="match"
-				type="line"
-				filter={['all', ['==', 'type', 'match']]}
-				layout={{
-					'line-join': 'round',
-					'line-cap': 'round'
-				}}
-				paint={{
-					'line-color': '#00ff00',
-					'line-width': 3
-				}}
-			/>
-		</GeoJSON>
-	{/await}
-{/if}
-
 {#if fps}
 	{#await fps then f}
 		{#if f}
@@ -211,6 +177,40 @@
 				</Card>
 			</Control>
 		{/if}
+	{/await}
+{/if}
+
+{#if matches}
+	{#await matches then m}
+		<GeoJSON id="matches" data={m}>
+			<Layer
+				onclick={(e) => {
+					const props = e.features![0].properties;
+					id = props.id;
+				}}
+				id="matches"
+				type="circle"
+				filter={['all', ['==', '$type', 'Point']]}
+				layout={{}}
+				paint={{
+					'circle-color': ['match', ['get', 'type'], 'location', '#ff0000', '#0000ff'],
+					'circle-radius': 5
+				}}
+			/>
+			<Layer
+				id="match"
+				type="line"
+				filter={['all', ['==', 'type', 'match']]}
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				paint={{
+					'line-color': '#00ff00',
+					'line-width': 3
+				}}
+			/>
+		</GeoJSON>
 	{/await}
 {/if}
 

@@ -331,6 +331,35 @@ paths:
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
 
+  /api/v1/levels:
+    get:
+      tags:
+        - map
+      summary: Get all available levels for a map section
+      operationId: levels
+      parameters:
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+      responses:
+        '200':
+          description: array of available levels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: number
+
   /api/debug/footpaths:
     get:
       tags:

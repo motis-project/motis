@@ -80,6 +80,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     point_rtree<n::location_idx_t> const& loc_rtree,
     elevators const& e,
     platform_matches_t const& matches,
+    n::location_idx_t const start_l,
     osr::location const start,
     osr::direction const dir,
     osr::search_profile const profile,
@@ -93,9 +94,12 @@ std::vector<n::td_footpath> get_td_footpaths(
     set_blocked(e_nodes, states, blocked_mem);
 
     auto neighbors = std::vector<n::location_idx_t>{};
-    loc_rtree.in_radius(
-        start.pos_, kMaxDistance,
-        [&](n::location_idx_t const x) { neighbors.emplace_back(x); });
+    loc_rtree.in_radius(start.pos_, kMaxDistance,
+                        [&](n::location_idx_t const x) {
+                          if (x != start_l) {
+                            neighbors.emplace_back(x);
+                          }
+                        });
     auto const results = osr::route(
         w, l, profile, start,
         utl::to_vec(neighbors,
@@ -138,7 +142,7 @@ void update_rtt_td_footpaths(
       tasks.size(),
       [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
         auto const [start, dir] = *(begin(tasks) + task_idx);
-        auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches,
+        auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, start,
                                     get_loc(tt, w, pl, matches, start), dir,
                                     osr::search_profile::kWheelchair, blocked);
         {

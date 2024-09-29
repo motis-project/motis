@@ -118,9 +118,12 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
           (mode == osr::search_profile::kFoot ? footpaths_out_foot[l]
                                               : footpaths_out_wheelchair[l]);
       auto neighbors = std::vector<n::location_idx_t>{};
-      loc_rtree.in_radius(
-          tt.locations_.coordinates_[l], kMaxDistance,
-          [&](n::location_idx_t const l) { neighbors.emplace_back(l); });
+      loc_rtree.in_radius(tt.locations_.coordinates_[l], kMaxDistance,
+                          [&](n::location_idx_t const x) {
+                            if (x != l) {
+                              neighbors.emplace_back(x);
+                            }
+                          });
       auto const results = osr::route(
           w, mode, get_loc(tt, w, pl, matches, l),
           utl::to_vec(neighbors,
