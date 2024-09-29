@@ -95,6 +95,21 @@
 	});
 
 	let selectedItinerary = $state<Itinerary>();
+	$effect(() => {
+		if (selectedItinerary && map) {
+			const start = maplibregl.LngLat.convert(selectedItinerary.legs[0].from);
+			const box = new maplibregl.LngLatBounds(start, start);
+			selectedItinerary.legs.forEach((l) => {
+				box.extend(l.from);
+				box.extend(l.to);
+				l.intermediateStops?.forEach((x) => {
+					box.extend(x);
+				});
+			});
+			const padding = { top: 96, right: 96, bottom: 96, left: 640 };
+			map.flyTo({ ...map.cameraForBounds(box), padding });
+		}
+	});
 
 	type CloseFn = () => void;
 </script>

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string_view>
+#include <variant>
+
 #include "nigiri/routing/journey.h"
 #include "nigiri/types.h"
 
@@ -25,6 +28,8 @@ using street_routing_cache_t = hash_map<std::tuple<osr::location,
                                                    osr::search_profile,
                                                    std::vector<bool>>,
                                         std::optional<osr::path>>;
+
+api::Place to_place(nigiri::timetable const&, place_t, std::string_view);
 
 api::Itinerary journey_to_response(
     osr::ways const&,

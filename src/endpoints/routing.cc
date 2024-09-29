@@ -44,7 +44,7 @@ boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-place_t to_place(n::timetable const& tt, std::string_view s) {
+place_t get_place(n::timetable const& tt, std::string_view s) {
   if (auto const location = parse_location(s); location.has_value()) {
     return *location;
   }
@@ -279,8 +279,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const from = to_place(tt_, query.fromPlace_);
-  auto const to = to_place(tt_, query.toPlace_);
+  auto const from = get_place(tt_, query.fromPlace_);
+  auto const to = get_place(tt_, query.toPlace_);
   auto const from_modes = get_from_modes(query.mode_);
   auto const to_modes = get_to_modes(query.mode_);
 
@@ -364,31 +364,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   UTL_STOP_TIMING(nigiri);
   auto const nigiri_timing = UTL_TIMING_MS(nigiri);
 
-  auto const to_place = [&](place_t const p, std::string_view name) {
-    return std::visit(
-        utl::overloaded{
-            [&](osr::location const l) {
-              return api::Place{
-                  .name_ = std::string{name},
-                  .lat_ = l.pos_.lat_,
-                  .lon_ = l.pos_.lng_,
-                  .vertexType_ = api::VertexTypeEnum::NORMAL,
-              };
-            },
-            [&](n::location_idx_t const l) {
-              auto const pos = tt_.locations_.coordinates_[l];
-              return api::Place{
-                  .name_ = std::string{tt_.locations_.names_[l].view()},
-                  .stopId_ = std::string{tt_.locations_.ids_[l].view()},
-                  .lat_ = pos.lat_,
-                  .lon_ = pos.lng_};
-            }},
-        p);
-  };
-
   return {
-      .from_ = to_place(from, "Origin"),
-      .to_ = to_place(to, "Destination"),
+      .from_ = to_place(tt_, from, "Origin"),
+      .to_ = to_place(tt_, to, "Destination"),
       .itineraries_ =
           utl::to_vec(*r.journeys_,
                       [&, cache = street_routing_cache_t{}](auto&& j) mutable {
