@@ -1,27 +1,27 @@
 <script lang="ts">
+	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
+	import Accessibility from 'lucide-svelte/icons/accessibility';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
-	import * as Select from '$lib/components/ui/select';
 	import DateInput from '$lib/DateInput.svelte';
 	import { type Location } from '$lib/Location';
-	import type { Selected } from 'bits-ui';
-	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
+	import { Toggle } from '$lib/components/ui/toggle';
 
 	let {
 		from = $bindable(),
 		to = $bindable(),
 		dateTime = $bindable(),
 		timeType = $bindable(),
-		profile = $bindable(),
+		wheelchair = $bindable(),
 		theme
 	}: {
 		from: Location;
 		to: Location;
 		dateTime: Date;
 		timeType: string;
-		profile: Selected<string>;
+		wheelchair: boolean;
 		theme?: 'light' | 'dark';
 	} = $props();
 
@@ -80,18 +80,8 @@
 				<span>Ankunft</span>
 			</Label>
 		</RadioGroup.Root>
-		<div class="min-w-22">
-			<Select.Root bind:selected={profile}>
-				<Select.SelectTrigger>
-					<Select.SelectValue placeholder="Profile" />
-				</Select.SelectTrigger>
-				<Select.SelectContent>
-					<Select.SelectItem value="wheelchair">Wheelchair</Select.SelectItem>
-					<Select.SelectItem value="foot">Foot</Select.SelectItem>
-					<Select.SelectItem value="bike">Bike</Select.SelectItem>
-					<Select.SelectItem value="car">Car</Select.SelectItem>
-				</Select.SelectContent>
-			</Select.Root>
-		</div>
+		<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
+			<Accessibility class="h-6 w-6" />
+		</Toggle>
 	</div>
 </div>

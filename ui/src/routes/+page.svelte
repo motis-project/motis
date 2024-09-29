@@ -6,7 +6,6 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import type { Selected } from 'bits-ui';
 	import { type Itinerary, plan, type PlanResponse } from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
@@ -15,7 +14,6 @@
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
 	import { cn } from '$lib/utils';
-	// import ThemeToggle from '$lib/ThemeToggle.svelte';
 	import Debug from './Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
@@ -26,29 +24,14 @@
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 
-	let theme = $state<'dark' | 'light'>(
+	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : undefined) ??
-			(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'dark'
-				: 'light')
-	);
-	const updateBodyTheme = (theme: 'dark' | 'light') => {
-		document.documentElement.classList.remove('dark');
-		if (theme === 'dark') {
-			document.documentElement.classList.add('dark');
-		}
-	};
-	// Creates bad interaction with markers
-	// Map becomes scrollable so markers stay visible
-	// after theme change
-	// if (browser) {
-	// 	window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
-	// 		theme = event.matches ? 'dark' : 'light';
-	// 	});
-	// }
-	$effect(() => {
-		updateBodyTheme(theme);
-	});
+		(browser && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+			? 'dark'
+			: 'light');
+	if (theme === 'dark') {
+		document.documentElement.classList.add('dark');
+	}
 
 	let level = $state(0);
 	let zoom = $state(15);
@@ -59,7 +42,7 @@
 	let to = $state<Location>({ label: '', value: {} });
 	let dateTime = $state<Date>(new Date());
 	let timeType = $state<string>('departure');
-	let profile = $state<Selected<string>>({ value: 'foot', label: 'Foot' });
+	let wheelchair = $state(false);
 
 	const pad = (x: number) => ('0' + x).slice(-2);
 	const toPlaceString = (l: Location) => {
@@ -79,9 +62,9 @@
 						time: `${pad(dateTime.getUTCHours())}:${pad(dateTime.getUTCMinutes())}`,
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
-						wheelchair: profile.value === 'wheelchair',
 						arriveBy: timeType === 'arrival',
-						timetableView: true
+						timetableView: true,
+						wheelchair
 					}
 				}
 			: undefined
@@ -152,15 +135,6 @@
 	class={cn('h-screen overflow-clip', theme)}
 	style={getStyle(theme, level)}
 >
-	<!--
-	Creates bad interaction with markers
-	Map becomes scrollable so markers stay visible
-	after theme change
-	<Control position="top-right">
-		<ThemeToggle bind:theme />
-	</Control>
-	-->
-
 	{#if hasDebug}
 		<Control position="top-right">
 			<Debug {bounds} {level} />
@@ -169,7 +143,7 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask bind:from bind:to bind:dateTime bind:timeType bind:profile {theme} />
+			<SearchMask bind:from bind:to bind:dateTime bind:timeType bind:wheelchair {theme} />
 		</Card>
 	</Control>
 
