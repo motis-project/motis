@@ -1,6 +1,7 @@
 #include "fmt/core.h"
 
 #include "boost/asio/io_context.hpp"
+#include "boost/fiber/all.hpp"
 #include "boost/program_options.hpp"
 
 #include "net/web_server/query_router.h"
@@ -9,6 +10,7 @@
 #include "utl/init_from.h"
 
 #include "net/run.h"
+#include "net/stop_handler.h"
 
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
@@ -29,15 +31,23 @@ namespace bpo = boost::program_options;
 
 using namespace motis;
 
+struct boost_fiber_executor {
+  auto operator()(auto&& fn, net::web_server::http_res_cb_t const& cb) {
+    boost::fibers::fiber([f = std::forward<decltype(fn)>(fn)]() {
+      f();
+    }).detach();
+  }
+};
+
 template <typename T, typename From>
-void GET(net::query_router& r, std::string target, From& from) {
+void GET(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
     r.get(std::move(target), std::move(*x));
   }
 }
 
 template <typename T, typename From>
-void POST(net::query_router& r, std::string target, From& from) {
+void POST(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
     r.post(std::move(target), std::move(*x));
   }
@@ -48,8 +58,9 @@ int main(int ac, char** av) {
   data::load(ac == 2U ? av[1] : "data", d);
 
   auto ioc = asio::io_context{};
+  auto workers = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto qr = net::query_router{};
+  auto qr = net::query_router{net::asio_exec({ioc, workers})};
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
@@ -75,6 +86,20 @@ int main(int ac, char** av) {
     return 1;
   }
 
+  auto work_guard = asio::make_work_guard(workers);
+  auto threads = std::vector<std::thread>(
+      static_cast<unsigned>(std::max(1U, std::thread::hardware_concurrency())));
+  for (auto& t : threads) {
+    t = std::thread(net::run(workers));
+  }
+
+  auto const stop = net::stop_handler(ioc, [&]() { s.stop(); });
+
   std::cout << "listening on 0.0.0.0:7999\n";
   net::run(ioc)();
+
+  workers.stop();
+  for (auto& t : threads) {
+    t.join();
+  }
 }

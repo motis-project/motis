@@ -27,14 +27,6 @@ namespace motis::ep {
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
-template <typename T>
-concept JSON = boost::json::has_value_to<T>::value && std::is_aggregate_v<T>;
-
-template <JSON T>
-std::string to_str(T const& t) {
-  return boost::json::serialize(boost::json::value_from(t));
-}
-
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<n::routing::search_state> search_state;
 
