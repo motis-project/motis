@@ -23,22 +23,16 @@ int main(int ac, char** av) {
   auto tt_path = fs::path{"data/tt.bin"};
   auto osr_path = fs::path{"data/osr"};
   auto out_path = fs::path{"data"};
-  auto fasta_path = fs::path{"data/fasta.json"};
 
   auto desc = bpo::options_description{"Options"};
   desc.add_options()  //
       ("help,h", "produce this help message")  //
       ("tt", bpo::value(&tt_path)->default_value(tt_path), "timetable path")  //
       ("osr", bpo::value(&osr_path)->default_value(osr_path), "osr data")  //
-      ("fasta", bpo::value(&fasta_path)->default_value(fasta_path),
-       "FaSta path")  //
       ("out,o", bpo::value(&out_path)->default_value(out_path), "output path");
-  auto const pos =
-      bpo::positional_options_description{}.add("tt", -1).add("osr", 1);
 
   auto vm = bpo::variables_map{};
-  bpo::store(
-      bpo::command_line_parser(ac, av).options(desc).positional(pos).run(), vm);
+  bpo::store(bpo::command_line_parser(ac, av).options(desc).run(), vm);
   bpo::notify(vm);
 
   if (vm.count("help") != 0U) {
