@@ -129,6 +129,9 @@
 	bind:zoom
 	transformRequest={(url: string) => {
 		console.log(url);
+		if (url.startsWith('/sprite')) {
+			return { url: `${client.getConfig().baseUrl}/${url}` };
+		}
 		if (url.startsWith('/')) {
 			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
 		}

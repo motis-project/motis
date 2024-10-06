@@ -102,16 +102,17 @@ int server(int ac, char** av) {
     return 1;
   }
 
-  auto work_guard = asio::make_work_guard(workers);
+  auto const work_guard = asio::make_work_guard(workers);
   auto threads = std::vector<std::thread>(
-      static_cast<unsigned>(std::max(1U, std::thread::hardware_concurrency())));
+      static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
   for (auto& t : threads) {
     t = std::thread(net::run(workers));
   }
 
   auto const stop = net::stop_handler(ioc, [&]() { s.stop(); });
 
-  fmt::println("listening on {}:{}", server_config.host_, server_config.port_);
+  fmt::println("n_threads={}, listening on {}:{}", server_config.n_threads_,
+               server_config.host_, server_config.port_);
   net::run(ioc)();
 
   workers.stop();
