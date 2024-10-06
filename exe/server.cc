@@ -84,7 +84,7 @@ int server(int ac, char** av) {
   GET<ep::geocode>(qr, "/api/v1/geocode", d);
   GET<ep::routing>(qr, "/api/v1/plan", d);
 
-  if (c.has_feature(motis::feature::TILES)) {
+  if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
     qr.route("GET", "/tiles/.*", ep::tiles{*d.tiles_});
   }

@@ -52,32 +52,31 @@ data::data(std::filesystem::path p) : path_{std::move(p)} {}
 data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
   rt_ = std::make_shared<rt>();
 
-  if (c.has_feature(feature::GEOCODING)) {
+  if (c.geocoding_) {
     load_geocoder();
   }
 
-  if (c.has_feature(feature::REVERSE_GEOCODING)) {
+  if (c.reverse_geocoding_) {
     load_reverse_geocoder();
   }
 
-  if (c.has_feature(feature::TIMETABLE)) {
+  if (c.timetable_) {
     load_tt();
   }
 
-  if (c.has_feature(feature::STREET_ROUTING)) {
+  if (c.street_routing_) {
     load_osr();
   }
 
-  if (c.has_feature(feature::STREET_ROUTING) &&
-      c.has_feature(feature::TIMETABLE)) {
+  if (c.street_routing_ && c.timetable_) {
     load_matches();
   }
 
-  if (c.has_feature(feature::ELEVATORS)) {
+  if (c.elevators_) {
     load_elevators();
   }
 
-  if (c.has_feature(feature::TILES)) {
+  if (c.tiles_) {
     load_tiles();
   }
 }

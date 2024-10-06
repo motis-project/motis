@@ -60,62 +60,52 @@ config config::read(std::filesystem::path const& p) {
 }
 
 config config::read(std::string const& s) {
-  return rfl::yaml::read<config, drop_trailing, rfl::DefaultIfMissing>(s)
-      .value();
-}
-
-bool config::has_feature(feature const f) const {
-  return !features_.has_value() || features_->contains(f);
+  auto c =
+      rfl::yaml::read<config, drop_trailing, rfl::DefaultIfMissing>(s).value();
+  c.verify();
+  return c;
 }
 
 void config::verify() const {
-  utl::verify(!has_feature(feature::GEOCODING) || osm_.has_value(),
+  utl::verify(!geocoding_ || osm_,
               "feature GEOCODING requires OpenStreetMap data");
-  utl::verify(!has_feature(feature::REVERSE_GEOCODING) ||
-                  (has_feature(feature::GEOCODING) && osm_.has_value()),
+  utl::verify(!reverse_geocoding_ || (geocoding_ && osm_),
               "feature REVERSE_GEOCODING requires OpenStreetMap data and "
               "feature GEOCODING");
-  utl::verify(!has_feature(feature::TILES) || osm_.has_value(),
-              "feature TILES requires OpenStreetMap data");
-  utl::verify(!has_feature(feature::STREET_ROUTING) || osm_.has_value(),
+  utl::verify(!tiles_ || osm_, "feature TILES requires OpenStreetMap data");
+  utl::verify(!street_routing_ || osm_,
               "feature STREET_ROUTING requires OpenStreetMap data");
-  utl::verify(!has_feature(feature::TIMETABLE) ||
-                  (timetable_.has_value() && !timetable_->datasets_.empty()),
+  utl::verify(!timetable_ || !timetable_->datasets_.empty(),
               "feature TIMETABLE requires timetable data");
   utl::verify(
-      !has_feature(feature::OSR_FOOTPATH) ||
-          (has_feature(feature::STREET_ROUTING) &&
-           has_feature(feature::TIMETABLE)),
+      !osr_footpath_ || (street_routing_ && timetable_),
       "feature OSR_FOOTPATH requires features STREET_ROUTING and TIMETABLE");
   utl::verify(
-      !has_feature(feature::ELEVATORS) ||
-          (fasta_.has_value() && has_feature(feature::STREET_ROUTING) &&
-           has_feature(feature::TIMETABLE)),
+      !elevators_ || (fasta_ && street_routing_ && timetable_),
       "feature ELEVATORS requires fasta.json and features STREET_ROUTING and "
       "TIMETABLE");
+}
 
-  utl::verify(!osm_.has_value() || fs::is_regular_file(*osm_),
+void config::verify_input_files_exist() const {
+  utl::verify(!osm_ || fs::is_regular_file(*osm_),
               "OpenStreetMap file does not exist: {}",
               osm_.value_or(fs::path{}));
 
-  utl::verify(!has_feature(feature::TILES) || tiles_.has_value(),
-              "feature TILES requires tiles setting");
-
-  utl::verify(!tiles_.has_value() || fs::is_regular_file(tiles_->profile_),
+  utl::verify(!tiles_ || fs::is_regular_file(tiles_->profile_),
               "tiles profile {} does not exist",
               tiles_.value_or(tiles{}).profile_);
 
-  utl::verify(!tiles_.has_value() || !tiles_->coastline_.has_value() ||
-                  fs::exists(*tiles_->coastline_),
+  utl::verify(!tiles_ || !tiles_->coastline_ ||
+                  fs::is_regular_file(*tiles_->coastline_),
               "coastline file {} does not exist",
               tiles_.value_or(tiles{}).coastline_.value_or(""));
 
-  if (timetable_.has_value()) {
+  if (timetable_) {
     for (auto const [_, d] : timetable_->datasets_) {
       utl::verify(fs::is_directory(d.path_) || fs::is_regular_file(d.path_),
                   "timetable dataset does not exist: {}", d.path_);
 
-      if (d.clasz_bikes_allowed_.has_value()) {
+      if (d.clasz_bikes_allowed_) {
         for (auto const& c : *d.clasz_bikes_allowed_) {
           nigiri::to_clasz(c.first);
         }

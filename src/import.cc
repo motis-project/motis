@@ -114,7 +114,7 @@ cista::hash_t hash_file(fs::path const& p) {
 }
 
 void import(config const& c, fs::path const& data_path) {
-  c.verify();
+  c.verify_input_files_exist();
 
   auto ec = std::error_code{};
   fs::create_directories(data_path / "logs", ec);
@@ -154,7 +154,7 @@ void import(config const& c, fs::path const& data_path) {
   auto d = data{data_path};
 
   auto osr = task{"osr",
-                  [&]() { return c.has_feature(feature::STREET_ROUTING); },
+                  [&]() { return c.street_routing_; },
                   [&]() { return true; },
                   [&]() {
                     osr::extract(true, fs::path{*c.osm_}, data_path / "osr");
@@ -164,22 +164,19 @@ void import(config const& c, fs::path const& data_path) {
                   {osm_hash, {"version"s, osr::kBinaryVersion}}};
 
   auto adr = task{"adr",
-                  [&]() {
-                    return c.has_feature(feature::GEOCODING) ||
-                           c.has_feature(feature::REVERSE_GEOCODING);
-                  },
+                  [&]() { return c.geocoding_ || c.reverse_geocoding_; },
                   [&]() { return true; },
                   [&]() {
                     adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
                     d.load_geocoder();
 
-                    if (c.has_feature(feature::REVERSE_GEOCODING)) {
+                    if (c.reverse_geocoding_) {
                       d.load_reverse_geocoder();
                     }
                   },
                   [&]() {
                     d.load_geocoder();
-                    if (c.has_feature(feature::REVERSE_GEOCODING)) {
+                    if (c.reverse_geocoding_) {
                       d.load_reverse_geocoder();
                     }
                   },
@@ -187,7 +184,7 @@ void import(config const& c, fs::path const& data_path) {
 
   auto tt = task{
       "tt",
-      [&]() { return c.has_feature(feature::TIMETABLE); },
+      [&]() { return c.timetable_.has_value(); },
       [&]() { return true; },
       [&]() {
         auto const to_clasz_bool_array =
@@ -253,10 +250,7 @@ void import(config const& c, fs::path const& data_path) {
 
   auto adr_extend =
       task{"adr_extend",
-           [&]() {
-             return c.has_feature(feature::GEOCODING) &&
-                    c.has_feature(feature::TIMETABLE);
-           },
+           [&]() { return c.geocoding_ && c.timetable_.has_value(); },
            [&]() { return d.tt_ && d.t_ && d.area_db_; },
            [&]() {
              adr_extend_tt(*d.tt_, *d.area_db_, *d.t_);
@@ -270,7 +264,7 @@ void import(config const& c, fs::path const& data_path) {
 
   auto osr_footpath = task{
       "osr_footpath",
-      [&]() { return c.has_feature(feature::OSR_FOOTPATH); },
+      [&]() { return c.osr_footpath_; },
       [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
       [&]() {
         auto const elevator_footpath_map =
@@ -283,7 +277,7 @@ void import(config const& c, fs::path const& data_path) {
 
   auto tiles = task{
       "tiles",
-      [&]() { return c.has_feature(feature::TILES); },
+      [&]() { return c.tiles_.has_value(); },
       [&]() { return true; },
       [&]() {
         auto const progress_tracker = utl::get_active_progress_tracker();
