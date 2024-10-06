@@ -32,8 +32,6 @@ TEST(motis, config) {
       .osr_footpath_ = true,
       .geocoding_ = true};
 
-  std::cout << (std::stringstream{} << "\n" << c << "\n").str();
-
   EXPECT_EQ(fmt::format(R"(
 osm: europe-latest.osm.pbf
 tiles:

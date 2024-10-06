@@ -289,7 +289,11 @@ TEST(motis, routing) {
         date::sys_days{2019_y / November / 1}},
        kGTFS);
 
-  auto d = data{data_path, config{}};
+  auto d = data{data_path, config{
+                               .timetable_ = {config::timetable{}},
+                               .street_routing_ = true,
+                               .elevators_ = true,
+                           }};
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   // Route with wheelchair.
