@@ -2,7 +2,7 @@
 
 #include "boost/json/value.hpp"
 
-#include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "motis/fwd.h"
 #include "motis/point_rtree.h"

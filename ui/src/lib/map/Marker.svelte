@@ -40,7 +40,6 @@
 	});
 
 	$effect(() => {
-		console.log('marker updatel location:', $state.snapshot(location.value.match));
 		if (marker && location.value && location.value.match) {
 			marker.setLngLat(location.value.match);
 		}

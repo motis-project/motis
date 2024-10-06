@@ -1,7 +1,5 @@
 #pragma once
 
-#include "nigiri/routing/query.h"
-
 #include "osr/location.h"
 #include "osr/types.h"
 

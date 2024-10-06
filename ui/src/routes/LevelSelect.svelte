@@ -43,16 +43,18 @@
 	});
 </script>
 
-<Control>
-	<RadioGroup class="flex flex-col space-y-1" bind:value>
-		{#each availableLevels as l}
-			<Label
-				for={`level-${l}`}
-				class="inline-flex items-center justify-center font-bold rounded-md border-2 border-muted bg-popover h-9 w-9 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
-			>
-				<Item value={`level-${l}`} id={`level-${l}`} class="sr-only" aria-label={`level-${l}`} />
-				{l}
-			</Label>
-		{/each}
-	</RadioGroup>
-</Control>
+{#if availableLevels.length > 1}
+	<Control>
+		<RadioGroup class="flex flex-col space-y-1" bind:value>
+			{#each availableLevels as l}
+				<Label
+					for={`level-${l}`}
+					class="inline-flex items-center justify-center font-bold rounded-md border-2 border-muted bg-popover h-9 w-9 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
+				>
+					<Item value={`level-${l}`} id={`level-${l}`} class="sr-only" aria-label={`level-${l}`} />
+					{l}
+				</Label>
+			{/each}
+		</RadioGroup>
+	</Control>
+{/if}

@@ -19,6 +19,7 @@
 	import Popup from '$lib/map/Popup.svelte';
 	import LevelSelect from './LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
+	import { client } from '$lib/openapi';
 
 	const urlParams = browser && new URLSearchParams(window.location.search);
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -127,8 +128,9 @@
 	bind:bounds
 	bind:zoom
 	transformRequest={(url: string) => {
+		console.log(url);
 		if (url.startsWith('/')) {
-			return { url: `https://europe.motis-project.de/tiles${url}` };
+			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
 		}
 	}}
 	center={[8.652235, 49.876908]}

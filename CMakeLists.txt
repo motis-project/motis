@@ -12,6 +12,8 @@ if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     endif ()
 endif ()
 
+set(REFLECTCPP_YAML ON)
+
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
 
@@ -76,12 +78,24 @@ file(GLOB_RECURSE motis-files src/*.cc)
 add_library(motis ${motis-files})
 target_include_directories(motis PUBLIC include)
 target_compile_features(motis PUBLIC cxx_std_23)
-target_link_libraries(motis nigiri osr boost-json adr motis-api)
+target_link_libraries(motis
+    nigiri
+    osr
+    adr
+    boost-json
+    motis-api
+    reflectcpp
+    web-server tiles
+    pbf_sdf_fonts_res
+    pbf_sdf_fonts_res-res
+)
+
 
 # --- ADR EXTEND ---
 add_executable(motis-adr-extend exe/adr_extend.cc)
 target_compile_features(motis-adr-extend PUBLIC cxx_std_23)
 target_link_libraries(motis-adr-extend motis)
+
 
 # --- PREPARE ---
 add_executable(motis-prepare exe/prepare.cc)
@@ -92,7 +106,18 @@ target_link_libraries(motis-prepare motis)
 # --- SERVER ---
 add_executable(motis-server exe/server.cc)
 target_compile_features(motis-server PUBLIC cxx_std_23)
-target_link_libraries(motis-server motis web-server adr fmt::fmt rtree geo cista ianatzdb-res)
+target_link_libraries(motis-server
+    motis
+    web-server
+    adr
+    fmt::fmt
+    rtree
+    geo
+    cista
+    ianatzdb-res
+    pbf_sdf_fonts_res-res
+    tiles_server_res-res
+)
 
 
 # --- TEST ---

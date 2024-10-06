@@ -7,6 +7,7 @@
 #include "fmt/chrono.h"
 #include "fmt/format.h"
 
+#include "motis/data.h"
 #include "motis/elevators/match_elevator.h"
 
 namespace json = boost::json;

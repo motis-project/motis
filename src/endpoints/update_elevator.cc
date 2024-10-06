@@ -48,8 +48,8 @@ json::value update_elevator::operator()(json::value const& query) const {
                           rtt, new_rtt);
 
   rt_ = std::make_shared<rt>(
-      rt{.rtt_ = std::make_unique<n::rt_timetable>(std::move(new_rtt)),
-         .e_ = std::make_unique<elevators>(std::move(new_e))});
+      std::make_unique<n::rt_timetable>(std::move(new_rtt)),
+      std::make_unique<elevators>(std::move(new_e)));
 
   return json::string{{"success", true}};
 }

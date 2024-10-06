@@ -17,7 +17,7 @@
 	}: {
 		map?: maplibregl.Map;
 		style: maplibregl.StyleSpecification;
-		transformRequest: maplibregl.RequestTransformFunction;
+		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
 		bounds?: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;

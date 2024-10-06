@@ -22,12 +22,9 @@
 		}
 		const src = ctx.map!.getSource(id);
 		if (src) {
-			console.log('UPDATE DATA', id);
-
 			// @ts-expect-error: setData exists and does what it should
 			src.setData(data);
 		} else {
-			console.log('ADD SOURCE', id);
 			ctx.map!.addSource(id, {
 				type: 'geojson',
 				data
@@ -54,10 +51,7 @@
 			sourceId.id = null;
 			const src = ctx.map!.getSource(id);
 			if (src) {
-				console.log('DESTROY SOURCE', id);
 				ctx.map?.removeSource(id);
-			} else {
-				console.log('DESTROY SOURCE --- NO SOURCE!', id);
 			}
 		}
 	});

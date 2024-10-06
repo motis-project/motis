@@ -7,7 +7,8 @@
 #include "osr/types.h"
 
 #include "motis-api/motis-api.h"
-#include "motis/data.h"
+#include "motis/fwd.h"
+#include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
 #include "motis/types.h"
 

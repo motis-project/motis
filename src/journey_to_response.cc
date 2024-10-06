@@ -144,7 +144,7 @@ api::Itinerary journey_to_response(
     osr::lookup const& l,
     n::timetable const& tt,
     osr::platforms const& pl,
-    elevators const& e,
+    elevators const* e,
     n::rt_timetable const* rtt,
     vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
     bool const wheelchair,
@@ -172,23 +172,18 @@ api::Itinerary journey_to_response(
     auto const t = n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
         std::chrono::milliseconds{leg.startTime_})};
 
-    auto const s = get_states_at(w, l, e, t, from.pos_);
-    if (!s.has_value()) {
-      // TODO(felix)
-      fmt::println("no state found: profile={}, from={}, to={}\n",
-                   to_str(profile), fmt::streamed(from), fmt::streamed(to));
-      return;
-    }
-
+    auto const s = e ? get_states_at(w, l, *e, t, from.pos_)
+                     : std::optional{std::pair<nodes_t, states_t>{}};
     auto const& [e_nodes, e_states] = *s;
     auto const key = std::tuple{from, to, profile, e_states};
     auto const it = cache.find(key);
     auto const path =
         it != end(cache)
             ? it->second
-            : osr::route(w, l, profile, from, to, 3600,
-                         osr::direction::kForward, kMaxMatchingDistance,
-                         &set_blocked(e_nodes, e_states, blocked_mem));
+            : osr::route(
+                  w, l, profile, from, to, 3600, osr::direction::kForward,
+                  kMaxMatchingDistance,
+                  s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr);
     if (it == end(cache)) {
       cache.emplace(std::pair{key, path});
     }

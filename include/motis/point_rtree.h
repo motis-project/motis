@@ -2,6 +2,8 @@
 
 #include <array>
 
+#include "cista/strong.h"
+
 #include "rtree.h"
 
 #include "geo/box.h"

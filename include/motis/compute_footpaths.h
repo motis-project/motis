@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nigiri/timetable.h"
+#include "cista/memory_holder.h"
 
 #include "osr/types.h"
 
@@ -13,10 +13,10 @@ using elevator_footpath_map_t = hash_map<
     osr::node_idx_t,
     hash_set<std::pair<nigiri::location_idx_t, nigiri::location_idx_t>>>;
 
-elevator_footpath_map_t compute_footpaths(nigiri::timetable&,
-                                          osr::ways const&,
+elevator_footpath_map_t compute_footpaths(osr::ways const&,
                                           osr::lookup const&,
                                           osr::platforms const&,
+                                          nigiri::timetable&,
                                           bool update_coordinates);
 
 void write(std::filesystem::path const&, elevator_footpath_map_t const&);

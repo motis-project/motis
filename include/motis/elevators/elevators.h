@@ -1,7 +1,7 @@
 #pragma once
 
-#include "motis/data.h"
 #include "motis/elevators/match_elevator.h"
+#include "motis/fwd.h"
 #include "motis/point_rtree.h"
 
 namespace motis {

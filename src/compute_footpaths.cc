@@ -50,15 +50,15 @@ vector_map<n::location_idx_t, osr::match_t> lookup_locations(
   return ret;
 }
 
-elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
-                                          osr::ways const& w,
+elevator_footpath_map_t compute_footpaths(osr::ways const& w,
                                           osr::lookup const& lookup,
                                           osr::platforms const& pl,
+                                          nigiri::timetable& tt,
                                           bool const update_coordinates) {
-  fmt::println("  -> creating matches");
+  fmt::println(std::clog, "  -> creating matches");
   auto const matches = get_matches(tt, pl, w);
 
-  fmt::println("  -> creating r-tree");
+  fmt::println(std::clog, "  -> creating r-tree");
   auto const loc_rtree = [&]() {
     auto t = point_rtree<n::location_idx_t>{};
     for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
@@ -154,7 +154,7 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
     });
   }
 
-  fmt::println("  -> create ingoing footpaths");
+  fmt::println(std::clog, "  -> create ingoing footpaths");
   auto footpaths_in_foot =
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_in_foot.resize(tt.n_locations());
@@ -179,7 +179,7 @@ elevator_footpath_map_t compute_footpaths(nigiri::timetable& tt,
     }
   }
 
-  fmt::println("  -> copy footpaths");
+  fmt::println(std::clog, "  -> copy footpaths");
   for (auto const& x : footpaths_out_foot) {
     tt.locations_.footpaths_out_[1].emplace_back(x);
   }

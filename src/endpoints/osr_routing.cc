@@ -5,6 +5,8 @@
 #include "osr/geojson.h"
 #include "osr/routing/route.h"
 
+#include "motis/data.h"
+
 namespace json = boost::json;
 
 namespace motis::ep {
@@ -37,7 +39,8 @@ json::value osr_routing::operator()(json::value const& query) const {
   auto const max_it = q.find("max");
   auto const max = static_cast<osr::cost_t>(
       max_it == q.end() ? 3600 : max_it->value().as_int64());
-  auto const p = route(w_, l_, profile, from, to, max, dir, 8, &e->blocked_);
+  auto const p = route(w_, l_, profile, from, to, max, dir, 8,
+                       e == nullptr ? nullptr : &e->blocked_);
   return p.has_value()
              ? json::value{{"type", "FeatureCollection"},
                            {"metadata",

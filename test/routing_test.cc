@@ -2,6 +2,8 @@
 
 #include <map>
 
+#include "boost/json.hpp"
+
 #include "utl/init_from.h"
 
 #include "nigiri/loader/gtfs/load_timetable.h"
@@ -17,6 +19,7 @@
 #include "osr/ways.h"
 
 #include "motis/compute_footpaths.h"
+#include "motis/config.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/match_elevator.h"
@@ -266,7 +269,7 @@ FFM,50.10701,8.66341,06:15-22:30
   nl::finalize(tt);
 
   fmt::println("computing footpaths");
-  auto const elevator_footpath_map = compute_footpaths(tt, w, l, pl, true);
+  auto const elevator_footpath_map = compute_footpaths(w, l, pl, tt, true);
 
   fmt::println("writing elevator footpaths");
   write(data_path / "elevator_footpath_map.bin", elevator_footpath_map);
@@ -286,8 +289,10 @@ TEST(motis, routing) {
         date::sys_days{2019_y / November / 1}},
        kGTFS);
 
-  auto d = data{};
-  data::load(data_path, d);
+  auto d = data{
+      data_path,
+      config{.features_ = {{feature::OSR_FOOTPATH, feature::ELEVATORS,
+                            feature::TIMETABLE, feature::STREET_ROUTING}}}};
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   // Route with wheelchair.

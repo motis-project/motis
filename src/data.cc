@@ -5,6 +5,7 @@
 #include "utl/read_file.h"
 
 #include "adr/adr.h"
+#include "adr/area_database.h"
 #include "adr/cache.h"
 #include "adr/cista_read.h"
 #include "adr/reverse.h"
@@ -17,9 +18,11 @@
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/timetable.h"
 
+#include "motis/config.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
+#include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
 #include "motis/update_rtt_td_footpaths.h"
 
@@ -28,87 +31,120 @@ namespace n = nigiri;
 
 namespace motis {
 
-data::data() {}
+rt::rt() = default;
+
+rt::rt(ptr<nigiri::rt_timetable>&& rtt, ptr<elevators>&& e)
+    : rtt_{std::move(rtt)}, e_{std::move(e)} {}
+
+rt::~rt() = default;
+
+std::ostream& operator<<(std::ostream& out, data const& d) {
+  return out << "\nt=" << d.t_.get() << "\narea_db=" << d.area_db_
+             << "\nr=" << d.r_ << "\ntc=" << d.tc_ << "\nw=" << d.w_
+             << "\npl=" << d.pl_ << "\nl=" << d.l_ << "\ntt=" << d.tt_.get()
+             << "\nlocation_rtee=" << d.location_rtee_
+             << "\nelevator_nodes=" << d.elevator_nodes_
+             << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
+}
+
+data::data(std::filesystem::path p) : path_{std::move(p)} {}
+
+data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
+  rt_ = std::make_shared<rt>();
+
+  if (c.has_feature(feature::GEOCODING)) {
+    load_geocoder();
+  }
+
+  if (c.has_feature(feature::REVERSE_GEOCODING)) {
+    load_reverse_geocoder();
+  }
+
+  if (c.has_feature(feature::TIMETABLE)) {
+    load_tt();
+  }
+
+  if (c.has_feature(feature::STREET_ROUTING)) {
+    load_osr();
+  }
+
+  if (c.has_feature(feature::STREET_ROUTING) &&
+      c.has_feature(feature::TIMETABLE)) {
+    load_matches();
+  }
+
+  if (c.has_feature(feature::ELEVATORS)) {
+    load_elevators();
+  }
+
+  if (c.has_feature(feature::TILES)) {
+    load_tiles();
+  }
+}
+
 data::~data() = default;
 
-void data::load(std::filesystem::path const& p, data& d) {
-  d.rt_ = std::make_shared<rt>();
+void data::load_osr() {
+  auto const osr_path = path_ / "osr";
+  w_ = std::make_unique<osr::ways>(osr_path, cista::mmap::protection::READ);
+  l_ = std::make_unique<osr::lookup>(*w_);
+  elevator_nodes_ =
+      std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*w_));
+  pl_ =
+      std::make_unique<osr::platforms>(osr_path, cista::mmap::protection::READ);
+  pl_->build_rtree(*w_);
+}
 
-  auto const t_path = p / "adr" / "t.bin";
-  if (fs::is_regular_file(t_path)) {
-    d.t_ = adr::read(t_path, false);
-    d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
-  } else {
-    fmt::println("{} not found -> not loading geo coder", t_path);
-  }
+void data::load_tt() {
+  tt_ = n::timetable::read(cista::memory_holder{
+      cista::file{(path_ / "tt.bin").generic_string().c_str(), "r"}.content()});
+  tt_->locations_.resolve_timezones();
+  location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
+      create_location_rtree(*tt_));
 
-  auto const r_path = p / "adr" / "street_segments_data.bin";
-  if (d.t_ != nullptr && fs::is_regular_file(r_path)) {
-    d.r_ = std::make_unique<adr::reverse>(p / "adr",
-                                          cista::mmap::protection::READ);
-    d.r_->build_rtree(*d.t_);
-  } else {
-    fmt::println(
-        "{} not found, typeahead loaded: {} -> not loading reverse geo coder",
-        r_path, d.t_ != nullptr);
-  }
+  auto const today = std::chrono::time_point_cast<date::days>(
+      std::chrono::system_clock::now());
+  rt_->rtt_ = std::make_unique<n::rt_timetable>(
+      n::rt::create_rt_timetable(*tt_, today));
+}
 
-  auto const tt_path = p / "tt.bin";
-  if (fs::is_regular_file(tt_path)) {
-    d.tt_ = n::timetable::read(cista::memory_holder{
-        cista::file{(tt_path).generic_string().c_str(), "r"}.content()});
-    d.tt_->locations_.resolve_timezones();
-    d.location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
-        create_location_rtree(*d.tt()));
+void data::load_geocoder() {
+  t_ = adr::read(path_ / "adr" / "t.bin", false);
+  tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
+  area_db_ = std::make_unique<adr::area_database>(
+      path_ / "adr", cista::mmap::protection::READ);
+}
 
-    auto const today = std::chrono::time_point_cast<date::days>(
-        std::chrono::system_clock::now());
-    d.rt_->rtt_ = std::make_unique<n::rt_timetable>(
-        n::rt::create_rt_timetable(*d.tt_, today));
-  } else {
-    fmt::println("{} not found -> not loading timetable", tt_path);
-  }
+void data::load_reverse_geocoder() {
+  r_ = std::make_unique<adr::reverse>(path_ / "adr",
+                                      cista::mmap::protection::READ);
+  r_->build_rtree(*t_);
+}
 
-  auto const osr_path = p / "osr";
-  if (fs::is_directory(osr_path)) {
-    d.w_ =
-        std::make_unique<osr::ways>(p / "osr", cista::mmap::protection::READ);
-    d.l_ = std::make_unique<osr::lookup>(*d.w_);
-    d.elevator_nodes_ =
-        std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*d.w_));
+void data::load_matches() {
+  matches_ = std::make_unique<platform_matches_t>(get_matches(*tt_, *pl_, *w_));
+}
 
-    if (fs::is_regular_file(osr_path / "node_pos.bin")) {
-      d.pl_ = std::make_unique<osr::platforms>(p / "osr",
-                                               cista::mmap::protection::READ);
-      d.pl_->build_rtree(*d.w_);
-    }
-  } else {
-    fmt::println("{} not found -> not loading street routing", osr_path);
-  }
+void data::load_elevators() {
+  auto const fasta =
+      utl::read_file((path_ / "fasta.json").generic_string().c_str());
+  utl::verify(fasta.has_value(), "could not read fasta.json");
 
-  auto const fasta_path = p / "fasta.json";
-  if (fs::is_regular_file(fasta_path)) {
-    auto const fasta = utl::read_file((fasta_path).generic_string().c_str());
-    utl::verify(fasta.has_value(), "could not read fasta.json");
+  rt_->e_ = std::make_unique<elevators>(*w_, *elevator_nodes_,
+                                        parse_fasta(std::string_view{*fasta}));
 
-    d.rt_->e_ = std::make_unique<elevators>(
-        *d.w_, *d.elevator_nodes_, parse_fasta(std::string_view{*fasta}));
-  } else {
-    fmt::println("{} not found -> not loading elevator status", fasta_path);
-  }
+  auto const elevator_footpath_map =
+      read_elevator_footpath_map(path_ / "elevator_footpath_map.bin");
+  motis::update_rtt_td_footpaths(*w_, *l_, *pl_, *tt_, *location_rtee_,
+                                 *rt_->e_, *elevator_footpath_map, *matches_,
+                                 *rt_->rtt_);
+}
 
-  if (d.has_tt() && d.has_osr() && d.pl_ != nullptr && d.rt_->e_ != nullptr &&
-      d.rt_->rtt_ != nullptr) {
-    d.matches_ = std::make_unique<platform_matches_t>(
-        get_matches(*d.tt(), *d.pl_, *d.w_));
-    auto const elevator_footpath_map =
-        read_elevator_footpath_map(p / "elevator_footpath_map.bin");
-    motis::update_rtt_td_footpaths(
-        *d.w_, *d.l_, *d.pl_, *d.tt(), *d.location_rtee_, *d.rt_->e_,
-        *elevator_footpath_map, *d.matches_, *d.rt_->rtt_);
-  } else {
-    fmt::println("not updating footpaths according to elevator status");
-  }
+void data::load_tiles() {
+  auto const db_size =
+      config::read(path_ / "config.yml").tiles_.value().db_size_;
+  tiles_ = std::make_unique<tiles_data>(
+      (path_ / "tiles" / "tiles.mdb").generic_string(), db_size);
 }
 
 }  // namespace motis

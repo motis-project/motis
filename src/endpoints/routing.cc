@@ -19,7 +19,6 @@
 #include "motis/parse_location.h"
 #include "motis/update_rtt_td_footpaths.h"
 
-namespace json = boost::json;
 namespace n = nigiri;
 
 namespace motis::ep {
@@ -363,7 +362,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           utl::to_vec(*r.journeys_,
                       [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                         return journey_to_response(
-                            w_, l_, tt_, pl_, *e, rtt, matches_,
+                            w_, l_, tt_, pl_, e, rtt, matches_,
                             query.wheelchair_, j, start, dest, cache, *blocked);
                       }),
       .previousPageCursor_ = fmt::format(
