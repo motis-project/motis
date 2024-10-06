@@ -12,8 +12,6 @@ if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     endif ()
 endif ()
 
-set(REFLECTCPP_YAML ON)
-
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
 
@@ -69,45 +67,35 @@ else ()
     endif ()
 endif ()
 
+
 # --- OPENAPI ---
 openapi_generate(openapi.yaml motis-api motis::api)
 
 
 # --- LIB ---
-file(GLOB_RECURSE motis-files src/*.cc)
-add_library(motis ${motis-files})
-target_include_directories(motis PUBLIC include)
-target_compile_features(motis PUBLIC cxx_std_23)
-target_link_libraries(motis
+file(GLOB_RECURSE motislib-files src/*.cc)
+add_library(motislib ${motislib-files})
+target_include_directories(motislib PUBLIC include)
+target_compile_features(motislib PUBLIC cxx_std_23)
+target_link_libraries(motislib
     nigiri
     osr
     adr
     boost-json
     motis-api
     reflectcpp
-    web-server tiles
+    web-server
+    tiles
     pbf_sdf_fonts_res
     pbf_sdf_fonts_res-res
 )
 
 
-# --- ADR EXTEND ---
-add_executable(motis-adr-extend exe/adr_extend.cc)
-target_compile_features(motis-adr-extend PUBLIC cxx_std_23)
-target_link_libraries(motis-adr-extend motis)
-
-
-# --- PREPARE ---
-add_executable(motis-prepare exe/prepare.cc)
-target_compile_features(motis-prepare PUBLIC cxx_std_23)
-target_link_libraries(motis-prepare motis)
-
-
-# --- SERVER ---
-add_executable(motis-server exe/server.cc)
-target_compile_features(motis-server PUBLIC cxx_std_23)
-target_link_libraries(motis-server
-    motis
+# --- EXE ---
+add_executable(motis exe/server.cc)
+target_compile_features(motis PUBLIC cxx_std_23)
+target_link_libraries(motis
+    motislib
     web-server
     adr
     fmt::fmt
@@ -129,5 +117,5 @@ configure_file(
 )
 file(GLOB_RECURSE motis-test-files test/*.cc)
 add_executable(motis-test ${motis-test-files})
-target_link_libraries(motis-test motis gtest web-server ianatzdb-res motis-generated)
+target_link_libraries(motis-test motislib gtest web-server ianatzdb-res motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})

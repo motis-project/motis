@@ -37,4 +37,4 @@
 [reflect-cpp]
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
-  commit=0c34a23ab48f33da82af7862761a999a64b7506d
+  commit=c54fe66de4650b60c23aadd4a06d9db4ffeda22f
