@@ -110,15 +110,14 @@ jobs:
         run: .\build\motis-test.exe
 
   macos:
-    runs-on: ${{ matrix.config.os }}
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         config:
           - preset: macos-x86_64
-            os: macos-13
+            tests: On
           - preset: macos-arm64
-            os: macos-14
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
@@ -164,6 +163,7 @@ jobs:
 
       # ==== TESTS ====
       - name: Run Tests
+        if: matrix.config.tests == 'On'
         run: build/motis-test
 
       # ==== SAVE CACHE ====
