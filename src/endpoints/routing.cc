@@ -134,7 +134,7 @@ std::vector<n::routing::offset> routing::get_offsets(
   for (auto const m : modes) {
     auto const profile = to_profile(m, wheelchair);
 
-    if (profile == osr::search_profile::kWheelchair) {
+    if (rt_->e_ && profile == osr::search_profile::kWheelchair) {
       continue;  // handled by get_td_offsets
     }
 
@@ -308,28 +308,40 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                     std::chrono::seconds{query.maxPostTransitTime_});
               }},
           dest),
-      .td_start_ = std::visit(
-          utl::overloaded{
-              [&](n::location_idx_t const l) { return td_offsets_t{}; },
-              [&](osr::location const& pos) {
-                auto const dir = query.arriveBy_ ? osr::direction::kForward
-                                                 : osr::direction::kBackward;
-                return get_td_offsets(
-                    *e, pos, dir, start_modes, query.wheelchair_,
-                    std::chrono::seconds{query.maxPreTransitTime_});
-              }},
-          start),
-      .td_dest_ = std::visit(
-          utl::overloaded{
-              [&](n::location_idx_t const l) { return td_offsets_t{}; },
-              [&](osr::location const& pos) {
-                auto const dir = query.arriveBy_ ? osr::direction::kBackward
-                                                 : osr::direction::kForward;
-                return get_td_offsets(
-                    *e, pos, dir, dest_modes, query.wheelchair_,
-                    std::chrono::seconds{query.maxPostTransitTime_});
-              }},
-          dest),
+      .td_start_ =
+          rt_->e_ != nullptr
+              ? std::visit(
+                    utl::overloaded{
+                        [&](n::location_idx_t const l) {
+                          return td_offsets_t{};
+                        },
+                        [&](osr::location const& pos) {
+                          auto const dir = query.arriveBy_
+                                               ? osr::direction::kForward
+                                               : osr::direction::kBackward;
+                          return get_td_offsets(
+                              *e, pos, dir, start_modes, query.wheelchair_,
+                              std::chrono::seconds{query.maxPreTransitTime_});
+                        }},
+                    start)
+              : td_offsets_t{},
+      .td_dest_ =
+          rt_->e_ != nullptr
+              ? std::visit(
+                    utl::overloaded{
+                        [&](n::location_idx_t const l) {
+                          return td_offsets_t{};
+                        },
+                        [&](osr::location const& pos) {
+                          auto const dir = query.arriveBy_
+                                               ? osr::direction::kBackward
+                                               : osr::direction::kForward;
+                          return get_td_offsets(
+                              *e, pos, dir, dest_modes, query.wheelchair_,
+                              std::chrono::seconds{query.maxPostTransitTime_});
+                        }},
+                    dest)
+              : td_offsets_t{},
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.has_value() ? *query.maxTransfers_
                                           : n::routing::kMaxTransfers),
