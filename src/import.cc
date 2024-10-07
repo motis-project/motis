@@ -232,7 +232,7 @@ void import(config const& c, fs::path const& data_path) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                    -> std::pair<fs::path, nl::loader_config> {
+                -> std::pair<fs::path, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
