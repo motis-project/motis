@@ -92,7 +92,8 @@ target_link_libraries(motislib
 
 
 # --- EXE ---
-add_executable(motis exe/server.cc)
+file(GLOB_RECURSE motis-files exe/*.cc)
+add_executable(motis ${motis-files})
 target_compile_features(motis PUBLIC cxx_std_23)
 target_link_libraries(motis
     motislib
