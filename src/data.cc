@@ -21,8 +21,8 @@
 #include "motis/config.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/match_platforms.h"
-#include "motis/nigiri/tag_lookup.h"
 #include "motis/point_rtree.h"
+#include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
 #include "motis/update_rtt_td_footpaths.h"
@@ -83,6 +83,8 @@ data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
 }
 
 data::~data() = default;
+data::data(data&&) = default;
+data& data::operator=(data&&) = default;
 
 void data::load_osr() {
   auto const osr_path = path_ / "osr";
@@ -127,12 +129,8 @@ void data::load_matches() {
 }
 
 void data::load_elevators() {
-  auto const fasta =
-      utl::read_file((path_ / "fasta.json").generic_string().c_str());
-  utl::verify(fasta.has_value(), "could not read fasta.json");
-
   rt_->e_ = std::make_unique<elevators>(*w_, *elevator_nodes_,
-                                        parse_fasta(std::string_view{*fasta}));
+                                        vector_map<elevator_idx_t, elevator>{});
 
   auto const elevator_footpath_map =
       read_elevator_footpath_map(path_ / "elevator_footpath_map.bin");

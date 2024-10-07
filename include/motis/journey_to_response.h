@@ -29,12 +29,16 @@ using street_routing_cache_t = hash_map<std::tuple<osr::location,
                                                    std::vector<bool>>,
                                         std::optional<osr::path>>;
 
-api::Place to_place(nigiri::timetable const&, place_t, std::string_view);
+api::Place to_place(nigiri::timetable const&,
+                    tag_lookup const&,
+                    place_t,
+                    std::string_view);
 
 api::Itinerary journey_to_response(
     osr::ways const&,
     osr::lookup const&,
     nigiri::timetable const&,
+    tag_lookup const&,
     osr::platforms const&,
     elevators const* e,
     nigiri::rt_timetable const*,

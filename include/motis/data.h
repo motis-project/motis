@@ -38,10 +38,10 @@ struct data {
   ~data();
 
   data(data const&) = delete;
-  data(data&&) = delete;
-
   data& operator=(data const&) = delete;
-  data& operator=(data&&) = delete;
+
+  data(data&&);
+  data& operator=(data&&);
 
   friend std::ostream& operator<<(std::ostream&, data const&);
 

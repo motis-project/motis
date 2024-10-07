@@ -17,6 +17,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/tag_lookup.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
@@ -35,15 +36,13 @@ boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-place_t get_place(n::timetable const& tt, std::string_view s) {
+place_t get_place(n::timetable const& tt,
+                  tag_lookup const& tags,
+                  std::string_view s) {
   if (auto const location = parse_location(s); location.has_value()) {
     return *location;
   }
-  try {
-    return tt.locations_.get(n::location_id{s, n::source_idx_t{}}).l_;
-  } catch (...) {
-    throw utl::fail("could not find place {}", s);
-  }
+  return tags.get(tt, s);
 }
 
 bool is_intermodal(place_t const& p) {
@@ -270,8 +269,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const from = get_place(tt_, query.fromPlace_);
-  auto const to = get_place(tt_, query.toPlace_);
+  auto const from = get_place(tt_, tags_, query.fromPlace_);
+  auto const to = get_place(tt_, tags_, query.toPlace_);
   auto const from_modes = get_from_modes(query.mode_);
   auto const to_modes = get_to_modes(query.mode_);
 
@@ -368,13 +367,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const nigiri_timing = UTL_TIMING_MS(nigiri);
 
   return {
-      .from_ = to_place(tt_, from, "Origin"),
-      .to_ = to_place(tt_, to, "Destination"),
+      .from_ = to_place(tt_, tags_, from, "Origin"),
+      .to_ = to_place(tt_, tags_, to, "Destination"),
       .itineraries_ =
           utl::to_vec(*r.journeys_,
                       [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                         return journey_to_response(
-                            w_, l_, tt_, pl_, e, rtt, matches_,
+                            w_, l_, tt_, tags_, pl_, e, rtt, matches_,
                             query.wheelchair_, j, start, dest, cache, *blocked);
                       }),
       .previousPageCursor_ = fmt::format(

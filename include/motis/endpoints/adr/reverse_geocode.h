@@ -10,6 +10,7 @@ struct reverse_geocode {
       boost::urls::url_view const& url) const;
 
   nigiri::timetable const& tt_;
+  tag_lookup const& tags_;
   adr::typeahead const& t_;
   adr::reverse const& r_;
 };

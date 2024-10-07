@@ -9,6 +9,8 @@
 
 #include "adr/typeahead.h"
 
+#include "motis/tag_lookup.h"
+
 namespace a = adr;
 namespace n = nigiri;
 
@@ -31,6 +33,7 @@ std::int16_t get_area_lang_idx(a::typeahead const& t,
 api::geocode_response suggestions_to_response(
     adr::typeahead const& t,
     n::timetable const& tt,
+    tag_lookup const& tags,
     std::basic_string<a::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
     std::vector<adr::suggestion> const& suggestions) {
@@ -68,9 +71,7 @@ api::geocode_response suggestions_to_response(
                          : api::typeEnum::PLACE;
               id =
                   type == api::typeEnum::STOP
-                      ? tt.locations_
-                            .ids_[n::location_idx_t{t.place_osm_ids_[p]}]
-                            .view()
+                      ? tags.id(tt, n::location_idx_t{t.place_osm_ids_[p]})
                       : fmt::format("{}/{}",
                                     t.place_is_way_[to_idx(p)] ? "way" : "node",
                                     t.place_osm_ids_[p]);

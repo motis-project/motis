@@ -42,7 +42,7 @@
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
-#include "motis/nigiri/tag_lookup.h"
+#include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
 namespace fs = std::filesystem;
@@ -118,7 +118,7 @@ cista::hash_t hash_file(fs::path const& p) {
   return cista::hash(mmap.view());
 }
 
-void import(config const& c, fs::path const& data_path) {
+data import(config const& c, fs::path const& data_path) {
   c.verify_input_files_exist();
 
   auto ec = std::error_code{};
@@ -232,7 +232,7 @@ void import(config const& c, fs::path const& data_path) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<fs::path, nl::loader_config> {
+                    -> std::pair<fs::path, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -345,6 +345,8 @@ void import(config const& c, fs::path const& data_path) {
   }
 
   std::ofstream{(data_path / "config.yml").generic_string()} << c << "\n";
+
+  return d;
 }
 
 }  // namespace motis

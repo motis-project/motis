@@ -9,6 +9,7 @@ struct geocode {
   api::geocode_response operator()(boost::urls::url_view const& url) const;
 
   nigiri::timetable const& tt_;
+  tag_lookup const& tags_;
   adr::typeahead const& t_;
   adr::cache& cache_;
 };

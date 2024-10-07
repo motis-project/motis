@@ -1,40 +1,15 @@
 #include "gtest/gtest.h"
 
-#include <map>
-
 #include "boost/json.hpp"
 
 #include "utl/init_from.h"
 
-#include "nigiri/loader/gtfs/load_timetable.h"
-#include "nigiri/loader/init_finish.h"
-#include "nigiri/rt/create_rt_timetable.h"
-#include "nigiri/rt/rt_timetable.h"
-#include "nigiri/timetable.h"
-
-#include "osr/extract/extract.h"
-#include "osr/lookup.h"
-#include "osr/platforms.h"
-#include "osr/routing/route.h"
-#include "osr/ways.h"
-
-#include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/data.h"
-#include "motis/elevators/elevators.h"
-#include "motis/elevators/match_elevator.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
-#include "motis/get_loc.h"
-#include "motis/match_platforms.h"
-#include "motis/nigiri/tag_lookup.h"
-#include "motis/tt_location_rtree.h"
-#include "motis/update_rtt_td_footpaths.h"
 
-namespace n = nigiri;
-namespace nl = nigiri::loader;
 namespace json = boost::json;
-namespace fs = std::filesystem;
 using namespace std::string_view_literals;
 using namespace motis;
 using namespace date;
@@ -228,6 +203,8 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
     }
     first = false;
     out << "(";
+    out << "from=" << leg.from_.stopId_.value_or("-")
+        << ", to=" << leg.to_.stopId_.value_or("-") << ", ";
     out << "start=";
     format_time(leg.startTime_);
     out << ", mode=";
@@ -239,66 +216,16 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
   out << "\n]\n";
 }
 
-void load(fs::path const& data_path,
-          n::interval<date::sys_days> const interval,
-          std::string_view gtfs) {
-  auto ec = std::error_code{};
-  fs::remove_all(data_path, ec);
-  fs::create_directories(data_path, ec);
-
-  // Load OSR.
-  auto const osr_path = data_path / "osr";
-  osr::extract(true, "test/resources/test_case.osm.pbf", osr_path);
-  auto const w = osr::ways{osr_path, cista::mmap::protection::READ};
-  auto pl = osr::platforms{osr_path, cista::mmap::protection::READ};
-  auto const l = osr::lookup{w};
-  auto const elevator_nodes = get_elevator_nodes(w);
-  pl.build_rtree(w);
-
-  // Load assistance times.
-  auto assistance = n::loader::read_assistance(R"(name,lat,lng,time
-DA HBF,49.87260,8.63085,06:15-22:30
-FFM,50.10701,8.66341,06:15-22:30
-)");
-
-  // Load timetable.
-  auto tt = n::timetable{};
-  tt.date_range_ = interval;
-  nl::register_special_stations(tt);
-  nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(gtfs), tt,
-                           &assistance);
-  nl::finalize(tt);
-
-  auto tags = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
-  tags->add(n::source_idx_t{0U}, "default");
-  tags->write(data_path / "tags.bin");
-
-  fmt::println("computing footpaths");
-  auto const elevator_footpath_map = compute_footpaths(w, l, pl, tt, true);
-
-  fmt::println("writing elevator footpaths");
-  write(data_path / "elevator_footpath_map.bin", elevator_footpath_map);
-
-  fmt::println("writing timetable");
-  tt.write(data_path / "tt.bin");
-
-  std::ofstream{data_path / "fasta.json"}.write(kFastaJson.data(),
-                                                kFastaJson.size());
-}
-
 TEST(motis, routing) {
-  auto const data_path = fs::path{"test/data"};
-
-  load(data_path,
-       {date::sys_days{2019_y / March / 25},
-        date::sys_days{2019_y / November / 1}},
-       kGTFS);
-
-  auto d = data{data_path, config{
-                               .timetable_ = {config::timetable{}},
-                               .street_routing_ = true,
-                               .elevators_ = true,
-                           }};
+  auto d = data{
+      "test/data",
+      config{.osm_ = {"test/resources/test_case.osm.pbf"},
+             .timetable_ =
+                 config::timetable{.datasets_ = {{"test", {.path_ = kGTFS}}}},
+             .street_routing_ = true,
+             .elevators_ = true}};
+  d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
+                                          parse_fasta(kFastaJson));
   auto const routing = utl::init_from<ep::routing>(d).value();
 
   // Route with wheelchair.
