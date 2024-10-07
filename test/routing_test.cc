@@ -27,6 +27,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
+#include "motis/nigiri/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 #include "motis/update_rtt_td_footpaths.h"
 
@@ -267,6 +268,10 @@ FFM,50.10701,8.66341,06:15-22:30
   nl::gtfs::load_timetable({}, n::source_idx_t{}, nl::mem_dir::read(gtfs), tt,
                            &assistance);
   nl::finalize(tt);
+
+  auto tags = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
+  tags->add(n::source_idx_t{0U}, "default");
+  tags->write(data_path / "tags.bin");
 
   fmt::println("computing footpaths");
   auto const elevator_footpath_map = compute_footpaths(w, l, pl, tt, true);
