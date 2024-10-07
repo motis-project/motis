@@ -1,11 +1,17 @@
 #include "motis/nigiri/tag_lookup.h"
 
+#include "cista/mmap.h"
+#include "cista/serialization.h"
+
 #include "utl/enumerate.h"
 #include "utl/verify.h"
 
 namespace n = nigiri;
 
 namespace motis {
+
+constexpr auto const kMode =
+    cista::mode::WITH_INTEGRITY | cista::mode::WITH_STATIC_VERSION;
 
 void tag_lookup::add(n::source_idx_t const src, std::string_view str) {
   utl::verify(tag_to_src_.size() == to_idx(src), "invalid tag");
@@ -25,6 +31,19 @@ std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {
 std::string_view tag_lookup::get_tag_clean(n::source_idx_t const src) const {
   auto const tag = get_tag(src);
   return tag.empty() ? tag : tag.substr(0, tag.size() - 1);
+}
+
+void tag_lookup::write(std::filesystem::path const& p) const {
+  auto mmap = cista::mmap{p.string().c_str(), cista::mmap::protection::WRITE};
+  auto writer = cista::buf<cista::mmap>(std::move(mmap));
+  cista::serialize<kMode>(writer, *this);
+}
+
+cista::wrapped<tag_lookup> tag_lookup::read(std::filesystem::path const& p) {
+  auto b = cista::file{p.generic_string().c_str(), "r"}.content();
+  auto const ptr = cista::deserialize<tag_lookup, kMode>(b);
+  auto mem = cista::memory_holder{std::move(b)};
+  return cista::wrapped{std::move(mem), ptr};
 }
 
 std::ostream& operator<<(std::ostream& out, tag_lookup const& tags) {

@@ -1,7 +1,10 @@
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <string_view>
+
+#include "cista/memory_holder.h"
 
 #include "nigiri/types.h"
 
@@ -15,9 +18,11 @@ struct tag_lookup {
   std::string_view get_tag_clean(nigiri::source_idx_t) const;
 
   friend std::ostream& operator<<(std::ostream&, tag_lookup const&);
+  void write(std::filesystem::path const&) const;
+  static cista::wrapped<tag_lookup> read(std::filesystem::path const&);
 
   nigiri::vecvec<nigiri::source_idx_t, char, std::uint32_t> src_to_tag_;
-  nigiri::hash_map<std::string, nigiri::source_idx_t> tag_to_src_;
+  nigiri::hash_map<nigiri::string, nigiri::source_idx_t> tag_to_src_;
 };
 
 }  // namespace motis

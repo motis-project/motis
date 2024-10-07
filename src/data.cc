@@ -21,6 +21,7 @@
 #include "motis/config.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/match_platforms.h"
+#include "motis/nigiri/tag_lookup.h"
 #include "motis/point_rtree.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
@@ -95,6 +96,7 @@ void data::load_osr() {
 }
 
 void data::load_tt() {
+  tags_ = tag_lookup::read(path_ / "tags.bin");
   tt_ = n::timetable::read(cista::memory_holder{
       cista::file{(path_ / "tt.bin").generic_string().c_str(), "r"}.content()});
   tt_->locations_.resolve_timezones();

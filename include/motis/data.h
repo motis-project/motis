@@ -55,7 +55,7 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, location_rtee_,
+    return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, tags_, location_rtee_,
                     elevator_nodes_, matches_, rt_);
   }
 
@@ -68,6 +68,7 @@ struct data {
   ptr<osr::platforms> pl_;
   ptr<osr::lookup> l_;
   cista::wrapped<nigiri::timetable> tt_;
+  cista::wrapped<tag_lookup> tags_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<platform_matches_t> matches_;

@@ -42,6 +42,7 @@
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
+#include "motis/nigiri/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
 namespace fs = std::filesystem;
@@ -50,6 +51,10 @@ namespace nl = nigiri::loader;
 using namespace std::string_literals;
 
 namespace motis {
+
+constexpr auto const kAdrBinaryVersion = 1U;
+constexpr auto const kOsrBinaryVersion = 2U;
+constexpr auto const kNigiriBinaryVersion = 2U;
 
 using meta_entry_t = std::pair<std::string, std::uint64_t>;
 using meta_t = std::map<std::string, std::uint64_t>;
@@ -147,9 +152,9 @@ void import(config const& c, fs::path const& data_path) {
     tiles_profile_hash.second = hash_file(c.tiles_->profile_);
   }
 
-  auto const osr_version = meta_entry_t{"osr_bin_ver", osr::kBinaryVersion};
-  auto const adr_version = meta_entry_t{"adr_bin_ver", adr::kBinaryVersion};
-  auto const n_version = meta_entry_t{"nigiri_bin_ver", n::kBinaryVersion};
+  auto const osr_version = meta_entry_t{"osr_bin_ver", kOsrBinaryVersion};
+  auto const adr_version = meta_entry_t{"adr_bin_ver", kAdrBinaryVersion};
+  auto const n_version = meta_entry_t{"nigiri_bin_ver", kNigiriBinaryVersion};
 
   auto d = data{data_path};
 
@@ -222,11 +227,14 @@ void import(config const& c, fs::path const& data_path) {
               n::create_shapes_storage(data_path / "shapes"));
         }
 
+        d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
         d.tt_ = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
             utl::to_vec(
                 t.datasets_,
-                [&](auto&& x) -> std::pair<fs::path, nl::loader_config> {
-                  auto const& [_, dc] = x;
+                [&, src = n::source_idx_t{}](auto&& x) mutable
+                    -> std::pair<fs::path, nl::loader_config> {
+                  auto const& [tag, dc] = x;
+                  d.tags_->add(src++, tag);
                   return {dc.path_,
                           {
                               .link_stop_distance_ = t.link_stop_distance_,
@@ -244,6 +252,7 @@ void import(config const& c, fs::path const& data_path) {
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));
         d.tt_->write(data_path / "tt.bin");
+        d.tags_->write(data_path / "tags.bin");
       },
       [&]() { d.load_tt(); },
       {tt_hash, n_version}};

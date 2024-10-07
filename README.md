@@ -84,8 +84,10 @@ Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/
 ./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
 ```
 
-
 # Documentation
 
-- [Developer Setup](docs/dev_setup.md)
+- Developer Setup
+  - for Linux (docs/linux-dev-setup.md)
+  - for Windows (docs/windows-dev-setup.md)
+  - for macOS (docs/macos-dev-setup.md)
 - [Advanced Setups](docs/setup.md)

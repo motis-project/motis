@@ -25,4 +25,5 @@ struct offset;
 namespace motis {
 struct tiles_data;
 struct rt;
+struct tag_lookup;
 }  // namespace motis
