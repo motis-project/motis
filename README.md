@@ -87,7 +87,7 @@ Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/
 # Documentation
 
 - Developer Setup
-  - for Linux (docs/linux-dev-setup.md)
-  - for Windows (docs/windows-dev-setup.md)
-  - for macOS (docs/macos-dev-setup.md)
+  - [for Linux](docs/linux-dev-setup.md)
+  - [for Windows](docs/windows-dev-setup.md)
+  - [for macOS](docs/macos-dev-setup.md)
 - [Advanced Setups](docs/setup.md)
