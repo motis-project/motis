@@ -64,7 +64,7 @@ After that, it will start a server.
 
 This script will execute the steps described above for a small dataset for the city of Aachen, Germany:
 
-**Linux / MacOS**
+**Linux / macOS**
 
 ```bash
 TARGET="linux-amd64"  # set to linux-arm64, macos-xarm64, ... to fit your setup
