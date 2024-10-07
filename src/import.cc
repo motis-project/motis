@@ -113,6 +113,9 @@ struct fmt::formatter<motis::task> : fmt::ostream_formatter {};
 namespace motis {
 
 cista::hash_t hash_file(fs::path const& p) {
+  if (p.generic_string().starts_with("\n#")) {
+    return cista::hash(p.generic_string());
+  }
   auto const mmap =
       cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
   return cista::hash(mmap.view());
@@ -232,7 +235,7 @@ data import(config const& c, fs::path const& data_path) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                    -> std::pair<fs::path, nl::loader_config> {
+                -> std::pair<fs::path, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -284,6 +287,13 @@ data import(config const& c, fs::path const& data_path) {
       [&]() {},
       {tt_hash, osm_hash, osr_version, n_version}};
 
+  auto matches = task{"matches",
+                      [&]() { return c.timetable_ && c.street_routing_; },
+                      [&]() { return d.tt_ && d.w_ && d.pl_; },
+                      [&]() { d.load_matches(); },
+                      [&]() { d.load_matches(); },
+                      {tt_hash, osm_hash, osr_version, n_version}};
+
   auto tiles = task{
       "tiles",
       [&]() { return c.tiles_.has_value(); },
@@ -332,7 +342,8 @@ data import(config const& c, fs::path const& data_path) {
       []() {},
       {osm_hash, coastline_hash, tiles_profile_hash}};
 
-  auto tasks = std::vector<task>{osr, adr, tt, adr_extend, osr_footpath, tiles};
+  auto tasks =
+      std::vector<task>{osr, adr, tt, adr_extend, osr_footpath, tiles, matches};
   utl::erase_if(tasks, [&](auto&& t) { return !t.should_run_(); });
 
   while (!tasks.empty()) {

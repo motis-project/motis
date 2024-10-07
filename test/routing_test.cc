@@ -8,6 +8,7 @@
 #include "motis/data.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
+#include "motis/import.h"
 
 namespace json = boost::json;
 using namespace std::string_view_literals;
@@ -217,13 +218,16 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
 }
 
 TEST(motis, routing) {
-  auto d = data{
-      "test/data",
+  auto ec = std::error_code{};
+  std::filesystem::remove_all("test/data", ec);
+
+  auto d = import(
       config{.osm_ = {"test/resources/test_case.osm.pbf"},
              .timetable_ =
                  config::timetable{.datasets_ = {{"test", {.path_ = kGTFS}}}},
              .street_routing_ = true,
-             .elevators_ = true}};
+             .osr_footpath_ = true},
+      "test/data");
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   auto const routing = utl::init_from<ep::routing>(d).value();

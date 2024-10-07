@@ -102,7 +102,8 @@ void config::verify_input_files_exist() const {
 
   if (timetable_) {
     for (auto const [_, d] : timetable_->datasets_) {
-      utl::verify(fs::is_directory(d.path_) || fs::is_regular_file(d.path_),
+      utl::verify(fs::is_directory(d.path_) || fs::is_regular_file(d.path_) ||
+                      d.path_.generic_string().starts_with("\n#"),
                   "timetable dataset does not exist: {}", d.path_);
 
       if (d.clasz_bikes_allowed_) {
