@@ -224,9 +224,10 @@ TEST(motis, routing) {
   auto d = import(
       config{.osm_ = {"test/resources/test_case.osm.pbf"},
              .timetable_ =
-                 config::timetable{.first_day_ = "2019-05-01",
-                                   .num_days_ = 2,
-                                   .datasets_ = {{"test", {.path_ = kGTFS}}}},
+                 config::timetable{
+                     .first_day_ = "2019-05-01",
+                     .num_days_ = 2,
+                     .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
              .street_routing_ = true,
              .osr_footpath_ = true},
       "test/data", false);
