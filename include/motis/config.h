@@ -56,7 +56,7 @@ struct config {
 
       bool operator==(dataset const&) const = default;
 
-      std::filesystem::path path_;
+      std::string path_;
       bool default_bikes_allowed_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::vector<rt>> rt_{};

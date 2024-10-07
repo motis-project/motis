@@ -238,7 +238,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                 -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
-                  return {dc.path_.generic_string(),
+                  return {dc.path_,
                           {
                               .link_stop_distance_ = t.link_stop_distance_,
                               .default_tz_ = dc.default_timezone_.value_or(
