@@ -35,10 +35,10 @@ that allows you to generate clients for your favorite programming language.
 
 MOTIS comes with all features you need for a next generation mobility platform:
 
-- routing (one mode walking, bike, car, sharing mobility / combined modes)
-- geocoding (address completion and resolution to geo coordinates)
-- reverse geocoding (resolving geo coordinates to the closest address)
-- tile server (background map tiles)
+- **routing**: one mode walking, bike, car, sharing mobility / combined modes
+- **geocoding**: multi-language address + stop name completion with fuzzy string matching and resolution to geo coordinates
+- **reverse geocoding**: resolving geo coordinates to the closest address
+- **tile server**: background map tiles
 
 Features can be turned on and off as needed.
 
