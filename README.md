@@ -29,9 +29,8 @@ that allows you to generate clients for your favorite programming language.
 # Features
 
 > [!NOTE]  
-> MOTIS has the most **memory efficient data model** and the **fastest routing algorithms**.
->
-> This enables the following features *planet-sized* on affordable hardware!
+> MOTIS is optimized for **high performance** with **low memory usage**.
+> This enables _planet-sized_ deployments of the following features on affordable hardware.
 
 MOTIS comes with all features you need for a next generation mobility platform:
 
