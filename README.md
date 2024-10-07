@@ -1,54 +1,91 @@
 <p align="center"><img src="logo.svg" width="196" height="196"></p>
 
-[![Linux+MacOS Build](https://github.com/motis-project/motis/actions/workflows/unix.yml/badge.svg)](https://github.com/motis-project/motis/actions/workflows/unix.yml)
-![Windows Build](https://github.com/motis-project/motis/workflows/Windows%20Build/badge.svg)
+> [!TIP]
+> Join the MOTIS community at [**motis:matrix.org**](https://matrix.to/#/#motis:matrix.org)
 
-MOTIS stands for **M**ulti **O**bjective **T**ravel **I**nformation **S**ystem.
+MOTIS stands for **M**odular **O**pen **T**ransportation **I**nformation **S**ystem.
+It is an open-source software platform designed to facilitate
+efficient planning and routing in multi-modal transportation systems.
+Developed to handle *large-scale* transportation data,
+MOTIS integrates various modes of transport -
+such as walking, cycling, sharing mobility (e-scooters, bike sharing, car
+sharing), and public transport -
+to provide optimized routing solutions.
 
-The core features are:
+MOTIS currently supports the following input formats:
 
-- **Intermodal Routing**: computing optimal journeys mixing public transit,
-  sharing mobility, walking, etc. in sensible
-  ways. [Read more.](https://motis-project.de/docs/features/routing.html)
-- **Real Time Support**: considering delays, train cancellations, additional
-  services, reroutings, track changes,
-  etc. [Read more.](https://motis-project.de/docs/features/realtime.html#real-time-support)
-- **Visualization**: view vehicle movements in
-  real-time. [Try it out!](https://europe.motis-project.de/)
-- **JSON API**: the backend provides a JSON API via
-  HTTP. [Documentation](https://motis-project.de/docs/api/)
+- (One) **OpenStreetMap `osm.pbf`** file for the street network, addresses, indoor-routing, etc. 
+- (Multiple) **GTFS** feeds for static timetables
+- (Multiple) **GTFS-RT** feeds for real-time updates (delays, cancellations, track changes)
+- (Multiple) **GBFS** feeds for sharing mobility
 
-More detailed information can be found
-at [motis-project.de](https://motis-project.de).
+*Planned*: GTFS-Flex, NeTEx and SIRI
 
-To demonstrate the functionalities,
-an [Android App](https://play.google.com/store/apps/details?id=de.motis_project.demo)
-and a [web-based information system](https://europe.motis-project.de/) is
-available. The source code for both front-ends is available as Open Source
-Software [as well](https://github.com/motis-project/motis/tree/master/ui).
+MOTIS provides an easy-to-use **REST API** (JSON via HTTP) with
+a [**OpenAPI specification**](openapi.yaml)
+that allows you to generate clients for your favorite programming language.
 
-The system can consume schedule timetables in
-the [GTFS](https://developers.google.com/transit/gtfs/)
-or [HAFAS](https://www.öv-info.ch/sites/default/files/2023-07/hrdf_2_0_5_e.pdf)
-format as well as real time information in
-the [GTFS-RT](https://developers.google.com/transit/gtfs-realtime/reference) (
-and RISML, a propriatary format at Deutsche Bahn) as input data. For pedestrian
-routing (handled by [Per Pedes Routing](https://github.com/motis-project/ppr))
-and car routing (handled
-by [OSRM](https://github.com/Project-OSRM/osrm-backend)) OpenStreetMap data is
-used.
+
+# Features
+
+> [!NOTE]  
+> MOTIS has the most **memory efficient data model** and the **fastest routing algorithms**.
+>
+> This enables the following features *planet-sized* on affordable hardware!
+
+MOTIS comes with all features you need for a next generation mobility platform:
+
+- routing (one mode walking, bike, car, sharing mobility / combined modes)
+- geocoding (address completion and resolution to geo coordinates)
+- reverse geocoding (resolving geo coordinates to the closest address)
+- tile server (background map tiles)
+
+Features can be turned on and off as needed.
+
+# Quick Start
+
+- Create a folder with the following files.
+- Download MOTIS from
+  the [latest release](https://github.com/motis-project/motis/releases) and
+  extract the archive.
+- Download a OpenStreetMap dataset as `osm.pbf` (e.g.
+  from [Geofabrik](https://download.geofabrik.de/)) and place it in the folder
+- Download one or more GTFS datasets and place them in the folder 
+
+```bash
+./motis my.osm.pbf my.gtfs.zip
+```
+
+This will preprocess the input files and create a `data` folder.
+After that, it will start a server.
+
+> [!IMPORTANT]
+> Ensure a valid timetable is used. If the timetable is outdated, it will not contain any trips to consider for upcoming dates.
+
+This script will execute the steps described above for a small dataset for the city of Aachen, Germany:
+
+**Linux / MacOS**
+
+```bash
+TARGET="linux-amd64"  # set to linux-arm64, macos-xarm64, ... to fit your setup
+wget https://github.com/motis-project/motis/releases/latest/download/motis-${TARGET}.tar.bz2
+tar xf motis-${TARGET}.tar.bz2
+wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
+wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
+./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+```
+
+**Windows**
+
+```pwsh
+Invoke-WebRequest https://github.com/motis-project/motis/releases/latest/download/motis-windows.zip -OutFile motis-windows.zip
+Expand-Archive motis-windows.zip
+Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/aachen.zip -OutFile aachen.zip
+./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+```
+
 
 # Documentation
 
-- [Installation and Setup](https://github.com/motis-project/motis/wiki/Installation-and-Setup)
-- [API Documentation](https://motis-project.de/docs/api/)
-- Developer Setup:
-    - [Windows Developer Setup](https://github.com/motis-project/motis/wiki/Windows-Developer-Setup)
-    - [Linux Developer Setup](https://github.com/motis-project/motis/wiki/Linux-Developer-Setup)
-
-# Contribution
-
-Feel free to contribute in any area you like (new features, small improvments,
-bug fixes, documentation, testing, etc.)!
-By making a pull-request you agree to license your contribution under the MIT
-and Apache 2.0 license as described below.
+- [Developer Setup](docs/dev_setup.md)
+- [Advanced Setups](docs/setup.md)
