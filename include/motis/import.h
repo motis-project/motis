@@ -7,6 +7,8 @@
 
 namespace motis {
 
-data import(config const&, std::filesystem::path const& data_path);
+data import(config const&,
+            std::filesystem::path const& data_path,
+            bool write = true);
 
 }  // namespace motis

@@ -78,8 +78,7 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
     return t;
   }();
 
-  auto const g = utl::global_progress_bars{};
-  auto const pt = utl::get_active_progress_tracker_or_activate("routing");
+  auto const pt = utl::get_active_progress_tracker();
   pt->in_high(tt.n_locations() * 2U);
 
   auto footpaths_out_foot =

@@ -121,14 +121,14 @@ cista::hash_t hash_file(fs::path const& p) {
   return cista::hash(mmap.view());
 }
 
-data import(config const& c, fs::path const& data_path) {
+data import(config const& c, fs::path const& data_path, bool const write) {
   c.verify_input_files_exist();
 
   auto ec = std::error_code{};
   fs::create_directories(data_path / "logs", ec);
   fs::create_directories(data_path / "meta", ec);
 
-  auto const bars = utl::global_progress_bars{false};
+  clog_redirect::set_enabled(write);
 
   auto tt_hash = std::pair{"timetable"s, cista::BASE_HASH};
   if (c.timetable_.has_value()) {
@@ -235,10 +235,10 @@ data import(config const& c, fs::path const& data_path) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<fs::path, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
-                  return {dc.path_,
+                  return {dc.path_.generic_string(),
                           {
                               .link_stop_distance_ = t.link_stop_distance_,
                               .default_tz_ = dc.default_timezone_.value_or(
@@ -254,8 +254,11 @@ data import(config const& c, fs::path const& data_path) {
         d.location_rtee_ =
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));
-        d.tt_->write(data_path / "tt.bin");
-        d.tags_->write(data_path / "tags.bin");
+
+        if (write) {
+          d.tt_->write(data_path / "tt.bin");
+          d.tags_->write(data_path / "tags.bin");
+        }
       },
       [&]() { d.load_tt(); },
       {tt_hash, n_version}};
@@ -266,26 +269,33 @@ data import(config const& c, fs::path const& data_path) {
            [&]() { return d.tt_ && d.t_ && d.area_db_; },
            [&]() {
              adr_extend_tt(*d.tt_, *d.area_db_, *d.t_);
-             auto mmap = cista::buf{cista::mmap{
-                 (data_path / "adr" / "t.bin").generic_string().c_str(),
-                 cista::mmap::protection::WRITE}};
-             cista::serialize<cista::mode::WITH_STATIC_VERSION>(mmap, *d.t_);
+
+             if (write) {
+               auto mmap = cista::buf{cista::mmap{
+                   (data_path / "adr" / "t.bin").generic_string().c_str(),
+                   cista::mmap::protection::WRITE}};
+               cista::serialize<cista::mode::WITH_STATIC_VERSION>(mmap, *d.t_);
+             }
            },
            [&]() {},
            {tt_hash, osm_hash, adr_version, n_version}};
 
-  auto osr_footpath = task{
-      "osr_footpath",
-      [&]() { return c.osr_footpath_; },
-      [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
-      [&]() {
-        auto const elevator_footpath_map =
-            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
-        write(data_path / "elevator_footpath_map.bin", elevator_footpath_map);
-        d.tt_->write(data_path / "tt.bin");
-      },
-      [&]() {},
-      {tt_hash, osm_hash, osr_version, n_version}};
+  auto osr_footpath =
+      task{"osr_footpath",
+           [&]() { return c.osr_footpath_; },
+           [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
+           [&]() {
+             auto const elevator_footpath_map =
+                 compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
+
+             if (write) {
+               ::motis::write(data_path / "elevator_footpath_map.bin",
+                              elevator_footpath_map);
+               d.tt_->write(data_path / "tt.bin");
+             }
+           },
+           [&]() {},
+           {tt_hash, osm_hash, osr_version, n_version}};
 
   auto matches = task{"matches",
                       [&]() { return c.timetable_ && c.street_routing_; },

@@ -214,7 +214,7 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
     format_time(leg.endTime_);
     out << ")";
   }
-  out << "\n]\n";
+  out << "\n]";
 }
 
 TEST(motis, routing) {
@@ -224,10 +224,12 @@ TEST(motis, routing) {
   auto d = import(
       config{.osm_ = {"test/resources/test_case.osm.pbf"},
              .timetable_ =
-                 config::timetable{.datasets_ = {{"test", {.path_ = kGTFS}}}},
+                 config::timetable{.first_day_ = "2019-05-01",
+                                   .num_days_ = 2,
+                                   .datasets_ = {{"test", {.path_ = kGTFS}}}},
              .street_routing_ = true,
              .osr_footpath_ = true},
-      "test/data");
+      "test/data", false);
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   auto const routing = utl::init_from<ep::routing>(d).value();
@@ -238,11 +240,20 @@ TEST(motis, routing) {
         "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
         "&date=05-01-2019&time=01:25&wheelchair=true");
 
-    std::cout << "With wheelchair:\n";
+    auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
-      print_short(std::cout, j);
-      std::cout << "\n";
+      print_short(ss, j);
     }
+
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:29, end=02:29, duration=01:04, transfers=1, legs=[
+    (from=-, to=test_DA_10, start=2019-05-01 01:29, mode="WALK", end=2019-05-01 01:35),
+    (from=test_DA_10, to=test_FFM_12, start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", end=2019-05-01 01:45),
+    (from=test_FFM_12, to=test_FFM_101, start=2019-05-01 01:45, mode="WALK", end=2019-05-01 01:51),
+    (from=test_FFM_101, to=test_FFM_HAUPT_S, start=2019-05-01 02:15, mode="METRO", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S, to=-, start=2019-05-01 02:20, mode="WALK", end=2019-05-01 02:29)
+])",
+        ss.str());
   }
 
   // Route without wheelchair.
@@ -251,10 +262,19 @@ TEST(motis, routing) {
         "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
         "&date=05-01-2019&time=01:25");
 
-    std::cout << "Without wheelchair:\n";
+    auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
-      print_short(std::cout, j);
-      std::cout << "\n";
+      print_short(ss, j);
     }
+
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
+    (from=-, to=test_DA_10, start=2019-05-01 01:25, mode="WALK", end=2019-05-01 01:28),
+    (from=test_DA_10, to=test_FFM_12, start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", end=2019-05-01 01:45),
+    (from=test_FFM_12, to=test_de:6412:10:6:1, start=2019-05-01 01:45, mode="WALK", end=2019-05-01 01:49),
+    (from=test_de:6412:10:6:1, to=test_FFM_HAUPT_U, start=2019-05-01 02:05, mode="SUBWAY", end=2019-05-01 02:10),
+    (from=test_FFM_HAUPT_U, to=-, start=2019-05-01 02:10, mode="WALK", end=2019-05-01 02:14)
+])",
+        ss.str());
   }
 }
