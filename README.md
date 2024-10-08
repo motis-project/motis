@@ -33,10 +33,10 @@ that allows you to generate clients for your favorite programming language.
 > 
 > This enables _planet-sized_ deployments on affordable hardware.
 
-MOTIS comes with all features you need for a next generation mobility platform:
+MOTIS is a swiss army knife for mobility and comes with all features you need for a next generation mobility platform:
 
 - **routing**: one mode walking, bike, car, sharing mobility / combined modes
-- **geocoding**: multi-language address + stop name completion with fuzzy string matching and resolution to geo coordinates
+- **geocoding**: multi-language address and stop name completion with fuzzy string matching and resolution to geo coordinates
 - **reverse geocoding**: resolving geo coordinates to the closest address
 - **tile server**: background map tiles
 
@@ -67,7 +67,9 @@ This script will execute the steps described above for a small dataset for the c
 **Linux / macOS**
 
 ```bash
-TARGET="linux-amd64"  # set to linux-arm64, macos-xarm64, ... to fit your setup
+# set TARGET to linux-arm64, macos-arm64, ... to fit your setup
+# see release list for supported platforms
+TARGET="linux-amd64"
 wget https://github.com/motis-project/motis/releases/latest/download/motis-${TARGET}.tar.bz2
 tar xf motis-${TARGET}.tar.bz2
 wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
