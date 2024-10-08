@@ -207,8 +207,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
               return a;
             };
 
-        auto ec = std::error_code{};
-
         auto const& t = *c.timetable_;
 
         auto const first_day = n::parse_date(t.first_day_);
@@ -315,7 +313,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         auto const path = (dir / "tiles.mdb").string();
 
         auto ec = std::error_code{};
-        fs::create_directories(data_path / "tiles");
+        fs::create_directories(data_path / "tiles", ec);
 
         progress_tracker->status("Clear Database");
         ::tiles::clear_database(path, c.tiles_->db_size_);

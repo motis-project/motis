@@ -1,5 +1,7 @@
 #include "motis/max_distance.h"
 
+#include <utility>
+
 namespace motis {
 
 double get_max_distance(osr::search_profile const profile,

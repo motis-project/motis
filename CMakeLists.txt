@@ -63,6 +63,7 @@ else ()
     set(motis-compile-options
             -Wall
             -Wextra
+            -Wno-mismatched-new-delete
             -Wno-maybe-uninitialized)
     if (NOT CMAKE_CROSSCOMPILING)
         set(motis-compile-options ${motis-compile-options} -Werror)
