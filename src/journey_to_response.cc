@@ -282,9 +282,18 @@ api::Itinerary journey_to_response(
                   static_cast<std::int64_t>(polyline.size());
 
               leg.intermediateStops_ = std::vector<api::Place>{};
-              for (auto i =
-                       static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
-                   i < t.stop_range_.to_ - 1U; ++i) {
+
+              auto const first =
+                  static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
+              auto const last =
+                  static_cast<n::stop_idx_t>(t.stop_range_.to_ - 1U);
+
+              leg.from_.departureDelay_ =
+                  to_ms(fr[first].delay(n::event_type::kDep));
+              leg.to_.arrivalDelay_ =
+                  to_ms(fr[last].delay(n::event_type::kDep));
+
+              for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
                     to_place(tt, tags, stop.get_location_idx(), start, dest));
