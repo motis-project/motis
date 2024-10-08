@@ -29,8 +29,8 @@ that allows you to generate clients for your favorite programming language.
 # Features
 
 > [!NOTE]  
-> MOTIS is optimized for **high performance** with **low memory usage**.
-> This enables _planet-sized_ deployments of the following features on affordable hardware.
+> :rocket: MOTIS is optimized for **high performance** with **low memory usage**.
+> This enables _planet-sized_ deployments on affordable hardware.
 
 MOTIS comes with all features you need for a next generation mobility platform:
 
