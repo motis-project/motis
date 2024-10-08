@@ -88,6 +88,8 @@ target_link_libraries(motislib
     tiles
     pbf_sdf_fonts_res
     pbf_sdf_fonts_res-res
+    ssl
+    crypto
 )
 
 

@@ -38,3 +38,7 @@
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
   commit=c54fe66de4650b60c23aadd4a06d9db4ffeda22f
+[boost]
+  url=git@github.com:motis-project/boost.git
+  branch=boost-1.86.0
+  commit=69938dc9ea06ce38201bce50a4761c1bda2e41cc

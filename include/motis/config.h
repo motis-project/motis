@@ -22,6 +22,8 @@ struct config {
   void verify() const;
   void verify_input_files_exist() const;
 
+  bool requires_rt_timetable_updates() const;
+
   bool operator==(config const&) const = default;
 
   struct server {
@@ -72,6 +74,8 @@ struct config {
     bool merge_dupes_intra_src_{false};
     bool merge_dupes_inter_src_{false};
     unsigned link_stop_distance_{100U};
+    unsigned update_interval_{60};
+    bool incremental_rt_update_{false};
     std::uint16_t max_footpath_length_{15};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};

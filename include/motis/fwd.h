@@ -26,4 +26,5 @@ namespace motis {
 struct tiles_data;
 struct rt;
 struct tag_lookup;
+struct config;
 }  // namespace motis

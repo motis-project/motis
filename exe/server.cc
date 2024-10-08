@@ -1,3 +1,5 @@
+#include "boost/asio/co_spawn.hpp"
+#include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
 #include "boost/program_options.hpp"
 
@@ -9,6 +11,7 @@
 #include "utl/init_from.h"
 
 #include "motis/config.h"
+#include "motis/cron.h"
 #include "motis/endpoints/adr/geocode.h"
 #include "motis/endpoints/adr/reverse_geocode.h"
 #include "motis/endpoints/elevators.h"
@@ -21,6 +24,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/update_elevator.h"
+#include "motis/rt_update.h"
 
 namespace fs = std::filesystem;
 namespace bpo = boost::program_options;
@@ -91,6 +95,14 @@ int server(int ac, char** av) {
   auto ec = boost::system::error_code{};
   s.init(server_config.host_, server_config.port_, ec);
   s.run();
+
+  if (c.requires_rt_timetable_updates()) {
+    cron(ioc, std::chrono::seconds{c.timetable_->update_interval_}, [&]() {
+      boost::asio::co_spawn(workers, rt_update(c, *d.tt_, *d.tags_, d.rt_),
+                            boost::asio::detached);
+    });
+  }
+
   if (ec) {
     std::cerr << "error: " << ec << "\n";
     return 1;
@@ -103,7 +115,10 @@ int server(int ac, char** av) {
     t = std::thread(net::run(workers));
   }
 
-  auto const stop = net::stop_handler(ioc, [&]() { s.stop(); });
+  auto const stop = net::stop_handler(ioc, [&]() {
+    s.stop();
+    ioc.stop();
+  });
 
   fmt::println("n_threads={}, listening on {}:{}", server_config.n_threads_,
                server_config.host_, server_config.port_);

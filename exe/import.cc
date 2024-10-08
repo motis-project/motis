@@ -1,5 +1,7 @@
 #include <filesystem>
 
+#include "utl/progress_tracker.h"
+
 #include "boost/program_options.hpp"
 
 #include "motis/config.h"
@@ -28,6 +30,7 @@ int import(int ac, char** av) {
   auto c = config{};
   try {
     c = config::read(config_path);
+    auto const silencer = utl::global_progress_bars{true};
     import(c, std::move(data_path));
   } catch (std::exception const& e) {
     fmt::println("unable to import: {}", e.what());
