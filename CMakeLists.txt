@@ -56,7 +56,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
 elseif (MSVC)
-    set(motis-compile-options /WX)
+    set(motis-compile-options /WX /bigobj)
 else ()
     set(motis-compile-options
             -Wall
@@ -77,6 +77,7 @@ file(GLOB_RECURSE motislib-files src/*.cc)
 add_library(motislib ${motislib-files})
 target_include_directories(motislib PUBLIC include)
 target_compile_features(motislib PUBLIC cxx_std_23)
+target_compile_options(motislib PRIVATE ${motis-compile-options})
 target_link_libraries(motislib
     nigiri
     osr
@@ -97,6 +98,7 @@ target_link_libraries(motislib
 file(GLOB_RECURSE motis-files exe/*.cc)
 add_executable(motis ${motis-files})
 target_compile_features(motis PUBLIC cxx_std_23)
+target_compile_options(motis PRIVATE ${motis-compile-options})
 target_link_libraries(motis
     motislib
     web-server

@@ -169,7 +169,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                     d.load_osr();
                   },
                   [&]() { d.load_osr(); },
-                  {osm_hash, {"version"s, osr::kBinaryVersion}}};
+                  {osm_hash, osr_version}};
 
   auto adr = task{"adr",
                   [&]() { return c.geocoding_ || c.reverse_geocoding_; },
