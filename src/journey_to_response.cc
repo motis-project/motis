@@ -283,24 +283,23 @@ api::Itinerary journey_to_response(
 
               leg.intermediateStops_ = std::vector<api::Place>{};
 
+              leg.from_.departureDelay_ = leg.departureDelay_ =
+                  to_ms(fr[t.stop_range_.from_].delay(n::event_type::kDep));
+              leg.to_.arrivalDelay_ = leg.arrivalDelay_ =
+                  to_ms(fr[t.stop_range_.to_ - 1U].delay(n::event_type::kArr));
+
               auto const first =
                   static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
               auto const last =
                   static_cast<n::stop_idx_t>(t.stop_range_.to_ - 1U);
-
-              leg.from_.departureDelay_ =
-                  to_ms(fr[first].delay(n::event_type::kDep));
-              leg.to_.arrivalDelay_ =
-                  to_ms(fr[last].delay(n::event_type::kDep));
-
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
                     to_place(tt, tags, stop.get_location_idx(), start, dest));
                 p.departure_ = to_ms(stop.time(n::event_type::kDep));
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
-                p.arrival_ = to_ms(stop.time(n::event_type::kDep));
-                p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kDep));
+                p.arrival_ = to_ms(stop.time(n::event_type::kArr));
+                p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kArr));
               }
             },
             [&](n::footpath) {

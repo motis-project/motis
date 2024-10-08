@@ -133,7 +133,7 @@
 		{/if}
 	{/each}
 	<div class="flex pb-4">
-		<div class="relative left-[13px] w-3 h-3 rounded-full" style={routeColor(lastLeg!)}></div>
+		<div class="relative left-[12px] w-3 h-3 rounded-full" style={routeColor(lastLeg!)}></div>
 		<div class="relative left-3 bottom-[7px] pl-6 grid gap-y-6 grid-cols-7 items-center">
 			{@render stopTimes(lastLeg!.endTime, lastLeg!.arrivalDelay, lastLeg!.to.name)}
 		</div>

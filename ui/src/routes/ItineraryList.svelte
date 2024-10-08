@@ -55,12 +55,20 @@
 						<div class="text-base h-8 flex justify-between items-center space-x-4 w-full">
 							<div>
 								<div class="text-xs font-bold uppercase text-slate-400">Departure</div>
-								<Time timestamp={it.startTime} />
+								<Time
+									timestamp={it.startTime}
+									delay={it.legs[0].departureDelay}
+									showAlways={true}
+								/>
 							</div>
 							<Separator orientation="vertical" />
 							<div>
 								<div class="text-xs font-bold uppercase text-slate-400">Arrival</div>
-								<Time timestamp={it.endTime} />
+								<Time
+									timestamp={it.endTime}
+									delay={it.legs[it.legs.length - 1].arrivalDelay}
+									showAlways={true}
+								/>
 							</div>
 							<Separator orientation="vertical" />
 							<div>
