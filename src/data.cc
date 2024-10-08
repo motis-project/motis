@@ -19,6 +19,7 @@
 #include "nigiri/timetable.h"
 
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
@@ -134,9 +135,9 @@ void data::load_elevators() {
 
   auto const elevator_footpath_map =
       read_elevator_footpath_map(path_ / "elevator_footpath_map.bin");
-  motis::update_rtt_td_footpaths(*w_, *l_, *pl_, *tt_, *location_rtee_,
-                                 *rt_->e_, *elevator_footpath_map, *matches_,
-                                 *rt_->rtt_);
+  update_rtt_td_footpaths(*w_, *l_, *pl_, *tt_, *location_rtee_, *rt_->e_,
+                          *elevator_footpath_map, *matches_, *rt_->rtt_,
+                          std::chrono::seconds{kMaxDuration});
 }
 
 void data::load_tiles() {

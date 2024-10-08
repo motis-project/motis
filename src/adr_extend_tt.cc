@@ -26,7 +26,7 @@ void adr_extend_tt(nigiri::timetable const& tt,
 
   auto area_set_lookup = [&]() {
     auto x = hash_map<std::basic_string<a::area_idx_t>, a::area_set_idx_t>{};
-    for (auto const& [i, area_set] : utl::enumerate(t.area_sets_)) {
+    for (auto const [i, area_set] : utl::enumerate(t.area_sets_)) {
       x.emplace(area_set.view(), a::area_set_idx_t{i});
     }
     return x;
@@ -36,8 +36,6 @@ void adr_extend_tt(nigiri::timetable const& tt,
   if (tt.n_locations() == 0) {
     return;
   }
-
-  auto const base_offset = t.place_names_.size();
 
   // Map each location + its equivalents with the same name to one place_idx
   // mapping: location_idx -> place_idx
@@ -79,7 +77,7 @@ void adr_extend_tt(nigiri::timetable const& tt,
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
       for (auto const& r : tt.location_routes_[l]) {
-        for (auto const& tr : tt.route_transport_ranges_[r]) {
+        for (auto const tr : tt.route_transport_ranges_[r]) {
           auto const clasz = static_cast<std::underlying_type_t<n::clasz>>(
               tt.route_section_clasz_[r][0]);
           transport_counts[clasz] +=
@@ -104,7 +102,8 @@ void adr_extend_tt(nigiri::timetable const& tt,
       auto const p = tt.locations_.parents_[l];
       auto const x = (p == n::location_idx_t::invalid()) ? l : p;
       for (auto const [clasz, t_count] : utl::enumerate(transport_counts)) {
-        importance[location_place[x]] += prio[clasz] * t_count;
+        importance[location_place[x]] +=
+            prio[clasz] * static_cast<float>(t_count);
       }
     }
   }
@@ -121,7 +120,7 @@ void adr_extend_tt(nigiri::timetable const& tt,
 
   // Add to typeahead.
   auto areas = std::basic_string<a::area_idx_t>{};
-  for (auto const& [prio, l] : utl::zip(importance, place_location)) {
+  for (auto const [prio, l] : utl::zip(importance, place_location)) {
     auto const str_idx = a::string_idx_t{t.strings_.size()};
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
     t.place_type_.emplace_back(a::place_type::kExtra);

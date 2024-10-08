@@ -16,6 +16,7 @@
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
 #include "motis/journey_to_response.h"
+#include "motis/max_distance.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/update_rtt_td_footpaths.h"
@@ -28,13 +29,13 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::search_state> search_state;
+static boost::thread_specific_ptr<n::routing::search_state> search_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
+static boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
+static boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t get_place(n::timetable const& tt,
                   tag_lookup const& tags,
@@ -74,19 +75,6 @@ bool require_bike_transport(std::vector<api::ModeEnum> const& mode) {
       mode, [](api::ModeEnum const m) { return m == api::ModeEnum::BIKE; });
 }
 
-double get_max_distance(osr::search_profile const profile,
-                        std::chrono::seconds const t) {
-  switch (profile) {
-    case osr::search_profile::kWheelchair: return t.count() * 0.8;
-    case osr::search_profile::kFoot: return t.count() * 1.1;
-    case osr::search_profile::kBike: return t.count() * 2.8;
-    case osr::search_profile::kCar:
-    case osr::search_profile::kCarParking: [[fallthrough]];
-    case osr::search_profile::kCarParkingWheelchair: return t.count() * 28.0;
-  }
-  std::unreachable();
-}
-
 td_offsets_t routing::get_td_offsets(elevators const& e,
                                      osr::location const& pos,
                                      osr::direction const dir,
@@ -103,7 +91,7 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
 
     utl::equal_ranges_linear(
         get_td_footpaths(w_, l_, pl_, tt_, loc_tree_, e, matches_,
-                         n::location_idx_t::invalid(), pos, dir, profile,
+                         n::location_idx_t::invalid(), pos, dir, profile, max,
                          *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
           return a.target_ == b.target_;
@@ -145,7 +133,8 @@ std::vector<n::routing::offset> routing::get_offsets(
                                pl_.get_level(w_, matches_[l])};
         });
     auto const paths = osr::route(w_, l_, profile, pos, near_stop_locations,
-                                  max.count(), dir, kMaxMatchingDistance);
+                                  static_cast<osr::cost_t>(max.count()), dir,
+                                  kMaxMatchingDistance);
     for (auto const [p, l] : utl::zip(paths, near_stops)) {
       if (p.has_value()) {
         offsets.emplace_back(
@@ -311,9 +300,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           rt_->e_ != nullptr
               ? std::visit(
                     utl::overloaded{
-                        [&](n::location_idx_t const l) {
-                          return td_offsets_t{};
-                        },
+                        [&](n::location_idx_t) { return td_offsets_t{}; },
                         [&](osr::location const& pos) {
                           auto const dir = query.arriveBy_
                                                ? osr::direction::kForward
@@ -328,9 +315,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           rt_->e_ != nullptr
               ? std::visit(
                     utl::overloaded{
-                        [&](n::location_idx_t const l) {
-                          return td_offsets_t{};
-                        },
+                        [&](n::location_idx_t) { return td_offsets_t{}; },
                         [&](osr::location const& pos) {
                           auto const dir = query.arriveBy_
                                                ? osr::direction::kBackward
@@ -358,13 +343,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     raptor_state.reset(new n::routing::raptor_state{});
   }
 
-  UTL_START_TIMING(nigiri);
   auto const r = n::routing::raptor_search(
       tt_, rtt, *search_state, *raptor_state, std::move(q),
       query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
       std::nullopt);
-  UTL_STOP_TIMING(nigiri);
-  auto const nigiri_timing = UTL_TIMING_MS(nigiri);
 
   return {
       .from_ = to_place(tt_, tags_, from, "Origin"),

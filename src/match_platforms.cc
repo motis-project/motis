@@ -12,8 +12,6 @@ namespace n = nigiri;
 
 namespace motis {
 
-constexpr auto const kNumberMatchBonus = 200.0;
-
 bool is_number(char const x) { return x >= '0' && x <= '9'; }
 
 template <typename Fn>
@@ -99,24 +97,24 @@ double get_routes_bonus(n::timetable const& tt,
 template <typename Collection>
 double get_match_bonus(Collection&& names,
                        std::string_view ref,
-                       std::string_view name,
-                       bool const debug = false) {
+                       std::string_view name) {
   auto bonus = 0U;
+  auto const size = static_cast<double>(name.size());
   if (has_exact_match(names, ref)) {
-    bonus += 200.0 - names.size();
+    bonus += 200.0 - size;
   }
   if (has_number_match(names, name)) {
-    bonus += 140.0 - names.size();
+    bonus += 140.0 - size;
   }
   if (auto const track = get_track(ref);
       track.has_value() && has_number_match(names, *track)) {
-    bonus += 60.0 - names.size();
+    bonus += 60.0 - size;
   }
   if (has_exact_match(names, name)) {
-    bonus += 15.0 - names.size();
+    bonus += 15.0 - size;
   }
   if (has_contains_match(names, ref)) {
-    bonus += 5.0 - names.size();
+    bonus += 5.0 - size;
   }
   return bonus;
 }
@@ -228,7 +226,7 @@ osr::platform_idx_t get_match(n::timetable const& tt,
 
   if (best != osr::platform_idx_t::invalid()) {
     get_match_bonus(pl.platform_names_[best], tt.locations_.ids_[l].view(),
-                    tt.locations_.names_[l].view(), true);
+                    tt.locations_.names_[l].view());
   }
 
   return best;

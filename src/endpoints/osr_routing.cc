@@ -13,7 +13,7 @@ namespace motis::ep {
 
 osr::location parse_location(json::value const& v) {
   auto const& obj = v.as_object();
-  return {obj.at("lat").as_double(), obj.at("lng").as_double(),
+  return {{obj.at("lat").as_double(), obj.at("lng").as_double()},
           obj.contains("level")
               ? osr::to_level(obj.at("level").to_number<float>())
               : osr::level_t::invalid()};

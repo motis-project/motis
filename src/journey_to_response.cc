@@ -219,7 +219,7 @@ api::Itinerary journey_to_response(
       utl::concat(concat, p.polyline_);
     }
     leg.legGeometry_.points_ = encode_polyline<7>(concat);
-    leg.legGeometry_.length_ = concat.size();
+    leg.legGeometry_.length_ = static_cast<std::int64_t>(concat.size());
   };
 
   auto itinerary = api::Itinerary{
@@ -234,12 +234,8 @@ api::Itinerary journey_to_response(
                 leg.uses_);
           }) - 1)};
 
-  for (auto const [_leg_i, _j_leg] : utl::enumerate(j.legs_)) {
-    auto const& leg_i = _leg_i;
-    auto const& j_leg = _j_leg;
-
-    auto const write_leg = [&](auto&& x,
-                               api::ModeEnum const mode) -> api::Leg& {
+  for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
+    auto const write_leg = [&](api::ModeEnum const mode) -> api::Leg& {
       auto& leg = itinerary.legs_.emplace_back();
       leg.mode_ = mode;
       leg.from_ = to_place(tt, tags, j_leg.from_, start, dest);
@@ -260,7 +256,7 @@ api::Itinerary journey_to_response(
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
 
-              auto& leg = write_leg(t, api::ModeEnum::TRANSIT);
+              auto& leg = write_leg(api::ModeEnum::TRANSIT);
               leg.source_ = fmt::format("{}", fmt::streamed(fr.dbg()));
               leg.headsign_ = enter_stop.direction();
               leg.routeColor_ = to_str(color.color_);
@@ -268,7 +264,7 @@ api::Itinerary journey_to_response(
               leg.mode_ = to_mode(enter_stop.get_clasz());
               leg.realTime_ = fr.is_rt();
               leg.tripId_ = fr.id().id_;  // TODO source_idx
-              leg.serviceDate_ = get_service_date(tt, t.r_.t_, 0U),
+              leg.serviceDate_ = get_service_date(tt, t.r_.t_, 0U);
               leg.agencyName_ = agency.long_name_;
               leg.agencyId_ = agency.short_name_;
               leg.routeShortName_ = enter_stop.trip_display_name();
@@ -282,10 +278,12 @@ api::Itinerary journey_to_response(
                 polyline.emplace_back(stop.pos());
               }
               leg.legGeometry_.points_ = geo::encode_polyline<7>(polyline);
-              leg.legGeometry_.length_ = polyline.size();
+              leg.legGeometry_.length_ =
+                  static_cast<std::int64_t>(polyline.size());
 
               leg.intermediateStops_ = std::vector<api::Place>{};
-              for (auto i = t.stop_range_.from_ + 1U;
+              for (auto i =
+                       static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
                    i < t.stop_range_.to_ - 1U; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
@@ -296,8 +294,8 @@ api::Itinerary journey_to_response(
                 p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kDep));
               }
             },
-            [&](n::footpath const fp) {
-              auto& leg = write_leg(fp, api::ModeEnum::WALK);
+            [&](n::footpath) {
+              auto& leg = write_leg(api::ModeEnum::WALK);
               add_routed_polyline(wheelchair ? osr::search_profile::kWheelchair
                                              : osr::search_profile::kFoot,
                                   to_location(j_leg.from_),
@@ -306,7 +304,7 @@ api::Itinerary journey_to_response(
             [&](n::routing::offset const x) {
               auto const profile =
                   static_cast<osr::search_profile>(x.transport_mode_id_);
-              auto& leg = write_leg(x, to_mode(profile));
+              auto& leg = write_leg(to_mode(profile));
               add_routed_polyline(profile, to_location(j_leg.from_),
                                   to_location(j_leg.to_), leg);
             }},

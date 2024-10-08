@@ -10,7 +10,7 @@ namespace motis {
 point_rtree<elevator_idx_t> create_elevator_rtree(
     nigiri::vector_map<elevator_idx_t, elevator> const& elevators) {
   auto t = point_rtree<elevator_idx_t>{};
-  for (auto const& [i, e] : utl::enumerate(elevators)) {
+  for (auto const [i, e] : utl::enumerate(elevators)) {
     t.add(e.pos_, elevator_idx_t{i});
   }
   return t;

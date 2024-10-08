@@ -8,6 +8,7 @@
 
 #include "motis/constants.h"
 #include "motis/get_loc.h"
+#include "motis/max_distance.h"
 
 namespace n = nigiri;
 using namespace std::chrono_literals;
@@ -84,6 +85,7 @@ std::vector<n::td_footpath> get_td_footpaths(
     osr::location const start,
     osr::direction const dir,
     osr::search_profile const profile,
+    std::chrono::seconds const max,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
   blocked_mem.resize(w.n_nodes());
 
@@ -104,7 +106,8 @@ std::vector<n::td_footpath> get_td_footpaths(
         w, l, profile, start,
         utl::to_vec(neighbors,
                     [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
-        kMaxDuration, dir, kMaxMatchingDistance, &blocked_mem);
+        static_cast<osr::cost_t>(max.count()), dir,
+        get_max_distance(profile, max), &blocked_mem);
 
     for (auto const [to, p] : utl::zip(neighbors, results)) {
       auto const duration = p.has_value() && (n::duration_t{p->cost_ / 60U} <
@@ -132,7 +135,8 @@ void update_rtt_td_footpaths(
     platform_matches_t const& matches,
     hash_set<std::pair<n::location_idx_t, osr::direction>> const& tasks,
     nigiri::rt_timetable const* old_rtt,
-    nigiri::rt_timetable& rtt) {
+    nigiri::rt_timetable& rtt,
+    std::chrono::seconds const max) {
   fmt::println("  -> {} routing tasks tasks", tasks.size());
 
   auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
@@ -142,9 +146,10 @@ void update_rtt_td_footpaths(
       tasks.size(),
       [&](osr::bitvec<osr::node_idx_t>& blocked, std::size_t const task_idx) {
         auto const [start, dir] = *(begin(tasks) + task_idx);
-        auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, start,
-                                    get_loc(tt, w, pl, matches, start), dir,
-                                    osr::search_profile::kWheelchair, blocked);
+        auto fps =
+            get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, start,
+                             get_loc(tt, w, pl, matches, start), dir,
+                             osr::search_profile::kWheelchair, max, blocked);
         {
           auto const lock = std::unique_lock{
               dir == osr::direction::kForward ? out_mutex : in_mutex};
@@ -195,9 +200,9 @@ void update_rtt_td_footpaths(osr::ways const& w,
                              elevators const& e,
                              elevator_footpath_map_t const& elevators_in_paths,
                              platform_matches_t const& matches,
-                             nigiri::rt_timetable& rtt) {
+                             nigiri::rt_timetable& rtt,
+                             std::chrono::seconds const max) {
   auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
-  auto n_sources = 0U, n_sinks = 0U;
   for (auto const& [e_in_path, from_to] : elevators_in_paths) {
     auto const e_idx =
         match_elevator(e.elevators_rtree_, e.elevators_, w, e_in_path);
@@ -214,7 +219,7 @@ void update_rtt_td_footpaths(osr::ways const& w,
     }
   }
   update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,
-                          rtt);
+                          rtt, max);
 }
 
 }  // namespace motis

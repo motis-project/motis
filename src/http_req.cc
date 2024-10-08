@@ -57,7 +57,8 @@ asio::awaitable<http_response> req_tls(
 
   auto const host = url.host();
   // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-  if (!SSL_set_tlsext_host_name(stream.native_handle(), host.c_str())) {
+  if (!SSL_set_tlsext_host_name(stream.native_handle(),
+                                const_cast<char*>(host.c_str()))) {
     throw boost::system::system_error{{static_cast<int>(::ERR_get_error()),
                                        boost::asio::error::get_ssl_category()}};
   }

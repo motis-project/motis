@@ -52,6 +52,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-c++20-extensions
             -Wno-switch-default
             -Wno-unused-template
+            -Wno-shadow-uncaptured-local
+            -Wno-documentation-deprecated-sync
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)

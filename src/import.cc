@@ -200,7 +200,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
               auto a = std::array<bool, n::kNumClasses>{};
               a.fill(d.default_bikes_allowed_);
               if (d.clasz_bikes_allowed_.has_value()) {
-                for (auto const [clasz, allowed] : *d.clasz_bikes_allowed_) {
+                for (auto const& [clasz, allowed] : *d.clasz_bikes_allowed_) {
                   a[static_cast<unsigned>(n::to_clasz(clasz))] = allowed;
                 }
               }
@@ -235,7 +235,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,

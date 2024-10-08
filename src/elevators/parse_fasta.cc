@@ -78,7 +78,7 @@ std::optional<elevator> parse_elevator(json::value const& e) {
 
 vector_map<elevator_idx_t, elevator> parse_fasta(std::string_view s) {
   auto ret = vector_map<elevator_idx_t, elevator>{};
-  for (auto const& [i, e] : utl::enumerate(json::parse(s).as_array())) {
+  for (auto const [i, e] : utl::enumerate(json::parse(s).as_array())) {
     if (auto x = parse_elevator(e); x.has_value()) {
       ret.emplace_back(std::move(*x));
     }

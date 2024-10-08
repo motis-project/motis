@@ -12,7 +12,7 @@ namespace motis::ep {
 
 std::string get_names(osr::platforms const& pl, osr::platform_idx_t const x) {
   auto ss = std::stringstream{};
-  for (auto const& y : pl.platform_names_[x]) {
+  for (auto const y : pl.platform_names_[x]) {
     ss << y.view() << ", ";
   }
   return ss.str();

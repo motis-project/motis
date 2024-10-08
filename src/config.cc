@@ -101,7 +101,7 @@ void config::verify_input_files_exist() const {
               tiles_.value_or(tiles{}).coastline_.value_or(""));
 
   if (timetable_) {
-    for (auto const [_, d] : timetable_->datasets_) {
+    for (auto const& [_, d] : timetable_->datasets_) {
       utl::verify(d.path_.starts_with("\n#") || fs::is_directory(d.path_) ||
                       fs::is_regular_file(d.path_),
                   "timetable dataset does not exist: {}", d.path_);

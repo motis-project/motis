@@ -16,10 +16,9 @@ namespace n = nigiri;
 
 namespace motis {
 
-std::int16_t get_area_lang_idx(a::typeahead const& t,
-                               a::language_list_t const& languages,
-                               a::area_set_lang_t const matched_area_lang,
-                               a::area_idx_t const a) {
+long get_area_lang_idx(a::typeahead const& t,
+                       a::language_list_t const& languages,
+                       a::area_idx_t const a) {
   for (auto i = 0U; i != languages.size(); ++i) {
     auto const j = languages.size() - i - 1U;
     auto const lang_idx = a::find_lang(t.area_name_lang_[a], languages[j]);
@@ -56,8 +55,8 @@ api::geocode_response suggestions_to_response(
           return (x > 7 ? 10 : 1) * std::abs(x - 7) <
                  (y > 7 ? 10 : 1) * std::abs(y - 7);
         });
-    auto const city_idx =
-        city_it == end(areas) ? -1 : std::distance(begin(areas), city_it);
+    auto const city_idx = static_cast<std::size_t>(
+        city_it == end(areas) ? -1 : std::distance(begin(areas), city_it));
 
     auto type = api::typeEnum{};
     auto street = std::optional<std::string>{};
@@ -116,17 +115,17 @@ api::geocode_response suggestions_to_response(
               auto const [i, a] = el;
               auto const admin_lvl = t.area_admin_level_[a];
               auto const is_matched = (((1U << i) & s.matched_areas_) != 0U);
-              auto const language =
-                  is_matched ? s.matched_area_lang_[i]
-                             : get_area_lang_idx(t, lang_indices,
-                                                 s.matched_area_lang_, a);
-              auto const name =
+              auto const language = is_matched
+                                        ? s.matched_area_lang_[i]
+                                        : get_area_lang_idx(t, lang_indices, a);
+              auto const area_name =
                   t.strings_[t.area_names_[a][language == -1
                                                   ? a::kDefaultLangIdx
-                                                  : language]]
+                                                  : static_cast<unsigned>(
+                                                        language)]]
                       .view();
               return api::Area{
-                  .name_ = std::string{name},
+                  .name_ = std::string{area_name},
                   .admin_level_ = static_cast<double>(to_idx(admin_lvl)),
                   .matched_ = is_matched,
                   .default_ = i == city_idx};
