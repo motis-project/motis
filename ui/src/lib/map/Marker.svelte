@@ -40,7 +40,13 @@
 	});
 
 	$effect(() => {
-		if (marker && location.value && location.value.match) {
+		if (
+			marker &&
+			location.value &&
+			location.value.match &&
+			location.value.match.lat &&
+			location.value.match.lon
+		) {
 			marker.setLngLat(location.value.match);
 		}
 	});

@@ -88,16 +88,20 @@
 							</div>
 						</div>
 						<Separator class="my-2" />
-						<div class="mt-4 flex flex-wrap gap-x-4 gap-y-4">
-							{#each it.legs.filter((l) => l.routeShortName) as l}
+						<div class="mt-4 flex flex-wrap gap-x-3 gap-y-3">
+							{#each it.legs.filter((l, i) => i == 0 || i == it.legs.length - 1 || l.routeShortName) as l}
 								<div
 									class="flex items-center py-1 px-2 rounded-lg font-bold text-sm h-8 text-nowrap"
 									style={routeColor(l)}
 								>
-									<svg class="relative mr-1 w-4 h-4 fill-white rounded-full">
+									<svg class="relative mr-1 w-4 h-4 rounded-full">
 										<use xlink:href={`#${getModeStyle(l.mode)[0]}`}></use>
 									</svg>
-									{l.routeShortName}
+									{#if l.routeShortName}
+										{l.routeShortName}
+									{:else}
+										{formatDurationSec(l.duration)}
+									{/if}
 								</div>
 							{/each}
 						</div>

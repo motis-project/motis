@@ -52,18 +52,16 @@
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {l} />
-				{#if pred?.from.track || pred?.duration !== 0}
+				{#if pred && (pred.from.track || pred.duration !== 0)}
 					<div class="border-t w-full h-0"></div>
-					{#if pred && (pred.from.track || pred.duration !== 0)}
-						<div class="text-sm text-muted-foreground text-nowrap px-2">
-							{#if pred.from.track}
-								Ankunft auf Gleis {pred.from.track},
-							{/if}
-							{#if pred.duration !== 0}
-								{formatDurationSec(pred.duration)} Fußweg
-							{/if}
-						</div>
-					{/if}
+					<div class="text-sm text-muted-foreground text-nowrap px-2">
+						{#if pred.from.track}
+							Ankunft auf Gleis {pred.from.track},
+						{/if}
+						{#if pred.duration !== 0}
+							{formatDurationSec(pred.duration)} Fußweg
+						{/if}
+					</div>
 				{/if}
 				<div class="border-t w-full h-0"></div>
 				{#if l.from.track}
