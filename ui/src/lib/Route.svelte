@@ -25,6 +25,8 @@
 	onclick={() => {
 		if (l.tripId && l.serviceDate) {
 			onClickTrip(l.tripId, l.serviceDate);
+		} else {
+			console.log('tripId or serviceDate missing', l);
 		}
 	}}
 >

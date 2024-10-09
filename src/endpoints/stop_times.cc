@@ -318,8 +318,9 @@ api::stoptimes_response stop_times::operator()(
                     to_str(s.get_route_color(ev_type).text_color_),
                 .routeId_ = "",
                 .tripId_ = tags_.id(tt_, s.get_trip_idx(ev_type)),
-                .serviceDate_ =
-                    r.is_rt() ? "" : get_service_date(tt_, r.t_, s.stop_idx_),
+                .serviceDate_ = fr.is_scheduled()
+                                    ? get_service_date(tt_, fr.t_, s.stop_idx_)
+                                    : "ADDED",
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
