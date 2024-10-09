@@ -1,6 +1,8 @@
 import type { Mode } from './openapi';
 
 export type LegLike = {
+	tripId?: string;
+	serviceDate?: string;
 	routeShortName?: string;
 	routeColor?: string;
 	routeTextColor?: string;

@@ -94,6 +94,42 @@ export type Match = {
 export type type = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
+ * # Street modes
+ *
+ * - `WALK`: Walking some or all of the way of the route.
+ * - `BIKE`: Cycling for the entirety of the route or taking a bicycle onto the public transport (if enabled) and cycling from the arrival station to the destination.
+ * - `BIKE_RENTAL`: Taking a rented, shared-mobility bike for part or the entirety of the route.
+ * - `BIKE_TO_PARK`: Leaving the bicycle at the departure station and walking from the arrival station to the destination. This mode needs to be combined with at least one transit mode otherwise it behaves like an ordinary bicycle journey.
+ * - `CAR`: Driving your own car the entirety of the route. This can be combined with transit, where will return routes with a Kiss & Ride component. This means that the car is not parked in a permanent parking area but rather the passenger is dropped off (for example, at an airport) and the driver continues driving the car away from the drop off location.
+ * - `CAR_PARK` | `CAR_TO_PARK`: Driving a car to the park-and-ride facilities near a station and taking publictransport. This mode needs to be combined with at least one transit mode otherwise, it behaves like an ordinary car journey.
+ * - `CAR_HAILING`: Using a car hailing app like Uber or Lyft to get to a train station or all the way to the destination.
+ * - `CAR_PICKUP`: Walking to a pickup point along the road, driving to a drop-off point along the road, and walking the rest of the way. This can include various taxi-services or kiss & ride.
+ * - `CAR_RENTAL`: Walk to a car rental point, drive to a car rental drop-off point and walk the rest of the way. This can include car rental at fixed locations or free-floating services.
+ * - `FLEXIBLE`: Encompasses all types of on-demand and flexible transportation for example GTFS Flex or NeTEx Flexible Stop Places.
+ * - `SCOOTER_RENTAL`: Walking to a scooter rental point, riding a scooter to a scooter rental drop-off point, and walking the rest of the way. This can include scooter rental at fixed locations or free-floating services.
+ *
+ * # Transit modes
+ *
+ * - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
+ * - `TRAM`: trams
+ * - `SUBWAY`: subway trains
+ * - `FERRY`: ferries
+ * - `AIRPLANE`: airline flights
+ * - `BUS`: short distance buses (does not include `COACH`)
+ * - `COACH`: long distance buses (does not include `BUS`)
+ * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
+ * - `METRO`: metro trains
+ * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
+ * - `LONG_DISTANCE`: long distance inter city trains
+ * - `NIGHT_RAIL`: long distance night trains
+ * - `COACH`: long distance buses
+ * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
+ * - `REGIONAL_RAIL`: regional train
+ *
+ */
+export type Mode = 'WALK' | 'BIKE' | 'CAR' | 'BIKE_RENTAL' | 'BIKE_TO_PARK' | 'CAR_TO_PARK' | 'CAR_HAILING' | 'CAR_SHARING' | 'CAR_PICKUP' | 'CAR_RENTAL' | 'FLEXIBLE' | 'SCOOTER_RENTAL' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
+
+/**
  * departure or arrival event at a stop
  */
 export type StopTime = {
@@ -144,42 +180,6 @@ export type StopTime = {
      */
     source: string;
 };
-
-/**
- * # Street modes
- *
- * - `WALK`: Walking some or all of the way of the route.
- * - `BIKE`: Cycling for the entirety of the route or taking a bicycle onto the public transport (if enabled) and cycling from the arrival station to the destination.
- * - `BIKE_RENTAL`: Taking a rented, shared-mobility bike for part or the entirety of the route.
- * - `BIKE_TO_PARK`: Leaving the bicycle at the departure station and walking from the arrival station to the destination. This mode needs to be combined with at least one transit mode otherwise it behaves like an ordinary bicycle journey.
- * - `CAR`: Driving your own car the entirety of the route. This can be combined with transit, where will return routes with a Kiss & Ride component. This means that the car is not parked in a permanent parking area but rather the passenger is dropped off (for example, at an airport) and the driver continues driving the car away from the drop off location.
- * - `CAR_PARK` | `CAR_TO_PARK`: Driving a car to the park-and-ride facilities near a station and taking publictransport. This mode needs to be combined with at least one transit mode otherwise, it behaves like an ordinary car journey.
- * - `CAR_HAILING`: Using a car hailing app like Uber or Lyft to get to a train station or all the way to the destination.
- * - `CAR_PICKUP`: Walking to a pickup point along the road, driving to a drop-off point along the road, and walking the rest of the way. This can include various taxi-services or kiss & ride.
- * - `CAR_RENTAL`: Walk to a car rental point, drive to a car rental drop-off point and walk the rest of the way. This can include car rental at fixed locations or free-floating services.
- * - `FLEXIBLE`: Encompasses all types of on-demand and flexible transportation for example GTFS Flex or NeTEx Flexible Stop Places.
- * - `SCOOTER_RENTAL`: Walking to a scooter rental point, riding a scooter to a scooter rental drop-off point, and walking the rest of the way. This can include scooter rental at fixed locations or free-floating services.
- *
- * # Transit modes
- *
- * - `TRANSIT`: translates to `RAIL,SUBWAY,TRAM,BUS,FERRY,AIRPLANE,COACH`
- * - `TRAM`: trams
- * - `SUBWAY`: subway trains
- * - `FERRY`: ferries
- * - `AIRPLANE`: airline flights
- * - `BUS`: short distance buses (does not include `COACH`)
- * - `COACH`: long distance buses (does not include `BUS`)
- * - `RAIL`: translates to `HIGHSPEED_RAIL,LONG_DISTANCE_RAIL,NIGHT_RAIL,REGIONAL_RAIL,REGIONAL_FAST_RAIL`
- * - `METRO`: metro trains
- * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
- * - `LONG_DISTANCE`: long distance inter city trains
- * - `NIGHT_RAIL`: long distance night trains
- * - `COACH`: long distance buses
- * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
- * - `REGIONAL_RAIL`: regional train
- *
- */
-export type Mode = 'WALK' | 'BIKE' | 'CAR' | 'BIKE_RENTAL' | 'BIKE_TO_PARK' | 'CAR_TO_PARK' | 'CAR_HAILING' | 'CAR_SHARING' | 'CAR_PICKUP' | 'CAR_RENTAL' | 'FLEXIBLE' | 'SCOOTER_RENTAL' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -494,6 +494,32 @@ export type GeocodeData = {
 export type GeocodeResponse = (Array<Match>);
 
 export type GeocodeError = unknown;
+
+export type TripData = {
+    query: {
+        /**
+         * Service date as specified in the source dataset.
+         * Can be taken from an itinerary leg or stop event.
+         *
+         * Not that for GTFS the first departure time can be greater than 24:00:00
+         * which means that the service date is shifted by the offset (first departure / 24h).
+         * A valid use case for this are stay seated transfers expressed by `block_id`.
+         *
+         * Example: a train with first departure at 25:00:00 on 9th of Oct 2024
+         * has the 8th of Oct 2024 as service date.
+         *
+         */
+        date: string;
+        /**
+         * trip identifier (e.g. from an itinerary leg or stop event)
+         */
+        tripId: string;
+    };
+};
+
+export type TripResponse = (Itinerary);
+
+export type TripError = unknown;
 
 export type StoptimesData = {
     query: {

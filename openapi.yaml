@@ -70,6 +70,42 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
+  /api/v1/trip:
+    get:
+      tags:
+        - timetable
+      summary: Get a trip as itinerary
+      operationId: trip
+      parameters:
+        - name: tripId
+          in: query
+          schema:
+            type: string
+          required: true
+          description: trip identifier (e.g. from an itinerary leg or stop event)
+        - name: date
+          in: query
+          schema:
+            type: string
+          required: true
+          description: |
+            Service date as specified in the source dataset.
+            Can be taken from an itinerary leg or stop event.
+            
+            Not that for GTFS the first departure time can be greater than 24:00:00
+            which means that the service date is shifted by the offset (first departure / 24h).
+            A valid use case for this are stay seated transfers expressed by `block_id`.
+            
+            Example: a train with first departure at 25:00:00 on 9th of Oct 2024
+            has the 8th of Oct 2024 as service date.
+      responses:
+        200:
+          description: the requested trip as itinerary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Itinerary'
+
   /api/v1/stoptimes:
     get:
       tags:

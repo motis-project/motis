@@ -10,11 +10,13 @@
 	let {
 		stopId,
 		time: queryTime,
-		arriveBy = $bindable()
+		arriveBy = $bindable(),
+		onClickTrip
 	}: {
 		stopId: string;
 		time: Date;
 		arriveBy?: boolean;
+		onClickTrip: (tripId: string, date: string) => void;
 	} = $props();
 
 	const [date, time] = toDateTime(queryTime);
@@ -69,7 +71,7 @@
 			{/if}
 
 			{#each r.stopTimes as t}
-				<Route class="col-span-3 w-fit" l={t} />
+				<Route class="col-span-3 w-fit" l={t} {onClickTrip} />
 				<Time rt={false} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
 				<Time rt={true} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
 				<div class="col-span-4 flex items-center text-muted-foreground">

@@ -24,6 +24,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/stop_times.h"
 #include "motis/endpoints/tiles.h"
+#include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
 #include "motis/rt_update.h"
 
@@ -83,6 +84,7 @@ int server(int ac, char** av) {
   GET<ep::geocode>(qr, "/api/v1/geocode", d);
   GET<ep::routing>(qr, "/api/v1/plan", d);
   GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
+  GET<ep::trip>(qr, "/api/v1/trip", d);
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");

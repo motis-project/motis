@@ -12,6 +12,8 @@
 
 namespace motis {
 
+std::pair<std::string_view, std::string_view> split_tag_id(std::string_view);
+
 struct tag_lookup {
   void add(nigiri::source_idx_t, std::string_view str);
 

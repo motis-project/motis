@@ -9,10 +9,12 @@
 
 	const {
 		itinerary,
-		onClickStop
+		onClickStop,
+		onClickTrip
 	}: {
 		itinerary: Itinerary;
 		onClickStop: (name: string, stopId: string, time: Date) => void;
+		onClickTrip: (tripId: string, date: string) => void;
 	} = $props();
 
 	const lastLeg = itinerary.legs.findLast((l) => l.duration !== 0);
@@ -51,7 +53,7 @@
 
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
-				<Route {l} />
+				<Route {onClickTrip} {l} />
 				{#if pred && (pred.from.track || pred.duration !== 0)}
 					<div class="border-t w-full h-0"></div>
 					<div class="text-sm text-muted-foreground text-nowrap px-2">
@@ -123,7 +125,7 @@
 				{/if}
 			</div>
 		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName)}
-			<Route {l} />
+			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-7 items-center">
 					{@render stopTimes(l.startTime, l.departureDelay, l.realTime, l.from.name, l.from.stopId)}

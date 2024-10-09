@@ -6,7 +6,7 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import { type Itinerary, plan, type PlanResponse } from '$lib/openapi';
+	import { type Itinerary, plan, type PlanResponse, trip } from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -102,6 +102,13 @@
 	let stopArriveBy = $state<boolean>();
 	let selectedStop = $state<{ name: string; stopId: string; time: Date }>();
 
+	const onClickTrip = (tripId: string, date: string) => {
+		trip({ query: { tripId, date } }).then((r) => {
+			selectedItinerary = r.data;
+			selectedStop = undefined;
+		});
+	};
+
 	type CloseFn = () => void;
 </script>
 
@@ -188,6 +195,7 @@
 						onClickStop={(name: string, stopId: string, time: Date) => {
 							selectedStop = { name, stopId, time };
 						}}
+						{onClickTrip}
 					/>
 				</div>
 			</Card>
@@ -222,6 +230,7 @@
 						stopId={selectedStop.stopId}
 						time={selectedStop.time}
 						bind:arriveBy={stopArriveBy}
+						{onClickTrip}
 					/>
 				</div>
 			</Card>

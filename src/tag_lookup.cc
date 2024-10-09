@@ -17,13 +17,12 @@ namespace motis {
 constexpr auto const kMode =
     cista::mode::WITH_INTEGRITY | cista::mode::WITH_STATIC_VERSION;
 
-std::pair<std::string_view, std::string_view> split_tag_and_location_id(
-    std::string_view station_id) {
-  auto const first_underscore_pos = station_id.find('_');
+std::pair<std::string_view, std::string_view> split_tag_id(std::string_view x) {
+  auto const first_underscore_pos = x.find('_');
   return first_underscore_pos != std::string_view::npos
-             ? std::pair{station_id.substr(0, first_underscore_pos),
-                         station_id.substr(first_underscore_pos + 1U)}
-             : std::pair{std::string_view{}, station_id};
+             ? std::pair{x.substr(0, first_underscore_pos),
+                         x.substr(first_underscore_pos + 1U)}
+             : std::pair{std::string_view{}, x};
 }
 
 void tag_lookup::add(n::source_idx_t const src, std::string_view str) {
@@ -68,7 +67,7 @@ std::string tag_lookup::id(nigiri::trip_id const& t) const {
 
 nigiri::location_idx_t tag_lookup::get(nigiri::timetable const& tt,
                                        std::string_view s) const {
-  auto const [tag, id] = split_tag_and_location_id(s);
+  auto const [tag, id] = split_tag_id(s);
   auto const src = get_src(tag);
   try {
     return tt.locations_.location_id_to_idx_.at({{id}, src});

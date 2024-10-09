@@ -66,6 +66,12 @@ n::unixtime_t get_date_time(std::optional<std::string> const& date,
   }
 }
 
+date::sys_days parse_iso_date(std::string_view s) {
+  auto d = date::sys_days{};
+  (std::stringstream{} << s) >> date::parse("%F", d);
+  return d;
+}
+
 std::pair<n::direction, n::unixtime_t> parse_cursor(std::string_view s) {
   auto const split_pos = s.find("|");
   utl::verify(split_pos != std::string_view::npos && split_pos != s.size() - 1U,
