@@ -8,15 +8,16 @@
 	let {
 		color,
 		draggable,
-		location = $bindable()
+		location = $bindable(),
+		marker = $bindable()
 	}: {
 		color: string;
 		draggable: boolean;
 		location: Location;
+		marker?: maplibregl.Marker;
 	} = $props();
 
 	let initialized = false;
-	let marker: maplibregl.Marker | undefined;
 
 	$effect(() => {
 		if (ctx.map && location.value.match) {

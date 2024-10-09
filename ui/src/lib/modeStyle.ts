@@ -17,7 +17,7 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 		case 'BIKE_TO_PARK':
 		case 'BIKE_RENTAL':
 		case 'SCOOTER_RENTAL':
-			return ['bike', '#333', 'hsl(var(--foreground) / 1)'];
+			return ['bike', '#333', 'white'];
 
 		case 'CAR':
 		case 'CAR_TO_PARK':
@@ -25,45 +25,45 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 		case 'CAR_SHARING':
 		case 'CAR_PICKUP':
 		case 'CAR_RENTAL':
-			return ['car', '#333', 'hsl(var(--foreground) / 1)'];
+			return ['car', '#333', 'white'];
 
 		case 'TRANSIT':
 		case 'BUS':
-			return ['bus', '#ff9800', 'hsl(var(--foreground) / 1)'];
+			return ['bus', '#ff9800', 'white'];
 		case 'COACH':
-			return ['bus', '#9ccc65', 'hsl(var(--foreground) / 1)'];
+			return ['bus', '#9ccc65', 'white'];
 
 		case 'TRAM':
-			return ['tram', '#ff9800', 'hsl(var(--foreground) / 1)'];
+			return ['tram', '#ff9800', 'white'];
 
 		case 'METRO':
-			return ['sbahn', '#4caf50', 'hsl(var(--foreground) / 1)'];
+			return ['sbahn', '#4caf50', 'white'];
 
 		case 'SUBWAY':
-			return ['ubahn', '#3f51b5', 'hsl(var(--foreground) / 1)'];
+			return ['ubahn', '#3f51b5', 'white'];
 
 		case 'FERRY':
-			return ['ferry', '#00acc1', 'hsl(var(--foreground) / 1)'];
+			return ['ferry', '#00acc1', 'white'];
 
 		case 'AIRPLANE':
-			return ['plane', '#90a4ae', 'hsl(var(--foreground) / 1)'];
+			return ['plane', '#90a4ae', 'white'];
 
 		case 'HIGHSPEED_RAIL':
-			return ['train', '#9c27b0', 'hsl(var(--foreground) / 1)'];
+			return ['train', '#9c27b0', 'white'];
 
 		case 'LONG_DISTANCE':
-			return ['train', '#e91e63', 'hsl(var(--foreground) / 1)'];
+			return ['train', '#e91e63', 'white'];
 
 		case 'NIGHT_RAIL':
-			return ['train', '#1a237e', 'hsl(var(--foreground) / 1)'];
+			return ['train', '#1a237e', 'white'];
 
 		case 'REGIONAL_FAST_RAIL':
 		case 'REGIONAL_RAIL':
 		case 'RAIL':
-			return ['train', '#f44336', 'hsl(var(--foreground) / 1)'];
+			return ['train', '#f44336', 'white'];
 	}
 
-	return ['train', '#000000', 'hsl(var(--foreground) / 1)'];
+	return ['train', '#000000', 'white'];
 };
 
 export const getColor = (l: LegLike): [string, string] => {

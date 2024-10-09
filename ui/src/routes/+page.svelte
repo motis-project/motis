@@ -41,6 +41,8 @@
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
 
+	let fromMarker = $state<maplibregl.Marker>();
+	let toMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>({ label: '', value: {} });
 	let to = $state<Location>({ label: '', value: {} });
 	let dateTime = $state<Date>(new Date());
@@ -107,9 +109,8 @@
 	<Button
 		variant="outline"
 		on:click={() => {
-			let x = posToLocation(e.lngLat);
-			from.value = x.value;
-			from.label = x.label;
+			from = posToLocation(e.lngLat);
+			fromMarker?.setLngLat(from.value.match!);
 			close();
 		}}
 	>
@@ -118,9 +119,8 @@
 	<Button
 		variant="outline"
 		on:click={() => {
-			let x = posToLocation(e.lngLat);
-			to.value = x.value;
-			to.label = x.label;
+			to = posToLocation(e.lngLat);
+			toMarker?.setLngLat(to.value.match!);
 			close();
 		}}
 	>
@@ -133,7 +133,6 @@
 	bind:bounds
 	bind:zoom
 	transformRequest={(url: string) => {
-		console.log(url);
 		if (url.startsWith('/sprite')) {
 			return { url: `${client.getConfig().baseUrl}/${url}` };
 		}
@@ -232,10 +231,10 @@
 	<Popup trigger="contextmenu" children={contextMenu} />
 
 	{#if from}
-		<Marker color="green" draggable={true} bind:location={from} />
+		<Marker color="green" draggable={true} bind:location={from} bind:marker={fromMarker} />
 	{/if}
 
 	{#if to}
-		<Marker color="red" draggable={true} bind:location={to} />
+		<Marker color="red" draggable={true} bind:location={to} bind:marker={toMarker} />
 	{/if}
 </Map>
