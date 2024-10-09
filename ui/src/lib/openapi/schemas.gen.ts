@@ -101,6 +101,80 @@ export const MatchSchema = {
     }
 } as const;
 
+export const StopTimeSchema = {
+    description: 'departure or arrival event at a stop',
+    type: 'object',
+    required: ['mode', 'time', 'delay', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'routeColor', 'routeTextColor', 'routeType', 'routeId', 'tripId', 'serviceDate', 'routeShortName', 'source'],
+    properties: {
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this leg'
+        },
+        time: {
+            type: 'integer',
+            description: `The offset from the scheduled arrival time of the boarding stop in this leg.
+Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+`
+        },
+        delay: {
+            type: 'integer',
+            description: `The offset from the scheduled departure time of the boarding stop in this leg.
+Scheduled time of departure at boarding stop = startTime - departureDelay
+`
+        },
+        realTime: {
+            description: 'Whether there is real-time data about this leg',
+            type: 'boolean'
+        },
+        route: {
+            description: `For transit legs, the route of the bus or train being used.
+For non-transit legs, the name of the street being traversed.
+`,
+            type: 'string'
+        },
+        headsign: {
+            description: `For transit legs, the headsign of the bus or train being used.
+For non-transit legs, null
+`,
+            type: 'string'
+        },
+        agencyId: {
+            type: 'string'
+        },
+        agencyName: {
+            type: 'string'
+        },
+        agencyUrl: {
+            type: 'string'
+        },
+        routeColor: {
+            type: 'string'
+        },
+        routeTextColor: {
+            type: 'string'
+        },
+        routeType: {
+            type: 'string'
+        },
+        routeId: {
+            type: 'string'
+        },
+        tripId: {
+            type: 'string'
+        },
+        serviceDate: {
+            type: 'string'
+        },
+        routeShortName: {
+            type: 'string'
+        },
+        source: {
+            description: 'Filename and line number where this trip is from',
+            type: 'string'
+        }
+    }
+} as const;
+
 export const ModeSchema = {
     description: `# Street modes
 
@@ -252,19 +326,6 @@ and thus the directions should say something like "cross"
         lat: {
             description: 'The latitude of start of the step',
             type: 'number'
-        }
-    }
-} as const;
-
-export const FeedScopedIdSchema = {
-    type: 'object',
-    required: ['feedId', 'id'],
-    properties: {
-        feedId: {
-            type: 'string'
-        },
-        id: {
-            type: 'string'
         }
     }
 } as const;

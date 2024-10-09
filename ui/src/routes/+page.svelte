@@ -20,6 +20,8 @@
 	import LevelSelect from './LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/openapi';
+	import StopTimes from './StopTimes.svelte';
+	import { toDateTime } from '$lib/toDateTime';
 
 	const urlParams = browser && new URLSearchParams(window.location.search);
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -45,7 +47,6 @@
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
 
-	const pad = (x: number) => ('0' + x).slice(-2);
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
 			return l.value.match.id;
@@ -59,8 +60,8 @@
 		from.value.match && to.value.match
 			? {
 					query: {
-						date: `${pad(dateTime.getUTCMonth() + 1)}-${pad(dateTime.getUTCDate())}-${dateTime.getUTCFullYear()}`,
-						time: `${pad(dateTime.getUTCHours())}:${pad(dateTime.getUTCMinutes())}`,
+						date: toDateTime(dateTime)[0],
+						time: toDateTime(dateTime)[1],
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
 						arriveBy: timeType === 'arrival',
@@ -75,6 +76,7 @@
 		if (baseQuery) {
 			routingResponses = [plan<true>(baseQuery).then((response) => response.data)];
 			selectedItinerary = undefined;
+			selectedStop = undefined;
 		}
 	});
 
@@ -94,6 +96,9 @@
 			map.flyTo({ ...map.cameraForBounds(box), padding });
 		}
 	});
+
+	let stopArriveBy = $state<boolean>();
+	let selectedStop = $state<{ name: String; stopId: string; time: Date }>();
 
 	type CloseFn = () => void;
 </script>
@@ -164,11 +169,11 @@
 		</Control>
 	{/if}
 
-	{#if selectedItinerary}
+	{#if selectedItinerary && !selectedStop}
 		<Control position="top-left">
 			<Card class="w-[500px] bg-background rounded-lg">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-					<h2 class="ml-2 text-base font-semibold tracking-tight">Journey Details</h2>
+					<h2 class="ml-2 text-base font-semibold">Journey Details</h2>
 					<Button
 						variant="ghost"
 						on:click={() => {
@@ -178,12 +183,50 @@
 						<X />
 					</Button>
 				</div>
-				<div class="overflow-y-auto overflow-x-hidden max-h-[70vh]">
-					<ConnectionDetail itinerary={selectedItinerary} />
+				<div class="p-6 overflow-y-auto overflow-x-hidden max-h-[70vh]">
+					<ConnectionDetail
+						itinerary={selectedItinerary}
+						onClickStop={(name: string, stopId: string, time: Date) => {
+							selectedStop = { name, stopId, time };
+						}}
+					/>
 				</div>
 			</Card>
 		</Control>
 		<ItineraryGeoJson itinerary={selectedItinerary} {level} />
+	{/if}
+
+	{#if selectedStop}
+		<Control position="top-left">
+			<Card class="w-[500px] bg-background rounded-lg">
+				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
+					<h2 class="ml-2 text-base font-semibold">
+						{#if stopArriveBy}
+							Ankünfte
+						{:else}
+							Abfahrten
+						{/if}
+						in
+						{selectedStop.name}
+					</h2>
+					<Button
+						variant="ghost"
+						on:click={() => {
+							selectedStop = undefined;
+						}}
+					>
+						<X />
+					</Button>
+				</div>
+				<div class="p-6 overflow-y-auto overflow-x-hidden max-h-[70vh]">
+					<StopTimes
+						stopId={selectedStop.stopId}
+						time={selectedStop.time}
+						bind:arriveBy={stopArriveBy}
+					/>
+				</div>
+			</Card>
+		</Control>
 	{/if}
 
 	<Popup trigger="contextmenu" children={contextMenu} />

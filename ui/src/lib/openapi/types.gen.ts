@@ -94,6 +94,58 @@ export type Match = {
 export type type = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
+ * departure or arrival event at a stop
+ */
+export type StopTime = {
+    /**
+     * Transport mode for this leg
+     */
+    mode: Mode;
+    /**
+     * The offset from the scheduled arrival time of the boarding stop in this leg.
+     * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+     *
+     */
+    time: number;
+    /**
+     * The offset from the scheduled departure time of the boarding stop in this leg.
+     * Scheduled time of departure at boarding stop = startTime - departureDelay
+     *
+     */
+    delay: number;
+    /**
+     * Whether there is real-time data about this leg
+     */
+    realTime: boolean;
+    /**
+     * For transit legs, the route of the bus or train being used.
+     * For non-transit legs, the name of the street being traversed.
+     *
+     */
+    route: string;
+    /**
+     * For transit legs, the headsign of the bus or train being used.
+     * For non-transit legs, null
+     *
+     */
+    headsign: string;
+    agencyId: string;
+    agencyName: string;
+    agencyUrl: string;
+    routeColor: string;
+    routeTextColor: string;
+    routeType: string;
+    routeId: string;
+    tripId: string;
+    serviceDate: string;
+    routeShortName: string;
+    /**
+     * Filename and line number where this trip is from
+     */
+    source: string;
+};
+
+/**
  * # Street modes
  *
  * - `WALK`: Walking some or all of the way of the route.
@@ -224,11 +276,6 @@ export type StepInstruction = {
      * The latitude of start of the step
      */
     lat: number;
-};
-
-export type FeedScopedId = {
-    feedId: string;
-    id: string;
 };
 
 export type EncodedPolyline = {
@@ -448,6 +495,71 @@ export type GeocodeResponse = (Array<Match>);
 
 export type GeocodeError = unknown;
 
+export type StoptimesData = {
+    query: {
+        /**
+         * Optional. Default is `false`.
+         *
+         * - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
+         * - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+         *
+         */
+        arriveBy?: boolean;
+        /**
+         * Optional. Defaults to the current date.
+         *
+         * Departure date ($arriveBy=false) / arrival date ($arriveBy=true), format: 06-28-2024
+         *
+         */
+        date?: string;
+        /**
+         * the number of events
+         */
+        n: number;
+        /**
+         * Use the cursor to go to the next "page" of stop times.
+         * Copy the cursor from the last response and keep the original request as is.
+         * This will enable you to search for stop times in the next or previous time-window.
+         *
+         */
+        pageCursor?: string;
+        /**
+         * stop id of the stop to retrieve departures/arrivals for
+         */
+        stopId: string;
+        /**
+         * Optional. Defaults to the current time.
+         *
+         * Format:
+         * - 12h format: 7:06pm
+         * - 24h format: 19:06
+         *
+         */
+        time?: string;
+    };
+};
+
+export type StoptimesResponse = ({
+    /**
+     * list of stop times
+     */
+    stopTimes: Array<StopTime>;
+    /**
+     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+     * The previous page is a set of stop times BEFORE the first stop time in the result.
+     *
+     */
+    previousPageCursor: string;
+    /**
+     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+     * The next page is a set of stop times AFTER the last stop time in this result.
+     *
+     */
+    nextPageCursor: string;
+});
+
+export type StoptimesError = unknown;
+
 export type PlanData = {
     query: {
         /**
@@ -466,7 +578,7 @@ export type PlanData = {
          */
         date?: string;
         /**
-         * latitude, longitude, level tuple in degrees or stop id
+         * \`latitude,longitude,level\` tuple in degrees OR stop id
          */
         fromPlace: string;
         /**
@@ -575,7 +687,7 @@ export type PlanData = {
          */
         timetableView?: boolean;
         /**
-         * latitude, longitude, level tuple in degrees or stop id
+         * \`latitude,longitude,level\` tuple in degrees OR stop id
          */
         toPlace: string;
         /**

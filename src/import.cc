@@ -54,7 +54,7 @@ namespace motis {
 
 constexpr auto const kAdrBinaryVersion = 1U;
 constexpr auto const kOsrBinaryVersion = 2U;
-constexpr auto const kNigiriBinaryVersion = 2U;
+constexpr auto const kNigiriBinaryVersion = 3U;
 
 using meta_entry_t = std::pair<std::string, std::uint64_t>;
 using meta_t = std::map<std::string, std::uint64_t>;
@@ -233,7 +233,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,

@@ -16,6 +16,7 @@
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/time_conv.h"
+#include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/service_date.h"
 
 namespace n = nigiri;
@@ -264,12 +265,11 @@ api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
 
-  auto const time = get_date_time(query.date_, query.time_);
   auto const l = tags_.get(tt_, query.stopId_);
   auto const l_name = tt_.locations_.names_[l].view();
-  auto const [dir, t] = parse_cursor(query.pageCursor_.value_or(
+  auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
       fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",
-                  to_seconds(get_date_time()))));
+                  to_seconds(get_date_time(query.date_, query.time_)))));
 
   auto locations = std::vector{l};
   utl::concat(locations, tt_.locations_.children_[l]);
@@ -284,8 +284,13 @@ api::stoptimes_response stop_times::operator()(
   auto const rtt = rt->rtt_.get();
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
-  auto const events = get_events(locations, tt_, rtt, time, ev_type, dir,
-                                 static_cast<std::size_t>(query.n_));
+  auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
+                           static_cast<std::size_t>(query.n_));
+  utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
+    auto const fr_a = n::rt::frun{tt_, rtt, a};
+    auto const fr_b = n::rt::frun{tt_, rtt, b};
+    return fr_a[0].time(ev_type) < fr_b[0].time(ev_type);
+  });
   return {
       .stopTimes_ = utl::to_vec(
           events,
@@ -294,6 +299,7 @@ api::stoptimes_response stop_times::operator()(
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
             return {
+                .mode_ = to_mode(s.get_clasz(ev_type)),
                 .time_ = to_ms(s.time(ev_type)),
                 .delay_ = to_ms(s.delay(ev_type)),
                 .realTime_ = r.is_rt(),
@@ -307,7 +313,8 @@ api::stoptimes_response stop_times::operator()(
                     to_str(s.get_route_color(ev_type).text_color_),
                 .routeId_ = "",
                 .tripId_ = tags_.id(tt_, s.get_trip_idx(ev_type)),
-                .serviceDate_ = get_service_date(tt_, r.t_, s.stop_idx_),
+                .serviceDate_ =
+                    r.is_rt() ? "" : get_service_date(tt_, r.t_, s.stop_idx_),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
