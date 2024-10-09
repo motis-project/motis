@@ -100,7 +100,7 @@
 	});
 
 	let stopArriveBy = $state<boolean>();
-	let selectedStop = $state<{ name: String; stopId: string; time: Date }>();
+	let selectedStop = $state<{ name: string; stopId: string; time: Date }>();
 
 	type CloseFn = () => void;
 </script>
