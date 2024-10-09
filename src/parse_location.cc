@@ -1,5 +1,7 @@
 #include "motis/parse_location.h"
 
+#include <utility>
+
 #include "boost/phoenix/core/reference.hpp"
 #include "boost/spirit/include/qi.hpp"
 
@@ -102,6 +104,7 @@ n::routing::query cursor_to_query(std::string_view s) {
           .extend_interval_earlier_ = false,
           .extend_interval_later_ = true};
   }
+  std::unreachable();
 }
 
 }  // namespace motis
