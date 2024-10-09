@@ -10,9 +10,9 @@ info:
   version: v1
 externalDocs:
   description: Find out more about MOTIS
-  url: https://triptix.tech
+  url: https://github.com/motis-project/motis
 servers:
-  - url: https://demo.triptix.tech
+  - url: https://europe.motis-project.de
 paths:
   /api/v1/reverse-geocode:
     get:
@@ -70,6 +70,99 @@ paths:
                 items:
                   $ref: '#/components/schemas/Match'
 
+  /api/v1/stoptimes:
+    get:
+      tags:
+        - timetable
+      summary: Get the next N departures or arrivals of a stop sorted by time
+      operationId: stoptimes
+      parameters:
+        - name: stopId
+          in: query
+          schema:
+            type: string
+          required: true
+          description: stop id of the stop to retrieve departures/arrivals for
+
+        - name: date
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current date.
+            
+            Departure date ($arriveBy=false) / arrival date ($arriveBy=true), format: 06-28-2024
+          schema:
+            type: string
+
+        - name: time
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current time.
+
+            Format:
+              - 12h format: 7:06pm
+              - 24h format: 19:06
+          schema:
+            type: string
+
+        - name: arriveBy
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+              - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
+              - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+
+        - name: n
+          in: query
+          schema:
+            type: integer
+          required: true
+          description: the number of events
+
+        - name: pageCursor
+          in: query
+          required: false
+          description: |
+            Use the cursor to go to the next "page" of stop times.
+            Copy the cursor from the last response and keep the original request as is.
+            This will enable you to search for stop times in the next or previous time-window.
+          schema:
+            type: string
+
+      responses:
+        200:
+          description: A list of guesses to resolve the text to a location
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - stopTimes
+                  - previousPageCursor
+                  - nextPageCursor
+                properties:
+                  stopTimes:
+                    description: list of stop times
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StopTime'
+                  previousPageCursor:
+                    description: |
+                      Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+                      The previous page is a set of stop times BEFORE the first stop time in the result.
+                    type: string
+                  nextPageCursor:
+                    description: |
+                      Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+                      The next page is a set of stop times AFTER the last stop time in this result.
+                    type: string
+
   /api/v1/plan:
     get:
       tags:
@@ -80,14 +173,14 @@ paths:
         - name: fromPlace
           in: query
           required: true
-          description: latitude, longitude, level tuple in degrees or stop id
+          description: \`latitude,longitude,level\` tuple in degrees OR stop id
           schema:
             type: string
 
         - name: toPlace
           in: query
           required: true
-          description: latitude, longitude, level tuple in degrees or stop id
+          description: \`latitude,longitude,level\` tuple in degrees OR stop id
           schema:
             type: string
 
@@ -486,6 +579,74 @@ components:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
 
+    StopTime:
+      description: departure or arrival event at a stop
+      type: object
+      required:
+        - time
+        - delay
+        - realTime
+        - route
+        - headsign
+        - agencyId
+        - agencyName
+        - agencyUrl
+        - routeColor
+        - routeTextColor
+        - routeType
+        - routeId
+        - tripId
+        - serviceDate
+        - routeShortName
+        - source
+      properties:
+        time:
+          type: integer
+          description: |
+            The offset from the scheduled arrival time of the boarding stop in this leg.
+            Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+        delay:
+          type: integer
+          description: |
+            The offset from the scheduled departure time of the boarding stop in this leg.
+            Scheduled time of departure at boarding stop = startTime - departureDelay
+        realTime:
+          description: Whether there is real-time data about this leg
+          type: boolean
+        route:
+          description: |
+            For transit legs, the route of the bus or train being used.
+            For non-transit legs, the name of the street being traversed.
+          type: string
+        headsign:
+          description: |
+            For transit legs, the headsign of the bus or train being used.
+            For non-transit legs, null
+          type: string
+        agencyId:
+          type: string
+        agencyName:
+          type: string
+        agencyUrl:
+          type: string
+        routeColor:
+          type: string
+        routeTextColor:
+          type: string
+        routeType:
+          type: string
+        routeId:
+          type: string
+        tripId:
+          type: string
+        serviceDate:
+          type: string
+        routeShortName:
+          type: string
+        source:
+          description: Filename and line number where this trip is from
+          type: string
+
     Mode:
       description: |
         # Street modes
@@ -679,17 +840,6 @@ components:
         lat:
           description: The latitude of start of the step
           type: number
-
-    FeedScopedId:
-      type: object
-      required:
-        - feedId
-        - id
-      properties:
-        feedId:
-          type: string
-        id:
-          type: string
 
     EncodedPolyline:
       type: object

@@ -20,25 +20,13 @@
 
 #include "motis/constants.h"
 #include "motis/tag_lookup.h"
+#include "motis/time_conv.h"
+#include "motis/timetable/service_date.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
 namespace motis {
-
-std::int64_t to_ms(n::unixtime_t const t) {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(
-             t.time_since_epoch())
-      .count();
-}
-
-std::int64_t to_seconds(n::i32_minutes const t) {
-  return std::chrono::duration_cast<std::chrono::seconds>(t).count();
-}
-
-std::int64_t to_ms(n::i32_minutes const t) {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(t).count();
-}
 
 api::Place to_place(nigiri::timetable const& tt,
                     tag_lookup const& tags,
@@ -92,10 +80,6 @@ api::Place to_place(n::timetable const& tt,
   }
 }
 
-std::string to_str(n::color_t const c) {
-  return fmt::format("{:06x}", to_idx(c) & 0x00ffffff);
-}
-
 api::ModeEnum to_mode(n::clasz const c) {
   switch (c) {
     case n::clasz::kAir: return api::ModeEnum::AIRPLANE;
@@ -126,20 +110,6 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
   }
   std::unreachable();
-}
-
-std::string get_service_date(n::timetable const& tt,
-                             n::transport const t,
-                             n::stop_idx_t const stop_idx) {
-  auto const o = tt.transport_first_dep_offset_[t.t_idx_];
-  auto const utc_dep =
-      tt.event_mam(t.t_idx_, stop_idx, n::event_type::kDep).as_duration();
-  auto const gtfs_static_dep = utc_dep + o;
-  auto const [day_offset, tz_offset_minutes] =
-      n::rt::split_rounded(gtfs_static_dep - utc_dep);
-  auto const day = (tt.internal_interval_days().from_ +
-                    std::chrono::days{to_idx(t.day_)} - day_offset);
-  return fmt::format("{:%Y-%m-%d}", day);
 }
 
 api::Itinerary journey_to_response(
@@ -263,7 +233,8 @@ api::Itinerary journey_to_response(
               leg.routeTextColor_ = to_str(color.text_color_);
               leg.mode_ = to_mode(enter_stop.get_clasz());
               leg.realTime_ = fr.is_rt();
-              leg.tripId_ = fr.id().id_;  // TODO source_idx
+              leg.tripId_ =
+                  fmt::format("{}_{}", tags.get_tag(fr.id().src_), fr.id().id_);
               leg.serviceDate_ = get_service_date(tt, t.r_.t_, 0U);
               leg.agencyName_ = agency.long_name_;
               leg.agencyId_ = agency.short_name_;

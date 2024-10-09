@@ -19,6 +19,7 @@
 #include "motis/max_distance.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
+#include "motis/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
@@ -234,7 +235,7 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
 
 n::routing::query get_start_time(api::plan_params const& query) {
   if (query.pageCursor_.has_value()) {
-    return parse_cursor(*query.pageCursor_);
+    return cursor_to_query(*query.pageCursor_);
   } else {
     auto const t = get_date_time(query.date_, query.time_);
     auto const window = std::chrono::duration_cast<n::duration_t>(
@@ -358,14 +359,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                             w_, l_, tt_, tags_, pl_, e, rtt, matches_,
                             query.wheelchair_, j, start, dest, cache, *blocked);
                       }),
-      .previousPageCursor_ = fmt::format(
-          "EARLIER|{}", std::chrono::duration_cast<std::chrono::seconds>(
-                            r.interval_.from_.time_since_epoch())
-                            .count()),
-      .nextPageCursor_ = fmt::format(
-          "LATER|{}", std::chrono::duration_cast<std::chrono::seconds>(
-                          r.interval_.to_.time_since_epoch())
-                          .count()),
+      .previousPageCursor_ =
+          fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),
+      .nextPageCursor_ = fmt::format("LATER|{}", to_seconds(r.interval_.to_)),
   };
 }
 

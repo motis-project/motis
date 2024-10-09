@@ -41,11 +41,6 @@ std::string_view tag_lookup::get_tag(n::source_idx_t const src) const {
   return src == n::source_idx_t::invalid() ? "" : src_to_tag_.at(src).view();
 }
 
-std::string_view tag_lookup::get_tag_clean(n::source_idx_t const src) const {
-  auto const tag = get_tag(src);
-  return tag.empty() ? tag : tag.substr(0, tag.size() - 1);
-}
-
 std::string tag_lookup::id(nigiri::timetable const& tt,
                            nigiri::location_idx_t const l) const {
   auto const src = tt.locations_.src_.at(l);
@@ -53,6 +48,22 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
   return src == n::source_idx_t::invalid()
              ? std::string{id}
              : fmt::format("{}_{}", get_tag(src), id);
+}
+
+std::string tag_lookup::id(nigiri::timetable const& tt,
+                           nigiri::trip_idx_t const t) const {
+  auto const id_idx = tt.trip_ids_[t].front();
+  auto const id = tt.trip_id_strings_[id_idx].view();
+  auto const src = tt.trip_id_src_[id_idx];
+  return src == n::source_idx_t::invalid()
+             ? std::string{id}
+             : fmt::format("{}_{}", get_tag(src), id);
+}
+
+std::string tag_lookup::id(nigiri::trip_id const& t) const {
+  return t.src_ == n::source_idx_t::invalid()
+             ? std::string{t.id_}
+             : fmt::format("{}_{}", get_tag(t.src_), t.id_);
 }
 
 nigiri::location_idx_t tag_lookup::get(nigiri::timetable const& tt,

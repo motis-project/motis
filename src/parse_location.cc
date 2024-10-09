@@ -64,7 +64,7 @@ n::unixtime_t get_date_time(std::optional<std::string> const& date,
   }
 }
 
-n::routing::query parse_cursor(std::string_view s) {
+std::pair<n::direction, n::unixtime_t> parse_cursor(std::string_view s) {
   auto const split_pos = s.find("|");
   utl::verify(split_pos != std::string_view::npos && split_pos != s.size() - 1U,
               "invalid page cursor {}, separator '|' not found", s);
@@ -76,23 +76,31 @@ n::routing::query parse_cursor(std::string_view s) {
 
   auto const t = n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
       std::chrono::seconds{utl::parse<std::int64_t>(time_str)})};
+
   auto const direction = s.substr(0, split_pos);
   switch (cista::hash(direction)) {
-    case cista::hash("EARLIER"):
+    case cista::hash("EARLIER"): return {n::direction::kBackward, t};
+    case cista::hash("LATER"): return {n::direction::kForward, t};
+    default: throw utl::fail("invalid cursor: \"{}\"", s);
+  }
+}
+
+n::routing::query cursor_to_query(std::string_view s) {
+  auto const [dir, t] = parse_cursor(s);
+  switch (dir) {
+    case n::direction::kBackward:
       return n::routing::query{
           .start_time_ =
               n::routing::start_time_t{n::interval{t - n::duration_t{120}, t}},
           .extend_interval_earlier_ = true,
           .extend_interval_later_ = false};
 
-    case cista::hash("LATER"):
+    case n::direction::kForward:
       return n::routing::query{
           .start_time_ =
               n::routing::start_time_t{n::interval{t, t + n::duration_t{120}}},
           .extend_interval_earlier_ = false,
           .extend_interval_later_ = true};
-
-    default: throw utl::fail("invalid page cursor {}", s);
   }
 }
 

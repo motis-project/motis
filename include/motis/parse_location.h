@@ -13,9 +13,11 @@ namespace motis {
 
 std::optional<osr::location> parse_location(std::string_view);
 
-nigiri::unixtime_t get_date_time(std::optional<std::string> const& date,
-                                 std::optional<std::string> const& time);
+nigiri::unixtime_t get_date_time(std::optional<std::string> const& date = {},
+                                 std::optional<std::string> const& time = {});
 
-nigiri::routing::query parse_cursor(std::string_view s);
+nigiri::routing::query cursor_to_query(std::string_view);
+
+std::pair<nigiri::direction, nigiri::unixtime_t> parse_cursor(std::string_view);
 
 }  // namespace motis

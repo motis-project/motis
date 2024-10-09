@@ -26,7 +26,7 @@ TEST(motis, parse_date_time) {
 }
 
 TEST(motis, parse_cursor_earlier) {
-  auto const q = parse_cursor("EARLIER|1720036560");
+  auto const q = cursor_to_query("EARLIER|1720036560");
 
   ASSERT_TRUE(
       std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_));
@@ -37,7 +37,7 @@ TEST(motis, parse_cursor_earlier) {
 }
 
 TEST(motis, parse_cursor_later) {
-  auto const q = parse_cursor("LATER|1720036560");
+  auto const q = cursor_to_query("LATER|1720036560");
 
   ASSERT_TRUE(
       std::holds_alternative<n::interval<n::unixtime_t>>(q.start_time_));
