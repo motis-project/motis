@@ -229,7 +229,7 @@ std::vector<n::rt::run> get_events(
             ((ev_type == n::event_type::kDep &&
               stop_idx != location_seq.size() - 1U) ||
              (ev_type == n::event_type::kArr && stop_idx != 0U)) &&
-            seen.emplace(r, stop_idx).second) {
+            seen.emplace(r, static_cast<n::stop_idx_t>(stop_idx)).second) {
           iterators.emplace_back(std::make_unique<static_ev_iterator>(
               tt, rtt, r, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
               dir));
