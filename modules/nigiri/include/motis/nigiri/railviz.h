@@ -4,6 +4,7 @@
 
 #include "geo/box.h"
 
+#include "nigiri/shape.h"
 #include "nigiri/types.h"
 
 #include "motis/module/message.h"
@@ -18,7 +19,8 @@ namespace motis::nigiri {
 struct tag_lookup;
 
 struct railviz {
-  railviz(tag_lookup const&, ::nigiri::timetable const&);
+  railviz(tag_lookup const&, ::nigiri::timetable const&,
+          std::unique_ptr<::nigiri::shapes_storage>&&);
   ~railviz();
 
   module::msg_ptr get_trains(module::msg_ptr const&) const;

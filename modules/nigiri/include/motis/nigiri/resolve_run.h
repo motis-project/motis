@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nigiri/rt/run.h"
+#include "nigiri/types.h"
 
 #include "motis/core/journey/extern_trip.h"
 

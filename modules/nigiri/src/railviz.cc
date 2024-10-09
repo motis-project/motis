@@ -1,5 +1,7 @@
 #include "motis/nigiri/railviz.h"
 
+#include <ranges>
+
 #include "boost/geometry/index/rtree.hpp"
 #include "boost/iterator/function_output_iterator.hpp"
 
@@ -8,14 +10,18 @@
 #include "utl/to_vec.h"
 
 #include "geo/detail/register_box.h"
+#include "geo/latlng.h"
 #include "geo/polyline_format.h"
 
+#include "nigiri/common/interval.h"
 #include "nigiri/common/linear_lower_bound.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
+#include "nigiri/shape.h"
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "motis/core/conv/position_conv.h"
 #include "motis/core/conv/trip_conv.h"
@@ -171,7 +177,9 @@ struct rt_transport_geo_index {
 };
 
 struct railviz::impl {
-  impl(tag_lookup const& tags, n::timetable const& tt) : tags_{tags}, tt_{tt} {
+  impl(tag_lookup const& tags, n::timetable const& tt,
+       std::unique_ptr<n::shapes_storage>&& shapes_data)
+      : tags_{tags}, tt_{tt}, shapes_data_{std::move(shapes_data)} {
     static_distances_.resize(tt_.route_location_seq_.size());
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
       static_geo_indices_[c] =
@@ -194,11 +202,13 @@ struct railviz::impl {
 
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
       for (auto const [from, to] : utl::pairwise(fr)) {
-        runs.emplace_back(stop_pair{.r_ = r,
-                                    .from_ = static_cast<n::stop_idx_t>(
-                                        from.stop_idx_ - fr.stop_range_.from_),
-                                    .to_ = static_cast<n::stop_idx_t>(
-                                        to.stop_idx_ - fr.stop_range_.from_)});
+        runs.emplace_back(stop_pair{
+            .r_ = r,
+            .from_ = static_cast<n::stop_idx_t>(from.stop_idx_ -
+                                                fr.stop_range_.from_),
+            .to_ =
+                static_cast<n::stop_idx_t>(to.stop_idx_ - fr.stop_range_.from_),
+        });
       }
     }
     return create_response(runs);
@@ -273,9 +283,6 @@ struct railviz::impl {
       return l;
     };
 
-    auto polyline_indices_cache =
-        n::hash_map<std::pair<n::location_idx_t, n::location_idx_t>,
-                    std::int64_t>{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
@@ -287,19 +294,15 @@ struct railviz::impl {
       auto const from_l = add_station(from.get_location_idx());
       auto const to_l = add_station(to.get_location_idx());
 
-      auto const key =
-          std::pair{std::min(from_l, to_l), std::max(from_l, to_l)};
-      auto const polyline_indices = std::vector<int64_t>{
-          utl::get_or_create(
-              polyline_indices_cache, key,
-              [&] {
-                enc.push(tt_.locations_.coordinates_.at(key.first));
-                enc.push(tt_.locations_.coordinates_.at(key.second));
-                fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
-                enc.reset();
-                return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
-              }) *
-          (key.first != from_l ? -1 : 1)};
+      auto const polyline_indices = std::vector<std::int64_t>{
+          static_cast<std::int64_t>(fbs_polylines.size())};
+      fr.for_each_shape_point(
+          shapes_data_.get(),
+          n::interval{r.from_, static_cast<n::stop_idx_t>(r.to_ + 1)},
+          [&enc](geo::latlng const& point) { enc.push(point); });
+      fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
+      enc.reset();
+
       return motis::railviz::CreateTrain(
           mc, mc.CreateVector(std::vector{mc.CreateString(fr.name())}),
           static_cast<int>(fr.get_clasz()),
@@ -389,9 +392,11 @@ struct railviz::impl {
                        n::unixtime_t::duration{1}}) &&
               is_active(t)) {
             runs.emplace_back(stop_pair{
-                .r_ = n::rt::run{.t_ = t,
-                                 .stop_range_ = {from, to},
-                                 .rt_ = n::rt_transport_idx_t::invalid()},
+                .r_ =
+                    n::rt::run{.t_ = t,
+                               .stop_range_ = {from, static_cast<n::stop_idx_t>(
+                                                         to + 1U)},
+                               .rt_ = n::rt_transport_idx_t::invalid()},
                 .from_ = 0,
                 .to_ = 1});
           }
@@ -411,6 +416,7 @@ struct railviz::impl {
 
   tag_lookup const& tags_;
   n::timetable const& tt_;
+  std::unique_ptr<n::shapes_storage> shapes_data_;
   std::shared_ptr<n::rt_timetable> rtt_;
   std::array<route_geo_index, n::kNumClasses> static_geo_indices_;
   std::array<rt_transport_geo_index, n::kNumClasses> rt_geo_indices_;
@@ -418,8 +424,9 @@ struct railviz::impl {
   n::vector_map<n::rt_transport_idx_t, float> rt_distances_{};
 };
 
-railviz::railviz(tag_lookup const& tags, n::timetable const& tt)
-    : impl_{std::make_unique<impl>(tags, tt)} {}
+railviz::railviz(tag_lookup const& tags, n::timetable const& tt,
+                 std::unique_ptr<n::shapes_storage>&& shapes_data)
+    : impl_{std::make_unique<impl>(tags, tt, std::move(shapes_data))} {}
 
 mm::msg_ptr railviz::get_trains(mm::msg_ptr const& msg) const {
   return impl_->get_trains(msg);

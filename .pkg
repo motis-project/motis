@@ -1,7 +1,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=bec8bca4e6a38e38236a99ca4d4b767690fc01a1
+  commit=762ca9acc68731814e4e89bdaa72045500461604
 [conf]
   url=git@github.com:motis-project/conf.git
   branch=master
@@ -25,7 +25,7 @@
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
-  commit=03bee0de6cbcbf34a3445bdb19ab90b07a67e9df
+  commit=9ef1eddff4df3c485a3ec2c8872e03ee22ff5973
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
@@ -77,7 +77,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=d6e1c8f5c0a8264e568fa85a34622e105a975315
+  commit=164480a8ca850a2411d5aa7d547013d65a9ce543
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
