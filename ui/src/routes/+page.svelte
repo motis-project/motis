@@ -183,7 +183,7 @@
 						<X />
 					</Button>
 				</div>
-				<div class="p-6 overflow-y-auto overflow-x-hidden max-h-[70vh]">
+				<div class="p-4 overflow-y-auto overflow-x-hidden max-h-[70vh]">
 					<ConnectionDetail
 						itinerary={selectedItinerary}
 						onClickStop={(name: string, stopId: string, time: Date) => {

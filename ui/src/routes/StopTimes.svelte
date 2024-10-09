@@ -25,7 +25,7 @@
 	});
 </script>
 
-<div class="text-lg grid gap-y-4 gap-x-4 grid-cols-9 items-center">
+<div class="text-lg grid gap-y-4 gap-x-4 grid-cols-9 auto-rows-fr items-center">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -74,7 +74,7 @@
 				<Time rt={true} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
 				<div class="col-span-4 flex items-center text-muted-foreground">
 					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
-					<span class="ml-1">{t.headsign}</span>
+					<span class="ml-1 text-nowrap text-ellipsis">{t.headsign}</span>
 				</div>
 			{/each}
 

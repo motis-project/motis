@@ -29,7 +29,7 @@
 						};
 					});
 				} else {
-					const color = `${getColor(l)}`;
+					const color = `${getColor(l)[0]}`;
 					const outlineColor = colord(color).darken(0.2).toHex();
 					return {
 						type: 'Feature',

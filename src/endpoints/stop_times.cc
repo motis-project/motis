@@ -246,7 +246,8 @@ std::vector<n::rt::run> get_events(
 
   auto const fwd = dir == n::direction::kForward;
   auto evs = std::vector<n::rt::run>{};
-  while (!all_finished() && evs.size() < count) {
+  auto last_time = n::unixtime_t{};
+  while (!all_finished()) {
     auto const it = std::min_element(
         begin(iterators), end(iterators), [&](auto const& a, auto const& b) {
           if (a->finished() || b->finished()) {
@@ -255,7 +256,11 @@ std::vector<n::rt::run> get_events(
           return fwd ? a->time() < b->time() : a->time() > b->time();
         });
     assert(!(*it)->finished());
+    if (evs.size() >= count && (*it)->time() != last_time) {
+      break;
+    }
     evs.emplace_back((*it)->get());
+    last_time = (*it)->time();
     (*it)->increment();
   }
   return evs;
@@ -323,15 +328,17 @@ api::stoptimes_response stop_times::operator()(
               ? ""
               : fmt::format(
                     "EARLIER|{}",
-                    to_seconds(n::rt::frun{tt_, rtt, events.front()}[0].time(
-                        ev_type))),
+                    to_seconds(
+                        n::rt::frun{tt_, rtt, events.front()}[0].time(ev_type) -
+                        std::chrono::minutes{1})),
       .nextPageCursor_ =
           events.empty()
               ? ""
               : fmt::format(
                     "LATER|{}",
-                    to_seconds(n::rt::frun{tt_, rtt, events.back()}[0].time(
-                        ev_type)))};
+                    to_seconds(
+                        n::rt::frun{tt_, rtt, events.back()}[0].time(ev_type) +
+                        std::chrono::minutes{1}))};
 }
 
 }  // namespace motis::ep
