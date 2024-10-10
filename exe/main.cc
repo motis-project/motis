@@ -2,6 +2,12 @@
 
 #include <iostream>
 
+#include "utl/progress_tracker.h"
+
+#include "motis/config.h"
+#include "motis/data.h"
+#include "motis/import.h"
+
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
 #endif
@@ -12,6 +18,7 @@ using namespace std::string_view_literals;
 namespace motis {
 int import(int, char**);
 int server(int, char**);
+int server(data d, config const& c);
 }  // namespace motis
 
 using namespace motis;
@@ -56,11 +63,18 @@ int main(int ac, char** av) {
       return server(ac, av);
     } else if (cmd == "import") {
       return import(ac, av);
-    }
-  } else {
-    auto const exit_code = import(ac, av);
-    if (exit_code == 0) {
-      server(ac, av);
+    } else {
+      try {
+        auto const bars = utl::global_progress_bars{false};
+        auto args = vm.count("subargs")
+                        ? vm.at("subargs").as<std::vector<std::string>>()
+                        : std::vector<std::string>{};
+        args.insert(begin(args), cmd);
+        auto const c = config::read_simple(args);
+        server(import(c, "data"), c);
+      } catch (std::exception const& e) {
+        std::cerr << "error: " << e.what() << "\n";
+      }
     }
   }
 }

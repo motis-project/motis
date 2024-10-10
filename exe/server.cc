@@ -48,25 +48,7 @@ void POST(auto&& r, std::string target, From& from) {
   }
 }
 
-int server(int ac, char** av) {
-  auto data_path = fs::path{"data"};
-
-  auto desc = bpo::options_description{"Options"};
-  desc.add_options()  //
-      ("help,h", "produce this help message")  //
-      ("data,d", bpo::value(&data_path)->default_value(data_path), "data path");
-
-  auto const pos_desc = bpo::positional_options_description{}.add("data", -1);
-
-  auto vm = bpo::variables_map{};
-  bpo::store(
-      bpo::command_line_parser(ac, av).options(desc).positional(pos_desc).run(),
-      vm);
-  bpo::notify(vm);
-
-  auto c = config::read(data_path / "config.yml");
-  auto d = data{std::move(data_path), c};
-
+int server(data d, config const& c) {
   auto ioc = asio::io_context{};
   auto workers = asio::io_context{};
   auto s = net::web_server{ioc};
@@ -91,11 +73,11 @@ int server(int ac, char** av) {
     qr.route("GET", "/tiles/.*", ep::tiles{*d.tiles_});
   }
 
-  qr.serve_files("ui/build");
+  auto const server_config = c.server_.value_or(config::server{});
+  qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.on_http_request(std::move(qr));
 
-  auto const server_config = c.server_.value_or(config::server{});
   auto ec = boost::system::error_code{};
   s.init(server_config.host_, server_config.port_, ec);
   s.run();
@@ -135,6 +117,31 @@ int server(int ac, char** av) {
   }
 
   return 0;
+}
+
+int server(int ac, char** av) {
+  auto data_path = fs::path{"data"};
+
+  auto desc = bpo::options_description{"Options"};
+  desc.add_options()  //
+      ("help,h", "produce this help message")  //
+      ("data,d", bpo::value(&data_path)->default_value(data_path), "data path");
+
+  auto const pos_desc = bpo::positional_options_description{}.add("data", -1);
+
+  auto vm = bpo::variables_map{};
+  bpo::store(
+      bpo::command_line_parser(ac, av).options(desc).positional(pos_desc).run(),
+      vm);
+  bpo::notify(vm);
+
+  if (vm.count("help")) {
+    std::cout << desc << "\n";
+    return 0;
+  }
+
+  auto const c = config::read(data_path / "config.yml");
+  return server(data{std::move(data_path), c}, c);
 }
 
 }  // namespace motis

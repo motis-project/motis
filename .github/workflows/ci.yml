@@ -206,7 +206,9 @@ jobs:
         run: ln -s /deps deps
 
       - name: CMake
-        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+        run: |
+          git config --global --add safe.directory `pwd`
+          cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
 
       # ==== BUILD ====
       - name: Build

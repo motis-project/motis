@@ -8,7 +8,7 @@ namespace json = boost::json;
 
 namespace motis::ep {
 
-constexpr auto const kMaxWays = 4096;
+constexpr auto const kMaxWays = 2048U;
 
 json::value graph::operator()(json::value const& query) const {
   auto const& q = query.as_object();

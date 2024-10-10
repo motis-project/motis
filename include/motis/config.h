@@ -18,6 +18,8 @@ using headers_t = std::map<std::string, std::string>;
 
 struct config {
   friend std::ostream& operator<<(std::ostream&, config const&);
+  static config read_simple(std::vector<std::string> const& args);
+  static config read_legacy(std::filesystem::path const&);
   static config read(std::filesystem::path const&);
   static config read(std::string const&);
 
@@ -32,6 +34,7 @@ struct config {
     bool operator==(server const&) const = default;
     std::string host_{"0.0.0.0"};
     std::string port_{"8080"};
+    std::string web_folder_{"ui"};
     unsigned n_threads_{std::thread::hardware_concurrency()};
   };
   std::optional<server> server_{};
