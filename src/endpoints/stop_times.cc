@@ -270,7 +270,9 @@ api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
 
-  auto const l = tags_.get(tt_, query.stopId_);
+  auto const x = tags_.get(tt_, query.stopId_);
+  auto const p = tt_.locations_.parents_[x];
+  auto const l = p == n::location_idx_t::invalid() ? x : p;
   auto const l_name = tt_.locations_.names_[l].view();
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
       fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",

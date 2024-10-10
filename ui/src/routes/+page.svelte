@@ -193,6 +193,7 @@
 					<ConnectionDetail
 						itinerary={selectedItinerary}
 						onClickStop={(name: string, stopId: string, time: Date) => {
+							stopArriveBy = false;
 							selectedStop = { name, stopId, time };
 						}}
 						{onClickTrip}

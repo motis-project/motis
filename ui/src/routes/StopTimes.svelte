@@ -27,7 +27,7 @@
 	});
 </script>
 
-<div class="text-lg grid gap-y-4 grid-cols-9 auto-rows-fr items-center">
+<div class="text-base grid gap-y-2 grid-cols-10 auto-rows-fr items-center">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -72,11 +72,11 @@
 
 			{#each r.stopTimes as t}
 				<Route class="col-span-3 w-fit" l={t} {onClickTrip} />
-				<Time rt={false} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
+				<Time class="ml-1" rt={false} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
 				<Time class="ml-2" rt={true} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
-				<div class="ml-4 col-span-4 flex items-center text-muted-foreground">
-					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
-					<span class="ml-1 text-nowrap text-ellipsis">{t.headsign}</span>
+				<div class="ml-4 col-span-5 flex items-center text-muted-foreground">
+					<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
+					<span class="ml-1 text-nowrap text-ellipsis overflow-hidden">{t.headsign}</span>
 				</div>
 			{/each}
 

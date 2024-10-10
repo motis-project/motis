@@ -8,6 +8,8 @@ namespace json = boost::json;
 
 namespace motis::ep {
 
+constexpr auto const kMaxWays = 4096;
+
 json::value graph::operator()(json::value const& query) const {
   auto const& q = query.as_object();
   auto const& x = query.at("waypoints").as_array();
@@ -18,7 +20,12 @@ json::value graph::operator()(json::value const& query) const {
                          : osr::level_t::invalid();
 
   auto gj = osr::geojson_writer{.w_ = w_};
+  auto n_ways = 0U;
   l_.find({min, max}, [&](osr::way_idx_t const w) {
+    if (++n_ways == kMaxWays) {
+      throw utl::fail("too many ways");
+    }
+
     if (level == osr::level_t::invalid()) {
       gj.write_way(w);
       return;
