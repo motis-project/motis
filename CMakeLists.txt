@@ -15,7 +15,6 @@ endif ()
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
 
-
 # --- LINT ---
 option(ICC_LINT "Run clang-tidy with the compiler." OFF)
 if (ICC_LINT)
@@ -98,10 +97,17 @@ target_link_libraries(motislib
 
 
 # --- EXE ---
+execute_process(
+    COMMAND git describe --always --tags --dirty=-dirty
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE motis-git-tag
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 file(GLOB_RECURSE motis-files exe/*.cc)
 add_executable(motis ${motis-files})
 target_compile_features(motis PUBLIC cxx_std_23)
 target_compile_options(motis PRIVATE ${motis-compile-options})
+set_source_files_properties(exe/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VERSION="${motis-git-tag}")
 target_link_libraries(motis
     motislib
     web-server
@@ -127,3 +133,9 @@ file(GLOB_RECURSE motis-test-files test/*.cc)
 add_executable(motis-test ${motis-test-files})
 target_link_libraries(motis-test motislib gtest web-server ianatzdb-res motis-generated)
 target_compile_options(motis-test PRIVATE ${motis-compile-options})
+
+
+# --- TILES ---
+set_property(
+    TARGET motis tiles tiles-import-library
+    APPEND PROPERTY COMPILE_DEFINITIONS TILES_GLOBAL_PROGRESS_TRACKER=1)

@@ -30,7 +30,7 @@ int import(int ac, char** av) {
   auto c = config{};
   try {
     c = config::read(config_path);
-    auto const silencer = utl::global_progress_bars{true};
+    auto const silencer = utl::global_progress_bars{false};
     import(c, std::move(data_path));
   } catch (std::exception const& e) {
     fmt::println("unable to import: {}", e.what());

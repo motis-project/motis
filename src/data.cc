@@ -2,12 +2,13 @@
 
 #include <filesystem>
 
+#include "cista/io.h"
+
 #include "utl/read_file.h"
 
 #include "adr/adr.h"
 #include "adr/area_database.h"
 #include "adr/cache.h"
-#include "adr/cista_read.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
@@ -100,8 +101,7 @@ void data::load_osr() {
 
 void data::load_tt() {
   tags_ = tag_lookup::read(path_ / "tags.bin");
-  tt_ = n::timetable::read(cista::memory_holder{
-      cista::file{(path_ / "tt.bin").generic_string().c_str(), "r"}.content()});
+  tt_ = n::timetable::read(path_ / "tt.bin");
   tt_->locations_.resolve_timezones();
   location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
@@ -113,7 +113,7 @@ void data::load_tt() {
 }
 
 void data::load_geocoder() {
-  t_ = adr::read(path_ / "adr" / "t.bin", false);
+  t_ = adr::read(path_ / "adr" / "t.bin");
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
   area_db_ = std::make_unique<adr::area_database>(
       path_ / "adr", cista::mmap::protection::READ);

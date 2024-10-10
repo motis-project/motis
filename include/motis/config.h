@@ -8,6 +8,8 @@
 #include <thread>
 #include <vector>
 
+#include "cista/hashing.h"
+
 #include "utl/verify.h"
 
 namespace motis {
@@ -52,6 +54,9 @@ struct config {
     struct dataset {
       struct rt {
         bool operator==(rt const&) const = default;
+        cista::hash_t hash() const noexcept {
+          return cista::build_hash(url_, headers_);
+        }
         std::string url_;
         std::optional<headers_t> headers_{};
       };
@@ -91,3 +96,7 @@ struct config {
 };
 
 }  // namespace motis
+
+#include "cista/reflection/to_tuple.h"
+
+static_assert(std::is_aggregate_v<motis::config::timetable>);

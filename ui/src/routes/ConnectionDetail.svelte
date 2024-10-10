@@ -58,10 +58,10 @@
 					<div class="border-t w-full h-0"></div>
 					<div class="text-sm text-muted-foreground text-nowrap px-2">
 						{#if pred.from.track}
-							Ankunft auf Gleis {pred.from.track},
+							Ankunft auf Gleis {pred.from.track}
 						{/if}
-						{#if pred.duration !== 0}
-							{formatDurationSec(pred.duration)} Fußweg
+						{#if pred.duration !== 0 && l.distance != 0}
+							, {formatDurationSec(pred.duration)} Fußweg ({Math.round(l.distance)} m)
 						{/if}
 					</div>
 				{/if}
@@ -131,7 +131,9 @@
 					{@render stopTimes(l.startTime, l.departureDelay, l.realTime, l.from.name, l.from.stopId)}
 				</div>
 				<div class="py-12 pl-8 flex items-center text-muted-foreground">
-					<span class="ml-6">Fußweg ({formatDurationSec(l.duration)})</span>
+					<span class="ml-6">
+						{formatDurationSec(l.duration)} Fußweg ({Math.round(l.distance)} m)
+					</span>
 				</div>
 				{#if !isLast}
 					<div class="grid gap-y-6 grid-cols-7 items-center pb-4">

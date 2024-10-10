@@ -337,6 +337,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .allowed_claszes_ = to_clasz_mask(query.mode_),
       .require_bike_transport_ = require_bike_transport(query.mode_)};
 
+  if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
+    q.prf_idx_ = 0U;
+  }
+
   if (search_state.get() == nullptr) {
     search_state.reset(new n::routing::search_state{});
   }

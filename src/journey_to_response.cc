@@ -169,6 +169,7 @@ api::Itinerary journey_to_response(
     for (auto const& p : path->segments_) {
       utl::concat(concat, p.polyline_);
     }
+    leg.distance_ = path->dist_;
     leg.legGeometry_.points_ = encode_polyline<7>(concat);
     leg.legGeometry_.length_ = static_cast<std::int64_t>(concat.size());
   };

@@ -102,7 +102,7 @@ struct task {
   std::function<void()> run_;
   std::function<void()> load_;
   meta_t hashes_;
-  utl::progress_tracker_ptr pt_{utl::activate_progress_tracker(name_)};
+  utl::progress_tracker_ptr pt_{};
 };
 
 }  // namespace motis
@@ -118,7 +118,10 @@ cista::hash_t hash_file(fs::path const& p) {
   }
   auto const mmap =
       cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
-  return cista::hash(mmap.view());
+  return cista::hash_combine(
+      cista::hash(mmap.view().substr(
+          0ZU, std::min(mmap.size(), 50ZU * 1024ZU * 1024ZU))),
+      mmap.size());
 }
 
 data import(config const& c, fs::path const& data_path, bool const write) {
@@ -132,13 +135,20 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
   auto tt_hash = std::pair{"timetable"s, cista::BASE_HASH};
   if (c.timetable_.has_value()) {
-    for (auto const& [_, d] : c.timetable_->datasets_) {
-      tt_hash.second = cista::hash_combine(tt_hash.second, hash_file(d.path_));
+    auto& h = tt_hash.second;
+    auto const& t = *c.timetable_;
+
+    for (auto const& [_, d] : t.datasets_) {
+      h = cista::build_hash(h, c.osr_footpath_, hash_file(d.path_),
+                            d.default_bikes_allowed_, d.clasz_bikes_allowed_,
+                            d.rt_, d.default_timezone_);
     }
-    if (c.timetable_->assistance_times_.has_value()) {
-      tt_hash.second = cista::hash_combine(
-          tt_hash.second, hash_file(*c.timetable_->assistance_times_));
-    }
+
+    h = cista::build_hash(
+        h, t.first_day_, t.num_days_, t.with_shapes_, t.ignore_errors_,
+        t.adjust_footpaths_, t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
+        t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
+        t.max_footpath_length_, t.default_timezone_, t.assistance_times_);
   }
 
   auto osm_hash = std::pair{"osm"s, cista::BASE_HASH};
@@ -146,13 +156,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     osm_hash.second = hash_file(*c.osm_);
   }
 
-  auto coastline_hash = std::pair{"coastline"s, cista::BASE_HASH};
-  auto tiles_profile_hash = std::pair{"tiles_profile", cista::BASE_HASH};
+  auto tiles_hash = std::pair{"tiles_profile", cista::BASE_HASH};
   if (c.tiles_.has_value()) {
+    auto& h = tiles_hash.second;
+    h = cista::build_hash(hash_file(c.tiles_->profile_), c.tiles_->db_size_);
     if (c.tiles_->coastline_.has_value()) {
-      coastline_hash.second = hash_file(*c.tiles_->coastline_);
+      h = cista::hash_combine(h, hash_file(*c.tiles_->coastline_));
     }
-    tiles_profile_hash.second = hash_file(c.tiles_->profile_);
   }
 
   auto const osr_version = meta_entry_t{"osr_bin_ver", kOsrBinaryVersion};
@@ -348,11 +358,14 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         ::tiles::prepare_tiles(db_handle, pack_handle, 10);
       },
       []() {},
-      {osm_hash, coastline_hash, tiles_profile_hash}};
+      {osm_hash, tiles_hash}};
 
   auto tasks =
       std::vector<task>{osr, adr, tt, adr_extend, osr_footpath, tiles, matches};
   utl::erase_if(tasks, [&](auto&& t) { return !t.should_run_(); });
+  for (auto& t : tasks) {
+    t.pt_ = utl::activate_progress_tracker(t.name_);
+  }
 
   while (!tasks.empty()) {
     auto const task_it =
