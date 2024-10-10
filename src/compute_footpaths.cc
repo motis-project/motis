@@ -19,9 +19,6 @@ namespace n = nigiri;
 
 namespace motis {
 
-constexpr auto const kMode =
-    cista::mode::WITH_INTEGRITY | cista::mode::WITH_STATIC_VERSION;
-
 vector_map<n::location_idx_t, osr::match_t> lookup_locations(
     osr::ways const& w,
     osr::lookup const& lookup,
@@ -193,21 +190,6 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
   }
 
   return elevator_in_paths;
-}
-
-void write(std::filesystem::path const& p, elevator_footpath_map_t const& efp) {
-  auto writer = cista::buf{
-      cista::mmap{p.generic_string().c_str(), cista::mmap::protection::WRITE}};
-  cista::serialize<kMode>(writer, efp);
-}
-
-cista::wrapped<elevator_footpath_map_t> read_elevator_footpath_map(
-    std::filesystem::path const& p) {
-  auto mem = cista::memory_holder{
-      cista::file{p.generic_string().c_str(), "r"}.content()};
-  auto const ptr = cista::deserialize<elevator_footpath_map_t, kMode>(
-      std::get<cista::buffer>(mem));
-  return cista::wrapped{std::move(mem), ptr};
 }
 
 }  // namespace motis

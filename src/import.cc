@@ -9,6 +9,10 @@
 
 #include "fmt/ranges.h"
 
+#include "cista/io.h"
+
+#include "adr/area_database.h"
+
 #include "utl/erase_if.h"
 #include "utl/read_file.h"
 #include "utl/to_vec.h"
@@ -55,6 +59,7 @@ namespace motis {
 constexpr auto const kAdrBinaryVersion = 1U;
 constexpr auto const kOsrBinaryVersion = 2U;
 constexpr auto const kNigiriBinaryVersion = 3U;
+constexpr auto const kMatchesBinaryVersion = 4U;
 
 using meta_entry_t = std::pair<std::string, std::uint64_t>;
 using meta_t = std::map<std::string, std::uint64_t>;
@@ -81,17 +86,20 @@ struct task {
     return out << t.name_;
   }
 
-  void run(fs::path const& data_path) {
-    auto const redirect = clog_redirect{
-        (data_path / "logs" / (name_ + ".txt")).generic_string().c_str()};
+  bool ready_for_load(fs::path const& data_path) {
     auto const pt = utl::activate_progress_tracker(name_);
     auto const existing = read_hashes(data_path, name_);
-    if (existing == hashes_) {
-      load_();
-    } else {
-      run_();
-      write_hashes(data_path, name_, hashes_);
-    }
+    return existing == hashes_;
+  }
+
+  void load() { load_(); }
+
+  void run(fs::path const& data_path) {
+    auto const pt = utl::activate_progress_tracker(name_);
+    auto const redirect = clog_redirect{
+        (data_path / "logs" / (name_ + ".txt")).generic_string().c_str()};
+    run_();
+    write_hashes(data_path, name_, hashes_);
     pt->out_ = 100;
     pt->status("FINISHED");
   }
@@ -120,7 +128,8 @@ cista::hash_t hash_file(fs::path const& p) {
       cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
   return cista::hash_combine(
       cista::hash(mmap.view().substr(
-          0ZU, std::min(mmap.size(), 50ZU * 1024ZU * 1024ZU))),
+          0U, std::min(mmap.size(),
+                       static_cast<std::size_t>(50U * 1024U * 1024U)))),
       mmap.size());
 }
 
@@ -168,6 +177,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto const osr_version = meta_entry_t{"osr_bin_ver", kOsrBinaryVersion};
   auto const adr_version = meta_entry_t{"adr_bin_ver", kAdrBinaryVersion};
   auto const n_version = meta_entry_t{"nigiri_bin_ver", kNigiriBinaryVersion};
+  auto const matches_version =
+      meta_entry_t{"matches_ver", kMatchesBinaryVersion};
 
   auto d = data{data_path};
 
@@ -274,15 +285,13 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto adr_extend =
       task{"adr_extend",
            [&]() { return c.geocoding_ && c.timetable_.has_value(); },
-           [&]() { return d.tt_ && d.t_ && d.area_db_; },
+           [&]() { return d.tt_ && d.t_; },
            [&]() {
-             adr_extend_tt(*d.tt_, *d.area_db_, *d.t_);
-
+             auto const area_db = adr::area_database{
+                 data_path / "adr", cista::mmap::protection::READ};
+             adr_extend_tt(*d.tt_, area_db, *d.t_);
              if (write) {
-               auto mmap = cista::buf{cista::mmap{
-                   (data_path / "adr" / "t.bin").generic_string().c_str(),
-                   cista::mmap::protection::WRITE}};
-               cista::serialize<cista::mode::WITH_STATIC_VERSION>(mmap, *d.t_);
+               cista::write(data_path / "adr" / "t.bin", *d.t_);
              }
            },
            [&]() {},
@@ -297,20 +306,28 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                  compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
 
              if (write) {
-               ::motis::write(data_path / "elevator_footpath_map.bin",
-                              elevator_footpath_map);
+               cista::write(data_path / "elevator_footpath_map.bin",
+                            elevator_footpath_map);
                d.tt_->write(data_path / "tt.bin");
              }
            },
            [&]() {},
            {tt_hash, osm_hash, osr_version, n_version}};
 
-  auto matches = task{"matches",
-                      [&]() { return c.timetable_ && c.street_routing_; },
-                      [&]() { return d.tt_ && d.w_ && d.pl_; },
-                      [&]() { d.load_matches(); },
-                      [&]() { d.load_matches(); },
-                      {tt_hash, osm_hash, osr_version, n_version}};
+  auto matches =
+      task{"matches",
+           [&]() { return c.timetable_ && c.street_routing_; },
+           [&]() { return d.tt_ && d.w_ && d.pl_; },
+           [&]() {
+             d.matches_ = cista::wrapped<platform_matches_t>{
+                 cista::raw::make_unique<platform_matches_t>(
+                     get_matches(*d.tt_, *d.pl_, *d.w_))};
+             if (write) {
+               cista::write(data_path / "matches.bin", *d.matches_);
+             }
+           },
+           [&]() { d.load_matches(); },
+           {tt_hash, osm_hash, osr_version, n_version, matches_version}};
 
   auto tiles = task{
       "tiles",
@@ -362,7 +379,19 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
   auto tasks =
       std::vector<task>{osr, adr, tt, adr_extend, osr_footpath, tiles, matches};
-  utl::erase_if(tasks, [&](auto&& t) { return !t.should_run_(); });
+  utl::erase_if(tasks, [&](auto&& t) {
+    if (!t.should_run_()) {
+      return true;
+    }
+
+    if (t.ready_for_load(data_path)) {
+      t.load();
+      return true;
+    }
+
+    return false;
+  });
+
   for (auto& t : tasks) {
     t.pt_ = utl::activate_progress_tracker(t.name_);
   }

@@ -120,12 +120,13 @@ int server(int ac, char** av) {
   }
 
   auto const stop = net::stop_handler(ioc, [&]() {
+    fmt::println("shutdown");
     s.stop();
     ioc.stop();
   });
 
-  fmt::println("n_threads={}, listening on {}:{}", server_config.n_threads_,
-               server_config.host_, server_config.port_);
+  fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
+               server_config.host_, server_config.port_, server_config.port_);
   net::run(ioc)();
 
   workers.stop();

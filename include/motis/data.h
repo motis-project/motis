@@ -61,7 +61,6 @@ struct data {
 
   std::filesystem::path path_;
   cista::wrapped<adr::typeahead> t_;
-  ptr<adr::area_database> area_db_;
   ptr<adr::reverse> r_;
   ptr<adr::cache> tc_;
   ptr<osr::ways> w_;
@@ -71,7 +70,7 @@ struct data {
   cista::wrapped<tag_lookup> tags_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
-  ptr<platform_matches_t> matches_;
+  cista::wrapped<platform_matches_t> matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
 };

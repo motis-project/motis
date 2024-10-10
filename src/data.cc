@@ -1,13 +1,13 @@
 #include "motis/data.h"
 
 #include <filesystem>
+#include <future>
 
 #include "cista/io.h"
 
 #include "utl/read_file.h"
 
 #include "adr/adr.h"
-#include "adr/area_database.h"
 #include "adr/cache.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
@@ -42,10 +42,9 @@ rt::rt(ptr<nigiri::rt_timetable>&& rtt, ptr<elevators>&& e)
 rt::~rt() = default;
 
 std::ostream& operator<<(std::ostream& out, data const& d) {
-  return out << "\nt=" << d.t_.get() << "\narea_db=" << d.area_db_
-             << "\nr=" << d.r_ << "\ntc=" << d.tc_ << "\nw=" << d.w_
-             << "\npl=" << d.pl_ << "\nl=" << d.l_ << "\ntt=" << d.tt_.get()
-             << "\nlocation_rtee=" << d.location_rtee_
+  return out << "\nt=" << d.t_.get() << "\nr=" << d.r_ << "\ntc=" << d.tc_
+             << "\nw=" << d.w_ << "\npl=" << d.pl_ << "\nl=" << d.l_
+             << "\ntt=" << d.tt_.get() << "\nlocation_rtee=" << d.location_rtee_
              << "\nelevator_nodes=" << d.elevator_nodes_
              << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
 }
@@ -55,33 +54,54 @@ data::data(std::filesystem::path p) : path_{std::move(p)} {}
 data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
   rt_ = std::make_shared<rt>();
 
-  if (c.geocoding_) {
-    load_geocoder();
-  }
+  auto const geocoder = std::async(std::launch::async, [&]() {
+    if (c.geocoding_) {
+      load_geocoder();
+    }
+    if (c.reverse_geocoding_) {
+      load_reverse_geocoder();
+    }
+  });
 
-  if (c.reverse_geocoding_) {
-    load_reverse_geocoder();
-  }
+  auto const tt = std::async(std::launch::async, [&]() {
+    if (c.timetable_) {
+      load_tt();
+    }
+  });
 
-  if (c.timetable_) {
-    load_tt();
-  }
+  auto const street_routing = std::async(std::launch::async, [&]() {
+    if (c.street_routing_) {
+      load_osr();
+    }
+  });
 
-  if (c.street_routing_) {
-    load_osr();
-  }
+  auto const matches = std::async(std::launch::async, [&]() {
+    if (c.street_routing_ && c.timetable_) {
+      load_matches();
+    }
+  });
 
-  if (c.street_routing_ && c.timetable_) {
-    load_matches();
-  }
+  auto const elevators = std::async(std::launch::async, [&]() {
+    tt.wait();
+    street_routing.wait();
+    matches.wait();
+    if (c.elevators_) {
+      load_elevators();
+    }
+  });
 
-  if (c.elevators_) {
-    load_elevators();
-  }
+  auto const tiles = std::async(std::launch::async, [&]() {
+    if (c.tiles_) {
+      load_tiles();
+    }
+  });
 
-  if (c.tiles_) {
-    load_tiles();
-  }
+  geocoder.wait();
+  tt.wait();
+  street_routing.wait();
+  matches.wait();
+  elevators.wait();
+  tiles.wait();
 }
 
 data::~data() = default;
@@ -115,8 +135,6 @@ void data::load_tt() {
 void data::load_geocoder() {
   t_ = adr::read(path_ / "adr" / "t.bin");
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
-  area_db_ = std::make_unique<adr::area_database>(
-      path_ / "adr", cista::mmap::protection::READ);
 }
 
 void data::load_reverse_geocoder() {
@@ -126,7 +144,7 @@ void data::load_reverse_geocoder() {
 }
 
 void data::load_matches() {
-  matches_ = std::make_unique<platform_matches_t>(get_matches(*tt_, *pl_, *w_));
+  matches_ = cista::read<platform_matches_t>(path_ / "matches.bin");
 }
 
 void data::load_elevators() {
@@ -134,7 +152,7 @@ void data::load_elevators() {
                                         vector_map<elevator_idx_t, elevator>{});
 
   auto const elevator_footpath_map =
-      read_elevator_footpath_map(path_ / "elevator_footpath_map.bin");
+      cista::read<elevator_footpath_map_t>(path_ / "elevator_footpath_map.bin");
   update_rtt_td_footpaths(*w_, *l_, *pl_, *tt_, *location_rtee_, *rt_->e_,
                           *elevator_footpath_map, *matches_, *rt_->rtt_,
                           std::chrono::seconds{kMaxDuration});
