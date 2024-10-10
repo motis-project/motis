@@ -1,7 +1,7 @@
 <p align="center"><img src="logo.svg" width="196" height="196"></p>
 
 > [!TIP]
-> Join the international MOTIS community at [**motis:matrix.org**](https://matrix.to/#/#motis:matrix.org)
+> :sparkles: Join the international MOTIS community at [**motis:matrix.org**](https://matrix.to/#/#motis:matrix.org)
 
 MOTIS stands for **M**odular **O**pen **T**ransportation **I**nformation **S**ystem.
 It is an open-source software platform designed to facilitate
@@ -39,6 +39,9 @@ MOTIS is a swiss army knife for mobility and comes with all features you need fo
 - **geocoding**: multi-language address and stop name completion with fuzzy string matching and resolution to geo coordinates
 - **reverse geocoding**: resolving geo coordinates to the closest address
 - **tile server**: background map tiles
+
+MOTIS uses efficient traffic day bitsets that allows efficient loading of **full year timetables**!
+Loading one year of timetable doesn't take much more RAM than loading one month.
 
 Features can be turned on and off as needed.
 
