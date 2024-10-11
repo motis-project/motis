@@ -213,7 +213,7 @@ jobs:
           mv build/motis motis/motis
           mv ui/build motis/ui
           cp -r deps/tiles/profile motis/tiles-profiles
-          tar -C ./motis -cjf motis-linux-amd64-release.tar.bz2 ./motis ./tiles-profiles ./ui
+          tar -C ./motis -cjf motis-${{ matrix.config.preset }}.tar.bz2 ./motis ./tiles-profiles ./ui
 
       - name: Upload Distribution
         uses: actions/upload-artifact@v4
