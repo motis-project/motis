@@ -282,6 +282,7 @@ jobs:
 
       # ==== DISTRIBUTION ====
       - name: Create Distribution
+        if: matrix.config.artifact
         run: |
           mkdir motis
           mv build/motis motis/motis
@@ -290,6 +291,7 @@ jobs:
           tar -C ./motis -cjf motis-${{ matrix.config.artifact }}.tar.bz2 ./motis ./tiles-profiles ./ui
 
       - name: Upload Distribution
+        if: matrix.config.artifact
         uses: actions/upload-artifact@v4
         with:
           name: motis-${{ matrix.config.artifact }}
@@ -297,14 +299,14 @@ jobs:
 
       # ==== RELEASE ====
       - name: Upload Release
-        if: github.event.action == 'published'
+        if: github.event.action == 'published' && matrix.config.artifact
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./motis-${{ matrix.config.preset }}.tar.bz2
-          asset_name: motis-${{ matrix.config.preset }}.tar.bz2
+          asset_path: ./motis-${{ matrix.config.artifact }}.tar.bz2
+          asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
           asset_content_type: application/x-tar
 
   docker:
