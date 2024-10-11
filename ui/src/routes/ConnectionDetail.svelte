@@ -17,7 +17,7 @@
 		onClickTrip: (tripId: string, date: string) => void;
 	} = $props();
 
-	const lastLeg = itinerary.legs.findLast((l) => l.duration !== 0);
+	const lastLeg = $derived(itinerary.legs.findLast((l) => l.duration !== 0));
 </script>
 
 {#snippet stopTimes(
