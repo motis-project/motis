@@ -86,8 +86,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
        .dest_time_ = dest_time,
        .dest_ = to_l.get_location_idx(),
        .transfers_ = 0U},
-      n::location_idx_t::invalid(), n::location_idx_t::invalid(), cache,
-      blocked);
+      from_l.get_location_idx(), to_l.get_location_idx(), cache, blocked);
 }
 
 }  // namespace motis::ep
