@@ -22,6 +22,10 @@ constexpr auto const kClaszMax =
 void adr_extend_tt(nigiri::timetable const& tt,
                    a::area_database const& area_db,
                    a::typeahead& t) {
+  if (tt.n_locations() == 0) {
+    return;
+  }
+
   auto const timer = utl::scoped_timer{"guesser candidates"};
 
   auto area_set_lookup = [&]() {
@@ -32,18 +36,14 @@ void adr_extend_tt(nigiri::timetable const& tt,
     return x;
   }();
 
-  auto place_location = vector_map<a::place_idx_t, n::location_idx_t>{};
-  if (tt.n_locations() == 0) {
-    return;
-  }
-
   // Map each location + its equivalents with the same name to one place_idx
   // mapping: location_idx -> place_idx
   // reverse: place_idx -> location_idx
-  auto location_place = n::vector_map<n::location_idx_t, a::place_idx_t>{};
+  auto place_location = vector_map<a::place_idx_t, n::location_idx_t>{};
+  auto location_place = vector_map<n::location_idx_t, a::place_idx_t>{};
   {
     location_place.resize(tt.n_locations(), a::place_idx_t::invalid());
-    place_location.resize(tt.n_locations());
+    place_location.resize(tt.n_locations(), n::location_idx_t::invalid());
 
     auto i = a::place_idx_t{0U};
     for (auto l = n::location_idx_t{0U}; l != tt.n_locations(); ++l) {
@@ -74,6 +74,10 @@ void adr_extend_tt(nigiri::timetable const& tt,
     auto const event_counts = utl::scoped_timer{"guesser event_counts"};
     for (auto i = 0U; i != tt.n_locations(); ++i) {
       auto const l = n::location_idx_t{i};
+      if (tt.locations_.parents_[l] != n::location_idx_t::invalid() ||
+          location_place[l] >= importance.size()) {
+        continue;
+      }
 
       auto transport_counts = std::array<unsigned, n::kNumClasses>{};
       for (auto const& r : tt.location_routes_[l]) {
@@ -102,6 +106,9 @@ void adr_extend_tt(nigiri::timetable const& tt,
       auto const p = tt.locations_.parents_[l];
       auto const x = (p == n::location_idx_t::invalid()) ? l : p;
       for (auto const [clasz, t_count] : utl::enumerate(transport_counts)) {
+        assert(clasz < kClaszMax);
+        assert(x < location_place.size());
+        assert(location_place[x] < importance.size());
         importance[location_place[x]] +=
             prio[clasz] * static_cast<float>(t_count);
       }

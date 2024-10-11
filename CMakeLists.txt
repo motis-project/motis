@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(motis)
 
+option(MOTIS_MIMALLOC "use mimalloc" OFF)
+
 if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     if (ICC_MIMALLOC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
@@ -11,6 +13,16 @@ if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
         set(protobuf_MSVC_STATIC_RUNTIME ON)
     endif ()
 endif ()
+
+if (MOTIS_MIMALLOC)
+    set(CISTA_USE_MIMALLOC ON)
+    set(PPR_MIMALLOC ON)
+    set(ADR_MIMALLOC ON)
+    set(OSR_MIMALLOC ON)
+    if(WIN32)
+        set(MI_BUILD_SHARED ON)
+    endif()
+endif()
 
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
@@ -139,3 +151,42 @@ target_compile_options(motis-test PRIVATE ${motis-compile-options})
 set_property(
     TARGET motis tiles tiles-import-library
     APPEND PROPERTY COMPILE_DEFINITIONS TILES_GLOBAL_PROGRESS_TRACKER=1)
+
+# --- MIMALLOC ---
+if (MOTIS_MIMALLOC)
+    if(WIN32)
+        set(motis-mimalloc-lib mimalloc)
+        target_link_libraries(cista INTERFACE mimalloc)
+    else()
+        set(motis-mimalloc-lib mimalloc-obj)
+        target_link_libraries(cista INTERFACE mimalloc-static)
+    endif()
+    target_compile_definitions(cista INTERFACE CISTA_USE_MIMALLOC=1)
+    target_compile_definitions(boost INTERFACE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
+
+    target_link_libraries(motis ${motis-mimalloc-lib})
+    if(WIN32)
+        add_custom_command(
+                TARGET motis POST_BUILD
+                COMMAND "${CMAKE_COMMAND}" -E copy
+                $<TARGET_FILE:mimalloc>
+                $<TARGET_FILE_DIR:motis>
+                COMMENT "Copy mimalloc.dll to output directory"
+        )
+        add_custom_command(
+                TARGET motis POST_BUILD
+                COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_BINARY_DIR}/deps/mimalloc/mimalloc-redirect.dll"
+                $<TARGET_FILE_DIR:motis>
+                COMMENT "Copy mimalloc-redirect.dll to output directory"
+        )
+    endif()
+endif()
+
+
+# --- UI ---
+add_custom_target(motis-web-ui
+        COMMAND npm i -f && npm run build
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+        VERBATIM
+)

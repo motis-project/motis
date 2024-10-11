@@ -58,14 +58,12 @@ jobs:
 
   msvc:
     runs-on: [ self-hosted, windows, x64 ]
-
     strategy:
       fail-fast: false
       matrix:
         config:
           - mode: Debug
           - mode: Release
-
     env:
       CXX: cl.exe
       CC: cl.exe
@@ -76,9 +74,9 @@ jobs:
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
       BUILDCACHE_MAX_CACHE_SIZE: 1073741824
       CLICOLOR_FORCE: 1
-
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
       - uses: ilammy/msvc-dev-cmd@v1
 
       # ==== RESTORE CACHE ====
@@ -100,7 +98,7 @@ jobs:
             -GNinja -S . -B build `
             -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }}
           .\build\buildcache\bin\buildcache.exe -z
-          cmake --build build --target motis-test
+          cmake --build build --target motis motis-test motis-web-ui
           $CompilerExitCode = $LastExitCode
           .\build\buildcache\bin\buildcache.exe -s
           exit $CompilerExitCode
@@ -108,6 +106,40 @@ jobs:
       # ==== TESTS ====
       - name: Run Tests
         run: .\build\motis-test.exe
+
+      # ==== DISTRIBUTION ====
+      - name: Move Profiles
+        if: matrix.config.mode == 'Release'
+        run: |
+          cd deps\tiles
+          git reset --hard HEAD
+          cd ..\..
+          mkdir dist
+          Copy-Item .\deps\tiles\profile dist\tiles-profiles -Recurse
+          mv .\build\motis.exe dist
+          mv .\ui\build dist\ui
+          cd dist
+          7z a motis-windows.zip *
+          mv motis-windows.zip ..
+
+      - name: Upload Distribution
+        if: matrix.config.mode == 'Release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: motis-windows
+          path: dist
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published' && matrix.config.mode == 'Release'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-windows.zip
+          asset_name: motis-windows.zip
+          asset_content_type: application/zip
 
   macos:
     runs-on: macos-latest
@@ -158,7 +190,7 @@ jobs:
       - name: Build
         run: |
           ./build/buildcache/bin/buildcache -z
-          cmake --build build --target motis-test
+          cmake --build build --target motis motis-test motis-web-ui
           ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
@@ -173,6 +205,33 @@ jobs:
         with:
           path: ${{ github.workspace }}/.buildcache
           key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
+
+      # ==== DISTRIBUTION ====
+      - name: Create Distribution
+        run: |
+          mkdir motis
+          mv build/motis motis/motis
+          mv ui/build motis/ui
+          cp -r deps/tiles/profile motis/tiles-profiles
+          tar -C ./motis -cjf motis-linux-amd64-release.tar.bz2 ./motis ./tiles-profiles ./ui
+
+      - name: Upload Distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: motis-${{ matrix.config.preset }}
+          path: motis-${{ matrix.config.preset }}.tar.bz2
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-${{ matrix.config.preset }}.tar.bz2
+          asset_name: motis-${{ matrix.config.preset }}.tar.bz2
+          asset_content_type: application/x-tar
 
   linux:
     runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
@@ -214,9 +273,80 @@ jobs:
       - name: Build
         run: |
           buildcache -z
-          cmake --build build --target motis-test
+          cmake --build build --target motis motis-test motis-web-ui
           buildcache -s
 
       # ==== TESTS ====
       - name: Run Integration Tests
         run: ${{ matrix.config.emulator }} build/motis-test
+
+      # ==== DISTRIBUTION ====
+      - name: Create Distribution
+        run: |
+          mkdir motis
+          mv build/motis motis/motis
+          mv ui/build motis/ui
+          cp -r deps/tiles/profile motis/tiles-profiles
+          tar -C ./motis -cjf motis-${{ matrix.config.artifact }}.tar.bz2 ./motis ./tiles-profiles ./ui
+
+      - name: Upload Distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: motis-${{ matrix.config.preset }}
+          path: motis-${{ matrix.config.preset }}.tar.bz2
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-${{ matrix.config.preset }}.tar.bz2
+          asset_name: motis-${{ matrix.config.preset }}.tar.bz2
+          asset_content_type: application/x-tar
+
+  docker:
+    runs-on: ubuntu-20.04
+    needs: linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Docker setup-buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
+
+      - name: Docker Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=edge
+
+      - name: Docker build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: .
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64

@@ -39,7 +39,8 @@
       "toolchainFile": "/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake",
       "cacheVariables": {
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_MIMALLOC": "ON"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -54,7 +55,8 @@
       "cacheVariables": {
         "CMAKE_CROSSCOMPILING_EMULATOR": "qemu-aarch64-static",
         "CMAKE_EXE_LINKER_FLAGS": "-B/opt/mold",
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "MOTIS_MIMALLOC": "ON"
       },
       "environment": {
         "PATH": "/opt:/opt/cmake-3.26.3-linux-x86_64/bin:/opt/buildcache/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
