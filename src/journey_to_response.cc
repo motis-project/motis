@@ -102,6 +102,7 @@ api::Itinerary journey_to_response(
     elevators const* e,
     n::rt_timetable const* rtt,
     vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
+    n::shapes_storage const* shapes,
     bool const wheelchair,
     n::routing::journey const& j,
     place_t const& start,
@@ -226,10 +227,9 @@ api::Itinerary journey_to_response(
               leg.arrivalDelay_ = to_ms(exit_stop.delay(n::event_type::kArr));
 
               auto polyline = geo::polyline{};
-              for (auto i = t.stop_range_.from_; i < t.stop_range_.to_; ++i) {
-                auto const stop = fr[i];
-                polyline.emplace_back(stop.pos());
-              }
+              fr.for_each_shape_point(
+                  shapes, t.stop_range_,
+                  [&](geo::latlng const& pos) { polyline.emplace_back(pos); });
               leg.legGeometry_.points_ = geo::encode_polyline<7>(polyline);
               leg.legGeometry_.length_ =
                   static_cast<std::int64_t>(polyline.size());

@@ -243,11 +243,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
               nl::read_assistance(f.view()));
         }
 
-        //        auto shapes = std::unique_ptr<n::shape_storage_t>();
-        //        if (t.with_shapes_) {
-        //          shapes = std::make_unique<n::shape_storage_t>(
-        //              n::create_shape_storage(data_path / "shapes"));
-        //        }
+        if (t.with_shapes_) {
+          d.shapes_ = std::make_unique<n::shapes_storage>(
+              n::shapes_storage(data_path / "shapes"));
+        }
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
         d.tt_ = cista::wrapped{cista::raw::make_unique<n::timetable>(nl::load(
@@ -269,7 +268,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              .merge_dupes_intra_src_ = t.merge_dupes_intra_src_,
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_},
-            interval, assistance.get(), nullptr, t.ignore_errors_))};
+            interval, assistance.get(), d.shapes_.get(), t.ignore_errors_))};
         d.location_rtee_ =
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));

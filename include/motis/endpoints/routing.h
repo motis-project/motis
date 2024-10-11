@@ -36,6 +36,7 @@ struct routing {
   point_rtree<nigiri::location_idx_t> const& loc_tree_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;
   std::shared_ptr<rt> const& rt_;
+  nigiri::shapes_storage const* shapes_;
 };
 
 }  // namespace motis::ep

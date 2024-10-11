@@ -17,6 +17,7 @@
 #include "osr/ways.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/shape.h"
 #include "nigiri/timetable.h"
 
 #include "motis/config.h"
@@ -66,6 +67,9 @@ data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
   auto const tt = std::async(std::launch::async, [&]() {
     if (c.timetable_) {
       load_tt();
+      if (c.timetable_->with_shapes_) {
+        load_shapes();
+      }
     }
   });
 
@@ -130,6 +134,11 @@ void data::load_tt() {
       std::chrono::system_clock::now());
   rt_->rtt_ = std::make_unique<n::rt_timetable>(
       n::rt::create_rt_timetable(*tt_, today));
+}
+
+void data::load_shapes() {
+  shapes_ = std::make_unique<nigiri::shapes_storage>(
+      nigiri::shapes_storage{path_ / "shapes", cista::mmap::protection::READ});
 }
 
 void data::load_geocoder() {

@@ -16,6 +16,7 @@ struct lookup;
 namespace nigiri {
 struct timetable;
 struct rt_timetable;
+struct shapes_storage;
 namespace routing {
 struct td_offset;
 struct offset;

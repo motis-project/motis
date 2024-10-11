@@ -43,6 +43,7 @@ api::Itinerary journey_to_response(
     elevators const* e,
     nigiri::rt_timetable const*,
     vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
+    nigiri::shapes_storage const*,
     bool const wheelchair,
     nigiri::routing::journey const&,
     place_t const& start,

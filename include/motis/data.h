@@ -47,6 +47,7 @@ struct data {
 
   void load_osr();
   void load_tt();
+  void load_shapes();
   void load_geocoder();
   void load_matches();
   void load_reverse_geocoder();
@@ -56,7 +57,7 @@ struct data {
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, tags_, location_rtee_,
-                    elevator_nodes_, matches_, rt_);
+                    elevator_nodes_, shapes_, matches_, rt_);
   }
 
   std::filesystem::path path_;
@@ -70,6 +71,7 @@ struct data {
   cista::wrapped<tag_lookup> tags_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
+  ptr<nigiri::shapes_storage> shapes_;
   cista::wrapped<platform_matches_t> matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};

@@ -75,7 +75,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto blocked = osr::bitvec<osr::node_idx_t>{};
 
   return journey_to_response(
-      w_, l_, tt_, tags_, pl_, nullptr, rtt, matches_, false,
+      w_, l_, tt_, tags_, pl_, nullptr, rtt, matches_, nullptr, false,
       {.legs_ = {n::routing::journey::leg{
            n::direction::kForward, from_l.get_location_idx(),
            to_l.get_location_idx(), start_time, dest_time,
