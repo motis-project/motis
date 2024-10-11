@@ -19,8 +19,9 @@
 	import { posToLocation, type Location as ApiLocation } from '$lib/Location';
 	import geojson from 'geojson';
 	import Popup from '$lib/map/Popup.svelte';
+	import { client } from '$lib/openapi';
 
-	const baseUrl = 'http://localhost:8080';
+	const baseUrl = client.getConfig().baseUrl;
 
 	const post = async (path: string, req: unknown) => {
 		const response = await fetch(`${baseUrl}${path}`, {
