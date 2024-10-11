@@ -89,7 +89,7 @@
 						</div>
 						<Separator class="my-2" />
 						<div class="mt-4 flex flex-wrap gap-x-3 gap-y-3">
-							{#each it.legs.filter((l, i) => i == 0 || i == it.legs.length - 1 || l.routeShortName) as l}
+							{#each it.legs.filter((l, i) => (i == 0 && l.duration !== 0) || (i == it.legs.length - 1 && l.duration !== 0) || l.routeShortName) as l}
 								<div
 									class="flex items-center py-1 px-2 rounded-lg font-bold text-sm h-8 text-nowrap"
 									style={routeColor(l)}
