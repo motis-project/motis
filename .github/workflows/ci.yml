@@ -292,8 +292,8 @@ jobs:
       - name: Upload Distribution
         uses: actions/upload-artifact@v4
         with:
-          name: motis-${{ matrix.config.preset }}
-          path: motis-${{ matrix.config.preset }}.tar.bz2
+          name: motis-${{ matrix.config.artifact }}
+          path: motis-${{ matrix.config.artifact }}.tar.bz2
 
       # ==== RELEASE ====
       - name: Upload Release
