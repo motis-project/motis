@@ -41,6 +41,7 @@ private:
   bool lookup_{true};
   bool guesser_{true};
   bool railviz_{true};
+  bool shapes_{false};
   bool routing_{true};
   unsigned link_stop_distance_{100U};
   std::vector<std::string> gtfsrt_urls_;

@@ -158,6 +158,8 @@ nigiri::nigiri() : module("Next Generation Routing", "nigiri") {
   param(lookup_, "lookup", "provide geo station lookup");
   param(guesser_, "guesser", "station typeahead/autocomplete");
   param(railviz_, "railviz", "provide railviz functions");
+  param(shapes_, "shapes",
+        "use available shapes instead of direct connections");
   param(routing_, "routing", "provide trip_to_connection");
   param(link_stop_distance_, "link_stop_distance",
         "GTFS only: radius to connect stations, 0=skip");
@@ -536,7 +538,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const dump_file_path = data_dir / filename;
         auto const shapes_dump_file_prefix = data_dir / (filename + "-shapes");
         auto shapes_data = std::unique_ptr<n::shapes_storage>{};
-        if (railviz_ || !no_cache_) {
+        if (shapes_ || !no_cache_) {
           std::filesystem::create_directories(data_dir);
         }
 
@@ -558,7 +560,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
-            if (railviz_) {
+            if (shapes_) {
               shapes_data =
                   std::make_unique<n::shapes_storage>(n::shapes_storage(
                       shapes_dump_file_prefix, cista::mmap::protection::WRITE));
@@ -638,7 +640,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 impl_->update_rtt(std::make_shared<n::rt_timetable>(
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
-              if (railviz_) {
+              if (shapes_) {
                 shapes_data = std::make_unique<n::shapes_storage>(
                     n::shapes_storage(shapes_dump_file_prefix,
                                       cista::mmap::protection::READ));
