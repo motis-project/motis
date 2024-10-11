@@ -6,6 +6,5 @@ RUN addgroup -S motis && adduser -S motis -G motis && \
     chown motis:motis /data
 EXPOSE 8080
 VOLUME ["/data"]
-WORKDIR /motis
 USER motis
-CMD ["/motis/motis", "server", "/data"]
+CMD ["/motis", "server", "/data"]
