@@ -28,6 +28,18 @@ endif()
 include(cmake/buildcache.cmake)
 include(cmake/pkg.cmake)
 
+if (MOTIS_MIMALLOC)
+    if(WIN32)
+        set(motis-mimalloc-lib mimalloc)
+        target_link_libraries(cista INTERFACE mimalloc)
+    else()
+        set(motis-mimalloc-lib mimalloc-obj)
+        target_link_libraries(cista INTERFACE mimalloc-static)
+    endif()
+    target_compile_definitions(cista INTERFACE CISTA_USE_MIMALLOC=1)
+    target_compile_definitions(boost INTERFACE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
+endif()
+
 # --- LINT ---
 option(ICC_LINT "Run clang-tidy with the compiler." OFF)
 if (ICC_LINT)
@@ -155,16 +167,6 @@ set_property(
 
 # --- MIMALLOC ---
 if (MOTIS_MIMALLOC)
-    if(WIN32)
-        set(motis-mimalloc-lib mimalloc)
-        target_link_libraries(cista INTERFACE mimalloc)
-    else()
-        set(motis-mimalloc-lib mimalloc-obj)
-        target_link_libraries(cista INTERFACE mimalloc-static)
-    endif()
-    target_compile_definitions(cista INTERFACE CISTA_USE_MIMALLOC=1)
-    target_compile_definitions(boost INTERFACE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
-
     target_link_libraries(motis ${motis-mimalloc-lib})
     if(WIN32)
         add_custom_command(
