@@ -766,6 +766,23 @@ export type PlanResponse = ({
 
 export type PlanError = unknown;
 
+export type InitialResponse = ({
+    /**
+     * latitude
+     */
+    lat: number;
+    /**
+     * longitude
+     */
+    lon: number;
+    /**
+     * zoom level
+     */
+    zoom: number;
+});
+
+export type InitialError = unknown;
+
 export type LevelsData = {
     query: {
         /**

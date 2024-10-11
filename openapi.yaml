@@ -460,7 +460,35 @@ paths:
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
 
-  /api/v1/levels:
+  /api/v1/map/initial:
+    get:
+      tags:
+        - map
+      operationId: initial
+      summary: initial location to view the map at after loading based on where public transport should be visible
+      responses:
+        '200':
+          description: latitude, longitude and zoom level to set the map to
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - lat
+                  - lon
+                  - zoom
+                properties:
+                  lat:
+                    description: latitude
+                    type: number
+                  lon:
+                    description: longitude
+                    type: number
+                  zoom:
+                    description: zoom level
+                    type: number
+
+  /api/v1/map/levels:
     get:
       tags:
         - map

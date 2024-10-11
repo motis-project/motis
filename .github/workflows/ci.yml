@@ -111,9 +111,6 @@ jobs:
       - name: Move Profiles
         if: matrix.config.mode == 'Release'
         run: |
-          cd deps\tiles
-          git reset --hard HEAD
-          cd ..\..
           mkdir dist
           Copy-Item .\deps\tiles\profile dist\tiles-profiles -Recurse
           mv .\build\motis.exe dist

@@ -17,6 +17,7 @@
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/footpaths.h"
 #include "motis/endpoints/graph.h"
+#include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/matches.h"
 #include "motis/endpoints/osr_routing.h"
@@ -61,7 +62,8 @@ int server(data d, config const& c) {
   POST<ep::graph>(qr, "/api/graph", d);
   POST<ep::update_elevator>(qr, "/api/update_elevator", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
-  GET<ep::levels>(qr, "/api/v1/levels", d);
+  GET<ep::levels>(qr, "/api/v1/map/levels", d);
+  GET<ep::initial>(qr, "/api/v1/map/initial", d);
   GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);
   GET<ep::geocode>(qr, "/api/v1/geocode", d);
   GET<ep::routing>(qr, "/api/v1/plan", d);

@@ -29,13 +29,6 @@
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
-	$effect(() => {
-		if (style != currStyle && ctx.map) {
-			ctx.map.setStyle(style);
-		}
-	});
-
-	let currentCenter = center;
 	const createMap = (container: HTMLElement) => {
 		map = new maplibregl.Map({ container, zoom, center, style, transformRequest });
 
@@ -75,8 +68,23 @@
 	};
 
 	$effect(() => {
-		if (center != currentCenter) {
-			map?.setCenter(center);
+		if (style != currStyle && ctx.map) {
+			ctx.map.setStyle(style);
+		}
+	});
+
+	let currentZoom = zoom;
+	$effect(() => {
+		if (map && zoom != currentZoom) {
+			map.setZoom(zoom);
+			currentZoom = zoom;
+		}
+	});
+
+	let currentCenter = center;
+	$effect(() => {
+		if (map && center != currentCenter) {
+			map.setCenter(center);
 			currentCenter = center;
 		}
 	});

@@ -6,7 +6,7 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import { type Itinerary, plan, type PlanResponse, trip } from '$lib/openapi';
+	import { initial, type Itinerary, plan, type PlanResponse, trip } from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -22,6 +22,7 @@
 	import { client } from '$lib/openapi';
 	import StopTimes from './StopTimes.svelte';
 	import { toDateTime } from '$lib/toDateTime';
+	import { onMount } from 'svelte';
 
 	const urlParams = browser && new URLSearchParams(window.location.search);
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -36,10 +37,21 @@
 		document.documentElement.classList.add('dark');
 	}
 
+	let center = $state.raw<[number, number]>([8.652235, 49.876908]);
 	let level = $state(0);
 	let zoom = $state(15);
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
+
+	onMount(() => {
+		initial().then((d) => {
+			const r = d.data;
+			if (r) {
+				center = [r.lon, r.lat];
+				zoom = r.zoom;
+			}
+		});
+	});
 
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
@@ -147,7 +159,7 @@
 			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
 		}
 	}}
-	center={[8.652235, 49.876908]}
+	{center}
 	class={cn('h-screen overflow-clip', theme)}
 	style={getStyle(theme, level)}
 >
