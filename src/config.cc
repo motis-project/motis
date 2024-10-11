@@ -211,7 +211,6 @@ config config::read_legacy(fs::path const& p) {
     std::vector<std::string> exclude_modules_;
 
     // nigiri
-    bool no_cache_{false};
     bool adjust_footpaths_{true};
     bool merge_dupes_intra_src_{false};
     bool merge_dupes_inter_src_{false};
@@ -220,17 +219,12 @@ config config::read_legacy(fs::path const& p) {
     std::string first_day_{"TODAY"};
     std::string default_timezone_;
     std::uint16_t num_days_{2U};
-    bool lookup_{true};
-    bool guesser_{true};
-    bool railviz_{true};
-    bool routing_{true};
     unsigned link_stop_distance_{100U};
     std::vector<std::string> gtfsrt_urls_;
-    std::vector<std::string> gtfsrt_paths_;
     unsigned gtfsrt_update_interval_sec_{60U};
     bool gtfsrt_incremental_{false};
-    bool debug_{false};
     bool bikes_allowed_default_{false};
+    bool shapes_{false};
 
     // tiles
     bool use_coastline_{false};
@@ -297,13 +291,13 @@ config config::read_legacy(fs::path const& p) {
         "tz for agencies w/o tz or routes w/o agency");
   param(cfg.gtfsrt_urls_, "gtfsrt",
         "list of GTFS-RT endpoints, format: tag|url|authorization");
-  param(cfg.gtfsrt_paths_, "gtfsrt_paths",
-        "list of GTFS-RT, format: tag|/path/to/file.pb");
   param(cfg.gtfsrt_incremental_, "gtfsrt_incremental",
         "true=incremental updates, false=forget all prev. RT updates");
   param(cfg.bikes_allowed_default_, "bikes_allowed_default",
         "whether bikes are allowed in trips where no information is "
         "available");
+  param(cfg.shapes_, "shapes",
+        "use available shapes instead of direct connections");
 
   prefix = "tiles";
   param(cfg.use_coastline_, "import.use_coastline", "true|false");
@@ -359,7 +353,7 @@ config config::read_legacy(fs::path const& p) {
                      ? std::optional{timetable{
                            .first_day_ = cfg.first_day_,
                            .num_days_ = cfg.num_days_,
-                           .with_shapes_ = true,
+                           .with_shapes_ = cfg.shapes_,
                            .ignore_errors_ = true,
                            .adjust_footpaths_ = cfg.adjust_footpaths_,
                            .merge_dupes_intra_src_ = cfg.merge_dupes_intra_src_,
