@@ -702,16 +702,40 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 				'source-layer': 'cities',
 				filter: ['==', ['get', 'place'], 'city'],
 				layout: {
-					// "symbol-sort-key": ["get", "population"],
+					'symbol-sort-key': ['-', ['coalesce', ['get', 'population'], 0]],
 					'text-field': ['get', 'name'],
 					'text-font': ['Noto Sans Display Bold'],
-					'text-size': 18
+					'text-size': ['interpolate', ['linear'], ['zoom'], 6, 12, 9, 16]
 				},
 				paint: {
 					'text-halo-width': 2,
-					'text-halo-color': c.citiesTextHalo,
-					'text-color': c.citiesText
+					'text-halo-color': 'white',
+					'text-color': 'hsl(0, 0%, 20%)'
 				}
+				// }, {
+				//    "id": "tiles_debug_info_bound",
+				//    "type": "line",
+				//    "source": "osm",
+				//    "source-layer": "tiles_debug_info",
+				//    "paint": {
+				//      "line-color": "magenta",
+				//      "line-width": 1
+				//    }
+				// }, {
+				//     "id": "tiles_debug_info_name",
+				//     "type": "symbol",
+				//     "source": "osm",
+				//     "source-layer": "tiles_debug_info",
+				//     "layout": {
+				//       "text-field": ["get", "tile_id"],
+				//       "text-font": ["Noto Sans Display Bold"],
+				//       "text-size": 16,
+				//     },
+				//     "paint": {
+				//       "text-halo-width": 2,
+				//       "text-halo-color": "white",
+				//       "text-color": "hsl(0, 0%, 20%)"
+				//     }
 			}
 		]
 	};
