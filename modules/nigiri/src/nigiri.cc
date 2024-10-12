@@ -635,9 +635,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             auto const read_scope = opentelemetry::trace::Scope{read_span};
             try {
               impl_->tt_ = std::make_shared<cista::wrapped<n::timetable>>(
-                  n::timetable::read(cista::memory_holder{
-                      cista::file{dump_file_path.string().c_str(), "r"}
-                          .content()}));
+                  n::timetable::read(dump_file_path));
               (**impl_->tt_).locations_.resolve_timezones();
               if (!gtfsrt_urls_.empty() || !gtfsrt_paths_.empty()) {
                 impl_->update_rtt(std::make_shared<n::rt_timetable>(
