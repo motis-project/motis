@@ -249,8 +249,9 @@ void nigiri::init(motis::module::registry& reg) {
 
   reg.register_op("/nigiri",
                   [&](mm::msg_ptr const& msg) {
-                    return route(impl_->tags_, **impl_->tt_,
-                                 impl_->get_rtt().get(), msg, *impl_->metrics_);
+                    auto const rtt = impl_->get_rtt();
+                    return route(impl_->tags_, **impl_->tt_, rtt.get(), msg,
+                                 *impl_->metrics_);
                   },
                   {});
 
@@ -258,8 +259,8 @@ void nigiri::init(motis::module::registry& reg) {
     for (auto const& [prf_name, prf_idx] : impl_->tt_->get()->profiles_) {
       reg.register_op(fmt::format("/nigiri/{}", prf_name),
                       [&, p = prf_idx, this](mm::msg_ptr const& msg) {
-                        return route(impl_->tags_, **impl_->tt_,
-                                     impl_->get_rtt().get(), msg,
+                        auto const rtt = impl_->get_rtt();
+                        return route(impl_->tags_, **impl_->tt_, rtt.get(), msg,
                                      *impl_->metrics_, p);
                       },
                       {});
@@ -327,8 +328,9 @@ void nigiri::init(motis::module::registry& reg) {
         {});
     reg.register_op("/railviz/get_station",
                     [&](mm::msg_ptr const& msg) {
-                      return get_station(impl_->tags_, **impl_->tt_,
-                                         impl_->get_rtt().get(), msg);
+                      auto const rtt = impl_->get_rtt();
+                      return get_station(impl_->tags_, **impl_->tt_, rtt.get(),
+                                         msg);
                     },
                     {});
   }
@@ -336,8 +338,9 @@ void nigiri::init(motis::module::registry& reg) {
   if (routing_) {
     reg.register_op("/trip_to_connection",
                     [&](mm::msg_ptr const& msg) {
+                      auto const rtt = impl_->get_rtt();
                       return trip_to_connection(impl_->tags_, **impl_->tt_,
-                                                impl_->get_rtt().get(), msg);
+                                                rtt.get(), msg);
                     },
                     {});
   }
