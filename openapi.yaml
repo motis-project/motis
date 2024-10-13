@@ -460,6 +460,57 @@ paths:
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
 
+  /api/v1/railviz:
+    get:
+      tags:
+        - map
+      operationId: railviz
+      summary: |
+        Given a area frame (box defined by top right and bottom left corner) and a time frame,
+        it returns all trips and their respective shapes that operate in this area + time frame.
+        Trips are filtered by zoom level. On low zoom levels, only long distance trains will be shown
+        while on high zoom levels, also metros, buses and trams will be returned.
+      parameters:
+        - name: zoom
+          in: query
+          required: true
+          description: current zoom level
+          schema:
+            type: number
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+        - name: startTime
+          in: query
+          required: true
+          description: start of the time window (unix timestamp in milliseconds)
+          schema:
+            type: number
+        - name: endTime
+          in: query
+          required: true
+          description: end if the time window (unix timestamp in milliseconds)
+          schema:
+            type: number
+      responses:
+        '200':
+          description: a list of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TripSegment'
+
   /api/v1/map/initial:
     get:
       tags:
@@ -837,6 +888,76 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+
+    TripInfo:
+      description: trip id and name
+      type: object
+      required:
+        - tripId
+        - serviceDate
+        - routeShortName
+      properties:
+        tripId:
+          description: trip ID (dataset trip id prefixed with the dataset tag)
+          type: string
+        serviceDate:
+          description: service date
+          type: string
+        routeShortName:
+          description: trip display name
+          type: string
+
+    TripSegment:
+      description: trip segment between two stops to show a trip on a map
+      type: object
+      required:
+        - trips
+        - mode
+        - distance
+        - from
+        - to
+        - departure
+        - arrival
+        - departureDelay
+        - arrivalDelay
+        - realTime
+      properties:
+        trips:
+          type: array
+          items:
+            $ref: '#/components/schemas/TripInfo'
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this leg
+        distance:
+          type: number
+          description: distance in meters
+        from:
+          $ref: '#/components/schemas/Place'
+        to:
+          $ref: '#/components/schemas/Place'
+        departure:
+          description: departure time, format = unixtime in milliseconds
+          type: integer
+        arrival:
+          description: arrival time, format = unixtime in milliseconds
+          type: integer
+        departureDelay:
+          type: integer
+          description: |
+            The offset from the scheduled departure time of the boarding stop in this leg.
+            Scheduled time of departure at boarding stop = startTime - departureDelay
+        arrivalDelay:
+          type: integer
+          description: |
+            The offset from the scheduled arrival time of the boarding stop in this leg.
+            Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+        realTime:
+          description: Whether there is real-time data about this leg
+          type: boolean
+        polyline:
+          description: Google polyline encoded coordinate sequence where the trip travels on this segment
+          type: string
 
     RelativeDirection:
       type: string

@@ -76,6 +76,7 @@ struct config {
     bool operator==(timetable const&) const = default;
     std::string first_day_{"TODAY"};
     std::uint16_t num_days_{365U};
+    bool railviz_{true};
     bool with_shapes_{true};
     bool ignore_errors_{false};
     bool adjust_footpaths_{true};

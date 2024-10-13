@@ -19,7 +19,7 @@
 #include "motis/max_distance.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
-#include "motis/time_conv.h"
+#include "motis/timetable/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;

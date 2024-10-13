@@ -15,9 +15,9 @@
 #include "motis/data.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
-#include "motis/time_conv.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/service_date.h"
+#include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
 

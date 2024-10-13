@@ -17,10 +17,12 @@ namespace nigiri {
 struct timetable;
 struct rt_timetable;
 struct shapes_storage;
+
 namespace routing {
 struct td_offset;
 struct offset;
 }  // namespace routing
+
 }  // namespace nigiri
 
 namespace motis {
@@ -28,4 +30,6 @@ struct tiles_data;
 struct rt;
 struct tag_lookup;
 struct config;
+struct railviz_static_index;
+struct railviz_rt_index;
 }  // namespace motis

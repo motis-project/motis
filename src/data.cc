@@ -25,6 +25,7 @@
 #include "motis/elevators/parse_fasta.h"
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
+#include "motis/railviz.h"
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
@@ -69,6 +70,9 @@ data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
       load_tt();
       if (c.timetable_->with_shapes_) {
         load_shapes();
+      }
+      if (c.timetable_->railviz_) {
+        load_railviz();
       }
     }
   });
@@ -139,6 +143,11 @@ void data::load_tt() {
 void data::load_shapes() {
   shapes_ = std::make_unique<nigiri::shapes_storage>(
       nigiri::shapes_storage{path_ / "shapes", cista::mmap::protection::READ});
+}
+
+void data::load_railviz() {
+  railviz_static_ = std::make_unique<railviz_static_index>(*tt_);
+  rt_->railviz_rt_ = std::make_unique<railviz_rt_index>(*tt_, *rt_->rtt_);
 }
 
 void data::load_geocoder() {

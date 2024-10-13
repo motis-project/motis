@@ -29,6 +29,7 @@ struct rt {
   rt(ptr<nigiri::rt_timetable>&&, ptr<elevators>&&);
   ~rt();
   ptr<nigiri::rt_timetable> rtt_;
+  ptr<railviz_rt_index> railviz_rt_;
   ptr<elevators> e_;
 };
 
@@ -48,6 +49,7 @@ struct data {
   void load_osr();
   void load_tt();
   void load_shapes();
+  void load_railviz();
   void load_geocoder();
   void load_matches();
   void load_reverse_geocoder();
@@ -72,6 +74,7 @@ struct data {
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<nigiri::shapes_storage> shapes_;
+  ptr<railviz_static_index> railviz_static_;
   cista::wrapped<platform_matches_t> matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};

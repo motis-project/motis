@@ -20,9 +20,9 @@
 
 #include "motis/constants.h"
 #include "motis/tag_lookup.h"
-#include "motis/time_conv.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/service_date.h"
+#include "motis/timetable/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
@@ -34,22 +34,21 @@ api::Place to_place(nigiri::timetable const& tt,
                     place_t const p,
                     std::string_view name) {
   return std::visit(
-      utl::overloaded{[&](osr::location const l) {
-                        return api::Place{
+      utl::overloaded{[&](osr::location const l) -> api::Place {
+                        return {
                             .name_ = std::string{name},
                             .lat_ = l.pos_.lat_,
                             .lon_ = l.pos_.lng_,
                             .vertexType_ = api::VertexTypeEnum::NORMAL,
                         };
                       },
-                      [&](n::location_idx_t const l) {
+                      [&](n::location_idx_t const l) -> api::Place {
                         auto const pos = tt.locations_.coordinates_[l];
-                        return api::Place{
-                            .name_ =
-                                std::string{tt.locations_.names_[l].view()},
-                            .stopId_ = tags.id(tt, l),
-                            .lat_ = pos.lat_,
-                            .lon_ = pos.lng_};
+                        return {.name_ =
+                                    std::string{tt.locations_.names_[l].view()},
+                                .stopId_ = tags.id(tt, l),
+                                .lat_ = pos.lat_,
+                                .lon_ = pos.lng_};
                       }},
       p);
 }
