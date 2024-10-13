@@ -179,7 +179,7 @@ struct rt_transport_geo_index {
 struct realtime {
   std::array<rt_transport_geo_index, n::kNumClasses> rt_geo_indices_;
   n::vector_map<n::rt_transport_idx_t, float> rt_distances_{};
-  std::shared_ptr<n::rt_timetable> rtt__;
+  std::shared_ptr<n::rt_timetable> rtt_;
 };
 
 struct railviz::impl {
@@ -197,8 +197,8 @@ struct railviz::impl {
     using motis::railviz::RailVizTripsRequest;
     auto const* req = motis_content(RailVizTripsRequest, msg);
 
-    auto const rt = rt__;
-    auto const rtt = rt->rtt__;
+    auto const rt = rt_;
+    auto const rtt = rt->rtt_;
 
     auto runs = std::vector<stop_pair>{};
     for (auto const t : *req->trips()) {
@@ -242,8 +242,8 @@ struct railviz::impl {
 
   mm::msg_ptr get_trains(n::interval<n::unixtime_t> time_interval,
                          geo::box const& area, int const zoom_level) {
-    auto const rt = rt__;
-    auto const rtt = rt->rtt__;
+    auto const rt = rt_;
+    auto const rtt = rt->rtt_;
 
     auto runs = std::vector<stop_pair>{};
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
@@ -422,19 +422,19 @@ struct railviz::impl {
 
   void update(std::shared_ptr<n::rt_timetable> const& rtt) {
     auto rt = std::make_shared<realtime>();
-    rt->rtt__ = rtt;
+    rt->rtt_ = rtt;
     rt->rt_distances_.resize(rtt->rt_transport_location_seq_.size());
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
       rt->rt_geo_indices_[c] =
           rt_transport_geo_index{tt_, *rtt, n::clasz{c}, rt->rt_distances_};
     }
-    rt__ = rt;
+    rt_ = rt;
   }
 
   tag_lookup const& tags_;
   n::timetable const& tt_;
   std::unique_ptr<n::shapes_storage> shapes_data_;
-  std::shared_ptr<realtime> rt__;
+  std::shared_ptr<realtime> rt_;
   std::array<route_geo_index, n::kNumClasses> static_geo_indices_;
   n::vector_map<n::route_idx_t, float> static_distances_{};
 };
