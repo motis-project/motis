@@ -304,12 +304,16 @@ api::railviz_response get_trains(tag_lookup const& tags,
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
   auto const start_time =
       n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-          std::chrono::milliseconds{static_cast<long long>(query.startTime_)})};
+          std::chrono::seconds{static_cast<long long>(query.startTime_)})};
   auto const end_time =
       n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-          std::chrono::milliseconds{static_cast<long long>(query.endTime_)})};
+          std::chrono::seconds{static_cast<long long>(query.endTime_)})};
   auto const time_interval = n::interval{start_time, end_time};
   auto const area = geo::make_box({min->pos_, max->pos_});
+
+  std::cout << "area=" << area.min_ << ", " << area.max_ << "\n";
+  std::cout << "start_time=" << start_time << "[" << query.startTime_ << "]\n";
+  std::cout << "end_time=" << end_time << "[" << query.endTime_ << "]\n";
 
   // Collect runs within time+location window.
   auto runs = std::vector<stop_pair>{};

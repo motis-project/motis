@@ -63,6 +63,7 @@ config config::read_simple(std::vector<std::string> const& args) {
       c.osm_ = p;
       c.street_routing_ = true;
       c.geocoding_ = true;
+      c.tiles_ = {config::tiles{.profile_ = ""}};
     } else {
       if (!c.timetable_.has_value()) {
         c.timetable_ = {timetable{}};

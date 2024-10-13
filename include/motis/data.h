@@ -26,7 +26,7 @@ using ptr = std::unique_ptr<T>;
 
 struct rt {
   rt();
-  rt(ptr<nigiri::rt_timetable>&&, ptr<elevators>&&);
+  rt(ptr<nigiri::rt_timetable>&&, ptr<elevators>&&, ptr<railviz_rt_index>&&);
   ~rt();
   ptr<nigiri::rt_timetable> rtt_;
   ptr<railviz_rt_index> railviz_rt_;
@@ -59,7 +59,7 @@ struct data {
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, tags_, location_rtee_,
-                    elevator_nodes_, shapes_, matches_, rt_);
+                    elevator_nodes_, shapes_, railviz_static_, matches_, rt_);
   }
 
   std::filesystem::path path_;

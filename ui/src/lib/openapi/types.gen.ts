@@ -238,6 +238,69 @@ export type Place = {
     vertexType?: VertexType;
 };
 
+/**
+ * trip id and name
+ */
+export type TripInfo = {
+    /**
+     * trip ID (dataset trip id prefixed with the dataset tag)
+     */
+    tripId: string;
+    /**
+     * service date
+     */
+    serviceDate: string;
+    /**
+     * trip display name
+     */
+    routeShortName: string;
+};
+
+/**
+ * trip segment between two stops to show a trip on a map
+ */
+export type TripSegment = {
+    trips: Array<TripInfo>;
+    /**
+     * Transport mode for this leg
+     */
+    mode: Mode;
+    /**
+     * distance in meters
+     */
+    distance: number;
+    from: Place;
+    to: Place;
+    /**
+     * departure time, format = unixtime in milliseconds
+     */
+    departure: number;
+    /**
+     * arrival time, format = unixtime in milliseconds
+     */
+    arrival: number;
+    /**
+     * The offset from the scheduled departure time of the boarding stop in this leg.
+     * Scheduled time of departure at boarding stop = startTime - departureDelay
+     *
+     */
+    departureDelay: number;
+    /**
+     * The offset from the scheduled arrival time of the boarding stop in this leg.
+     * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+     *
+     */
+    arrivalDelay: number;
+    /**
+     * Whether there is real-time data about this leg
+     */
+    realTime: boolean;
+    /**
+     * Google polyline encoded coordinate sequence where the trip travels on this segment
+     */
+    polyline?: string;
+};
+
 export type RelativeDirection = 'DEPART' | 'HARD_LEFT' | 'LEFT' | 'SLIGHTLY_LEFT' | 'CONTINUE' | 'SLIGHTLY_RIGHT' | 'RIGHT' | 'HARD_RIGHT' | 'CIRCLE_CLOCKWISE' | 'CIRCLE_COUNTERCLOCKWISE' | 'ELEVATOR' | 'UTURN_LEFT' | 'UTURN_RIGHT';
 
 export type AbsoluteDirection = 'NORTH' | 'NORTHEAST' | 'EAST' | 'SOUTHEAST' | 'SOUTH' | 'SOUTHWEST' | 'WEST' | 'NORTHWEST';
@@ -765,6 +828,35 @@ export type PlanResponse = ({
 });
 
 export type PlanError = unknown;
+
+export type RailvizData = {
+    query: {
+        /**
+         * end if the time window (unix timestamp in milliseconds)
+         */
+        endTime: number;
+        /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min: string;
+        /**
+         * start of the time window (unix timestamp in milliseconds)
+         */
+        startTime: number;
+        /**
+         * current zoom level
+         */
+        zoom: number;
+    };
+};
+
+export type RailvizResponse = (Array<TripSegment>);
+
+export type RailvizError = unknown;
 
 export type InitialResponse = ({
     /**

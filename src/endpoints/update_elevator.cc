@@ -6,6 +6,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/get_loc.h"
+#include "motis/railviz.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace json = boost::json;
@@ -49,7 +50,8 @@ json::value update_elevator::operator()(json::value const& query) const {
 
   rt_ = std::make_shared<rt>(
       std::make_unique<n::rt_timetable>(std::move(new_rtt)),
-      std::make_unique<elevators>(std::move(new_e)));
+      std::make_unique<elevators>(std::move(new_e)),
+      std::unique_ptr<railviz_rt_index>{});
 
   return json::string{{"success", true}};
 }

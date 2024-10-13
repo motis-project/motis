@@ -9,6 +9,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/http_req.h"
+#include "motis/railviz.h"
 #include "motis/tag_lookup.h"
 
 namespace n = nigiri;
@@ -63,7 +64,9 @@ awaitable<void> rt_update(config const& c,
                  fmt::streamed(stats));
   }
 
-  r = std::make_shared<rt>(std::move(rtt), std::move(r->e_));
+  auto railviz_rt = std::make_unique<railviz_rt_index>(tt, *rtt);
+  r = std::make_shared<rt>(std::move(rtt), std::move(r->e_),
+                           std::move(railviz_rt));
 
   co_return;
 }

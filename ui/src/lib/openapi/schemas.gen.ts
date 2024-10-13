@@ -276,6 +276,82 @@ Scheduled time of departure at boarding stop = startTime - departureDelay
     }
 } as const;
 
+export const TripInfoSchema = {
+    description: 'trip id and name',
+    type: 'object',
+    required: ['tripId', 'serviceDate', 'routeShortName'],
+    properties: {
+        tripId: {
+            description: 'trip ID (dataset trip id prefixed with the dataset tag)',
+            type: 'string'
+        },
+        serviceDate: {
+            description: 'service date',
+            type: 'string'
+        },
+        routeShortName: {
+            description: 'trip display name',
+            type: 'string'
+        }
+    }
+} as const;
+
+export const TripSegmentSchema = {
+    description: 'trip segment between two stops to show a trip on a map',
+    type: 'object',
+    required: ['trips', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime'],
+    properties: {
+        trips: {
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/TripInfo'
+            }
+        },
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this leg'
+        },
+        distance: {
+            type: 'number',
+            description: 'distance in meters'
+        },
+        from: {
+            '$ref': '#/components/schemas/Place'
+        },
+        to: {
+            '$ref': '#/components/schemas/Place'
+        },
+        departure: {
+            description: 'departure time, format = unixtime in milliseconds',
+            type: 'integer'
+        },
+        arrival: {
+            description: 'arrival time, format = unixtime in milliseconds',
+            type: 'integer'
+        },
+        departureDelay: {
+            type: 'integer',
+            description: `The offset from the scheduled departure time of the boarding stop in this leg.
+Scheduled time of departure at boarding stop = startTime - departureDelay
+`
+        },
+        arrivalDelay: {
+            type: 'integer',
+            description: `The offset from the scheduled arrival time of the boarding stop in this leg.
+Scheduled time of arrival at boarding stop = endTime - arrivalDelay
+`
+        },
+        realTime: {
+            description: 'Whether there is real-time data about this leg',
+            type: 'boolean'
+        },
+        polyline: {
+            description: 'Google polyline encoded coordinate sequence where the trip travels on this segment',
+            type: 'string'
+        }
+    }
+} as const;
+
 export const RelativeDirectionSchema = {
     type: 'string',
     enum: ['DEPART', 'HARD_LEFT', 'LEFT', 'SLIGHTLY_LEFT', 'CONTINUE', 'SLIGHTLY_RIGHT', 'RIGHT', 'HARD_RIGHT', 'CIRCLE_CLOCKWISE', 'CIRCLE_COUNTERCLOCKWISE', 'ELEVATOR', 'UTURN_LEFT', 'UTURN_RIGHT']

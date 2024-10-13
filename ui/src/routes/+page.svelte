@@ -6,7 +6,15 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import { initial, type Itinerary, plan, type PlanResponse, trip } from '$lib/openapi';
+	import {
+		initial,
+		type Itinerary,
+		plan,
+		type PlanResponse,
+		railviz,
+		trip,
+		type TripSegment
+	} from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -23,6 +31,9 @@
 	import StopTimes from './StopTimes.svelte';
 	import { toDateTime } from '$lib/toDateTime';
 	import { onMount } from 'svelte';
+
+	import { MapboxOverlay } from '@deck.gl/mapbox';
+	import { ScatterplotLayer } from '@deck.gl/layers';
 
 	const urlParams = browser && new URLSearchParams(window.location.search);
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -121,6 +132,64 @@
 		});
 	};
 
+	const getRailvizLayer = (trips: Array<TripSegment>) => {
+		return new ScatterplotLayer({
+			id: 'deckgl-circle',
+			data: trips,
+			getPosition: (d) => [d.from.lon, d.from.lat],
+			getFillColor: [255, 0, 0, 100],
+			getRadius: 1000
+		});
+	};
+
+	const railvizRequest = () => {
+		const b = maplibregl.LngLatBounds.convert(bounds!);
+		const min = lngLatToStr(b.getNorthWest());
+		const max = lngLatToStr(b.getSouthEast());
+		const startTime = new Date().getTime() / 1000;
+		const endTime = startTime + 2 * 60;
+		return railviz({
+			query: {
+				min,
+				max,
+				startTime,
+				endTime,
+				zoom
+			}
+		});
+	};
+
+	const overlay = new MapboxOverlay({
+		layers: []
+	});
+
+	let railvizInitialized = false;
+	$effect(() => {
+		if (map && bounds && zoom) {
+			if (!railvizInitialized) {
+				railvizInitialized = true;
+				console.log('initializing railviz');
+				railvizRequest().then((d) => {
+					overlay.setProps({
+						layers: [getRailvizLayer(d.data!)]
+					});
+					map!.addControl(overlay);
+
+					setTimeout(async () => {
+						railvizRequest().then((d) => {
+							overlay.setProps({
+								layers: [getRailvizLayer(d.data!)]
+							});
+						});
+					}, 1000);
+				});
+				railvizInitialized = true;
+			} else {
+				//
+			}
+		}
+	});
+
 	type CloseFn = () => void;
 </script>
 
@@ -153,7 +222,7 @@
 	bind:zoom
 	transformRequest={(url: string) => {
 		if (url.startsWith('/sprite')) {
-			return { url: `${client.getConfig().baseUrl}/${url}` };
+			return { url: `${window.location.origin}${url}` };
 		}
 		if (url.startsWith('/')) {
 			return { url: `${client.getConfig().baseUrl}/tiles${url}` };

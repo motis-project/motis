@@ -38,8 +38,10 @@ namespace motis {
 
 rt::rt() = default;
 
-rt::rt(ptr<nigiri::rt_timetable>&& rtt, ptr<elevators>&& e)
-    : rtt_{std::move(rtt)}, e_{std::move(e)} {}
+rt::rt(ptr<nigiri::rt_timetable>&& rtt,
+       ptr<elevators>&& e,
+       ptr<railviz_rt_index>&& railviz)
+    : rtt_{std::move(rtt)}, railviz_rt_{std::move(railviz)}, e_{std::move(e)} {}
 
 rt::~rt() = default;
 
