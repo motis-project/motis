@@ -86,11 +86,16 @@ int server(data d, config const& c) {
   s.init(server_config.host_, server_config.port_, ec);
   s.run();
 
+  auto rt_update_thread = std::unique_ptr<std::thread>{};
+  auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
   if (c.requires_rt_timetable_updates()) {
-    cron(ioc, std::chrono::seconds{c.timetable_->update_interval_}, [&]() {
-      asio::co_spawn(workers, rt_update(c, *d.tt_, *d.tags_, d.rt_),
-                     asio::detached);
-    });
+    rt_update_ioc = std::make_unique<asio::io_context>();
+    cron(*rt_update_ioc, std::chrono::seconds{c.timetable_->update_interval_},
+         [&]() {
+           asio::co_spawn(*rt_update_ioc, rt_update(c, *d.tt_, *d.tags_, d.rt_),
+                          asio::detached);
+         });
+    rt_update_thread = std::make_unique<std::thread>(net::run(*rt_update_ioc));
   }
 
   if (ec) {
@@ -109,6 +114,10 @@ int server(data d, config const& c) {
     fmt::println("shutdown");
     s.stop();
     ioc.stop();
+
+    if (rt_update_ioc != nullptr) {
+      rt_update_ioc->stop();
+    }
   });
 
   fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
@@ -118,6 +127,9 @@ int server(data d, config const& c) {
   workers.stop();
   for (auto& t : threads) {
     t.join();
+  }
+  if (rt_update_thread != nullptr) {
+    rt_update_thread->join();
   }
 
   return 0;
