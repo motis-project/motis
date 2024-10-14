@@ -53,15 +53,18 @@
 		}
 
 		if (!l) {
-			// @ts-expect-error not assignable
-			ctx.map!.addLayer({
-				source: source.id,
-				id,
-				type,
-				filter,
-				layout,
-				paint
-			});
+			ctx.map!.addLayer(
+				// @ts-expect-error not assignable
+				{
+					source: source.id,
+					id,
+					type,
+					filter,
+					layout,
+					paint
+				},
+				'road-ref-shield'
+			);
 			currFilter = $state.snapshot(filter);
 			currLayout = $state.snapshot(layout);
 			currPaint = $state.snapshot(paint);

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { formatTime } from './toDateTime';
 	import { cn } from './utils';
 
 	let {
@@ -27,6 +28,6 @@
 	class:text-green-600={isRealtime && rt && delay < 180000}
 >
 	{#if showAlways || !rt || (rt && isRealtime)}
-		{pad(d.getHours())}:{pad(d.getMinutes())}
+		{formatTime(d)}
 	{/if}
 </div>

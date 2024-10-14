@@ -33,7 +33,6 @@
 	let currentCenter: maplibregl.LngLatLike | undefined = undefined;
 
 	const createMap = (container: HTMLElement) => {
-		console.log('CREATE MAP');
 		let tmp = new maplibregl.Map({ container, zoom, bounds, center, style, transformRequest });
 
 		tmp.addImage(
@@ -85,11 +84,8 @@
 
 	$effect(() => {
 		if (map && $state.snapshot(zoom) !== currentZoom) {
-			console.log('UPDATING ZOOM', { zoom, currentZoom });
 			map.setZoom(zoom);
 			currentZoom = zoom;
-		} else {
-			console.log('NOT UPDATING ZOOM', { map, zoom, currentZoom });
 		}
 	});
 

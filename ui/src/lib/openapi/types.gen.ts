@@ -298,7 +298,7 @@ export type TripSegment = {
     /**
      * Google polyline encoded coordinate sequence where the trip travels on this segment
      */
-    polyline?: string;
+    polyline: string;
 };
 
 export type RelativeDirection = 'DEPART' | 'HARD_LEFT' | 'LEFT' | 'SLIGHTLY_LEFT' | 'CONTINUE' | 'SLIGHTLY_RIGHT' | 'RIGHT' | 'HARD_RIGHT' | 'CIRCLE_CLOCKWISE' | 'CIRCLE_COUNTERCLOCKWISE' | 'ELEVATOR' | 'UTURN_LEFT' | 'UTURN_RIGHT';

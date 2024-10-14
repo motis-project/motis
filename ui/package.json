@@ -46,6 +46,8 @@
 		"@deck.gl/layers": "^9.0.33",
 		"@deck.gl/mapbox": "^9.0.33",
 		"@hey-api/client-fetch": "^0.3.4",
+		"@turf/rhumb-bearing": "^7.1.0",
+		"@turf/rhumb-distance": "^7.1.0",
 		"bits-ui": "^0.21.12",
 		"clsx": "^2.1.1",
 		"colord": "^2.9.3",

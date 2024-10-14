@@ -29,11 +29,16 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/openapi';
 	import StopTimes from './StopTimes.svelte';
-	import { toDateTime } from '$lib/toDateTime';
+	import { formatTime, toDateTime } from '$lib/toDateTime';
 	import { onMount } from 'svelte';
 
 	import { MapboxOverlay } from '@deck.gl/mapbox';
-	import { ScatterplotLayer } from '@deck.gl/layers';
+	import { IconLayer } from '@deck.gl/layers';
+	import { createTripIcon } from '$lib/map/createTripIcon';
+	import { getColor } from '$lib/modeStyle';
+	import getDistance from '@turf/rhumb-distance';
+	import getBearing from '@turf/rhumb-bearing';
+	import polyline from 'polyline';
 
 	const urlParams = browser && new URLSearchParams(window.location.search);
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -60,7 +65,6 @@
 			if (r) {
 				center = [r.lon, r.lat];
 				zoom = r.zoom;
-				console.log({ zoom });
 			}
 		});
 	});
@@ -133,14 +137,92 @@
 		});
 	};
 
-	const getRailvizLayer = (trips: Array<TripSegment>) => {
-		return new ScatterplotLayer({
-			id: 'deckgl-circle',
-			data: trips,
-			getPosition: (d) => [d.from.lon, d.from.lat],
-			getFillColor: theme === 'dark' ? [193, 135, 255, 100] : [138, 28, 255, 100],
-			radiusMinPixels: 4,
-			radiusMaxPixels: 4
+	function hexToRgb(hex: string) {
+		var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		return result
+			? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16), 255]
+			: null;
+	}
+
+	type KeyFrame = { point: [number, number]; heading: number; time: number };
+
+	const getKeyFrames = (t: TripSegment): Array<KeyFrame> => {
+		let keyFrames: Array<KeyFrame> = [];
+		const coordinates = polyline.decode(t.polyline).map(([x, y]): [number, number] => [y, x]);
+		const totalDistance = t.distance;
+		const totalDuration = t.arrival - t.departure;
+		let currDistance = 0;
+		for (let i = 0; i < coordinates.length - 1; i++) {
+			let from = coordinates[i];
+			let to = coordinates[i + 1];
+
+			const distance = getDistance(from, to, { units: 'kilometers' }) * 1000;
+			const heading = getBearing(from, to);
+
+			const r = currDistance / totalDistance;
+			keyFrames.push({ point: from, heading, time: t.departure + r * totalDuration });
+
+			currDistance += distance;
+		}
+		keyFrames.push({ point: coordinates[coordinates.length - 1], time: t.arrival, heading: 0 });
+		return keyFrames;
+	};
+
+	const getFrame = (keyframes: Array<KeyFrame>, timestamp: number) => {
+		const i = keyframes.findIndex((s) => s.time >= timestamp);
+
+		if (i === -1 || i === 0) {
+			return;
+		}
+
+		const startState = keyframes[i - 1];
+		const endState = keyframes[i];
+		const r = (timestamp - startState.time) / (endState.time - startState.time);
+
+		return {
+			point: [
+				startState.point[0] * (1 - r) + endState.point[0] * r,
+				startState.point[1] * (1 - r) + endState.point[1] * r
+			],
+			heading: startState.heading
+		};
+	};
+
+	const tripIcon = createTripIcon(128);
+	const getRailvizLayer = (trips: Array<TripSegment & { keyFrames: Array<KeyFrame> }>) => {
+		const now = new Date().getTime();
+
+		const tripsWithFrame = trips
+			.map((t) => {
+				return {
+					...t,
+					...getFrame(t.keyFrames, now)
+				};
+			})
+			.filter((t) => t.point);
+
+		return new IconLayer<TripSegment & { keyFrames: Array<KeyFrame> } & KeyFrame>({
+			id: 'trips',
+			data: tripsWithFrame,
+			beforeId: 'road-name-text',
+			getColor: (d) => hexToRgb(getColor(d)[0]),
+			getAngle: (d) => -d.heading + 90,
+			getPosition: (d) => d.point,
+			getSize: (d) => 48,
+			getIcon: (_) => 'marker',
+			pickable: true,
+			iconAtlas: tripIcon!,
+			iconMapping: {
+				marker: {
+					x: 0,
+					y: 0,
+					width: 128,
+					height: 128,
+					anchorY: 64,
+					anchorX: 64,
+					mask: true
+				}
+			}
 		});
 	};
 
@@ -161,11 +243,25 @@
 		});
 	};
 
+	let animation: number | null = null;
 	const updateRailvizLayer = () => {
 		railvizRequest().then((d) => {
-			overlay!.setProps({
-				layers: [getRailvizLayer(d.data!)]
+			if (animation) {
+				cancelAnimationFrame(animation);
+			}
+
+			const tripSegmentsWithKeyFrames = d.data!.map((tripSegment: TripSegment) => {
+				return { ...tripSegment, keyFrames: getKeyFrames(tripSegment) };
 			});
+
+			const onAnimationFrame = () => {
+				overlay!.setProps({
+					layers: [getRailvizLayer(tripSegmentsWithKeyFrames)]
+				});
+				animation = requestAnimationFrame(onAnimationFrame);
+			};
+
+			onAnimationFrame();
 		});
 	};
 
@@ -174,7 +270,22 @@
 	$effect(() => {
 		if (map && !overlay) {
 			overlay = new MapboxOverlay({
-				layers: []
+				interleaved: true,
+				layers: [],
+				getTooltip: ({ object }) => {
+					if (!object) {
+						return null;
+					}
+					return {
+						className: 'bg-red-500',
+						html: `${object.trips[0].routeShortName}<br>
+										${formatTime(new Date(object.departure))} ${object.from.name}<br>
+										${formatTime(new Date(object.arrival))} ${object.to.name}`
+					};
+				},
+				onClick: ({ object }) => {
+					onClickTrip(object.trips[0].tripId, object.trips[0].serviceDate);
+				}
 			});
 			map.addControl(overlay);
 			updateRailvizLayer();

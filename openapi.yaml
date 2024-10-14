@@ -921,6 +921,7 @@ components:
         - departureDelay
         - arrivalDelay
         - realTime
+        - polyline
       properties:
         trips:
           type: array

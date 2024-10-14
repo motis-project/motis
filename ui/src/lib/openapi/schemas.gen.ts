@@ -299,7 +299,7 @@ export const TripInfoSchema = {
 export const TripSegmentSchema = {
     description: 'trip segment between two stops to show a trip on a map',
     type: 'object',
-    required: ['trips', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime'],
+    required: ['trips', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime', 'polyline'],
     properties: {
         trips: {
             type: 'array',

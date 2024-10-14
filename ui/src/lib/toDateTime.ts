@@ -5,3 +5,7 @@ export const toDateTime = (t: Date): [string, string] => {
 	const time = `${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())}`;
 	return [date, time];
 };
+
+export const formatTime = (d: Date): string => {
+	return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
