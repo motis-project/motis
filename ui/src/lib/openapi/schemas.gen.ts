@@ -299,13 +299,16 @@ export const TripInfoSchema = {
 export const TripSegmentSchema = {
     description: 'trip segment between two stops to show a trip on a map',
     type: 'object',
-    required: ['trips', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime', 'polyline'],
+    required: ['trips', 'routeColor', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime', 'polyline'],
     properties: {
         trips: {
             type: 'array',
             items: {
                 '$ref': '#/components/schemas/TripInfo'
             }
+        },
+        routeColor: {
+            type: 'string'
         },
         mode: {
             '$ref': '#/components/schemas/Mode',

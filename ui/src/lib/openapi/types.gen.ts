@@ -261,6 +261,7 @@ export type TripInfo = {
  */
 export type TripSegment = {
     trips: Array<TripInfo>;
+    routeColor: string;
     /**
      * Transport mode for this leg
      */
