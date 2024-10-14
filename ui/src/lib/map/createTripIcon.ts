@@ -10,10 +10,10 @@ export function createTripIcon(size: number): HTMLCanvasElement | undefined {
 	const innerSize = size - 2 * padding;
 	const mid = size / 2;
 	const rad = innerSize / 3.5;
-	var cv = document.createElement('canvas');
+	const cv = document.createElement('canvas');
 	cv.width = size;
 	cv.height = size;
-	var ctx = cv.getContext('2d', { alpha: true });
+	const ctx = cv.getContext('2d', { alpha: true });
 
 	if (!ctx) {
 		return cv;

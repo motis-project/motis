@@ -19,7 +19,6 @@
 	} = $props();
 
 	const d = new Date(rt ? timestamp : timestamp - delay);
-	const pad = (x: number) => ('0' + x).slice(-2);
 </script>
 
 <div

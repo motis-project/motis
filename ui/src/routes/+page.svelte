@@ -208,7 +208,7 @@
 			getColor: (d) => hexToRgb(getColor(d)[0]),
 			getAngle: (d) => -d.heading + 90,
 			getPosition: (d) => d.point,
-			getSize: (d) => 48,
+			getSize: (_) => 48,
 			getIcon: (_) => 'marker',
 			pickable: true,
 			// @ts-expect-error: canvas element seems to work fine

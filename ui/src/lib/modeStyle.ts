@@ -10,8 +10,7 @@ export type TripInfo = {
 	tripId?: string;
 	serviceDate?: string;
 	routeShortName?: string;
-}
-
+};
 
 export type LegLike = Colorable & TripInfo;
 
