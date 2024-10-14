@@ -357,6 +357,8 @@ api::railviz_response get_trains(tag_lookup const& tags,
                                 : "ADDED",
             .routeShortName_ =
                 std::string{from.trip_display_name(n::event_type::kDep)}}},
+        .routeColor_ =
+            to_str(from.get_route_color(nigiri::event_type::kDep).color_),
         .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
         .distance_ =
             fr.is_rt()

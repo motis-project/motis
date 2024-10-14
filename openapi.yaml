@@ -912,6 +912,7 @@ components:
       type: object
       required:
         - trips
+        - routeColor
         - mode
         - distance
         - from
@@ -927,6 +928,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TripInfo'
+        routeColor:
+          type: string
         mode:
           $ref: '#/components/schemas/Mode'
           description: Transport mode for this leg
