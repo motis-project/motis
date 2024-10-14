@@ -138,7 +138,7 @@ int server(data d, config const& c) {
 int server(fs::path const& data_path) {
   try {
     auto const c = config::read(data_path / "config.yml");
-    return server(data{std::move(data_path), c}, c);
+    return server(data{data_path, c}, c);
   } catch (std::exception const& e) {
     std::cerr << "unable to start server: " << e.what() << "\n";
     return 1;
