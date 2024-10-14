@@ -150,14 +150,21 @@
 	const getKeyFrames = (t: TripSegment): Array<KeyFrame> => {
 		let keyFrames: Array<KeyFrame> = [];
 		const coordinates = polyline.decode(t.polyline).map(([x, y]): [number, number] => [y, x]);
-		const totalDistance = t.distance;
 		const totalDuration = t.arrival - t.departure;
 		let currDistance = 0;
+
+		let totalDistance = 0;
+		for (let i = 0; i < coordinates.length - 1; i++) {
+			let from = coordinates[i];
+			let to = coordinates[i + 1];
+			totalDistance += getDistance(from, to, { units: 'meters' });
+		}
+
 		for (let i = 0; i < coordinates.length - 1; i++) {
 			let from = coordinates[i];
 			let to = coordinates[i + 1];
 
-			const distance = getDistance(from, to, { units: 'kilometers' }) * 1000;
+			const distance = getDistance(from, to, { units: 'meters' });
 			const heading = getBearing(from, to);
 
 			const r = currDistance / totalDistance;
@@ -193,6 +200,7 @@
 		const now = new Date().getTime();
 
 		const tripsWithFrame = trips
+			.filter((t) => now >= t.departure && now < t.arrival)
 			.map((t) => {
 				return {
 					...t,
@@ -285,6 +293,9 @@
 					};
 				},
 				onClick: ({ object }) => {
+					if (!object) {
+						return;
+					}
 					onClickTrip(object.trips[0].tripId, object.trips[0].serviceDate);
 				}
 			});

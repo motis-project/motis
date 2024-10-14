@@ -18,7 +18,7 @@
 		isRealtime: boolean;
 	} = $props();
 
-	const d = new Date(rt ? timestamp : timestamp - delay);
+	const d = $derived(new Date(rt ? timestamp : timestamp - delay));
 </script>
 
 <div

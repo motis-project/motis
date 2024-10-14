@@ -31,7 +31,7 @@
 	<Time {isRealtime} rt={true} class="font-semibold" {timestamp} {delay} />
 	{#if stopId}
 		<Button
-			class="col-span-5 mr-6 text-lg justify-normal"
+			class="col-span-5 mr-6 text-lg justify-normal text-wrap text-left"
 			variant="link"
 			on:click={() => {
 				onClickStop(name, stopId, new Date(timestamp));
