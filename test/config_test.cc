@@ -41,6 +41,7 @@ tiles:
 timetable:
   first_day: 2024-10-02
   num_days: 2
+  railviz: true
   with_shapes: true
   ignore_errors: false
   adjust_footpaths: true
