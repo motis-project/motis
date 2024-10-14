@@ -86,8 +86,7 @@ int min_zoom_level(n::clasz const clasz, float const distance) {
 
     case n::clasz::kOther: return 11;
 
-    default:
-      throw utl::fail("unknown n::clasz {}", static_cast<int_clasz>(clasz));
+    default: throw utl::fail("unknown n::clasz {}", static_cast<int>(clasz));
   }
 }
 
