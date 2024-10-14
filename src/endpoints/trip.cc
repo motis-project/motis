@@ -64,6 +64,11 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const [tag, id] = split_tag_id(query.tripId_);
   auto const r = resolve_run(tt_, day, tags_.get_src(tag), id);
 
+  if (!r.valid()) {
+    throw utl::fail("trip not found: tripId={}, date={}", query.tripId_,
+                    query.date_);
+  }
+
   auto fr = n::rt::frun{tt_, rtt, r};
   fr.stop_range_.to_ = fr.size();
   fr.stop_range_.from_ = 0U;
@@ -75,7 +80,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto blocked = osr::bitvec<osr::node_idx_t>{};
 
   return journey_to_response(
-      w_, l_, tt_, tags_, pl_, nullptr, rtt, matches_, nullptr, false,
+      w_, l_, tt_, tags_, pl_, nullptr, rtt, matches_, shapes_, false,
       {.legs_ = {n::routing::journey::leg{
            n::direction::kForward, from_l.get_location_idx(),
            to_l.get_location_idx(), start_time, dest_time,

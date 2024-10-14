@@ -276,6 +276,12 @@
 
 	let timer: number | undefined;
 	let overlay = $state.raw<MapboxOverlay>();
+	const updateRailviz = () => {
+		clearTimeout(timer);
+		updateRailvizLayer();
+		timer = setTimeout(updateRailviz, 60000);
+	};
+
 	$effect(() => {
 		if (map && !overlay) {
 			overlay = new MapboxOverlay({
@@ -300,16 +306,14 @@
 				}
 			});
 			map.addControl(overlay);
-			updateRailvizLayer();
-			timer = setTimeout(updateRailvizLayer, 1000);
+
+			updateRailviz();
 		}
 	});
 
 	$effect(() => {
 		if (overlay && bounds && zoom) {
-			updateRailvizLayer();
-			clearTimeout(timer);
-			timer = setTimeout(updateRailvizLayer, 1000);
+			updateRailviz();
 		}
 	});
 

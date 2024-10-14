@@ -29,10 +29,14 @@ using street_routing_cache_t = hash_map<std::tuple<osr::location,
                                                    std::vector<bool>>,
                                         std::optional<osr::path>>;
 
+api::Place to_place(osr::location, std::string_view name);
+
 api::Place to_place(nigiri::timetable const&,
                     tag_lookup const&,
-                    place_t,
-                    std::string_view = "");
+                    place_t l,
+                    place_t start = osr::location{},
+                    place_t dest = osr::location{},
+                    std::string_view name = "");
 
 api::Itinerary journey_to_response(
     osr::ways const&,

@@ -123,14 +123,21 @@ namespace motis {
 cista::hash_t hash_file(fs::path const& p) {
   if (p.generic_string().starts_with("\n#")) {
     return cista::hash(p.generic_string());
+  } else if (fs::is_directory(p)) {
+    auto h = cista::BASE_HASH;
+    for (auto const& file : fs::directory_iterator{p}) {
+      h = cista::hash_combine(h, hash_file(file));
+    }
+    return h;
+  } else {
+    auto const mmap =
+        cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
+    return cista::hash_combine(
+        cista::hash(mmap.view().substr(
+            0U, std::min(mmap.size(),
+                         static_cast<std::size_t>(50U * 1024U * 1024U)))),
+        mmap.size());
   }
-  auto const mmap =
-      cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
-  return cista::hash_combine(
-      cista::hash(mmap.view().substr(
-          0U, std::min(mmap.size(),
-                       static_cast<std::size_t>(50U * 1024U * 1024U)))),
-      mmap.size());
 }
 
 data import(config const& c, fs::path const& data_path, bool const write) {
@@ -253,7 +260,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,

@@ -4,6 +4,7 @@
 
 #include "utl/concat.h"
 #include "utl/enumerate.h"
+#include "utl/overloaded.h"
 
 #include "osr/platforms.h"
 #include "osr/routing/route.h"
@@ -29,55 +30,49 @@ namespace n = nigiri;
 
 namespace motis {
 
-api::Place to_place(nigiri::timetable const& tt,
-                    tag_lookup const& tags,
-                    place_t const p,
-                    std::string_view name) {
-  return std::visit(
-      utl::overloaded{[&](osr::location const l) -> api::Place {
-                        return {
-                            .name_ = std::string{name},
-                            .lat_ = l.pos_.lat_,
-                            .lon_ = l.pos_.lng_,
-                            .vertexType_ = api::VertexTypeEnum::NORMAL,
-                        };
-                      },
-                      [&](n::location_idx_t const l) -> api::Place {
-                        auto const pos = tt.locations_.coordinates_[l];
-                        return {.name_ =
-                                    std::string{tt.locations_.names_[l].view()},
-                                .stopId_ = tags.id(tt, l),
-                                .lat_ = pos.lat_,
-                                .lon_ = pos.lng_};
-                      }},
-      p);
+api::Place to_place(osr::location const l, std::string_view name) {
+  return {
+      .name_ = std::string{name},
+      .lat_ = l.pos_.lat_,
+      .lon_ = l.pos_.lng_,
+      .vertexType_ = api::VertexTypeEnum::NORMAL,
+  };
 }
 
 api::Place to_place(n::timetable const& tt,
                     tag_lookup const& tags,
-                    n::location_idx_t const l,
+                    place_t const l,
                     place_t const start,
-                    place_t const dest) {
-  if (l == n::get_special_station(n::special_station::kStart)) {
-    return to_place(tt, tags, start, "START");
-  } else if (l == n::get_special_station(n::special_station::kEnd)) {
-    return to_place(tt, tags, dest, "END");
-  } else {
-    auto const pos = tt.locations_.coordinates_[l];
-    auto const type = tt.locations_.types_.at(l);
-    auto const is_track = (type == n::location_type::kGeneratedTrack ||
-                           type == n::location_type::kTrack);
-    auto const p = is_track ? tt.locations_.parents_.at(l) : l;
-    auto const track =
-        is_track ? std::optional{std::string{tt.locations_.names_.at(l).view()}}
-                 : std::nullopt;
-    return {.name_ = std::string{tt.locations_.names_[p].view()},
-            .stopId_ = tags.id(tt, l),
-            .lat_ = pos.lat_,
-            .lon_ = pos.lng_,
-            .track_ = track,
-            .vertexType_ = api::VertexTypeEnum::NORMAL};
-  }
+                    place_t const dest,
+                    std::string_view name) {
+  return std::visit(
+      utl::overloaded{
+          [&](osr::location const& l) { return to_place(l, name); },
+          [&](n::location_idx_t const l) -> api::Place {
+            if (l == n::get_special_station(n::special_station::kStart)) {
+              return to_place(std::get<osr::location>(start), "START");
+            } else if (l == n::get_special_station(n::special_station::kEnd)) {
+              return to_place(std::get<osr::location>(dest), "END");
+            } else {
+              auto const pos = tt.locations_.coordinates_[l];
+              auto const type = tt.locations_.types_.at(l);
+              auto const is_track =
+                  (type == n::location_type::kGeneratedTrack ||
+                   type == n::location_type::kTrack);
+              auto const p = is_track ? tt.locations_.parents_.at(l) : l;
+              auto const track = is_track
+                                     ? std::optional{std::string{
+                                           tt.locations_.names_.at(l).view()}}
+                                     : std::nullopt;
+              return {.name_ = std::string{tt.locations_.names_[p].view()},
+                      .stopId_ = tags.id(tt, l),
+                      .lat_ = pos.lat_,
+                      .lon_ = pos.lng_,
+                      .track_ = track,
+                      .vertexType_ = api::VertexTypeEnum::NORMAL};
+            }
+          }},
+      l);
 }
 
 api::ModeEnum to_mode(osr::search_profile const m) {

@@ -30,7 +30,6 @@ awaitable<void> cron(std::chrono::seconds const interval, cron_fn_t f) {
     } catch (...) {
       std::cerr << "EXCEPTION CAUGHT IN CRON" << std::endl;
     }
-    std::cout << "WAIT " << interval << "s" << std::endl;
     timer.expires_after(interval);
     co_await timer.async_wait(asio::redirect_error(use_awaitable, ec));
     if (ec == asio::error::operation_aborted) {

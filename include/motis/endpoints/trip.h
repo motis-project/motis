@@ -15,6 +15,7 @@ struct trip {
   osr::lookup const& l_;
   osr::platforms const& pl_;
   nigiri::timetable const& tt_;
+  nigiri::shapes_storage const* shapes_;
   tag_lookup const& tags_;
   point_rtree<nigiri::location_idx_t> const& loc_tree_;
   vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches_;

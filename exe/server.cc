@@ -54,7 +54,7 @@ int server(data d, config const& c) {
   auto ioc = asio::io_context{};
   auto workers = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto qr = net::query_router{net::asio_exec({ioc, workers})};
+  auto qr = net::query_router{net::asio_exec(ioc, workers)};
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
@@ -144,8 +144,13 @@ int server(int ac, char** av) {
     return 0;
   }
 
-  auto const c = config::read(data_path / "config.yml");
-  return server(data{std::move(data_path), c}, c);
+  try {
+    auto const c = config::read(data_path / "config.yml");
+    return server(data{std::move(data_path), c}, c);
+  } catch (std::exception const& e) {
+    std::cerr << "unable to start server: " << e.what() << "\n";
+    return 1;
+  }
 }
 
 }  // namespace motis

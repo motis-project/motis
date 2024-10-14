@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include "boost/url.hpp"
+
 #include "fmt/std.h"
 
 #include "utl/erase.h"
@@ -109,6 +111,20 @@ void config::verify() const {
       !elevators_ || (fasta_ && street_routing_ && timetable_),
       "feature ELEVATORS requires fasta.json and features STREET_ROUTING and "
       "TIMETABLE");
+
+  if (timetable_) {
+    for (auto const& [_, d] : timetable_->datasets_) {
+      if (d.rt_.has_value()) {
+        for (auto const& url : *d.rt_) {
+          try {
+            boost::urls::url{url.url_};
+          } catch (std::exception const& e) {
+            throw utl::fail("{} is not a valid url: {}", url.url_, e.what());
+          }
+        }
+      }
+    }
+  }
 }
 
 void config::verify_input_files_exist() const {
@@ -131,7 +147,7 @@ void config::verify_input_files_exist() const {
                       fs::is_regular_file(d.path_),
                   "timetable dataset does not exist: {}", d.path_);
 
-      if (d.clasz_bikes_allowed_) {
+      if (d.clasz_bikes_allowed_.has_value()) {
         for (auto const& c : *d.clasz_bikes_allowed_) {
           nigiri::to_clasz(c.first);
         }

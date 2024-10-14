@@ -354,8 +354,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       std::nullopt);
 
   return {
-      .from_ = to_place(tt_, tags_, from, "Origin"),
-      .to_ = to_place(tt_, tags_, to, "Destination"),
+      .from_ = to_place(tt_, tags_, from),
+      .to_ = to_place(tt_, tags_, to),
       .itineraries_ =
           utl::to_vec(*r.journeys_,
                       [&, cache = street_routing_cache_t{}](auto&& j) mutable {
