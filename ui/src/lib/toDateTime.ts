@@ -7,5 +7,5 @@ export const toDateTime = (t: Date): [string, string] => {
 };
 
 export const formatTime = (d: Date): string => {
-	return `${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
+	return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};

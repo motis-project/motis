@@ -1,13 +1,19 @@
 import type { Mode } from './openapi';
 
-export type LegLike = {
-	tripId?: string;
-	serviceDate?: string;
-	routeShortName?: string;
+export type Colorable = {
 	routeColor?: string;
 	routeTextColor?: string;
 	mode: Mode;
 };
+
+export type TripInfo = {
+	tripId?: string;
+	serviceDate?: string;
+	routeShortName?: string;
+}
+
+
+export type LegLike = Colorable & TripInfo;
 
 export const getModeStyle = (mode: Mode): [string, string, string] => {
 	switch (mode) {
@@ -68,18 +74,18 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 	return ['train', '#000000', 'white'];
 };
 
-export const getColor = (l: LegLike): [string, string] => {
+export const getColor = (l: Colorable): [string, string] => {
 	const [_, defaultColor, defaultTextColor] = getModeStyle(l.mode);
 	return !l.routeColor || l.routeColor === '000000'
 		? [defaultColor, defaultTextColor]
 		: ['#' + l.routeColor, '#' + l.routeTextColor];
 };
 
-export const routeBorderColor = (l: LegLike) => {
+export const routeBorderColor = (l: Colorable) => {
 	return `border-color: ${getColor(l)[0]}`;
 };
 
-export const routeColor = (l: LegLike) => {
+export const routeColor = (l: Colorable) => {
 	const [color, textColor] = getColor(l);
 	return `background-color: ${color}; color: ${textColor}; fill: ${textColor}`;
 };

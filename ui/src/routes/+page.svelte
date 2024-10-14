@@ -137,11 +137,12 @@
 		});
 	};
 
-	function hexToRgb(hex: string) {
+	function hexToRgb(hex: string): [number, number, number, number] {
 		var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-		return result
-			? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16), 255]
-			: null;
+		if (!result) {
+			throw `${hex} is not a hex color #RRGGBB`;
+		}
+		return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16), 255];
 	}
 
 	type KeyFrame = { point: [number, number]; heading: number; time: number };
@@ -188,7 +189,6 @@
 		};
 	};
 
-	const tripIcon = createTripIcon(128);
 	const getRailvizLayer = (trips: Array<TripSegment & { keyFrames: Array<KeyFrame> }>) => {
 		const now = new Date().getTime();
 
@@ -211,7 +211,8 @@
 			getSize: (d) => 48,
 			getIcon: (_) => 'marker',
 			pickable: true,
-			iconAtlas: tripIcon!,
+			// @ts-expect-error: canvas element seems to work fine
+			iconAtlas: createTripIcon(128),
 			iconMapping: {
 				marker: {
 					x: 0,
