@@ -1,5 +1,9 @@
 <p align="center"><img src="logo.svg" width="196" height="196"></p>
 
+> [!NOTE]
+> This is MOTIS v2.
+> You can find the `0.x.y` legacy branch [here](https://github.com/motis-project/motis/tree/legacy).
+
 > [!TIP]
 > :sparkles: Join the international MOTIS community at [**motis:matrix.org**](https://matrix.to/#/#motis:matrix.org)
 

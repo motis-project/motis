@@ -135,27 +135,7 @@ int server(data d, config const& c) {
   return 0;
 }
 
-int server(int ac, char** av) {
-  auto data_path = fs::path{"data"};
-
-  auto desc = bpo::options_description{"Options"};
-  desc.add_options()  //
-      ("help,h", "produce this help message")  //
-      ("data,d", bpo::value(&data_path)->default_value(data_path), "data path");
-
-  auto const pos_desc = bpo::positional_options_description{}.add("data", -1);
-
-  auto vm = bpo::variables_map{};
-  bpo::store(
-      bpo::command_line_parser(ac, av).options(desc).positional(pos_desc).run(),
-      vm);
-  bpo::notify(vm);
-
-  if (vm.count("help")) {
-    std::cout << desc << "\n";
-    return 0;
-  }
-
+int server(fs::path const& data_path) {
   try {
     auto const c = config::read(data_path / "config.yml");
     return server(data{std::move(data_path), c}, c);

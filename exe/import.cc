@@ -12,21 +12,7 @@ namespace fs = std::filesystem;
 
 namespace motis {
 
-int import(int ac, char** av) {
-  auto config_path = fs::path{"config.yml"};
-  auto data_path = fs::path{"data"};
-
-  auto desc = bpo::options_description{"Options"};
-  desc.add_options()  //
-      ("help,h", "produce this help message")  //
-      ("config,c", bpo::value(&config_path)->default_value(config_path),
-       "configuration file")  //
-      ("data,d", bpo::value(&data_path)->default_value(data_path), "data path");
-
-  auto vm = bpo::variables_map{};
-  bpo::store(bpo::command_line_parser(ac, av).options(desc).run(), vm);
-  bpo::notify(vm);
-
+int import(fs::path const& data_path, fs::path const& config_path) {
   auto c = config{};
   try {
     c = config_path.extension() == ".ini" ? config::read_legacy(config_path)
@@ -38,7 +24,6 @@ int import(int ac, char** av) {
     fmt::println("config:\n{}", fmt::streamed(c));
     return 1;
   }
-
   return 0;
 }
 

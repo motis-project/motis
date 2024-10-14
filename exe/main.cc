@@ -1,5 +1,6 @@
 #include "boost/program_options.hpp"
 
+#include <filesystem>
 #include <iostream>
 
 #include "utl/progress_tracker.h"
@@ -14,67 +15,102 @@
 
 namespace po = boost::program_options;
 using namespace std::string_view_literals;
+namespace fs = std::filesystem;
 
 namespace motis {
-int import(int, char**);
-int server(int, char**);
+int import(fs::path const&, fs::path const&);
+int server(fs::path const&);
 int server(data d, config const& c);
 }  // namespace motis
 
 using namespace motis;
 
 int main(int ac, char** av) {
-  auto global = po::options_description{"Global options"};
-  global.add_options()  //
-      ("help", "print help message")  //
-      ("version", "print version")  //
-      ("command", po::value<std::string>(), "command to execute")  //
-      ("subargs", po::value<std::vector<std::string>>(),
-       "arguments for command");
+  auto data_path = fs::path{"data"};
+  auto config_path = fs::path{"config.yml"};
 
-  auto pos = po::positional_options_description{};
-  pos.add("command", 1).add("subargs", -1);
+  auto desc = po::options_description{"Global options"};
+  desc.add_options()  //
+      ("version", "Prints the MOTIS version")  //
+      ("help", "Prints this help message")  //
+      ("data,d", po::value(&data_path)->default_value(data_path),
+       "The data path contains all preprocessed data as well as a `config.yml` "
+       "and is required by `motis server`. It will be created by the `motis "
+       "import` command. After the import has finished, `motis server` only "
+       "needs the `data` folder and can run without the input files (such as "
+       "OpenStreetMap file, GTFS datasets, tiles-profiles, etc.)")  //
+      ("config,c", po::value(&config_path)->default_value(config_path),
+       "Configuration YAML file. Legacy INI files are still supported but this "
+       "support will be dropped in the future.")  //
+      ("command", po::value<std::string>(),
+       "Command to execute:\n"
+       "  - \"import\": preprocesses the input data\n"
+       "    and creates the `data` folder.\n"
+       "  - \"server\": serves static files\n"
+       "    and all API endpoints such as\n"
+       "    routing, geocoding, tiles, etc.")  //
+      ("paths", po::value<std::vector<std::string>>(),
+       "List of paths to import for the simple mode. File type will be "
+       "determined based on extension:\n"
+       "  - \".osm.pbf\" will be used as\n"
+       "    OpenStreetMap file.\n"
+       "    This enables street routing,\n"
+       "    geocoding and map tiles\n"
+       "  - the rest will be interpreted as\n"
+       "    static timetables.\n"
+       "    This enables transit routing");
 
-  auto parsed = po::command_line_parser(ac, av)
-                    .options(global)
-                    .positional(pos)
-                    .allow_unregistered()
-                    .run();
-
-  auto vm = po::variables_map{};
-  po::store(parsed, vm);
-
-  if (!vm.count("command")) {
-    if (vm.count("version")) {
-      std::cout << MOTIS_VERSION << "\n";
-      return 0;
-    } else if (vm.count("help")) {
-      std::cout << "MOTIS " << MOTIS_VERSION << "\n\n" << global << "\n";
-      return 0;
+  enum mode { kImport, kServer, kSimple } mode = kSimple;
+  if (ac > 1) {
+    auto const cmd = std::string_view{av[1]};
+    switch (cista::hash(cmd)) {
+      case cista::hash("import"):
+        mode = kImport;
+        --ac;
+        ++av;
+        break;
+      case cista::hash("server"):
+        mode = kServer;
+        --ac;
+        ++av;
+        break;
     }
   }
 
-  --ac;
-  ++av;
+  auto pos = po::positional_options_description{}.add("paths", -1);
+  auto vm = po::variables_map{};
+  po::store(po::command_line_parser(ac, av).options(desc).positional(pos).run(),
+            vm);
+  po::notify(vm);
 
-  if (vm.count("command")) {
-    auto const cmd = vm["command"].as<std::string>();
-    if (cmd == "server") {
-      return server(ac, av);
-    } else if (cmd == "import") {
-      return import(ac, av);
-    } else {
+  if (vm.count("version")) {
+    std::cout << MOTIS_VERSION << "\n";
+    return 0;
+  } else if (vm.count("help")) {
+    std::cout << "MOTIS " << MOTIS_VERSION << "\n\n"
+              << "Usage:\n"
+                 "  - simple:   motis         [PATHS...]\n"
+                 "  - import:   motis import  [-c config.yml] [-d data_dir]\n"
+                 "  - server:   motis server  [-d data_dir]\n\n"
+              << desc << "\n";
+    return 0;
+  }
+
+  switch (mode) {
+    case kServer: return server(data_path);
+    case kImport: return import(data_path, config_path);
+    case kSimple:
       try {
         auto const bars = utl::global_progress_bars{false};
-        auto args = vm.count("subargs")
-                        ? vm.at("subargs").as<std::vector<std::string>>()
+        auto args = vm.count("paths")
+                        ? vm.at("paths").as<std::vector<std::string>>()
                         : std::vector<std::string>{};
-        args.insert(begin(args), cmd);
+
         auto const c = config::read_simple(args);
-        server(import(c, "data"), c);
+        server(import(c, data_path), c);
       } catch (std::exception const& e) {
         std::cerr << "error: " << e.what() << "\n";
       }
-    }
+      return 0;
   }
 }

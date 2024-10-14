@@ -146,6 +146,12 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto ec = std::error_code{};
   fs::create_directories(data_path / "logs", ec);
   fs::create_directories(data_path / "meta", ec);
+  {
+    auto cfg = std::ofstream{(data_path / "config.yml").generic_string()};
+    cfg.exceptions(std::ios_base::badbit | std::ios_base::eofbit);
+    cfg << c << "\n";
+    cfg.close();
+  }
 
   clog_redirect::set_enabled(write);
 
@@ -260,7 +266,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -379,8 +385,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         progress_tracker->status("Prepare Tiles").out_bounds(90, 100);
         ::tiles::prepare_tiles(db_handle, pack_handle, 10);
+
+        d.load_tiles();
       },
-      []() {},
+      [&]() { d.load_tiles(); },
       {osm_hash, tiles_hash}};
 
   auto tasks =
@@ -410,8 +418,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     task_it->run(data_path);
     tasks.erase(task_it);
   }
-
-  std::ofstream{(data_path / "config.yml").generic_string()} << c << "\n";
 
   return d;
 }
