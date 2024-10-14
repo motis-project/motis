@@ -29,10 +29,14 @@
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
-	const createMap = (container: HTMLElement) => {
-		map = new maplibregl.Map({ container, zoom, center, style, transformRequest });
+	let currentZoom: number | undefined = undefined;
+	let currentCenter: maplibregl.LngLatLike | undefined = undefined;
 
-		map.addImage(
+	const createMap = (container: HTMLElement) => {
+		console.log('CREATE MAP');
+		let tmp = new maplibregl.Map({ container, zoom, bounds, center, style, transformRequest });
+
+		tmp.addImage(
 			'shield',
 			...createShield({
 				fill: 'hsl(0, 0%, 98%)',
@@ -40,7 +44,7 @@
 			})
 		);
 
-		map.addImage(
+		tmp.addImage(
 			'shield-dark',
 			...createShield({
 				fill: 'hsl(0, 0%, 16%)',
@@ -48,20 +52,26 @@
 			})
 		);
 
-		map.on('load', () => {
+		tmp.on('load', () => {
+			tmp.setZoom(zoom);
+			tmp.setCenter(center);
+			currentZoom = zoom;
+			currentCenter = center;
+			bounds = tmp.getBounds();
+			map = tmp;
+			ctx.map = tmp;
 			currStyle = style;
-			ctx.map = map;
-			bounds = map?.getBounds();
+			currentZoom = zoom;
 		});
 
-		map.on('moveend', async () => {
-			bounds = ctx.map?.getBounds() as maplibregl.LngLatBoundsLike;
-			zoom = ctx.map?.getZoom() as number;
+		tmp.on('moveend', async () => {
+			bounds = tmp.getBounds();
+			zoom = tmp.getZoom();
 		});
 
 		return {
 			destroy() {
-				ctx.map?.remove();
+				tmp.remove();
 				ctx.map = undefined;
 			}
 		};
@@ -73,15 +83,16 @@
 		}
 	});
 
-	let currentZoom = zoom;
 	$effect(() => {
-		if (map && zoom != currentZoom) {
+		if (map && $state.snapshot(zoom) !== currentZoom) {
+			console.log('UPDATING ZOOM', { zoom, currentZoom });
 			map.setZoom(zoom);
 			currentZoom = zoom;
+		} else {
+			console.log('NOT UPDATING ZOOM', { map, zoom, currentZoom });
 		}
 	});
 
-	let currentCenter = center;
 	$effect(() => {
 		if (map && center != currentCenter) {
 			map.setCenter(center);

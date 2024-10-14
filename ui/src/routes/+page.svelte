@@ -60,6 +60,7 @@
 			if (r) {
 				center = [r.lon, r.lat];
 				zoom = r.zoom;
+				console.log({ zoom });
 			}
 		});
 	});
@@ -137,8 +138,9 @@
 			id: 'deckgl-circle',
 			data: trips,
 			getPosition: (d) => [d.from.lon, d.from.lat],
-			getFillColor: [255, 0, 0, 100],
-			getRadius: 1000
+			getFillColor: theme === 'dark' ? [193, 135, 255, 100] : [138, 28, 255, 100],
+			radiusMinPixels: 4,
+			radiusMaxPixels: 4
 		});
 	};
 
@@ -159,34 +161,32 @@
 		});
 	};
 
-	const overlay = new MapboxOverlay({
-		layers: []
+	const updateRailvizLayer = () => {
+		railvizRequest().then((d) => {
+			overlay!.setProps({
+				layers: [getRailvizLayer(d.data!)]
+			});
+		});
+	};
+
+	let timer: number | undefined;
+	let overlay = $state.raw<MapboxOverlay>();
+	$effect(() => {
+		if (map && !overlay) {
+			overlay = new MapboxOverlay({
+				layers: []
+			});
+			map.addControl(overlay);
+			updateRailvizLayer();
+			timer = setTimeout(updateRailvizLayer, 1000);
+		}
 	});
 
-	let railvizInitialized = false;
 	$effect(() => {
-		if (map && bounds && zoom) {
-			if (!railvizInitialized) {
-				railvizInitialized = true;
-				console.log('initializing railviz');
-				railvizRequest().then((d) => {
-					overlay.setProps({
-						layers: [getRailvizLayer(d.data!)]
-					});
-					map!.addControl(overlay);
-
-					setTimeout(async () => {
-						railvizRequest().then((d) => {
-							overlay.setProps({
-								layers: [getRailvizLayer(d.data!)]
-							});
-						});
-					}, 1000);
-				});
-				railvizInitialized = true;
-			} else {
-				//
-			}
+		if (overlay && bounds && zoom) {
+			updateRailvizLayer();
+			clearTimeout(timer);
+			timer = setTimeout(updateRailvizLayer, 1000);
 		}
 	});
 

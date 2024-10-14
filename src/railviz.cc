@@ -311,10 +311,6 @@ api::railviz_response get_trains(tag_lookup const& tags,
   auto const time_interval = n::interval{start_time, end_time};
   auto const area = geo::make_box({min->pos_, max->pos_});
 
-  std::cout << "area=" << area.min_ << ", " << area.max_ << "\n";
-  std::cout << "start_time=" << start_time << "[" << query.startTime_ << "]\n";
-  std::cout << "end_time=" << end_time << "[" << query.endTime_ << "]\n";
-
   // Collect runs within time+location window.
   auto runs = std::vector<stop_pair>{};
   for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
