@@ -74,7 +74,7 @@ int server(data d, config const& c) {
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
-    qr.route("GET", "/tiles/.*", ep::tiles{*d.tiles_});
+    qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
   auto const server_config = c.server_.value_or(config::server{});
@@ -88,8 +88,8 @@ int server(data d, config const& c) {
 
   if (c.requires_rt_timetable_updates()) {
     cron(ioc, std::chrono::seconds{c.timetable_->update_interval_}, [&]() {
-      boost::asio::co_spawn(workers, rt_update(c, *d.tt_, *d.tags_, d.rt_),
-                            boost::asio::detached);
+      asio::co_spawn(workers, rt_update(c, *d.tt_, *d.tags_, d.rt_),
+                     asio::detached);
     });
   }
 
