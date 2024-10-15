@@ -27,18 +27,31 @@ Offset<Station> station_builder::get_or_create_station(int eva_num,
         fbb.CreateVector(utl::to_vec(
             begin(it->second.ds100_), end(it->second.ds100_),
             [&](std::string const& s) { return fbb.CreateString(s); })),
-        utl::get_or_create(fbs_timezones_, tze, [&]() {
-          if (tze->season_) {
-            auto const& season = *(tze->season_);
-            return CreateTimezone(
-                fbb, tze->general_gmt_offset_,
-                CreateSeason(fbb, season.gmt_offset_, season.first_day_idx_,
-                             season.last_day_idx_, season.season_begin_time_,
-                             season.season_end_time_));
-          } else {
-            return CreateTimezone(fbb, tze->general_gmt_offset_);
-          }
-        }));
+        utl::get_or_create(
+            fbs_timezones_, tze,
+            [&]() {
+              if (tze->season_) {
+                auto const& season = *(tze->season_);
+                return CreateTimezone(
+                    fbb, tze->general_gmt_offset_,
+                    CreateSeason(fbb, season.gmt_offset_, season.first_day_idx_,
+                                 season.last_day_idx_,
+                                 season.season_begin_time_,
+                                 season.season_end_time_));
+              } else {
+                return CreateTimezone(fbb, tze->general_gmt_offset_);
+              }
+            }),
+        0, it->second.platform_change_time_,
+        fbb.CreateVector(
+            utl::to_vec(it->second.platforms_, [&](auto const& platform) {
+              return CreatePlatform(
+                  fbb, fbb.CreateString(platform.first),
+                  fbb.CreateVector(
+                      utl::to_vec(platform.second, [&](auto const& track) {
+                        return fbb.CreateString(track);
+                      })));
+            })));
   });
 }
 

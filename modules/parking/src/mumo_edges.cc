@@ -31,7 +31,7 @@ msg_ptr make_geo_station_request(geo::latlng const& pos, double radius) {
 
 msg_ptr make_osrm_request(geo::latlng const& pos,
                           std::vector<parking_lot> const& destinations,
-                          std::string const& profile, Direction direction) {
+                          std::string const& profile, SearchDir direction) {
   Position fbs_position{pos.lat_, pos.lng_};
   auto const many = utl::to_vec(destinations, [](auto const& dest) {
     return Position{dest.location_.lat_, dest.location_.lng_};
@@ -49,9 +49,9 @@ msg_ptr make_osrm_request(geo::latlng const& pos,
 
 msg_ptr make_ppr_request(latlng const& pos,
                          std::vector<Position> const& destinations,
-                         SearchOptions const* search_options,
-                         SearchDirection dir, bool include_steps,
-                         bool include_edges, bool include_path) {
+                         SearchOptions const* search_options, SearchDir dir,
+                         bool include_steps, bool include_edges,
+                         bool include_path) {
   assert(search_options != nullptr);
   Position const fbs_position{pos.lat_, pos.lng_};
 
@@ -69,9 +69,9 @@ msg_ptr make_ppr_request(latlng const& pos,
 
 msg_ptr make_ppr_request(geo::latlng const& pos,
                          Vector<Offset<Station>> const* stations,
-                         SearchOptions const* search_options,
-                         SearchDirection dir, bool include_steps,
-                         bool include_edges, bool include_path) {
+                         SearchOptions const* search_options, SearchDir dir,
+                         bool include_steps, bool include_edges,
+                         bool include_path) {
   return make_ppr_request(
       pos,
       utl::to_vec(*stations,

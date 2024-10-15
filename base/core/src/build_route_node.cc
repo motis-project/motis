@@ -6,8 +6,11 @@ namespace motis {
 
 node* build_route_node(int route_index, int node_id, station_node* station_node,
                        int transfer_time, bool in_allowed, bool out_allowed) {
-  auto route_node = new node(make_node(station_node, node_id, route_index));
-  station_node->route_nodes_.emplace_back(route_node);
+  auto route_node =
+      station_node->child_nodes_
+          .emplace_back(mcd::make_unique<node>(make_node(
+              node_type::ROUTE_NODE, station_node, node_id, route_index)))
+          .get();
 
   if (!in_allowed) {
     station_node->edges_.push_back(make_invalid_edge(station_node, route_node));

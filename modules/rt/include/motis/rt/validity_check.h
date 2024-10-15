@@ -15,6 +15,18 @@ inline bool fits_edge(ev_key const& k, motis::time const t) {
          (!succ.is_not_null() || t < succ.get_time());
 }
 
+inline bool fits_edge(schedule const& sched, ev_key const& k,
+                      uint16_t const new_track) {
+  if (k.route_edge_->m_.route_edge_.conns_.size() == 1) {
+    return true;
+  }
+  auto const station = sched.stations_[k.get_station_idx()].get();
+  return station->get_platform(k.is_departure()
+                                   ? k.lcon()->full_con_->d_track_
+                                   : k.lcon()->full_con_->a_track_) ==
+         station->get_platform(new_track);
+}
+
 inline bool fits_trip(schedule const& sched, ev_key const& k,
                       motis::time const t) {
   switch (k.ev_type_) {

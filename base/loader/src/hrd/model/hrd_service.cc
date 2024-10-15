@@ -41,9 +41,8 @@ hrd_service::section parse_initial_section(specification const& spec) {
   auto const first_stop = spec.stops_.front();
   auto const train_num = stop_train_num(first_stop);
   auto const admin = stop_admin(first_stop);
-  return hrd_service::section(
-      train_num.empty() ? initial_train_num(spec) : parse<int>(train_num),
-      admin.empty() ? spec.internal_service_.substr(9, size(6)) : admin);
+  return {train_num.empty() ? initial_train_num(spec) : parse<int>(train_num),
+          admin.empty() ? spec.internal_service_.substr(9, size(6)) : admin};
 }
 
 std::vector<hrd_service::section> parse_section(

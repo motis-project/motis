@@ -1,0 +1,5 @@
+namespace motis.ris;
+
+table RISSystemTimeChanged {
+  schedule: ulong;
+}

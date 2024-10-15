@@ -10,7 +10,8 @@ struct schedule;
 namespace test::schedule::simple_realtime {
 
 static auto const dataset_opt =
-    loader::loader_options{{"test/schedule/simple_realtime"}, "20151124"};
+    loader::loader_options{.dataset_ = {"test/schedule/simple_realtime"},
+                           .schedule_begin_ = "20151124"};
 
 static auto const dataset_opt_short =
     loader::loader_options{.dataset_ = {"test/schedule/simple_realtime"},

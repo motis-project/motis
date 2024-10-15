@@ -2,46 +2,63 @@
   "name": "rsl",
   "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "@craco/craco": "^6.0.0",
-    "@tailwindcss/postcss7-compat": "^2.0.2",
-    "@testing-library/jest-dom": "^5.11.6",
-    "@testing-library/react": "^11.2.2",
-    "@testing-library/user-event": "^12.6.0",
-    "autoprefixer": "^9.8.6",
-    "date-fns": "^2.16.1",
-    "postcss": "^7.0.35",
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1",
-    "react-scripts": "4.0.3",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.0.2",
-    "web-vitals": "^0.2.4"
-  },
   "scripts": {
-    "start": "craco start",
-    "build": "craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject"
+    "preinstall": "npx only-allow pnpm",
+    "dev": "vite",
+    "dev-host": "vite --host",
+    "build": "tsc && vite build",
+    "serve": "vite preview",
+    "serve-host": "vite preview --host",
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings 0",
+    "fix-lint": "eslint src --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write src",
+    "format-check": "prettier --check src",
+    "ts-check": "tsc",
+    "update-protocol": "node --trace-uncaught tools/protocol.js && prettier --write src/api/protocol"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "dependencies": {
+    "@headlessui/react": "^1.5.0",
+    "@heroicons/react": "^1.0.6",
+    "@radix-ui/react-dropdown-menu": "^0.1.6",
+    "@radix-ui/react-tooltip": "^0.1.7",
+    "@visx/axis": "^2.6.0",
+    "@visx/grid": "^2.6.0",
+    "@visx/responsive": "^2.8.0",
+    "@visx/scale": "^2.2.2",
+    "@visx/shape": "^2.4.0",
+    "@visx/stats": "^2.2.2",
+    "date-fns": "^2.28.0",
+    "downshift": "^6.1.7",
+    "jotai": "^1.6.1",
+    "lodash-es": "^4.17.21",
+    "optics-ts": "^2.3.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-hook-form": "^7.29.0",
+    "react-query": "^3.34.19",
+    "react-virtuoso": "^2.8.6",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "prettier": "2.2.1"
+    "@tailwindcss/forms": "^0.5.0",
+    "@trivago/prettier-plugin-sort-imports": "^3.2.0",
+    "@types/lodash-es": "^4.17.6",
+    "@types/react": "^17.0.43",
+    "@types/react-dom": "^17.0.14",
+    "@types/uuid": "^8.3.4",
+    "@typescript-eslint/eslint-plugin": "^5.17.0",
+    "@typescript-eslint/parser": "^5.17.0",
+    "@vitejs/plugin-react": "^1.2.0",
+    "autoprefixer": "^10.4.4",
+    "eslint": "^8.12.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-react": "^7.29.4",
+    "eslint-plugin-react-hooks": "^4.4.0",
+    "postcss": "^8.4.12",
+    "prettier": "^2.6.1",
+    "prettier-plugin-alias-imports": "^0.1.6",
+    "tailwindcss": "^3.0.23",
+    "typescript": "^4.6.3",
+    "vite": "^2.8.6"
   }
 }

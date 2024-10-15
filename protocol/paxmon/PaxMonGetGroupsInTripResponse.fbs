@@ -1,0 +1,27 @@
+include "base/Station.fbs";
+include "base/TripServiceInfo.fbs";
+include "paxmon/PaxMonCombinedGroups.fbs";
+
+namespace motis.paxmon;
+
+table GroupedPassengerGroups {
+  grouped_by_station: [motis.Station];
+  grouped_by_trip: [motis.TripServiceInfo];
+  entry_station: [motis.Station];
+  entry_time: long;
+  info: PaxMonCombinedGroups;
+}
+
+table GroupsInTripSection {
+  from: motis.Station;
+  to: motis.Station;
+  departure_schedule_time: long;
+  departure_current_time: long;
+  arrival_schedule_time: long;
+  arrival_current_time: long;
+  groups: [GroupedPassengerGroups];
+}
+
+table PaxMonGetGroupsInTripResponse {
+  sections: [GroupsInTripSection];
+}

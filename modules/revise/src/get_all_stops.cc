@@ -513,7 +513,7 @@ void propagate_times(schedule const& sched, std::vector<stop_ptr>& stops) {
   }
   for (auto it = std::prev(first_trip_stop); it >= begin(stops);
        it = std::prev(it)) {
-    it->get()->propagate_time_bwd(sched, *(std::next(it)->get()));
+    it->get()->propagate_time_bwd(sched, **std::next(it));
   }
 }
 

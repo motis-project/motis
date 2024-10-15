@@ -97,6 +97,7 @@ find_package(Threads)
 include(cmake/pkg.cmake)
 if (MOTIS_MIMALLOC)
   target_link_libraries(cista INTERFACE mimalloc-static)
+  target_compile_definitions(boost INTERFACE BOOST_ASIO_DISABLE_STD_ALIGNED_ALLOC=1)
 endif()
 add_subdirectory(modules/ris/gtfsrtpb)
 

@@ -5,6 +5,7 @@
 namespace motis::railviz {
 
 static loader::loader_options dataset_opt{
-    {"modules/railviz/test_resources/schedule"}, "20151121"};
+    .dataset_ = {"modules/railviz/test_resources/schedule"},
+    .schedule_begin_ = "20151121"};
 
 }  // namespace motis::railviz

@@ -1,0 +1,25 @@
+include "base/Station.fbs";
+include "base/TripServiceInfo.fbs";
+include "paxmon/PaxMonCombinedGroups.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonTripStopInfo {
+  schedule_time: ulong;
+  current_time: ulong;
+  trips: [TripServiceInfo];
+  station: Station;
+}
+
+table PaxMonInterchangeInfo {
+  arrival: [PaxMonTripStopInfo];
+  departure: [PaxMonTripStopInfo];
+  groups: PaxMonCombinedGroups;
+  transfer_time: uint; // minutes
+}
+
+table PaxMonGetInterchangesResponse {
+  station: motis.Station;
+  interchanges: [PaxMonInterchangeInfo];
+  max_count_reached: bool;
+}

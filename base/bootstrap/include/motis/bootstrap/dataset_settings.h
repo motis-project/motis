@@ -32,6 +32,9 @@ struct dataset_settings : public conf::configuration,
           "Remove footpaths if they do not fit an assumed average speed");
     param(expand_footpaths_, "expand_footpaths",
           "Calculate expanded footpaths");
+    param(use_platforms_, "use_platforms",
+          "Use separate interchange times for trips stopping at the same "
+          "platform");
     param(schedule_begin_, "begin",
           "schedule interval begin (TODAY or YYYYMMDD)");
     param(num_days_, "num_days", "number of days");

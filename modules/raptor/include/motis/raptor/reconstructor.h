@@ -36,8 +36,7 @@ struct intermediate_journey {
   void add_footpath(stop_id const to, time const a_time, time const d_time,
                     time const duration, raptor_meta_info const& raptor_sched) {
     auto const motis_index = raptor_sched.station_id_to_index_[to];
-    // a_time now has the transfer time preadded
-    stops_.emplace_back(stops_.size(), motis_index, 0, 0, a_time, d_time,
+    stops_.emplace_back(stops_.size(), motis_index, 0, 0, 0, 0, a_time, d_time,
                         a_time, d_time, timestamp_reason::SCHEDULE,
                         timestamp_reason::SCHEDULE, false, true);
     transports_.emplace_back(stops_.size() - 1, stops_.size(), duration, 0, 0,
@@ -88,12 +87,8 @@ struct intermediate_journey {
         }
       };
 
-      // We only have a single lcon_ptr array for the forward search,
-      // therefore we need to adjust the index
       auto const lcon = raptor_sched.lcon_ptr_[stop_time_idx];
       auto const a_track = lcon->full_con_->a_track_;
-      // in case of having the first route in the journey or the first route
-      //   used after a foot path determine the departure track from the lcon
       auto const d_track = get_d_track(lcon);
 
       if (!valid(a_time)) {
@@ -106,8 +101,9 @@ struct intermediate_journey {
                             !transports_.back().is_walk();
       auto const is_exit = s_offset == exit_offset;
 
-      stops_.emplace_back(stops_.size(), motis_index, a_track, d_track, a_time,
-                          d_time, a_time, d_time, timestamp_reason::SCHEDULE,
+      stops_.emplace_back(stops_.size(), motis_index, a_track, d_track, a_track,
+                          d_track, a_time, d_time, a_time, d_time,
+                          timestamp_reason::SCHEDULE,
                           timestamp_reason::SCHEDULE, is_exit, is_enter);
 
       transports_.emplace_back(stops_.size() - 1, stops_.size(), lcon);
@@ -124,12 +120,13 @@ struct intermediate_journey {
     auto const motis_index = raptor_sched.station_id_to_index_[start];
 
     auto const enter = !transports_.empty() && !transports_.back().is_walk();
+    auto const d_track =
+        enter ? transports_.back().con_->full_con_->d_track_ : 0;
 
-    stops_.emplace_back(
-        stops_.size(), motis_index, 0,
-        enter ? transports_.back().con_->full_con_->d_track_ : 0, INVALID_TIME,
-        d_time, INVALID_TIME, d_time, timestamp_reason::SCHEDULE,
-        timestamp_reason::SCHEDULE, false, enter);
+    stops_.emplace_back(stops_.size(), motis_index, 0, d_track, 0, d_track,
+                        INVALID_TIME, d_time, INVALID_TIME, d_time,
+                        timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE,
+                        false, enter);
   }
 
   void finalize() {

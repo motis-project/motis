@@ -8,6 +8,8 @@
 
 #include "net/web_server/url_decode.h"
 
+#include "cista/reflection/comparable.h"
+
 #include "tiles/db/clear_database.h"
 #include "tiles/db/feature_inserter_mt.h"
 #include "tiles/db/feature_pack.h"

@@ -6,6 +6,7 @@
 #include "motis/module/controller.h"
 #include "motis/module/dispatcher.h"
 #include "motis/module/message.h"
+#include "motis/module/module.h"
 
 using namespace motis;
 using namespace motis::module;
@@ -77,10 +78,10 @@ TEST(module_op, launch) {
     dispatcher::direct_mode_dispatcher_ = &c;
   }
 
-  c.register_op("/guesser", guess);
-  c.register_op("/routing", route);
+  c.register_op("/guesser", guess, {});
+  c.register_op("/routing", route, {});
 
-  auto result = c.run([]() { return motis_call(make_msg(query))->val(); });
+  auto result = c.run([]() { return motis_call(make_msg(query))->val(); }, {});
 
   ASSERT_TRUE(result);
   motis_content(RoutingResponse, result);

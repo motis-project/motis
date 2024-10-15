@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <mutex>
 #include <vector>
 
 #include "boost/filesystem.hpp"
@@ -59,6 +60,11 @@ struct generator_settings : public conf::configuration {
     param(max_load_, "max_load",
           "Max allowed trip load (e.g. 1.0 for 100%, set to 0.0 to disable "
           "check)");
+    param(largest_stations_, "largest_stations",
+          "If set to n > 0, only use the n largest stations as "
+          "start/destination");
+    param(require_long_distance_leg_, "require_long_distance_leg",
+          "Require at least one long distance transport per journey");
     param(router_target_, "router_target", "Router target");
     param(num_threads_, "num_threads", "Number of worker threads");
   }
@@ -78,6 +84,9 @@ struct generator_settings : public conf::configuration {
 
   bool generate_capacities_{true};
   double max_load_{0.0};
+
+  unsigned largest_stations_{0};
+  bool require_long_distance_leg_{true};
 };
 
 struct journey_generator {
@@ -88,7 +97,7 @@ struct journey_generator {
         sched_{instance_.sched()},
         caps_{caps},
         uv_{uv},
-        query_gen_{sched_},
+        query_gen_{sched_, generator_opt.largest_stations_},
         group_gen_{group_gen},
         generator_opt_{generator_opt},
         converter_{generator_opt.csv_journey_path_},
@@ -118,9 +127,13 @@ struct journey_generator {
   unsigned over_capacity_skipped_count() const {
     return over_capacity_skipped_;
   }
+  unsigned no_long_distance_skipped_count() const {
+    return no_long_distance_skipped_;
+  }
 
 private:
   bool generate_next() {
+    std::unique_lock lock{mutex_};
     if (pax_generated_ >= generator_opt_.pax_count_) {
       if (in_flight_ == 0) {
         instance_.runner_.ios().stop();
@@ -131,12 +144,15 @@ private:
         query_gen_.get_routing_request(generator_opt_.router_target_);
     ++in_flight_;
     ++routing_queries_;
+    lock.unlock();
     instance_.on_msg(request_msg,
                      instance_.runner_.ios().wrap(
                          [&](msg_ptr const& response_msg, std::error_code) {
+                           std::unique_lock lock{mutex_};
                            --in_flight_;
                            pax_generated_ += handle_response(response_msg);
                            progress_tracker_->update(pax_generated_);
+                           lock.unlock();
                            generate_next();
                          }));
     return true;
@@ -154,7 +170,8 @@ private:
       for (auto secondary_id = 1ULL; secondary_id <= group_count;
            ++secondary_id) {
         auto const group_size = group_gen_.get_group_size();
-        if (!check_journey_load(j, group_size, primary_id, secondary_id)) {
+        if (!check_journey_constraints(j, group_size, primary_id,
+                                       secondary_id)) {
           break;
         }
         converter_.write_journey(j, primary_id, secondary_id, group_size);
@@ -171,9 +188,21 @@ private:
     return generated;
   }
 
-  bool check_journey_load(journey const& j, std::uint16_t group_size,
-                          std::uint32_t primary_id,
-                          std::uint32_t secondary_id) {
+  bool check_journey_constraints(journey const& j, std::uint16_t group_size,
+                                 std::uint32_t primary_id,
+                                 std::uint32_t secondary_id) {
+    if (generator_opt_.require_long_distance_leg_) {
+      if (!std::any_of(begin(j.transports_), end(j.transports_),
+                       [](auto const& transport) {
+                         auto const clasz =
+                             static_cast<service_class>(transport.clasz_);
+                         return clasz == service_class::ICE ||
+                                clasz == service_class::IC;
+                       })) {
+        ++no_long_distance_skipped_;
+        return false;
+      }
+    }
     if (!check_load_) {
       return true;
     }
@@ -209,12 +238,14 @@ private:
   journey_converter converter_;
   utl::progress_tracker_ptr progress_tracker_;
 
+  std::mutex mutex_;
   unsigned in_flight_{};
   unsigned pax_generated_{};
   unsigned groups_generated_{};
   unsigned routing_queries_{};
   unsigned different_journeys_{};
   unsigned over_capacity_skipped_{};
+  unsigned no_long_distance_skipped_{};
   std::uint32_t next_primary_id_{1};
   bool check_load_{};
   double max_load_{};
@@ -222,7 +253,7 @@ private:
 
 int generate(int argc, char const** argv) {
   auto const routers = std::vector<std::string>{"tripbased", "csa", "routing"};
-  auto const default_router_module = routers.front();
+  auto const& default_router_module = routers.front();
   auto const default_router_target = std::string{"/"} + default_router_module;
 
   generator_settings generator_opt;
@@ -337,6 +368,11 @@ int generate(int argc, char const** argv) {
   if (check_load) {
     std::cout << "Had to generate " << journey_gen.over_capacity_skipped_count()
               << " additional journeys because of load restrictions.\n";
+  }
+  if (generator_opt.require_long_distance_leg_) {
+    std::cout
+        << "Had to generate " << journey_gen.no_long_distance_skipped_count()
+        << " additional journeys because of no long distance transport.\n";
   }
 
   return 0;

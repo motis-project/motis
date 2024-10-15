@@ -145,6 +145,15 @@ loaded_file load(fs::path const& root, filename_key k, config const& c) {
   return loaded_file(root / *it, c.convert_utf8_);
 }
 
+loaded_file load_optional(fs::path const& root, char const* filename) {
+  auto const path = root / filename;
+  if (fs::is_regular_file(path)) {
+    return loaded_file{path, false};
+  } else {
+    return loaded_file{};
+  }
+}
+
 void parse_and_build_services(
     fs::path const& hrd_root, std::map<int, bitfield> const& bitfields,
     std::vector<std::unique_ptr<loaded_file>>& schedule_data,
@@ -222,9 +231,10 @@ void hrd_parser::parse(fs::path const& hrd_root, FlatBufferBuilder& fbb,
   auto const footp_file_1 = load(core_data_root, FOOTPATHS, c);
   auto const footp_file_ext = load(core_data_root, FOOTPATHS_EXT, c);
   auto const minct_file = load(core_data_root, MIN_CT_FILE, c);
+  auto const platform_file = load_optional(core_data_root, "platform.csv");
   station_meta_data metas;
   parse_station_meta_data(infotext_file, footp_file_1, footp_file_ext,
-                          minct_file, metas, c);
+                          minct_file, platform_file, metas, c);
 
   station_builder stb(parse_stations(stations_file, coordinates_file, metas, c),
                       parse_timezones(timezones_file, basic_data_file, c));

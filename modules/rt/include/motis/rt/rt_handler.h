@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "ctx/res_id_t.h"
+
 #include "motis/core/schedule/free_text.h"
 #include "motis/core/schedule/schedule.h"
 
@@ -16,12 +18,12 @@
 namespace motis::rt {
 
 struct rt_handler {
-  explicit rt_handler(schedule& sched, bool validate_graph,
-                      bool validate_constant_graph, bool print_stats);
+  explicit rt_handler(schedule& sched, ctx::res_id_t schedule_res_id,
+                      bool validate_graph, bool validate_constant_graph,
+                      bool print_stats);
 
   motis::module::msg_ptr update(motis::module::msg_ptr const&);
   motis::module::msg_ptr single(motis::module::msg_ptr const&);
-  void update(motis::ris::Message const*);
   motis::module::msg_ptr flush(motis::module::msg_ptr const&);
 
 private:
@@ -37,9 +39,11 @@ private:
     motis::time schedule_time_;
   };
 
+  void update(motis::ris::Message const*);
   void propagate();
 
   schedule& sched_;
+  ctx::res_id_t schedule_res_id_;
   delay_propagator propagator_;
   update_msg_builder update_builder_;
   statistics stats_;

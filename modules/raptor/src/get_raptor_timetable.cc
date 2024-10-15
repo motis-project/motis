@@ -340,7 +340,7 @@ auto get_initialization_footpaths(transformable_timetable const& ttt) {
 }
 
 std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
-    transformable_timetable& ttt) {
+    transformable_timetable const& ttt) {
   auto meta_info = std::make_unique<raptor_meta_info>();
 
   // generate initialization footpaths BEFORE removing empty stations
@@ -385,12 +385,18 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
   meta_info->departure_events_with_metas_ = meta_info->departure_events_;
 
   for (auto s_id = 0; s_id < ttt.stations_.size(); ++s_id) {
+    auto& meta_departures = meta_info->departure_events_with_metas_[s_id];
+    if (!meta_departures.empty()) {
+      continue;
+    }
     auto const s = ttt.stations_[s_id];
     for (auto const equi_s_id : s.equivalent_) {
-      utl::concat(meta_info->departure_events_with_metas_[s_id],
-                  meta_info->departure_events_[equi_s_id]);
+      utl::concat(meta_departures, meta_info->departure_events_[equi_s_id]);
     }
-    utl::erase_duplicates(meta_info->departure_events_with_metas_[s_id]);
+    utl::erase_duplicates(meta_departures);
+    for (auto const equi_s_id : s.equivalent_) {
+      meta_info->departure_events_with_metas_[equi_s_id] = meta_departures;
+    }
   }
 
   // Loop over the routes

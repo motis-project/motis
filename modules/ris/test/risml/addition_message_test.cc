@@ -42,7 +42,7 @@ constexpr auto const addition_fixture_1 = R"(
 )";
 
 TEST(ris_addition_message, message_1) {
-  auto const messages = risml_parser::parse(addition_fixture_1);
+  auto const messages = parse(addition_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];
@@ -142,7 +142,7 @@ constexpr auto const addition_fixture_2 = R"(
 )";
 
 TEST(ris_addition_message, message_2) {
-  auto const messages = risml_parser::parse(addition_fixture_2);
+  auto const messages = parse(addition_fixture_2);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

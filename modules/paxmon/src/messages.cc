@@ -61,7 +61,7 @@ Offset<PaxMonCompactJourneyLeg> to_fbs(schedule const& sched,
                                        FlatBufferBuilder& fbb,
                                        journey_leg const& leg) {
   return CreatePaxMonCompactJourneyLeg(
-      fbb, to_fbs(fbb, to_extern_trip(sched, leg.trip_)),
+      fbb, to_fbs_trip_service_info(fbb, sched, leg),
       to_fbs(fbb, *sched.stations_[leg.enter_station_id_]),
       to_fbs(fbb, *sched.stations_[leg.exit_station_id_]),
       motis_to_unixtime(sched, leg.enter_time_),
@@ -71,7 +71,7 @@ Offset<PaxMonCompactJourneyLeg> to_fbs(schedule const& sched,
 
 journey_leg from_fbs(schedule const& sched,
                      PaxMonCompactJourneyLeg const* leg) {
-  return {get_trip(sched, to_extern_trip(leg->trip())),
+  return {get_trip(sched, to_extern_trip(leg->trip()->trip()))->trip_idx_,
           get_station(sched, leg->enter_station()->id()->str())->index_,
           get_station(sched, leg->exit_station()->id()->str())->index_,
           unix_to_motistime(sched, leg->enter_time()),
@@ -123,6 +123,11 @@ passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg) {
       pg->generation(), pg->estimated_delay(), pg->id());
 }
 
+PaxMonGroupBaseInfo to_fbs_base_info(FlatBufferBuilder& /*fbb*/,
+                                     passenger_group const& pg) {
+  return PaxMonGroupBaseInfo{pg.id_, pg.passengers_, pg.probability_};
+}
+
 Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
                     passenger_localization const& loc) {
   if (loc.in_trip()) {
@@ -145,20 +150,25 @@ Offset<void> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
 passenger_localization from_fbs(schedule const& sched,
                                 PaxMonLocalization const loc_type,
                                 void const* loc_ptr) {
+  // NOTE: remaining_interchanges_ is currently not included in messages
   switch (loc_type) {
     case PaxMonLocalization_PaxMonInTrip: {
       auto const loc = reinterpret_cast<PaxMonInTrip const*>(loc_ptr);
       return {from_fbs(sched, loc->trip()),
               get_station(sched, loc->next_station()->id()->str()),
               unix_to_motistime(sched, loc->schedule_arrival_time()),
-              unix_to_motistime(sched, loc->current_arrival_time()), false};
+              unix_to_motistime(sched, loc->current_arrival_time()),
+              false,
+              {}};
     }
     case PaxMonLocalization_PaxMonAtStation: {
       auto const loc = reinterpret_cast<PaxMonAtStation const*>(loc_ptr);
-      return {nullptr, get_station(sched, loc->station()->id()->str()),
+      return {nullptr,
+              get_station(sched, loc->station()->id()->str()),
               unix_to_motistime(sched, loc->schedule_arrival_time()),
               unix_to_motistime(sched, loc->current_arrival_time()),
-              loc->first_station()};
+              loc->first_station(),
+              {}};
     }
     default:
       throw utl::fail("invalid passenger localization type: {}", loc_type);
@@ -193,15 +203,29 @@ Offset<PaxMonEvent> to_fbs(schedule const& sched, FlatBufferBuilder& fbb,
       to_fbs_time(sched, me.expected_arrival_time_));
 }
 
+Offset<Vector<PaxMonPdfEntry const*>> pdf_to_fbs(FlatBufferBuilder& fbb,
+                                                 pax_pdf const& pdf) {
+  auto entries = std::vector<PaxMonPdfEntry>{};
+  for (auto const& [pax, prob] : utl::enumerate(pdf.data_)) {
+    if (prob != 0.F) {
+      entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
+    }
+  }
+  return fbb.CreateVectorOfStructs(entries);
+}
+
 Offset<Vector<PaxMonCdfEntry const*>> cdf_to_fbs(FlatBufferBuilder& fbb,
                                                  pax_cdf const& cdf) {
   auto entries = std::vector<PaxMonCdfEntry>{};
   entries.reserve(cdf.data_.size());
-  auto last_prob = 0.0F;
-  for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
-    if (prob != last_prob) {
-      entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
-      last_prob = prob;
+  if (!cdf.data_.empty()) {
+    auto last_prob = 0.0F;
+    auto const last_index = cdf.data_.size() - 1;
+    for (auto const& [pax, prob] : utl::enumerate(cdf.data_)) {
+      if (prob != last_prob || pax == last_index) {
+        entries.emplace_back(static_cast<std::uint32_t>(pax), prob);
+        last_prob = prob;
+      }
     }
   }
   return fbb.CreateVectorOfStructs(entries);
@@ -243,6 +267,27 @@ Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
                                   get_service_infos(sched, trp));
 }
 
+Offset<TripServiceInfo> to_fbs_trip_service_info(FlatBufferBuilder& fbb,
+                                                 schedule const& sched,
+                                                 journey_leg const& leg) {
+  return to_fbs_trip_service_info(fbb, sched, get_trip(sched, leg.trip_idx_),
+                                  get_service_infos_for_leg(sched, leg));
+}
+
+Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
+                                               pax_pdf const& pdf,
+                                               pax_stats const& stats) {
+  return CreatePaxMonDistribution(fbb, stats.limits_.min_, stats.limits_.max_,
+                                  stats.q5_, stats.q50_, stats.q95_,
+                                  pdf_to_fbs(fbb, pdf));
+}
+
+Offset<PaxMonDistribution> to_fbs_distribution(FlatBufferBuilder& fbb,
+                                               pax_pdf const& pdf,
+                                               pax_cdf const& cdf) {
+  return to_fbs_distribution(fbb, pdf, get_pax_stats(cdf));
+}
+
 Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
                                   universe const& uv,
                                   edge_load_info const& eli) {
@@ -256,8 +301,9 @@ Offset<PaxMonEdgeLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,
       motis_to_unixtime(sched, to->schedule_time()),
       motis_to_unixtime(sched, to->current_time()),
       get_capacity_type(eli.edge_), eli.edge_->capacity(),
-      cdf_to_fbs(fbb, eli.forecast_cdf_), eli.updated_,
-      eli.possibly_over_capacity_, eli.expected_passengers_);
+      to_fbs_distribution(fbb, eli.forecast_pdf_, eli.forecast_cdf_),
+      eli.updated_, eli.possibly_over_capacity_, eli.probability_over_capacity_,
+      eli.expected_passengers_);
 }
 
 Offset<PaxMonTripLoadInfo> to_fbs(FlatBufferBuilder& fbb, schedule const& sched,

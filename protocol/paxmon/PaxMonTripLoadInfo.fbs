@@ -1,12 +1,8 @@
 include "base/TripServiceInfo.fbs";
 include "base/Station.fbs";
+include "paxmon/PaxMonDistribution.fbs";
 
 namespace motis.paxmon;
-
-struct PaxMonCdfEntry {
-  passengers: uint;
-  probability: float;
-}
 
 enum PaxMonCapacityType : byte { Known, Unknown, Unlimited }
 
@@ -19,9 +15,10 @@ table PaxMonEdgeLoadInfo {
   arrival_current_time: ulong;
   capacity_type: PaxMonCapacityType;
   capacity: uint;
-  passenger_cdf: [PaxMonCdfEntry];
+  dist: PaxMonDistribution;
   updated: bool;
   possibly_over_capacity: bool;
+  prob_over_capacity: float;
   expected_passengers: uint;
 }
 

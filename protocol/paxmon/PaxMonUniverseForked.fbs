@@ -1,0 +1,8 @@
+namespace motis.paxmon;
+
+table PaxMonUniverseForked {
+  base_universe: uint;
+  new_universe: uint;
+  new_schedule: ulong; // schedule id of new universe
+  schedule_forked: bool;
+}

@@ -360,7 +360,8 @@ struct web_server::impl {
     }
 
     try {
-      log_file_ << msg->to_json(true) << std::endl;
+      log_file_ << "[" << motis::logging::time() << "] " << msg->to_json(true)
+                << std::endl;
     } catch (std::ios_base::failure const& e) {
       LOG(logging::error) << "could not log request: " << e.what();
       reset_logging(false);

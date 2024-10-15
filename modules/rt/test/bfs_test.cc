@@ -16,8 +16,8 @@ struct bfs_test : public motis_instance_test {
   bfs_test()
       : motis::test::motis_instance_test(
             loader::loader_options{
-                {"base/loader/test_resources/hrd_schedules/mss-ts"},
-                "20150329"},
+                .dataset_ = {"base/loader/test_resources/hrd_schedules/mss-ts"},
+                .schedule_begin_ = "20150329"},
             {"rt"}) {}
 };
 

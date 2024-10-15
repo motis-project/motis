@@ -1,0 +1,16 @@
+{
+  "fbsDir": "../../protocol",
+  "tsOutputDir": "src/api/protocol",
+  "typeFilter": [
+    "motis.*",
+    "motis.ris.RISForwardTimeRequest",
+    "motis.ris.RISContentType",
+    "motis.paxmon.*",
+    "motis.paxforecast.*",
+    "motis.routing.*",
+    "motis.guesser.*",
+    "motis.lookup.*",
+    "motis.ribasis.*"
+  ],
+  "header": "// generated file - do not modify - run update-protocol to update"
+}

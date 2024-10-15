@@ -24,7 +24,7 @@ flatbuffers::Offset<IdEvent> create_id_event(message_context&, schedule const&,
 
 flatbuffers::Offset<IdEvent> create_id_event(message_context&,
                                              mcd::string const& station_id,
-                                             unixtime const start_time);
+                                             unixtime start_time);
 
 flatbuffers::Offset<Event> create_event(trip const&, schedule const&,
                                         message_context&, stop_context const&,

@@ -20,3 +20,9 @@ table PaxMonGroup {
   added_time: ulong;
   estimated_delay: short;
 }
+
+struct PaxMonGroupBaseInfo {
+  id: ulong (key);
+  n: uint; // passengers
+  p: float; // probability
+}

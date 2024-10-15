@@ -6,6 +6,7 @@
 namespace motis::access {
 
 trip_stop::trip_stop(trip const* t, int const index) : trip_(t), index_(index) {
+  assert(!trip_->edges_->empty());
   if (index == static_cast<int>(trip_->edges_->size())) {
     node_ = trip_->edges_->back().get_edge()->to_;
   } else {

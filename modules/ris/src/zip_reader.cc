@@ -57,7 +57,7 @@ struct zip_reader::impl {
 
     buf_.resize(get_curr_file_size());
     if (auto const success = mz_zip_reader_extract_to_mem(
-            &ar_, curr_file_index_, &buf_[0], buf_.size(), 0);
+            &ar_, curr_file_index_, buf_.data(), buf_.size(), 0);
         success) {
       ++curr_file_index_;
       return std::string_view{reinterpret_cast<const char*>(buf_.data()),

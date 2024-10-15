@@ -38,6 +38,7 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
         auto const& dep_lcon = stop.dep_lcon();
         auto const enter = trip_stop_idx == e.from_stop_index_;
         stops.emplace_back(stop_idx++, stop.get_station_id(), a_track,
+                           dep_lcon.full_con_->d_track_, a_track,
                            dep_lcon.full_con_->d_track_, a_time,
                            dep_lcon.d_time_, a_time, dep_lcon.d_time_,
                            timestamp_reason::SCHEDULE,
@@ -53,9 +54,10 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
       exit = true;
     } else {
       auto const d_time = e.departure_time_;
-      stops.emplace_back(stop_idx++, e.footpath_.from_stop_, a_track, 0, a_time,
-                         d_time, a_time, d_time, timestamp_reason::SCHEDULE,
-                         timestamp_reason::SCHEDULE, exit, false);
+      stops.emplace_back(stop_idx++, e.footpath_.from_stop_, a_track, 0,
+                         a_track, 0, a_time, d_time, a_time, d_time,
+                         timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE,
+                         exit, false);
       transports.emplace_back(stop_idx - 1, stop_idx, e.footpath_.duration_,
                               e.mumo_id_, e.mumo_price_, e.mumo_accessibility_);
       a_time = static_cast<time>(d_time + e.footpath_.duration_);
@@ -74,9 +76,10 @@ parse_tb_journey(schedule const& sched, tb_journey const& tbj) {
   } else {
     last_stop = last_edge.footpath_.to_stop_;
   }
-  stops.emplace_back(stop_idx++, last_stop, a_track, 0, a_time, INVALID_TIME,
-                     a_time, INVALID_TIME, timestamp_reason::SCHEDULE,
-                     timestamp_reason::SCHEDULE, exit, false);
+  stops.emplace_back(stop_idx++, last_stop, a_track, 0, a_track, 0, a_time,
+                     INVALID_TIME, a_time, INVALID_TIME,
+                     timestamp_reason::SCHEDULE, timestamp_reason::SCHEDULE,
+                     exit, false);
 
   return {stops, transports};
 }

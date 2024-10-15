@@ -67,7 +67,10 @@ struct schedule {
   mcd::vector<mcd::unique_ptr<mcd::string>> directions_;
   mcd::vector<mcd::unique_ptr<timezone>> timezones_;
 
-  mcd::hash_map<gtfs_trip_id, ptr<trip const>> gtfs_trip_ids_;
+  mcd::hash_map<
+      mcd::string,
+      mcd::vector<mcd::pair<unixtime /* trip start time */, ptr<trip const>>>>
+      gtfs_trip_ids_;
   mcd::vector<mcd::pair<primary_trip_id, ptr<trip>>> trips_;
   mcd::vector<mcd::unique_ptr<trip>> trip_mem_;
   mcd::vector<mcd::unique_ptr<mcd::vector<trip::route_edge>>> trip_edges_;

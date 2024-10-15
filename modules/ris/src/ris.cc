@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <atomic>
+#include <fstream>
 #include <limits>
 #include <optional>
 
@@ -10,6 +11,9 @@
 
 #include "utl/concat.h"
 #include "utl/parser/file.h"
+#include "utl/read_file.h"
+
+#include "net/http/client/url.h"
 
 #include "conf/date_time.h"
 
@@ -17,18 +21,25 @@
 #include "tar/tar_reader.h"
 #include "tar/zstd_reader.h"
 
+#include "utl/overloaded.h"
 #include "utl/verify.h"
+#include "utl/zip.h"
 
 #include "lmdb/lmdb.hpp"
+
+#include "rabbitmq/amqp.hpp"
 
 #include "motis/core/common/logging.h"
 #include "motis/core/common/unixtime.h"
 #include "motis/core/access/time_access.h"
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/print_trip.h"
+#include "motis/module/context/motis_http_req.h"
 #include "motis/module/context/motis_publish.h"
 #include "motis/module/context/motis_spawn.h"
+#include "motis/ris/gtfs-rt/common.h"
 #include "motis/ris/gtfs-rt/gtfsrt_parser.h"
+#include "motis/ris/gtfs-rt/util.h"
 #include "motis/ris/ribasis/ribasis_parser.h"
 #include "motis/ris/ris_message.h"
 #include "motis/ris/risml/risml_parser.h"
@@ -111,13 +122,206 @@ std::string_view from_unixtime(unixtime const& t) {
 }
 
 struct ris::impl {
-  impl(schedule& sched, config const& c)
-      : sched_{sched}, config_{c}, gtfsrt_parser_{sched} {}
+  /**
+   * Extracts the station prefix + directory path from a string formed
+   * "${station-prefix}:${input-directory-path}"
+   *
+   * Contains an optional tag which is used as station id prefix to match
+   * stations in multi-schedule mode and the path to the directory.
+   *
+   * In single-timetable mode, the tag should be omitted.
+   */
+  struct input {
+    using source_t = std::variant<net::http::client::request, fs::path>;
+    enum class source_type { path, url };
 
-  void init() {
-    if (!config_.gtfs_trip_ids_path_.empty()) {
-      read_gtfs_trip_ids();
+    input(schedule const& sched, std::string const& in)
+        : input{sched, split(in)} {}
+
+    std::string str() const {
+      return std::visit(
+          utl::overloaded{
+              [](fs::path const& p) { return "path: " + p.generic_string(); },
+              [](net::http::client::request const& u) {
+                auto const auth_it = u.headers.find("Authorization");
+                return "url: " + u.address.str() + ", auth: " +
+                       (auth_it == end(u.headers) ? "none" : auth_it->second);
+              }},
+          src_);
     }
+
+    source_type source_type() const {
+      return std::visit(
+          utl::overloaded{[](fs::path const&) { return source_type::path; },
+                          [](net::http::client::request const&) {
+                            return source_type::url;
+                          }},
+          src_);
+    }
+
+    fs::path get_path() const {
+      utl::verify(std::holds_alternative<fs::path>(src_), "no path {}", str());
+      return std::get<fs::path>(src_);
+    }
+
+    net::http::client::request get_request() const {
+      utl::verify(std::holds_alternative<net::http::client::request>(src_),
+                  "no url {}", str());
+      return std::get<net::http::client::request>(src_);
+    }
+
+    std::string const& tag() const { return tag_; }
+
+    gtfsrt::knowledge_context& gtfs_knowledge() { return gtfs_knowledge_; }
+
+  private:
+    input(schedule const& sched,
+          std::pair<source_t, std::string>&& path_and_tag)
+        : src_{std::move(path_and_tag.first)},
+          tag_{path_and_tag.second},
+          gtfs_knowledge_{path_and_tag.second, sched} {}
+
+    static std::pair<source_t, std::string> split(std::string const& in) {
+      auto const is_url = [](std::string const& s) {
+        return boost::starts_with(s, "http://") ||
+               boost::starts_with(s, "https://");
+      };
+
+      auto const parse_req = [](std::string const& s) {
+        if (auto const delimiter_pos = s.find('|');
+            delimiter_pos != std::string::npos) {
+          auto req = net::http::client::request{s.substr(0, delimiter_pos)};
+          req.headers.emplace("Authorization", s.substr(delimiter_pos + 1));
+          return req;
+        } else {
+          return net::http::client::request{s};
+        }
+      };
+
+      std::string tag;
+      if (auto const delimiter_pos = in.find('|');
+          delimiter_pos != std::string::npos) {
+        tag = in.substr(0, delimiter_pos);
+        tag = tag.empty() ? "" : tag + "_";
+        auto const src = in.substr(delimiter_pos + 1);
+        return {
+            is_url(src) ? source_t{parse_req(src)} : source_t{fs::path{src}},
+            tag};
+      } else {
+        return {is_url(in) ? source_t{parse_req(in)} : source_t{fs::path{in}},
+                tag};
+      }
+    }
+
+    source_t src_;
+    std::string tag_;
+
+    gtfsrt::knowledge_context gtfs_knowledge_;
+    std::unique_ptr<amqp::ssl_connection> con_;
+  };
+
+  explicit impl(config& c)
+      : config_{c}, rabbitmq_log_enabled_{!config_.rabbitmq_log_.empty()} {
+    if (rabbitmq_log_enabled_) {
+      LOG(info) << "Logging RabbitMQ messages to: " << config_.rabbitmq_log_;
+      rabbitmq_log_file_.exceptions(std::ios_base::failbit |
+                                    std::ios_base::badbit);
+      rabbitmq_log_file_.open(config_.rabbitmq_log_, std::ios_base::app);
+    }
+  }
+
+  void init_ribasis_receiver(dispatcher* d, schedule* sched) {
+    utl::verify(config_.rabbitmq_.valid(), "invalid rabbitmq configuration");
+    if (config_.rabbitmq_.empty()) {
+      return;
+    }
+
+    ribasis_receiver_ = std::make_unique<amqp::ssl_connection>(
+        &config_.rabbitmq_, [](std::string const& log_msg) {
+          LOG(info) << "rabbitmq: " << log_msg;
+        });
+    ribasis_receiver_->run([this, d, sched, buffer = std::vector<amqp::msg>{}](
+                               amqp::msg const& m) mutable {
+      buffer.emplace_back(m);
+
+      if (auto const n = now();
+          (n - ribasis_receiver_last_update_) < config_.update_interval_) {
+        return;
+      } else {
+        ribasis_receiver_last_update_ = n;
+
+        auto msgs_copy = buffer;
+        buffer.clear();
+
+        d->enqueue(
+            ctx_data{d},
+            [this, sched, msgs = std::move(msgs_copy)]() {
+              publisher pub;
+              pub.schedule_res_id_ =
+                  to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+              for (auto const& m : msgs) {
+                if (rabbitmq_log_enabled_) {
+                  rabbitmq_log_file_ << "[" << motis::logging::time()
+                                     << "] msg size=" << m.content_.size()
+                                     << "\n"
+                                     << m.content_ << "\n"
+                                     << std::endl;
+                }
+                parse_str_and_write_to_db(
+                    *file_upload_, {m.content_.c_str(), m.content_.size()},
+                    file_type::JSON, pub);
+              }
+
+              sched->system_time_ = pub.max_timestamp_;
+              sched->last_update_timestamp_ = std::time(nullptr);
+
+              if (rabbitmq_log_enabled_) {
+                rabbitmq_log_file_
+                    << "[" << motis::logging::time() << "] published "
+                    << msgs.size()
+                    << " messages, system_time=" << sched->system_time_ << " ("
+                    << format_unix_time(sched->system_time_) << ")"
+                    << std::endl;
+              }
+
+              publish_system_time_changed(pub.schedule_res_id_);
+            },
+            ctx::op_id{"ribasis_receive", CTX_LOCATION, 0U}, ctx::op_type_t::IO,
+            ctx::accesses_t{ctx::access_request{
+                to_res_id(::motis::module::global_res_id::SCHEDULE),
+                ctx::access_t::WRITE}});
+      }
+    });
+  }
+
+  void update_gtfs_rt(schedule& sched) {
+    auto futures = std::vector<http_future_t>{};
+    auto inputs = std::vector<input*>{};
+    for (auto& in : inputs_) {
+      if (in.source_type() == input::source_type::url) {
+        futures.emplace_back(motis_http(in.get_request()));
+        inputs.emplace_back(&in);
+      }
+    }
+
+    publisher pub;
+    pub.schedule_res_id_ = to_res_id(::motis::module::global_res_id::SCHEDULE);
+
+    for (auto const& [f, in] : utl::zip(futures, inputs)) {
+      parse_str_and_write_to_db(*in, f->val().body, file_type::PROTOBUF, pub);
+    }
+
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
+  }
+
+  void init(dispatcher& d, schedule& sched) {
+    inputs_ = utl::to_vec(config_.input_, [&](std::string const& in) {
+      return input{sched, in};
+    });
+    file_upload_ = std::make_unique<input>(sched, "");
 
     if (config_.clear_db_ && fs::exists(config_.db_path_)) {
       LOG(info) << "clearing database path " << config_.db_path_;
@@ -126,8 +330,14 @@ struct ris::impl {
 
     env_.set_maxdbs(4);
     env_.set_mapsize(config_.db_max_size_);
-    env_.open(config_.db_path_.c_str(),
-              lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOTLS);
+
+    try {
+      env_.open(config_.db_path_.c_str(),
+                lmdb::env_open_flags::NOSUBDIR | lmdb::env_open_flags::NOTLS);
+    } catch (...) {
+      l(logging::error, "ris: can't open database {}", config_.db_path_);
+      throw;
+    }
 
     db::txn t{env_};
     t.dbi_open(FILE_DB, db::dbi_flags::CREATE);
@@ -136,42 +346,43 @@ struct ris::impl {
     t.dbi_open(MAX_DAY_DB, db::dbi_flags::CREATE | db::dbi_flags::INTEGERKEY);
     t.commit();
 
-    if (fs::exists(config_.input_)) {
-      LOG(warn) << "parsing " << config_.input_;
-      // parse_parallel(config_.input_, null_pub_);
-      if (config_.instant_forward_) {
-        publisher pub;
-        parse_sequential(config_.input_, pub);
-      } else {
-        parse_sequential(config_.input_, null_pub_);
+    std::vector<input> urls;
+    for (auto& in : inputs_) {
+      if (in.source_type() != input::source_type::path) {
+        continue;
       }
-    } else {
-      LOG(warn) << config_.input_ << " does not exist";
+
+      if (fs::exists(in.get_path())) {
+        LOG(warn) << "parsing " << in.get_path();
+        if (config_.instant_forward_) {
+          publisher pub;
+          parse_sequential(sched, in, pub);
+        } else {
+          parse_sequential(sched, in, null_pub_);
+        }
+      } else {
+        LOG(warn) << in.get_path() << " does not exist";
+      }
+    }
+
+    auto const has_urls = std::any_of(
+        begin(inputs_), end(inputs_),
+        [](auto&& in) { return in.source_type() == input::source_type::url; });
+    if (has_urls) {
+      d.register_timer(
+          "RIS GTFS-RT Update",
+          boost::posix_time::seconds{config_.update_interval_},
+          [this, &sched]() { update_gtfs_rt(sched); },
+          ctx::accesses_t{ctx::access_request{
+              to_res_id(::motis::module::global_res_id::SCHEDULE),
+              ctx::access_t::WRITE}});
     }
 
     if (config_.init_time_.unix_time_ != 0) {
-      forward(config_.init_time_.unix_time_);
+      forward(sched, 0U, config_.init_time_.unix_time_);
     }
-  }
 
-  void read_gtfs_trip_ids() const {
-    auto const trips =
-        utl::file{config_.gtfs_trip_ids_path_.c_str(), "r"}.content();
-    auto const trips_msg =
-        make_msg(trips.data(), trips.size(), DEFAULT_FBS_MAX_DEPTH,
-                 std::numeric_limits<std::uint32_t>::max());
-    for (auto const& id : *motis_content(RISGTFSRTMapping, trips_msg)->ids()) {
-      try {
-        sched_.gtfs_trip_ids_.emplace(
-            gtfs_trip_id{id->id()->str(), static_cast<unixtime>(id->day())},
-            from_fbs(sched_, id->trip(), true));
-      } catch (...) {
-        std::cout << to_extern_trip(id->trip()) << "\n";
-      }
-    }
-    LOG(info) << sched_.gtfs_trip_ids_.size() << "/"
-              << motis_content(RISGTFSRTMapping, trips_msg)->ids()->size()
-              << " imported";
+    init_ribasis_receiver(&d, &sched);
   }
 
   static std::string_view get_content_type(HTTPRequest const* req) {
@@ -184,7 +395,7 @@ struct ris::impl {
     return {};
   }
 
-  msg_ptr upload(msg_ptr const& msg) {
+  msg_ptr upload(schedule& sched, msg_ptr const& msg) {
     auto const req = motis_content(HTTPRequest, msg);
     auto const content = req->content();
     auto const ft =
@@ -192,26 +403,38 @@ struct ris::impl {
                         std::string_view{content->c_str(), content->size()});
     publisher pub;
 
-    parse_str_and_write_to_db(
-        std::string_view{content->c_str(), content->size()}, ft, pub);
+    parse_str_and_write_to_db(*file_upload_,
+                              {content->c_str(), content->size()}, ft, pub);
 
-    sched_.system_time_ = pub.max_timestamp_;
-    sched_.last_update_timestamp_ = std::time(nullptr);
-    ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
 
-  msg_ptr read(msg_ptr const&) {
+  msg_ptr read(schedule& sched, msg_ptr const&) {
     publisher pub;
-    parse_sequential(config_.input_, pub);
-    sched_.system_time_ = pub.max_timestamp_;
-    sched_.last_update_timestamp_ = std::time(nullptr);
-    ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
+    for (auto& in : inputs_) {
+      if (in.source_type() == input::source_type::path) {
+        parse_sequential(sched, in, pub);
+      }
+    }
+    sched.system_time_ = pub.max_timestamp_;
+    sched.last_update_timestamp_ = std::time(nullptr);
+    publish_system_time_changed(pub.schedule_res_id_);
     return {};
   }
 
-  msg_ptr forward(msg_ptr const& msg) {
-    forward(motis_content(RISForwardTimeRequest, msg)->new_time());
+  msg_ptr forward(module& mod, msg_ptr const& msg) {
+    auto const req = motis_content(RISForwardTimeRequest, msg);
+    auto const schedule_res_id =
+        req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                              : static_cast<ctx::res_id_t>(req->schedule());
+    auto res_lock =
+        mod.lock_resources({{schedule_res_id, ctx::access_t::WRITE}});
+    auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+    forward(sched, schedule_res_id,
+            motis_content(RISForwardTimeRequest, msg)->new_time());
     return {};
   }
 
@@ -235,8 +458,32 @@ struct ris::impl {
     return {};
   }
 
+  msg_ptr apply(module& mod, msg_ptr const& msg) {
+    auto const req = motis_content(RISApplyRequest, msg);
+    auto const schedule_res_id =
+        req->schedule() == 0U ? to_res_id(global_res_id::SCHEDULE)
+                              : static_cast<ctx::res_id_t>(req->schedule());
+    auto res_lock =
+        mod.lock_resources({{schedule_res_id, ctx::access_t::WRITE}});
+    auto& sched = *res_lock.get<schedule_data>(schedule_res_id).schedule_;
+
+    publisher pub{schedule_res_id};
+    for (auto const& rim : *req->input_messages()) {
+      parse_and_publish_message(rim, pub);
+    }
+
+    pub.flush();
+    sched.system_time_ = std::max(sched.system_time_, pub.max_timestamp_);
+    sched.last_update_timestamp_ = std::time(nullptr);
+
+    publish_system_time_changed(schedule_res_id);
+    return {};
+  }
+
   struct publisher {
     publisher() = default;
+    explicit publisher(ctx::res_id_t schedule_res_id)
+        : schedule_res_id_{schedule_res_id} {}
     publisher(publisher&&) = delete;
     publisher(publisher const&) = delete;
     publisher& operator=(publisher&&) = delete;
@@ -251,7 +498,8 @@ struct ris::impl {
 
       fbb_.create_and_finish(
           MsgContent_RISBatch,
-          CreateRISBatch(fbb_, fbb_.CreateVector(offsets_)).Union(),
+          CreateRISBatch(fbb_, fbb_.CreateVector(offsets_), schedule_res_id_)
+              .Union(),
           "/ris/messages");
 
       auto msg = make_msg(fbb_);
@@ -276,6 +524,7 @@ struct ris::impl {
     message_creator fbb_;
     std::vector<flatbuffers::Offset<MessageHolder>> offsets_;
     unixtime max_timestamp_ = 0;
+    ctx::res_id_t schedule_res_id_{};
   };
 
   struct null_publisher {
@@ -283,39 +532,42 @@ struct ris::impl {
     void add(uint8_t const*, size_t const) {}
     size_t size() const { return 0; }  // NOLINT
     unixtime max_timestamp_ = 0;
+    ctx::res_id_t schedule_res_id_{};
   } null_pub_;
 
-  void forward(unixtime const to) {
+  void forward(schedule& sched, ctx::res_id_t schedule_res_id,
+               unixtime const to) {
     auto const first_schedule_event_day =
-        sched_.first_event_schedule_time_ !=
-                std::numeric_limits<unixtime>::max()
-            ? floor(sched_.first_event_schedule_time_,
+        sched.first_event_schedule_time_ != std::numeric_limits<unixtime>::max()
+            ? floor(sched.first_event_schedule_time_,
                     static_cast<unixtime>(SECONDS_A_DAY))
-            : external_schedule_begin(sched_);
+            : external_schedule_begin(sched);
     auto const last_schedule_event_day =
-        sched_.last_event_schedule_time_ != std::numeric_limits<unixtime>::min()
-            ? ceil(sched_.last_event_schedule_time_,
+        sched.last_event_schedule_time_ != std::numeric_limits<unixtime>::min()
+            ? ceil(sched.last_event_schedule_time_,
                    static_cast<unixtime>(SECONDS_A_DAY))
-            : external_schedule_end(sched_);
+            : external_schedule_end(sched);
     auto const min_timestamp =
         get_min_timestamp(first_schedule_event_day, last_schedule_event_day);
     if (min_timestamp) {
-      forward(std::max(*min_timestamp, sched_.system_time_ + 1), to);
+      forward(sched, schedule_res_id,
+              std::max(*min_timestamp, sched.system_time_ + 1), to);
     } else {
       LOG(info) << "ris database has no relevant data";
     }
   }
 
-  void forward(unixtime const from, unixtime const to) {
+  void forward(schedule& sched, ctx::res_id_t schedule_res_id,
+               unixtime const from, unixtime const to) {
     LOG(info) << "forwarding from " << logging::time(from) << " to "
-              << logging::time(to);
+              << logging::time(to) << " [schedule " << schedule_res_id << "]";
 
     auto t = db::txn{env_, db::txn_flags::RDONLY};
     auto db = t.dbi_open(MSG_DB);
     auto c = db::cursor{t, db};
     auto bucket = c.get(db::cursor_op::SET_RANGE, from);
     auto batch_begin = bucket ? bucket->first : 0;
-    publisher pub;
+    publisher pub{schedule_res_id};
     while (true) {
       if (!bucket) {
         LOG(info) << "end of db reached";
@@ -360,8 +612,8 @@ struct ris::impl {
     }
 
     pub.flush();
-    sched_.system_time_ = to;
-    ctx::await_all(motis_publish(make_no_msg("/ris/system_time_changed")));
+    sched.system_time_ = to;
+    publish_system_time_changed(pub.schedule_res_id_);
   }
 
   std::optional<unixtime> get_min_timestamp(unixtime const from_day,
@@ -464,20 +716,27 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_sequential(fs::path const& p, Publisher& pub) {
-    for (auto const& [t, path, type] :
-         collect_files(fs::canonical(p, p.root_path()))) {
-      (void)(t);
-      parse_file_and_write_to_db(path, type, pub);
-      if (config_.instant_forward_) {
-        sched_.system_time_ = pub.max_timestamp_;
-        sched_.last_update_timestamp_ = std::time(nullptr);
-        try {
-          ctx::await_all(
-              motis_publish(make_no_msg("/ris/system_time_changed")));
-        } catch (std::system_error& e) {
-          LOG(info) << e.what();
+  void parse_sequential(schedule& sched, input& in, Publisher& pub) {
+    if (!fs::exists(in.get_path())) {
+      l(logging::error, "ris input path {} does not exist", in.get_path());
+      return;
+    }
+
+    for (auto const& [t, path, type] : collect_files(
+             fs::canonical(in.get_path(), in.get_path().root_path()))) {
+      try {
+        parse_file_and_write_to_db(in, path, type, pub);
+        if (config_.instant_forward_) {
+          sched.system_time_ = pub.max_timestamp_;
+          sched.last_update_timestamp_ = std::time(nullptr);
+          try {
+            publish_system_time_changed(pub.schedule_res_id_);
+          } catch (std::system_error& e) {
+            LOG(info) << e.what();
+          }
         }
+      } catch (std::exception const& e) {
+        l(logging::error, "error parsing file {}", path);
       }
     }
     env_.force_sync();
@@ -497,23 +756,24 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_file_and_write_to_db(fs::path const& p, file_type const type,
-                                  Publisher& pub) {
+  void parse_file_and_write_to_db(input& in, fs::path const& p,
+                                  file_type const type, Publisher& pub) {
     using tar_zst = tar_reader<zstd_reader>;
     auto const& cp = p.generic_string();
 
     try {
       switch (type) {
         case file_type::ZST:
-          parse_and_write_to_db(tar_zst(zstd_reader(cp.c_str())), type, pub);
+          parse_and_write_to_db(in, tar_zst(zstd_reader(cp.c_str())), type,
+                                pub);
           break;
         case file_type::ZIP:
-          parse_and_write_to_db(zip_reader(cp.c_str()), type, pub);
+          parse_and_write_to_db(in, zip_reader(cp.c_str()), type, pub);
           break;
         case file_type::XML:
         case file_type::PROTOBUF:
         case file_type::JSON:
-          parse_and_write_to_db(file_reader(cp.c_str()), type, pub);
+          parse_and_write_to_db(in, file_reader(cp.c_str()), type, pub);
           break;
         default: assert(false);
       }
@@ -524,41 +784,40 @@ struct ris::impl {
   }
 
   template <typename Publisher>
-  void parse_str_and_write_to_db(std::string_view sv, file_type const type,
-                                 Publisher& pub) {
+  void parse_str_and_write_to_db(input& in, std::string_view sv,
+                                 file_type const type, Publisher& pub) {
     switch (type) {
       case file_type::ZST:
         throw utl::fail("zst upload is not supported");
         break;
       case file_type::ZIP:
-        parse_and_write_to_db(zip_reader{sv.data(), sv.size()}, type, pub);
+        parse_and_write_to_db(in, zip_reader{sv.data(), sv.size()}, type, pub);
         break;
       case file_type::XML:
       case file_type::PROTOBUF:
       case file_type::JSON:
-        parse_and_write_to_db(string_view_reader{sv}, type, pub);
+        parse_and_write_to_db(in, string_view_reader{sv}, type, pub);
         break;
       default: assert(false);
     }
   }
 
   template <typename Reader, typename Publisher>
-  void parse_and_write_to_db(Reader&& reader, file_type const type,
+  void parse_and_write_to_db(input& in, Reader&& reader, file_type const type,
                              Publisher& pub) {
-    auto const risml_fn = [this](
-                              std::string_view s, std::string_view,
+    auto const risml_fn = [&](std::string_view s, std::string_view,
                               std::function<void(ris_message &&)> const& cb) {
-      risml_parser_.to_ris_message(s, cb);
+      risml::to_ris_message(s, cb, in.tag());
     };
-    auto const gtfsrt_fn = [this](
-                               std::string_view s, std::string_view,
+    auto const gtfsrt_fn = [&](std::string_view s, std::string_view,
                                std::function<void(ris_message &&)> const& cb) {
-      gtfsrt_parser_.to_ris_message(s, cb);
+      gtfsrt::to_ris_message(in.gtfs_knowledge(),
+                             config_.gtfs_is_addition_skip_allowed_, s, cb,
+                             in.tag());
     };
-    auto const ribasis_fn = [this](
-                                std::string_view s, std::string_view,
+    auto const ribasis_fn = [&](std::string_view s, std::string_view,
                                 std::function<void(ris_message &&)> const& cb) {
-      ribasis_parser_.to_ris_message(s, cb);
+      ribasis::to_ris_message(s, cb, in.tag());
     };
     auto const file_fn = [&](std::string_view s, std::string_view file_name,
                              std::function<void(ris_message &&)> const& cb) {
@@ -606,7 +865,7 @@ struct ris::impl {
             v && v->first == timestamp) {
           entry.insert(end(entry), begin(v->second), end(v->second));
         }
-        c.put(timestamp, std::string_view{&entry[0], entry.size()});
+        c.put(timestamp, std::string_view{entry.data(), entry.size()});
       }
 
       c.commit();
@@ -626,8 +885,8 @@ struct ris::impl {
       buf_val.resize(buf_val.size() + SIZE_TYPE_SIZE + m.size());
 
       auto const msg_size = static_cast<size_type>(m.size());
-      std::memcpy(&buf_val[0] + base, &msg_size, SIZE_TYPE_SIZE);
-      std::memcpy(&buf_val[0] + base + SIZE_TYPE_SIZE, m.data(), m.size());
+      std::memcpy(buf_val.data() + base, &msg_size, SIZE_TYPE_SIZE);
+      std::memcpy(buf_val.data() + base + SIZE_TYPE_SIZE, m.data(), m.size());
 
       pub.add(m.data(), m.size());
 
@@ -686,24 +945,64 @@ struct ris::impl {
     t.commit();
   }
 
-  schedule& sched_;
+  static void publish_system_time_changed(ctx::res_id_t schedule_res_id) {
+    message_creator mc;
+    mc.create_and_finish(
+        MsgContent_RISSystemTimeChanged,
+        CreateRISSystemTimeChanged(mc, schedule_res_id).Union(),
+        "/ris/system_time_changed");
+    ctx::await_all(motis_publish(make_msg(mc)));
+  }
+
+  template <typename Publisher>
+  void parse_and_publish_message(RISInputMessage const* rim, Publisher& pub) {
+    auto content_sv =
+        std::string_view{rim->content()->c_str(), rim->content()->size()};
+
+    auto const handle_message = [&](ris_message&& m) {
+      pub.add(m.data(), m.size());
+    };
+
+    switch (rim->type()) {
+      case RISContentType_RIBasis: {
+        ribasis::to_ris_message(content_sv, handle_message);
+        break;
+      }
+      case RISContentType_RISML: {
+        risml::to_ris_message(content_sv, handle_message);
+        break;
+      }
+      default: throw utl::fail("ris: unsupported message type");
+    }
+  }
+
+  void stop_io() const {
+    if (ribasis_receiver_ != nullptr) {
+      ribasis_receiver_->stop();
+    }
+  }
+
+  std::unique_ptr<amqp::ssl_connection> ribasis_receiver_;
+  unixtime ribasis_receiver_last_update_{now()};
+
   db::env env_;
-  std::atomic<uint64_t> next_msg_id_{0};
   std::mutex min_max_mutex_;
   std::mutex merge_mutex_;
 
-  config const& config_;
+  config& config_;
 
-  risml::risml_parser risml_parser_;
-  gtfsrt::gtfsrt_parser gtfsrt_parser_;
-  ribasis::ribasis_parser ribasis_parser_;
+  std::unique_ptr<input> file_upload_;
+  std::vector<input> inputs_;
+
+  bool rabbitmq_log_enabled_{false};
+  std::ofstream rabbitmq_log_file_;
 };
 
 ris::ris() : module("RIS", "ris") {
-  param(config_.gtfs_trip_ids_path_, "gtfs_trip_ids",
-        "path to GTFS trip ids file");
   param(config_.db_path_, "db", "ris database path");
-  param(config_.input_, "input", "ris input (folder or risml)");
+  param(config_.input_, "input",
+        "input paths. expected format [tag:]path (tag MUST match the "
+        "timetable)");
   param(config_.db_max_size_, "db_max_size", "virtual memory map size");
   param(config_.init_time_, "init_time", "initial forward time");
   param(config_.clear_db_, "clear_db", "clean db before init");
@@ -711,76 +1010,102 @@ ris::ris() : module("RIS", "ris") {
         "automatically forward after every file during read");
   param(config_.gtfs_is_addition_skip_allowed_,
         "gtfsrt.is_addition_skip_allowed", "allow skips on additional trips");
+  param(config_.update_interval_, "update_interval",
+        "RT update interval in seconds (RabbitMQ messages get buffered)");
+  param(config_.rabbitmq_.host_, "rabbitmq.host", "RabbitMQ remote host");
+  param(config_.rabbitmq_.port_, "rabbitmq.port", "RabbitMQ remote port");
+  param(config_.rabbitmq_.user_, "rabbitmq.username", "RabbitMQ username");
+  param(config_.rabbitmq_.pw_, "rabbitmq.password", "RabbitMQ password");
+  param(config_.rabbitmq_.vhost_, "rabbitmq.vhost", "RabbitMQ vhost");
+  param(config_.rabbitmq_.queue_, "rabbitmq.queue", "RabbitMQ queue name");
+  param(config_.rabbitmq_.ca_, "rabbitmq.ca", "RabbitMQ path to CA file");
+  param(config_.rabbitmq_.cert_, "rabbitmq.cert",
+        "RabbitMQ path to client certificate");
+  param(config_.rabbitmq_.key_, "rabbitmq.key",
+        "RabbitMQ path to client key file");
+  param(config_.rabbitmq_log_, "rabbitmq.log",
+        "Path to log file for RabbitMQ messages (set to empty string to "
+        "disable logging)");
 }
 
 ris::~ris() = default;
 
+void ris::stop_io() { impl_->stop_io(); }
+
+void ris::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd(
+      "gtfsrt-json2pb", "json to protobuf", [](int argc, char const** argv) {
+        if (argc != 3) {
+          std::cout << "usage: " << argv[0] << " JSON_FILE PB_OUTPUT\n";
+          return 1;
+        }
+
+        auto const file = utl::read_file(argv[1]);
+        if (!file.has_value()) {
+          std::cout << "unable to read file " << argv[1] << "\n";
+          return 1;
+        }
+
+        auto const out = gtfsrt::json_to_protobuf(*file);
+        utl::file{argv[2], "w"}.write(out.data(), out.size());
+
+        return 0;
+      });
+  r.register_cmd("gtfsrt-pb2json", "protobuf to json",
+                 [](int argc, char const** argv) {
+                   if (argc != 2) {
+                     std::cout << "usage: " << argv[0] << " PB_FILE\n";
+                     return 1;
+                   }
+
+                   auto const file = utl::read_file(argv[1]);
+                   if (!file.has_value()) {
+                     std::cout << "unable to read file " << argv[1] << "\n";
+                     return 1;
+                   }
+
+                   std::cout << gtfsrt::protobuf_to_json(*file) << "\n";
+
+                   return 0;
+                 });
+}
+
 void ris::init(motis::module::registry& r) {
-  impl_ = std::make_unique<impl>(*const_cast<schedule*>(&get_sched())  // NOLINT
-                                 ,
-                                 config_);
+  impl_ = std::make_unique<impl>(config_);
   r.subscribe(
       "/init",
       [this]() {
-        impl_->init();  // NOLINT
+        impl_->init(*shared_data_,
+                    const_cast<schedule&>(get_sched()));  // NOLINT
       },
-      ctx::access_t::WRITE);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   r.register_op(
-      "/ris/upload", [this](auto&& m) { return impl_->upload(m); },
-      ctx::access_t::WRITE);
+      "/ris/upload",
+      [this](auto&& m) {
+        return impl_->upload(const_cast<schedule&>(get_sched()), m);  // NOLINT
+      },
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
+  r.register_op("/ris/forward",
+                [this](auto&& m) { return impl_->forward(*this, m); }, {});
   r.register_op(
-      "/ris/forward", [this](auto&& m) { return impl_->forward(m); },
-      ctx::access_t::WRITE);
-  r.register_op(
-      "/ris/read", [this](auto&& m) { return impl_->read(m); },
-      ctx::access_t::WRITE);
+      "/ris/read",
+      [this](auto&& m) {
+        return impl_->read(const_cast<schedule&>(get_sched()), m);  // NOLINT
+      },
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
   r.register_op(
       "/ris/purge", [this](auto&& m) { return impl_->purge(m); },
-      ctx::access_t::WRITE);
-  r.register_op(
-      "/ris/write_gtfs_trip_ids",
-      [this](auto&&) {
-        message_creator fbb;
-        auto const& sched = get_sched();
-        fbb.create_and_finish(
-            MsgContent_RISGTFSRTMapping,
-            CreateRISGTFSRTMapping(
-                fbb,
-                fbb.CreateVector(utl::to_vec(
-                    sched.gtfs_trip_ids_,
-                    [&](mcd::pair<gtfs_trip_id, ptr<trip const>> const& id) {
-                      // SBB HRD data uses eva numbers
-                      // GTFS uses ${eva number}:0:${track}
-                      // To use SBB GTFS station indices in HRD:
-                      // -> cut and export the eva number (the part until
-                      // ':')
-                      auto const cut = [](std::string const& s) {
-                        auto const i = s.find_first_of(':');
-                        return i != std::string::npos ? s.substr(0, i) : s;
-                      };
-                      auto const& p = id.second->id_.primary_;
-                      auto const& s = id.second->id_.secondary_;
-                      return CreateGTFSID(
-                          fbb, fbb.CreateString(id.first.trip_id_),
-                          id.first.start_date_,
-                          CreateTripId(
-                              fbb,
-                              fbb.CreateString(
-                                  cut(sched.stations_.at(p.station_id_)
-                                          ->eva_nr_.str())),
-                              p.train_nr_, motis_to_unixtime(sched, p.time_),
-                              fbb.CreateString(
-                                  cut(sched.stations_.at(s.target_station_id_)
-                                          ->eva_nr_.str())),
-                              motis_to_unixtime(sched, s.target_time_),
-                              fbb.CreateString(s.line_id_)));
-                    })))
-                .Union());
-        auto const msg = make_msg(fbb);
-        utl::file{"gtfs_trips.raw", "w"}.write(msg->data(), msg->size());
-        return nullptr;
-      },
-      ctx::access_t::READ);
+      ctx::accesses_t{ctx::access_request{
+          to_res_id(::motis::module::global_res_id::SCHEDULE),
+          ctx::access_t::WRITE}});
+  r.register_op("/ris/apply",
+                [this](auto&& m) { return impl_->apply(*this, m); }, {});
 }
 
 }  // namespace motis::ris

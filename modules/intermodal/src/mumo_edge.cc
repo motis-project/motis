@@ -37,7 +37,7 @@ msg_ptr make_geo_request(latlng const& pos, double radius) {
 
 msg_ptr make_osrm_request(latlng const& pos,
                           Vector<Offset<Station>> const* stations,
-                          std::string const& profile, Direction direction) {
+                          std::string const& profile, SearchDir direction) {
   Position fbs_position{pos.lat_, pos.lng_};
   std::vector<Position> many;
   for (auto const* station : *stations) {
@@ -55,7 +55,7 @@ msg_ptr make_osrm_request(latlng const& pos,
 }
 
 void osrm_edges(latlng const& pos, int max_dur, int max_dist,
-                mumo_type const type, Direction direction,
+                mumo_type const type, SearchDir direction,
                 appender_fun const& appender) {
   auto const geo_msg = motis_call(make_geo_request(pos, max_dist))->val();
   auto const geo_resp = motis_content(LookupGeoStationResponse, geo_msg);
@@ -79,13 +79,9 @@ void osrm_edges(latlng const& pos, int max_dur, int max_dist,
 
 msg_ptr make_ppr_request(latlng const& pos,
                          Vector<Offset<Station>> const* stations,
-                         SearchOptions const* search_options,
-                         Direction direction) {
+                         SearchOptions const* search_options, SearchDir dir) {
   assert(search_options != nullptr);
   Position const fbs_position{pos.lat_, pos.lng_};
-
-  auto const dir = direction == Direction_Forward ? SearchDirection_Forward
-                                                  : SearchDirection_Backward;
 
   message_creator mc;
   mc.create_and_finish(
@@ -102,7 +98,7 @@ msg_ptr make_ppr_request(latlng const& pos,
 }
 
 void ppr_edges(latlng const& pos, SearchOptions const* search_options,
-               Direction direction, appender_fun const& appender,
+               SearchDir direction, appender_fun const& appender,
                ppr_profiles const& profiles) {
   auto const max_dur = search_options->duration_limit();
   if (max_dur == 0) {
@@ -134,7 +130,7 @@ void ppr_edges(latlng const& pos, SearchOptions const* search_options,
 
 void car_parking_edges(latlng const& pos, int max_car_duration,
                        SearchOptions const* ppr_search_options,
-                       Direction direction, appender_fun const& appender,
+                       SearchDir direction, appender_fun const& appender,
                        mumo_stats_appender_fun const& mumo_stats_appender,
                        std::string const& mumo_stats_prefix) {
   Position fbs_position{pos.lat_, pos.lng_};
@@ -145,14 +141,14 @@ void car_parking_edges(latlng const& pos, int max_car_duration,
           mc, &fbs_position, max_car_duration,
           motis_copy_table(SearchOptions, mc, ppr_search_options),
           mc.CreateVector(std::vector<Offset<Station>>{}),
-          direction == Direction_Forward, direction == Direction_Backward,
+          direction == SearchDir_Forward, direction == SearchDir_Backward,
           false)
           .Union(),
       "/parking/edges");
   auto const pe_msg = motis_call(make_msg(mc))->val();
   auto const pe_res = motis_content(ParkingEdgesResponse, pe_msg);
   for (auto const& pe : *pe_res->edges()) {
-    auto const& costs = direction == Direction_Forward ? pe->outward_costs()
+    auto const& costs = direction == SearchDir_Forward ? pe->outward_costs()
                                                        : pe->return_costs();
     for (auto const& c : *costs) {
       auto& e =
@@ -171,8 +167,34 @@ void car_parking_edges(latlng const& pos, int max_car_duration,
   mumo_stats_appender(std::move(stats));
 }
 
+void gbfs_edges(appender_fun const& appender, SearchDir const dir,
+                latlng const& pos,
+                std::vector<std::string> const& vehicle_types,
+                unsigned const max_walk_duration,
+                unsigned const max_ride_duration) {
+  using gbfs::GBFSRoutingResponse;
+
+  Position fbs_position{pos.lat_, pos.lng_};
+  message_creator mc;
+  mc.create_and_finish(
+      MsgContent_GBFSRoutingRequest,
+      gbfs::CreateGBFSRoutingRequest(
+          mc, dir, &fbs_position,
+          mc.CreateVector(utl::to_vec(
+              vehicle_types, [&](auto&& s) { return mc.CreateString(s); })),
+          max_walk_duration, max_ride_duration)
+          .Union(),
+      "/gbfs/route");
+  auto const res_msg = motis_call(make_msg(mc))->val();
+  auto const gbfs_res = motis_content(GBFSRoutingResponse, res_msg);
+  for (auto const& r : *gbfs_res->routes()) {
+    appender(r->station()->id()->str(), to_latlng(r->station()->pos()),
+             r->total_duration(), 0, mumo_type::GBFS, 0);
+  }
+}
+
 void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
-                Direction const osrm_direction, appender_fun const& appender,
+                SearchDir const search_dir, appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 std::string const& mumo_stats_prefix,
                 ppr_profiles const& profiles) {
@@ -182,7 +204,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dur =
             reinterpret_cast<Foot const*>(wrapper->mode())->max_duration();
         auto max_dist = max_dur * WALK_SPEED;
-        osrm_edges(pos, max_dur, max_dist, mumo_type::FOOT, osrm_direction,
+        osrm_edges(pos, max_dur, max_dist, mumo_type::FOOT, search_dir,
                    appender);
         break;
       }
@@ -191,7 +213,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dur =
             reinterpret_cast<Bike const*>(wrapper->mode())->max_duration();
         auto max_dist = max_dur * BIKE_SPEED;
-        osrm_edges(pos, max_dur, max_dist, mumo_type::BIKE, osrm_direction,
+        osrm_edges(pos, max_dur, max_dist, mumo_type::BIKE, search_dir,
                    appender);
         break;
       }
@@ -200,7 +222,7 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
         auto max_dur =
             reinterpret_cast<Car const*>(wrapper->mode())->max_duration();
         auto max_dist = max_dur * CAR_SPEED;
-        osrm_edges(pos, max_dur, max_dist, mumo_type::CAR, osrm_direction,
+        osrm_edges(pos, max_dur, max_dist, mumo_type::CAR, search_dir,
                    appender);
         break;
       }
@@ -208,15 +230,25 @@ void make_edges(Vector<Offset<ModeWrapper>> const* modes, latlng const& pos,
       case Mode_FootPPR: {
         auto const options =
             reinterpret_cast<FootPPR const*>(wrapper->mode())->search_options();
-        ppr_edges(pos, options, osrm_direction, appender, profiles);
+        ppr_edges(pos, options, search_dir, appender, profiles);
         break;
       }
 
       case Mode_CarParking: {
         auto const cp = reinterpret_cast<CarParking const*>(wrapper->mode());
         car_parking_edges(pos, cp->max_car_duration(), cp->ppr_search_options(),
-                          osrm_direction, appender, mumo_stats_appender,
+                          search_dir, appender, mumo_stats_appender,
                           mumo_stats_prefix);
+        break;
+      }
+
+      case Mode_GBFS: {
+        auto const gbfs = reinterpret_cast<GBFS const*>(wrapper->mode());
+        gbfs_edges(
+            appender, search_dir, pos,
+            utl::to_vec(*gbfs->vehicle_types(),
+                        [](flatbuffers::String const* t) { return t->str(); }),
+            gbfs->max_walk_duration() / 60.0, gbfs->max_ride_duration() / 60.0);
         break;
       }
 
@@ -229,7 +261,7 @@ void make_starts(IntermodalRoutingRequest const* req, latlng const& pos,
                  appender_fun const& appender,
                  mumo_stats_appender_fun const& mumo_stats_appender,
                  ppr_profiles const& profiles) {
-  make_edges(req->start_modes(), pos, Direction_Forward, appender,
+  make_edges(req->start_modes(), pos, SearchDir_Forward, appender,
              mumo_stats_appender, "intermodal.start.", profiles);
 }
 
@@ -237,7 +269,7 @@ void make_dests(IntermodalRoutingRequest const* req, latlng const& pos,
                 appender_fun const& appender,
                 mumo_stats_appender_fun const& mumo_stats_appender,
                 ppr_profiles const& profiles) {
-  make_edges(req->destination_modes(), pos, Direction_Backward, appender,
+  make_edges(req->destination_modes(), pos, SearchDir_Backward, appender,
              mumo_stats_appender, "intermodal.dest.", profiles);
 }
 

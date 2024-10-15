@@ -1,0 +1,34 @@
+{
+  "header": {
+    "gtfsRealtimeVersion": "1.0",
+    "incrementality": "FULL_DATASET",
+    "timestamp": "1640167082"
+  },
+  "entity": [
+    {
+      "id": "8317",
+      "tripUpdate": {
+        "trip": {
+          "tripId": "1_672491^#",
+          "scheduleRelationship": "SCHEDULED",
+          "routeId": "893"
+        },
+        "stopTimeUpdate": [
+          {
+            "stopSequence": 6,
+            "arrival": {
+              "delay": -120
+            },
+            "scheduleRelationship": "SCHEDULED"
+          }
+        ],
+        "vehicle": {
+          "id": "8317",
+          "label": "893/15"
+        },
+        "timestamp": "1640167072"
+      }
+    }
+  ]
+}
+

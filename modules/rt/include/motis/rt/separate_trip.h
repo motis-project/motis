@@ -3,6 +3,7 @@
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
 
+#include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/edges.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/bfs.h"
@@ -43,14 +44,18 @@ inline edge copy_edge(edge const& original, node* from, node* to,
 
 inline void copy_trip_route(
     schedule& sched, ev_key const& k, std::map<node const*, node*>& nodes,
-    std::map<trip::route_edge, trip::route_edge>& edges) {
+    std::map<trip::route_edge, trip::route_edge>& edges,
+    std::map<node const*,
+             std::pair<light_connection const*, light_connection const*>>&
+        lcons) {
   auto const route_id = sched.route_count_++;
 
   auto const build_node = [&](node* orig) {
-    auto const n = new node(make_node(orig->station_node_,  // NOLINT
-                                      sched.next_node_id_++, route_id));
-    orig->station_node_->route_nodes_.emplace_back(n);
-    return n;
+    return orig->station_node_->child_nodes_
+        .emplace_back(mcd::make_unique<node>(
+            make_node(node_type::ROUTE_NODE, orig->station_node_,
+                      sched.next_node_id_++, route_id)))
+        .get();
   };
 
   for (auto const& e : route_edges(k)) {
@@ -60,12 +65,16 @@ inline void copy_trip_route(
         utl::get_or_create(nodes, e->to_, [&] { return build_node(e->to_); });
 
     from->edges_.push_back(copy_edge(*e, from, to, k.lcon_idx_));
-    edges[e] = trip::route_edge(&from->edges_.back());
+    auto const& new_edge = from->edges_.back();
+    edges[e] = trip::route_edge(&new_edge);
     constant_graph_add_route_edge(sched, edges[e]);
 
     if (e->type() == edge::ROUTE_EDGE) {
-      auto const& lcon = e->m_.route_edge_.conns_[k.lcon_idx_];
-      const_cast<light_connection&>(lcon).valid_ = false;  // NOLINT
+      auto const& old_lcon = e->m_.route_edge_.conns_[k.lcon_idx_];
+      const_cast<light_connection&>(old_lcon).valid_ = false;  // NOLINT
+      auto const& new_lcon = new_edge.m_.route_edge_.conns_.back();
+      lcons[from].second = &new_lcon;
+      lcons[to].first = &new_lcon;
     }
   }
 }
@@ -102,14 +111,17 @@ inline void build_change_edges(
     schedule& sched,
     std::map<node const*, in_out_allowed> const& in_out_allowed,
     std::map<node const*, node*> const& nodes,
+    std::map<node const*,
+             std::pair<light_connection const*, light_connection const*>> const&
+        lcons,
     std::vector<incoming_edge_patch>& incoming) {
   for (auto& n : nodes) {
     auto station_node =
         sched.station_nodes_.at(n.first->get_station()->id_).get();
     auto in_out = in_out_allowed.at(n.first);
     auto route_node = n.second;
-    auto const transfer_time =
-        sched.stations_.at(station_node->id_)->transfer_time_;
+    auto const station = sched.stations_.at(station_node->id_).get();
+    auto const transfer_time = station->transfer_time_;
 
     if (!in_out.in_allowed_) {
       station_node->edges_.push_back(
@@ -117,6 +129,16 @@ inline void build_change_edges(
     } else {
       station_node->edges_.push_back(
           make_enter_edge(station_node, route_node, transfer_time, true));
+      auto const lcon = lcons.at(route_node).second;
+      if (lcon != nullptr) {
+        auto const platform = station->get_platform(lcon->full_con_->d_track_);
+        if (platform) {
+          auto const pn = add_platform_enter_edge(
+              sched, route_node, station_node, station->platform_transfer_time_,
+              platform.value());
+          add_outgoing_edge(&pn->edges_.back(), incoming);
+        }
+      }
     }
     add_outgoing_edge(&station_node->edges_.back(), incoming);
 
@@ -125,6 +147,15 @@ inline void build_change_edges(
     } else {
       route_node->edges_.push_back(
           make_exit_edge(route_node, station_node, transfer_time, true));
+      auto const lcon = lcons.at(route_node).first;
+      if (lcon != nullptr) {
+        auto const platform = station->get_platform(lcon->full_con_->a_track_);
+        if (platform) {
+          add_platform_exit_edge(sched, route_node, station_node,
+                                 station->platform_transfer_time_,
+                                 platform.value());
+        }
+      }
     }
 
     if (in_out.out_allowed_ && station_node->foot_node_) {
@@ -183,10 +214,13 @@ inline void seperate_trip(schedule& sched, ev_key const& k) {
   save_outgoing_edges(station_nodes, incoming);
   auto nodes = std::map<node const*, node*>{};
   auto edges = std::map<trip::route_edge, trip::route_edge>{};
+  auto lcons =
+      std::map<node const*,
+               std::pair<light_connection const*, light_connection const*>>{};
 
-  copy_trip_route(sched, k, nodes, edges);
+  copy_trip_route(sched, k, nodes, edges, lcons);
   update_trips(sched, k, edges);
-  build_change_edges(sched, in_out_allowed, nodes, incoming);
+  build_change_edges(sched, in_out_allowed, nodes, lcons, incoming);
   add_outgoing_edges_from_new_route(nodes, incoming);
   patch_incoming_edges(incoming);
   update_delays(k.lcon_idx_, edges, sched);

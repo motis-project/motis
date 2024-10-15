@@ -28,6 +28,7 @@
 #include "motis/core/access/trip_iterator.h"
 #include "motis/core/conv/trip_conv.h"
 
+#include "motis/paxmon/compact_journey_util.h"
 #include "motis/paxmon/loader/csv/row.h"
 #include "motis/paxmon/util/get_station_idx.h"
 #include "motis/paxmon/util/interchange_time.h"
@@ -239,7 +240,7 @@ struct input_journey_leg {
                 "input_journey_leg.to_journey_leg(): invalid times");
     utl::verify(trip_found(),
                 "input_journey_leg.to_journey_leg(): trip not found");
-    return journey_leg{trp_candidate_.trp_,
+    return journey_leg{trp_candidate_.trp_->trip_idx_,
                        from_station_idx_.value(),
                        to_station_idx_.value(),
                        enter_time_,
@@ -255,19 +256,27 @@ struct input_journey_leg {
   std::optional<transfer_info> enter_transfer_;
 };
 
-std::optional<transfer_info> get_transfer_info(
-    schedule const& sched,
-    std::vector<input_journey_leg> const& partial_journey,
-    std::uint32_t enter_station_idx) {
+void set_transfer_info(schedule const& sched,
+                       std::vector<input_journey_leg>& partial_journey) {
   if (partial_journey.size() < 2) {
-    return {};
+    return;
   }
   auto const& prev_leg = partial_journey[partial_journey.size() - 2];
   if (!prev_leg.to_station_idx_ || prev_leg.exit_time_ == INVALID_TIME) {
-    return {};
+    return;
   }
-  return util::get_transfer_info(sched, prev_leg.to_station_idx_.value(),
-                                 enter_station_idx);
+  auto& cur_leg = partial_journey.back();
+  auto const arrival_station = prev_leg.to_station_idx_.value();
+  auto const arrival_track =
+      get_arrival_track(sched, prev_leg.trp_candidate_.trp_, arrival_station,
+                        prev_leg.exit_time_);
+  auto const departure_station = cur_leg.from_station_idx_.value();
+  auto const departure_track =
+      get_departure_track(sched, cur_leg.trp_candidate_.trp_, departure_station,
+                          cur_leg.enter_time_);
+  cur_leg.enter_transfer_ =
+      util::get_transfer_info(sched, arrival_station, arrival_track,
+                              departure_station, departure_track);
 }
 
 void write_match_log(
@@ -471,8 +480,7 @@ loader_result load_journeys(schedule const& sched, universe& uv,
               sched, leg.from_station_idx_.value(), leg.to_station_idx_.value(),
               leg.enter_time_, leg.exit_time_, row.train_nr_.val(),
               match_tolerance);
-          leg.enter_transfer_ = get_transfer_info(
-              sched, current_input_legs, leg.from_station_idx_.value());
+          set_transfer_info(sched, current_input_legs);
         }
         write_match_log(match_log, sched, leg, current_id, row,
                         current_input_legs, debug_match_tolerance);

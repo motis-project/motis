@@ -1,10 +1,31 @@
 include "base/TripServiceInfo.fbs";
+include "paxmon/PaxMonTripLoadInfo.fbs";
 
 namespace motis.paxmon;
 
-table PaxMonFilterTripsResponse {
-  filtered_trips: ulong;
-  critical_sections: ulong;
+table PaxMonFilteredTripInfo {
+  tsi: motis.TripServiceInfo;
 
-  trips: [motis.TripServiceInfo];
+  section_count: uint;
+  critical_sections: uint;
+  crowded_sections: uint;
+
+  max_excess_pax: uint;
+  cumulative_excess_pax: uint;
+  max_load: float;
+
+  max_expected_pax: uint;
+
+  edges: [PaxMonEdgeLoadInfo]; // only if include_edges
+}
+
+table PaxMonFilterTripsResponse {
+  total_matching_trips: ulong; // total number of matching trips
+  filtered_trips: ulong; // number of trips included in response
+  remaining_trips: ulong; // number of remaining matching trips
+  next_skip: ulong; // skip_next parameter for next call
+
+  total_critical_sections: ulong;
+
+  trips: [PaxMonFilteredTripInfo];
 }

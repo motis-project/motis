@@ -28,7 +28,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
   auto const add_interchange = [&](reachable_trip const& rt,
                                    event_node* exit_node) {
     utl::verify(exit_node != nullptr,
-                "update_load: add_interchange: missing exit_node");
+                "paxmon::update_load: add_interchange: missing exit_node");
     auto const transfer_time = get_transfer_duration(rt.leg_->enter_transfer_);
     auto enter_node =
         uv.trip_data_.edges(rt.tdi_)[rt.enter_edge_idx_].get(uv)->from(uv);
@@ -39,14 +39,7 @@ void update_load(passenger_group* pg, reachability_info const& reachability,
         return;
       }
     }
-    auto pci = uv.pax_connection_info_.insert();
-    uv.pax_connection_info_.groups_[pci].emplace_back(pg->id_);
-    uv.pax_connection_info_.init_expected_load(uv.passenger_groups_, pci);
-    auto const* e = add_edge(
-        uv, make_interchange_edge(exit_node->index_, enter_node->index_,
-                                  transfer_time, pci));
-    auto const ei = get_edge_index(uv, e);
-    pg->edges_.emplace_back(ei);
+    throw utl::fail("paxmon::update_load: interchange edge missing");
   };
 
   if (reachability.ok_) {

@@ -1,6 +1,11 @@
 Checks: "*,\
 -llvmlibc-*,\
 -abseil-*,\
+-readability-identifier-length,\
+-altera-unroll-loops,\
+-altera-id-dependent-backward-branch,\
+-bugprone-easily-swappable-parameters,\
+-bugprone-implicit-widening-of-multiplication-result,\
 -llvm-else-after-return,\
 -hicpp-named-parameter,\
 -cert-err60-cpp,\
@@ -44,7 +49,7 @@ Checks: "*,\
 -cppcoreguidelines-pro-bounds-constant-array-index,\
 -*-avoid-c-arrays,\
 -*-narrowing-conversions,\
--*-avoid-goto,
+-*-avoid-goto,\
 -hicpp-multiway-paths-covered,\
 -clang-analyzer-cplusplus.NewDeleteLeaks,\
 -clang-analyzer-cplusplus.NewDelete,\
@@ -64,10 +69,12 @@ Checks: "*,\
 -readability-qualified-auto,\
 -google-readability-avoid-underscore-in-googletest-name,\
 -readability-function-cognitive-complexity,\
+-readability-avoid-const-params-in-decls,\
 -altera-struct-pack-align"
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^${RELATIVE_SOURCE_DIR}(base|modules|test)/'
 AnalyzeTemporaryDtors: false
+UseColor: true
 User:            root
 CheckOptions:
   - key:             cert-err61-cpp.CheckThrowTemporaries
@@ -338,22 +345,8 @@ CheckOptions:
     value:           ''
   - key:             readability-identifier-naming.TemplateParameterCase
     value:           CamelCase
-  - key:             readability-identifier-naming.TemplateParameterPrefix
-    value:           ''
-  - key:             readability-identifier-naming.TemplateParameterSuffix
-    value:           ''
   - key:             readability-identifier-naming.TemplateTemplateParameterCase
     value:           CamelCase
-  - key:             readability-identifier-naming.TemplateTemplateParameterPrefix
-    value:           ''
-  - key:             readability-identifier-naming.TemplateTemplateParameterSuffix
-    value:           ''
-  - key:             readability-identifier-naming.TypeTemplateParameterCase
-    value:           CamelCase
-  - key:             readability-identifier-naming.TypeTemplateParameterPrefix
-    value:           ''
-  - key:             readability-identifier-naming.TypeTemplateParameterSuffix
-    value:           ''
   - key:             readability-identifier-naming.TypedefCase
     value:           lower_case
   - key:             readability-identifier-naming.TypedefPrefix
@@ -392,3 +385,5 @@ CheckOptions:
     value:           'offset_ptr;ptr'
   - key:             performance-unnecessary-value-param.AllowedTypes
     value:           'offset_ptr;ptr'
+  - key:             readability-identifier-naming.TypeTemplateParameterIgnoredRegexp
+    value:           'expr-type'

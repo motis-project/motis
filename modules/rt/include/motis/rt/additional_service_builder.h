@@ -9,6 +9,7 @@
 #include "utl/get_or_create.h"
 #include "utl/verify.h"
 
+#include "motis/core/schedule/build_platform_node.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/core/access/station_access.h"
 #include "motis/core/access/time_access.h"
@@ -90,6 +91,27 @@ struct additional_service_builder {
     return status::OK;
   }
 
+  static mcd::vector<uint32_t> build_seq_numbers(
+      flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
+          events) {
+    if (events->Get(0)->seq_no() == -1) {
+      return {};
+    }
+
+    mcd::vector<uint32_t> stop_seq_numbers{
+        static_cast<uint32_t>(events->Get(0)->seq_no())};
+    for (auto i = 1U; i < events->size(); i += 2) {
+      utl::verify(events->Get(i)->seq_no() >= 0,
+                  "invalid negative sequence number");
+      stop_seq_numbers.emplace_back(
+          static_cast<unsigned>(events->Get(i)->seq_no()));
+      utl::verify(i + 1 == events->size() ||
+                      events->Get(i + 1)->seq_no() == stop_seq_numbers.back(),
+                  "additional service: seq number mismatch i={}", i);
+    }
+    return stop_seq_numbers;
+  }
+
   std::vector<section> build_sections(
       flatbuffers::Vector<flatbuffers::Offset<ris::AdditionalEvent>> const*
           events) {
@@ -139,23 +161,42 @@ struct additional_service_builder {
     node* prev_route_node = nullptr;
     for (auto const& s : sections) {
       light_connection l{};
-      station_node *from_station = nullptr, *to_station = nullptr;
-      std::tie(l, from_station, to_station) = s;
+      station_node *from_station_node = nullptr, *to_station_node = nullptr;
+      std::tie(l, from_station_node, to_station_node) = s;
 
-      auto const from_station_transfer_time =
-          sched_.stations_.at(from_station->id_)->transfer_time_;
-      auto const to_station_transfer_time =
-          sched_.stations_.at(to_station->id_)->transfer_time_;
+      auto const from_station =
+          sched_.stations_.at(from_station_node->id_).get();
+      auto const to_station = sched_.stations_.at(to_station_node->id_).get();
+      auto const from_station_transfer_time = from_station->transfer_time_;
+      auto const to_station_transfer_time = to_station->transfer_time_;
 
       auto const from_route_node =
           prev_route_node != nullptr
               ? prev_route_node
               : build_route_node(sched_, route_id, sched_.next_node_id_++,
-                                 from_station, from_station_transfer_time, true,
-                                 true, incoming);
-      auto const to_route_node =
-          build_route_node(sched_, route_id, sched_.next_node_id_++, to_station,
-                           to_station_transfer_time, true, true, incoming);
+                                 from_station_node, from_station_transfer_time,
+                                 true, true, incoming);
+
+      auto const from_platform =
+          from_station->get_platform(l.full_con_->d_track_);
+      if (from_platform) {
+        auto const pn = add_platform_enter_edge(
+            sched_, from_route_node, from_station_node,
+            from_station->platform_transfer_time_, from_platform.value());
+        add_outgoing_edge(&pn->edges_.back(), incoming);
+      }
+
+      auto const to_route_node = build_route_node(
+          sched_, route_id, sched_.next_node_id_++, to_station_node,
+          to_station_transfer_time, true, true, incoming);
+
+      auto const to_platform = to_station->get_platform(l.full_con_->a_track_);
+      if (to_platform) {
+        add_platform_exit_edge(sched_, to_route_node, to_station_node,
+                               to_station->platform_transfer_time_,
+                               to_platform.value());
+        add_outgoing_edge(&to_route_node->edges_.back(), incoming);
+      }
 
       from_route_node->edges_.push_back(
           make_route_edge(from_route_node, to_route_node, {l}));
@@ -171,7 +212,8 @@ struct additional_service_builder {
     return trip_edges;
   }
 
-  trip const* update_trips(mcd::vector<trip::route_edge> const& trip_edges) {
+  trip const* update_trips(mcd::vector<trip::route_edge> const& trip_edges,
+                           mcd::vector<uint32_t> const& seq_numbers) {
     auto const first_edge = trip_edges.front().get_edge();
     auto const first_station = first_edge->from_->get_station();
     auto const first_lcon = first_edge->m_.route_edge_.conns_[0];
@@ -189,7 +231,9 @@ struct additional_service_builder {
                      secondary_trip_id{
                          last_station->id_, last_lcon.a_time_,
                          first_lcon.full_con_->con_info_->line_identifier_}},
-        sched_.trip_edges_.back().get(), 0U, trip_debug{}));
+        sched_.trip_edges_.back().get(), 0U,
+        static_cast<trip_idx_t>(sched_.trip_mem_.size()), trip_debug{},
+        seq_numbers));
 
     auto const trp = sched_.trip_mem_.back().get();
     auto const trp_entry = mcd::pair{trp->id_.primary_, ptr<trip>(trp)};
@@ -252,12 +296,13 @@ struct additional_service_builder {
     }
 
     auto const sections = build_sections(msg->events());
+    auto const seq_numbers = build_seq_numbers(msg->events());
     auto const station_nodes = get_station_nodes(sections);
     std::vector<incoming_edge_patch> incoming;
     save_outgoing_edges(station_nodes, incoming);
     auto const route = build_route(sections, incoming);
     patch_incoming_edges(incoming);
-    auto const trp = update_trips(route);
+    auto const trp = update_trips(route, seq_numbers);
 
     update_builder_.add_reroute(trp, {}, 0);
 

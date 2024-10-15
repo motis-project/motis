@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "ctx/res_id_t.h"
+
 #include "motis/core/schedule/delay_info.h"
 #include "motis/core/schedule/schedule.h"
 #include "motis/module/message.h"
@@ -10,7 +12,7 @@
 namespace motis::rt {
 
 struct update_msg_builder {
-  explicit update_msg_builder(schedule const& sched);
+  update_msg_builder(schedule const& sched, ctx::res_id_t schedule_res_id);
 
   void add_delay(delay_info const* di);
 
@@ -42,6 +44,7 @@ private:
 
   motis::module::message_creator fbb_;
   schedule const& sched_;
+  ctx::res_id_t schedule_res_id_;
   std::vector<flatbuffers::Offset<RtUpdate>> updates_;
   mcd::hash_map<trip const*, std::vector<delay_info const*>> delays_;
   std::size_t delay_count_{0};

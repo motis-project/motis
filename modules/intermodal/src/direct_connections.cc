@@ -72,14 +72,10 @@ ppr_settings get_direct_ppr_settings(IntermodalRoutingRequest const* req,
 msg_ptr make_direct_ppr_request(geo::latlng const& start,
                                 geo::latlng const& dest,
                                 std::string const& ppr_profile,
-                                double ppr_duration_limit,
-                                SearchDir direction) {
+                                double ppr_duration_limit, SearchDir dir) {
   Position const start_pos{start.lat_, start.lng_};
   Position const dest_pos{dest.lat_, dest.lng_};
   message_creator mc;
-
-  auto const dir = direction == SearchDir_Forward ? SearchDirection_Forward
-                                                  : SearchDirection_Backward;
 
   mc.create_and_finish(
       MsgContent_FootRoutingRequest,
@@ -167,14 +163,10 @@ osrm_settings get_direct_osrm_car_settings(
 
 msg_ptr make_direct_osrm_request(geo::latlng const& start,
                                  geo::latlng const& dest,
-                                 std::string const& profile,
-                                 SearchDir direction) {
+                                 std::string const& profile, SearchDir dir) {
   Position const start_pos{start.lat_, start.lng_};
   Position const dest_pos{dest.lat_, dest.lng_};
   message_creator mc;
-
-  auto const dir =
-      direction == SearchDir_Forward ? Direction_Forward : Direction_Backward;
 
   mc.create_and_finish(
       MsgContent_OSRMOneToManyRequest,

@@ -2,6 +2,9 @@
 
 #include <map>
 #include <set>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "motis/loader/hrd/parse_config.h"
 #include "motis/loader/loaded_file.h"
@@ -26,18 +29,21 @@ struct station_meta_data {
     std::vector<int> equivalent_;
   };
 
-  int get_station_change_time(int eva_num) const;
+  std::pair<int, int> get_station_change_time(int eva_num) const;
 
-  std::map<int, int> station_change_times_;
+  std::map<int, std::pair<int, int>> station_change_times_;
   std::set<footpath> footpaths_;
   std::set<meta_station> meta_stations_;
   std::map<utl::cstr, int> ds100_to_eva_num_;
+  std::map<std::string, std::map<std::string, std::set<std::string>>>
+      platforms_;
 };
 
 void parse_station_meta_data(loaded_file const& infotext_file,
                              loaded_file const& metabhf_file,
                              loaded_file const& metabhf_zusatz_file,
-                             loaded_file const& minct_file,  //
+                             loaded_file const& minct_file,
+                             loaded_file const& platform_file,
                              station_meta_data&, config const&);
 
 }  // namespace motis::loader::hrd

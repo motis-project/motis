@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "motis/core/access/trip_access.h"
+#include "motis/test/schedule/gtfs_minimal_swiss.h"
 
 #include "./gtfsrt_itest.h"
 
@@ -16,11 +17,14 @@ using namespace motis::ris::gtfsrt;
 
 constexpr auto const TIMEZONE_OFFSET = -7200;
 
+using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
+
 struct ris_gtfsrt_cancel_message_itest_t0 : public gtfsrt_itest {
   ris_gtfsrt_cancel_message_itest_t0()
-      : gtfsrt_itest(
-            "--ris.input=modules/ris/test_resources/gtfs-rt/cancel_itest/"
-            "t0") {}
+      : gtfsrt_itest(dataset_opt, {"--ris.instant_forward=true",
+                                   "--ris.gtfsrt.is_addition_skip_allowed=true",
+                                   "--ris.input=modules/ris/test_resources/"
+                                   "gtfs-rt/cancel_itest/t0"}) {}
 };
 
 TEST_F(ris_gtfsrt_cancel_message_itest_t0, before_cancel) {
@@ -38,8 +42,11 @@ TEST_F(ris_gtfsrt_cancel_message_itest_t0, before_cancel) {
 struct ris_gtfsrt_cancel_message_itest_t1 : public gtfsrt_itest {
   ris_gtfsrt_cancel_message_itest_t1()
       : gtfsrt_itest(
-            "--ris.input=modules/ris/test_resources/gtfs-rt/cancel_itest/"
-            "t1") {}
+            dataset_opt,
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/cancel_itest/"
+             "t1"}) {}
 };
 
 TEST_F(ris_gtfsrt_cancel_message_itest_t1, after_cancel) {

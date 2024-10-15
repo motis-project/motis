@@ -7,6 +7,7 @@
 #include "utl/get_or_create.h"
 
 #include "motis/core/schedule/schedule.h"
+#include "motis/core/access/track_access.h"
 #include "motis/loader/classes.h"
 
 namespace motis::rt {
@@ -41,14 +42,12 @@ inline connection_info const* get_con_info(
 }
 
 inline uint16_t get_track(schedule& sched, std::string_view const track_name) {
-  auto const it = std::find_if(
-      begin(sched.tracks_), end(sched.tracks_),
-      [&track_name](mcd::string const& t) { return t == track_name; });
-  if (it == end(sched.tracks_)) {
+  auto const track = get_track_index(sched, track_name);
+  if (track.has_value()) {
+    return track.value();
+  } else {
     sched.tracks_.emplace_back(track_name);
     return static_cast<uint16_t>(sched.tracks_.size() - 1);
-  } else {
-    return static_cast<uint16_t>(std::distance(begin(sched.tracks_), it));
   }
 }
 

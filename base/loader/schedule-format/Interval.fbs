@@ -1,6 +1,6 @@
 namespace motis.loader;
 
 struct Interval {
-  from: ulong;
-  to: ulong;
+  from: long;
+  to: long;
 }

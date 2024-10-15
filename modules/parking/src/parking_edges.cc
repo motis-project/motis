@@ -54,11 +54,11 @@ osrm_parking_response route_osrm(geo::latlng const& start_pos,
 
   if (include_outward) {
     outward_req = motis_call(
-        make_osrm_request(start_pos, parkings, "car", Direction_Forward));
+        make_osrm_request(start_pos, parkings, "car", SearchDir_Forward));
   }
   if (include_return) {
     return_req = motis_call(
-        make_osrm_request(start_pos, parkings, "car", Direction_Backward));
+        make_osrm_request(start_pos, parkings, "car", SearchDir_Backward));
   }
 
   if (include_outward) {
@@ -93,15 +93,14 @@ ppr_parking_response route_ppr(geo::latlng const& parking_pos,
       stations, [&](Station const* station) { return *station->pos(); });
 
   if (include_outward) {
-    outward_req = motis_call(make_ppr_request(parking_pos, station_positions,
-                                              ppr_search_options,
-                                              SearchDirection_Forward));
+    outward_req = motis_call(make_ppr_request(
+        parking_pos, station_positions, ppr_search_options, SearchDir_Forward));
   }
 
   if (include_return) {
-    return_req = motis_call(make_ppr_request(parking_pos, station_positions,
-                                             ppr_search_options,
-                                             SearchDirection_Backward));
+    return_req =
+        motis_call(make_ppr_request(parking_pos, station_positions,
+                                    ppr_search_options, SearchDir_Backward));
   }
 
   if (include_outward) {

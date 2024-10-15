@@ -20,8 +20,10 @@ stop_id checked_eva_to_raptor_id(raptor_meta_info const& meta_info,
 base_query get_base_query(RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_meta_info const& meta_info) {
-  utl::verify(routing_request->search_dir() == routing::SearchDir_Forward,
+  utl::verify(routing_request->search_dir() == SearchDir_Forward,
               "RAPTOR currently only supports departure queries");
+  utl::verify(routing_request->schedule() == 0U,
+              "RAPTOR currently only supports the default schedule");
 
   base_query q;
 

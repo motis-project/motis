@@ -97,6 +97,42 @@ edge* get_connecting_edge(event_node const* from, event_node const* to,
   return nullptr;
 }
 
+// the following functions are split because otherwise clang-tidy complains
+// that begin(from->outgoing_edges(uv)) allegedly returns nullptr
+
+void disable_outgoing_edges(universe& uv, event_node* from,
+                            edge const* except) {
+  for (auto& e : from->outgoing_edges(uv)) {
+    if (&e != except && (e.is_trip() || e.is_wait())) {
+      e.type_ = edge_type::DISABLED;
+    }
+  }
+}
+
+void disable_outgoing_edges(universe& uv, event_node* from) {
+  for (auto& e : from->outgoing_edges(uv)) {
+    if (e.is_trip() || e.is_wait()) {
+      e.type_ = edge_type::DISABLED;
+    }
+  }
+}
+
+void disable_incoming_edges(universe& uv, event_node* to, edge const* except) {
+  for (auto& e : to->incoming_edges(uv)) {
+    if (&e != except && (e.is_trip() || e.is_wait())) {
+      e.type_ = edge_type::DISABLED;
+    }
+  }
+}
+
+void disable_incoming_edges(universe& uv, event_node* to) {
+  for (auto& e : to->incoming_edges(uv)) {
+    if (e.is_trip() || e.is_wait()) {
+      e.type_ = edge_type::DISABLED;
+    }
+  }
+}
+
 edge* connect_nodes(event_node* from, event_node* to,
                     merged_trips_idx merged_trips,
                     std::uint16_t encoded_capacity, universe& uv) {
@@ -107,11 +143,18 @@ edge* connect_nodes(event_node* from, event_node* to,
       (from->type_ == event_type::DEP && to->type_ == event_type::ARR) ||
           (from->type_ == event_type::ARR && to->type_ == event_type::DEP),
       "invalid event sequence");
-  if (auto e = get_connecting_edge(from, to, uv); e != nullptr) {
-    return e;
-  }
   auto const type =
       from->type_ == event_type::DEP ? edge_type::TRIP : edge_type::WAIT;
+  if (auto e = get_connecting_edge(from, to, uv); e != nullptr) {
+    if (e->is_disabled()) {
+      e->type_ = type;
+    }
+    disable_outgoing_edges(uv, from, e);
+    disable_incoming_edges(uv, to, e);
+    return e;
+  }
+  disable_outgoing_edges(uv, from);
+  disable_incoming_edges(uv, to);
   auto const cap = from->type_ == event_type::DEP ? encoded_capacity
                                                   : UNLIMITED_ENCODED_CAPACITY;
   return add_edge(
@@ -168,7 +211,7 @@ bool update_passenger_group(trip_data_index const tdi, trip const* trp,
   static constexpr auto const INVALID_INDEX =
       std::numeric_limits<std::size_t>::max();
   for (auto const& leg : pg->compact_planned_journey_.legs_) {
-    if (leg.trip_ == trp) {
+    if (leg.trip_idx_ == trp->trip_idx_) {
       auto const edges = uv.trip_data_.edges(tdi);
       auto enter_index = INVALID_INDEX;
       auto exit_index = INVALID_INDEX;

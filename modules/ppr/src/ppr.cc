@@ -188,7 +188,7 @@ private:
     }
 
     auto const profile = get_search_profile(req->search_options());
-    auto const dir = req->search_direction() == SearchDirection_Forward
+    auto const dir = req->search_direction() == SearchDir_Forward
                          ? search_direction::FWD
                          : search_direction::BWD;
 

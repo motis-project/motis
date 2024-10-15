@@ -1,6 +1,7 @@
 include "base/Interval.fbs";
 include "base/Station.fbs";
 include "base/TripId.fbs";
+include "base/SearchDir.fbs";
 
 namespace motis.routing;
 
@@ -129,23 +130,16 @@ enum SearchType : byte {
 }
 
 // ----------------------------------------------------------------------------
-// Search Type
-// ----------------------------------------------------------------------------
-enum SearchDir : byte {
-  Forward,  // given time = departure time
-  Backward  // given time = arrival time
-}
-
-// ----------------------------------------------------------------------------
 
 table RoutingRequest {
   start:Start;
   destination:InputStation;
   search_type:SearchType;
-  search_dir:SearchDir;
+  search_dir:motis.SearchDir;
   via:[Via];
   additional_edges:[AdditionalEdgeWrapper];
   use_start_metas: bool = true;
   use_dest_metas: bool = true;
   use_start_footpaths: bool = true;
+  schedule: ulong; // schedule id (0 = default)
 }

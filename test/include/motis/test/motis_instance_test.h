@@ -38,12 +38,10 @@ struct motis_instance_test : public ::testing::Test {
   static std::function<module::msg_ptr(module::msg_ptr const&)> msg_sink(
       std::vector<module::msg_ptr>*);
 
-  schedule const& sched() const { return instance_->sched(); }
+  ::motis::schedule const& sched() const;
 
   std::time_t unix_time(int hhmm, int day_idx = 0,
-                        int timezone_offset = DEFAULT_TIMEZONE_OFFSET) const {
-    return motis::unix_time(sched(), hhmm, day_idx, timezone_offset);
-  }
+                        int timezone_offset = DEFAULT_TIMEZONE_OFFSET) const;
 
   template <typename Module>
   Module& get_module(std::string const& module_name) {

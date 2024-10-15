@@ -21,6 +21,9 @@ struct parking : public motis::module::module {
 
   bool import_successful() const override { return import_successful_; }
 
+  void init_io(boost::asio::io_context&) override;
+  void stop_io() override;
+
 private:
   boost::filesystem::path module_data_dir() const;
   std::string parking_file() const;

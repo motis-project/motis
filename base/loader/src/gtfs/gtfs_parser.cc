@@ -42,19 +42,22 @@
 #include "motis/loader/util.h"
 #include "motis/schedule-format/Schedule_generated.h"
 
-using namespace flatbuffers64;
+namespace fbs64 = flatbuffers64;
 namespace fs = boost::filesystem;
 using namespace motis::logging;
 using std::get;
 
 namespace motis::loader::gtfs {
 
-auto const required_files = {AGENCY_FILE, STOPS_FILE,      ROUTES_FILE,
-                             TRIPS_FILE,  STOP_TIMES_FILE, TRANSFERS_FILE};
+auto const required_files = {AGENCY_FILE, STOPS_FILE, ROUTES_FILE, TRIPS_FILE,
+                             STOP_TIMES_FILE};
 
 cista::hash_t hash(fs::path const& path) {
   auto hash = cista::BASE_HASH;
   auto const hash_file = [&](fs::path const& p) {
+    if (!fs::is_regular_file(p)) {
+      return;
+    }
     cista::mmap m{p.generic_string().c_str(), cista::mmap::protection::READ};
     hash = cista::hash_combine(
         cista::hash(std::string_view{
@@ -235,7 +238,7 @@ void fix_flixtrain_transfers(trip_map& trips,
   }
 }
 
-void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
+void gtfs_parser::parse(fs::path const& root, fbs64::FlatBufferBuilder& fbb) {
   motis::logging::scoped_timer global_timer{"gtfs parser"};
 
   auto const load = [&](char const* file) {
@@ -255,19 +258,21 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   fix_stop_positions(trips);
   fix_flixtrain_transfers(trips, transfers);
 
-  std::map<category, Offset<Category>> fbs_categories;
-  std::map<agency const*, Offset<Provider>> fbs_providers;
-  std::map<std::string, Offset<String>> fbs_strings;
-  std::map<stop const*, Offset<Station>> fbs_stations;
-  std::map<trip::stop_seq, Offset<Route>> fbs_routes;
-  std::vector<Offset<Service>> fbs_services;
+  std::map<category, fbs64::Offset<Category>> fbs_categories;
+  std::map<agency const*, fbs64::Offset<Provider>> fbs_providers;
+  std::map<std::string, fbs64::Offset<fbs64::String>> fbs_strings;
+  std::map<stop const*, fbs64::Offset<Station>> fbs_stations;
+  std::map<trip::stop_seq, fbs64::Offset<Route>> fbs_routes;
+  std::map<trip::stop_seq_numbers, fbs64::Offset<fbs64::Vector<uint32_t>>>
+      fbs_seq_numbers;
+  std::vector<fbs64::Offset<Service>> fbs_services;
 
   auto get_or_create_stop = [&](stop const* s) {
     return utl::get_or_create(fbs_stations, s, [&]() {
       return CreateStation(
           fbb, fbb.CreateString(s->id_), fbb.CreateString(s->name_),
           s->coord_.lat_, s->coord_.lng_, 2,
-          fbb.CreateVector(std::vector<Offset<String>>()), 0,
+          fbb.CreateVector(std::vector<fbs64::Offset<fbs64::String>>()), 0,
           s->timezone_.empty() ? 0 : fbb.CreateString(s->timezone_));
     });
   };
@@ -348,9 +353,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
   progress_tracker->status("Export schedule.raw")
       .out_bounds(60.F, 100.F)
       .in_high(trips.size());
-  auto const interval =
-      Interval{static_cast<uint64_t>(to_unix_time(traffic_days.first_day_)),
-               static_cast<uint64_t>(to_unix_time(traffic_days.last_day_))};
+  auto const interval = Interval{to_unix_time(traffic_days.first_day_),
+                                 to_unix_time(traffic_days.last_day_)};
 
   auto const create_service = [&](trip const* t, bitfield const& traffic_days,
                                   bool const is_rule_service_participant) {
@@ -383,22 +387,23 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                   fbb.CreateVector(utl::to_vec(
                       stop_seq,
                       [](trip::stop_identity const& s) {
-                        return static_cast<uint8_t>(s.in_allowed_ ? 1u : 0u);
+                        return static_cast<uint8_t>(s.in_allowed_ ? 1U : 0U);
                       })),
                   fbb.CreateVector(
                       utl::to_vec(stop_seq, [](trip::stop_identity const& s) {
-                        return static_cast<uint8_t>(s.out_allowed_ ? 1u : 0u);
+                        return static_cast<uint8_t>(s.out_allowed_ ? 1U : 0U);
                       })));
             }),
         fbb.CreateString(serialize_bitset(traffic_days)),
         fbb.CreateVector(repeat_n(
-            CreateSection(fbb, get_or_create_category(t),
-                          get_or_create_provider(t->route_->agency_), train_nr,
-                          get_or_create_str(t->route_->short_name_),
-                          fbb.CreateVector(std::vector<Offset<Attribute>>()),
-                          CreateDirection(fbb, 0, get_or_create_direction(t))),
+            CreateSection(
+                fbb, get_or_create_category(t),
+                get_or_create_provider(t->route_->agency_), train_nr,
+                get_or_create_str(t->route_->short_name_),
+                fbb.CreateVector(std::vector<fbs64::Offset<Attribute>>()),
+                CreateDirection(fbb, 0, get_or_create_direction(t))),
             stop_seq.size() - 1)),
-        0,
+        0 /* tracks currently not extracted */,
         fbb.CreateVector(utl::all(t->stop_times_)  //
                          | utl::accumulate(
                                [&](std::vector<int>&& times,
@@ -408,10 +413,14 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
                                  return std::move(times);
                                },
                                std::vector<int>())),
-        0,
+        0 /* route key obsolete */,
         CreateServiceDebugInfo(fbb, get_or_create_str(t->id_), t->line_,
                                t->line_),
-        is_rule_service_participant, 0, get_or_create_str(t->id_));
+        is_rule_service_participant, 0 /* initial train number */,
+        get_or_create_str(t->id_),
+        utl::get_or_create(fbs_seq_numbers, t->seq_numbers(), [&]() {
+          return fbb.CreateVector(t->seq_numbers());
+        }));
   };
 
   auto output_services =
@@ -433,7 +442,7 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         })  //
       | utl::vec();
 
-  std::vector<flatbuffers64::Offset<RuleService>> rule_services;
+  std::vector<fbs64::Offset<RuleService>> rule_services;
   for (auto const& blk : blocks) {
     for (auto const& [trips, traffic_days] : blk.second->rule_services()) {
       if (trips.size() == 1) {
@@ -442,8 +451,8 @@ void gtfs_parser::parse(fs::path const& root, FlatBufferBuilder& fbb) {
         continue;
       }
 
-      std::vector<flatbuffers64::Offset<Rule>> rules;
-      std::map<trip*, flatbuffers64::Offset<Service>> services;
+      std::vector<fbs64::Offset<Rule>> rules;
+      std::map<trip*, fbs64::Offset<Service>> services;
       auto const traffic_day = traffic_days;
       for (auto const& p : utl::pairwise(trips)) {
         auto const& a = get<0>(p);

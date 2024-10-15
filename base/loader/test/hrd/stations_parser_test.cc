@@ -59,6 +59,51 @@ constexpr auto const minct_data = R"(FD;;7;3
 FF;FFT;10;-
 FF;;8;4)";
 
+constexpr char const* platform_data = R"(ril100;bahnhof;Bstg;Gleis1;Kennzeichen
+FD ;Darmstadt Hbf;1;1;p
+FD ;Darmstadt Hbf;3-4;3;p
+FD ;Darmstadt Hbf;3-4;4;p
+FD ;Darmstadt Hbf;5-6;5;p
+FD ;Darmstadt Hbf;5-6;6;p
+FD ;Darmstadt Hbf;7-8;7;p
+FD ;Darmstadt Hbf;7-8;8;p
+FD ;Darmstadt Hbf;9-10;9;p
+FD ;Darmstadt Hbf;9-10;10;p
+FD ;Darmstadt Hbf;11-12;11;p
+FD ;Darmstadt Hbf;11-12;12;p
+FF ;Frankfurt (Main) Hbf;1/1A;1;p
+FF ;Frankfurt (Main) Hbf;2/3;2;p
+FF ;Frankfurt (Main) Hbf;2/3;3;p
+FF ;Frankfurt (Main) Hbf;4/5;4;p
+FF ;Frankfurt (Main) Hbf;4/5;5;p
+FF ;Frankfurt (Main) Hbf;6/7;6;p
+FF ;Frankfurt (Main) Hbf;6/7;7;p
+FF ;Frankfurt (Main) Hbf;8/9;8;p
+FF ;Frankfurt (Main) Hbf;8/9;9;p
+FF ;Frankfurt (Main) Hbf;10/11;10;p
+FF ;Frankfurt (Main) Hbf;10/11;11;p
+FF ;Frankfurt (Main) Hbf;12/13;12;p
+FF ;Frankfurt (Main) Hbf;12/13;13;p
+FF ;Frankfurt (Main) Hbf;14/15;14;p
+FF ;Frankfurt (Main) Hbf;14/15;15;p
+FF ;Frankfurt (Main) Hbf;16/17;16;p
+FF ;Frankfurt (Main) Hbf;16/17;17;p
+FF ;Frankfurt (Main) Hbf;18/19;18;p
+FF ;Frankfurt (Main) Hbf;18/19;19;p
+FF ;Frankfurt (Main) Hbf;20/21;20;p
+FF ;Frankfurt (Main) Hbf;20/21;21;p
+FF ;Frankfurt (Main) Hbf;22/23;22;p
+FF ;Frankfurt (Main) Hbf;22/23;23;p
+FF ;Frankfurt (Main) Hbf;24;24;p
+FF ;Frankfurt (Main) Hbf;S101/102;101;p
+FF ;Frankfurt (Main) Hbf;S101/102;102;p
+FF ;Frankfurt (Main) Hbf;S103/104;103;p
+FF ;Frankfurt (Main) Hbf;S103/104;104;p
+FF ;Frankfurt (Main) Hbf;1/1A;1a;p
+FF ;Frankfurt (Main) Hbf;U1;U1;p
+FF ;Frankfurt (Main) Hbf;U2;U2;p
+)";
+
 TEST(loader_hrd_stations_parser, meta_data) {
   try {
     loaded_file info_text_file("infotext.101", infotext);
@@ -66,18 +111,19 @@ TEST(loader_hrd_stations_parser, meta_data) {
     loaded_file fp_new_file("footpaths_new.101", footpaths_new);
     loaded_file fp_new_file_2("footpats_new_2.101", footpaths_hrd_20_26);
     loaded_file minct_csv("minct.csv", minct_data);
+    loaded_file platform_csv("platform.csv", platform_data);
 
     station_meta_data meta_old;
     parse_station_meta_data(info_text_file, fp_old_file, fp_new_file, minct_csv,
-                            meta_old, hrd_5_00_8);
+                            platform_csv, meta_old, hrd_5_00_8);
     station_meta_data meta_new;
     parse_station_meta_data(info_text_file, fp_new_file_2, fp_new_file,
-                            minct_csv, meta_new, hrd_5_20_26);
+                            minct_csv, platform_csv, meta_new, hrd_5_20_26);
 
     for (auto m : {meta_old, meta_new}) {
       ASSERT_EQ(2, m.station_change_times_.size());
-      ASSERT_EQ(7, m.get_station_change_time(8000068));
-      ASSERT_EQ(8, m.get_station_change_time(8000105));
+      ASSERT_EQ(std::make_pair(7, 3), m.get_station_change_time(8000068));
+      ASSERT_EQ(std::make_pair(8, 4), m.get_station_change_time(8000105));
 
       ASSERT_EQ(3, m.footpaths_.find({8003935, 651301, -1, false})->duration_);
     }
@@ -99,9 +145,9 @@ TEST(loader_hrd_stations_parser, parse_stations) {
       loaded_file{"metabhf.101", footpaths_hrd_20_26};
 
   parse_station_meta_data(infotext_file, metabhf_file, meta_zusatz_file,
-                          loaded_file{}, meta_old, hrd_5_00_8);
+                          loaded_file{}, loaded_file{}, meta_old, hrd_5_00_8);
   parse_station_meta_data(infotext_file, meta_hrd_20_26_file, meta_zusatz_file,
-                          loaded_file{}, meta_new, hrd_5_20_26);
+                          loaded_file{}, loaded_file{}, meta_new, hrd_5_20_26);
 
   auto const bahnhof = loaded_file{"bahnhof.101", stations_data};
   auto const koords = loaded_file{"dbkoords.101", coordinates_data};

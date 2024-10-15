@@ -92,4 +92,13 @@ motis_instance_test::msg_sink(std::vector<module::msg_ptr>* vec) {
   };
 }
 
+schedule const& motis_instance_test::sched() const {
+  return instance_->sched();
+}
+
+std::time_t motis_instance_test::unix_time(int hhmm, int day_idx,
+                                           int timezone_offset) const {
+  return motis::unix_time(sched(), hhmm, day_idx, timezone_offset);
+}
+
 }  // namespace motis::test

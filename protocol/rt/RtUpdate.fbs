@@ -53,10 +53,11 @@ union Content {
   RtStationAdded
 }
 
-table RtUpdate{
+table RtUpdate {
   content: Content;
 }
 
 table RtUpdates {
   updates: [RtUpdate];
+  schedule: ulong;
 }

@@ -623,7 +623,9 @@ struct rule_service_route_builder {
     auto trips_added = false;
     for (auto lcon_idx = 0U; lcon_idx < lc_count; ++lcon_idx) {
       full_trip_id ftid;
-      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx, trip_debug{});
+      push_mem(gb_.sched_.trip_mem_, ftid, edges_ptr, lcon_idx,
+               static_cast<trip_idx_t>(gb_.sched_.trip_mem_.size()),
+               trip_debug{}, mcd::vector<uint32_t>{});
       auto const trip_ptr = gb_.sched_.trip_mem_.back().get();
       if (gb_.check_trip(trip_ptr)) {
         gb_.sched_.expanded_trips_.push_back(trip_ptr);

@@ -34,6 +34,9 @@ flatbuffers::Offset<PaxMonGroup> to_fbs(schedule const& sched,
 
 passenger_group from_fbs(schedule const& sched, PaxMonGroup const* pg);
 
+PaxMonGroupBaseInfo to_fbs_base_info(flatbuffers::FlatBufferBuilder& fbb,
+                                     passenger_group const& pg);
+
 PaxMonLocalization fbs_localization_type(passenger_localization const& loc);
 
 flatbuffers::Offset<PaxMonLocalizationWrapper> to_fbs_localization_wrapper(
@@ -65,6 +68,18 @@ flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
 flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
     trip const* trp);
+
+flatbuffers::Offset<TripServiceInfo> to_fbs_trip_service_info(
+    flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,
+    journey_leg const& leg);
+
+flatbuffers::Offset<PaxMonDistribution> to_fbs_distribution(
+    flatbuffers::FlatBufferBuilder& fbb, pax_pdf const& pdf,
+    pax_stats const& stats);
+
+flatbuffers::Offset<PaxMonDistribution> to_fbs_distribution(
+    flatbuffers::FlatBufferBuilder& fbb, pax_pdf const& pdf,
+    pax_cdf const& cdf);
 
 flatbuffers::Offset<PaxMonEdgeLoadInfo> to_fbs(
     flatbuffers::FlatBufferBuilder& fbb, schedule const& sched,

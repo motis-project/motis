@@ -1,9 +1,8 @@
 include "address/AddressRequest.fbs";
 include "address/AddressResponse.fbs";
-include "bikesharing/BikesharingGeoTerminalsRequest.fbs";
-include "bikesharing/BikesharingGeoTerminalsResponse.fbs";
-include "bikesharing/BikesharingRequest.fbs";
-include "bikesharing/BikesharingResponse.fbs";
+include "gbfs/GBFSRoutingRequest.fbs";
+include "gbfs/GBFSRoutingResponse.fbs";
+include "gbfs/GBFSGeoJSONResponse.fbs";
 include "guesser/StationGuesserRequest.fbs";
 include "guesser/StationGuesserResponse.fbs";
 include "import/CoastlineEvent.fbs";
@@ -21,9 +20,13 @@ include "lookup/LookupIdTrainRequest.fbs";
 include "lookup/LookupIdTrainResponse.fbs";
 include "lookup/LookupMetaStationRequest.fbs";
 include "lookup/LookupMetaStationResponse.fbs";
+include "lookup/LookupRiBasisRequest.fbs";
+include "lookup/LookupRiBasisResponse.fbs";
 include "lookup/LookupScheduleInfoResponse.fbs";
 include "lookup/LookupStationEventsRequest.fbs";
 include "lookup/LookupStationEventsResponse.fbs";
+include "osrm/OSRMManyToManyRequest.fbs";
+include "osrm/OSRMManyToManyResponse.fbs";
 include "osrm/OSRMOneToManyRequest.fbs";
 include "osrm/OSRMOneToManyResponse.fbs";
 include "osrm/OSRMSmoothViaRouteRequest.fbs";
@@ -60,13 +63,16 @@ include "railviz/RailVizTripGuessResponse.fbs";
 include "railviz/RailVizTripsRequest.fbs";
 include "revise/ReviseRequest.fbs";
 include "revise/ReviseResponse.fbs";
+include "ris/RISApplyRequest.fbs";
 include "ris/RISBatch.fbs";
 include "ris/RISForwardTimeRequest.fbs";
 include "ris/RISGTFSRTMapping.fbs";
 include "ris/RISMessage.fbs";
 include "ris/RISPurgeRequest.fbs";
+include "ris/RISSystemTimeChanged.fbs";
 include "routing/RoutingRequest.fbs";
 include "routing/RoutingResponse.fbs";
+include "rt/RtGraphUpdated.fbs";
 include "rt/RtUpdate.fbs";
 include "rt/RtWriteGraphRequest.fbs";
 include "tripbased/TripBasedTripDebugRequest.fbs";
@@ -79,6 +85,7 @@ include "paxmon/PaxMonFindTripsRequest.fbs";
 include "paxmon/PaxMonFindTripsResponse.fbs";
 include "paxmon/PaxMonGetGroupsRequest.fbs";
 include "paxmon/PaxMonGetGroupsResponse.fbs";
+include "paxmon/PaxMonStatusRequest.fbs";
 include "paxmon/PaxMonStatusResponse.fbs";
 include "paxmon/PaxMonTripLoadInfo.fbs";
 include "paxmon/PaxMonFilterGroupsRequest.fbs";
@@ -90,7 +97,17 @@ include "paxmon/PaxMonGetTripLoadInfosResponse.fbs";
 include "paxmon/PaxMonForkUniverseRequest.fbs";
 include "paxmon/PaxMonForkUniverseResponse.fbs";
 include "paxmon/PaxMonDestroyUniverseRequest.fbs";
+include "paxmon/PaxMonGetGroupsInTripRequest.fbs";
+include "paxmon/PaxMonGetGroupsInTripResponse.fbs";
+include "paxmon/PaxMonUniverseForked.fbs";
+include "paxmon/PaxMonUniverseDestroyed.fbs";
+include "paxmon/PaxMonGetInterchangesRequest.fbs";
+include "paxmon/PaxMonGetInterchangesResponse.fbs";
+include "paxmon/PaxMonGetAddressableGroupsRequest.fbs";
+include "paxmon/PaxMonGetAddressableGroupsResponse.fbs";
 include "paxforecast/PaxForecastUpdate.fbs";
+include "paxforecast/PaxForecastApplyMeasuresRequest.fbs";
+include "paxforecast/PaxForecastApplyMeasuresResponse.fbs";
 
 include "HTTPMessage.fbs";
 
@@ -154,10 +171,9 @@ union MsgContent {
   motis.TripId                                                            = 015,
   motis.address.AddressRequest                                            = 016,
   motis.address.AddressResponse                                           = 017,
-  motis.bikesharing.BikesharingRequest                                    = 018,
-  motis.bikesharing.BikesharingResponse                                   = 019,
-  motis.bikesharing.BikesharingGeoTerminalsRequest                        = 020,
-  motis.bikesharing.BikesharingGeoTerminalsResponse                       = 022,
+  motis.gbfs.GBFSRoutingRequest                                           = 018,
+  motis.gbfs.GBFSRoutingResponse                                          = 019,
+  motis.gbfs.GBFSGeoJSONResponse                                          = 020,
   motis.guesser.StationGuesserRequest                                     = 023,
   motis.guesser.StationGuesserResponse                                    = 024,
   motis.intermodal.IntermodalRoutingRequest                               = 025,
@@ -250,7 +266,25 @@ union MsgContent {
   motis.paxmon.PaxMonGetTripLoadInfosResponse                             = 112,
   motis.paxmon.PaxMonForkUniverseRequest                                  = 113,
   motis.paxmon.PaxMonForkUniverseResponse                                 = 114,
-  motis.paxmon.PaxMonDestroyUniverseRequest                               = 115
+  motis.paxmon.PaxMonDestroyUniverseRequest                               = 115,
+  motis.paxmon.PaxMonGetGroupsInTripRequest                               = 116,
+  motis.paxmon.PaxMonGetGroupsInTripResponse                              = 117,
+  motis.paxforecast.PaxForecastApplyMeasuresRequest                       = 118,
+  motis.paxmon.PaxMonUniverseForked                                       = 119,
+  motis.paxmon.PaxMonUniverseDestroyed                                    = 120,
+  motis.paxmon.PaxMonGetInterchangesRequest                               = 121,
+  motis.paxmon.PaxMonGetInterchangesResponse                              = 122,
+  motis.paxmon.PaxMonStatusRequest                                        = 123,
+  motis.ris.RISApplyRequest                                               = 124,
+  motis.ris.RISSystemTimeChanged                                          = 125,
+  motis.rt.RtGraphUpdated                                                 = 126,
+  motis.lookup.LookupRiBasisRequest                                       = 127,
+  motis.lookup.LookupRiBasisResponse                                      = 128,
+  motis.paxforecast.PaxForecastApplyMeasuresResponse                      = 129,
+  motis.paxmon.PaxMonGetAddressableGroupsRequest                          = 130,
+  motis.paxmon.PaxMonGetAddressableGroupsResponse                         = 131,
+  motis.osrm.OSRMManyToManyRequest                                        = 132,
+  motis.osrm.OSRMManyToManyResponse                                       = 133
 }
 
 // Destination Examples:

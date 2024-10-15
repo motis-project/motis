@@ -1,8 +1,6 @@
-name: Unix Build
+name: Linux+MacOS Build
 
 on:
-  schedule:
-    - cron: '0 3 * * 2,6'
   push:
     branches: [ master ]
   pull_request:
@@ -13,177 +11,63 @@ on:
 
 jobs:
   formatting:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container: ghcr.io/motis-project/docker-cpp-build
     steps:
       - uses: actions/checkout@v2
-
-      - name: Install clang-format
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 12
-          rm llvm.sh
-          sudo apt-get install -y --no-install-recommends clang-format-12
 
       - name: Format files
         run: |
           find base libs modules test \
             -type f -a \( -name "*.cc" -o -name "*.h" -o -name ".cuh" -o -name ".cu" \) \
-            -print0 | xargs -0 clang-format-12 -i
+            -print0 | xargs -0 clang-format-14 -i
 
       - name: Check for differences
         run: |
           git status --porcelain
           git status --porcelain | xargs -I {} -0 test -z \"{}\"
 
-  build:
-    runs-on: ${{ matrix.config.os }}
+  rsl-ui-checks:
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        working-directory: ui/rsl
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: pnpm Cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ui/rsl
+      - name: Formatting
+        run: pnpm run format-check
+
+      - name: ESLint
+        run: pnpm run lint
+
+      - name: TypeScript
+        run: pnpm run ts-check
+
+  macos:
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         config:
-          - name: macos-avx2
-            cxx: clang++
-            cc: clang
-            mode: Release
-            cxxflags: -stdlib=libc++
-            os: macos-latest
-            artifact: macos
-            avx: On
-            avx2: On
-            webui: On
-            tests: Off
-            mimalloc: Off
-          - name: macos-noavx2
-            cxx: clang++
-            cc: clang
-            mode: Release
-            cxxflags: -stdlib=libc++
-            os: macos-latest
-            artifact: macos-noavx2
-            avx: On
-            avx2: Off
-            webui: On
+          - preset: macos-x86_64
+          - preset: macos-x86_64-noavx2
             tests: On
-            mimalloc: Off
-          - name: linux-amd64-debug
-            cxx: g++-10
-            cc: gcc-10
-            mode: Debug
-            os: ubuntu-20.04
-            avx: On
-            avx2: On
-            webui: Off
-            tests: On
-            mimalloc: Off
-            emulator: valgrind --error-exitcode=1
-            install: ninja-build valgrind
-          - name: linux-amd64-clang
-            cxx: clang++-12
-            cc: clang-12
-            mode: Release
-            cxxflags: -stdlib=libc++
-            ldflags: -lc++abi
-            os: ubuntu-20.04
-            avx: On
-            avx2: On
-            webui: Off
-            tests: On
-            mimalloc: Off
-            install: ninja-build
-          - name: linux-clang-tidy
-            cxx: clang++-12
-            cc: clang-12
-            mode: Debug
-            cxxflags: -stdlib=libc++
-            ldflags: -lc++abi
-            lint: true
-            os: ubuntu-20.04
-            avx: On
-            avx2: On
-            webui: Off
-            tests: On
-            mimalloc: Off
-            install: ninja-build
-          - name: linux-clang-sanitizer
-            cxx: clang++-12
-            cc: clang-12
-            mode: Release
-            cflags: -fsanitize=address,undefined -fno-omit-frame-pointer
-            cxxflags: -fsanitize=address,undefined -fno-omit-frame-pointer -stdlib=libc++
-            ldflags: -lc++abi
-            os: ubuntu-20.04
-            avx: On
-            avx2: On
-            webui: Off
-            tests: On
-            mimalloc: Off
-            install: ninja-build
-          - name: linux-amd64-release
-            os: ubuntu-20.04
-            toolchain: x86_64-multilib-linux-musl
-            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
-            mode: Release
-            artifact: linux-amd64
-            avx: On
-            avx2: On
-            webui: On
-            tests: On
-            mimalloc: On
-            install: ninja-build
-          - name: linux-amd64-noavx-release
-            os: ubuntu-20.04
-            toolchain: x86_64-multilib-linux-musl
-            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-amd64.cmake
-            mode: Release
-            artifact: linux-amd64-noavx
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            mimalloc: Off
-            install: ninja-build
-          - name: linux-x86-release
-            os: ubuntu-20.04
-            toolchain: x86_64-multilib-linux-musl
-            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/x86_64-multilib-linux-musl/toolchain-x86.cmake
-            mode: Release
-            artifact: linux-x86
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            mimalloc: Off
-            install: ninja-build
-          - name: linux-arm-release
-            os: ubuntu-20.04
-            toolchain: arm-unknown-linux-musleabihf
-            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/arm-unknown-linux-musleabihf/toolchain-arm.cmake
-            mode: Release
-            artifact: linux-arm
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            mimalloc: Off
-            install: ninja-build qemu-user-static
-            emulator: qemu-arm-static
-          - name: linux-arm64-release
-            os: ubuntu-20.04
-            toolchain: aarch64-unknown-linux-musl
-            cross: -DCMAKE_TOOLCHAIN_FILE=/opt/aarch64-unknown-linux-musl/toolchain-arm64.cmake
-            artifact: linux-arm64
-            avx: Off
-            avx2: Off
-            webui: On
-            tests: On
-            mimalloc: Off
-            install: ninja-build qemu-user-static
-            emulator: qemu-aarch64-static
+          - preset: macos-arm64
     env:
-      DEBIAN_FRONTEND: noninteractive
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_ACCURACY: SLOPPY
@@ -191,49 +75,20 @@ jobs:
       BUILDCACHE_DIR: ${{ github.workspace }}/.buildcache
       UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
       ASAN_OPTIONS: alloc_dealloc_mismatch=0
-      ASAN_SYMBOLIZER_PATH: /usr/lib/llvm-12/bin/llvm-symbolizer
     steps:
       - uses: actions/checkout@v2
-
       - uses: seanmiddleditch/gha-setup-ninja@master
-        if: matrix.config.os == 'macos-latest'
 
-      # ==== INSTALL ====
-      - name: Update APT
-        if: matrix.config.os != 'macos-latest'
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt update
-
-      - name: Install LLVM
-        if: matrix.config.os != 'macos-latest' && matrix.config.cc == 'clang-12'
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 12
-          rm llvm.sh
-          sudo apt-get install -y --no-install-recommends libc++-12-dev libc++abi-12-dev clang-tidy-12 libunwind-12-dev llvm-12
-
-      - name: Install Packages
-        if: matrix.config.os != 'macos-latest'
-        run: sudo apt-get install -y --no-install-recommends ${{ matrix.config.install }}
-
-      - name: Install musl Toolchain
-        if: matrix.config.toolchain
-        run: |
-          wget https://github.com/motis-project/musl-toolchains/releases/latest/download/${{ matrix.config.toolchain }}.tar.xz
-          tar xf ${{ matrix.config.toolchain }}.tar.xz -C /opt
-
-      # ==== CACHING ====
+      # ==== CACHE ====
       - name: buildcache Cache
         uses: actions/cache@v2
         with:
           path: ${{ github.workspace }}/.buildcache
           key: buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-${{ hashFiles('**/*.cc') }}
           restore-keys: |
-            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
-            buildcache-${{ matrix.config.name }}-${{ hashFiles('.pkg') }}-
-            buildcache-${{ matrix.config.name }}-
+            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-${{ hashFiles('**/*.h') }}-
+            buildcache-${{ matrix.config.preset }}-${{ hashFiles('.pkg') }}-
+            buildcache-${{ matrix.config.preset }}-
 
       - name: Dependencies Cache
         uses: actions/cache@v2
@@ -244,36 +99,143 @@ jobs:
 
       # ==== BUILD ====
       - name: CMake
-        run: |
-          cmake ${{ matrix.config.cross }} \
-            -G Ninja -S . -B build \
-            -DCMAKE_C_COMPILER=${{ matrix.config.cc }} \
-            -DCMAKE_CXX_COMPILER=${{ matrix.config.cxx }} \
-            -DCMAKE_C_FLAGS="${{ matrix.config.cflags }}" \
-            -DCMAKE_CXX_FLAGS="${{ matrix.config.cxxflags }}" \
-            -DCMAKE_CXX_FLAGS_DEBUG="" \
-            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.config.ldflags }}" \
-            -DCMAKE_BUILD_TYPE=${{ matrix.config.mode }} \
-            -DMOTIS_LINT=${{ matrix.config.lint }} \
-            -DMOTIS_AVX=${{ matrix.config.avx }} \
-            -DMOTIS_AVX2=${{ matrix.config.avx2 }} \
-            -DMOTIS_MIMALLOC=${{ matrix.config.mimalloc }} \
-            -DCTX_ASAN=${{ contains(matrix.config.cxxflags, '-fsanitize=address') }} \
-            -DCTX_VALGRIND=${{ matrix.config.cc == 'gcc-10' && matrix.config.mode == 'Debug' }} \
-            -DMOTIS_WITH_WEBUI=${{ matrix.config.webui }}
+        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
 
       - name: Build
         run: |
           ./build/buildcache/bin/buildcache -z
-          cmake --build build --target \
-            motis \
-            motis-test \
-            motis-itest
+          cmake --build build --target motis motis-test motis-itest
           ./build/buildcache/bin/buildcache -s
 
       # ==== TESTS ====
       - name: Run Test Mode
         if: matrix.config.tests == 'On'
+        run: |
+          ./build/motis --mode test \
+            --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
+            --dataset.begin 20151004 \
+            --dataset.write_serialized false \
+            --ris.db_max_size 1048576 \
+            --exclude_modules address osrm parking path ppr tiles tripbased
+
+      - name: Run Tests
+        if: matrix.config.tests == 'On'
+        run: build/motis-test
+
+      - name: Run Integration Tests
+        if: matrix.config.tests == 'On'
+        run: build/motis-itest
+
+      # ==== WEB INTERFACE ====
+      - name: Compile Web Interface
+        run: cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
+
+      - name: pnpm Cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ./ui/rsl
+
+      - name: Compile RSL Web Interface
+        run: pnpm run build
+        working-directory: ./ui/rsl
+
+      # ==== DISTRIBUTION ====
+      - name: Create Distribution
+        run: |
+          mkdir motis
+          mkdir motis/web
+          mv ui/web/{external_lib,img,js,style} motis/web/
+          mv ui/web/{*.html,*.js,*.ico} motis/web/
+          mv ui/rsl/dist motis/web/rsl
+          mv build/motis motis/
+          cp -r deps/osrm-backend/profiles motis/osrm-profiles
+          cp -r deps/ppr/profiles motis/ppr-profiles
+          cp -r deps/tiles/profile motis/tiles-profiles
+          tar cjf motis-${{ matrix.config.preset }}.tar.bz2 motis
+
+      - name: Upload Distribution
+        uses: actions/upload-artifact@v1
+        with:
+          name: motis-${{ matrix.config.preset }}
+          path: motis-${{ matrix.config.preset }}.tar.bz2
+
+      # ==== RELEASE ====
+      - name: Upload Release
+        if: github.event.action == 'published'
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./motis-${{ matrix.config.preset }}.tar.bz2
+          asset_name: motis-${{ matrix.config.preset }}.tar.bz2
+          asset_content_type: application/x-tar
+
+  linux:
+    runs-on: [ self-hosted, linux, x64, '${{ matrix.config.preset }}' ]
+    container:
+      image: ghcr.io/motis-project/docker-cpp-build
+      volumes:
+        - ${{ matrix.config.preset }}-deps:/deps
+        - ${{ matrix.config.preset }}-buildcache:/buildcache
+        - ${{ matrix.config.preset }}-pnpstore:/root/.pnpm-store
+        - ${{ matrix.config.preset }}-elm:/elm
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - preset: linux-amd64-avx2-release
+            artifact: linux-amd64
+          - preset: linux-amd64-noavx-release
+            artifact: linux-amd64-noavx
+          - preset: linux-x86-release
+            artifact: linux-x86
+          - preset: linux-arm-release
+            artifact: linux-arm
+            emulator: qemu-arm-static
+          - preset: linux-arm64-release
+            artifact: linux-arm64
+            emulator: qemu-aarch64-static
+          - preset: clang-tidy
+            skipui: true
+          - preset: linux-sanitizer
+            skipui: true
+          - preset: linux-debug
+            skipui: true
+            emulator: valgrind
+    env:
+      BUILDCACHE_DIR: /buildcache
+      BUILDCACHE_DIRECT_MODE: true
+      BUILDCACHE_MAX_CACHE_SIZE: 26843545600
+      BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get deps
+        run: ln -s /deps deps
+
+      - name: CMake
+        run: cmake -G Ninja -S . -B build --preset=${{ matrix.config.preset }}
+
+      # ==== BUILD ====
+      - name: Build
+        run: |
+          buildcache -z
+          cmake --build build --target motis motis-test motis-itest
+          buildcache -s
+
+      # ==== TESTS ====
+      - name: Run Test Mode
         run: |
           ${{ matrix.config.emulator }} ./build/motis --mode test \
             --import.paths schedule:base/loader/test_resources/hrd_schedules/single-ice \
@@ -283,27 +245,46 @@ jobs:
             --exclude_modules address osrm parking path ppr tiles tripbased
 
       - name: Run Tests
-        if: matrix.config.tests == 'On'
-        run: ${{ matrix.config.emulator }} ./build/motis-test
+        run: ${{ matrix.config.emulator }} build/motis-test
 
       - name: Run Integration Tests
-        if: matrix.config.tests == 'On'
-        run: ${{ matrix.config.emulator }} ./build/motis-itest
+        run: ${{ matrix.config.emulator }} build/motis-itest
+
+      # ==== WEB INTERFACE ====
+      - name: Compile Web Interface
+        if: ${{ !matrix.config.skipui }}
+        run: |
+          mkdir -p ui/web/elm-stuff
+          ln -s /elm ui/web/elm-stuff/packages
+          cmake --build build --target motis-web-ui || (sleep 10 && cmake --build build --target motis-web-ui)
+
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        if: ${{ !matrix.config.skipui }}
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ./ui/rsl
+
+      - name: Compile RSL Web Interface
+        if: ${{ !matrix.config.skipui }}
+        run: pnpm run build
+        working-directory: ./ui/rsl
 
       # ==== DISTRIBUTION ====
-      - name: Compile Web Interface
-        if: matrix.config.webui == 'On'
-        run: |
-          cmake --build build --target motis-web-ui
-          rm -r ui/web/elm-stuff
-          rm -r ui/web/src
-
       - name: Create Distribution
         if: matrix.config.artifact
         run: |
-          mkdir motis
-          mv ui/web motis
-          mv build/motis motis
+          mkdir -p motis/web
+          mv ui/web/external_lib motis/web/
+          mv ui/web/img motis/web/
+          mv ui/web/js motis/web/
+          mv ui/web/style motis/web/
+          mv ui/web/*.html motis/web/
+          mv ui/web/*.js motis/web/
+          mv ui/web/*.ico motis/web/
+          mv ui/rsl/dist motis/web/rsl
+          mv build/motis motis/motis
           cp -r deps/osrm-backend/profiles motis/osrm-profiles
           cp -r deps/ppr/profiles motis/ppr-profiles
           cp -r deps/tiles/profile motis/tiles-profiles
@@ -330,12 +311,12 @@ jobs:
 
   full-data-set-test:
     runs-on: ${{ matrix.config.os }}
-    needs: build
+    needs: [ linux, macos ]
     strategy:
       fail-fast: false
       matrix:
         config:
-          - artifact: macos-noavx2
+          - artifact: macos-x86_64-noavx2
             os: macos-latest
           - artifact: linux-amd64
             os: ubuntu-20.04
@@ -430,7 +411,7 @@ jobs:
       - name: Docker build and push
         uses: docker/build-push-action@v2
         with:
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

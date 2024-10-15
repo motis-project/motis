@@ -183,7 +183,7 @@ TEST(paxmon_get_load, two_groups) {
   EXPECT_FALSE(load_factor_possibly_ge(lf_pdf, 2.0F));
 
   for (auto const& cdf : {get_cdf(pdf), get_load_cdf(pgc, pcig)}) {
-    EXPECT_EQ(cdf, (make_cdf({{10, 0.6F}, {30, 1.0F}})));
+    EXPECT_EQ(cdf.data_, (make_cdf({{10, 0.6F}, {30, 1.0F}}).data_));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.2F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 0.5F));
     EXPECT_TRUE(load_factor_possibly_ge(cdf, capacity, 1.0F));

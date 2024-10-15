@@ -12,8 +12,7 @@ namespace motis::module {
 inline std::vector<future> motis_publish_impl(msg_ptr const& msg,
                                               ctx::op_id id) {
   if (dispatcher::direct_mode_dispatcher_ != nullptr) {
-    ctx_data d{ctx::access_t::READ, dispatcher::direct_mode_dispatcher_,
-               nullptr};
+    ctx_data d{dispatcher::direct_mode_dispatcher_};
     return dispatcher::direct_mode_dispatcher_->publish(msg, d, id);
   } else {
     auto const op = ctx::current_op<ctx_data>();

@@ -1,8 +1,48 @@
+include "base/Interval.fbs";
+
 namespace motis.paxmon;
+
+enum PaxMonFilterTripsSortOrder : byte {
+  MostCritical, // most critical trip first
+  FirstDeparture, // earliest trip first
+  ExpectedPax, // trip with most expected passengers first
+  TrainNr, // lowest train number first
+  MaxLoad, // trips with highest load first
+  EarliestCritical, // earliest critical trip first
+  MaxPaxRange, // trips with highest max - min pax first
+}
+
+enum PaxMonFilterTripsTimeFilter : byte {
+  NoFilter, // don't filter based on time
+  DepartureTime, // trip id departure must be in interval
+  DepartureOrArrivalTime // trip id departure or arrival must be in interval
+}
 
 table PaxMonFilterTripsRequest {
   universe: uint;
 
-  load_factor_possibly_ge: float;
-  ignore_past_sections: bool;
+  ignore_past_sections: bool; // sections in the past don't count
+  include_load_threshold: float; // only include trips with load >= this
+
+  // used for critical/crowded section counts:
+  critical_load_threshold: float = 1.0;
+  crowded_load_threshold: float = 0.8; // must be <= critical_load_threshold
+
+  include_edges: bool;
+
+  sort_by: PaxMonFilterTripsSortOrder;
+  max_results: uint; // 0 = unlimited
+  skip_first: uint; // skip the first x results (for subsequent calls)
+
+  // filter trips by time
+  filter_by_time: PaxMonFilterTripsTimeFilter;
+  filter_interval: Interval;
+
+  // filter by train nr
+  filter_by_train_nr: bool;
+  filter_train_nrs: [uint];
+
+  // filter by service class
+  filter_by_service_class: bool;
+  filter_service_classes: [uint];
 }

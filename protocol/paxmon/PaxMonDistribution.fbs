@@ -1,0 +1,20 @@
+namespace motis.paxmon;
+
+struct PaxMonPdfEntry {
+  n: uint;  // passengers
+  p: float; // probability
+}
+
+struct PaxMonCdfEntry {
+  n: uint;  // passengers
+  p: float; // probability
+}
+
+table PaxMonDistribution {
+  min: uint;
+  max: uint;
+  q5: uint; // 5% quantile
+  q50: uint; // median
+  q95: uint; // 95% quantile
+  pdf: [PaxMonPdfEntry];
+}

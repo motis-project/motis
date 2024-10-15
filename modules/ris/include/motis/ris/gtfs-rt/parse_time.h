@@ -4,6 +4,8 @@
 
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 
+#include "utl/verify.h"
+
 #include "motis/core/common/unixtime.h"
 #include "motis/core/schedule/event.h"
 #include "motis/core/access/realtime_access.h"
@@ -15,15 +17,23 @@ struct schedule;
 struct trip;
 namespace ris::gtfsrt {
 
-inline boost::gregorian::date parse_date(std::string const& dt) {
-  if (dt.length() != 8) {
-    throw std::runtime_error("Bad date format (length != 8) in GTFS-RT entity");
+inline std::optional<unixtime> parse_start_date(std::string const& yyyymmdd) {
+  utl::verify(yyyymmdd.empty() || yyyymmdd.length() == 8,
+              "start date expected to be empty or YYYYMMDD, is \"{}\"",
+              yyyymmdd);
+  if (yyyymmdd.empty()) {
+    return std::nullopt;
+  } else {
+    return to_unix_time(std::stoi(yyyymmdd.substr(0, 4)),
+                        std::stoi(yyyymmdd.substr(4, 2)),
+                        std::stoi(yyyymmdd.substr(6, 2)));
   }
-  using boost::gregorian::date;
-  using std::stoi;
-  return date(stoi(dt.substr(0, 4)), stoi(dt.substr(4, 2)),
-              stoi(dt.substr(6, 2)));
-};
+}
+
+inline gtfs_trip_id to_trip_id(transit_realtime::TripDescriptor const& d,
+                               std::string const& tag) {
+  return {tag, d.trip_id(), parse_start_date(d.start_date())};
+}
 
 inline unixtime get_updated_time(
     transit_realtime::TripUpdate_StopTimeEvent const& time_event,
@@ -32,10 +42,8 @@ inline unixtime get_updated_time(
   unixtime updated_time = 0;
   if (time_event.has_time() && !is_addition_trip) {
     updated_time = time_event.time();
-
   } else if (time_event.has_delay() && schedule_time != 0) {
     updated_time = schedule_time + time_event.delay();
-
   } else {
     if (is_addition_trip) {
       throw std::runtime_error{

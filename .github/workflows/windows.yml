@@ -88,7 +88,7 @@ jobs:
       - name: Run Integration Tests
         run: .\build\motis-itest.exe
 
-      # ==== DISTRIBUTION ====
+      # ==== WEB INTERFACE ====
       - name: Compile Web Interface
         if: matrix.config.webui == 'On'
         run: |
@@ -96,12 +96,43 @@ jobs:
           rm -r ui/web/elm-stuff
           rm -r ui/web/src
 
+      - name: pnpm Cache
+        if: matrix.config.webui == 'On'
+        uses: actions/cache@v2
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Install RSL Web Interface Dependencies
+        uses: pnpm/action-setup@v2.2.0
+        if: matrix.config.webui == 'On'
+        with:
+          version: ^6.32.2
+          run_install: |
+            - cwd: ./ui/rsl
+
+      - name: Compile RSL Web Interface
+        if: matrix.config.webui == 'On'
+        run: pnpm run build
+        working-directory: ./ui/rsl
+
+      # ==== DISTRIBUTION ====
       - name: Move Profiles
         if: matrix.config.mode == 'Release'
         run: |
-          echo d | xcopy /s .\deps\osrm-backend\profiles .\osrm-profiles
-          echo d | xcopy /s .\deps\ppr\profiles .\ppr-profiles
-          echo d | xcopy /s .\deps\tiles\profile .\tiles-profiles
+          Copy-Item .\deps\osrm-backend\profiles .\osrm-profiles -Recurse
+          Copy-Item .\deps\ppr\profiles .\ppr-profiles -Recurse
+          Copy-Item .\deps\tiles\profile .\tiles-profiles -Recurse
+
+      - name: Move Web UI
+        if: matrix.config.mode == 'Release'
+        run: |
+          mkdir web
+          Copy-Item .\ui\web\external_lib,.\ui\web\img,.\ui\web\js,.\ui\web\style .\web\ -Recurse
+          Copy-Item .\ui\web\*.html,.\ui\web\*.js,.\ui\web\*.ico .\web\
+          Copy-Item .\ui\rsl\dist .\web\rsl -Recurse
 
       - name: Create Distribution
         if: matrix.config.mode == 'Release'
@@ -111,7 +142,7 @@ jobs:
           .\osrm-profiles
           .\ppr-profiles
           .\tiles-profiles
-          .\ui\web
+          .\web
 
       - name: Upload Distribution
         if: matrix.config.mode == 'Release'

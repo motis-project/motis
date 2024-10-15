@@ -59,8 +59,9 @@ void set_change_times(station_meta_data const& metas,
                       std::map<int, intermediate_station>& stations) {
   scoped_timer timer("set station change times");
   for (auto& station_entry : stations) {
-    station_entry.second.change_time_ =
-        metas.get_station_change_time(station_entry.first);
+    auto const ct = metas.get_station_change_time(station_entry.first);
+    station_entry.second.change_time_ = ct.first;
+    station_entry.second.platform_change_time_ = ct.second;
   }
 }
 
@@ -74,6 +75,23 @@ void set_ds100(station_meta_data const& metas,
   }
 }
 
+void set_platforms(station_meta_data const& metas,
+                   std::map<int, intermediate_station>& stations) {
+  for (auto const& platforms : metas.platforms_) {
+    auto const ds100_it = metas.ds100_to_eva_num_.find(platforms.first.c_str());
+    if (ds100_it == end(metas.ds100_to_eva_num_)) {
+      continue;
+    }
+    auto const eva = ds100_it->second;
+    auto station_it = stations.find(eva);
+    if (station_it == end(stations)) {
+      continue;
+    }
+    auto& station = station_it->second;
+    station.platforms_ = platforms.second;
+  }
+}
+
 std::map<int, intermediate_station> parse_stations(
     loaded_file const& station_names_file,
     loaded_file const& station_coordinates_file, station_meta_data const& metas,
@@ -84,6 +102,7 @@ std::map<int, intermediate_station> parse_stations(
   parse_station_coordinates(station_coordinates_file, stations, config);
   set_change_times(metas, stations);
   set_ds100(metas, stations);
+  set_platforms(metas, stations);
   return stations;
 }
 

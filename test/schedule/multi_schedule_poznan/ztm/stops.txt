@@ -1,0 +1,9 @@
+stop_name,stop_code,zone_id,stop_id,stop_lat,stop_lon
+Rokietnica/Boczna,RKBOC02,B,1891,52.51807,16.745457
+Rokietnica/PKM,RKPKM02,B,1850,52.511887,16.752462
+Rokietnica/ROS,RKROS02,B,1853,52.51268,16.742373
+Rokietnica/ROS,RKROS03,B,1851,52.512333,16.7436
+Rostworowo/Jodłowa,RTJOD02,B,1893,52.524693,16.75007
+Rostworowo/Sobocka,RTSOB02,B,1895,52.53702,16.758717
+Żydowo/Pętla,ZYPET03,B,1906,52.547005,16.751045
+Żydowo/Świetlica,ZYSWI02,B,1897,52.5462,16.754602

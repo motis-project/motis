@@ -201,7 +201,7 @@ protected:
   capacity_maps const& caps_;
   universe const& uv_;
   trip const* trip_{};
-  trip_data_index const tdi_{};
+  trip_data_index tdi_{};
   int index_{};
 };
 
@@ -214,7 +214,7 @@ struct sections_with_load {
         caps_{caps},
         uv_{uv},
         trip_{trp},
-        tdi_{uv.trip_data_.find_index(trp)} {
+        tdi_{uv.trip_data_.find_index(trp->trip_idx_)} {
     if (tdi_ != INVALID_TRIP_DATA_INDEX) {
       auto const td_edges = uv.trip_data_.edges(tdi_);
       utl::verify(trip_->edges_->size() == td_edges.size(),
@@ -256,7 +256,7 @@ struct sections_with_load {
   capacity_maps const& caps_;
   universe const& uv_;
   trip const* trip_{};
-  trip_data_index const tdi_{};
+  trip_data_index tdi_{};
 };
 
 }  // namespace motis::paxmon

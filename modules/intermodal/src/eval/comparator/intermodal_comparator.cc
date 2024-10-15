@@ -115,7 +115,7 @@ bool has_connection(std::vector<journey> const& connections,
   }
 }
 
-std::string file_identifier(std::string filename) {
+std::string file_identifier(std::string const& filename) {
   return fs::path{filename}.stem().string();
 }
 

@@ -1,0 +1,49 @@
+include "base/Position.fbs";
+include "base/SearchDir.fbs";
+
+namespace motis.gbfs;
+
+// JSON example:
+// --
+// {
+//   "destination": {
+//     "type": "Module",
+//     "target": "/gbfs/route"
+//   },
+//   "content_type": "GBFSRoutingRequest",
+//   "content": {
+//     "dir": "Forward",
+//     "x": {
+//       "lat": 48.77541,
+//       "lng": 9.158932
+//     },
+//     "vehicle_type": "bike",
+//     "max_foot_duration": 15,
+//     "max_bike_duration": 15
+//   }
+// }
+
+// curl -XPOST -H "Content-type: application/json" -d '{
+//   "destination": {
+//     "type": "Module",
+//     "target": "/gbfs/route"
+//   },
+//   "content_type": "GBFSRoutingRequest",
+//   "content": {
+//     "dir": "Forward",
+//     "x": {
+//       "lat": 48.77541,
+//       "lng": 9.158932
+//     },
+//     "max_foot_duration": 15,
+//     "max_bike_duration": 20
+//   }
+// }' 'http://localhost:8080'
+
+table GBFSRoutingRequest {
+  dir: SearchDir;
+  x: motis.Position;
+  vehicle_types: [string];
+  max_foot_duration: uint;  // minutes
+  max_bike_duration: uint;  // minutes
+}

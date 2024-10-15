@@ -11,4 +11,6 @@ schedule_ptr read_graph(std::string const& path, cista::memory_holder&,
 
 void write_graph(std::string const& path, schedule const&);
 
+schedule_data copy_graph(schedule const& sched);
+
 }  // namespace motis

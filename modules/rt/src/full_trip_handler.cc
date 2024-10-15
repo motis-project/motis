@@ -235,7 +235,8 @@ private:
     ftid.primary_.train_nr_ = tid->train_nr();
     ftid.secondary_.target_station_id_ =
         get_station(sched_, view(tid->target_station_id()))->index_;
-    ftid.secondary_.target_time_ = unix_to_motistime(sched_, tid->time());
+    ftid.secondary_.target_time_ =
+        unix_to_motistime(sched_, tid->target_time());
     ftid.secondary_.line_id_ = view(tid->line_id());
 
     return ftid;
@@ -366,6 +367,10 @@ private:
       auto const con_info =
           get_con_info(sched_, con_infos_, ts->category()->code()->str(),
                        ts->line_id()->str(), ts->train_nr());
+      // NOTE: connections are always created with track=schedule_track first.
+      // if a different current_track is supplied, it will be updated in
+      // update_event (so that both schedule + current track information is
+      // stored).
       lc.full_con_ = get_full_con(sched_, con_info, sec.dep_.schedule_track_,
                                   sec.arr_.schedule_track_);
       lcs.emplace_back(lc);
@@ -427,11 +432,40 @@ private:
 
     for (auto i = 0ULL; i < sections.size(); ++i) {
       auto& sec = sections[i];  // NOLINT
+      auto const& lc = lcs.at(i);
+
+      // NOTE: at this point, the connections still have track=schedule_track,
+      // but we connect the route nodes to the platform nodes for current_track.
+      // the track inside the connections is updated later in update_event.
+
       auto const from_route_node = route_nodes[i];  // NOLINT
+      auto const from_station_node = from_route_node->get_station();
+      auto const from_station = sched_.stations_[from_station_node->id_].get();
+      auto const from_platform =
+          from_station->get_platform(sec.dep_.current_track_);
+
       auto const to_route_node = route_nodes[i + 1];  // NOLINT
+      auto const to_station_node = to_route_node->get_station();
+      auto const to_station = sched_.stations_[to_station_node->id_].get();
+      auto const to_platform =
+          to_station->get_platform(sec.arr_.current_track_);
+
+      if (from_platform) {
+        auto const pn = add_platform_enter_edge(
+            sched_, from_route_node, from_station_node,
+            from_station->platform_transfer_time_, from_platform.value());
+        add_outgoing_edge(&pn->edges_.back(), incoming);
+      }
+
+      if (to_platform) {
+        add_platform_exit_edge(sched_, to_route_node, to_station_node,
+                               to_station->platform_transfer_time_,
+                               to_platform.value());
+        add_outgoing_edge(&to_route_node->edges_.back(), incoming);
+      }
 
       auto const& route_edge = from_route_node->edges_.emplace_back(
-          make_route_edge(from_route_node, to_route_node, {lcs.at(i)}));
+          make_route_edge(from_route_node, to_route_node, {lc}));
       add_outgoing_edge(&route_edge, incoming);
       trip_edges.emplace_back(&route_edge);
       constant_graph_add_route_edge(sched_, &route_edge);
@@ -457,11 +491,14 @@ private:
 
     if (trp == nullptr) {
       trp = sched_.trip_mem_
-                .emplace_back(
-                    mcd::make_unique<trip>(ftid, edges, lcon_idx, trip_debug{}))
+                .emplace_back(mcd::make_unique<trip>(
+                    ftid, edges, lcon_idx,
+                    static_cast<trip_idx_t>(sched_.trip_mem_.size()),
+                    trip_debug{}))
                 .get();
 
-      auto const trp_entry = mcd::pair{ftid.primary_, ptr<trip>(trp)};
+      auto const trp_entry =
+          mcd::pair{ftid.primary_, static_cast<ptr<trip>>(trp)};
       sched_.trips_.insert(
           std::lower_bound(begin(sched_.trips_), end(sched_.trips_), trp_entry),
           trp_entry);
@@ -592,19 +629,22 @@ private:
     }
   }
 
-  static bool is_same_route_stop(event_info const& a, event_info const& b) {
+  bool is_same_route_stop(event_info const& a, event_info const& b) {
+    auto const st = sched_.stations_[a.station_->id_].get();
     return a.station_ == b.station_ &&
-           a.interchange_allowed_ == b.interchange_allowed_;
+           a.interchange_allowed_ == b.interchange_allowed_ &&
+           st->get_platform(a.current_track_) ==
+               st->get_platform(b.current_track_);
   }
 
-  static bool is_same_route(std::vector<section> const& a,
-                            std::vector<section> const& b) {
+  bool is_same_route(std::vector<section> const& a,
+                     std::vector<section> const& b) {
     if (a.size() != b.size()) {
       return false;
     }
 
     return std::all_of(begin(utl::zip(a, b)), end(utl::zip(a, b)),
-                       [](auto const& tup) {
+                       [&](auto const& tup) {
                          auto const& [sa, sb] = tup;
                          return is_same_route_stop(sa.dep_, sb.dep_) &&
                                 is_same_route_stop(sa.arr_, sb.arr_);

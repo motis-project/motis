@@ -6,19 +6,14 @@
 
 #include "motis/core/schedule/time.h"
 #include "motis/test/motis_instance_test.h"
-#include "motis/test/schedule/gtfs_minimal_swiss.h"
-
-using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
 
 namespace motis::ris::gtfsrt {
 
 struct gtfsrt_itest : public motis::test::motis_instance_test {
-  gtfsrt_itest(std::string const& test_sample)
+  gtfsrt_itest(loader::loader_options const& dataset_opt,
+               std::vector<std::string> const& modules_cmdline_opt)
       : motis::test::motis_instance_test{
-            dataset_opt,
-            {"ris", "rt"},
-            {test_sample, "--ris.instant_forward=true",
-             "--ris.gtfsrt.is_addition_skip_allowed=true"}} {}
+            dataset_opt, {"ris", "rt"}, modules_cmdline_opt} {}
 
   struct stop_times {
     motis::time arr_, dep_;

@@ -6,6 +6,7 @@ include_directories(include)
 file(GLOB_RECURSE motis-address-files src/*.cc)
 add_library(motis-address STATIC ${motis-address-files})
 target_link_libraries(motis-address
+  cista
   boost-system
   address-typeahead
   motis-module

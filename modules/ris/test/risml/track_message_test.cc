@@ -38,8 +38,8 @@ auto const track_fixture_1 = R"(<?xml version="1.0"?>
  </ListNachricht>
 </Paket>)";
 
-TEST(ris_track_message, DISABLED_track_test) {
-  auto const messages = risml_parser::parse(track_fixture_1);
+TEST(ris_track_message, track_test) {
+  auto const messages = parse(track_fixture_1);
   ASSERT_EQ(1, messages.size());
 
   auto const& message = messages[0];

@@ -16,10 +16,10 @@ void print_graph_stats(graph_statistics const& graph_stats) {
                            graph_stats.nodes_, graph_stats.canceled_nodes_);
   LOG(info) << fmt::format(
       "{:L} graph edges ({:L} canceled): {:L} trip + {:L} interchange + {:L} "
-      "wait + {:L} through",
+      "wait + {:L} through + {:L} disabled",
       graph_stats.edges_, graph_stats.canceled_edges_, graph_stats.trip_edges_,
       graph_stats.interchange_edges_, graph_stats.wait_edges_,
-      graph_stats.through_edges_);
+      graph_stats.through_edges_, graph_stats.disabled_edges_);
   LOG(info) << fmt::format("{:L} stations", graph_stats.stations_);
   LOG(info) << fmt::format("{:L} trips", graph_stats.trips_);
   LOG(info) << fmt::format("over capacity: {:L} trips, {:L} edges",

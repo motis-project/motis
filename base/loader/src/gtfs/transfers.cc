@@ -25,6 +25,11 @@ std::map<stop_pair, transfer> read_transfers(loaded_file f,
                                              stop_map const& stops) {
   motis::logging::scoped_timer timer{"read transfers"};
   std::map<stop_pair, transfer> transfers;
+
+  if (f.empty()) {
+    return transfers;
+  }
+
   for (auto const& [i, t] :
        utl::enumerate(read<gtfs_transfer>(f.content(), columns))) {
     try {

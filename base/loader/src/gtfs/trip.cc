@@ -25,10 +25,13 @@ namespace motis::loader::gtfs {
 
 std::vector<std::pair<std::vector<trip*>, bitfield>> block::rule_services() {
   utl::verify(!trips_.empty(), "empty block not allowed");
-  utl::verify(
-      std::none_of(begin(trips_), end(trips_),
-                   [](trip const* t) { return t->stop_times_.empty(); }),
-      "invalid trip with no stop times");
+
+  auto const no_stop_times_t =
+      std::find_if(begin(trips_), end(trips_),
+                   [](trip const* t) { return t->stop_times_.empty(); });
+  utl::verify(no_stop_times_t == end(trips_),
+              "invalid trip \"{}\" with no stop times",
+              no_stop_times_t == end(trips_) ? "" : (*no_stop_times_t)->id_);
   std::sort(begin(trips_), end(trips_), [](trip const* a, trip const* b) {
     return a->stop_times_.front().dep_.time_ <
            b->stop_times_.front().dep_.time_;
@@ -109,11 +112,17 @@ trip::trip(route const* route, bitfield const* service, block* blk,
 
 trip::stop_seq trip::stops() const {
   return utl::to_vec(
-      begin(stop_times_), end(stop_times_),
-      [](flat_map<stop_time>::entry_t const& e) -> stop_identity {
+      stop_times_, [](flat_map<stop_time>::entry_t const& e) -> stop_identity {
         return {e.second.stop_, e.second.arr_.in_out_allowed_,
                 e.second.dep_.in_out_allowed_};
       });
+}
+
+trip::stop_seq_numbers trip::seq_numbers() const {
+  return utl::to_vec(stop_times_,
+                     [](flat_map<stop_time>::entry_t const& e) -> unsigned {
+                       return e.first;
+                     });
 }
 
 int trip::avg_speed() const {

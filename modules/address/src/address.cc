@@ -9,6 +9,8 @@
 
 #include "cereal/archives/binary.hpp"
 
+#include "cista/reflection/comparable.h"
+
 #include "utl/to_vec.h"
 
 #include "address-typeahead/common.h"

@@ -70,7 +70,13 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
     if (last_trip != nullptr && t_id == last_trip_id) {
       t = last_trip;
     } else {
-      t = trips.at(t_id).get();
+      auto const trip_it = trips.find(t_id);
+      if (trip_it == end(trips)) {
+        LOG(logging::error) << "trip \"" << t_id << "\" in " << file.name()
+                            << ":" << i << " not found";
+        continue;
+      }
+      t = trip_it->second.get();
       last_trip_id = t_id;
       last_trip = t;
     }
@@ -79,8 +85,8 @@ void read_stop_times(loaded_file const& file, trip_map& trips,
       t->stop_times_.emplace(
           get<stop_sequence>(s), stops.at(get<stop_id>(s).to_str()).get(),
           get<stop_headsign>(s).to_str(),  //
-          hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) == 0,
-          hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) == 0);
+          hhmm_to_min(get<arrival_time>(s)), get<drop_off_type>(s) != 1,
+          hhmm_to_min(get<departure_time>(s)), get<pickup_type>(s) != 1);
     } catch (...) {
       LOG(logging::warn) << "unkown stop " << get<stop_id>(s).to_str() << " at "
                          << file.name() << ":" << i;

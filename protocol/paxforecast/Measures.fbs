@@ -1,0 +1,57 @@
+include "base/TripId.fbs";
+include "ris/RISContentType.fbs";
+
+namespace motis.paxforecast;
+
+table MeasureRecipients {
+  trips: [TripId];
+  stations: [string]; // station ids
+}
+
+enum LoadLevel : byte { Unknown, Low, NoSeats, Full }
+
+table TripLoadInfoMeasure {
+  recipients: MeasureRecipients;
+  time: long;
+  trip: TripId;
+  level: LoadLevel;
+}
+
+table TripRecommendationMeasure {
+  recipients: MeasureRecipients;
+  time: long;
+  planned_trips: [TripId];
+  planned_destinations: [string]; // station ids
+  recommended_trip: TripId;
+}
+
+table TripWithLoadLevel {
+  trip: TripId;
+  level: LoadLevel;
+}
+
+table TripLoadRecommendationMeasure {
+  recipients: MeasureRecipients;
+  time: long;
+  planned_destinations: [string]; // station ids
+  full_trips: [TripWithLoadLevel];
+  recommended_trips: [TripWithLoadLevel];
+}
+
+table RtUpdateMeasure {
+  recipients: MeasureRecipients;
+  time: long;
+  type: motis.ris.RISContentType;
+  content: string;
+}
+
+union Measure {
+  TripLoadInfoMeasure,
+  TripRecommendationMeasure,
+  TripLoadRecommendationMeasure,
+  RtUpdateMeasure
+}
+
+table MeasureWrapper {
+  measure: Measure;
+}

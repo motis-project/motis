@@ -9,8 +9,11 @@
 #include "utl/verify.h"
 
 #include "motis/core/access/realtime_access.h"
+#include "motis/core/access/trip_access.h"
+#include "motis/core/debug/trip.h"
 
 #include "motis/paxmon/debug.h"
+#include "motis/paxmon/service_info.h"
 
 namespace motis::paxmon {
 
@@ -48,9 +51,81 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
         }
       }
     }
+
+    if (!n.is_enter_exit_node() && n.is_valid()) {
+      auto const in_trip_edges =
+          std::count_if(begin(n.incoming_edges(uv)), end(n.incoming_edges(uv)),
+                        [&](edge const& e) {
+                          return e.is_trip() && e.is_valid(uv) &&
+                                 !e.from(uv)->is_enter_exit_node();
+                        });
+      auto const out_trip_edges =
+          std::count_if(begin(n.outgoing_edges(uv)), end(n.outgoing_edges(uv)),
+                        [&](edge const& e) {
+                          return e.is_trip() && e.is_valid(uv) &&
+                                 !e.to(uv)->is_enter_exit_node();
+                        });
+      if (in_trip_edges > 1 || out_trip_edges > 1) {
+        auto const& st = sched.stations_.at(n.station_idx());
+        std::cout << "!! " << in_trip_edges << " incoming + " << out_trip_edges
+                  << " outgoing trip edges at station " << st->eva_nr_ << " ("
+                  << st->name_ << ")\n";
+        ok = false;
+
+        std::cout << "  incoming edges:\n";
+        for (auto const& in_edge : n.incoming_edges(uv)) {
+          auto const& from_station =
+              sched.stations_.at(in_edge.from(uv)->station_idx());
+          std::cout << "    " << in_edge.type()
+                    << " (valid=" << in_edge.is_valid(uv)
+                    << ", canceled=" << in_edge.is_canceled(uv)
+                    << "), merged_trips_idx=" << in_edge.get_merged_trips_idx()
+                    << " => " << in_edge.get_trips(sched).size()
+                    << " trips, from=" << from_station->eva_nr_ << " "
+                    << from_station->name_
+                    << ", capacity=" << in_edge.capacity() << "\n";
+          for (auto const& trp : in_edge.get_trips(sched)) {
+            auto const service_infos = get_service_infos(sched, trp);
+            std::cout << "      " << debug::trip{sched, trp}
+                      << "\n        services:";
+            for (auto const& [si, count] : service_infos) {
+              std::cout << " " << count << "x " << si.category_ << " "
+                        << si.train_nr_ << ", line=" << si.line_
+                        << ", name=" << si.name_;
+            }
+            std::cout << "\n";
+          }
+        }
+        std::cout << "  outgoing edges:\n";
+        for (auto const& out_edge : n.outgoing_edges(uv)) {
+          auto const& to_station =
+              sched.stations_.at(out_edge.to(uv)->station_idx());
+          std::cout << "    " << out_edge.type()
+                    << " (valid=" << out_edge.is_valid(uv)
+                    << ", canceled=" << out_edge.is_canceled(uv)
+                    << "), merged_trips_idx=" << out_edge.get_merged_trips_idx()
+                    << " => " << out_edge.get_trips(sched).size()
+                    << " trips, to=" << to_station->eva_nr_ << " "
+                    << to_station->name_ << ", capacity=" << out_edge.capacity()
+                    << "\n";
+          for (auto const& trp : out_edge.get_trips(sched)) {
+            auto const service_infos = get_service_infos(sched, trp);
+            std::cout << "      " << debug::trip{sched, trp}
+                      << "\n        services:";
+            for (auto const& [si, count] : service_infos) {
+              std::cout << " " << count << "x " << si.category_ << " "
+                        << si.train_nr_ << ", line=" << si.line_
+                        << ", name=" << si.name_;
+            }
+            std::cout << "\n";
+          }
+        }
+      }
+    }
   }
 
-  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
+    auto const* trp = get_trip(sched, trp_idx);
     for (auto const& ei : uv.trip_data_.edges(tdi)) {
       auto const* e = ei.get(uv);
       auto const& trips = e->get_trips(sched);
@@ -76,6 +151,9 @@ bool check_graph_integrity(universe const& uv, schedule const& sched) {
     }
   }
 
+  if (!ok) {
+    std::cout << "check_graph_integrity failed" << std::endl;
+  }
   return ok;
 }
 
@@ -156,8 +234,8 @@ bool check_trip_times(universe const& uv, schedule const& sched,
 bool check_graph_times(universe const& uv, schedule const& sched) {
   auto ok = true;
 
-  for (auto const& [trp, tdi] : uv.trip_data_.mapping_) {
-    if (!check_trip_times(uv, sched, trp, tdi)) {
+  for (auto const& [trp_idx, tdi] : uv.trip_data_.mapping_) {
+    if (!check_trip_times(uv, sched, get_trip(sched, trp_idx), tdi)) {
       ok = false;
     }
   }

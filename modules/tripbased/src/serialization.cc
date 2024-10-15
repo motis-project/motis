@@ -17,7 +17,7 @@ using namespace motis::logging;
 
 namespace motis::tripbased::serialization {
 
-constexpr uint64_t CURRENT_VERSION = 11;
+constexpr uint64_t CURRENT_VERSION = 12;
 
 struct file {
   file(char const* path, char const* mode) : f_(std::fopen(path, mode)) {
@@ -26,7 +26,7 @@ struct file {
 
   ~file() {
     if (f_ != nullptr) {
-      fclose(f_);
+      (void)fclose(f_);
     }
     f_ = nullptr;
   }
@@ -161,8 +161,12 @@ void write_data(tb_data const& data, std::string const& filename,
   set_fws_multimap_offset(offset, h.reverse_transfers_,
                           data.reverse_transfers_);
 
-  set_fws_multimap_offset(offset, h.in_allowed_, data.in_allowed_);
+  set_array_offset(offset, h.in_allowed_data_, data.in_allowed_.data_);
   set_array_offset(offset, h.out_allowed_data_, data.out_allowed_.data_);
+  set_array_offset(offset, h.arrival_platform_data_,
+                   data.arrival_platform_.data_);
+  set_array_offset(offset, h.departure_platform_data_,
+                   data.departure_platform_.data_);
 
   f.write(&h, sizeof(header));
 
@@ -181,8 +185,10 @@ void write_data(tb_data const& data, std::string const& filename,
   write_fws_multimap(f, data.transfers_);
   write_fws_multimap(f, data.reverse_transfers_);
 
-  write_fws_multimap(f, data.in_allowed_);
+  write_array(f, data.in_allowed_.data_);
   write_array(f, data.out_allowed_.data_);
+  write_array(f, data.arrival_platform_.data_);
+  write_array(f, data.departure_platform_.data_);
 }
 
 template <typename T>
@@ -293,8 +299,10 @@ std::unique_ptr<tb_data> read_data(std::string const& filename,
   read_fws_multimap(f, h.transfers_, data->transfers_);
   read_fws_multimap(f, h.reverse_transfers_, data->reverse_transfers_);
 
-  read_fws_multimap(f, h.in_allowed_, data->in_allowed_);
+  read_array(f, h.in_allowed_data_, data->in_allowed_.data_);
   read_array(f, h.out_allowed_data_, data->out_allowed_.data_);
+  read_array(f, h.arrival_platform_data_, data->arrival_platform_.data_);
+  read_array(f, h.departure_platform_data_, data->departure_platform_.data_);
 
   return data;
 }

@@ -1,0 +1,2 @@
+feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date
+ZTM Poznań,http://www.ztm.poznan.pl,pl,20211218,20211222

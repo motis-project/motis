@@ -4,7 +4,10 @@
 #include "utl/verify.h"
 
 #include "motis/core/access/station_access.h"
+#include "motis/core/access/track_access.h"
 #include "motis/core/access/trip_access.h"
+
+#include "motis/paxmon/util/interchange_time.h"
 
 namespace motis::paxmon {
 
@@ -80,15 +83,19 @@ void for_each_trip(
     if (stop.enter_) {
       enter_stop_idx = stop_idx;
       if (exit_stop_idx) {
-        if (*exit_stop_idx == stop_idx) {
-          auto const st = get_station(sched, stop.eva_no_);
-          enter_transfer =
-              transfer_info{static_cast<duration>(st->transfer_time_),
-                            transfer_info::type::SAME_STATION};
-        } else {
+        auto const& exit_stop = j.stops_.at(exit_stop_idx.value());
+        auto const exit_station = get_station(sched, exit_stop.eva_no_);
+        auto const enter_station = get_station(sched, stop.eva_no_);
+        auto const arrival_track = get_track_index(sched, stop.arrival_.track_);
+        auto const departure_track =
+            get_track_index(sched, stop.departure_.track_);
+        enter_transfer =
+            util::get_transfer_info(sched, exit_station->index_, arrival_track,
+                                    enter_station->index_, departure_track);
+        if (!enter_transfer) {
           auto const walk_duration =
               (stop.arrival_.schedule_timestamp_ -
-               j.stops_.at(*exit_stop_idx).departure_.schedule_timestamp_) /
+               exit_stop.departure_.schedule_timestamp_) /
               60;
           enter_transfer = transfer_info{static_cast<duration>(walk_duration),
                                          transfer_info::type::FOOTPATH};

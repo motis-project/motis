@@ -19,15 +19,15 @@ int min_zoom_level(service_class const clasz, float const distance) {
 
     // regional distance
     case service_class::RE:
-    case service_class::RB:
-    case service_class::S: return 5;
+    case service_class::RB: return 7;
+    case service_class::S: return 8;
 
     // metro distance
-    case service_class::U: return 6;
+    case service_class::U: return 9;
 
     // short distance
     case service_class::STR:
-    case service_class::BUS: return distance > 10'000.F ? 10 : 11;
+    case service_class::BUS: return distance > 10'000.F ? 9 : 10;
 
     // ship can be anything
     case service_class::SHIP:

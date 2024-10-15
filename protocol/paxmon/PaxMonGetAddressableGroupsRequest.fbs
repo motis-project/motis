@@ -1,0 +1,9 @@
+include "base/TripId.fbs";
+
+namespace motis.paxmon;
+
+table PaxMonGetAddressableGroupsRequest {
+  universe: uint;
+
+  trip: motis.TripId;
+}

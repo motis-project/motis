@@ -107,6 +107,10 @@ trip_based_query build_tb_query(RoutingRequest const* req,
     }
   }
 
+  if (req->schedule() != 0U) {
+    throw std::system_error(error::schedule_not_supported);
+  }
+
   std::string start_node_eva;
 
   switch (q.start_type_) {
@@ -417,6 +421,8 @@ struct tripbased::impl {
         return !in_interval(j, q.interval_begin_, q.interval_end_);
       });
       results_outside_of_interval = results_before - res.journeys_.size();
+      res.interval_begin_ = q.interval_begin_;
+      res.interval_end_ = q.interval_end_;
     }
 
     for (auto& tbs : tb_stats) {

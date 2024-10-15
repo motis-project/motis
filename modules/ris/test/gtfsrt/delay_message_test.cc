@@ -1,210 +1,105 @@
 #include "gtest/gtest.h"
 
-#include "motis/loader/loader.h"
-#include "motis/ris/ris_message.h"
+#include "motis/core/access/trip_access.h"
 #include "motis/test/schedule/gtfs_minimal_swiss.h"
 
-#include "./gtfsrt_test.h"
+#include "./gtfsrt_itest.h"
 
 using namespace motis;
 using namespace motis::test;
+using namespace motis::module;
+using namespace motis::ris::gtfsrt;
+
 using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
 
-namespace motis::ris::gtfsrt {
+// used delay messages are the same as the ones used in the
+// delay_message_test.cc
+// test t0 is some time after a delay for a trip was received
+// test t1 is some time after a second delay for the same trip was received
+// the second update should be applied independend of the second
 
-class gtfsrt_delay_test : public gtfsrt_test {
-public:
-  gtfsrt_delay_test() : gtfsrt_test(dataset_opt) {}
+constexpr auto const TIMEZONE_OFFSET = -120;
+
+struct ris_gtfsrt_delay_message_itest_t0 : public gtfsrt_itest {
+  ris_gtfsrt_delay_message_itest_t0()
+      : gtfsrt_itest(
+            dataset_opt,
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/delay_itest/t0"}) {
+  }
 };
 
-constexpr auto const simple_delay = R"(
-{
-  "header": {
-    "gtfsRealtimeVersion": "1.0",
-    "timestamp": "1561596300"
-  },
-  "entity": [{
-    "id": "22.TA.1-1-A-j19-1.22.R",
-    "tripUpdate": {
-      "trip": {
-        "tripId": "22.TA.1-1-A-j19-1.22.R",
-        "startTime": "01:07:00",
-        "startDate": "20190627",
-        "scheduleRelationship": "SCHEDULED",
-        "routeId": "1-1-A-j19-1"
-      },
-      "stopTimeUpdate": [{
-        "stopSequence": 1,
-        "departure": {
-          "delay": 0
-        },
-        "stopId": "8502113:0:1",
-        "scheduleRelationship": "SCHEDULED"
-      }, {
-        "stopSequence": 5,
-        "arrival": {
-          "delay": -60
-        },
-        "departure": {
-          "delay": 0
-        },
-        "stopId": "8502247:0:5",
-        "scheduleRelationship": "SCHEDULED"
-      }, {
-        "stopSequence": 7,
-        "arrival": {
-          "delay": -240
-        },
-        "stopId": "8500309:0:5",
-        "scheduleRelationship": "SCHEDULED"
-      }]
-    }
-  }]
-}
-)";
+TEST_F(ris_gtfsrt_delay_message_itest_t0, simple) {
+  auto trp =
+      get_trip(sched(), "8502113:0:1", 0, 1561597620 + TIMEZONE_OFFSET * 60,
+               "8500309:0:5", 1561598940 + TIMEZONE_OFFSET * 60, "1");
 
-constexpr auto const TIMEZONE_OFFSET = -7200;
-
-TEST_F(gtfsrt_delay_test, simple_delay) {
-  auto const msgs = parse_json(simple_delay);
-
-  // currently only Is_ Messages and no Forecast expected
-  ASSERT_EQ(1, msgs.size());
-
-  auto const& message = msgs[0];
-  EXPECT_EQ(1561596300, message.timestamp_);
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, message.earliest_);
-  EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, message.latest_);
-
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
-  auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
-
-  auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8502113:0:1", id->station_id()->c_str());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, id->schedule_time());
-  EXPECT_EQ(DelayType_Is, inner_msg->type());
-
-  auto events = inner_msg->events();
-  ASSERT_EQ(4, events->size());
-
-  auto e0 = events->Get(0);
-  EXPECT_STREQ("8502113:0:1", e0->base()->station_id()->c_str());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->base()->schedule_time());
-  EXPECT_EQ(EventType_DEP, e0->base()->type());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->updated_time());
-
-  auto e1 = events->Get(1);
-  EXPECT_STREQ("8502247:0:5", e1->base()->station_id()->c_str());
-  EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e1->base()->schedule_time());
-  EXPECT_EQ(EventType_ARR, e1->base()->type());
-  EXPECT_EQ(1561598460 + TIMEZONE_OFFSET, e1->updated_time());
-
-  auto e2 = events->Get(2);
-  EXPECT_STREQ("8502247:0:5", e2->base()->station_id()->c_str());
-  EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e2->base()->schedule_time());
-  EXPECT_EQ(EventType_DEP, e2->base()->type());
-  EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e2->updated_time());
-
-  auto e3 = events->Get(3);
-  EXPECT_STREQ("8500309:0:5", e3->base()->station_id()->c_str());
-  EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, e3->base()->schedule_time());
-  EXPECT_EQ(EventType_ARR, e3->base()->type());
-  EXPECT_EQ(1561598700 + TIMEZONE_OFFSET, e3->updated_time());
+  auto evs = get_trip_event_info(sched(), trp);
+  EXPECT_EQ(motis_time(1561597620) + TIMEZONE_OFFSET,
+            evs.at("8502113:0:1").dep_);
+  EXPECT_EQ(motis_time(1561597860) + TIMEZONE_OFFSET,
+            evs.at("8502114:0:4").arr_);
+  EXPECT_EQ(motis_time(1561597860) + TIMEZONE_OFFSET,
+            evs.at("8502114:0:4").dep_);
+  EXPECT_EQ(motis_time(1561598100) + TIMEZONE_OFFSET,
+            evs.at("8502119:0:2").arr_);
+  EXPECT_EQ(motis_time(1561598160) + TIMEZONE_OFFSET,
+            evs.at("8502119:0:2").dep_);
+  EXPECT_EQ(motis_time(1561598340) + TIMEZONE_OFFSET,
+            evs.at("8502105:0:5").arr_);
+  EXPECT_EQ(motis_time(1561598340) + TIMEZONE_OFFSET,
+            evs.at("8502105:0:5").dep_);
+  EXPECT_EQ(motis_time(1561598460) + TIMEZONE_OFFSET,
+            evs.at("8502247:0:5").arr_);
+  EXPECT_EQ(motis_time(1561598520) + TIMEZONE_OFFSET,
+            evs.at("8502247:0:5").dep_);
+  EXPECT_EQ(motis_time(1561598640) + TIMEZONE_OFFSET,
+            evs.at("8502237:0:5").arr_);
+  EXPECT_EQ(motis_time(1561598640) + TIMEZONE_OFFSET,
+            evs.at("8502237:0:5").dep_);
+  EXPECT_EQ(motis_time(1561598700) + TIMEZONE_OFFSET,
+            evs.at("8500309:0:5").arr_);
 }
 
-constexpr auto const simple_delay2 = R"(
-{
-  "header": {
-    "gtfsRealtimeVersion": "1.0",
-    "timestamp": "1561596300"
-  },
-  "entity": [{
-    "id": "22.TA.1-1-A-j19-1.22.R",
-    "tripUpdate": {
-      "trip": {
-        "tripId": "22.TA.1-1-A-j19-1.22.R",
-        "startTime": "01:07:00",
-        "startDate": "20190627",
-        "scheduleRelationship": "SCHEDULED",
-        "routeId": "1-1-A-j19-1"
-      },
-      "stopTimeUpdate": [{
-        "stopSequence": 1,
-        "departure": {
-          "delay": 0
-        },
-        "stopId": "8502113:0:1",
-        "scheduleRelationship": "SCHEDULED"
-      }, {
-        "stopSequence": 5,
-        "arrival": {
-          "delay": -60
-        },
-        "departure": {
-          "delay": 180
-        },
-        "stopId": "8502247:0:5",
-        "scheduleRelationship": "SCHEDULED"
-      }, {
-        "stopSequence": 7,
-        "arrival": {
-          "delay": 300
-        },
-        "stopId": "8500309:0:5",
-        "scheduleRelationship": "SCHEDULED"
-      }]
-    }
-  }]
+struct ris_gtfsrt_delay_message_itest_t1 : public gtfsrt_itest {
+  ris_gtfsrt_delay_message_itest_t1()
+      : gtfsrt_itest(
+            dataset_opt,
+            {"--ris.instant_forward=true",
+             "--ris.gtfsrt.is_addition_skip_allowed=true",
+             "--ris.input=modules/ris/test_resources/gtfs-rt/delay_itest/t1"}) {
+  }
+};
+
+TEST_F(ris_gtfsrt_delay_message_itest_t1, updated_delay) {
+  auto trp =
+      get_trip(sched(), "8502113:0:1", 0, 1561597620 + TIMEZONE_OFFSET * 60,
+               "8500309:0:5", 1561598940 + TIMEZONE_OFFSET * 60, "1");
+
+  auto evs = get_trip_event_info(sched(), trp);
+  EXPECT_EQ(motis_time(1561597620) + TIMEZONE_OFFSET,
+            evs.at("8502113:0:1").dep_);
+  EXPECT_EQ(motis_time(1561597860) + TIMEZONE_OFFSET,
+            evs.at("8502114:0:4").arr_);
+  EXPECT_EQ(motis_time(1561597860) + TIMEZONE_OFFSET,
+            evs.at("8502114:0:4").dep_);
+  EXPECT_EQ(motis_time(1561598100) + TIMEZONE_OFFSET,
+            evs.at("8502119:0:2").arr_);
+  EXPECT_EQ(motis_time(1561598160) + TIMEZONE_OFFSET,
+            evs.at("8502119:0:2").dep_);
+  EXPECT_EQ(motis_time(1561598340) + TIMEZONE_OFFSET,
+            evs.at("8502105:0:5").arr_);
+  EXPECT_EQ(motis_time(1561598340) + TIMEZONE_OFFSET,
+            evs.at("8502105:0:5").dep_);
+  EXPECT_EQ(motis_time(1561598460) + TIMEZONE_OFFSET,
+            evs.at("8502247:0:5").arr_);
+  EXPECT_EQ(motis_time(1561598700) + TIMEZONE_OFFSET,
+            evs.at("8502247:0:5").dep_);
+  EXPECT_EQ(motis_time(1561598820) + TIMEZONE_OFFSET,
+            evs.at("8502237:0:5").arr_);
+  EXPECT_EQ(motis_time(1561598820) + TIMEZONE_OFFSET,
+            evs.at("8502237:0:5").dep_);
+  EXPECT_EQ(motis_time(1561599240) + TIMEZONE_OFFSET,
+            evs.at("8500309:0:5").arr_);
 }
-)";
-
-TEST_F(gtfsrt_delay_test, simple_delay2) {
-  auto const msgs = parse_json(simple_delay2);
-
-  // currently only Is_ Messages and no Forecast expected
-  ASSERT_EQ(1, msgs.size());
-
-  auto const& message = msgs[0];
-  EXPECT_EQ(1561596300, message.timestamp_);
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, message.earliest_);
-  EXPECT_EQ(1561599240 + TIMEZONE_OFFSET, message.latest_);
-
-  auto outer_msg = GetMessage(message.data());
-  ASSERT_EQ(MessageUnion_DelayMessage, outer_msg->content_type());
-  auto inner_msg = reinterpret_cast<DelayMessage const*>(outer_msg->content());
-
-  auto id = inner_msg->trip_id();
-  EXPECT_STREQ("8502113:0:1", id->station_id()->c_str());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, id->schedule_time());
-  EXPECT_EQ(DelayType_Is, inner_msg->type());
-
-  auto events = inner_msg->events();
-  ASSERT_EQ(4, events->size());
-
-  auto e0 = events->Get(0);
-  EXPECT_STREQ("8502113:0:1", e0->base()->station_id()->c_str());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->base()->schedule_time());
-  EXPECT_EQ(EventType_DEP, e0->base()->type());
-  EXPECT_EQ(1561597620 + TIMEZONE_OFFSET, e0->updated_time());
-
-  auto e1 = events->Get(1);
-  EXPECT_STREQ("8502247:0:5", e1->base()->station_id()->c_str());
-  EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e1->base()->schedule_time());
-  EXPECT_EQ(EventType_ARR, e1->base()->type());
-  EXPECT_EQ(1561598460 + TIMEZONE_OFFSET, e1->updated_time());
-
-  auto e2 = events->Get(2);
-  EXPECT_STREQ("8502247:0:5", e2->base()->station_id()->c_str());
-  EXPECT_EQ(1561598520 + TIMEZONE_OFFSET, e2->base()->schedule_time());
-  EXPECT_EQ(EventType_DEP, e2->base()->type());
-  EXPECT_EQ(1561598700 + TIMEZONE_OFFSET, e2->updated_time());
-
-  auto e3 = events->Get(3);
-  EXPECT_STREQ("8500309:0:5", e3->base()->station_id()->c_str());
-  EXPECT_EQ(1561598940 + TIMEZONE_OFFSET, e3->base()->schedule_time());
-  EXPECT_EQ(EventType_ARR, e3->base()->type());
-  EXPECT_EQ(1561599240 + TIMEZONE_OFFSET, e3->updated_time());
-}
-
-}  // namespace motis::ris::gtfsrt

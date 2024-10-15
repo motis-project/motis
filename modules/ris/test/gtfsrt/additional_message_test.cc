@@ -15,9 +15,8 @@ using motis::test::schedule::gtfs_minimal_swiss::dataset_opt;
 
 namespace motis::ris::gtfsrt {
 
-class gtfsrt_additional_test : public gtfsrt_test {
-public:
-  gtfsrt_additional_test() : gtfsrt_test(dataset_opt){};
+struct gtfsrt_additional_test : public gtfsrt_test {
+  gtfsrt_additional_test() : gtfsrt_test(dataset_opt) {}
   static void check_addition_message(ris_message const&);
 };
 

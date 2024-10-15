@@ -16,8 +16,6 @@ namespace motis::path {
 struct path_database;
 struct path_index;
 
-constexpr auto const PATH_DATA_KEY = "path_data";
-
 struct path_data {
   size_t trip_to_index(schedule const&, trip const*) const;
 

@@ -93,8 +93,8 @@ struct passenger_group_container {
 
     template <bool IsConst = Const, typename = std::enable_if_t<!IsConst>>
     pointer operator[](difference_type n) {
-      return const_cast<passenger_group_container&>(
-          pgc_)[index_ + n];  // NOLINT
+      return const_cast<passenger_group_container&>(  // NOLINT
+          pgc_)[index_ + n];
     }
 
     friend bool operator==(group_iterator const& lhs,
