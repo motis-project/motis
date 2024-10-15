@@ -14,6 +14,68 @@ externalDocs:
 servers:
   - url: https://europe.motis-project.de
 paths:
+  /api/v1/one-to-many:
+    get:
+      tags:
+        -geocode
+      summary: |
+        Street routing from one to many places or many to one.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+      operationId: oneToMany
+      parameters:
+        - name: one
+          in: query
+          required: true
+          description: geo location as latitude,longitude
+          schema:
+            type: string
+        - name: many
+          in: query
+          required: true
+          description: geo locations as latitude;longitude,latitude;longitude,...
+          schema:
+            type: array
+            items:
+              type: string
+        - name: mode
+          in: query
+          required: true
+          description: |
+            routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+          schema:
+            $ref: '#/components/schemas/Mode'
+        - name: max
+          in: query
+          required: true
+          description: maximum travel time in seconds
+          schema:
+            type: number
+        - name: maxMatchingDistance
+          in: query
+          required: true
+          description: maximum matching distance in meters to match geo coordinates to the street network
+          schema:
+            type: number
+        - name: arriveBy
+          in: query
+          required: true
+          description: |
+            true = many to one
+            false = one to many
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: |
+            A list of distance + duration pairs.
+            If no path was found, the object doesn't contain distance and duration.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Duration'
+
   /api/v1/reverse-geocode:
     get:
       tags:
@@ -602,6 +664,15 @@ paths:
 
 components:
   schemas:
+    Duration:
+      description: Object containing duration if a path was found or none if no path was found
+      type: object
+      required: [ ]
+      properties:
+        duration:
+          type: number
+          description: duration in seconds if a path was found, otherwise missing
+
     Area:
       description: Administrative area
       type: object
