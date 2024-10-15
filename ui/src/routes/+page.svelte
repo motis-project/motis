@@ -11,7 +11,7 @@
 		type Itinerary,
 		plan,
 		type PlanResponse,
-		railviz,
+		trips,
 		trip,
 		type TripSegment
 	} from '$lib/openapi';
@@ -241,7 +241,7 @@
 		const max = lngLatToStr(b.getSouthEast());
 		const startTime = new Date().getTime() / 1000;
 		const endTime = startTime + 2 * 60;
-		return railviz({
+		return trips({
 			query: {
 				min,
 				max,

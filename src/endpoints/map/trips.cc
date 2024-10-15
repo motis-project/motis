@@ -1,4 +1,4 @@
-#include "motis/endpoints/railviz.h"
+#include "motis/endpoints/map/trips.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/data.h"
@@ -7,11 +7,10 @@
 
 namespace motis::ep {
 
-api::railviz_response railviz::operator()(
-    boost::urls::url_view const& url) const {
+api::trips_response trips::operator()(boost::urls::url_view const& url) const {
   auto const rt = rt_;
   return get_trains(tags_, tt_, rt->rtt_.get(), shapes_, *static_.impl_,
-                    *rt->railviz_rt_->impl_, api::railviz_params{url.params()});
+                    *rt->railviz_rt_->impl_, api::trips_params{url.params()});
 }
 
 }  // namespace motis::ep

@@ -23,12 +23,12 @@ struct railviz_rt_index {
   std::unique_ptr<impl> impl_;
 };
 
-api::railviz_response get_trains(tag_lookup const&,
-                                 nigiri::timetable const&,
-                                 nigiri::rt_timetable const*,
-                                 nigiri::shapes_storage const*,
-                                 railviz_static_index::impl const&,
-                                 railviz_rt_index::impl const&,
-                                 api::railviz_params const&);
+api::trips_response get_trains(tag_lookup const&,
+                               nigiri::timetable const&,
+                               nigiri::rt_timetable const*,
+                               nigiri::shapes_storage const*,
+                               railviz_static_index::impl const&,
+                               railviz_rt_index::impl const&,
+                               api::trips_params const&);
 
 }  // namespace motis

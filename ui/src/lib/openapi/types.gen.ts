@@ -876,7 +876,7 @@ export type PlanResponse = ({
 
 export type PlanError = unknown;
 
-export type RailvizData = {
+export type TripsData = {
     query: {
         /**
          * end if the time window (unix timestamp in milliseconds)
@@ -901,9 +901,9 @@ export type RailvizData = {
     };
 };
 
-export type RailvizResponse = (Array<TripSegment>);
+export type TripsResponse = (Array<TripSegment>);
 
-export type RailvizError = unknown;
+export type TripsError = unknown;
 
 export type InitialResponse = ({
     /**
@@ -921,6 +921,23 @@ export type InitialResponse = ({
 });
 
 export type InitialError = unknown;
+
+export type StopsData = {
+    query: {
+        /**
+         * latitude,longitude pair of the upper left coordinate
+         */
+        max: string;
+        /**
+         * latitude,longitude pair of the lower right coordinate
+         */
+        min: string;
+    };
+};
+
+export type StopsResponse = (Array<Place>);
+
+export type StopsError = unknown;
 
 export type LevelsData = {
     query: {
