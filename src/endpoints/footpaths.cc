@@ -12,6 +12,7 @@
 #include "motis/elevators/match_elevator.h"
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
+#include "motis/tag_lookup.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
@@ -23,7 +24,7 @@ api::footpaths_response footpaths::operator()(
   auto const q = motis::api::footpaths_params{url.params()};
   auto const rt = rt_;
   auto const e = rt->e_.get();
-  auto const l = tt_.locations_.get({q.id_, n::source_idx_t{}});
+  auto const l = tags_.get(tt_, q.id_);
 
   auto const neighbors =
       loc_rtree_.in_radius(tt_.locations_.coordinates_[l.l_], kMaxDistance);
