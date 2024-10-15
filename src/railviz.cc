@@ -288,13 +288,13 @@ void add_static_transports(n::timetable const& tt,
   }
 }
 
-api::railviz_response get_trains(tag_lookup const& tags,
-                                 n::timetable const& tt,
-                                 n::rt_timetable const* rtt,
-                                 n::shapes_storage const* shapes,
-                                 railviz_static_index::impl const& static_index,
-                                 railviz_rt_index::impl const& rt_index,
-                                 api::railviz_params const& query) {
+api::trips_response get_trains(tag_lookup const& tags,
+                               n::timetable const& tt,
+                               n::rt_timetable const* rtt,
+                               n::shapes_storage const* shapes,
+                               railviz_static_index::impl const& static_index,
+                               railviz_rt_index::impl const& rt_index,
+                               api::trips_params const& query) {
   // Parse query.
   auto const zoom_level = static_cast<int>(query.zoom_);
   auto const min = parse_location(query.min_);

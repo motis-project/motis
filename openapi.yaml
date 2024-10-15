@@ -522,11 +522,11 @@ paths:
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
 
-  /api/v1/railviz:
+  /api/v1/map/trips:
     get:
       tags:
         - map
-      operationId: railviz
+      operationId: trips
       summary: |
         Given a area frame (box defined by top right and bottom left corner) and a time frame,
         it returns all trips and their respective shapes that operate in this area + time frame.
@@ -600,6 +600,35 @@ paths:
                   zoom:
                     description: zoom level
                     type: number
+
+  /api/v1/map/stops:
+    get:
+      tags:
+        - map
+      summary: Get all stops for a map section
+      operationId: stops
+      parameters:
+        - name: min
+          in: query
+          required: true
+          description: latitude,longitude pair of the lower right coordinate
+          schema:
+            type: string
+        - name: max
+          in: query
+          required: true
+          description: latitude,longitude pair of the upper left coordinate
+          schema:
+            type: string
+      responses:
+        '200':
+          description: array of stop places in the selected map section
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Place'
 
   /api/v1/map/levels:
     get:

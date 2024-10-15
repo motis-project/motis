@@ -5,8 +5,8 @@
 
 namespace motis::ep {
 
-struct railviz {
-  api::railviz_response operator()(boost::urls::url_view const&) const;
+struct trips {
+  api::trips_response operator()(boost::urls::url_view const&) const;
 
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;
