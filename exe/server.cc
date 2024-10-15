@@ -20,6 +20,7 @@
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
 #include "motis/endpoints/railviz.h"
@@ -71,6 +72,7 @@ int server(data d, config const& c) {
   GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::railviz>(qr, "/api/v1/railviz", d);
+  GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");

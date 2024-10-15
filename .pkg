@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=a116ae7bd64b0ef3698725301703c2b8a2729387
+  commit=0f316f13cd9491407f3af2a26b0ba4c833a136b0
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master

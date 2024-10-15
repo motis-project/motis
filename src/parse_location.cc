@@ -13,7 +13,8 @@ namespace n = nigiri;
 
 namespace motis {
 
-std::optional<osr::location> parse_location(std::string_view s) {
+std::optional<osr::location> parse_location(std::string_view s,
+                                            char const separator) {
   using boost::phoenix::ref;
   using boost::spirit::ascii::space;
   using boost::spirit::qi::double_;
@@ -28,11 +29,12 @@ std::optional<osr::location> parse_location(std::string_view s) {
   auto const lng = [&](double& x) { pos.lng_ = x; };
   auto const lvl = [&](double& x) { level = static_cast<float>(x); };
 
-  auto const has_matched = phrase_parse(
-      first, last,
-      ((double_[lat] >> ',' >> double_[lng] >> ',' >> double_[lvl]) |
-       double_[lat] >> ',' >> double_[lng]),
-      space);
+  auto const has_matched =
+      phrase_parse(first, last,
+                   ((double_[lat] >> separator >> double_[lng] >> separator >>
+                     double_[lvl]) |
+                    double_[lat] >> separator >> double_[lng]),
+                   space);
   if (!has_matched || first != last) {
     return std::nullopt;
   }

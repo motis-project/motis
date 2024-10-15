@@ -19,8 +19,8 @@
 							properties: {
 								color: '#42a5f5',
 								outlineColor: '#1966a4',
-								level: p.from_level,
-								way: p.osm_way
+								level: p.fromLevel,
+								way: p.osmWay
 							},
 							geometry: {
 								type: 'LineString',
