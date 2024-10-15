@@ -678,13 +678,13 @@ components:
       type: object
       required:
         - name
-        - admin_level
+        - adminLevel
         - matched
       properties:
         name:
           type: string
           description: Name of the area
-        admin_level:
+        adminLevel:
           type: number
           description: |
             [OpenStreetMap `admin_level`](https://wiki.openstreetmap.org/wiki/Key:admin_level)
@@ -750,7 +750,7 @@ components:
         street:
           description: street name
           type: string
-        house_number:
+        houseNumber:
           description: house number
           type: string
         zip:
@@ -1121,17 +1121,17 @@ components:
     LevelEncodedPolyline:
       type: object
       required:
-        - from_level
-        - to_level
+        - fromLevel
+        - toLevel
         - polyline
       properties:
-        from_level:
+        fromLevel:
           description: level where this segment starts, based on OpenStreetMap data
           type: number
-        to_level:
+        toLevel:
           description: level where this segment starts, based on OpenStreetMap data
           type: number
-        osm_way:
+        osmWay:
           description: OpenStreetMap way index
           type: integer
         polyline:

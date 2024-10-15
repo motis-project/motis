@@ -107,7 +107,7 @@ api::geocode_response suggestions_to_response(
         .lon_ = s.coordinates_.as_latlng().lng_,
         .level_ = 0.0,  // TODO
         .street_ = std::move(street),
-        .house_number_ = std::move(house_number),
+        .houseNumber_ = std::move(house_number),
         .zip_ = std::move(zip),
         .areas_ = utl::to_vec(
             utl::enumerate(areas),
@@ -126,7 +126,7 @@ api::geocode_response suggestions_to_response(
                       .view();
               return api::Area{
                   .name_ = std::string{area_name},
-                  .admin_level_ = static_cast<double>(to_idx(admin_lvl)),
+                  .adminLevel_ = static_cast<double>(to_idx(admin_lvl)),
                   .matched_ = is_matched,
                   .default_ = i == city_idx};
             }),

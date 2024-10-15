@@ -15,13 +15,13 @@ export const DurationSchema = {
 export const AreaSchema = {
     description: 'Administrative area',
     type: 'object',
-    required: ['name', 'admin_level', 'matched'],
+    required: ['name', 'adminLevel', 'matched'],
     properties: {
         name: {
             type: 'string',
             description: 'Name of the area'
         },
-        admin_level: {
+        adminLevel: {
             type: 'number',
             description: `[OpenStreetMap \`admin_level\`](https://wiki.openstreetmap.org/wiki/Key:admin_level)
 of the area
@@ -91,7 +91,7 @@ export const MatchSchema = {
             description: 'street name',
             type: 'string'
         },
-        house_number: {
+        houseNumber: {
             description: 'house number',
             type: 'string'
         },
@@ -438,17 +438,17 @@ export const EncodedPolylineSchema = {
 
 export const LevelEncodedPolylineSchema = {
     type: 'object',
-    required: ['from_level', 'to_level', 'polyline'],
+    required: ['fromLevel', 'toLevel', 'polyline'],
     properties: {
-        from_level: {
+        fromLevel: {
             description: 'level where this segment starts, based on OpenStreetMap data',
             type: 'number'
         },
-        to_level: {
+        toLevel: {
             description: 'level where this segment starts, based on OpenStreetMap data',
             type: 'number'
         },
-        osm_way: {
+        osmWay: {
             description: 'OpenStreetMap way index',
             type: 'integer'
         },

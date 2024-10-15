@@ -23,7 +23,7 @@ export type Area = {
      * of the area
      *
      */
-    admin_level: number;
+    adminLevel: number;
     /**
      * Whether this area was matched by the input text
      */
@@ -83,7 +83,7 @@ export type Match = {
     /**
      * house number
      */
-    house_number?: string;
+    houseNumber?: string;
     /**
      * zip code
      */
@@ -367,15 +367,15 @@ export type LevelEncodedPolyline = {
     /**
      * level where this segment starts, based on OpenStreetMap data
      */
-    from_level: number;
+    fromLevel: number;
     /**
      * level where this segment starts, based on OpenStreetMap data
      */
-    to_level: number;
+    toLevel: number;
     /**
      * OpenStreetMap way index
      */
-    osm_way?: number;
+    osmWay?: number;
     polyline: EncodedPolyline;
 };
 

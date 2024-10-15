@@ -149,12 +149,12 @@ api::Itinerary journey_to_response(
     leg.legGeometryWithLevels_ =
         utl::to_vec(path->segments_, [&](osr::path::segment const& s) {
           return api::LevelEncodedPolyline{
-              .from_level_ = to_float(s.from_level_),
-              .to_level_ = to_float(s.to_level_),
-              .osm_way_ = s.way_ == osr::way_idx_t ::invalid()
-                              ? std::nullopt
-                              : std::optional{static_cast<std::int64_t>(
-                                    to_idx(w.way_osm_idx_[s.way_]))},
+              .fromLevel_ = to_float(s.from_level_),
+              .toLevel_ = to_float(s.to_level_),
+              .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
+                             ? std::nullopt
+                             : std::optional{static_cast<std::int64_t>(
+                                   to_idx(w.way_osm_idx_[s.way_]))},
               .polyline_ = {encode_polyline<7>(s.polyline_),
                             static_cast<std::int64_t>(s.polyline_.size())},
           };
