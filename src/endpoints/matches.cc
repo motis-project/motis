@@ -4,6 +4,7 @@
 
 #include "motis/location_routes.h"
 #include "motis/match_platforms.h"
+#include "motis/tag_lookup.h"
 
 namespace json = boost::json;
 namespace n = nigiri;
@@ -45,7 +46,7 @@ json::value matches::operator()(json::value const& query) const {
     auto const match = get_match(tt_, pl_, w_, l);
     auto props =
         json::value{{"name", tt_.locations_.names_[l].view()},
-                    {"id", tt_.locations_.ids_[l].view()},
+                    {"id", tags_.id(tt_, l)},
                     {"src", to_idx(tt_.locations_.src_[l])},
                     {"type", "location"},
                     {"trips", fmt::format("{}", get_location_routes(tt_, l))}}
