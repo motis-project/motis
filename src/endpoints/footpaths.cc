@@ -27,18 +27,18 @@ api::footpaths_response footpaths::operator()(
   auto const l = tags_.get(tt_, q.id_);
 
   auto const neighbors =
-      loc_rtree_.in_radius(tt_.locations_.coordinates_[l.l_], kMaxDistance);
+      loc_rtree_.in_radius(tt_.locations_.coordinates_[l], kMaxDistance);
 
   auto footpaths = hash_map<n::location_idx_t, api::Footpath>{};
 
-  for (auto const fp : tt_.locations_.footpaths_out_[0][l.l_]) {
+  for (auto const fp : tt_.locations_.footpaths_out_[0][l]) {
     if (tt_.location_routes_[fp.target()].empty()) {
       continue;
     }
     footpaths[fp.target()].default_ = fp.duration().count();
   }
 
-  auto const loc = get_loc(tt_, w_, pl_, matches_, l.l_);
+  auto const loc = get_loc(tt_, w_, pl_, matches_, l);
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
     auto const results = osr::route(
@@ -78,7 +78,7 @@ api::footpaths_response footpaths::operator()(
             .vertexType_ = api::VertexTypeEnum::NORMAL};
   };
 
-  return {.place_ = to_place(l),
+  return {.place_ = to_place(tt_.locations_.get(l)),
           .footpaths_ = utl::to_vec(footpaths, [&](auto&& e) {
             e.second.to_ = to_place(tt_.locations_.get(e.first));
             return e.second;
