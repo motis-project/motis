@@ -72,8 +72,8 @@ int server(data d, config const& c) {
   GET<ep::routing>(qr, "/api/v1/plan", d);
   GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
   GET<ep::trip>(qr, "/api/v1/trip", d);
-  GET<ep::trips>(qr, "/api/v1/railviz", d);
-  GET<ep::stops>(qr, "/api/v1/stops", d);
+  GET<ep::trips>(qr, "/api/v1/map/trips", d);
+  GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {
