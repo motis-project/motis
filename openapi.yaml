@@ -872,8 +872,6 @@ components:
         - agencyId
         - agencyName
         - agencyUrl
-        - routeColor
-        - routeTextColor
         - routeType
         - routeId
         - tripId
@@ -1012,7 +1010,6 @@ components:
       type: object
       required:
         - trips
-        - routeColor
         - mode
         - distance
         - from
