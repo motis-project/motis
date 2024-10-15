@@ -12,7 +12,7 @@
 namespace motis {
 
 std::optional<osr::location> parse_location(std::string_view,
-                                            char separator = ';');
+                                            char separator = ',');
 
 nigiri::unixtime_t get_date_time(std::optional<std::string> const& date = {},
                                  std::optional<std::string> const& time = {});
