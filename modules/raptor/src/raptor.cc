@@ -1,6 +1,7 @@
 #include "motis/raptor/raptor.h"
 
 #include "utl/to_vec.h"
+#include "utl/verify.h"
 
 #include "motis/module/message.h"
 
@@ -12,7 +13,10 @@
 #include "motis/core/journey/journeys_to_message.h"
 #include "motis/core/journey/message_to_journeys.h"
 
+#include "motis/raptor/criteria/configs.h"
+#include "motis/raptor/eval/commands.h"
 #include "motis/raptor/get_raptor_timetable.h"
+#include "motis/raptor/implementation_type.h"
 #include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_search.h"
 
@@ -76,6 +80,8 @@ struct raptor::impl {
 
     queries_per_device_ = std::max(config.queries_per_device_, int32_t{1});
     mem_store_.init(*meta_info_, *timetable_, queries_per_device_);
+
+    cudaDeviceSynchronize();
 #endif
   }
 
@@ -84,12 +90,15 @@ struct raptor::impl {
 
     auto const req = motis_content(RoutingRequest, msg);
 
+    utl::verify_ex(req->search_dir() == routing::SearchDir_Forward,
+                   access::error::not_implemented);
+
     auto const base_query = get_base_query(req, sched_, *meta_info_);
     auto q = raptor_query{base_query, *meta_info_, *timetable_};
 
     raptor_statistics stats;
-    auto const journeys =
-        cpu_raptor(q, stats, sched_, *meta_info_, *timetable_);
+    auto const journeys = search_dispatch<implementation_type::CPU>(
+        q, stats, sched_, *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, journeys, req, stats);
@@ -101,6 +110,8 @@ struct raptor::impl {
     MOTIS_START_TIMING(total_calculation_time);
 
     auto const req = motis_content(RoutingRequest, msg);
+    utl::verify_ex(req->search_dir() == routing::SearchDir_Forward,
+                   access::error::not_implemented);
 
     auto base_query = get_base_query(req, sched_, *meta_info_);
 
@@ -109,7 +120,8 @@ struct raptor::impl {
     d_query q(base_query, *meta_info_, loan.mem_, *d_gtt_);
 
     std::vector<journey> js;
-    js = gpu_raptor(q, stats, sched_, *meta_info_, *timetable_);
+    js = search_dispatch<implementation_type::GPU>(q, stats, sched_,
+                                                   *meta_info_, *timetable_);
     stats.total_calculation_time_ = MOTIS_GET_TIMING_MS(total_calculation_time);
 
     return make_response(sched_, js, req, stats);
@@ -158,6 +170,15 @@ void raptor::init(motis::module::registry& reg) {
 #else
   reg.register_op("/raptor", [&](auto&& m) { return impl_->route_cpu(m); });
 #endif
+}
+
+void raptor::reg_subc(motis::module::subc_reg& r) {
+  r.register_cmd("print-raptor", "prints journeys with raptor schedule details",
+                 eval::print_raptor);
+  r.register_cmd("validate", "validates journeys against schedule",
+                 eval::validate);
+  r.register_cmd("print-raptor-route", "prints a given route from raptor timetable",
+                 eval::print_raptor_route);
 }
 
 }  // namespace motis::raptor

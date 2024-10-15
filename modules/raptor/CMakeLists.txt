@@ -9,6 +9,7 @@ target_link_libraries(motis-raptor
         motis-routing
         motis-module
         motis-core
+        utl
         )
 target_compile_options(motis-raptor PRIVATE ${MOTIS_CXX_FLAGS})
 target_compile_definitions(motis-raptor PRIVATE ${MOTIS_COMPILE_DEFINITIONS})
@@ -30,7 +31,8 @@ if (MOTIS_CUDA)
     target_compile_definitions(gpu-raptor PRIVATE MOTIS_CUDA)
     target_link_libraries(gpu-raptor utl motis-core)
     target_include_directories(gpu-raptor PRIVATE include)
-    set_property(TARGET gpu-raptor PROPERTY CUDA_ARCHITECTURES 75 61)
+    set_property(TARGET gpu-raptor PROPERTY CUDA_ARCHITECTURES 61 70 75 80)
     target_compile_options(gpu-raptor PRIVATE "--expt-relaxed-constexpr")
+    #target_compile_options(gpu-raptor PRIVATE "-G")
     target_link_libraries(motis-raptor gpu-raptor CUDA::cudart_static)
 endif ()

@@ -27,6 +27,7 @@ struct raptor : public motis::module::module {
   raptor(raptor&&) = delete;
   raptor& operator=(raptor&&) = delete;
 
+  void reg_subc(motis::module::subc_reg&) override;
   void init(motis::module::registry&) override;
 
 private:

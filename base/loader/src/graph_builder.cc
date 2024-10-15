@@ -214,9 +214,10 @@ void graph_builder::add_route_services(
       auto const merged_trips_idx = sched_.merged_trips_.size();
       for (unsigned section_idx = 0; section_idx < s->sections()->size();
            ++section_idx) {
+        int third = ((section_idx)*3) / static_cast<int>(s->sections()->size());
         lcons.push_back(section_to_connection(merged_trips_idx,
                                               {{participant{s, section_idx}}},
-                                              day, prev_arr, adjusted));
+                                              day, prev_arr, adjusted, third));
         prev_arr = lcons.back().a_time_;
       }
 
@@ -226,6 +227,7 @@ void graph_builder::add_route_services(
 
       utl::verify(merged_trips_idx == create_merged_trips(s, day),
                   "unexpected merged_trips_idx");
+
       add_to_routes(alt_routes, lcons, stations);
     }
   }
@@ -387,6 +389,7 @@ int graph_builder::get_index(
       bool later_eq_arr = static_cast<unsigned>(index) < route_section.size() &&
                           lc.a_time_ >= route_section[index].a_time_;
 
+
       // Check if both tracks have the same platform or both tracks have no
       // platform information.
       auto const& dep_station = stations[section_idx];
@@ -434,6 +437,73 @@ void graph_builder::add_to_routes(
   add_to_route(alt_routes.back(), sections, 0);
 }
 
+uint8_t graph_builder::estimate_occupancy(int third, time dep_time,
+                                          connection_info const* info) {
+  std::vector<std::vector<uint8_t>> occ_matrix{
+      {0, 0, 0},  // 0
+      {0, 0, 0},  // 0:30
+      {0, 0, 0},  // 1
+      {0, 0, 0},  // 1:30
+      {0, 0, 0},  // 2
+      {0, 0, 0},  // 2:30
+      {0, 0, 0},  // 3
+      {0, 0, 0},  // 3:30
+      {0, 0, 0},  // 4
+      {0, 0, 0},  //
+      {0, 0, 1},  // 5
+      {0, 0, 1},  //
+      {0, 1, 2},  // 6
+      {0, 1, 2},  //
+      {1, 2, 2},  // 7
+      {1, 2, 2},  //
+      {1, 2, 2},  // 8
+      {0, 1, 1},  //
+      {0, 0, 1},  // 9
+      {0, 0, 0},  //
+      {0, 0, 0},  // 10
+      {0, 0, 0},  //
+      {0, 0, 0},  // 11
+      {0, 0, 0},  //
+      {0, 0, 0},  // 12
+      {0, 0, 0},  //
+      {0, 0, 0},  // 13
+      {0, 0, 0},  //
+      {0, 0, 0},  // 14
+      {0, 0, 0},  //
+      {0, 0, 1},  // 15
+      {0, 1, 1},  //
+      {0, 1, 2},  // 16
+      {1, 2, 2},  //
+      {1, 2, 2},  // 17
+      {1, 2, 2},  //
+      {0, 1, 2},  // 18
+      {0, 0, 1},  //
+      {0, 0, 0},  // 19
+      {0, 0, 0},  //
+      {0, 0, 0},  // 20
+      {0, 0, 0},  //
+      {0, 0, 0},  // 21
+      {0, 0, 0},  //
+      {0, 0, 0},  // 22
+      {0, 0, 0},  //
+      {0, 0, 0},  // 23
+      {0, 0, 0}  //
+  };
+
+  if (std::any_of(info->attributes_.begin(), info->attributes_.end(),
+                  [](attribute const* a) {
+                    return a->code_ == "00" || a->code_ == "10" ||
+                           a->code_ == "01" || a->code_ == "11" ||
+                           a->text_.str().find("ausgelastet") !=
+                               std::string::npos;
+                  })) {
+    return 2;
+  }
+  time half_hour = (dep_time % MINUTES_A_DAY) / 30;
+
+  return occ_matrix[half_hour][third];
+}
+
 connection_info* graph_builder::get_or_create_connection_info(
     Section const* section, int dep_day_index, connection_info* merged_with) {
   con_info_.line_identifier_ =
@@ -472,7 +542,7 @@ connection_info* graph_builder::get_or_create_connection_info(
 
 light_connection graph_builder::section_to_connection(
     merged_trips_idx trips, std::array<participant, 16> const& services,
-    int day, time prev_arr, bool& adjusted) {
+    int day, time prev_arr, bool& adjusted, int third) {
   auto const& ref = services[0].service_;
   auto const& section_idx = services[0].section_idx_;
 
@@ -550,14 +620,15 @@ light_connection graph_builder::section_to_connection(
       sched_.last_event_schedule_time_,
       motis_to_unixtime(sched_, arr_motis_time) - SCHEDULE_OFFSET_MINUTES * 60);
 
-  return {dep_motis_time, arr_motis_time,
-          mcd::set_get_or_create(connections_, &con_,
-                                 [&]() {
-                                   sched_.full_connections_.emplace_back(
-                                       mcd::make_unique<connection>(con_));
-                                   return sched_.full_connections_.back().get();
-                                 }),
-          trips};
+  return light_connection(
+      dep_motis_time, arr_motis_time,
+      mcd::set_get_or_create(connections_, &con_,
+                             [&]() {
+                               sched_.full_connections_.emplace_back(
+                                   mcd::make_unique<connection>(con_));
+                               return sched_.full_connections_.back().get();
+                             }),
+      trips, occupancy);
 }
 
 void graph_builder::connect_reverse() {

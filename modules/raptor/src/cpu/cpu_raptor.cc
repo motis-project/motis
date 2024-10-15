@@ -15,6 +15,8 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
     return invalid<trip_count>;
   }
 
+  time const transfer_time = tt.transfer_times_[stop_id];
+
   // get first defined earliest trip for the stop in the route
   auto const first_trip_stop_idx = route.index_to_stop_times_ + r_stop_offset;
   auto const last_trip_stop_idx =
@@ -27,7 +29,7 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
 
     auto const stop_time = tt.stop_times_[stop_time_idx];
     if (valid(stop_time.departure_) &&
-        prev_arrivals[stop_id] <= stop_time.departure_) {
+        prev_arrivals[stop_id] + transfer_time <= stop_time.departure_) {
       return current_trip;
     }
 
@@ -38,17 +40,18 @@ trip_count get_earliest_trip(raptor_timetable const& tt,
 }
 
 void init_arrivals(raptor_result& result, raptor_query const& q,
-                   cpu_mark_store& station_marks) {
+                   raptor_timetable const& tt, cpu_mark_store& station_marks) {
 
   // Don't set the values for the earliest arrival, as the footpath update
   // in the first round will use the values in conjunction with the
   // footpath lengths without transfertime leading to invalid results.
   // Not setting the earliest arrival values should (I hope) be correct.
-  result[0][q.source_] = q.source_time_begin_;
+  auto const start_time = q.source_time_begin_ - tt.transfer_times_[q.source_];
+  result[0][q.source_] = start_time;
   station_marks.mark(q.source_);
 
   for (auto const& add_start : q.add_starts_) {
-    time const add_start_time = q.source_time_begin_ + add_start.offset_;
+    time const add_start_time = start_time + add_start.offset_;
     result[0][add_start.s_id_] =
         std::min(result[0][add_start.s_id_], add_start_time);
     station_marks.mark(add_start.s_id_);
@@ -106,7 +109,8 @@ void update_route(raptor_timetable const& tt, route_id const r_id,
 
     // check if we could catch an earlier trip
     auto const previous_k_arrival = prev_arrivals[stop_id];
-    if (previous_k_arrival <= stop_time.departure_) {
+    auto const transfer_time = tt.transfer_times_[stop_id];
+    if (previous_k_arrival + transfer_time <= stop_time.departure_) {
       earliest_trip_id =
           std::min(earliest_trip_id,
                    get_earliest_trip(tt, route, prev_arrivals, r_stop_offset));
@@ -161,7 +165,7 @@ void invoke_cpu_raptor(raptor_query const& query, raptor_statistics&) {
   cpu_mark_store station_marks(tt.stop_count());
   cpu_mark_store route_marks(tt.route_count());
 
-  init_arrivals(result, query, station_marks);
+  init_arrivals(result, query, tt, station_marks);
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
     bool any_marked = false;

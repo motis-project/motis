@@ -98,7 +98,35 @@ enum SearchType : byte {
   LateConnectionsTest,
   Accessibility,
   DefaultPrice,
-  DefaultPriceRegional
+  DefaultPriceRegional,
+
+  MaxOccupancy,
+  MaxOccupancyShfl,
+  //TimeSlottedOccupancy,
+  MaxTransferClass,
+  TcMaxOccupancy,
+
+  Tso96,
+  Tso90,
+  Tso80,
+  Tso72,
+  Tso64,
+  Tso60,
+  Tso48,
+  Tso45,
+  Tso40,
+  Tso36,
+  Tso32,
+  Tso30,
+  Tso24,
+  Tso20,
+  Tso18,
+  Tso16,
+  Tso12,
+  Tso10,
+  Tso08,
+  Tso06
+
 }
 
 // ----------------------------------------------------------------------------

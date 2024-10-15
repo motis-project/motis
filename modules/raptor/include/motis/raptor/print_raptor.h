@@ -5,6 +5,7 @@
 #include "utl/enumerate.h"
 #include "utl/to_vec.h"
 
+#include "motis/raptor/raptor_query.h"
 #include "motis/raptor/raptor_result.h"
 #include "motis/raptor/raptor_timetable.h"
 
@@ -19,6 +20,13 @@ inline std::string get_string(stop_id const s_id,
 inline void print_station(stop_id const s_id, raptor_meta_info const& sched) {
   std::cout << "SID: " << s_id << " -- EVA: " << sched.raptor_id_to_eva_[s_id]
             << '\n';
+}
+
+inline void print_stations(raptor_meta_info const& meta) {
+  auto stop_cnt = meta.raptor_id_to_eva_.size();
+  for (int s_id = 0; s_id < stop_cnt; ++s_id) {
+    print_station(s_id, meta);
+  }
 }
 
 template <typename TimeStringer>
@@ -46,7 +54,9 @@ inline void print_route_gen(route_id const r_id, raptor_timetable const& tt,
       auto const stop_time = tt.stop_times_[st_idx];
       std::cout << stop_offset << ": "
                 << "(" << time_string(stop_time.arrival_) << ","
-                << time_string(stop_time.departure_) << ") ; ";
+                << time_string(stop_time.departure_) << ")"
+                << "(" << +tt.stop_attr_[st_idx].inbound_occupancy_ << ")"
+                << " ; ";
     }
     std::cout << "]\n";
   }
@@ -93,6 +103,21 @@ inline void print_station_arrivals(stop_id const s_id,
   std::cout << s_id << "(station) Arrivals: [ ";
   for (auto k = 0; k < max_raptor_round; ++k) {
     std::cout << raptor_result[k][s_id] << " ";
+  }
+  std::cout << "]\n";
+}
+
+template <typename CriteriaConfig>
+inline void mc_print_station_arrivals(stop_id const s_id,
+                                      raptor_round const round,
+                                      raptor_result_base const& raptor_result) {
+  auto const trait_size = CriteriaConfig::TRAITS_SIZE;
+  std::cout << +round << "(round) " << s_id << "(station) Arrivals: [ ";
+  for(auto t_off = 0; t_off < trait_size; ++t_off) {
+    auto const arr_idx = CriteriaConfig::get_arrival_idx(s_id, t_off);
+    auto const time = raptor_result[round][arr_idx];
+    if (valid(time))
+      std::cout << t_off << ": " << time << "; ";
   }
   std::cout << "]\n";
 }
@@ -167,7 +192,7 @@ inline void print_route_arrivals(route_id const r_id,
 
 inline bool is_reset(raptor_result_base const& result) {
   for (auto k = 0; k < max_raptor_round; ++k) {
-    for (auto s = 0; s < result.stop_count_; ++s) {
+    for (auto s = 0; s < result.arrival_times_count_; ++s) {
       if (result[k][s] != invalid<time>) {
         return false;
       }
@@ -175,6 +200,40 @@ inline bool is_reset(raptor_result_base const& result) {
   }
 
   return true;
+}
+
+inline void print_query(raptor_query const& query) {
+  std::cout << "Received Query: " << std::endl;
+  std::cout << "Start Station:  " << std::setw(7) << +query.source_ << " -> "
+            << std::setw(6) << +query.source_time_begin_ << std::endl;
+  std::cout << "End Station:    " << std::setw(7) << +query.target_
+            << std::endl;
+}
+
+inline void print_theoretical_moc_figures(raptor_timetable const& tt) {
+  auto pair_count = 0UL;
+  for (route_id r_id = 0; r_id < tt.route_count(); ++r_id) {
+    auto const route = tt.routes_[r_id];
+    auto const trip_count = route.trip_count_;
+
+    auto route_pairs = 0UL;
+    for (uint32_t stop_idx = 1; stop_idx < route.stop_count_; ++stop_idx) {
+      route_pairs += stop_idx;
+    }
+
+    pair_count += (trip_count * route_pairs);
+  }
+
+  auto required_ints = std::ceil(pair_count / 16);
+  auto byte_size = required_ints * 4;
+  auto kib = byte_size / 1024.0;
+  auto mib = kib / 1024.0;
+
+  std::cout << "Number of Dep-Arr Pairs:\t" << +pair_count << "\n";
+  std::cout << "Number of int32 needed:\t" << +required_ints << "\n";
+  std::cout << "Number of bytes needed:\t" << byte_size << "\n";
+  std::cout << "Number of Kibibytes req.:\t" << kib << "\n";
+  std::cout << "Number of Mebibtyes req.:\t" << mib << "\n";
 }
 
 }  // namespace motis::raptor

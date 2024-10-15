@@ -1,60 +1,14 @@
 #pragma once
 
-#include <cstdint>
 #include <limits>
 #include <unordered_map>
-#include <vector>
 
 #include "utl/verify.h"
 
+#include "motis/raptor/types.h"
 #include "motis/core/schedule/connection.h"
-#include "motis/core/schedule/time.h"
 
 namespace motis::raptor {
-
-using time8 = uint8_t;
-
-using stop_id = int32_t;
-using route_id = uint32_t;
-using footpath_id = int32_t;
-using trip_id = uint32_t;
-
-using motis_id = int32_t;
-
-// these are only 16bit wide, because they are used relativ to a station/route
-// i.e. how many stops/trips a single route has
-//      how many routes/footpaths a single station has
-using trip_count = uint16_t;
-using stop_count = uint16_t;
-using route_count = uint16_t;
-using footpath_count = uint16_t;
-
-using stop_offset = uint16_t;
-
-using stop_times_index = uint32_t;
-using route_stops_index = uint32_t;
-using stop_routes_index = uint32_t;
-using footpaths_index = uint32_t;
-
-using raptor_round = uint8_t;
-using transfers = uint8_t;
-
-using earliest_arrivals = std::vector<time>;
-
-template <typename T>
-inline constexpr T min_value = std::numeric_limits<T>::min();
-
-template <typename T>
-inline constexpr T max_value = std::numeric_limits<T>::max();
-
-template <typename T>
-inline constexpr T invalid = max_value<T>;
-// Template specializations in raptor_timetable.cc
-
-template <typename T>
-inline constexpr auto valid(T const& value) {
-  return value != invalid<T>;
-}
 
 constexpr raptor_round max_transfers = 6;
 constexpr raptor_round max_trips = max_transfers + 1;
@@ -97,6 +51,10 @@ struct stop_time {
   time departure_{invalid<decltype(departure_)>};
 };
 
+struct stop_attributes {
+  occ_t inbound_occupancy_{0};
+};
+
 struct raptor_footpath {
   raptor_footpath() = delete;
   raptor_footpath(stop_id const to, time const duration)
@@ -133,8 +91,11 @@ struct raptor_timetable {
   std::vector<raptor_footpath> footpaths_;
 
   std::vector<stop_time> stop_times_;
+  std::vector<stop_attributes> stop_attr_;
   std::vector<stop_id> route_stops_;
   std::vector<route_id> stop_routes_;
+
+  std::vector<time> transfer_times_;
 
   // Needed for the reconstruction
   // duration REDUCED by the transfer times from the departure station
@@ -153,6 +114,14 @@ struct raptor_timetable {
   }
 };
 
+struct route_mapping {
+  std::unordered_map<std::string, std::unordered_map<route_id , std::vector<trip_id>>>
+      trip_dbg_to_route_trips_;
+
+  void insert_dbg(std::string const& dbg, route_id r_id, trip_id t_id);
+  std::string str(std::string const& dbg) const;
+};
+
 struct raptor_meta_info {
   raptor_meta_info() = default;
   raptor_meta_info(raptor_meta_info const&) = delete;
@@ -164,7 +133,6 @@ struct raptor_meta_info {
   std::unordered_map<std::string, stop_id> eva_to_raptor_id_;
   std::vector<std::string> raptor_id_to_eva_;
   std::vector<unsigned> station_id_to_index_;
-  std::vector<time> transfer_times_;
 
   // contains the stop_id itself as first element
   std::vector<std::vector<stop_id>> equivalent_stations_;
@@ -186,6 +154,10 @@ struct raptor_meta_info {
   // duration of the footpaths INCLUDE transfer time from the departure
   // station
   std::vector<std::vector<raptor_footpath>> initialization_footpaths_;
+
+  //Mapper table to convert from the regular schedule trip debug string
+  // to raptor route and trip ids and vice versa
+  route_mapping route_mapping_;
 };
 
 }  // namespace motis::raptor

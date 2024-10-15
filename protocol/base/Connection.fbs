@@ -88,5 +88,8 @@ table Connection {
   problems:[Problem];
   night_penalty:ushort;
   db_costs:ushort;
+  max_occupancy:ushort;
+  time_slotted_occupancy: ushort;
+  max_transfer_class: ushort;
   status:ConnectionStatus;
 }

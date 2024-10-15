@@ -52,6 +52,13 @@ std::unique_ptr<host_gpu_timetable> get_host_gpu_timetable(
     h_gtt->stop_departures_.push_back(stop_time.departure_);
   }
 
+  h_gtt->stop_inb_occupancy_.reserve(tt.stop_attr_.size());
+  for(auto const& stop_attr : tt.stop_attr_) {
+    h_gtt->stop_inb_occupancy_.push_back(stop_attr.inbound_occupancy_);
+  }
+
+  h_gtt->transfer_times_ = tt.transfer_times_;
+
   return h_gtt;
 }
 
@@ -64,10 +71,10 @@ std::unique_ptr<device_gpu_timetable> get_device_gpu_timetable(
 
   copy_vector_to_device(h_gtt.footpaths_, &(d_gtt->footpaths_));
 
-  copy_vector_to_device(h_gtt.stop_times_, &(d_gtt->stop_times_));
-
   copy_vector_to_device(h_gtt.stop_arrivals_, &(d_gtt->stop_arrivals_));
   copy_vector_to_device(h_gtt.stop_departures_, &(d_gtt->stop_departures_));
+  copy_vector_to_device(h_gtt.stop_inb_occupancy_,
+                        &(d_gtt->stop_inb_occupancy_));
 
   copy_vector_to_device(h_gtt.route_stops_, &(d_gtt->route_stops_));
   copy_vector_to_device(h_gtt.stop_routes_, &(d_gtt->stop_routes_));
@@ -86,9 +93,9 @@ void destroy_device_gpu_timetable(device_gpu_timetable& d_gtt) {
   cudaFree(d_gtt.routes_);
   cudaFree(d_gtt.footpaths_);
   cudaFree(d_gtt.transfer_times_);
-  cudaFree(d_gtt.stop_times_);
   cudaFree(d_gtt.stop_arrivals_);
   cudaFree(d_gtt.stop_departures_);
+  cudaFree(d_gtt.stop_inb_occupancy_);
   cudaFree(d_gtt.route_stops_);
   cudaFree(d_gtt.stop_routes_);
 }

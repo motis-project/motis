@@ -68,18 +68,20 @@ struct light_connection {
         d_time_{INVALID_TIME},
         a_time_{INVALID_TIME},
         trips_{0U},
-        valid_{0U} {}
+        valid_{0U},
+        occupancy_{0} {}
 
   explicit light_connection(time d_time) : d_time_{d_time} {}  // NOLINT
 
   light_connection(time const d_time, time const a_time,
                    connection const* full_con = nullptr,
-                   merged_trips_idx const trips = 0)
+                   merged_trips_idx const trips = 0, uint8_t occupancy = 0)
       : full_con_{full_con},
         d_time_{d_time},
         a_time_{a_time},
         trips_{trips},
-        valid_{1U} {}
+        valid_{1U},
+        occupancy_{occupancy} {}
 
   time event_time(event_type const t) const {
     return t == event_type::DEP ? d_time_ : a_time_;
@@ -95,6 +97,7 @@ struct light_connection {
   time d_time_, a_time_;
   uint32_t trips_ : 31;
   uint32_t valid_ : 1;
+  uint8_t occupancy_;
 };
 
 // Index of a light_connection in a route edge.

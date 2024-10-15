@@ -1,0 +1,15 @@
+﻿route_id,service_id,trip_id,trip_headsign,trip_short_name,direction_id
+"TC1","T1","TC1-TR1","TC1-TR1","TC1 Trip 1",0
+"TC1","T1","TC1-TR2","TC1-TR2","TC1 Trip 2",0
+"TC2","T2","TC2-TR1","TC2-TR1","TC2 Trip 1",0
+"TC2","T2","TC2-TR2","TC2-TR2","TC2 Trip 2",0
+"TC2","T2","TC2-TR3","TC2-TR3","TC2 Trip 3",0
+"TC3-1","T3","TC3-1-TR1","TC3-1-TR1","TC3-1 Trip 1",0
+"TC3-2","T3","TC3-2-TR1","TC3-2-TR1","TC3-2 Trip 1",0
+"TC3-3","T3","TC3-3-TR1","TC3-3-TR1","TC3-3 Trip 1",0
+"TC4-1","T4","TC4-1-TR1","TC4-1-TR1","TC4-1 Trip 1",0
+"TC4-2","T4","TC4-2-TR1","TC4-2-TR1","TC4-2 Trip 1",0
+"TC4-3","T4","TC4-3-TR1","TC4-3-TR1","TC4-3 Trip 1",0
+"TC5","T5","TC5-TR1","TC5-TR1","TC5 Trip 1",0
+"TC6","T6","TC6-TR1","TC6-TR1","TC6 Trip 1",0
+"TC7","T7","TC7-TR1","TC7-TR1","TC7 Trip 1",0

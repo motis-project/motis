@@ -55,6 +55,8 @@ size_t get_max_add_starts(raptor_meta_info const& meta_info) {
     max_add_starts = std::max(max_add_starts, add_starts);
   }
 
+  std::cout << "Max Additional Starts: " << +max_add_starts << std::endl;
+
   return max_add_starts;
 }
 

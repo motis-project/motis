@@ -57,6 +57,8 @@ struct raptor_lcon {
 struct transformable_trip {
   std::vector<raptor_lcon> lcons_;
   std::vector<stop_time> stop_times_;
+  std::vector<stop_attributes> stop_attr_;
+  std::string dbg_;
 };
 
 struct transformable_route {
@@ -82,6 +84,23 @@ std::vector<stop_time> get_stop_times_from_lcons(
     }
   }
   return stop_times;
+}
+
+std::vector<stop_attributes> get_stop_attributes_from_lcons(
+    std::vector<raptor_lcon> const& lcons) {
+  auto const edge_count = lcons.size();
+  auto const stop_count = edge_count + 1;
+
+  std::vector<stop_attributes> stop_attributes(stop_count);
+
+  // first stop has no inbound edge; therefore also no occupancy
+  stop_attributes[0].inbound_occupancy_ = 0;
+
+  for (auto idx = 1; idx < stop_count; ++idx) {
+    stop_attributes[idx].inbound_occupancy_ = lcons[idx - 1].lcon_->occupancy_;
+  }
+
+  return stop_attributes;
 }
 
 std::vector<stop_id> get_route_stops_from_lcons(
@@ -169,6 +188,8 @@ void init_routes(schedule const& sched, std::vector<transformable_route>& rs) {
       }
 
       t_trip.stop_times_ = get_stop_times_from_lcons(t_trip.lcons_);
+      t_trip.stop_attr_ = get_stop_attributes_from_lcons(t_trip.lcons_);
+      t_trip.dbg_ = std::string{trip->dbg_.str()};
 
       ++t_id;
     }
@@ -207,6 +228,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
   auto tt = std::make_unique<raptor_timetable>();
 
   tt->stops_.reserve(ttt.stations_.size() + 1);
+  tt->transfer_times_.reserve(ttt.stations_.size());
   tt->incoming_footpaths_.resize(ttt.stations_.size());
 
   for (auto s_id = 0U; s_id < ttt.stations_.size(); ++s_id) {
@@ -227,9 +249,12 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     for (auto const& f : t_stop.incoming_footpaths_) {
       auto const transfer_time = ttt.stations_[f.from_].transfer_time_;
-      tt->incoming_footpaths_[s_id].emplace_back(f.from_,
-                                                 f.duration_ - transfer_time);
+      tt->incoming_footpaths_[s_id].emplace_back(
+          f.from_, f.duration_ - transfer_time);
     }
+
+    auto const transfer_time = ttt.stations_[s_id].transfer_time_;
+    tt->transfer_times_.push_back(transfer_time);
   }
 
   auto footpaths_idx = static_cast<footpaths_index>(tt->footpaths_.size());
@@ -247,6 +272,7 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
     for (auto const& trip : t_route.trips_) {
       utl::concat(tt->stop_times_, trip.stop_times_);
+      utl::concat(tt->stop_attr_, trip.stop_attr_);
     }
     utl::concat(tt->route_stops_, t_route.route_stops_);
   }
@@ -256,25 +282,22 @@ std::unique_ptr<raptor_timetable> create_raptor_timetable(
 
   tt->routes_.emplace_back(0, 0, stop_times_idx, rs_idx);
 
-  // preadd the transfer times
-  for (auto const& route : tt->routes_) {
-    for (auto trip = 0; trip < route.trip_count_; ++trip) {
-      for (auto offset = 0; offset < route.stop_count_; ++offset) {
-        auto const rsi = route.index_to_route_stops_ + offset;
-        auto const sti =
-            route.index_to_stop_times_ + (trip * route.stop_count_) + offset;
+  return tt;
+}
 
-        auto const s_id = tt->route_stops_[rsi];
-        auto const transfer_time = ttt.stations_[s_id].transfer_time_;
-        auto& arrival = tt->stop_times_[sti].arrival_;
-        if (valid(arrival)) {
-          arrival += transfer_time;
-        }
-      }
+auto create_route_map(transformable_timetable const& ttt) {
+  route_mapping route_map{};
+
+  for (route_id r_id = 0; r_id < ttt.routes_.size(); ++r_id) {
+    auto& route = ttt.routes_[r_id];
+
+    for (trip_id t_id = 0; t_id < route.trips_.size(); ++t_id) {
+      auto const& el = route.trips_[t_id];
+      route_map.insert_dbg(el.dbg_, r_id, t_id);
     }
   }
 
-  return tt;
+  return route_map;
 }
 
 auto get_station_departure_events(transformable_timetable const& ttt,
@@ -323,7 +346,6 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
   // generate initialization footpaths BEFORE removing empty stations
   meta_info->initialization_footpaths_ = get_initialization_footpaths(ttt);
 
-  meta_info->transfer_times_.reserve(ttt.stations_.size());
   meta_info->raptor_id_to_eva_.reserve(ttt.stations_.size());
   meta_info->station_id_to_index_.reserve(ttt.stations_.size());
 
@@ -335,7 +357,6 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     auto const& s = ttt.stations_[s_id];
 
     meta_info->station_id_to_index_.push_back(s.motis_station_index_);
-    meta_info->transfer_times_.push_back(s.transfer_time_);
     meta_info->raptor_id_to_eva_.push_back(s.eva_);
     meta_info->eva_to_raptor_id_.emplace(
         s.eva_, static_cast<stop_id>(meta_info->eva_to_raptor_id_.size()));
@@ -388,6 +409,8 @@ std::unique_ptr<raptor_meta_info> transformable_to_meta_info(
     }
   }
 
+  meta_info->route_mapping_ = std::move(create_route_map(ttt));
+
   return meta_info;
 }
 
@@ -413,8 +436,23 @@ get_raptor_timetable(schedule const& sched) {
   LOG(log::info) << "RAPTOR Stations: " << ttt.stations_.size();
   LOG(log::info) << "RAPTOR Routes: " << ttt.routes_.size();
 
+  auto footpaths = 0UL;
+  for(auto& s : ttt.stations_)
+    footpaths += s.incoming_footpaths_.size();
+  LOG(log::info) << "RAPTOR Footpaths: " << footpaths;
+
+  auto trips = 0UL;
+  for(auto& t : ttt.routes_)
+    trips += t.trips_.size();
+  LOG(log::info) << "RAPTOR Trips: " << trips;
+
   auto meta_info = transformable_to_meta_info(ttt);
   auto tt = create_raptor_timetable(ttt);
+
+  auto dep_events = 0UL;
+  for(auto& s : meta_info->departure_events_)
+    dep_events += s.size();
+  LOG(log::info) << "RAPTOR Departure Events: " << dep_events;
 
   return {std::move(meta_info), std::move(tt)};
 }

@@ -8,6 +8,15 @@ namespace motis::raptor {
 
 using namespace motis::routing;
 
+stop_id checked_eva_to_raptor_id(raptor_meta_info const& meta_info,
+                                 std::string const& eva) {
+  try {
+    return meta_info.eva_to_raptor_id_.at(eva);
+  } catch (std::out_of_range const&) {
+    throw std::system_error{access::error::station_not_found};
+  }
+}
+
 base_query get_base_query(RoutingRequest const* routing_request,
                           schedule const& sched,
                           raptor_meta_info const& meta_info) {
@@ -20,6 +29,7 @@ base_query get_base_query(RoutingRequest const* routing_request,
 
   auto const destination_station = routing_request->destination();
   auto const target_eva = destination_station->id()->str();
+
   std::string start_eva;
 
   switch (routing_request->start_type()) {
@@ -63,8 +73,8 @@ base_query get_base_query(RoutingRequest const* routing_request,
     }
   }
 
-  q.source_ = meta_info.eva_to_raptor_id_.at(start_eva);
-  q.target_ = meta_info.eva_to_raptor_id_.at(target_eva);
+  q.source_ = checked_eva_to_raptor_id(meta_info, start_eva);
+  q.target_ = checked_eva_to_raptor_id(meta_info, target_eva);
 
   q.forward_ = (routing_request->search_dir() == SearchDir::SearchDir_Forward);
   q.ontrip_ = routing_request->start_type() != Start::Start_PretripStart;
@@ -77,6 +87,9 @@ base_query get_base_query(RoutingRequest const* routing_request,
   q.use_dest_metas_ = routing_request->use_dest_metas();
 
   q.use_start_footpaths_ = routing_request->use_start_footpaths();
+
+  q.criteria_config_ =
+      get_criteria_config_from_search_type(routing_request->search_type());
 
   return q;
 }

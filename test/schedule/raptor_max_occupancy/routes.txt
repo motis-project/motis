@@ -1,0 +1,12 @@
+﻿route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
+"TC1","1","TC 1","Test Case 1",,1
+"TC2","1","TC 2","Test Case 2",,1
+"TC3-1","1","TC 3-1","Test Case 3 R1",,1
+"TC3-2","1","TC 3-2","Test Case 3 R2",,1
+"TC3-3","1","TC 3-3","Test Case 3 R3",,1
+"TC4-1","1","TC 4-1","Test Case 4 R1",,1
+"TC4-2","1","TC 4-2","Test Case 4 R2",,1
+"TC4-3","1","TC 4-3","Test Case 4 R3",,1
+"TC5","1","TC 5","Test Case 5",,1
+"TC6","1","TC 6","Test Case 6",,1
+"TC7","1","TC 7","Test Case 7",,1

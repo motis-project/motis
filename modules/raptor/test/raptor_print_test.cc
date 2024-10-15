@@ -34,7 +34,8 @@ TEST(print_raptor_itest_results, just_print) {
   auto const sched = loader::load_schedule(dataset_opt);
   auto const [meta_info, raptor_timetable] = get_raptor_timetable(*sched);
 
-  raptor_result result(raptor_timetable->stop_count());
+  raptor_result result(raptor_timetable->stop_count(),
+                       raptor_criteria_config::Default);
   print_station_arrivals(0, result);
   print_route_arrivals(0, *raptor_timetable, result[0]);
   ASSERT_TRUE(is_reset(result));

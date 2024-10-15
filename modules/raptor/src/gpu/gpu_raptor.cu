@@ -1,5 +1,9 @@
 #include "motis/raptor/gpu/gpu_raptor.cuh"
 
+#include "motis/raptor/gpu/gpu_mark_store.cuh"
+#include "motis/raptor/gpu/raptor_utils.cuh"
+#include "motis/raptor/gpu/update_arrivals.cuh"
+
 #include "cooperative_groups.h"
 #include "cuda_profiler_api.h"
 
@@ -11,121 +15,6 @@ using namespace cooperative_groups;
 // no leader is a zero ballot vote (all 0) minus 1 => with underflow all 1's
 constexpr unsigned int FULL_MASK = 0xFFFFffff;
 constexpr unsigned int NO_LEADER = FULL_MASK;
-
-__device__ __forceinline__ unsigned int get_block_thread_id() {
-  return threadIdx.x + (blockDim.x * threadIdx.y);
-}
-
-__device__ __forceinline__ unsigned int get_global_thread_id() {
-  return get_block_thread_id() + (blockDim.x * blockDim.y * blockIdx.x);
-}
-
-__device__ __forceinline__ unsigned int get_block_stride() {
-  return blockDim.x * blockDim.y;
-}
-
-__device__ __forceinline__ unsigned int get_global_stride() {
-  return get_block_stride() * gridDim.x * gridDim.y;
-}
-
-__device__ void mark(unsigned int* store, unsigned int const idx) {
-  unsigned int const store_idx = (idx >> 5);  // divide by 32
-  unsigned int const mask = 1 << (idx % 32);
-  atomicOr(&store[store_idx], mask);
-}
-
-__device__ bool marked(unsigned int const* const store, unsigned int idx) {
-  unsigned int const store_idx = (idx >> 5);  // divide by 32
-  unsigned int const val = store[store_idx];
-  unsigned int const mask = 1 << (idx % 32);
-  return (bool)(val & mask);
-}
-
-__device__ void reset_store(unsigned int* store, int const store_size) {
-  auto const t_id = get_global_thread_id();
-  auto const stride = get_global_stride();
-
-  for (auto idx = t_id; idx < store_size; idx += stride) {
-    store[idx] = 0;
-  }
-}
-
-__device__ void convert_station_to_route_marks(unsigned int* station_marks,
-                                               unsigned int* route_marks,
-                                               bool* any_station_marked,
-                                               device_gpu_timetable const& tt) {
-  auto const global_t_id = get_global_thread_id();
-  auto const global_stride = get_global_stride();
-  for (auto idx = global_t_id; idx < tt.stop_count_; idx += global_stride) {
-    if (marked(station_marks, idx)) {
-      if (!*any_station_marked) {
-        *any_station_marked = true;
-      }
-      auto const stop = tt.stops_[idx];
-      for (auto sri = stop.index_to_stop_routes_;
-           sri < stop.index_to_stop_routes_ + stop.route_count_; ++sri) {
-        mark(route_marks, tt.stop_routes_[sri]);
-      }
-    }
-  }
-}
-
-__device__ bool update_arrival(time* const base, stop_id const s_id,
-                               time const val) {
-
-#if __CUDA_ARCH__ >= 700
-
-  auto old_value = base[s_id];
-  time assumed;
-
-  do {
-    if (old_value <= val) {
-      return false;
-    }
-
-    assumed = old_value;
-
-    old_value = atomicCAS(&base[s_id], assumed, val);
-  } while (assumed != old_value);
-
-  return true;
-
-#else
-
-  // we have a 16-bit time value array, but only 32-bit atomic operations
-  // therefore every two 16-bit time values are read as one 32-bit time value
-  // then they are the corresponding part is updated and stored if a better
-  // time value was found while the remaining 16 bit value part remains
-  // unchanged
-
-  time* const arr_address = &base[s_id];
-  unsigned int* base_address = (unsigned int*)((size_t)arr_address & ~2);
-  unsigned int old_value, assumed, new_value, compare_val;
-
-  old_value = *base_address;
-
-  do {
-    assumed = old_value;
-
-    if ((size_t)arr_address & 2) {
-      compare_val = (0x0000FFFF & assumed) ^ (((unsigned int)val) << 16);
-    } else {
-      compare_val = (0xFFFF0000 & assumed) ^ (unsigned int)val;
-    }
-
-    new_value = __vminu2(old_value, compare_val);
-
-    if (new_value == old_value) {
-      return false;
-    }
-
-    old_value = atomicCAS(base_address, assumed, new_value);
-  } while (assumed != old_value);
-
-  return true;
-
-#endif
-}
 
 __device__ void copy_marked_arrivals(time* const to, time const* const from,
                                      unsigned int* station_marks,
@@ -155,7 +44,7 @@ __device__ void copy_and_min_arrivals(time* const to, time* const from,
 __device__ void update_route_larger32(gpu_route const& route,
                                       time const* const prev_arrivals,
                                       time* const arrivals,
-                                      unsigned int* station_marks,
+                                      uint32_t* station_marks,
                                       device_gpu_timetable const& tt) {
   auto const t_id = threadIdx.x;
 
@@ -163,6 +52,7 @@ __device__ void update_route_larger32(gpu_route const& route,
   time prev_arrival = invalid<time>;
   time stop_arrival = invalid<time>;
   time stop_departure = invalid<time>;
+  time transfer_time = invalid<time>;
 
   int active_stop_count = route.stop_count_;
 
@@ -201,13 +91,14 @@ __device__ void update_route_larger32(gpu_route const& route,
         auto const st_idx = route.index_to_stop_times_ +
                             (trip_offset * route.stop_count_) + stage_id;
         stop_departure = tt.stop_departures_[st_idx];
+        transfer_time = tt.transfer_times_[stop_id_t];
       }
 
       // get the current stage leader
       unsigned int ballot = __ballot_sync(
           FULL_MASK, (stage_id < active_stop_count) && valid(prev_arrival) &&
                          valid(stop_departure) &&
-                         (prev_arrival <= stop_departure));
+                         (prev_arrival + transfer_time <= stop_departure));
       leader = __ffs(ballot) - 1;
 
       if (leader != NO_LEADER) {
@@ -262,7 +153,7 @@ __device__ void update_route_larger32(gpu_route const& route,
 __device__ void update_route_smaller32(gpu_route const route,
                                        time const* const prev_arrivals,
                                        time* const arrivals,
-                                       unsigned int* station_marks,
+                                       uint32_t* station_marks,
                                        device_gpu_timetable const& tt) {
   auto const t_id = threadIdx.x;
 
@@ -270,6 +161,7 @@ __device__ void update_route_smaller32(gpu_route const route,
   time prev_arrival = invalid<time>;
   time stop_arrival = invalid<time>;
   time stop_departure = invalid<time>;
+  time transfer_time = invalid<time>;
 
   unsigned leader = route.stop_count_;
   unsigned int active_stop_count = route.stop_count_;
@@ -290,13 +182,14 @@ __device__ void update_route_smaller32(gpu_route const route,
       auto const st_idx =
           route.index_to_stop_times_ + (trip_offset * route.stop_count_) + t_id;
       stop_departure = tt.stop_departures_[st_idx];
+      transfer_time = tt.transfer_times_[stop_id_t];
     }
 
     // elect leader
     unsigned ballot = __ballot_sync(
         FULL_MASK, (t_id < active_stop_count) && valid(prev_arrival) &&
                        valid(stop_departure) &&
-                       (prev_arrival <= stop_departure));
+                       (prev_arrival + transfer_time <= stop_departure));
     leader = __ffs(ballot) - 1;
 
     if (t_id > leader && t_id < active_stop_count) {
@@ -319,7 +212,7 @@ __device__ void update_route_smaller32(gpu_route const route,
 
 __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
                                              time* const write_arrivals,
-                                             unsigned int* station_marks,
+                                             uint32_t* station_marks,
                                              device_gpu_timetable const& tt) {
 
   auto const global_stride = get_global_stride();
@@ -341,27 +234,9 @@ __device__ void update_footpaths_dev_scratch(time const* const read_arrivals,
 }
 
 __device__ void update_routes_dev(time const* const prev_arrivals,
-                                  time* const arrivals,
-                                  unsigned int* station_marks,
-                                  unsigned int* route_marks,
-                                  bool* any_station_marked,
+                                  time* const arrivals, uint32_t* station_marks,
+                                  uint32_t* route_marks,
                                   device_gpu_timetable const& tt) {
-
-  if (get_global_thread_id() == 0) {
-    *any_station_marked = false;
-  }
-
-  convert_station_to_route_marks(station_marks, route_marks, any_station_marked,
-                                 tt);
-  this_grid().sync();
-
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(station_marks, station_store_size);
-  this_grid().sync();
-
-  if (!*any_station_marked) {
-    return;
-  }
 
   auto const stride = blockDim.y * gridDim.x;
   auto const start_r_id = threadIdx.y + (blockDim.y * blockIdx.x);
@@ -389,25 +264,18 @@ __device__ void init_arrivals_dev(base_query const& query,
                                   device_gpu_timetable const& tt) {
   auto const t_id = get_global_thread_id();
 
-  auto const station_store_size = (tt.stop_count_ / 32) + 1;
-  reset_store(device_mem.station_marks_, station_store_size);
-
-  auto const route_store_size = (tt.route_count_ / 32) + 1;
-  reset_store(device_mem.route_marks_, route_store_size);
+  auto const start_time =
+      query.source_time_begin_ - tt.transfer_times_[query.source_];
 
   if (t_id == 0) {
-    *device_mem.any_station_marked_ = false;
-  }
-
-  if (t_id == 0) {
-    device_mem.result_[0][query.source_] = query.source_time_begin_;
+    device_mem.result_[0][query.source_] = start_time;
     mark(device_mem.station_marks_, query.source_);
   }
 
   if (t_id < device_mem.additional_start_count_) {
     auto const& add_start = device_mem.additional_starts_[t_id];
 
-    auto const add_start_time = query.source_time_begin_ + add_start.offset_;
+    auto const add_start_time = start_time + add_start.offset_;
     bool updated =
         update_arrival(device_mem.result_[0], add_start.s_id_, add_start_time);
 
@@ -418,7 +286,7 @@ __device__ void init_arrivals_dev(base_query const& query,
 }
 
 __device__ void update_footpaths_dev(device_memory const& device_mem,
-                                     raptor_round round_k,
+                                     raptor_round const round_k,
                                      device_gpu_timetable const& tt) {
   time* const arrivals = device_mem.result_[round_k];
 
@@ -450,12 +318,29 @@ __global__ void gpu_raptor_kernel(base_query const query,
   this_grid().sync();
 
   for (raptor_round round_k = 1; round_k < max_raptor_round; ++round_k) {
+    if (get_global_thread_id() == 0) {
+      *(device_mem.any_station_marked_) = false;
+    }
+    this_grid().sync();
+
+    convert_station_to_route_marks(device_mem.station_marks_,
+                                   device_mem.route_marks_,
+                                   device_mem.any_station_marked_, tt);
+    this_grid().sync();
+
+    auto const station_store_size = (tt.stop_count_ / 32) + 1;
+    reset_store(device_mem.station_marks_, station_store_size);
+    this_grid().sync();
+
+    if (!(*device_mem.any_station_marked_)) {
+      return;
+    }
+
     time const* const prev_arrivals = device_mem.result_[round_k - 1];
     time* const arrivals = device_mem.result_[round_k];
 
     update_routes_dev(prev_arrivals, arrivals, device_mem.station_marks_,
-                      device_mem.route_marks_, device_mem.any_station_marked_,
-                      tt);
+                      device_mem.route_marks_, tt);
     this_grid().sync();
 
     update_footpaths_dev(device_mem, round_k, tt);
@@ -463,11 +348,35 @@ __global__ void gpu_raptor_kernel(base_query const query,
   }
 }
 
+std::pair<dim3, dim3> get_gpu_raptor_launch_parameters(
+    device_id const device_id, int32_t const concurrency_per_device) {
+  cudaSetDevice(device_id);
+  cuda_check();
+
+  cudaDeviceProp prop{};
+  cudaGetDeviceProperties(&prop, device_id);
+  cuda_check();
+
+  utl::verify(
+      prop.warpSize == 32,
+      "Warp Size must be 32! Otherwise the gRAPTOR algorithm will not work.");
+
+  int min_grid_size = 0;
+  int block_size = 0;
+  cudaOccupancyMaxPotentialBlockSize(&min_grid_size, &block_size,
+                                     gpu_raptor_kernel, 0, 0);
+
+  dim3 threads_per_block(prop.warpSize, block_size / prop.warpSize, 1);
+  dim3 grid(min_grid_size / concurrency_per_device, 1, 1);
+
+  return {threads_per_block, grid};
+}
+
 void invoke_gpu_raptor(d_query const& dq) {
-  void* kernel_args[] = {(void*)&dq, (void*)&(dq.mem_->device_),
+  void* kernel_args[] = {(void*)&dq, (void*)(dq.mem_->active_device_),
                          (void*)&(dq.tt_)};
   launch_kernel(gpu_raptor_kernel, kernel_args, dq.mem_->context_,
-                dq.mem_->context_.proc_stream_);
+                dq.mem_->context_.proc_stream_, dq.criteria_config_);
   cuda_check();
 
   cuda_sync_stream(dq.mem_->context_.proc_stream_);
@@ -475,6 +384,7 @@ void invoke_gpu_raptor(d_query const& dq) {
 
   fetch_arrivals_async(dq, dq.mem_->context_.transfer_stream_);
   cuda_check();
+
   cuda_sync_stream(dq.mem_->context_.transfer_stream_);
   cuda_check();
 }
