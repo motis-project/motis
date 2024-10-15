@@ -178,8 +178,8 @@ export type StopTime = {
     agencyId: string;
     agencyName: string;
     agencyUrl: string;
-    routeColor: string;
-    routeTextColor: string;
+    routeColor?: string;
+    routeTextColor?: string;
     routeType: string;
     routeId: string;
     tripId: string;
@@ -271,7 +271,7 @@ export type TripInfo = {
  */
 export type TripSegment = {
     trips: Array<TripInfo>;
-    routeColor: string;
+    routeColor?: string;
     /**
      * Transport mode for this leg
      */

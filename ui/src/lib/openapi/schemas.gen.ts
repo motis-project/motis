@@ -153,7 +153,7 @@ export const ModeSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['mode', 'time', 'delay', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'routeColor', 'routeTextColor', 'routeType', 'routeId', 'tripId', 'serviceDate', 'routeShortName', 'source'],
+    required: ['mode', 'time', 'delay', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'routeType', 'routeId', 'tripId', 'serviceDate', 'routeShortName', 'source'],
     properties: {
         mode: {
             '$ref': '#/components/schemas/Mode',
@@ -311,7 +311,7 @@ export const TripInfoSchema = {
 export const TripSegmentSchema = {
     description: 'trip segment between two stops to show a trip on a map',
     type: 'object',
-    required: ['trips', 'routeColor', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime', 'polyline'],
+    required: ['trips', 'mode', 'distance', 'from', 'to', 'departure', 'arrival', 'departureDelay', 'arrivalDelay', 'realTime', 'polyline'],
     properties: {
         trips: {
             type: 'array',
