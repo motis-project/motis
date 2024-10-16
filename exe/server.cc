@@ -1,14 +1,15 @@
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
+#include "boost/asio/signal_set.hpp"
+#include "boost/beast/core/string.hpp"
 #include "boost/program_options.hpp"
 
-#include "net/run.h"
-#include "net/stop_handler.h"
-#include "net/web_server/query_router.h"
-#include "net/web_server/web_server.h"
+#include "App.h"
 
 #include "utl/init_from.h"
+
+// #include "ui_files_res.h"
 
 #include "motis/config.h"
 #include "motis/cron.h"
@@ -30,6 +31,7 @@
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
+#include "motis/http_server.h"
 #include "motis/rt_update.h"
 
 namespace fs = std::filesystem;
@@ -38,57 +40,55 @@ namespace asio = boost::asio;
 
 namespace motis {
 
-template <typename T, typename From>
-void GET(auto&& r, std::string target, From& from) {
-  if (auto const x = utl::init_from<T>(from); x.has_value()) {
-    r.get(std::move(target), std::move(*x));
-  }
+auto run_ioc(auto& ioc) {
+  return [&]() {
+    while (true) {
+      try {
+        ioc.run();
+        break;
+      } catch (std::exception const&) {
+        continue;
+      }
+    }
+  };
 }
 
-template <typename T, typename From>
-void POST(auto&& r, std::string target, From& from) {
+template <typename T>
+void GET(auto& app, auto& executor, std::string target, auto&& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
-    r.post(std::move(target), std::move(*x));
+    handle_get(app, executor, target, std::move(*x));
   }
 }
 
 int server(data d, config const& c) {
-  auto ioc = asio::io_context{};
   auto workers = asio::io_context{};
-  auto s = net::web_server{ioc};
-  auto qr = net::query_router{net::asio_exec(ioc, workers)};
+  auto app = uWS::App{};
 
-  POST<ep::matches>(qr, "/api/matches", d);
-  POST<ep::elevators>(qr, "/api/elevators", d);
-  POST<ep::osr_routing>(qr, "/api/route", d);
-  POST<ep::platforms>(qr, "/api/platforms", d);
-  POST<ep::graph>(qr, "/api/graph", d);
-  POST<ep::update_elevator>(qr, "/api/update_elevator", d);
-  GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
-  GET<ep::levels>(qr, "/api/v1/map/levels", d);
-  GET<ep::initial>(qr, "/api/v1/map/initial", d);
-  GET<ep::reverse_geocode>(qr, "/api/v1/reverse-geocode", d);
-  GET<ep::geocode>(qr, "/api/v1/geocode", d);
-  GET<ep::routing>(qr, "/api/v1/plan", d);
-  GET<ep::stop_times>(qr, "/api/v1/stoptimes", d);
-  GET<ep::trip>(qr, "/api/v1/trip", d);
-  GET<ep::trips>(qr, "/api/v1/map/trips", d);
-  GET<ep::stops>(qr, "/api/v1/map/stops", d);
-  GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
+  GET<ep::initial>(app, workers, "/api/v1/map/initial", d);
+  GET<ep::footpaths>(app, workers, "/api/debug/footpaths", d);
+  GET<ep::levels>(app, workers, "/api/v1/map/levels", d);
+  GET<ep::reverse_geocode>(app, workers, "/api/v1/reverse-geocode", d);
+  GET<ep::geocode>(app, workers, "/api/v1/geocode", d);
+  GET<ep::routing>(app, workers, "/api/v1/plan", d);
+  GET<ep::stop_times>(app, workers, "/api/v1/stoptimes", d);
+  GET<ep::trip>(app, workers, "/api/v1/trip", d);
+  GET<ep::trips>(app, workers, "/api/v1/map/trips", d);
+  GET<ep::stops>(app, workers, "/api/v1/map/stops", d);
+  GET<ep::one_to_many>(app, workers, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
-    qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
+    handle_get_generic_response(app, workers, "/tiles/:z/:x/:y.mvt",
+                                ep::tiles{*d.tiles_});
   }
 
-  auto const server_config = c.server_.value_or(config::server{});
-  qr.serve_files(server_config.web_folder_);
-  qr.enable_cors();
-  s.on_http_request(std::move(qr));
+  app.options("/*", [](auto* res, auto*) { send_response(res, {}); });
+  app.get("/*", [](auto* res, auto* req) {
+    std::cout << "not found: " << req->getFullUrl() << std::endl;
+    send_response(res, {});
+  });
 
-  auto ec = boost::system::error_code{};
-  s.init(server_config.host_, server_config.port_, ec);
-  s.run();
+  auto const server_config = c.server_.value_or(config::server{});
 
   auto rt_update_thread = std::unique_ptr<std::thread>{};
   auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
@@ -99,34 +99,46 @@ int server(data d, config const& c) {
            asio::co_spawn(*rt_update_ioc, rt_update(c, *d.tt_, *d.tags_, d.rt_),
                           asio::detached);
          });
-    rt_update_thread = std::make_unique<std::thread>(net::run(*rt_update_ioc));
-  }
-
-  if (ec) {
-    std::cerr << "error: " << ec << "\n";
-    return 1;
+    rt_update_thread = std::make_unique<std::thread>(run_ioc(*rt_update_ioc));
   }
 
   auto const work_guard = asio::make_work_guard(workers);
   auto threads = std::vector<std::thread>(
       static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
   for (auto& t : threads) {
-    t = std::thread(net::run(workers));
+    t = std::thread(run_ioc(workers));
   }
 
-  auto const stop = net::stop_handler(ioc, [&]() {
-    fmt::println("shutdown");
-    s.stop();
-    ioc.stop();
+  auto listen_socket = static_cast<us_listen_socket_t*>(nullptr);
 
+  auto signals = boost::asio::signal_set{workers, SIGINT, SIGTERM};
+  signals.async_wait([&](boost::system::error_code const&, int) {
+    std::cout << "shutting down..." << std::endl;
+
+    if (listen_socket != nullptr) {
+      us_listen_socket_close(0, listen_socket);
+    }
+    workers.stop();
     if (rt_update_ioc != nullptr) {
       rt_update_ioc->stop();
     }
   });
 
-  fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
-               server_config.host_, server_config.port_, server_config.port_);
-  net::run(ioc)();
+  app.listen(server_config.port_,
+             [&](us_listen_socket_t* s) {
+               if (s != nullptr) {
+                 listen_socket = s;
+                 fmt::println(
+                     "listening on {}:{}\nlocal link: http://localhost:{}",
+                     server_config.host_, server_config.port_,
+                     server_config.port_);
+               } else {
+                 fmt::println("no listen socket - something went wrong");
+               }
+             })
+      .run();
+
+  std::cout << "shutdown\n";
 
   workers.stop();
   for (auto& t : threads) {

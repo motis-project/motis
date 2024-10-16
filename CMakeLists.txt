@@ -121,6 +121,17 @@ target_link_libraries(motislib
 )
 
 
+# --- UI ---
+#add_custom_target(motis-web-ui
+#        COMMAND npm i -f && npm run build
+#        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+#        VERBATIM
+#)
+#file(GLOB_RECURSE ui-files "${CMAKE_CURRENT_SOURCE_DIR}/ui/build")
+#create_resource("${CMAKE_CURRENT_SOURCE_DIR}/client/" "${ui-files}" ui_files_res)
+#add_dependencies(ui_files_res motis-web-ui)
+
+
 # --- EXE ---
 execute_process(
     COMMAND git describe --always --tags --dirty=-dirty
@@ -135,15 +146,12 @@ target_compile_options(motis PRIVATE ${motis-compile-options})
 set_source_files_properties(exe/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VERSION="${motis-git-tag}")
 target_link_libraries(motis
     motislib
-    web-server
-    adr
-    fmt::fmt
-    rtree
-    geo
-    cista
+    uWebSockets
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res
+#    ui_files_res-res
+#    ui_files_res
 )
 
 
@@ -165,6 +173,7 @@ set_property(
     TARGET motis tiles tiles-import-library
     APPEND PROPERTY COMPILE_DEFINITIONS TILES_GLOBAL_PROGRESS_TRACKER=1)
 
+
 # --- MIMALLOC ---
 if (MOTIS_MIMALLOC)
     target_link_libraries(motis ${motis-mimalloc-lib})
@@ -185,11 +194,3 @@ if (MOTIS_MIMALLOC)
         )
     endif()
 endif()
-
-
-# --- UI ---
-add_custom_target(motis-web-ui
-        COMMAND npm i -f && npm run build
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
-        VERBATIM
-)

@@ -215,7 +215,8 @@ config config::read_legacy(fs::path const& p) {
     unsigned num_threads_{std::thread::hardware_concurrency()};
 
     // server
-    std::string host_{"0.0.0.0"}, port_{"8080"};
+    std::string host_{"0.0.0.0"};
+    int port_{8080};
     std::string static_path_;
 
     // import
