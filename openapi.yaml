@@ -824,7 +824,6 @@ components:
           - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
           - `LONG_DISTANCE`: long distance inter city trains
           - `NIGHT_RAIL`: long distance night trains
-          - `COACH`: long distance buses
           - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
           - `REGIONAL_RAIL`: regional train
       type: string
