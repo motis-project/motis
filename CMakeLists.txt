@@ -122,11 +122,11 @@ target_link_libraries(motislib
 
 
 # --- UI ---
-#add_custom_target(motis-web-ui
-#        COMMAND npm i -f && npm run build
-#        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
-#        VERBATIM
-#)
+add_custom_target(motis-web-ui
+        COMMAND npm i -f && npm run build
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+        VERBATIM
+)
 #file(GLOB_RECURSE ui-files "${CMAKE_CURRENT_SOURCE_DIR}/ui/build")
 #create_resource("${CMAKE_CURRENT_SOURCE_DIR}/client/" "${ui-files}" ui_files_res)
 #add_dependencies(ui_files_res motis-web-ui)

@@ -49,4 +49,4 @@
 [uWebSockets]
   url=git@github.com:triptix-tech/uWebSockets.git
   branch=master
-  commit=3d59b9478248ce3089f051c8c4179f9054adad0d
+  commit=2a589f51f347a890ff7432ea537795c8ec8b80cc
