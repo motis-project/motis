@@ -61,6 +61,9 @@ void GET(auto& app, std::string target, auto&& from) {
 }
 
 int server(data d, config const& c) {
+  auto const server_config = c.server_.value_or(config::server{});
+
+  auto sockets = std::vector<us_listen_socket_t*>{};
   auto const init = [&]() {
     auto app = uWS::App{};
     GET<ep::initial>(app, "/api/v1/map/initial", d);
@@ -86,10 +89,19 @@ int server(data d, config const& c) {
       std::cout << "not found: " << req->getFullUrl() << std::endl;
       send_response(res, {});
     });
+    app.listen(
+        server_config.host_, server_config.port_, [&](us_listen_socket_t* s) {
+          if (s != nullptr) {
+            sockets.emplace_back(s);
+            fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
+                         server_config.host_, server_config.port_,
+                         server_config.port_);
+          } else {
+            fmt::println("no listen socket - something went wrong");
+          }
+        });
     return app;
   };
-
-  auto const server_config = c.server_.value_or(config::server{});
 
   auto rt_update_thread = std::unique_ptr<std::thread>{};
   auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
@@ -103,34 +115,7 @@ int server(data d, config const& c) {
     rt_update_thread = std::make_unique<std::thread>(run_ioc(*rt_update_ioc));
   }
 
-  auto listen_socket = static_cast<us_listen_socket_t*>(nullptr);
-
-  //  auto signals = boost::asio::signal_set{workers, SIGINT, SIGTERM};
-  //  signals.async_wait([&](boost::system::error_code const&, int) {
-  //    std::cout << "shutting down..." << std::endl;
-  //
-  //    if (listen_socket != nullptr) {
-  //      us_listen_socket_close(0, listen_socket);
-  //    }
-  //    workers.stop();
-  //    if (rt_update_ioc != nullptr) {
-  //      rt_update_ioc->stop();
-  //    }
-  //  });
-
-  app.listen(server_config.port_,
-             [&](us_listen_socket_t* s) {
-               if (s != nullptr) {
-                 listen_socket = s;
-                 fmt::println(
-                     "listening on {}:{}\nlocal link: http://localhost:{}",
-                     server_config.host_, server_config.port_,
-                     server_config.port_);
-               } else {
-                 fmt::println("no listen socket - something went wrong");
-               }
-             })
-      .run();
+  local_cluster<uWS::App>{init};
 
   std::cout << "shutdown\n";
 
