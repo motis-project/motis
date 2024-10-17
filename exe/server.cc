@@ -54,39 +54,40 @@ auto run_ioc(auto& ioc) {
 }
 
 template <typename T>
-void GET(auto& app, auto& executor, std::string target, auto&& from) {
+void GET(auto& app, std::string target, auto&& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
-    handle_get(app, executor, target, std::move(*x));
+    handle_get(app, target, std::move(*x));
   }
 }
 
 int server(data d, config const& c) {
-  auto workers = asio::io_context{};
-  auto app = uWS::App{};
+  auto const init = [&]() {
+    auto app = uWS::App{};
+    GET<ep::initial>(app, "/api/v1/map/initial", d);
+    GET<ep::footpaths>(app, "/api/debug/footpaths", d);
+    GET<ep::levels>(app, "/api/v1/map/levels", d);
+    GET<ep::reverse_geocode>(app, "/api/v1/reverse-geocode", d);
+    GET<ep::geocode>(app, "/api/v1/geocode", d);
+    GET<ep::routing>(app, "/api/v1/plan", d);
+    GET<ep::stop_times>(app, "/api/v1/stoptimes", d);
+    GET<ep::trip>(app, "/api/v1/trip", d);
+    GET<ep::trips>(app, "/api/v1/map/trips", d);
+    GET<ep::stops>(app, "/api/v1/map/stops", d);
+    GET<ep::one_to_many>(app, "/api/v1/one-to-many", d);
 
-  GET<ep::initial>(app, workers, "/api/v1/map/initial", d);
-  GET<ep::footpaths>(app, workers, "/api/debug/footpaths", d);
-  GET<ep::levels>(app, workers, "/api/v1/map/levels", d);
-  GET<ep::reverse_geocode>(app, workers, "/api/v1/reverse-geocode", d);
-  GET<ep::geocode>(app, workers, "/api/v1/geocode", d);
-  GET<ep::routing>(app, workers, "/api/v1/plan", d);
-  GET<ep::stop_times>(app, workers, "/api/v1/stoptimes", d);
-  GET<ep::trip>(app, workers, "/api/v1/trip", d);
-  GET<ep::trips>(app, workers, "/api/v1/map/trips", d);
-  GET<ep::stops>(app, workers, "/api/v1/map/stops", d);
-  GET<ep::one_to_many>(app, workers, "/api/v1/one-to-many", d);
+    if (c.tiles_) {
+      utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
+      handle_get_generic_response(app, "/tiles/:z/:x/:y.mvt",
+                                  ep::tiles{*d.tiles_});
+    }
 
-  if (c.tiles_) {
-    utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
-    handle_get_generic_response(app, workers, "/tiles/:z/:x/:y.mvt",
-                                ep::tiles{*d.tiles_});
-  }
-
-  app.options("/*", [](auto* res, auto*) { send_response(res, {}); });
-  app.get("/*", [](auto* res, auto* req) {
-    std::cout << "not found: " << req->getFullUrl() << std::endl;
-    send_response(res, {});
-  });
+    app.options("/*", [](auto* res, auto*) { send_response(res, {}); });
+    app.get("/*", [](auto* res, auto* req) {
+      std::cout << "not found: " << req->getFullUrl() << std::endl;
+      send_response(res, {});
+    });
+    return app;
+  };
 
   auto const server_config = c.server_.value_or(config::server{});
 
@@ -102,27 +103,20 @@ int server(data d, config const& c) {
     rt_update_thread = std::make_unique<std::thread>(run_ioc(*rt_update_ioc));
   }
 
-  auto const work_guard = asio::make_work_guard(workers);
-  auto threads = std::vector<std::thread>(
-      static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
-  for (auto& t : threads) {
-    t = std::thread(run_ioc(workers));
-  }
-
   auto listen_socket = static_cast<us_listen_socket_t*>(nullptr);
 
-  auto signals = boost::asio::signal_set{workers, SIGINT, SIGTERM};
-  signals.async_wait([&](boost::system::error_code const&, int) {
-    std::cout << "shutting down..." << std::endl;
-
-    if (listen_socket != nullptr) {
-      us_listen_socket_close(0, listen_socket);
-    }
-    workers.stop();
-    if (rt_update_ioc != nullptr) {
-      rt_update_ioc->stop();
-    }
-  });
+  //  auto signals = boost::asio::signal_set{workers, SIGINT, SIGTERM};
+  //  signals.async_wait([&](boost::system::error_code const&, int) {
+  //    std::cout << "shutting down..." << std::endl;
+  //
+  //    if (listen_socket != nullptr) {
+  //      us_listen_socket_close(0, listen_socket);
+  //    }
+  //    workers.stop();
+  //    if (rt_update_ioc != nullptr) {
+  //      rt_update_ioc->stop();
+  //    }
+  //  });
 
   app.listen(server_config.port_,
              [&](us_listen_socket_t* s) {
@@ -140,13 +134,13 @@ int server(data d, config const& c) {
 
   std::cout << "shutdown\n";
 
-  workers.stop();
-  for (auto& t : threads) {
-    t.join();
-  }
-  if (rt_update_thread != nullptr) {
-    rt_update_thread->join();
-  }
+  //  workers.stop();
+  //  for (auto& t : threads) {
+  //    t.join();
+  //  }
+  //  if (rt_update_thread != nullptr) {
+  //    rt_update_thread->join();
+  //  }
 
   return 0;
 }
