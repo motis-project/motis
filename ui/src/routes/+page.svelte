@@ -13,7 +13,8 @@
 		type PlanResponse,
 		trips,
 		trip,
-		type TripSegment
+		type TripSegment,
+		type Match
 	} from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
@@ -40,7 +41,7 @@
 	import getBearing from '@turf/rhumb-bearing';
 	import polyline from 'polyline';
 
-	const urlParams = browser && new URLSearchParams(window.location.search);
+	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 
@@ -69,10 +70,31 @@
 		});
 	});
 
+	let fromParam: Match | undefined = undefined;
+	let toParam: Match | undefined = undefined;
+	if (browser && urlParams && urlParams.has('from') && urlParams.has('to')) {
+		fromParam = JSON.parse(urlParams.get('from') ?? '') ?? {};
+		toParam = JSON.parse(urlParams.get('to') ?? '') ?? {};
+	}
+
+	let fromMatch = {
+		match: fromParam
+	};
+	let toMatch = {
+		match: toParam
+	};
+
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
-	let from = $state<Location>({ label: '', value: {} });
-	let to = $state<Location>({ label: '', value: {} });
+	let from = $state<Location>({
+		label: fromParam ? fromParam['name'] : '',
+		value: fromParam ? fromMatch : {}
+	});
+
+	let to = $state<Location>({
+		label: toParam ? toParam['name'] : '',
+		value: toParam ? toMatch : {}
+	});
 	let dateTime = $state<Date>(new Date());
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
