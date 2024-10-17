@@ -30,6 +30,7 @@
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
+#include "motis/http_server.h"
 #include "motis/rt_update.h"
 
 namespace fs = std::filesystem;
@@ -52,7 +53,33 @@ void POST(auto&& r, std::string target, From& from) {
   }
 }
 
-int server(data d, config const& c) {
+int server(data, config const& c) {
+  auto const server_config = c.server_.value_or(config::server{});
+  auto workers = asio::io_context{};
+  auto const work_guard = asio::make_work_guard(workers);
+  auto threads = std::vector<std::thread>(
+      static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
+  for (auto& t : threads) {
+    t = std::thread(net::run(workers));
+  }
+  serve(server_config.host_, server_config.port_, server_config.web_folder_,
+        [&](http_req_t const& req, http_res_cb_t&& cb) {
+          workers.post([version = req.version(), keep_alive = req.keep_alive(),
+                        cb = std::move(cb)]() {
+            std::this_thread::sleep_for(std::chrono::seconds{60});
+            http_res_t res{boost::beast::http::status::not_found, version};
+            res.set(boost::beast::http::field::content_type, "text/html");
+            res.keep_alive(keep_alive);
+            res.body() = "The resource was not found.";
+            res.prepare_payload();
+            cb(std::move(res));
+          });
+        });
+  workers.stop();
+  for (auto& t : threads) {
+    t.join();
+  }
+  /*
   auto ioc = asio::io_context{};
   auto workers = asio::io_context{};
   auto s = net::web_server{ioc};
@@ -136,6 +163,8 @@ int server(data d, config const& c) {
     rt_update_thread->join();
   }
 
+  return 0;
+  */
   return 0;
 }
 
