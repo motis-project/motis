@@ -46,3 +46,7 @@
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
   commit=ca0013532a4c4012bf014f5f53ad3df11a873cfb
+[uWebSockets]
+  url=git@github.com:triptix-tech/uWebSockets.git
+  branch=master
+  commit=3a7d5db12234c17d874e2959d9c80236ffeac462

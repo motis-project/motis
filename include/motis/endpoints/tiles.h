@@ -1,13 +1,14 @@
 #pragma once
 
-#include "net/web_server/query_router.h"
+#include "boost/url/url_view.hpp"
 
 #include "motis/fwd.h"
+#include "motis/http_response.h"
 
 namespace motis::ep {
 
 struct tiles {
-  net::reply operator()(net::route_request const&, bool) const;
+  http_response operator()(boost::urls::url_view const&) const;
 
   tiles_data& tiles_data_;
 };
