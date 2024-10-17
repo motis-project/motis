@@ -889,7 +889,7 @@ components:
         delay:
           type: integer
           description: |
-            The offset from the scheduled departure time of the boarding stop in this leg.
+            The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
             Scheduled time of departure at boarding stop = startTime - departureDelay
         realTime:
           description: Whether there is real-time data about this leg
@@ -967,12 +967,12 @@ components:
         arrivalDelay:
           type: integer
           description: |
-            The offset from the scheduled arrival time of the boarding stop in this leg.
+            The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
             Scheduled time of arrival at boarding stop = endTime - arrivalDelay
         departureDelay:
           type: integer
           description: |
-            The offset from the scheduled departure time of the boarding stop in this leg.
+            The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
             Scheduled time of departure at boarding stop = startTime - departureDelay
         arrival:
           description: arrival time, format = unixtime in milliseconds
@@ -1045,18 +1045,18 @@ components:
         departureDelay:
           type: integer
           description: |
-            The offset from the scheduled departure time of the boarding stop in this leg.
+            The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
             Scheduled time of departure at boarding stop = startTime - departureDelay
         arrivalDelay:
           type: integer
           description: |
-            The offset from the scheduled arrival time of the boarding stop in this leg.
+            The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
             Scheduled time of arrival at boarding stop = endTime - arrivalDelay
         realTime:
           description: Whether there is real-time data about this leg
           type: boolean
         polyline:
-          description: Google polyline encoded coordinate sequence where the trip travels on this segment
+          description: Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
           type: string
 
     RelativeDirection:
@@ -1137,7 +1137,7 @@ components:
         - length
       properties:
         points:
-          description: The encoded points of the polyline.
+          description: The encoded points of the polyline using the Google polyline encoding with precision 7.
           type: string
         length:
           description: The number of points in the string
@@ -1196,12 +1196,12 @@ components:
         departureDelay:
           type: integer
           description: |
-            The offset from the scheduled departure time of the boarding stop in this leg.
+            The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
             Scheduled time of departure at boarding stop = startTime - departureDelay
         arrivalDelay:
           type: integer
           description: |
-            The offset from the scheduled arrival time of the boarding stop in this leg.
+            The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
             Scheduled time of arrival at boarding stop = endTime - arrivalDelay
         realTime:
           description: Whether there is real-time data about this leg
