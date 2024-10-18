@@ -4,6 +4,7 @@
 #include <variant>
 
 #include "nigiri/routing/journey.h"
+#include "nigiri/rt/frun.h"
 #include "nigiri/types.h"
 
 #include "osr/location.h"
@@ -17,7 +18,17 @@
 
 namespace motis {
 
-using place_t = std::variant<osr::location, nigiri::location_idx_t>;
+struct tt_location {
+  explicit tt_location(nigiri::rt::frun::run_stop const& stop);
+  explicit tt_location(
+      nigiri::location_idx_t l,
+      nigiri::location_idx_t scheduled = nigiri::location_idx_t::invalid());
+
+  nigiri::location_idx_t l_;
+  nigiri::location_idx_t scheduled_;
+};
+
+using place_t = std::variant<osr::location, tt_location>;
 
 inline std::ostream& operator<<(std::ostream& out, place_t const p) {
   return std::visit([&](auto const l) -> std::ostream& { return out << l; }, p);

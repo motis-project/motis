@@ -50,7 +50,7 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 			return ['ubahn', '#3f51b5', 'white'];
 
 		case 'FERRY':
-			return ['ferry', '#00acc1', 'white'];
+			return ['ship', '#00acc1', 'white'];
 
 		case 'AIRPLANE':
 			return ['plane', '#90a4ae', 'white'];

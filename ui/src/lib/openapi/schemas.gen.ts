@@ -142,7 +142,6 @@ export const ModeSchema = {
   - \`HIGHSPEED_RAIL\`: long distance high speed trains (e.g. TGV)
   - \`LONG_DISTANCE\`: long distance inter city trains
   - \`NIGHT_RAIL\`: long distance night trains
-  - \`COACH\`: long distance buses
   - \`REGIONAL_FAST_RAIL\`: regional express routes that skip low traffic stops to be faster
   - \`REGIONAL_RAIL\`: regional train
 `,
@@ -150,26 +149,88 @@ export const ModeSchema = {
     enum: ['WALK', 'BIKE', 'CAR', 'BIKE_RENTAL', 'BIKE_TO_PARK', 'CAR_TO_PARK', 'CAR_HAILING', 'CAR_SHARING', 'CAR_PICKUP', 'CAR_RENTAL', 'FLEXIBLE', 'SCOOTER_RENTAL', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
 } as const;
 
-export const StopTimeSchema = {
-    description: 'departure or arrival event at a stop',
+export const VertexTypeSchema = {
+    type: 'string',
+    description: `- \`NORMAL\` - latitude / longitude coordinate or address
+- \`BIKESHARE\` - bike sharing station
+- \`BIKEPARK\` - bike parking
+- \`TRANSIT\` - transit stop
+`,
+    enum: ['NORMAL', 'BIKESHARE', 'BIKEPARK', 'TRANSIT']
+} as const;
+
+export const PlaceSchema = {
     type: 'object',
-    required: ['mode', 'time', 'delay', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'routeType', 'routeId', 'tripId', 'serviceDate', 'routeShortName', 'source'],
+    required: ['name', 'lat', 'lon', 'level'],
     properties: {
-        mode: {
-            '$ref': '#/components/schemas/Mode',
-            description: 'Transport mode for this leg'
+        name: {
+            description: 'name of the transit stop / PoI / address',
+            type: 'string'
         },
-        time: {
+        stopId: {
+            description: "The ID of the stop. This is often something that users don't care about.",
+            type: 'string'
+        },
+        lat: {
+            description: 'latitude',
+            type: 'number'
+        },
+        lon: {
+            description: 'longitude',
+            type: 'number'
+        },
+        level: {
+            description: 'level according to OpenStreetMap',
+            type: 'number'
+        },
+        arrivalDelay: {
             type: 'integer',
-            description: `The offset from the scheduled arrival time of the boarding stop in this leg.
+            description: `The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
 Scheduled time of arrival at boarding stop = endTime - arrivalDelay
 `
         },
-        delay: {
+        departureDelay: {
             type: 'integer',
-            description: `The offset from the scheduled departure time of the boarding stop in this leg.
+            description: `The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
 Scheduled time of departure at boarding stop = startTime - departureDelay
 `
+        },
+        arrival: {
+            description: 'arrival time, format = unixtime in milliseconds',
+            type: 'integer'
+        },
+        departure: {
+            description: 'departure time, format = unixtime in milliseconds',
+            type: 'integer'
+        },
+        scheduledTrack: {
+            description: 'scheduled track from the static schedule timetable dataset',
+            type: 'string'
+        },
+        track: {
+            description: `The current track/platform information, updated with real-time updates if available. 
+Can be missing if neither real-time updates nor the schedule timetable contains track information.
+`,
+            type: 'string'
+        },
+        vertexType: {
+            '$ref': '#/components/schemas/VertexType'
+        }
+    }
+} as const;
+
+export const StopTimeSchema = {
+    description: 'departure or arrival event at a stop',
+    type: 'object',
+    required: ['place', 'mode', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'routeType', 'routeId', 'tripId', 'serviceDate', 'routeShortName', 'source'],
+    properties: {
+        place: {
+            '$ref': '#/components/schemas/Place',
+            description: 'information about the stop place and time'
+        },
+        mode: {
+            '$ref': '#/components/schemas/Mode',
+            description: 'Transport mode for this leg'
         },
         realTime: {
             description: 'Whether there is real-time data about this leg',
@@ -220,70 +281,6 @@ For non-transit legs, null
         source: {
             description: 'Filename and line number where this trip is from',
             type: 'string'
-        }
-    }
-} as const;
-
-export const VertexTypeSchema = {
-    type: 'string',
-    description: `- \`NORMAL\` - latitude / longitude coordinate or address
-- \`BIKESHARE\` - bike sharing station
-- \`BIKEPARK\` - bike parking
-- \`TRANSIT\` - transit stop
-`,
-    enum: ['NORMAL', 'BIKESHARE', 'BIKEPARK', 'TRANSIT']
-} as const;
-
-export const PlaceSchema = {
-    type: 'object',
-    required: ['name', 'lat', 'lon', 'level'],
-    properties: {
-        name: {
-            description: 'name of the transit stop / PoI / address',
-            type: 'string'
-        },
-        stopId: {
-            description: "The ID of the stop. This is often something that users don't care about.",
-            type: 'string'
-        },
-        lat: {
-            description: 'latitude',
-            type: 'number'
-        },
-        lon: {
-            description: 'longitude',
-            type: 'number'
-        },
-        level: {
-            description: 'level according to OpenStreetMap',
-            type: 'number'
-        },
-        arrivalDelay: {
-            type: 'integer',
-            description: `The offset from the scheduled arrival time of the boarding stop in this leg.
-Scheduled time of arrival at boarding stop = endTime - arrivalDelay
-`
-        },
-        departureDelay: {
-            type: 'integer',
-            description: `The offset from the scheduled departure time of the boarding stop in this leg.
-Scheduled time of departure at boarding stop = startTime - departureDelay
-`
-        },
-        arrival: {
-            description: 'arrival time, format = unixtime in milliseconds',
-            type: 'integer'
-        },
-        departure: {
-            description: 'departure time, format = unixtime in milliseconds',
-            type: 'integer'
-        },
-        track: {
-            description: 'track/platform information, if available',
-            type: 'string'
-        },
-        vertexType: {
-            '$ref': '#/components/schemas/VertexType'
         }
     }
 } as const;
@@ -346,13 +343,13 @@ export const TripSegmentSchema = {
         },
         departureDelay: {
             type: 'integer',
-            description: `The offset from the scheduled departure time of the boarding stop in this leg.
+            description: `The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
 Scheduled time of departure at boarding stop = startTime - departureDelay
 `
         },
         arrivalDelay: {
             type: 'integer',
-            description: `The offset from the scheduled arrival time of the boarding stop in this leg.
+            description: `The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
 Scheduled time of arrival at boarding stop = endTime - arrivalDelay
 `
         },
@@ -361,7 +358,7 @@ Scheduled time of arrival at boarding stop = endTime - arrivalDelay
             type: 'boolean'
         },
         polyline: {
-            description: 'Google polyline encoded coordinate sequence where the trip travels on this segment',
+            description: 'Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.',
             type: 'string'
         }
     }
@@ -426,7 +423,7 @@ export const EncodedPolylineSchema = {
     required: ['points', 'length'],
     properties: {
         points: {
-            description: 'The encoded points of the polyline.',
+            description: 'The encoded points of the polyline using the Google polyline encoding with precision 7.',
             type: 'string'
         },
         length: {
@@ -486,13 +483,13 @@ export const LegSchema = {
         },
         departureDelay: {
             type: 'integer',
-            description: `The offset from the scheduled departure time of the boarding stop in this leg.
+            description: `The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
 Scheduled time of departure at boarding stop = startTime - departureDelay
 `
         },
         arrivalDelay: {
             type: 'integer',
-            description: `The offset from the scheduled arrival time of the boarding stop in this leg.
+            description: `The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
 Scheduled time of arrival at boarding stop = endTime - arrivalDelay
 `
         },

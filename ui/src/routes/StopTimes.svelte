@@ -71,13 +71,15 @@
 			{/if}
 
 			{#each r.stopTimes as t}
+				{@const time = arriveBy ? t.place.arrival! : t.place.departure!}
+				{@const delay = arriveBy ? t.place.arrivalDelay! : t.place.departureDelay!}
 				<Route
 					class="col-span-3 w-fit max-w-28 text-ellipsis overflow-hidden"
 					l={t}
 					{onClickTrip}
 				/>
-				<Time class="ml-1" rt={false} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
-				<Time class="ml-2" rt={true} isRealtime={t.realTime} timestamp={t.time} delay={t.delay} />
+				<Time class="ml-1" rt={false} isRealtime={t.realTime} timestamp={time} {delay} />
+				<Time class="ml-2" rt={true} isRealtime={t.realTime} timestamp={time} {delay} />
 				<div class="ml-4 col-span-5 flex items-center text-muted-foreground">
 					<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
 					<span class="ml-1 text-nowrap text-ellipsis overflow-hidden">{t.headsign}</span>

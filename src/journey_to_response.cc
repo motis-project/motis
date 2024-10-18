@@ -30,6 +30,15 @@ namespace n = nigiri;
 
 namespace motis {
 
+tt_location::tt_location(nigiri::rt::frun::run_stop const& stop)
+    : l_{stop.get_location_idx()},
+      scheduled_{stop.get_scheduled_location_idx()} {}
+
+tt_location::tt_location(nigiri::location_idx_t const l,
+                         nigiri::location_idx_t const scheduled)
+    : l_{l},
+      scheduled_{scheduled == n::location_idx_t::invalid() ? l : scheduled} {}
+
 api::Place to_place(osr::location const l, std::string_view name) {
   return {
       .name_ = std::string{name},
@@ -45,30 +54,40 @@ api::Place to_place(n::timetable const& tt,
                     place_t const start,
                     place_t const dest,
                     std::string_view name) {
+  auto const is_track = [&](n::location_idx_t const x) {
+    auto const type = tt.locations_.types_.at(x);
+    return (type == n::location_type::kGeneratedTrack ||
+            type == n::location_type::kTrack);
+  };
+
+  auto const get_track = [&](n::location_idx_t const x) {
+    auto const type = tt.locations_.types_.at(x);
+    auto const is_track = (type == n::location_type::kGeneratedTrack ||
+                           type == n::location_type::kTrack);
+    return is_track
+               ? std::optional{std::string{tt.locations_.names_.at(x).view()}}
+               : std::nullopt;
+  };
+
   return std::visit(
       utl::overloaded{
           [&](osr::location const& l) { return to_place(l, name); },
-          [&](n::location_idx_t const l) -> api::Place {
+          [&](tt_location const tt_l) -> api::Place {
+            auto const l = tt_l.l_;
             if (l == n::get_special_station(n::special_station::kStart)) {
               return to_place(std::get<osr::location>(start), "START");
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
               return to_place(std::get<osr::location>(dest), "END");
             } else {
               auto const pos = tt.locations_.coordinates_[l];
-              auto const type = tt.locations_.types_.at(l);
-              auto const is_track =
-                  (type == n::location_type::kGeneratedTrack ||
-                   type == n::location_type::kTrack);
-              auto const p = is_track ? tt.locations_.parents_.at(l) : l;
-              auto const track = is_track
-                                     ? std::optional{std::string{
-                                           tt.locations_.names_.at(l).view()}}
-                                     : std::nullopt;
+              auto const p =
+                  is_track(tt_l.l_) ? tt.locations_.parents_.at(l) : l;
               return {.name_ = std::string{tt.locations_.names_[p].view()},
                       .stopId_ = tags.id(tt, l),
                       .lat_ = pos.lat_,
                       .lon_ = pos.lng_,
-                      .track_ = track,
+                      .scheduledTrack_ = get_track(tt_l.scheduled_),
+                      .track_ = get_track(tt_l.l_),
                       .vertexType_ = api::VertexTypeEnum::NORMAL};
             }
           }},
@@ -184,9 +203,14 @@ api::Itinerary journey_to_response(
   for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
     auto const write_leg = [&](api::ModeEnum const mode) -> api::Leg& {
       auto& leg = itinerary.legs_.emplace_back();
+      auto const pred = itinerary.legs_.size() == 1U
+                            ? nullptr
+                            : &itinerary.legs_[itinerary.legs_.size() - 2U];
       leg.mode_ = mode;
-      leg.from_ = to_place(tt, tags, j_leg.from_, start, dest);
-      leg.to_ = to_place(tt, tags, j_leg.to_, start, dest);
+      leg.from_ = pred == nullptr ? to_place(tt, tags, tt_location{j_leg.from_},
+                                             start, dest)
+                                  : pred->to_;
+      leg.to_ = to_place(tt, tags, tt_location{j_leg.to_}, start, dest);
       leg.from_.departure_ = leg.startTime_ = to_ms(j_leg.dep_time_);
       leg.to_.arrival_ = leg.endTime_ = to_ms(j_leg.arr_time_);
       leg.duration_ = to_seconds(j_leg.arr_time_ - j_leg.dep_time_);
@@ -235,6 +259,11 @@ api::Itinerary journey_to_response(
               leg.to_.arrivalDelay_ = leg.arrivalDelay_ =
                   to_ms(fr[t.stop_range_.to_ - 1U].delay(n::event_type::kArr));
 
+              leg.from_ =
+                  to_place(tt, tags, tt_location{fr[t.stop_range_.from_]});
+              leg.to_ =
+                  to_place(tt, tags, tt_location{fr[t.stop_range_.to_ - 1U]});
+
               auto const first =
                   static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
               auto const last =
@@ -242,7 +271,7 @@ api::Itinerary journey_to_response(
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(tt, tags, stop.get_location_idx(), start, dest));
+                    to_place(tt, tags, tt_location{stop}, start, dest));
                 p.departure_ = to_ms(stop.time(n::event_type::kDep));
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
                 p.arrival_ = to_ms(stop.time(n::event_type::kArr));

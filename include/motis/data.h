@@ -4,18 +4,20 @@
 
 #include "cista/memory_holder.h"
 
+#include "date/date.h"
+
 #include "nigiri/types.h"
 
 #include "osr/types.h"
 
 #include "motis/compute_footpaths.h"
+#include "motis/config.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 #include "motis/types.h"
 
 namespace motis {
 
-struct config;
 struct elevators;
 
 template <typename T>
@@ -56,6 +58,9 @@ struct data {
   void load_elevators();
   void load_tiles();
 
+  void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
+                    std::chrono::system_clock::now()));
+
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, tags_, location_rtee_,
@@ -63,6 +68,8 @@ struct data {
   }
 
   std::filesystem::path path_;
+  config config_;
+
   cista::wrapped<adr::typeahead> t_;
   ptr<adr::reverse> r_;
   ptr<adr::cache> tc_;

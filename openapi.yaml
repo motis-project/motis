@@ -858,76 +858,6 @@ components:
         - REGIONAL_RAIL
         - OTHER
 
-    StopTime:
-      description: departure or arrival event at a stop
-      type: object
-      required:
-        - mode
-        - time
-        - delay
-        - realTime
-        - route
-        - headsign
-        - agencyId
-        - agencyName
-        - agencyUrl
-        - routeType
-        - routeId
-        - tripId
-        - serviceDate
-        - routeShortName
-        - source
-      properties:
-        mode:
-          $ref: '#/components/schemas/Mode'
-          description: Transport mode for this leg
-        time:
-          type: integer
-          description: |
-            The offset from the scheduled arrival time of the boarding stop in this leg.
-            Scheduled time of arrival at boarding stop = endTime - arrivalDelay
-        delay:
-          type: integer
-          description: |
-            The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
-            Scheduled time of departure at boarding stop = startTime - departureDelay
-        realTime:
-          description: Whether there is real-time data about this leg
-          type: boolean
-        route:
-          description: |
-            For transit legs, the route of the bus or train being used.
-            For non-transit legs, the name of the street being traversed.
-          type: string
-        headsign:
-          description: |
-            For transit legs, the headsign of the bus or train being used.
-            For non-transit legs, null
-          type: string
-        agencyId:
-          type: string
-        agencyName:
-          type: string
-        agencyUrl:
-          type: string
-        routeColor:
-          type: string
-        routeTextColor:
-          type: string
-        routeType:
-          type: string
-        routeId:
-          type: string
-        tripId:
-          type: string
-        serviceDate:
-          type: string
-        routeShortName:
-          type: string
-        source:
-          description: Filename and line number where this trip is from
-          type: string
-
     VertexType:
       type: string
       description: |
@@ -980,11 +910,78 @@ components:
         departure:
           description: departure time, format = unixtime in milliseconds
           type: integer
+        scheduledTrack:
+          description: scheduled track from the static schedule timetable dataset
+          type: string
         track:
-          description: track/platform information, if available
+          description: |
+            The current track/platform information, updated with real-time updates if available. 
+            Can be missing if neither real-time updates nor the schedule timetable contains track information.
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+
+    StopTime:
+      description: departure or arrival event at a stop
+      type: object
+      required:
+        - place
+        - mode
+        - realTime
+        - route
+        - headsign
+        - agencyId
+        - agencyName
+        - agencyUrl
+        - routeType
+        - routeId
+        - tripId
+        - serviceDate
+        - routeShortName
+        - source
+      properties:
+        place:
+          $ref: '#/components/schemas/Place'
+          description: information about the stop place and time
+        mode:
+          $ref: '#/components/schemas/Mode'
+          description: Transport mode for this leg
+        realTime:
+          description: Whether there is real-time data about this leg
+          type: boolean
+        route:
+          description: |
+            For transit legs, the route of the bus or train being used.
+            For non-transit legs, the name of the street being traversed.
+          type: string
+        headsign:
+          description: |
+            For transit legs, the headsign of the bus or train being used.
+            For non-transit legs, null
+          type: string
+        agencyId:
+          type: string
+        agencyName:
+          type: string
+        agencyUrl:
+          type: string
+        routeColor:
+          type: string
+        routeTextColor:
+          type: string
+        routeType:
+          type: string
+        routeId:
+          type: string
+        tripId:
+          type: string
+        serviceDate:
+          type: string
+        routeShortName:
+          type: string
+        source:
+          description: Filename and line number where this trip is from
+          type: string
 
     TripInfo:
       description: trip id and name

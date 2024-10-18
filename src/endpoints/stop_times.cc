@@ -13,6 +13,7 @@
 #include "nigiri/types.h"
 
 #include "motis/data.h"
+#include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
@@ -305,10 +306,20 @@ api::stoptimes_response stop_times::operator()(
             auto const fr = n::rt::frun{tt_, rtt, r};
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
+            auto place = to_place(tt_, tags_,
+                                  tt_location{s.get_location_idx(),
+                                              s.get_scheduled_location_idx()});
+            if (fr.stop_range_.from_ != 0U) {
+              place.arrival_ = {to_ms(s.time(n::event_type::kArr))};
+              place.arrivalDelay_ = {to_ms(s.delay(n::event_type::kArr))};
+            }
+            if (fr.stop_range_.from_ != fr.size() - 1U) {
+              place.departure_ = {to_ms(s.time(n::event_type::kDep))};
+              place.departureDelay_ = {to_ms(s.delay(n::event_type::kDep))};
+            }
             return {
+                .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type)),
-                .time_ = to_ms(s.time(ev_type)),
-                .delay_ = to_ms(s.delay(ev_type)),
                 .realTime_ = r.is_rt(),
                 .route_ = std::string{s.line(ev_type)},
                 .headsign_ = std::string{s.direction(ev_type)},
