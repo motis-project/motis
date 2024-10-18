@@ -148,7 +148,7 @@ void data::load_shapes() {
 }
 
 void data::load_railviz() {
-  railviz_static_ = std::make_unique<railviz_static_index>(*tt_);
+  railviz_static_ = std::make_unique<railviz_static_index>(*tt_, shapes_.get());
   rt_->railviz_rt_ = std::make_unique<railviz_rt_index>(*tt_, *rt_->rtt_);
 }
 

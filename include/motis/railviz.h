@@ -8,7 +8,7 @@
 namespace motis {
 
 struct railviz_static_index {
-  railviz_static_index(nigiri::timetable const&);
+  railviz_static_index(nigiri::timetable const&, nigiri::shapes_storage const*);
   ~railviz_static_index();
 
   struct impl;
