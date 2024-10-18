@@ -9,13 +9,13 @@
 #include "osr/types.h"
 
 #include "motis/compute_footpaths.h"
+#include "motis/config.h"
 #include "motis/fwd.h"
 #include "motis/match_platforms.h"
 #include "motis/types.h"
 
 namespace motis {
 
-struct config;
 struct elevators;
 
 template <typename T>
@@ -63,6 +63,8 @@ struct data {
   }
 
   std::filesystem::path path_;
+  config config_;
+
   cista::wrapped<adr::typeahead> t_;
   ptr<adr::reverse> r_;
   ptr<adr::cache> tc_;

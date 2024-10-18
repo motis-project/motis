@@ -53,9 +53,11 @@ std::ostream& operator<<(std::ostream& out, data const& d) {
              << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
 }
 
-data::data(std::filesystem::path p) : path_{std::move(p)} {}
+data::data(std::filesystem::path p)
+    : path_{std::move(p)}, config_{config::read(path_ / "config.yml")} {}
 
-data::data(std::filesystem::path p, config const& c) : path_{std::move(p)} {
+data::data(std::filesystem::path p, config const& c)
+    : path_{std::move(p)}, config_{c} {
   rt_ = std::make_shared<rt>();
 
   auto const geocoder = std::async(std::launch::async, [&]() {
@@ -153,7 +155,8 @@ void data::load_railviz() {
 }
 
 void data::load_geocoder() {
-  t_ = adr::read(path_ / "adr" / "t.bin");
+  t_ = adr::read(path_ / "adr" /
+                 (config_.timetable_.has_value() ? "t_ext.bin" : "t.bin"));
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
 }
 
@@ -179,8 +182,7 @@ void data::load_elevators() {
 }
 
 void data::load_tiles() {
-  auto const db_size =
-      config::read(path_ / "config.yml").tiles_.value().db_size_;
+  auto const db_size = config_.tiles_.value().db_size_;
   tiles_ = std::make_unique<tiles_data>(
       (path_ / "tiles" / "tiles.mdb").generic_string(), db_size);
 }

@@ -205,24 +205,33 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                   [&]() { d.load_osr(); },
                   {osm_hash, osr_version}};
 
-  auto adr = task{"adr",
-                  [&]() { return c.geocoding_ || c.reverse_geocoding_; },
-                  [&]() { return true; },
-                  [&]() {
-                    adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
-                    d.load_geocoder();
+  auto adr =
+      task{"adr",
+           [&]() { return c.geocoding_ || c.reverse_geocoding_; },
+           []() { return true; },
+           [&]() {
+             adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
 
-                    if (c.reverse_geocoding_) {
-                      d.load_reverse_geocoder();
-                    }
-                  },
-                  [&]() {
-                    d.load_geocoder();
-                    if (c.reverse_geocoding_) {
-                      d.load_reverse_geocoder();
-                    }
-                  },
-                  {osm_hash, adr_version}};
+             // We can't use d.load_geocoder() here because
+             // adr_extend expects the base-line version
+             // without extra timetable information.
+             d.t_ = adr::read(data_path / "adr" / "t.bin");
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
+           },
+           [&]() {
+             // Same here, need to load base-line version for adr_extend!
+             d.t_ = adr::read(data_path / "adr" / "t.bin");
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
+           },
+           {osm_hash, adr_version}};
 
   auto tt = task{
       "tt",
@@ -303,10 +312,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                  data_path / "adr", cista::mmap::protection::READ};
              adr_extend_tt(*d.tt_, area_db, *d.t_);
              if (write) {
-               cista::write(data_path / "adr" / "t.bin", *d.t_);
+               cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
              }
            },
-           [&]() {},
+           [&]() { d.load_geocoder(); },
            {tt_hash, osm_hash, adr_version, n_version}};
 
   auto osr_footpath =
