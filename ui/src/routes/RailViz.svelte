@@ -11,6 +11,10 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import maplibregl from 'maplibre-gl';
 	import { onDestroy } from 'svelte';
+	import Control from '$lib/map/Control.svelte';
+	import { Button } from '$lib/components/ui/button';
+	import Palette from 'lucide-svelte/icons/palette';
+	import Rss from 'lucide-svelte/icons/rss';
 
 	let {
 		map,
@@ -23,6 +27,8 @@
 		zoom: number;
 		onClickTrip: (tripId: string, date: string) => void;
 	} = $props();
+
+	let colorMode = $state<'rt' | 'route'>('route');
 
 	type RGBA = [number, number, number, number];
 
@@ -119,16 +125,12 @@
 			return [163, 0, 10, 255];
 		};
 
-		const colorMode = 'realtime';
-
 		return new IconLayer<TripSegment & { keyFrames: Array<KeyFrame> } & KeyFrame>({
 			id: 'trips',
 			data: tripsWithFrame,
 			beforeId: 'road-name-text',
 			getColor: (d) =>
-				colorMode == 'realtime'
-					? getDelayColor(d.arrivalDelay, d.realTime)
-					: hexToRgb(getColor(d)[0]),
+				colorMode == 'rt' ? getDelayColor(d.arrivalDelay, d.realTime) : hexToRgb(getColor(d)[0]),
 			getAngle: (d) => -d.heading + 90,
 			getPosition: (d) => d.point,
 			getSize: (_) => 48,
@@ -226,7 +228,7 @@
 	});
 
 	$effect(() => {
-		if (overlay && bounds && zoom) {
+		if (overlay && bounds && zoom && colorMode) {
 			updateRailviz();
 		}
 	});
@@ -241,3 +243,19 @@
 		}
 	});
 </script>
+
+<Control position="top-right">
+	<Button
+		size="icon"
+		variant={colorMode ? 'default' : 'outline'}
+		on:click={() => {
+			colorMode = colorMode == 'rt' ? 'route' : 'rt';
+		}}
+	>
+		{#if colorMode == 'rt'}
+			<Rss size="icon" class="h-[1.2rem] w-[1.2rem]" />
+		{:else}
+			<Palette size="icon" class="h-[1.2rem] w-[1.2rem]" />
+		{/if}
+	</Button>
+</Control>
