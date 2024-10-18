@@ -84,6 +84,7 @@ int server(data d, config const& c) {
   auto const server_config = c.server_.value_or(config::server{});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
+  s.set_timeout(std::chrono::minutes{5});
   s.on_http_request(std::move(qr));
 
   auto ec = boost::system::error_code{};
