@@ -19,12 +19,13 @@
 	} = $props();
 
 	const d = $derived(timestamp ? new Date(rt ? timestamp : timestamp - delay!) : undefined);
+	const highDelay = $derived(delay !== undefined ? delay >= 180000 : false);
 </script>
 
 <div
 	class={cn('w-16', className)}
-	class:text-destructive={isRealtime && rt && delay && delay >= 180000}
-	class:text-green-600={isRealtime && rt && delay && delay < 180000}
+	class:text-destructive={isRealtime && rt && highDelay}
+	class:text-green-600={isRealtime && rt && !highDelay}
 >
 	{#if d && (showAlways || !rt || (rt && isRealtime))}
 		{formatTime(d)}
