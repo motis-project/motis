@@ -132,64 +132,11 @@ export type type = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `HIGHSPEED_RAIL`: long distance high speed trains (e.g. TGV)
  * - `LONG_DISTANCE`: long distance inter city trains
  * - `NIGHT_RAIL`: long distance night trains
- * - `COACH`: long distance buses
  * - `REGIONAL_FAST_RAIL`: regional express routes that skip low traffic stops to be faster
  * - `REGIONAL_RAIL`: regional train
  *
  */
 export type Mode = 'WALK' | 'BIKE' | 'CAR' | 'BIKE_RENTAL' | 'BIKE_TO_PARK' | 'CAR_TO_PARK' | 'CAR_HAILING' | 'CAR_SHARING' | 'CAR_PICKUP' | 'CAR_RENTAL' | 'FLEXIBLE' | 'SCOOTER_RENTAL' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
-
-/**
- * departure or arrival event at a stop
- */
-export type StopTime = {
-    /**
-     * Transport mode for this leg
-     */
-    mode: Mode;
-    /**
-     * The offset from the scheduled arrival time of the boarding stop in this leg.
-     * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
-     *
-     */
-    time: number;
-    /**
-     * The offset from the scheduled departure time of the boarding stop in this leg.
-     * Scheduled time of departure at boarding stop = startTime - departureDelay
-     *
-     */
-    delay: number;
-    /**
-     * Whether there is real-time data about this leg
-     */
-    realTime: boolean;
-    /**
-     * For transit legs, the route of the bus or train being used.
-     * For non-transit legs, the name of the street being traversed.
-     *
-     */
-    route: string;
-    /**
-     * For transit legs, the headsign of the bus or train being used.
-     * For non-transit legs, null
-     *
-     */
-    headsign: string;
-    agencyId: string;
-    agencyName: string;
-    agencyUrl: string;
-    routeColor?: string;
-    routeTextColor?: string;
-    routeType: string;
-    routeId: string;
-    tripId: string;
-    serviceDate: string;
-    routeShortName: string;
-    /**
-     * Filename and line number where this trip is from
-     */
-    source: string;
-};
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -222,13 +169,13 @@ export type Place = {
      */
     level: number;
     /**
-     * The offset from the scheduled arrival time of the boarding stop in this leg.
+     * The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
      *
      */
     arrivalDelay?: number;
     /**
-     * The offset from the scheduled departure time of the boarding stop in this leg.
+     * The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of departure at boarding stop = startTime - departureDelay
      *
      */
@@ -242,10 +189,60 @@ export type Place = {
      */
     departure?: number;
     /**
-     * track/platform information, if available
+     * scheduled track from the static schedule timetable dataset
+     */
+    scheduledTrack?: string;
+    /**
+     * The current track/platform information, updated with real-time updates if available.
+     * Can be missing if neither real-time updates nor the schedule timetable contains track information.
+     *
      */
     track?: string;
     vertexType?: VertexType;
+};
+
+/**
+ * departure or arrival event at a stop
+ */
+export type StopTime = {
+    /**
+     * information about the stop place and time
+     */
+    place: Place;
+    /**
+     * Transport mode for this leg
+     */
+    mode: Mode;
+    /**
+     * Whether there is real-time data about this leg
+     */
+    realTime: boolean;
+    /**
+     * For transit legs, the route of the bus or train being used.
+     * For non-transit legs, the name of the street being traversed.
+     *
+     */
+    route: string;
+    /**
+     * For transit legs, the headsign of the bus or train being used.
+     * For non-transit legs, null
+     *
+     */
+    headsign: string;
+    agencyId: string;
+    agencyName: string;
+    agencyUrl: string;
+    routeColor?: string;
+    routeTextColor?: string;
+    routeType: string;
+    routeId: string;
+    tripId: string;
+    serviceDate: string;
+    routeShortName: string;
+    /**
+     * Filename and line number where this trip is from
+     */
+    source: string;
 };
 
 /**
@@ -291,13 +288,13 @@ export type TripSegment = {
      */
     arrival: number;
     /**
-     * The offset from the scheduled departure time of the boarding stop in this leg.
+     * The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of departure at boarding stop = startTime - departureDelay
      *
      */
     departureDelay: number;
     /**
-     * The offset from the scheduled arrival time of the boarding stop in this leg.
+     * The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
      *
      */
@@ -307,7 +304,7 @@ export type TripSegment = {
      */
     realTime: boolean;
     /**
-     * Google polyline encoded coordinate sequence where the trip travels on this segment
+     * Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
      */
     polyline: string;
 };
@@ -354,7 +351,7 @@ export type StepInstruction = {
 
 export type EncodedPolyline = {
     /**
-     * The encoded points of the polyline.
+     * The encoded points of the polyline using the Google polyline encoding with precision 7.
      */
     points: string;
     /**
@@ -399,13 +396,13 @@ export type Leg = {
      */
     endTime: number;
     /**
-     * The offset from the scheduled departure time of the boarding stop in this leg.
+     * The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of departure at boarding stop = startTime - departureDelay
      *
      */
     departureDelay: number;
     /**
-     * The offset from the scheduled arrival time of the boarding stop in this leg.
+     * The offset from the scheduled arrival time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of arrival at boarding stop = endTime - arrivalDelay
      *
      */
