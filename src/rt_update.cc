@@ -60,14 +60,15 @@ awaitable<void> rt_update(config const& c,
   auto statistics = std::vector<n::rt::statistics>{};
   for (auto& [src, url, response] : gtfs_rt) {
     auto stats = n::rt::statistics{};
+    auto const tag = tags.get_tag(src);
     try {
       auto const res = co_await std::move(response);
       stats = n::rt::gtfsrt_update_buf(
-          tt, *rtt, src, tags.get_tag(src),
+          tt, *rtt, src, tag,
           boost::beast::buffers_to_string(res.body().data()));
     } catch (std::exception const& e) {
-      n::log(n::log_lvl::error, "motis.rt", "EXCEPTION CAUGHT IN CRON: {}",
-             e.what());
+      n::log(n::log_lvl::error, "motis.rt", "RT FETCH ERROR: tag={}, error={}",
+             tag, e.what());
     }
     statistics.emplace_back(stats);
   }
