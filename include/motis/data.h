@@ -4,6 +4,8 @@
 
 #include "cista/memory_holder.h"
 
+#include "date/date.h"
+
 #include "nigiri/types.h"
 
 #include "osr/types.h"
@@ -55,6 +57,9 @@ struct data {
   void load_reverse_geocoder();
   void load_elevators();
   void load_tiles();
+
+  void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
+                    std::chrono::system_clock::now()));
 
   auto cista_members() {
     // !!! Remember to add all new members !!!

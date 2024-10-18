@@ -31,6 +31,8 @@
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shape.h"
 #include "nigiri/timetable.h"
 
@@ -299,6 +301,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           d.tt_->write(data_path / "tt.bin");
           d.tags_->write(data_path / "tags.bin");
         }
+
+        d.init_rtt();
       },
       [&]() { d.load_tt(); },
       {tt_hash, n_version}};

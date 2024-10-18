@@ -137,11 +137,12 @@ void data::load_tt() {
   tt_->locations_.resolve_timezones();
   location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
+  init_rtt();
+}
 
-  auto const today = std::chrono::time_point_cast<date::days>(
-      std::chrono::system_clock::now());
-  rt_->rtt_ = std::make_unique<n::rt_timetable>(
-      n::rt::create_rt_timetable(*tt_, today));
+void data::init_rtt(date::sys_days const d) {
+  rt_->rtt_ =
+      std::make_unique<n::rt_timetable>(n::rt::create_rt_timetable(*tt_, d));
 }
 
 void data::load_shapes() {

@@ -44,7 +44,7 @@ place_t get_place(n::timetable const& tt,
   if (auto const location = parse_location(s); location.has_value()) {
     return *location;
   }
-  return tags.get(tt, s);
+  return tt_location{tags.get(tt, s)};
 }
 
 bool is_intermodal(place_t const& p) {
@@ -276,7 +276,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       .dest_match_mode_ = get_match_mode(dest),
       .use_start_footpaths_ = !is_intermodal(start),
       .start_ = std::visit(
-          utl::overloaded{[&](n::location_idx_t const l) { return direct(l); },
+          utl::overloaded{[&](tt_location const l) { return direct(l.l_); },
                           [&](osr::location const& pos) {
                             auto const dir = query.arriveBy_
                                                  ? osr::direction::kForward
@@ -288,7 +288,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           start),
       .destination_ = std::visit(
           utl::overloaded{
-              [&](n::location_idx_t const l) { return direct(l); },
+              [&](tt_location const l) { return direct(l.l_); },
               [&](osr::location const& pos) {
                 auto const dir = query.arriveBy_ ? osr::direction::kBackward
                                                  : osr::direction::kForward;
@@ -301,7 +301,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           rt_->e_ != nullptr
               ? std::visit(
                     utl::overloaded{
-                        [&](n::location_idx_t) { return td_offsets_t{}; },
+                        [&](tt_location) { return td_offsets_t{}; },
                         [&](osr::location const& pos) {
                           auto const dir = query.arriveBy_
                                                ? osr::direction::kForward
@@ -316,7 +316,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           rt_->e_ != nullptr
               ? std::visit(
                     utl::overloaded{
-                        [&](n::location_idx_t) { return td_offsets_t{}; },
+                        [&](tt_location) { return td_offsets_t{}; },
                         [&](osr::location const& pos) {
                           auto const dir = query.arriveBy_
                                                ? osr::direction::kBackward
