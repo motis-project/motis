@@ -148,14 +148,12 @@ FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
 S3,DB,S3,,,109
-RB,DB,RB,,,106
 U4,DB,U4,,,402
 ICE,DB,ICE,,,101
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 S3,S1,S3,,
-RB,S1,RB,,
 U4,S1,U4,,
 ICE,S1,ICE,,
 
@@ -163,13 +161,10 @@ ICE,S1,ICE,,
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
 S3,01:15:00,01:15:00,FFM_101,1,0,0
 S3,01:20:00,01:20:00,FFM_HAUPT_S,2,0,0
-RB,00:35:00,00:35:00,DA_10,0,0,0
-RB,00:45:00,00:45:00,LANGEN,1,0,0
-RB,00:55:00,00:55:00,FFM_12,2,0,0
 U4,01:05:00,01:05:00,de:6412:10:6:1,0,0,0
 U4,01:10:00,01:10:00,FFM_HAUPT_U,1,0,0
-ICE,00:45:00,00:45:00,DA_10,0,0,0
-ICE,00:55:00,00:55:00,FFM_10,1,0,0
+ICE,00:35:00,00:35:00,DA_10,0,0,0
+ICE,00:45:00,00:45:00,FFM_10,1,0,0
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -178,7 +173,6 @@ S1,20190501,1
 # frequencies.txt
 trip_id,start_time,end_time,headway_secs
 S3,01:15:00,25:15:00,3600
-RB,00:35:00,24:35:00,3600
 ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
@@ -240,6 +234,8 @@ struct trip_update {
     std::optional<std::string> stop_assignment_{std::nullopt};
   };
   std::string trip_id_;
+  std::optional<std::string> start_time_;
+  std::optional<std::string> date_;
   std::vector<stop_time_update> stop_updates_{};
   bool cancelled_{false};
 };
@@ -275,6 +271,12 @@ transit_realtime::FeedMessage to_feed_msg(
       td->set_schedule_relationship(
           transit_realtime::TripDescriptor_ScheduleRelationship_CANCELED);
       continue;
+    }
+    if (trip.date_) {
+      td->set_start_date(*trip.date_);
+    }
+    if (trip.start_time_) {
+      td->set_start_time(*trip.start_time_);
     }
 
     for (auto const& stop_upd : trip.stop_updates_) {
@@ -323,20 +325,17 @@ TEST(motis, routing) {
   d.init_rtt(date::sys_days{2019_y / May / 1});
   auto const stats = n::rt::gtfsrt_update_msg(
       *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg({{.trip_id_ = "RB",
-                    .stop_updates_ = {{.stop_id_ = "FFM_10",
-                                       .seq_ = std::optional{2U},
-                                       .ev_type_ = n::event_type::kArr,
-                                       .delay_minutes_ = 0,
-                                       .stop_assignment_ = "FFM_10"}}},
-                   {.trip_id_ = "ICE",
-                    .stop_updates_ = {{.stop_id_ = "FFM_12",
-                                       .seq_ = std::optional{1U},
-                                       .ev_type_ = n::event_type::kArr,
-                                       .delay_minutes_ = 0,
-                                       .stop_assignment_ = "FFM_12"}}}},
-                  date::sys_days{2019_y / May / 1} + 9h));
-  EXPECT_EQ(2U, stats.total_entities_success_);
+      to_feed_msg(
+          {trip_update{.trip_id_ = "ICE",
+                       .start_time_ = {"03:35:00"},
+                       .date_ = {"20190501"},
+                       .stop_updates_ = {{.stop_id_ = "FFM_12",
+                                          .seq_ = std::optional{1U},
+                                          .ev_type_ = n::event_type::kArr,
+                                          .delay_minutes_ = 10,
+                                          .stop_assignment_ = "FFM_12"}}}},
+          date::sys_days{2019_y / May / 1} + 9h));
+  EXPECT_EQ(1U, stats.total_entities_success_);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
@@ -355,8 +354,8 @@ TEST(motis, routing) {
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:29, end=02:29, duration=01:04, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-], to=test_DA_10 [track=10, scheduled_track=10], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35),
-    (from=test_DA_10 [track=10, scheduled_track=10], to=test_FFM_10 [track=12, scheduled_track=10], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 01:45),
-    (from=test_FFM_10 [track=12, scheduled_track=10], to=test_FFM_101 [track=101, scheduled_track=101], start=2019-05-01 01:45, mode="WALK", trip="-", end=2019-05-01 01:51),
+    (from=test_DA_10 [track=10, scheduled_track=10], to=test_FFM_12 [track=12, scheduled_track=10], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 01:55),
+    (from=test_FFM_12 [track=12, scheduled_track=10], to=test_FFM_101 [track=101, scheduled_track=101], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:01),
     (from=test_FFM_101 [track=101, scheduled_track=101], to=test_FFM_HAUPT_S [track=-, scheduled_track=-], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-], to=- [track=-, scheduled_track=-], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:29)
 ])",
@@ -377,8 +376,8 @@ TEST(motis, routing) {
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-], to=test_DA_10 [track=10, scheduled_track=10], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
-    (from=test_DA_10 [track=10, scheduled_track=10], to=test_FFM_10 [track=12, scheduled_track=10], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 01:45),
-    (from=test_FFM_10 [track=12, scheduled_track=10], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4], start=2019-05-01 01:45, mode="WALK", trip="-", end=2019-05-01 01:49),
+    (from=test_DA_10 [track=10, scheduled_track=10], to=test_FFM_12 [track=12, scheduled_track=10], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 01:55),
+    (from=test_FFM_12 [track=12, scheduled_track=10], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4], to=test_FFM_HAUPT_U [track=-, scheduled_track=-], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-], to=- [track=-, scheduled_track=-], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
 ])",

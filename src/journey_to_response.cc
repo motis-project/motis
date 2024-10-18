@@ -122,8 +122,6 @@ api::Itinerary journey_to_response(
     place_t const& dest,
     street_routing_cache_t& cache,
     osr::bitvec<osr::node_idx_t>& blocked_mem) {
-  j.print(std::cout, tt, rtt);
-
   auto const to_location = [&](n::location_idx_t const l) {
     switch (to_idx(l)) {
       case static_cast<n::location_idx_t::value_t>(n::special_station::kStart):
@@ -205,8 +203,13 @@ api::Itinerary journey_to_response(
   for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
     auto const write_leg = [&](api::ModeEnum const mode) -> api::Leg& {
       auto& leg = itinerary.legs_.emplace_back();
+      auto const pred = itinerary.legs_.size() == 1U
+                            ? nullptr
+                            : &itinerary.legs_[itinerary.legs_.size() - 2U];
       leg.mode_ = mode;
-      leg.from_ = to_place(tt, tags, tt_location{j_leg.from_}, start, dest);
+      leg.from_ = pred == nullptr ? to_place(tt, tags, tt_location{j_leg.from_},
+                                             start, dest)
+                                  : pred->to_;
       leg.to_ = to_place(tt, tags, tt_location{j_leg.to_}, start, dest);
       leg.from_.departure_ = leg.startTime_ = to_ms(j_leg.dep_time_);
       leg.to_.arrival_ = leg.endTime_ = to_ms(j_leg.arr_time_);
