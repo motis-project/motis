@@ -84,6 +84,7 @@ struct config {
     bool merge_dupes_inter_src_{false};
     unsigned link_stop_distance_{100U};
     unsigned update_interval_{60};
+    unsigned http_timeout_{10};
     bool incremental_rt_update_{false};
     std::uint16_t max_footpath_length_{15};
     std::optional<std::string> default_timezone_{};

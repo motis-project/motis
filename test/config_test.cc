@@ -49,6 +49,7 @@ timetable:
   merge_dupes_inter_src: false
   link_stop_distance: 100
   update_interval: 60
+  http_timeout: 10
   incremental_rt_update: false
   max_footpath_length: 15
   datasets:

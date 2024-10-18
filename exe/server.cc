@@ -1,7 +1,4 @@
-#include "boost/asio/co_spawn.hpp"
-#include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
-#include "boost/program_options.hpp"
 
 #include "net/run.h"
 #include "net/stop_handler.h"
@@ -11,7 +8,6 @@
 #include "utl/init_from.h"
 
 #include "motis/config.h"
-#include "motis/cron.h"
 #include "motis/endpoints/adr/geocode.h"
 #include "motis/endpoints/adr/reverse_geocode.h"
 #include "motis/endpoints/elevators.h"
@@ -33,7 +29,6 @@
 #include "motis/rt_update.h"
 
 namespace fs = std::filesystem;
-namespace bpo = boost::program_options;
 namespace asio = boost::asio;
 
 namespace motis {
@@ -95,12 +90,10 @@ int server(data d, config const& c) {
   auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
   if (c.requires_rt_timetable_updates()) {
     rt_update_ioc = std::make_unique<asio::io_context>();
-    cron(*rt_update_ioc, std::chrono::seconds{c.timetable_->update_interval_},
-         [&]() {
-           asio::co_spawn(*rt_update_ioc, rt_update(c, *d.tt_, *d.tags_, d.rt_),
-                          asio::detached);
-         });
-    rt_update_thread = std::make_unique<std::thread>(net::run(*rt_update_ioc));
+    rt_update_thread = std::make_unique<std::thread>([&]() {
+      run_rt_update(*rt_update_ioc, c, *d.tt_, *d.tags_, d.rt_);
+      rt_update_ioc->run();
+    });
   }
 
   if (ec) {

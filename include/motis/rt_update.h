@@ -1,14 +1,18 @@
 #pragma once
 
-#include "boost/asio/awaitable.hpp"
+#include <chrono>
+#include <memory>
+
+#include "boost/asio/io_context.hpp"
 
 #include "motis/fwd.h"
 
 namespace motis {
 
-boost::asio::awaitable<void> rt_update(config const&,
-                                       nigiri::timetable const&,
-                                       tag_lookup const& tags,
-                                       std::shared_ptr<rt>&);
+void run_rt_update(boost::asio::io_context&,
+                   config const&,
+                   nigiri::timetable const&,
+                   tag_lookup const&,
+                   std::shared_ptr<rt>&);
 
 }
