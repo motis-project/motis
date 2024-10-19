@@ -284,6 +284,7 @@ api::stoptimes_response stop_times::operator()(
   for (auto const eq : tt_.locations_.equivalences_[l]) {
     if (tt_.locations_.names_[eq].view() == l_name) {
       locations.emplace_back(eq);
+      utl::concat(locations, tt_.locations_.children_[eq]);
     }
   }
   utl::erase_duplicates(locations);
