@@ -280,12 +280,22 @@ api::stoptimes_response stop_times::operator()(
                   to_seconds(get_date_time(query.date_, query.time_)))));
 
   auto locations = std::vector{l};
-  utl::concat(locations, tt_.locations_.children_[l]);
-  for (auto const eq : tt_.locations_.equivalences_[l]) {
-    if (tt_.locations_.names_[eq].view() == l_name) {
-      locations.emplace_back(eq);
-      utl::concat(locations, tt_.locations_.children_[eq]);
+  auto const add = [&](n::location_idx_t const l) {
+    utl::concat(locations, tt_.locations_.children_[l]);
+    for (auto const eq : tt_.locations_.equivalences_[l]) {
+      if (tt_.locations_.names_[eq].view() == l_name) {
+        locations.emplace_back(eq);
+        utl::concat(locations, tt_.locations_.children_[eq]);
+      }
     }
+  };
+
+  if (query.radius_) {
+    loc_rtree_.in_radius(tt_.locations_.coordinates_[x],
+                         static_cast<double>(*query.radius_),
+                         [&](n::location_idx_t const y) { add(y); });
+  } else {
+    add(x);
   }
   utl::erase_duplicates(locations);
 
@@ -307,7 +317,7 @@ api::stoptimes_response stop_times::operator()(
             auto const fr = n::rt::frun{tt_, rtt, r};
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
-            auto place = to_place(tt_, tags_,
+            auto place = to_place(tt_, tags_, w_, pl_, matches_,
                                   tt_location{s.get_location_idx(),
                                               s.get_scheduled_location_idx()});
             if (fr.stop_range_.from_ != 0U) {

@@ -14,6 +14,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"
+#include "motis/match_platforms.h"
 #include "motis/types.h"
 
 namespace motis {
@@ -44,6 +45,9 @@ api::Place to_place(osr::location, std::string_view name);
 
 api::Place to_place(nigiri::timetable const&,
                     tag_lookup const&,
+                    osr::ways const* w,
+                    osr::platforms const* pl,
+                    platform_matches_t const* matches,
                     place_t l,
                     place_t start = osr::location{},
                     place_t dest = osr::location{},

@@ -9,8 +9,9 @@ namespace motis::ep {
 
 api::trips_response trips::operator()(boost::urls::url_view const& url) const {
   auto const rt = rt_;
-  return get_trains(tags_, tt_, rt->rtt_.get(), shapes_, *static_.impl_,
-                    *rt->railviz_rt_->impl_, api::trips_params{url.params()});
+  return get_trains(tags_, tt_, rt->rtt_.get(), shapes_, w_, pl_, matches_,
+                    *static_.impl_, *rt->railviz_rt_->impl_,
+                    api::trips_params{url.params()});
 }
 
 }  // namespace motis::ep
