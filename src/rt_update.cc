@@ -25,35 +25,6 @@ using asio::awaitable;
 
 namespace motis {
 
-template <typename Executor>
-awaitable<n::rt::statistics> update(Executor executor,
-                                    nigiri::timetable const& tt,
-                                    n::source_idx_t src,
-                                    std::string_view tag,
-                                    config::timetable::dataset::rt ep,
-                                    std::chrono::seconds http_timeout,
-                                    n::rt_timetable& rtt) {
-  return boost::asio::co_spawn(
-      executor,
-      [=, &rtt, &tt]() -> awaitable<n::rt::statistics> {
-        try {
-          auto const res = co_await http_GET(boost::urls::url{ep.url_},
-                                             ep.headers_.value_or(headers_t{}),
-                                             http_timeout);
-          co_return n::rt::gtfsrt_update_buf(
-              tt, rtt, src, tag,
-              boost::beast::buffers_to_string(res.body().data()));
-        } catch (std::exception const& e) {
-          n::log(n::log_lvl::error, "motis.rt",
-                 "RT FETCH ERROR: tag={}, url={}, error={}", tag, ep.url_,
-                 e.what());
-          co_return n::rt::statistics{.parser_error_ = true,
-                                      .no_header_ = true};
-        }
-      },
-      asio::use_awaitable);
-}
-
 void run_rt_update(boost::asio::io_context& ioc,
                    config const& c,
                    nigiri::timetable const& tt,
@@ -127,6 +98,9 @@ void run_rt_update(boost::asio::io_context& ioc,
             for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
               auto const [ep, src, tag] = endpoints[i];
               try {
+                if (ex) {
+                  std::rethrow_exception(ex);
+                }
                 n::log(n::log_lvl::info, "motis.rt",
                        "rt update stats for tag={}, url={}: {}", tag, ep.url_,
                        fmt::streamed(s));

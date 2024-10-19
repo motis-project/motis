@@ -19,7 +19,7 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
   auto res = api::stops_response{};
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
-    res.emplace_back(to_place(tt_, tags_, tt_location{l}));
+    res.emplace_back(to_place(tt_, tags_, w_, pl_, matches_, tt_location{l}));
   });
   return res;
 }
