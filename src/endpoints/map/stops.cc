@@ -12,7 +12,7 @@ namespace n = nigiri;
 namespace motis::ep {
 
 api::stops_response stops::operator()(boost::urls::url_view const& url) const {
-  auto const query = api::trips_params{url.params()};
+  auto const query = api::stops_params{url.params()};
   auto const min = parse_location(query.min_);
   auto const max = parse_location(query.max_);
   utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
