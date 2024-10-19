@@ -65,8 +65,10 @@ void run_rt_update(boost::asio::io_context& ioc,
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
         while (true) {
+          // Remember when we started so we can schedule the next update.
           auto const start = std::chrono::steady_clock::now();
 
+          // Create new real-time timetable.
           auto const today = std::chrono::time_point_cast<date::days>(
               std::chrono::system_clock::now());
           auto rtt = std::make_unique<n::rt_timetable>(
@@ -74,10 +76,10 @@ void run_rt_update(boost::asio::io_context& ioc,
                   ? n::rt_timetable{*r->rtt_}
                   : n::rt::create_rt_timetable(tt, today));
 
+          // Schedule updates for each real-time endpoint.
           auto awaitables =
               std::vector<std::tuple<awaitable<n::rt::statistics>,
                                      std::string_view, boost::urls::url>>{};
-
           for (auto const& [tag, d] : c.timetable_->datasets_) {
             if (!d.rt_.has_value()) {
               continue;
@@ -94,17 +96,26 @@ void run_rt_update(boost::asio::io_context& ioc,
             }
           }
 
+          // Wait for all updates to finish and print statistics.
           for (auto& [stats, tag, url] : awaitables) {
-            n::log(n::log_lvl::info, "motis.rt",
-                   "rt update stats for tag={}, url={}: {}", tag,
-                   fmt::streamed(url),
-                   fmt::streamed(co_await std::move(stats)));
+            try {
+              n::log(n::log_lvl::info, "motis.rt",
+                     "rt update stats for tag={}, url={}: {}", tag,
+                     fmt::streamed(url),
+                     fmt::streamed(co_await std::move(stats)));
+            } catch (std::exception const& e) {
+              n::log(n::log_lvl::error, "motis.rt",
+                     "rt update failed: tag={}, url={}, error={}", tag,
+                     fmt::streamed(url), e.what());
+            }
           }
 
+          // Update real-time timetable shared pointer.
           auto railviz_rt = std::make_unique<railviz_rt_index>(tt, *rtt);
           r = std::make_shared<rt>(std::move(rtt), std::move(r->e_),
                                    std::move(railviz_rt));
 
+          // Schedule next update.
           timer.expires_at(
               start + std::chrono::seconds{c.timetable_->update_interval_});
           co_await timer.async_wait(
