@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { trips, type TripSegment } from '$lib/openapi';
+	import { trips, type Mode, type TripSegment } from '$lib/openapi';
 	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { IconLayer } from '@deck.gl/layers';
 	import { createTripIcon } from '$lib/map/createTripIcon';
@@ -46,10 +46,18 @@
 		time: number;
 	};
 
-	const getKeyFrames = (t: TripSegment): Array<KeyFrame> => {
+	type KeyFrameExt = {
+		keyFrames: Array<KeyFrame>;
+		arrival: number;
+		departure: number;
+	};
+
+	const getKeyFrames = (t: TripSegment): KeyFrameExt => {
 		let keyFrames: Array<KeyFrame> = [];
+		const departure = new Date(t.departure).getTime();
+		const arrival = new Date(t.arrival).getTime();
 		const coordinates = polyline.decode(t.polyline).map(([x, y]): [number, number] => [y, x]);
-		const totalDuration = t.arrival - t.departure;
+		const totalDuration = arrival - departure;
 		let currDistance = 0;
 
 		let totalDistance = 0;
@@ -67,12 +75,12 @@
 			const heading = getBearing(from, to);
 
 			const r = currDistance / totalDistance;
-			keyFrames.push({ point: from, heading, time: t.departure + r * totalDuration });
+			keyFrames.push({ point: from, heading, time: departure + r * totalDuration });
 
 			currDistance += distance;
 		}
-		keyFrames.push({ point: coordinates[coordinates.length - 1], time: t.arrival, heading: 0 });
-		return keyFrames;
+		keyFrames.push({ point: coordinates[coordinates.length - 1], time: arrival, heading: 0 });
+		return { keyFrames, arrival, departure };
 	};
 
 	const getFrame = (keyframes: Array<KeyFrame>, timestamp: number) => {
@@ -95,7 +103,9 @@
 		};
 	};
 
-	const getRailvizLayer = (trips: Array<TripSegment & { keyFrames: Array<KeyFrame> }>) => {
+	const getRailvizLayer = (
+		trips: Array<{ realTime: boolean; arrivalDelay: number } & KeyFrameExt>
+	) => {
 		const now = new Date().getTime();
 
 		const tripsWithFrame = trips
@@ -125,7 +135,15 @@
 			return [163, 0, 10, 255];
 		};
 
-		return new IconLayer<TripSegment & { keyFrames: Array<KeyFrame> } & KeyFrame>({
+		return new IconLayer<
+			{
+				realTime: boolean;
+				arrivalDelay: number;
+				routeColor?: string;
+				routeTextColor?: string;
+				mode: Mode;
+			} & KeyFrame
+		>({
 			id: 'trips',
 			data: tripsWithFrame,
 			beforeId: 'road-name-text',
@@ -156,14 +174,14 @@
 		const b = maplibregl.LngLatBounds.convert(bounds!);
 		const min = lngLatToStr(b.getNorthWest());
 		const max = lngLatToStr(b.getSouthEast());
-		const startTime = new Date().getTime() / 1000;
-		const endTime = startTime + 2 * 60;
+		const startTime = new Date();
+		const endTime = new Date(startTime.getTime() + 60000);
 		return trips({
 			query: {
 				min,
 				max,
-				startTime,
-				endTime,
+				startTime: startTime.toISOString(),
+				endTime: endTime.toISOString(),
 				zoom
 			}
 		});
@@ -177,7 +195,7 @@
 			}
 
 			const tripSegmentsWithKeyFrames = d.data!.map((tripSegment: TripSegment) => {
-				return { ...tripSegment, keyFrames: getKeyFrames(tripSegment) };
+				return { ...tripSegment, ...getKeyFrames(tripSegment) };
 			});
 
 			const onAnimationFrame = () => {

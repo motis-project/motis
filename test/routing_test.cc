@@ -179,9 +179,10 @@ U4,01:05:00,25:01:00,3600
 
 void print_short(std::ostream& out, api::Itinerary const& j) {
   auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-    auto const u = std::chrono::time_point<std::chrono::system_clock>{
-        std::chrono::milliseconds{t}};
-    out << date::format(fmt, u);
+    out << date::format(fmt, *t);
+  };
+  auto const format_duration = [&](auto&& t, char const* fmt = "%H:%M") {
+    out << date::format(fmt, std::chrono::milliseconds{t});
   };
 
   out << "date=";
@@ -192,7 +193,7 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
   format_time(j.endTime_, "%H:%M");
 
   out << ", duration=";
-  format_time(j.duration_ * 1000U, "%H:%M");
+  format_duration(j.duration_ * 1000U);
   out << ", transfers=" << j.transfers_;
 
   out << ", legs=[\n";
@@ -344,8 +345,10 @@ TEST(motis, routing) {
   // Route with wheelchair.
   {
     auto const plan_response = routing(
-        "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
-        "&date=05-01-2019&time=01:25&wheelchair=true");
+        "?fromPlace=49.87263,8.63127"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z"
+        "&wheelchair=true");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
@@ -366,8 +369,9 @@ TEST(motis, routing) {
   // Route without wheelchair.
   {
     auto const plan_response = routing(
-        "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
-        "&date=05-01-2019&time=01:25");
+        "?fromPlace=49.87263,8.63127"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {

@@ -305,11 +305,9 @@ api::trips_response get_trains(tag_lookup const& tags,
   utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
   auto const start_time =
-      n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-          std::chrono::seconds{static_cast<long long>(query.startTime_)})};
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*query.startTime_);
   auto const end_time =
-      n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-          std::chrono::seconds{static_cast<long long>(query.endTime_)})};
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*query.endTime_);
   auto const time_interval = n::interval{start_time, end_time};
   auto const area = geo::make_box({min->pos_, max->pos_});
 
@@ -370,8 +368,8 @@ api::trips_response get_trains(tag_lookup const& tags,
                       .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
         .from_ = to_place(tt, tags, w, pl, matches, tt_location{from}),
         .to_ = to_place(tt, tags, w, pl, matches, tt_location{to}),
-        .departure_ = to_ms(from.time(n::event_type::kDep)),
-        .arrival_ = to_ms(to.time(n::event_type::kArr)),
+        .departure_ = from.time(n::event_type::kDep),
+        .arrival_ = to.time(n::event_type::kArr),
         .departureDelay_ = to_ms(from.delay(n::event_type::kDep)),
         .arrivalDelay_ = to_ms(to.delay(n::event_type::kArr)),
         .realTime_ = fr.is_rt(),

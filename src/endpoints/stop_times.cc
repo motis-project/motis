@@ -276,7 +276,9 @@ api::stoptimes_response stop_times::operator()(
   auto const l = p == n::location_idx_t::invalid() ? x : p;
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
       fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",
-                  to_seconds(get_date_time(query.date_, query.time_)))));
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      query.time_->time_.time_since_epoch())
+                      .count())));
 
   auto locations = std::vector{l};
   auto const add = [&](n::location_idx_t const l) {
@@ -321,11 +323,11 @@ api::stoptimes_response stop_times::operator()(
                                   tt_location{s.get_location_idx(),
                                               s.get_scheduled_location_idx()});
             if (fr.stop_range_.from_ != 0U) {
-              place.arrival_ = {to_ms(s.time(n::event_type::kArr))};
+              place.arrival_ = {s.time(n::event_type::kArr)};
               place.arrivalDelay_ = {to_ms(s.delay(n::event_type::kArr))};
             }
             if (fr.stop_range_.from_ != fr.size() - 1U) {
-              place.departure_ = {to_ms(s.time(n::event_type::kDep))};
+              place.departure_ = {s.time(n::event_type::kDep)};
               place.departureDelay_ = {to_ms(s.delay(n::event_type::kDep))};
             }
             return {

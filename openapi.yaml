@@ -182,27 +182,13 @@ paths:
           required: true
           description: stop id of the stop to retrieve departures/arrivals for
 
-        - name: date
-          in: query
-          required: false
-          description: |
-            Optional. Defaults to the current date.
-            
-            Departure date ($arriveBy=false) / arrival date ($arriveBy=true), format: 06-28-2024
-          schema:
-            type: string
-
         - name: time
           in: query
           required: false
           description: |
             Optional. Defaults to the current time.
-
-            Format:
-              - 12h format: 7:06pm
-              - 24h format: 19:06
           schema:
-            type: string
+            type: date
 
         - name: arriveBy
           in: query
@@ -296,31 +282,15 @@ paths:
           schema:
             type: string
 
-        - name: date
-          in: query
-          required: false
-          description: |
-            Optional. Defaults to the current date.
-            
-            Departure date ($arriveBy=false) / arrival date ($arriveBy=true), format: 06-28-2024
-          schema:
-            type: string
-
         - name: time
           in: query
           required: false
           description: |
             Optional. Defaults to the current time.
             
-            Meaning depending on `arriveBy`
-              - Departure time for `arriveBy=false`
-              - Arrival time for `arriveBy=true`
-            
-            Format:
-              - 12h format: 7:06pm
-              - 24h format: 19:06
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
           schema:
-            type: string
+            type: date
 
         - name: maxTransfers
           in: query
@@ -513,9 +483,6 @@ paths:
                     type: object
                     additionalProperties:
                       type: string
-                  date:
-                    description: "The time and date of travel"
-                    type: integer
                   from:
                     $ref: '#/components/schemas/Place'
                   to:
@@ -568,15 +535,15 @@ paths:
         - name: startTime
           in: query
           required: true
-          description: start of the time window (unix timestamp in milliseconds)
+          description: start of the time window
           schema:
-            type: number
+            type: date
         - name: endTime
           in: query
           required: true
-          description: end if the time window (unix timestamp in milliseconds)
+          description: end if the time window
           schema:
-            type: number
+            type: date
       responses:
         '200':
           description: a list of trips
@@ -919,11 +886,11 @@ components:
             The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
             Scheduled time of departure at boarding stop = startTime - departureDelay
         arrival:
-          description: arrival time, format = unixtime in milliseconds
-          type: integer
+          description: arrival time
+          type: date
         departure:
-          description: departure time, format = unixtime in milliseconds
-          type: integer
+          description: departure time
+          type: date
         scheduledTrack:
           description: scheduled track from the static schedule timetable dataset
           type: string
@@ -1048,11 +1015,11 @@ components:
         to:
           $ref: '#/components/schemas/Place'
         departure:
-          description: departure time, format = unixtime in milliseconds
-          type: integer
+          description: departure time
+          type: date
         arrival:
-          description: arrival time, format = unixtime in milliseconds
-          type: integer
+          description: arrival time
+          type: date
         departureDelay:
           type: integer
           description: |
@@ -1199,11 +1166,11 @@ components:
           description: Leg duration in seconds
           type: integer
         startTime:
-          type: integer
-          description: leg departure time, format = unixtime in milliseconds
+          type: date
+          description: leg departure time
         endTime:
-          type: integer
-          description: leg arrival time, format = unixtime in milliseconds
+          type: date
+          description: leg arrival time
         departureDelay:
           type: integer
           description: |
@@ -1295,11 +1262,11 @@ components:
           description: journey duration in seconds
           type: integer
         startTime:
-          type: integer
-          description: journey departure time, format = unixtime in milliseconds
+          type: date
+          description: journey departure time
         endTime:
-          type: integer
-          description: journey arrival time, format = unixtime in milliseconds
+          type: date
+          description: journey arrival time
         walkTime:
           type: integer
           description: How much time is spent walking, in seconds.
