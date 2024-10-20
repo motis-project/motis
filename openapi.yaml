@@ -723,7 +723,6 @@ components:
         - id
         - lat
         - lon
-        - level
         - tokens
         - areas
         - score
