@@ -274,13 +274,13 @@ api::stoptimes_response stop_times::operator()(
   auto const x = tags_.get(tt_, query.stopId_);
   auto const p = tt_.locations_.parents_[x];
   auto const l = p == n::location_idx_t::invalid() ? x : p;
-  auto const l_name = tt_.locations_.names_[l].view();
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
       fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",
                   to_seconds(get_date_time(query.date_, query.time_)))));
 
   auto locations = std::vector{l};
   auto const add = [&](n::location_idx_t const l) {
+    auto const l_name = tt_.locations_.names_[l].view();
     utl::concat(locations, tt_.locations_.children_[l]);
     for (auto const eq : tt_.locations_.equivalences_[l]) {
       if (tt_.locations_.names_[eq].view() == l_name) {
