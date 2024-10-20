@@ -6,7 +6,7 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import { initial, type Itinerary, plan, type PlanResponse, trip } from '$lib/openapi';
+	import { initial, type Itinerary, type Match, plan, type PlanResponse, trip } from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
