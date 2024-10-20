@@ -277,7 +277,7 @@ api::stoptimes_response stop_times::operator()(
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
       fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",
                   std::chrono::duration_cast<std::chrono::seconds>(
-                      query.time_->time_.time_since_epoch())
+                      query.time_.value_or(openapi::now())->time_since_epoch())
                       .count())));
 
   auto locations = std::vector{l};
