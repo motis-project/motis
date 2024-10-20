@@ -73,10 +73,11 @@
 		});
 		const shown = new Set<string>();
 		items = items.filter((x) => {
-			if (shown.has(x.label!)) {
+			const entry = x.value.match?.type + x.label!;
+			if (shown.has(entry)) {
 				return false;
 			}
-			shown.add(x.label!);
+			shown.add(entry);
 			return true;
 		});
 	};
