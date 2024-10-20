@@ -48,11 +48,19 @@ api::Place to_place(osr::location const l, std::string_view name) {
   };
 }
 
+osr::level_t get_lvl(osr::ways const* w,
+                     osr::platforms const* pl,
+                     platform_matches_t const* matches,
+                     n::location_idx_t const l) {
+  return w && pl && matches ? pl->get_level(*w, (*matches)[l])
+                            : osr::level_t::invalid();
+}
+
 double get_level(osr::ways const* w,
                  osr::platforms const* pl,
                  platform_matches_t const* matches,
                  n::location_idx_t const l) {
-  return w && pl && matches ? to_float(pl->get_level(*w, (*matches)[l])) : 0.0;
+  return to_float(get_lvl(w, pl, matches, l));
 }
 
 api::Place to_place(n::timetable const& tt,
@@ -117,14 +125,14 @@ api::ModeEnum to_mode(osr::search_profile const m) {
   std::unreachable();
 }
 
-api::Itinerary journey_to_response(osr::ways const& w,
-                                   osr::lookup const& l,
+api::Itinerary journey_to_response(osr::ways const* w,
+                                   osr::lookup const* l,
+                                   osr::platforms const* pl,
                                    n::timetable const& tt,
                                    tag_lookup const& tags,
-                                   osr::platforms const& pl,
                                    elevators const* e,
                                    n::rt_timetable const* rtt,
-                                   platform_matches_t const& matches,
+                                   platform_matches_t const* matches,
                                    n::shapes_storage const* shapes,
                                    bool const wheelchair,
                                    n::routing::journey const& j,
@@ -142,16 +150,19 @@ api::Itinerary journey_to_response(osr::ways const& w,
         return std::get<osr::location>(dest);
       default:
         return osr::location{tt.locations_.coordinates_[l],
-                             pl.get_level(w, matches[l])};
+                             get_lvl(w, pl, matches, l)};
     }
   };
   auto const add_routed_polyline = [&](osr::search_profile const profile,
                                        osr::location const& from,
                                        osr::location const& to, api::Leg& leg) {
+    if (!w || !l) {
+      return;
+    }
+
     auto const t =
         std::chrono::time_point_cast<n::i32_minutes>(*leg.startTime_);
-
-    auto const s = e ? get_states_at(w, l, *e, t, from.pos_)
+    auto const s = e ? get_states_at(*w, *l, *e, t, from.pos_)
                      : std::optional{std::pair<nodes_t, states_t>{}};
     auto const& [e_nodes, e_states] = *s;
     auto const key = std::tuple{from, to, profile, e_states};
@@ -160,7 +171,7 @@ api::Itinerary journey_to_response(osr::ways const& w,
         it != end(cache)
             ? it->second
             : osr::route(
-                  w, l, profile, from, to, 3600, osr::direction::kForward,
+                  *w, *l, profile, from, to, 3600, osr::direction::kForward,
                   kMaxMatchingDistance,
                   s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr);
     if (it == end(cache)) {
@@ -183,7 +194,7 @@ api::Itinerary journey_to_response(osr::ways const& w,
               .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
                              ? std::nullopt
                              : std::optional{static_cast<std::int64_t>(
-                                   to_idx(w.way_osm_idx_[s.way_]))},
+                                   to_idx(w->way_osm_idx_[s.way_]))},
               .polyline_ = {encode_polyline<7>(s.polyline_),
                             static_cast<std::int64_t>(s.polyline_.size())},
           };
@@ -218,10 +229,10 @@ api::Itinerary journey_to_response(osr::ways const& w,
                             : &itinerary.legs_[itinerary.legs_.size() - 2U];
       leg.mode_ = mode;
       leg.from_ = pred == nullptr
-                      ? to_place(tt, tags, &w, &pl, &matches,
+                      ? to_place(tt, tags, w, pl, matches,
                                  tt_location{j_leg.from_}, start, dest)
                       : pred->to_;
-      leg.to_ = to_place(tt, tags, &w, &pl, &matches, tt_location{j_leg.to_},
+      leg.to_ = to_place(tt, tags, w, pl, matches, tt_location{j_leg.to_},
                          start, dest);
       leg.from_.departure_ = leg.startTime_ = j_leg.dep_time_;
       leg.to_.arrival_ = leg.endTime_ = j_leg.arr_time_;
@@ -271,9 +282,9 @@ api::Itinerary journey_to_response(osr::ways const& w,
               leg.to_.arrivalDelay_ = leg.arrivalDelay_ =
                   to_ms(fr[t.stop_range_.to_ - 1U].delay(n::event_type::kArr));
 
-              leg.from_ = to_place(tt, tags, &w, &pl, &matches,
+              leg.from_ = to_place(tt, tags, w, pl, matches,
                                    tt_location{fr[t.stop_range_.from_]});
-              leg.to_ = to_place(tt, tags, &w, &pl, &matches,
+              leg.to_ = to_place(tt, tags, w, pl, matches,
                                  tt_location{fr[t.stop_range_.to_ - 1U]});
 
               auto const first =
@@ -282,9 +293,8 @@ api::Itinerary journey_to_response(osr::ways const& w,
                   static_cast<n::stop_idx_t>(t.stop_range_.to_ - 1U);
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
-                auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(tt, tags, &w, &pl, &matches, tt_location{stop},
-                             start, dest));
+                auto& p = leg.intermediateStops_->emplace_back(to_place(
+                    tt, tags, w, pl, matches, tt_location{stop}, start, dest));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
                 p.arrival_ = stop.time(n::event_type::kArr);

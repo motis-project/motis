@@ -29,13 +29,13 @@ struct routing {
                  bool wheelchair,
                  std::chrono::seconds max) const;
 
-  osr::ways const& w_;
-  osr::lookup const& l_;
-  osr::platforms const& pl_;
-  nigiri::timetable const& tt_;
-  tag_lookup const& tags_;
-  point_rtree<nigiri::location_idx_t> const& loc_tree_;
-  platform_matches_t const& matches_;
+  osr::ways const* w_;
+  osr::lookup const* l_;
+  osr::platforms const* pl_;
+  nigiri::timetable const* tt_;
+  tag_lookup const* tags_;
+  point_rtree<nigiri::location_idx_t> const* loc_tree_;
+  platform_matches_t const* matches_;
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
 };

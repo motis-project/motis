@@ -53,21 +53,25 @@ api::Place to_place(nigiri::timetable const&,
                     place_t dest = osr::location{},
                     std::string_view name = "");
 
-api::Itinerary journey_to_response(
-    osr::ways const&,
-    osr::lookup const&,
-    nigiri::timetable const&,
-    tag_lookup const&,
-    osr::platforms const&,
-    elevators const* e,
-    nigiri::rt_timetable const*,
-    vector_map<nigiri::location_idx_t, osr::platform_idx_t> const& matches,
-    nigiri::shapes_storage const*,
-    bool const wheelchair,
-    nigiri::routing::journey const&,
-    place_t const& start,
-    place_t const& dest,
-    street_routing_cache_t&,
-    osr::bitvec<osr::node_idx_t>& blocked_mem);
+double get_level(osr::ways const*,
+                 osr::platforms const*,
+                 platform_matches_t const*,
+                 nigiri::location_idx_t);
+
+api::Itinerary journey_to_response(osr::ways const*,
+                                   osr::lookup const*,
+                                   osr::platforms const*,
+                                   nigiri::timetable const&,
+                                   tag_lookup const&,
+                                   elevators const* e,
+                                   nigiri::rt_timetable const*,
+                                   platform_matches_t const* matches,
+                                   nigiri::shapes_storage const*,
+                                   bool const wheelchair,
+                                   nigiri::routing::journey const&,
+                                   place_t const& start,
+                                   place_t const& dest,
+                                   street_routing_cache_t&,
+                                   osr::bitvec<osr::node_idx_t>& blocked_mem);
 
 }  // namespace motis
