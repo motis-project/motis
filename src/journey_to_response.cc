@@ -148,8 +148,8 @@ api::Itinerary journey_to_response(osr::ways const& w,
   auto const add_routed_polyline = [&](osr::search_profile const profile,
                                        osr::location const& from,
                                        osr::location const& to, api::Leg& leg) {
-    auto const t = n::unixtime_t{std::chrono::duration_cast<n::i32_minutes>(
-        std::chrono::milliseconds{leg.startTime_})};
+    auto const t =
+        std::chrono::time_point_cast<n::i32_minutes>(*leg.startTime_);
 
     auto const s = e ? get_states_at(w, l, *e, t, from.pos_)
                      : std::optional{std::pair<nodes_t, states_t>{}};
@@ -200,8 +200,8 @@ api::Itinerary journey_to_response(osr::ways const& w,
 
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
-      .startTime_ = to_ms(j.legs_.front().dep_time_),
-      .endTime_ = to_ms(j.legs_.back().arr_time_),
+      .startTime_ = j.legs_.front().dep_time_,
+      .endTime_ = j.legs_.back().arr_time_,
       .transfers_ = std::max(
           static_cast<std::iterator_traits<
               decltype(j.legs_)::iterator>::difference_type>(0),
@@ -223,8 +223,8 @@ api::Itinerary journey_to_response(osr::ways const& w,
                       : pred->to_;
       leg.to_ = to_place(tt, tags, &w, &pl, &matches, tt_location{j_leg.to_},
                          start, dest);
-      leg.from_.departure_ = leg.startTime_ = to_ms(j_leg.dep_time_);
-      leg.to_.arrival_ = leg.endTime_ = to_ms(j_leg.arr_time_);
+      leg.from_.departure_ = leg.startTime_ = j_leg.dep_time_;
+      leg.to_.arrival_ = leg.endTime_ = j_leg.arr_time_;
       leg.duration_ = to_seconds(j_leg.arr_time_ - j_leg.dep_time_);
       return leg;
     };
@@ -285,9 +285,9 @@ api::Itinerary journey_to_response(osr::ways const& w,
                 auto& p = leg.intermediateStops_->emplace_back(
                     to_place(tt, tags, &w, &pl, &matches, tt_location{stop},
                              start, dest));
-                p.departure_ = to_ms(stop.time(n::event_type::kDep));
+                p.departure_ = stop.time(n::event_type::kDep);
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
-                p.arrival_ = to_ms(stop.time(n::event_type::kArr));
+                p.arrival_ = stop.time(n::event_type::kArr);
                 p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kArr));
               }
             },

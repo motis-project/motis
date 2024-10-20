@@ -10,7 +10,7 @@
 		rt,
 		isRealtime
 	}: {
-		timestamp: number | undefined;
+		timestamp: string | undefined;
 		delay: number | undefined;
 		class?: string;
 		showAlways?: boolean;
@@ -18,7 +18,9 @@
 		isRealtime: boolean;
 	} = $props();
 
-	const d = $derived(timestamp ? new Date(rt ? timestamp : timestamp - delay!) : undefined);
+	const d = $derived(
+		timestamp ? new Date(new Date(timestamp).getTime() - (rt ? (delay ?? 0) : 0)) : undefined
+	);
 	const highDelay = $derived(delay !== undefined ? delay >= 180000 : false);
 </script>
 

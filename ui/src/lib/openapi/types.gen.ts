@@ -181,13 +181,13 @@ export type Place = {
      */
     departureDelay?: number;
     /**
-     * arrival time, format = unixtime in milliseconds
+     * arrival time
      */
-    arrival?: number;
+    arrival?: string;
     /**
-     * departure time, format = unixtime in milliseconds
+     * departure time
      */
-    departure?: number;
+    departure?: string;
     /**
      * scheduled track from the static schedule timetable dataset
      */
@@ -280,13 +280,13 @@ export type TripSegment = {
     from: Place;
     to: Place;
     /**
-     * departure time, format = unixtime in milliseconds
+     * departure time
      */
-    departure: number;
+    departure: string;
     /**
-     * arrival time, format = unixtime in milliseconds
+     * arrival time
      */
-    arrival: number;
+    arrival: string;
     /**
      * The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of departure at boarding stop = startTime - departureDelay
@@ -388,13 +388,13 @@ export type Leg = {
      */
     duration: number;
     /**
-     * leg departure time, format = unixtime in milliseconds
+     * leg departure time
      */
-    startTime: number;
+    startTime: string;
     /**
-     * leg arrival time, format = unixtime in milliseconds
+     * leg arrival time
      */
-    endTime: number;
+    endTime: string;
     /**
      * The offset from the scheduled departure time of the boarding stop in this leg (in milliseconds).
      * Scheduled time of departure at boarding stop = startTime - departureDelay
@@ -470,13 +470,13 @@ export type Itinerary = {
      */
     duration: number;
     /**
-     * journey departure time, format = unixtime in milliseconds
+     * journey departure time
      */
-    startTime: number;
+    startTime: string;
     /**
-     * journey arrival time, format = unixtime in milliseconds
+     * journey arrival time
      */
-    endTime: number;
+    endTime: string;
     /**
      * How much time is spent walking, in seconds.
      */
@@ -639,13 +639,6 @@ export type StoptimesData = {
          */
         arriveBy?: boolean;
         /**
-         * Optional. Defaults to the current date.
-         *
-         * Departure date ($arriveBy=false) / arrival date ($arriveBy=true), format: 06-28-2024
-         *
-         */
-        date?: string;
-        /**
          * the number of events
          */
         n: number;
@@ -657,15 +650,22 @@ export type StoptimesData = {
          */
         pageCursor?: string;
         /**
+         * Optional. Radius in meters.
+         *
+         * Default is that only stop times of the parent of the stop itself
+         * and all stops with the same name (+ their child stops) are returned.
+         *
+         * If set, all stops at parent stations and their child stops in the specified radius
+         * are returned.
+         *
+         */
+        radius?: number;
+        /**
          * stop id of the stop to retrieve departures/arrivals for
          */
         stopId: string;
         /**
          * Optional. Defaults to the current time.
-         *
-         * Format:
-         * - 12h format: 7:06pm
-         * - 24h format: 19:06
          *
          */
         time?: string;
@@ -703,13 +703,6 @@ export type PlanData = {
          *
          */
         arriveBy?: boolean;
-        /**
-         * Optional. Defaults to the current date.
-         *
-         * Departure date ($arriveBy=false) / arrival date ($arriveBy=true), format: 06-28-2024
-         *
-         */
-        date?: string;
         /**
          * \`latitude,longitude,level\` tuple in degrees OR stop id
          */
@@ -788,13 +781,7 @@ export type PlanData = {
         /**
          * Optional. Defaults to the current time.
          *
-         * Meaning depending on `arriveBy`
-         * - Departure time for `arriveBy=false`
-         * - Arrival time for `arriveBy=true`
-         *
-         * Format:
-         * - 12h format: 7:06pm
-         * - 24h format: 19:06
+         * Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
          *
          */
         time?: string;
@@ -847,10 +834,6 @@ export type PlanResponse = ({
     debugOutput: {
         [key: string]: (string);
     };
-    /**
-     * The time and date of travel
-     */
-    date: number;
     from: Place;
     to: Place;
     /**
@@ -876,9 +859,9 @@ export type PlanError = unknown;
 export type TripsData = {
     query: {
         /**
-         * end if the time window (unix timestamp in milliseconds)
+         * end if the time window
          */
-        endTime: number;
+        endTime: string;
         /**
          * latitude,longitude pair of the upper left coordinate
          */
@@ -888,9 +871,9 @@ export type TripsData = {
          */
         min: string;
         /**
-         * start of the time window (unix timestamp in milliseconds)
+         * start of the time window
          */
-        startTime: number;
+        startTime: string;
         /**
          * current zoom level
          */

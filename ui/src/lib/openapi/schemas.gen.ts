@@ -196,12 +196,12 @@ Scheduled time of departure at boarding stop = startTime - departureDelay
 `
         },
         arrival: {
-            description: 'arrival time, format = unixtime in milliseconds',
-            type: 'integer'
+            description: 'arrival time',
+            type: 'date'
         },
         departure: {
-            description: 'departure time, format = unixtime in milliseconds',
-            type: 'integer'
+            description: 'departure time',
+            type: 'date'
         },
         scheduledTrack: {
             description: 'scheduled track from the static schedule timetable dataset',
@@ -334,12 +334,12 @@ export const TripSegmentSchema = {
             '$ref': '#/components/schemas/Place'
         },
         departure: {
-            description: 'departure time, format = unixtime in milliseconds',
-            type: 'integer'
+            description: 'departure time',
+            type: 'date'
         },
         arrival: {
-            description: 'arrival time, format = unixtime in milliseconds',
-            type: 'integer'
+            description: 'arrival time',
+            type: 'date'
         },
         departureDelay: {
             type: 'integer',
@@ -474,12 +474,12 @@ export const LegSchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'integer',
-            description: 'leg departure time, format = unixtime in milliseconds'
+            type: 'date',
+            description: 'leg departure time'
         },
         endTime: {
-            type: 'integer',
-            description: 'leg arrival time, format = unixtime in milliseconds'
+            type: 'date',
+            description: 'leg arrival time'
         },
         departureDelay: {
             type: 'integer',
@@ -591,12 +591,12 @@ export const ItinerarySchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'integer',
-            description: 'journey departure time, format = unixtime in milliseconds'
+            type: 'date',
+            description: 'journey departure time'
         },
         endTime: {
-            type: 'integer',
-            description: 'journey arrival time, format = unixtime in milliseconds'
+            type: 'date',
+            description: 'journey arrival time'
         },
         walkTime: {
             type: 'integer',
