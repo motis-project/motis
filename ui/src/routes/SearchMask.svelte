@@ -12,14 +12,14 @@
 	let {
 		from = $bindable(),
 		to = $bindable(),
-		dateTime = $bindable(),
+		time = $bindable(),
 		timeType = $bindable(),
 		wheelchair = $bindable(),
 		theme
 	}: {
 		from: Location;
 		to: Location;
-		dateTime: Date;
+		time: Date;
 		timeType: string;
 		wheelchair: boolean;
 		theme?: 'light' | 'dark';
@@ -63,7 +63,7 @@
 		<ArrowUpDown class="w-5 h-5" />
 	</Button>
 	<div class="flex flex-row space-x-2 justify-between">
-		<DateInput bind:value={dateTime} />
+		<DateInput bind:value={time} />
 		<RadioGroup.Root class="flex space-x-1" bind:value={timeType}>
 			<Label
 				for="departure"

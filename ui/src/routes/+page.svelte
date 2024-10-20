@@ -21,7 +21,6 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/openapi';
 	import StopTimes from './StopTimes.svelte';
-	import { toDateTime } from '$lib/toDateTime';
 	import { onMount } from 'svelte';
 	import RailViz from './RailViz.svelte';
 
@@ -58,7 +57,7 @@
 	let toMarker = $state<maplibregl.Marker>();
 	let from = $state<Location>({ label: '', value: {} });
 	let to = $state<Location>({ label: '', value: {} });
-	let dateTime = $state<Date>(new Date());
+	let time = $state<Date>(new Date());
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
 
@@ -75,8 +74,7 @@
 		from.value.match && to.value.match
 			? {
 					query: {
-						date: toDateTime(dateTime)[0],
-						time: toDateTime(dateTime)[1],
+						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
 						toPlace: toPlaceString(to),
 						arriveBy: timeType === 'arrival',
@@ -172,7 +170,7 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask bind:from bind:to bind:dateTime bind:timeType bind:wheelchair {theme} />
+			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair {theme} />
 		</Card>
 	</Control>
 

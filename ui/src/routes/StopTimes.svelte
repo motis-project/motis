@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { stoptimes, type StoptimesResponse } from '$lib/openapi';
-	import { toDateTime } from '$lib/toDateTime';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import Time from '$lib/Time.svelte';
@@ -19,8 +18,7 @@
 		onClickTrip: (tripId: string, date: string) => void;
 	} = $props();
 
-	const [date, time] = toDateTime(queryTime);
-	let query = $derived({ stopId, date, time, arriveBy, n: 10 });
+	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10 });
 	let responses = $state<Array<Promise<StoptimesResponse>>>([]);
 	$effect(() => {
 		responses = [stoptimes({ query }).then((r) => r.data!)];

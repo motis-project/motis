@@ -275,8 +275,10 @@ api::stoptimes_response stop_times::operator()(
   auto const p = tt_.locations_.parents_[x];
   auto const l = p == n::location_idx_t::invalid() ? x : p;
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
-      fmt::format("{}|{:%FT%T%z}", query.arriveBy_ ? "EARLIER" : "LATER",
-                  query.time_->time_)));
+      fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      query.time_->time_.time_since_epoch())
+                      .count())));
 
   auto locations = std::vector{l};
   auto const add = [&](n::location_idx_t const l) {
