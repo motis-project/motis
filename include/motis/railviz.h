@@ -1,14 +1,29 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
+
+#include "geo/box.h"
+
+#include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
 
 namespace motis {
 
+struct railviz_bounding_boxes {
+  railviz_bounding_boxes(std::filesystem::path const&,
+                         nigiri::timetable const&,
+                         nigiri::shapes_storage const*);
+  railviz_bounding_boxes(std::filesystem::path const&);
+  geo::box get_bounding_box(nigiri::route_idx_t const) const;
+  geo::box get_bounding_box(nigiri::route_idx_t const, std::size_t const) const;
+  nigiri::mm_vecvec<nigiri::route_idx_t, geo::box> boxes_;
+};
+
 struct railviz_static_index {
-  railviz_static_index(nigiri::timetable const&, nigiri::shapes_storage const*);
+  railviz_static_index(nigiri::timetable const&, railviz_bounding_boxes&&);
   ~railviz_static_index();
 
   struct impl;
