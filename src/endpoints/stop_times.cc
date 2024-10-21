@@ -17,7 +17,6 @@
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
-#include "motis/timetable/service_date.h"
 #include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
@@ -271,7 +270,7 @@ api::stoptimes_response stop_times::operator()(
     boost::urls::url_view const& url) const {
   auto const query = api::stoptimes_params{url.params()};
 
-  auto const x = tags_.get(tt_, query.stopId_);
+  auto const x = tags_.get_location(tt_, query.stopId_);
   auto const p = tt_.locations_.parents_[x];
   auto const l = p == n::location_idx_t::invalid() ? x : p;
   auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
@@ -342,7 +341,6 @@ api::stoptimes_response stop_times::operator()(
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
-                .routeId_ = "",
                 .tripId_ = tags_.id(tt_, s),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};

@@ -898,8 +898,6 @@ components:
         - agencyId
         - agencyName
         - agencyUrl
-        - routeType
-        - routeId
         - tripId
         - routeShortName
         - source
@@ -932,10 +930,6 @@ components:
         routeColor:
           type: string
         routeTextColor:
-          type: string
-        routeType:
-          type: string
-        routeId:
           type: string
         tripId:
           type: string

@@ -19,20 +19,9 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
-  auto const [tag, id] = split_tag_id(query.tripId_);
-  auto const src = tags_.get_src(tag);
-
-  // transform YYYY-MM-DD to YYYYMMDD
-  query.date_.erase(std::remove(begin(query.date_), end(query.date_), '-'),
-                    end(query.date_));
-
-  transit_realtime::TripDescriptor td;
-  td.set_trip_id(id);
-  td.set_start_date(query.date_);
-
-  auto const [r, _] = n::rt::gtfsrt_resolve_run({}, tt_, rtt, src, td);
-  utl::verify(r.valid(), "trip not found: tripId={}, date={}, tt={}",
-              query.tripId_, query.date_, tt_.external_interval());
+  auto const [r, _] = tags_.get_trip(tt_, query.tripId_);
+  utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
+              tt_.external_interval());
 
   auto fr = n::rt::frun{tt_, rtt, r};
   fr.stop_range_.to_ = fr.size();

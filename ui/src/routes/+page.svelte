@@ -133,8 +133,8 @@
 	let stopArriveBy = $state<boolean>();
 	let selectedStop = $state<{ name: string; stopId: string; time: Date }>();
 
-	const onClickTrip = (tripId: string, date: string) => {
-		trip({ query: { tripId, date } }).then((r) => {
+	const onClickTrip = (tripId: string) => {
+		trip({ query: { tripId } }).then((r) => {
 			selectedItinerary = r.data;
 			selectedStop = undefined;
 		});

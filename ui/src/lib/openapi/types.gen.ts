@@ -75,7 +75,7 @@ export type Match = {
      * (at the moment only for public transport)
      *
      */
-    level: number;
+    level?: number;
     /**
      * street name
      */
@@ -234,10 +234,7 @@ export type StopTime = {
     agencyUrl: string;
     routeColor?: string;
     routeTextColor?: string;
-    routeType: string;
-    routeId: string;
     tripId: string;
-    serviceDate: string;
     routeShortName: string;
     /**
      * Filename and line number where this trip is from
@@ -253,10 +250,6 @@ export type TripInfo = {
      * trip ID (dataset trip id prefixed with the dataset tag)
      */
     tripId: string;
-    /**
-     * service date
-     */
-    serviceDate: string;
     /**
      * trip display name
      */
@@ -439,7 +432,6 @@ export type Leg = {
     routeId?: string;
     agencyId?: string;
     tripId?: string;
-    serviceDate?: string;
     routeShortName?: string;
     /**
      * Filename and line number where this trip is from
@@ -604,19 +596,6 @@ export type GeocodeError = unknown;
 
 export type TripData = {
     query: {
-        /**
-         * Service date as specified in the source dataset.
-         * Can be taken from an itinerary leg or stop event.
-         *
-         * Not that for GTFS the first departure time can be greater than 24:00:00
-         * which means that the service date is shifted by the offset (first departure / 24h).
-         * A valid use case for this are stay seated transfers expressed by `block_id`.
-         *
-         * Example: a train with first departure at 25:00:00 on 9th of Oct 2024
-         * has the 8th of Oct 2024 as service date.
-         *
-         */
-        date: string;
         /**
          * trip identifier (e.g. from an itinerary leg or stop event)
          */

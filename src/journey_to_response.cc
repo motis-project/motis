@@ -22,7 +22,6 @@
 #include "motis/constants.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
-#include "motis/timetable/service_date.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
 
@@ -30,7 +29,7 @@ namespace n = nigiri;
 
 namespace motis {
 
-tt_location::tt_location(nigiri::rt::frun::run_stop const& stop)
+tt_location::tt_location(nigiri::rt::run_stop const& stop)
     : l_{stop.get_location_idx()},
       scheduled_{stop.get_scheduled_location_idx()} {}
 

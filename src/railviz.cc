@@ -28,7 +28,6 @@
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
-#include "motis/timetable/service_date.h"
 #include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
@@ -350,30 +349,26 @@ api::trips_response get_trains(tag_lookup const& tags,
                             {r.from_, static_cast<n::stop_idx_t>(r.to_ + 1U)},
                             [&](auto&& p) { enc.push(p); });
 
-    return {
-        .trips_ = {api::TripInfo{
-            .tripId_ = tags.id(tt, from.get_trip_idx(n::event_type::kDep)),
-            .serviceDate_ = fr.is_scheduled()
-                                ? get_service_date(tt, fr.t_, from.stop_idx_)
-                                : "ADDED",
-            .routeShortName_ =
-                std::string{from.trip_display_name(n::event_type::kDep)}}},
-        .routeColor_ =
-            to_str(from.get_route_color(nigiri::event_type::kDep).color_),
-        .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
-        .distance_ =
-            fr.is_rt()
-                ? rt_index.rt_distances_[fr.rt_]
-                : static_index
-                      .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-        .from_ = to_place(tt, tags, w, pl, matches, tt_location{from}),
-        .to_ = to_place(tt, tags, w, pl, matches, tt_location{to}),
-        .departure_ = from.time(n::event_type::kDep),
-        .arrival_ = to.time(n::event_type::kArr),
-        .departureDelay_ = to_ms(from.delay(n::event_type::kDep)),
-        .arrivalDelay_ = to_ms(to.delay(n::event_type::kArr)),
-        .realTime_ = fr.is_rt(),
-        .polyline_ = std::move(enc.buf_)};
+    return {.trips_ = {api::TripInfo{
+                .tripId_ = tags.id(tt, from),
+                .routeShortName_ =
+                    std::string{from.trip_display_name(n::event_type::kDep)}}},
+            .routeColor_ =
+                to_str(from.get_route_color(nigiri::event_type::kDep).color_),
+            .mode_ = to_mode(from.get_clasz(n::event_type::kDep)),
+            .distance_ =
+                fr.is_rt()
+                    ? rt_index.rt_distances_[fr.rt_]
+                    : static_index
+                          .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
+            .from_ = to_place(tt, tags, w, pl, matches, tt_location{from}),
+            .to_ = to_place(tt, tags, w, pl, matches, tt_location{to}),
+            .departure_ = from.time(n::event_type::kDep),
+            .arrival_ = to.time(n::event_type::kArr),
+            .departureDelay_ = to_ms(from.delay(n::event_type::kDep)),
+            .arrivalDelay_ = to_ms(to.delay(n::event_type::kArr)),
+            .realTime_ = fr.is_rt(),
+            .polyline_ = std::move(enc.buf_)};
   });
 }
 

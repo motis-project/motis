@@ -53,7 +53,7 @@
 		return {
 			lat: l.value.match!.lat,
 			lng: l.value.match!.lon,
-			level: l.value.match!.level
+			level: l.value.match!.level ?? 0
 		};
 	};
 

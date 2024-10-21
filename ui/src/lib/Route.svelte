@@ -9,7 +9,7 @@
 	}: {
 		l: LegLike;
 		class?: string;
-		onClickTrip: (tripId: string, date: string) => void;
+		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	const modeIcon = getModeStyle(l.mode)[0];
@@ -23,10 +23,10 @@
 	)}
 	style={routeColor(l)}
 	onclick={() => {
-		if (l.tripId && l.serviceDate) {
-			onClickTrip(l.tripId, l.serviceDate);
+		if (l.tripId) {
+			onClickTrip(l.tripId);
 		} else {
-			console.log('tripId or serviceDate missing', l);
+			console.log('tripId missing', l);
 		}
 	}}
 >
