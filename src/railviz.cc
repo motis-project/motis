@@ -108,8 +108,7 @@ struct route_geo_index {
   route_geo_index(n::timetable const& tt,
                   railviz_bounding_boxes const& bounding_boxes,
                   n::clasz const clasz,
-                  n::vector_map<n::route_idx_t, float>& distances)
-      : bounding_boxes_{&bounding_boxes} {
+                  n::vector_map<n::route_idx_t, float>& distances) {
     auto values = std::vector<route_box>{};
     // Create bounding boxes for all routes
     for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
@@ -136,7 +135,6 @@ struct route_geo_index {
   }
 
   static_rtree rtree_{};
-  railviz_bounding_boxes const* bounding_boxes_{nullptr};
 };
 
 struct rt_transport_geo_index {
@@ -251,9 +249,8 @@ void add_static_transports(n::timetable const& tt,
                            n::route_idx_t const r,
                            n::interval<n::unixtime_t> const time_interval,
                            geo::box const& area,
-                           route_geo_index const& geo_index,
+                           railviz_bounding_boxes const& bounding_boxes,
                            std::vector<stop_pair>& runs) {
-  assert(geo_index.bounding_boxes_ != nullptr);
   auto const is_active = [&](n::transport const t) -> bool {
     return (rtt == nullptr
                 ? tt.bitfields_[tt.transport_traffic_days_[t.t_idx_]]
@@ -267,7 +264,7 @@ void add_static_transports(n::timetable const& tt,
   auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
   auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
-    auto const& box = geo_index.bounding_boxes_->get_bounding_box(r, from);
+    auto const& box = bounding_boxes.get_bounding_box(r, from);
     if (!box.overlaps(area)) {
       continue;
     }
@@ -447,11 +444,10 @@ api::trips_response get_trains(tag_lookup const& tags,
       }
     }
 
-    auto const& geo_indices = static_index.static_geo_indices_[c];
-    for (auto const& r : geo_indices.get_routes(area)) {
+    for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
       if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
-        add_static_transports(tt, rtt, r, time_interval, area, geo_indices,
-                              runs);
+        add_static_transports(tt, rtt, r, time_interval, area,
+                              static_index.bounding_boxes_, runs);
       }
     }
   }
