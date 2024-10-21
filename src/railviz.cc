@@ -163,18 +163,20 @@ struct route_geo_index {
             }
           }
           auto prev_pos = tt.locations_.coordinates_.at(
-              n::stop{absolute_range.from_}.location_idx());
+              n::stop{seq[absolute_range.from_]}.location_idx());
           bounding_box.extend(prev_pos);
           for (auto const [from, to] : utl::pairwise(absolute_range)) {
             auto const next_pos =
-                tt.locations_.coordinates_.at(n::stop{to}.location_idx());
+                tt.locations_.coordinates_.at(n::stop{seq[to]}.location_idx());
             auto& box = segment_boxes[cista::to_idx(from)];
             bounding_box.extend(next_pos);
             box.extend(prev_pos);
             box.extend(next_pos);
             if (shape_boxes != nullptr) {
-              box.extend((*shape_boxes)[static_cast<std::size_t>(
-                  cista::to_idx(from) - cista::to_idx(absolute_range.from_))]);
+              auto const& shape_box = (*shape_boxes)[static_cast<std::size_t>(
+                  cista::to_idx(from) - cista::to_idx(absolute_range.from_))];
+              bounding_box.extend(shape_box);
+              box.extend(shape_box);
             }
             prev_pos = next_pos;
           }
