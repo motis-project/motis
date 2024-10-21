@@ -31,6 +31,8 @@
 #include "nigiri/loader/loader_interface.h"
 #include "nigiri/clasz.h"
 #include "nigiri/common/parse_date.h"
+#include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shape.h"
 #include "nigiri/timetable.h"
 
@@ -206,24 +208,33 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                   [&]() { d.load_osr(); },
                   {osm_hash, osr_version}};
 
-  auto adr = task{"adr",
-                  [&]() { return c.geocoding_ || c.reverse_geocoding_; },
-                  [&]() { return true; },
-                  [&]() {
-                    adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
-                    d.load_geocoder();
+  auto adr =
+      task{"adr",
+           [&]() { return c.geocoding_ || c.reverse_geocoding_; },
+           []() { return true; },
+           [&]() {
+             adr::extract(*c.osm_, data_path / "adr", data_path / "adr");
 
-                    if (c.reverse_geocoding_) {
-                      d.load_reverse_geocoder();
-                    }
-                  },
-                  [&]() {
-                    d.load_geocoder();
-                    if (c.reverse_geocoding_) {
-                      d.load_reverse_geocoder();
-                    }
-                  },
-                  {osm_hash, adr_version}};
+             // We can't use d.load_geocoder() here because
+             // adr_extend expects the base-line version
+             // without extra timetable information.
+             d.t_ = adr::read(data_path / "adr" / "t.bin");
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
+           },
+           [&]() {
+             // Same here, need to load base-line version for adr_extend!
+             d.t_ = adr::read(data_path / "adr" / "t.bin");
+             d.tc_ = std::make_unique<adr::cache>(d.t_->strings_.size(), 100U);
+
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
+           },
+           {osm_hash, adr_version}};
 
   auto tt = task{
       "tt",
@@ -296,6 +307,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           d.tt_->write(data_path / "tt.bin");
           d.tags_->write(data_path / "tags.bin");
         }
+
+        d.init_rtt();
       },
       [&]() { d.load_tt(); },
       {tt_hash, n_version}};
@@ -309,10 +322,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                  data_path / "adr", cista::mmap::protection::READ};
              adr_extend_tt(*d.tt_, area_db, *d.t_);
              if (write) {
-               cista::write(data_path / "adr" / "t.bin", *d.t_);
+               cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
              }
            },
-           [&]() {},
+           [&]() { d.load_geocoder(); },
            {tt_hash, osm_hash, adr_version, n_version}};
 
   auto osr_footpath =
@@ -398,7 +411,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       {osm_hash, tiles_hash}};
 
   auto tasks =
-      std::vector<task>{osr, adr, tt, adr_extend, osr_footpath, tiles, matches};
+      std::vector<task>{tiles, osr, adr, tt, adr_extend, osr_footpath, matches};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;

@@ -7,12 +7,6 @@
 
 namespace motis {
 
-inline std::int64_t to_ms(nigiri::unixtime_t const t) {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(
-             t.time_since_epoch())
-      .count();
-}
-
 inline std::int64_t to_seconds(nigiri::unixtime_t const t) {
   return std::chrono::duration_cast<std::chrono::seconds>(t.time_since_epoch())
       .count();

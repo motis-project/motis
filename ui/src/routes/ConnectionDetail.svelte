@@ -21,7 +21,7 @@
 </script>
 
 {#snippet stopTimes(
-	timestamp: number,
+	timestamp: string,
 	delay: number,
 	isRealtime: boolean,
 	name: string,

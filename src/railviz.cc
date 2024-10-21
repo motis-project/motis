@@ -410,6 +410,9 @@ api::trips_response get_trains(tag_lookup const& tags,
                                n::timetable const& tt,
                                n::rt_timetable const* rtt,
                                n::shapes_storage const* shapes,
+                               osr::ways const* w,
+                               osr::platforms const* pl,
+                               platform_matches_t const* matches,
                                railviz_static_index::impl const& static_index,
                                railviz_rt_index::impl const& rt_index,
                                api::trips_params const& query) {
@@ -420,11 +423,9 @@ api::trips_response get_trains(tag_lookup const& tags,
   utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
   auto const start_time =
-      n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-          std::chrono::seconds{static_cast<long long>(query.startTime_)})};
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*query.startTime_);
   auto const end_time =
-      n::unixtime_t{std::chrono::duration_cast<n::unixtime_t::duration>(
-          std::chrono::seconds{static_cast<long long>(query.endTime_)})};
+      std::chrono::time_point_cast<n::unixtime_t::duration>(*query.endTime_);
   auto const time_interval = n::interval{start_time, end_time};
   auto const area = geo::make_box({min->pos_, max->pos_});
 
@@ -485,10 +486,10 @@ api::trips_response get_trains(tag_lookup const& tags,
                 ? rt_index.rt_distances_[fr.rt_]
                 : static_index
                       .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-        .from_ = to_place(tt, tags, from.get_location_idx()),
-        .to_ = to_place(tt, tags, to.get_location_idx()),
-        .departure_ = to_ms(from.time(n::event_type::kDep)),
-        .arrival_ = to_ms(to.time(n::event_type::kArr)),
+        .from_ = to_place(tt, tags, w, pl, matches, tt_location{from}),
+        .to_ = to_place(tt, tags, w, pl, matches, tt_location{to}),
+        .departure_ = from.time(n::event_type::kDep),
+        .arrival_ = to.time(n::event_type::kArr),
         .departureDelay_ = to_ms(from.delay(n::event_type::kDep)),
         .arrivalDelay_ = to_ms(to.delay(n::event_type::kArr)),
         .realTime_ = fr.is_rt(),

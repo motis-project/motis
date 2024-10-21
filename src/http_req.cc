@@ -27,7 +27,8 @@ asio::awaitable<http_response> req(Stream&&,
 
 asio::awaitable<http_response> req_no_tls(
     boost::urls::url const& url,
-    std::map<std::string, std::string> const& headers) {
+    std::map<std::string, std::string> const& headers,
+    std::chrono::seconds const timeout) {
   auto executor = co_await asio::this_coro::executor;
   auto resolver = asio::ip::tcp::resolver{executor};
   auto stream = beast::tcp_stream{executor};
@@ -35,7 +36,7 @@ asio::awaitable<http_response> req_no_tls(
   auto const results = co_await resolver.async_resolve(
       url.host(), url.has_port() ? url.port() : "80");
 
-  stream.expires_after(std::chrono::seconds(30));
+  stream.expires_after(timeout);
 
   co_await stream.async_connect(results);
   co_return co_await req(std::move(stream), url, headers);
@@ -43,7 +44,8 @@ asio::awaitable<http_response> req_no_tls(
 
 asio::awaitable<http_response> req_tls(
     boost::urls::url const& url,
-    std::map<std::string, std::string> const& headers) {
+    std::map<std::string, std::string> const& headers,
+    std::chrono::seconds const timeout) {
   auto ssl_ctx = ssl::context{ssl::context::tlsv12_client};
   ssl_ctx.set_default_verify_paths();
   ssl_ctx.set_verify_mode(ssl::verify_none);
@@ -63,7 +65,7 @@ asio::awaitable<http_response> req_tls(
                                        boost::asio::error::get_ssl_category()}};
   }
 
-  stream.next_layer().expires_after(std::chrono::seconds(30));
+  stream.next_layer().expires_after(timeout);
 
   auto const results = co_await resolver.async_resolve(
       url.host(), url.has_port() ? url.port() : "443");
@@ -99,14 +101,16 @@ asio::awaitable<http_response> req(
 }
 
 asio::awaitable<http::response<http::dynamic_body>> http_GET(
-    boost::urls::url url, std::map<std::string, std::string> const& headers) {
+    boost::urls::url url,
+    std::map<std::string, std::string> const& headers,
+    std::chrono::seconds const timeout) {
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
     auto const res =
         co_await (next_url.scheme_id() == boost::urls::scheme::https
-                      ? req_tls(next_url, headers)
-                      : req_no_tls(next_url, headers));
+                      ? req_tls(next_url, headers, timeout)
+                      : req_no_tls(next_url, headers, timeout));
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};

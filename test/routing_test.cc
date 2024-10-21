@@ -2,7 +2,11 @@
 
 #include "boost/json.hpp"
 
+#include "gtfsrt/gtfs-realtime.pb.h"
+
 #include "utl/init_from.h"
+
+#include "nigiri/rt/gtfsrt_update.h"
 
 #include "motis/config.h"
 #include "motis/data.h"
@@ -14,6 +18,8 @@ namespace json = boost::json;
 using namespace std::string_view_literals;
 using namespace motis;
 using namespace date;
+using namespace std::chrono_literals;
+namespace n = nigiri;
 
 constexpr auto const kFastaJson = R"__(
 [
@@ -131,6 +137,7 @@ DA_3,DA Hbf,49.87355,8.63003,0,DA,3
 DA_10,DA Hbf,49.87336,8.62926,0,DA,10
 FFM,FFM Hbf,50.10701,8.66341,1,,
 FFM_101,FFM Hbf,50.10739,8.66333,0,FFM,101
+FFM_10,FFM Hbf,50.10593,8.66118,0,FFM,10
 FFM_12,FFM Hbf,50.10658,8.66178,0,FFM,12
 de:6412:10:6:1,FFM Hbf U-Bahn,50.107577,8.6638173,0,FFM,U4
 LANGEN,Langen,49.99359,8.65677,1,,1
@@ -141,14 +148,12 @@ FFM_HAUPT_S,FFM Hauptwache S,50.11404,8.67824,0,FFM_HAUPT,
 # routes.txt
 route_id,agency_id,route_short_name,route_long_name,route_desc,route_type
 S3,DB,S3,,,109
-RB,DB,RB,,,106
 U4,DB,U4,,,402
 ICE,DB,ICE,,,101
 
 # trips.txt
 route_id,service_id,trip_id,trip_headsign,block_id
 S3,S1,S3,,
-RB,S1,RB,,
 U4,S1,U4,,
 ICE,S1,ICE,,
 
@@ -156,13 +161,10 @@ ICE,S1,ICE,,
 trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type
 S3,01:15:00,01:15:00,FFM_101,1,0,0
 S3,01:20:00,01:20:00,FFM_HAUPT_S,2,0,0
-RB,00:35:00,00:35:00,DA_10,0,0,0
-RB,00:45:00,00:45:00,LANGEN,1,0,0
-RB,00:55:00,00:55:00,FFM_12,2,0,0
 U4,01:05:00,01:05:00,de:6412:10:6:1,0,0,0
 U4,01:10:00,01:10:00,FFM_HAUPT_U,1,0,0
-ICE,00:45:00,00:45:00,DA_10,0,0,0
-ICE,00:55:00,00:55:00,FFM_12,1,0,0
+ICE,00:35:00,00:35:00,DA_10,0,0,0
+ICE,00:45:00,00:45:00,FFM_10,1,0,0
 
 # calendar_dates.txt
 service_id,date,exception_type
@@ -171,16 +173,16 @@ S1,20190501,1
 # frequencies.txt
 trip_id,start_time,end_time,headway_secs
 S3,01:15:00,25:15:00,3600
-RB,00:35:00,24:35:00,3600
 ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
 
 void print_short(std::ostream& out, api::Itinerary const& j) {
   auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
-    auto const u = std::chrono::time_point<std::chrono::system_clock>{
-        std::chrono::milliseconds{t}};
-    out << date::format(fmt, u);
+    out << date::format(fmt, *t);
+  };
+  auto const format_duration = [&](auto&& t, char const* fmt = "%H:%M") {
+    out << date::format(fmt, std::chrono::milliseconds{t});
   };
 
   out << "date=";
@@ -191,7 +193,7 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
   format_time(j.endTime_, "%H:%M");
 
   out << ", duration=";
-  format_time(j.duration_ * 1000U, "%H:%M");
+  format_duration(j.duration_ * 1000U);
   out << ", transfers=" << j.transfers_;
 
   out << ", legs=[\n";
@@ -205,16 +207,105 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
     first = false;
     out << "(";
     out << "from=" << leg.from_.stopId_.value_or("-")
-        << ", to=" << leg.to_.stopId_.value_or("-") << ", ";
+        << " [track=" << leg.from_.track_.value_or("-")
+        << ", scheduled_track=" << leg.from_.scheduledTrack_.value_or("-")
+        << ", level=" << leg.from_.level_ << "]"
+        << ", to=" << leg.to_.stopId_.value_or("-")
+        << " [track=" << leg.to_.track_.value_or("-")
+        << ", scheduled_track=" << leg.to_.scheduledTrack_.value_or("-")
+        << ", level=" << leg.to_.level_ << "], ";
     out << "start=";
     format_time(leg.startTime_);
     out << ", mode=";
     out << json::serialize(json::value_from(leg.mode_));
+    out << ", trip=\"" << leg.routeShortName_.value_or("-") << "\"";
     out << ", end=";
     format_time(leg.endTime_);
     out << ")";
   }
   out << "\n]";
+}
+
+struct trip_update {
+  struct stop_time_update {
+    std::string stop_id_;
+    std::optional<std::uint32_t> seq_{std::nullopt};
+    ::nigiri::event_type ev_type_{::nigiri::event_type::kDep};
+    std::int32_t delay_minutes_{0U};
+    bool skip_{false};
+    std::optional<std::string> stop_assignment_{std::nullopt};
+  };
+  std::string trip_id_;
+  std::optional<std::string> start_time_;
+  std::optional<std::string> date_;
+  std::vector<stop_time_update> stop_updates_{};
+  bool cancelled_{false};
+};
+
+template <typename T>
+std::uint64_t to_unix(T&& x) {
+  return static_cast<std::uint64_t>(
+      std::chrono::time_point_cast<std::chrono::seconds>(x)
+          .time_since_epoch()
+          .count());
+};
+
+transit_realtime::FeedMessage to_feed_msg(
+    std::vector<trip_update> const& trip_delays,
+    date::sys_seconds const msg_time) {
+  transit_realtime::FeedMessage msg;
+
+  auto const hdr = msg.mutable_header();
+  hdr->set_gtfs_realtime_version("2.0");
+  hdr->set_incrementality(
+      transit_realtime::FeedHeader_Incrementality_FULL_DATASET);
+  hdr->set_timestamp(to_unix(msg_time));
+
+  auto id = 0U;
+  for (auto const& trip : trip_delays) {
+    auto const e = msg.add_entity();
+    e->set_id(fmt::format("{}", ++id));
+    e->set_is_deleted(false);
+
+    auto const td = e->mutable_trip_update()->mutable_trip();
+    td->set_trip_id(trip.trip_id_);
+    if (trip.cancelled_) {
+      td->set_schedule_relationship(
+          transit_realtime::TripDescriptor_ScheduleRelationship_CANCELED);
+      continue;
+    }
+    if (trip.date_) {
+      td->set_start_date(*trip.date_);
+    }
+    if (trip.start_time_) {
+      td->set_start_time(*trip.start_time_);
+    }
+
+    for (auto const& stop_upd : trip.stop_updates_) {
+      auto* const upd = e->mutable_trip_update()->add_stop_time_update();
+      if (!stop_upd.stop_id_.empty()) {
+        *upd->mutable_stop_id() = stop_upd.stop_id_;
+      }
+      if (stop_upd.seq_.has_value()) {
+        upd->set_stop_sequence(*stop_upd.seq_);
+      }
+      if (stop_upd.stop_assignment_.has_value()) {
+        upd->mutable_stop_time_properties()->set_assigned_stop_id(
+            stop_upd.stop_assignment_.value());
+      }
+      if (stop_upd.skip_) {
+        upd->set_schedule_relationship(
+            transit_realtime::
+                TripUpdate_StopTimeUpdate_ScheduleRelationship_SKIPPED);
+        continue;
+      }
+      stop_upd.ev_type_ == ::nigiri::event_type::kDep
+          ? upd->mutable_departure()->set_delay(stop_upd.delay_minutes_ * 60)
+          : upd->mutable_arrival()->set_delay(stop_upd.delay_minutes_ * 60);
+    }
+  }
+
+  return msg;
 }
 
 TEST(motis, routing) {
@@ -233,13 +324,31 @@ TEST(motis, routing) {
       "test/data", false);
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
+  d.init_rtt(date::sys_days{2019_y / May / 1});
+  auto const stats = n::rt::gtfsrt_update_msg(
+      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+      to_feed_msg(
+          {trip_update{.trip_id_ = "ICE",
+                       .start_time_ = {"03:35:00"},
+                       .date_ = {"20190501"},
+                       .stop_updates_ = {{.stop_id_ = "FFM_12",
+                                          .seq_ = std::optional{1U},
+                                          .ev_type_ = n::event_type::kArr,
+                                          .delay_minutes_ = 10,
+                                          .stop_assignment_ = "FFM_12"}}}},
+          date::sys_days{2019_y / May / 1} + 9h));
+  EXPECT_EQ(1U, stats.total_entities_success_);
+
   auto const routing = utl::init_from<ep::routing>(d).value();
+  EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
 
   // Route with wheelchair.
   {
     auto const plan_response = routing(
-        "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
-        "&date=05-01-2019&time=01:25&wheelchair=true");
+        "?fromPlace=49.87263,8.63127"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z"
+        "&wheelchair=true");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
@@ -248,11 +357,11 @@ TEST(motis, routing) {
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:29, end=02:29, duration=01:04, transfers=1, legs=[
-    (from=-, to=test_DA_10, start=2019-05-01 01:29, mode="WALK", end=2019-05-01 01:35),
-    (from=test_DA_10, to=test_FFM_12, start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", end=2019-05-01 01:45),
-    (from=test_FFM_12, to=test_FFM_101, start=2019-05-01 01:45, mode="WALK", end=2019-05-01 01:51),
-    (from=test_FFM_101, to=test_FFM_HAUPT_S, start=2019-05-01 02:15, mode="METRO", end=2019-05-01 02:20),
-    (from=test_FFM_HAUPT_S, to=-, start=2019-05-01 02:20, mode="WALK", end=2019-05-01 02:29)
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 01:55),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:01),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:29)
 ])",
         ss.str());
   }
@@ -260,8 +369,9 @@ TEST(motis, routing) {
   // Route without wheelchair.
   {
     auto const plan_response = routing(
-        "/?fromPlace=49.87263,8.63127&toPlace=50.11347,8.67664"
-        "&date=05-01-2019&time=01:25");
+        "?fromPlace=49.87263,8.63127"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
@@ -270,11 +380,11 @@ TEST(motis, routing) {
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
-    (from=-, to=test_DA_10, start=2019-05-01 01:25, mode="WALK", end=2019-05-01 01:28),
-    (from=test_DA_10, to=test_FFM_12, start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", end=2019-05-01 01:45),
-    (from=test_FFM_12, to=test_de:6412:10:6:1, start=2019-05-01 01:45, mode="WALK", end=2019-05-01 01:49),
-    (from=test_de:6412:10:6:1, to=test_FFM_HAUPT_U, start=2019-05-01 02:05, mode="SUBWAY", end=2019-05-01 02:10),
-    (from=test_FFM_HAUPT_U, to=-, start=2019-05-01 02:10, mode="WALK", end=2019-05-01 02:14)
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 01:55),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 01:59),
+    (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
+    (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
 ])",
         ss.str());
   }

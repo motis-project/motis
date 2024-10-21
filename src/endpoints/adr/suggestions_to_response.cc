@@ -9,6 +9,7 @@
 
 #include "adr/typeahead.h"
 
+#include "motis/journey_to_response.h"
 #include "motis/tag_lookup.h"
 
 namespace a = adr;
@@ -31,8 +32,11 @@ long get_area_lang_idx(a::typeahead const& t,
 
 api::geocode_response suggestions_to_response(
     adr::typeahead const& t,
-    n::timetable const& tt,
-    tag_lookup const& tags,
+    n::timetable const* tt,
+    tag_lookup const* tags,
+    osr::ways const* w,
+    osr::platforms const* pl,
+    platform_matches_t const* matches,
     std::basic_string<a::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
     std::vector<adr::suggestion> const& suggestions) {
@@ -62,18 +66,26 @@ api::geocode_response suggestions_to_response(
     auto street = std::optional<std::string>{};
     auto house_number = std::optional<std::string>{};
     auto id = std::string{};
+    auto level = std::optional<double>{};
     auto name = std::visit(
         utl::overloaded{
             [&](a::place_idx_t const p) {
               type = t.place_type_[p] == a::place_type::kExtra
                          ? api::typeEnum::STOP
                          : api::typeEnum::PLACE;
-              id =
-                  type == api::typeEnum::STOP
-                      ? tags.id(tt, n::location_idx_t{t.place_osm_ids_[p]})
-                      : fmt::format("{}/{}",
-                                    t.place_is_way_[to_idx(p)] ? "way" : "node",
-                                    t.place_osm_ids_[p]);
+              if (type == api::typeEnum::STOP) {
+                if (tt != nullptr && tags != nullptr) {
+                  auto const l = n::location_idx_t{t.place_osm_ids_[p]};
+                  level = get_level(w, pl, matches, l);
+                  id = tags->id(*tt, n::location_idx_t{t.place_osm_ids_[p]});
+                } else {
+                  id = fmt::format("stop/{}", p);
+                }
+              } else {
+                id = fmt::format("{}/{}",
+                                 t.place_is_way_[to_idx(p)] ? "way" : "node",
+                                 t.place_osm_ids_[p]);
+              }
               return std::string{t.strings_[s.str_].view()};
             },
             [&](a::address const addr) {
@@ -105,7 +117,7 @@ api::geocode_response suggestions_to_response(
         .id_ = std::move(id),
         .lat_ = s.coordinates_.as_latlng().lat_,
         .lon_ = s.coordinates_.as_latlng().lng_,
-        .level_ = 0.0,  // TODO
+        .level_ = level,
         .street_ = std::move(street),
         .houseNumber_ = std::move(house_number),
         .zip_ = std::move(zip),
