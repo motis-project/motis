@@ -10,6 +10,10 @@
 
 #include "motis/fwd.h"
 
+namespace nigiri::rt {
+struct run_stop;
+}
+
 namespace motis {
 
 std::pair<std::string_view, std::string_view> split_tag_id(std::string_view);
@@ -20,8 +24,7 @@ struct tag_lookup {
   nigiri::source_idx_t get_src(std::string_view tag) const;
   std::string_view get_tag(nigiri::source_idx_t) const;
   std::string id(nigiri::timetable const&, nigiri::location_idx_t) const;
-  std::string id(nigiri::timetable const&, nigiri::trip_idx_t) const;
-  std::string id(nigiri::trip_id const&) const;
+  std::string id(nigiri::timetable const&, nigiri::rt::run_stop const&) const;
   nigiri::location_idx_t get(nigiri::timetable const&, std::string_view) const;
 
   friend std::ostream& operator<<(std::ostream&, tag_lookup const&);

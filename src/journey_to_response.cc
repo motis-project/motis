@@ -257,9 +257,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               leg.routeTextColor_ = to_str(color.text_color_);
               leg.mode_ = to_mode(enter_stop.get_clasz());
               leg.realTime_ = fr.is_rt();
-              leg.tripId_ =
-                  fmt::format("{}_{}", tags.get_tag(fr.id().src_), fr.id().id_);
-              leg.serviceDate_ = get_service_date(tt, t.r_.t_, 0U);
+              leg.tripId_ = tags.id(tt, enter_stop);
               leg.agencyName_ = agency.long_name_;
               leg.agencyId_ = agency.short_name_;
               leg.routeShortName_ = enter_stop.trip_display_name();
