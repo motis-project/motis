@@ -343,10 +343,7 @@ api::stoptimes_response stop_times::operator()(
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
                 .routeId_ = "",
-                .tripId_ = tags_.id(tt_, s.get_trip_idx(ev_type)),
-                .serviceDate_ = fr.is_scheduled()
-                                    ? get_service_date(tt_, fr.t_, s.stop_idx_)
-                                    : "ADDED",
+                .tripId_ = tags_.id(tt_, s),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
