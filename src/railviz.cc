@@ -325,9 +325,11 @@ railviz_bounding_boxes::railviz_bounding_boxes(
         for (auto const [i, pair] : utl::enumerate(utl::pairwise(offsets))) {
           auto& box = segment_boxes[i];
           auto const& [from, to] = pair;
-          box.extend(
-              shape.subspan(cista::to_idx(from),
-                            cista::to_idx(to) - cista::to_idx(from) + 1));
+          for (auto const point :
+               shape.subspan(cista::to_idx(from),
+                             cista::to_idx(to) - cista::to_idx(from) + 1)) {
+            box.extend(point);
+          }
         }
         return segment_boxes;
       });
