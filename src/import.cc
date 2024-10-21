@@ -405,7 +405,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       {osm_hash, tiles_hash}};
 
   auto tasks =
-      std::vector<task>{osr, adr, tt, adr_extend, osr_footpath, tiles, matches};
+      std::vector<task>{tiles, osr, adr, tt, adr_extend, osr_footpath, matches};
   utl::erase_if(tasks, [&](auto&& t) {
     if (!t.should_run_()) {
       return true;
