@@ -24,7 +24,7 @@ api::footpaths_response footpaths::operator()(
   auto const q = motis::api::footpaths_params{url.params()};
   auto const rt = rt_;
   auto const e = rt->e_.get();
-  auto const l = tags_.get(tt_, q.id_);
+  auto const l = tags_.get_location(tt_, q.id_);
 
   auto const neighbors =
       loc_rtree_.in_radius(tt_.locations_.coordinates_[l], kMaxDistance);

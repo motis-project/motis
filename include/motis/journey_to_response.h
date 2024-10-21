@@ -20,7 +20,7 @@
 namespace motis {
 
 struct tt_location {
-  explicit tt_location(nigiri::rt::frun::run_stop const& stop);
+  explicit tt_location(nigiri::rt::run_stop const& stop);
   explicit tt_location(
       nigiri::location_idx_t l,
       nigiri::location_idx_t scheduled = nigiri::location_idx_t::invalid());

@@ -68,7 +68,7 @@ config config::read_simple(std::vector<std::string> const& args) {
       c.tiles_ = {config::tiles{.profile_ = "tiles-profiles/full.lua"}};
     } else {
       if (!c.timetable_.has_value()) {
-        c.timetable_ = {timetable{}};
+        c.timetable_ = {timetable{.railviz_ = true}};
       }
 
       auto tag = p.stem().generic_string();

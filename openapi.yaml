@@ -145,21 +145,6 @@ paths:
             type: string
           required: true
           description: trip identifier (e.g. from an itinerary leg or stop event)
-        - name: date
-          in: query
-          schema:
-            type: string
-          required: true
-          description: |
-            Service date as specified in the source dataset.
-            Can be taken from an itinerary leg or stop event.
-            
-            Not that for GTFS the first departure time can be greater than 24:00:00
-            which means that the service date is shifted by the offset (first departure / 24h).
-            A valid use case for this are stay seated transfers expressed by `block_id`.
-            
-            Example: a train with first departure at 25:00:00 on 9th of Oct 2024
-            has the 8th of Oct 2024 as service date.
       responses:
         200:
           description: the requested trip as itinerary
@@ -188,7 +173,7 @@ paths:
           description: |
             Optional. Defaults to the current time.
           schema:
-            type: date
+            type: date-time
 
         - name: arriveBy
           in: query
@@ -290,7 +275,7 @@ paths:
             
             Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
           schema:
-            type: date
+            type: date-time
 
         - name: maxTransfers
           in: query
@@ -537,13 +522,13 @@ paths:
           required: true
           description: start of the time window
           schema:
-            type: date
+            type: date-time
         - name: endTime
           in: query
           required: true
           description: end if the time window
           schema:
-            type: date
+            type: date-time
       responses:
         '200':
           description: a list of trips
@@ -886,10 +871,10 @@ components:
             Scheduled time of departure at boarding stop = startTime - departureDelay
         arrival:
           description: arrival time
-          type: date
+          type: date-time
         departure:
           description: departure time
-          type: date
+          type: date-time
         scheduledTrack:
           description: scheduled track from the static schedule timetable dataset
           type: string
@@ -913,10 +898,7 @@ components:
         - agencyId
         - agencyName
         - agencyUrl
-        - routeType
-        - routeId
         - tripId
-        - serviceDate
         - routeShortName
         - source
       properties:
@@ -949,13 +931,7 @@ components:
           type: string
         routeTextColor:
           type: string
-        routeType:
-          type: string
-        routeId:
-          type: string
         tripId:
-          type: string
-        serviceDate:
           type: string
         routeShortName:
           type: string
@@ -968,14 +944,10 @@ components:
       type: object
       required:
         - tripId
-        - serviceDate
         - routeShortName
       properties:
         tripId:
           description: trip ID (dataset trip id prefixed with the dataset tag)
-          type: string
-        serviceDate:
-          description: service date
           type: string
         routeShortName:
           description: trip display name
@@ -1015,10 +987,10 @@ components:
           $ref: '#/components/schemas/Place'
         departure:
           description: departure time
-          type: date
+          type: date-time
         arrival:
           description: arrival time
-          type: date
+          type: date-time
         departureDelay:
           type: integer
           description: |
@@ -1165,10 +1137,10 @@ components:
           description: Leg duration in seconds
           type: integer
         startTime:
-          type: date
+          type: date-time
           description: leg departure time
         endTime:
-          type: date
+          type: date-time
           description: leg arrival time
         departureDelay:
           type: integer
@@ -1215,8 +1187,6 @@ components:
           type: string
         tripId:
           type: string
-        serviceDate:
-          type: string
         routeShortName:
           type: string
         source:
@@ -1261,10 +1231,10 @@ components:
           description: journey duration in seconds
           type: integer
         startTime:
-          type: date
+          type: date-time
           description: journey departure time
         endTime:
-          type: date
+          type: date-time
           description: journey arrival time
         walkTime:
           type: integer
