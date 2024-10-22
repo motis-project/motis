@@ -345,6 +345,7 @@ railviz_bounding_boxes::railviz_bounding_boxes(
     assert(seq.size() > 0U);
     auto segment_boxes = std::vector<geo::box>(seq.size());
     auto nontrivial = 0U;
+    // 0: bounding box for trip,  1-N: bounding box for segment
     auto& bounding_box = segment_boxes[0U];
     auto const stop_indices =
         n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
@@ -387,6 +388,7 @@ railviz_bounding_boxes::railviz_bounding_boxes(
         }
       });
     }
+    // 0: bounding box for trip,  1-N: bounding box for segment
     segment_boxes.resize(nontrivial + 1);
     boxes_.emplace_back(segment_boxes);
   }
@@ -400,6 +402,7 @@ geo::box railviz_bounding_boxes::get_bounding_box(
     nigiri::route_idx_t const route_idx) const {
   utl::verify(route_idx < boxes_.size(), "Route index {} is out of bounds",
               route_idx);
+  // 0: bounding box for trip
   return boxes_[route_idx][0];
 }
 
@@ -411,6 +414,7 @@ geo::box railviz_bounding_boxes::get_bounding_box_or_else(
   utl::verify(route_idx < boxes_.size(), "Route index {} is out of bounds",
               route_idx);
   auto const& boxes = boxes_[route_idx];
+  // 1-N: bounding box for segment
   return segment + 1 < boxes.size() ? boxes[segment + 1] : callback();
 }
 
