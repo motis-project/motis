@@ -146,6 +146,7 @@ void data::init_rtt(date::sys_days const d) {
 }
 
 void data::load_shapes() {
+  shapes_ = {};
   shapes_ = std::make_unique<nigiri::shapes_storage>(
       nigiri::shapes_storage{path_ / "shapes", cista::mmap::protection::READ});
 }
