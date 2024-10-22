@@ -306,42 +306,6 @@ export type RelativeDirection = 'DEPART' | 'HARD_LEFT' | 'LEFT' | 'SLIGHTLY_LEFT
 
 export type AbsoluteDirection = 'NORTH' | 'NORTHEAST' | 'EAST' | 'SOUTHEAST' | 'SOUTH' | 'SOUTHWEST' | 'WEST' | 'NORTHWEST';
 
-export type StepInstruction = {
-    relativeDirection: RelativeDirection;
-    absoluteDirection: AbsoluteDirection;
-    /**
-     * The distance in meters that this step takes.
-     */
-    distance: number;
-    /**
-     * The name of the street.
-     */
-    streetName: string;
-    /**
-     * When exiting a highway or traffic circle, the exit name/number.
-     */
-    exit: string;
-    /**
-     * Indicates whether or not a street changes direction at an intersection.
-     *
-     */
-    stayOn: boolean;
-    /**
-     * This step is on an open area, such as a plaza or train platform,
-     * and thus the directions should say something like "cross"
-     *
-     */
-    area: boolean;
-    /**
-     * The longitude of start of the step
-     */
-    lon: number;
-    /**
-     * The latitude of start of the step
-     */
-    lat: number;
-};
-
 export type EncodedPolyline = {
     /**
      * The encoded points of the polyline using the Google polyline encoding with precision 7.
@@ -353,7 +317,13 @@ export type EncodedPolyline = {
     length: number;
 };
 
-export type LevelEncodedPolyline = {
+export type StepInstruction = {
+    relativeDirection: RelativeDirection;
+    absoluteDirection: AbsoluteDirection;
+    /**
+     * The distance in meters that this step takes.
+     */
+    distance: number;
     /**
      * level where this segment starts, based on OpenStreetMap data
      */
@@ -367,6 +337,29 @@ export type LevelEncodedPolyline = {
      */
     osmWay?: number;
     polyline: EncodedPolyline;
+    /**
+     * The name of the street.
+     */
+    streetName: string;
+    /**
+     * Not implemented!
+     * When exiting a highway or traffic circle, the exit name/number.
+     *
+     */
+    exit: string;
+    /**
+     * Not implemented!
+     * Indicates whether or not a street changes direction at an intersection.
+     *
+     */
+    stayOn: boolean;
+    /**
+     * Not implemented!
+     * This step is on an open area, such as a plaza or train platform,
+     * and thus the directions should say something like "cross"
+     *
+     */
+    area: boolean;
 };
 
 export type Leg = {
@@ -444,10 +437,6 @@ export type Leg = {
      */
     intermediateStops?: Array<Place>;
     legGeometry: EncodedPolyline;
-    /**
-     * Like `legGeometry`, but split at level changes
-     */
-    legGeometryWithLevels?: Array<LevelEncodedPolyline>;
     /**
      * A series of turn by turn instructions
      * used for walking, biking and driving.

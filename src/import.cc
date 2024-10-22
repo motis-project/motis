@@ -59,7 +59,7 @@ using namespace std::string_literals;
 namespace motis {
 
 constexpr auto const kAdrBinaryVersion = 1U;
-constexpr auto const kOsrBinaryVersion = 2U;
+constexpr auto const kOsrBinaryVersion = 3U;
 constexpr auto const kNigiriBinaryVersion = 4U;
 constexpr auto const kMatchesBinaryVersion = 4U;
 
