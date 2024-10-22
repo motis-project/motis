@@ -2,10 +2,12 @@ cmake_minimum_required(VERSION 3.20)
 
 project(motis)
 
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+
 option(MOTIS_MIMALLOC "use mimalloc" OFF)
 
 if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
-    if (ICC_MIMALLOC)
+    if (MOTIS_MIMALLOC)
         set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
         set(protobuf_MSVC_STATIC_RUNTIME OFF)
     else ()
