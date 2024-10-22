@@ -264,7 +264,11 @@ void add_static_transports(n::timetable const& tt,
   auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
   auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
-    auto const& box = bounding_boxes.get_bounding_box(r, from);
+    auto const& box = bounding_boxes.get_bounding_box_or_else(r, from, [&]() {
+      return geo::make_box(
+          {tt.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
+           tt.locations_.coordinates_[n::stop{seq[to]}.location_idx()]});
+    });
     if (!box.overlaps(area)) {
       continue;
     }
@@ -340,7 +344,8 @@ railviz_bounding_boxes::railviz_bounding_boxes(
     auto const r = n::route_idx_t{i};
     auto const seq = tt.route_location_seq_[r];
     assert(seq.size() > 0U);
-    auto segment_boxes = boxes_.add_back_sized(seq.size());
+    auto segment_boxes = std::vector<geo::box>(seq.size());
+    auto nontrivial = 0U;
     auto& bounding_box = segment_boxes[0U];
     auto const stop_indices =
         n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
@@ -373,13 +378,18 @@ railviz_bounding_boxes::railviz_bounding_boxes(
           if (shape_boxes != nullptr) {
             auto const& shape_box = (*shape_boxes)[static_cast<std::size_t>(
                 cista::to_idx(from) - cista::to_idx(absolute_range.from_))];
-            bounding_box.extend(shape_box);
-            box.extend(shape_box);
+            if (!box.contains(shape_box)) {
+              bounding_box.extend(shape_box);
+              box.extend(shape_box);
+              nontrivial = std::max(nontrivial, from + 1U);
+            }
           }
           prev_pos = next_pos;
         }
       });
     }
+    segment_boxes.resize(nontrivial + 1);
+    boxes_.emplace_back(segment_boxes);
   }
 }
 
@@ -394,15 +404,15 @@ geo::box railviz_bounding_boxes::get_bounding_box(
   return boxes_[route_idx][0];
 }
 
-geo::box railviz_bounding_boxes::get_bounding_box(
-    nigiri::route_idx_t const route_idx, std::size_t const segment) const {
+geo::box railviz_bounding_boxes::get_bounding_box_or_else(
+    nigiri::route_idx_t const route_idx,
+    std::size_t const segment,
+    std::function<geo::box()> const& callback) const {
 
   utl::verify(route_idx < boxes_.size(), "Route index {} is out of bounds",
               route_idx);
   auto const& boxes = boxes_[route_idx];
-  utl::verify(segment + 1 < boxes.size(),
-              "Segment {} for route {} is out of bounds", segment, route_idx);
-  return boxes[segment + 1];
+  return segment + 1 < boxes.size() ? boxes[segment + 1] : callback();
 }
 
 api::trips_response get_trains(tag_lookup const& tags,

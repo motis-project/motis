@@ -19,7 +19,9 @@ struct railviz_bounding_boxes {
                          nigiri::shapes_storage const*);
   railviz_bounding_boxes(std::filesystem::path const&);
   geo::box get_bounding_box(nigiri::route_idx_t const) const;
-  geo::box get_bounding_box(nigiri::route_idx_t const, std::size_t const) const;
+  geo::box get_bounding_box_or_else(nigiri::route_idx_t,
+                                    std::size_t,
+                                    std::function<geo::box()> const&) const;
   nigiri::mm_vecvec<nigiri::route_idx_t, geo::box> boxes_;
 };
 
