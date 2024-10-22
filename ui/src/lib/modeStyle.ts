@@ -8,7 +8,6 @@ export type Colorable = {
 
 export type TripInfo = {
 	tripId?: string;
-	serviceDate?: string;
 	routeShortName?: string;
 };
 

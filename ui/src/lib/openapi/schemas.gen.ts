@@ -51,7 +51,7 @@ export const TokenSchema = {
 export const MatchSchema = {
     description: 'GeoCoding match',
     type: 'object',
-    required: ['type', 'name', 'id', 'lat', 'lon', 'level', 'tokens', 'areas', 'score'],
+    required: ['type', 'name', 'id', 'lat', 'lon', 'tokens', 'areas', 'score'],
     properties: {
         type: {
             description: 'location type',
@@ -197,11 +197,11 @@ Scheduled time of departure at boarding stop = startTime - departureDelay
         },
         arrival: {
             description: 'arrival time',
-            type: 'date'
+            type: 'date-time'
         },
         departure: {
             description: 'departure time',
-            type: 'date'
+            type: 'date-time'
         },
         scheduledTrack: {
             description: 'scheduled track from the static schedule timetable dataset',
@@ -222,7 +222,7 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'routeType', 'routeId', 'tripId', 'serviceDate', 'routeShortName', 'source'],
+    required: ['place', 'mode', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -263,16 +263,7 @@ For non-transit legs, null
         routeTextColor: {
             type: 'string'
         },
-        routeType: {
-            type: 'string'
-        },
-        routeId: {
-            type: 'string'
-        },
         tripId: {
-            type: 'string'
-        },
-        serviceDate: {
             type: 'string'
         },
         routeShortName: {
@@ -288,14 +279,10 @@ For non-transit legs, null
 export const TripInfoSchema = {
     description: 'trip id and name',
     type: 'object',
-    required: ['tripId', 'serviceDate', 'routeShortName'],
+    required: ['tripId', 'routeShortName'],
     properties: {
         tripId: {
             description: 'trip ID (dataset trip id prefixed with the dataset tag)',
-            type: 'string'
-        },
-        serviceDate: {
-            description: 'service date',
             type: 'string'
         },
         routeShortName: {
@@ -335,11 +322,11 @@ export const TripSegmentSchema = {
         },
         departure: {
             description: 'departure time',
-            type: 'date'
+            type: 'date-time'
         },
         arrival: {
             description: 'arrival time',
-            type: 'date'
+            type: 'date-time'
         },
         departureDelay: {
             type: 'integer',
@@ -474,11 +461,11 @@ export const LegSchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'date',
+            type: 'date-time',
             description: 'leg departure time'
         },
         endTime: {
-            type: 'date',
+            type: 'date-time',
             description: 'leg arrival time'
         },
         departureDelay: {
@@ -541,9 +528,6 @@ For non-transit legs, null
         tripId: {
             type: 'string'
         },
-        serviceDate: {
-            type: 'string'
-        },
         routeShortName: {
             type: 'string'
         },
@@ -591,11 +575,11 @@ export const ItinerarySchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'date',
+            type: 'date-time',
             description: 'journey departure time'
         },
         endTime: {
-            type: 'date',
+            type: 'date-time',
             description: 'journey arrival time'
         },
         walkTime: {

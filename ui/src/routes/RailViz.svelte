@@ -25,7 +25,7 @@
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		onClickTrip: (tripId: string, date: string) => void;
+		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	let colorMode = $state<'rt' | 'route'>('route');
@@ -236,7 +236,7 @@
 					if (!object) {
 						return;
 					}
-					onClickTrip(object.trips[0].tripId, object.trips[0].serviceDate);
+					onClickTrip(object.trips[0].tripId);
 				}
 			});
 			map.addControl(overlay);

@@ -309,8 +309,23 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
 
         d.init_rtt();
+
+        if (c.timetable_->with_shapes_) {
+          d.load_shapes();
+        }
+        if (c.timetable_->railviz_) {
+          d.load_railviz();
+        }
       },
-      [&]() { d.load_tt(); },
+      [&]() {
+        d.load_tt();
+        if (c.timetable_->with_shapes_) {
+          d.load_shapes();
+        }
+        if (c.timetable_->railviz_) {
+          d.load_railviz();
+        }
+      },
       {tt_hash, n_version}};
 
   auto adr_extend =

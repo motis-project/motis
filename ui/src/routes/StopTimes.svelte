@@ -15,7 +15,7 @@
 		stopId: string;
 		time: Date;
 		arriveBy?: boolean;
-		onClickTrip: (tripId: string, date: string) => void;
+		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	let query = $derived({ stopId, time: queryTime.toISOString(), arriveBy, n: 10 });

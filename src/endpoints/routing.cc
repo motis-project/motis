@@ -46,7 +46,7 @@ place_t get_place(n::timetable const* tt,
   }
   utl::verify(tt != nullptr && tags != nullptr,
               R"(could not parse location (no timetable loaded): "{}")", s);
-  return tt_location{tags->get(*tt, s)};
+  return tt_location{tags->get_location(*tt, s)};
 }
 
 bool is_intermodal(place_t const& p) {
