@@ -109,7 +109,6 @@ struct route_geo_index {
                   n::clasz const clasz,
                   n::vector_map<n::route_idx_t, float>& distances) {
     auto values = std::vector<route_box>{};
-    // Create bounding boxes for all routes
     for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
       auto const r = n::route_idx_t{i};
       if (claszes.at(0) != clasz) {
@@ -316,6 +315,7 @@ railviz_bounding_boxes::railviz_bounding_boxes(
       nigiri::hash_map<cista::pair<n::shape_idx_t, n::shape_offset_idx_t>,
                        std::vector<geo::box>>{};
   if (shapes_data != nullptr) {
+    // Create bounding boxes for all shape segments
     for (auto const key : shapes_data->trip_offset_indices_) {
       if (key.first == n::shape_idx_t::invalid() ||
           key.second == n::shape_offset_idx_t::invalid()) {
