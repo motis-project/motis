@@ -456,6 +456,7 @@ paths:
                   - date
                   - from
                   - to
+                  - direct
                   - itineraries
                   - previousPageCursor
                   - nextPageCursor
@@ -474,6 +475,14 @@ paths:
                     $ref: '#/components/schemas/Place'
                   to:
                     $ref: '#/components/schemas/Place'
+                  direct:
+                    description: |
+                      Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+                      The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+                      But all `direct` connections are meant to be independent of absolute times.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Itinerary'
                   itineraries:
                     description: list of itineraries
                     type: array
