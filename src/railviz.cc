@@ -105,16 +105,33 @@ struct route_geo_index {
   route_geo_index() = default;
 
   route_geo_index(n::timetable const& tt,
-                  railviz_bounding_boxes const& bounding_boxes,
+                  n::shapes_storage const* shapes_data,
                   n::clasz const clasz,
                   n::vector_map<n::route_idx_t, float>& distances) {
+    auto const get_box = [&]() -> std::function<geo::box(n::route_idx_t)> {
+      if (shapes_data != nullptr) {
+        return [&](n::route_idx_t const route_idx) {
+          return shapes_data->get_bounding_box(route_idx);
+        };
+      } else {
+        return [&](n::route_idx_t const route_idx) {
+          auto bounding_box = geo::box{};
+          for (auto const l : tt.route_location_seq_[route_idx]) {
+            bounding_box.extend(
+                tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
+          }
+
+          return bounding_box;
+        };
+      }
+    }();
     auto values = std::vector<route_box>{};
     for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
       auto const r = n::route_idx_t{i};
       if (claszes.at(0) != clasz) {
         continue;
       }
-      auto bounding_box = bounding_boxes.get_bounding_box(r);
+      auto bounding_box = get_box(r);
 
       distances[r] = static_cast<float>(
           geo::distance(bounding_box.max_, bounding_box.min_));
@@ -181,20 +198,17 @@ struct rt_transport_geo_index {
 };
 
 struct railviz_static_index::impl {
-  impl(railviz_bounding_boxes&& bounding_boxes)
-      : bounding_boxes_{std::move(bounding_boxes)} {}
   std::array<route_geo_index, n::kNumClasses> static_geo_indices_;
   n::vector_map<n::route_idx_t, float> static_distances_{};
-  railviz_bounding_boxes bounding_boxes_;
 };
 
-railviz_static_index::railviz_static_index(
-    n::timetable const& tt, railviz_bounding_boxes&& bounding_boxes)
-    : impl_{std::make_unique<impl>(std::move(bounding_boxes))} {
+railviz_static_index::railviz_static_index(n::timetable const& tt,
+                                           n::shapes_storage const* shapes_data)
+    : impl_{std::make_unique<impl>()} {
   impl_->static_distances_.resize(tt.route_location_seq_.size());
   for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
-    impl_->static_geo_indices_[c] = route_geo_index{
-        tt, impl_->bounding_boxes_, n::clasz{c}, impl_->static_distances_};
+    impl_->static_geo_indices_[c] =
+        route_geo_index{tt, shapes_data, n::clasz{c}, impl_->static_distances_};
   }
 }
 
@@ -247,7 +261,7 @@ void add_static_transports(n::timetable const& tt,
                            n::route_idx_t const r,
                            n::interval<n::unixtime_t> const time_interval,
                            geo::box const& area,
-                           railviz_bounding_boxes const& bounding_boxes,
+                           n::shapes_storage const* shapes_data,
                            std::vector<stop_pair>& runs) {
   auto const is_active = [&](n::transport const t) -> bool {
     return (rtt == nullptr
@@ -261,12 +275,27 @@ void add_static_transports(n::timetable const& tt,
       n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
   auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
   auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
+  auto const get_box = [&]() -> std::function<geo::box(std::size_t)> {
+    if (shapes_data != nullptr) {
+      return [&](std::size_t const segment) {
+        return shapes_data->get_bounding_box_or_else(r, segment, [&]() {
+          return geo::make_box(
+              {tt.locations_.coordinates_[n::stop{seq[segment]}.location_idx()],
+               tt.locations_
+                   .coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
+        });
+      };
+    } else {
+      return [&](std::size_t const segment) {
+        return geo::make_box(
+            {tt.locations_.coordinates_[n::stop{seq[segment]}.location_idx()],
+             tt.locations_
+                 .coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
+      };
+    }
+  }();
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
-    auto const& box = bounding_boxes.get_bounding_box_or_else(r, from, [&]() {
-      return geo::make_box(
-          {tt.locations_.coordinates_[n::stop{seq[from]}.location_idx()],
-           tt.locations_.coordinates_[n::stop{seq[to]}.location_idx()]});
-    });
+    auto const& box = get_box(from);
     if (!box.overlaps(area)) {
       continue;
     }
@@ -304,118 +333,6 @@ nigiri::mm_vecvec<nigiri::route_idx_t, geo::box> open_railviz_bb(
       cista::basic_mmap_vec<cista::base_t<nigiri::route_idx_t>, std::uint64_t>{
           cista::mmap{fmt::format("{}_idx.bin", path.generic_string()).data(),
                       mode}}};
-}
-
-railviz_bounding_boxes::railviz_bounding_boxes(
-    std::filesystem::path const& path,
-    nigiri::timetable const& tt,
-    nigiri::shapes_storage const* shapes_data)
-    : boxes_{open_railviz_bb(path, cista::mmap::protection::WRITE)} {
-  auto shape_segment_boxes =
-      nigiri::hash_map<cista::pair<n::shape_idx_t, n::shape_offset_idx_t>,
-                       std::vector<geo::box>>{};
-  if (shapes_data != nullptr) {
-    // Create bounding boxes for all shape segments
-    for (auto const key : shapes_data->trip_offset_indices_) {
-      if (key.first == n::shape_idx_t::invalid() ||
-          key.second == n::shape_offset_idx_t::invalid()) {
-        continue;
-      }
-      utl::get_or_create(shape_segment_boxes, key, [&]() {
-        auto const shape = shapes_data->get_shape(key.first);
-        auto const& offsets = shapes_data->offsets_[key.second];
-        auto segment_boxes = std::vector<geo::box>(offsets.size() - 1);
-        for (auto const [i, pair] : utl::enumerate(utl::pairwise(offsets))) {
-          auto& box = segment_boxes[i];
-          auto const& [from, to] = pair;
-          for (auto const point :
-               shape.subspan(cista::to_idx(from),
-                             cista::to_idx(to) - cista::to_idx(from) + 1)) {
-            box.extend(point);
-          }
-        }
-        return segment_boxes;
-      });
-    }
-  }
-  // Create bounding boxes for all routes
-  for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
-    auto const r = n::route_idx_t{i};
-    auto const seq = tt.route_location_seq_[r];
-    assert(seq.size() > 0U);
-    auto segment_boxes = std::vector<geo::box>(seq.size());
-    auto nontrivial = 0U;
-    // 0: bounding box for trip,  1-N: bounding box for segment
-    auto& bounding_box = segment_boxes[0U];
-    auto const stop_indices =
-        n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
-    for (auto const transport_idx : tt.route_transport_ranges_[r]) {
-      auto const frun =
-          n::rt::frun{tt, nullptr,
-                      n::rt::run{.t_ = n::transport{transport_idx},
-                                 .stop_range_ = stop_indices,
-                                 .rt_ = n::rt_transport_idx_t::invalid()}};
-      frun.for_each_trip([&](n::trip_idx_t const trip_idx,
-                             n::interval<n::stop_idx_t> const absolute_range) {
-        auto shape_boxes = static_cast<std::vector<geo::box> const*>(nullptr);
-        if (shapes_data != nullptr) {
-          auto it = shape_segment_boxes.find(
-              shapes_data->trip_offset_indices_[trip_idx]);
-          if (it != end(shape_segment_boxes)) {
-            shape_boxes = &it->second;
-          }
-        }
-        auto prev_pos = tt.locations_.coordinates_.at(
-            n::stop{seq[absolute_range.from_]}.location_idx());
-        bounding_box.extend(prev_pos);
-        for (auto const [from, to] : utl::pairwise(absolute_range)) {
-          auto const next_pos =
-              tt.locations_.coordinates_.at(n::stop{seq[to]}.location_idx());
-          auto& box = segment_boxes[cista::to_idx(to)];
-          bounding_box.extend(next_pos);
-          box.extend(prev_pos);
-          box.extend(next_pos);
-          if (shape_boxes != nullptr) {
-            auto const& shape_box = (*shape_boxes)[static_cast<std::size_t>(
-                cista::to_idx(from) - cista::to_idx(absolute_range.from_))];
-            if (!box.contains(shape_box)) {
-              bounding_box.extend(shape_box);
-              box.extend(shape_box);
-              nontrivial = std::max(nontrivial, from + 1U);
-            }
-          }
-          prev_pos = next_pos;
-        }
-      });
-    }
-    // 0: bounding box for trip,  1-N: bounding box for segment
-    segment_boxes.resize(nontrivial + 1);
-    boxes_.emplace_back(segment_boxes);
-  }
-}
-
-railviz_bounding_boxes::railviz_bounding_boxes(
-    std::filesystem::path const& path)
-    : boxes_{open_railviz_bb(path, cista::mmap::protection::READ)} {}
-
-geo::box railviz_bounding_boxes::get_bounding_box(
-    nigiri::route_idx_t const route_idx) const {
-  utl::verify(route_idx < boxes_.size(), "Route index {} is out of bounds",
-              route_idx);
-  // 0: bounding box for trip
-  return boxes_[route_idx][0];
-}
-
-geo::box railviz_bounding_boxes::get_bounding_box_or_else(
-    nigiri::route_idx_t const route_idx,
-    std::size_t const segment,
-    std::function<geo::box()> const& callback) const {
-
-  utl::verify(route_idx < boxes_.size(), "Route index {} is out of bounds",
-              route_idx);
-  auto const& boxes = boxes_[route_idx];
-  // 1-N: bounding box for segment
-  return segment + 1 < boxes.size() ? boxes[segment + 1] : callback();
 }
 
 api::trips_response get_trains(tag_lookup const& tags,
@@ -461,8 +378,7 @@ api::trips_response get_trains(tag_lookup const& tags,
 
     for (auto const& r : static_index.static_geo_indices_[c].get_routes(area)) {
       if (should_display(cl, zoom_level, static_index.static_distances_[r])) {
-        add_static_transports(tt, rtt, r, time_interval, area,
-                              static_index.bounding_boxes_, runs);
+        add_static_transports(tt, rtt, r, time_interval, area, shapes, runs);
       }
     }
   }

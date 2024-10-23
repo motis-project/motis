@@ -298,11 +298,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));
 
-        if (t.railviz_) {
-          railviz_bounding_boxes{data_path / "railviz_bb", *d.tt_,
-                                 d.shapes_.get()};
-        }
-
         if (write) {
           d.tt_->write(data_path / "tt.bin");
           d.tags_->write(data_path / "tags.bin");
