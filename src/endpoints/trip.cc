@@ -15,6 +15,8 @@ namespace n = nigiri;
 namespace motis::ep {
 
 api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
+  std::this_thread::sleep_for(std::chrono::seconds(60));
+
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
 
