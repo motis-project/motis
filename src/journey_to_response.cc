@@ -185,19 +185,30 @@ api::Itinerary journey_to_response(osr::ways const* w,
       return;
     }
 
-    leg.legGeometryWithLevels_ =
-        utl::to_vec(path->segments_, [&](osr::path::segment const& s) {
-          return api::LevelEncodedPolyline{
-              .fromLevel_ = to_float(s.from_level_),
-              .toLevel_ = to_float(s.to_level_),
-              .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
-                             ? std::nullopt
-                             : std::optional{static_cast<std::int64_t>(
-                                   to_idx(w->way_osm_idx_[s.way_]))},
-              .polyline_ = {encode_polyline<7>(s.polyline_),
-                            static_cast<std::int64_t>(s.polyline_.size())},
-          };
-        });
+    leg.steps_ = utl::to_vec(path->segments_, [&](osr::path::segment const& s) {
+      auto const way_name = s.way_ == osr::way_idx_t::invalid()
+                                ? osr::string_idx_t::invalid()
+                                : w->way_names_[s.way_];
+      return api::StepInstruction{
+          .relativeDirection_ = api::RelativeDirectionEnum::CONTINUE,  // TODO
+          .absoluteDirection_ = api::AbsoluteDirectionEnum::NORTH,  // TODO
+          .distance_ = static_cast<double>(s.dist_),
+          .fromLevel_ = to_float(s.from_level_),
+          .toLevel_ = to_float(s.to_level_),
+          .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
+                         ? std::nullopt
+                         : std::optional{static_cast<std::int64_t>(
+                               to_idx(w->way_osm_idx_[s.way_]))},
+          .polyline_ = {encode_polyline<7>(s.polyline_),
+                        static_cast<std::int64_t>(s.polyline_.size())},
+          .streetName_ = way_name == osr::string_idx_t::invalid()
+                             ? ""
+                             : std::string{w->strings_[way_name].view()},
+          .exit_ = {},  // TODO
+          .stayOn_ = false,  // TODO
+          .area_ = false  // TODO
+      };
+    });
 
     auto concat = geo::polyline{};
     for (auto const& p : path->segments_) {
