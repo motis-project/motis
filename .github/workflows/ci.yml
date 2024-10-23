@@ -14,6 +14,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  openapi-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm install @openapitools/openapi-generator-cli -g
+
+      - name: OpenAPI Lint
+        run: openapi-generator-cli validate -i openapi.yaml
+
   ui:
     runs-on: ubuntu-latest
     steps:
