@@ -173,7 +173,8 @@ paths:
           description: |
             Optional. Defaults to the current time.
           schema:
-            type: date-time
+            type: string
+            format: date-time
 
         - name: arriveBy
           in: query
