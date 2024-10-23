@@ -361,50 +361,6 @@ export const AbsoluteDirectionSchema = {
     enum: ['NORTH', 'NORTHEAST', 'EAST', 'SOUTHEAST', 'SOUTH', 'SOUTHWEST', 'WEST', 'NORTHWEST']
 } as const;
 
-export const StepInstructionSchema = {
-    type: 'object',
-    required: ['relativeDirection', 'absoluteDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'lon', 'lat'],
-    properties: {
-        relativeDirection: {
-            '$ref': '#/components/schemas/RelativeDirection'
-        },
-        absoluteDirection: {
-            '$ref': '#/components/schemas/AbsoluteDirection'
-        },
-        distance: {
-            description: 'The distance in meters that this step takes.',
-            type: 'number'
-        },
-        streetName: {
-            description: 'The name of the street.',
-            type: 'string'
-        },
-        exit: {
-            description: 'When exiting a highway or traffic circle, the exit name/number.',
-            type: 'string'
-        },
-        stayOn: {
-            description: `Indicates whether or not a street changes direction at an intersection.
-`,
-            type: 'boolean'
-        },
-        area: {
-            description: `This step is on an open area, such as a plaza or train platform,
-and thus the directions should say something like "cross"
-`,
-            type: 'boolean'
-        },
-        lon: {
-            description: 'The longitude of start of the step',
-            type: 'number'
-        },
-        lat: {
-            description: 'The latitude of start of the step',
-            type: 'number'
-        }
-    }
-} as const;
-
 export const EncodedPolylineSchema = {
     type: 'object',
     required: ['points', 'length'],
@@ -420,10 +376,20 @@ export const EncodedPolylineSchema = {
     }
 } as const;
 
-export const LevelEncodedPolylineSchema = {
+export const StepInstructionSchema = {
     type: 'object',
-    required: ['fromLevel', 'toLevel', 'polyline'],
+    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'absoluteDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'lon', 'lat'],
     properties: {
+        relativeDirection: {
+            '$ref': '#/components/schemas/RelativeDirection'
+        },
+        absoluteDirection: {
+            '$ref': '#/components/schemas/AbsoluteDirection'
+        },
+        distance: {
+            description: 'The distance in meters that this step takes.',
+            type: 'number'
+        },
         fromLevel: {
             description: 'level where this segment starts, based on OpenStreetMap data',
             type: 'number'
@@ -438,6 +404,29 @@ export const LevelEncodedPolylineSchema = {
         },
         polyline: {
             '$ref': '#/components/schemas/EncodedPolyline'
+        },
+        streetName: {
+            description: 'The name of the street.',
+            type: 'string'
+        },
+        exit: {
+            description: `Not implemented!
+When exiting a highway or traffic circle, the exit name/number.
+`,
+            type: 'string'
+        },
+        stayOn: {
+            description: `Not implemented!
+Indicates whether or not a street changes direction at an intersection.
+`,
+            type: 'boolean'
+        },
+        area: {
+            description: `Not implemented!
+This step is on an open area, such as a plaza or train platform,
+and thus the directions should say something like "cross"
+`,
+            type: 'boolean'
         }
     }
 } as const;
@@ -546,13 +535,6 @@ and the Place where the leg ends. For non-transit legs, null.
         },
         legGeometry: {
             '$ref': '#/components/schemas/EncodedPolyline'
-        },
-        legGeometryWithLevels: {
-            description: 'Like `legGeometry`, but split at level changes',
-            type: 'array',
-            items: {
-                '$ref': '#/components/schemas/LevelEncodedPolyline'
-            }
         },
         steps: {
             description: `A series of turn by turn instructions

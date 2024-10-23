@@ -12,8 +12,8 @@
 		return {
 			type: 'FeatureCollection',
 			features: i.legs.flatMap((l) => {
-				if (l.legGeometryWithLevels) {
-					return l.legGeometryWithLevels.map((p) => {
+				if (l.steps) {
+					return l.steps.map((p) => {
 						return {
 							type: 'Feature',
 							properties: {
