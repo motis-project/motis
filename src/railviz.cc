@@ -275,25 +275,19 @@ void add_static_transports(n::timetable const& tt,
       n::interval{n::stop_idx_t{0U}, static_cast<n::stop_idx_t>(seq.size())};
   auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
   auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
-  auto const get_box = [&]() -> std::function<geo::box(std::size_t)> {
-    if (shapes_data != nullptr) {
-      return [&](std::size_t const segment) {
-        return shapes_data->get_bounding_box_or_else(r, segment, [&]() {
-          return geo::make_box(
+  auto const get_box = [&](std::size_t segment) {
+    auto const box = shapes_data != nullptr
+                         ? shapes_data->get_bounding_box(r, segment)
+                         : std::optional<geo::box>{};
+    return box
+        .or_else([&]() {
+          return std::optional{geo::make_box(
               {tt.locations_.coordinates_[n::stop{seq[segment]}.location_idx()],
                tt.locations_
-                   .coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
-        });
-      };
-    } else {
-      return [&](std::size_t const segment) {
-        return geo::make_box(
-            {tt.locations_.coordinates_[n::stop{seq[segment]}.location_idx()],
-             tt.locations_
-                 .coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
-      };
-    }
-  }();
+                   .coordinates_[n::stop{seq[segment + 1]}.location_idx()]})};
+        })
+        .value();
+  };
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
     auto const& box = get_box(from);
     if (!box.overlaps(area)) {
