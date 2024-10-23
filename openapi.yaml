@@ -173,7 +173,8 @@ paths:
           description: |
             Optional. Defaults to the current time.
           schema:
-            type: date-time
+            type: string
+            format: date-time
 
         - name: arriveBy
           in: query
@@ -275,7 +276,8 @@ paths:
             
             Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
           schema:
-            type: date-time
+            type: string
+            format: date-time
 
         - name: maxTransfers
           in: query
@@ -522,13 +524,15 @@ paths:
           required: true
           description: start of the time window
           schema:
-            type: date-time
+            type: string
+            format: date-time
         - name: endTime
           in: query
           required: true
           description: end if the time window
           schema:
-            type: date-time
+            type: string
+            format: date-time
       responses:
         '200':
           description: a list of trips
@@ -871,10 +875,12 @@ components:
             Scheduled time of departure at boarding stop = startTime - departureDelay
         arrival:
           description: arrival time
-          type: date-time
+          type: string
+          format: date-time
         departure:
           description: departure time
-          type: date-time
+          type: string
+          format: date-time
         scheduledTrack:
           description: scheduled track from the static schedule timetable dataset
           type: string
@@ -987,10 +993,12 @@ components:
           $ref: '#/components/schemas/Place'
         departure:
           description: departure time
-          type: date-time
+          type: string
+          format: date-time
         arrival:
           description: arrival time
-          type: date-time
+          type: string
+          format: date-time
         departureDelay:
           type: integer
           description: |
@@ -1130,10 +1138,12 @@ components:
           description: Leg duration in seconds
           type: integer
         startTime:
-          type: date-time
+          type: string
+          format: date-time
           description: leg departure time
         endTime:
-          type: date-time
+          type: string
+          format: date-time
           description: leg arrival time
         departureDelay:
           type: integer
@@ -1219,10 +1229,12 @@ components:
           description: journey duration in seconds
           type: integer
         startTime:
-          type: date-time
+          type: string
+          format: date-time
           description: journey departure time
         endTime:
-          type: date-time
+          type: string
+          format: date-time
           description: journey arrival time
         walkTime:
           type: integer
