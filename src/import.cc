@@ -405,7 +405,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           progress_tracker->status("Load Features").out_bounds(20, 70);
           ::tiles::load_osm(db_handle, inserter, c.osm_->generic_string(),
                             c.tiles_->profile_.generic_string(),
-                            dir.generic_string());
+                            dir.generic_string(), c.tiles_->flush_threshold_);
         }
 
         progress_tracker->status("Pack Features").out_bounds(70, 90);
