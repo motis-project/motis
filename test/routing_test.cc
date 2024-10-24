@@ -348,7 +348,8 @@ TEST(motis, routing) {
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
-        "&wheelchair=true");
+        "&wheelchair=true"
+        "&timetableView=false");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
@@ -371,7 +372,8 @@ TEST(motis, routing) {
     auto const plan_response = routing(
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
-        "&time=2019-05-01T01:25Z");
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
