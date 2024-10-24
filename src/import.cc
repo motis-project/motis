@@ -33,7 +33,7 @@
 #include "nigiri/common/parse_date.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
-#include "nigiri/shape.h"
+#include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 
 #include "osr/extract/extract.h"
@@ -60,7 +60,7 @@ namespace motis {
 
 constexpr auto const kAdrBinaryVersion = 1U;
 constexpr auto const kOsrBinaryVersion = 3U;
-constexpr auto const kNigiriBinaryVersion = 4U;
+constexpr auto const kNigiriBinaryVersion = 5U;
 constexpr auto const kMatchesBinaryVersion = 4U;
 
 using meta_entry_t = std::pair<std::string, std::uint64_t>;
@@ -268,8 +268,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
 
         if (t.with_shapes_) {
-          d.shapes_ = std::make_unique<n::shapes_storage>(
-              n::shapes_storage(data_path / "shapes"));
+          d.shapes_ = std::make_unique<n::shapes_storage>(data_path);
         }
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
@@ -277,7 +276,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
