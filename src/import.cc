@@ -268,7 +268,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
 
         if (t.with_shapes_) {
-          d.shapes_ = std::make_unique<n::shapes_storage>(data_path);
+          d.shapes_ = std::make_unique<n::shapes_storage>(
+              data_path, cista::mmap::protection::WRITE);
         }
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
