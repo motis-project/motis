@@ -393,7 +393,7 @@ paths:
               - `arriveBy=false`: the time window around `date` and `time` refers to the departure time window
           schema:
             type: boolean
-            default: false
+            default: true
 
         - name: arriveBy
           in: query
