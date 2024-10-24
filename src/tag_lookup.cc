@@ -76,7 +76,7 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
     auto const start_hours = gtfs_static_dep / 60;
     auto const start_minutes = gtfs_static_dep % 60;
 
-    return fmt::format("{:%Y%m%d}_{}:{}_{}_{}", day, start_hours.count(),
+    return fmt::format("{:%Y%m%d}_{:02}:{:02}_{}_{}", day, start_hours.count(),
                        start_minutes.count(), get_tag(src), id);
   } else {
     // TODO support added trips
@@ -88,11 +88,12 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
     nigiri::timetable const& tt, std::string_view id) const {
   auto const [date, start_time, tag, trip_id] =
       utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
-
   auto td = transit_realtime::TripDescriptor{};
-  td.set_trip_id(trip_id.view());
   td.set_start_date(date.view());
   td.set_start_time(start_time.view());
+  td.set_trip_id(std::string_view{
+      trip_id.str,
+      static_cast<std::size_t>(id.data() + id.size() - trip_id.str)});
 
   return n::rt::gtfsrt_resolve_run({}, tt, nullptr, get_src(tag.view()), td);
 }
