@@ -177,9 +177,9 @@ awaitable<void> load_feed(config::gbfs const& c,
     if (auto const it = c.default_restrictions_.find(id);
         it != end(c.default_restrictions_)) {
       set_default_restrictions(it->second);
-    } else if (auto const it = c.default_restrictions_.find(prefix);
-               it != end(c.default_restrictions_)) {
-      set_default_restrictions(it->second);
+    } else if (auto const prefix_it = c.default_restrictions_.find(prefix);
+               prefix_it != end(c.default_restrictions_)) {
+      set_default_restrictions(prefix_it->second);
     }
 
     if (urls.contains("system_information")) {

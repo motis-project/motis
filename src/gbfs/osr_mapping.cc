@@ -29,8 +29,9 @@ void map_geofencing_zones(gbfs_provider& provider,
                           osr::lookup const& l) {
   auto const make_loc_bitvec = [&]() {
     auto bv = osr::bitvec<osr::node_idx_t>{};
-    bv.resize(w.n_nodes() + provider.stations_.size() +
-              provider.vehicle_status_.size());
+    bv.resize(static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
+        w.n_nodes() + provider.stations_.size() +
+        provider.vehicle_status_.size()));
     return bv;
   };
 

@@ -21,8 +21,9 @@ geofencing_restrictions geofencing_zones::get_restrictions(
     geofencing_restrictions const& default_restrictions) {
   for (auto const& z : zones_) {
     if (multipoly_contains_point(z.geom_.get(), pos)) {
-      for (auto const& r : z.rules_) {
-        // vehicle_type_ids currently ignored, using first rule
+      // vehicle_type_ids currently ignored, using first rule
+      if (!z.rules_.empty()) {
+        auto const& r = z.rules_.front();
         return geofencing_restrictions{
             .ride_start_allowed_ = r.ride_start_allowed_,
             .ride_end_allowed_ = r.ride_end_allowed_,
