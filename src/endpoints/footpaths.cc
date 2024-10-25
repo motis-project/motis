@@ -47,7 +47,7 @@ api::footpaths_response footpaths::operator()(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
         kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-        e == nullptr ? nullptr : &e->blocked_,
+        e == nullptr ? nullptr : &e->blocked_, nullptr,
         [](osr::path const& p) { return p.uses_elevator_; });
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {

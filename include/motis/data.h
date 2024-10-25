@@ -13,6 +13,7 @@
 #include "motis/compute_footpaths.h"
 #include "motis/config.h"
 #include "motis/fwd.h"
+#include "motis/gbfs/data.h"
 #include "motis/match_platforms.h"
 #include "motis/types.h"
 
@@ -64,7 +65,8 @@ struct data {
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(t_, r_, tc_, w_, pl_, l_, tt_, tags_, location_rtee_,
-                    elevator_nodes_, shapes_, railviz_static_, matches_, rt_);
+                    elevator_nodes_, shapes_, railviz_static_, matches_, rt_,
+                    gbfs_);
   }
 
   std::filesystem::path path_;
@@ -85,6 +87,7 @@ struct data {
   cista::wrapped<platform_matches_t> matches_;
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
+  std::shared_ptr<gbfs::gbfs_data> gbfs_{};
 };
 
 }  // namespace motis

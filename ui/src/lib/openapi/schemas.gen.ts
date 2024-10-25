@@ -197,11 +197,13 @@ Scheduled time of departure at boarding stop = startTime - departureDelay
         },
         arrival: {
             description: 'arrival time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         departure: {
             description: 'departure time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         scheduledTrack: {
             description: 'scheduled track from the static schedule timetable dataset',
@@ -322,11 +324,13 @@ export const TripSegmentSchema = {
         },
         departure: {
             description: 'departure time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         arrival: {
             description: 'arrival time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         departureDelay: {
             type: 'integer',
@@ -431,6 +435,42 @@ and thus the directions should say something like "cross"
     }
 } as const;
 
+export const RentalSchema = {
+    description: 'Vehicle rental',
+    type: 'object',
+    required: ['systemId'],
+    properties: {
+        systemId: {
+            type: 'string',
+            description: 'Vehicle share system ID'
+        },
+        systemName: {
+            type: 'string',
+            description: 'Vehicle share system name'
+        },
+        url: {
+            type: 'string',
+            description: 'URL of the vehicle share system'
+        },
+        stationName: {
+            type: 'string',
+            description: 'Name of the station'
+        },
+        rentalUriAndroid: {
+            type: 'string',
+            description: 'Rental URI for Android (deep link to the specific station or vehicle)'
+        },
+        rentalUriIOS: {
+            type: 'string',
+            description: 'Rental URI for iOS (deep link to the specific station or vehicle)'
+        },
+        rentalUriWeb: {
+            type: 'string',
+            description: 'Rental URI for web (deep link to the specific station or vehicle)'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'departureDelay', 'arrivalDelay', 'realTime', 'distance', 'duration', 'from', 'to', 'legGeometry'],
@@ -450,11 +490,13 @@ export const LegSchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'leg departure time'
         },
         endTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'leg arrival time'
         },
         departureDelay: {
@@ -544,6 +586,9 @@ used for walking, biking and driving.
             items: {
                 '$ref': '#/components/schemas/StepInstruction'
             }
+        },
+        rental: {
+            '$ref': '#/components/schemas/Rental'
         }
     }
 } as const;
@@ -557,11 +602,13 @@ export const ItinerarySchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'journey departure time'
         },
         endTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'journey arrival time'
         },
         walkTime: {

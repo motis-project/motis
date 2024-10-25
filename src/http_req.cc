@@ -9,6 +9,10 @@
 #include "boost/beast/http/dynamic_body.hpp"
 #include "boost/beast/ssl/ssl_stream.hpp"
 #include "boost/beast/version.hpp"
+#include "boost/iostreams/copy.hpp"
+#include "boost/iostreams/filter/gzip.hpp"
+#include "boost/iostreams/filtering_stream.hpp"
+#include "boost/iostreams/filtering_streambuf.hpp"
 #include "boost/url/url.hpp"
 
 #include "utl/verify.h"
@@ -121,6 +125,20 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
   }
   throw utl::fail(R"(too many redirects: "{}", latest="{}")",
                   fmt::streamed(url), fmt::streamed(next_url));
+}
+
+std::string get_http_body(http_response const& res) {
+  auto body = beast::buffers_to_string(res.body().data());
+  if (res[http::field::content_encoding] == "gzip") {
+    auto const src = boost::iostreams::array_source{body.data(), body.size()};
+    auto is = boost::iostreams::filtering_istream{};
+    auto os = std::stringstream{};
+    is.push(boost::iostreams::gzip_decompressor{});
+    is.push(src);
+    boost::iostreams::copy(is, os);
+    body = os.str();
+  }
+  return body;
 }
 
 }  // namespace motis

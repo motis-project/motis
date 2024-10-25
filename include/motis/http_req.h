@@ -19,4 +19,6 @@ boost::asio::awaitable<http_response> http_GET(
     std::map<std::string, std::string> const& headers,
     std::chrono::seconds timeout);
 
+std::string get_http_body(http_response const&);
+
 }  // namespace motis
