@@ -209,9 +209,9 @@ awaitable<void> load_feed(config::gbfs const& c,
                             (co_await fetch("geofencing_zones")).json_);
     }
 
-    map_geofencing_zones(provider, w, l);
-    map_stations(provider, w, l);
-    map_vehicles(provider, w, l);
+    map_geofencing_zones(w, l, provider);
+    map_stations(w, l, provider);
+    map_vehicles(w, l, provider);
 
     provider.has_vehicles_to_rent_ = provider.start_allowed_.count() != 0;
 

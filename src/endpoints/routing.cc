@@ -448,9 +448,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(w_, l_, pl_, *tt_, *tags_, e, rtt,
-                                         matches_, shapes_, query.wheelchair_,
-                                         j, start, dest, cache, *blocked,
-                                         gbfs.get());
+                                         matches_, shapes_, gbfs.get(),
+                                         query.wheelchair_, j, start, dest,
+                                         cache, *blocked);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

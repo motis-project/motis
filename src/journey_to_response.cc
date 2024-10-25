@@ -185,13 +185,13 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    n::rt_timetable const* rtt,
                                    platform_matches_t const* matches,
                                    n::shapes_storage const* shapes,
+                                   gbfs::gbfs_data const* gbfs,
                                    bool const wheelchair,
                                    n::routing::journey const& j,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t& cache,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
-                                   gbfs::gbfs_data const* gbfs) {
+                                   osr::bitvec<osr::node_idx_t>& blocked_mem) {
   auto const to_location = [&](n::location_idx_t const loc) {
     switch (to_idx(loc)) {
       case static_cast<n::location_idx_t::value_t>(n::special_station::kStart):

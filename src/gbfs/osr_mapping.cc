@@ -24,9 +24,9 @@
 
 namespace motis::gbfs {
 
-void map_geofencing_zones(gbfs_provider& provider,
-                          osr::ways const& w,
-                          osr::lookup const& l) {
+void map_geofencing_zones(osr::ways const& w,
+                          osr::lookup const& l,
+                          gbfs_provider& provider) {
   auto const make_loc_bitvec = [&]() {
     auto bv = osr::bitvec<osr::node_idx_t>{};
     bv.resize(static_cast<typename osr::bitvec<osr::node_idx_t>::size_type>(
@@ -111,9 +111,9 @@ void map_geofencing_zones(gbfs_provider& provider,
   }
 }
 
-void map_stations(gbfs_provider& provider,
-                  osr::ways const& w,
-                  osr::lookup const& l) {
+void map_stations(osr::ways const& w,
+                  osr::lookup const& l,
+                  gbfs_provider& provider) {
   auto next_node_id = static_cast<osr::node_idx_t>(
       w.n_nodes() + provider.additional_nodes_.size());
   for (auto const& [id, st] : provider.stations_) {
@@ -182,9 +182,9 @@ void map_stations(gbfs_provider& provider,
   }
 }
 
-void map_vehicles(gbfs_provider& provider,
-                  osr::ways const& w,
-                  osr::lookup const& l) {
+void map_vehicles(osr::ways const& w,
+                  osr::lookup const& l,
+                  gbfs_provider& provider) {
   auto next_node_id = static_cast<osr::node_idx_t>(
       w.n_nodes() + provider.additional_nodes_.size());
   for (auto const [vehicle_idx, vs] :
