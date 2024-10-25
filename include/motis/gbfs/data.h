@@ -79,8 +79,8 @@ struct station_information {
   std::string name_;
   geo::latlng pos_{};
   // optional:
-  std::string address_;
-  std::string cross_street_;
+  std::string address_{};
+  std::string cross_street_{};
   rental_uris rental_uris_{};
 
   std::unique_ptr<tg_geom, tg_geom_deleter> station_area_{};

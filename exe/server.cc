@@ -26,6 +26,7 @@
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
+#include "motis/gbfs/update.h"
 #include "motis/rt_update.h"
 
 namespace fs = std::filesystem;
