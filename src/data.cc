@@ -17,7 +17,7 @@
 #include "osr/ways.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
-#include "nigiri/shape.h"
+#include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 
 #include "motis/config.h"
@@ -148,7 +148,7 @@ void data::init_rtt(date::sys_days const d) {
 void data::load_shapes() {
   shapes_ = {};
   shapes_ = std::make_unique<nigiri::shapes_storage>(
-      nigiri::shapes_storage{path_ / "shapes", cista::mmap::protection::READ});
+      nigiri::shapes_storage{path_, cista::mmap::protection::READ});
 }
 
 void data::load_railviz() {
