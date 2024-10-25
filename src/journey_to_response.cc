@@ -366,7 +366,6 @@ api::Itinerary journey_to_response(osr::ways const* w,
         [](auto const& a, auto const& b) { return a.mode_ == b.mode_; },
         [&](it_t const& lb, it_t const& ub) {
           auto const range = std::span{lb, ub};
-          auto const is_first_leg = lb == begin(path->segments_);
           auto const is_last_leg = ub == end(path->segments_);
           auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
 
