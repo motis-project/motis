@@ -60,7 +60,7 @@ namespace motis {
 
 constexpr auto const kAdrBinaryVersion = 1U;
 constexpr auto const kOsrBinaryVersion = 3U;
-constexpr auto const kNigiriBinaryVersion = 5U;
+constexpr auto const kNigiriBinaryVersion = 6U;
 constexpr auto const kMatchesBinaryVersion = 4U;
 
 using meta_entry_t = std::pair<std::string, std::uint64_t>;
