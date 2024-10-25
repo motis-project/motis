@@ -41,13 +41,14 @@ void map_geofencing_zones(gbfs_provider& provider,
   provider.through_allowed_ = make_loc_bitvec();
 
   // global rules
-  for (auto const& r : provider.geofencing_zones_.global_rules_) {
+  if (!provider.geofencing_zones_.global_rules_.empty()) {
+    // vehicle_type_ids currently ignored, using first rule
+    auto const& r = provider.geofencing_zones_.global_rules_.front();
     provider.default_restrictions_.ride_start_allowed_ = r.ride_start_allowed_;
     provider.default_restrictions_.ride_end_allowed_ = r.ride_end_allowed_;
     provider.default_restrictions_.ride_through_allowed_ =
         r.ride_through_allowed_;
     provider.default_restrictions_.station_parking_ = r.station_parking_;
-    break;  // vehicle_type_ids currently ignored, using first rule
   }
 
   if (provider.default_restrictions_.ride_end_allowed_ &&
@@ -69,14 +70,15 @@ void map_geofencing_zones(gbfs_provider& provider,
     for (auto const& z : provider.geofencing_zones_.zones_) {
       // check if pos is inside the zone multipolygon
       if (multipoly_contains_point(z.geom_.get(), pos)) {
-        for (auto const& r : z.rules_) {
+        // vehicle_type_ids currently ignored, using first rule
+        if (!z.rules_.empty()) {
+          auto const& r = z.rules_.front();
           start_allowed = r.ride_start_allowed_;
           end_allowed = r.ride_end_allowed_;
           through_allowed = r.ride_through_allowed_;
           if (r.station_parking_.has_value()) {
             station_parking = r.station_parking_.value();
           }
-          break;  // vehicle_type_ids currently ignored, using first rule
         }
         if (start_allowed.has_value()) {
           break;  // for now
@@ -185,7 +187,7 @@ void map_vehicles(gbfs_provider& provider,
                   osr::lookup const& l) {
   auto next_node_id = static_cast<osr::node_idx_t>(
       w.n_nodes() + provider.additional_nodes_.size());
-  for (auto const& [vehicle_idx, vs] :
+  for (auto const [vehicle_idx, vs] :
        utl::enumerate(provider.vehicle_status_)) {
     if (vs.is_disabled_ || vs.is_reserved_ || !vs.station_id_.empty() ||
         !vs.home_station_id_.empty()) {
