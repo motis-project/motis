@@ -173,7 +173,6 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       auto const& vta = station_obj.at("vehicle_types_available").as_array();
       auto unrestricted_available = 0U;
       auto any_station_available = 0U;
-      auto roundtrip_station_available = 0U;
       for (auto const& vt : vta) {
         auto const vehicle_type_id =
             static_cast<std::string>(vt.at("vehicle_type_id").as_string());
@@ -184,9 +183,7 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
           switch (it->second.return_constraint_) {
             case return_constraint::kNone: ++unrestricted_available; break;
             case return_constraint::kAnyStation: ++any_station_available; break;
-            case return_constraint::kRoundtripStation:
-              ++roundtrip_station_available;
-              break;
+            case return_constraint::kRoundtripStation: break;
           }
         }
       }
