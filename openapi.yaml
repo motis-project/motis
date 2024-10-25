@@ -1112,6 +1112,34 @@ components:
             and thus the directions should say something like "cross"
           type: boolean
 
+    Rental:
+      description: Vehicle rental
+      type: object
+      required:
+        - systemId
+      properties:
+        systemId:
+          type: string
+          description: Vehicle share system ID
+        systemName:
+          type: string
+          description: Vehicle share system name
+        url:
+          type: string
+          description: URL of the vehicle share system
+        stationName:
+          type: string
+          description: Name of the station
+        rentalUriAndroid:
+          type: string
+          description: Rental URI for Android (deep link to the specific station or vehicle)
+        rentalUriIOS:
+          type: string
+          description: Rental URI for iOS (deep link to the specific station or vehicle)
+        rentalUriWeb:
+          type: string
+          description: Rental URI for web (deep link to the specific station or vehicle)
+
     Leg:
       type: object
       required:
@@ -1211,6 +1239,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StepInstruction'
+        rental:
+          $ref: '#/components/schemas/Rental'
 
     Itinerary:
       type: object

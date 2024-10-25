@@ -111,6 +111,8 @@ void config::verify() const {
       !elevators_ || (fasta_ && street_routing_ && timetable_),
       "feature ELEVATORS requires fasta.json and features STREET_ROUTING and "
       "TIMETABLE");
+  utl::verify(!has_gbfs_feeds() || street_routing_,
+              "feature GBFS requires feature STREET_ROUTING");
 
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {
@@ -161,6 +163,10 @@ bool config::requires_rt_timetable_updates() const {
          utl::any_of(timetable_->datasets_, [](auto&& d) {
            return d.second.rt_.has_value() && !d.second.rt_->empty();
          });
+}
+
+bool config::has_gbfs_feeds() const {
+  return gbfs_.has_value() && !gbfs_->feeds_.empty();
 }
 
 }  // namespace motis

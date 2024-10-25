@@ -1,11 +1,12 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import type { Itinerary } from '$lib/openapi';
+	import type { Itinerary, Leg } from '$lib/openapi';
 	import Time from '../lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
+	import { getModeName } from '$lib/getModeName';
 
 	const {
 		itinerary,
@@ -42,6 +43,20 @@
 	{:else}
 		<span class="col-span-5 mr-6">{name}</span>
 	{/if}
+{/snippet}
+
+{#snippet streetLeg(l: Leg)}
+	<div class="py-12 pl-8 flex flex-col text-muted-foreground">
+		<span class="ml-6">
+			{formatDurationSec(l.duration)}
+			{getModeName(l.mode)} ({Math.round(l.distance)} m)
+		</span>
+		{#if l.rental && l.rental.systemName}
+			<span class="ml-6">
+				Anbieter: <a href={l.rental.url} target="_blank">{l.rental.systemName}</a>
+			</span>
+		{/if}
+	</div>
 {/snippet}
 
 <div class="text-lg">
@@ -124,17 +139,13 @@
 					<div class="pb-1"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName)}
+		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'BIKE_RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-7 items-center">
 					{@render stopTimes(l.startTime, l.departureDelay, l.realTime, l.from.name, l.from.stopId)}
 				</div>
-				<div class="py-12 pl-8 flex items-center text-muted-foreground">
-					<span class="ml-6">
-						{formatDurationSec(l.duration)} Fußweg ({Math.round(l.distance)} m)
-					</span>
-				</div>
+				{@render streetLeg(l)}
 				{#if !isLast}
 					<div class="grid gap-y-6 grid-cols-7 items-center pb-4">
 						{@render stopTimes(l.endTime, l.arrivalDelay, l.realTime, l.to.name, l.to.stopId)}

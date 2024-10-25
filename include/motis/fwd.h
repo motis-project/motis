@@ -42,4 +42,9 @@ struct config;
 struct railviz_static_index;
 struct railviz_rt_index;
 
+namespace gbfs {
+struct gbfs_data;
+struct gbfs_provider;
+}  // namespace gbfs
+
 }  // namespace motis

@@ -1,5 +1,6 @@
 import { client } from '$lib/openapi';
 import { browser } from '$app/environment';
+import type { QuerySerializerOptions } from '@hey-api/client-fetch';
 
 export const prerender = true;
 
@@ -21,5 +22,6 @@ if (browser) {
 			baseUrl = motisParam;
 		}
 	}
-	client.setConfig({ baseUrl }); //`${window.location}`
+  const querySerializer = {array: {explode: false}} as QuerySerializerOptions;
+	client.setConfig({ baseUrl, querySerializer }); //`${window.location}`
 }

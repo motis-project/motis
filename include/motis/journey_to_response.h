@@ -37,7 +37,7 @@ inline std::ostream& operator<<(std::ostream& out, place_t const p) {
 
 using street_routing_cache_t = hash_map<std::tuple<osr::location,
                                                    osr::location,
-                                                   osr::search_profile,
+                                                   nigiri::transport_mode_id_t,
                                                    std::vector<bool>>,
                                         std::optional<osr::path>>;
 
@@ -72,6 +72,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t&,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem);
+                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
+                                   gbfs::gbfs_data const*);
 
 }  // namespace motis

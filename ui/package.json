@@ -15,7 +15,7 @@
 		"test:unit": "vitest"
 	},
 	"devDependencies": {
-		"@hey-api/openapi-ts": "^0.53.2",
+		"@hey-api/openapi-ts": "^0.53.11",
 		"@playwright/test": "^1.28.1",
 		"@sveltejs/adapter-static": "^3.0.5",
 		"@sveltejs/kit": "^2.7.2",
@@ -44,7 +44,7 @@
 		"@deck.gl/core": "^9.0.33",
 		"@deck.gl/layers": "^9.0.33",
 		"@deck.gl/mapbox": "^9.0.33",
-		"@hey-api/client-fetch": "^0.3.4",
+		"@hey-api/client-fetch": "^0.4.2",
 		"@turf/rhumb-bearing": "^7.1.0",
 		"@turf/rhumb-distance": "^7.1.0",
 		"bits-ui": "^0.21.16",

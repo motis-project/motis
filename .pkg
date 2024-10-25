@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=48ac3ab16a9e4e436bc20ff0707029c09acfc825
+  commit=9968fc9f455c8822d6fef496d200a24c51388b5f
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -46,3 +46,7 @@
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
   commit=ca0013532a4c4012bf014f5f53ad3df11a873cfb
+[tg]
+  url=git@github.com:triptix-tech/tg.git
+  branch=main
+  commit=20c0f298b8ce58de29a790290f44dca7c4ecc364
