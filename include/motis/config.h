@@ -95,13 +95,17 @@ struct config {
   std::optional<timetable> timetable_{};
 
   struct gbfs {
+    bool operator==(gbfs const&) const = default;
+
     struct restrictions {
+      bool operator==(restrictions const&) const = default;
       bool ride_start_allowed_{true};
       bool ride_end_allowed_{true};
       bool ride_through_allowed_{true};
     };
 
     struct feed {
+      bool operator==(feed const&) const = default;
       std::string url_;
       std::optional<headers_t> headers_{};
     };
