@@ -22,7 +22,7 @@
 
 #include "motis/config.h"
 #include "motis/constants.h"
-#include "motis/elevators/parse_fasta.h"
+#include "motis/hashes.h"
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
@@ -58,6 +58,26 @@ data::data(std::filesystem::path p)
 
 data::data(std::filesystem::path p, config const& c)
     : path_{std::move(p)}, config_{c} {
+  auto const verify_version = [&](bool cond, char const* name, auto&& ver) {
+    utl::verify(!cond || read_hashes(path_, name).at(ver.first) == ver.second,
+                "{} binary version mismatch, please re-run import", name);
+  };
+  auto const verify_exists = [&](bool cond, char const* feature, auto&&... p) {
+    if (cond) {
+      (utl::verify(fs::exists(path_ / p),
+                   "feature {} requires file {} to exist", feature, path_ / p),
+       ...);
+    }
+  };
+
+  auto const adr_required = (c.geocoding_ || c.reverse_geocoding_);
+  verify_version(adr_required && !c.timetable_, "adr", adr_version);
+  verify_version(adr_required && c.timetable_, "adr_extend", adr_version);
+  verify_version(c.street_routing_, "osr", osr_version);
+  verify_version(c.street_routing_ && c.timetable_, "matches", adr_version);
+  verify_version(c.tiles_.has_value(), "tiles", tiles_version);
+  verify_exists(adr_required, "geocoding / reverse geocoding", );
+
   rt_ = std::make_shared<rt>();
 
   auto const geocoder = std::async(std::launch::async, [&]() {

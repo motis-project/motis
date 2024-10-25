@@ -5,8 +5,6 @@
 #include <ostream>
 #include <vector>
 
-#include "boost/json.hpp"
-
 #include "fmt/ranges.h"
 
 #include "cista/io.h"
@@ -48,6 +46,7 @@
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
+#include "motis/hashes.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
@@ -57,31 +56,6 @@ namespace nl = nigiri::loader;
 using namespace std::string_literals;
 
 namespace motis {
-
-constexpr auto const kAdrBinaryVersion = 1U;
-constexpr auto const kOsrBinaryVersion = 3U;
-constexpr auto const kNigiriBinaryVersion = 4U;
-constexpr auto const kMatchesBinaryVersion = 4U;
-
-using meta_entry_t = std::pair<std::string, std::uint64_t>;
-using meta_t = std::map<std::string, std::uint64_t>;
-
-meta_t read_hashes(fs::path const& data_path, std::string const& name) {
-  auto const p = (data_path / "meta" / (name + ".json"));
-  if (!exists(p)) {
-    return {};
-  }
-  auto const mmap =
-      cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
-  return boost::json::value_to<meta_t>(boost::json::parse(mmap.view()));
-}
-
-void write_hashes(fs::path const& data_path,
-                  std::string const& name,
-                  meta_t const& h) {
-  auto const p = (data_path / "meta" / (name + ".json"));
-  std::ofstream{p} << boost::json::serialize(boost::json::value_from(h));
-}
 
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
@@ -188,12 +162,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       h = cista::hash_combine(h, hash_file(*c.tiles_->coastline_));
     }
   }
-
-  auto const osr_version = meta_entry_t{"osr_bin_ver", kOsrBinaryVersion};
-  auto const adr_version = meta_entry_t{"adr_bin_ver", kAdrBinaryVersion};
-  auto const n_version = meta_entry_t{"nigiri_bin_ver", kNigiriBinaryVersion};
-  auto const matches_version =
-      meta_entry_t{"matches_ver", kMatchesBinaryVersion};
 
   auto d = data{data_path};
 
