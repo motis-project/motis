@@ -11,6 +11,10 @@ namespace fs = std::filesystem;
 
 namespace motis {
 
+std::string to_str(meta_t const& h) {
+  return boost::json::serialize(boost::json::value_from(h));
+}
+
 meta_t read_hashes(fs::path const& data_path, std::string const& name) {
   auto const p = (data_path / "meta" / (name + ".json"));
   if (!exists(p)) {
@@ -25,7 +29,7 @@ void write_hashes(fs::path const& data_path,
                   std::string const& name,
                   meta_t const& h) {
   auto const p = (data_path / "meta" / (name + ".json"));
-  std::ofstream{p} << boost::json::serialize(boost::json::value_from(h));
+  std::ofstream{p} << to_str(h);
 }
 
 }  // namespace motis

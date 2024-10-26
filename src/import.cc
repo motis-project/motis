@@ -63,8 +63,12 @@ struct task {
   }
 
   bool ready_for_load(fs::path const& data_path) {
-    auto const pt = utl::activate_progress_tracker(name_);
     auto const existing = read_hashes(data_path, name_);
+    if (existing != hashes_) {
+      std::cout << name_ << "\n"
+                << "  existing: " << to_str(existing) << "\n"
+                << "  current: " << to_str(hashes_) << "\n";
+    }
     return existing == hashes_;
   }
 
@@ -173,7 +177,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                     d.load_osr();
                   },
                   [&]() { d.load_osr(); },
-                  {osm_hash, osr_version}};
+                  {osm_hash, osr_version()}};
 
   auto adr =
       task{"adr",
@@ -201,7 +205,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                d.load_reverse_geocoder();
              }
            },
-           {osm_hash, adr_version}};
+           {osm_hash, adr_version()}};
 
   auto tt = task{
       "tt",
@@ -288,7 +292,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           d.load_railviz();
         }
       },
-      {tt_hash, n_version}};
+      {tt_hash, n_version()}};
 
   auto adr_extend =
       task{"adr_extend",
@@ -303,24 +307,24 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
            },
            [&]() { d.load_geocoder(); },
-           {tt_hash, osm_hash, adr_version, n_version}};
+           {tt_hash, osm_hash, adr_version(), n_version()}};
 
-  auto osr_footpath =
-      task{"osr_footpath",
-           [&]() { return c.osr_footpath_; },
-           [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
-           [&]() {
-             auto const elevator_footpath_map =
-                 compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
+  auto osr_footpath = task{
+      "osr_footpath",
+      [&]() { return c.osr_footpath_; },
+      [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
+      [&]() {
+        auto const elevator_footpath_map =
+            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
 
-             if (write) {
-               cista::write(data_path / "elevator_footpath_map.bin",
-                            elevator_footpath_map);
-               d.tt_->write(data_path / "tt.bin");
-             }
-           },
-           [&]() {},
-           {tt_hash, osm_hash, osr_version, n_version}};
+        if (write) {
+          cista::write(data_path / "elevator_footpath_map.bin",
+                       elevator_footpath_map);
+          d.tt_->write(data_path / "tt.bin");
+        }
+      },
+      [&]() {},
+      {tt_hash, osm_hash, osr_version(), osr_footpath_version(), n_version()}};
 
   auto matches =
       task{"matches",
@@ -335,7 +339,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
            },
            [&]() { d.load_matches(); },
-           {tt_hash, osm_hash, osr_version, n_version, matches_version}};
+           {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
 
   auto tiles = task{
       "tiles",
@@ -385,7 +389,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         d.load_tiles();
       },
       [&]() { d.load_tiles(); },
-      {osm_hash, tiles_hash}};
+      {tiles_version(), osm_hash, tiles_hash}};
 
   auto tasks =
       std::vector<task>{tiles, osr, adr, tt, adr_extend, osr_footpath, matches};
