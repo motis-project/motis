@@ -7,8 +7,8 @@
 
 namespace motis {
 
-using meta_entry_t = std::pair<std::string, std::uint64_t>;
-using meta_t = std::map<std::string, std::uint64_t>;
+using meta_entry_t = std::pair<std::string_view, std::uint64_t>;
+using meta_t = std::map<std::string_view, std::uint64_t>;
 
 constexpr auto const osr_version = meta_entry_t{"osr_bin_ver", 3U};
 constexpr auto const adr_version = meta_entry_t{"adr_bin_ver", 1U};
