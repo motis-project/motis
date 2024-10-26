@@ -19,7 +19,6 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
-#include "nigiri/shape.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 

@@ -6,7 +6,15 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import { initial, type Itinerary, type Match, plan, type PlanResponse, trip } from '$lib/openapi';
+	import {
+		initial,
+		type Itinerary,
+		type Match,
+		plan,
+		type PlanResponse,
+		trip,
+		type Mode
+	} from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -80,6 +88,7 @@
 	let time = $state<Date>(new Date());
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
+	let bikeRental = $state(false);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -99,7 +108,8 @@
 						toPlace: toPlaceString(to),
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
-						wheelchair
+						wheelchair,
+						mode: ['TRANSIT', 'WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]
 					}
 				}
 			: undefined
@@ -190,7 +200,15 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair {theme} />
+			<SearchMask
+				bind:from
+				bind:to
+				bind:time
+				bind:timeType
+				bind:wheelchair
+				bind:bikeRental
+				{theme}
+			/>
 		</Card>
 	</Control>
 

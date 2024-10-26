@@ -26,6 +26,7 @@
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
+#include "motis/gbfs/update.h"
 #include "motis/rt_update.h"
 
 namespace fs = std::filesystem;
@@ -86,6 +87,11 @@ int server(data d, config const& c) {
   s.init(server_config.host_, server_config.port_, ec);
   s.run();
 
+  if (ec) {
+    std::cerr << "error: " << ec << "\n";
+    return 1;
+  }
+
   auto rt_update_thread = std::unique_ptr<std::thread>{};
   auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
   if (c.requires_rt_timetable_updates()) {
@@ -96,9 +102,14 @@ int server(data d, config const& c) {
     });
   }
 
-  if (ec) {
-    std::cerr << "error: " << ec << "\n";
-    return 1;
+  auto gbfs_update_thread = std::unique_ptr<std::thread>{};
+  auto gbfs_update_ioc = std::unique_ptr<asio::io_context>{};
+  if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
+    gbfs_update_ioc = std::make_unique<asio::io_context>();
+    gbfs_update_thread = std::make_unique<std::thread>([&]() {
+      gbfs::run_gbfs_update(*gbfs_update_ioc, c, *d.w_, *d.l_, d.gbfs_);
+      gbfs_update_ioc->run();
+    });
   }
 
   auto const work_guard = asio::make_work_guard(workers);

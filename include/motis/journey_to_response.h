@@ -37,7 +37,7 @@ inline std::ostream& operator<<(std::ostream& out, place_t const p) {
 
 using street_routing_cache_t = hash_map<std::tuple<osr::location,
                                                    osr::location,
-                                                   osr::search_profile,
+                                                   nigiri::transport_mode_id_t,
                                                    std::vector<bool>>,
                                         std::optional<osr::path>>;
 
@@ -67,6 +67,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    nigiri::rt_timetable const*,
                                    platform_matches_t const* matches,
                                    nigiri::shapes_storage const*,
+                                   gbfs::gbfs_data const*,
                                    bool const wheelchair,
                                    nigiri::routing::journey const&,
                                    place_t const& start,

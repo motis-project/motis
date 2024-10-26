@@ -2,9 +2,12 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "utl/helpers/algorithm.h"
+
 #include "osr/platforms.h"
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
+#include "osr/routing/sharing_data.h"
 
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/pareto_set.h"
@@ -15,6 +18,8 @@
 
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
+
+#include "motis/gbfs/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/parse_location.h"
@@ -65,6 +70,7 @@ osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
                         : osr::search_profile::kFoot;
     case api::ModeEnum::BIKE: return osr::search_profile::kBike;
     case api::ModeEnum::CAR: return osr::search_profile::kCar;
+    case api::ModeEnum::BIKE_RENTAL: return osr::search_profile::kBikeSharing;
     default: throw utl::fail("unsupported mode");
   }
 }
@@ -123,37 +129,96 @@ std::vector<n::routing::offset> routing::get_offsets(
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
     bool const wheelchair,
-    std::chrono::seconds const max) const {
+    std::chrono::seconds const max,
+    gbfs::gbfs_data const* gbfs) const {
   if (!loc_tree_ || !pl_ || !tt_ || !loc_tree_ || !matches_) {
     return {};
   }
 
   auto offsets = std::vector<n::routing::offset>{};
-  for (auto const m : modes) {
+  auto rental_providers = 0U;
+  auto ignore_walk = false;
+
+  auto const handle_mode = [&](api::ModeEnum const m) {
     auto const profile = to_profile(m, wheelchair);
 
     if (rt_->e_ && profile == osr::search_profile::kWheelchair) {
-      continue;  // handled by get_td_offsets
+      return;  // handled by get_td_offsets
     }
 
-    auto const near_stops =
-        loc_tree_->in_radius(pos.pos_, get_max_distance(profile, max));
+    auto const max_dist = get_max_distance(profile, max);
+
+    auto const near_stops = loc_tree_->in_radius(pos.pos_, max_dist);
     auto const near_stop_locations =
         utl::to_vec(near_stops, [&](n::location_idx_t const l) {
           return osr::location{tt_->locations_.coordinates_[l],
                                pl_->get_level(*w_, (*matches_)[l])};
         });
-    auto const paths = osr::route(*w_, *l_, profile, pos, near_stop_locations,
-                                  static_cast<osr::cost_t>(max.count()), dir,
-                                  kMaxMatchingDistance);
-    for (auto const [p, l] : utl::zip(paths, near_stops)) {
-      if (p.has_value()) {
-        offsets.emplace_back(
-            n::routing::offset{l, n::duration_t{p->cost_ / 60},
-                               static_cast<n::transport_mode_id_t>(profile)});
+
+    if (profile == osr::search_profile::kBikeSharing) {
+      if (gbfs == nullptr) {
+        return;
+      }
+
+      auto providers = hash_set<gbfs::gbfs_provider_idx_t>{};
+      gbfs->provider_rtree_.in_radius(
+          pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
+
+      for (auto const& pi : providers) {
+        auto const& provider = gbfs->providers_.at(to_idx(pi));
+        auto const sharing =
+            osr::sharing_data{.start_allowed_ = provider.start_allowed_,
+                              .end_allowed_ = provider.end_allowed_,
+                              .through_allowed_ = provider.through_allowed_,
+                              .additional_node_offset_ = w_->n_nodes(),
+                              .additional_edges_ = provider.additional_edges_};
+        auto const paths =
+            osr::route(*w_, *l_, profile, pos, near_stop_locations,
+                       static_cast<osr::cost_t>(max.count()), dir,
+                       kMaxMatchingDistance, nullptr, &sharing);
+        ++rental_providers;
+        for (auto const [p, l] : utl::zip(paths, near_stops)) {
+          if (p.has_value()) {
+            offsets.emplace_back(
+                l, n::duration_t{p->cost_ / 60},
+                static_cast<n::transport_mode_id_t>(kGbfsTransportModeIdOffset +
+                                                    to_idx(provider.idx_)));
+          }
+        }
+      }
+
+    } else {
+      auto const paths = osr::route(*w_, *l_, profile, pos, near_stop_locations,
+                                    static_cast<osr::cost_t>(max.count()), dir,
+                                    kMaxMatchingDistance, nullptr, nullptr);
+      for (auto const [p, l] : utl::zip(paths, near_stops)) {
+        if (p.has_value()) {
+          offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
+                               static_cast<n::transport_mode_id_t>(profile));
+        }
       }
     }
+  };
+
+  if (utl::find(modes, api::ModeEnum::BIKE_RENTAL) != end(modes)) {
+    // bike rental search also finds walk paths - if at least
+    // one provider is found, we can ignore the walk profile
+    handle_mode(api::ModeEnum::BIKE_RENTAL);
+    if (rental_providers > 0) {
+      ignore_walk = true;
+    }
   }
+
+  for (auto const m : modes) {
+    if (m == api::ModeEnum::BIKE_RENTAL) {
+      continue;  // handled above
+    }
+    if (m == api::ModeEnum::WALK && ignore_walk) {
+      continue;
+    }
+    handle_mode(m);
+  }
+
   return offsets;
 }
 
@@ -167,12 +232,14 @@ std::vector<api::ModeEnum> get_from_modes(
       case api::ModeEnum::CAR: ret.emplace_back(api::ModeEnum::CAR); break;
       case api::ModeEnum::BIKE_TO_PARK: [[fallthrough]];
       case api::ModeEnum::BIKE: ret.emplace_back(api::ModeEnum::BIKE); break;
+      case api::ModeEnum::BIKE_RENTAL:
+        ret.emplace_back(api::ModeEnum::BIKE_RENTAL);
+        break;
 
       case api::ModeEnum::CAR_TO_PARK:
       case api::ModeEnum::CAR_SHARING:
       case api::ModeEnum::FLEXIBLE:
       case api::ModeEnum::CAR_RENTAL:
-      case api::ModeEnum::BIKE_RENTAL:
       case api::ModeEnum::SCOOTER_RENTAL:
       case api::ModeEnum::CAR_PICKUP: throw utl::fail("mode not supported yet");
 
@@ -189,13 +256,15 @@ std::vector<api::ModeEnum> get_to_modes(
     switch (m) {
       case api::ModeEnum::WALK: ret.emplace_back(api::ModeEnum::WALK); break;
       case api::ModeEnum::BIKE: ret.emplace_back(api::ModeEnum::BIKE); break;
+      case api::ModeEnum::BIKE_RENTAL:
+        ret.emplace_back(api::ModeEnum::BIKE_RENTAL);
+        break;
 
       case api::ModeEnum::CAR_TO_PARK:
       case api::ModeEnum::CAR_HAILING:
       case api::ModeEnum::CAR_SHARING:
       case api::ModeEnum::CAR_RENTAL:
       case api::ModeEnum::FLEXIBLE:
-      case api::ModeEnum::BIKE_RENTAL:
       case api::ModeEnum::SCOOTER_RENTAL:
       case api::ModeEnum::CAR_PICKUP: throw utl::fail("mode not supported yet");
 
@@ -265,6 +334,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = rt_->e_.get();
+  auto const gbfs = gbfs_;
   if (blocked.get() == nullptr && w_ != nullptr) {
     blocked.reset(new osr::bitvec<osr::node_idx_t>{w_->n_nodes()});
   }
@@ -298,7 +368,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                                    : osr::direction::kBackward;
                   return get_offsets(
                       pos, dir, start_modes, query.wheelchair_,
-                      std::chrono::seconds{query.maxPreTransitTime_});
+                      std::chrono::seconds{query.maxPreTransitTime_},
+                      gbfs.get());
                 }},
             start),
         .destination_ = std::visit(
@@ -309,7 +380,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                                    : osr::direction::kForward;
                   return get_offsets(
                       pos, dir, dest_modes, query.wheelchair_,
-                      std::chrono::seconds{query.maxPostTransitTime_});
+                      std::chrono::seconds{query.maxPostTransitTime_},
+                      gbfs.get());
                 }},
             dest),
         .td_start_ =
@@ -376,8 +448,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(w_, l_, pl_, *tt_, *tags_, e, rtt,
-                                         matches_, shapes_, query.wheelchair_,
-                                         j, start, dest, cache, *blocked);
+                                         matches_, shapes_, gbfs.get(),
+                                         query.wheelchair_, j, start, dest,
+                                         cache, *blocked);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

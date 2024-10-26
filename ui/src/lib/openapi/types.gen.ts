@@ -362,6 +362,40 @@ export type StepInstruction = {
     area: boolean;
 };
 
+/**
+ * Vehicle rental
+ */
+export type Rental = {
+    /**
+     * Vehicle share system ID
+     */
+    systemId: string;
+    /**
+     * Vehicle share system name
+     */
+    systemName?: string;
+    /**
+     * URL of the vehicle share system
+     */
+    url?: string;
+    /**
+     * Name of the station
+     */
+    stationName?: string;
+    /**
+     * Rental URI for Android (deep link to the specific station or vehicle)
+     */
+    rentalUriAndroid?: string;
+    /**
+     * Rental URI for iOS (deep link to the specific station or vehicle)
+     */
+    rentalUriIOS?: string;
+    /**
+     * Rental URI for web (deep link to the specific station or vehicle)
+     */
+    rentalUriWeb?: string;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -443,6 +477,7 @@ export type Leg = {
      *
      */
     steps?: Array<StepInstruction>;
+    rental?: Rental;
 };
 
 export type Itinerary = {

@@ -126,7 +126,7 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
                       [&](auto&& x) { return get_loc(tt, w, pl, matches, x); }),
           candidates[l],
           utl::to_vec(neighbors, [&](auto&& x) { return candidates[x]; }),
-          kMaxDuration, osr::direction::kForward, nullptr,
+          kMaxDuration, osr::direction::kForward, nullptr, nullptr,
           [](osr::path const& p) { return p.uses_elevator_; });
       for (auto const [n, r] : utl::zip(neighbors, results)) {
         if (r.has_value()) {

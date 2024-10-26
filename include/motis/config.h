@@ -27,6 +27,7 @@ struct config {
   void verify_input_files_exist() const;
 
   bool requires_rt_timetable_updates() const;
+  bool has_gbfs_feeds() const;
 
   bool operator==(config const&) const = default;
 
@@ -92,6 +93,29 @@ struct config {
     std::optional<std::filesystem::path> assistance_times_{};
   };
   std::optional<timetable> timetable_{};
+
+  struct gbfs {
+    bool operator==(gbfs const&) const = default;
+
+    struct restrictions {
+      bool operator==(restrictions const&) const = default;
+      bool ride_start_allowed_{true};
+      bool ride_end_allowed_{true};
+      bool ride_through_allowed_{true};
+    };
+
+    struct feed {
+      bool operator==(feed const&) const = default;
+      std::string url_;
+      std::optional<headers_t> headers_{};
+    };
+
+    std::map<std::string, feed> feeds_{};
+    std::map<std::string, restrictions> default_restrictions_{};
+    unsigned update_interval_{60};
+    unsigned http_timeout_{10};
+  };
+  std::optional<gbfs> gbfs_{};
 
   bool street_routing_{false};
   bool osr_footpath_{false};

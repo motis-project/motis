@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
 	import Accessibility from 'lucide-svelte/icons/accessibility';
+	import Bike from 'lucide-svelte/icons/bike';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
@@ -15,6 +16,7 @@
 		time = $bindable(),
 		timeType = $bindable(),
 		wheelchair = $bindable(),
+		bikeRental = $bindable(),
 		theme
 	}: {
 		from: Location;
@@ -22,6 +24,7 @@
 		time: Date;
 		timeType: string;
 		wheelchair: boolean;
+		bikeRental: boolean;
 		theme?: 'light' | 'dark';
 	} = $props();
 
@@ -82,6 +85,9 @@
 		</RadioGroup.Root>
 		<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
 			<Accessibility class="h-6 w-6" />
+		</Toggle>
+		<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
+			<Bike class="h-6 w-6" />
 		</Toggle>
 	</div>
 </div>

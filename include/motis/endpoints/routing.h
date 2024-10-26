@@ -18,7 +18,8 @@ struct routing {
       osr::direction,
       std::vector<api::ModeEnum> const&,
       bool wheelchair,
-      std::chrono::seconds max) const;
+      std::chrono::seconds max,
+      gbfs::gbfs_data const*) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
@@ -38,6 +39,7 @@ struct routing {
   platform_matches_t const* matches_;
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
+  std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
 };
 
 }  // namespace motis::ep
