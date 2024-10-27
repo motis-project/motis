@@ -21,7 +21,7 @@
 							properties: {
 								color,
 								outlineColor,
-								level: p.fromLevel,
+								level: p.fromLevel ?? 0,
 								way: p.osmWay
 							},
 							geometry: {

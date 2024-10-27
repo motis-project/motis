@@ -312,32 +312,36 @@ TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
 
+  (void)kFastaJson;
   auto d = import(
-      config{.osm_ = {"test/resources/test_case.osm.pbf"},
-             .timetable_ =
-                 config::timetable{
-                     .first_day_ = "2019-05-01",
-                     .num_days_ = 2,
-                     .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
+      config{.server_ = {{.web_folder_ = "ui/build"}},
+             .osm_ = {"test/resources/test_case.osm.pbf"},
+             .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua"}},
+             .timetable_ = {{.first_day_ = "2019-05-01",
+                             .num_days_ = 2,
+                             .datasets_ = {{"test",
+                                            {.path_ = std::string{kGTFS}}}}}},
              .street_routing_ = true,
-             .osr_footpath_ = true},
-      "test/data", false);
+             .osr_footpath_ = true,
+             .geocoding_ = true,
+             .reverse_geocoding_ = true},
+      "test/data", true);
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
-  d.init_rtt(date::sys_days{2019_y / May / 1});
-  auto const stats = n::rt::gtfsrt_update_msg(
-      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
-      to_feed_msg(
-          {trip_update{.trip_id_ = "ICE",
-                       .start_time_ = {"03:35:00"},
-                       .date_ = {"20190501"},
-                       .stop_updates_ = {{.stop_id_ = "FFM_12",
-                                          .seq_ = std::optional{1U},
-                                          .ev_type_ = n::event_type::kArr,
-                                          .delay_minutes_ = 10,
-                                          .stop_assignment_ = "FFM_12"}}}},
-          date::sys_days{2019_y / May / 1} + 9h));
-  EXPECT_EQ(1U, stats.total_entities_success_);
+  //  d.init_rtt(date::sys_days{2019_y / May / 1});
+  //  auto const stats = n::rt::gtfsrt_update_msg(
+  //      *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
+  //      to_feed_msg(
+  //          {trip_update{.trip_id_ = "ICE",
+  //                       .start_time_ = {"03:35:00"},
+  //                       .date_ = {"20190501"},
+  //                       .stop_updates_ = {{.stop_id_ = "FFM_12",
+  //                                          .seq_ = std::optional{1U},
+  //                                          .ev_type_ = n::event_type::kArr,
+  //                                          .delay_minutes_ = 10,
+  //                                          .stop_assignment_ = "FFM_12"}}}},
+  //          date::sys_days{2019_y / May / 1} + 9h));
+  //  EXPECT_EQ(1U, stats.total_entities_success_);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());

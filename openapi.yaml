@@ -1061,8 +1061,6 @@ components:
     StepInstruction:
       type: object
       required:
-        - fromLevel
-        - toLevel
         - polyline
         - relativeDirection
         - absoluteDirection

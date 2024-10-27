@@ -248,8 +248,14 @@ api::Itinerary journey_to_response(osr::ways const* w,
           .relativeDirection_ = api::RelativeDirectionEnum::CONTINUE,  // TODO
           .absoluteDirection_ = api::AbsoluteDirectionEnum::NORTH,  // TODO
           .distance_ = static_cast<double>(s.dist_),
-          .fromLevel_ = to_float(s.from_level_),
-          .toLevel_ = to_float(s.to_level_),
+          .fromLevel_ =
+              s.from_level_ == osr::kNoLevel
+                  ? std::nullopt
+                  : std::optional{static_cast<double>(to_float(s.from_level_))},
+          .toLevel_ =
+              s.to_level_ == osr::kNoLevel
+                  ? std::nullopt
+                  : std::optional{static_cast<double>(to_float(s.to_level_))},
           .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
                          ? std::nullopt
                          : std::optional{static_cast<std::int64_t>(
