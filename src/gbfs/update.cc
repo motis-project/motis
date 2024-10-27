@@ -260,7 +260,7 @@ awaitable<void> update(config const& c,
     auto const& headers = feed.headers_.has_value() ? *feed.headers_ : no_hdr;
     auto const dir =
         feed.url_.starts_with("http:") || feed.url_.starts_with("https:")
-            ? std::optional<std::filesystem::path>{}
+            ? std::nullopt
             : std::optional<std::filesystem::path>{feed.url_};
 
     co_await load_feed(c.gbfs_.value(), w, l, d.get(), "", id, feed.url_,
