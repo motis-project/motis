@@ -183,6 +183,7 @@ bool config::has_gbfs_feeds() const {
 #include "boost/program_options.hpp"
 
 #include "utl/parser/split.h"
+#include "utl/pipes.h"
 
 namespace std {  // NOLINT(cert-dcl58-cpp)
 
@@ -255,6 +256,10 @@ config config::read_legacy(fs::path const& p) {
     size_t db_size_{sizeof(void*) >= 8 ? 1024ULL * 1024 * 1024 * 1024
                                        : 256 * 1024 * 1024};
     size_t flush_threshold_{sizeof(void*) >= 8 ? 10'000'000 : 100'000};
+
+    // gbfs
+    unsigned update_interval_minutes_{5U};
+    std::vector<std::string> urls_;
   } cfg;
 
   auto prefix = std::string{};
@@ -329,6 +334,11 @@ config config::read_legacy(fs::path const& p) {
   param(cfg.profile_path_, "profile", "/path/to/profile.lua");
   param(cfg.db_size_, "db_size", "database size");
 
+  prefix = "gbfs";
+  param(cfg.update_interval_minutes_, "update_interval",
+        "update interval in minutes");
+  param(cfg.urls_, "urls", "URLs to fetch data from");
+
   auto ifs = std::ifstream{p};
   if (!ifs) {
     throw utl::fail("could not open file {}", p);
@@ -395,6 +405,32 @@ config config::read_legacy(fs::path const& p) {
           ? std::optional{tiles{.profile_ = cfg.profile_path_,
                                 .db_size_ = cfg.db_size_,
                                 .flush_threshold_ = cfg.flush_threshold_}}
+          : std::nullopt;
+  c.gbfs_ =
+      is_module_active("gbfs")
+          ? std::optional{gbfs{
+                .feeds_ =
+                    utl::all(cfg.urls_) |
+                    utl::transform([](std::string url)
+                                       -> std::pair<std::string, gbfs::feed> {
+                      auto tag = std::string{"default"};
+                      auto vehicle_type = std::string{"bike"};
+                      auto const tag_pos = url.find('|');
+                      if (tag_pos != std::string::npos) {
+                        tag = url.substr(0, tag_pos);
+
+                        auto const vehicle_type_delimiter = tag.find('-');
+                        if (vehicle_type_delimiter != std::string::npos) {
+                          vehicle_type = tag.substr(vehicle_type_delimiter + 1);
+                          tag = tag.substr(0, vehicle_type_delimiter);
+                        }
+
+                        url = url.substr(tag_pos + 1);
+                      }
+                      return {tag, gbfs::feed{.url_ = url}};
+                    }) |
+                    utl::to<std::map<std::string, gbfs::feed>>(),
+                .update_interval_ = cfg.update_interval_minutes_ * 60}}
           : std::nullopt;
 
   for (auto const& x : cfg.import_paths_) {
