@@ -305,13 +305,13 @@ api::Itinerary journey_to_response(osr::ways const* w,
     utl::verify(gbfs != nullptr, "missing gbfs data");
     auto const provider_idx =
         gbfs::gbfs_provider_idx_t{transport_mode - kGbfsTransportModeIdOffset};
-    auto const& provider = gbfs->providers_.at(to_idx(provider_idx));
+    auto const provider = gbfs->providers_.at(to_idx(provider_idx)).get();
     auto const sharing =
-        osr::sharing_data{.start_allowed_ = provider.start_allowed_,
-                          .end_allowed_ = provider.end_allowed_,
-                          .through_allowed_ = provider.through_allowed_,
+        osr::sharing_data{.start_allowed_ = provider->start_allowed_,
+                          .end_allowed_ = provider->end_allowed_,
+                          .through_allowed_ = provider->through_allowed_,
                           .additional_node_offset_ = w->n_nodes(),
-                          .additional_edges_ = provider.additional_edges_};
+                          .additional_edges_ = provider->additional_edges_};
 
     auto const get_node_pos = [&](osr::node_idx_t const n) -> geo::latlng {
       if (n == osr::node_idx_t::invalid()) {
@@ -319,14 +319,14 @@ api::Itinerary journey_to_response(osr::ways const* w,
       } else if (to_idx(n) < sharing.additional_node_offset_) {
         return w->get_node_pos(n).as_latlng();
       } else {
-        auto const& an = provider.additional_nodes_.at(
+        auto const& an = provider->additional_nodes_.at(
             to_idx(n) - sharing.additional_node_offset_);
         if (std::holds_alternative<gbfs::additional_node::station>(an.data_)) {
-          return provider.stations_
+          return provider->stations_
               .at(std::get<gbfs::additional_node::station>(an.data_).id_)
               .info_.pos_;
         } else {
-          return provider.vehicle_status_
+          return provider->vehicle_status_
               .at(std::get<gbfs::additional_node::vehicle>(an.data_).idx_)
               .pos_;
         }
@@ -354,9 +354,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                tt_location{j_leg.from_}, start, dest);
 
     auto rental = api::Rental{
-        .systemId_ = provider.sys_info_.id_,
-        .systemName_ = provider.sys_info_.name_,
-        .url_ = provider.sys_info_.url_,
+        .systemId_ = provider->sys_info_.id_,
+        .systemName_ = provider->sys_info_.name_,
+        .url_ = provider->sys_info_.url_,
     };
 
     using it_t = std::vector<osr::path::segment>::const_iterator;
@@ -373,7 +373,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               is_last_leg
                   ? to_place(tt, tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest)
-                  : api::Place{.name_ = provider.sys_info_.name_,
+                  : api::Place{.name_ = provider->sys_info_.name_,
                                .lat_ = 0,
                                .lon_ = 0,
                                .vertexType_ = api::VertexTypeEnum::BIKESHARE};
@@ -385,12 +385,12 @@ api::Itinerary journey_to_response(osr::ways const* w,
             next_place.lon_ = to_pos.lng_;
 
             if (to_idx(to_node) >= sharing.additional_node_offset_) {
-              auto const& an = provider.additional_nodes_.at(
+              auto const& an = provider->additional_nodes_.at(
                   to_idx(to_node) - sharing.additional_node_offset_);
               std::visit(
                   utl::overloaded{
                       [&](gbfs::additional_node::station const& s) {
-                        auto const& st = provider.stations_.at(s.id_);
+                        auto const& st = provider->stations_.at(s.id_);
                         next_place.name_ = st.info_.name_;
                         rental.stationName_ = st.info_.name_;
                         rental.rentalUriAndroid_ =
@@ -399,7 +399,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                         rental.rentalUriWeb_ = st.info_.rental_uris_.web_;
                       },
                       [&](gbfs::additional_node::vehicle const& v) {
-                        auto const& vi = provider.vehicle_status_.at(v.idx_);
+                        auto const& vi = provider->vehicle_status_.at(v.idx_);
                         rental.rentalUriAndroid_ = vi.rental_uris_.android_;
                         rental.rentalUriIOS_ = vi.rental_uris_.ios_;
                         rental.rentalUriWeb_ = vi.rental_uris_.web_;

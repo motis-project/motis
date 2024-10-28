@@ -165,13 +165,13 @@ std::vector<n::routing::offset> routing::get_offsets(
           pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
-        auto const& provider = gbfs->providers_.at(to_idx(pi));
+        auto const provider = gbfs->providers_.at(to_idx(pi)).get();
         auto const sharing =
-            osr::sharing_data{.start_allowed_ = provider.start_allowed_,
-                              .end_allowed_ = provider.end_allowed_,
-                              .through_allowed_ = provider.through_allowed_,
+            osr::sharing_data{.start_allowed_ = provider->start_allowed_,
+                              .end_allowed_ = provider->end_allowed_,
+                              .through_allowed_ = provider->through_allowed_,
                               .additional_node_offset_ = w_->n_nodes(),
-                              .additional_edges_ = provider.additional_edges_};
+                              .additional_edges_ = provider->additional_edges_};
         auto const paths =
             osr::route(*w_, *l_, profile, pos, near_stop_locations,
                        static_cast<osr::cost_t>(max.count()), dir,
@@ -182,7 +182,7 @@ std::vector<n::routing::offset> routing::get_offsets(
             offsets.emplace_back(
                 l, n::duration_t{p->cost_ / 60},
                 static_cast<n::transport_mode_id_t>(kGbfsTransportModeIdOffset +
-                                                    to_idx(provider.idx_)));
+                                                    to_idx(provider->idx_)));
           }
         }
       }

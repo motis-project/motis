@@ -188,7 +188,7 @@ struct gbfs_provider {
 };
 
 struct gbfs_data {
-  std::vector<gbfs_provider> providers_{};
+  std::vector<std::unique_ptr<gbfs_provider>> providers_{};
   hash_map<std::string, gbfs_provider_idx_t> provider_by_id_{};
   point_rtree<gbfs_provider_idx_t> provider_rtree_{};
 };
