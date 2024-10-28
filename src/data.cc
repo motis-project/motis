@@ -134,7 +134,7 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
-  auto const wait = [](char const* context, auto& future) {
+  auto const throw_if_failed = [](char const* context, auto& future) {
     try {
       future.get();
     } catch (std::exception const& e) {
@@ -145,12 +145,19 @@ data::data(std::filesystem::path p, config const& c)
     }
   };
 
-  wait("geocoder", geocoder);
-  wait("tt", tt);
-  wait("street_routing", street_routing);
-  wait("matches", matches);
-  wait("elevators", elevators);
-  wait("tiles", tiles);
+  geocoder.wait();
+  tt.wait();
+  street_routing.wait();
+  matches.wait();
+  elevators.wait();
+  tiles.wait();
+
+  throw_if_failed("geocoder", geocoder);
+  throw_if_failed("tt", tt);
+  throw_if_failed("street_routing", street_routing);
+  throw_if_failed("matches", matches);
+  throw_if_failed("elevators", elevators);
+  throw_if_failed("tiles", tiles);
 }
 
 data::~data() = default;
