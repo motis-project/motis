@@ -73,8 +73,7 @@ std::vector<api::StepInstruction> get_step_instructions(
                            ? std::nullopt
                            : std::optional{static_cast<std::int64_t>(
                                  to_idx(w.way_osm_idx_[s.way_]))},
-            .polyline_ = {geo::encode_polyline<7>(polyline),
-                          static_cast<std::int64_t>(polyline.size())},
+            .polyline_ = to_polyline(s.polyline_),
             .streetName_ = way_name == osr::string_idx_t::invalid()
                                ? ""
                                : std::string{w.strings_[way_name].view()},

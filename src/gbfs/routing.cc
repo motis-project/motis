@@ -53,28 +53,34 @@ api::Itinerary route(osr::ways const& w,
     }
   };
 
-  auto const get_polyline =
-      [&](osr::path::segment const& seg) -> geo::polyline {
-    if (seg.polyline_.empty()) {
-      return {get_node_pos(seg.from_), get_node_pos(seg.to_)};
-    } else {
-      return seg.polyline_;
+  auto const path = [&]() {
+    auto p = get_path(w, l, e, &sharing, get_location(from), get_location(to),
+                      static_cast<transport_mode_t>(
+                          to_idx(provider_idx + kGbfsTransportModeIdOffset)),
+                      osr::search_profile::kBikeSharing, start_time, cache,
+                      blocked_mem);
+    if (p.has_value()) {
+      // Post-processing polylines: coordinates of additional nodes are not
+      // known to osr. Therefore, polylines to/from additional nodes are empty.
+      for (auto& s : p->segments_) {
+        if (s.polyline_.empty()) {
+          s.polyline_ =
+              geo::polyline{get_node_pos(s.from_), get_node_pos(s.to_)};
+        }
+      }
     }
-  };
-
-  auto const transport_mode = static_cast<transport_mode_t>(
-      to_idx(provider_idx + kGbfsTransportModeIdOffset));
-  auto const path = get_path(
-      w, l, e, &sharing, get_location(from), get_location(to), transport_mode,
-      osr::search_profile::kBikeSharing, start_time, cache, blocked_mem);
+    return p;
+  }();
 
   if (!path.has_value()) {
     return {};
   }
 
-  auto itinerary = api::Itinerary{
-      .startTime_ = start_time,
-      .endTime_ = start_time + std::chrono::seconds{path->cost_}};
+  auto itinerary =
+      api::Itinerary{.duration_ = path->cost_,
+                     .startTime_ = start_time,
+                     .endTime_ = start_time + std::chrono::seconds{path->cost_},
+                     .transfers_ = 0};
 
   auto rental = api::Rental{
       .systemId_ = provider.sys_info_.id_,
@@ -132,7 +138,7 @@ api::Itinerary route(osr::ways const& w,
         auto concat = geo::polyline{};
         auto dist = 0.0;
         for (auto const& p : range) {
-          utl::concat(concat, get_polyline(p));
+          utl::concat(concat, p.polyline_);
           if (p.cost_ != osr::kInfeasible) {
             t += std::chrono::seconds{p.cost_};
             dist += p.dist_;
