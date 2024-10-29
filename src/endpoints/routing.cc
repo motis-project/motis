@@ -75,7 +75,7 @@ osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
   }
 }
 
-std::vector<n::routing::offset> direct(n::location_idx_t const l) {
+std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
@@ -165,7 +165,7 @@ std::vector<n::routing::offset> routing::get_offsets(
           pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
-        auto const& provider = gbfs->providers_.at(to_idx(pi));
+        auto const& provider = gbfs->providers_.at(pi);
         auto const sharing =
             osr::sharing_data{.start_allowed_ = provider.start_allowed_,
                               .end_allowed_ = provider.end_allowed_,
@@ -350,6 +350,15 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const& start_modes = query.arriveBy_ ? to_modes : from_modes;
   auto const& dest_modes = query.arriveBy_ ? from_modes : to_modes;
 
+  //  auto const direct =
+  //      holds_alternative<osr::location>(from) &&
+  //              holds_alternative<osr::location>(to)
+  //          ? route_direct(get<osr::location>(from), get<osr::location>(to),
+  //                         from_modes, query.wheelchair_,
+  //                         std::chrono::seconds{query.maxPreTransitTime_ +
+  //                                              query.maxPostTransitTime_})
+  //          : std::vector<api::Itinerary>{};
+
   if (utl::find(query.mode_, api::ModeEnum::TRANSIT) != end(query.mode_)) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
@@ -362,7 +371,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .use_start_footpaths_ = !is_intermodal(start),
         .start_ = std::visit(
             utl::overloaded{
-                [&](tt_location const l) { return direct(l.l_); },
+                [&](tt_location const l) { return station_start(l.l_); },
                 [&](osr::location const& pos) {
                   auto const dir = query.arriveBy_ ? osr::direction::kForward
                                                    : osr::direction::kBackward;
@@ -374,7 +383,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             start),
         .destination_ = std::visit(
             utl::overloaded{
-                [&](tt_location const l) { return direct(l.l_); },
+                [&](tt_location const l) { return station_start(l.l_); },
                 [&](osr::location const& pos) {
                   auto const dir = query.arriveBy_ ? osr::direction::kBackward
                                                    : osr::direction::kForward;
@@ -442,8 +451,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         std::nullopt);
 
     return {
-        .from_ = to_place(*tt_, *tags_, w_, pl_, matches_, from),
-        .to_ = to_place(*tt_, *tags_, w_, pl_, matches_, to),
+        .from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
+        .to_ = to_place(tt_, tags_, w_, pl_, matches_, to),
         .itineraries_ = utl::to_vec(
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
@@ -458,8 +467,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(*tt_, *tags_, w_, pl_, matches_, from),
-          .to_ = to_place(*tt_, *tags_, w_, pl_, matches_, to),
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, to),
           .itineraries_ = {}};
 }
 

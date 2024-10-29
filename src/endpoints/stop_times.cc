@@ -318,7 +318,7 @@ api::stoptimes_response stop_times::operator()(
             auto const fr = n::rt::frun{tt_, rtt, r};
             auto const s = fr[0];
             auto const& agency = s.get_provider(ev_type);
-            auto place = to_place(tt_, tags_, w_, pl_, matches_,
+            auto place = to_place(&tt_, &tags_, w_, pl_, matches_,
                                   tt_location{s.get_location_idx(),
                                               s.get_scheduled_location_idx()});
             if (fr.stop_range_.from_ != 0U) {

@@ -30,6 +30,12 @@ struct routing {
                  bool wheelchair,
                  std::chrono::seconds max) const;
 
+  std::vector<api::Itinerary> route_direct(osr::location,
+                                           osr::location,
+                                           std::vector<api::ModeEnum> const&,
+                                           bool wheelchair,
+                                           std::chrono::seconds max) const;
+
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;

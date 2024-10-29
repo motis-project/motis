@@ -13,7 +13,7 @@
 		selectedItinerary = $bindable()
 	}: {
 		routingResponses: Array<Promise<PlanResponse>>;
-		baseQuery: PlanData;
+		baseQuery: PlanData | undefined;
 		selectedItinerary: Itinerary | undefined;
 	} = $props();
 </script>
@@ -25,7 +25,7 @@
 				<LoaderCircle class="animate-spin w-12 h-12 m-20" />
 			</div>
 		{:then r}
-			{#if rI === 0}
+			{#if rI === 0 && baseQuery}
 				<div class="w-full flex justify-between items-center space-x-4">
 					<div class="border-t w-full h-0"></div>
 					<button
@@ -108,7 +108,7 @@
 					</Card>
 				</button>
 			{/each}
-			{#if rI === routingResponses.length - 1}
+			{#if rI === routingResponses.length - 1 && baseQuery}
 				<div class="w-full flex justify-between items-center space-x-4">
 					<div class="border-t w-full h-0"></div>
 					<button

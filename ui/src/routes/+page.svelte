@@ -123,6 +123,18 @@
 		}
 	});
 
+	if (browser) {
+		addEventListener('paste', (event) => {
+			const paste = (event.clipboardData || window.clipboardData).getData('text');
+			const json = JSON.parse(paste);
+			routingResponses = [
+				new Promise((resolve, _) => {
+					resolve(json);
+				})
+			];
+		});
+	}
+
 	let selectedItinerary = $state<Itinerary>();
 	$effect(() => {
 		if (selectedItinerary && map) {
@@ -214,7 +226,7 @@
 
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if !selectedItinerary && baseQuery && routingResponses.length !== 0}
+	{#if !selectedItinerary && routingResponses.length !== 0}
 		<Control position="top-left">
 			<Card
 				class="w-[500px] max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
