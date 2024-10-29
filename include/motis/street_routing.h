@@ -17,27 +17,17 @@ using street_routing_cache_key_t = std::
 using street_routing_cache_t =
     hash_map<street_routing_cache_key_t, std::optional<osr::path>>;
 
-std::optional<osr::path> get_path(osr::ways const&,
-                                  osr::lookup const&,
-                                  elevators const*,
-                                  osr::sharing_data const*,
-                                  osr::location const& from,
-                                  osr::location const& to,
-                                  transport_mode_t const,
-                                  osr::search_profile const,
-                                  std::chrono::sys_seconds const start_time,
-                                  street_routing_cache_t&,
-                                  osr::bitvec<osr::node_idx_t>& blocked_mem);
-
-template <std::int64_t Precision = 5>
-api::EncodedPolyline to_polyline(geo::polyline const& polyline);
-
-std::vector<api::StepInstruction> get_step_instructions(
-    osr::ways const&, std::span<osr::path::segment const>);
-
-api::Itinerary street_routing(osr::location const& from,
-                              osr::location const& to,
-                              api::ModeEnum,
-                              street_routing_cache_t&);
+api::Itinerary route(osr::ways const&,
+                     osr::lookup const&,
+                     gbfs::gbfs_data const*,
+                     elevators const*,
+                     api::Place const& from,
+                     api::Place const& to,
+                     api::ModeEnum,
+                     bool const wheelchair,
+                     nigiri::unixtime_t start_time,
+                     gbfs_provider_idx_t,
+                     street_routing_cache_t&,
+                     osr::bitvec<osr::node_idx_t>& blocked_mem);
 
 }  // namespace motis

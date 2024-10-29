@@ -162,9 +162,6 @@ struct additional_node {
   std::variant<station, vehicle> data_;
 };
 
-using gbfs_provider_idx_t =
-    cista::strong<std::size_t, struct gbfs_provider_idx_>;
-
 struct gbfs_provider {
   std::string id_;  // from config
   gbfs_provider_idx_t idx_{};

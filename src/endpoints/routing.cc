@@ -22,7 +22,9 @@
 #include "motis/gbfs/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
+#include "motis/mode_to_profile.h"
 #include "motis/parse_location.h"
+#include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
@@ -61,18 +63,6 @@ bool is_intermodal(place_t const& p) {
 n::routing::location_match_mode get_match_mode(place_t const& p) {
   return is_intermodal(p) ? n::routing::location_match_mode::kIntermodal
                           : n::routing::location_match_mode::kEquivalent;
-}
-
-osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
-  switch (m) {
-    case api::ModeEnum::WALK:
-      return wheelchair ? osr::search_profile::kWheelchair
-                        : osr::search_profile::kFoot;
-    case api::ModeEnum::BIKE: return osr::search_profile::kBike;
-    case api::ModeEnum::CAR: return osr::search_profile::kCar;
-    case api::ModeEnum::BIKE_RENTAL: return osr::search_profile::kBikeSharing;
-    default: throw utl::fail("unsupported mode");
-  }
 }
 
 std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
@@ -160,7 +150,7 @@ std::vector<n::routing::offset> routing::get_offsets(
         return;
       }
 
-      auto providers = hash_set<gbfs::gbfs_provider_idx_t>{};
+      auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs->provider_rtree_.in_radius(
           pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
 

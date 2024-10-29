@@ -18,14 +18,27 @@
 
 #include "motis/constants.h"
 #include "motis/place.h"
+#include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
-#include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
 namespace motis {
+
+api::ModeEnum to_mode(osr::search_profile const m) {
+  switch (m) {
+    case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
+    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_TO_PARK;
+    case osr::search_profile::kFoot: [[fallthrough]];
+    case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
+    case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kBike: return api::ModeEnum::BIKE;
+    case osr::search_profile::kBikeSharing: return api::ModeEnum::BIKE_RENTAL;
+  }
+  std::unreachable();
+}
 
 api::Itinerary journey_to_response(osr::ways const* w,
                                    osr::lookup const* l,
@@ -55,7 +68,35 @@ api::Itinerary journey_to_response(osr::ways const* w,
                 leg.uses_);
           }) - 1)};
 
+  auto const append = [&](api::Itinerary&& x) {
+    itinerary.legs_.insert(end(itinerary.legs_),
+                           std::move_iterator{begin(x.legs_)},
+                           std::move_iterator{end(x.legs_)});
+  };
+
   for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
+    auto const pred =
+        itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
+    auto const from = pred == nullptr
+                          ? to_place(&tt, &tags, w, pl, matches,
+                                     tt_location{j_leg.from_}, start, dest)
+                          : pred->to_;
+    auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
+                             start, dest);
+
+    auto& leg = itinerary.legs_.emplace_back(
+        api::Leg{.from_ = from,
+                 .to_ = to,
+                 .duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count(),
+                 .startTime_ = j_leg.dep_time_,
+                 .endTime_ = j_leg.arr_time_});
+    leg.from_.departure_ = j_leg.dep_time_;
+    leg.to_.arrival_ = j_leg.arr_time_;
+
+    auto const to_place = [&](auto&& l) {
+      return ::motis::to_place(&tt, &tags, w, pl, matches, l, start, dest);
+    };
+
     std::visit(
         utl::overloaded{
             [&](n::routing::journey::run_enter_exit const& t) {
@@ -66,25 +107,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
 
-              auto const pred =
-                  itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
-              auto const from =
-                  pred == nullptr
-                      ? to_place(&tt, &tags, w, pl, matches,
-                                 tt_location{j_leg.from_}, start, dest)
-                      : pred->to_;
-              auto const to = to_place(&tt, &tags, w, pl, matches,
-                                       tt_location{j_leg.to_}, start, dest);
-
-              auto& leg = itinerary.legs_.emplace_back();
-
               leg.mode_ = api::ModeEnum::TRANSIT;
-              leg.from_ = from;
-              leg.to_ = to;
-              leg.from_.departure_ = leg.startTime_ = j_leg.dep_time_;
-              leg.to_.arrival_ = leg.endTime_ = j_leg.arr_time_;
-              leg.duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count();
-
               leg.source_ = fmt::format("{}", fmt::streamed(fr.dbg()));
               leg.headsign_ = enter_stop.direction();
               leg.routeColor_ = to_str(color.color_);
@@ -114,10 +137,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               leg.to_.arrivalDelay_ = leg.arrivalDelay_ =
                   to_ms(fr[t.stop_range_.to_ - 1U].delay(n::event_type::kArr));
 
-              leg.from_ = to_place(&tt, &tags, w, pl, matches,
-                                   tt_location{fr[t.stop_range_.from_]});
-              leg.to_ = to_place(&tt, &tags, w, pl, matches,
-                                 tt_location{fr[t.stop_range_.to_ - 1U]});
+              leg.from_ = to_place(tt_location{fr[t.stop_range_.from_]});
+              leg.to_ = to_place(tt_location{fr[t.stop_range_.to_ - 1U]});
 
               auto const first =
                   static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
@@ -126,8 +147,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(&tt, &tags, w, pl, matches, tt_location{stop},
-                             start, dest));
+                    to_place(tt_location{stop}));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
                 p.arrival_ = stop.time(n::event_type::kArr);
@@ -135,19 +155,28 @@ api::Itinerary journey_to_response(osr::ways const* w,
               }
             },
             [&](n::footpath) {
-              add_osr_legs(static_cast<n::transport_mode_id_t>(
-                               wheelchair ? osr::search_profile::kWheelchair
-                                          : osr::search_profile::kFoot),
-                           to_location(j_leg.from_), to_location(j_leg.to_),
-                           j_leg, itinerary);
+              append(route(*w, *l, gbfs, e, from, to, api::ModeEnum::WALK,
+                           wheelchair, j_leg.dep_time_,
+                           gbfs_provider_idx_t::invalid(), cache, blocked_mem));
             },
             [&](n::routing::offset const x) {
-              add_osr_legs(x.transport_mode_id_, to_location(j_leg.from_),
-                           to_location(j_leg.to_), j_leg, itinerary);
+              append(route(
+                  *w, *l, gbfs, e, from, to,
+                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                      ? api::ModeEnum::BIKE_RENTAL
+                      : to_mode(osr::search_profile{
+                            static_cast<std::uint8_t>(x.transport_mode_id_)}),
+                  wheelchair, j_leg.dep_time_,
+                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                      ? gbfs_provider_idx_t{x.transport_mode_id_ -
+                                            kGbfsTransportModeIdOffset}
+                      : gbfs_provider_idx_t::invalid(),
+                  cache, blocked_mem));
             }},
         j_leg.uses_);
   }
 
   return itinerary;
 }
+
 }  // namespace motis
