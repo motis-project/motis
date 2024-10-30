@@ -315,7 +315,8 @@ TEST(motis, routing) {
   auto d = import(
       config{.server_ = {{.web_folder_ = "ui/build"}},
              .osm_ = {"test/resources/test_case.osm.pbf"},
-             .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua"}},
+             .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
+                         .db_size_ = 1024U * 1024U * 25U}},
              .timetable_ =
                  config::timetable{
                      .first_day_ = "2019-05-01",
