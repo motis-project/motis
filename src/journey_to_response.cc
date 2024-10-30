@@ -84,15 +84,6 @@ api::Itinerary journey_to_response(osr::ways const* w,
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto& leg = itinerary.legs_.emplace_back(
-        api::Leg{.from_ = from,
-                 .to_ = to,
-                 .duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count(),
-                 .startTime_ = j_leg.dep_time_,
-                 .endTime_ = j_leg.arr_time_});
-    leg.from_.departure_ = j_leg.dep_time_;
-    leg.to_.arrival_ = j_leg.arr_time_;
-
     auto const to_place = [&](auto&& l) {
       return ::motis::to_place(&tt, &tags, w, pl, matches, l, start, dest);
     };
@@ -107,6 +98,14 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
 
+              auto& leg = itinerary.legs_.emplace_back(api::Leg{
+                  .from_ = from,
+                  .to_ = to,
+                  .duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count(),
+                  .startTime_ = j_leg.dep_time_,
+                  .endTime_ = j_leg.arr_time_});
+              leg.from_.departure_ = j_leg.dep_time_;
+              leg.to_.arrival_ = j_leg.arr_time_;
               leg.mode_ = api::ModeEnum::TRANSIT;
               leg.source_ = fmt::format("{}", fmt::streamed(fr.dbg()));
               leg.headsign_ = enter_stop.direction();
@@ -156,7 +155,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
             },
             [&](n::footpath) {
               append(route(*w, *l, gbfs, e, from, to, api::ModeEnum::WALK,
-                           wheelchair, j_leg.dep_time_,
+                           wheelchair, j_leg.dep_time_, j_leg.arr_time_,
                            gbfs_provider_idx_t::invalid(), cache, blocked_mem));
             },
             [&](n::routing::offset const x) {
@@ -166,7 +165,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       ? api::ModeEnum::BIKE_RENTAL
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
-                  wheelchair, j_leg.dep_time_,
+                  wheelchair, j_leg.dep_time_, j_leg.arr_time_,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs_provider_idx_t{x.transport_mode_id_ -
                                             kGbfsTransportModeIdOffset}

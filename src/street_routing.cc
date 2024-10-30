@@ -149,6 +149,7 @@ api::Itinerary route(osr::ways const& w,
                      api::ModeEnum const mode,
                      bool const wheelchair,
                      n::unixtime_t const start_time,
+                     n::unixtime_t const end_time,
                      gbfs_provider_idx_t const provider_idx,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem) {
@@ -157,7 +158,7 @@ api::Itinerary route(osr::ways const& w,
               "sharing mobility not configured");
 
   auto const is_additional_node = [&](osr::node_idx_t const n) {
-    return n <= w.n_nodes();
+    return n >= w.n_nodes();
   };
 
   auto const sharing_data = profile == osr::search_profile::kBikeSharing
@@ -196,15 +197,26 @@ api::Itinerary route(osr::ways const& w,
     return p;
   }();
 
-  if (!path.has_value()) {
-    return {};
-  }
-
   auto itinerary =
       api::Itinerary{.duration_ = path->cost_,
                      .startTime_ = start_time,
                      .endTime_ = start_time + std::chrono::seconds{path->cost_},
                      .transfers_ = 0};
+
+  if (!path.has_value()) {
+    auto& leg = itinerary.legs_.emplace_back(
+        api::Leg{.mode_ = mode,
+                 .from_ = from,
+                 .to_ = to,
+                 .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
+                                  end_time - start_time)
+                                  .count(),
+                 .startTime_ = start_time,
+                 .endTime_ = end_time});
+    leg.from_.departure_ = leg.startTime_;
+    leg.to_.arrival_ = leg.endTime_;
+    return itinerary;
+  }
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
   auto pred_place = from;
@@ -247,11 +259,11 @@ api::Itinerary route(osr::ways const& w,
                                                    : api::ModeEnum::WALK,
             .from_ = pred_place,
             .to_ = next_place,
-            .duration_ =
-                std::chrono::duration_cast<std::chrono::seconds>(t - start_time)
-                    .count(),
+            .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
+                             t - pred_end_time)
+                             .count(),
             .startTime_ = pred_end_time,
-            .endTime_ = t,
+            .endTime_ = is_last_leg ? end_time : t,
             .distance_ = dist,
             .legGeometry_ = to_polyline<7>(concat),
             .steps_ = get_step_instructions(w, range),

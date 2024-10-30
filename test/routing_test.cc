@@ -355,9 +355,6 @@ TEST(motis, routing) {
         "&wheelchair=true"
         "&timetableView=false");
 
-    std::cout << boost::json::serialize(boost::json::value_from(plan_response))
-              << "\n";
-
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
       print_short(ss, j);

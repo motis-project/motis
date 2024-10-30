@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=13b19ebff109118c5ca1358c4da0973929ce786c
+  commit=dc598c38804701eb1508124cd41220aad1ab3e68
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -29,7 +29,7 @@
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=ded26586e923212b51f22455d094492842f65d22
+  commit=7c760e7c7ea7b6ffdda1befbf4fea96a786c7531
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
   branch=master
