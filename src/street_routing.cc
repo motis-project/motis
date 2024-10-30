@@ -200,17 +200,17 @@ api::Itinerary route(osr::ways const& w,
     return p;
   }();
 
-  auto itinerary =
-      api::Itinerary{.duration_ = path->cost_,
-                     .startTime_ = start_time,
-                     .endTime_ = start_time + std::chrono::seconds{path->cost_},
-                     .transfers_ = 0};
-
   if (!path.has_value()) {
     if (!end_time.has_value()) {
       return {};
     }
 
+    auto itinerary = api::Itinerary{
+        .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
+                         *end_time - start_time)
+                         .count(),
+        .startTime_ = start_time,
+        .endTime_ = *end_time};
     auto& leg = itinerary.legs_.emplace_back(
         api::Leg{.mode_ = mode,
                  .from_ = from,
@@ -224,6 +224,15 @@ api::Itinerary route(osr::ways const& w,
     leg.to_.arrival_ = leg.endTime_;
     return itinerary;
   }
+
+  auto itinerary = api::Itinerary{
+      .duration_ = end_time ? std::chrono::duration_cast<std::chrono::seconds>(
+                                  *end_time - start_time)
+                                  .count()
+                            : path->cost_,
+      .startTime_ = start_time,
+      .endTime_ = start_time + std::chrono::seconds{path->cost_},
+      .transfers_ = 0};
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
   auto pred_place = from;
