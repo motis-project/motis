@@ -257,9 +257,6 @@ jobs:
         config:
           - preset: linux-amd64-release
             artifact: linux-amd64
-          - preset: linux-arm64-release
-            artifact: linux-arm64
-            emulator: qemu-aarch64-static
           - preset: clang-tidy
           - preset: linux-sanitizer
           - preset: linux-debug
@@ -362,4 +359,4 @@ jobs:
           context: .
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64

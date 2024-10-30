@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=e3d4159b100f66db0c189f21dad45a9a661ca47b
+  commit=9ea20eb368fd82f10f5ea63552cabf6d5315f2d1
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -41,7 +41,7 @@
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=a7bc84e9e7919afa0fbb6b5def762c706e5a0880
+  commit=6b6dc45bc904966640c7207ab91950848a8b3f6c
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
