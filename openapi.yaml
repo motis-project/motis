@@ -908,7 +908,6 @@ components:
         - place
         - mode
         - realTime
-        - route
         - headsign
         - agencyId
         - agencyName
@@ -926,11 +925,6 @@ components:
         realTime:
           description: Whether there is real-time data about this leg
           type: boolean
-        route:
-          description: |
-            For transit legs, the route of the bus or train being used.
-            For non-transit legs, the name of the street being traversed.
-          type: string
         headsign:
           description: |
             For transit legs, the headsign of the bus or train being used.

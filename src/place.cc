@@ -26,6 +26,7 @@ api::Place to_place(osr::location const l, std::string_view name) {
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
+      .level_ = to_float(l.lvl_),
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
 }

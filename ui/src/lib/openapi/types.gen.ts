@@ -218,12 +218,6 @@ export type StopTime = {
      */
     realTime: boolean;
     /**
-     * For transit legs, the route of the bus or train being used.
-     * For non-transit legs, the name of the street being traversed.
-     *
-     */
-    route: string;
-    /**
      * For transit legs, the headsign of the bus or train being used.
      * For non-transit legs, null
      *
@@ -493,22 +487,6 @@ export type Itinerary = {
      * journey arrival time
      */
     endTime: string;
-    /**
-     * How much time is spent walking, in seconds.
-     */
-    walkTime: number;
-    /**
-     * How much time is spent on transit, in seconds.
-     */
-    transitTime: number;
-    /**
-     * How much time is spent waiting for transit to arrive, in seconds.
-     */
-    waitingTime: number;
-    /**
-     * How far the user has to walk, in meters.
-     */
-    walkDistance: number;
     /**
      * The number of transfers this trip has.
      */
@@ -839,6 +817,13 @@ export type PlanResponse = ({
     };
     from: Place;
     to: Place;
+    /**
+     * Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+     * The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+     * But all `direct` connections are meant to be independent of absolute times.
+     *
+     */
+    direct: Array<Itinerary>;
     /**
      * list of itineraries
      */

@@ -30,11 +30,15 @@ struct routing {
                  bool wheelchair,
                  std::chrono::seconds max) const;
 
-  std::vector<api::Itinerary> route_direct(osr::location,
-                                           osr::location,
-                                           std::vector<api::ModeEnum> const&,
-                                           bool wheelchair,
-                                           std::chrono::seconds max) const;
+  std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
+      elevators const*,
+      gbfs::gbfs_data const*,
+      api::Place const& from,
+      api::Place const& to,
+      std::vector<api::ModeEnum> const&,
+      nigiri::unixtime_t start_time,
+      bool wheelchair,
+      std::chrono::seconds max) const;
 
   osr::ways const* w_;
   osr::lookup const* l_;

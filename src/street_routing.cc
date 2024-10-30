@@ -26,6 +26,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   transport_mode_t const transport_mode,
                                   osr::search_profile const profile,
                                   nigiri::unixtime_t const start_time,
+                                  osr::cost_t const max,
                                   street_routing_cache_t& cache,
                                   osr::bitvec<osr::node_idx_t>& blocked_mem) {
   auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
@@ -38,7 +39,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
       it != end(cache)
           ? it->second
           : osr::route(
-                w, l, profile, from, to, 3600, osr::direction::kForward,
+                w, l, profile, from, to, max, osr::direction::kForward,
                 kMaxMatchingDistance,
                 s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
                 sharing);
@@ -149,10 +150,11 @@ api::Itinerary route(osr::ways const& w,
                      api::ModeEnum const mode,
                      bool const wheelchair,
                      n::unixtime_t const start_time,
-                     n::unixtime_t const end_time,
+                     std::optional<n::unixtime_t> const end_time,
                      gbfs_provider_idx_t const provider_idx,
                      street_routing_cache_t& cache,
-                     osr::bitvec<osr::node_idx_t>& blocked_mem) {
+                     osr::bitvec<osr::node_idx_t>& blocked_mem,
+                     std::chrono::seconds const max) {
   auto const profile = to_profile(mode, wheelchair);
   utl::verify(profile != osr::search_profile::kBikeSharing || gbfs != nullptr,
               "sharing mobility not configured");
@@ -181,7 +183,8 @@ api::Itinerary route(osr::ways const& w,
                  get_location(from), get_location(to),
                  static_cast<transport_mode_t>(
                      to_idx(provider_idx + kGbfsTransportModeIdOffset)),
-                 to_profile(mode, wheelchair), start_time, cache, blocked_mem);
+                 to_profile(mode, wheelchair), start_time,
+                 static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
     if (p.has_value() && profile == osr::search_profile::kBikeSharing) {
       // Coordinates of additional nodes are not known to osr.
@@ -204,15 +207,19 @@ api::Itinerary route(osr::ways const& w,
                      .transfers_ = 0};
 
   if (!path.has_value()) {
+    if (!end_time.has_value()) {
+      return {};
+    }
+
     auto& leg = itinerary.legs_.emplace_back(
         api::Leg{.mode_ = mode,
                  .from_ = from,
                  .to_ = to,
                  .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
-                                  end_time - start_time)
+                                  *end_time - start_time)
                                   .count(),
                  .startTime_ = start_time,
-                 .endTime_ = end_time});
+                 .endTime_ = *end_time});
     leg.from_.departure_ = leg.startTime_;
     leg.to_.arrival_ = leg.endTime_;
     return itinerary;
@@ -263,7 +270,7 @@ api::Itinerary route(osr::ways const& w,
                              t - pred_end_time)
                              .count(),
             .startTime_ = pred_end_time,
-            .endTime_ = is_last_leg ? end_time : t,
+            .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
             .legGeometry_ = to_polyline<7>(concat),
             .steps_ = get_step_instructions(w, range),

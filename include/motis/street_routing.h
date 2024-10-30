@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include "osr/location.h"
 #include "osr/routing/route.h"
 
@@ -26,9 +28,10 @@ api::Itinerary route(osr::ways const&,
                      api::ModeEnum,
                      bool const wheelchair,
                      nigiri::unixtime_t start_time,
-                     nigiri::unixtime_t end_time,
+                     std::optional<nigiri::unixtime_t> end_time,
                      gbfs_provider_idx_t,
                      street_routing_cache_t&,
-                     osr::bitvec<osr::node_idx_t>& blocked_mem);
+                     osr::bitvec<osr::node_idx_t>& blocked_mem,
+                     std::chrono::seconds max = std::chrono::seconds{3600});
 
 }  // namespace motis

@@ -8,11 +8,13 @@
 	let {
 		color,
 		draggable,
+		level,
 		location = $bindable(),
 		marker = $bindable()
 	}: {
 		color: string;
 		draggable: boolean;
+		level?: number;
 		location: Location;
 		marker?: maplibregl.Marker;
 	} = $props();
@@ -30,7 +32,7 @@
 					.addTo(ctx.map)
 					.on('dragend', () => {
 						if (marker && location.value.match) {
-							let x = posToLocation(marker.getLngLat());
+							let x = posToLocation(marker.getLngLat(), level);
 							location.value = x.value;
 							location.label = x.label;
 						}

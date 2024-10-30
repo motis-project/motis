@@ -114,10 +114,13 @@
 				}
 			: undefined
 	);
+	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	$effect(() => {
 		if (baseQuery) {
-			routingResponses = [plan<true>(baseQuery).then((response) => response.data)];
+			const base = plan<true>(baseQuery).then((response) => response.data);
+			baseResponse = base;
+			routingResponses = [base];
 			selectedItinerary = undefined;
 			selectedStop = undefined;
 		}
@@ -125,7 +128,7 @@
 
 	if (browser) {
 		addEventListener('paste', (event) => {
-			const paste = (event.clipboardData || window.clipboardData).getData('text');
+			const paste = event.clipboardData!.getData('text');
 			const json = JSON.parse(paste);
 			routingResponses = [
 				new Promise((resolve, _) => {
@@ -169,7 +172,7 @@
 	<Button
 		variant="outline"
 		on:click={() => {
-			from = posToLocation(e.lngLat);
+			from = posToLocation(e.lngLat, level);
 			fromMarker?.setLngLat(from.value.match!);
 			close();
 		}}
@@ -179,7 +182,7 @@
 	<Button
 		variant="outline"
 		on:click={() => {
-			to = posToLocation(e.lngLat);
+			to = posToLocation(e.lngLat, level);
 			toMarker?.setLngLat(to.value.match!);
 			close();
 		}}
@@ -231,7 +234,7 @@
 			<Card
 				class="w-[500px] max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
-				<ItineraryList {routingResponses} {baseQuery} bind:selectedItinerary />
+				<ItineraryList {baseResponse} {routingResponses} {baseQuery} bind:selectedItinerary />
 			</Card>
 		</Control>
 	{/if}
@@ -304,10 +307,10 @@
 	<Popup trigger="contextmenu" children={contextMenu} />
 
 	{#if from}
-		<Marker color="green" draggable={true} bind:location={from} bind:marker={fromMarker} />
+		<Marker color="green" draggable={true} {level} bind:location={from} bind:marker={fromMarker} />
 	{/if}
 
 	{#if to}
-		<Marker color="red" draggable={true} bind:location={to} bind:marker={toMarker} />
+		<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
 	{/if}
 </Map>
