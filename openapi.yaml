@@ -426,7 +426,7 @@ paths:
           schema:
             type: integer
             default: 7200
-            minimum: 0
+            minium: 0
 
         - name: maxPreTransitTime
           in: query
@@ -448,6 +448,17 @@ paths:
           schema:
             type: integer
             default: 900
+            minimum: 0
+
+        - name: maxDirectTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 30min which is `1800`.
+            Maximum time in seconds for direct connections.
+          schema:
+            type: integer
+            default: 1800
             minimum: 0
       responses:
         '200':

@@ -389,8 +389,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
        holds_alternative<osr::location>(to) && t.has_value())
           ? route_direct(e, gbfs.get(), from_p, to_p, from_modes, *t,
                          query.wheelchair_,
-                         std::chrono::seconds{query.maxPreTransitTime_ +
-                                              query.maxPostTransitTime_})
+                         std::chrono::seconds{query.maxDirectTime_})
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
 
   if (utl::find(modes, api::ModeEnum::TRANSIT) != end(modes) &&
