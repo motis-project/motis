@@ -250,15 +250,18 @@ api::Itinerary route(osr::ways const& w,
         auto const to_node = range.back().to_;
         auto const to_pos = get_node_pos(to_node);
         auto const next_place =
-            is_last_leg
-                ? to
-                // All modes except sharing mobility have only one leg.
-                // -> This is not the last leg = it has to be sharing mobility.
-                : api::Place{
-                      .name_ = sharing_data.value().provider_.sys_info_.name_,
-                      .lat_ = to_pos.lat_,
-                      .lon_ = to_pos.lng_,
-                      .vertexType_ = api::VertexTypeEnum::BIKESHARE};
+            is_last_leg ? to
+            // All modes except sharing mobility have only one leg.
+            // -> This is not the last leg = it has to be sharing mobility.
+            : profile == osr::search_profile::kBikeSharing
+                ? api::Place{.name_ =
+                                 sharing_data.value().provider_.sys_info_.name_,
+                             .lat_ = to_pos.lat_,
+                             .lon_ = to_pos.lng_,
+                             .vertexType_ = api::VertexTypeEnum::BIKESHARE}
+                : api::Place{.lat_ = to_pos.lat_,
+                             .lon_ = to_pos.lng_,
+                             .vertexType_ = api::VertexTypeEnum::NORMAL};
 
         auto concat = geo::polyline{};
         auto dist = 0.0;

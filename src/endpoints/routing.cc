@@ -130,7 +130,6 @@ std::vector<n::routing::offset> routing::get_offsets(
   }
 
   auto offsets = std::vector<n::routing::offset>{};
-  auto rental_providers = 0U;
   auto ignore_walk = false;
 
   auto const handle_mode = [&](api::ModeEnum const m) {
@@ -170,7 +169,7 @@ std::vector<n::routing::offset> routing::get_offsets(
             osr::route(*w_, *l_, profile, pos, near_stop_locations,
                        static_cast<osr::cost_t>(max.count()), dir,
                        kMaxMatchingDistance, nullptr, &sharing);
-        ++rental_providers;
+        ignore_walk = true;
         for (auto const [p, l] : utl::zip(paths, near_stops)) {
           if (p.has_value()) {
             offsets.emplace_back(
@@ -195,12 +194,7 @@ std::vector<n::routing::offset> routing::get_offsets(
   };
 
   if (utl::find(modes, api::ModeEnum::BIKE_RENTAL) != end(modes)) {
-    // bike rental search also finds walk paths - if at least
-    // one provider is found, we can ignore the walk profile
     handle_mode(api::ModeEnum::BIKE_RENTAL);
-    if (rental_providers > 0) {
-      ignore_walk = true;
-    }
   }
 
   for (auto const m : modes) {

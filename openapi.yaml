@@ -67,8 +67,8 @@ paths:
       responses:
         200:
           description: |
-            A list of distance + duration pairs.
-            If no path was found, the object doesn't contain distance and duration.
+            A list of durations.
+            If no path was found, the object is empty.
           content:
             application/json:
               schema:
@@ -306,20 +306,26 @@ paths:
             optimal (e.g. the least transfers) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
+            
+            TODO: pass parameter to nigiri
           schema:
             type: number
 
         - name: minTransferTime
           in: query
           required: false
-          description: Minimum transfer time for each transfer.
+          description: |
+            Minimum transfer time for each transfer.
+            TODO: pass parameter to nigiri
           schema:
             type: integer
 
         - name: transferTimeFactor
           in: query
           required: false
-          description: Factor to multiply transfer times with.
+          description: |
+            Factor to multiply transfer times with.
+            TODO: pass parameter to nigiri
           schema:
             type: integer
             default: 1
