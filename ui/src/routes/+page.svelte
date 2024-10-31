@@ -130,11 +130,12 @@
 		addEventListener('paste', (event) => {
 			const paste = event.clipboardData!.getData('text');
 			const json = JSON.parse(paste);
-			routingResponses = [
-				new Promise((resolve, _) => {
-					resolve(json);
-				})
-			];
+			console.log('paste: ', json);
+			const response = new Promise<PlanResponse>((resolve, _) => {
+				resolve(json as PlanResponse);
+			});
+			baseResponse = response;
+			routingResponses = [response];
 		});
 	}
 
