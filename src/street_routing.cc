@@ -274,8 +274,10 @@ api::Itinerary route(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = lb->mode_ == osr::mode::kBike ? api::ModeEnum::BIKE_RENTAL
-                                                   : api::ModeEnum::WALK,
+            .mode_ = (lb->mode_ == osr::mode::kBike &&
+                      profile == osr::search_profile::kBikeSharing)
+                         ? api::ModeEnum::BIKE_RENTAL
+                         : to_mode(lb->mode_),
             .from_ = pred_place,
             .to_ = next_place,
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(

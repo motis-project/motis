@@ -4,6 +4,15 @@
 
 namespace motis {
 
+api::ModeEnum to_mode(osr::mode const m) {
+  switch (m) {
+    case osr::mode::kFoot: [[fallthrough]];
+    case osr::mode::kWheelchair: return api::ModeEnum::WALK;
+    case osr::mode::kBike: return api::ModeEnum::BIKE;
+    case osr::mode::kCar: return api::ModeEnum::CAR;
+  }
+}
+
 osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
   switch (m) {
     case api::ModeEnum::WALK:
