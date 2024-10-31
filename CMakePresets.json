@@ -72,7 +72,7 @@
         "CMAKE_CXX_COMPILER": "clang++-18",
         "CMAKE_EXE_LINKER_FLAGS": "-lc++abi",
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_C_FLAGS": "-fsanitize=address,undefined -fsanitize-ignorelist=${sourceDir}/tools/ubsan-suppress.txt -fno-omit-frame-pointer",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++ -fsanitize=address,undefined -fno-omit-frame-pointer"
       },
       "environment": {

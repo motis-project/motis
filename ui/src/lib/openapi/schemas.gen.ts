@@ -224,7 +224,7 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -237,12 +237,6 @@ export const StopTimeSchema = {
         realTime: {
             description: 'Whether there is real-time data about this leg',
             type: 'boolean'
-        },
-        route: {
-            description: `For transit legs, the route of the bus or train being used.
-For non-transit legs, the name of the street being traversed.
-`,
-            type: 'string'
         },
         headsign: {
             description: `For transit legs, the headsign of the bus or train being used.
@@ -595,7 +589,7 @@ used for walking, biking and driving.
 
 export const ItinerarySchema = {
     type: 'object',
-    required: ['duration', 'startTime', 'endTime', 'walkTime', 'transitTime', 'waitingTime', 'walkDistance', 'transfers', 'legs'],
+    required: ['duration', 'startTime', 'endTime', 'transfers', 'legs'],
     properties: {
         duration: {
             description: 'journey duration in seconds',
@@ -610,22 +604,6 @@ export const ItinerarySchema = {
             type: 'string',
             format: 'date-time',
             description: 'journey arrival time'
-        },
-        walkTime: {
-            type: 'integer',
-            description: 'How much time is spent walking, in seconds.'
-        },
-        transitTime: {
-            type: 'integer',
-            description: 'How much time is spent on transit, in seconds.'
-        },
-        waitingTime: {
-            type: 'integer',
-            description: 'How much time is spent waiting for transit to arrive, in seconds.'
-        },
-        walkDistance: {
-            type: 'integer',
-            description: 'How far the user has to walk, in meters.'
         },
         transfers: {
             type: 'integer',

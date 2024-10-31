@@ -39,6 +39,7 @@
 			});
 		} else {
 			availableLevels = [];
+			level = 0;
 		}
 	});
 </script>

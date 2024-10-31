@@ -456,6 +456,7 @@ paths:
                   - date
                   - from
                   - to
+                  - direct
                   - itineraries
                   - previousPageCursor
                   - nextPageCursor
@@ -474,6 +475,14 @@ paths:
                     $ref: '#/components/schemas/Place'
                   to:
                     $ref: '#/components/schemas/Place'
+                  direct:
+                    description: |
+                      Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+                      The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+                      But all `direct` connections are meant to be independent of absolute times.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Itinerary'
                   itineraries:
                     description: list of itineraries
                     type: array
@@ -899,7 +908,6 @@ components:
         - place
         - mode
         - realTime
-        - route
         - headsign
         - agencyId
         - agencyName
@@ -917,11 +925,6 @@ components:
         realTime:
           description: Whether there is real-time data about this leg
           type: boolean
-        route:
-          description: |
-            For transit legs, the route of the bus or train being used.
-            For non-transit legs, the name of the street being traversed.
-          type: string
         headsign:
           description: |
             For transit legs, the headsign of the bus or train being used.
@@ -1248,10 +1251,6 @@ components:
         - duration
         - startTime
         - endTime
-        - walkTime
-        - transitTime
-        - waitingTime
-        - walkDistance
         - transfers
         - legs
       properties:
@@ -1266,18 +1265,6 @@ components:
           type: string
           format: date-time
           description: journey arrival time
-        walkTime:
-          type: integer
-          description: How much time is spent walking, in seconds.
-        transitTime:
-          type: integer
-          description: How much time is spent on transit, in seconds.
-        waitingTime:
-          type: integer
-          description: How much time is spent waiting for transit to arrive, in seconds.
-        walkDistance:
-          type: integer
-          description: How far the user has to walk, in meters.
         transfers:
           type: integer
           description: The number of transfers this trip has.

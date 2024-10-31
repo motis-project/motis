@@ -305,6 +305,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (write) {
                cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
              }
+             d.t_.get()->~typeahead();
+             d.load_geocoder();
            },
            [&]() { d.load_geocoder(); },
            {tt_hash, osm_hash, adr_version(), n_version()}};

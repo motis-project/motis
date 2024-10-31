@@ -2,6 +2,7 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "utl/erase_duplicates.h"
 #include "utl/helpers/algorithm.h"
 
 #include "osr/platforms.h"
@@ -18,18 +19,23 @@
 
 #include "motis/constants.h"
 #include "motis/endpoints/routing.h"
-
 #include "motis/gbfs/data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
+#include "motis/mode_to_profile.h"
 #include "motis/parse_location.h"
+#include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/time_conv.h"
 #include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
+using namespace std::chrono_literals;
 
 namespace motis::ep {
+
+constexpr auto const kInfinityDuration =
+    n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -63,19 +69,7 @@ n::routing::location_match_mode get_match_mode(place_t const& p) {
                           : n::routing::location_match_mode::kEquivalent;
 }
 
-osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
-  switch (m) {
-    case api::ModeEnum::WALK:
-      return wheelchair ? osr::search_profile::kWheelchair
-                        : osr::search_profile::kFoot;
-    case api::ModeEnum::BIKE: return osr::search_profile::kBike;
-    case api::ModeEnum::CAR: return osr::search_profile::kCar;
-    case api::ModeEnum::BIKE_RENTAL: return osr::search_profile::kBikeSharing;
-    default: throw utl::fail("unsupported mode");
-  }
-}
-
-std::vector<n::routing::offset> direct(n::location_idx_t const l) {
+std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
@@ -160,12 +154,12 @@ std::vector<n::routing::offset> routing::get_offsets(
         return;
       }
 
-      auto providers = hash_set<gbfs::gbfs_provider_idx_t>{};
+      auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs->provider_rtree_.in_radius(
           pos.pos_, max_dist, [&](auto const pi) { providers.insert(pi); });
 
       for (auto const& pi : providers) {
-        auto const& provider = gbfs->providers_.at(to_idx(pi));
+        auto const& provider = gbfs->providers_.at(pi);
         auto const sharing =
             osr::sharing_data{.start_allowed_ = provider.start_allowed_,
                               .end_allowed_ = provider.end_allowed_,
@@ -312,22 +306,59 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
   return mask;
 }
 
-n::routing::query get_start_time(api::plan_params const& query) {
+std::pair<n::routing::query, std::optional<n::unixtime_t>> get_start_time(
+    api::plan_params const& query) {
   if (query.pageCursor_.has_value()) {
-    return cursor_to_query(*query.pageCursor_);
+    return {cursor_to_query(*query.pageCursor_), std::nullopt};
   } else {
     auto const t = std::chrono::time_point_cast<n::i32_minutes>(
         *query.time_.value_or(openapi::now()));
     auto const window = std::chrono::duration_cast<n::duration_t>(
         std::chrono::seconds{query.searchWindow_ * (query.arriveBy_ ? -1 : 1)});
-    return {.start_time_ = query.timetableView_
-                               ? n::routing::start_time_t{n::interval{
-                                     query.arriveBy_ ? t - window : t,
-                                     query.arriveBy_ ? t : t + window}}
-                               : n::routing::start_time_t{t},
-            .extend_interval_earlier_ = query.arriveBy_,
-            .extend_interval_later_ = !query.arriveBy_};
+    return {{.start_time_ = query.timetableView_
+                                ? n::routing::start_time_t{n::interval{
+                                      query.arriveBy_ ? t - window : t,
+                                      query.arriveBy_ ? t : t + window}}
+                                : n::routing::start_time_t{t},
+             .extend_interval_earlier_ = query.arriveBy_,
+             .extend_interval_later_ = !query.arriveBy_},
+            t};
   }
+}
+
+std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
+    elevators const* e,
+    gbfs::gbfs_data const* gbfs,
+    api::Place const& from,
+    api::Place const& to,
+    std::vector<api::ModeEnum> const& modes,
+    n::unixtime_t const start_time,
+    bool wheelchair,
+    std::chrono::seconds max) const {
+  if (!w_ || !l_) {
+    return {};
+  }
+  auto fastest_direct = kInfinityDuration;
+  auto cache = street_routing_cache_t{};
+  auto itineraries = std::vector<api::Itinerary>{};
+  for (auto const& m : modes) {
+    if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
+        m == api::ModeEnum::WALK) {
+      auto itinerary = route(
+          *w_, *l_, gbfs, e, from, to, m, wheelchair, start_time, std::nullopt,
+          gbfs_provider_idx_t::invalid(), cache, *blocked, max);
+      if (itinerary.legs_.empty()) {
+        continue;
+      }
+      auto const itinerary_duration = std::chrono::duration_cast<n::duration_t>(
+          std::chrono::seconds{itinerary.duration_});
+      if (itinerary_duration < fastest_direct) {
+        fastest_direct = itinerary_duration;
+      }
+      itineraries.emplace_back(std::move(itinerary));
+    }
+  }
+  return {itineraries, fastest_direct};
 }
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
@@ -340,21 +371,39 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
+  auto const modes = [&]() {
+    auto m = query.mode_;
+    utl::erase_duplicates(m);
+    return m;
+  }();
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto const from_modes = get_from_modes(query.mode_);
-  auto const to_modes = get_to_modes(query.mode_);
+  auto const from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
+  auto const to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
+  auto const from_modes = get_from_modes(modes);
+  auto const to_modes = get_to_modes(modes);
 
   auto const& start = query.arriveBy_ ? to : from;
   auto const& dest = query.arriveBy_ ? from : to;
   auto const& start_modes = query.arriveBy_ ? to_modes : from_modes;
   auto const& dest_modes = query.arriveBy_ ? from_modes : to_modes;
 
-  if (utl::find(query.mode_, api::ModeEnum::TRANSIT) != end(query.mode_)) {
+  auto const [start_time, t] = get_start_time(query);
+
+  auto const [direct, fastest_direct] =
+      (holds_alternative<osr::location>(from) &&
+       holds_alternative<osr::location>(to) && t.has_value())
+          ? route_direct(e, gbfs.get(), from_p, to_p, from_modes, *t,
+                         query.wheelchair_,
+                         std::chrono::seconds{query.maxPreTransitTime_ +
+                                              query.maxPostTransitTime_})
+          : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
+
+  if (utl::find(modes, api::ModeEnum::TRANSIT) != end(modes) &&
+      fastest_direct > 5min) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
-    auto const start_time = get_start_time(query);
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
         .start_match_mode_ = get_match_mode(start),
@@ -362,7 +411,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .use_start_footpaths_ = !is_intermodal(start),
         .start_ = std::visit(
             utl::overloaded{
-                [&](tt_location const l) { return direct(l.l_); },
+                [&](tt_location const l) { return station_start(l.l_); },
                 [&](osr::location const& pos) {
                   auto const dir = query.arriveBy_ ? osr::direction::kForward
                                                    : osr::direction::kBackward;
@@ -374,7 +423,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             start),
         .destination_ = std::visit(
             utl::overloaded{
-                [&](tt_location const l) { return direct(l.l_); },
+                [&](tt_location const l) { return station_start(l.l_); },
                 [&](osr::location const& pos) {
                   auto const dir = query.arriveBy_ ? osr::direction::kBackward
                                                    : osr::direction::kForward;
@@ -422,8 +471,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
         .prf_idx_ = static_cast<n::profile_idx_t>(query.wheelchair_ ? 2U : 1U),
-        .allowed_claszes_ = to_clasz_mask(query.mode_),
-        .require_bike_transport_ = require_bike_transport(query.mode_)};
+        .allowed_claszes_ = to_clasz_mask(modes),
+        .require_bike_transport_ = require_bike_transport(modes),
+        .fastest_direct_ = fastest_direct == kInfinityDuration
+                               ? std::nullopt
+                               : std::optional{fastest_direct}};
 
     if (tt_->locations_.footpaths_out_.at(q.prf_idx_).empty()) {
       q.prf_idx_ = 0U;
@@ -442,8 +494,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         std::nullopt);
 
     return {
-        .from_ = to_place(*tt_, *tags_, w_, pl_, matches_, from),
-        .to_ = to_place(*tt_, *tags_, w_, pl_, matches_, to),
+        .from_ = from_p,
+        .to_ = to_p,
+        .direct_ = std::move(direct),
         .itineraries_ = utl::to_vec(
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
@@ -458,8 +511,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {.from_ = to_place(*tt_, *tags_, w_, pl_, matches_, from),
-          .to_ = to_place(*tt_, *tags_, w_, pl_, matches_, to),
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, to),
+          .direct_ = std::move(direct),
           .itineraries_ = {}};
 }
 
