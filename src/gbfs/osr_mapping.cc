@@ -215,14 +215,14 @@ void map_vehicles(osr::ways const& w,
     auto const& add_additional_edges = [&](osr::node_candidate const& nc) {
       auto const edge_to_an = osr::additional_edge{
           additional_node_id, static_cast<osr::distance_t>(nc.dist_to_node_)};
-      auto const edge_from_an = osr::additional_edge{
-          nc.node_, static_cast<osr::distance_t>(nc.dist_to_node_)};
       auto& node_edges = provider.additional_edges_[nc.node_];
-      auto& an_edges = provider.additional_edges_[additional_node_id];
-
       if (utl::find(node_edges, edge_to_an) == end(node_edges)) {
         node_edges.emplace_back(edge_to_an);
       }
+
+      auto const edge_from_an = osr::additional_edge{
+          nc.node_, static_cast<osr::distance_t>(nc.dist_to_node_)};
+      auto& an_edges = provider.additional_edges_[additional_node_id];
       if (utl::find(an_edges, edge_from_an) == end(an_edges)) {
         an_edges.emplace_back(edge_from_an);
       }
