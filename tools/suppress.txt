@@ -1,0 +1,7 @@
+{
+   uninitialized_values_written_to_memory_map
+   Memcheck:Param
+   msync(start)
+   fun:msync
+   fun:_ZN5cista4mmap4syncEv
+}
