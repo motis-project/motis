@@ -3,7 +3,7 @@
 	import type { Itinerary, Leg } from '$lib/openapi';
 	import Time from '../lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
-	import { formatDurationSec } from '$lib/formatDuration';
+	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
@@ -49,7 +49,8 @@
 	<div class="py-12 pl-8 flex flex-col text-muted-foreground">
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
-			{getModeName(l.mode)} ({Math.round(l.distance)} m)
+			{getModeName(l.mode)}
+			{formatDistanceMeters(Math.round(l.distance))}
 		</span>
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
