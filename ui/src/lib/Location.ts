@@ -9,16 +9,16 @@ export type Location = {
 	};
 };
 
-export function posToLocation(pos: maplibregl.LngLatLike): Location {
+export function posToLocation(pos: maplibregl.LngLatLike, level: number | undefined): Location {
 	const { lat, lng } = maplibregl.LngLat.convert(pos);
-	const label = `${lat},${lng}`;
+	const label = level ? `${lat},${lng},${level}` : `${lat},${lng}`;
 	return {
 		label,
 		value: {
 			match: {
 				lat,
 				lon: lng,
-				level: 0,
+				level,
 				id: '',
 				areas: [],
 				type: 'PLACE',

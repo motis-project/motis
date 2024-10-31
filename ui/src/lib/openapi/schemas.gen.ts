@@ -197,11 +197,13 @@ Scheduled time of departure at boarding stop = startTime - departureDelay
         },
         arrival: {
             description: 'arrival time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         departure: {
             description: 'departure time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         scheduledTrack: {
             description: 'scheduled track from the static schedule timetable dataset',
@@ -222,7 +224,7 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'route', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -235,12 +237,6 @@ export const StopTimeSchema = {
         realTime: {
             description: 'Whether there is real-time data about this leg',
             type: 'boolean'
-        },
-        route: {
-            description: `For transit legs, the route of the bus or train being used.
-For non-transit legs, the name of the street being traversed.
-`,
-            type: 'string'
         },
         headsign: {
             description: `For transit legs, the headsign of the bus or train being used.
@@ -322,11 +318,13 @@ export const TripSegmentSchema = {
         },
         departure: {
             description: 'departure time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         arrival: {
             description: 'arrival time',
-            type: 'date-time'
+            type: 'string',
+            format: 'date-time'
         },
         departureDelay: {
             type: 'integer',
@@ -361,50 +359,6 @@ export const AbsoluteDirectionSchema = {
     enum: ['NORTH', 'NORTHEAST', 'EAST', 'SOUTHEAST', 'SOUTH', 'SOUTHWEST', 'WEST', 'NORTHWEST']
 } as const;
 
-export const StepInstructionSchema = {
-    type: 'object',
-    required: ['relativeDirection', 'absoluteDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'lon', 'lat'],
-    properties: {
-        relativeDirection: {
-            '$ref': '#/components/schemas/RelativeDirection'
-        },
-        absoluteDirection: {
-            '$ref': '#/components/schemas/AbsoluteDirection'
-        },
-        distance: {
-            description: 'The distance in meters that this step takes.',
-            type: 'number'
-        },
-        streetName: {
-            description: 'The name of the street.',
-            type: 'string'
-        },
-        exit: {
-            description: 'When exiting a highway or traffic circle, the exit name/number.',
-            type: 'string'
-        },
-        stayOn: {
-            description: `Indicates whether or not a street changes direction at an intersection.
-`,
-            type: 'boolean'
-        },
-        area: {
-            description: `This step is on an open area, such as a plaza or train platform,
-and thus the directions should say something like "cross"
-`,
-            type: 'boolean'
-        },
-        lon: {
-            description: 'The longitude of start of the step',
-            type: 'number'
-        },
-        lat: {
-            description: 'The latitude of start of the step',
-            type: 'number'
-        }
-    }
-} as const;
-
 export const EncodedPolylineSchema = {
     type: 'object',
     required: ['points', 'length'],
@@ -420,10 +374,20 @@ export const EncodedPolylineSchema = {
     }
 } as const;
 
-export const LevelEncodedPolylineSchema = {
+export const StepInstructionSchema = {
     type: 'object',
-    required: ['fromLevel', 'toLevel', 'polyline'],
+    required: ['fromLevel', 'toLevel', 'polyline', 'relativeDirection', 'absoluteDirection', 'distance', 'streetName', 'exit', 'stayOn', 'area', 'lon', 'lat'],
     properties: {
+        relativeDirection: {
+            '$ref': '#/components/schemas/RelativeDirection'
+        },
+        absoluteDirection: {
+            '$ref': '#/components/schemas/AbsoluteDirection'
+        },
+        distance: {
+            description: 'The distance in meters that this step takes.',
+            type: 'number'
+        },
         fromLevel: {
             description: 'level where this segment starts, based on OpenStreetMap data',
             type: 'number'
@@ -438,6 +402,65 @@ export const LevelEncodedPolylineSchema = {
         },
         polyline: {
             '$ref': '#/components/schemas/EncodedPolyline'
+        },
+        streetName: {
+            description: 'The name of the street.',
+            type: 'string'
+        },
+        exit: {
+            description: `Not implemented!
+When exiting a highway or traffic circle, the exit name/number.
+`,
+            type: 'string'
+        },
+        stayOn: {
+            description: `Not implemented!
+Indicates whether or not a street changes direction at an intersection.
+`,
+            type: 'boolean'
+        },
+        area: {
+            description: `Not implemented!
+This step is on an open area, such as a plaza or train platform,
+and thus the directions should say something like "cross"
+`,
+            type: 'boolean'
+        }
+    }
+} as const;
+
+export const RentalSchema = {
+    description: 'Vehicle rental',
+    type: 'object',
+    required: ['systemId'],
+    properties: {
+        systemId: {
+            type: 'string',
+            description: 'Vehicle share system ID'
+        },
+        systemName: {
+            type: 'string',
+            description: 'Vehicle share system name'
+        },
+        url: {
+            type: 'string',
+            description: 'URL of the vehicle share system'
+        },
+        stationName: {
+            type: 'string',
+            description: 'Name of the station'
+        },
+        rentalUriAndroid: {
+            type: 'string',
+            description: 'Rental URI for Android (deep link to the specific station or vehicle)'
+        },
+        rentalUriIOS: {
+            type: 'string',
+            description: 'Rental URI for iOS (deep link to the specific station or vehicle)'
+        },
+        rentalUriWeb: {
+            type: 'string',
+            description: 'Rental URI for web (deep link to the specific station or vehicle)'
         }
     }
 } as const;
@@ -461,11 +484,13 @@ export const LegSchema = {
             type: 'integer'
         },
         startTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'leg departure time'
         },
         endTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'leg arrival time'
         },
         departureDelay: {
@@ -547,13 +572,6 @@ and the Place where the leg ends. For non-transit legs, null.
         legGeometry: {
             '$ref': '#/components/schemas/EncodedPolyline'
         },
-        legGeometryWithLevels: {
-            description: 'Like `legGeometry`, but split at level changes',
-            type: 'array',
-            items: {
-                '$ref': '#/components/schemas/LevelEncodedPolyline'
-            }
-        },
         steps: {
             description: `A series of turn by turn instructions
 used for walking, biking and driving.
@@ -562,41 +580,30 @@ used for walking, biking and driving.
             items: {
                 '$ref': '#/components/schemas/StepInstruction'
             }
+        },
+        rental: {
+            '$ref': '#/components/schemas/Rental'
         }
     }
 } as const;
 
 export const ItinerarySchema = {
     type: 'object',
-    required: ['duration', 'startTime', 'endTime', 'walkTime', 'transitTime', 'waitingTime', 'walkDistance', 'transfers', 'legs'],
+    required: ['duration', 'startTime', 'endTime', 'transfers', 'legs'],
     properties: {
         duration: {
             description: 'journey duration in seconds',
             type: 'integer'
         },
         startTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'journey departure time'
         },
         endTime: {
-            type: 'date-time',
+            type: 'string',
+            format: 'date-time',
             description: 'journey arrival time'
-        },
-        walkTime: {
-            type: 'integer',
-            description: 'How much time is spent walking, in seconds.'
-        },
-        transitTime: {
-            type: 'integer',
-            description: 'How much time is spent on transit, in seconds.'
-        },
-        waitingTime: {
-            type: 'integer',
-            description: 'How much time is spent waiting for transit to arrive, in seconds.'
-        },
-        walkDistance: {
-            type: 'integer',
-            description: 'How far the user has to walk, in meters.'
         },
         transfers: {
             type: 'integer',

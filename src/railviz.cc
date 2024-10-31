@@ -25,7 +25,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
-#include "nigiri/shape.h"
+#include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
@@ -403,8 +403,8 @@ api::trips_response get_trains(tag_lookup const& tags,
                     ? rt_index.rt_distances_[fr.rt_]
                     : static_index
                           .static_distances_[tt.transport_route_[fr.t_.t_idx_]],
-            .from_ = to_place(tt, tags, w, pl, matches, tt_location{from}),
-            .to_ = to_place(tt, tags, w, pl, matches, tt_location{to}),
+            .from_ = to_place(&tt, &tags, w, pl, matches, tt_location{from}),
+            .to_ = to_place(&tt, &tags, w, pl, matches, tt_location{to}),
             .departure_ = from.time(n::event_type::kDep),
             .arrival_ = to.time(n::event_type::kArr),
             .departureDelay_ = to_ms(from.delay(n::event_type::kDep)),

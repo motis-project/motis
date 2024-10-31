@@ -1,13 +1,11 @@
 #include "motis/journey_to_response.h"
 
 #include <cmath>
+#include <iostream>
+#include <span>
 
-#include "utl/concat.h"
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
-
-#include "osr/platforms.h"
-#include "osr/routing/route.h"
 
 #include "geo/polyline_format.h"
 
@@ -16,101 +14,18 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
 #include "nigiri/special_stations.h"
-#include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
 #include "motis/constants.h"
+#include "motis/place.h"
+#include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
-#include "motis/update_rtt_td_footpaths.h"
 
 namespace n = nigiri;
 
 namespace motis {
-
-tt_location::tt_location(nigiri::rt::run_stop const& stop)
-    : l_{stop.get_location_idx()},
-      scheduled_{stop.get_scheduled_location_idx()} {}
-
-tt_location::tt_location(nigiri::location_idx_t const l,
-                         nigiri::location_idx_t const scheduled)
-    : l_{l},
-      scheduled_{scheduled == n::location_idx_t::invalid() ? l : scheduled} {}
-
-api::Place to_place(osr::location const l, std::string_view name) {
-  return {
-      .name_ = std::string{name},
-      .lat_ = l.pos_.lat_,
-      .lon_ = l.pos_.lng_,
-      .vertexType_ = api::VertexTypeEnum::NORMAL,
-  };
-}
-
-osr::level_t get_lvl(osr::ways const* w,
-                     osr::platforms const* pl,
-                     platform_matches_t const* matches,
-                     n::location_idx_t const l) {
-  return w && pl && matches ? pl->get_level(*w, (*matches)[l])
-                            : osr::level_t::invalid();
-}
-
-double get_level(osr::ways const* w,
-                 osr::platforms const* pl,
-                 platform_matches_t const* matches,
-                 n::location_idx_t const l) {
-  return to_float(get_lvl(w, pl, matches, l));
-}
-
-api::Place to_place(n::timetable const& tt,
-                    tag_lookup const& tags,
-                    osr::ways const* w,
-                    osr::platforms const* pl,
-                    platform_matches_t const* matches,
-                    place_t const l,
-                    place_t const start,
-                    place_t const dest,
-                    std::string_view name) {
-  auto const is_track = [&](n::location_idx_t const x) {
-    auto const type = tt.locations_.types_.at(x);
-    return (type == n::location_type::kGeneratedTrack ||
-            type == n::location_type::kTrack);
-  };
-
-  auto const get_track = [&](n::location_idx_t const x) {
-    auto const type = tt.locations_.types_.at(x);
-    auto const is_track = (type == n::location_type::kGeneratedTrack ||
-                           type == n::location_type::kTrack);
-    return is_track
-               ? std::optional{std::string{tt.locations_.names_.at(x).view()}}
-               : std::nullopt;
-  };
-
-  return std::visit(
-      utl::overloaded{
-          [&](osr::location const& l) { return to_place(l, name); },
-          [&](tt_location const tt_l) -> api::Place {
-            auto const l = tt_l.l_;
-            if (l == n::get_special_station(n::special_station::kStart)) {
-              return to_place(std::get<osr::location>(start), "START");
-            } else if (l == n::get_special_station(n::special_station::kEnd)) {
-              return to_place(std::get<osr::location>(dest), "END");
-            } else {
-              auto const pos = tt.locations_.coordinates_[l];
-              auto const p =
-                  is_track(tt_l.l_) ? tt.locations_.parents_.at(l) : l;
-              return {.name_ = std::string{tt.locations_.names_[p].view()},
-                      .stopId_ = tags.id(tt, l),
-                      .lat_ = pos.lat_,
-                      .lon_ = pos.lng_,
-                      .level_ = get_level(w, pl, matches, l),
-                      .scheduledTrack_ = get_track(tt_l.scheduled_),
-                      .track_ = get_track(tt_l.l_),
-                      .vertexType_ = api::VertexTypeEnum::NORMAL};
-            }
-          }},
-      l);
-}
 
 api::ModeEnum to_mode(osr::search_profile const m) {
   switch (m) {
@@ -120,6 +35,7 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
+    case osr::search_profile::kBikeSharing: return api::ModeEnum::BIKE_RENTAL;
   }
   std::unreachable();
 }
@@ -133,81 +49,13 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    n::rt_timetable const* rtt,
                                    platform_matches_t const* matches,
                                    n::shapes_storage const* shapes,
+                                   gbfs::gbfs_data const* gbfs,
                                    bool const wheelchair,
                                    n::routing::journey const& j,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t& cache,
                                    osr::bitvec<osr::node_idx_t>& blocked_mem) {
-  auto const to_location = [&](n::location_idx_t const l) {
-    switch (to_idx(l)) {
-      case static_cast<n::location_idx_t::value_t>(n::special_station::kStart):
-        assert(std::holds_alternative<osr::location>(start));
-        return std::get<osr::location>(start);
-      case static_cast<n::location_idx_t::value_t>(n::special_station::kEnd):
-        assert(std::holds_alternative<osr::location>(dest));
-        return std::get<osr::location>(dest);
-      default:
-        return osr::location{tt.locations_.coordinates_[l],
-                             get_lvl(w, pl, matches, l)};
-    }
-  };
-  auto const add_routed_polyline = [&](osr::search_profile const profile,
-                                       osr::location const& from,
-                                       osr::location const& to, api::Leg& leg) {
-    if (!w || !l) {
-      return;
-    }
-
-    auto const t =
-        std::chrono::time_point_cast<n::i32_minutes>(*leg.startTime_);
-    auto const s = e ? get_states_at(*w, *l, *e, t, from.pos_)
-                     : std::optional{std::pair<nodes_t, states_t>{}};
-    auto const& [e_nodes, e_states] = *s;
-    auto const key = std::tuple{from, to, profile, e_states};
-    auto const it = cache.find(key);
-    auto const path =
-        it != end(cache)
-            ? it->second
-            : osr::route(
-                  *w, *l, profile, from, to, 3600, osr::direction::kForward,
-                  kMaxMatchingDistance,
-                  s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr);
-    if (it == end(cache)) {
-      cache.emplace(std::pair{key, path});
-    }
-
-    if (!path.has_value()) {
-      if (it == end(cache)) {
-        std::cout << "no path found: " << from << " -> " << to
-                  << ", profile=" << to_str(profile) << std::endl;
-      }
-      return;
-    }
-
-    leg.legGeometryWithLevels_ =
-        utl::to_vec(path->segments_, [&](osr::path::segment const& s) {
-          return api::LevelEncodedPolyline{
-              .fromLevel_ = to_float(s.from_level_),
-              .toLevel_ = to_float(s.to_level_),
-              .osmWay_ = s.way_ == osr::way_idx_t ::invalid()
-                             ? std::nullopt
-                             : std::optional{static_cast<std::int64_t>(
-                                   to_idx(w->way_osm_idx_[s.way_]))},
-              .polyline_ = {encode_polyline<7>(s.polyline_),
-                            static_cast<std::int64_t>(s.polyline_.size())},
-          };
-        });
-
-    auto concat = geo::polyline{};
-    for (auto const& p : path->segments_) {
-      utl::concat(concat, p.polyline_);
-    }
-    leg.distance_ = path->dist_;
-    leg.legGeometry_.points_ = encode_polyline<7>(concat);
-    leg.legGeometry_.length_ = static_cast<std::int64_t>(concat.size());
-  };
-
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
       .startTime_ = j.legs_.front().dep_time_,
@@ -220,23 +68,24 @@ api::Itinerary journey_to_response(osr::ways const* w,
                 leg.uses_);
           }) - 1)};
 
+  auto const append = [&](api::Itinerary&& x) {
+    itinerary.legs_.insert(end(itinerary.legs_),
+                           std::move_iterator{begin(x.legs_)},
+                           std::move_iterator{end(x.legs_)});
+  };
+
   for (auto const [_, j_leg] : utl::enumerate(j.legs_)) {
-    auto const write_leg = [&](api::ModeEnum const mode) -> api::Leg& {
-      auto& leg = itinerary.legs_.emplace_back();
-      auto const pred = itinerary.legs_.size() == 1U
-                            ? nullptr
-                            : &itinerary.legs_[itinerary.legs_.size() - 2U];
-      leg.mode_ = mode;
-      leg.from_ = pred == nullptr
-                      ? to_place(tt, tags, w, pl, matches,
-                                 tt_location{j_leg.from_}, start, dest)
-                      : pred->to_;
-      leg.to_ = to_place(tt, tags, w, pl, matches, tt_location{j_leg.to_},
-                         start, dest);
-      leg.from_.departure_ = leg.startTime_ = j_leg.dep_time_;
-      leg.to_.arrival_ = leg.endTime_ = j_leg.arr_time_;
-      leg.duration_ = to_seconds(j_leg.arr_time_ - j_leg.dep_time_);
-      return leg;
+    auto const pred =
+        itinerary.legs_.empty() ? nullptr : &itinerary.legs_.back();
+    auto const from = pred == nullptr
+                          ? to_place(&tt, &tags, w, pl, matches,
+                                     tt_location{j_leg.from_}, start, dest)
+                          : pred->to_;
+    auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
+                             start, dest);
+
+    auto const to_place = [&](auto&& l) {
+      return ::motis::to_place(&tt, &tags, w, pl, matches, l, start, dest);
     };
 
     std::visit(
@@ -249,7 +98,15 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
 
-              auto& leg = write_leg(api::ModeEnum::TRANSIT);
+              auto& leg = itinerary.legs_.emplace_back(api::Leg{
+                  .from_ = from,
+                  .to_ = to,
+                  .duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count(),
+                  .startTime_ = j_leg.dep_time_,
+                  .endTime_ = j_leg.arr_time_});
+              leg.from_.departure_ = j_leg.dep_time_;
+              leg.to_.arrival_ = j_leg.arr_time_;
+              leg.mode_ = api::ModeEnum::TRANSIT;
               leg.source_ = fmt::format("{}", fmt::streamed(fr.dbg()));
               leg.headsign_ = enter_stop.direction();
               leg.routeColor_ = to_str(color.color_);
@@ -279,10 +136,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               leg.to_.arrivalDelay_ = leg.arrivalDelay_ =
                   to_ms(fr[t.stop_range_.to_ - 1U].delay(n::event_type::kArr));
 
-              leg.from_ = to_place(tt, tags, w, pl, matches,
-                                   tt_location{fr[t.stop_range_.from_]});
-              leg.to_ = to_place(tt, tags, w, pl, matches,
-                                 tt_location{fr[t.stop_range_.to_ - 1U]});
+              leg.from_ = to_place(tt_location{fr[t.stop_range_.from_]});
+              leg.to_ = to_place(tt_location{fr[t.stop_range_.to_ - 1U]});
 
               auto const first =
                   static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
@@ -290,8 +145,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   static_cast<n::stop_idx_t>(t.stop_range_.to_ - 1U);
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
-                auto& p = leg.intermediateStops_->emplace_back(to_place(
-                    tt, tags, w, pl, matches, tt_location{stop}, start, dest));
+                auto& p = leg.intermediateStops_->emplace_back(
+                    to_place(tt_location{stop}));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
                 p.arrival_ = stop.time(n::event_type::kArr);
@@ -299,18 +154,23 @@ api::Itinerary journey_to_response(osr::ways const* w,
               }
             },
             [&](n::footpath) {
-              auto& leg = write_leg(api::ModeEnum::WALK);
-              add_routed_polyline(wheelchair ? osr::search_profile::kWheelchair
-                                             : osr::search_profile::kFoot,
-                                  to_location(j_leg.from_),
-                                  to_location(j_leg.to_), leg);
+              append(route(*w, *l, gbfs, e, from, to, api::ModeEnum::WALK,
+                           wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                           gbfs_provider_idx_t::invalid(), cache, blocked_mem));
             },
             [&](n::routing::offset const x) {
-              auto const profile =
-                  static_cast<osr::search_profile>(x.transport_mode_id_);
-              auto& leg = write_leg(to_mode(profile));
-              add_routed_polyline(profile, to_location(j_leg.from_),
-                                  to_location(j_leg.to_), leg);
+              append(route(
+                  *w, *l, gbfs, e, from, to,
+                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                      ? api::ModeEnum::BIKE_RENTAL
+                      : to_mode(osr::search_profile{
+                            static_cast<std::uint8_t>(x.transport_mode_id_)}),
+                  wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                      ? gbfs_provider_idx_t{x.transport_mode_id_ -
+                                            kGbfsTransportModeIdOffset}
+                      : gbfs_provider_idx_t::invalid(),
+                  cache, blocked_mem));
             }},
         j_leg.uses_);
   }

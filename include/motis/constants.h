@@ -23,4 +23,7 @@ constexpr auto const kTransferTimeMultiplier = 1.5F;
 // are updated on elevator status changes [meters]
 constexpr auto const kElevatorUpdateRadius = 1000.;
 
+// first nigiri::transport_mode_id_t used for GBFS
+constexpr auto const kGbfsTransportModeIdOffset = 10;
+
 }  // namespace motis

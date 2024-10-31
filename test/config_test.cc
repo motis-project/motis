@@ -36,8 +36,8 @@ TEST(motis, config) {
 osm: europe-latest.osm.pbf
 tiles:
   profile: deps/tiles/profile/profile.lua
-  db_size: 1099511627776
-  flush_threshold: 10000000
+  db_size: 274877906944
+  flush_threshold: 100000
 timetable:
   first_day: 2024-10-02
   num_days: 2

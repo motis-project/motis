@@ -313,15 +313,20 @@ TEST(motis, routing) {
   std::filesystem::remove_all("test/data", ec);
 
   auto d = import(
-      config{.osm_ = {"test/resources/test_case.osm.pbf"},
+      config{.server_ = {{.web_folder_ = "ui/build"}},
+             .osm_ = {"test/resources/test_case.osm.pbf"},
+             .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
+                         .db_size_ = 1024U * 1024U * 25U}},
              .timetable_ =
                  config::timetable{
                      .first_day_ = "2019-05-01",
                      .num_days_ = 2,
                      .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
              .street_routing_ = true,
-             .osr_footpath_ = true},
-      "test/data", false);
+             .osr_footpath_ = true,
+             .geocoding_ = true,
+             .reverse_geocoding_ = true},
+      "test/data", true);
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});
@@ -348,7 +353,8 @@ TEST(motis, routing) {
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
-        "&wheelchair=true");
+        "&wheelchair=true"
+        "&timetableView=false");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
@@ -371,7 +377,8 @@ TEST(motis, routing) {
     auto const plan_response = routing(
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
-        "&time=2019-05-01T01:25Z");
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {

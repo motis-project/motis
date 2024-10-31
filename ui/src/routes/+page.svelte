@@ -6,7 +6,15 @@
 	import SearchMask from './SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
-	import { initial, type Itinerary, type Match, plan, type PlanResponse, trip } from '$lib/openapi';
+	import {
+		initial,
+		type Itinerary,
+		type Match,
+		plan,
+		type PlanResponse,
+		trip,
+		type Mode
+	} from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
@@ -80,6 +88,7 @@
 	let time = $state<Date>(new Date());
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
+	let bikeRental = $state(false);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -99,19 +108,35 @@
 						toPlace: toPlaceString(to),
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
-						wheelchair
+						wheelchair,
+						mode: ['TRANSIT', 'WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]
 					}
 				}
 			: undefined
 	);
+	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	$effect(() => {
 		if (baseQuery) {
-			routingResponses = [plan<true>(baseQuery).then((response) => response.data)];
+			const base = plan<true>(baseQuery).then((response) => response.data);
+			baseResponse = base;
+			routingResponses = [base];
 			selectedItinerary = undefined;
 			selectedStop = undefined;
 		}
 	});
+
+	if (browser) {
+		addEventListener('paste', (event) => {
+			const paste = event.clipboardData!.getData('text');
+			const json = JSON.parse(paste);
+			routingResponses = [
+				new Promise((resolve, _) => {
+					resolve(json);
+				})
+			];
+		});
+	}
 
 	let selectedItinerary = $state<Itinerary>();
 	$effect(() => {
@@ -147,7 +172,7 @@
 	<Button
 		variant="outline"
 		on:click={() => {
-			from = posToLocation(e.lngLat);
+			from = posToLocation(e.lngLat, level);
 			fromMarker?.setLngLat(from.value.match!);
 			close();
 		}}
@@ -157,7 +182,7 @@
 	<Button
 		variant="outline"
 		on:click={() => {
-			to = posToLocation(e.lngLat);
+			to = posToLocation(e.lngLat, level);
 			toMarker?.setLngLat(to.value.match!);
 			close();
 		}}
@@ -190,18 +215,26 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair {theme} />
+			<SearchMask
+				bind:from
+				bind:to
+				bind:time
+				bind:timeType
+				bind:wheelchair
+				bind:bikeRental
+				{theme}
+			/>
 		</Card>
 	</Control>
 
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if !selectedItinerary && baseQuery && routingResponses.length !== 0}
+	{#if !selectedItinerary && routingResponses.length !== 0}
 		<Control position="top-left">
 			<Card
 				class="w-[500px] max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
-				<ItineraryList {routingResponses} {baseQuery} bind:selectedItinerary />
+				<ItineraryList {baseResponse} {routingResponses} {baseQuery} bind:selectedItinerary />
 			</Card>
 		</Control>
 	{/if}
@@ -274,10 +307,10 @@
 	<Popup trigger="contextmenu" children={contextMenu} />
 
 	{#if from}
-		<Marker color="green" draggable={true} bind:location={from} bind:marker={fromMarker} />
+		<Marker color="green" draggable={true} {level} bind:location={from} bind:marker={fromMarker} />
 	{/if}
 
 	{#if to}
-		<Marker color="red" draggable={true} bind:location={to} bind:marker={toMarker} />
+		<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
 	{/if}
 </Map>

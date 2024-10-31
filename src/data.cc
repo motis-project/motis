@@ -17,12 +17,12 @@
 #include "osr/ways.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
-#include "nigiri/shape.h"
+#include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 
 #include "motis/config.h"
 #include "motis/constants.h"
-#include "motis/elevators/parse_fasta.h"
+#include "motis/hashes.h"
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
@@ -58,9 +58,35 @@ data::data(std::filesystem::path p)
 
 data::data(std::filesystem::path p, config const& c)
     : path_{std::move(p)}, config_{c} {
+  auto const verify_version = [&](bool cond, char const* name, auto&& ver) {
+    if (!cond) {
+      return;
+    }
+    auto const [key, expected_ver] = ver;
+    auto const h = read_hashes(path_, name);
+    auto const existing_ver_it = h.find(key);
+
+    utl::verify(existing_ver_it != end(h),
+                "{}: no existing version found [key={}], please re-run import; "
+                "hashes: {}",
+                name, key, to_str(h));
+    utl::verify(existing_ver_it->second == expected_ver,
+                "{}: binary version mismatch [existing={} vs expected={}], "
+                "please re-run import; hashes: {}",
+                name, existing_ver_it->second, expected_ver, to_str(h));
+  };
+
+  verify_version(c.timetable_.has_value(), "tt", n_version());
+  verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
+  verify_version(c.street_routing_, "osr", osr_version());
+  verify_version(c.street_routing_ && c.timetable_, "matches",
+                 matches_version());
+  verify_version(c.tiles_.has_value(), "tiles", tiles_version());
+  verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
+
   rt_ = std::make_shared<rt>();
 
-  auto const geocoder = std::async(std::launch::async, [&]() {
+  auto geocoder = std::async(std::launch::async, [&]() {
     if (c.geocoding_) {
       load_geocoder();
     }
@@ -69,7 +95,7 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
-  auto const tt = std::async(std::launch::async, [&]() {
+  auto tt = std::async(std::launch::async, [&]() {
     if (c.timetable_) {
       load_tt();
       if (c.timetable_->with_shapes_) {
@@ -81,19 +107,19 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
-  auto const street_routing = std::async(std::launch::async, [&]() {
+  auto street_routing = std::async(std::launch::async, [&]() {
     if (c.street_routing_) {
       load_osr();
     }
   });
 
-  auto const matches = std::async(std::launch::async, [&]() {
+  auto matches = std::async(std::launch::async, [&]() {
     if (c.street_routing_ && c.timetable_) {
       load_matches();
     }
   });
 
-  auto const elevators = std::async(std::launch::async, [&]() {
+  auto elevators = std::async(std::launch::async, [&]() {
     tt.wait();
     street_routing.wait();
     matches.wait();
@@ -102,11 +128,22 @@ data::data(std::filesystem::path p, config const& c)
     }
   });
 
-  auto const tiles = std::async(std::launch::async, [&]() {
+  auto tiles = std::async(std::launch::async, [&]() {
     if (c.tiles_) {
       load_tiles();
     }
   });
+
+  auto const throw_if_failed = [](char const* context, auto& future) {
+    try {
+      future.get();
+    } catch (std::exception const& e) {
+      throw utl::fail(
+          "loading {} failed (if this happens after a fresh import, please "
+          "file a bug report): {}",
+          context, e.what());
+    }
+  };
 
   geocoder.wait();
   tt.wait();
@@ -114,6 +151,13 @@ data::data(std::filesystem::path p, config const& c)
   matches.wait();
   elevators.wait();
   tiles.wait();
+
+  throw_if_failed("geocoder", geocoder);
+  throw_if_failed("tt", tt);
+  throw_if_failed("street_routing", street_routing);
+  throw_if_failed("matches", matches);
+  throw_if_failed("elevators", elevators);
+  throw_if_failed("tiles", tiles);
 }
 
 data::~data() = default;
@@ -146,8 +190,9 @@ void data::init_rtt(date::sys_days const d) {
 }
 
 void data::load_shapes() {
+  shapes_ = {};
   shapes_ = std::make_unique<nigiri::shapes_storage>(
-      nigiri::shapes_storage{path_ / "shapes", cista::mmap::protection::READ});
+      nigiri::shapes_storage{path_, cista::mmap::protection::READ});
 }
 
 void data::load_railviz() {

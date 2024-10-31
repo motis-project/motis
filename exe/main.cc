@@ -8,6 +8,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/import.h"
+#include "motis/server.h"
 
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
@@ -16,10 +17,6 @@
 namespace po = boost::program_options;
 using namespace std::string_view_literals;
 namespace fs = std::filesystem;
-
-namespace motis {
-int server(data d, config const& c);
-}  // namespace motis
 
 using namespace motis;
 

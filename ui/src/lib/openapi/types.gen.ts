@@ -218,12 +218,6 @@ export type StopTime = {
      */
     realTime: boolean;
     /**
-     * For transit legs, the route of the bus or train being used.
-     * For non-transit legs, the name of the street being traversed.
-     *
-     */
-    route: string;
-    /**
      * For transit legs, the headsign of the bus or train being used.
      * For non-transit legs, null
      *
@@ -306,42 +300,6 @@ export type RelativeDirection = 'DEPART' | 'HARD_LEFT' | 'LEFT' | 'SLIGHTLY_LEFT
 
 export type AbsoluteDirection = 'NORTH' | 'NORTHEAST' | 'EAST' | 'SOUTHEAST' | 'SOUTH' | 'SOUTHWEST' | 'WEST' | 'NORTHWEST';
 
-export type StepInstruction = {
-    relativeDirection: RelativeDirection;
-    absoluteDirection: AbsoluteDirection;
-    /**
-     * The distance in meters that this step takes.
-     */
-    distance: number;
-    /**
-     * The name of the street.
-     */
-    streetName: string;
-    /**
-     * When exiting a highway or traffic circle, the exit name/number.
-     */
-    exit: string;
-    /**
-     * Indicates whether or not a street changes direction at an intersection.
-     *
-     */
-    stayOn: boolean;
-    /**
-     * This step is on an open area, such as a plaza or train platform,
-     * and thus the directions should say something like "cross"
-     *
-     */
-    area: boolean;
-    /**
-     * The longitude of start of the step
-     */
-    lon: number;
-    /**
-     * The latitude of start of the step
-     */
-    lat: number;
-};
-
 export type EncodedPolyline = {
     /**
      * The encoded points of the polyline using the Google polyline encoding with precision 7.
@@ -353,7 +311,13 @@ export type EncodedPolyline = {
     length: number;
 };
 
-export type LevelEncodedPolyline = {
+export type StepInstruction = {
+    relativeDirection: RelativeDirection;
+    absoluteDirection: AbsoluteDirection;
+    /**
+     * The distance in meters that this step takes.
+     */
+    distance: number;
     /**
      * level where this segment starts, based on OpenStreetMap data
      */
@@ -367,6 +331,63 @@ export type LevelEncodedPolyline = {
      */
     osmWay?: number;
     polyline: EncodedPolyline;
+    /**
+     * The name of the street.
+     */
+    streetName: string;
+    /**
+     * Not implemented!
+     * When exiting a highway or traffic circle, the exit name/number.
+     *
+     */
+    exit: string;
+    /**
+     * Not implemented!
+     * Indicates whether or not a street changes direction at an intersection.
+     *
+     */
+    stayOn: boolean;
+    /**
+     * Not implemented!
+     * This step is on an open area, such as a plaza or train platform,
+     * and thus the directions should say something like "cross"
+     *
+     */
+    area: boolean;
+};
+
+/**
+ * Vehicle rental
+ */
+export type Rental = {
+    /**
+     * Vehicle share system ID
+     */
+    systemId: string;
+    /**
+     * Vehicle share system name
+     */
+    systemName?: string;
+    /**
+     * URL of the vehicle share system
+     */
+    url?: string;
+    /**
+     * Name of the station
+     */
+    stationName?: string;
+    /**
+     * Rental URI for Android (deep link to the specific station or vehicle)
+     */
+    rentalUriAndroid?: string;
+    /**
+     * Rental URI for iOS (deep link to the specific station or vehicle)
+     */
+    rentalUriIOS?: string;
+    /**
+     * Rental URI for web (deep link to the specific station or vehicle)
+     */
+    rentalUriWeb?: string;
 };
 
 export type Leg = {
@@ -445,15 +466,12 @@ export type Leg = {
     intermediateStops?: Array<Place>;
     legGeometry: EncodedPolyline;
     /**
-     * Like `legGeometry`, but split at level changes
-     */
-    legGeometryWithLevels?: Array<LevelEncodedPolyline>;
-    /**
      * A series of turn by turn instructions
      * used for walking, biking and driving.
      *
      */
     steps?: Array<StepInstruction>;
+    rental?: Rental;
 };
 
 export type Itinerary = {
@@ -469,22 +487,6 @@ export type Itinerary = {
      * journey arrival time
      */
     endTime: string;
-    /**
-     * How much time is spent walking, in seconds.
-     */
-    walkTime: number;
-    /**
-     * How much time is spent on transit, in seconds.
-     */
-    transitTime: number;
-    /**
-     * How much time is spent waiting for transit to arrive, in seconds.
-     */
-    waitingTime: number;
-    /**
-     * How far the user has to walk, in meters.
-     */
-    walkDistance: number;
     /**
      * The number of transfers this trip has.
      */
@@ -815,6 +817,13 @@ export type PlanResponse = ({
     };
     from: Place;
     to: Place;
+    /**
+     * Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+     * The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+     * But all `direct` connections are meant to be independent of absolute times.
+     *
+     */
+    direct: Array<Itinerary>;
     /**
      * list of itineraries
      */

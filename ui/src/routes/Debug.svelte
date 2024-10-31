@@ -153,8 +153,8 @@
 												<Button
 													variant="outline"
 													on:click={() => {
-														start = posToLocation(f.place);
-														destination = posToLocation(x.to);
+														start = posToLocation(f.place, f.place.level);
+														destination = posToLocation(x.to, f.place.level);
 														profile = 'foot';
 													}}
 												>
@@ -167,8 +167,8 @@
 												<Button
 													variant="outline"
 													on:click={() => {
-														start = posToLocation(f.place);
-														destination = posToLocation(x.to);
+														start = posToLocation(f.place, f.place.level);
+														destination = posToLocation(x.to, f.place.level);
 														profile = 'foot';
 													}}
 												>
@@ -182,8 +182,8 @@
 													class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
 													variant="outline"
 													on:click={() => {
-														start = posToLocation(f.place);
-														destination = posToLocation(x.to);
+														start = posToLocation(f.place, f.place.level);
+														destination = posToLocation(x.to, f.place.level);
 														profile = 'wheelchair';
 													}}
 												>

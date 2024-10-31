@@ -12,13 +12,15 @@
 		return {
 			type: 'FeatureCollection',
 			features: i.legs.flatMap((l) => {
-				if (l.legGeometryWithLevels) {
-					return l.legGeometryWithLevels.map((p) => {
+				if (l.steps) {
+					const color = l.mode == 'WALK' ? '#42a5f5' : `${getColor(l)[0]}`;
+					const outlineColor = l.mode == 'WALK' ? '#1966a4' : colord(color).darken(0.2).toHex();
+					return l.steps.map((p) => {
 						return {
 							type: 'Feature',
 							properties: {
-								color: '#42a5f5',
-								outlineColor: '#1966a4',
+								color,
+								outlineColor,
 								level: p.fromLevel,
 								way: p.osmWay
 							},

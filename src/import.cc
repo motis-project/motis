@@ -5,8 +5,6 @@
 #include <ostream>
 #include <vector>
 
-#include "boost/json.hpp"
-
 #include "fmt/ranges.h"
 
 #include "cista/io.h"
@@ -33,7 +31,7 @@
 #include "nigiri/common/parse_date.h"
 #include "nigiri/rt/create_rt_timetable.h"
 #include "nigiri/rt/rt_timetable.h"
-#include "nigiri/shape.h"
+#include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 
 #include "osr/extract/extract.h"
@@ -48,7 +46,7 @@
 #include "motis/clog_redirect.h"
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
-#include "motis/railviz.h"
+#include "motis/hashes.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
@@ -59,39 +57,18 @@ using namespace std::string_literals;
 
 namespace motis {
 
-constexpr auto const kAdrBinaryVersion = 1U;
-constexpr auto const kOsrBinaryVersion = 2U;
-constexpr auto const kNigiriBinaryVersion = 4U;
-constexpr auto const kMatchesBinaryVersion = 4U;
-
-using meta_entry_t = std::pair<std::string, std::uint64_t>;
-using meta_t = std::map<std::string, std::uint64_t>;
-
-meta_t read_hashes(fs::path const& data_path, std::string const& name) {
-  auto const p = (data_path / "meta" / (name + ".json"));
-  if (!exists(p)) {
-    return {};
-  }
-  auto const mmap =
-      cista::mmap{p.generic_string().c_str(), cista::mmap::protection::READ};
-  return boost::json::value_to<meta_t>(boost::json::parse(mmap.view()));
-}
-
-void write_hashes(fs::path const& data_path,
-                  std::string const& name,
-                  meta_t const& h) {
-  auto const p = (data_path / "meta" / (name + ".json"));
-  std::ofstream{p} << boost::json::serialize(boost::json::value_from(h));
-}
-
 struct task {
   friend std::ostream& operator<<(std::ostream& out, task const& t) {
     return out << t.name_;
   }
 
   bool ready_for_load(fs::path const& data_path) {
-    auto const pt = utl::activate_progress_tracker(name_);
     auto const existing = read_hashes(data_path, name_);
+    if (existing != hashes_) {
+      std::cout << name_ << "\n"
+                << "  existing: " << to_str(existing) << "\n"
+                << "  current: " << to_str(hashes_) << "\n";
+    }
     return existing == hashes_;
   }
 
@@ -190,12 +167,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     }
   }
 
-  auto const osr_version = meta_entry_t{"osr_bin_ver", kOsrBinaryVersion};
-  auto const adr_version = meta_entry_t{"adr_bin_ver", kAdrBinaryVersion};
-  auto const n_version = meta_entry_t{"nigiri_bin_ver", kNigiriBinaryVersion};
-  auto const matches_version =
-      meta_entry_t{"matches_ver", kMatchesBinaryVersion};
-
   auto d = data{data_path};
 
   auto osr = task{"osr",
@@ -206,7 +177,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                     d.load_osr();
                   },
                   [&]() { d.load_osr(); },
-                  {osm_hash, osr_version}};
+                  {osm_hash, osr_version()}};
 
   auto adr =
       task{"adr",
@@ -234,7 +205,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                d.load_reverse_geocoder();
              }
            },
-           {osm_hash, adr_version}};
+           {osm_hash, adr_version()}};
 
   auto tt = task{
       "tt",
@@ -270,7 +241,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         if (t.with_shapes_) {
           d.shapes_ = std::make_unique<n::shapes_storage>(
-              n::shapes_storage{data_path / "shapes"});
+              data_path, cista::mmap::protection::WRITE);
         }
 
         d.tags_ = cista::wrapped{cista::raw::make_unique<tag_lookup>()};
@@ -321,7 +292,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           d.load_railviz();
         }
       },
-      {tt_hash, n_version}};
+      {tt_hash, n_version()}};
 
   auto adr_extend =
       task{"adr_extend",
@@ -334,26 +305,28 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (write) {
                cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
              }
+             d.t_.get()->~typeahead();
+             d.load_geocoder();
            },
            [&]() { d.load_geocoder(); },
-           {tt_hash, osm_hash, adr_version, n_version}};
+           {tt_hash, osm_hash, adr_version(), n_version()}};
 
-  auto osr_footpath =
-      task{"osr_footpath",
-           [&]() { return c.osr_footpath_; },
-           [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
-           [&]() {
-             auto const elevator_footpath_map =
-                 compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
+  auto osr_footpath = task{
+      "osr_footpath",
+      [&]() { return c.osr_footpath_; },
+      [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
+      [&]() {
+        auto const elevator_footpath_map =
+            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
 
-             if (write) {
-               cista::write(data_path / "elevator_footpath_map.bin",
-                            elevator_footpath_map);
-               d.tt_->write(data_path / "tt.bin");
-             }
-           },
-           [&]() {},
-           {tt_hash, osm_hash, osr_version, n_version}};
+        if (write) {
+          cista::write(data_path / "elevator_footpath_map.bin",
+                       elevator_footpath_map);
+          d.tt_->write(data_path / "tt.bin");
+        }
+      },
+      [&]() {},
+      {tt_hash, osm_hash, osr_version(), osr_footpath_version(), n_version()}};
 
   auto matches =
       task{"matches",
@@ -368,7 +341,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
            },
            [&]() { d.load_matches(); },
-           {tt_hash, osm_hash, osr_version, n_version, matches_version}};
+           {tt_hash, osm_hash, osr_version(), n_version(), matches_version()}};
 
   auto tiles = task{
       "tiles",
@@ -406,7 +379,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
           progress_tracker->status("Load Features").out_bounds(20, 70);
           ::tiles::load_osm(db_handle, inserter, c.osm_->generic_string(),
                             c.tiles_->profile_.generic_string(),
-                            dir.generic_string());
+                            dir.generic_string(), c.tiles_->flush_threshold_);
         }
 
         progress_tracker->status("Pack Features").out_bounds(70, 90);
@@ -418,7 +391,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         d.load_tiles();
       },
       [&]() { d.load_tiles(); },
-      {osm_hash, tiles_hash}};
+      {tiles_version(), osm_hash, tiles_hash}};
 
   auto tasks =
       std::vector<task>{tiles, osr, adr, tt, adr_extend, osr_footpath, matches};
