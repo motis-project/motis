@@ -117,15 +117,23 @@ struct http_client::connection
               << key_.port_ << ": sent " << n_sent_ << " requests, received "
               << n_received_ << " responses, " << pending_requests_.size()
               << " still pending, " << n_connects_ << " connects" << std::endl;
-    if (ssl()) {
+    if (ssl_stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*ssl_stream_)
           .socket()
           .shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-    } else {
+    } else if (stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*stream_).socket().shutdown(
           asio::ip::tcp::socket::shutdown_both, ec);
+    }
+  }
+
+  asio::awaitable<void> fail_all_requests(boost::system::error_code const ec) {
+    while (!pending_requests_.empty()) {
+      auto req = pending_requests_.front();
+      pending_requests_.pop_front();
+      co_await req->response_channel_.async_send(ec, {});
     }
   }
 
@@ -204,7 +212,6 @@ struct http_client::connection
     } catch (std::exception const& ex) {
       std::cout << "[http] exception in send_requests: " << ex.what()
                 << std::endl;
-      // throw ex;
     }
   }
 
@@ -270,8 +277,13 @@ struct http_client::connection
     using namespace boost::asio::experimental::awaitable_operators;
     auto const self = shared_from_this();
     do {
-      co_await self->connect();
-      co_await (self->receive_responses() || self->send_requests());
+      auto err = boost::system::error_code{error::request_failed};
+      try {
+        co_await self->connect();
+        co_await (self->receive_responses() || self->send_requests());
+      } catch (boost::system::system_error const& e) {
+        err = e.code();
+      }
       close();
 
       // if we get disconnected, don't use pipelining again
@@ -281,15 +293,18 @@ struct http_client::connection
           asio::experimental::channel<void(boost::system::error_code)>>(
           executor, 1);
 
+      // check if we have any more requests in the request channel and
+      // receive the next one
+      if (pending_requests_.empty() && request_channel_.is_open()) {
+        auto request = co_await request_channel_.async_receive();
+        pending_requests_.push_back(request);
+      }
+
       if (!pending_requests_.empty()) {
         ++n_current_retries_;
         if (n_current_retries_ >= 3) {
           // fail all remaining pending requests
-          for (auto const& request : pending_requests_) {
-            co_await request->response_channel_.async_send(
-                error::request_failed, {});
-          }
-          pending_requests_.clear();
+          co_await fail_all_requests(err);
         }
       }
     } while (!pending_requests_.empty());
