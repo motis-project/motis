@@ -1,7 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <cstddef>
 #include <deque>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -28,6 +30,9 @@
 #include "motis/types.h"
 
 namespace motis {
+
+constexpr auto const kUnlimitedHttpPipelining =
+    std::numeric_limits<std::size_t>::max();
 
 struct http_client {
   static boost::asio::awaitable<void> timeout(
@@ -65,10 +70,13 @@ struct http_client {
 
   struct connection : public std::enable_shared_from_this<connection> {
     template <typename Executor>
-    connection(Executor const& executor, connection_key key)
+    connection(Executor const& executor,
+               connection_key key,
+               std::size_t const max_in_flight = 1)
         : key_{std::move(key)},
+          unlimited_pipelining_{max_in_flight == kUnlimitedHttpPipelining},
           request_channel_{executor},
-          request_lock_{executor, 1} {
+          requests_in_flight_{executor, max_in_flight} {
       ssl_ctx_.set_default_verify_paths();
       ssl_ctx_.set_verify_mode(boost::asio::ssl::verify_none);
       ssl_ctx_.set_options(boost::asio::ssl::context::default_workarounds |
@@ -80,7 +88,8 @@ struct http_client {
     void close() const {
       std::cout << "[http] closing connection to " << key_.host_ << ":"
                 << key_.port_ << ": sent " << n_sent_ << " requests, received "
-                << n_received_ << " responses, " << n_connects_ << " connects"
+                << n_received_ << " responses, " << pending_requests_.size()
+                << " still pending, " << n_connects_ << " connects"
                 << std::endl;
       if (ssl()) {
         auto ec = boost::beast::error_code{};
@@ -122,7 +131,7 @@ struct http_client {
         co_await stream_->async_connect(results);
       }
 
-      request_lock_.try_receive([](auto const&) {});
+      requests_in_flight_.reset();
     }
 
     boost::asio::awaitable<void> send_requests() {
@@ -142,8 +151,9 @@ struct http_client {
           }
           req.keep_alive(true);
 
-          if (!pipelining_) {
-            co_await request_lock_.async_send(boost::system::error_code{});
+          if (!unlimited_pipelining_) {
+            co_await requests_in_flight_.async_send(
+                boost::system::error_code{});
           }
 
           if (ssl()) {
@@ -152,6 +162,9 @@ struct http_client {
             co_await boost::beast::http::async_write(*stream_, req);
           }
           ++n_sent_;
+          std::cout << "[http::send_requests] sent " << n_sent_ << ", received "
+                    << n_received_ << ", " << pending_requests_.size()
+                    << " pending" << std::endl;
         };
 
         if (!pending_requests_.empty()) {
@@ -187,8 +200,8 @@ struct http_client {
           }
           ++n_received_;
 
-          if (!pipelining_) {
-            request_lock_.try_receive([](auto const&) {});
+          if (!unlimited_pipelining_) {
+            requests_in_flight_.try_receive([](auto const&) {});
           }
 
           utl::verify(!pending_requests_.empty(),
@@ -220,16 +233,25 @@ struct http_client {
     bool ssl() const { return key_.ssl_; }
 
     connection_key key_{};
-    bool pipelining_{false};
+    bool unlimited_pipelining_{false};
+
     std::unique_ptr<boost::beast::tcp_stream> stream_;
     std::unique_ptr<boost::asio::ssl::stream<boost::beast::tcp_stream>>
         ssl_stream_;
+
+    // the connection accepts new requests through the request_channel_
     boost::asio::experimental::channel<void(boost::system::error_code,
                                             std::shared_ptr<request>)>
         request_channel_;
+    // unless unlimited_pipelining_ is true, the requests_in_flight_
+    // channel limits the number of requests that are in-flight (i.e. request
+    // sent and waiting for response)
     boost::asio::experimental::channel<void(boost::system::error_code)>
-        request_lock_;
+        requests_in_flight_;
+
+    // requests that are sent and waiting for a response
     std::deque<std::shared_ptr<request>> pending_requests_;
+
     boost::asio::ssl::context ssl_ctx_{
         boost::asio::ssl::context::tlsv12_client};
 
