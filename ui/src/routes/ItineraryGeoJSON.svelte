@@ -1,20 +1,24 @@
 <script lang="ts">
 	import Layer from '$lib/map/Layer.svelte';
 	import GeoJSON from '$lib/map/GeoJSON.svelte';
-	import type { Itinerary } from '$lib/openapi';
+	import type { Itinerary, Mode } from '$lib/openapi';
 	import { getColor } from '$lib/modeStyle';
 	import polyline from 'polyline';
 	import { colord } from 'colord';
 
 	const PRECISION = 7;
 
+	function isIndividualTransport(m: Mode): boolean {
+		return m == 'WALK' || m == 'BIKE' || m == 'CAR';
+	}
+
 	function itineraryToGeoJSON(i: Itinerary): GeoJSON.GeoJSON {
 		return {
 			type: 'FeatureCollection',
 			features: i.legs.flatMap((l) => {
 				if (l.steps) {
-					const color = l.mode == 'WALK' ? '#42a5f5' : `${getColor(l)[0]}`;
-					const outlineColor = l.mode == 'WALK' ? '#1966a4' : colord(color).darken(0.2).toHex();
+					const color = isIndividualTransport(l.mode) ? '#42a5f5' : `${getColor(l)[0]}`;
+					const outlineColor = colord(color).darken(0.2).toHex();
 					return l.steps.map((p) => {
 						return {
 							type: 'Feature',

@@ -163,7 +163,14 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
                                                 ? "num_bikes_available"
                                                 : "num_vehicles_available";
 
-    auto& station = provider.stations_.at(station_id);
+    auto const station_it = provider.stations_.find(station_id);
+    if (station_it == end(provider.stations_)) {
+      std::cerr << "GBFS provider=\"" << provider.id_ << "\": station_id=\""
+                << station_id << "\" not found\n";
+      continue;
+    }
+
+    auto& station = station_it->second;
     station.status_ = station_status{
         .num_vehicles_available_ =
             station_obj.at(num_vehicles_available_key).to_number<unsigned>(),

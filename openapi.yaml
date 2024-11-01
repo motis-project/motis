@@ -67,8 +67,8 @@ paths:
       responses:
         200:
           description: |
-            A list of distance + duration pairs.
-            If no path was found, the object doesn't contain distance and duration.
+            A list of durations.
+            If no path was found, the object is empty.
           content:
             application/json:
               schema:
@@ -306,20 +306,26 @@ paths:
             optimal (e.g. the least transfers) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
+            
+            TODO: pass parameter to nigiri
           schema:
             type: number
 
         - name: minTransferTime
           in: query
           required: false
-          description: Minimum transfer time for each transfer.
+          description: |
+            Minimum transfer time for each transfer.
+            TODO: pass parameter to nigiri
           schema:
             type: integer
 
         - name: transferTimeFactor
           in: query
           required: false
-          description: Factor to multiply transfer times with.
+          description: |
+            Factor to multiply transfer times with.
+            TODO: pass parameter to nigiri
           schema:
             type: integer
             default: 1
@@ -420,7 +426,18 @@ paths:
           schema:
             type: integer
             default: 7200
-            minimum: 0
+            minium: 0
+
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to allow bike carriage.
 
         - name: maxPreTransitTime
           in: query
@@ -443,6 +460,17 @@ paths:
             type: integer
             default: 900
             minimum: 0
+
+        - name: maxDirectTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 30min which is `1800`.
+            Maximum time in seconds for direct connections.
+          schema:
+            type: integer
+            default: 1800
+            minimum: 0
       responses:
         '200':
           description: routing result
@@ -456,6 +484,7 @@ paths:
                   - date
                   - from
                   - to
+                  - direct
                   - itineraries
                   - previousPageCursor
                   - nextPageCursor
@@ -474,6 +503,14 @@ paths:
                     $ref: '#/components/schemas/Place'
                   to:
                     $ref: '#/components/schemas/Place'
+                  direct:
+                    description: |
+                      Direct trips by `WALK`, `BIKE`, `CAR`, etc. without time-dependency.
+                      The starting time (`arriveBy=false`) / arrival time (`arriveBy=true`) is always the queried `time` parameter (set to \"now\" if not set).
+                      But all `direct` connections are meant to be independent of absolute times.
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Itinerary'
                   itineraries:
                     description: list of itineraries
                     type: array
@@ -832,12 +869,10 @@ components:
       description: |
         - `NORMAL` - latitude / longitude coordinate or address
         - `BIKESHARE` - bike sharing station
-        - `BIKEPARK` - bike parking
         - `TRANSIT` - transit stop
       enum:
         - NORMAL
         - BIKESHARE
-        - BIKEPARK
         - TRANSIT
 
     Place:
@@ -899,7 +934,6 @@ components:
         - place
         - mode
         - realTime
-        - route
         - headsign
         - agencyId
         - agencyName
@@ -917,11 +951,6 @@ components:
         realTime:
           description: Whether there is real-time data about this leg
           type: boolean
-        route:
-          description: |
-            For transit legs, the route of the bus or train being used.
-            For non-transit legs, the name of the street being traversed.
-          type: string
         headsign:
           description: |
             For transit legs, the headsign of the bus or train being used.
@@ -1248,10 +1277,6 @@ components:
         - duration
         - startTime
         - endTime
-        - walkTime
-        - transitTime
-        - waitingTime
-        - walkDistance
         - transfers
         - legs
       properties:
@@ -1266,18 +1291,6 @@ components:
           type: string
           format: date-time
           description: journey arrival time
-        walkTime:
-          type: integer
-          description: How much time is spent walking, in seconds.
-        transitTime:
-          type: integer
-          description: How much time is spent on transit, in seconds.
-        waitingTime:
-          type: integer
-          description: How much time is spent waiting for transit to arrive, in seconds.
-        walkDistance:
-          type: integer
-          description: How far the user has to walk, in meters.
         transfers:
           type: integer
           description: The number of transfers this trip has.
