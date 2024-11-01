@@ -38,16 +38,6 @@ namespace ssl = asio::ssl;
 
 namespace motis {
 
-namespace {
-// TODO
-asio::awaitable<void> timeout(
-    std::chrono::steady_clock::duration const duration) {
-  asio::steady_timer timer(co_await asio::this_coro::executor);
-  timer.expires_after(duration);
-  co_await timer.async_wait();
-}
-}  // namespace
-
 #if !defined(MOTIS_VERSION)
 #define MOTIS_VERSION "unknown"
 #endif
