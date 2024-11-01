@@ -171,7 +171,6 @@ awaitable<void> load_feed(config::gbfs const& c,
   try {
     auto const discovery =
         co_await fetch_file("gbfs", url, headers, dir, client, timeout);
-    std::cout << "  (" << id << "): loaded discovery" << std::endl;
 
     auto const& root = discovery.json_.as_object();
     if ((root.contains("data") &&
@@ -214,36 +213,29 @@ awaitable<void> load_feed(config::gbfs const& c,
     if (urls.contains("system_information")) {
       load_system_information(*provider,
                               (co_await fetch("system_information")).json_);
-      std::cout << "  (" << id << "): loaded system_information" << std::endl;
     }
 
     if (urls.contains("vehicle_types")) {
       load_vehicle_types(*provider, (co_await fetch("vehicle_types")).json_);
-      std::cout << "  (" << id << "): loaded vehicle_types" << std::endl;
     }
 
     if (urls.contains("station_information") &&
         urls.contains("station_status")) {
       load_station_information(*provider,
                                (co_await fetch("station_information")).json_);
-      std::cout << "  (" << id << "): loaded station_information" << std::endl;
       load_station_status(*provider, (co_await fetch("station_status")).json_);
-      std::cout << "  (" << id << "): loaded station_status" << std::endl;
     }
 
     if (urls.contains("vehicle_status")) {  // 3.x
       load_vehicle_status(*provider, (co_await fetch("vehicle_status")).json_);
-      std::cout << "  (" << id << "): loaded vehicle_status" << std::endl;
     } else if (urls.contains("free_bike_status")) {  // 2.x
       load_vehicle_status(*provider,
                           (co_await fetch("free_bike_status")).json_);
-      std::cout << "  (" << id << "): loaded free_bike_status" << std::endl;
     }
 
     if (urls.contains("geofencing_zones")) {
       load_geofencing_zones(*provider,
                             (co_await fetch("geofencing_zones")).json_);
-      std::cout << "  (" << id << "): loaded geofencing_zones" << std::endl;
     }
 
     map_geofencing_zones(w, l, *provider);
