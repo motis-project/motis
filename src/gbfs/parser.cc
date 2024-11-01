@@ -1,8 +1,12 @@
 #include <string_view>
+#include <vector>
 
 #include "motis/gbfs/parser.h"
 
 #include "cista/hash.h"
+
+#include "utl/raii.h"
+#include "utl/to_vec.h"
 
 namespace json = boost::json;
 
@@ -51,6 +55,56 @@ bool get_bool(gbfs_version const version,
               std::string_view const key) {
   return version == gbfs_version::k1 ? obj.at(key).to_number<int>() == 1
                                      : obj.at(key).as_bool();
+}
+
+tg_geom* parse_multipolygon(json::object const& json) {
+  utl::verify(json.at("type").as_string() == "MultiPolygon",
+              "expected MultiPolygon, got {}", json.at("type").as_string());
+  auto const& coordinates = json.at("coordinates").as_array();
+
+  auto polys = std::vector<tg_poly*>{};
+  UTL_FINALLY([&polys]() {
+    for (auto const poly : polys) {
+      tg_poly_free(poly);
+    }
+  });
+
+  for (auto const& j_poly : coordinates) {
+    auto rings = std::vector<tg_ring*>{};
+    UTL_FINALLY([&rings]() {
+      for (auto const ring : rings) {
+        tg_ring_free(ring);
+      }
+    });
+    for (auto const& j_ring : j_poly.as_array()) {
+      auto points = utl::to_vec(j_ring.as_array(), [&](auto const& j_pt) {
+        auto const& j_pt_arr = j_pt.as_array();
+        utl::verify(j_pt_arr.size() >= 2, "invalid point in polygon ring");
+        return tg_point{j_pt_arr[0].as_double(), j_pt_arr[1].as_double()};
+      });
+      utl::verify(points.size() > 2, "empty ring in polygon");
+      // handle invalid polygons that don't have closed rings
+      if (points.front().x != points.back().x ||
+          points.front().y != points.back().y) {
+        points.push_back(points.front());
+      }
+      auto ring = tg_ring_new(points.data(), points.size());
+      utl::verify(ring != nullptr, "failed to create ring");
+      rings.emplace_back(ring);
+    }
+    utl::verify(!rings.empty(), "empty polygon in multipolygon");
+    auto poly =
+        tg_poly_new(rings.front(), rings.size() > 1 ? &rings[1] : nullptr,
+                    static_cast<int>(rings.size() - 1));
+    utl::verify(poly != nullptr, "failed to create polygon");
+    polys.emplace_back(poly);
+  }
+
+  utl::verify(!polys.empty(), "empty multipolygon");
+  auto const multipoly =
+      tg_geom_new_multipolygon(polys.data(), static_cast<int>(polys.size()));
+  utl::verify(multipoly != nullptr, "failed to create multipolygon");
+  return multipoly;
 }
 
 hash_map<std::string, std::string> parse_discovery(json::value const& root) {
@@ -126,19 +180,11 @@ void load_station_information(gbfs_provider& provider,
 
     tg_geom* area = nullptr;
     if (station_obj.contains("station_area")) {
-      area = tg_parse_geojson(
-          json::serialize(station_obj.at("station_area")).c_str());
-      if (auto const* err = tg_geom_error(area); err != nullptr) {
-        std::cerr << "[GBFS] failed to parse station_area geojson: " << err
-                  << "\n";
-        tg_geom_free(area);
-        area = nullptr;
-      }
-      if (area != nullptr && tg_geom_typeof(area) != TG_MULTIPOLYGON) {
-        std::cerr << "[GBFS] station_area must be a MultiPolygon, not "
-                  << tg_geom_type_string(tg_geom_typeof(area)) << "\n";
-        tg_geom_free(area);
-        area = nullptr;
+      try {
+        area = parse_multipolygon(station_obj.at("station_area").as_object());
+      } catch (std::exception const& ex) {
+        std::cerr << "[GBFS] (" << provider.id_
+                  << ") invalid station_area: " << ex.what() << "\n";
       }
     }
 
@@ -165,8 +211,8 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
 
     auto const station_it = provider.stations_.find(station_id);
     if (station_it == end(provider.stations_)) {
-      std::cerr << "GBFS provider=\"" << provider.id_ << "\": station_id=\""
-                << station_id << "\" not found\n";
+      std::cerr << "[GBFS] (" << provider.id_ << "): station_id=\""
+                << station_id << "\" referenced in station_status not found\n";
       continue;
     }
 
@@ -326,19 +372,7 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
             utl::to_vec(props.at("rules").as_array(),
                         [&](auto const& r) { return parse_rule(version, r); });
 
-        auto const feature_str = json::serialize(z);
-        auto* geom = tg_parse_geojson(feature_str.c_str());
-        if (auto const* err = tg_geom_error(geom); err != nullptr) {
-          auto const msg = std::string{err};
-          tg_geom_free(geom);
-          throw utl::fail("failed to parse geojson: {}", msg);
-        }
-        if (tg_geom_typeof(geom) != TG_MULTIPOLYGON) {
-          auto const type_str = tg_geom_type_string(tg_geom_typeof(geom));
-          tg_geom_free(geom);
-          throw utl::fail("geofencing zone must be a MultiPolygon, not {}",
-                          type_str);
-        }
+        auto* geom = parse_multipolygon(z.at("geometry").as_object());
 
         auto name = props.contains("name")
                         ? get_localized_string(version, props.at("name"))
