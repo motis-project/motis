@@ -55,6 +55,24 @@ asio::awaitable<void> timeout(
 constexpr auto const kMotisUserAgent =
     "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
 
+std::string http_client::error_category_impl::message(int ev) const {
+  switch (static_cast<error>(ev)) {
+    case error::success: return "success";
+    case error::too_many_redirects: return "too many redirects";
+    default: return "unknown";
+  }
+}
+
+boost::system::error_category const& http_client_error_category() {
+  static http_client::error_category_impl instance;
+  return instance;
+}
+
+boost::system::error_code make_error_code(http_client::error e) {
+  return boost::system::error_code(static_cast<int>(e),
+                                   http_client_error_category());
+}
+
 struct http_client::request {
   template <typename Executor>
   request(boost::urls::url&& url,
@@ -69,6 +87,7 @@ struct http_client::request {
   asio::experimental::channel<void(boost::system::error_code,
                                    http::response<http::dynamic_body>)>
       response_channel_;
+  unsigned n_redirects_{};
 };
 
 struct http_client::connection
@@ -204,15 +223,37 @@ struct http_client::connection
         auto req = pending_requests_.front();
         pending_requests_.pop_front();
 
+        auto const code = res.result_int();
+        if (code >= 300 && code < 400) {  // redirect
+          auto const location = res[http::field::location];
+          auto next_url = boost::urls::url{};
+          auto const resolve_result = boost::urls::resolve(
+              req->url_, boost::urls::url{location}, next_url);
+          if (resolve_result.has_error()) {
+            co_await req->response_channel_.async_send(resolve_result.error(),
+                                                       std::move(res));
+            continue;
+          }
+
+          ++req->n_redirects_;
+          req->url_ = next_url;
+          if (req->n_redirects_ > 3) {
+            co_await req->response_channel_.async_send(
+                error::too_many_redirects, std::move(res));
+          } else {
+            co_await request_channel_.async_send(boost::system::error_code{},
+                                                 req);
+          }
+          continue;
+        }
+
         co_await req->response_channel_.async_send(boost::system::error_code{},
                                                    std::move(res));
       }
     } catch (std::exception const& ex) {
       std::cout << "[http] exception in receive_responses: " << ex.what()
                 << std::endl;
-      // throw ex;
     }
-    // TODO: boost::system::system_error
   }
 
   asio::awaitable<void> run() {

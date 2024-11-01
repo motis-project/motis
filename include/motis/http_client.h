@@ -6,8 +6,10 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <type_traits>
 
 #include "boost/asio/awaitable.hpp"
+#include "boost/system.hpp"
 #include "boost/url/url.hpp"
 
 #include "motis/http_req.h"
@@ -19,6 +21,14 @@ constexpr auto const kUnlimitedHttpPipelining =
     std::numeric_limits<std::size_t>::max();
 
 struct http_client {
+  enum class error { success = 0, too_many_redirects };
+
+  class error_category_impl : public boost::system::error_category {
+    char const* name() const noexcept override { return "http_client"; }
+
+    std::string message(int ev) const override;
+  };
+
   struct connection_key {
     friend bool operator==(connection_key const&,
                            connection_key const&) = default;
@@ -41,3 +51,19 @@ struct http_client {
 };
 
 }  // namespace motis
+
+namespace boost {
+namespace system {
+
+template <>
+struct is_error_code_enum<::motis::http_client::error> : std::true_type {};
+
+}  // namespace system
+}  // namespace boost
+
+namespace std {
+
+template <>
+struct is_error_code_enum<::motis::http_client::error> : std::true_type {};
+
+}  // namespace std
