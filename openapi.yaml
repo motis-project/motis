@@ -428,6 +428,17 @@ paths:
             default: 7200
             minium: 0
 
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to allow bike carriage.
+
         - name: maxPreTransitTime
           in: query
           required: false
@@ -858,12 +869,10 @@ components:
       description: |
         - `NORMAL` - latitude / longitude coordinate or address
         - `BIKESHARE` - bike sharing station
-        - `BIKEPARK` - bike parking
         - `TRANSIT` - transit stop
       enum:
         - NORMAL
         - BIKESHARE
-        - BIKEPARK
         - TRANSIT
 
     Place:

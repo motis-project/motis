@@ -73,11 +73,6 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
-bool require_bike_transport(std::vector<api::ModeEnum> const& mode) {
-  return utl::any_of(
-      mode, [](api::ModeEnum const m) { return m == api::ModeEnum::BIKE; });
-}
-
 td_offsets_t routing::get_td_offsets(elevators const& e,
                                      osr::location const& pos,
                                      osr::direction const dir,
@@ -465,7 +460,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .extend_interval_later_ = start_time.extend_interval_later_,
         .prf_idx_ = static_cast<n::profile_idx_t>(query.wheelchair_ ? 2U : 1U),
         .allowed_claszes_ = to_clasz_mask(modes),
-        .require_bike_transport_ = require_bike_transport(modes),
+        .require_bike_transport_ = query.requireBikeTransport_,
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct}};
