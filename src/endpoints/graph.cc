@@ -17,7 +17,7 @@ json::value graph::operator()(json::value const& query) const {
   auto const max = geo::latlng{x[3].as_double(), x[2].as_double()};
   auto const level = q.contains("level")
                          ? osr::to_level(q.at("level").to_number<float>())
-                         : osr::level_t::invalid();
+                         : osr::kNoLevel;
 
   auto gj = osr::geojson_writer{.w_ = w_};
   auto n_ways = 0U;
@@ -26,7 +26,7 @@ json::value graph::operator()(json::value const& query) const {
       throw utl::fail("too many ways");
     }
 
-    if (level == osr::level_t::invalid()) {
+    if (level == osr::kNoLevel) {
       gj.write_way(w);
       return;
     }
@@ -47,13 +47,15 @@ json::value graph::operator()(json::value const& query) const {
       }
     }
 
-    if (way_prop.from_level() == level || way_prop.to_level() == level) {
+    if ((level == osr::to_level(0.0) &&
+         way_prop.from_level() == osr::kNoLevel) ||
+        way_prop.from_level() == level || way_prop.to_level() == level) {
       gj.write_way(w);
       return;
     }
   });
 
-  gj.finish(&osr::get_dijkstra<osr::foot<true>>());
+  gj.finish(&osr::get_dijkstra<osr::foot<true, osr::elevator_tracking>>());
 
   return gj.json();
 }

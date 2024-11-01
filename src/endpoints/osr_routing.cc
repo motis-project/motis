@@ -16,7 +16,7 @@ osr::location parse_location(json::value const& v) {
   return {{obj.at("lat").as_double(), obj.at("lng").as_double()},
           obj.contains("level")
               ? osr::to_level(obj.at("level").to_number<float>())
-              : osr::level_t::invalid()};
+              : osr::kNoLevel};
 }
 
 json::value osr_routing::operator()(json::value const& query) const {

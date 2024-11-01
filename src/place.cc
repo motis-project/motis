@@ -35,8 +35,7 @@ osr::level_t get_lvl(osr::ways const* w,
                      osr::platforms const* pl,
                      platform_matches_t const* matches,
                      n::location_idx_t const l) {
-  return w && pl && matches ? pl->get_level(*w, (*matches)[l])
-                            : osr::level_t::invalid();
+  return w && pl && matches ? pl->get_level(*w, (*matches)[l]) : osr::kNoLevel;
 }
 
 double get_level(osr::ways const* w,
