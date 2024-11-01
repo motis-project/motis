@@ -140,27 +140,20 @@ awaitable<void> load_manifest(config::gbfs const& c,
     }
   }
 
-  std::cout << "|GBFS| manifest: creating awaitables for " << feeds.size()
-            << " feeds" << std::endl;
   auto executor = co_await asio::this_coro::executor;
   auto awaitables = utl::to_vec(feeds, [&](auto const& feed) {
     return boost::asio::co_spawn(
         executor,
         [&, feed]() -> awaitable<void> {
-          std::cout << "|GBFS| manifest: running awaitable for feed "
-                    << feed.combined_id_ << std::endl;
           co_await load_feed(c, w, l, d, prefix, feed.combined_id_, feed.url_,
                              headers, {}, client, timeout);
         },
         asio::deferred);
   });
 
-  std::cout << "|GBFS| manifest: waiting for " << awaitables.size()
-            << " awaitables" << std::endl;
   auto x =
       co_await asio::experimental::make_parallel_group(awaitables)
           .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
-  std::cout << "|GBFS| manifest: awaitables complete" << std::endl;
 }
 
 awaitable<void> load_feed(config::gbfs const& c,
@@ -301,8 +294,6 @@ awaitable<void> update(config const& c,
   auto const no_hdr = headers_t{};
   auto const timeout = std::chrono::seconds{c.gbfs_->http_timeout_};
 
-  std::cout << "|GBFS| creating awaitables for " << c.gbfs_->feeds_.size()
-            << " feeds" << std::endl;
   auto executor = co_await asio::this_coro::executor;
   auto awaitables = utl::to_vec(c.gbfs_->feeds_, [&](auto const& f) {
     auto const& id = f.first;
@@ -316,7 +307,6 @@ awaitable<void> update(config const& c,
         executor,
         [id, feed, dir, &c, &d, &w, &l, &no_hdr, &client,
          &timeout]() -> awaitable<void> {
-          std::cout << "|GBFS| running awaitable for feed " << id << std::endl;
           co_await load_feed(c.gbfs_.value(), w, l, d.get(), "", id, feed.url_,
                              feed.headers_.value_or(no_hdr), dir, client,
                              timeout);
@@ -324,12 +314,9 @@ awaitable<void> update(config const& c,
         asio::deferred);
   });
 
-  std::cout << "|GBFS| waiting for " << awaitables.size() << " awaitables"
-            << std::endl;
   auto x =
       co_await asio::experimental::make_parallel_group(awaitables)
           .async_wait(asio::experimental::wait_for_all(), asio::use_awaitable);
-  std::cout << "|GBFS| awaitables complete" << std::endl;
 
   data_ptr = d;
   co_return;

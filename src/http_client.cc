@@ -113,10 +113,6 @@ struct http_client::connection
   }
 
   void close() const {
-    std::cout << "[http] closing connection to " << key_.host_ << ":"
-              << key_.port_ << ": sent " << n_sent_ << " requests, received "
-              << n_received_ << " responses, " << pending_requests_.size()
-              << " still pending, " << n_connects_ << " connects" << std::endl;
     if (ssl_stream_) {
       auto ec = beast::error_code{};
       beast::get_lowest_layer(*ssl_stream_)
@@ -192,9 +188,6 @@ struct http_client::connection
           co_await http::async_write(*stream_, req);
         }
         ++n_sent_;
-        std::cout << "[http::send_requests] sent " << n_sent_ << ", received "
-                  << n_received_ << ", " << pending_requests_.size()
-                  << " pending" << std::endl;
       };
 
       if (!pending_requests_.empty()) {
@@ -210,8 +203,6 @@ struct http_client::connection
         co_await send_request(request);
       }
     } catch (std::exception const& ex) {
-      std::cout << "[http] exception in send_requests: " << ex.what()
-                << std::endl;
     }
   }
 
@@ -268,8 +259,6 @@ struct http_client::connection
                                                    std::move(res));
       }
     } catch (std::exception const& ex) {
-      std::cout << "[http] exception in receive_responses: " << ex.what()
-                << std::endl;
     }
   }
 
@@ -352,10 +341,6 @@ asio::awaitable<http_response> http_client::get(
   auto const https = url.scheme_id() == boost::urls::scheme::https;
   auto const key = connection_key{
       url.host(), url.has_port() ? url.port() : (https ? "443" : "80"), https};
-
-  std::cout << "[http] get(" << key.host_ << ":" << key.port_
-            << ", ssl=" << key.ssl_ << "), target=" << url.encoded_target()
-            << std::endl;
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
