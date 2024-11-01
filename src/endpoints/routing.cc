@@ -401,8 +401,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             utl::overloaded{
                 [&](tt_location const l) { return station_start(l.l_); },
                 [&](osr::location const& pos) {
-                  auto const dir = query.arriveBy_ ? osr::direction::kForward
-                                                   : osr::direction::kBackward;
+                  auto const dir = query.arriveBy_ ? osr::direction::kBackward
+                                                   : osr::direction::kForward;
                   return get_offsets(
                       pos, dir, start_modes, query.wheelchair_,
                       std::chrono::seconds{query.maxPreTransitTime_},
@@ -413,8 +413,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             utl::overloaded{
                 [&](tt_location const l) { return station_start(l.l_); },
                 [&](osr::location const& pos) {
-                  auto const dir = query.arriveBy_ ? osr::direction::kBackward
-                                                   : osr::direction::kForward;
+                  auto const dir = query.arriveBy_ ? osr::direction::kForward
+                                                   : osr::direction::kBackward;
                   return get_offsets(
                       pos, dir, dest_modes, query.wheelchair_,
                       std::chrono::seconds{query.maxPostTransitTime_},
@@ -428,8 +428,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                           [&](tt_location) { return td_offsets_t{}; },
                           [&](osr::location const& pos) {
                             auto const dir = query.arriveBy_
-                                                 ? osr::direction::kForward
-                                                 : osr::direction::kBackward;
+                                                 ? osr::direction::kBackward
+                                                 : osr::direction::kForward;
                             return get_td_offsets(
                                 *e, pos, dir, start_modes, query.wheelchair_,
                                 std::chrono::seconds{query.maxPreTransitTime_});
@@ -443,8 +443,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                           [&](tt_location) { return td_offsets_t{}; },
                           [&](osr::location const& pos) {
                             auto const dir = query.arriveBy_
-                                                 ? osr::direction::kBackward
-                                                 : osr::direction::kForward;
+                                                 ? osr::direction::kForward
+                                                 : osr::direction::kBackward;
                             return get_td_offsets(
                                 *e, pos, dir, dest_modes, query.wheelchair_,
                                 std::chrono::seconds{
