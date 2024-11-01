@@ -48,6 +48,13 @@ asio::awaitable<void> timeout(
 }
 }  // namespace
 
+#if !defined(MOTIS_VERSION)
+#define MOTIS_VERSION "unknown"
+#endif
+
+constexpr auto const kMotisUserAgent =
+    "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
+
 struct http_client::request {
   template <typename Executor>
   request(boost::urls::url&& url,
@@ -73,7 +80,9 @@ struct http_client::connection
       : key_{std::move(key)},
         unlimited_pipelining_{max_in_flight == kUnlimitedHttpPipelining},
         request_channel_{executor},
-        requests_in_flight_{executor, max_in_flight} {
+        requests_in_flight_{std::make_unique<
+            asio::experimental::channel<void(boost::system::error_code)>>(
+            executor, max_in_flight)} {
     ssl_ctx_.set_default_verify_paths();
     ssl_ctx_.set_verify_mode(ssl::verify_none);
     ssl_ctx_.set_options(ssl::context::default_workarounds |
@@ -122,7 +131,7 @@ struct http_client::connection
       co_await stream_->async_connect(results);
     }
 
-    requests_in_flight_.reset();
+    requests_in_flight_->reset();
   }
 
   asio::awaitable<void> send_requests() {
@@ -132,7 +141,7 @@ struct http_client::connection
         auto req = http::request<http::string_body>{
             http::verb::get, request->url_.encoded_target(), 11};
         req.set(http::field::host, request->url_.host());
-        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+        req.set(http::field::user_agent, kMotisUserAgent);
         req.set(http::field::accept_encoding, "gzip");
         for (auto const& [k, v] : request->headers_) {
           req.set(k, v);
@@ -140,7 +149,7 @@ struct http_client::connection
         req.keep_alive(true);
 
         if (!unlimited_pipelining_) {
-          co_await requests_in_flight_.async_send(boost::system::error_code{});
+          co_await requests_in_flight_->async_send(boost::system::error_code{});
         }
 
         if (ssl()) {
@@ -187,7 +196,7 @@ struct http_client::connection
         ++n_received_;
 
         if (!unlimited_pipelining_) {
-          requests_in_flight_.try_receive([](auto const&) {});
+          requests_in_flight_->try_receive([](auto const&) {});
         }
 
         utl::verify(!pending_requests_.empty(),
@@ -213,6 +222,13 @@ struct http_client::connection
       co_await self->connect();
       co_await (self->receive_responses() || self->send_requests());
       close();
+
+      // if we get disconnected, don't use pipelining again
+      unlimited_pipelining_ = false;
+      auto executor = requests_in_flight_->get_executor();
+      requests_in_flight_ = std::make_unique<
+          asio::experimental::channel<void(boost::system::error_code)>>(
+          executor, 1);
     } while (!pending_requests_.empty());
   }
 
@@ -231,7 +247,7 @@ struct http_client::connection
   // unless unlimited_pipelining_ is true, the requests_in_flight_
   // channel limits the number of requests that are in-flight (i.e. request
   // sent and waiting for response)
-  asio::experimental::channel<void(boost::system::error_code)>
+  std::unique_ptr<asio::experimental::channel<void(boost::system::error_code)>>
       requests_in_flight_;
 
   // requests that are sent and waiting for a response
@@ -262,7 +278,7 @@ asio::awaitable<http_response> http_client::get(
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn = std::make_shared<connection>(executor, key);
+    auto conn = std::make_shared<connection>(executor, key, 5);
     connections_[key] = conn;
     asio::co_spawn(executor, conn->run(), asio::detached);
   }
