@@ -59,6 +59,7 @@ std::string http_client::error_category_impl::message(int ev) const {
   switch (static_cast<error>(ev)) {
     case error::success: return "success";
     case error::too_many_redirects: return "too many redirects";
+    case error::request_failed: return "request failed (max retries reached)";
     default: return "unknown";
   }
 }
@@ -95,13 +96,15 @@ struct http_client::connection
   template <typename Executor>
   connection(Executor const& executor,
              connection_key key,
+             std::chrono::seconds const timeout,
              std::size_t const max_in_flight = 1)
       : key_{std::move(key)},
         unlimited_pipelining_{max_in_flight == kUnlimitedHttpPipelining},
         request_channel_{executor},
         requests_in_flight_{std::make_unique<
             asio::experimental::channel<void(boost::system::error_code)>>(
-            executor, max_in_flight)} {
+            executor, max_in_flight)},
+        timeout_{timeout} {
     ssl_ctx_.set_default_verify_paths();
     ssl_ctx_.set_verify_mode(ssl::verify_none);
     ssl_ctx_.set_options(ssl::context::default_workarounds |
@@ -143,10 +146,12 @@ struct http_client::connection
                                            asio::error::get_ssl_category()}};
       }
 
+      beast::get_lowest_layer(*ssl_stream_).expires_after(timeout_);
       co_await beast::get_lowest_layer(*ssl_stream_).async_connect(results);
       co_await ssl_stream_->async_handshake(ssl::stream_base::client);
     } else {
       stream_ = std::make_unique<beast::tcp_stream>(executor);
+      stream_->expires_after(timeout_);
       co_await stream_->async_connect(results);
     }
 
@@ -172,8 +177,10 @@ struct http_client::connection
         }
 
         if (ssl()) {
+          beast::get_lowest_layer(*ssl_stream_).expires_after(timeout_);
           co_await http::async_write(*ssl_stream_, req);
         } else {
+          stream_->expires_after(timeout_);
           co_await http::async_write(*stream_, req);
         }
         ++n_sent_;
@@ -208,8 +215,10 @@ struct http_client::connection
         auto res = http::response<http::dynamic_body>{};
 
         if (ssl()) {
+          beast::get_lowest_layer(*ssl_stream_).expires_after(timeout_);
           co_await http::async_read(*ssl_stream_, buffer, res);
         } else {
+          stream_->expires_after(timeout_);
           co_await http::async_read(*stream_, buffer, res);
         }
         ++n_received_;
@@ -222,6 +231,7 @@ struct http_client::connection
                     "received response without pending request");
         auto req = pending_requests_.front();
         pending_requests_.pop_front();
+        n_current_retries_ = 0;
 
         auto const code = res.result_int();
         if (code >= 300 && code < 400) {  // redirect
@@ -270,6 +280,18 @@ struct http_client::connection
       requests_in_flight_ = std::make_unique<
           asio::experimental::channel<void(boost::system::error_code)>>(
           executor, 1);
+
+      if (!pending_requests_.empty()) {
+        ++n_current_retries_;
+        if (n_current_retries_ >= 3) {
+          // fail all remaining pending requests
+          for (auto const& request : pending_requests_) {
+            co_await request->response_channel_.async_send(
+                error::request_failed, {});
+          }
+          pending_requests_.clear();
+        }
+      }
     } while (!pending_requests_.empty());
   }
 
@@ -295,10 +317,13 @@ struct http_client::connection
   std::deque<std::shared_ptr<request>> pending_requests_;
 
   ssl::context ssl_ctx_{ssl::context::tlsv12_client};
+  std::chrono::seconds timeout_;
 
   unsigned n_sent_{};
   unsigned n_received_{};
   unsigned n_connects_{};
+  // number of retries for the current request (reset after successful request)
+  unsigned n_current_retries_{};
 };
 
 http_client::~http_client() {
@@ -319,7 +344,7 @@ asio::awaitable<http_response> http_client::get(
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn = std::make_shared<connection>(executor, key, 5);
+    auto conn = std::make_shared<connection>(executor, key, timeout_, 5);
     connections_[key] = conn;
     asio::co_spawn(executor, conn->run(), asio::detached);
   }

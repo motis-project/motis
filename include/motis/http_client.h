@@ -21,7 +21,7 @@ constexpr auto const kUnlimitedHttpPipelining =
     std::numeric_limits<std::size_t>::max();
 
 struct http_client {
-  enum class error { success = 0, too_many_redirects };
+  enum class error { success = 0, too_many_redirects, request_failed };
 
   class error_category_impl : public boost::system::error_category {
     char const* name() const noexcept override { return "http_client"; }
