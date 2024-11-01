@@ -32,7 +32,7 @@
 					.addTo(ctx.map)
 					.on('dragend', () => {
 						if (marker && location.value.match) {
-							let x = posToLocation(marker.getLngLat(), level);
+							let x = posToLocation(marker.getLngLat(), level ?? 0);
 							location.value = x.value;
 							location.label = x.label;
 						}
