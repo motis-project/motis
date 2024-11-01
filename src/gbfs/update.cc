@@ -26,6 +26,7 @@
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/gbfs/data.h"
+#include "motis/http_client.h"
 #include "motis/http_req.h"
 
 #include "motis/gbfs/osr_mapping.h"
@@ -60,12 +61,13 @@ awaitable<gbfs_file> fetch_file(std::string_view const name,
                                 std::string_view const url,
                                 headers_t const& headers,
                                 std::optional<std::filesystem::path> const& dir,
+                                http_client& client,
                                 std::chrono::seconds timeout) {
   auto content = std::string{};
   if (dir.has_value()) {
     content = read_file(*dir / fmt::format("{}.json", name));
   } else {
-    auto const res = co_await http_GET(boost::urls::url{url}, headers, timeout);
+    auto const res = co_await client.get(boost::urls::url{url}, headers);
     content = get_http_body(res);
   }
   co_return gbfs_file{.json_ = json::parse(content), .hash_ = hash(content)};
@@ -91,6 +93,7 @@ awaitable<void> load_feed(config::gbfs const& c,
                           std::string const& url,
                           headers_t const& headers,
                           std::optional<std::filesystem::path> const& dir,
+                          http_client& client,
                           std::chrono::seconds timeout);
 
 struct manifest_feed {
@@ -104,6 +107,7 @@ awaitable<void> load_manifest(config::gbfs const& c,
                               gbfs_data* d,
                               std::string const& prefix,
                               headers_t const& headers,
+                              http_client& client,
                               std::chrono::seconds timeout,
                               boost::json::object const& root) {
   auto feeds = std::vector<manifest_feed>{};
@@ -146,7 +150,7 @@ awaitable<void> load_manifest(config::gbfs const& c,
           std::cout << "|GBFS| manifest: running awaitable for feed "
                     << feed.combined_id_ << std::endl;
           co_await load_feed(c, w, l, d, prefix, feed.combined_id_, feed.url_,
-                             headers, {}, timeout);
+                             headers, {}, client, timeout);
         },
         asio::deferred);
   });
@@ -168,11 +172,12 @@ awaitable<void> load_feed(config::gbfs const& c,
                           std::string const& url,
                           headers_t const& headers,
                           std::optional<std::filesystem::path> const& dir,
+                          http_client& client,
                           std::chrono::seconds timeout) {
   std::cout << "[GBFS] loading feed " << id << ": " << url << std::endl;
   try {
     auto const discovery =
-        co_await fetch_file("gbfs", url, headers, dir, timeout);
+        co_await fetch_file("gbfs", url, headers, dir, client, timeout);
     std::cout << "  (" << id << "): loaded discovery" << std::endl;
 
     auto const& root = discovery.json_.as_object();
@@ -180,13 +185,14 @@ awaitable<void> load_feed(config::gbfs const& c,
          root.at("data").as_object().contains("datasets")) ||
         root.contains("systems")) {
       // File is not an individual feed, but a manifest.json / Lamassu file
-      co_return co_await load_manifest(c, w, l, d, id, headers, timeout, root);
+      co_return co_await load_manifest(c, w, l, d, id, headers, client, timeout,
+                                       root);
     }
 
     auto const urls = parse_discovery(discovery.json_);
 
     auto const fetch = [&](std::string_view const name) {
-      return fetch_file(name, urls.at(name), headers, dir, timeout);
+      return fetch_file(name, urls.at(name), headers, dir, client, timeout);
     };
 
     auto const provider_idx = gbfs_provider_idx_t{d->providers_.size()};
@@ -291,6 +297,7 @@ awaitable<void> update(config const& c,
   }
 
   auto d = std::make_shared<gbfs_data>();
+  auto client = http_client{};
   auto const no_hdr = headers_t{};
   auto const timeout = std::chrono::seconds{c.gbfs_->http_timeout_};
 
@@ -307,10 +314,12 @@ awaitable<void> update(config const& c,
 
     return boost::asio::co_spawn(
         executor,
-        [&, id, feed, dir]() -> awaitable<void> {
+        [id, feed, dir, &c, &d, &w, &l, &no_hdr, &client,
+         &timeout]() -> awaitable<void> {
           std::cout << "|GBFS| running awaitable for feed " << id << std::endl;
           co_await load_feed(c.gbfs_.value(), w, l, d.get(), "", id, feed.url_,
-                             feed.headers_.value_or(no_hdr), dir, timeout);
+                             feed.headers_.value_or(no_hdr), dir, client,
+                             timeout);
         },
         asio::deferred);
   });
