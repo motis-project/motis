@@ -31,13 +31,18 @@
 #include "motis/http_req.h"
 #include "motis/types.h"
 
+namespace beast = boost::beast;
+namespace http = beast::http;
+namespace asio = boost::asio;
+namespace ssl = asio::ssl;
+
 namespace motis {
 
 namespace {
 // TODO
-boost::asio::awaitable<void> timeout(
+asio::awaitable<void> timeout(
     std::chrono::steady_clock::duration const duration) {
-  boost::asio::steady_timer timer(co_await boost::asio::this_coro::executor);
+  asio::steady_timer timer(co_await asio::this_coro::executor);
   timer.expires_after(duration);
   co_await timer.async_wait();
 }
@@ -54,9 +59,8 @@ struct http_client::request {
 
   boost::urls::url url_{};
   std::map<std::string, std::string> headers_{};
-  boost::asio::experimental::channel<void(
-      boost::system::error_code,
-      boost::beast::http::response<boost::beast::http::dynamic_body>)>
+  asio::experimental::channel<void(boost::system::error_code,
+                                   http::response<http::dynamic_body>)>
       response_channel_;
 };
 
@@ -71,11 +75,10 @@ struct http_client::connection
         request_channel_{executor},
         requests_in_flight_{executor, max_in_flight} {
     ssl_ctx_.set_default_verify_paths();
-    ssl_ctx_.set_verify_mode(boost::asio::ssl::verify_none);
-    ssl_ctx_.set_options(boost::asio::ssl::context::default_workarounds |
-                         boost::asio::ssl::context::no_sslv2 |
-                         boost::asio::ssl::context::no_sslv3 |
-                         boost::asio::ssl::context::single_dh_use);
+    ssl_ctx_.set_verify_mode(ssl::verify_none);
+    ssl_ctx_.set_options(ssl::context::default_workarounds |
+                         ssl::context::no_sslv2 | ssl::context::no_sslv3 |
+                         ssl::context::single_dh_use);
   }
 
   void close() const {
@@ -84,58 +87,53 @@ struct http_client::connection
               << n_received_ << " responses, " << pending_requests_.size()
               << " still pending, " << n_connects_ << " connects" << std::endl;
     if (ssl()) {
-      auto ec = boost::beast::error_code{};
-      boost::beast::get_lowest_layer(*ssl_stream_)
+      auto ec = beast::error_code{};
+      beast::get_lowest_layer(*ssl_stream_)
           .socket()
-          .shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+          .shutdown(asio::ip::tcp::socket::shutdown_both, ec);
     } else {
-      auto ec = boost::beast::error_code{};
-      boost::beast::get_lowest_layer(*stream_).socket().shutdown(
-          boost::asio::ip::tcp::socket::shutdown_both, ec);
+      auto ec = beast::error_code{};
+      beast::get_lowest_layer(*stream_).socket().shutdown(
+          asio::ip::tcp::socket::shutdown_both, ec);
     }
   }
 
-  boost::asio::awaitable<void> connect() {
-    auto executor = co_await boost::asio::this_coro::executor;
-    auto resolver = boost::asio::ip::tcp::resolver{executor};
+  asio::awaitable<void> connect() {
+    auto executor = co_await asio::this_coro::executor;
+    auto resolver = asio::ip::tcp::resolver{executor};
 
     auto const results =
         co_await resolver.async_resolve(key_.host_, key_.port_);
     ++n_connects_;
     if (ssl()) {
       ssl_stream_ =
-          std::make_unique<boost::asio::ssl::stream<boost::beast::tcp_stream>>(
-              executor, ssl_ctx_);
+          std::make_unique<ssl::stream<beast::tcp_stream>>(executor, ssl_ctx_);
 
       if (!SSL_set_tlsext_host_name(ssl_stream_->native_handle(),
                                     const_cast<char*>(key_.host_.c_str()))) {
-        throw boost::system::system_error{
-            {static_cast<int>(::ERR_get_error()),
-             boost::asio::error::get_ssl_category()}};
+        throw boost::system::system_error{{static_cast<int>(::ERR_get_error()),
+                                           asio::error::get_ssl_category()}};
       }
 
-      co_await boost::beast::get_lowest_layer(*ssl_stream_)
-          .async_connect(results);
-      co_await ssl_stream_->async_handshake(
-          boost::asio::ssl::stream_base::client);
+      co_await beast::get_lowest_layer(*ssl_stream_).async_connect(results);
+      co_await ssl_stream_->async_handshake(ssl::stream_base::client);
     } else {
-      stream_ = std::make_unique<boost::beast::tcp_stream>(executor);
+      stream_ = std::make_unique<beast::tcp_stream>(executor);
       co_await stream_->async_connect(results);
     }
 
     requests_in_flight_.reset();
   }
 
-  boost::asio::awaitable<void> send_requests() {
+  asio::awaitable<void> send_requests() {
     try {
-      auto const send_request = [&](std::shared_ptr<request> request)
-          -> boost::asio::awaitable<void> {
-        auto req = boost::beast::http::request<boost::beast::http::string_body>{
-            boost::beast::http::verb::get, request->url_.encoded_target(), 11};
-        req.set(boost::beast::http::field::host, request->url_.host());
-        req.set(boost::beast::http::field::user_agent,
-                BOOST_BEAST_VERSION_STRING);
-        req.set(boost::beast::http::field::accept_encoding, "gzip");
+      auto const send_request =
+          [&](std::shared_ptr<request> request) -> asio::awaitable<void> {
+        auto req = http::request<http::string_body>{
+            http::verb::get, request->url_.encoded_target(), 11};
+        req.set(http::field::host, request->url_.host());
+        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+        req.set(http::field::accept_encoding, "gzip");
         for (auto const& [k, v] : request->headers_) {
           req.set(k, v);
         }
@@ -146,9 +144,9 @@ struct http_client::connection
         }
 
         if (ssl()) {
-          co_await boost::beast::http::async_write(*ssl_stream_, req);
+          co_await http::async_write(*ssl_stream_, req);
         } else {
-          co_await boost::beast::http::async_write(*stream_, req);
+          co_await http::async_write(*stream_, req);
         }
         ++n_sent_;
         std::cout << "[http::send_requests] sent " << n_sent_ << ", received "
@@ -175,17 +173,16 @@ struct http_client::connection
     }
   }
 
-  boost::asio::awaitable<void> receive_responses() {
+  asio::awaitable<void> receive_responses() {
     try {
       for (;;) {
-        auto buffer = boost::beast::flat_buffer{};
-        auto res =
-            boost::beast::http::response<boost::beast::http::dynamic_body>{};
+        auto buffer = beast::flat_buffer{};
+        auto res = http::response<http::dynamic_body>{};
 
         if (ssl()) {
-          co_await boost::beast::http::async_read(*ssl_stream_, buffer, res);
+          co_await http::async_read(*ssl_stream_, buffer, res);
         } else {
-          co_await boost::beast::http::async_read(*stream_, buffer, res);
+          co_await http::async_read(*stream_, buffer, res);
         }
         ++n_received_;
 
@@ -209,7 +206,7 @@ struct http_client::connection
     // TODO: boost::system::system_error
   }
 
-  boost::asio::awaitable<void> run() {
+  asio::awaitable<void> run() {
     using namespace boost::asio::experimental::awaitable_operators;
     auto const self = shared_from_this();
     do {
@@ -224,24 +221,23 @@ struct http_client::connection
   connection_key key_{};
   bool unlimited_pipelining_{false};
 
-  std::unique_ptr<boost::beast::tcp_stream> stream_;
-  std::unique_ptr<boost::asio::ssl::stream<boost::beast::tcp_stream>>
-      ssl_stream_;
+  std::unique_ptr<beast::tcp_stream> stream_;
+  std::unique_ptr<ssl::stream<beast::tcp_stream>> ssl_stream_;
 
   // the connection accepts new requests through the request_channel_
-  boost::asio::experimental::channel<void(boost::system::error_code,
-                                          std::shared_ptr<request>)>
+  asio::experimental::channel<void(boost::system::error_code,
+                                   std::shared_ptr<request>)>
       request_channel_;
   // unless unlimited_pipelining_ is true, the requests_in_flight_
   // channel limits the number of requests that are in-flight (i.e. request
   // sent and waiting for response)
-  boost::asio::experimental::channel<void(boost::system::error_code)>
+  asio::experimental::channel<void(boost::system::error_code)>
       requests_in_flight_;
 
   // requests that are sent and waiting for a response
   std::deque<std::shared_ptr<request>> pending_requests_;
 
-  boost::asio::ssl::context ssl_ctx_{boost::asio::ssl::context::tlsv12_client};
+  ssl::context ssl_ctx_{ssl::context::tlsv12_client};
 
   unsigned n_sent_{};
   unsigned n_received_{};
@@ -254,7 +250,7 @@ http_client::~http_client() {
   }
 }
 
-boost::asio::awaitable<http_response> http_client::get(
+asio::awaitable<http_response> http_client::get(
     boost::urls::url url, std::map<std::string, std::string> headers) {
   auto const https = url.scheme_id() == boost::urls::scheme::https;
   auto const key = connection_key{
@@ -264,11 +260,11 @@ boost::asio::awaitable<http_response> http_client::get(
             << ", ssl=" << key.ssl_ << "), target=" << url.encoded_target()
             << std::endl;
 
-  auto executor = co_await boost::asio::this_coro::executor;
+  auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
     auto conn = std::make_shared<connection>(executor, key);
     connections_[key] = conn;
-    boost::asio::co_spawn(executor, conn->run(), boost::asio::detached);
+    asio::co_spawn(executor, conn->run(), asio::detached);
   }
 
   auto req =
