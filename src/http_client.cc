@@ -344,7 +344,7 @@ asio::awaitable<http_response> http_client::get(
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn = std::make_shared<connection>(executor, key, timeout_, 5);
+    auto conn = std::make_shared<connection>(executor, key, timeout_, 1);
     connections_[key] = conn;
     asio::co_spawn(executor, conn->run(), asio::detached);
   }
