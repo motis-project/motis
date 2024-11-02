@@ -26,7 +26,7 @@ api::Place to_place(osr::location const l, std::string_view name) {
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
-      .level_ = to_float(l.lvl_),
+      .level_ = l.lvl_.to_float(),
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
 }
@@ -42,11 +42,11 @@ double get_level(osr::ways const* w,
                  osr::platforms const* pl,
                  platform_matches_t const* matches,
                  n::location_idx_t const l) {
-  return to_float(get_lvl(w, pl, matches, l));
+  return get_lvl(w, pl, matches, l).to_float();
 }
 
 osr::location get_location(api::Place const& p) {
-  return {{p.lat_, p.lon_}, osr::to_level(static_cast<float>(p.level_))};
+  return {{p.lat_, p.lon_}, osr::level_t{static_cast<float>(p.level_)}};
 }
 
 osr::location get_location(n::timetable const* tt,

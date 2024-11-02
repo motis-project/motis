@@ -36,7 +36,7 @@ json::value matches::operator()(json::value const& query) const {
         {"type", "Feature"},
         {"properties",
          {{"type", "platform"},
-          {"level", to_float(pl_.get_level(w_, p))},
+          {"level", pl_.get_level(w_, p).to_float()},
           {"platform_names", fmt::format("{}", get_names(pl_, p))}}},
         {"geometry", osr::to_point(osr::point::from_latlng(*center))}});
   });
@@ -54,19 +54,20 @@ json::value matches::operator()(json::value const& query) const {
     if (match == osr::platform_idx_t::invalid()) {
       props.emplace("level", "-");
     } else {
-      std::visit(
-          utl::overloaded{
-              [&](osr::way_idx_t x) {
-                props.emplace("osm_way_id", to_idx(w_.way_osm_idx_[x]));
-                props.emplace("level",
-                              to_float(w_.r_->way_properties_[x].from_level()));
-              },
-              [&](osr::node_idx_t x) {
-                props.emplace("osm_node_id", to_idx(w_.node_to_osm_[x]));
-                props.emplace(
-                    "level", to_float(w_.r_->node_properties_[x].from_level()));
-              }},
-          osr::to_ref(pl_.platform_ref_[match][0]));
+      std::visit(utl::overloaded{
+                     [&](osr::way_idx_t x) {
+                       props.emplace("osm_way_id", to_idx(w_.way_osm_idx_[x]));
+                       props.emplace(
+                           "level",
+                           w_.r_->way_properties_[x].from_level().to_float());
+                     },
+                     [&](osr::node_idx_t x) {
+                       props.emplace("osm_node_id", to_idx(w_.node_to_osm_[x]));
+                       props.emplace(
+                           "level",
+                           w_.r_->node_properties_[x].from_level().to_float());
+                     }},
+                 osr::to_ref(pl_.platform_ref_[match][0]));
     }
     matches.emplace_back(
         json::value{{"type", "Feature"},

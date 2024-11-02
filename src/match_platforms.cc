@@ -213,7 +213,7 @@ osr::platform_idx_t get_match(n::timetable const& tt,
                         tt.locations_.names_[l].view());
     auto const lvl = pl.get_level(w, x);
     auto const lvl_bonus =
-        lvl != osr::kNoLevel && osr::to_float(lvl) != 0.0F ? 5 : 0;
+        lvl != osr::kNoLevel && lvl.to_float() != 0.0F ? 5 : 0;
     auto const way_bonus = osr::is_way(pl.platform_ref_[x].front()) ? 20 : 0;
     auto const routes_bonus = get_routes_bonus(tt, l, pl.platform_names_[x]);
     auto const score =

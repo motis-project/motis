@@ -205,6 +205,8 @@ api::Itinerary route(osr::ways const& w,
       return {};
     }
 
+    std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
+              << "\n  -> CREATING DUMMY LEG\n";
     auto itinerary = api::Itinerary{
         .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                          *end_time - start_time)

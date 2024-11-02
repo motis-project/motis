@@ -74,7 +74,7 @@ api::footpaths_response footpaths::operator()(
             .stopId_ = std::string{l.id_},
             .lat_ = l.pos_.lat(),
             .lon_ = l.pos_.lng(),
-            .level_ = osr::to_float(pl_.get_level(w_, matches_[l.l_])),
+            .level_ = pl_.get_level(w_, matches_[l.l_]).to_float(),
             .vertexType_ = api::VertexTypeEnum::NORMAL};
   };
 
