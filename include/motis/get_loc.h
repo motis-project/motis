@@ -25,7 +25,7 @@ inline osr::location get_loc(
     }
   }
   auto const lvl = matches[l] == osr::platform_idx_t::invalid()
-                       ? osr::to_level(0.0F)
+                       ? osr::level_t{0.F}
                        : pl.get_level(w, matches[l]);
   return {pos, lvl};
 }

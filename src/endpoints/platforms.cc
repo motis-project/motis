@@ -9,7 +9,7 @@ namespace motis::ep {
 json::value platforms::operator()(json::value const& query) const {
   auto const& q = query.as_object();
   auto const level = q.contains("level")
-                         ? osr::to_level(query.at("level").to_number<float>())
+                         ? osr::level_t{query.at("level").to_number<float>()}
                          : osr::kNoLevel;
   auto const waypoints = q.at("waypoints").as_array();
   auto const min = osr::point::from_latlng(

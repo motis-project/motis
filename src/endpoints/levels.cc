@@ -23,8 +23,8 @@ api::levels_response levels::operator()(
   auto levels = hash_set<float>{};
   l_.find({min->pos_, max->pos_}, [&](osr::way_idx_t const x) {
     auto const p = w_.r_->way_properties_[x];
-    levels.emplace(to_float(p.from_level()));
-    levels.emplace(to_float(p.to_level()));
+    levels.emplace(p.from_level().to_float());
+    levels.emplace(p.to_level().to_float());
   });
   auto levels_sorted =
       utl::to_vec(levels, [](float const l) { return static_cast<double>(l); });
