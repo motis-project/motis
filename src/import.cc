@@ -40,6 +40,7 @@
 #include "osr/ways.h"
 
 #include "adr/adr.h"
+#include "adr/reverse.h"
 #include "adr/typeahead.h"
 
 #include "motis/adr_extend_tt.h"
@@ -249,7 +250,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -305,8 +306,20 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (write) {
                cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
              }
+             d.r_.reset();
+             {
+               auto r = adr::reverse{data_path / "adr",
+                                     cista::mmap::protection::WRITE};
+               r.build_rtree(*d.t_);
+               r.write();
+             }
              d.t_.get()->~typeahead();
-             d.load_geocoder();
+             if (c.geocoding_) {
+               d.load_geocoder();
+             }
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
            },
            [&]() { d.load_geocoder(); },
            {tt_hash, osm_hash, adr_version(), n_version()}};
