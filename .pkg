@@ -29,7 +29,7 @@
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=7c760e7c7ea7b6ffdda1befbf4fea96a786c7531
+  commit=6b5fd40a2b552fc5656aeff56f203a34c1d9e9af
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
   branch=master
