@@ -498,7 +498,7 @@ paths:
                     description: "debug statistics"
                     type: object
                     additionalProperties:
-                      type: string
+                      type: integer
                   from:
                     $ref: '#/components/schemas/Place'
                   to:
@@ -1045,7 +1045,7 @@ components:
           description: Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
           type: string
 
-    RelativeDirection:
+    Direction:
       type: string
       enum:
         - DEPART
@@ -1058,21 +1058,10 @@ components:
         - HARD_RIGHT
         - CIRCLE_CLOCKWISE
         - CIRCLE_COUNTERCLOCKWISE
+        - STAIRS
         - ELEVATOR
         - UTURN_LEFT
         - UTURN_RIGHT
-
-    AbsoluteDirection:
-      type: string
-      enum:
-        - NORTH
-        - NORTHEAST
-        - EAST
-        - SOUTHEAST
-        - SOUTH
-        - SOUTHWEST
-        - WEST
-        - NORTHWEST
 
     EncodedPolyline:
       type: object
@@ -1094,7 +1083,6 @@ components:
         - toLevel
         - polyline
         - relativeDirection
-        - absoluteDirection
         - distance
         - streetName
         - exit
@@ -1104,9 +1092,7 @@ components:
         - lat
       properties:
         relativeDirection:
-          $ref: '#/components/schemas/RelativeDirection'
-        absoluteDirection:
-          $ref: '#/components/schemas/AbsoluteDirection'
+          $ref: '#/components/schemas/Direction'
         distance:
           description: The distance in meters that this step takes.
           type: number

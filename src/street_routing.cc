@@ -56,14 +56,34 @@ std::optional<osr::path> get_path(osr::ways const& w,
 }
 
 std::vector<api::StepInstruction> get_step_instructions(
-    osr::ways const& w, std::span<osr::path::segment const> segments) {
-  return utl::to_vec(segments, [&](osr::path::segment const& s) {
+    osr::ways const& w,
+    osr::location const& from,
+    osr::location const& to,
+    std::span<osr::path::segment const> segments) {
+  auto steps = std::vector<api::StepInstruction>{};
+  auto pred_lvl = from.lvl_.to_float();
+  for (auto const& s : segments) {
+    if (s.from_ != osr::node_idx_t::invalid() &&
+        w.r_->node_properties_[s.from_].is_elevator()) {
+      steps.push_back(api::StepInstruction{
+          .relativeDirection_ = api::DirectionEnum::ELEVATOR,
+          .fromLevel_ = pred_lvl,
+          .toLevel_ = s.from_level_.to_float()});
+    }
+
     auto const way_name = s.way_ == osr::way_idx_t::invalid()
                               ? osr::string_idx_t::invalid()
                               : w.way_names_[s.way_];
-    return api::StepInstruction{
-        .relativeDirection_ = api::RelativeDirectionEnum::CONTINUE,  // TODO
-        .absoluteDirection_ = api::AbsoluteDirectionEnum::NORTH,  // TODO
+    auto const props = s.way_ != osr::way_idx_t::invalid()
+                           ? w.r_->way_properties_[s.way_]
+                           : osr::way_properties{};
+    steps.push_back(api::StepInstruction{
+        .relativeDirection_ =
+            s.way_ != osr::way_idx_t::invalid()
+                ? (props.is_elevator() ? api::DirectionEnum::ELEVATOR
+                   : props.is_steps()  ? api::DirectionEnum::STAIRS
+                                       : api::DirectionEnum::CONTINUE)
+                : api::DirectionEnum::CONTINUE,  // TODO entry/exit/u-turn
         .distance_ = static_cast<double>(s.dist_),
         .fromLevel_ = s.from_level_.to_float(),
         .toLevel_ = s.to_level_.to_float(),
@@ -78,8 +98,21 @@ std::vector<api::StepInstruction> get_step_instructions(
         .exit_ = {},  // TODO
         .stayOn_ = false,  // TODO
         .area_ = false  // TODO
-    };
-  });
+    });
+  }
+
+  if (!segments.empty()) {
+    auto& last = segments.back();
+    if (last.to_ != osr::node_idx_t::invalid() &&
+        w.r_->node_properties_[last.to_].is_elevator()) {
+      steps.push_back(api::StepInstruction{
+          .relativeDirection_ = api::DirectionEnum::ELEVATOR,
+          .fromLevel_ = pred_lvl,
+          .toLevel_ = to.lvl_.to_float()});
+    }
+  }
+
+  return steps;
 }
 
 struct sharing {
@@ -289,7 +322,8 @@ api::Itinerary route(osr::ways const& w,
             .endTime_ = is_last_leg && end_time ? *end_time : t,
             .distance_ = dist,
             .legGeometry_ = to_polyline<7>(concat),
-            .steps_ = get_step_instructions(w, range),
+            .steps_ = get_step_instructions(w, get_location(from),
+                                            get_location(to), range),
             .rental_ = is_rental ? std::optional{sharing_data->get_rental(
                                        range.back().to_)}
                                  : std::nullopt});
