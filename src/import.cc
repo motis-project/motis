@@ -206,7 +206,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                d.load_reverse_geocoder();
              }
            },
-           {osm_hash, adr_version()}};
+           {osm_hash,
+            adr_version(),
+            {"geocoding", c.geocoding_},
+            {"reverse_geocoding", c.reverse_geocoding_}}};
 
   auto tt = task{
       "tt",
@@ -322,7 +325,12 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
            },
            [&]() { d.load_geocoder(); },
-           {tt_hash, osm_hash, adr_version(), n_version()}};
+           {tt_hash,
+            osm_hash,
+            adr_version(),
+            n_version(),
+            {"geocoding", c.geocoding_},
+            {"reverse_geocoding", c.reverse_geocoding_}}};
 
   auto osr_footpath = task{
       "osr_footpath",

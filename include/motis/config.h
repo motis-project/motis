@@ -125,7 +125,3 @@ struct config {
 };
 
 }  // namespace motis
-
-#include "cista/reflection/to_tuple.h"
-
-static_assert(std::is_aggregate_v<motis::config::timetable>);
