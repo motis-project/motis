@@ -319,16 +319,6 @@ void add_static_transports(n::timetable const& tt,
   }
 }
 
-nigiri::mm_vecvec<nigiri::route_idx_t, geo::box> open_railviz_bb(
-    std::filesystem::path const& path, cista::mmap::protection const mode) {
-  return {
-      cista::basic_mmap_vec<geo::box, std::uint64_t>{cista::mmap{
-          fmt::format("{}_data.bin", path.generic_string()).data(), mode}},
-      cista::basic_mmap_vec<cista::base_t<nigiri::route_idx_t>, std::uint64_t>{
-          cista::mmap{fmt::format("{}_idx.bin", path.generic_string()).data(),
-                      mode}}};
-}
-
 api::trips_response get_trains(tag_lookup const& tags,
                                n::timetable const& tt,
                                n::rt_timetable const* rtt,
