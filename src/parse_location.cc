@@ -39,7 +39,7 @@ std::optional<osr::location> parse_location(std::string_view s,
     return std::nullopt;
   }
 
-  return osr::location{pos, osr::to_level(level)};
+  return osr::location{pos, osr::level_t{level}};
 }
 
 n::unixtime_t get_date_time(std::optional<std::string> const& date,

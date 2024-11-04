@@ -20,17 +20,14 @@ api::levels_response levels::operator()(
   auto const max = parse_location(query.max_);
   utl::verify(min.has_value(), "min not a coordinate: {}", query.min_);
   utl::verify(max.has_value(), "max not a coordinate: {}", query.max_);
-  auto levels = hash_set<osr::level_t>{};
+  auto levels = hash_set<float>{};
   l_.find({min->pos_, max->pos_}, [&](osr::way_idx_t const x) {
     auto const p = w_.r_->way_properties_[x];
-    levels.emplace(p.from_level());
-    if (p.from_level() != p.to_level()) {
-      levels.emplace(p.to_level());
-    }
+    levels.emplace(p.from_level().to_float());
+    levels.emplace(p.to_level().to_float());
   });
-  auto levels_sorted = utl::to_vec(levels, [](osr::level_t const l) {
-    return static_cast<double>(to_float(l));
-  });
+  auto levels_sorted =
+      utl::to_vec(levels, [](float const l) { return static_cast<double>(l); });
   utl::sort(levels_sorted, [](auto&& a, auto&& b) { return a > b; });
   return levels_sorted;
 }
