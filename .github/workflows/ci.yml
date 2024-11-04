@@ -114,6 +114,7 @@ jobs:
           .\build\buildcache\bin\buildcache.exe -z
           cmake --build build --target motis motis-test motis-web-ui
           $CompilerExitCode = $LastExitCode
+          Copy-Item ${env:VCToolsRedistDir}x64\Microsoft.VC143.CRT\*.dll .\build\
           .\build\buildcache\bin\buildcache.exe -s
           exit $CompilerExitCode
 
@@ -128,6 +129,7 @@ jobs:
           mkdir dist
           Copy-Item .\deps\tiles\profile dist\tiles-profiles -Recurse
           mv .\build\motis.exe dist
+          mv .\build\*.dll dist
           mv .\ui\build dist\ui
           cd dist
           7z a motis-windows.zip *
