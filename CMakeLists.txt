@@ -4,7 +4,7 @@ project(motis)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
-option(MOTIS_MIMALLOC "use mimalloc" OFF)
+option(MOTIS_MIMALLOC "use mimalloc" ON)
 
 if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
     if (MOTIS_MIMALLOC)
