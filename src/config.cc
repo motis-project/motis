@@ -65,6 +65,7 @@ config config::read_simple(std::vector<std::string> const& args) {
       c.osm_ = p;
       c.street_routing_ = true;
       c.geocoding_ = true;
+      c.reverse_geocoding_ = true;
       c.tiles_ = {config::tiles{.profile_ = "tiles-profiles/full.lua"}};
     } else {
       if (!c.timetable_.has_value()) {
@@ -399,7 +400,7 @@ config config::read_legacy(fs::path const& p) {
                      : std::nullopt;
   c.street_routing_ = is_module_active("osr") || is_module_active("osrm") ||
                       is_module_active("ppr");
-  c.geocoding_ = is_module_active("adr");
+  c.geocoding_ = c.reverse_geocoding_ = is_module_active("adr");
   c.tiles_ =
       is_module_active("tiles")
           ? std::optional{tiles{.profile_ = cfg.profile_path_,

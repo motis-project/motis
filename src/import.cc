@@ -40,6 +40,7 @@
 #include "osr/ways.h"
 
 #include "adr/adr.h"
+#include "adr/reverse.h"
 #include "adr/typeahead.h"
 
 #include "motis/adr_extend_tt.h"
@@ -205,7 +206,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                d.load_reverse_geocoder();
              }
            },
-           {osm_hash, adr_version()}};
+           {osm_hash,
+            adr_version(),
+            {"geocoding", c.geocoding_},
+            {"reverse_geocoding", c.reverse_geocoding_}}};
 
   auto tt = task{
       "tt",
@@ -305,11 +309,28 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              if (write) {
                cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
              }
+             d.r_.reset();
+             {
+               auto r = adr::reverse{data_path / "adr",
+                                     cista::mmap::protection::WRITE};
+               r.build_rtree(*d.t_);
+               r.write();
+             }
              d.t_.get()->~typeahead();
-             d.load_geocoder();
+             if (c.geocoding_) {
+               d.load_geocoder();
+             }
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
            },
            [&]() { d.load_geocoder(); },
-           {tt_hash, osm_hash, adr_version(), n_version()}};
+           {tt_hash,
+            osm_hash,
+            adr_version(),
+            n_version(),
+            {"geocoding", c.geocoding_},
+            {"reverse_geocoding", c.reverse_geocoding_}}};
 
   auto osr_footpath = task{
       "osr_footpath",
