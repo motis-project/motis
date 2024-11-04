@@ -319,7 +319,7 @@ TEST(motis, routing) {
   std::filesystem::remove_all("test/data", ec);
 
   auto const c = config{
-      .server_ = {{.web_folder_ = "ui/build"}},
+      .server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
       .osm_ = {"test/resources/test_case.osm.pbf"},
       .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
                   .db_size_ = 1024U * 1024U * 25U}},
