@@ -154,7 +154,7 @@
 													variant="outline"
 													on:click={() => {
 														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, f.place.level);
+														destination = posToLocation(x.to, x.to.level);
 														profile = 'foot';
 													}}
 												>
@@ -168,7 +168,7 @@
 													variant="outline"
 													on:click={() => {
 														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, f.place.level);
+														destination = posToLocation(x.to, x.to.level);
 														profile = 'foot';
 													}}
 												>
@@ -183,7 +183,7 @@
 													variant="outline"
 													on:click={() => {
 														start = posToLocation(f.place, f.place.level);
-														destination = posToLocation(x.to, f.place.level);
+														destination = posToLocation(x.to, x.to.level);
 														profile = 'wheelchair';
 													}}
 												>

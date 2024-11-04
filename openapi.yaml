@@ -67,8 +67,8 @@ paths:
       responses:
         200:
           description: |
-            A list of distance + duration pairs.
-            If no path was found, the object doesn't contain distance and duration.
+            A list of durations.
+            If no path was found, the object is empty.
           content:
             application/json:
               schema:
@@ -306,20 +306,26 @@ paths:
             optimal (e.g. the least transfers) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
+            
+            TODO: pass parameter to nigiri
           schema:
             type: number
 
         - name: minTransferTime
           in: query
           required: false
-          description: Minimum transfer time for each transfer.
+          description: |
+            Minimum transfer time for each transfer.
+            TODO: pass parameter to nigiri
           schema:
             type: integer
 
         - name: transferTimeFactor
           in: query
           required: false
-          description: Factor to multiply transfer times with.
+          description: |
+            Factor to multiply transfer times with.
+            TODO: pass parameter to nigiri
           schema:
             type: integer
             default: 1
@@ -420,7 +426,18 @@ paths:
           schema:
             type: integer
             default: 7200
-            minimum: 0
+            minium: 0
+
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+            
+            If set to `true`, all used transit trips are required to allow bike carriage.
 
         - name: maxPreTransitTime
           in: query
@@ -442,6 +459,17 @@ paths:
           schema:
             type: integer
             default: 900
+            minimum: 0
+
+        - name: maxDirectTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 30min which is `1800`.
+            Maximum time in seconds for direct connections.
+          schema:
+            type: integer
+            default: 1800
             minimum: 0
       responses:
         '200':
@@ -470,7 +498,7 @@ paths:
                     description: "debug statistics"
                     type: object
                     additionalProperties:
-                      type: string
+                      type: integer
                   from:
                     $ref: '#/components/schemas/Place'
                   to:
@@ -841,12 +869,10 @@ components:
       description: |
         - `NORMAL` - latitude / longitude coordinate or address
         - `BIKESHARE` - bike sharing station
-        - `BIKEPARK` - bike parking
         - `TRANSIT` - transit stop
       enum:
         - NORMAL
         - BIKESHARE
-        - BIKEPARK
         - TRANSIT
 
     Place:
@@ -1019,7 +1045,7 @@ components:
           description: Google polyline encoded coordinate sequence (with precision 7) where the trip travels on this segment.
           type: string
 
-    RelativeDirection:
+    Direction:
       type: string
       enum:
         - DEPART
@@ -1032,21 +1058,10 @@ components:
         - HARD_RIGHT
         - CIRCLE_CLOCKWISE
         - CIRCLE_COUNTERCLOCKWISE
+        - STAIRS
         - ELEVATOR
         - UTURN_LEFT
         - UTURN_RIGHT
-
-    AbsoluteDirection:
-      type: string
-      enum:
-        - NORTH
-        - NORTHEAST
-        - EAST
-        - SOUTHEAST
-        - SOUTH
-        - SOUTHWEST
-        - WEST
-        - NORTHWEST
 
     EncodedPolyline:
       type: object
@@ -1068,7 +1083,6 @@ components:
         - toLevel
         - polyline
         - relativeDirection
-        - absoluteDirection
         - distance
         - streetName
         - exit
@@ -1078,9 +1092,7 @@ components:
         - lat
       properties:
         relativeDirection:
-          $ref: '#/components/schemas/RelativeDirection'
-        absoluteDirection:
-          $ref: '#/components/schemas/AbsoluteDirection'
+          $ref: '#/components/schemas/Direction'
         distance:
           description: The distance in meters that this step takes.
           type: number

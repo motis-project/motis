@@ -55,6 +55,15 @@ int main(int ac, char** av) {
        "    static timetables.\n"
        "    This enables transit routing");
 
+  auto const help = [&]() {
+    std::cout << "MOTIS " << MOTIS_VERSION << "\n\n"
+              << "Usage:\n"
+                 "  - simple:   motis         [PATHS...]\n"
+                 "  - import:   motis import  [-c config.yml] [-d data_dir]\n"
+                 "  - server:   motis server  [-d data_dir]\n\n"
+              << desc << "\n";
+  };
+
   enum mode { kImport, kServer, kSimple } mode = kSimple;
   if (ac > 1) {
     auto const cmd = std::string_view{av[1]};
@@ -70,6 +79,9 @@ int main(int ac, char** av) {
         ++av;
         break;
     }
+  } else {
+    help();
+    return 1;
   }
 
   auto pos = po::positional_options_description{}.add("paths", -1);
@@ -82,12 +94,7 @@ int main(int ac, char** av) {
     std::cout << MOTIS_VERSION << "\n";
     return 0;
   } else if (vm.count("help")) {
-    std::cout << "MOTIS " << MOTIS_VERSION << "\n\n"
-              << "Usage:\n"
-                 "  - simple:   motis         [PATHS...]\n"
-                 "  - import:   motis import  [-c config.yml] [-d data_dir]\n"
-                 "  - server:   motis server  [-d data_dir]\n\n"
-              << desc << "\n";
+    help();
     return 0;
   }
 
