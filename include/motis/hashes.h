@@ -26,7 +26,7 @@ constexpr auto const tiles_version = []() {
   return meta_entry_t{"tiles_bin_ver", 1U};
 };
 constexpr auto const osr_footpath_version = []() {
-  return meta_entry_t{"osr_footpath_bin_ver", 1U};
+  return meta_entry_t{"osr_footpath_bin_ver", 2U};
 };
 
 std::string to_str(meta_t const&);
