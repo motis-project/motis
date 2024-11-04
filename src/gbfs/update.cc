@@ -61,8 +61,7 @@ awaitable<gbfs_file> fetch_file(std::string_view const name,
                                 std::string_view const url,
                                 headers_t const& headers,
                                 std::optional<std::filesystem::path> const& dir,
-                                http_client& client,
-                                std::chrono::seconds timeout) {
+                                http_client& client) {
   auto content = std::string{};
   if (dir.has_value()) {
     content = read_file(*dir / fmt::format("{}.json", name));
@@ -93,8 +92,7 @@ awaitable<void> load_feed(config::gbfs const& c,
                           std::string const& url,
                           headers_t const& headers,
                           std::optional<std::filesystem::path> const& dir,
-                          http_client& client,
-                          std::chrono::seconds timeout);
+                          http_client& client);
 
 struct manifest_feed {
   std::string combined_id_{};
@@ -108,7 +106,6 @@ awaitable<void> load_manifest(config::gbfs const& c,
                               std::string const& prefix,
                               headers_t const& headers,
                               http_client& client,
-                              std::chrono::seconds timeout,
                               boost::json::object const& root) {
   auto feeds = std::vector<manifest_feed>{};
   if (root.contains("data") &&
@@ -146,7 +143,7 @@ awaitable<void> load_manifest(config::gbfs const& c,
         executor,
         [&, feed]() -> awaitable<void> {
           co_await load_feed(c, w, l, d, prefix, feed.combined_id_, feed.url_,
-                             headers, {}, client, timeout);
+                             headers, {}, client);
         },
         asio::deferred);
   });
@@ -165,26 +162,24 @@ awaitable<void> load_feed(config::gbfs const& c,
                           std::string const& url,
                           headers_t const& headers,
                           std::optional<std::filesystem::path> const& dir,
-                          http_client& client,
-                          std::chrono::seconds timeout) {
+                          http_client& client) {
   std::cout << "[GBFS] loading feed " << id << ": " << url << std::endl;
   try {
     auto const discovery =
-        co_await fetch_file("gbfs", url, headers, dir, client, timeout);
+        co_await fetch_file("gbfs", url, headers, dir, client);
 
     auto const& root = discovery.json_.as_object();
     if ((root.contains("data") &&
          root.at("data").as_object().contains("datasets")) ||
         root.contains("systems")) {
       // File is not an individual feed, but a manifest.json / Lamassu file
-      co_return co_await load_manifest(c, w, l, d, id, headers, client, timeout,
-                                       root);
+      co_return co_await load_manifest(c, w, l, d, id, headers, client, root);
     }
 
     auto const urls = parse_discovery(discovery.json_);
 
     auto const fetch = [&](std::string_view const name) {
-      return fetch_file(name, urls.at(name), headers, dir, client, timeout);
+      return fetch_file(name, urls.at(name), headers, dir, client);
     };
 
     auto const provider_idx = gbfs_provider_idx_t{d->providers_.size()};
@@ -284,7 +279,7 @@ awaitable<void> update(config const& c,
   auto d = std::make_shared<gbfs_data>();
   auto client = http_client{};
   auto const no_hdr = headers_t{};
-  auto const timeout = std::chrono::seconds{c.gbfs_->http_timeout_};
+  client.timeout_ = std::chrono::seconds{c.gbfs_->http_timeout_};
 
   auto executor = co_await asio::this_coro::executor;
   auto awaitables = utl::to_vec(c.gbfs_->feeds_, [&](auto const& f) {
@@ -297,11 +292,9 @@ awaitable<void> update(config const& c,
 
     return boost::asio::co_spawn(
         executor,
-        [id, feed, dir, &c, &d, &w, &l, &no_hdr, &client,
-         &timeout]() -> awaitable<void> {
+        [id, feed, dir, &c, &d, &w, &l, &no_hdr, &client]() -> awaitable<void> {
           co_await load_feed(c.gbfs_.value(), w, l, d.get(), "", id, feed.url_,
-                             feed.headers_.value_or(no_hdr), dir, client,
-                             timeout);
+                             feed.headers_.value_or(no_hdr), dir, client);
         },
         asio::deferred);
   });
