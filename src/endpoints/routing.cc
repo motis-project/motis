@@ -350,7 +350,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   return {itineraries, fastest_direct};
 }
 
-std::map<std::string, std::uint64_t> join(auto&&... maps) {
+using stats_map_t = std::map<std::string, std::uint64_t>;
+
+stats_map_t join(auto&&... maps) {
   auto ret = std::map<std::string, std::uint64_t>{};
   auto const add = [&](std::map<std::string, std::uint64_t> const& x) {
     ret.insert(begin(x), end(x));
@@ -431,6 +433,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   auto const [start_time, t] = get_start_time(query);
 
+  UTL_START_TIMING(direct);
   auto const [direct, fastest_direct] =
       (holds_alternative<osr::location>(from) &&
        holds_alternative<osr::location>(to) && t.has_value())
@@ -438,12 +441,14 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.wheelchair_,
                          std::chrono::seconds{query.maxDirectTime_})
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
+  UTL_STOP_TIMING(direct);
 
   if (utl::find(modes, api::ModeEnum::TRANSIT) != end(modes) &&
       fastest_direct > 5min) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
+    UTL_START_TIMING(query_preparation);
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
         .start_match_mode_ = get_match_mode(start),
@@ -517,6 +522,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                ? std::nullopt
                                : std::optional{fastest_direct}};
     remove_slower_than_fastest_direct(q);
+    UTL_STOP_TIMING(query_preparation);
 
     if (tt_->locations_.footpaths_out_.at(q.prf_idx_).empty()) {
       q.prf_idx_ = 0U;
@@ -535,7 +541,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         std::nullopt);
 
     return {
-        .debugOutput_ = join(r.search_stats_.to_map(), r.algo_stats_.to_map()),
+        .debugOutput_ = join(stats_map_t{{"direct", UTL_TIMING_MS(direct)},
+                                         {"query_preparation",
+                                          UTL_TIMING_MS(query_preparation)}},
+                             r.search_stats_.to_map(), r.algo_stats_.to_map()),
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),
