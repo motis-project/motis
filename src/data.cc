@@ -167,7 +167,8 @@ data& data::operator=(data&&) = default;
 void data::load_osr() {
   auto const osr_path = path_ / "osr";
   w_ = std::make_unique<osr::ways>(osr_path, cista::mmap::protection::READ);
-  l_ = std::make_unique<osr::lookup>(*w_);
+  l_ = std::make_unique<osr::lookup>(*w_, osr_path,
+                                     cista::mmap::protection::READ);
   elevator_nodes_ =
       std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*w_));
   pl_ =
