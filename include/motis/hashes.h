@@ -11,7 +11,7 @@ using meta_entry_t = std::pair<std::string, std::uint64_t>;
 using meta_t = std::map<std::string, std::uint64_t>;
 
 constexpr auto const osr_version = []() {
-  return meta_entry_t{"osr_bin_ver", 6U};
+  return meta_entry_t{"osr_bin_ver", 7U};
 };
 constexpr auto const adr_version = []() {
   return meta_entry_t{"adr_bin_ver", 2U};
@@ -26,7 +26,7 @@ constexpr auto const tiles_version = []() {
   return meta_entry_t{"tiles_bin_ver", 1U};
 };
 constexpr auto const osr_footpath_version = []() {
-  return meta_entry_t{"osr_footpath_bin_ver", 2U};
+  return meta_entry_t{"osr_footpath_bin_ver", 1U};
 };
 
 std::string to_str(meta_t const&);
