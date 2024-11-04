@@ -209,7 +209,6 @@ void data::load_geocoder() {
 void data::load_reverse_geocoder() {
   r_ = std::make_unique<adr::reverse>(path_ / "adr",
                                       cista::mmap::protection::READ);
-  r_->build_rtree(*t_);
 }
 
 void data::load_matches() {
