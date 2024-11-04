@@ -14,6 +14,7 @@
 #include "geo/latlng.h"
 
 #include "osr/routing/additional_edge.h"
+#include "osr/routing/sharing_data.h"
 #include "osr/types.h"
 
 #include "motis/point_rtree.h"
@@ -163,6 +164,15 @@ struct additional_node {
 };
 
 struct gbfs_provider {
+  osr::sharing_data get_sharing_data(
+      osr::node_idx_t::value_t const additional_node_offset) const {
+    return {.start_allowed_ = start_allowed_,
+            .end_allowed_ = end_allowed_,
+            .through_allowed_ = through_allowed_,
+            .additional_node_offset_ = additional_node_offset,
+            .additional_edges_ = additional_edges_};
+  }
+
   std::string id_;  // from config
   gbfs_provider_idx_t idx_{};
 
