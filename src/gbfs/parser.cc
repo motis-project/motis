@@ -67,7 +67,7 @@ tg_geom* parse_multipolygon(json::object const& json) {
     for (auto const poly : polys) {
       tg_poly_free(poly);
     }
-  });
+  })
 
   for (auto const& j_poly : coordinates) {
     auto rings = std::vector<tg_ring*>{};
@@ -75,7 +75,7 @@ tg_geom* parse_multipolygon(json::object const& json) {
       for (auto const ring : rings) {
         tg_ring_free(ring);
       }
-    });
+    })
     for (auto const& j_ring : j_poly.as_array()) {
       auto points = utl::to_vec(j_ring.as_array(), [&](auto const& j_pt) {
         auto const& j_pt_arr = j_pt.as_array();
@@ -88,7 +88,7 @@ tg_geom* parse_multipolygon(json::object const& json) {
           points.front().y != points.back().y) {
         points.push_back(points.front());
       }
-      auto ring = tg_ring_new(points.data(), points.size());
+      auto ring = tg_ring_new(points.data(), static_cast<int>(points.size()));
       utl::verify(ring != nullptr, "failed to create ring");
       rings.emplace_back(ring);
     }

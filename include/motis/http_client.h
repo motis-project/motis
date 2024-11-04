@@ -23,9 +23,9 @@ constexpr auto const kUnlimitedHttpPipelining =
 struct http_client {
   enum class error { success = 0, too_many_redirects, request_failed };
 
-  class error_category_impl : public boost::system::error_category {
+  struct error_category_impl : public boost::system::error_category {
+    virtual ~error_category_impl() = default;
     char const* name() const noexcept override { return "http_client"; }
-
     std::string message(int ev) const override;
   };
 

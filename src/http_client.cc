@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <iostream>
 
@@ -50,8 +51,8 @@ std::string http_client::error_category_impl::message(int ev) const {
     case error::success: return "success";
     case error::too_many_redirects: return "too many redirects";
     case error::request_failed: return "request failed (max retries reached)";
-    default: return "unknown";
   }
+  std::unreachable();
 }
 
 boost::system::error_category const& http_client_error_category() {
@@ -192,7 +193,7 @@ struct http_client::connection
         pending_requests_.push_back(request);
         co_await send_request(request);
       }
-    } catch (std::exception const& ex) {
+    } catch (std::exception const&) {
     }
   }
 
@@ -248,7 +249,7 @@ struct http_client::connection
         co_await req->response_channel_.async_send(boost::system::error_code{},
                                                    std::move(res));
       }
-    } catch (std::exception const& ex) {
+    } catch (std::exception const&) {
     }
   }
 
