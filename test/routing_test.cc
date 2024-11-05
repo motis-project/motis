@@ -373,7 +373,7 @@ TEST(motis, routing) {
         "&toPlace=49.87253873915287,8.629724234688751"
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
-        "&mode=TRANSIT,WALK,BIKE_RENTAL");
+        "&directModes=WALK,BIKE_RENTAL");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.direct_) {
@@ -397,14 +397,13 @@ TEST(motis, routing) {
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
-        "&mode=TRANSIT,WALK,BIKE_RENTAL");
+        "&preTransitModes=WALK,BIKE_RENTAL");
 
     auto ss = std::stringstream{};
     for (auto const& j : plan_response.itineraries_) {
       print_short(ss, j);
     }
 
-    std::cout << "---\n" << ss.str() << "\n---\n" << std::endl;
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=03:14, duration=01:49, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
