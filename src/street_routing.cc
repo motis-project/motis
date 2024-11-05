@@ -330,8 +330,10 @@ api::Itinerary route(osr::ways const& w,
                                        range.back().to_)}
                                  : std::nullopt});
 
-        leg.from_.departure_ = leg.startTime_;
-        leg.to_.arrival_ = leg.endTime_;
+        leg.from_.departure_ = leg.from_.scheduledDeparture_ =
+            leg.scheduledStartTime_ = leg.startTime_;
+        leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.scheduledEndTime_ =
+            leg.endTime_;
 
         pred_place = next_place;
         pred_end_time = t;
