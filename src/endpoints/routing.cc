@@ -205,58 +205,6 @@ std::vector<n::routing::offset> routing::get_offsets(
   return offsets;
 }
 
-std::vector<api::ModeEnum> get_from_modes(
-    std::vector<api::ModeEnum> const& modes) {
-  auto ret = std::vector<api::ModeEnum>{};
-  for (auto const& m : modes) {
-    switch (m) {
-      case api::ModeEnum::WALK: ret.emplace_back(api::ModeEnum::WALK); break;
-      case api::ModeEnum::CAR_HAILING: [[fallthrough]];
-      case api::ModeEnum::CAR: ret.emplace_back(api::ModeEnum::CAR); break;
-      case api::ModeEnum::BIKE_TO_PARK: [[fallthrough]];
-      case api::ModeEnum::BIKE: ret.emplace_back(api::ModeEnum::BIKE); break;
-      case api::ModeEnum::BIKE_RENTAL:
-        ret.emplace_back(api::ModeEnum::BIKE_RENTAL);
-        break;
-
-      case api::ModeEnum::CAR_TO_PARK:
-      case api::ModeEnum::CAR_SHARING:
-      case api::ModeEnum::FLEXIBLE:
-      case api::ModeEnum::CAR_RENTAL:
-      case api::ModeEnum::SCOOTER_RENTAL:
-      case api::ModeEnum::CAR_PICKUP: throw utl::fail("mode not supported yet");
-
-      default: continue;
-    }
-  }
-  return ret;
-}
-
-std::vector<api::ModeEnum> get_to_modes(
-    std::vector<api::ModeEnum> const& modes) {
-  auto ret = std::vector<api::ModeEnum>{};
-  for (auto const& m : modes) {
-    switch (m) {
-      case api::ModeEnum::WALK: ret.emplace_back(api::ModeEnum::WALK); break;
-      case api::ModeEnum::BIKE: ret.emplace_back(api::ModeEnum::BIKE); break;
-      case api::ModeEnum::BIKE_RENTAL:
-        ret.emplace_back(api::ModeEnum::BIKE_RENTAL);
-        break;
-
-      case api::ModeEnum::CAR_TO_PARK:
-      case api::ModeEnum::CAR_HAILING:
-      case api::ModeEnum::CAR_SHARING:
-      case api::ModeEnum::CAR_RENTAL:
-      case api::ModeEnum::FLEXIBLE:
-      case api::ModeEnum::SCOOTER_RENTAL:
-      case api::ModeEnum::CAR_PICKUP: throw utl::fail("mode not supported yet");
-
-      default: continue;
-    }
-  }
-  return ret;
-}
-
 n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
   auto mask = n::routing::clasz_mask_t{0U};
   auto const allow = [&](n::clasz const c) {
@@ -404,6 +352,23 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
   }
 }
 
+std::vector<n::routing::via_stop> get_via_stops(
+    n::timetable const& tt,
+    tag_lookup const& tags,
+    std::optional<std::vector<std::string>> const& vias,
+    std::vector<std::int64_t> const& times) {
+  if (!vias.has_value()) {
+    return {};
+  }
+
+  auto ret = std::vector<n::routing::via_stop>{};
+  for (auto i = 0U; i != vias->size(); ++i) {
+    ret.push_back({tags.get_location(tt, (*vias)[i]),
+                   n::duration_t{i < times.size() ? times[i] : 0}});
+  }
+  return ret;
+}
+
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
@@ -414,22 +379,22 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   }
 
   auto const query = api::plan_params{url.params()};
-  auto const modes = [&]() {
-    auto m = query.mode_;
+  auto const deduplicate = [](auto m) {
     utl::erase_duplicates(m);
     return m;
-  }();
+  };
+  auto const ingressModes = deduplicate(query.ingressModes_);
+  auto const egressModes = deduplicate(query.egressModes_);
+  auto const directModes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
   auto const from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
   auto const to_p = to_place(tt_, tags_, w_, pl_, matches_, to);
-  auto const from_modes = get_from_modes(modes);
-  auto const to_modes = get_to_modes(modes);
 
   auto const& start = query.arriveBy_ ? to : from;
   auto const& dest = query.arriveBy_ ? from : to;
-  auto const& start_modes = query.arriveBy_ ? to_modes : from_modes;
-  auto const& dest_modes = query.arriveBy_ ? from_modes : to_modes;
+  auto const& start_modes = query.arriveBy_ ? egressModes : ingressModes;
+  auto const& dest_modes = query.arriveBy_ ? ingressModes : egressModes;
 
   auto const [start_time, t] = get_start_time(query);
 
@@ -437,14 +402,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const [direct, fastest_direct] =
       (holds_alternative<osr::location>(from) &&
        holds_alternative<osr::location>(to) && t.has_value())
-          ? route_direct(e, gbfs.get(), from_p, to_p, from_modes, *t,
+          ? route_direct(e, gbfs.get(), from_p, to_p, directModes, *t,
                          query.wheelchair_,
                          std::chrono::seconds{query.maxDirectTime_})
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
-  if (utl::find(modes, api::ModeEnum::TRANSIT) != end(modes) &&
-      fastest_direct > 5min) {
+  if (!query.transitModes_.empty() && fastest_direct > 5min) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
@@ -516,8 +480,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
         .prf_idx_ = static_cast<n::profile_idx_t>(query.wheelchair_ ? 2U : 1U),
-        .allowed_claszes_ = to_clasz_mask(modes),
+        .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
+        .transfer_time_settings_ =
+            n::routing::transfer_time_settings{
+                .default_ = (query.minTransferTime_ == 0 &&
+                             query.transferTimeFactor_ == 1.0),
+                .min_transfer_time_ = n::duration_t{query.minTransferTime_},
+                .factor_ = static_cast<float>(query.transferTimeFactor_)},
+        .via_stops_ =
+            get_via_stops(*tt_, *tags_, query.via_, query.viaMinimumStay_),
         .fastest_direct_ = fastest_direct == kInfinityDuration
                                ? std::nullopt
                                : std::optional{fastest_direct}};

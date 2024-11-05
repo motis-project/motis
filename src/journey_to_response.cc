@@ -101,27 +101,31 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto const agency = enter_stop.get_provider();
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
-                  .from_ = from,
-                  .to_ = to,
+                  .mode_ = to_mode(enter_stop.get_clasz()),
+                  .from_ = to_place(tt_location{enter_stop}),
+                  .to_ = to_place(tt_location{exit_stop}),
                   .duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count(),
                   .startTime_ = j_leg.dep_time_,
-                  .endTime_ = j_leg.arr_time_});
-              leg.from_.departure_ = j_leg.dep_time_;
-              leg.to_.arrival_ = j_leg.arr_time_;
-              leg.mode_ = api::ModeEnum::TRANSIT;
-              leg.source_ = fmt::format("{}", fmt::streamed(fr.dbg()));
-              leg.headsign_ = enter_stop.direction();
-              leg.routeColor_ = to_str(color.color_);
-              leg.routeTextColor_ = to_str(color.text_color_);
-              leg.mode_ = to_mode(enter_stop.get_clasz());
-              leg.realTime_ = fr.is_rt();
-              leg.tripId_ = tags.id(tt, enter_stop);
-              leg.agencyName_ = agency.long_name_;
-              leg.agencyId_ = agency.short_name_;
-              leg.routeShortName_ = enter_stop.trip_display_name();
-              leg.departureDelay_ =
-                  to_ms(enter_stop.delay(n::event_type::kDep));
-              leg.arrivalDelay_ = to_ms(exit_stop.delay(n::event_type::kArr));
+                  .endTime_ = j_leg.arr_time_,
+                  .scheduledStartTime_ =
+                      enter_stop.scheduled_time(n::event_type::kDep),
+                  .scheduledEndTime_ =
+                      exit_stop.scheduled_time(n::event_type::kArr),
+                  .realTime_ = fr.is_rt(),
+                  .headsign_ = std::string{enter_stop.direction()},
+                  .routeColor_ = to_str(color.color_),
+                  .routeTextColor_ = to_str(color.text_color_),
+                  .agencyName_ = {std::string{agency.long_name_}},
+                  .agencyUrl_ = {std::string{agency.url_}},
+                  .agencyId_ = {std::string{agency.short_name_}},
+                  .tripId_ = tags.id(tt, enter_stop),
+                  .routeShortName_ = {std::string{
+                      enter_stop.trip_display_name()}},
+                  .source_ = fmt::to_string(fr.dbg())});
+              leg.from_.departure_ = leg.startTime_;
+              leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
+              leg.to_.arrival_ = leg.endTime_;
+              leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
 
               auto polyline = geo::polyline{};
               fr.for_each_shape_point(
@@ -131,28 +135,20 @@ api::Itinerary journey_to_response(osr::ways const* w,
               leg.legGeometry_.length_ =
                   static_cast<std::int64_t>(polyline.size());
 
-              leg.intermediateStops_ = std::vector<api::Place>{};
-
-              leg.from_.departureDelay_ = leg.departureDelay_ =
-                  to_ms(fr[t.stop_range_.from_].delay(n::event_type::kDep));
-              leg.to_.arrivalDelay_ = leg.arrivalDelay_ =
-                  to_ms(fr[t.stop_range_.to_ - 1U].delay(n::event_type::kArr));
-
-              leg.from_ = to_place(tt_location{fr[t.stop_range_.from_]});
-              leg.to_ = to_place(tt_location{fr[t.stop_range_.to_ - 1U]});
-
               auto const first =
                   static_cast<n::stop_idx_t>(t.stop_range_.from_ + 1U);
               auto const last =
                   static_cast<n::stop_idx_t>(t.stop_range_.to_ - 1U);
+              leg.intermediateStops_ = std::vector<api::Place>{};
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
                 auto& p = leg.intermediateStops_->emplace_back(
                     to_place(tt_location{stop}));
                 p.departure_ = stop.time(n::event_type::kDep);
-                p.departureDelay_ = to_ms(stop.delay(n::event_type::kDep));
+                p.scheduledDeparture_ =
+                    stop.scheduled_time(n::event_type::kDep);
                 p.arrival_ = stop.time(n::event_type::kArr);
-                p.arrivalDelay_ = to_ms(stop.delay(n::event_type::kArr));
+                p.scheduledArrival_ = stop.scheduled_time(n::event_type::kArr);
               }
             },
             [&](n::footpath) {
