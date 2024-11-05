@@ -50,12 +50,15 @@
 		keyFrames: Array<KeyFrame>;
 		arrival: number;
 		departure: number;
+		arrivalDelay: number;
 	};
 
 	const getKeyFrames = (t: TripSegment): KeyFrameExt => {
 		let keyFrames: Array<KeyFrame> = [];
 		const departure = new Date(t.departure).getTime();
 		const arrival = new Date(t.arrival).getTime();
+		const scheduledArrival = new Date(t.scheduledArrival).getTime();
+		const arrivalDelay = arrival - scheduledArrival;
 		const coordinates = polyline.decode(t.polyline).map(([x, y]): [number, number] => [y, x]);
 		const totalDuration = arrival - departure;
 		let currDistance = 0;
@@ -80,7 +83,7 @@
 			currDistance += distance;
 		}
 		keyFrames.push({ point: coordinates[coordinates.length - 1], time: arrival, heading: 0 });
-		return { keyFrames, arrival, departure };
+		return { keyFrames, arrival, departure, arrivalDelay };
 	};
 
 	const getFrame = (keyframes: Array<KeyFrame>, timestamp: number) => {

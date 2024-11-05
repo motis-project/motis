@@ -96,10 +96,9 @@
 											<div class="text-xs font-bold uppercase text-slate-400">Departure</div>
 											<Time
 												isRealtime={it.legs[0].realTime}
-												rt={true}
 												timestamp={it.startTime}
-												delay={it.legs[0].departureDelay}
-												showAlways={true}
+												scheduledTimestamp={it.legs[0].scheduledStartTime}
+												variant={'realtime-show-always'}
 											/>
 										</div>
 										<Separator orientation="vertical" />
@@ -107,10 +106,9 @@
 											<div class="text-xs font-bold uppercase text-slate-400">Arrival</div>
 											<Time
 												isRealtime={it.legs[it.legs.length - 1].realTime}
-												rt={true}
 												timestamp={it.endTime}
-												delay={it.legs[it.legs.length - 1].arrivalDelay}
-												showAlways={true}
+												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledStartTime}
+												variant={'realtime-show-always'}
 											/>
 										</div>
 										<Separator orientation="vertical" />
