@@ -333,7 +333,7 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
   }
 
   constexpr auto const kMaxDuration =
-      n::duration_t{std::numeric_limits<n::duration_t>::max()};
+      n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
   auto const worse_than_fastest_direct = [&](n::duration_t const min) {
     return [&, min](auto const& o) {
