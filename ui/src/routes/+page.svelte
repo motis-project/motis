@@ -13,7 +13,8 @@
 		plan,
 		type PlanResponse,
 		trip,
-		type Mode
+		type Mode,
+		type PlanData
 	} from '$lib/openapi';
 	import ItineraryList from './ItineraryList.svelte';
 	import ConnectionDetail from './ConnectionDetail.svelte';
@@ -102,7 +103,7 @@
 	let modes = $derived(['WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
-			? {
+			? ({
 					query: {
 						time: time.toISOString(),
 						fromPlace: toPlaceString(from),
@@ -110,11 +111,11 @@
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
 						wheelchair,
-						ingressModes: modes,
-						egressModes: modes,
+						preTransitModes: modes,
+						postTransitModes: modes,
 						directModes: modes
 					}
-				}
+				} as PlanData)
 			: undefined
 	);
 	let baseResponse = $state<Promise<PlanResponse>>();
