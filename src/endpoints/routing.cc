@@ -342,7 +342,7 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
   };
   auto const get_min_duration = [&](auto&& x) {
     return x.empty() ? kMaxDuration
-                     : utl::max_element(x, [](auto&& a, auto&& b) {
+                     : utl::min_element(x, [](auto&& a, auto&& b) {
                          return a.duration() < b.duration();
                        })->duration();
   };
