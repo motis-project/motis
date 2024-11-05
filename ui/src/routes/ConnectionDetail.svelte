@@ -80,16 +80,13 @@
 					<div class="border-t w-full h-0"></div>
 					<div class="text-sm text-muted-foreground text-nowrap px-2">
 						{#if pred.from.track}
-							Ankunft auf Gleis {pred.from.track}
+							Ankunft auf Gleis {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
-						{#if pred.from.track && pred.duration !== 0}
-							,
-						{/if}
-						{#if pred.duration !== 0}
+						{#if pred.duration}
 							{formatDurationSec(pred.duration)} Fußweg
 						{/if}
-						{#if pred.distance != 0}
-							({Math.round(pred.distance!)} m)
+						{#if pred.distance}
+							({Math.round(pred.distance)} m)
 						{/if}
 					</div>
 				{/if}
