@@ -1,0 +1,21 @@
+{
+  "last_updated": 1729500733,
+  "ttl": 240,
+  "version": "2.3",
+  "data": {
+    "bikes": [
+      {
+        "bike_id": "CAB:Vehicle:887f506f-23fb-48d4-92f7-3c74446e729c",
+        "lat": 49.87530897258006,
+        "lon": 8.627667300924486,
+        "is_reserved": false,
+        "is_disabled": false,
+        "rental_uris": {
+          "android": "https://www.callabike.de/bike?number=12404",
+          "ios": "https://www.callabike.de/bike?number=12404"
+        },
+        "vehicle_type_id": "CAB:VehicleType:832e0956-f155-3c82-9211-c2beb9f6929d"
+      }
+    ]
+  }
+}

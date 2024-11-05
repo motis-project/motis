@@ -1,0 +1,15 @@
+{
+  "last_updated": 1729497561,
+  "ttl": 86400,
+  "version": "2.3",
+  "data": {
+    "vehicle_types": [
+      {
+        "vehicle_type_id": "CAB:VehicleType:832e0956-f155-3c82-9211-c2beb9f6929d",
+        "form_factor": "bicycle",
+        "propulsion_type": "human",
+        "name": "bike"
+      }
+    ]
+  }
+}

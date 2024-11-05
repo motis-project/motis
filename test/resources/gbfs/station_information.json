@@ -1,0 +1,15 @@
+{
+  "last_updated": 1729479276,
+  "ttl": 86400,
+  "version": "2.3",
+  "data": {
+    "stations": [
+      {
+        "station_id": "CAB:Station:4a58211d-7fc2-4897-bc9f-3767f804953a",
+        "name": "Darmstadt Hbf",
+        "lat": 49.871651,
+        "lon": 8.631084
+      }
+    ]
+  }
+}

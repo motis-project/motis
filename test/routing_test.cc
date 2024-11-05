@@ -1,7 +1,12 @@
 #include "gtest/gtest.h"
 
+#include "boost/asio/co_spawn.hpp"
+#include "boost/asio/detached.hpp"
 #include "boost/json.hpp"
 
+#ifdef NO_DATA
+#undef NO_DATA
+#endif
 #include "gtfsrt/gtfs-realtime.pb.h"
 
 #include "utl/init_from.h"
@@ -12,6 +17,7 @@
 #include "motis/data.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
+#include "motis/gbfs/update.h"
 #include "motis/import.h"
 
 namespace json = boost::json;
@@ -312,24 +318,37 @@ TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
 
-  auto d = import(
-      config{.server_ = {{.web_folder_ = "ui/build"}},
-             .osm_ = {"test/resources/test_case.osm.pbf"},
-             .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
-                         .db_size_ = 1024U * 1024U * 25U}},
-             .timetable_ =
-                 config::timetable{
-                     .first_day_ = "2019-05-01",
-                     .num_days_ = 2,
-                     .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
-             .street_routing_ = true,
-             .osr_footpath_ = true,
-             .geocoding_ = true,
-             .reverse_geocoding_ = true},
-      "test/data", true);
+  auto const c = config{
+      .server_ = {{.web_folder_ = "ui/build", .n_threads_ = 1U}},
+      .osm_ = {"test/resources/test_case.osm.pbf"},
+      .tiles_ = {{.profile_ = "deps/tiles/profile/full.lua",
+                  .db_size_ = 1024U * 1024U * 25U}},
+      .timetable_ =
+          config::timetable{
+              .first_day_ = "2019-05-01",
+              .num_days_ = 2,
+              .datasets_ = {{"test", {.path_ = std::string{kGTFS}}}}},
+      .gbfs_ = {{.feeds_ = {{"CAB", {.url_ = "./test/resources/gbfs"}}}}},
+      .street_routing_ = true,
+      .osr_footpath_ = true,
+      .geocoding_ = true,
+      .reverse_geocoding_ = true};
+  auto d = import(c, "test/data", true);
   d.rt_->e_ = std::make_unique<elevators>(*d.w_, *d.elevator_nodes_,
                                           parse_fasta(kFastaJson));
   d.init_rtt(date::sys_days{2019_y / May / 1});
+
+  {
+    auto ioc = boost::asio::io_context{};
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          co_await gbfs::update(c, *d.w_, *d.l_, d.gbfs_);
+        },
+        boost::asio::detached);
+    ioc.run();
+  }
+
   auto const stats = n::rt::gtfsrt_update_msg(
       *d.tt_, *d.rt_->rtt_, n::source_idx_t{0}, "test",
       to_feed_msg(
@@ -346,6 +365,58 @@ TEST(motis, routing) {
 
   auto const routing = utl::init_from<ep::routing>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
+
+  // Route direct with GBFS.
+  {
+    auto const plan_response = routing(
+        "?fromPlace=49.87526849014631,8.62771903392948"
+        "&toPlace=49.87253873915287,8.629724234688751"
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false"
+        "&mode=TRANSIT,WALK,BIKE_RENTAL");
+
+    auto ss = std::stringstream{};
+    for (auto const& j : plan_response.direct_) {
+      print_short(ss, j);
+    }
+
+    std::cout << "---\n" << ss.str() << "\n---\n" << std::endl;
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:25, end=01:38, duration=00:13, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="BIKE_RENTAL", trip="-", end=2019-05-01 01:29),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:38)
+])",
+        ss.str());
+  }
+
+  // Route with GBFS.
+  {
+    auto const plan_response = routing(
+        "?fromPlace=49.875308,8.6276673"
+        "&toPlace=50.11347,8.67664"
+        "&time=2019-05-01T01:25Z"
+        "&timetableView=false"
+        "&mode=TRANSIT,WALK,BIKE_RENTAL");
+
+    auto ss = std::stringstream{};
+    for (auto const& j : plan_response.itineraries_) {
+      print_short(ss, j);
+    }
+
+    std::cout << "---\n" << ss.str() << "\n---\n" << std::endl;
+    EXPECT_EQ(
+        R"(date=2019-05-01, start=01:25, end=03:14, duration=01:49, transfers=1, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="BIKE_RENTAL", trip="-", end=2019-05-01 01:26),
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:37),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 02:45),
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:49),
+    (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 03:05, mode="SUBWAY", trip="U4", end=2019-05-01 03:10),
+    (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:10, mode="WALK", trip="-", end=2019-05-01 03:14)
+])",
+        ss.str());
+  }
 
   // Route with wheelchair.
   {

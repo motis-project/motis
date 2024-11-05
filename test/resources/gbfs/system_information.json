@@ -1,0 +1,25 @@
+{
+  "last_updated": 1728960694,
+  "ttl": 86400,
+  "version": "2.3",
+  "data": {
+    "system_id": "callabike",
+    "language": "de",
+    "name": "Call a Bike",
+    "short_name": "CaB",
+    "operator": "Deutsche Bahn Connect GmbH",
+    "url": "https://www.callabike.de",
+    "feed_contact_email": "doServices.Sirius.Team@deutschebahn.com",
+    "timezone": "Europe/Berlin",
+    "rental_apps": {
+      "android": {
+        "store_uri": "https://play.google.com/store/apps/details?id=de.bahn.callabike",
+        "discovery_uri": "callabike://"
+      },
+      "ios": {
+        "store_uri": "https://apps.apple.com/de/app/call-a-bike/id420360589",
+        "discovery_uri": "callabike://"
+      }
+    }
+  }
+}
