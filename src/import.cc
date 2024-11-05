@@ -316,7 +316,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                r.build_rtree(*d.t_);
                r.write();
              }
-             d.t_.get()->~typeahead();
+             d.t_.reset();
              if (c.geocoding_) {
                d.load_geocoder();
              }
@@ -324,7 +324,16 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                d.load_reverse_geocoder();
              }
            },
-           [&]() { d.load_geocoder(); },
+           [&]() {
+             d.t_.reset();
+             d.r_.reset();
+             if (c.geocoding_) {
+               d.load_geocoder();
+             }
+             if (c.reverse_geocoding_) {
+               d.load_reverse_geocoder();
+             }
+           },
            {tt_hash,
             osm_hash,
             adr_version(),

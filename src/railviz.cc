@@ -3,8 +3,7 @@
 #include <filesystem>
 #include <ranges>
 
-#include "boost/geometry/index/rtree.hpp"
-#include "boost/iterator/function_output_iterator.hpp"
+#include "cista/containers/rtree.h"
 
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
@@ -37,13 +36,9 @@
 #include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
-namespace bgi = boost::geometry::index;
 
-using route_box = std::pair<geo::box, n::route_idx_t>;
-using static_rtree = bgi::rtree<route_box, bgi::quadratic<16>>;
-
-using rt_transport_box = std::pair<geo::box, n::rt_transport_idx_t>;
-using rt_rtree = bgi::rtree<rt_transport_box, bgi::quadratic<16>>;
+using static_rtree = cista::raw::rtree<n::route_idx_t>;
+using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
 
 using int_clasz = decltype(n::kNumClasses);
 
@@ -125,7 +120,6 @@ struct route_geo_index {
         };
       }
     }();
-    auto values = std::vector<route_box>{};
     for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
       auto const r = n::route_idx_t{i};
       if (claszes.at(0) != clasz) {
@@ -133,19 +127,20 @@ struct route_geo_index {
       }
       auto bounding_box = get_box(r);
 
+      rtree_.insert(bounding_box.min_.lnglat_float(),
+                    bounding_box.max_.lnglat_float(), r);
       distances[r] = static_cast<float>(
           geo::distance(bounding_box.max_, bounding_box.min_));
-      values.emplace_back(std::move(bounding_box), r);
     }
-    rtree_ = static_rtree{values};
   }
 
   std::vector<n::route_idx_t> get_routes(geo::box const& b) const {
     auto routes = std::vector<n::route_idx_t>{};
-    rtree_.query(bgi::intersects(b),
-                 boost::make_function_output_iterator([&](route_box const& v) {
-                   routes.emplace_back(v.second);
-                 }));
+    rtree_.search(b.min_.lnglat_float(), b.max_.lnglat_float(),
+                  [&](auto, auto, n::route_idx_t const r) {
+                    routes.push_back(r);
+                    return true;
+                  });
     return routes;
   }
 
@@ -160,7 +155,6 @@ struct rt_transport_geo_index {
       n::rt_timetable const& rtt,
       n::clasz const clasz,
       n::vector_map<n::rt_transport_idx_t, float>& distances) {
-    auto values = std::vector<rt_transport_box>{};
     for (auto const [i, claszes] :
          utl::enumerate(rtt.rt_transport_section_clasz_)) {
       auto const rt_t = n::rt_transport_idx_t{i};
@@ -174,23 +168,23 @@ struct rt_transport_geo_index {
             tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
       }
 
-      values.emplace_back(bounding_box, rt_t);
+      rtree_.insert(bounding_box.min_.lnglat_float(),
+                    bounding_box.max_.lnglat_float(), rt_t);
       distances[rt_t] = static_cast<float>(
           geo::distance(bounding_box.min_, bounding_box.max_));
     }
-    rtree_ = rt_rtree{values};
   }
 
   std::vector<n::rt_transport_idx_t> get_rt_transports(
       n::rt_timetable const& rtt, geo::box const& b) const {
     auto rt_transports = std::vector<n::rt_transport_idx_t>{};
-    rtree_.query(
-        bgi::intersects(b),
-        boost::make_function_output_iterator([&](rt_transport_box const& v) {
-          if (!rtt.rt_transport_is_cancelled_[to_idx(v.second)]) {
-            rt_transports.emplace_back(v.second);
-          }
-        }));
+    rtree_.search(b.min_.lnglat_float(), b.max_.lnglat_float(),
+                  [&](auto, auto, n::rt_transport_idx_t const rt_t) {
+                    if (!rtt.rt_transport_is_cancelled_[to_idx(rt_t)]) {
+                      rt_transports.emplace_back(rt_t);
+                    }
+                    return true;
+                  });
     return rt_transports;
   }
 

@@ -5,11 +5,11 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=5b6808fd7d7a7c1c7e4cb152b563dbf71e3efba4
+  commit=950f96f4ded53a6b5753824b280550b722933e55
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=06ddcbb6ca05a9636373f015c2c852a11874bc79
+  commit=f0a180848d67b48c6442b87ee76f4cf2a0b3015d
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
