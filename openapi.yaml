@@ -401,7 +401,7 @@ paths:
             
             Note: Direct connections will only be returned on the first call. For paging calls, they can be omitted.
             
-            Note: Transit connections that are slower than the fastest direct walking connection will not show up.
+            Note: Transit connections that are slower than the fastest direct connection will not show up.
             This is being used as a cut-off during transit routing to speed up the search.
             To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
             
