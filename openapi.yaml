@@ -362,8 +362,7 @@ paths:
             Optional. Default is 1.0
             
             Factor to multiply minimum required transfer times with.
-            Numbers > 1.0 lead to longer minimum required transfer times.
-            Numbers < 1.0 lead to shorter minimum required transfer times.
+            Values smaller than 1.0 are not supported.
           schema:
             type: number
             default: 1.0
@@ -415,7 +414,7 @@ paths:
               $ref: '#/components/schemas/Mode'
           explode: false
 
-        - name: ingressModes
+        - name: preTransitModes
           in: query
           required: false
           description: |
@@ -430,7 +429,7 @@ paths:
               $ref: '#/components/schemas/Mode'
           explode: false
 
-        - name: egressModes
+        - name: postTransitModes
           in: query
           required: false
           description: |

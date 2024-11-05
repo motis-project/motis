@@ -678,23 +678,9 @@ export type PlanData = {
          */
         directModes?: Array<Mode>;
         /**
-         * Optional. Default is `WALK`. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
-         *
-         * A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
-         *
-         */
-        egressModes?: Array<Mode>;
-        /**
          * \`latitude,longitude,level\` tuple in degrees OR stop id
          */
         fromPlace: string;
-        /**
-         * Optional. Default is `WALK`. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
-         *
-         * A list of modes that are allowed to be used from the `from` coordinate to the first transit stop. Example: `WALK,BIKE_SHARING`.
-         *
-         */
-        ingressModes?: Array<Mode>;
         /**
          * Optional. Default is 30min which is `1800`.
          * Maximum time in seconds for direct connections.
@@ -761,6 +747,20 @@ export type PlanData = {
          */
         pageCursor?: string;
         /**
+         * Optional. Default is `WALK`. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+         *
+         * A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
+         *
+         */
+        postTransitModes?: Array<Mode>;
+        /**
+         * Optional. Default is `WALK`. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+         *
+         * A list of modes that are allowed to be used from the `from` coordinate to the first transit stop. Example: `WALK,BIKE_SHARING`.
+         *
+         */
+        preTransitModes?: Array<Mode>;
+        /**
          * Optional. Default is `false`.
          *
          * If set to `true`, all used transit trips are required to allow bike carriage.
@@ -813,8 +813,7 @@ export type PlanData = {
          * Optional. Default is 1.0
          *
          * Factor to multiply minimum required transfer times with.
-         * Numbers > 1.0 lead to longer minimum required transfer times.
-         * Numbers < 1.0 lead to shorter minimum required transfer times.
+         * Values smaller than 1.0 are not supported.
          *
          */
         transferTimeFactor?: number;

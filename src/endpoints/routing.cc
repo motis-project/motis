@@ -383,9 +383,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::erase_duplicates(m);
     return m;
   };
-  auto const ingressModes = deduplicate(query.ingressModes_);
-  auto const egressModes = deduplicate(query.egressModes_);
-  auto const directModes = deduplicate(query.directModes_);
+  auto const pre_transit_modes = deduplicate(query.preTransitModes_);
+  auto const post_transit_modes = deduplicate(query.postTransitModes_);
+  auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
   auto const from_p = to_place(tt_, tags_, w_, pl_, matches_, from);
@@ -393,8 +393,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   auto const& start = query.arriveBy_ ? to : from;
   auto const& dest = query.arriveBy_ ? from : to;
-  auto const& start_modes = query.arriveBy_ ? egressModes : ingressModes;
-  auto const& dest_modes = query.arriveBy_ ? ingressModes : egressModes;
+  auto const& start_modes =
+      query.arriveBy_ ? post_transit_modes : pre_transit_modes;
+  auto const& dest_modes =
+      query.arriveBy_ ? pre_transit_modes : post_transit_modes;
 
   auto const [start_time, t] = get_start_time(query);
 
@@ -402,7 +404,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const [direct, fastest_direct] =
       (holds_alternative<osr::location>(from) &&
        holds_alternative<osr::location>(to) && t.has_value())
-          ? route_direct(e, gbfs.get(), from_p, to_p, directModes, *t,
+          ? route_direct(e, gbfs.get(), from_p, to_p, direct_modes, *t,
                          query.wheelchair_,
                          std::chrono::seconds{query.maxDirectTime_})
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
