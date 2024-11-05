@@ -82,8 +82,14 @@
 						{#if pred.from.track}
 							Ankunft auf Gleis {pred.from.track}
 						{/if}
-						{#if pred.duration !== 0 && l.distance != 0}
-							, {formatDurationSec(pred.duration)} Fußweg ({Math.round(l.distance!)} m)
+						{#if pred.from.track && pred.duration !== 0}
+							,
+						{/if}
+						{#if pred.duration !== 0}
+							{formatDurationSec(pred.duration)} Fußweg
+						{/if}
+						{#if pred.distance != 0}
+							({Math.round(pred.distance!)} m)
 						{/if}
 					</div>
 				{/if}
