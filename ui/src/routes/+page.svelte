@@ -99,6 +99,7 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
+	let modes = $derived(['WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? {
@@ -109,7 +110,9 @@
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
 						wheelchair,
-						mode: ['TRANSIT', 'WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]
+						ingressModes: modes,
+						egressModes: modes,
+						directModes: modes
 					}
 				}
 			: undefined

@@ -323,11 +323,12 @@ api::stoptimes_response stop_times::operator()(
                                               s.get_scheduled_location_idx()});
             if (fr.stop_range_.from_ != 0U) {
               place.arrival_ = {s.time(n::event_type::kArr)};
-              place.arrivalDelay_ = {to_ms(s.delay(n::event_type::kArr))};
+              place.scheduledArrival_ = {s.scheduled_time(n::event_type::kArr)};
             }
             if (fr.stop_range_.from_ != fr.size() - 1U) {
               place.departure_ = {s.time(n::event_type::kDep)};
-              place.departureDelay_ = {to_ms(s.delay(n::event_type::kDep))};
+              place.scheduledDeparture_ = {
+                  s.scheduled_time(n::event_type::kDep)};
             }
             return {
                 .place_ = std::move(place),
