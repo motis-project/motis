@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=f0a180848d67b48c6442b87ee76f4cf2a0b3015d
+  commit=fa764a7436ade8398d77f0bf3a735e38f663caa5
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -50,3 +50,7 @@
   url=git@github.com:triptix-tech/tg.git
   branch=main
   commit=20c0f298b8ce58de29a790290f44dca7c4ecc364
+[mimalloc]
+  url=git@github.com:motis-project/mimalloc.git
+  branch=dev
+  commit=e2f4fe647e8aff4603a7d5119b8639fd1a47c8a6
