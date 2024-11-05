@@ -289,7 +289,7 @@ void add_static_transports(n::timetable const& tt,
         .value();
   };
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
-    auto const& box = get_box(from);
+    auto const box = get_box(from);
     if (!box.overlaps(area)) {
       continue;
     }
