@@ -1,0 +1,11 @@
+{
+  "last_updated": 1729479604,
+  "ttl": 86400,
+  "version": "2.3",
+  "data": {
+    "geofencing_zones": {
+      "type": "FeatureCollection",
+      "features": []
+    }
+  }
+}

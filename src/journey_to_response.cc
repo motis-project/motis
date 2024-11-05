@@ -158,7 +158,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
             [&](n::footpath) {
               append(route(*w, *l, gbfs, e, from, to, api::ModeEnum::WALK,
                            wheelchair, j_leg.dep_time_, j_leg.arr_time_,
-                           gbfs_provider_idx_t::invalid(), cache, blocked_mem));
+                           gbfs_provider_idx_t::invalid(), cache, blocked_mem,
+                           std::chrono::seconds{900}));
             },
             [&](n::routing::offset const x) {
               append(route(
@@ -172,7 +173,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       ? gbfs_provider_idx_t{x.transport_mode_id_ -
                                             kGbfsTransportModeIdOffset}
                       : gbfs_provider_idx_t::invalid(),
-                  cache, blocked_mem));
+                  cache, blocked_mem, std::chrono::seconds{900}));
             }},
         j_leg.uses_);
   }

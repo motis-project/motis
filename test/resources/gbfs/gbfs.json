@@ -1,0 +1,39 @@
+{
+  "last_updated": 1728356899,
+  "ttl": 86400,
+  "version": "2.3",
+  "data": {
+    "de": {
+      "feeds": [
+        {
+          "name": "gbfs",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/gbfs"
+        },
+        {
+          "name": "system_information",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/system_information"
+        },
+        {
+          "name": "vehicle_types",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/vehicle_types"
+        },
+        {
+          "name": "station_information",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/station_information"
+        },
+        {
+          "name": "station_status",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/station_status"
+        },
+        {
+          "name": "free_bike_status",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/free_bike_status"
+        },
+        {
+          "name": "geofencing_zones",
+          "url": "https://api.mobidata-bw.de/sharing/gbfs/v2/callabike/geofencing_zones"
+        }
+      ]
+    }
+  }
+}

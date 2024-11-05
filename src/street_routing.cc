@@ -63,7 +63,7 @@ std::vector<api::StepInstruction> get_step_instructions(
   auto steps = std::vector<api::StepInstruction>{};
   auto pred_lvl = from.lvl_.to_float();
   for (auto const& s : segments) {
-    if (s.from_ != osr::node_idx_t::invalid() &&
+    if (s.from_ != osr::node_idx_t::invalid() && s.from_ < w.n_nodes() &&
         w.r_->node_properties_[s.from_].is_elevator()) {
       steps.push_back(api::StepInstruction{
           .relativeDirection_ = api::DirectionEnum::ELEVATOR,
@@ -103,7 +103,7 @@ std::vector<api::StepInstruction> get_step_instructions(
 
   if (!segments.empty()) {
     auto& last = segments.back();
-    if (last.to_ != osr::node_idx_t::invalid() &&
+    if (last.to_ != osr::node_idx_t::invalid() && last.to_ < w.n_nodes() &&
         w.r_->node_properties_[last.to_].is_elevator()) {
       steps.push_back(api::StepInstruction{
           .relativeDirection_ = api::DirectionEnum::ELEVATOR,
