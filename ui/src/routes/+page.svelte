@@ -91,6 +91,7 @@
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
 	let bikeRental = $state(false);
+	let carParking = $state(false);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -101,7 +102,11 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived(['WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
+	let modes = $derived([
+		...(bikeRental ? ['BIKE_RENTAL'] : []),
+		...(carParking ? ['CAR_PARKING'] : [])
+	] as Mode[]);
+	let postTransitModes = $derived([...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -113,8 +118,9 @@
 						timetableView: true,
 						wheelchair,
 						preTransitModes: modes,
-						postTransitModes: modes,
-						directModes: modes
+						postTransitModes,
+						directModes: modes,
+						maxPreTransitTime: 2200
 					}
 				} as PlanData)
 			: undefined
@@ -220,7 +226,7 @@
 	{/if}
 
 	<Control position="top-left">
-		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+		<Card class="w-[560px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 			<SearchMask
 				bind:from
 				bind:to
@@ -228,7 +234,7 @@
 				bind:timeType
 				bind:wheelchair
 				bind:bikeRental
-				{theme}
+				bind:carParking
 			/>
 		</Card>
 	</Control>
@@ -238,7 +244,7 @@
 	{#if !selectedItinerary && routingResponses.length !== 0}
 		<Control position="top-left">
 			<Card
-				class="w-[500px] max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				class="w-[560px] max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
 				<ItineraryList {baseResponse} {routingResponses} {baseQuery} bind:selectedItinerary />
 			</Card>
@@ -247,7 +253,7 @@
 
 	{#if selectedItinerary && !selectedStop}
 		<Control position="top-left">
-			<Card class="w-[500px] bg-background rounded-lg">
+			<Card class="w-[560px] bg-background rounded-lg">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">Journey Details</h2>
 					<Button
@@ -276,7 +282,7 @@
 
 	{#if selectedStop}
 		<Control position="top-left">
-			<Card class="w-[500px] bg-background rounded-lg">
+			<Card class="w-[560px] bg-background rounded-lg">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if stopArriveBy}

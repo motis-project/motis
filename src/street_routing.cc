@@ -39,7 +39,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
       it != end(cache)
           ? it->second
           : osr::route(
-                w, l, profile, from, to, max, osr::direction::kForward,
+                w, l, profile, to, from, max, osr::direction::kBackward,
                 kMaxMatchingDistance,
                 s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
                 sharing);

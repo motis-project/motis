@@ -240,6 +240,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
   auto itineraries = std::vector<api::Itinerary>{};
   for (auto const& m : modes) {
     if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
+        m == api::ModeEnum::CAR_PARKING ||
         (!omit_walk && m == api::ModeEnum::WALK)) {
       auto itinerary = route(
           *w_, *l_, gbfs, e, from, to, m, wheelchair, start_time, std::nullopt,

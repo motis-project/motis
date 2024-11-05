@@ -16,21 +16,14 @@ export type LegLike = Colorable & TripInfo;
 export const getModeStyle = (mode: Mode): [string, string, string] => {
 	switch (mode) {
 		case 'WALK':
-		case 'FLEXIBLE':
 			return ['walk', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
 
 		case 'BIKE':
-		case 'BIKE_TO_PARK':
 		case 'BIKE_RENTAL':
-		case 'SCOOTER_RENTAL':
 			return ['bike', '#075985', 'white'];
 
 		case 'CAR':
-		case 'CAR_TO_PARK':
-		case 'CAR_HAILING':
-		case 'CAR_SHARING':
-		case 'CAR_PICKUP':
-		case 'CAR_RENTAL':
+		case 'CAR_PARKING':
 			return ['car', '#333', 'white'];
 
 		case 'TRANSIT':
