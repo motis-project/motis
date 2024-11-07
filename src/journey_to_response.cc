@@ -104,7 +104,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .mode_ = to_mode(enter_stop.get_clasz()),
                   .from_ = to_place(tt_location{enter_stop}),
                   .to_ = to_place(tt_location{exit_stop}),
-                  .duration_ = (j_leg.arr_time_ - j_leg.dep_time_).count(),
+                  .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
+                                   j_leg.arr_time_ - j_leg.dep_time_)
+                                   .count(),
                   .startTime_ = j_leg.dep_time_,
                   .endTime_ = j_leg.arr_time_,
                   .scheduledStartTime_ =
@@ -122,8 +124,10 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
                   .source_ = fmt::to_string(fr.dbg())});
+              leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
               leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;
+              leg.to_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.to_.arrival_ = leg.endTime_;
               leg.to_.scheduledArrival_ = leg.scheduledEndTime_;
 
