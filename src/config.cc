@@ -74,6 +74,7 @@ config config::read_simple(std::vector<std::string> const& args) {
 
       auto tag = p.stem().generic_string();
       utl::erase(tag, '_');
+      utl::erase(tag, '.');
       c.timetable_->datasets_.emplace(
           tag, timetable::dataset{.path_ = p.generic_string()});
     }
