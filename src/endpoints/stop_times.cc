@@ -6,6 +6,7 @@
 #include "utl/enumerate.h"
 #include "utl/erase_duplicates.h"
 
+#include "nigiri/routing/clasz_mask.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
@@ -17,6 +18,7 @@
 #include "motis/parse_location.h"
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
+#include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
 
 namespace n = nigiri;
@@ -150,14 +152,16 @@ struct rt_ev_iterator : public ev_iterator {
                  n::stop_idx_t const stop_idx,
                  n::unixtime_t const start,
                  n::event_type const ev_type,
-                 n::direction const dir)
+                 n::direction const dir,
+                 n::routing::clasz_mask_t const allowed_clasz)
       : rtt_{rtt},
         stop_idx_{stop_idx},
         rt_t_{rt_t},
         ev_type_{ev_type},
-        finished_(dir == n::direction::kForward ? time() < start
-                                                : time() > start) {
-
+        finished_{
+            !n::routing::is_allowed(
+                allowed_clasz, rtt.rt_transport_section_clasz_[rt_t].at(0)) ||
+            (dir == n::direction::kForward ? time() < start : time() > start)} {
     assert((ev_type == n::event_type::kDep &&
             stop_idx_ < rtt_.rt_transport_location_seq_[rt_t].size() - 1U) ||
            (ev_type == n::event_type::kArr && stop_idx_ > 0U));
@@ -198,7 +202,8 @@ std::vector<n::rt::run> get_events(
     n::unixtime_t const time,
     n::event_type const ev_type,
     n::direction const dir,
-    std::size_t const count) {
+    std::size_t const count,
+    n::routing::clasz_mask_t const allowed_clasz) {
   auto iterators = std::vector<std::unique_ptr<ev_iterator>>{};
 
   if (rtt != nullptr) {
@@ -214,7 +219,7 @@ std::vector<n::rt::run> get_events(
                 n::stop{s}.out_allowed()))) {
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
                 *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
-                dir));
+                dir, allowed_clasz));
           }
         }
       }
@@ -224,6 +229,9 @@ std::vector<n::rt::run> get_events(
   auto seen = n::hash_set<std::pair<n::route_idx_t, n::stop_idx_t>>{};
   for (auto const x : locations) {
     for (auto const r : tt.location_routes_[x]) {
+      if (!n::routing::is_allowed(allowed_clasz, tt.route_clasz_[r])) {
+        continue;
+      }
       auto const location_seq = tt.route_location_seq_[r];
       for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
         if (n::stop{s}.location_idx() == x &&
@@ -273,11 +281,17 @@ api::stoptimes_response stop_times::operator()(
   auto const x = tags_.get_location(tt_, query.stopId_);
   auto const p = tt_.locations_.parents_[x];
   auto const l = p == n::location_idx_t::invalid() ? x : p;
-  auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(
-      fmt::format("{}|{}", query.arriveBy_ ? "EARLIER" : "LATER",
-                  std::chrono::duration_cast<std::chrono::seconds>(
-                      query.time_.value_or(openapi::now())->time_since_epoch())
-                      .count())));
+  auto const allowed_clasz = to_clasz_mask(query.mode_);
+  auto const [dir, time] = parse_cursor(query.pageCursor_.value_or(fmt::format(
+      "{}|{}",
+      query.direction_
+          .transform([](auto&& x) {
+            return x == api::directionEnum::EARLIER ? "EARLIER" : "LATER";
+          })
+          .value_or(query.arriveBy_ ? "EARLIER" : "LATER"),
+      std::chrono::duration_cast<std::chrono::seconds>(
+          query.time_.value_or(openapi::now())->time_since_epoch())
+          .count())));
 
   auto locations = std::vector{l};
   auto const add = [&](n::location_idx_t const l) {
@@ -305,7 +319,7 @@ api::stoptimes_response stop_times::operator()(
   auto const ev_type =
       query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   auto events = get_events(locations, tt_, rtt, time, ev_type, dir,
-                           static_cast<std::size_t>(query.n_));
+                           static_cast<std::size_t>(query.n_), allowed_clasz);
   utl::sort(events, [&](n::rt::run const& a, n::rt::run const& b) {
     auto const fr_a = n::rt::frun{tt_, rtt, a};
     auto const fr_b = n::rt::frun{tt_, rtt, b};

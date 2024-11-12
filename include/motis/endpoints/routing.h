@@ -3,6 +3,8 @@
 #include "osr/location.h"
 #include "osr/types.h"
 
+#include "nigiri/routing/clasz_mask.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/elevators/elevators.h"
 #include "motis/fwd.h"

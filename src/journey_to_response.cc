@@ -146,6 +146,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
               leg.intermediateStops_ = std::vector<api::Place>{};
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
+                if (stop.is_canceled()) {
+                  continue;
+                }
                 auto& p = leg.intermediateStops_->emplace_back(
                     to_place(tt_location{stop}));
                 p.departure_ = stop.time(n::event_type::kDep);
