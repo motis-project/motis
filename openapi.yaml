@@ -188,6 +188,38 @@ paths:
               - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
               - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
 
+        - name: direction
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - EARLIER
+              - LATER
+          description: |
+            This parameter will be ignored in case `pageCursor` is set.
+            
+            Optional. Default is
+              - `LATER` for `arriveBy=false`
+              - `EARLIER` for `arriveBy=true`
+            
+            The response will contain the next `n` arrivals / departures
+            in case `EARLIER` is selected and the previous `n`
+            arrivals / departures if `LATER` is selected.
+
+        - name: mode
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+            default:
+              - TRANSIT
+          description: |
+            Optional. Default is all transit modes.
+            
+            Only return arrivals/departures of the given modes.
+
         - name: n
           in: query
           schema:
