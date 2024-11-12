@@ -107,7 +107,6 @@ struct route_geo_index {
         bounding_box.extend(
             tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
       }
-
       return bounding_box;
     };
     for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
