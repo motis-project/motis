@@ -1,11 +1,6 @@
 #pragma once
 
-#include <filesystem>
 #include <memory>
-
-#include "geo/box.h"
-
-#include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
