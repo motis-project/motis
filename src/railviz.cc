@@ -100,29 +100,24 @@ struct route_geo_index {
                   n::shapes_storage const* shapes_data,
                   n::clasz const clasz,
                   n::vector_map<n::route_idx_t, float>& distances) {
-    auto const get_box = [&]() -> std::function<geo::box(n::route_idx_t)> {
-      if (shapes_data != nullptr) {
-        return [&](n::route_idx_t const route_idx) {
-          return shapes_data->get_bounding_box(route_idx);
-        };
-      } else {
-        return [&](n::route_idx_t const route_idx) {
-          auto bounding_box = geo::box{};
-          for (auto const l : tt.route_location_seq_[route_idx]) {
-            bounding_box.extend(
-                tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
-          }
-
-          return bounding_box;
-        };
+    // Fallback, if no route bounding box can be loaded
+    auto const get_box = [&](n::route_idx_t const route_idx) {
+      auto bounding_box = geo::box{};
+      for (auto const l : tt.route_location_seq_[route_idx]) {
+        bounding_box.extend(
+            tt.locations_.coordinates_.at(n::stop{l}.location_idx()));
       }
-    }();
+
+      return bounding_box;
+    };
     for (auto const [i, claszes] : utl::enumerate(tt.route_section_clasz_)) {
       auto const r = n::route_idx_t{i};
       if (claszes.at(0) != clasz) {
         continue;
       }
-      auto bounding_box = get_box(r);
+      auto bounding_box = (shapes_data == nullptr)
+                              ? get_box(r)
+                              : shapes_data->get_bounding_box(r);
 
       rtree_.insert(bounding_box.min_.lnglat_float(),
                     bounding_box.max_.lnglat_float(), r);
@@ -267,17 +262,16 @@ void add_static_transports(n::timetable const& tt,
   auto const [start_day, _] = tt.day_idx_mam(time_interval.from_);
   auto const [end_day, _1] = tt.day_idx_mam(time_interval.to_);
   auto const get_box = [&](std::size_t segment) {
-    auto const box = shapes_data != nullptr
-                         ? shapes_data->get_bounding_box(r, segment)
-                         : std::optional<geo::box>{};
-    return box
-        .or_else([&]() {
-          return std::optional{geo::make_box(
-              {tt.locations_.coordinates_[n::stop{seq[segment]}.location_idx()],
-               tt.locations_
-                   .coordinates_[n::stop{seq[segment + 1]}.location_idx()]})};
-        })
-        .value();
+    if (shapes_data != nullptr) {
+      auto const box = shapes_data->get_bounding_box(r, segment);
+      if (box.has_value()) {
+        return *box;
+      }
+    }
+    // Fallback, if no segment bounding box can be loaded
+    return geo::make_box(
+        {tt.locations_.coordinates_[n::stop{seq[segment]}.location_idx()],
+         tt.locations_.coordinates_[n::stop{seq[segment + 1]}.location_idx()]});
   };
   for (auto const [from, to] : utl::pairwise(stop_indices)) {
     auto const box = get_box(from);
