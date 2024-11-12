@@ -1,11 +1,15 @@
 #include "boost/asio/io_context.hpp"
 
+#include "fmt/format.h"
+
 #include "net/run.h"
 #include "net/stop_handler.h"
 #include "net/web_server/query_router.h"
 #include "net/web_server/web_server.h"
 
+#include "utl/enumerate.h"
 #include "utl/init_from.h"
+#include "utl/set_thread_name.h"
 
 #include "motis/config.h"
 #include "motis/endpoints/adr/geocode.h"
@@ -97,6 +101,7 @@ int server(data d, config const& c) {
   if (c.requires_rt_timetable_updates()) {
     rt_update_ioc = std::make_unique<asio::io_context>();
     rt_update_thread = std::make_unique<std::thread>([&]() {
+      utl::set_current_thread_name("rt update");
       run_rt_update(*rt_update_ioc, c, *d.tt_, *d.tags_, d.rt_);
       rt_update_ioc->run();
     });
@@ -107,6 +112,7 @@ int server(data d, config const& c) {
   if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
     gbfs_update_ioc = std::make_unique<asio::io_context>();
     gbfs_update_thread = std::make_unique<std::thread>([&]() {
+      utl::set_current_thread_name("gbfs update");
       gbfs::run_gbfs_update(*gbfs_update_ioc, c, *d.w_, *d.l_, d.gbfs_);
       gbfs_update_ioc->run();
     });
@@ -115,8 +121,9 @@ int server(data d, config const& c) {
   auto const work_guard = asio::make_work_guard(workers);
   auto threads = std::vector<std::thread>(
       static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
-  for (auto& t : threads) {
+  for (auto [i, t] : utl::enumerate(threads)) {
     t = std::thread(net::run(workers));
+    utl::set_thread_name(t, fmt::format("worker {}", i));
   }
 
   auto const stop = net::stop_handler(ioc, [&]() {

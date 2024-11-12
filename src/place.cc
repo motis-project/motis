@@ -124,7 +124,7 @@ api::Place to_place(n::timetable const* tt,
                       .level_ = get_level(w, pl, matches, l),
                       .scheduledTrack_ = get_track(tt_l.scheduled_),
                       .track_ = get_track(tt_l.l_),
-                      .vertexType_ = api::VertexTypeEnum::NORMAL};
+                      .vertexType_ = api::VertexTypeEnum::TRANSIT};
             }
           }},
       l);

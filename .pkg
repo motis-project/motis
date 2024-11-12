@@ -9,11 +9,11 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=f0a180848d67b48c6442b87ee76f4cf2a0b3015d
+  commit=60eb1ee32698fbe4c2dde2070acb9bceea621257
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=f76f70812be09d88b260e398ddd43fc7345f9fb9
+  commit=9c44a5abcb62c0463df87355e0cb29d90906f0d0
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
@@ -45,8 +45,12 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
-  commit=ca0013532a4c4012bf014f5f53ad3df11a873cfb
+  commit=930f38eb0365ceb7853273e03da4d9e7787abfb9
 [tg]
   url=git@github.com:triptix-tech/tg.git
   branch=main
   commit=20c0f298b8ce58de29a790290f44dca7c4ecc364
+[mimalloc]
+  url=git@github.com:motis-project/mimalloc.git
+  branch=dev
+  commit=e2f4fe647e8aff4603a7d5119b8639fd1a47c8a6

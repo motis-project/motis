@@ -3,33 +3,32 @@
 	import { cn } from './utils';
 
 	let {
-		timestamp,
-		delay,
 		class: className,
-		showAlways,
-		rt,
-		isRealtime
+		timestamp,
+		scheduledTimestamp,
+		isRealtime,
+		variant
 	}: {
-		timestamp: string | undefined;
-		delay: number | undefined;
 		class?: string;
-		showAlways?: boolean;
-		rt: boolean;
+		timestamp: string;
+		scheduledTimestamp: string;
 		isRealtime: boolean;
+		variant: 'schedule' | 'realtime' | 'realtime-show-always';
 	} = $props();
 
-	const d = $derived(
-		timestamp ? new Date(new Date(timestamp).getTime() - (rt ? (delay ?? 0) : 0)) : undefined
-	);
-	const highDelay = $derived(delay !== undefined ? delay >= 180000 : false);
+	const t = $derived(new Date(timestamp));
+	const scheduled = $derived(new Date(scheduledTimestamp));
+	const delayMinutes = $derived((t.getTime() - scheduled.getTime()) / 60000);
+	const highDelay = $derived(isRealtime && delayMinutes > 3);
+	const lowDelay = $derived(isRealtime && delayMinutes <= 3);
 </script>
 
-<div
-	class={cn('w-16', className)}
-	class:text-destructive={isRealtime && rt && highDelay}
-	class:text-green-600={isRealtime && rt && !highDelay}
->
-	{#if d && (showAlways || !rt || (rt && isRealtime))}
-		{formatTime(d)}
+<div class={cn('w-16', className)}>
+	{#if variant == 'schedule'}
+		{formatTime(scheduled)}
+	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
+		<div class:text-destructive={highDelay} class:text-green-600={lowDelay}>
+			{formatTime(t)}
+		</div>
 	{/if}
 </div>

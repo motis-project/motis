@@ -144,6 +144,7 @@ target_link_libraries(motis
     rtree
     geo
     cista
+    tg
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res

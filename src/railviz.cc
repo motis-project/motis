@@ -391,8 +391,8 @@ api::trips_response get_trains(tag_lookup const& tags,
             .to_ = to_place(&tt, &tags, w, pl, matches, tt_location{to}),
             .departure_ = from.time(n::event_type::kDep),
             .arrival_ = to.time(n::event_type::kArr),
-            .departureDelay_ = to_ms(from.delay(n::event_type::kDep)),
-            .arrivalDelay_ = to_ms(to.delay(n::event_type::kArr)),
+            .scheduledDeparture_ = from.scheduled_time(n::event_type::kDep),
+            .scheduledArrival_ = to.scheduled_time(n::event_type::kArr),
             .realTime_ = fr.is_rt(),
             .polyline_ = std::move(enc.buf_)};
   });

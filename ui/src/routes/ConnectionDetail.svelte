@@ -23,13 +23,19 @@
 
 {#snippet stopTimes(
 	timestamp: string,
-	delay: number,
+	scheduledTimestamp: string,
 	isRealtime: boolean,
 	name: string,
 	stopId?: string
 )}
-	<Time {isRealtime} rt={false} class="font-semibold mr-2" {timestamp} {delay} />
-	<Time {isRealtime} rt={true} class="font-semibold" {timestamp} {delay} />
+	<Time
+		variant="schedule"
+		class="font-semibold mr-2"
+		{isRealtime}
+		{timestamp}
+		{scheduledTimestamp}
+	/>
+	<Time variant="realtime" class="font-semibold" {isRealtime} {timestamp} {scheduledTimestamp} />
 	{#if stopId}
 		<Button
 			class="col-span-5 mr-6 text-lg justify-normal text-wrap text-left"
@@ -50,7 +56,7 @@
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
 			{getModeName(l.mode)}
-			{formatDistanceMeters(Math.round(l.distance))}
+			{formatDistanceMeters(Math.round(l.distance!))}
 		</span>
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
@@ -74,10 +80,13 @@
 					<div class="border-t w-full h-0"></div>
 					<div class="text-sm text-muted-foreground text-nowrap px-2">
 						{#if pred.from.track}
-							Ankunft auf Gleis {pred.from.track}
+							Ankunft auf Gleis {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
-						{#if pred.duration !== 0 && l.distance != 0}
-							, {formatDurationSec(pred.duration)} Fußweg ({Math.round(l.distance)} m)
+						{#if pred.duration}
+							{formatDurationSec(pred.duration)} Fußweg
+						{/if}
+						{#if pred.distance}
+							({Math.round(pred.distance)} m)
 						{/if}
 					</div>
 				{/if}
@@ -91,7 +100,13 @@
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-7 items-center">
-					{@render stopTimes(l.startTime, l.departureDelay, l.realTime, l.from.name, l.from.stopId)}
+					{@render stopTimes(
+						l.startTime,
+						l.scheduledStartTime,
+						l.realTime,
+						l.from.name,
+						l.from.stopId
+					)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground">
 					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
@@ -123,7 +138,7 @@
 						</summary>
 						<div class="mb-6 grid gap-y-6 grid-cols-7 items-center">
 							{#each l.intermediateStops! as s}
-								{@render stopTimes(s.arrival!, s.arrivalDelay!, l.realTime, s.name!, s.stopId)}
+								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s.name!, s.stopId)}
 							{/each}
 						</div>
 					</details>
@@ -131,7 +146,13 @@
 
 				{#if !isLast && !(isLastPred && next!.duration === 0)}
 					<div class="grid gap-y-6 grid-cols-7 items-center pb-3">
-						{@render stopTimes(l.endTime!, l.arrivalDelay!, l.realTime!, l.to.name, l.to.stopId)}
+						{@render stopTimes(
+							l.endTime!,
+							l.scheduledEndTime!,
+							l.realTime!,
+							l.to.name,
+							l.to.stopId
+						)}
 					</div>
 				{/if}
 
@@ -144,12 +165,18 @@
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-7 items-center">
-					{@render stopTimes(l.startTime, l.departureDelay, l.realTime, l.from.name, l.from.stopId)}
+					{@render stopTimes(
+						l.startTime,
+						l.scheduledStartTime,
+						l.realTime,
+						l.from.name,
+						l.from.stopId
+					)}
 				</div>
 				{@render streetLeg(l)}
 				{#if !isLast}
 					<div class="grid gap-y-6 grid-cols-7 items-center pb-4">
-						{@render stopTimes(l.endTime, l.arrivalDelay, l.realTime, l.to.name, l.to.stopId)}
+						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to.name, l.to.stopId)}
 					</div>
 				{/if}
 			</div>
@@ -160,7 +187,7 @@
 		<div class="relative left-3 bottom-[7px] pl-6 grid gap-y-6 grid-cols-7 items-center">
 			{@render stopTimes(
 				lastLeg!.endTime,
-				lastLeg!.arrivalDelay,
+				lastLeg!.scheduledEndTime,
 				lastLeg!.realTime,
 				lastLeg!.to.name,
 				lastLeg!.to.stopId

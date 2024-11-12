@@ -63,7 +63,7 @@ std::vector<api::StepInstruction> get_step_instructions(
   auto steps = std::vector<api::StepInstruction>{};
   auto pred_lvl = from.lvl_.to_float();
   for (auto const& s : segments) {
-    if (s.from_ != osr::node_idx_t::invalid() &&
+    if (s.from_ != osr::node_idx_t::invalid() && s.from_ < w.n_nodes() &&
         w.r_->node_properties_[s.from_].is_elevator()) {
       steps.push_back(api::StepInstruction{
           .relativeDirection_ = api::DirectionEnum::ELEVATOR,
@@ -103,7 +103,7 @@ std::vector<api::StepInstruction> get_step_instructions(
 
   if (!segments.empty()) {
     auto& last = segments.back();
-    if (last.to_ != osr::node_idx_t::invalid() &&
+    if (last.to_ != osr::node_idx_t::invalid() && last.to_ < w.n_nodes() &&
         w.r_->node_properties_[last.to_].is_elevator()) {
       steps.push_back(api::StepInstruction{
           .relativeDirection_ = api::DirectionEnum::ELEVATOR,
@@ -119,7 +119,9 @@ struct sharing {
   sharing(osr::ways const& w,
           gbfs::gbfs_data const& gbfs,
           gbfs_provider_idx_t const provider_idx)
-      : w_{w}, gbfs_{gbfs}, provider_{gbfs_.providers_.at(provider_idx)} {}
+      : w_{w},
+        gbfs_{gbfs},
+        provider_{*gbfs_.providers_.at(provider_idx).get()} {}
 
   api::Rental get_rental(osr::node_idx_t const n) const {
     auto ret = rental_;
@@ -328,8 +330,10 @@ api::Itinerary route(osr::ways const& w,
                                        range.back().to_)}
                                  : std::nullopt});
 
-        leg.from_.departure_ = leg.startTime_;
-        leg.to_.arrival_ = leg.endTime_;
+        leg.from_.departure_ = leg.from_.scheduledDeparture_ =
+            leg.scheduledStartTime_ = leg.startTime_;
+        leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.scheduledEndTime_ =
+            leg.endTime_;
 
         pred_place = next_place;
         pred_end_time = t;

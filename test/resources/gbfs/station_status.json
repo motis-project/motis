@@ -1,0 +1,23 @@
+{
+  "last_updated": 1729500733,
+  "ttl": 240,
+  "version": "2.3",
+  "data": {
+    "stations": [
+      {
+        "station_id": "CAB:Station:4a58211d-7fc2-4897-bc9f-3767f804953a",
+        "num_bikes_available": 48,
+        "vehicle_types_available": [
+          {
+            "vehicle_type_id": "CAB:VehicleType:832e0956-f155-3c82-9211-c2beb9f6929d",
+            "count": 48
+          }
+        ],
+        "is_installed": true,
+        "is_renting": true,
+        "is_returning": true,
+        "last_reported": 1729500733
+      }
+    ]
+  }
+}
