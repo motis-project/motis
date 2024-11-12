@@ -263,7 +263,7 @@ jobs:
           - preset: clang-tidy
           - preset: linux-sanitizer
           - preset: linux-debug
-            emulator: valgrind --suppressions=tools/suppress.txt --leak-check=full --error-exitcode=1
+            emulator: valgrind --suppressions=deps/osr/docs/tbb.supp --suppressions=deps/osr/docs/pthread.supp --suppressions=tools/suppress.txt --leak-check=full --gen-suppressions=all --error-exitcode=1
     env:
       BUILDCACHE_DIR: /buildcache
       BUILDCACHE_DIRECT_MODE: true
