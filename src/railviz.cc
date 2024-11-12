@@ -115,9 +115,9 @@ struct route_geo_index {
       if (claszes.at(0) != clasz) {
         continue;
       }
-      auto bounding_box = (shapes_data == nullptr)
-                              ? get_box(r)
-                              : shapes_data->get_bounding_box(r);
+      auto const bounding_box = (shapes_data == nullptr)
+                                    ? get_box(r)
+                                    : shapes_data->get_bounding_box(r);
 
       rtree_.insert(bounding_box.min_.lnglat_float(),
                     bounding_box.max_.lnglat_float(), r);
