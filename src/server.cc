@@ -134,6 +134,9 @@ int server(data d, config const& c) {
     if (rt_update_ioc != nullptr) {
       rt_update_ioc->stop();
     }
+    if (gbfs_update_ioc != nullptr) {
+      gbfs_update_ioc->stop();
+    }
   });
 
   fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
@@ -146,6 +149,9 @@ int server(data d, config const& c) {
   }
   if (rt_update_thread != nullptr) {
     rt_update_thread->join();
+  }
+  if (gbfs_update_thread != nullptr) {
+    gbfs_update_thread->join();
   }
 
   return 0;
