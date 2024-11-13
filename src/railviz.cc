@@ -34,6 +34,8 @@
 
 namespace n = nigiri;
 
+constexpr auto const kLimit = 4096U;
+
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;
 
@@ -233,6 +235,7 @@ void add_rt_transports(n::timetable const& tt,
         n::interval{from.time(n::event_type::kDep),
                     to.time(n::event_type::kArr) + n::i32_minutes{1}};
     if (active.overlaps(time_interval)) {
+      utl::verify(runs.size() < kLimit, "too many trips");
       runs.emplace_back(
           stop_pair{.r_ = fr,  // NOLINT(cppcoreguidelines-slicing)
                     .from_ = from.stop_idx_,
@@ -290,6 +293,7 @@ void add_static_transports(n::timetable const& tt,
                                     tt.event_time(t, to, n::event_type::kArr) +
                                         n::unixtime_t::duration{1}}) &&
             is_active(t)) {
+          utl::verify(runs.size() < kLimit, "too many trips");
           runs.emplace_back(stop_pair{
               .r_ = n::rt::run{.t_ = t,
                                .stop_range_ = {from, static_cast<n::stop_idx_t>(

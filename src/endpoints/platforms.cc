@@ -6,6 +6,8 @@ namespace json = boost::json;
 
 namespace motis::ep {
 
+constexpr auto const kLimit = 4096U;
+
 json::value platforms::operator()(json::value const& query) const {
   auto const& q = query.as_object();
   auto const level = q.contains("level")
@@ -20,6 +22,7 @@ json::value platforms::operator()(json::value const& query) const {
   auto gj = osr::geojson_writer{.w_ = w_, .platforms_ = &pl_};
   pl_.find(min, max, [&](osr::platform_idx_t const i) {
     if (level == osr::kNoLevel || pl_.get_level(w_, i) == level) {
+      utl::verify(gj.features_.size() < kLimit, "too many platforms");
       gj.write_platform(i);
     }
   });
