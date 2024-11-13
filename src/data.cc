@@ -30,6 +30,7 @@
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
 #include "motis/update_rtt_td_footpaths.h"
+#include "utl/verify.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -158,6 +159,18 @@ data::data(std::filesystem::path p, config const& c)
   throw_if_failed("matches", matches);
   throw_if_failed("elevators", elevators);
   throw_if_failed("tiles", tiles);
+
+  utl_verify(
+      shapes_ == nullptr || tt_ == nullptr ||
+          (tt_->n_routes() == shapes_->route_bboxes_.size() &&
+           tt_->n_routes() == shapes_->route_segment_bboxes_.size()),
+      "mismatch: n_routes={}, n_route_bboxes={}, n_route_segment_bboxes={}",
+      tt_->n_routes(), shapes_->route_bboxes_.size(),
+      shapes_->route_segment_bboxes_.size());
+  utl_verify(matches_ == nullptr || tt_ == nullptr ||
+                 matches_->size() == tt_->n_locations(),
+             "mismatch: n_matches={}, n_locations={}", matches_->size(),
+             tt_->n_locations());
 }
 
 data::~data() = default;
