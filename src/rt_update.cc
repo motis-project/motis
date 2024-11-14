@@ -71,7 +71,7 @@ void run_rt_update(boost::asio::io_context& ioc,
               auto const& [ep, src, tag] = x;
               return boost::asio::co_spawn(
                   executor,
-                  [=, &rtt, &tt]() -> awaitable<n::rt::statistics> {
+                  [=, &rtt, &tt, &msg]() -> awaitable<n::rt::statistics> {
                     try {
                       auto const res = co_await http_GET(
                           boost::urls::url{ep.url_},
