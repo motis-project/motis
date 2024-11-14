@@ -34,6 +34,7 @@ void run_rt_update(boost::asio::io_context& ioc,
       ioc,
       [&c, &tt, &tags, &r]() -> awaitable<void> {
         auto executor = co_await asio::this_coro::executor;
+        auto msg = transit_realtime::FeedMessage{};
         auto timer = asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
         while (true) {
@@ -75,8 +76,8 @@ void run_rt_update(boost::asio::io_context& ioc,
                       auto const res = co_await http_GET(
                           boost::urls::url{ep.url_},
                           ep.headers_.value_or(headers_t{}), timeout);
-                      co_return n::rt::gtfsrt_update_buf(tt, *rtt, src, tag,
-                                                         get_http_body(res));
+                      co_return n::rt::gtfsrt_update_buf(
+                          tt, *rtt, src, tag, get_http_body(res), msg);
                     } catch (std::exception const& e) {
                       n::log(n::log_lvl::error, "motis.rt",
                              "RT FETCH ERROR: tag={}, error={}", tag, e.what());
