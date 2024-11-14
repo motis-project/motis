@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <iostream>
 
+#include "google/protobuf/stubs/common.h"
+
 #include "utl/progress_tracker.h"
 
 #include "motis/config.h"
@@ -137,4 +139,6 @@ int main(int ac, char** av) {
       }
       return 0;
   }
+
+  google::protobuf::ShutdownProtobufLibrary();
 }
