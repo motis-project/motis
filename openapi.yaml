@@ -387,6 +387,17 @@ paths:
             type: integer
             default: 0
 
+        - name: additionalTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+            
+            Additional transfer time reserved for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
         - name: transferTimeFactor
           in: query
           required: false
