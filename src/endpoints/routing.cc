@@ -467,8 +467,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .transfer_time_settings_ =
             n::routing::transfer_time_settings{
                 .default_ = (query.minTransferTime_ == 0 &&
+                             query.additionalTransferTime_ == 0 &&
                              query.transferTimeFactor_ == 1.0),
                 .min_transfer_time_ = n::duration_t{query.minTransferTime_},
+                .additional_time_ =
+                    n::duration_t{query.additionalTransferTime_},
                 .factor_ = static_cast<float>(query.transferTimeFactor_)},
         .via_stops_ =
             get_via_stops(*tt_, *tags_, query.via_, query.viaMinimumStay_),
