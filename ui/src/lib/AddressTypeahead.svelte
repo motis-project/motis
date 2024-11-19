@@ -2,15 +2,15 @@
 	import { Combobox } from 'bits-ui';
 	import { cn } from './utils';
 	import { geocode, type Match } from './openapi';
-	import { browser } from '$app/environment';
 	import Bus from 'lucide-svelte/icons/bus-front';
 	import House from 'lucide-svelte/icons/map-pin-house';
 	import Place from 'lucide-svelte/icons/map-pin';
 	import { posToLocation, type Location } from './Location';
 	import { GEOCODER_PRECISION } from './Precision';
+	import { language } from './i18n/translation';
 
-	const COORD_LVL_REGEX = /([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)/;
-	const COORD_REGEX = /([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)/;
+	const COORD_LVL_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
+	const COORD_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
 
 	let {
 		items = $bindable([]),
@@ -30,8 +30,6 @@
 
 	let inputValue = $state('');
 	let touchedInput = $state(false);
-
-	const language = browser ? navigator.languages.find((l) => l.length == 2) : '';
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {

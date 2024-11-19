@@ -7,6 +7,7 @@
 	import { plan, type Itinerary, type Leg, type PlanData, type PlanResponse } from '$lib/openapi';
 	import Time from '$lib/Time.svelte';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import { t } from '$lib/i18n/translation';
 
 	let {
 		routingResponses,
@@ -79,7 +80,7 @@
 									}}
 									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg"
 								>
-									früher
+									{t.earlier}
 								</button>
 								<div class="border-t w-full h-0"></div>
 							</div>
@@ -93,7 +94,7 @@
 								<Card class="p-4">
 									<div class="text-base h-8 flex justify-between items-center space-x-4 w-full">
 										<div>
-											<div class="text-xs font-bold uppercase text-slate-400">Departure</div>
+											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
 												isRealtime={it.legs[0].realTime}
 												timestamp={it.startTime}
@@ -103,7 +104,7 @@
 										</div>
 										<Separator orientation="vertical" />
 										<div>
-											<div class="text-xs font-bold uppercase text-slate-400">Arrival</div>
+											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
 												isRealtime={it.legs[it.legs.length - 1].realTime}
 												timestamp={it.endTime}
@@ -118,7 +119,7 @@
 										</div>
 										<Separator orientation="vertical" />
 										<div>
-											<div class="text-xs font-bold uppercase text-slate-400">Duration</div>
+											<div class="text-xs font-bold uppercase text-slate-400">{t.duration}</div>
 											<div class="flex justify-center w-full">
 												{formatDurationSec(it.duration)}
 											</div>
@@ -146,7 +147,7 @@
 									}}
 									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg"
 								>
-									später
+									{t.later}
 								</button>
 								<div class="border-t w-full h-0"></div>
 							</div>

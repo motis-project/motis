@@ -7,6 +7,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import Route from '$lib/Route.svelte';
 	import { getModeName } from '$lib/getModeName';
+	import { t } from '$lib/i18n/translation';
 
 	const {
 		itinerary,
@@ -60,7 +61,7 @@
 		</span>
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
-				Anbieter: <a href={l.rental.url} target="_blank">{l.rental.systemName}</a>
+				{t.sharingProvider}: <a href={l.rental.url} target="_blank">{l.rental.systemName}</a>
 			</span>
 		{/if}
 	</div>
@@ -80,7 +81,7 @@
 					<div class="border-t w-full h-0"></div>
 					<div class="text-sm text-muted-foreground text-nowrap px-2">
 						{#if pred.from.track}
-							Ankunft auf Gleis {pred.from.track}{pred.duration ? ',' : ''}
+							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
 						{#if pred.duration}
 							{formatDurationSec(pred.duration)} Fußweg
@@ -93,7 +94,8 @@
 				<div class="border-t w-full h-0"></div>
 				{#if l.from.track}
 					<div class="text-nowrap border rounded-xl px-2">
-						Gleis {l.from.track}
+						{t.track}
+						{l.from.track}
 					</div>
 				{/if}
 			</div>
@@ -114,7 +116,7 @@
 				</div>
 				{#if l.intermediateStops?.length === 0}
 					<div class="py-12 pl-8 flex items-center text-muted-foreground">
-						Fahrt ohne Zwischenhalt
+						{t.tripIntermediateStops(0)}
 					</div>
 				{:else}
 					<details class="[&_svg]:open:-rotate-180">
@@ -133,7 +135,8 @@
 								<polyline points="6 9 12 15 18 9"></polyline>
 							</svg>
 							<span class="ml-2 cursor-pointer">
-								Fahrt {l.intermediateStops?.length} Station ({formatDurationSec(l.duration)})
+								{t.tripIntermediateStops(l.intermediateStops?.length ?? 0)}
+								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
 						<div class="mb-6 grid gap-y-6 grid-cols-7 items-center">

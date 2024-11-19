@@ -9,6 +9,7 @@
 	import DateInput from '$lib/DateInput.svelte';
 	import { type Location } from '$lib/Location';
 	import { Toggle } from '$lib/components/ui/toggle';
+	import { t } from '$lib/i18n/translation';
 
 	let {
 		from = $bindable(),
@@ -36,7 +37,7 @@
 	<AddressTypeahead
 		name="from"
 		class="w-full"
-		placeholder="From"
+		placeholder={t.from}
 		bind:selected={from}
 		bind:items={fromItems}
 		{theme}
@@ -44,7 +45,7 @@
 	<AddressTypeahead
 		name="to"
 		class="w-full"
-		placeholder="To"
+		placeholder={t.to}
 		bind:selected={to}
 		bind:items={toItems}
 		{theme}
@@ -73,14 +74,14 @@
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
 				<RadioGroup.Item value="departure" id="departure" class="sr-only" aria-label="Abfahrt" />
-				<span>Abfahrt</span>
+				<span>{t.departure}</span>
 			</Label>
 			<Label
 				for="arrival"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
 				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label="Ankunft" />
-				<span>Ankunft</span>
+				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
 		<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>

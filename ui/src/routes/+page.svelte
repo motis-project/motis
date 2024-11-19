@@ -32,6 +32,7 @@
 	import StopTimes from './StopTimes.svelte';
 	import { onMount } from 'svelte';
 	import RailViz from './RailViz.svelte';
+	import { t } from '$lib/i18n/translation';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -279,9 +280,9 @@
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if stopArriveBy}
-							Ankünfte
+							{t.arrivals}
 						{:else}
-							Abfahrten
+							{t.departures}
 						{/if}
 						in
 						{selectedStop.name}
