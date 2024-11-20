@@ -1,6 +1,9 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
+	walk: 'Walk',
+	bike: 'Bike',
+	car: 'Car',
 	from: 'From',
 	to: 'To',
 	arrival: 'Arrival',

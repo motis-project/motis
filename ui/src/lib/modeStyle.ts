@@ -24,7 +24,7 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 
 		case 'CAR':
 		case 'CAR_PARKING':
-			return ['car', '#333', 'white'];
+			return ['car', '#333333', 'white'];
 
 		case 'TRANSIT':
 		case 'BUS':
