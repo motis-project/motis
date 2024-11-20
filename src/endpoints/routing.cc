@@ -321,9 +321,6 @@ void remove_slower_than_fastest_direct(n::routing::query& q) {
     min_dest = std::min(min_dest, get_min_duration(v));
   }
 
-  utl::verify(min_start != kMaxDuration, "no valid start offset");
-  utl::verify(min_dest != kMaxDuration, "no valid dest offset");
-
   utl::erase_if(q.start_, worse_than_fastest_direct(min_dest));
   utl::erase_if(q.destination_, worse_than_fastest_direct(min_start));
   for (auto& [k, v] : q.td_start_) {
@@ -493,16 +490,22 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       raptor_state.reset(new n::routing::raptor_state{});
     }
 
+    auto const query_stats =
+        stats_map_t{{"direct", UTL_TIMING_MS(direct)},
+                    {"query_preparation", UTL_TIMING_MS(query_preparation)},
+                    {"n_start_offsets", q.start_.size()},
+                    {"n_dest_offsets", q.destination_.size()},
+                    {"n_td_start_offsets", q.td_start_.size()},
+                    {"n_td_dest_offsets", q.td_dest_.size()}};
+
     auto const r = n::routing::raptor_search(
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
         std::nullopt);
 
     return {
-        .debugOutput_ = join(stats_map_t{{"direct", UTL_TIMING_MS(direct)},
-                                         {"query_preparation",
-                                          UTL_TIMING_MS(query_preparation)}},
-                             r.search_stats_.to_map(), r.algo_stats_.to_map()),
+        .debugOutput_ =
+            join(query_stats, r.search_stats_.to_map(), r.algo_stats_.to_map()),
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),
