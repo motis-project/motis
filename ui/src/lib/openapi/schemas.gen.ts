@@ -461,7 +461,19 @@ export const LegSchema = {
             '$ref': '#/components/schemas/Place'
         },
         duration: {
-            description: 'Leg duration in seconds',
+            description: `Leg duration in seconds
+
+If leg is footpath:
+  The footpath duration is derived from the default footpath
+  duration using the query parameters \`transferTimeFactor\` and
+  \`additionalTransferTime\` as follows:
+  \`leg.duration = defaultDuration * transferTimeFactor + additionalTransferTime.\`
+  In case the defaultDuration is needed, it can be calculated by
+  \`defaultDuration = (leg.duration - additionalTransferTime) / transferTimeFactor\`.
+  Note that the default values are \`transferTimeFactor = 1\` and
+  \`additionalTransferTime = 0\` in case they are not explicitly
+  provided in the query.
+`,
             type: 'integer'
         },
         startTime: {

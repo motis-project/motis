@@ -381,6 +381,18 @@ export type Leg = {
     to: Place;
     /**
      * Leg duration in seconds
+     *
+     * If leg is footpath:
+     * The footpath duration is derived from the default footpath
+     * duration using the query parameters `transferTimeFactor` and
+     * `additionalTransferTime` as follows:
+     * `leg.duration = defaultDuration * transferTimeFactor + additionalTransferTime.`
+     * In case the defaultDuration is needed, it can be calculated by
+     * `defaultDuration = (leg.duration - additionalTransferTime) / transferTimeFactor`.
+     * Note that the default values are `transferTimeFactor = 1` and
+     * `additionalTransferTime = 0` in case they are not explicitly
+     * provided in the query.
+     *
      */
     duration: number;
     /**
@@ -591,6 +603,26 @@ export type StoptimesData = {
          */
         arriveBy?: boolean;
         /**
+         * This parameter will be ignored in case `pageCursor` is set.
+         *
+         * Optional. Default is
+         * - `LATER` for `arriveBy=false`
+         * - `EARLIER` for `arriveBy=true`
+         *
+         * The response will contain the next `n` arrivals / departures
+         * in case `EARLIER` is selected and the previous `n`
+         * arrivals / departures if `LATER` is selected.
+         *
+         */
+        direction?: 'EARLIER' | 'LATER';
+        /**
+         * Optional. Default is all transit modes.
+         *
+         * Only return arrivals/departures of the given modes.
+         *
+         */
+        mode?: Array<Mode>;
+        /**
          * the number of events
          */
         n: number;
@@ -647,6 +679,13 @@ export type StoptimesError = unknown;
 
 export type PlanData = {
     query: {
+        /**
+         * Optional. Default is 0 minutes.
+         *
+         * Additional transfer time reserved for each transfer in minutes.
+         *
+         */
+        additionalTransferTime?: number;
         /**
          * Optional. Default is `false`.
          *
