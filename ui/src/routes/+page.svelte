@@ -177,7 +177,7 @@
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
 	<Button
 		variant="outline"
-		on:click={() => {
+		onclick={() => {
 			from = posToLocation(e.lngLat, level);
 			fromMarker?.setLngLat(from.value.match!);
 			close();
@@ -187,7 +187,7 @@
 	</Button>
 	<Button
 		variant="outline"
-		on:click={() => {
+		onclick={() => {
 			to = posToLocation(e.lngLat, level);
 			toMarker?.setLngLat(to.value.match!);
 			close();
@@ -244,7 +244,7 @@
 					<h2 class="ml-2 text-base font-semibold">Journey Details</h2>
 					<Button
 						variant="ghost"
-						on:click={() => {
+						onclick={() => {
 							selectedItinerary = undefined;
 						}}
 					>
@@ -281,7 +281,7 @@
 					</h2>
 					<Button
 						variant="ghost"
-						on:click={() => {
+						onclick={() => {
 							selectedStop = undefined;
 						}}
 					>
