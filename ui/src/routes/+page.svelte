@@ -221,15 +221,7 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask
-				bind:from
-				bind:to
-				bind:time
-				bind:timeType
-				bind:wheelchair
-				bind:bikeRental
-				{theme}
-			/>
+			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
 		</Card>
 	</Control>
 

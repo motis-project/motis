@@ -30,7 +30,7 @@ namespace motis {
 api::ModeEnum to_mode(osr::search_profile const m) {
   switch (m) {
     case osr::search_profile::kCarParkingWheelchair: [[fallthrough]];
-    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_TO_PARK;
+    case osr::search_profile::kCarParking: return api::ModeEnum::CAR_PARKING;
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;

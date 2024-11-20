@@ -106,17 +106,11 @@ export type type = 'ADDRESS' | 'PLACE' | 'STOP';
 /**
  * # Street modes
  *
- * - `WALK`: Walking some or all of the way of the route.
- * - `BIKE`: Cycling for the entirety of the route or taking a bicycle onto the public transport (if enabled) and cycling from the arrival station to the destination.
- * - `BIKE_RENTAL`: Taking a rented, shared-mobility bike for part or the entirety of the route.
- * - `BIKE_TO_PARK`: Leaving the bicycle at the departure station and walking from the arrival station to the destination. This mode needs to be combined with at least one transit mode otherwise it behaves like an ordinary bicycle journey.
- * - `CAR`: Driving your own car the entirety of the route. This can be combined with transit, where will return routes with a Kiss & Ride component. This means that the car is not parked in a permanent parking area but rather the passenger is dropped off (for example, at an airport) and the driver continues driving the car away from the drop off location.
- * - `CAR_PARK` | `CAR_TO_PARK`: Driving a car to the park-and-ride facilities near a station and taking publictransport. This mode needs to be combined with at least one transit mode otherwise, it behaves like an ordinary car journey.
- * - `CAR_HAILING`: Using a car hailing app like Uber or Lyft to get to a train station or all the way to the destination.
- * - `CAR_PICKUP`: Walking to a pickup point along the road, driving to a drop-off point along the road, and walking the rest of the way. This can include various taxi-services or kiss & ride.
- * - `CAR_RENTAL`: Walk to a car rental point, drive to a car rental drop-off point and walk the rest of the way. This can include car rental at fixed locations or free-floating services.
- * - `FLEXIBLE`: Encompasses all types of on-demand and flexible transportation for example GTFS Flex or NeTEx Flexible Stop Places.
- * - `SCOOTER_RENTAL`: Walking to a scooter rental point, riding a scooter to a scooter rental drop-off point, and walking the rest of the way. This can include scooter rental at fixed locations or free-floating services.
+ * - `WALK`
+ * - `BIKE`
+ * - `BIKE_RENTAL`
+ * - `CAR`
+ * - `CAR_PARKING`
  *
  * # Transit modes
  *
@@ -136,7 +130,7 @@ export type type = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `REGIONAL_RAIL`: regional train
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'CAR' | 'BIKE_RENTAL' | 'BIKE_TO_PARK' | 'CAR_TO_PARK' | 'CAR_HAILING' | 'CAR_SHARING' | 'CAR_PICKUP' | 'CAR_RENTAL' | 'FLEXIBLE' | 'SCOOTER_RENTAL' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'CAR' | 'BIKE_RENTAL' | 'CAR_PARKING' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -387,6 +381,18 @@ export type Leg = {
     to: Place;
     /**
      * Leg duration in seconds
+     *
+     * If leg is footpath:
+     * The footpath duration is derived from the default footpath
+     * duration using the query parameters `transferTimeFactor` and
+     * `additionalTransferTime` as follows:
+     * `leg.duration = defaultDuration * transferTimeFactor + additionalTransferTime.`
+     * In case the defaultDuration is needed, it can be calculated by
+     * `defaultDuration = (leg.duration - additionalTransferTime) / transferTimeFactor`.
+     * Note that the default values are `transferTimeFactor = 1` and
+     * `additionalTransferTime = 0` in case they are not explicitly
+     * provided in the query.
+     *
      */
     duration: number;
     /**
@@ -597,6 +603,26 @@ export type StoptimesData = {
          */
         arriveBy?: boolean;
         /**
+         * This parameter will be ignored in case `pageCursor` is set.
+         *
+         * Optional. Default is
+         * - `LATER` for `arriveBy=false`
+         * - `EARLIER` for `arriveBy=true`
+         *
+         * The response will contain the next `n` arrivals / departures
+         * in case `EARLIER` is selected and the previous `n`
+         * arrivals / departures if `LATER` is selected.
+         *
+         */
+        direction?: 'EARLIER' | 'LATER';
+        /**
+         * Optional. Default is all transit modes.
+         *
+         * Only return arrivals/departures of the given modes.
+         *
+         */
+        mode?: Array<Mode>;
+        /**
          * the number of events
          */
         n: number;
@@ -654,6 +680,13 @@ export type StoptimesError = unknown;
 export type PlanData = {
     query: {
         /**
+         * Optional. Default is 0 minutes.
+         *
+         * Additional transfer time reserved for each transfer in minutes.
+         *
+         */
+        additionalTransferTime?: number;
+        /**
          * Optional. Default is `false`.
          *
          * - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
@@ -669,7 +702,7 @@ export type PlanData = {
          *
          * Note: Direct connections will only be returned on the first call. For paging calls, they can be omitted.
          *
-         * Note: Transit connections that are slower than the fastest direct walking connection will not show up.
+         * Note: Transit connections that are slower than the fastest direct connection will not show up.
          * This is being used as a cut-off during transit routing to speed up the search.
          * To prevent this, it's possible to send two separate requests (one with only `transitModes` and one with only `directModes`).
          *

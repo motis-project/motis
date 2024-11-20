@@ -17,15 +17,13 @@
 		selected = $bindable(),
 		placeholder,
 		class: className,
-		name,
-		theme
+		name
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
 		class?: string;
 		name?: string;
-		theme?: 'light' | 'dark';
 	} = $props();
 
 	let inputValue = $state('');
@@ -113,10 +111,7 @@
 	{#if items.length !== 0}
 		<Combobox.Content
 			sideOffset={12}
-			class={cn(
-				'absolute z-10 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none',
-				theme
-			)}
+			class="absolute z-10 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 		>
 			{#each items as item (item.value)}
 				<Combobox.Item

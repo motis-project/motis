@@ -17,8 +17,7 @@
 		time = $bindable(),
 		timeType = $bindable(),
 		wheelchair = $bindable(),
-		bikeRental = $bindable(),
-		theme
+		bikeRental = $bindable()
 	}: {
 		from: Location;
 		to: Location;
@@ -26,7 +25,6 @@
 		timeType: string;
 		wheelchair: boolean;
 		bikeRental: boolean;
-		theme?: 'light' | 'dark';
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -40,7 +38,6 @@
 		placeholder={t.from}
 		bind:selected={from}
 		bind:items={fromItems}
-		{theme}
 	/>
 	<AddressTypeahead
 		name="to"
@@ -48,7 +45,6 @@
 		placeholder={t.to}
 		bind:selected={to}
 		bind:items={toItems}
-		{theme}
 	/>
 	<Button
 		class="absolute z-10 right-12 top-10"
