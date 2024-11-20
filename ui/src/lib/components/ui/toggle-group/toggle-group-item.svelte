@@ -1,31 +1,30 @@
 <script lang="ts">
-	import { ToggleGroup as ToggleGroupPrimitive } from 'bits-ui';
-	import { type ToggleVariants, getToggleGroupCtx } from './index.js';
-	import { cn } from '$lib/utils.js';
-	import { toggleVariants } from '$lib/components/ui/toggle/index.js';
+	import { ToggleGroup as ToggleGroupPrimitive } from "bits-ui";
+	import { getToggleGroupCtx } from "./toggle-group.svelte";
+	import { cn } from "$lib/utils.js";
+	import { type ToggleVariants, toggleVariants } from "$lib/components/ui/toggle/index.js";
 
-	type $$Props = ToggleGroupPrimitive.ItemProps & ToggleVariants;
-
-	let className: string | undefined | null = undefined;
-
-	export { className as class };
-	export let variant: $$Props['variant'] = 'default';
-	export let size: $$Props['size'] = 'default';
-	export let value: $$Props['value'];
+	let {
+		ref = $bindable(null),
+		value = $bindable(),
+		class: className,
+		size,
+		variant,
+		...restProps
+	}: ToggleGroupPrimitive.ItemProps & ToggleVariants = $props();
 
 	const ctx = getToggleGroupCtx();
 </script>
 
 <ToggleGroupPrimitive.Item
+	bind:ref
 	class={cn(
 		toggleVariants({
 			variant: ctx.variant || variant,
-			size: ctx.size || size
+			size: ctx.size || size,
 		}),
 		className
 	)}
 	{value}
-	{...$$restProps}
->
-	<slot />
-</ToggleGroupPrimitive.Item>
+	{...restProps}
+/>

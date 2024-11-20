@@ -7,13 +7,15 @@
 		ref = $bindable(null),
 		class: className,
 		...restProps
-	}: WithoutChildrenOrChild<RadioGroupPrimitive.ItemProps> = $props();
+	}: WithoutChildrenOrChild<RadioGroupPrimitive.ItemProps> & {
+		value: string;
+	} = $props();
 </script>
 
 <RadioGroupPrimitive.Item
 	bind:ref
 	class={cn(
-		"border-primary text-primary ring-offset-background focus-visible:ring-ring aspect-square size-4 rounded-full border focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+		"border-primary text-primary focus-visible:ring-ring aspect-square size-4 rounded-full border shadow focus:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50",
 		className
 	)}
 	{...restProps}
@@ -21,7 +23,7 @@
 	{#snippet children({ checked })}
 		<div class="flex items-center justify-center">
 			{#if checked}
-				<Circle class="size-2.5 fill-current text-current" />
+				<Circle class="fill-primary size-3.5" />
 			{/if}
 		</div>
 	{/snippet}

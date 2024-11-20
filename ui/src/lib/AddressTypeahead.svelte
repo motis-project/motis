@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { cn } from './utils';
 	import { geocode, type Match } from './openapi';
 	import Bus from 'lucide-svelte/icons/bus-front';
 	import House from 'lucide-svelte/icons/map-pin-house';
@@ -88,7 +87,6 @@
 	};
 
 	const deserialize = (s: string): Location => {
-		console.log('deserialize', s);
 		const x = JSON.parse(s);
 		return {
 			value: x,
@@ -97,8 +95,8 @@
 	};
 
 	$effect(() => {
-		console.log('selected change: ', selected);
 		value = JSON.stringify(selected.value);
+		inputValue = selected.label!;
 	});
 
 	let timer: number;
@@ -110,28 +108,33 @@
 			}, 150);
 		}
 	});
+
+	let ref = $state<HTMLElement | null>();
+	$inspect(ref);
 </script>
 
 <Combobox.Root
 	type="single"
 	controlledValue
+	allowDeselect={false}
 	{value}
 	onValueChange={(e: string) => {
 		if (e) {
 			selected = deserialize(e);
+			inputValue = selected.label!;
 		}
 	}}
 >
-	<Combobox.Trigger>
-		<Combobox.Input
-			oninput={(e) => (inputValue = e.currentTarget.value)}
-			class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-			{placeholder}
-			aria-label={placeholder}
-			autocomplete="off"
-			{name}
-		/>
-	</Combobox.Trigger>
+	<Combobox.Input
+		{placeholder}
+		{name}
+		{ref}
+		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+		autocomplete="off"
+		oninput={(e) => (inputValue = e.currentTarget.value)}
+		aria-label={placeholder}
+		data-combobox-input={inputValue}
+	/>
 	{#if items.length !== 0}
 		<Combobox.Portal>
 			<Combobox.Content
