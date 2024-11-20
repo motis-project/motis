@@ -504,8 +504,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         std::nullopt);
 
     return {
-        .debugOutput_ =
-            join(query_stats, r.search_stats_.to_map(), r.algo_stats_.to_map()),
+        .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
+                             r.algo_stats_.to_map()),
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),
