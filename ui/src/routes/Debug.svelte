@@ -122,7 +122,7 @@
 <Button
 	size="icon"
 	variant={debug ? 'default' : 'outline'}
-	on:click={() => {
+	onclick={() => {
 		debug = !debug;
 	}}
 >
@@ -152,7 +152,7 @@
 											{#if x.default !== undefined}
 												<Button
 													variant="outline"
-													on:click={() => {
+													onclick={() => {
 														start = posToLocation(f.place, f.place.level);
 														destination = posToLocation(x.to, x.to.level);
 														profile = 'foot';
@@ -166,7 +166,7 @@
 											{#if x.foot !== undefined}
 												<Button
 													variant="outline"
-													on:click={() => {
+													onclick={() => {
 														start = posToLocation(f.place, f.place.level);
 														destination = posToLocation(x.to, x.to.level);
 														profile = 'foot';
@@ -181,7 +181,7 @@
 												<Button
 													class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
 													variant="outline"
-													on:click={() => {
+													onclick={() => {
 														start = posToLocation(f.place, f.place.level);
 														destination = posToLocation(x.to, x.to.level);
 														profile = 'wheelchair';

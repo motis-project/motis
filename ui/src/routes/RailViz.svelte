@@ -173,6 +173,7 @@
 		});
 	};
 
+	let railvizError = $state();
 	const railvizRequest = () => {
 		const b = maplibregl.LngLatBounds.convert(bounds!);
 		const min = lngLatToStr(b.getNorthWest());
@@ -191,13 +192,19 @@
 	};
 
 	let animation: number | null = null;
-	const updateRailvizLayer = () => {
-		railvizRequest().then((d) => {
+	const updateRailvizLayer = async () => {
+		try {
+			const { data, error } = await railvizRequest();
 			if (animation) {
 				cancelAnimationFrame(animation);
 			}
 
-			const tripSegmentsWithKeyFrames = d.data!.map((tripSegment: TripSegment) => {
+			if (error) {
+				railvizError = error;
+				return;
+			}
+
+			const tripSegmentsWithKeyFrames = data!.map((tripSegment: TripSegment) => {
 				return { ...tripSegment, ...getKeyFrames(tripSegment) };
 			});
 
@@ -209,14 +216,16 @@
 			};
 
 			onAnimationFrame();
-		});
+		} catch (e) {
+			railvizError = e;
+		}
 	};
 
 	let timer: number | undefined;
 	let overlay = $state.raw<MapboxOverlay>();
-	const updateRailviz = () => {
+	const updateRailviz = async () => {
 		clearTimeout(timer);
-		updateRailvizLayer();
+		await updateRailvizLayer();
 		timer = setTimeout(updateRailviz, 60000);
 	};
 
@@ -269,7 +278,7 @@
 	<Button
 		size="icon"
 		variant={colorMode ? 'default' : 'outline'}
-		on:click={() => {
+		onclick={() => {
 			colorMode = colorMode == 'rt' ? 'route' : 'rt';
 		}}
 	>
@@ -280,3 +289,9 @@
 		{/if}
 	</Button>
 </Control>
+
+{#if railvizError}
+	<Control position="bottom-left">
+		{railvizError}
+	</Control>
+{/if}

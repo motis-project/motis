@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Combobox } from 'bits-ui';
-	import { cn } from './utils';
 	import { geocode, type Match } from './openapi';
 	import Bus from 'lucide-svelte/icons/bus-front';
 	import House from 'lucide-svelte/icons/map-pin-house';
@@ -16,18 +15,16 @@
 		items = $bindable([]),
 		selected = $bindable(),
 		placeholder,
-		class: className,
 		name
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
-		class?: string;
 		name?: string;
 	} = $props();
 
 	let inputValue = $state('');
-	let touchedInput = $state(false);
+	let value = $state('');
 
 	const getDisplayArea = (match: Match | undefined) => {
 		if (match) {
@@ -89,9 +86,29 @@
 		});
 	};
 
+	const deserialize = (s: string): Location => {
+		const x = JSON.parse(s);
+		return {
+			value: x,
+			label: getLabel(x.match)
+		};
+	};
+
+	$effect(() => {
+		value = JSON.stringify(selected.value);
+		inputValue = selected.label!;
+	});
+
+	let ref = $state<HTMLElement | null>(null);
+	$effect(() => {
+		if (ref && inputValue) {
+			(ref as HTMLInputElement).value = inputValue;
+		}
+	});
+
 	let timer: number;
 	$effect(() => {
-		if (inputValue && touchedInput) {
+		if (inputValue) {
 			clearTimeout(timer);
 			timer = setTimeout(() => {
 				updateGuesses();
@@ -100,41 +117,64 @@
 	});
 </script>
 
-<Combobox.Root {items} bind:selected bind:inputValue bind:touchedInput>
-	<div class={cn('relative', className)}>
-		<Combobox.Input
-			class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-			{placeholder}
-			aria-label={placeholder}
-		/>
-	</div>
+<Combobox.Root
+	type="single"
+	controlledValue
+	allowDeselect={false}
+	{value}
+	onValueChange={(e: string) => {
+		if (e) {
+			selected = deserialize(e);
+			inputValue = selected.label!;
+		}
+	}}
+>
+	<Combobox.Input
+		{placeholder}
+		{name}
+		bind:ref
+		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+		autocomplete="off"
+		oninput={(e) => (inputValue = e.currentTarget.value)}
+		aria-label={placeholder}
+		data-combobox-input={inputValue}
+	/>
 	{#if items.length !== 0}
-		<Combobox.Content
-			sideOffset={12}
-			class="absolute z-10 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
-		>
-			{#each items as item (item.value)}
-				<Combobox.Item
-					class="relative flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
-					value={item.value}
-					label={item.label}
-				>
-					{#if item.value.match?.type == 'STOP'}
-						<Bus />
-					{:else if item.value.match?.type == 'ADDRESS'}
-						<House />
-					{:else if item.value.match?.type == 'PLACE'}
-						<Place />
+		<Combobox.Portal>
+			<Combobox.Content
+				align="start"
+				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-10 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
+			>
+				{#snippet child({ props, open })}
+					{#if open}
+						<div {...props}>
+							{#each items as item (item.value)}
+								<Combobox.Item
+									class="flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
+									value={JSON.stringify(item.value)}
+									label={item.label}
+								>
+									{#if item.value.match?.type == 'STOP'}
+										<Bus />
+									{:else if item.value.match?.type == 'ADDRESS'}
+										<House />
+									{:else if item.value.match?.type == 'PLACE'}
+										<Place />
+									{/if}
+									<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
+										{item.value.match?.name}
+									</span>
+									<span
+										class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden"
+									>
+										{getDisplayArea(item.value.match)}
+									</span>
+								</Combobox.Item>
+							{/each}
+						</div>
 					{/if}
-					<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
-						{item.value.match?.name}
-					</span>
-					<span class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden">
-						{getDisplayArea(item.value.match)}
-					</span>
-				</Combobox.Item>
-			{/each}
-		</Combobox.Content>
+				{/snippet}
+			</Combobox.Content>
+		</Combobox.Portal>
 	{/if}
-	<Combobox.HiddenInput {name} />
 </Combobox.Root>
