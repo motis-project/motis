@@ -363,7 +363,7 @@ paths:
           in: query
           required: false
           description: |
-            The maximum travel time in hours.
+            The maximum travel time in minutes.
             If not provided, the routing to uses the value
             hardcoded in the server which is usually quite high.
             
@@ -372,7 +372,7 @@ paths:
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
           schema:
-            type: number
+            type: integer
 
         - name: minTransferTime
           in: query

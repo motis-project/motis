@@ -1,6 +1,6 @@
 #include "motis/endpoints/routing.h"
 
-#include <cmath>
+#include <algorithm>
 
 #include "boost/thread/tss.hpp"
 
@@ -296,11 +296,11 @@ stats_map_t join(auto&&... maps) {
 // Get cutoff to remove journeys with slower or equal duration
 std::optional<n::duration_t> calculate_search_cutoff_time(
     n::duration_t const fastest_direct,
-    std::optional<double> const& max_travel_time) {
+    std::optional<int> const& max_travel_time) {
   if (max_travel_time.has_value()) {
     // Add +1 to keep journeys with equal duration
     auto const max_travel_duration =
-        n::duration_t{std::lround(60 * *max_travel_time) + 1};
+        n::duration_t{*max_travel_time + 1};
     return fastest_direct == kInfinityDuration
                ? max_travel_duration
                : std::min(fastest_direct, max_travel_duration);
