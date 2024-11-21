@@ -99,6 +99,13 @@
 		inputValue = selected.label!;
 	});
 
+	let ref = $state<HTMLElement | null>(null);
+	$effect(() => {
+		if (ref && inputValue) {
+			(ref as HTMLInputElement).value = inputValue;
+		}
+	});
+
 	let timer: number;
 	$effect(() => {
 		if (inputValue) {
@@ -108,9 +115,6 @@
 			}, 150);
 		}
 	});
-
-	let ref = $state<HTMLElement | null>();
-	$inspect(ref);
 </script>
 
 <Combobox.Root
@@ -128,7 +132,7 @@
 	<Combobox.Input
 		{placeholder}
 		{name}
-		{ref}
+		bind:ref
 		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 		autocomplete="off"
 		oninput={(e) => (inputValue = e.currentTarget.value)}

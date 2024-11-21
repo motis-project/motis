@@ -39,8 +39,8 @@
 		variant="outline"
 		size="icon"
 		onclick={() => {
-			const tmp = $state.snapshot(to);
-			to = $state.snapshot(from);
+			const tmp = to;
+			to = from;
 			from = tmp;
 
 			const tmpItems = toItems;
