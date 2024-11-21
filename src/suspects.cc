@@ -48,11 +48,8 @@ suspects::suspects(nigiri::timetable const& tt) {
       ++from_idx;
       ++to_idx;
     }
-  next_route:
+  next_route:;
   }
-
-  std::cout << "SUSPECTS COLLECTED: " << routes_.size() << "\n";
-  std::cout << "GOOD STOP PAIRS: " << n_good_stop_pairs << "\n";
 }
 
 }  // namespace motis
