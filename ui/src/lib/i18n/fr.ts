@@ -1,33 +1,33 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
-	walk: 'Walk',
-	bike: 'Bike',
-	car: 'Car',
-	from: 'From',
-	to: 'To',
-	arrival: 'Arrival',
-	departure: 'Departure',
-	duration: 'Duration',
-	arrivals: 'Arrivals',
-	later: 'later',
-	earlier: 'earlier',
-	departures: 'Departures',
-	switchToArrivals: 'Wechsel zu Ankünften',
-	switchToDepartures: 'Wechsel zu Abfahrten',
-	track: 'Track',
-	arrivalOnTrack: 'Arrival on track',
+	walk: 'Marche',
+	bike: 'Vélo',
+	car: 'Voiture',
+	from: 'De',
+	to: 'À',
+	arrival: 'Arrivée',
+	departure: 'Départ',
+	duration: 'Durée',
+	arrivals: 'Arrivées',
+	later: 'plus tard',
+	earlier: 'plus tôt',
+	departures: 'Départ',
+	switchToArrivals: 'Basculer vers les arrivées',
+	switchToDepartures: 'Basculer vers les départs',
+	track: 'Voie',
+	arrivalOnTrack: 'Arrivée sur la voie',
 	tripIntermediateStops: (n: number) => {
 		switch (n) {
 			case 0:
-				return 'No intermediate stops';
+				return 'Aucun arrêt intermédiaire';
 			case 1:
-				return '1 intermediate stop';
+				return '1 arrêt intermédiaire';
 			default:
-				return `${n}  intermediate stops`;
+				return `${n} arrêts intermédiaires`;
 		}
 	},
-	sharingProvider: 'Provider'
+	sharingProvider: 'Fournisseur'
 };
 
 export default translations;
