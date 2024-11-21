@@ -26,6 +26,7 @@
 #include "motis/match_platforms.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
+#include "motis/suspects.h"
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
@@ -195,6 +196,7 @@ void data::load_tt() {
   tt_->locations_.resolve_timezones();
   location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
+  suspects_ = std::make_unique<suspects>(*tt_);
   init_rtt();
 }
 
