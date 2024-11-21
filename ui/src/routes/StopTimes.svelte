@@ -31,7 +31,7 @@
 		<Button
 			class="font-bold"
 			variant="outline"
-			on:click={() => {
+			onclick={() => {
 				arriveBy = !arriveBy;
 			}}
 		>

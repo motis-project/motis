@@ -49,7 +49,7 @@
 				{#each r.direct as d}
 					<Button
 						variant="link"
-						on:click={() => {
+						onclick={() => {
 							selectedItinerary = d;
 						}}
 					>
