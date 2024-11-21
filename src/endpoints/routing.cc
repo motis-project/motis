@@ -299,8 +299,7 @@ std::optional<n::duration_t> calculate_search_cutoff_time(
     std::optional<int> const& max_travel_time) {
   if (max_travel_time.has_value()) {
     // Add +1 to keep journeys with equal duration
-    auto const max_travel_duration =
-        n::duration_t{*max_travel_time + 1};
+    auto const max_travel_duration = n::duration_t{*max_travel_time + 1};
     return fastest_direct == kInfinityDuration
                ? max_travel_duration
                : std::min(fastest_direct, max_travel_duration);
