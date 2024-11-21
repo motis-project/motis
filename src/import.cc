@@ -48,7 +48,6 @@
 #include "motis/compute_footpaths.h"
 #include "motis/data.h"
 #include "motis/hashes.h"
-#include "motis/suspects.h"
 #include "motis/tag_lookup.h"
 #include "motis/tt_location_rtree.h"
 
@@ -289,7 +288,6 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
         d.init_rtt();
 
-        d.suspects_ = std::make_unique<suspects>(*d.tt_);
         if (c.timetable_->with_shapes_) {
           d.load_shapes();
         }

@@ -196,7 +196,6 @@ void data::load_tt() {
   tt_->locations_.resolve_timezones();
   location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
-  suspects_ = std::make_unique<suspects>(*tt_);
   init_rtt();
 }
 
