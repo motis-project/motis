@@ -40,6 +40,7 @@
 #include "osr/ways.h"
 
 #include "adr/adr.h"
+#include "adr/area_database.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
