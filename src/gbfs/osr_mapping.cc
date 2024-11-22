@@ -132,7 +132,9 @@ struct osr_mapping {
   }
 
   void map_stations() {
-    for (auto [seg, rd] : utl::zip(provider_.segments_, segment_data_)) {
+    for (auto [seg_b, rd_b] : utl::zip(provider_.segments_, segment_data_)) {
+      auto& seg = seg_b;  // fix for apple clang
+      auto& rd = rd_b;
       auto next_node_id = static_cast<osr::node_idx_t>(
           w_.n_nodes() + rd.additional_nodes_.size());
       for (auto const& [id, st] : provider_.stations_) {
