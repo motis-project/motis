@@ -39,7 +39,8 @@ struct partition {
       // count elements in current set that are in s
       auto count = T{0};
       for (auto i = current_start; i <= set_end; ++i) {
-        if (in_s[static_cast<std::size_t>(partition_[i])]) {
+        if (in_s[static_cast<std::size_t>(
+                partition_[static_cast<std::size_t>(i)])]) {
           ++count;
         }
       }
@@ -50,7 +51,8 @@ struct partition {
         // partition the set into two parts
         auto split_pos = current_start;
         for (auto i = current_start; i <= set_end; ++i) {
-          if (in_s[static_cast<std::size_t>(partition_[i])]) {
+          if (in_s[static_cast<std::size_t>(
+                  partition_[static_cast<std::size_t>(i)])]) {
             // move element to front of split
             if (i != split_pos) {
               std::swap(partition_[static_cast<std::size_t>(i)],
@@ -81,7 +83,7 @@ struct partition {
     auto current_start = T{0};
     for (auto const set_end : set_ends_) {
       auto set = std::vector<T>{};
-      set.reserve(set_end - current_start + 1);
+      set.reserve(static_cast<std::size_t>(set_end - current_start + 1));
       for (auto i = current_start; i <= set_end; ++i) {
         set.push_back(partition_[static_cast<std::size_t>(i)]);
       }
