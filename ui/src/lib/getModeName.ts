@@ -8,7 +8,7 @@ export const getModeName = (m: Mode) => {
 			return t.walk;
 		case 'BIKE':
 		case 'BIKE_RENTAL':
-      return t.bike;
+			return t.bike;
 		case 'SCOOTER_RENTAL':
 			return t.scooter;
 		case 'CAR':

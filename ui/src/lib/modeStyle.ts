@@ -22,8 +22,8 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 		case 'BIKE_RENTAL':
 			return ['bike', '#075985', 'white'];
 
-    case 'SCOOTER_RENTAL':
-      return ['scooter', '#075985', 'white'];
+		case 'SCOOTER_RENTAL':
+			return ['scooter', '#075985', 'white'];
 
 		case 'CAR':
 		case 'CAR_PARKING':
