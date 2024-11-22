@@ -32,6 +32,7 @@
 	import StopTimes from './StopTimes.svelte';
 	import { onMount } from 'svelte';
 	import RailViz from './RailViz.svelte';
+	import { t } from '$lib/i18n/translation';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -179,7 +180,7 @@
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
 	<Button
 		variant="outline"
-		on:click={() => {
+		onclick={() => {
 			from = posToLocation(e.lngLat, level);
 			fromMarker?.setLngLat(from.value.match!);
 			close();
@@ -189,7 +190,7 @@
 	</Button>
 	<Button
 		variant="outline"
-		on:click={() => {
+		onclick={() => {
 			to = posToLocation(e.lngLat, level);
 			toMarker?.setLngLat(to.value.match!);
 			close();
@@ -223,15 +224,7 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask
-				bind:from
-				bind:to
-				bind:time
-				bind:timeType
-				bind:wheelchair
-				bind:bikeRental
-				{theme}
-			/>
+			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
 		</Card>
 	</Control>
 
@@ -254,7 +247,7 @@
 					<h2 class="ml-2 text-base font-semibold">Journey Details</h2>
 					<Button
 						variant="ghost"
-						on:click={() => {
+						onclick={() => {
 							selectedItinerary = undefined;
 						}}
 					>
@@ -282,16 +275,16 @@
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if stopArriveBy}
-							Ankünfte
+							{t.arrivals}
 						{:else}
-							Abfahrten
+							{t.departures}
 						{/if}
 						in
 						{selectedStop.name}
 					</h2>
 					<Button
 						variant="ghost"
-						on:click={() => {
+						onclick={() => {
 							selectedStop = undefined;
 						}}
 					>

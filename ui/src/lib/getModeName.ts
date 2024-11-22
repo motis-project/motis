@@ -1,22 +1,19 @@
 import type { Mode } from './openapi';
 
+import { t } from './i18n/translation';
+
 export const getModeName = (m: Mode) => {
 	switch (m) {
 		case 'WALK':
-			return 'Fußweg';
+			return t.walk;
 		case 'BIKE':
 		case 'BIKE_RENTAL':
-		case 'BIKE_TO_PARK':
-			return 'Fahrrad';
-    case 'SCOOTER_RENTAL':
-      return 'Scooter';
+      return t.bike;
+		case 'SCOOTER_RENTAL':
+			return t.scooter;
 		case 'CAR':
-		case 'CAR_TO_PARK':
-		case 'CAR_HAILING':
-		case 'CAR_PICKUP':
-		case 'CAR_RENTAL':
-		case 'CAR_SHARING':
-			return 'Auto';
+		case 'CAR_PARKING':
+			return t.car;
 		default:
 			return `${m}`;
 	}

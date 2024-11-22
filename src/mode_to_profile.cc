@@ -21,6 +21,9 @@ osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
                         : osr::search_profile::kFoot;
     case api::ModeEnum::BIKE: return osr::search_profile::kBike;
     case api::ModeEnum::CAR: return osr::search_profile::kCar;
+    case api::ModeEnum::CAR_PARKING:
+      return wheelchair ? osr::search_profile::kCarParkingWheelchair
+                        : osr::search_profile::kCarParking;
     case api::ModeEnum::BIKE_RENTAL: return osr::search_profile::kBikeSharing;
     case api::ModeEnum::SCOOTER_RENTAL:
       return osr::search_profile::kBikeSharing;

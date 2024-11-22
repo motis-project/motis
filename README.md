@@ -26,7 +26,7 @@ MOTIS currently supports the following input formats:
 *Planned*: GTFS-Flex, NeTEx and SIRI
 
 MOTIS provides an easy-to-use **REST API** (JSON via HTTP) with
-a [**OpenAPI specification**](openapi.yaml)
+an [**OpenAPI specification**](https://redocly.github.io/redoc/?url=https://raw.githubusercontent.com/motis-project/motis/refs/heads/master/openapi.yaml) ([source](openapi.yaml))
 that allows you to generate clients for your favorite programming language.
 
 

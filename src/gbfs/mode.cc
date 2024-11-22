@@ -12,7 +12,6 @@ api::ModeEnum get_gbfs_mode(vehicle_form_factor const ff) {
     case gbfs::vehicle_form_factor::kScooterStanding:
     case gbfs::vehicle_form_factor::kScooterSeated:
       return api::ModeEnum::SCOOTER_RENTAL;
-    case gbfs::vehicle_form_factor::kCar: return api::ModeEnum::CAR_RENTAL;
     default: return api::ModeEnum::BIKE_RENTAL;
   }
 }

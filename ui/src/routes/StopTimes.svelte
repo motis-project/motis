@@ -5,6 +5,7 @@
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { t } from '$lib/i18n/translation';
 
 	let {
 		stopId,
@@ -30,14 +31,14 @@
 		<Button
 			class="font-bold"
 			variant="outline"
-			on:click={() => {
+			onclick={() => {
 				arriveBy = !arriveBy;
 			}}
 		>
 			{#if arriveBy}
-				Wechsel zu Abfahrten
+				{t.switchToDepartures}
 			{:else}
-				Wechsel zu Ankünften
+				{t.switchToArrivals}
 			{/if}
 		</Button>
 	</div>
@@ -62,7 +63,7 @@
 						}}
 						class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg"
 					>
-						früher
+						{t.earlier}
 					</button>
 					<div class="border-t w-full h-0"></div>
 				</div>
@@ -111,7 +112,7 @@
 						}}
 						class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg"
 					>
-						später
+						{t.later}
 					</button>
 					<div class="border-t w-full h-0"></div>
 				</div>
