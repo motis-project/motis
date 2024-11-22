@@ -352,7 +352,7 @@ struct aggregated_feed {
   std::string url_;
   headers_t headers_{};
   std::optional<std::chrono::system_clock::time_point> expiry_{};
-  std::vector<provider_feed> feeds_;
+  std::vector<provider_feed> feeds_{};
 };
 
 struct gbfs_data {

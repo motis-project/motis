@@ -26,7 +26,8 @@ inline compressed_bitvec compress_bitvec(
   auto cbv = compressed_bitvec{
       .data_ =
           std::unique_ptr<char[], compressed_bitvec::free_deleter>{
-              static_cast<char*>(std::malloc(max_compressed_size))},
+              static_cast<char*>(
+                  std::malloc(static_cast<std::size_t>(max_compressed_size)))},
       .original_bytes_ = original_bytes,
       .bitvec_size_ = bv.size_};
   utl::verify(cbv.data_ != nullptr,
@@ -48,7 +49,8 @@ inline compressed_bitvec compress_bitvec(
 template <typename Vec, typename Key = typename Vec::size_type>
 inline void decompress_bitvec(compressed_bitvec const& cbv,
                               cista::basic_bitvec<Vec, Key>& bv) {
-  bv.resize(cbv.bitvec_size_);
+  bv.resize(static_cast<typename cista::basic_bitvec<Vec, Key>::size_type>(
+      cbv.bitvec_size_));
   auto const decompressed_bytes = LZ4_decompress_safe(
       cbv.data_.get(), reinterpret_cast<char*>(bv.blocks_.data()),
       cbv.compressed_bytes_,
