@@ -14,4 +14,6 @@ api::ModeEnum get_gbfs_mode(gbfs_data const&, gbfs_segment_ref);
 api::ModeEnum get_gbfs_mode(gbfs_routing_data const&,
                             nigiri::transport_mode_id_t);
 
+bool form_factor_matches(api::ModeEnum, gbfs::vehicle_form_factor);
+
 }  // namespace motis::gbfs

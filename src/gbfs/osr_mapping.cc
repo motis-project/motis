@@ -45,11 +45,10 @@ struct osr_mapping {
     };
 
     for (auto [seg, rd] : utl::zip(provider_.segments_, segment_data_)) {
-      auto done = make_loc_bitvec();
+      auto default_restrictions = provider_.default_restrictions_;
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
       rd.through_allowed_ = make_loc_bitvec();
-      auto default_restrictions = provider_.default_restrictions_;
 
       // global rules
       for (auto const& r : provider_.geofencing_zones_.global_rules_) {
@@ -70,15 +69,20 @@ struct osr_mapping {
       if (default_restrictions.ride_through_allowed_) {
         rd.through_allowed_.one_out();
       }
-      auto const global_station_parking =
-          default_restrictions.station_parking_.value_or(false);
 
-      auto const handle_point = [&](osr::node_idx_t const n,
-                                    geo::latlng const& pos) {
+      rd.station_parking_ =
+          default_restrictions.station_parking_.value_or(false);
+    }
+
+    auto done = make_loc_bitvec();
+
+    auto const handle_point = [&](osr::node_idx_t const n,
+                                  geo::latlng const& pos) {
+      for (auto [seg, rd] : utl::zip(provider_.segments_, segment_data_)) {
         auto start_allowed = std::optional<bool>{};
         auto end_allowed = std::optional<bool>{};
         auto through_allowed = std::optional<bool>{};
-        auto station_parking = global_station_parking;
+        auto station_parking = rd.station_parking_;
         for (auto const& z : provider_.geofencing_zones_.zones_) {
           // check if pos is inside the zone multipolygon
           if (multipoly_contains_point(z.geom_.get(), pos)) {
@@ -106,24 +110,24 @@ struct osr_mapping {
         if (through_allowed.has_value()) {
           rd.through_allowed_.set(n, *through_allowed);
         }
-      };
-
-      auto const* osr_r = w_.r_.get();
-      for (auto const& z : provider_.geofencing_zones_.zones_) {
-        auto const rect = tg_geom_rect(z.geom_.get());
-        auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
-                                 geo::latlng{rect.max.y, rect.max.x}};
-
-        l_.find(bb, [&](osr::way_idx_t const way) {
-          for (auto const n : osr_r->way_nodes_[way]) {
-            if (done.test(n)) {
-              continue;
-            }
-            done.set(n, true);
-            handle_point(n, w_.get_node_pos(n).as_latlng());
-          }
-        });
       }
+    };
+
+    auto const* osr_r = w_.r_.get();
+    for (auto const& z : provider_.geofencing_zones_.zones_) {
+      auto const rect = tg_geom_rect(z.geom_.get());
+      auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
+                               geo::latlng{rect.max.y, rect.max.x}};
+
+      l_.find(bb, [&](osr::way_idx_t const way) {
+        for (auto const n : osr_r->way_nodes_[way]) {
+          if (done.test(n)) {
+            continue;
+          }
+          done.set(n, true);
+          handle_point(n, w_.get_node_pos(n).as_latlng());
+        }
+      });
     }
   }
 

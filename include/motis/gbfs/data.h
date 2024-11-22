@@ -235,6 +235,7 @@ struct routing_data {
   osr::bitvec<osr::node_idx_t> start_allowed_{};
   osr::bitvec<osr::node_idx_t> end_allowed_{};
   osr::bitvec<osr::node_idx_t> through_allowed_{};
+  bool station_parking_{};
 };
 
 struct compressed_routing_data {
