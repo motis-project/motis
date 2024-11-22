@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -8,9 +9,9 @@ namespace motis::gbfs {
 template <typename T>
 struct partition {
   explicit partition(T const n) : n_{n} {
-    partition_.resize(n);
+    partition_.resize(static_cast<std::size_t>(n));
     for (auto i = T{0}; i < n; ++i) {
-      partition_[i] = i;
+      partition_[static_cast<std::size_t>(i)] = i;
     }
     if (n != 0) {
       // initially there's only one set ending at n-1
@@ -24,9 +25,9 @@ struct partition {
     }
 
     // mark elements in s
-    auto in_s = std::vector<bool>(n_, false);
+    auto in_s = std::vector<bool>(static_cast<std::size_t>(n_), false);
     for (auto const elem : s) {
-      in_s[elem] = true;
+      in_s[static_cast<std::size_t>(elem)] = true;
     }
 
     // process each existing set
@@ -38,7 +39,7 @@ struct partition {
       // count elements in current set that are in s
       auto count = T{0};
       for (auto i = current_start; i <= set_end; ++i) {
-        if (in_s[partition_[i]]) {
+        if (in_s[static_cast<std::size_t>(partition_[i])]) {
           ++count;
         }
       }
@@ -49,10 +50,11 @@ struct partition {
         // partition the set into two parts
         auto split_pos = current_start;
         for (auto i = current_start; i <= set_end; ++i) {
-          if (in_s[partition_[i]]) {
+          if (in_s[static_cast<std::size_t>(partition_[i])]) {
             // move element to front of split
             if (i != split_pos) {
-              std::swap(partition_[i], partition_[split_pos]);
+              std::swap(partition_[static_cast<std::size_t>(i)],
+                        partition_[static_cast<std::size_t>(split_pos)]);
             }
             ++split_pos;
           }
@@ -81,7 +83,7 @@ struct partition {
       auto set = std::vector<T>{};
       set.reserve(set_end - current_start + 1);
       for (auto i = current_start; i <= set_end; ++i) {
-        set.push_back(partition_[i]);
+        set.push_back(partition_[static_cast<std::size_t>(i)]);
       }
       result.push_back(std::move(set));
       current_start = set_end + 1;
