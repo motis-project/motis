@@ -4,8 +4,9 @@
 
 namespace motis::gbfs {
 
-void map_geofencing_zones(osr::ways const&, osr::lookup const&, gbfs_provider&);
-void map_stations(osr::ways const&, osr::lookup const&, gbfs_provider&);
-void map_vehicles(osr::ways const&, osr::lookup const&, gbfs_provider&);
+void map_data(osr::ways const&,
+              osr::lookup const&,
+              gbfs_provider const&,
+              provider_routing_data&);
 
 }  // namespace motis::gbfs

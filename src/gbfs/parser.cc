@@ -193,8 +193,8 @@ void load_station_information(gbfs_provider& provider,
                           .name_ = name,
                           .pos_ = geo::latlng{lat, lon},
                           .rental_uris_ = parse_rental_uris(station_obj),
-                          .station_area_ =
-                              std::unique_ptr<tg_geom, tg_geom_deleter>(area)}};
+                          .station_area_ = std::shared_ptr<tg_geom>(
+                              area, tg_geom_deleter{})}};
   }
 }
 
@@ -211,8 +211,6 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
 
     auto const station_it = provider.stations_.find(station_id);
     if (station_it == end(provider.stations_)) {
-      std::cerr << "[GBFS] (" << provider.id_ << "): station_id=\""
-                << station_id << "\" referenced in station_status not found\n";
       continue;
     }
 
@@ -222,6 +220,7 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
             station_obj.at(num_vehicles_available_key).to_number<unsigned>(),
         .is_renting_ = get_bool(version, station_obj, "is_renting"),
         .is_returning_ = get_bool(version, station_obj, "is_returning")};
+
     if (station_obj.contains("vehicle_types_available")) {
       auto const& vta = station_obj.at("vehicle_types_available").as_array();
       auto unrestricted_available = 0U;
@@ -243,6 +242,15 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       station.status_.num_vehicles_available_ =
           unrestricted_available + any_station_available;
     }
+
+    if (station_obj.contains("vehicle_docks_available")) {
+      for (auto const& vt :
+           station_obj.at("vehicle_docks_available").as_array()) {
+        station.status_.vehicle_docks_available_[static_cast<std::string>(
+            vt.at("vehicle_type_id").as_string())] =
+            vt.at("count").to_number<unsigned>();
+      }
+    }
   }
 }
 
@@ -253,6 +261,7 @@ vehicle_form_factor parse_form_factor(std::string_view const s) {
       return vehicle_form_factor::kCargoBicycle;
     case cista::hash("car"): return vehicle_form_factor::kCar;
     case cista::hash("moped"): return vehicle_form_factor::kMoped;
+    case cista::hash("scooter"):  // < 3.0
     case cista::hash("scooter_standing"):
       return vehicle_form_factor::kScooterStanding;
     case cista::hash("scooter_seated"):

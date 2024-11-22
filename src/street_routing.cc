@@ -8,6 +8,8 @@
 #include "osr/routing/sharing_data.h"
 
 #include "motis/constants.h"
+#include "motis/gbfs/mode.h"
+#include "motis/gbfs/routing_data.h"
 #include "motis/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/polyline.h"
@@ -117,15 +119,17 @@ std::vector<api::StepInstruction> get_step_instructions(
 
 struct sharing {
   sharing(osr::ways const& w,
-          gbfs::gbfs_data const& gbfs,
-          gbfs_provider_idx_t const provider_idx)
+          gbfs::gbfs_routing_data& gbfs_rd,
+          gbfs::gbfs_segment_ref const seg_ref)
       : w_{w},
-        gbfs_{gbfs},
-        provider_{*gbfs_.providers_.at(provider_idx).get()} {}
+        gbfs_rd_{gbfs_rd},
+        provider_{*gbfs_rd_.data_->providers_.at(seg_ref.provider_)},
+        seg_rd_{gbfs_rd_.get_segment_routing_data(seg_ref)} {}
 
   api::Rental get_rental(osr::node_idx_t const n) const {
     auto ret = rental_;
-    auto const& an = provider_.additional_nodes_.at(get_additional_node_idx(n));
+    auto const& an =
+        seg_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
     std::visit(utl::overloaded{
                    [&](gbfs::additional_node::station const& s) {
                      auto const& st = provider_.stations_.at(s.id_);
@@ -153,7 +157,8 @@ struct sharing {
             [&](gbfs::additional_node::vehicle const& vehicle) {
               return provider_.vehicle_status_.at(vehicle.idx_).pos_;
             }},
-        provider_.additional_nodes_.at(get_additional_node_idx(n)).data_);
+        seg_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n))
+            .data_);
   }
 
   std::size_t get_additional_node_idx(osr::node_idx_t const n) const {
@@ -161,14 +166,15 @@ struct sharing {
   }
 
   osr::ways const& w_;
-  gbfs::gbfs_data const& gbfs_;
+  gbfs::gbfs_routing_data& gbfs_rd_;
   gbfs::gbfs_provider const& provider_;
+  gbfs::segment_routing_data const* seg_rd_;
   osr::sharing_data sharing_data_{
-      .start_allowed_ = provider_.start_allowed_,
-      .end_allowed_ = provider_.end_allowed_,
-      .through_allowed_ = provider_.through_allowed_,
+      .start_allowed_ = seg_rd_->start_allowed_,
+      .end_allowed_ = seg_rd_->end_allowed_,
+      .through_allowed_ = seg_rd_->through_allowed_,
       .additional_node_offset_ = w_.n_nodes(),
-      .additional_edges_ = provider_.additional_edges_};
+      .additional_edges_ = seg_rd_->compressed_.additional_edges_};
   api::Rental rental_{
       .systemId_ = provider_.sys_info_.id_,
       .systemName_ = provider_.sys_info_.name_,
@@ -178,7 +184,7 @@ struct sharing {
 
 api::Itinerary route(osr::ways const& w,
                      osr::lookup const& l,
-                     gbfs::gbfs_data const* gbfs,
+                     gbfs::gbfs_routing_data& gbfs_rd,
                      elevators const* e,
                      api::Place const& from,
                      api::Place const& to,
@@ -186,20 +192,21 @@ api::Itinerary route(osr::ways const& w,
                      bool const wheelchair,
                      n::unixtime_t const start_time,
                      std::optional<n::unixtime_t> const end_time,
-                     gbfs_provider_idx_t const provider_idx,
+                     gbfs::gbfs_segment_ref const seg_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
                      std::chrono::seconds const max) {
   auto const profile = to_profile(mode, wheelchair);
-  utl::verify(profile != osr::search_profile::kBikeSharing || gbfs != nullptr,
-              "sharing mobility not configured");
+  utl::verify(
+      profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
+      "sharing mobility not configured");
 
   auto const is_additional_node = [&](osr::node_idx_t const n) {
     return n >= w.n_nodes();
   };
 
   auto const sharing_data = profile == osr::search_profile::kBikeSharing
-                                ? std::optional{sharing(w, *gbfs, provider_idx)}
+                                ? std::optional{sharing(w, gbfs_rd, seg_ref)}
                                 : std::nullopt;
 
   auto const get_node_pos = [&](osr::node_idx_t const n) -> geo::latlng {
@@ -213,13 +220,12 @@ api::Itinerary route(osr::ways const& w,
   };
 
   auto const path = [&]() {
-    auto p =
-        get_path(w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-                 get_location(from), get_location(to),
-                 static_cast<transport_mode_t>(
-                     to_idx(provider_idx + kGbfsTransportModeIdOffset)),
-                 to_profile(mode, wheelchair), start_time,
-                 static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
+    auto p = get_path(
+        w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
+        get_location(from), get_location(to),
+        static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(seg_ref)),
+        to_profile(mode, wheelchair), start_time,
+        static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
     if (p.has_value() && profile == osr::search_profile::kBikeSharing) {
       // Coordinates of additional nodes are not known to osr.
@@ -241,7 +247,10 @@ api::Itinerary route(osr::ways const& w,
     }
 
     std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
-              << "\n  -> CREATING DUMMY LEG\n";
+              << "\n  -> CREATING DUMMY LEG (mode=" << mode
+              << ", profile=" << osr::to_str(profile)
+              << ", provider=" << seg_ref.provider_
+              << ", segment=" << seg_ref.segment_ << ")\n";
     auto itinerary = api::Itinerary{
         .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                          *end_time - start_time)
@@ -313,7 +322,7 @@ api::Itinerary route(osr::ways const& w,
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
             .mode_ = (lb->mode_ == osr::mode::kBike &&
                       profile == osr::search_profile::kBikeSharing)
-                         ? api::ModeEnum::BIKE_RENTAL
+                         ? gbfs::get_gbfs_mode(*gbfs_rd.data_, seg_ref)
                          : to_mode(lb->mode_),
             .from_ = pred_place,
             .to_ = next_place,

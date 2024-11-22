@@ -8,6 +8,8 @@ export const getModeName = (m: Mode) => {
 		case 'BIKE_RENTAL':
 		case 'BIKE_TO_PARK':
 			return 'Fahrrad';
+    case 'SCOOTER_RENTAL':
+      return 'Scooter';
 		case 'CAR':
 		case 'CAR_TO_PARK':
 		case 'CAR_HAILING':

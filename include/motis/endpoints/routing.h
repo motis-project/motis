@@ -21,7 +21,7 @@ struct routing {
       std::vector<api::ModeEnum> const&,
       bool wheelchair,
       std::chrono::seconds max,
-      gbfs::gbfs_data const*) const;
+      gbfs::gbfs_routing_data&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
@@ -34,7 +34,7 @@ struct routing {
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
-      gbfs::gbfs_data const*,
+      gbfs::gbfs_routing_data&,
       api::Place const& from,
       api::Place const& to,
       std::vector<api::ModeEnum> const&,
