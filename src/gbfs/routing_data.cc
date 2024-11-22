@@ -76,7 +76,8 @@ nigiri::transport_mode_id_t gbfs_routing_data::get_transport_mode(
 
 gbfs_segment_ref gbfs_routing_data::get_segment_ref(
     nigiri::transport_mode_id_t const id) const {
-  return segment_refs_.at(id - kGbfsTransportModeIdOffset);
+  return segment_refs_.at(
+      static_cast<std::size_t>(id - kGbfsTransportModeIdOffset));
 }
 
 }  // namespace motis::gbfs
