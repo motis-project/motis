@@ -246,9 +246,13 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
     if (station_obj.contains("vehicle_docks_available")) {
       for (auto const& vt :
            station_obj.at("vehicle_docks_available").as_array()) {
-        station.status_.vehicle_docks_available_[static_cast<std::string>(
-            vt.at("vehicle_type_id").as_string())] =
-            vt.at("count").to_number<unsigned>();
+        auto& vto = vt.as_object();
+        if (vto.contains("vehicle_type_ids") && vto.contains("count")) {
+          for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
+            station.status_.vehicle_docks_available_[static_cast<std::string>(
+                vti.as_string())] = vto.at("count").to_number<unsigned>();
+          }
+        }
       }
     }
   }
