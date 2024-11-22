@@ -192,7 +192,7 @@ struct file_info {
   cista::hash_t hash_{};
 };
 
-struct provider_cache {
+struct provider_file_infos {
   bool needs_update() const {
     auto const now = std::chrono::system_clock::now();
     return urls_fi_.needs_update(now) ||
@@ -204,7 +204,6 @@ struct provider_cache {
            geofencing_zones_fi_.needs_update(now);
   }
 
-  std::string discovery_url_;
   hash_map<std::string, std::string> urls_{};
 
   file_info urls_fi_{};
@@ -314,7 +313,7 @@ struct gbfs_provider {
   std::string id_;  // from config
   gbfs_provider_idx_t idx_{};
 
-  std::shared_ptr<provider_cache> cache_{};
+  std::shared_ptr<provider_file_infos> file_infos_{};
 
   system_information sys_info_{};
   std::map<std::string, station> stations_{};

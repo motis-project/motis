@@ -252,18 +252,17 @@ struct gbfs_update {
       std::optional<gbfs_file> discovery = std::nullopt) {
     auto& provider = add_provider(pf);
 
-    // check if exists in old data - if so, reuse cache
+    // check if exists in old data - if so, reuse existing file infos
     gbfs_provider const* prev_provider = nullptr;
     if (prev_d_ != nullptr) {
       if (auto const it = prev_d_->provider_by_id_.find(pf.id_);
           it != end(prev_d_->provider_by_id_)) {
         prev_provider = prev_d_->providers_[it->second].get();
-        provider.cache_ = prev_provider->cache_;
+        provider.file_infos_ = prev_provider->file_infos_;
       }
     }
-    if (!provider.cache_) {
-      provider.cache_ = std::make_shared<provider_cache>();
-      provider.cache_->discovery_url_ = pf.url_;  // TODO: no longer needed?
+    if (!provider.file_infos_) {
+      provider.file_infos_ = std::make_shared<provider_file_infos>();
     }
 
     co_return co_await process_provider_feed(pf, provider, prev_provider,
@@ -303,26 +302,26 @@ struct gbfs_update {
       gbfs_provider& provider,
       gbfs_provider const* prev_provider,
       std::optional<gbfs_file> discovery = std::nullopt) {
-    auto& cache = provider.cache_;
+    auto& file_infos = provider.file_infos_;
 
-    if (!discovery && !provider.cache_->needs_update()) {
+    if (!discovery && !provider.file_infos_->needs_update()) {
       co_return;
     }
 
-    if (!discovery && needs_refresh(provider.cache_->urls_fi_)) {
+    if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
       discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.dir_);
     }
     if (discovery) {
-      cache->urls_ = parse_discovery(discovery->json_);
-      cache->urls_fi_.expiry_ = discovery->next_refresh_;
-      cache->urls_fi_.hash_ = discovery->hash_;
+      file_infos->urls_ = parse_discovery(discovery->json_);
+      file_infos->urls_fi_.expiry_ = discovery->next_refresh_;
+      file_infos->urls_fi_.hash_ = discovery->hash_;
     }
 
     auto const update = [&](std::string_view const name, file_info& fi,
                             auto const& fn,
                             bool const force = false) -> awaitable<bool> {
-      if (force || (cache->urls_.contains(name) && needs_refresh(fi))) {
-        auto file = co_await fetch_file(name, cache->urls_.at(name),
+      if (force || (file_infos->urls_.contains(name) && needs_refresh(fi))) {
+        auto file = co_await fetch_file(name, file_infos->urls_.at(name),
                                         pf.headers_, pf.dir_);
         auto const hash_changed = file.hash_ != fi.hash_;
         auto j_root = file.json_.as_object();
@@ -334,41 +333,42 @@ struct gbfs_update {
       co_return false;
     };
 
-    auto const sys_info_updated =
-        co_await update("system_information", cache->system_information_fi_,
-                        load_system_information);
+    auto const sys_info_updated = co_await update(
+        "system_information", file_infos->system_information_fi_,
+        load_system_information);
     if (!sys_info_updated && prev_provider != nullptr) {
       provider.sys_info_ = prev_provider->sys_info_;
     }
 
     auto const vehicle_types_updated = co_await update(
-        "vehicle_types", cache->vehicle_types_fi_, load_vehicle_types);
+        "vehicle_types", file_infos->vehicle_types_fi_, load_vehicle_types);
     if (!vehicle_types_updated && prev_provider != nullptr) {
       provider.vehicle_types_ = prev_provider->vehicle_types_;
     }
 
-    auto const stations_updated =
-        co_await update("station_information", cache->station_information_fi_,
-                        load_station_information);
+    auto const stations_updated = co_await update(
+        "station_information", file_infos->station_information_fi_,
+        load_station_information);
     if (!stations_updated && prev_provider != nullptr) {
       provider.stations_ = prev_provider->stations_;
     }
 
     auto const station_status_updated =
-        co_await update("station_status", cache->station_status_fi_,
+        co_await update("station_status", file_infos->station_status_fi_,
                         load_station_status, stations_updated);
 
     auto const vehicle_status_updated =
-        co_await update("vehicle_status", cache->vehicle_status_fi_,
+        co_await update("vehicle_status", file_infos->vehicle_status_fi_,
                         load_vehicle_status)  // 3.x
-        || co_await update("free_bike_status", cache->vehicle_status_fi_,
+        || co_await update("free_bike_status", file_infos->vehicle_status_fi_,
                            load_vehicle_status);  // 1.x / 2.x
     if (!vehicle_status_updated && prev_provider != nullptr) {
       provider.vehicle_status_ = prev_provider->vehicle_status_;
     }
 
-    auto const geofencing_updated = co_await update(
-        "geofencing_zones", cache->geofencing_zones_fi_, load_geofencing_zones);
+    auto const geofencing_updated =
+        co_await update("geofencing_zones", file_infos->geofencing_zones_fi_,
+                        load_geofencing_zones);
     if (!geofencing_updated && prev_provider != nullptr) {
       provider.geofencing_zones_ = prev_provider->geofencing_zones_;
     }
