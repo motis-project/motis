@@ -186,7 +186,6 @@
 		});
 	};
 
-	let railvizError = $state();
 	const railvizRequest = () => {
 		const b = maplibregl.LngLatBounds.convert(bounds!);
 		const min = lngLatToStr(b.getNorthWest());
@@ -204,18 +203,21 @@
 		});
 	};
 
+	let railvizError = $state();
 	let animation: number | null = null;
 	const updateRailvizLayer = async () => {
 		try {
-			const { data, error } = await railvizRequest();
+			const { data, error, response } = await railvizRequest();
 			if (animation) {
 				cancelAnimationFrame(animation);
 			}
 
 			if (error) {
-				railvizError = error;
+				railvizError = `map trips error status ${response.status}`;
 				return;
 			}
+
+			railvizError = undefined;
 
 			const tripSegmentsWithKeyFrames = data!.map((tripSegment: TripSegment) => {
 				return { ...tripSegment, ...getKeyFrames(tripSegment) };

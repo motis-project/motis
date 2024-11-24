@@ -20,7 +20,7 @@ constexpr auto const kClaszMax =
     static_cast<std::underlying_type_t<n::clasz>>(n::kNumClasses);
 
 void adr_extend_tt(nigiri::timetable const& tt,
-                   a::area_database const& area_db,
+                   a::area_database const* area_db,
                    a::typeahead& t) {
   if (tt.n_locations() == 0) {
     return;
@@ -127,6 +127,10 @@ void adr_extend_tt(nigiri::timetable const& tt,
 
   // Add to typeahead.
   auto areas = std::basic_string<a::area_idx_t>{};
+  auto no_areas_idx = adr::area_set_idx_t{t.area_sets_.size()};
+  if (area_db == nullptr) {
+    t.area_sets_.emplace_back(areas);
+  }
   for (auto const [prio, l] : utl::zip(importance, place_location)) {
     auto const str_idx = a::string_idx_t{t.strings_.size()};
     auto const place_idx = a::place_idx_t{t.place_names_.size()};
@@ -147,14 +151,18 @@ void adr_extend_tt(nigiri::timetable const& tt,
     t.string_to_type_.emplace_back(
         std::initializer_list<a::location_type_t>{a::location_type_t::kPlace});
 
-    area_db.lookup(
-        t, a::coordinates::from_latlng(tt.locations_.coordinates_[l]), areas);
-    t.place_areas_.emplace_back(
-        utl::get_or_create(area_set_lookup, areas, [&]() {
-          auto const set_idx = a::area_set_idx_t{t.area_sets_.size()};
-          t.area_sets_.emplace_back(areas);
-          return set_idx;
-        }));
+    if (area_db == nullptr) {
+      t.place_areas_.emplace_back(no_areas_idx);
+    } else {
+      area_db->lookup(
+          t, a::coordinates::from_latlng(tt.locations_.coordinates_[l]), areas);
+      t.place_areas_.emplace_back(
+          utl::get_or_create(area_set_lookup, areas, [&]() {
+            auto const set_idx = a::area_set_idx_t{t.area_sets_.size()};
+            t.area_sets_.emplace_back(areas);
+            return set_idx;
+          }));
+    }
   }
 
   t.build_ngram_index();

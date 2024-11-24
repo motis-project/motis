@@ -19,6 +19,12 @@ using street_routing_cache_key_t = std::
 using street_routing_cache_t =
     hash_map<street_routing_cache_key_t, std::optional<osr::path>>;
 
+api::Itinerary dummy_itinerary(api::Place const& from,
+                               api::Place const& to,
+                               api::ModeEnum,
+                               nigiri::unixtime_t const start_time,
+                               nigiri::unixtime_t const end_time);
+
 api::Itinerary route(osr::ways const&,
                      osr::lookup const&,
                      gbfs::gbfs_data const*,

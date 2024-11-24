@@ -20,11 +20,6 @@ TEST(motis, parse_location_no_level) {
   EXPECT_EQ((osr::location{{-23.1, 45.2}, osr::level_t{0.F}}), *parsed);
 }
 
-TEST(motis, parse_date_time) {
-  auto const t = get_date_time("06-28-2024", "7:06 PM");
-  EXPECT_EQ(sys_days{2024_y / June / 28} + 19h + 6min, t);
-}
-
 TEST(motis, parse_cursor_earlier) {
   auto const q = cursor_to_query("EARLIER|1720036560");
 

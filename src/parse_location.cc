@@ -42,32 +42,6 @@ std::optional<osr::location> parse_location(std::string_view s,
   return osr::location{pos, osr::level_t{level}};
 }
 
-n::unixtime_t get_date_time(std::optional<std::string> const& date,
-                            std::optional<std::string> const& time) {
-  if (!date.has_value()) {
-    utl::verify(!time.has_value(), "time without date no supported");
-    return std::chrono::time_point_cast<n::i32_minutes>(
-        std::chrono::system_clock::now());
-  } else {
-    utl::verify(time.has_value(), "date without time not supported");
-    auto const date_time = *date + " " + *time;
-
-    // 06-28-2024 7:06pm
-    // 06-28-2024 19:06
-    std::stringstream ss;
-    ss << date_time;
-
-    auto t = n::unixtime_t{};
-    if (date_time.contains("AM") || date_time.contains("PM")) {
-      ss >> date::parse("%m-%d-%Y %I:%M %p", t);
-    } else {
-      ss >> date::parse("%m-%d-%Y %H:%M", t);
-    }
-
-    return t;
-  }
-}
-
 date::sys_days parse_iso_date(std::string_view s) {
   auto d = date::sys_days{};
   (std::stringstream{} << s) >> date::parse("%F", d);
