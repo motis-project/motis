@@ -127,7 +127,8 @@ export const getStyle = (theme: 'light' | 'dark', level: number): StyleSpecifica
 			osm: {
 				type: 'vector',
 				tiles: ['/{z}/{x}/{y}.mvt'],
-				maxzoom: 20
+				maxzoom: 20,
+				attribution: "&copy; <a href='http://www.openstreetmap.org/copyright'>OpenStreetMap</a>"
 			}
 		},
 		glyphs: '/glyphs/{fontstack}/{range}.pbf',
