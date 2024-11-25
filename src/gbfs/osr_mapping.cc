@@ -86,7 +86,6 @@ struct osr_mapping {
         for (auto const& z : provider_.geofencing_zones_.zones_) {
           // check if pos is inside the zone multipolygon
           if (multipoly_contains_point(z.geom_.get(), pos)) {
-            // vehicle_type_ids currently ignored, using first rule
             for (auto const& r : z.rules_) {
               if (!applies(r.vehicle_type_ids_, seg.vehicle_types_)) {
                 continue;
