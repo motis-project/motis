@@ -8,6 +8,8 @@
 
 #include "motis/types.h"
 
+#include "utl/helpers/algorithm.h"
+
 namespace motis::gbfs {
 
 template <typename Key, typename Value>
@@ -115,8 +117,7 @@ public:
   void remove(Key const key) {
     auto write_lock = std::unique_lock{mutex_};
     if (auto it = cache_map_.find(key); it != cache_map_.end()) {
-      if (auto const lru_it =
-              std::find(lru_order_.begin(), lru_order_.end(), key);
+      if (auto const lru_it = utl::find(lru_order_, key);
           lru_it != lru_order_.end()) {
         lru_order_.erase(lru_it);
       }
@@ -144,7 +145,7 @@ private:
   };
 
   void move_to_front(Key const key) {
-    auto const it = std::find(lru_order_.begin(), lru_order_.end(), key);
+    auto const it = utl::find(lru_order_, key);
     if (it != lru_order_.end()) {
       lru_order_.erase(it);
       lru_order_.insert(lru_order_.begin(), key);

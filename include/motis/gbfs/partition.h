@@ -96,7 +96,7 @@ struct partition {
 
   // the number of elements in the partition - the original set
   // contains the elements 0, 1, ..., n - 1
-  T const n_;
+  T n_;
 
   // stores the elements grouped by sets - the elements of each set are
   // stored contiguously, e.g. "0345789" could be {{0, 3, 4}, {5}, {7, 8, 9}}

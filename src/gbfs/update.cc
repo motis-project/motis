@@ -24,6 +24,8 @@
 #include "fmt/format.h"
 
 #include "utl/helpers/algorithm.h"
+#include "utl/overloaded.h"
+#include "utl/sorted_diff.h"
 #include "utl/timer.h"
 #include "utl/to_vec.h"
 
@@ -497,41 +499,52 @@ struct gbfs_update {
     auto moved_vehicles = 0U;
 
     if (prev_provider != nullptr) {
-      diff(
+      using ST = std::pair<std::string, station>;
+      utl::sorted_diff(
           prev_provider->stations_, provider.stations_,
-          [&](auto const& s) {
-            d_->provider_rtree_.remove(s.second.info_.pos_, provider.idx_);
-            ++removed_stations;
+          [](ST const& a, ST const& b) { return a < b; },
+          [](ST const& a, ST const& b) {
+            return a.second.info_.pos_ == b.second.info_.pos_;
           },
-          [&](auto const& s) {
-            d_->provider_rtree_.add(s.second.info_.pos_, provider.idx_);
-            ++added_stations;
-          },
-          [&](auto const& old_s, auto const& new_s) {
-            if (old_s.second.info_.pos_ != new_s.second.info_.pos_) {
-              d_->provider_rtree_.remove(old_s.second.info_.pos_,
-                                         provider.idx_);
-              d_->provider_rtree_.add(new_s.second.info_.pos_, provider.idx_);
-              ++moved_stations;
-            }
-          });
-      diff(
+          utl::overloaded{
+              [&](utl::op const o, ST const& s) {
+                if (o == utl::op::kAdd) {
+                  d_->provider_rtree_.add(s.second.info_.pos_, provider.idx_);
+                  ++added_stations;
+                } else {  // del
+                  d_->provider_rtree_.remove(s.second.info_.pos_,
+                                             provider.idx_);
+                  ++removed_stations;
+                }
+              },
+              [&](ST const& a, ST const& b) {
+                d_->provider_rtree_.remove(a.second.info_.pos_, provider.idx_);
+                d_->provider_rtree_.add(b.second.info_.pos_, provider.idx_);
+                ++moved_stations;
+              }});
+      utl::sorted_diff(
           prev_provider->vehicle_status_, provider.vehicle_status_,
-          [&](auto const& v) {
-            d_->provider_rtree_.remove(v.pos_, provider.idx_);
-            ++removed_vehicles;
+          [](vehicle_status const& a, vehicle_status const& b) {
+            return a < b;
           },
-          [&](auto const& v) {
-            d_->provider_rtree_.add(v.pos_, provider.idx_);
-            ++added_vehicles;
+          [](vehicle_status const& a, vehicle_status const& b) {
+            return a.pos_ == b.pos_;
           },
-          [&](auto const& old_v, auto const& new_v) {
-            if (old_v.pos_ != new_v.pos_) {
-              d_->provider_rtree_.remove(old_v.pos_, provider.idx_);
-              d_->provider_rtree_.add(new_v.pos_, provider.idx_);
-              ++moved_vehicles;
-            }
-          });
+          utl::overloaded{
+              [&](utl::op const o, vehicle_status const& v) {
+                if (o == utl::op::kAdd) {
+                  d_->provider_rtree_.add(v.pos_, provider.idx_);
+                  ++added_vehicles;
+                } else {  // del
+                  d_->provider_rtree_.remove(v.pos_, provider.idx_);
+                  ++removed_vehicles;
+                }
+              },
+              [&](vehicle_status const& a, vehicle_status const& b) {
+                d_->provider_rtree_.remove(a.pos_, provider.idx_);
+                d_->provider_rtree_.add(b.pos_, provider.idx_);
+                ++moved_vehicles;
+              }});
     } else {
       for (auto const& station : provider.stations_) {
         d_->provider_rtree_.add(station.second.info_.pos_, provider.idx_);
