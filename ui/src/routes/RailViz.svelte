@@ -82,6 +82,9 @@
 
 			currDistance += distance;
 		}
+		if (Math.abs(totalDistance - currDistance) > 1) {
+			console.log(totalDistance, currDistance);
+		}
 		keyFrames.push({ point: coordinates[coordinates.length - 1], time: arrival, heading: 0 });
 		return { keyFrames, arrival, departure, arrivalDelay };
 	};
@@ -90,6 +93,16 @@
 		const i = keyframes.findIndex((s) => s.time >= timestamp);
 
 		if (i === -1 || i === 0) {
+			console.log(
+				'not found, timestamp=',
+				new Date(timestamp),
+				' #keyframes=',
+				new Date(keyframes.length),
+				' first=',
+				new Date(keyframes[0].time),
+				', last=',
+				new Date(keyframes[keyframes.length - 1].time)
+			);
 			return;
 		}
 
@@ -112,7 +125,7 @@
 		const now = new Date().getTime();
 
 		const tripsWithFrame = trips
-			.filter((t) => now >= t.departure && now < t.arrival)
+			.filter((t) => now >= t.departure && now <= t.arrival)
 			.map((t) => {
 				return {
 					...t,
@@ -173,13 +186,12 @@
 		});
 	};
 
-	let railvizError = $state();
 	const railvizRequest = () => {
 		const b = maplibregl.LngLatBounds.convert(bounds!);
 		const min = lngLatToStr(b.getNorthWest());
 		const max = lngLatToStr(b.getSouthEast());
 		const startTime = new Date();
-		const endTime = new Date(startTime.getTime() + 60000);
+		const endTime = new Date(startTime.getTime() + 180000);
 		return trips({
 			query: {
 				min,
@@ -191,18 +203,21 @@
 		});
 	};
 
+	let railvizError = $state();
 	let animation: number | null = null;
 	const updateRailvizLayer = async () => {
 		try {
-			const { data, error } = await railvizRequest();
+			const { data, error, response } = await railvizRequest();
 			if (animation) {
 				cancelAnimationFrame(animation);
 			}
 
 			if (error) {
-				railvizError = error;
+				railvizError = `map trips error status ${response.status}`;
 				return;
 			}
+
+			railvizError = undefined;
 
 			const tripSegmentsWithKeyFrames = data!.map((tripSegment: TripSegment) => {
 				return { ...tripSegment, ...getKeyFrames(tripSegment) };

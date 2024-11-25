@@ -182,6 +182,31 @@ struct sharing {
   };
 };
 
+api::Itinerary dummy_itinerary(api::Place const& from,
+                               api::Place const& to,
+                               api::ModeEnum const mode,
+                               n::unixtime_t const start_time,
+                               n::unixtime_t const end_time) {
+  auto itinerary = api::Itinerary{
+      .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
+                                                                    start_time)
+                       .count(),
+      .startTime_ = start_time,
+      .endTime_ = end_time};
+  auto& leg = itinerary.legs_.emplace_back(api::Leg{
+      .mode_ = mode,
+      .from_ = from,
+      .to_ = to,
+      .duration_ = std::chrono::duration_cast<std::chrono::seconds>(end_time -
+                                                                    start_time)
+                       .count(),
+      .startTime_ = start_time,
+      .endTime_ = end_time});
+  leg.from_.departure_ = leg.startTime_;
+  leg.to_.arrival_ = leg.endTime_;
+  return itinerary;
+}
+
 api::Itinerary route(osr::ways const& w,
                      osr::lookup const& l,
                      gbfs::gbfs_routing_data& gbfs_rd,
@@ -245,30 +270,12 @@ api::Itinerary route(osr::ways const& w,
     if (!end_time.has_value()) {
       return {};
     }
-
     std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
               << "\n  -> CREATING DUMMY LEG (mode=" << mode
               << ", profile=" << osr::to_str(profile)
               << ", provider=" << seg_ref.provider_
               << ", segment=" << seg_ref.segment_ << ")\n";
-    auto itinerary = api::Itinerary{
-        .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
-                         *end_time - start_time)
-                         .count(),
-        .startTime_ = start_time,
-        .endTime_ = *end_time};
-    auto& leg = itinerary.legs_.emplace_back(
-        api::Leg{.mode_ = mode,
-                 .from_ = from,
-                 .to_ = to,
-                 .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
-                                  *end_time - start_time)
-                                  .count(),
-                 .startTime_ = start_time,
-                 .endTime_ = *end_time});
-    leg.from_.departure_ = leg.startTime_;
-    leg.to_.arrival_ = leg.endTime_;
-    return itinerary;
+    return dummy_itinerary(from, to, mode, start_time, *end_time);
   }
 
   auto itinerary = api::Itinerary{

@@ -65,11 +65,14 @@
 			return;
 		}
 
-		items = (
-			await geocode<true>({
-				query: { text: inputValue, language }
-			})
-		).data.map((match: Match): Location => {
+		const { data: matches, error } = await geocode({
+			query: { text: inputValue, language }
+		});
+		if (error) {
+			console.error('TYPEAHEAD ERROR: ', error);
+			return;
+		}
+		items = matches!.map((match: Match): Location => {
 			return {
 				label: getLabel(match),
 				value: { match, precision: GEOCODER_PRECISION }
