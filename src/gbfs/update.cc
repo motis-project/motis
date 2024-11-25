@@ -36,7 +36,6 @@
 #include "motis/http_req.h"
 
 #include "motis/gbfs/compression.h"
-#include "motis/gbfs/diff.h"
 #include "motis/gbfs/osr_mapping.h"
 #include "motis/gbfs/parser.h"
 #include "motis/gbfs/partition.h"
