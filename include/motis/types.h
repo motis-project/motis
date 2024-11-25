@@ -32,7 +32,7 @@ using hash_map = nigiri::hash_map<K, V>;
 using elevator_idx_t = cista::strong<std::uint32_t, struct elevator_idx_>;
 
 using gbfs_provider_idx_t =
-    cista::strong<std::size_t, struct gbfs_provider_idx_>;
+    cista::strong<std::uint16_t, struct gbfs_provider_idx_>;
 
 struct elevator {
   friend bool operator==(elevator const&, elevator const&) = default;
