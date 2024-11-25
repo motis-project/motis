@@ -399,7 +399,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   UTL_START_TIMING(direct);
   auto const [direct, fastest_direct] =
-      t.has_value() && !direct_modes.empty()
+      t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(e, gbfs.get(), from_p, to_p, direct_modes, *t,
                          query.wheelchair_,
                          std::chrono::seconds{query.maxDirectTime_})

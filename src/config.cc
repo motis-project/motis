@@ -96,11 +96,6 @@ config config::read(std::string const& s) {
 }
 
 void config::verify() const {
-  utl::verify(!geocoding_ || osm_,
-              "feature GEOCODING requires OpenStreetMap data");
-  utl::verify(!reverse_geocoding_ || (geocoding_ && osm_),
-              "feature REVERSE_GEOCODING requires OpenStreetMap data and "
-              "feature GEOCODING");
   utl::verify(!tiles_ || osm_, "feature TILES requires OpenStreetMap data");
   utl::verify(!street_routing_ || osm_,
               "feature STREET_ROUTING requires OpenStreetMap data");

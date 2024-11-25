@@ -164,11 +164,14 @@
 	let stopArriveBy = $state<boolean>();
 	let selectedStop = $state<{ name: string; stopId: string; time: Date }>();
 
-	const onClickTrip = (tripId: string) => {
-		trip({ query: { tripId } }).then((r) => {
-			selectedItinerary = r.data;
-			selectedStop = undefined;
-		});
+	const onClickTrip = async (tripId: string) => {
+		const { data: itinerary, error } = await trip({ query: { tripId } });
+		if (error) {
+			alert(error);
+			return;
+		}
+		selectedItinerary = itinerary;
+		selectedStop = undefined;
 	};
 
 	type CloseFn = () => void;
@@ -177,7 +180,7 @@
 {#snippet contextMenu(e: maplibregl.MapMouseEvent, close: CloseFn)}
 	<Button
 		variant="outline"
-		on:click={() => {
+		onclick={() => {
 			from = posToLocation(e.lngLat, level);
 			fromMarker?.setLngLat(from.value.match!);
 			close();
@@ -187,7 +190,7 @@
 	</Button>
 	<Button
 		variant="outline"
-		on:click={() => {
+		onclick={() => {
 			to = posToLocation(e.lngLat, level);
 			toMarker?.setLngLat(to.value.match!);
 			close();
@@ -244,7 +247,7 @@
 					<h2 class="ml-2 text-base font-semibold">Journey Details</h2>
 					<Button
 						variant="ghost"
-						on:click={() => {
+						onclick={() => {
 							selectedItinerary = undefined;
 						}}
 					>
@@ -281,7 +284,7 @@
 					</h2>
 					<Button
 						variant="ghost"
-						on:click={() => {
+						onclick={() => {
 							selectedStop = undefined;
 						}}
 					>
