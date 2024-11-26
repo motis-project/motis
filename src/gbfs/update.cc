@@ -390,7 +390,7 @@ struct gbfs_update {
 
       update_rtree(provider, prev_provider);
 
-      d_->cache_.update_if_exists(provider.idx_, [&](auto const& /*old*/) {
+      d_->cache_.try_add_or_update(provider.idx_, [&]() {
         return compute_provider_routing_data(w_, l_, provider);
       });
     } else if (prev_provider != nullptr) {

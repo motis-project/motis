@@ -114,6 +114,28 @@ public:
     }
   }
 
+  /// adds an entry to the cache if there is still space or updates
+  /// an existing entry if it already exists
+  template <typename F>
+  bool try_add_or_update(Key const key, F compute_fn) {
+    auto write_lock = std::unique_lock{mutex_};
+
+    if (auto it = cache_map_.find(key); it != cache_map_.end()) {
+      it->second->value_ = compute_fn();
+      move_to_front(key);
+      return true;
+    }
+
+    if (lru_order_.size() >= max_size_) {
+      return false;
+    }
+
+    cache_map_.try_emplace(
+        key, std::make_shared<cache_entry>(cache_entry{key, compute_fn()}));
+    lru_order_.insert(lru_order_.begin(), key);
+    return true;
+  }
+
   void remove(Key const key) {
     auto write_lock = std::unique_lock{mutex_};
     if (auto it = cache_map_.find(key); it != cache_map_.end()) {
@@ -137,6 +159,10 @@ public:
     }
     return entries;
   }
+
+  std::size_t size() const { return lru_order_.size(); }
+
+  bool empty() const { return lru_order_.empty(); }
 
 private:
   struct cache_entry {
