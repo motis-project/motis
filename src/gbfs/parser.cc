@@ -5,6 +5,7 @@
 
 #include "cista/hash.h"
 
+#include "utl/helpers/algorithm.h"
 #include "utl/raii.h"
 #include "utl/to_vec.h"
 
@@ -344,6 +345,8 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
         .home_station_id_ = optional_str(vehicle_obj, "home_station_id"),
         .rental_uris_ = parse_rental_uris(vehicle_obj)});
   }
+
+  utl::sort(provider.vehicle_status_);
 }
 
 rule parse_rule(gbfs_version const version, json::value const& r) {
