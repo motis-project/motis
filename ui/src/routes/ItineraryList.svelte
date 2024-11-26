@@ -116,7 +116,7 @@
 										</div>
 										<Separator orientation="vertical" />
 										<div>
-											<div class="text-xs font-bold uppercase text-slate-400">Transfers</div>
+											<div class="text-xs font-bold uppercase text-slate-400">{t.transfers}</div>
 											<div class="flex justify-center w-full">{it.transfers}</div>
 										</div>
 										<Separator orientation="vertical" />

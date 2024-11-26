@@ -31,7 +31,8 @@ const translations: Translations = {
 				return `${n} arrêts intermédiaires`;
 		}
 	},
-	sharingProvider: 'Fournisseur'
+	sharingProvider: 'Fournisseur',
+	transfers: 'Transferts'
 };
 
 export default translations;
