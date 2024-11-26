@@ -14,8 +14,8 @@ const translations: Translations = {
 	later: 'later',
 	earlier: 'earlier',
 	departures: 'Departures',
-	switchToArrivals: 'Wechsel zu Ankünften',
-	switchToDepartures: 'Wechsel zu Abfahrten',
+	switchToArrivals: 'Switch to arrivals',
+	switchToDepartures: 'Switch to departures',
 	track: 'Track',
 	arrivalOnTrack: 'Arrival on track',
 	tripIntermediateStops: (n: number) => {
