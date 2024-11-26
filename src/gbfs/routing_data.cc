@@ -16,6 +16,8 @@ namespace motis::gbfs {
 
 std::shared_ptr<provider_routing_data> compute_provider_routing_data(
     osr::ways const& w, osr::lookup const& l, gbfs_provider const& provider) {
+  auto timer = utl::scoped_timer{
+      fmt::format("compute routing data for gbfs provider {}", provider.id_)};
   auto prd = std::make_shared<provider_routing_data>();
 
   map_data(w, l, provider, *prd);
@@ -29,8 +31,6 @@ std::shared_ptr<provider_routing_data> get_provider_routing_data(
     gbfs_data& data,
     gbfs_provider const& provider) {
   return data.cache_.get_or_compute(provider.idx_, [&]() {
-    auto timer = utl::scoped_timer{
-        fmt::format("compute routing data for gbfs provider {}", provider.id_)};
     return compute_provider_routing_data(w, l, provider);
   });
 }

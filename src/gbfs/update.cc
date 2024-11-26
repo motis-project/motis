@@ -501,7 +501,7 @@ struct gbfs_update {
       using ST = std::pair<std::string, station>;
       utl::sorted_diff(
           prev_provider->stations_, provider.stations_,
-          [](ST const& a, ST const& b) { return a < b; },
+          [](ST const& a, ST const& b) { return a.first < b.first; },
           [](ST const& a, ST const& b) {
             return a.second.info_.pos_ == b.second.info_.pos_;
           },
@@ -524,7 +524,7 @@ struct gbfs_update {
       utl::sorted_diff(
           prev_provider->vehicle_status_, provider.vehicle_status_,
           [](vehicle_status const& a, vehicle_status const& b) {
-            return a < b;
+            return a.id_ < b.id_;
           },
           [](vehicle_status const& a, vehicle_status const& b) {
             return a.pos_ == b.pos_;

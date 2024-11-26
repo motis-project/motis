@@ -105,9 +105,6 @@ struct station_status {
 };
 
 struct station {
-  bool operator==(station const& o) const { return info_.id_ == o.info_.id_; }
-  auto operator<=>(station const& o) const { return info_.id_ <=> o.info_.id_; }
-
   station_information info_{};
   station_status status_{};
 };
