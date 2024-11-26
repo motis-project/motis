@@ -3,8 +3,11 @@ import type { Translations } from './translation';
 const translations: Translations = {
 	walk: 'Walk',
 	bike: 'Bike',
-	scooter: 'E-scooter',
+	cargoBike: 'Cargo bike',
+	scooterStanding: 'Standing kick scooter',
+	scooterSeated: 'Seated kick scooter',
 	car: 'Car',
+	moped: 'Moped',
 	from: 'From',
 	to: 'To',
 	arrival: 'Arrival',

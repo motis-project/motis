@@ -3,8 +3,11 @@ import type { Translations } from './translation';
 const translations: Translations = {
 	walk: 'Marche',
 	bike: 'Vélo',
-	scooter: 'Trottinette électrique',
+	cargoBike: 'Vélo Cargo',
+	scooterStanding: 'Trottinette',
+	scooterSeated: 'Trottinette avec siège',
 	car: 'Voiture',
+	moped: 'Mobylette',
 	from: 'De',
 	to: 'À',
 	arrival: 'Arrivée',

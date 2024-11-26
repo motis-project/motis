@@ -124,6 +124,7 @@ struct sharing {
       : w_{w},
         gbfs_rd_{gbfs_rd},
         provider_{*gbfs_rd_.data_->providers_.at(seg_ref.provider_)},
+        segment_{provider_.segments_.at(seg_ref.segment_)},
         seg_rd_{gbfs_rd_.get_segment_routing_data(seg_ref)} {}
 
   api::Rental get_rental(osr::node_idx_t const n) const {
@@ -168,6 +169,7 @@ struct sharing {
   osr::ways const& w_;
   gbfs::gbfs_routing_data& gbfs_rd_;
   gbfs::gbfs_provider const& provider_;
+  gbfs::provider_segment const& segment_;
   gbfs::segment_routing_data const* seg_rd_;
   osr::sharing_data sharing_data_{
       .start_allowed_ = seg_rd_->start_allowed_,
@@ -179,7 +181,9 @@ struct sharing {
       .systemId_ = provider_.sys_info_.id_,
       .systemName_ = provider_.sys_info_.name_,
       .url_ = provider_.sys_info_.url_,
-  };
+      .formFactor_ = gbfs::to_api_form_factor(segment_.form_factor_),
+      .propulsionType_ =
+          gbfs::to_api_propulsion_type(segment_.propulsion_type_)};
 };
 
 api::Itinerary dummy_itinerary(api::Place const& from,
@@ -296,9 +300,12 @@ api::Itinerary route(osr::ways const& w,
         auto const range = std::span{lb, ub};
         auto const is_last_leg = ub == end(path->segments_);
         auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
+        auto const from_additional_node =
+            is_additional_node(range.front().from_);
+        auto const to_additional_node = is_additional_node(range.back().to_);
         auto const is_rental =
             (profile == osr::search_profile::kBikeSharing && is_bike_leg &&
-             is_additional_node(range.back().to_));
+             (from_additional_node || to_additional_node));
 
         auto const to_node = range.back().to_;
         auto const to_pos = get_node_pos(to_node);
@@ -327,10 +334,7 @@ api::Itinerary route(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = (lb->mode_ == osr::mode::kBike &&
-                      profile == osr::search_profile::kBikeSharing)
-                         ? gbfs::get_gbfs_mode(*gbfs_rd.data_, seg_ref)
-                         : to_mode(lb->mode_),
+            .mode_ = is_rental ? api::ModeEnum::RENTAL : to_mode(lb->mode_),
             .from_ = pred_place,
             .to_ = next_place,
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
@@ -342,9 +346,11 @@ api::Itinerary route(osr::ways const& w,
             .legGeometry_ = to_polyline<7>(concat),
             .steps_ = get_step_instructions(w, get_location(from),
                                             get_location(to), range),
-            .rental_ = is_rental ? std::optional{sharing_data->get_rental(
-                                       range.back().to_)}
-                                 : std::nullopt});
+            .rental_ = is_rental
+                           ? std::optional{sharing_data->get_rental(
+                                 from_additional_node ? range.front().from_
+                                                      : range.back().to_)}
+                           : std::nullopt});
 
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;

@@ -37,7 +37,7 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
-    case osr::search_profile::kBikeSharing: return api::ModeEnum::BIKE_RENTAL;
+    case osr::search_profile::kBikeSharing: return api::ModeEnum::RENTAL;
   }
   std::unreachable();
 }
@@ -173,7 +173,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               append(route(
                   *w, *l, gbfs_rd, e, from, to,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs::get_gbfs_mode(gbfs_rd, x.transport_mode_id_)
+                      ? api::ModeEnum::RENTAL
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,

@@ -120,6 +120,9 @@ std::vector<n::routing::offset> routing::get_offsets(
     osr::location const& pos,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
+    std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
+    std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
+        propulsion_types,
     bool const wheelchair,
     std::chrono::seconds const max,
     gbfs::gbfs_routing_data& gbfs_rd) const {
@@ -162,7 +165,7 @@ std::vector<n::routing::offset> routing::get_offsets(
         }
         auto provider_rd = std::shared_ptr<gbfs::provider_routing_data>{};
         for (auto const& seg : provider->segments_) {
-          if (!form_factor_matches(m, seg.form_factor_)) {
+          if (!gbfs::segment_matches(seg, form_factors, propulsion_types)) {
             continue;
           }
           if (!provider_rd) {
@@ -198,15 +201,12 @@ std::vector<n::routing::offset> routing::get_offsets(
     }
   };
 
-  if (utl::find(modes, api::ModeEnum::BIKE_RENTAL) != end(modes)) {
-    handle_mode(api::ModeEnum::BIKE_RENTAL);
-  }
-  if (utl::find(modes, api::ModeEnum::SCOOTER_RENTAL) != end(modes)) {
-    handle_mode(api::ModeEnum::SCOOTER_RENTAL);
+  if (utl::find(modes, api::ModeEnum::RENTAL) != end(modes)) {
+    handle_mode(api::ModeEnum::RENTAL);
   }
 
   for (auto const m : modes) {
-    if (m == api::ModeEnum::BIKE_RENTAL || m == api::ModeEnum::SCOOTER_RENTAL) {
+    if (m == api::ModeEnum::RENTAL) {
       continue;  // handled above
     }
     if (m == api::ModeEnum::WALK && ignore_walk) {
@@ -244,16 +244,17 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     api::Place const& from,
     api::Place const& to,
     std::vector<api::ModeEnum> const& modes,
+    std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
+    std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
+        propulsion_types,
     n::unixtime_t const start_time,
     bool wheelchair,
     std::chrono::seconds max) const {
   if (!w_ || !l_) {
     return {};
   }
-  auto const omit_walk =
-      gbfs_rd.has_data() &&
-      (utl::find(modes, api::ModeEnum::BIKE_RENTAL) != end(modes) ||
-       utl::find(modes, api::ModeEnum::SCOOTER_RENTAL) != end(modes));
+  auto const omit_walk = gbfs_rd.has_data() &&
+                         utl::find(modes, api::ModeEnum::RENTAL) != end(modes);
   auto fastest_direct = kInfinityDuration;
   auto cache = street_routing_cache_t{};
   auto itineraries = std::vector<api::Itinerary>{};
@@ -273,9 +274,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         fastest_direct = duration;
       }
       itineraries.emplace_back(std::move(itinerary));
-    } else if ((m == api::ModeEnum::BIKE_RENTAL ||
-                m == api::ModeEnum::SCOOTER_RENTAL) &&
-               gbfs_rd.has_data()) {
+    } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
       auto const max_dist =
           get_max_distance(osr::search_profile::kBikeSharing, max);
       auto providers = hash_set<gbfs_provider_idx_t>{};
@@ -288,7 +287,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           continue;
         }
         for (auto const& seg : provider->segments_) {
-          if (!form_factor_matches(m, seg.form_factor_)) {
+          if (!gbfs::segment_matches(seg, form_factors, propulsion_types)) {
             continue;
           }
           auto itinerary = route(
@@ -380,7 +379,6 @@ std::vector<n::routing::via_stop> get_via_stops(
 }
 
 api::plan_response routing::operator()(boost::urls::url_view const& url) const {
-  auto const get_offsets_timer = utl::scoped_timer{"routing::operator()"};
   auto const rt = rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = rt_->e_.get();
@@ -408,13 +406,27 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       query.arriveBy_ ? post_transit_modes : pre_transit_modes;
   auto const& dest_modes =
       query.arriveBy_ ? pre_transit_modes : post_transit_modes;
+  auto const& start_form_factors = query.arriveBy_
+                                       ? query.postTransitRentalFormFactors_
+                                       : query.preTransitRentalFormFactors_;
+  auto const& dest_form_factors = query.arriveBy_
+                                      ? query.preTransitRentalFormFactors_
+                                      : query.postTransitRentalFormFactors_;
+  auto const& start_propulsion_types =
+      query.arriveBy_ ? query.postTransitRentalPropulsionTypes_
+                      : query.preTransitRentalPropulsionTypes_;
+  auto const& dest_propulsion_types =
+      query.arriveBy_ ? query.postTransitRentalPropulsionTypes_
+                      : query.preTransitRentalPropulsionTypes_;
 
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
   auto const [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
-          ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes, *t,
+          ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes,
+                         query.directRentalFormFactors_,
+                         query.directRentalPropulsionTypes_, *t,
                          query.wheelchair_,
                          std::chrono::seconds{query.maxDirectTime_})
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
@@ -437,7 +449,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   auto const dir = query.arriveBy_ ? osr::direction::kBackward
                                                    : osr::direction::kForward;
                   return get_offsets(
-                      pos, dir, start_modes, query.wheelchair_,
+                      pos, dir, start_modes, start_form_factors,
+                      start_propulsion_types, query.wheelchair_,
                       std::chrono::seconds{query.maxPreTransitTime_}, gbfs_rd);
                 }},
             start),
@@ -448,7 +461,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   auto const dir = query.arriveBy_ ? osr::direction::kForward
                                                    : osr::direction::kBackward;
                   return get_offsets(
-                      pos, dir, dest_modes, query.wheelchair_,
+                      pos, dir, dest_modes, dest_form_factors,
+                      dest_propulsion_types, query.wheelchair_,
                       std::chrono::seconds{query.maxPostTransitTime_}, gbfs_rd);
                 }},
             dest),

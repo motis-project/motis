@@ -24,9 +24,7 @@ osr::search_profile to_profile(api::ModeEnum const m, bool const wheelchair) {
     case api::ModeEnum::CAR_PARKING:
       return wheelchair ? osr::search_profile::kCarParkingWheelchair
                         : osr::search_profile::kCarParking;
-    case api::ModeEnum::BIKE_RENTAL: return osr::search_profile::kBikeSharing;
-    case api::ModeEnum::SCOOTER_RENTAL:
-      return osr::search_profile::kBikeSharing;
+    case api::ModeEnum::RENTAL: return osr::search_profile::kBikeSharing;
     default: throw utl::fail("unsupported mode");
   }
 }

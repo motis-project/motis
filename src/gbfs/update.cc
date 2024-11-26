@@ -477,6 +477,9 @@ struct gbfs_update {
             utl::to_vec(set, [&](auto const idx) { return vt_idx_to_id[idx]; });
         seg.form_factor_ =
             provider.vehicle_types_.at(seg.vehicle_types_.front()).form_factor_;
+        seg.propulsion_type_ =
+            provider.vehicle_types_.at(seg.vehicle_types_.front())
+                .propulsion_type_;
         seg.has_vehicles_to_rent_ =
             utl::any_of(provider.stations_,
                         [&](auto const& st) {

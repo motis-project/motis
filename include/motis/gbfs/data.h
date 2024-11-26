@@ -302,6 +302,7 @@ struct provider_segment {
   gbfs_segment_idx_t idx_{gbfs_segment_idx_t::invalid()};
   std::vector<std::string> vehicle_types_;
   vehicle_form_factor form_factor_{vehicle_form_factor::kBicycle};
+  propulsion_type propulsion_type_{propulsion_type::kHuman};
 
   bool has_vehicles_to_rent_{};
 };

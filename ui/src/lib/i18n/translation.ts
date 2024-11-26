@@ -6,8 +6,11 @@ import fr from './fr';
 export type Translations = {
 	walk: string;
 	bike: string;
-	scooter: string;
+	cargoBike: string;
+	scooterStanding: string;
+	scooterSeated: string;
 	car: string;
+	moped: string;
 	from: string;
 	to: string;
 	arrival: string;

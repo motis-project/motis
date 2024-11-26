@@ -56,7 +56,7 @@
 	<div class="py-12 pl-8 flex flex-col text-muted-foreground">
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
-			{getModeName(l.mode)}
+			{getModeName(l)}
 			{formatDistanceMeters(Math.round(l.distance!))}
 		</span>
 		{#if l.rental && l.rental.systemName}

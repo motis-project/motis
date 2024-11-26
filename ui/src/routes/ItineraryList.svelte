@@ -28,7 +28,7 @@
 		style={routeColor(l)}
 	>
 		<svg class="relative mr-1 w-4 h-4 rounded-full">
-			<use xlink:href={`#${getModeStyle(l.mode)[0]}`}></use>
+			<use xlink:href={`#${getModeStyle(l)[0]}`}></use>
 		</svg>
 		{#if l.routeShortName}
 			{l.routeShortName}

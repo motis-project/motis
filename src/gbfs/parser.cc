@@ -317,6 +317,8 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
         .id_ = id,
         .form_factor_ = parse_form_factor(
             static_cast<std::string_view>(v.at("form_factor").as_string())),
+        .propulsion_type_ = parse_propulsion_type(
+            static_cast<std::string_view>(v.at("propulsion_type").as_string())),
         .return_constraint_ = parse_return_constraint(v.as_object())};
   }
 }

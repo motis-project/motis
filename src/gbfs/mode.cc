@@ -1,43 +1,106 @@
 #include "motis/gbfs/mode.h"
 
+#include <utility>
+
+#include "utl/helpers/algorithm.h"
+#include "utl/verify.h"
+
 #include "motis/constants.h"
 
 namespace motis::gbfs {
 
-api::ModeEnum get_gbfs_mode(vehicle_form_factor const ff) {
+api::RentalFormFactorEnum to_api_form_factor(vehicle_form_factor const ff) {
   switch (ff) {
-    case gbfs::vehicle_form_factor::kBicycle:
-    case gbfs::vehicle_form_factor::kCargoBicycle:
-      return api::ModeEnum::BIKE_RENTAL;
-    case gbfs::vehicle_form_factor::kScooterStanding:
-    case gbfs::vehicle_form_factor::kScooterSeated:
-      return api::ModeEnum::SCOOTER_RENTAL;
-    default: return api::ModeEnum::BIKE_RENTAL;
+    case vehicle_form_factor::kBicycle:
+      return api::RentalFormFactorEnum::BICYCLE;
+    case vehicle_form_factor::kCargoBicycle:
+      return api::RentalFormFactorEnum::CARGO_BICYCLE;
+    case vehicle_form_factor::kCar: return api::RentalFormFactorEnum::CAR;
+    case vehicle_form_factor::kMoped: return api::RentalFormFactorEnum::MOPED;
+    case vehicle_form_factor::kScooterStanding:
+      return api::RentalFormFactorEnum::SCOOTER_STANDING;
+    case vehicle_form_factor::kScooterSeated:
+      return api::RentalFormFactorEnum::SCOOTER_STANDING;
+    case vehicle_form_factor::kOther: return api::RentalFormFactorEnum::OTHER;
   }
+  std::unreachable();
 }
 
-api::ModeEnum get_gbfs_mode(gbfs_data const& gbfs, gbfs_segment_ref const ref) {
-  return get_gbfs_mode(gbfs.providers_.at(ref.provider_)
-                           ->segments_.at(ref.segment_)
-                           .form_factor_);
-}
-
-api::ModeEnum get_gbfs_mode(gbfs_routing_data const& gbfs_rd,
-                            nigiri::transport_mode_id_t const id) {
-  return get_gbfs_mode(*gbfs_rd.data_, gbfs_rd.get_segment_ref(id));
-}
-
-bool form_factor_matches(api::ModeEnum const m,
-                         gbfs::vehicle_form_factor const ff) {
-  switch (m) {
-    case api::ModeEnum::BIKE_RENTAL:
-      return ff == gbfs::vehicle_form_factor::kBicycle ||
-             ff == gbfs::vehicle_form_factor::kCargoBicycle;
-    case api::ModeEnum::SCOOTER_RENTAL:
-      return ff == gbfs::vehicle_form_factor::kScooterStanding ||
-             ff == gbfs::vehicle_form_factor::kScooterSeated;
-    default: return false;
+vehicle_form_factor from_api_form_factor(api::RentalFormFactorEnum const ff) {
+  switch (ff) {
+    case api::RentalFormFactorEnum::BICYCLE:
+      return vehicle_form_factor::kBicycle;
+    case api::RentalFormFactorEnum::CARGO_BICYCLE:
+      return vehicle_form_factor::kCargoBicycle;
+    case api::RentalFormFactorEnum::CAR: return vehicle_form_factor::kCar;
+    case api::RentalFormFactorEnum::MOPED: return vehicle_form_factor::kMoped;
+    case api::RentalFormFactorEnum::SCOOTER_STANDING:
+      return vehicle_form_factor::kScooterStanding;
+    case api::RentalFormFactorEnum::SCOOTER_SEATED:
+      return vehicle_form_factor::kScooterSeated;
+    case api::RentalFormFactorEnum::OTHER: return vehicle_form_factor::kOther;
   }
+  throw utl::fail("invalid rental form factor");
+}
+
+api::RentalPropulsionTypeEnum to_api_propulsion_type(propulsion_type const pt) {
+  switch (pt) {
+    case propulsion_type::kHuman: return api::RentalPropulsionTypeEnum::HUMAN;
+    case propulsion_type::kElectricAssist:
+      return api::RentalPropulsionTypeEnum::ELECTRIC_ASSIST;
+    case propulsion_type::kElectric:
+      return api::RentalPropulsionTypeEnum::ELECTRIC;
+    case propulsion_type::kCombustion:
+      return api::RentalPropulsionTypeEnum::COMBUSTION;
+    case propulsion_type::kCombustionDiesel:
+      return api::RentalPropulsionTypeEnum::COMBUSTION_DIESEL;
+    case propulsion_type::kHybrid: return api::RentalPropulsionTypeEnum::HYBRID;
+    case propulsion_type::kPlugInHybrid:
+      return api::RentalPropulsionTypeEnum::PLUG_IN_HYBRID;
+    case propulsion_type::kHydrogenFuelCell:
+      return api::RentalPropulsionTypeEnum::HYDROGEN_FUEL_CELL;
+  }
+  std::unreachable();
+}
+
+propulsion_type from_api_propulsion_type(
+    api::RentalPropulsionTypeEnum const pt) {
+  switch (pt) {
+    case api::RentalPropulsionTypeEnum::HUMAN: return propulsion_type::kHuman;
+    case api::RentalPropulsionTypeEnum::ELECTRIC_ASSIST:
+      return propulsion_type::kElectricAssist;
+    case api::RentalPropulsionTypeEnum::ELECTRIC:
+      return propulsion_type::kElectric;
+    case api::RentalPropulsionTypeEnum::COMBUSTION:
+      return propulsion_type::kCombustion;
+    case api::RentalPropulsionTypeEnum::COMBUSTION_DIESEL:
+      return propulsion_type::kCombustionDiesel;
+    case api::RentalPropulsionTypeEnum::HYBRID: return propulsion_type::kHybrid;
+    case api::RentalPropulsionTypeEnum::PLUG_IN_HYBRID:
+      return propulsion_type::kPlugInHybrid;
+    case api::RentalPropulsionTypeEnum::HYDROGEN_FUEL_CELL:
+      return propulsion_type::kHydrogenFuelCell;
+  }
+  throw utl::fail("invalid rental propulsion type");
+}
+
+bool segment_matches(
+    provider_segment const& seg,
+    std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
+    std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
+        propulsion_types) {
+  if (form_factors.has_value() &&
+      utl::find(*form_factors, to_api_form_factor(seg.form_factor_)) ==
+          end(*form_factors)) {
+    return false;
+  }
+  if (propulsion_types.has_value() &&
+      utl::find(*propulsion_types,
+                to_api_propulsion_type(seg.propulsion_type_)) ==
+          end(*propulsion_types)) {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace motis::gbfs

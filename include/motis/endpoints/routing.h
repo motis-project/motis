@@ -1,5 +1,9 @@
 #pragma once
 
+#include <optional>
+#include <utility>
+#include <vector>
+
 #include "osr/location.h"
 #include "osr/types.h"
 
@@ -19,6 +23,8 @@ struct routing {
       osr::location const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
+      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
+      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       bool wheelchair,
       std::chrono::seconds max,
       gbfs::gbfs_routing_data&) const;
@@ -38,6 +44,8 @@ struct routing {
       api::Place const& from,
       api::Place const& to,
       std::vector<api::ModeEnum> const&,
+      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
+      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       nigiri::unixtime_t start_time,
       bool wheelchair,
       std::chrono::seconds max) const;
