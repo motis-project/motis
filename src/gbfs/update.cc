@@ -7,6 +7,7 @@
 #include <fstream>
 #include <sstream>
 #include <string_view>
+#include <utility>
 
 #include <iostream>
 
@@ -425,11 +426,13 @@ struct gbfs_update {
         vt_idx_to_id.emplace_back(id);
       }
 
-      // refine by form factor
+      // refine by form factor + propulsion type
       auto by_form_factor =
-          hash_map<vehicle_form_factor, std::vector<std::size_t>>{};
+          hash_map<std::pair<vehicle_form_factor, propulsion_type>,
+                   std::vector<std::size_t>>{};
       for (auto const& [id, vt] : provider.vehicle_types_) {
-        by_form_factor[vt.form_factor_].push_back(vt_id_to_idx[id]);
+        by_form_factor[std::pair{vt.form_factor_, vt.propulsion_type_}]
+            .push_back(vt_id_to_idx[id]);
       }
       for (auto const& [_, vt_indices] : by_form_factor) {
         part.refine(vt_indices);

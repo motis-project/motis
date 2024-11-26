@@ -276,6 +276,23 @@ vehicle_form_factor parse_form_factor(std::string_view const s) {
   }
 }
 
+propulsion_type parse_propulsion_type(std::string_view const s) {
+  switch (cista::hash(s)) {
+    case cista::hash("human"): return propulsion_type::kHuman;
+    case cista::hash("electric_assist"):
+      return propulsion_type::kElectricAssist;
+    case cista::hash("electric"): return propulsion_type::kElectric;
+    case cista::hash("combustion"): return propulsion_type::kCombustion;
+    case cista::hash("combustion_diesel"):
+      return propulsion_type::kCombustionDiesel;
+    case cista::hash("hybrid"): return propulsion_type::kHybrid;
+    case cista::hash("plug_in_hybrid"): return propulsion_type::kPlugInHybrid;
+    case cista::hash("hydrogen_fuel_cell"):
+      return propulsion_type::kHydrogenFuelCell;
+    default: return propulsion_type::kHuman;
+  }
+}
+
 return_constraint parse_return_constraint(json::object const& vt) {
   if (vt.contains("return_constraint")) {
     switch (cista::hash(static_cast<std::string_view>(

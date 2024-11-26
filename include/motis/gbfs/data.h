@@ -47,6 +47,17 @@ enum class vehicle_form_factor : std::uint8_t {
   kOther = 6
 };
 
+enum class propulsion_type : std::uint8_t {
+  kHuman = 0,
+  kElectricAssist = 1,
+  kElectric = 2,
+  kCombustion = 3,
+  kCombustionDiesel = 4,
+  kHybrid = 5,
+  kPlugInHybrid = 6,
+  kHydrogenFuelCell = 7
+};
+
 enum class return_constraint : std::uint8_t {
   kNone = 0,  // includes free_floating + hybrid
   kAnyStation = 1,
@@ -56,6 +67,7 @@ enum class return_constraint : std::uint8_t {
 struct vehicle_type {
   std::string id_;
   vehicle_form_factor form_factor_{};
+  propulsion_type propulsion_type_{};
   return_constraint return_constraint_{};
 };
 
