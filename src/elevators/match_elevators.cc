@@ -36,7 +36,7 @@ elevator_idx_t match_elevator(
   auto const pos = w.get_node_pos(n).as_latlng();
   auto closest = elevator_idx_t::invalid();
   auto closest_dist = std::numeric_limits<double>::max();
-  rtree.find(pos, [&](elevator_idx_t const e) {
+  rtree.find(geo::box{pos, 20.0}, [&](elevator_idx_t const e) {
     auto const dist = geo::distance(elevators[e].pos_, pos);
     if (dist < 20 && dist < closest_dist) {
       closest_dist = dist;

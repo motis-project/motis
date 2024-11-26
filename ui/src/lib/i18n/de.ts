@@ -1,6 +1,7 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
+	transfers: 'Umstiege',
 	walk: 'Fußweg',
 	bike: 'Fahrrad',
 	car: 'Auto',
