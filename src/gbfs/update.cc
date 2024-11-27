@@ -346,6 +346,7 @@ struct gbfs_update {
         "vehicle_types", file_infos->vehicle_types_fi_, load_vehicle_types);
     if (!vehicle_types_updated && prev_provider != nullptr) {
       provider.vehicle_types_ = prev_provider->vehicle_types_;
+      provider.vehicle_types_map_ = prev_provider->vehicle_types_map_;
     }
 
     auto const stations_updated = co_await update(
@@ -416,23 +417,15 @@ struct gbfs_update {
             return !vs.is_disabled_ && !vs.is_reserved_;
           });
     } else {
-      auto part = partition{provider.vehicle_types_.size()};
-
-      auto vt_id_to_idx = hash_map<std::string, std::size_t>{};
-      auto vt_idx_to_id = std::vector<std::string>{};
-      for (auto const& [id, vt] : provider.vehicle_types_) {
-        auto const idx = vt_id_to_idx.size();
-        vt_id_to_idx[id] = idx;
-        vt_idx_to_id.emplace_back(id);
-      }
+      auto part = partition{vehicle_type_idx_t{provider.vehicle_types_.size()}};
 
       // refine by form factor + propulsion type
       auto by_form_factor =
           hash_map<std::pair<vehicle_form_factor, propulsion_type>,
-                   std::vector<std::size_t>>{};
-      for (auto const& [id, vt] : provider.vehicle_types_) {
+                   std::vector<vehicle_type_idx_t>>{};
+      for (auto const& vt : provider.vehicle_types_) {
         by_form_factor[std::pair{vt.form_factor_, vt.propulsion_type_}]
-            .push_back(vt_id_to_idx[id]);
+            .push_back(vt.idx_);
       }
       for (auto const& [_, vt_indices] : by_form_factor) {
         part.refine(vt_indices);
@@ -441,31 +434,21 @@ struct gbfs_update {
       // refine by return stations
       // TODO: only do this if the station is not in a zone where vehicles
       //   can be returned anywhere
-      auto vts = std::vector<std::size_t>{};
+      auto vts = std::vector<vehicle_type_idx_t>{};
       for (auto const& [id, st] : provider.stations_) {
         if (!st.status_.vehicle_docks_available_.empty()) {
           vts.clear();
           for (auto const& [vt, num] : st.status_.vehicle_docks_available_) {
-            if (auto const it = vt_id_to_idx.find(vt);
-                it != end(vt_id_to_idx)) {
-              vts.push_back(it->second);
-            }
-            part.refine(vts);
+            vts.push_back(vt);
           }
+          part.refine(vts);
         }
       }
 
       // refine by geofencing zones
       for (auto const& z : provider.geofencing_zones_.zones_) {
         for (auto const& r : z.rules_) {
-          vts.clear();
-          for (auto const& id : r.vehicle_type_ids_) {
-            if (auto const it = vt_id_to_idx.find(id);
-                it != end(vt_id_to_idx)) {
-              vts.push_back(it->second);
-            }
-          }
-          part.refine(vts);
+          part.refine(r.vehicle_type_idxs_);
         }
       }
 
@@ -473,8 +456,7 @@ struct gbfs_update {
         auto const prod_idx = gbfs_products_idx_t{provider.products_.size()};
         auto& prod = provider.products_.emplace_back();
         prod.idx_ = prod_idx;
-        prod.vehicle_types_ =
-            utl::to_vec(set, [&](auto const idx) { return vt_idx_to_id[idx]; });
+        prod.vehicle_types_ = set;
         prod.form_factor_ =
             provider.vehicle_types_.at(prod.vehicle_types_.front())
                 .form_factor_;
@@ -489,7 +471,7 @@ struct gbfs_update {
                         }) ||
             utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
               return !vs.is_disabled_ && !vs.is_reserved_ &&
-                     prod.includes_vehicle_type(vs.vehicle_type_id_);
+                     prod.includes_vehicle_type(vs.vehicle_type_idx_);
             });
       }
     }

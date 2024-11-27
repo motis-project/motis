@@ -37,6 +37,9 @@ enum class gbfs_version : std::uint8_t {
   k3 = 2,
 };
 
+using vehicle_type_idx_t =
+    cista::strong<std::uint16_t, struct vehicle_type_idx_>;
+
 enum class vehicle_form_factor : std::uint8_t {
   kBicycle = 0,
   kCargoBicycle = 1,
@@ -66,6 +69,7 @@ enum class return_constraint : std::uint8_t {
 
 struct vehicle_type {
   std::string id_;
+  vehicle_type_idx_t idx_{vehicle_type_idx_t::invalid()};
   vehicle_form_factor form_factor_{};
   propulsion_type propulsion_type_{};
   return_constraint return_constraint_{};
@@ -110,8 +114,8 @@ struct station_information {
 
 struct station_status {
   unsigned num_vehicles_available_{};
-  hash_map<std::string, unsigned> vehicle_types_available_{};
-  hash_map<std::string, unsigned> vehicle_docks_available_{};
+  hash_map<vehicle_type_idx_t, unsigned> vehicle_types_available_{};
+  hash_map<vehicle_type_idx_t, unsigned> vehicle_docks_available_{};
   bool is_renting_{true};
   bool is_returning_{true};
 };
@@ -129,14 +133,14 @@ struct vehicle_status {
   geo::latlng pos_;
   bool is_reserved_{};
   bool is_disabled_{};
-  std::string vehicle_type_id_;
+  vehicle_type_idx_t vehicle_type_idx_;
   std::string station_id_;
   std::string home_station_id_;
   rental_uris rental_uris_{};
 };
 
 struct rule {
-  std::vector<std::string> vehicle_type_ids_{};
+  std::vector<vehicle_type_idx_t> vehicle_type_idxs_{};
   bool ride_start_allowed_{};
   bool ride_end_allowed_{};
   bool ride_through_allowed_{};
@@ -174,7 +178,7 @@ struct geofencing_zones {
   void clear();
   geofencing_restrictions get_restrictions(
       geo::latlng const& pos,
-      std::string const& vehicle_type_id,
+      vehicle_type_idx_t,
       geofencing_restrictions const& default_restrictions) const;
 };
 
@@ -280,7 +284,7 @@ struct products_routing_data {
 };
 
 using gbfs_products_idx_t =
-    cista::strong<std::size_t, struct gbfs_products_idx_>;
+    cista::strong<std::uint16_t, struct gbfs_products_idx_>;
 
 struct provider_routing_data
     : std::enable_shared_from_this<provider_routing_data> {
@@ -294,14 +298,14 @@ struct provider_routing_data
 };
 
 struct provider_products {
-  bool includes_vehicle_type(std::string const& id) const {
-    return (id.empty() && vehicle_types_.empty()) ||
-           std::find(begin(vehicle_types_), end(vehicle_types_), id) !=
+  bool includes_vehicle_type(vehicle_type_idx_t const idx) const {
+    return (idx == vehicle_type_idx_t::invalid() && vehicle_types_.empty()) ||
+           std::find(begin(vehicle_types_), end(vehicle_types_), idx) !=
                end(vehicle_types_);
   }
 
   gbfs_products_idx_t idx_{gbfs_products_idx_t::invalid()};
-  std::vector<std::string> vehicle_types_;
+  std::vector<vehicle_type_idx_t> vehicle_types_;
   vehicle_form_factor form_factor_{vehicle_form_factor::kBicycle};
   propulsion_type propulsion_type_{propulsion_type::kHuman};
 
@@ -322,13 +326,14 @@ struct gbfs_products_ref {
 
 struct gbfs_provider {
   std::string id_;  // from config
-  gbfs_provider_idx_t idx_{};
+  gbfs_provider_idx_t idx_{gbfs_provider_idx_t::invalid()};
 
   std::shared_ptr<provider_file_infos> file_infos_{};
 
   system_information sys_info_{};
   std::map<std::string, station> stations_{};
-  hash_map<std::string, vehicle_type> vehicle_types_{};
+  vector_map<vehicle_type_idx_t, vehicle_type> vehicle_types_{};
+  hash_map<std::string, vehicle_type_idx_t> vehicle_types_map_{};
   std::vector<vehicle_status> vehicle_status_;
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};

@@ -52,7 +52,7 @@ struct osr_mapping {
 
       // global rules
       for (auto const& r : provider_.geofencing_zones_.global_rules_) {
-        if (!applies(r.vehicle_type_ids_, seg.vehicle_types_)) {
+        if (!applies(r.vehicle_type_idxs_, seg.vehicle_types_)) {
           continue;
         }
         default_restrictions.ride_start_allowed_ = r.ride_start_allowed_;
@@ -87,7 +87,7 @@ struct osr_mapping {
           // check if pos is inside the zone multipolygon
           if (multipoly_contains_point(z.geom_.get(), pos)) {
             for (auto const& r : z.rules_) {
-              if (!applies(r.vehicle_type_ids_, seg.vehicle_types_)) {
+              if (!applies(r.vehicle_type_idxs_, seg.vehicle_types_)) {
                 continue;
               }
               start_allowed = r.ride_start_allowed_;
@@ -229,12 +229,12 @@ struct osr_mapping {
            utl::enumerate(provider_.vehicle_status_)) {
         if (vs.is_disabled_ || vs.is_reserved_ || !vs.station_id_.empty() ||
             !vs.home_station_id_.empty() ||
-            !seg.includes_vehicle_type(vs.vehicle_type_id_)) {
+            !seg.includes_vehicle_type(vs.vehicle_type_idx_)) {
           continue;
         }
 
         auto const restrictions = provider_.geofencing_zones_.get_restrictions(
-            vs.pos_, vs.vehicle_type_id_, geofencing_restrictions{});
+            vs.pos_, vs.vehicle_type_idx_, geofencing_restrictions{});
         if (!restrictions.ride_start_allowed_) {
           continue;
         }

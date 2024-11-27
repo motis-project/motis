@@ -7,10 +7,12 @@
 
 #include "geo/latlng.h"
 
+#include "motis/gbfs/data.h"
+
 namespace motis::gbfs {
 
-bool applies(std::vector<std::string> const& rule_vehicle_type_ids,
-             std::vector<std::string> const& segment_vehicle_type_ids);
+bool applies(std::vector<vehicle_type_idx_t> const& rule_vehicle_type_idxs,
+             std::vector<vehicle_type_idx_t> const& segment_vehicle_type_idxs);
 bool multipoly_contains_point(tg_geom const* geom, geo::latlng const& pos);
 
 }  // namespace motis::gbfs
