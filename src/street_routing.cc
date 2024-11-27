@@ -120,17 +120,17 @@ std::vector<api::StepInstruction> get_step_instructions(
 struct sharing {
   sharing(osr::ways const& w,
           gbfs::gbfs_routing_data& gbfs_rd,
-          gbfs::gbfs_segment_ref const seg_ref)
+          gbfs::gbfs_products_ref const prod_ref)
       : w_{w},
         gbfs_rd_{gbfs_rd},
-        provider_{*gbfs_rd_.data_->providers_.at(seg_ref.provider_)},
-        segment_{provider_.segments_.at(seg_ref.segment_)},
-        seg_rd_{gbfs_rd_.get_segment_routing_data(seg_ref)} {}
+        provider_{*gbfs_rd_.data_->providers_.at(prod_ref.provider_)},
+        products_{provider_.products_.at(prod_ref.products_)},
+        prod_rd_{gbfs_rd_.get_products_routing_data(prod_ref)} {}
 
   api::Rental get_rental(osr::node_idx_t const n) const {
     auto ret = rental_;
     auto const& an =
-        seg_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
+        prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
     std::visit(utl::overloaded{
                    [&](gbfs::additional_node::station const& s) {
                      auto const& st = provider_.stations_.at(s.id_);
@@ -158,7 +158,7 @@ struct sharing {
             [&](gbfs::additional_node::vehicle const& vehicle) {
               return provider_.vehicle_status_.at(vehicle.idx_).pos_;
             }},
-        seg_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n))
+        prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n))
             .data_);
   }
 
@@ -169,21 +169,21 @@ struct sharing {
   osr::ways const& w_;
   gbfs::gbfs_routing_data& gbfs_rd_;
   gbfs::gbfs_provider const& provider_;
-  gbfs::provider_segment const& segment_;
-  gbfs::segment_routing_data const* seg_rd_;
+  gbfs::provider_products const& products_;
+  gbfs::products_routing_data const* prod_rd_;
   osr::sharing_data sharing_data_{
-      .start_allowed_ = seg_rd_->start_allowed_,
-      .end_allowed_ = seg_rd_->end_allowed_,
-      .through_allowed_ = seg_rd_->through_allowed_,
+      .start_allowed_ = prod_rd_->start_allowed_,
+      .end_allowed_ = prod_rd_->end_allowed_,
+      .through_allowed_ = prod_rd_->through_allowed_,
       .additional_node_offset_ = w_.n_nodes(),
-      .additional_edges_ = seg_rd_->compressed_.additional_edges_};
+      .additional_edges_ = prod_rd_->compressed_.additional_edges_};
   api::Rental rental_{
       .systemId_ = provider_.sys_info_.id_,
       .systemName_ = provider_.sys_info_.name_,
       .url_ = provider_.sys_info_.url_,
-      .formFactor_ = gbfs::to_api_form_factor(segment_.form_factor_),
+      .formFactor_ = gbfs::to_api_form_factor(products_.form_factor_),
       .propulsionType_ =
-          gbfs::to_api_propulsion_type(segment_.propulsion_type_)};
+          gbfs::to_api_propulsion_type(products_.propulsion_type_)};
 };
 
 api::Itinerary dummy_itinerary(api::Place const& from,
@@ -221,7 +221,7 @@ api::Itinerary route(osr::ways const& w,
                      bool const wheelchair,
                      n::unixtime_t const start_time,
                      std::optional<n::unixtime_t> const end_time,
-                     gbfs::gbfs_segment_ref const seg_ref,
+                     gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
                      std::chrono::seconds const max) {
@@ -235,7 +235,7 @@ api::Itinerary route(osr::ways const& w,
   };
 
   auto const sharing_data = profile == osr::search_profile::kBikeSharing
-                                ? std::optional{sharing(w, gbfs_rd, seg_ref)}
+                                ? std::optional{sharing(w, gbfs_rd, prod_ref)}
                                 : std::nullopt;
 
   auto const get_node_pos = [&](osr::node_idx_t const n) -> geo::latlng {
@@ -252,7 +252,7 @@ api::Itinerary route(osr::ways const& w,
     auto p = get_path(
         w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
         get_location(from), get_location(to),
-        static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(seg_ref)),
+        static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref)),
         to_profile(mode, wheelchair), start_time,
         static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
@@ -277,8 +277,8 @@ api::Itinerary route(osr::ways const& w,
     std::cout << "ROUTING\n  FROM:  " << from << "     \n    TO:  " << to
               << "\n  -> CREATING DUMMY LEG (mode=" << mode
               << ", profile=" << osr::to_str(profile)
-              << ", provider=" << seg_ref.provider_
-              << ", segment=" << seg_ref.segment_ << ")\n";
+              << ", provider=" << prod_ref.provider_
+              << ", products=" << prod_ref.products_ << ")\n";
     return dummy_itinerary(from, to, mode, start_time, *end_time);
   }
 

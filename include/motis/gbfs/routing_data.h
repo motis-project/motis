@@ -21,21 +21,21 @@ struct gbfs_routing_data {
   std::shared_ptr<provider_routing_data> get_provider_routing_data(
       gbfs_provider const&);
 
-  segment_routing_data* get_segment_routing_data(gbfs_provider const& provider,
-                                                 gbfs_segment_idx_t seg_idx);
-  segment_routing_data* get_segment_routing_data(gbfs_segment_ref);
+  products_routing_data* get_products_routing_data(
+      gbfs_provider const& provider, gbfs_products_idx_t prod_idx);
+  products_routing_data* get_products_routing_data(gbfs_products_ref);
 
-  nigiri::transport_mode_id_t get_transport_mode(gbfs_segment_ref);
-  gbfs_segment_ref get_segment_ref(nigiri::transport_mode_id_t) const;
+  nigiri::transport_mode_id_t get_transport_mode(gbfs_products_ref);
+  gbfs_products_ref get_products_ref(nigiri::transport_mode_id_t) const;
 
   osr::ways const* w_{};
   osr::lookup const* l_{};
   std::shared_ptr<gbfs_data> data_{};
 
-  hash_map<gbfs_segment_ref, std::shared_ptr<segment_routing_data>> segments_;
-  std::vector<gbfs_segment_ref> segment_refs_;
-  hash_map<gbfs_segment_ref, nigiri::transport_mode_id_t>
-      segment_ref_to_transport_mode_;
+  hash_map<gbfs_products_ref, std::shared_ptr<products_routing_data>> products_;
+  std::vector<gbfs_products_ref> products_refs_;
+  hash_map<gbfs_products_ref, nigiri::transport_mode_id_t>
+      products_ref_to_transport_mode_;
 };
 
 std::shared_ptr<provider_routing_data> compute_provider_routing_data(

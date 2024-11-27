@@ -165,16 +165,17 @@ std::vector<n::routing::offset> routing::get_offsets(
           continue;
         }
         auto provider_rd = std::shared_ptr<gbfs::provider_routing_data>{};
-        for (auto const& seg : provider->segments_) {
-          if (!gbfs::segment_matches(seg, form_factors, propulsion_types)) {
+        for (auto const& prod : provider->products_) {
+          if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
           if (!provider_rd) {
             provider_rd = gbfs_rd.get_provider_routing_data(*provider);
           }
-          auto const seg_ref = gbfs::gbfs_segment_ref{pi, seg.idx_};
-          auto* seg_rd = gbfs_rd.get_segment_routing_data(*provider, seg.idx_);
-          auto const sharing = seg_rd->get_sharing_data(w_->n_nodes());
+          auto const prod_ref = gbfs::gbfs_products_ref{pi, prod.idx_};
+          auto* prod_rd =
+              gbfs_rd.get_products_routing_data(*provider, prod.idx_);
+          auto const sharing = prod_rd->get_sharing_data(w_->n_nodes());
           auto const paths =
               osr::route(*w_, *l_, profile, pos, near_stop_locations,
                          static_cast<osr::cost_t>(max.count()), dir,
@@ -183,7 +184,7 @@ std::vector<n::routing::offset> routing::get_offsets(
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
               offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
-                                   gbfs_rd.get_transport_mode(seg_ref));
+                                   gbfs_rd.get_transport_mode(prod_ref));
             }
           }
         }
@@ -287,13 +288,13 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         if (provider == nullptr) {
           continue;
         }
-        for (auto const& seg : provider->segments_) {
-          if (!gbfs::segment_matches(seg, form_factors, propulsion_types)) {
+        for (auto const& prod : provider->products_) {
+          if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
           auto itinerary = route(
               *w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
-              std::nullopt, gbfs::gbfs_segment_ref{provider->idx_, seg.idx_},
+              std::nullopt, gbfs::gbfs_products_ref{provider->idx_, prod.idx_},
               cache, *blocked, max);
           if (itinerary.legs_.empty()) {
             continue;

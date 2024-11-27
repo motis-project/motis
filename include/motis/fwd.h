@@ -46,10 +46,10 @@ struct elevators;
 namespace gbfs {
 struct gbfs_data;
 struct gbfs_provider;
-struct gbfs_segment_ref;
+struct gbfs_products_ref;
 struct gbfs_routing_data;
 struct provider_routing_data;
-struct segment_routing_data;
+struct products_routing_data;
 }  // namespace gbfs
 
 }  // namespace motis

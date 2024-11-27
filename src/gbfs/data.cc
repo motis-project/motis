@@ -4,7 +4,7 @@
 
 namespace motis::gbfs {
 
-segment_routing_data::segment_routing_data(
+products_routing_data::products_routing_data(
     std::shared_ptr<provider_routing_data const>&& prd,
     compressed_routing_data const& compressed)
     : provider_routing_data_{std::move(prd)}, compressed_{compressed} {

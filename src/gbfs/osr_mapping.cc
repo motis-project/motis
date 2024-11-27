@@ -32,7 +32,7 @@ struct osr_mapping {
               osr::lookup const& l,
               gbfs_provider const& provider)
       : w_{w}, l_{l}, provider_{provider} {
-    segment_data_.resize(provider.segments_.size());
+    segment_data_.resize(provider.products_.size());
   }
 
   void map_geofencing_zones() {
@@ -44,7 +44,7 @@ struct osr_mapping {
       return bv;
     };
 
-    for (auto [seg, rd] : utl::zip(provider_.segments_, segment_data_)) {
+    for (auto [seg, rd] : utl::zip(provider_.products_, segment_data_)) {
       auto default_restrictions = provider_.default_restrictions_;
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
@@ -78,7 +78,7 @@ struct osr_mapping {
 
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
-      for (auto [seg, rd] : utl::zip(provider_.segments_, segment_data_)) {
+      for (auto [seg, rd] : utl::zip(provider_.products_, segment_data_)) {
         auto start_allowed = std::optional<bool>{};
         auto end_allowed = std::optional<bool>{};
         auto through_allowed = std::optional<bool>{};
@@ -131,7 +131,7 @@ struct osr_mapping {
   }
 
   void map_stations() {
-    for (auto [seg_b, rd_b] : utl::zip(provider_.segments_, segment_data_)) {
+    for (auto [seg_b, rd_b] : utl::zip(provider_.products_, segment_data_)) {
       auto& seg = seg_b;  // fix for apple clang
       auto& rd = rd_b;
       auto next_node_id = static_cast<osr::node_idx_t>(
@@ -222,7 +222,7 @@ struct osr_mapping {
   }
 
   void map_vehicles() {
-    for (auto [seg, rd] : utl::zip(provider_.segments_, segment_data_)) {
+    for (auto [seg, rd] : utl::zip(provider_.products_, segment_data_)) {
       auto next_node_id = static_cast<osr::node_idx_t>(
           w_.n_nodes() + rd.additional_nodes_.size());
       for (auto const [vehicle_idx, vs] :
@@ -298,7 +298,7 @@ void map_data(osr::ways const& w,
   mapping.map_stations();
   mapping.map_vehicles();
 
-  prd.segments_ = utl::to_vec(mapping.segment_data_, [&](auto& rd) {
+  prd.products_ = utl::to_vec(mapping.segment_data_, [&](auto& rd) {
     return compressed_routing_data{
         .additional_nodes_ = std::move(rd.additional_nodes_),
         .additional_edges_ = std::move(rd.additional_edges_),

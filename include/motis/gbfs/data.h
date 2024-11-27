@@ -258,9 +258,9 @@ struct compressed_routing_data {
 
 struct provider_routing_data;
 
-struct segment_routing_data {
-  segment_routing_data(std::shared_ptr<provider_routing_data const>&& prd,
-                       compressed_routing_data const& compressed);
+struct products_routing_data {
+  products_routing_data(std::shared_ptr<provider_routing_data const>&& prd,
+                        compressed_routing_data const& compressed);
 
   osr::sharing_data get_sharing_data(
       osr::node_idx_t::value_t const additional_node_offset) const {
@@ -279,27 +279,28 @@ struct segment_routing_data {
   osr::bitvec<osr::node_idx_t> through_allowed_;
 };
 
-using gbfs_segment_idx_t = cista::strong<std::size_t, struct gbfs_segment_idx_>;
+using gbfs_products_idx_t =
+    cista::strong<std::size_t, struct gbfs_products_idx_>;
 
 struct provider_routing_data
     : std::enable_shared_from_this<provider_routing_data> {
-  std::shared_ptr<segment_routing_data> get_segment_routing_data(
-      gbfs_segment_idx_t const seg_idx) const {
-    return std::make_shared<segment_routing_data>(
-        shared_from_this(), segments_.at(to_idx(seg_idx)));
+  std::shared_ptr<products_routing_data> get_products_routing_data(
+      gbfs_products_idx_t const prod_idx) const {
+    return std::make_shared<products_routing_data>(
+        shared_from_this(), products_.at(to_idx(prod_idx)));
   }
 
-  std::vector<compressed_routing_data> segments_;
+  std::vector<compressed_routing_data> products_;
 };
 
-struct provider_segment {
+struct provider_products {
   bool includes_vehicle_type(std::string const& id) const {
     return (id.empty() && vehicle_types_.empty()) ||
            std::find(begin(vehicle_types_), end(vehicle_types_), id) !=
                end(vehicle_types_);
   }
 
-  gbfs_segment_idx_t idx_{gbfs_segment_idx_t::invalid()};
+  gbfs_products_idx_t idx_{gbfs_products_idx_t::invalid()};
   std::vector<std::string> vehicle_types_;
   vehicle_form_factor form_factor_{vehicle_form_factor::kBicycle};
   propulsion_type propulsion_type_{propulsion_type::kHuman};
@@ -307,16 +308,16 @@ struct provider_segment {
   bool has_vehicles_to_rent_{};
 };
 
-struct gbfs_segment_ref {
-  friend bool operator==(gbfs_segment_ref const&,
-                         gbfs_segment_ref const&) = default;
+struct gbfs_products_ref {
+  friend bool operator==(gbfs_products_ref const&,
+                         gbfs_products_ref const&) = default;
 
   explicit operator bool() const noexcept {
     return provider_ != gbfs_provider_idx_t::invalid();
   }
 
   gbfs_provider_idx_t provider_{gbfs_provider_idx_t::invalid()};
-  gbfs_segment_idx_t segment_{gbfs_segment_idx_t::invalid()};
+  gbfs_products_idx_t products_{gbfs_products_idx_t::invalid()};
 };
 
 struct gbfs_provider {
@@ -332,7 +333,7 @@ struct gbfs_provider {
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};
 
-  vector_map<gbfs_segment_idx_t, provider_segment> segments_;
+  vector_map<gbfs_products_idx_t, provider_products> products_;
   bool has_vehicles_to_rent_{};
 };
 

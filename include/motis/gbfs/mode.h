@@ -15,8 +15,8 @@ vehicle_form_factor from_api_form_factor(api::RentalFormFactorEnum);
 api::RentalPropulsionTypeEnum to_api_propulsion_type(propulsion_type);
 propulsion_type from_api_propulsion_type(api::RentalPropulsionTypeEnum);
 
-bool segment_matches(
-    provider_segment const& seg,
+bool products_match(
+    provider_products const& prod,
     std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
     std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
         propulsion_types);

@@ -35,7 +35,7 @@ api::Itinerary route(osr::ways const&,
                      bool wheelchair,
                      nigiri::unixtime_t start_time,
                      std::optional<nigiri::unixtime_t> end_time,
-                     gbfs::gbfs_segment_ref,
+                     gbfs::gbfs_products_ref,
                      street_routing_cache_t&,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
                      std::chrono::seconds max = std::chrono::seconds{3600});

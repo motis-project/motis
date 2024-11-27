@@ -84,19 +84,19 @@ propulsion_type from_api_propulsion_type(
   throw utl::fail("invalid rental propulsion type");
 }
 
-bool segment_matches(
-    provider_segment const& seg,
+bool products_match(
+    provider_products const& prod,
     std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
     std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
         propulsion_types) {
   if (form_factors.has_value() &&
-      utl::find(*form_factors, to_api_form_factor(seg.form_factor_)) ==
+      utl::find(*form_factors, to_api_form_factor(prod.form_factor_)) ==
           end(*form_factors)) {
     return false;
   }
   if (propulsion_types.has_value() &&
       utl::find(*propulsion_types,
-                to_api_propulsion_type(seg.propulsion_type_)) ==
+                to_api_propulsion_type(prod.propulsion_type_)) ==
           end(*propulsion_types)) {
     return false;
   }

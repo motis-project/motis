@@ -40,43 +40,43 @@ gbfs_routing_data::get_provider_routing_data(gbfs_provider const& provider) {
   return gbfs::get_provider_routing_data(*w_, *l_, *data_, provider);
 }
 
-segment_routing_data* gbfs_routing_data::get_segment_routing_data(
-    gbfs_provider const& provider, gbfs_segment_idx_t const seg_idx) {
-  auto const seg_ref = gbfs::gbfs_segment_ref{provider.idx_, seg_idx};
-  if (auto const it = segments_.find(seg_ref); it != end(segments_)) {
+products_routing_data* gbfs_routing_data::get_products_routing_data(
+    gbfs_provider const& provider, gbfs_products_idx_t const prod_idx) {
+  auto const prod_ref = gbfs::gbfs_products_ref{provider.idx_, prod_idx};
+  if (auto const it = products_.find(prod_ref); it != end(products_)) {
     return it->second.get();
   } else {
-    return segments_
-        .emplace(seg_ref,
-                 get_provider_routing_data(provider)->get_segment_routing_data(
-                     seg_idx))
+    return products_
+        .emplace(prod_ref,
+                 get_provider_routing_data(provider)->get_products_routing_data(
+                     prod_idx))
         .first->second.get();
   }
 }
 
-segment_routing_data* gbfs_routing_data::get_segment_routing_data(
-    gbfs_segment_ref const seg_ref) {
-  return get_segment_routing_data(*data_->providers_.at(seg_ref.provider_),
-                                  seg_ref.segment_);
+products_routing_data* gbfs_routing_data::get_products_routing_data(
+    gbfs_products_ref const prod_ref) {
+  return get_products_routing_data(*data_->providers_.at(prod_ref.provider_),
+                                   prod_ref.products_);
 }
 
 nigiri::transport_mode_id_t gbfs_routing_data::get_transport_mode(
-    gbfs_segment_ref const seg_ref) {
-  if (auto const it = segment_ref_to_transport_mode_.find(seg_ref);
-      it != end(segment_ref_to_transport_mode_)) {
+    gbfs_products_ref const prod_ref) {
+  if (auto const it = products_ref_to_transport_mode_.find(prod_ref);
+      it != end(products_ref_to_transport_mode_)) {
     return it->second;
   } else {
     auto const id = static_cast<nigiri::transport_mode_id_t>(
-        kGbfsTransportModeIdOffset + segment_refs_.size());
-    segment_refs_.emplace_back(seg_ref);
-    segment_ref_to_transport_mode_[seg_ref] = id;
+        kGbfsTransportModeIdOffset + products_refs_.size());
+    products_refs_.emplace_back(prod_ref);
+    products_ref_to_transport_mode_[prod_ref] = id;
     return id;
   }
 }
 
-gbfs_segment_ref gbfs_routing_data::get_segment_ref(
+gbfs_products_ref gbfs_routing_data::get_products_ref(
     nigiri::transport_mode_id_t const id) const {
-  return segment_refs_.at(
+  return products_refs_.at(
       static_cast<std::size_t>(id - kGbfsTransportModeIdOffset));
 }
 

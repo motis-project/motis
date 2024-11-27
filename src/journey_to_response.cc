@@ -181,8 +181,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs_rd.get_segment_ref(x.transport_mode_id_)
-                      : gbfs::gbfs_segment_ref{},
+                      ? gbfs_rd.get_products_ref(x.transport_mode_id_)
+                      : gbfs::gbfs_products_ref{},
                   cache, blocked_mem,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +

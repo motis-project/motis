@@ -386,8 +386,8 @@ struct gbfs_update {
     if (data_changed) {
       partition_provider(provider);
       provider.has_vehicles_to_rent_ = utl::any_of(
-          provider.segments_,
-          [](auto const& seg) { return seg.has_vehicles_to_rent_; });
+          provider.products_,
+          [](auto const& prod) { return prod.has_vehicles_to_rent_; });
 
       update_rtree(provider, prev_provider);
 
@@ -395,18 +395,18 @@ struct gbfs_update {
         return compute_provider_routing_data(w_, l_, provider);
       });
     } else if (prev_provider != nullptr) {
-      // data not changed, copy previously computed segments
-      provider.segments_ = prev_provider->segments_;
+      // data not changed, copy previously computed products
+      provider.products_ = prev_provider->products_;
       provider.has_vehicles_to_rent_ = prev_provider->has_vehicles_to_rent_;
     }
   }
 
   void partition_provider(gbfs_provider& provider) {
     if (provider.vehicle_types_.empty()) {
-      // providers without vehicle types only need one segment
-      auto& seg = provider.segments_.emplace_back();
-      seg.idx_ = gbfs_segment_idx_t{0};
-      seg.has_vehicles_to_rent_ =
+      // providers without vehicle types only need one product segment
+      auto& prod = provider.products_.emplace_back();
+      prod.idx_ = gbfs_products_idx_t{0};
+      prod.has_vehicles_to_rent_ =
           utl::any_of(provider.stations_,
                       [](auto const& st) {
                         return st.second.status_.is_renting_ &&
@@ -470,17 +470,18 @@ struct gbfs_update {
       }
 
       for (auto const& set : part.get_sets()) {
-        auto const seg_idx = gbfs_segment_idx_t{provider.segments_.size()};
-        auto& seg = provider.segments_.emplace_back();
-        seg.idx_ = seg_idx;
-        seg.vehicle_types_ =
+        auto const prod_idx = gbfs_products_idx_t{provider.products_.size()};
+        auto& prod = provider.products_.emplace_back();
+        prod.idx_ = prod_idx;
+        prod.vehicle_types_ =
             utl::to_vec(set, [&](auto const idx) { return vt_idx_to_id[idx]; });
-        seg.form_factor_ =
-            provider.vehicle_types_.at(seg.vehicle_types_.front()).form_factor_;
-        seg.propulsion_type_ =
-            provider.vehicle_types_.at(seg.vehicle_types_.front())
+        prod.form_factor_ =
+            provider.vehicle_types_.at(prod.vehicle_types_.front())
+                .form_factor_;
+        prod.propulsion_type_ =
+            provider.vehicle_types_.at(prod.vehicle_types_.front())
                 .propulsion_type_;
-        seg.has_vehicles_to_rent_ =
+        prod.has_vehicles_to_rent_ =
             utl::any_of(provider.stations_,
                         [&](auto const& st) {
                           return st.second.status_.is_renting_ &&
@@ -488,7 +489,7 @@ struct gbfs_update {
                         }) ||
             utl::any_of(provider.vehicle_status_, [&](auto const& vs) {
               return !vs.is_disabled_ && !vs.is_reserved_ &&
-                     seg.includes_vehicle_type(vs.vehicle_type_id_);
+                     prod.includes_vehicle_type(vs.vehicle_type_id_);
             });
       }
     }
