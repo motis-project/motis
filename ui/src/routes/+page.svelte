@@ -101,7 +101,7 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived(['WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
+	let modes = $derived(['BIKE', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -244,7 +244,7 @@
 		<Control position="top-left">
 			<Card class="w-[500px] bg-background rounded-lg">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-					<h2 class="ml-2 text-base font-semibold">Journey Details</h2>
+					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
 					<Button
 						variant="ghost"
 						onclick={() => {
