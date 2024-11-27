@@ -21,6 +21,7 @@
 #include "motis/constants.h"
 #include "motis/types.h"
 
+#include "motis/box_rtree.h"
 #include "motis/gbfs/compression.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/geofencing.h"
@@ -43,6 +44,12 @@ struct osr_mapping {
           provider_.vehicle_status_.size()));
       return bv;
     };
+
+    auto zone_rtree = box_rtree<std::size_t>{};
+    for (auto const& [i, z] :
+         utl::enumerate(provider_.geofencing_zones_.zones_)) {
+      zone_rtree.add(z.bounding_box(), i);
+    }
 
     for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       auto default_restrictions = provider_.default_restrictions_;
@@ -76,6 +83,8 @@ struct osr_mapping {
 
     auto done = make_loc_bitvec();
 
+    auto zone_indices = std::vector<std::size_t>{};
+    zone_indices.reserve(provider_.geofencing_zones_.zones_.size());
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
       for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
@@ -83,7 +92,16 @@ struct osr_mapping {
         auto end_allowed = std::optional<bool>{};
         auto through_allowed = std::optional<bool>{};
         auto station_parking = rd.station_parking_;
-        for (auto const& z : provider_.geofencing_zones_.zones_) {
+
+        // zones have to be checked in the order they are defined
+        zone_indices.clear();
+        zone_rtree.find(pos, [&](std::size_t const zone_idx) {
+          zone_indices.push_back(zone_idx);
+        });
+        utl::sort(zone_indices);
+
+        for (auto const zone_idx : zone_indices) {
+          auto const& z = provider_.geofencing_zones_.zones_[zone_idx];
           // check if pos is inside the zone multipolygon
           if (multipoly_contains_point(z.geom_.get(), pos)) {
             for (auto const& r : z.rules_) {
@@ -114,11 +132,7 @@ struct osr_mapping {
 
     auto const* osr_r = w_.r_.get();
     for (auto const& z : provider_.geofencing_zones_.zones_) {
-      auto const rect = tg_geom_rect(z.geom_.get());
-      auto const bb = geo::box{geo::latlng{rect.min.y, rect.min.x},
-                               geo::latlng{rect.max.y, rect.max.x}};
-
-      l_.find(bb, [&](osr::way_idx_t const way) {
+      l_.find(z.bounding_box(), [&](osr::way_idx_t const way) {
         for (auto const n : osr_r->way_nodes_[way]) {
           if (done.test(n)) {
             continue;

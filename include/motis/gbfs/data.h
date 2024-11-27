@@ -17,6 +17,7 @@
 #include "cista/hash.h"
 #include "cista/strong.h"
 
+#include "geo/box.h"
 #include "geo/latlng.h"
 
 #include "osr/routing/additional_edge.h"
@@ -163,6 +164,12 @@ struct zone {
                        ? tg_poly_clockwise(tg_geom_poly_at(geom_.get(), 0))
                        : true},
         name_{std::move(name)} {}
+
+  geo::box bounding_box() const {
+    auto const rect = tg_geom_rect(geom_.get());
+    return geo::box{geo::latlng{rect.min.y, rect.min.x},
+                    geo::latlng{rect.max.y, rect.max.x}};
+  }
 
   std::shared_ptr<tg_geom> geom_;
   std::vector<rule> rules_;
