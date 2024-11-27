@@ -161,13 +161,16 @@ api::Itinerary journey_to_response(osr::ways const* w,
               }
             },
             [&](n::footpath) {
-              append(w && l
-                         ? route(*w, *l, gbfs_rd, e, from, to,
-                                 api::ModeEnum::WALK, wheelchair,
-                                 j_leg.dep_time_, j_leg.arr_time_, {}, cache,
-                                 blocked_mem, std::chrono::seconds{900})
-                         : dummy_itinerary(from, to, api::ModeEnum::WALK,
-                                           j_leg.dep_time_, j_leg.arr_time_));
+              append(
+                  w && l
+                      ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
+                              wheelchair, j_leg.dep_time_, j_leg.arr_time_, {},
+                              cache, blocked_mem,
+                              std::chrono::duration_cast<std::chrono::seconds>(
+                                  j_leg.arr_time_ - j_leg.dep_time_) +
+                                  std::chrono::minutes{5})
+                      : dummy_itinerary(from, to, api::ModeEnum::WALK,
+                                        j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
               append(route(
@@ -180,7 +183,10 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs_rd.get_segment_ref(x.transport_mode_id_)
                       : gbfs::gbfs_segment_ref{},
-                  cache, blocked_mem, std::chrono::seconds{900}));
+                  cache, blocked_mem,
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      j_leg.arr_time_ - j_leg.dep_time_) +
+                      std::chrono::minutes{5}));
             }},
         j_leg.uses_);
   }

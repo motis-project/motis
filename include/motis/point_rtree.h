@@ -82,17 +82,11 @@ struct point_rtree {
 
   template <typename Fn>
   void in_radius(geo::latlng const& x, double distance, Fn&& fn) const {
-    find(x, [&](geo::latlng const& pos, T const item) {
+    find(geo::box{x, distance}, [&](geo::latlng const& pos, T const item) {
       if (geo::distance(x, pos) < distance) {
         fn(item);
       }
     });
-  }
-
-  template <typename Fn>
-  void find(geo::latlng const& x, Fn&& fn) const {
-    find({{x.lat() - 0.01, x.lng() - 0.01}, {x.lat() + 0.01, x.lng() + 0.01}},
-         std::forward<Fn>(fn));
   }
 
   template <typename Fn>

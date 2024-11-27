@@ -380,7 +380,6 @@ TEST(motis, routing) {
       print_short(ss, j);
     }
 
-    std::cout << "---\n" << ss.str() << "\n---\n" << std::endl;
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:38, duration=00:13, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
@@ -406,9 +405,9 @@ TEST(motis, routing) {
 
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=03:14, duration=01:49, transfers=1, legs=[
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:25),
-    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="RENTAL", trip="-", end=2019-05-01 01:26),
-    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:26, mode="WALK", trip="-", end=2019-05-01 01:37),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="RENTAL", trip="-", end=2019-05-01 01:29),
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:37),
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE ", end=2019-05-01 02:45),
     (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:49),
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 03:05, mode="SUBWAY", trip="U4", end=2019-05-01 03:10),
