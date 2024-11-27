@@ -46,7 +46,7 @@ struct osr_mapping {
     };
 
     auto zone_rtree = box_rtree<std::size_t>{};
-    for (auto const& [i, z] :
+    for (auto const [i, z] :
          utl::enumerate(provider_.geofencing_zones_.zones_)) {
       zone_rtree.add(z.bounding_box(), i);
     }
