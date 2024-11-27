@@ -32,7 +32,7 @@ struct osr_mapping {
               osr::lookup const& l,
               gbfs_provider const& provider)
       : w_{w}, l_{l}, provider_{provider} {
-    segment_data_.resize(provider.products_.size());
+    products_data_.resize(provider.products_.size());
   }
 
   void map_geofencing_zones() {
@@ -44,7 +44,7 @@ struct osr_mapping {
       return bv;
     };
 
-    for (auto [seg, rd] : utl::zip(provider_.products_, segment_data_)) {
+    for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       auto default_restrictions = provider_.default_restrictions_;
       rd.start_allowed_ = make_loc_bitvec();
       rd.end_allowed_ = make_loc_bitvec();
@@ -52,7 +52,7 @@ struct osr_mapping {
 
       // global rules
       for (auto const& r : provider_.geofencing_zones_.global_rules_) {
-        if (!applies(r.vehicle_type_idxs_, seg.vehicle_types_)) {
+        if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
           continue;
         }
         default_restrictions.ride_start_allowed_ = r.ride_start_allowed_;
@@ -78,7 +78,7 @@ struct osr_mapping {
 
     auto const handle_point = [&](osr::node_idx_t const n,
                                   geo::latlng const& pos) {
-      for (auto [seg, rd] : utl::zip(provider_.products_, segment_data_)) {
+      for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
         auto start_allowed = std::optional<bool>{};
         auto end_allowed = std::optional<bool>{};
         auto through_allowed = std::optional<bool>{};
@@ -87,7 +87,7 @@ struct osr_mapping {
           // check if pos is inside the zone multipolygon
           if (multipoly_contains_point(z.geom_.get(), pos)) {
             for (auto const& r : z.rules_) {
-              if (!applies(r.vehicle_type_idxs_, seg.vehicle_types_)) {
+              if (!applies(r.vehicle_type_idxs_, prod.vehicle_types_)) {
                 continue;
               }
               start_allowed = r.ride_start_allowed_;
@@ -131,8 +131,8 @@ struct osr_mapping {
   }
 
   void map_stations() {
-    for (auto [seg_b, rd_b] : utl::zip(provider_.products_, segment_data_)) {
-      auto& seg = seg_b;  // fix for apple clang
+    for (auto [prod_b, rd_b] : utl::zip(provider_.products_, products_data_)) {
+      auto& prod = prod_b;  // fix for apple clang
       auto& rd = rd_b;
       auto next_node_id = static_cast<osr::node_idx_t>(
           w_.n_nodes() + rd.additional_nodes_.size());
@@ -142,11 +142,11 @@ struct osr_mapping {
         auto is_returning = st.status_.is_returning_;
 
         // if the station lists vehicles available by type, at least one of
-        // the vehicle types included in the segment must be available
+        // the vehicle types included in the product segment must be available
         if (is_renting && !st.status_.vehicle_types_available_.empty()) {
           is_renting = utl::any_of(
               st.status_.vehicle_types_available_, [&](auto const& vt) {
-                return vt.second != 0 && seg.includes_vehicle_type(vt.first);
+                return vt.second != 0 && prod.includes_vehicle_type(vt.first);
               });
         }
 
@@ -154,7 +154,7 @@ struct osr_mapping {
         if (is_returning && !st.status_.vehicle_docks_available_.empty()) {
           is_returning = utl::any_of(
               st.status_.vehicle_docks_available_, [&](auto const& vt) {
-                return vt.second != 0 && seg.includes_vehicle_type(vt.first);
+                return vt.second != 0 && prod.includes_vehicle_type(vt.first);
               });
         }
 
@@ -222,14 +222,14 @@ struct osr_mapping {
   }
 
   void map_vehicles() {
-    for (auto [seg, rd] : utl::zip(provider_.products_, segment_data_)) {
+    for (auto [prod, rd] : utl::zip(provider_.products_, products_data_)) {
       auto next_node_id = static_cast<osr::node_idx_t>(
           w_.n_nodes() + rd.additional_nodes_.size());
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
         if (vs.is_disabled_ || vs.is_reserved_ || !vs.station_id_.empty() ||
             !vs.home_station_id_.empty() ||
-            !seg.includes_vehicle_type(vs.vehicle_type_idx_)) {
+            !prod.includes_vehicle_type(vs.vehicle_type_idx_)) {
           continue;
         }
 
@@ -286,7 +286,7 @@ struct osr_mapping {
   osr::lookup const& l_;
   gbfs_provider const& provider_;
 
-  std::vector<routing_data> segment_data_;
+  std::vector<routing_data> products_data_;
 };
 
 void map_data(osr::ways const& w,
@@ -298,7 +298,7 @@ void map_data(osr::ways const& w,
   mapping.map_stations();
   mapping.map_vehicles();
 
-  prd.products_ = utl::to_vec(mapping.segment_data_, [&](auto& rd) {
+  prd.products_ = utl::to_vec(mapping.products_data_, [&](auto& rd) {
     return compressed_routing_data{
         .additional_nodes_ = std::move(rd.additional_nodes_),
         .additional_edges_ = std::move(rd.additional_edges_),
