@@ -517,7 +517,7 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
             
             A list of vehicle type form factors that are allowed to be used from the `from` coordinate to the first transit stop.
             If empty (the default), all form factors are allowed.
@@ -532,7 +532,7 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
 
             A list of vehicle type form factors that are allowed to be used from the last transit stop to the `to` coordinate.
             If empty (the default), all form factors are allowed.
@@ -562,7 +562,7 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
             
             A list of vehicle propulsion types that are allowed to be used from the `from` coordinate to the first transit stop.
             If empty (the default), all propulsion types are allowed.
@@ -577,9 +577,9 @@ paths:
           in: query
           required: false
           description: |
-            Optional.  Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
             
-            A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate..
+            A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate.
             If empty (the default), all propulsion types are allowed.
             Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
           schema:
