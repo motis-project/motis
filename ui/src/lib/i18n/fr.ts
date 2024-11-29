@@ -1,6 +1,7 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
+	journeyDetails: 'Détails du voyage',
 	walk: 'Marche',
 	bike: 'Vélo',
 	cargoBike: 'Vélo Cargo',

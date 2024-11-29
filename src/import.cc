@@ -309,7 +309,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
   auto adr_extend = task{
       "adr_extend",
-      [&]() { return c.timetable_.has_value(); },
+      [&]() {
+        return c.timetable_.has_value() &&
+               (c.geocoding_ || c.reverse_geocoding_);
+      },
       [&]() { return d.tt_.get() != nullptr; },
       [&]() {
         auto const area_db = d.t_ ? (std::optional<adr::area_database>{
@@ -322,6 +325,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
         adr_extend_tt(*d.tt_, area_db.has_value() ? &*area_db : nullptr, *d.t_);
         if (write) {
+          auto ec = std::error_code{};
+          std::filesystem::create_directories(data_path / "adr", ec);
           cista::write(data_path / "adr" / "t_ext.bin", *d.t_);
         }
         d.r_.reset();
