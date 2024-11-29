@@ -1403,6 +1403,13 @@ components:
         - PLUG_IN_HYBRID
         - HYDROGEN_FUEL_CELL
 
+    RentalReturnConstraint:
+      type: string
+      enum:
+        - NONE
+        - ANY_STATION
+        - ROUNDTRIP_STATION
+
     Rental:
       description: Vehicle rental
       type: object
@@ -1434,6 +1441,8 @@ components:
           $ref: '#/components/schemas/RentalFormFactor'
         propulsionType:
           $ref: '#/components/schemas/RentalPropulsionType'
+        returnConstraint:
+          $ref: '#/components/schemas/RentalReturnConstraint'
 
     Leg:
       type: object

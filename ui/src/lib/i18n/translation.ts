@@ -28,6 +28,7 @@ export type Translations = {
 	track: string;
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
+	roundtripStationReturnConstraint: string;
 };
 
 const translations: Map<string, Translations> = new Map(

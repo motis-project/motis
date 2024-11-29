@@ -315,6 +315,7 @@ struct provider_products {
   std::vector<vehicle_type_idx_t> vehicle_types_;
   vehicle_form_factor form_factor_{vehicle_form_factor::kBicycle};
   propulsion_type propulsion_type_{propulsion_type::kHuman};
+  return_constraint return_constraint_{return_constraint::kNone};
 
   bool has_vehicles_to_rent_{};
 };

@@ -431,6 +431,16 @@ struct gbfs_update {
         part.refine(vt_indices);
       }
 
+      // refine by return constraints
+      auto by_return_constraint =
+          hash_map<return_constraint, std::vector<vehicle_type_idx_t>>{};
+      for (auto const& vt : provider.vehicle_types_) {
+        by_return_constraint[vt.return_constraint_].push_back(vt.idx_);
+      }
+      for (auto const& [_, vt_indices] : by_return_constraint) {
+        part.refine(vt_indices);
+      }
+
       // refine by return stations
       // TODO: only do this if the station is not in a zone where vehicles
       //   can be returned anywhere
@@ -457,12 +467,11 @@ struct gbfs_update {
         auto& prod = provider.products_.emplace_back();
         prod.idx_ = prod_idx;
         prod.vehicle_types_ = set;
-        prod.form_factor_ =
-            provider.vehicle_types_.at(prod.vehicle_types_.front())
-                .form_factor_;
-        prod.propulsion_type_ =
-            provider.vehicle_types_.at(prod.vehicle_types_.front())
-                .propulsion_type_;
+        auto const first_vt =
+            provider.vehicle_types_.at(prod.vehicle_types_.front());
+        prod.form_factor_ = first_vt.form_factor_;
+        prod.propulsion_type_ = first_vt.propulsion_type_;
+        prod.return_constraint_ = first_vt.return_constraint_;
         prod.has_vehicles_to_rent_ =
             utl::any_of(provider.stations_,
                         [&](auto const& st) {

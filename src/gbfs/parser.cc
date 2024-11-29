@@ -226,6 +226,7 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       auto const& vta = station_obj.at("vehicle_types_available").as_array();
       auto unrestricted_available = 0U;
       auto any_station_available = 0U;
+      auto roundtrip_available = 0U;
       for (auto const& vt : vta) {
         auto const vehicle_type_id =
             static_cast<std::string>(vt.at("vehicle_type_id").as_string());
@@ -239,12 +240,14 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
               provider.vehicle_types_[vehicle_type_idx].return_constraint_) {
             case return_constraint::kNone: ++unrestricted_available; break;
             case return_constraint::kAnyStation: ++any_station_available; break;
-            case return_constraint::kRoundtripStation: break;
+            case return_constraint::kRoundtripStation:
+              ++roundtrip_available;
+              break;
           }
         }
       }
       station.status_.num_vehicles_available_ =
-          unrestricted_available + any_station_available;
+          unrestricted_available + any_station_available + roundtrip_available;
     }
 
     if (station_obj.contains("vehicle_docks_available")) {
@@ -364,11 +367,6 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
     if (auto const it = provider.vehicle_types_map_.find(type_id);
         it != end(provider.vehicle_types_map_)) {
       type_idx = it->second;
-      if (provider.vehicle_types_[it->second].return_constraint_ ==
-          return_constraint::kRoundtripStation) {
-        // roundtrip vehicles currently not supported
-        continue;
-      }
     }
 
     provider.vehicle_status_.emplace_back(vehicle_status{

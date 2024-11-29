@@ -33,7 +33,8 @@ const translations: Translations = {
 				return `Fahrt ${n} Stationen`;
 		}
 	},
-	sharingProvider: 'Anbieter'
+	sharingProvider: 'Anbieter',
+	roundtripStationReturnConstraint: 'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.'
 };
 
 export default translations;

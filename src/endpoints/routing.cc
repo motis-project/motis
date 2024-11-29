@@ -169,7 +169,9 @@ std::vector<n::routing::offset> routing::get_offsets(
         }
         auto provider_rd = std::shared_ptr<gbfs::provider_routing_data>{};
         for (auto const& prod : provider->products_) {
-          if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
+          if (prod.return_constraint_ ==
+                  gbfs::return_constraint::kRoundtripStation ||
+              !gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
           if (!provider_rd) {

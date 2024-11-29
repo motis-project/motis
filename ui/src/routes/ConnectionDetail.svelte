@@ -53,7 +53,7 @@
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
-	<div class="py-12 pl-8 flex flex-col text-muted-foreground">
+	<div class="py-12 pl-8 flex flex-col gap-y-4 text-muted-foreground">
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
 			{getModeName(l)}
@@ -62,6 +62,11 @@
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
 				{t.sharingProvider}: <a href={l.rental.url} target="_blank">{l.rental.systemName}</a>
+			</span>
+		{/if}
+		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
+			<span class="ml-6">
+				{t.roundtripStationReturnConstraint}
 			</span>
 		{/if}
 	</div>

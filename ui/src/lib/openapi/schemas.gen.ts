@@ -420,6 +420,11 @@ export const RentalPropulsionTypeSchema = {
     enum: ['HUMAN', 'ELECTRIC_ASSIST', 'ELECTRIC', 'COMBUSTION', 'COMBUSTION_DIESEL', 'HYBRID', 'PLUG_IN_HYBRID', 'HYDROGEN_FUEL_CELL']
 } as const;
 
+export const RentalReturnConstraintSchema = {
+    type: 'string',
+    enum: ['NONE', 'ANY_STATION', 'ROUNDTRIP_STATION']
+} as const;
+
 export const RentalSchema = {
     description: 'Vehicle rental',
     type: 'object',
@@ -458,6 +463,9 @@ export const RentalSchema = {
         },
         propulsionType: {
             '$ref': '#/components/schemas/RentalPropulsionType'
+        },
+        returnConstraint: {
+            '$ref': '#/components/schemas/RentalReturnConstraint'
         }
     }
 } as const;

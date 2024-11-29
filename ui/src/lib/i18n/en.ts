@@ -33,7 +33,8 @@ const translations: Translations = {
 				return `${n}  intermediate stops`;
 		}
 	},
-	sharingProvider: 'Provider'
+	sharingProvider: 'Provider',
+	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.'
 };
 
 export default translations;

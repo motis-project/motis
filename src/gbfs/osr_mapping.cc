@@ -69,6 +69,10 @@ struct osr_mapping {
         break;
       }
 
+      if (prod.return_constraint_ == return_constraint::kAnyStation) {
+        default_restrictions.station_parking_ = true;
+      }
+
       if (default_restrictions.ride_end_allowed_ &&
           !default_restrictions.station_parking_) {
         rd.end_allowed_.one_out();
@@ -242,7 +246,8 @@ struct osr_mapping {
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
         if (vs.is_disabled_ || vs.is_reserved_ || !vs.station_id_.empty() ||
-            !vs.home_station_id_.empty() ||
+            (!vs.home_station_id_.empty() &&
+             prod.return_constraint_ != return_constraint::kRoundtripStation) ||
             !prod.includes_vehicle_type(vs.vehicle_type_idx_)) {
           continue;
         }

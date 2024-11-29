@@ -183,7 +183,9 @@ struct sharing {
       .url_ = provider_.sys_info_.url_,
       .formFactor_ = gbfs::to_api_form_factor(products_.form_factor_),
       .propulsionType_ =
-          gbfs::to_api_propulsion_type(products_.propulsion_type_)};
+          gbfs::to_api_propulsion_type(products_.propulsion_type_),
+      .returnConstraint_ =
+          gbfs::to_api_return_constraint(products_.return_constraint_)};
 };
 
 api::Itinerary dummy_itinerary(api::Place const& from,
