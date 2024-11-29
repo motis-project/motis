@@ -156,16 +156,14 @@ jobs:
           asset_content_type: application/zip
 
   macos:
-    runs-on: ${{ matrix.config.os }}
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         config:
           - preset: macos-x86_64
-            os: macos-13
             tests: On
           - preset: macos-arm64
-            os: macos-14
     env:
       BUILDCACHE_COMPRESS: true
       BUILDCACHE_DIRECT_MODE: true
