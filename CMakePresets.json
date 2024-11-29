@@ -12,6 +12,7 @@
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/macos-x86_64-release",
       "cacheVariables": {
+        "BOOST_CONTEXT_ABI": "sysv",
         "BOOST_CONTEXT_ARCHITECTURE": "x86_64",
         "CMAKE_OSX_ARCHITECTURES": "x86_64",
         "CMAKE_CXX_FLAGS": "-stdlib=libc++",
