@@ -41,6 +41,6 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t&,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem);
+                                   osr::bitvec<osr::node_idx_t>* blocked_mem);
 
 }  // namespace motis

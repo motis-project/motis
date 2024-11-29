@@ -28,7 +28,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   nigiri::unixtime_t const start_time,
                                   osr::cost_t const max,
                                   street_routing_cache_t& cache,
-                                  osr::bitvec<osr::node_idx_t>& blocked_mem) {
+                                  osr::bitvec<osr::node_idx_t>* blocked_mem) {
   auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
                    : std::optional{std::pair<nodes_t, states_t>{}};
   auto const& [e_nodes, e_states] = *s;
@@ -38,11 +38,12 @@ std::optional<osr::path> get_path(osr::ways const& w,
   auto const path =
       it != end(cache)
           ? it->second
-          : osr::route(
-                w, l, profile, from, to, max, osr::direction::kForward,
-                kMaxMatchingDistance,
-                s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-                sharing);
+          : osr::route(w, l, profile, from, to, max, osr::direction::kForward,
+                       kMaxMatchingDistance,
+                       s && blocked_mem
+                           ? &set_blocked(e_nodes, e_states, *blocked_mem)
+                           : nullptr,
+                       sharing);
   if (it == end(cache)) {
     cache.emplace(std::pair{key, path});
   }
@@ -213,7 +214,7 @@ api::Itinerary route(osr::ways const& w,
                      std::optional<n::unixtime_t> const end_time,
                      gbfs_provider_idx_t const provider_idx,
                      street_routing_cache_t& cache,
-                     osr::bitvec<osr::node_idx_t>& blocked_mem,
+                     osr::bitvec<osr::node_idx_t>* blocked_mem,
                      std::chrono::seconds const max) {
   auto const profile = to_profile(mode, wheelchair);
   utl::verify(profile != osr::search_profile::kBikeSharing || gbfs != nullptr,

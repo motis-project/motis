@@ -45,7 +45,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
-  commit=930f38eb0365ceb7853273e03da4d9e7787abfb9
+  commit=082a2d83c827e43f3b7eb8d6f0a1102cddb897ad
 [tg]
   url=git@github.com:triptix-tech/tg.git
   branch=main

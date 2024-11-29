@@ -55,7 +55,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t& cache,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem) {
+                                   osr::bitvec<osr::node_idx_t>* blocked_mem) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto itinerary = api::Itinerary{

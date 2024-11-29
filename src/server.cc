@@ -35,6 +35,7 @@
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
+namespace bf = boost::fibers;
 
 namespace motis {
 
@@ -54,9 +55,9 @@ void POST(auto&& r, std::string target, From& from) {
 
 int server(data d, config const& c) {
   auto ioc = asio::io_context{};
-  auto workers = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto qr = net::query_router{net::asio_exec(ioc, workers)};
+  auto ch = net::fiber_exec::channel_t{2048U};
+  auto qr = net::query_router{net::fiber_exec(ioc, ch)};
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
@@ -101,7 +102,7 @@ int server(data d, config const& c) {
   if (c.requires_rt_timetable_updates()) {
     rt_update_ioc = std::make_unique<asio::io_context>();
     rt_update_thread = std::make_unique<std::thread>([&]() {
-      utl::set_current_thread_name("rt update");
+      utl::set_current_thread_name("motis rt update");
       run_rt_update(*rt_update_ioc, c, *d.tt_, *d.tags_, d.rt_);
       rt_update_ioc->run();
     });
@@ -112,18 +113,17 @@ int server(data d, config const& c) {
   if (d.w_ && d.l_ && c.has_gbfs_feeds()) {
     gbfs_update_ioc = std::make_unique<asio::io_context>();
     gbfs_update_thread = std::make_unique<std::thread>([&]() {
-      utl::set_current_thread_name("gbfs update");
+      utl::set_current_thread_name("motis gbfs update");
       gbfs::run_gbfs_update(*gbfs_update_ioc, c, *d.w_, *d.l_, d.gbfs_);
       gbfs_update_ioc->run();
     });
   }
 
-  auto const work_guard = asio::make_work_guard(workers);
   auto threads = std::vector<std::thread>(
       static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
   for (auto [i, t] : utl::enumerate(threads)) {
-    t = std::thread(net::run(workers));
-    utl::set_thread_name(t, fmt::format("worker {}", i));
+    t = std::thread(net::fiber_exec::run(ch, server_config.n_threads_));
+    utl::set_thread_name(t, fmt::format("motis worker {}", i));
   }
 
   auto const stop = net::stop_handler(ioc, [&]() {
@@ -143,7 +143,7 @@ int server(data d, config const& c) {
                server_config.host_, server_config.port_, server_config.port_);
   net::run(ioc)();
 
-  workers.stop();
+  ch.close();
   for (auto& t : threads) {
     t.join();
   }

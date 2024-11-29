@@ -245,7 +245,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         (!omit_walk && m == api::ModeEnum::WALK)) {
       auto itinerary = route(
           *w_, *l_, gbfs, e, from, to, m, wheelchair, start_time, std::nullopt,
-          gbfs_provider_idx_t::invalid(), cache, *blocked, max);
+          gbfs_provider_idx_t::invalid(), cache, blocked.get(), max);
       if (itinerary.legs_.empty()) {
         continue;
       }
@@ -265,7 +265,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       for (auto const& pi : providers) {
         auto itinerary =
             route(*w_, *l_, gbfs, e, from, to, m, wheelchair, start_time,
-                  std::nullopt, pi, cache, *blocked, max);
+                  std::nullopt, pi, cache, blocked.get(), max);
         if (itinerary.legs_.empty()) {
           continue;
         }
@@ -516,7 +516,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
               return journey_to_response(w_, l_, pl_, *tt_, *tags_, e, rtt,
                                          matches_, shapes_, gbfs.get(),
                                          query.wheelchair_, j, start, dest,
-                                         cache, *blocked);
+                                         cache, blocked.get());
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),
