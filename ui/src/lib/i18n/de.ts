@@ -34,7 +34,8 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Anbieter',
-	roundtripStationReturnConstraint: 'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.'
+	roundtripStationReturnConstraint:
+		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.'
 };
 
 export default translations;
