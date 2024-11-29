@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
 	import { formatDurationSec } from '$lib/formatDuration';
@@ -8,6 +7,7 @@
 	import Time from '$lib/Time.svelte';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import { t } from '$lib/i18n/translation';
+	import DirectConnection from '$lib/DirectConnection.svelte';
 
 	let {
 		routingResponses,
@@ -47,14 +47,12 @@
 		{#if r.direct.length !== 0}
 			<div class="my-4 flex flex-wrap gap-x-3 gap-y-3">
 				{#each r.direct as d}
-					<Button
-						variant="link"
+					<DirectConnection
+						{d}
 						onclick={() => {
 							selectedItinerary = d;
 						}}
-					>
-						{@render legSummary(d.legs[0]!)}
-					</Button>
+					/>
 				{/each}
 			</div>
 		{/if}
