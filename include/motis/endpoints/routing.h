@@ -25,6 +25,7 @@ struct routing {
       std::vector<api::ModeEnum> const&,
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
+      std::optional<std::vector<std::string>> const& rental_providers,
       bool wheelchair,
       std::chrono::seconds max,
       unsigned max_matching_distance,
@@ -47,6 +48,7 @@ struct routing {
       std::vector<api::ModeEnum> const&,
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
+      std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
       bool wheelchair,
       std::chrono::seconds max) const;
