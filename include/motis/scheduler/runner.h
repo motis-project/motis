@@ -15,16 +15,11 @@ namespace motis {
 
 struct runner {
   runner(std::size_t const n_threads, std::size_t const buffer_size)
-      : init_barrier_{n_threads}, schedulers_{n_threads}, ch_{buffer_size} {}
+      : n_threads_{n_threads}, ch_{buffer_size} {}
 
   auto run_fn() {
     return [&]() {
-      /*
-    boost::fibers::use_scheduling_algorithm<
-    boost::fibers::algo::work_stealing>(schedulers_.size());
-    */
-      boost::fibers::use_scheduling_algorithm<scheduler_algo>(
-          init_barrier_, schedulers_, ++next_id_);
+      boost::fibers::use_scheduling_algorithm<work_stealing>(n_threads_);
       auto t = net::fiber_exec::task_t{};
       while (ch_.pop(t) != boost::fibers::channel_op_status::closed) {
         t();
@@ -32,9 +27,7 @@ struct runner {
     };
   }
 
-  boost::fibers::detail::thread_barrier init_barrier_;
-  std::atomic_uint32_t next_id_{0U};
-  std::vector<scheduler_algo*> schedulers_;
+  std::size_t n_threads_;
   net::fiber_exec::channel_t ch_;
 };
 

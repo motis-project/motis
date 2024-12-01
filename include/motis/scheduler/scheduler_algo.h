@@ -9,6 +9,7 @@
 #include "boost/fiber/detail/thread_barrier.hpp"
 #include "boost/fiber/properties.hpp"
 #include "boost/fiber/scheduler.hpp"
+#include "boost/intrusive_ptr.hpp"
 
 namespace motis {
 
@@ -24,31 +25,43 @@ struct fiber_props : public boost::fibers::fiber_properties {
   } type_{type::kIo};
 };
 
-struct scheduler_algo
-    : public boost::fibers::algo::algorithm_with_properties<fiber_props> {
-  using ready_queue_t = boost::fibers::scheduler::ready_queue_type;
+class BOOST_FIBERS_DECL work_stealing : public boost::fibers::algo::algorithm {
+private:
+  static std::atomic<std::uint32_t> counter_;
+  static std::vector<boost::intrusive_ptr<work_stealing> > schedulers_;
 
-  scheduler_algo(boost::fibers::detail::thread_barrier&,
-                 std::vector<scheduler_algo*>& schedulers,
-                 std::uint32_t id);
-
-  boost::fibers::context* steal() noexcept;
-
-  virtual void awakened(boost::fibers::context* ctx,
-                        fiber_props& props) noexcept override;
-  virtual boost::fibers::context* pick_next() noexcept override;
-  virtual bool has_ready_fibers() const noexcept override;
-  virtual void suspend_until(
-      std::chrono::steady_clock::time_point const&) noexcept override;
-  virtual void notify() noexcept override;
-
-  std::vector<scheduler_algo*>& schedulers_;
-  bool suspend_{false};
   std::uint32_t id_;
-  boost::fibers::detail::context_spinlock_queue work_queue_, io_queue_;
+  std::uint32_t thread_count_;
+  boost::fibers::detail::context_spinlock_queue rqueue_{};
   std::mutex mtx_{};
   std::condition_variable cnd_{};
   bool flag_{false};
+  bool suspend_;
+
+  static void init_(std::uint32_t,
+                    std::vector<boost::intrusive_ptr<work_stealing> >&);
+
+public:
+  work_stealing(std::uint32_t, bool = false);
+
+  work_stealing(work_stealing const&) = delete;
+  work_stealing(work_stealing&&) = delete;
+
+  work_stealing& operator=(work_stealing const&) = delete;
+  work_stealing& operator=(work_stealing&&) = delete;
+
+  void awakened(boost::fibers::context*) noexcept override;
+
+  boost::fibers::context* pick_next() noexcept override;
+
+  virtual boost::fibers::context* steal() noexcept { return rqueue_.steal(); }
+
+  bool has_ready_fibers() const noexcept override { return !rqueue_.empty(); }
+
+  void suspend_until(
+      std::chrono::steady_clock::time_point const&) noexcept override;
+
+  void notify() noexcept override;
 };
 
 }  // namespace motis
