@@ -32,10 +32,11 @@
 #include "motis/endpoints/update_elevator.h"
 #include "motis/gbfs/update.h"
 #include "motis/rt_update.h"
+#include "motis/scheduler/runner.h"
+#include "motis/scheduler/scheduler_algo.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
-namespace bf = boost::fibers;
 
 namespace motis {
 
@@ -54,10 +55,12 @@ void POST(auto&& r, std::string target, From& from) {
 }
 
 int server(data d, config const& c) {
+  auto const server_config = c.server_.value_or(config::server{});
+
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
-  auto ch = net::fiber_exec::channel_t{2048U};
-  auto qr = net::query_router{net::fiber_exec(ioc, ch)};
+  auto r = runner{server_config.n_threads_, 1024U};
+  auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
@@ -82,7 +85,6 @@ int server(data d, config const& c) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
-  auto const server_config = c.server_.value_or(config::server{});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});
@@ -119,10 +121,9 @@ int server(data d, config const& c) {
     });
   }
 
-  auto threads = std::vector<std::thread>(
-      static_cast<unsigned>(std::max(1U, server_config.n_threads_)));
+  auto threads = std::vector<std::thread>{server_config.n_threads_};
   for (auto [i, t] : utl::enumerate(threads)) {
-    t = std::thread(net::fiber_exec::run(ch, server_config.n_threads_));
+    t = std::thread{r.run_fn()};
     utl::set_thread_name(t, fmt::format("motis worker {}", i));
   }
 
@@ -143,7 +144,7 @@ int server(data d, config const& c) {
                server_config.host_, server_config.port_, server_config.port_);
   net::run(ioc)();
 
-  ch.close();
+  r.ch_.close();
   for (auto& t : threads) {
     t.join();
   }
