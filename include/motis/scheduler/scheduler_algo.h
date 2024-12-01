@@ -25,8 +25,8 @@ struct fiber_props : public boost::fibers::fiber_properties {
   } type_{type::kIo};
 };
 
-class BOOST_FIBERS_DECL work_stealing : public boost::fibers::algo::algorithm {
-private:
+struct work_stealing
+    : public boost::fibers::algo::algorithm_with_properties<fiber_props> {
   static std::atomic<std::uint32_t> counter_;
   static std::vector<boost::intrusive_ptr<work_stealing> > schedulers_;
 
@@ -41,7 +41,6 @@ private:
   static void init_(std::uint32_t,
                     std::vector<boost::intrusive_ptr<work_stealing> >&);
 
-public:
   work_stealing(std::uint32_t, bool = false);
 
   work_stealing(work_stealing const&) = delete;
@@ -50,7 +49,7 @@ public:
   work_stealing& operator=(work_stealing const&) = delete;
   work_stealing& operator=(work_stealing&&) = delete;
 
-  void awakened(boost::fibers::context*) noexcept override;
+  void awakened(boost::fibers::context*, fiber_props&) noexcept override;
 
   boost::fibers::context* pick_next() noexcept override;
 

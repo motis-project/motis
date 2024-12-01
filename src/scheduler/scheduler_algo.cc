@@ -19,7 +19,6 @@ std::vector<boost::intrusive_ptr<work_stealing> > work_stealing::schedulers_{};
 void work_stealing::init_(
     std::uint32_t thread_count,
     std::vector<boost::intrusive_ptr<work_stealing> >& schedulers) {
-  // resize array of schedulers to thread_count, initilized with nullptr
   std::vector<boost::intrusive_ptr<work_stealing> >{thread_count, nullptr}.swap(
       schedulers);
 }
@@ -36,7 +35,7 @@ work_stealing::work_stealing(std::uint32_t thread_count, bool suspend)
   b.wait();
 }
 
-void work_stealing::awakened(bf::context* ctx) noexcept {
+void work_stealing::awakened(bf::context* ctx, fiber_props&) noexcept {
   if (!ctx->is_context(bf::type::pinned_context)) {
     ctx->detach();
   }
