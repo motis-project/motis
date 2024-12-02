@@ -129,6 +129,7 @@ int server(data d, config const& c) {
 
   auto const stop = net::stop_handler(ioc, [&]() {
     fmt::println("shutdown");
+    r.ch_.close();
     s.stop();
     ioc.stop();
 
@@ -144,7 +145,6 @@ int server(data d, config const& c) {
                server_config.host_, server_config.port_, server_config.port_);
   net::run(ioc)();
 
-  r.ch_.close();
   for (auto& t : threads) {
     t.join();
   }

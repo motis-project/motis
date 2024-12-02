@@ -35,21 +35,31 @@ work_stealing::work_stealing(std::uint32_t thread_count, bool suspend)
   b.wait();
 }
 
-void work_stealing::awakened(bf::context* ctx, fiber_props&) noexcept {
+void work_stealing::awakened(bf::context* ctx, fiber_props& props) noexcept {
   if (!ctx->is_context(bf::type::pinned_context)) {
     ctx->detach();
   }
-  rqueue_.push(ctx);
+  if (props.type_ == fiber_props::type::kHighPrio) {
+    props.type_ = fiber_props::type::kLowPrio;
+    high_prio_rqueue_.push(ctx);
+  } else {
+    rqueue_.push(ctx);
+  }
 }
 
 bf::context* work_stealing::pick_next() noexcept {
-  bf::context* victim = rqueue_.pop();
-  if (nullptr != victim) {
+  bf::context* victim = nullptr;
+  if (victim = high_prio_rqueue_.pop(); nullptr != victim) {
     boost::context::detail::prefetch_range(victim, sizeof(bf::context));
     if (!victim->is_context(bf::type::pinned_context)) {
       bf::context::active()->attach(victim);
     }
-  } else {
+  } else if (victim = rqueue_.pop(); nullptr != victim) {
+    boost::context::detail::prefetch_range(victim, sizeof(bf::context));
+    if (!victim->is_context(bf::type::pinned_context)) {
+      bf::context::active()->attach(victim);
+    }
+  } else if (thread_count_ > 1U) {
     std::uint32_t id = 0;
     std::size_t count = 0, size = schedulers_.size();
     static thread_local std::minstd_rand generator{std::random_device{}()};

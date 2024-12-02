@@ -20,9 +20,9 @@ struct fiber_props : public boost::fibers::fiber_properties {
   // has to be prioritized over new requests. Otherwise, the server only starts
   // new requests and never finishes anything.
   enum class type : std::uint8_t {
-    kWork,  // follow-up work scheduled by work or I/O
-    kIo  // initial work scheduled by I/O (web request / batch query)
-  } type_{type::kIo};
+    kHighPrio,  // follow-up work scheduled by work
+    kLowPrio  // initial work scheduled by I/O (web request / batch query)
+  } type_{type::kHighPrio};
 };
 
 struct work_stealing
@@ -33,6 +33,7 @@ struct work_stealing
   std::uint32_t id_;
   std::uint32_t thread_count_;
   boost::fibers::detail::context_spinlock_queue rqueue_{};
+  boost::fibers::detail::context_spinlock_queue high_prio_rqueue_{};
   std::mutex mtx_{};
   std::condition_variable cnd_{};
   bool flag_{false};
