@@ -109,7 +109,7 @@ std::vector<n::td_footpath> get_td_footpaths(
         static_cast<osr::cost_t>(max.count()), dir,
         get_max_distance(profile, max), &blocked_mem);
 
-    for (auto const [to, p] : utl::zip(neighbors, results)) {
+    for (auto const [to, p] : utl::zip(neighbors, results.paths_)) {
       auto const duration = p.has_value() && (n::duration_t{p->cost_ / 60U} <
                                               n::footpath::kMaxDuration)
                                 ? n::duration_t{p->cost_ / 60U}
