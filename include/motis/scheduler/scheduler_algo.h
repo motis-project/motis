@@ -15,6 +15,7 @@ namespace motis {
 
 struct fiber_props : public boost::fibers::fiber_properties {
   fiber_props(boost::fibers::context*);
+  ~fiber_props() override;
 
   // In order to keep request latency low, finishing already started requests
   // has to be prioritized over new requests. Otherwise, the server only starts

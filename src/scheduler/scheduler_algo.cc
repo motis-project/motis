@@ -12,6 +12,7 @@ namespace bf = boost::fibers;
 namespace motis {
 
 fiber_props::fiber_props(bf::context* ctx) : fiber_properties{ctx} {}
+fiber_props::~fiber_props() = default;
 
 std::atomic<std::uint32_t> work_stealing::counter_{0};
 std::vector<boost::intrusive_ptr<work_stealing> > work_stealing::schedulers_{};
