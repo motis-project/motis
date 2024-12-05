@@ -53,15 +53,20 @@
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
-	<div class="py-12 pl-8 flex flex-col text-muted-foreground">
+	<div class="py-12 pl-8 flex flex-col gap-y-4 text-muted-foreground">
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
-			{getModeName(l.mode)}
+			{getModeName(l)}
 			{formatDistanceMeters(Math.round(l.distance!))}
 		</span>
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
 				{t.sharingProvider}: <a href={l.rental.url} target="_blank">{l.rental.systemName}</a>
+			</span>
+		{/if}
+		{#if l.rental?.returnConstraint == 'ROUNDTRIP_STATION'}
+			<span class="ml-6">
+				{t.roundtripStationReturnConstraint}
 			</span>
 		{/if}
 	</div>
@@ -164,7 +169,7 @@
 					<div class="pb-1"></div>
 				{/if}
 			</div>
-		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'BIKE_RENTAL')))}
+		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
 				<div class="grid gap-y-6 grid-cols-7 items-center">

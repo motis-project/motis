@@ -17,6 +17,8 @@
 #include "nigiri/types.h"
 
 #include "motis/constants.h"
+#include "motis/gbfs/mode.h"
+#include "motis/gbfs/routing_data.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
@@ -35,7 +37,7 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
-    case osr::search_profile::kBikeSharing: return api::ModeEnum::BIKE_RENTAL;
+    case osr::search_profile::kBikeSharing: return api::ModeEnum::RENTAL;
   }
   std::unreachable();
 }
@@ -49,7 +51,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    n::rt_timetable const* rtt,
                                    platform_matches_t const* matches,
                                    n::shapes_storage const* shapes,
-                                   gbfs::gbfs_data const* gbfs,
+                                   gbfs::gbfs_routing_data& gbfs_rd,
                                    bool const wheelchair,
                                    n::routing::journey const& j,
                                    place_t const& start,
@@ -161,10 +163,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
             [&](n::footpath) {
               append(
                   w && l
-                      ? route(*w, *l, gbfs, e, from, to, api::ModeEnum::WALK,
-                              wheelchair, j_leg.dep_time_, j_leg.arr_time_,
-                              gbfs_provider_idx_t::invalid(), cache,
-                              blocked_mem,
+                      ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
+                              wheelchair, j_leg.dep_time_, j_leg.arr_time_, {},
+                              cache, blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
                                   std::chrono::minutes{5})
@@ -173,16 +174,15 @@ api::Itinerary journey_to_response(osr::ways const* w,
             },
             [&](n::routing::offset const x) {
               append(route(
-                  *w, *l, gbfs, e, from, to,
+                  *w, *l, gbfs_rd, e, from, to,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? api::ModeEnum::BIKE_RENTAL
+                      ? api::ModeEnum::RENTAL
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs_provider_idx_t{x.transport_mode_id_ -
-                                            kGbfsTransportModeIdOffset}
-                      : gbfs_provider_idx_t::invalid(),
+                      ? gbfs_rd.get_products_ref(x.transport_mode_id_)
+                      : gbfs::gbfs_products_ref{},
                   cache, blocked_mem,
                   std::chrono::duration_cast<std::chrono::seconds>(
                       j_leg.arr_time_ - j_leg.dep_time_) +

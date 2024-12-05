@@ -12,21 +12,21 @@
 namespace motis {
 
 template <typename T, typename Fn>
-concept RtreePosHandler = requires(geo::latlng const& pos, T const x, Fn&& f) {
-  { std::forward<Fn>(f)(pos, x) };
+concept BoxRtreePosHandler = requires(geo::box const& b, T const x, Fn&& f) {
+  { std::forward<Fn>(f)(b, x) };
 };
 
 template <typename T>
-struct point_rtree {
-  point_rtree() : rtree_{rtree_new()} {}
+struct box_rtree {
+  box_rtree() : rtree_{rtree_new()} {}
 
-  ~point_rtree() {
+  ~box_rtree() {
     if (rtree_ != nullptr) {
       rtree_free(rtree_);
     }
   }
 
-  point_rtree(point_rtree const& o) {
+  box_rtree(box_rtree const& o) {
     if (this != &o) {
       if (rtree_ != nullptr) {
         rtree_free(rtree_);
@@ -35,14 +35,14 @@ struct point_rtree {
     }
   }
 
-  point_rtree(point_rtree&& o) {
+  box_rtree(box_rtree&& o) {
     if (this != &o) {
       rtree_ = o.rtree_;
       o.rtree_ = nullptr;
     }
   }
 
-  point_rtree& operator=(point_rtree const& o) {
+  box_rtree& operator=(box_rtree const& o) {
     if (this != &o) {
       if (rtree_ != nullptr) {
         rtree_free(rtree_);
@@ -52,7 +52,7 @@ struct point_rtree {
     return *this;
   }
 
-  point_rtree& operator=(point_rtree&& o) {
+  box_rtree& operator=(box_rtree&& o) {
     if (this != &o) {
       rtree_ = o.rtree_;
       o.rtree_ = nullptr;
@@ -60,33 +60,20 @@ struct point_rtree {
     return *this;
   }
 
-  void add(geo::latlng const& pos, T const t) {
-    auto const min_corner = std::array{pos.lng(), pos.lat()};
+  void add(geo::box const& b, T const t) {
+    auto const min_corner = b.min_.lnglat();
+    auto const max_corner = b.max_.lnglat();
     rtree_insert(
-        rtree_, min_corner.data(), nullptr,
+        rtree_, min_corner.data(), max_corner.data(),
         reinterpret_cast<void*>(static_cast<std::size_t>(cista::to_idx(t))));
   }
 
-  void remove(geo::latlng const& pos, T const t) {
-    auto const min_corner = std::array{pos.lng(), pos.lat()};
+  void remove(geo::box const& b, T const t) {
+    auto const min_corner = b.min_.lnglat();
+    auto const max_corner = b.max_.lnglat();
     rtree_delete(
-        rtree_, min_corner.data(), nullptr,
+        rtree_, min_corner.data(), max_corner.data(),
         reinterpret_cast<void*>(static_cast<std::size_t>(cista::to_idx(t))));
-  }
-
-  std::vector<T> in_radius(geo::latlng const& x, double distance) const {
-    auto ret = std::vector<T>{};
-    in_radius(x, distance, [&](auto&& item) { ret.emplace_back(item); });
-    return ret;
-  }
-
-  template <typename Fn>
-  void in_radius(geo::latlng const& x, double distance, Fn&& fn) const {
-    find(geo::box{x, distance}, [&](geo::latlng const& pos, T const item) {
-      if (geo::distance(x, pos) < distance) {
-        fn(item);
-      }
-    });
   }
 
   template <typename Fn>
@@ -95,11 +82,12 @@ struct point_rtree {
     auto const max = b.max_.lnglat();
     rtree_search(
         rtree_, min.data(), max.data(),
-        [](double const* pos, double const* /* max */, void const* item,
+        [](double const* min_corner, double const* max_corner, void const* item,
            void* udata) {
-          if constexpr (RtreePosHandler<T, Fn>) {
+          if constexpr (BoxRtreePosHandler<T, Fn>) {
             (*reinterpret_cast<Fn*>(udata))(
-                geo::latlng{pos[1], pos[0]},
+                geo::box{geo::latlng{min_corner[1], min_corner[0]},
+                         geo::latlng{max_corner[1], max_corner[0]}},
                 T{static_cast<cista::base_t<T>>(
                     reinterpret_cast<std::size_t>(item))});
           } else {
@@ -109,6 +97,11 @@ struct point_rtree {
           return true;
         },
         &fn);
+  }
+
+  template <typename Fn>
+  void find(geo::latlng const& pos, Fn&& fn) const {
+    return find(geo::box{pos, pos}, std::forward<Fn>(fn));
   }
 
   rtree* rtree_{nullptr};

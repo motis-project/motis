@@ -12,7 +12,7 @@
 		onClickTrip: (tripId: string) => void;
 	} = $props();
 
-	const modeIcon = getModeStyle(l.mode)[0];
+	const modeIcon = getModeStyle(l)[0];
 </script>
 
 <button

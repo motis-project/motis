@@ -114,6 +114,7 @@ struct config {
     std::map<std::string, restrictions> default_restrictions_{};
     unsigned update_interval_{60};
     unsigned http_timeout_{10};
+    unsigned cache_size_{50};
   };
   std::optional<gbfs> gbfs_{};
 

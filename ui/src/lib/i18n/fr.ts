@@ -4,7 +4,11 @@ const translations: Translations = {
 	journeyDetails: 'Détails du voyage',
 	walk: 'Marche',
 	bike: 'Vélo',
+	cargoBike: 'Vélo Cargo',
+	scooterStanding: 'Trottinette',
+	scooterSeated: 'Trottinette avec siège',
 	car: 'Voiture',
+	moped: 'Mobylette',
 	from: 'De',
 	to: 'À',
 	arrival: 'Arrivée',
@@ -29,7 +33,8 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Fournisseur',
-	transfers: 'Transferts'
+	transfers: 'Transferts',
+	roundtripStationReturnConstraint: 'Le véhicule doit être retourné à la station de départ.'
 };
 
 export default translations;
