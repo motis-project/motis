@@ -569,7 +569,7 @@ paths:
           schema:
             type: integer
             default: 7200
-            minium: 0
+            minimum: 0
 
         - name: requireBikeTransport
           in: query
