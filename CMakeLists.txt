@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(motis)
+project(motis LANGUAGES C CXX ASM)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
@@ -113,6 +113,7 @@ target_link_libraries(motislib
     osr
     adr
     boost-json
+    Boost::fiber
     motis-api
     reflectcpp
     web-server

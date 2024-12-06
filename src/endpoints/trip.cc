@@ -33,8 +33,6 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const start_time = from_l.time(n::event_type::kDep);
   auto const dest_time = to_l.time(n::event_type::kArr);
   auto cache = street_routing_cache_t{};
-  auto blocked = osr::bitvec<osr::node_idx_t>{};
-
   return journey_to_response(
       w_, l_, pl_, tt_, tags_, nullptr, rtt, matches_, shapes_, nullptr, false,
       {.legs_ = {n::routing::journey::leg{
@@ -49,7 +47,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
        .transfers_ = 0U},
       tt_location{from_l.get_location_idx(),
                   from_l.get_scheduled_location_idx()},
-      tt_location{to_l.get_location_idx()}, cache, blocked);
+      tt_location{to_l.get_location_idx()}, cache, nullptr);
 }
 
 }  // namespace motis::ep
