@@ -306,10 +306,6 @@ struct gbfs_update {
       std::optional<gbfs_file> discovery = std::nullopt) {
     auto& file_infos = provider.file_infos_;
 
-    if (!discovery && !provider.file_infos_->needs_update()) {
-      co_return;
-    }
-
     if (!discovery && needs_refresh(provider.file_infos_->urls_fi_)) {
       discovery = co_await fetch_file("gbfs", pf.url_, pf.headers_, pf.dir_);
     }
@@ -576,6 +572,8 @@ struct gbfs_update {
     if (af.needs_update()) {
       auto const file = co_await fetch_file("manifest", af.url_, af.headers_);
       co_await process_aggregated_feed(af, file.json_.as_object());
+    } else {
+      co_await update_aggregated_feed_provider_feeds(af);
     }
   }
 
@@ -618,7 +616,10 @@ struct gbfs_update {
     }
 
     af.feeds_ = std::move(feeds);
+    co_await update_aggregated_feed_provider_feeds(af);
+  }
 
+  awaitable<void> update_aggregated_feed_provider_feeds(aggregated_feed& af) {
     auto executor = co_await asio::this_coro::executor;
     co_await asio::experimental::make_parallel_group(
         utl::to_vec(af.feeds_,
