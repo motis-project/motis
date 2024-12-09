@@ -294,22 +294,6 @@ stats_map_t join(auto&&... maps) {
   return ret;
 }
 
-// Get cutoff to remove journeys with slower or equal duration
-std::optional<n::duration_t> calculate_search_cutoff_time(
-    n::duration_t const fastest_direct,
-    std::optional<std::int64_t> const& max_travel_time) {
-  if (max_travel_time.has_value()) {
-    // Add +1 to keep journeys with equal duration
-    auto const max_travel_duration = n::duration_t{*max_travel_time + 1};
-    return fastest_direct == kInfinityDuration
-               ? max_travel_duration
-               : std::min(fastest_direct, max_travel_duration);
-  } else {
-    return fastest_direct == kInfinityDuration ? std::nullopt
-                                               : std::optional{fastest_direct};
-  }
-}
-
 void remove_slower_than_fastest_direct(n::routing::query& q) {
   if (!q.fastest_direct_) {
     return;
@@ -475,6 +459,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .max_transfers_ = static_cast<std::uint8_t>(
             query.maxTransfers_.has_value() ? *query.maxTransfers_
                                             : n::routing::kMaxTransfers),
+        .max_travel_time_ = query.maxTravelTime_
+                                .and_then([](std::int64_t const dur) {
+                                  return std::optional{n::duration_t{dur}};
+                                })
+                                .value_or(kInfinityDuration),
         .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
@@ -492,8 +481,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 .factor_ = static_cast<float>(query.transferTimeFactor_)},
         .via_stops_ =
             get_via_stops(*tt_, *tags_, query.via_, query.viaMinimumStay_),
-        .fastest_direct_ =
-            calculate_search_cutoff_time(fastest_direct, query.maxTravelTime_)};
+        .fastest_direct_ = fastest_direct == kInfinityDuration
+                               ? std::nullopt
+                               : std::optional{fastest_direct}};
     remove_slower_than_fastest_direct(q);
     UTL_STOP_TIMING(query_preparation);
 
