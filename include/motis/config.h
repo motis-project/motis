@@ -115,6 +115,7 @@ struct config {
     unsigned update_interval_{60};
     unsigned http_timeout_{10};
     unsigned cache_size_{50};
+    std::optional<std::string> proxy_;
   };
   std::optional<gbfs> gbfs_{};
 

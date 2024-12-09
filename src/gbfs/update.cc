@@ -140,6 +140,9 @@ struct gbfs_update {
               gbfs_data const* prev_d)
       : c_{c}, w_{w}, l_{l}, d_{d}, prev_d_{prev_d} {
     client_.timeout_ = std::chrono::seconds{c.http_timeout_};
+    if (c.proxy_ && !c.proxy_->empty()) {
+      client_.set_proxy(boost::urls::url{*c.proxy_});
+    }
   }
 
   awaitable<void> run() {

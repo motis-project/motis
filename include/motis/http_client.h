@@ -38,6 +38,14 @@ struct http_client {
     bool ssl_{};
   };
 
+  struct proxy_settings {
+    operator bool() const { return !host_.empty(); }
+
+    std::string host_;
+    std::string port_;
+    bool ssl_{};
+  };
+
   struct connection;
   struct request;
 
@@ -46,8 +54,12 @@ struct http_client {
   boost::asio::awaitable<http_response> get(
       boost::urls::url url, std::map<std::string, std::string> headers);
 
+  void set_proxy(boost::urls::url const&);
+
   hash_map<connection_key, std::shared_ptr<connection>> connections_;
   std::chrono::seconds timeout_{std::chrono::seconds{10}};
+
+  proxy_settings proxy_{};
 };
 
 }  // namespace motis
