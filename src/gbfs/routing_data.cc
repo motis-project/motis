@@ -47,9 +47,7 @@ products_routing_data* gbfs_routing_data::get_products_routing_data(
     return it->second.get();
   } else {
     return products_
-        .emplace(prod_ref,
-                 get_provider_routing_data(provider)->get_products_routing_data(
-                     prod_idx))
+        .emplace(prod_ref, data_->get_products_routing_data(*w_, *l_, prod_ref))
         .first->second.get();
   }
 }

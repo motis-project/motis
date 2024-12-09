@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <variant>
@@ -25,6 +26,7 @@
 #include "osr/types.h"
 
 #include "motis/config.h"
+#include "motis/fwd.h"
 #include "motis/point_rtree.h"
 #include "motis/types.h"
 
@@ -382,6 +384,9 @@ struct aggregated_feed {
 struct gbfs_data {
   explicit gbfs_data(std::size_t const cache_size) : cache_{cache_size} {}
 
+  std::shared_ptr<products_routing_data> get_products_routing_data(
+      osr::ways const& w, osr::lookup const& l, gbfs_products_ref);
+
   std::shared_ptr<std::vector<std::unique_ptr<provider_feed>>>
       standalone_feeds_{};
   std::shared_ptr<std::vector<std::unique_ptr<aggregated_feed>>>
@@ -392,6 +397,11 @@ struct gbfs_data {
   point_rtree<gbfs_provider_idx_t> provider_rtree_{};
 
   lru_cache<gbfs_provider_idx_t, provider_routing_data> cache_;
+
+  // used to share decompressed routing data between routing requests
+  std::mutex products_routing_data_mutex_;
+  hash_map<gbfs_products_ref, std::weak_ptr<products_routing_data>>
+      products_routing_data_{};
 };
 
 }  // namespace motis::gbfs
