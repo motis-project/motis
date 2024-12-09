@@ -408,6 +408,17 @@ paths:
             type: number
             default: 1.0
 
+        - name: maxMatchingDistance
+          in: query
+          required: true
+          description: |
+            Optional. Default is 25 meters.
+            
+            Maximum matching distance in meters to match geo coordinates to the street network.
+          schema:
+            type: number
+            default: 25
+
         - name: wheelchair
           in: query
           description: Whether the trip must be wheelchair accessible.
@@ -556,7 +567,7 @@ paths:
           schema:
             type: integer
             default: 7200
-            minium: 0
+            minimum: 0
 
         - name: requireBikeTransport
           in: query

@@ -84,7 +84,7 @@
 							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
 						{#if pred.duration}
-							{formatDurationSec(pred.duration)} Fußweg
+							{formatDurationSec(pred.duration)} {t.walk}
 						{/if}
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)

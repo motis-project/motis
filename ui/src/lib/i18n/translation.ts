@@ -4,6 +4,8 @@ import de from './de';
 import fr from './fr';
 
 export type Translations = {
+	journeyDetails: string;
+	transfers: string;
 	walk: string;
 	bike: string;
 	car: string;

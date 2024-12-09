@@ -1,9 +1,11 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
-	walk: 'Walk',
-	bike: 'Bike',
-	car: 'Car',
+	journeyDetails: 'Journey Details',
+	transfers: 'transfers',
+	walk: 'walk',
+	bike: 'bike',
+	car: 'car',
 	from: 'From',
 	to: 'To',
 	arrival: 'Arrival',
@@ -13,8 +15,8 @@ const translations: Translations = {
 	later: 'later',
 	earlier: 'earlier',
 	departures: 'Departures',
-	switchToArrivals: 'Wechsel zu Ankünften',
-	switchToDepartures: 'Wechsel zu Abfahrten',
+	switchToArrivals: 'Switch to arrivals',
+	switchToDepartures: 'Switch to departures',
 	track: 'Track',
 	arrivalOnTrack: 'Arrival on track',
 	tripIntermediateStops: (n: number) => {

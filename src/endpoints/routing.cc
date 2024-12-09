@@ -122,6 +122,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::vector<api::ModeEnum> const& modes,
     bool const wheelchair,
     std::chrono::seconds const max,
+    unsigned const max_matching_distance,
     gbfs::gbfs_data const* gbfs) const {
   if (!loc_tree_ || !pl_ || !tt_ || !loc_tree_ || !matches_) {
     return {};
@@ -175,7 +176,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     } else {
       auto const paths = osr::route(*w_, *l_, profile, pos, near_stop_locations,
                                     static_cast<osr::cost_t>(max.count()), dir,
-                                    kMaxMatchingDistance, nullptr, nullptr);
+                                    max_matching_distance, nullptr, nullptr);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
@@ -425,7 +426,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   return get_offsets(
                       pos, dir, start_modes, query.wheelchair_,
                       std::chrono::seconds{query.maxPreTransitTime_},
-                      gbfs.get());
+                      query.maxMatchingDistance_, gbfs.get());
                 }},
             start),
         .destination_ = std::visit(
@@ -437,7 +438,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   return get_offsets(
                       pos, dir, dest_modes, query.wheelchair_,
                       std::chrono::seconds{query.maxPostTransitTime_},
-                      gbfs.get());
+                      query.maxMatchingDistance_, gbfs.get());
                 }},
             dest),
         .td_start_ =

@@ -1,6 +1,7 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
+	journeyDetails: 'Détails du voyage',
 	walk: 'Marche',
 	bike: 'Vélo',
 	car: 'Voiture',
@@ -27,7 +28,8 @@ const translations: Translations = {
 				return `${n} arrêts intermédiaires`;
 		}
 	},
-	sharingProvider: 'Fournisseur'
+	sharingProvider: 'Fournisseur',
+	transfers: 'Transferts'
 };
 
 export default translations;
