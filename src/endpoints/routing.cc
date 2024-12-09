@@ -1,5 +1,7 @@
 #include "motis/endpoints/routing.h"
 
+#include <algorithm>
+
 #include "boost/thread/tss.hpp"
 
 #include "utl/erase_duplicates.h"
@@ -457,6 +459,11 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .max_transfers_ = static_cast<std::uint8_t>(
             query.maxTransfers_.has_value() ? *query.maxTransfers_
                                             : n::routing::kMaxTransfers),
+        .max_travel_time_ = query.maxTravelTime_
+                                .and_then([](std::int64_t const dur) {
+                                  return std::optional{n::duration_t{dur}};
+                                })
+                                .value_or(kInfinityDuration),
         .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
