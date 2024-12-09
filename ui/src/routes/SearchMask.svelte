@@ -32,25 +32,13 @@
 </script>
 
 <div class="flex flex-col space-y-4 p-4">
-	<AddressTypeahead
-		name="from"
-		class="w-full"
-		placeholder={t.from}
-		bind:selected={from}
-		bind:items={fromItems}
-	/>
-	<AddressTypeahead
-		name="to"
-		class="w-full"
-		placeholder={t.to}
-		bind:selected={to}
-		bind:items={toItems}
-	/>
+	<AddressTypeahead name="from" placeholder={t.from} bind:selected={from} bind:items={fromItems} />
+	<AddressTypeahead name="to" placeholder={t.to} bind:selected={to} bind:items={toItems} />
 	<Button
 		class="absolute z-10 right-12 top-10"
 		variant="outline"
 		size="icon"
-		on:click={() => {
+		onclick={() => {
 			const tmp = to;
 			to = from;
 			from = tmp;

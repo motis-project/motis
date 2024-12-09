@@ -54,10 +54,11 @@ api::geocode_response suggestions_to_response(
 
     auto const city_it =
         std::min_element(begin(areas), end(areas), [&](auto&& a, auto&& b) {
+          constexpr auto const kCloseTo = 8;
           auto const x = to_idx(t.area_admin_level_[a]);
           auto const y = to_idx(t.area_admin_level_[b]);
-          return (x > 7 ? 10 : 1) * std::abs(x - 7) <
-                 (y > 7 ? 10 : 1) * std::abs(y - 7);
+          return (x > kCloseTo ? 10 : 1) * std::abs(x - kCloseTo) <
+                 (y > kCloseTo ? 10 : 1) * std::abs(y - kCloseTo);
         });
     auto const city_idx = static_cast<std::size_t>(
         city_it == end(areas) ? -1 : std::distance(begin(areas), city_it));

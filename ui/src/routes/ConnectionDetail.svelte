@@ -41,7 +41,7 @@
 		<Button
 			class="col-span-5 mr-6 text-lg justify-normal text-wrap text-left"
 			variant="link"
-			on:click={() => {
+			onclick={() => {
 				onClickStop(name, stopId, new Date(timestamp));
 			}}
 		>
@@ -84,7 +84,7 @@
 							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
 						{#if pred.duration}
-							{formatDurationSec(pred.duration)} Fußweg
+							{formatDurationSec(pred.duration)} {t.walk}
 						{/if}
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)

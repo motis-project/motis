@@ -44,18 +44,20 @@
 			<LoaderCircle class="animate-spin w-12 h-12 m-20" />
 		</div>
 	{:then r}
-		<div class="my-4 flex flex-wrap gap-x-3 gap-y-3">
-			{#each r.direct as d}
-				<Button
-					variant="link"
-					on:click={() => {
-						selectedItinerary = d;
-					}}
-				>
-					{@render legSummary(d.legs[0]!)}
-				</Button>
-			{/each}
-		</div>
+		{#if r.direct.length !== 0}
+			<div class="my-4 flex flex-wrap gap-x-3 gap-y-3">
+				{#each r.direct as d}
+					<Button
+						variant="link"
+						onclick={() => {
+							selectedItinerary = d;
+						}}
+					>
+						{@render legSummary(d.legs[0]!)}
+					</Button>
+				{/each}
+			</div>
+		{/if}
 
 		{#if r.itineraries.length !== 0}
 			<div class="flex flex-col space-y-8 px-4 py-8">
@@ -114,7 +116,7 @@
 										</div>
 										<Separator orientation="vertical" />
 										<div>
-											<div class="text-xs font-bold uppercase text-slate-400">Transfers</div>
+											<div class="text-xs font-bold uppercase text-slate-400">{t.transfers}</div>
 											<div class="flex justify-center w-full">{it.transfers}</div>
 										</div>
 										<Separator orientation="vertical" />

@@ -21,6 +21,7 @@ struct routing {
       std::vector<api::ModeEnum> const&,
       bool wheelchair,
       std::chrono::seconds max,
+      unsigned max_matching_distance,
       gbfs::gbfs_data const*) const;
 
   nigiri::hash_map<nigiri::location_idx_t,

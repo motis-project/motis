@@ -20,6 +20,7 @@
 	import geojson from 'geojson';
 	import Popup from '$lib/map/Popup.svelte';
 	import { client } from '$lib/openapi';
+	import X from 'lucide-svelte/icons/x';
 
 	const baseUrl = client.getConfig().baseUrl;
 
@@ -122,7 +123,7 @@
 <Button
 	size="icon"
 	variant={debug ? 'default' : 'outline'}
-	on:click={() => {
+	onclick={() => {
 		debug = !debug;
 	}}
 >
@@ -135,6 +136,21 @@
 			{#if f}
 				<Control position="bottom-right">
 					<Card class="w-[500px] h-[500px] overflow-y-auto bg-background rounded-lg">
+						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
+							<h2 class="ml-2 text-base font-semibold">
+								{f.place.name}
+								{f.place.track}
+								<span class="text-sm text-muted-foreground">Level: {f.place.level}</span>
+							</h2>
+							<Button
+								variant="ghost"
+								onclick={() => {
+									id = undefined;
+								}}
+							>
+								<X />
+							</Button>
+						</div>
 						<Table>
 							<TableHeader>
 								<TableRow>
@@ -152,7 +168,7 @@
 											{#if x.default !== undefined}
 												<Button
 													variant="outline"
-													on:click={() => {
+													onclick={() => {
 														start = posToLocation(f.place, f.place.level);
 														destination = posToLocation(x.to, x.to.level);
 														profile = 'foot';
@@ -166,7 +182,7 @@
 											{#if x.foot !== undefined}
 												<Button
 													variant="outline"
-													on:click={() => {
+													onclick={() => {
 														start = posToLocation(f.place, f.place.level);
 														destination = posToLocation(x.to, x.to.level);
 														profile = 'foot';
@@ -181,7 +197,7 @@
 												<Button
 													class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
 													variant="outline"
-													on:click={() => {
+													onclick={() => {
 														start = posToLocation(f.place, f.place.level);
 														destination = posToLocation(x.to, x.to.level);
 														profile = 'wheelchair';
@@ -217,7 +233,9 @@
 						'circle-color': ['match', ['get', 'type'], 'location', '#34ebde', '#fa921b'],
 						'circle-radius': 5
 					}}
-				/>
+				>
+					<Popup trigger="click" children={nodeDetails} />
+				</Layer>
 				<Layer
 					id="match"
 					type="line"
@@ -230,7 +248,9 @@
 						'line-color': '#00ff00',
 						'line-width': 3
 					}}
-				/>
+				>
+					<Popup trigger="click" children={nodeDetails} />
+				</Layer>
 			</GeoJSON>
 		{/await}
 	{/if}
