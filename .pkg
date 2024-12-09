@@ -5,7 +5,7 @@
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
-  commit=950f96f4ded53a6b5753824b280550b722933e55
+  commit=6362f3ad8c3133a0abf64e5d8c9ea3e21f531ee8
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
@@ -54,3 +54,7 @@
   url=git@github.com:motis-project/mimalloc.git
   branch=dev
   commit=e2f4fe647e8aff4603a7d5119b8639fd1a47c8a6
+[lz4]
+  url=git@github.com:motis-project/lz4.git
+  branch=dev
+  commit=c4765545ebb14b0a56c663e21923166923f8280e

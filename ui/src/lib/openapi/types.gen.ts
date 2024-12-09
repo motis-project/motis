@@ -108,7 +108,7 @@ export type type = 'ADDRESS' | 'PLACE' | 'STOP';
  *
  * - `WALK`
  * - `BIKE`
- * - `BIKE_RENTAL`
+ * - `RENTAL`
  * - `CAR`
  * - `CAR_PARKING`
  *
@@ -130,7 +130,7 @@ export type type = 'ADDRESS' | 'PLACE' | 'STOP';
  * - `REGIONAL_RAIL`: regional train
  *
  */
-export type Mode = 'WALK' | 'BIKE' | 'CAR' | 'BIKE_RENTAL' | 'CAR_PARKING' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
+export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'TRANSIT' | 'TRAM' | 'SUBWAY' | 'FERRY' | 'AIRPLANE' | 'METRO' | 'BUS' | 'COACH' | 'RAIL' | 'HIGHSPEED_RAIL' | 'LONG_DISTANCE' | 'NIGHT_RAIL' | 'REGIONAL_FAST_RAIL' | 'REGIONAL_RAIL' | 'OTHER';
 
 /**
  * - `NORMAL` - latitude / longitude coordinate or address
@@ -338,6 +338,12 @@ export type StepInstruction = {
     area: boolean;
 };
 
+export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | 'SCOOTER_STANDING' | 'SCOOTER_SEATED' | 'OTHER';
+
+export type RentalPropulsionType = 'HUMAN' | 'ELECTRIC_ASSIST' | 'ELECTRIC' | 'COMBUSTION' | 'COMBUSTION_DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'HYDROGEN_FUEL_CELL';
+
+export type RentalReturnConstraint = 'NONE' | 'ANY_STATION' | 'ROUNDTRIP_STATION';
+
 /**
  * Vehicle rental
  */
@@ -370,6 +376,9 @@ export type Rental = {
      * Rental URI for web (deep link to the specific station or vehicle)
      */
     rentalUriWeb?: string;
+    formFactor?: RentalFormFactor;
+    propulsionType?: RentalPropulsionType;
+    returnConstraint?: RentalReturnConstraint;
 };
 
 export type Leg = {
@@ -711,6 +720,32 @@ export type PlanData = {
          */
         directModes?: Array<Mode>;
         /**
+         * Optional. Only applies to direct connections.
+         *
+         * A list of vehicle type form factors that are allowed to be used for direct connections.
+         * If empty (the default), all form factors are allowed.
+         * Example: `BICYCLE,SCOOTER_STANDING`.
+         *
+         */
+        directRentalFormFactors?: Array<RentalFormFactor>;
+        /**
+         * Optional. Only applies to direct connections.
+         *
+         * A list of vehicle type form factors that are allowed to be used for direct connections.
+         * If empty (the default), all propulsion types are allowed.
+         * Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+         *
+         */
+        directRentalPropulsionTypes?: Array<RentalPropulsionType>;
+        /**
+         * Optional. Only applies to direct connections.
+         *
+         * A list of rental providers that are allowed to be used for direct connections.
+         * If empty (the default), all providers are allowed.
+         *
+         */
+        directRentalProviders?: Array<(string)>;
+        /**
          * \`latitude,longitude,level\` tuple in degrees OR stop id
          */
         fromPlace: string;
@@ -734,6 +769,13 @@ export type PlanData = {
          *
          */
         maxHours?: number;
+        /**
+         * Optional. Default is 25 meters.
+         *
+         * Maximum matching distance in meters to match geo coordinates to the street network.
+         *
+         */
+        maxMatchingDistance: number;
         /**
          * Optional. Default is 15min which is `900`.
          * Maximum time in seconds for the last street leg.
@@ -787,12 +829,64 @@ export type PlanData = {
          */
         postTransitModes?: Array<Mode>;
         /**
+         * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
+         *
+         * A list of vehicle type form factors that are allowed to be used from the last transit stop to the `to` coordinate.
+         * If empty (the default), all form factors are allowed.
+         * Example: `BICYCLE,SCOOTER_STANDING`.
+         *
+         */
+        postTransitRentalFormFactors?: Array<RentalFormFactor>;
+        /**
+         * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
+         *
+         * A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate.
+         * If empty (the default), all propulsion types are allowed.
+         * Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+         *
+         */
+        postTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
+        /**
+         * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
+         *
+         * A list of rental providers that are allowed to be used from the last transit stop to the `to` coordinate.
+         * If empty (the default), all providers are allowed.
+         *
+         */
+        postTransitRentalProviders?: Array<(string)>;
+        /**
          * Optional. Default is `WALK`. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
          *
          * A list of modes that are allowed to be used from the `from` coordinate to the first transit stop. Example: `WALK,BIKE_SHARING`.
          *
          */
         preTransitModes?: Array<Mode>;
+        /**
+         * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
+         *
+         * A list of vehicle type form factors that are allowed to be used from the `from` coordinate to the first transit stop.
+         * If empty (the default), all form factors are allowed.
+         * Example: `BICYCLE,SCOOTER_STANDING`.
+         *
+         */
+        preTransitRentalFormFactors?: Array<RentalFormFactor>;
+        /**
+         * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
+         *
+         * A list of vehicle propulsion types that are allowed to be used from the `from` coordinate to the first transit stop.
+         * If empty (the default), all propulsion types are allowed.
+         * Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+         *
+         */
+        preTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
+        /**
+         * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
+         *
+         * A list of rental providers that are allowed to be used from the `from` coordinate to the first transit stop.
+         * If empty (the default), all providers are allowed.
+         *
+         */
+        preTransitRentalProviders?: Array<(string)>;
         /**
          * Optional. Default is `false`.
          *

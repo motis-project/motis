@@ -88,6 +88,7 @@ struct http_client::connection
   connection(Executor const& executor,
              connection_key key,
              std::chrono::seconds const timeout,
+             proxy_settings const& proxy,
              std::size_t const max_in_flight = 1)
       : key_{std::move(key)},
         unlimited_pipelining_{max_in_flight == kUnlimitedHttpPipelining},
@@ -95,7 +96,8 @@ struct http_client::connection
         requests_in_flight_{std::make_unique<
             asio::experimental::channel<void(boost::system::error_code)>>(
             executor, max_in_flight)},
-        timeout_{timeout} {
+        timeout_{timeout},
+        proxy_{proxy} {
     ssl_ctx_.set_default_verify_paths();
     ssl_ctx_.set_verify_mode(ssl::verify_none);
     ssl_ctx_.set_options(ssl::context::default_workarounds |
@@ -128,15 +130,17 @@ struct http_client::connection
     auto executor = co_await asio::this_coro::executor;
     auto resolver = asio::ip::tcp::resolver{executor};
 
-    auto const results =
-        co_await resolver.async_resolve(key_.host_, key_.port_);
+    auto const host = proxy_ ? proxy_.host_ : key_.host_;
+    auto const port = proxy_ ? proxy_.port_ : key_.port_;
+
+    auto const results = co_await resolver.async_resolve(host, port);
     ++n_connects_;
     if (ssl()) {
       ssl_stream_ =
           std::make_unique<ssl::stream<beast::tcp_stream>>(executor, ssl_ctx_);
 
       if (!SSL_set_tlsext_host_name(ssl_stream_->native_handle(),
-                                    const_cast<char*>(key_.host_.c_str()))) {
+                                    const_cast<char*>(host.c_str()))) {
         throw boost::system::system_error{{static_cast<int>(::ERR_get_error()),
                                            asio::error::get_ssl_category()}};
       }
@@ -290,7 +294,7 @@ struct http_client::connection
     } while (!pending_requests_.empty());
   }
 
-  bool ssl() const { return key_.ssl_; }
+  bool ssl() const { return proxy_ ? proxy_.ssl_ : key_.ssl_; }
 
   connection_key key_{};
   bool unlimited_pipelining_{false};
@@ -313,6 +317,7 @@ struct http_client::connection
 
   ssl::context ssl_ctx_{ssl::context::tlsv12_client};
   std::chrono::seconds timeout_;
+  http_client::proxy_settings proxy_;
 
   unsigned n_sent_{};
   unsigned n_received_{};
@@ -335,7 +340,8 @@ asio::awaitable<http_response> http_client::get(
 
   auto executor = co_await asio::this_coro::executor;
   if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn = std::make_shared<connection>(executor, key, timeout_, 1);
+    auto conn =
+        std::make_shared<connection>(executor, key, timeout_, proxy_, 1);
     connections_[key] = conn;
     asio::co_spawn(executor, conn->run(), asio::detached);
   }
@@ -346,6 +352,12 @@ asio::awaitable<http_response> http_client::get(
       boost::system::error_code{}, req);
   auto response = co_await req->response_channel_.async_receive();
   co_return response;
+}
+
+void http_client::set_proxy(boost::urls::url const& url) {
+  proxy_.ssl_ = url.scheme_id() == boost::urls::scheme::https;
+  proxy_.host_ = url.host();
+  proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
 }
 
 }  // namespace motis
