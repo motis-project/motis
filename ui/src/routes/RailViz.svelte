@@ -97,7 +97,7 @@
 				'not found, timestamp=',
 				new Date(timestamp),
 				' #keyframes=',
-				new Date(keyframes.length),
+				keyframes.length,
 				' first=',
 				new Date(keyframes[0].time),
 				', last=',
@@ -241,7 +241,10 @@
 	const updateRailviz = async () => {
 		clearTimeout(timer);
 		await updateRailvizLayer();
-		timer = setTimeout(updateRailviz, 60000);
+		timer = setTimeout(() => {
+			console.log('updateRailviz: timer');
+			updateRailviz();
+		}, 60000);
 	};
 
 	$effect(() => {
@@ -268,12 +271,14 @@
 			});
 			map.addControl(overlay);
 
+			console.log('updateRailviz: init');
 			updateRailviz();
 		}
 	});
 
 	$effect(() => {
 		if (overlay && bounds && zoom && colorMode) {
+			console.log(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
 			updateRailviz();
 		}
 	});

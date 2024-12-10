@@ -119,15 +119,20 @@
 				} as PlanData)
 			: undefined
 	);
+
+	let searchDebounceTimer: number;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	$effect(() => {
 		if (baseQuery) {
-			const base = plan<true>(baseQuery).then((response) => response.data);
-			baseResponse = base;
-			routingResponses = [base];
-			selectedItinerary = undefined;
-			selectedStop = undefined;
+			clearTimeout(searchDebounceTimer);
+			searchDebounceTimer = setTimeout(() => {
+				const base = plan<true>(baseQuery).then((response) => response.data);
+				baseResponse = base;
+				routingResponses = [base];
+				selectedItinerary = undefined;
+				selectedStop = undefined;
+			}, 400);
 		}
 	});
 
