@@ -396,6 +396,7 @@ TEST(motis, routing) {
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
         "&timetableView=false"
+        "&useRoutedTransfers=true"
         "&preTransitModes=WALK,RENTAL");
 
     auto ss = std::stringstream{};
@@ -422,7 +423,8 @@ TEST(motis, routing) {
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
-        "&wheelchair=true"
+        "&pedestrianProfile=WHEELCHAIR"
+        "&useRoutedTransfers=true"
         "&timetableView=false");
 
     auto ss = std::stringstream{};
@@ -447,6 +449,7 @@ TEST(motis, routing) {
         "?fromPlace=49.87263,8.63127"
         "&toPlace=50.11347,8.67664"
         "&time=2019-05-01T01:25Z"
+        "&useRoutedTransfers=true"
         "&timetableView=false");
 
     auto ss = std::stringstream{};
