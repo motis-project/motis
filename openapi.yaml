@@ -1127,6 +1127,7 @@ components:
           - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
           - `CAR`
           - `CAR_PARKING`
+          - `ODM`
 
         # Transit modes
 
@@ -1152,6 +1153,7 @@ components:
         - RENTAL
         - CAR
         - CAR_PARKING
+        - ODM
         # === Transit ===
         - TRANSIT
         - TRAM
