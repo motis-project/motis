@@ -586,7 +586,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const r = n::routing::raptor_search(
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-        std::nullopt);
+        query.timeout_.has_value()
+            ? std::optional<std::chrono::seconds>{*query.timeout_}
+            : std::nullopt);
 
     return {
         .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),

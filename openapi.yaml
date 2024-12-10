@@ -774,6 +774,14 @@ paths:
             type: integer
             default: 1800
             minimum: 0
+
+        - name: timeout
+          in: query
+          required: false
+          description: Optional. Query timeout in seconds.
+          schema:
+            type: integer
+            minimum: 0
       responses:
         '200':
           description: routing result
