@@ -952,6 +952,7 @@ components:
           - `BIKE_RENTAL`
           - `CAR`
           - `CAR_PARKING`
+          - `ODM`
 
         # Transit modes
 
@@ -977,6 +978,7 @@ components:
         - CAR
         - BIKE_RENTAL
         - CAR_PARKING
+        - ODM
         # === Transit ===
         - TRANSIT
         - TRAM
