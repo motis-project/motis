@@ -445,7 +445,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes,
                          query.directRentalFormFactors_,
                          query.directRentalPropulsionTypes_,
-                         query.directRentalProviders_, *t, query.wheelchair_,
+                         query.directRentalProviders_, *t,
+                         query.pedestrianProfile_ ==
+                             api::PedestrianProfileEnum::WHEELCHAIR,
                          std::chrono::seconds{query.maxDirectTime_})
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
@@ -469,7 +471,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   return get_offsets(
                       pos, dir, start_modes, start_form_factors,
                       start_propulsion_types, start_rental_providers,
-                      query.wheelchair_,
+                      query.pedestrianProfile_ ==
+                          api::PedestrianProfileEnum::WHEELCHAIR,
                       std::chrono::seconds{query.maxPreTransitTime_},
                       query.maxMatchingDistance_, gbfs_rd);
                 }},
@@ -483,7 +486,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   return get_offsets(
                       pos, dir, dest_modes, dest_form_factors,
                       dest_propulsion_types, dest_rental_providers,
-                      query.wheelchair_,
+                      query.pedestrianProfile_ ==
+                          api::PedestrianProfileEnum::WHEELCHAIR,
                       std::chrono::seconds{query.maxPostTransitTime_},
                       query.maxMatchingDistance_, gbfs_rd);
                 }},
@@ -498,7 +502,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                                  ? osr::direction::kBackward
                                                  : osr::direction::kForward;
                             return get_td_offsets(
-                                *e, pos, dir, start_modes, query.wheelchair_,
+                                *e, pos, dir, start_modes,
+                                query.pedestrianProfile_ ==
+                                    api::PedestrianProfileEnum::WHEELCHAIR,
                                 std::chrono::seconds{query.maxPreTransitTime_});
                           }},
                       start)
@@ -513,7 +519,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                                  ? osr::direction::kForward
                                                  : osr::direction::kBackward;
                             return get_td_offsets(
-                                *e, pos, dir, dest_modes, query.wheelchair_,
+                                *e, pos, dir, dest_modes,
+                                query.pedestrianProfile_ ==
+                                    api::PedestrianProfileEnum::WHEELCHAIR,
                                 std::chrono::seconds{
                                     query.maxPostTransitTime_});
                           }},
@@ -530,7 +538,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         .min_connection_count_ = static_cast<unsigned>(query.numItineraries_),
         .extend_interval_earlier_ = start_time.extend_interval_earlier_,
         .extend_interval_later_ = start_time.extend_interval_later_,
-        .prf_idx_ = static_cast<n::profile_idx_t>(query.wheelchair_ ? 2U : 1U),
+        .prf_idx_ = static_cast<n::profile_idx_t>(
+            query.useRoutedTransfers_
+                ? (query.pedestrianProfile_ ==
+                           api::PedestrianProfileEnum::WHEELCHAIR
+                       ? 2U
+                       : 1U)
+                : 0U),
         .allowed_claszes_ = to_clasz_mask(query.transitModes_),
         .require_bike_transport_ = query.requireBikeTransport_,
         .transfer_time_settings_ =
@@ -585,7 +599,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
-                  query.wheelchair_, j, start, dest, cache, *blocked);
+                  query.pedestrianProfile_ ==
+                      api::PedestrianProfileEnum::WHEELCHAIR,
+                  j, start, dest, cache, *blocked);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

@@ -410,7 +410,7 @@ paths:
 
         - name: maxMatchingDistance
           in: query
-          required: true
+          required: false
           description: |
             Optional. Default is 25 meters.
             
@@ -419,10 +419,25 @@ paths:
             type: number
             default: 25
 
-        - name: wheelchair
+        - name: pedestrianProfile
           in: query
-          description: Whether the trip must be wheelchair accessible.
           required: false
+          description: |
+            Optional. Default is `FOOT`.
+            
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections, on the first mile, and last mile.
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            
+            Whether to use transfers routed on OpenStreetMap data.
           schema:
             type: boolean
             default: false
@@ -500,6 +515,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies to direct connections.
             
             A list of vehicle type form factors that are allowed to be used for direct connections.
@@ -515,6 +532,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
             
             A list of vehicle type form factors that are allowed to be used from the `from` coordinate to the first transit stop.
@@ -530,6 +549,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
 
             A list of vehicle type form factors that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -545,6 +566,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies to direct connections.
             
             A list of vehicle type form factors that are allowed to be used for direct connections.
@@ -560,6 +583,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
             
             A list of vehicle propulsion types that are allowed to be used from the `from` coordinate to the first transit stop.
@@ -575,6 +600,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
             
             A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -590,6 +617,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies to direct connections.
             
             A list of rental providers that are allowed to be used for direct connections.
@@ -603,6 +632,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
             
             A list of rental providers that are allowed to be used from the `from` coordinate to the first transit stop.
@@ -616,6 +647,8 @@ paths:
           in: query
           required: false
           description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
             Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
             
             A list of rental providers that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -1070,13 +1103,20 @@ components:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
 
+    PedestrianProfile:
+      description: Different accessibility profiles for pedestrians.
+      type: string
+      enum:
+        - FOOT
+        - WHEELCHAIR
+
     Mode:
       description: |
         # Street modes
         
           - `WALK`
           - `BIKE`
-          - `RENTAL`
+          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
           - `CAR`
           - `CAR_PARKING`
 

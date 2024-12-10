@@ -113,12 +113,18 @@ export const MatchSchema = {
     }
 } as const;
 
+export const PedestrianProfileSchema = {
+    description: 'Different accessibility profiles for pedestrians.',
+    type: 'string',
+    enum: ['FOOT', 'WHEELCHAIR']
+} as const;
+
 export const ModeSchema = {
     description: `# Street modes
 
   - \`WALK\`
   - \`BIKE\`
-  - \`RENTAL\`
+  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps).
   - \`CAR\`
   - \`CAR_PARKING\`
 
