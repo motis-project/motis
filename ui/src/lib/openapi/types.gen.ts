@@ -104,11 +104,16 @@ export type Match = {
 export type type = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
+ * Different accessibility profiles for pedestrians.
+ */
+export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
+
+/**
  * # Street modes
  *
  * - `WALK`
  * - `BIKE`
- * - `RENTAL`
+ * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
  * - `CAR`
  * - `CAR_PARKING`
  *
@@ -720,6 +725,8 @@ export type PlanData = {
          */
         directModes?: Array<Mode>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies to direct connections.
          *
          * A list of vehicle type form factors that are allowed to be used for direct connections.
@@ -729,6 +736,8 @@ export type PlanData = {
          */
         directRentalFormFactors?: Array<RentalFormFactor>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies to direct connections.
          *
          * A list of vehicle type form factors that are allowed to be used for direct connections.
@@ -738,6 +747,8 @@ export type PlanData = {
          */
         directRentalPropulsionTypes?: Array<RentalPropulsionType>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies to direct connections.
          *
          * A list of rental providers that are allowed to be used for direct connections.
@@ -756,26 +767,12 @@ export type PlanData = {
          */
         maxDirectTime?: number;
         /**
-         * The maximum travel time in hours.
-         * If not provided, the routing to uses the value
-         * hardcoded in the server which is usually quite high.
-         *
-         * *Warning*: Use with care. Setting this too low can lead to
-         * optimal (e.g. the least transfers) journeys not being found.
-         * If this value is too low to reach the destination at all,
-         * it can lead to slow routing performance.
-         *
-         * TODO: pass parameter to nigiri
-         *
-         */
-        maxHours?: number;
-        /**
          * Optional. Default is 25 meters.
          *
          * Maximum matching distance in meters to match geo coordinates to the street network.
          *
          */
-        maxMatchingDistance: number;
+        maxMatchingDistance?: number;
         /**
          * Optional. Default is 15min which is `900`.
          * Maximum time in seconds for the last street leg.
@@ -801,6 +798,18 @@ export type PlanData = {
          */
         maxTransfers?: number;
         /**
+         * The maximum travel time in minutes.
+         * If not provided, the routing to uses the value
+         * hardcoded in the server which is usually quite high.
+         *
+         * *Warning*: Use with care. Setting this too low can lead to
+         * optimal (e.g. the least transfers) journeys not being found.
+         * If this value is too low to reach the destination at all,
+         * it can lead to slow routing performance.
+         *
+         */
+        maxTravelTime?: number;
+        /**
          * Optional. Default is 0 minutes.
          *
          * Minimum transfer time for each transfer in minutes.
@@ -822,6 +831,14 @@ export type PlanData = {
          */
         pageCursor?: string;
         /**
+         * Optional. Default is `FOOT`.
+         *
+         * Accessibility profile to use for pedestrian routing in transfers
+         * between transit connections, on the first mile, and last mile.
+         *
+         */
+        pedestrianProfile?: PedestrianProfile;
+        /**
          * Optional. Default is `WALK`. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directModes`).
          *
          * A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
@@ -829,6 +846,8 @@ export type PlanData = {
          */
         postTransitModes?: Array<Mode>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
          *
          * A list of vehicle type form factors that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -838,6 +857,8 @@ export type PlanData = {
          */
         postTransitRentalFormFactors?: Array<RentalFormFactor>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
          *
          * A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -847,6 +868,8 @@ export type PlanData = {
          */
         postTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
          *
          * A list of rental providers that are allowed to be used from the last transit stop to the `to` coordinate.
@@ -862,6 +885,8 @@ export type PlanData = {
          */
         preTransitModes?: Array<Mode>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
          *
          * A list of vehicle type form factors that are allowed to be used from the `from` coordinate to the first transit stop.
@@ -871,6 +896,8 @@ export type PlanData = {
          */
         preTransitRentalFormFactors?: Array<RentalFormFactor>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
          *
          * A list of vehicle propulsion types that are allowed to be used from the `from` coordinate to the first transit stop.
@@ -880,6 +907,8 @@ export type PlanData = {
          */
         preTransitRentalPropulsionTypes?: Array<RentalPropulsionType>;
         /**
+         * Experimental. Expect unannounced breaking changes (without version bumps).
+         *
          * Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
          *
          * A list of rental providers that are allowed to be used from the `from` coordinate to the first transit stop.
@@ -952,6 +981,13 @@ export type PlanData = {
          */
         transitModes?: Array<Mode>;
         /**
+         * Optional. Default is `false`.
+         *
+         * Whether to use transfers routed on OpenStreetMap data.
+         *
+         */
+        useRoutedTransfers?: boolean;
+        /**
          * List of via stops to visit (only stop IDs, no coordinates allowed for now).
          * Also see the optional parameter `viaMinimumStay` to set a set a minimum stay duration for each via stop.
          *
@@ -969,10 +1005,6 @@ export type PlanData = {
          *
          */
         viaMinimumStay?: Array<(number)>;
-        /**
-         * Whether the trip must be wheelchair accessible.
-         */
-        wheelchair?: boolean;
     };
 };
 
