@@ -403,6 +403,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
+  auto const odm_pre_transit = std::find(begin(pre_transit_modes), end(pre_transit_modes), api::ModeEnum::ODM) != end(pre_transit_modes);
+  auto const odm_post_transit = std::find(begin(post_transit_modes), end(post_transit_modes), api::ModeEnum::ODM) != end(post_transit_modes);
+  auto const odm_direct = std::find(begin(direct_modes), end(direct_modes), api::ModeEnum::ODM) != end(direct_modes);
+  auto const odm_any = odm_pre_transit || odm_post_transit || odm_direct;
+  auto odm_journeys = std::optional<std::vector<n::routing::journey>>{}; // this should probably be the future, we get later, i.e., once regular routing is finished
+
+  // if ODM mode set: spawn fiber for ODM start/dest offset generation
+  auto const odm_routing = [&]()  {
+
+  };
+  if(odm_any) {
+
+  }
+
   if (!query.transitModes_.empty() && fastest_direct > 5min) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
@@ -510,6 +524,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
         std::nullopt);
+
+    // if ODM mode set extend routing result with ODM journeys, so we join the fiber here again
 
     return {
         .debugOutput_ = join(
