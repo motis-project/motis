@@ -415,8 +415,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
                                     api::ModeEnum::ODM) != end(direct_modes);
   auto const odm_any = odm_pre_transit || odm_post_transit || odm_direct;
-
   auto odm_stats = stats_map_t{};
+
   auto const odm_routing =
       [&]() -> std::optional<std::vector<n::routing::journey>> {
     if (!odm_any) {
@@ -443,15 +443,22 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             : std::vector<n::routing::offset>{};
 
     // TODO collect departures/arrivals for each offset
+    auto start_events = std::vector<std::vector<n::unixtime_t>>{};
+    start_events.resize(odm_start_offsets.size());
 
     // TODO ODM direct
 
     // TODO blacklist request
 
-    auto ret = std::vector<n::routing::journey>{};
+    // TODO remove blacklisted offsets
 
-    // TODO whitelist request
-    return ret;
+    // TODO start fibers to do the ODM routing
+
+    // TODO whitelist request for ODM rides used in journeys
+
+    // TODO remove journeys with non-whitelisted ODM rides
+
+    return std::vector<n::routing::journey>{};
   };
 
   auto odm_task = boost::fibers::packaged_task<
