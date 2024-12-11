@@ -60,7 +60,9 @@ Features can be turned on and off as needed.
 - Download one or more GTFS datasets and place them in the folder 
 
 ```bash
-./motis my.osm.pbf my.gtfs.zip
+./motis config my.osm.pbf gtfs.zip  # generates a minimal config.yml
+./motis import                      # preprocesses data
+./motis server                      # starts a HTTP server on port 8080 
 ```
 
 This will preprocess the input files and create a `data` folder.
@@ -81,7 +83,9 @@ wget https://github.com/motis-project/motis/releases/latest/download/motis-${TAR
 tar xf motis-${TARGET}.tar.bz2
 wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
 wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
-./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis import
+./motis server
 ```
 
 **Windows**
@@ -90,7 +94,9 @@ wget https://opendata.avv.de/current_GTFS/AVV_GTFS_Masten_mit_SPNV.zip
 Invoke-WebRequest https://github.com/motis-project/motis/releases/latest/download/motis-windows.zip -OutFile motis-windows.zip
 Expand-Archive motis-windows.zip
 Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/aachen.zip -OutFile aachen.zip
-./motis aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+./motis import
+./motis server
 ```
 
 # Documentation
