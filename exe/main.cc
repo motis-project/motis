@@ -25,7 +25,7 @@ namespace fs = std::filesystem;
 using namespace motis;
 
 int main(int ac, char** av) {
-  auto const print_global_help = [&]() {
+  if (ac > 1 && av[1] == "--help"sv) {
     fmt::println(
         "MOTIS {}\n\n"
         "Usage:\n"
@@ -36,10 +36,6 @@ int main(int ac, char** av) {
         "  import    prepare input data, creates the data directory\n"
         "  server    starts a web server serving the API\n",
         MOTIS_VERSION);
-  };
-
-  if (ac > 1 && av[1] == "--help"sv) {
-    print_global_help();
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
     fmt::println("{}", MOTIS_VERSION);
@@ -49,10 +45,6 @@ int main(int ac, char** av) {
   // Skip program argument, quit if no command.
   --ac;
   ++av;
-  if (ac == 0) {
-    print_global_help();
-    return 1;
-  }
 
   // Execute command.
   auto const cmd = std::string_view{av[0]};
