@@ -81,6 +81,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-shadow-uncaptured-local
             -Wno-documentation-deprecated-sync
             -Wno-float-equal
+            -Wno-deprecated-declarations
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
