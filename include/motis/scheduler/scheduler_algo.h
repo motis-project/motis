@@ -31,19 +31,10 @@ struct work_stealing
   static std::atomic<std::uint32_t> counter_;
   static std::vector<boost::intrusive_ptr<work_stealing> > schedulers_;
 
-  std::uint32_t id_;
-  std::uint32_t thread_count_;
-  boost::fibers::detail::context_spinlock_queue rqueue_{};
-  boost::fibers::detail::context_spinlock_queue high_prio_rqueue_{};
-  std::mutex mtx_{};
-  std::condition_variable cnd_{};
-  bool flag_{false};
-  bool suspend_;
-
   static void init_(std::uint32_t,
                     std::vector<boost::intrusive_ptr<work_stealing> >&);
 
-  work_stealing(std::uint32_t, bool = false);
+  work_stealing(std::uint32_t, bool = true);
 
   work_stealing(work_stealing const&) = delete;
   work_stealing(work_stealing&&) = delete;
@@ -63,6 +54,15 @@ struct work_stealing
       std::chrono::steady_clock::time_point const&) noexcept override;
 
   void notify() noexcept override;
+
+  std::uint32_t id_;
+  std::uint32_t thread_count_;
+  boost::fibers::detail::context_spinlock_queue rqueue_{};
+  boost::fibers::detail::context_spinlock_queue high_prio_rqueue_{};
+  std::mutex mtx_{};
+  std::condition_variable cnd_{};
+  bool flag_{false};
+  bool suspend_;
 };
 
 }  // namespace motis

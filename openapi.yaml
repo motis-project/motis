@@ -359,11 +359,11 @@ paths:
           schema:
             type: integer
 
-        - name: maxHours
+        - name: maxTravelTime
           in: query
           required: false
           description: |
-            The maximum travel time in hours.
+            The maximum travel time in minutes.
             If not provided, the routing to uses the value
             hardcoded in the server which is usually quite high.
             
@@ -371,10 +371,8 @@ paths:
             optimal (e.g. the least transfers) journeys not being found.
             If this value is too low to reach the destination at all,
             it can lead to slow routing performance.
-            
-            TODO: pass parameter to nigiri
           schema:
-            type: number
+            type: integer
 
         - name: minTransferTime
           in: query
@@ -412,7 +410,7 @@ paths:
 
         - name: maxMatchingDistance
           in: query
-          required: true
+          required: false
           description: |
             Optional. Default is 25 meters.
             
@@ -421,10 +419,25 @@ paths:
             type: number
             default: 25
 
-        - name: wheelchair
+        - name: pedestrianProfile
           in: query
-          description: Whether the trip must be wheelchair accessible.
           required: false
+          description: |
+            Optional. Default is `FOOT`.
+            
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections, on the first mile, and last mile.
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+            
+            Whether to use transfers routed on OpenStreetMap data.
           schema:
             type: boolean
             default: false
@@ -498,6 +511,153 @@ paths:
               $ref: '#/components/schemas/Mode'
           explode: false
 
+        - name: directRentalFormFactors
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of vehicle type form factors that are allowed to be used for direct connections.
+            If empty (the default), all form factors are allowed.
+            Example: `BICYCLE,SCOOTER_STANDING`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+
+        - name: preTransitRentalFormFactors
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
+            
+            A list of vehicle type form factors that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all form factors are allowed.
+            Example: `BICYCLE,SCOOTER_STANDING`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+
+        - name: postTransitRentalFormFactors
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalFormFactors`).
+
+            A list of vehicle type form factors that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all form factors are allowed.
+            Example: `BICYCLE,SCOOTER_STANDING`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalFormFactor'
+          explode: false
+
+        - name: directRentalPropulsionTypes
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of vehicle type form factors that are allowed to be used for direct connections.
+            If empty (the default), all propulsion types are allowed.
+            Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+
+        - name: preTransitRentalPropulsionTypes
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
+            
+            A list of vehicle propulsion types that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all propulsion types are allowed.
+            Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+
+        - name: postTransitRentalPropulsionTypes
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalPropulsionTypes`).
+            
+            A list of vehicle propulsion types that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all propulsion types are allowed.
+            Example: `HUMAN,ELECTRIC,ELECTRIC_ASSIST`.
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RentalPropulsionType'
+          explode: false
+
+        - name: directRentalProviders
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies to direct connections.
+            
+            A list of rental providers that are allowed to be used for direct connections.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+
+        - name: preTransitRentalProviders
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `from` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
+            
+            A list of rental providers that are allowed to be used from the `from` coordinate to the first transit stop.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+
+        - name: postTransitRentalProviders
+          in: query
+          required: false
+          description: |
+            Experimental. Expect unannounced breaking changes (without version bumps).
+            
+            Optional. Only applies if the `to` place is a coordinate (not a transit stop). Does not apply to direct connections (see `directRentalProviders`).
+            
+            A list of rental providers that are allowed to be used from the last transit stop to the `to` coordinate.
+            If empty (the default), all providers are allowed.
+          schema:
+            type: array
+            items:
+              type: string
+
         - name: numItineraries
           in: query
           required: false
@@ -569,7 +729,7 @@ paths:
           schema:
             type: integer
             default: 7200
-            minium: 0
+            minimum: 0
 
         - name: requireBikeTransport
           in: query
@@ -613,6 +773,14 @@ paths:
           schema:
             type: integer
             default: 1800
+            minimum: 0
+
+        - name: timeout
+          in: query
+          required: false
+          description: Optional. Query timeout in seconds.
+          schema:
+            type: integer
             minimum: 0
       responses:
         '200':
@@ -943,13 +1111,20 @@ components:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
 
+    PedestrianProfile:
+      description: Different accessibility profiles for pedestrians.
+      type: string
+      enum:
+        - FOOT
+        - WHEELCHAIR
+
     Mode:
       description: |
         # Street modes
         
           - `WALK`
           - `BIKE`
-          - `BIKE_RENTAL`
+          - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
           - `CAR`
           - `CAR_PARKING`
 
@@ -974,8 +1149,8 @@ components:
         # === Street ===
         - WALK
         - BIKE
+        - RENTAL
         - CAR
-        - BIKE_RENTAL
         - CAR_PARKING
         # === Transit ===
         - TRANSIT
@@ -1251,6 +1426,36 @@ components:
             and thus the directions should say something like "cross"
           type: boolean
 
+    RentalFormFactor:
+      type: string
+      enum:
+        - BICYCLE
+        - CARGO_BICYCLE
+        - CAR
+        - MOPED
+        - SCOOTER_STANDING
+        - SCOOTER_SEATED
+        - OTHER
+
+    RentalPropulsionType:
+      type: string
+      enum:
+        - HUMAN
+        - ELECTRIC_ASSIST
+        - ELECTRIC
+        - COMBUSTION
+        - COMBUSTION_DIESEL
+        - HYBRID
+        - PLUG_IN_HYBRID
+        - HYDROGEN_FUEL_CELL
+
+    RentalReturnConstraint:
+      type: string
+      enum:
+        - NONE
+        - ANY_STATION
+        - ROUNDTRIP_STATION
+
     Rental:
       description: Vehicle rental
       type: object
@@ -1278,6 +1483,12 @@ components:
         rentalUriWeb:
           type: string
           description: Rental URI for web (deep link to the specific station or vehicle)
+        formFactor:
+          $ref: '#/components/schemas/RentalFormFactor'
+        propulsionType:
+          $ref: '#/components/schemas/RentalPropulsionType'
+        returnConstraint:
+          $ref: '#/components/schemas/RentalReturnConstraint'
 
     Leg:
       type: object

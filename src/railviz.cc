@@ -34,7 +34,7 @@
 
 namespace n = nigiri;
 
-constexpr auto const kLimit = 4096U;
+constexpr auto const kLimit = 12'000U;
 
 using static_rtree = cista::raw::rtree<n::route_idx_t>;
 using rt_rtree = cista::raw::rtree<n::rt_transport_idx_t>;

@@ -1,5 +1,9 @@
 #pragma once
 
+#include <optional>
+#include <utility>
+#include <vector>
+
 #include "osr/location.h"
 #include "osr/types.h"
 
@@ -21,10 +25,13 @@ struct routing {
       osr::location const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
+      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
+      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
+      std::optional<std::vector<std::string>> const& rental_providers,
       bool wheelchair,
       std::chrono::seconds max,
       unsigned max_matching_distance,
-      gbfs::gbfs_data const*,
+      gbfs::gbfs_routing_data&,
       stats_map_t&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
@@ -38,10 +45,13 @@ struct routing {
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
-      gbfs::gbfs_data const*,
+      gbfs::gbfs_routing_data&,
       api::Place const& from,
       api::Place const& to,
       std::vector<api::ModeEnum> const&,
+      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
+      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
+      std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
       bool wheelchair,
       std::chrono::seconds max) const;

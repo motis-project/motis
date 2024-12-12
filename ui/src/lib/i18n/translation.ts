@@ -8,7 +8,11 @@ export type Translations = {
 	transfers: string;
 	walk: string;
 	bike: string;
+	cargoBike: string;
+	scooterStanding: string;
+	scooterSeated: string;
 	car: string;
+	moped: string;
 	from: string;
 	to: string;
 	arrival: string;
@@ -24,6 +28,7 @@ export type Translations = {
 	track: string;
 	tripIntermediateStops: (n: number) => string;
 	sharingProvider: string;
+	roundtripStationReturnConstraint: string;
 };
 
 const translations: Map<string, Translations> = new Map(

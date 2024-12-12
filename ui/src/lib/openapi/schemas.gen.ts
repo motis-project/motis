@@ -113,12 +113,18 @@ export const MatchSchema = {
     }
 } as const;
 
+export const PedestrianProfileSchema = {
+    description: 'Different accessibility profiles for pedestrians.',
+    type: 'string',
+    enum: ['FOOT', 'WHEELCHAIR']
+} as const;
+
 export const ModeSchema = {
     description: `# Street modes
 
   - \`WALK\`
   - \`BIKE\`
-  - \`BIKE_RENTAL\`
+  - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps).
   - \`CAR\`
   - \`CAR_PARKING\`
 
@@ -140,7 +146,7 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'CAR', 'BIKE_RENTAL', 'CAR_PARKING', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -410,6 +416,21 @@ and thus the directions should say something like "cross"
     }
 } as const;
 
+export const RentalFormFactorSchema = {
+    type: 'string',
+    enum: ['BICYCLE', 'CARGO_BICYCLE', 'CAR', 'MOPED', 'SCOOTER_STANDING', 'SCOOTER_SEATED', 'OTHER']
+} as const;
+
+export const RentalPropulsionTypeSchema = {
+    type: 'string',
+    enum: ['HUMAN', 'ELECTRIC_ASSIST', 'ELECTRIC', 'COMBUSTION', 'COMBUSTION_DIESEL', 'HYBRID', 'PLUG_IN_HYBRID', 'HYDROGEN_FUEL_CELL']
+} as const;
+
+export const RentalReturnConstraintSchema = {
+    type: 'string',
+    enum: ['NONE', 'ANY_STATION', 'ROUNDTRIP_STATION']
+} as const;
+
 export const RentalSchema = {
     description: 'Vehicle rental',
     type: 'object',
@@ -442,6 +463,15 @@ export const RentalSchema = {
         rentalUriWeb: {
             type: 'string',
             description: 'Rental URI for web (deep link to the specific station or vehicle)'
+        },
+        formFactor: {
+            '$ref': '#/components/schemas/RentalFormFactor'
+        },
+        propulsionType: {
+            '$ref': '#/components/schemas/RentalPropulsionType'
+        },
+        returnConstraint: {
+            '$ref': '#/components/schemas/RentalReturnConstraint'
         }
     }
 } as const;
