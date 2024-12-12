@@ -24,6 +24,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/mode_to_profile.h"
+#include "motis/odm/odm.h"
 #include "motis/parse_location.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
@@ -404,65 +405,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
-  auto const odm_pre_transit =
-      std::find(begin(pre_transit_modes), end(pre_transit_modes),
-                api::ModeEnum::ODM) != end(pre_transit_modes);
-  auto const odm_post_transit =
-      std::find(begin(post_transit_modes), end(post_transit_modes),
-                api::ModeEnum::ODM) != end(post_transit_modes);
-  auto const odm_start = query.arriveBy_ ? odm_post_transit : odm_pre_transit;
-  auto const odm_dest = query.arriveBy_ ? odm_pre_transit : odm_post_transit;
-  auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
-                                    api::ModeEnum::ODM) != end(direct_modes);
-  auto const odm_any = odm_pre_transit || odm_post_transit || odm_direct;
-  auto odm_stats = stats_map_t{};
-
-  auto const odm_routing =
-      [&]() -> std::optional<std::vector<n::routing::journey>> {
-    if (!odm_any) {
-      return std::nullopt;
-    }
-
-    auto const odm_start_offsets =
-        odm_start && holds_alternative<osr::location>(start)
-            ? get_offsets(std::get<osr::location>(start),
-                          query.arriveBy_ ? osr::direction::kBackward
-                                          : osr::direction::kForward,
-                          {api::ModeEnum::CAR}, query.wheelchair_,
-                          std::chrono::seconds{query.maxPreTransitTime_},
-                          query.maxMatchingDistance_, gbfs.get(), odm_stats)
-            : std::vector<n::routing::offset>{};
-    auto const odm_dest_offsets =
-        odm_dest && holds_alternative<osr::location>(dest)
-            ? get_offsets(std::get<osr::location>(dest),
-                          query.arriveBy_ ? osr::direction::kForward
-                                          : osr::direction::kBackward,
-                          {api::ModeEnum::CAR}, query.wheelchair_,
-                          std::chrono::seconds{query.maxPostTransitTime_},
-                          query.maxMatchingDistance_, gbfs.get(), odm_stats)
-            : std::vector<n::routing::offset>{};
-
-    // TODO collect departures/arrivals for each offset
-    auto start_events = std::vector<std::vector<n::unixtime_t>>{};
-    start_events.resize(odm_start_offsets.size());
-
-    // TODO ODM direct
-
-    // TODO blacklist request
-
-    // TODO remove blacklisted offsets
-
-    // TODO start fibers to do the ODM routing
-
-    // TODO whitelist request for ODM rides used in journeys
-
-    // TODO remove journeys with non-whitelisted ODM rides
-
-    return std::vector<n::routing::journey>{};
-  };
-
   auto odm_task = boost::fibers::packaged_task<
-      std::optional<std::vector<n::routing::journey>>()>{odm_routing};
+      std::optional<std::vector<n::routing::journey>>()>{[&]() {
+    return odm_routing(*this, query, pre_transit_modes, post_transit_modes,
+                       direct_modes, from, to, from_p, to_p, start, dest,
+                       start_modes, dest_modes, start_time, t);
+  }};
   auto odm_journeys = odm_task.get_future();
   boost::fibers::fiber{std::move(odm_task)}.detach();
 
