@@ -3,9 +3,14 @@
 #include "boost/fiber/fss.hpp"
 
 #include "nigiri/routing/journey.h"
+#include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
 #include "nigiri/routing/raptor/raptor_state.h"
 #include "nigiri/routing/raptor_search.h"
+#include "nigiri/routing/start_times.h"
+#include "nigiri/types.h"
+
+#include "osr/routing/route.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
@@ -13,18 +18,31 @@
 
 namespace motis::ep {
 
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::fibers::fiber_specific_ptr<nigiri::routing::search_state>
-    search_state;
+namespace n = nigiri;
+using namespace std::chrono_literals;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::fibers::fiber_specific_ptr<nigiri::routing::raptor_state>
-    raptor_state;
+static boost::fibers::fiber_specific_ptr<n::routing::search_state> search_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static boost::fibers::fiber_specific_ptr<n::routing::raptor_state> raptor_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::fibers::fiber_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-std::optional<std::vector<nigiri::routing::journey>> odm_routing(
+static auto const kNoTdOffsets =
+    hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
+
+n::interval<n::unixtime_t> get_dest_intvl(
+    n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
+  return dir == n::direction::kForward
+             ? n::interval<n::unixtime_t>{start_intvl.from_ + 30min,
+                                          start_intvl.to_ + 24h}
+             : n::interval<n::unixtime_t>{start_intvl.from_ - 24h,
+                                          start_intvl.to_ - 30min};
+}
+
+std::optional<std::vector<n::routing::journey>> odm_routing(
     routing const& r,
     api::plan_params const& query,
     std::vector<api::ModeEnum> const& pre_transit_modes,
@@ -38,12 +56,16 @@ std::optional<std::vector<nigiri::routing::journey>> odm_routing(
     std::variant<osr::location, tt_location> const& dest,
     std::vector<api::ModeEnum> const& start_modes,
     std::vector<api::ModeEnum> const& dest_modes,
-    nigiri::routing::query const& start_time,
-    std::optional<nigiri::unixtime_t> const& t) {
+    n::routing::query const& start_time,
+    std::optional<n::unixtime_t> const& t) {
+  auto const tt = r.tt_;
   auto const rt = r.rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = r.rt_->e_.get();
   auto const gbfs = r.gbfs_;
+  if (blocked.get() == nullptr && r.w_ != nullptr) {
+    blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
+  }
 
   auto const odm_pre_transit =
       std::find(begin(pre_transit_modes), end(pre_transit_modes),
@@ -56,48 +78,81 @@ std::optional<std::vector<nigiri::routing::journey>> odm_routing(
   auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
                                     api::ModeEnum::ODM) != end(direct_modes);
   auto const odm_any = odm_pre_transit || odm_post_transit || odm_direct;
-  auto odm_stats = motis::ep::stats_map_t{};
 
   if (!odm_any) {
     return std::nullopt;
   }
 
-  auto const odm_start_offsets =
-      odm_start && holds_alternative<osr::location>(start)
-          ? r.get_offsets(std::get<osr::location>(start),
-                          query.arriveBy_ ? osr::direction::kBackward
-                                          : osr::direction::kForward,
-                          {api::ModeEnum::CAR}, query.wheelchair_,
+  auto odm_stats = motis::ep::stats_map_t{};
+
+  auto const start_intvl = std::visit(
+      utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
+                      [](n::unixtime_t const t) {
+                        return n::interval<n::unixtime_t>{t, t};
+                      }},
+      start_time.start_time_);
+  auto const dest_intvl = get_dest_intvl(
+      query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+      start_intvl);
+  auto const& from_intvl = query.arriveBy_ ? dest_intvl : start_intvl;
+  auto const& to_intvl = query.arriveBy_ ? start_intvl : dest_intvl;
+
+  auto const odm_offsets_from =
+      odm_pre_transit && holds_alternative<osr::location>(from)
+          ? r.get_offsets(std::get<osr::location>(from),
+                          osr::direction::kForward, {api::ModeEnum::CAR},
+                          query.wheelchair_,
                           std::chrono::seconds{query.maxPreTransitTime_},
                           query.maxMatchingDistance_, gbfs.get(), odm_stats)
-          : std::vector<nigiri::routing::offset>{};
-  auto const odm_dest_offsets =
-      odm_dest && holds_alternative<osr::location>(dest)
-          ? r.get_offsets(std::get<osr::location>(dest),
-                          query.arriveBy_ ? osr::direction::kForward
-                                          : osr::direction::kBackward,
-                          {api::ModeEnum::CAR}, query.wheelchair_,
+          : std::vector<n::routing::offset>{};
+
+  auto const odm_offsets_to =
+      odm_post_transit && holds_alternative<osr::location>(to)
+          ? r.get_offsets(std::get<osr::location>(to),
+                          osr::direction::kBackward, {api::ModeEnum::CAR},
+                          query.wheelchair_,
                           std::chrono::seconds{query.maxPostTransitTime_},
                           query.maxMatchingDistance_, gbfs.get(), odm_stats)
-          : std::vector<nigiri::routing::offset>{};
+          : std::vector<n::routing::offset>{};
 
-  // TODO collect departures/arrivals for each offset
-  auto start_events = std::vector<std::vector<nigiri::unixtime_t>>{};
-  start_events.resize(odm_start_offsets.size());
+  auto from_events = std::vector<n::routing::start>{};
+  if (odm_pre_transit) {
+    from_events.reserve(odm_offsets_from.size() * 2);
+    n::routing::get_starts(n::direction::kForward, *tt, rtt, from_intvl,
+                           odm_offsets_from, kNoTdOffsets,
+                           n::routing::kMaxTravelTime,
+                           query.arriveBy_ ? start_time.dest_match_mode_
+                                           : start_time.start_match_mode_,
+                           false, from_events, true, start_time.prf_idx_,
+                           start_time.transfer_time_settings_);
+  }
+
+  auto to_events = std::vector<n::routing::start>{};
+  if (odm_post_transit) {
+    to_events.reserve(odm_offsets_to.size() * 2);
+    n::routing::get_starts(n::direction::kBackward, *tt, rtt, to_intvl,
+                           odm_offsets_to, kNoTdOffsets,
+                           n::routing::kMaxTravelTime,
+                           query.arriveBy_ ? start_time.start_match_mode_
+                                           : start_time.dest_match_mode_,
+                           false, to_events, true, start_time.prf_idx_,
+                           start_time.transfer_time_settings_);
+  }
 
   // TODO ODM direct
+  auto const path = r.route_direct(e, )
 
-  // TODO blacklist request
+                    // TODO blacklist request
 
-  // TODO remove blacklisted offsets
+                    // TODO remove blacklisted offsets
 
-  // TODO start fibers to do the ODM routing
+                    // TODO start fibers to do the ODM routing
 
-  // TODO whitelist request for ODM rides used in journeys
+                    // TODO whitelist request for ODM rides used in journeys
 
-  // TODO remove journeys with non-whitelisted ODM rides
+                    // TODO remove journeys with non-whitelisted ODM rides
 
-  return std::vector<nigiri::routing::journey>{};
+                    return std::vector<nigiri::routing::journey>{};
 }
 
 }  // namespace motis::ep
