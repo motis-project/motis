@@ -45,12 +45,20 @@ n::interval<n::unixtime_t> get_dest_intvl(
                                           start_intvl.to_ - 30min};
 }
 
-template <n::direction Dir>
 void populate_direct(
     n::interval<n::unixtime_t> itvl,
     n::duration_t dur,
-    std::vector<std::pair<n::unixtime_t, n::unixtime_t>> const& direct_events) {
-  for (auto dep = itvl.from_) }
+    std::vector<std::pair<n::unixtime_t, n::unixtime_t>>& direct_events) {
+  for (auto dep = std::chrono::ceil<std::chrono::hours>(itvl.from_);
+       itvl.contains(dep); dep += 1h) {
+    direct_events.emplace_back(dep, dep + dur);
+  }
+}
+
+bool comp_starts(n::routing::start const& a, n::routing::start const& b) {
+  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+}
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
     routing const& r,
@@ -135,6 +143,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
                                            : start_time.start_match_mode_,
                            false, from_events, true, start_time.prf_idx_,
                            start_time.transfer_time_settings_);
+    utl::sort(from_events, comp_starts);
   }
 
   auto to_events = std::vector<n::routing::start>{};
@@ -147,15 +156,15 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
                                            : start_time.dest_match_mode_,
                            false, to_events, true, start_time.prf_idx_,
                            start_time.transfer_time_settings_);
+    utl::sort(to_events, comp_starts);
   }
 
-  // TODO ODM direct
   auto direct_events = std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
   if (odm_direct && r.w_ && r.l_) {
-    auto const direct_car = r.route_direct(
+    auto const [direct, duration] = r.route_direct(
         e, gbfs.get(), from_p, to_p, {api::ModeEnum::CAR}, start_intvl.from_,
         query.wheelchair_, std::chrono::seconds{query.maxDirectTime_});
-    populate_direct(direct_events, );
+    populate_direct(start_intvl, duration, direct_events);
   }
 
   // TODO blacklist request
