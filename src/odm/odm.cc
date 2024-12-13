@@ -33,9 +33,6 @@ static boost::fibers::fiber_specific_ptr<n::routing::raptor_state> raptor_state;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::fibers::fiber_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-static auto const kNoTdOffsets =
-    hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
-
 n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
   return dir == n::direction::kForward
@@ -43,6 +40,60 @@ n::interval<n::unixtime_t> get_dest_intvl(
                                           start_intvl.to_ + 24h}
              : n::interval<n::unixtime_t>{start_intvl.from_ - 24h,
                                           start_intvl.to_ - 30min};
+}
+
+void inflate(std::vector<n::routing::offset>& offsets) {
+  static constexpr auto const kInflationFactor = 1.5;
+  static constexpr auto const kMinInflation = n::duration_t{10};
+
+  for (auto& o : offsets) {
+    o.duration_ = std::max(std::chrono::duration_cast<n::duration_t>(
+                               o.duration_ * kInflationFactor),
+                           o.duration_ + kMinInflation);
+  }
+}
+
+std::vector<n::routing::offset> get_offsets(
+    routing const& r,
+    osr::location const& pos,
+    osr::direction const dir,
+    std::vector<api::ModeEnum> const& modes,
+    bool const wheelchair,
+    std::chrono::seconds const max,
+    unsigned const max_matching_distance,
+    gbfs::gbfs_data const* gbfs,
+    stats_map_t& stats) {
+  auto offsets = r.get_offsets(pos, dir, modes, wheelchair, max,
+                               max_matching_distance, gbfs, stats);
+  inflate(offsets);
+  return offsets;
+}
+
+bool comp_starts(n::routing::start const& a, n::routing::start const& b) {
+  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+}
+
+std::vector<n::routing::start> get_events(
+    n::direction const search_dir,
+    n::timetable const& tt,
+    n::rt_timetable const* rtt,
+    n::routing::start_time_t const& time,
+    std::vector<n::routing::offset> const& offsets,
+    n::duration_t const max_start_offset,
+    n::routing::location_match_mode const mode,
+    n::profile_idx_t const prf_idx,
+    n::routing::transfer_time_settings const& tts) {
+  static auto const kNoTdOffsets =
+      hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
+
+  auto events = std::vector<n::routing::start>{};
+  events.reserve(offsets.size() * 2);
+  n::routing::get_starts(search_dir, tt, rtt, time, offsets, kNoTdOffsets,
+                         max_start_offset, mode, false, events, true, prf_idx,
+                         tts);
+  utl::sort(events, comp_starts);
+  return events;
 }
 
 void populate_direct(
@@ -53,11 +104,6 @@ void populate_direct(
        itvl.contains(dep); dep += 1h) {
     direct_events.emplace_back(dep, dep + dur);
   }
-}
-
-bool comp_starts(n::routing::start const& a, n::routing::start const& b) {
-  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
-         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
 }
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
@@ -117,47 +163,39 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
 
   auto const odm_offsets_from =
       odm_pre_transit && holds_alternative<osr::location>(from)
-          ? r.get_offsets(std::get<osr::location>(from),
-                          osr::direction::kForward, {api::ModeEnum::CAR},
-                          query.wheelchair_,
-                          std::chrono::seconds{query.maxPreTransitTime_},
-                          query.maxMatchingDistance_, gbfs.get(), odm_stats)
+          ? get_offsets(r, std::get<osr::location>(from),
+                        osr::direction::kForward, {api::ModeEnum::CAR},
+                        query.wheelchair_,
+                        std::chrono::seconds{query.maxPreTransitTime_},
+                        query.maxMatchingDistance_, gbfs.get(), odm_stats)
           : std::vector<n::routing::offset>{};
 
   auto const odm_offsets_to =
       odm_post_transit && holds_alternative<osr::location>(to)
-          ? r.get_offsets(std::get<osr::location>(to),
-                          osr::direction::kBackward, {api::ModeEnum::CAR},
-                          query.wheelchair_,
-                          std::chrono::seconds{query.maxPostTransitTime_},
-                          query.maxMatchingDistance_, gbfs.get(), odm_stats)
+          ? get_offsets(r, std::get<osr::location>(to),
+                        osr::direction::kBackward, {api::ModeEnum::CAR},
+                        query.wheelchair_,
+                        std::chrono::seconds{query.maxPostTransitTime_},
+                        query.maxMatchingDistance_, gbfs.get(), odm_stats)
           : std::vector<n::routing::offset>{};
 
-  auto from_events = std::vector<n::routing::start>{};
-  if (odm_pre_transit) {
-    from_events.reserve(odm_offsets_from.size() * 2);
-    n::routing::get_starts(n::direction::kForward, *tt, rtt, from_intvl,
-                           odm_offsets_from, kNoTdOffsets,
-                           n::routing::kMaxTravelTime,
-                           query.arriveBy_ ? start_time.dest_match_mode_
-                                           : start_time.start_match_mode_,
-                           false, from_events, true, start_time.prf_idx_,
-                           start_time.transfer_time_settings_);
-    utl::sort(from_events, comp_starts);
-  }
+  auto const from_events =
+      odm_pre_transit
+          ? get_events(n::direction::kForward, *tt, rtt, from_intvl,
+                       odm_offsets_from, n::routing::kMaxTravelTime,
+                       query.arriveBy_ ? start_time.dest_match_mode_
+                                       : start_time.start_match_mode_,
+                       start_time.prf_idx_, start_time.transfer_time_settings_)
+          : std::vector<n::routing::start>{};
 
-  auto to_events = std::vector<n::routing::start>{};
-  if (odm_post_transit) {
-    to_events.reserve(odm_offsets_to.size() * 2);
-    n::routing::get_starts(n::direction::kBackward, *tt, rtt, to_intvl,
-                           odm_offsets_to, kNoTdOffsets,
-                           n::routing::kMaxTravelTime,
-                           query.arriveBy_ ? start_time.start_match_mode_
-                                           : start_time.dest_match_mode_,
-                           false, to_events, true, start_time.prf_idx_,
-                           start_time.transfer_time_settings_);
-    utl::sort(to_events, comp_starts);
-  }
+  auto const to_events =
+      odm_post_transit
+          ? get_events(n::direction::kBackward, *tt, rtt, to_intvl,
+                       odm_offsets_to, n::routing::kMaxTravelTime,
+                       query.arriveBy_ ? start_time.start_match_mode_
+                                       : start_time.dest_match_mode_,
+                       start_time.prf_idx_, start_time.transfer_time_settings_)
+          : std::vector<n::routing::start>{};
 
   auto direct_events = std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
   if (odm_direct && r.w_ && r.l_) {
