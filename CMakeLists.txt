@@ -123,6 +123,7 @@ target_link_libraries(motislib
     pbf_sdf_fonts_res-res
     ssl
     crypto
+    rapidjson
 )
 
 
