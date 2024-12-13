@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=478bed28978461f0728c311899cc6bb22f0dd591
+  commit=f2ceb19b31c13258bd61053edfbaf03375431701
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -25,11 +25,11 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=6a457f5eaa077078fcac4153c5a178657737eee8
+  commit=30f8b05a435af6f8327376d6e95089b4341ac4f7
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=dac46d043f07a119d8b7d9ccb47e51049b259bfe
+  commit=a8c091e60e39a9e986cfd238f8712182516d52ca
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
   branch=master
@@ -45,7 +45,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
-  commit=930f38eb0365ceb7853273e03da4d9e7787abfb9
+  commit=4a9aca6cb8af75be6e58f28c09cc7e39f61e6173
 [tg]
   url=git@github.com:triptix-tech/tg.git
   branch=main

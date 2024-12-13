@@ -54,6 +54,15 @@ static boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
+stats_map_t join(auto&&... maps) {
+  auto ret = std::map<std::string, std::uint64_t>{};
+  auto const add = [&](std::map<std::string, std::uint64_t> const& x) {
+    ret.insert(begin(x), end(x));
+  };
+  (add(maps), ...);
+  return ret;
+}
+
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
                   std::string_view s) {
@@ -129,7 +138,8 @@ std::vector<n::routing::offset> routing::get_offsets(
     bool const wheelchair,
     std::chrono::seconds const max,
     unsigned const max_matching_distance,
-    gbfs::gbfs_routing_data& gbfs_rd) const {
+    gbfs::gbfs_routing_data& gbfs_rd,
+    stats_map_t& stats) const {
   if (!loc_tree_ || !pl_ || !tt_ || !loc_tree_ || !matches_) {
     return {};
   }
@@ -176,6 +186,7 @@ std::vector<n::routing::offset> routing::get_offsets(
               !gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
+          UTL_START_TIMING(timer);
           if (!provider_rd) {
             provider_rd = gbfs_rd.get_provider_routing_data(*provider);
           }
@@ -188,25 +199,41 @@ std::vector<n::routing::offset> routing::get_offsets(
                          static_cast<osr::cost_t>(max.count()), dir,
                          kMaxMatchingDistance, nullptr, &sharing);
           ignore_walk = true;
-          for (auto const [p, l] : utl::zip(paths, near_stops)) {
+          for (auto const [p, l] : utl::zip(paths.paths_, near_stops)) {
             if (p.has_value()) {
               offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
                                    gbfs_rd.get_transport_mode(prod_ref));
             }
           }
+          UTL_STOP_TIMING(timer);
+          stats.emplace(
+              fmt::format("GBFS_{}_{}_{}_{}", provider->id_, prod.idx_,
+                          fmt::streamed(dir), fmt::streamed(m)),
+              UTL_TIMING_MS(timer));
+          stats.emplace(
+              fmt::format("GBFS_{}_{}_{}_{}_lookup", provider->id_, prod.idx_,
+                          fmt::streamed(dir), fmt::streamed(m)),
+              paths.lookup_time_.count());
         }
       }
 
     } else {
+      UTL_START_TIMING(timer);
       auto const paths = osr::route(*w_, *l_, profile, pos, near_stop_locations,
                                     static_cast<osr::cost_t>(max.count()), dir,
                                     max_matching_distance, nullptr, nullptr);
-      for (auto const [p, l] : utl::zip(paths, near_stops)) {
+      for (auto const [p, l] : utl::zip(paths.paths_, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
                                static_cast<n::transport_mode_id_t>(profile));
         }
       }
+      UTL_STOP_TIMING(timer);
+      stats.emplace(fmt::format("{}_{}", fmt::streamed(dir), fmt::streamed(m)),
+                    UTL_TIMING_MS(timer));
+      stats.emplace(
+          fmt::format("{}_{}_lookup", fmt::streamed(dir), fmt::streamed(m)),
+          paths.lookup_time_.count());
     }
   };
 
@@ -274,7 +301,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         (!omit_walk && m == api::ModeEnum::WALK)) {
       auto itinerary =
           route(*w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
-                std::nullopt, {}, cache, *blocked, max);
+                std::nullopt, {}, cache, blocked.get(), max);
       if (itinerary.legs_.empty()) {
         continue;
       }
@@ -305,7 +332,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           auto itinerary = route(
               *w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
               std::nullopt, gbfs::gbfs_products_ref{provider->idx_, prod.idx_},
-              cache, *blocked, max);
+              cache, blocked.get(), max);
           if (itinerary.legs_.empty()) {
             continue;
           }
@@ -320,17 +347,6 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     }
   }
   return {itineraries, fastest_direct};
-}
-
-using stats_map_t = std::map<std::string, std::uint64_t>;
-
-stats_map_t join(auto&&... maps) {
-  auto ret = std::map<std::string, std::uint64_t>{};
-  auto const add = [&](std::map<std::string, std::uint64_t> const& x) {
-    ret.insert(begin(x), end(x));
-  };
-  (add(maps), ...);
-  return ret;
 }
 
 void remove_slower_than_fastest_direct(n::routing::query& q) {
@@ -457,6 +473,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                 "mode=TRANSIT requires timetable to be loaded");
 
     UTL_START_TIMING(query_preparation);
+    auto stats = stats_map_t{};
     auto q = n::routing::query{
         .start_time_ = start_time.start_time_,
         .start_match_mode_ = get_match_mode(start),
@@ -474,7 +491,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       query.pedestrianProfile_ ==
                           api::PedestrianProfileEnum::WHEELCHAIR,
                       std::chrono::seconds{query.maxPreTransitTime_},
-                      query.maxMatchingDistance_, gbfs_rd);
+                      query.maxMatchingDistance_, gbfs_rd, stats);
                 }},
             start),
         .destination_ = std::visit(
@@ -489,7 +506,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                       query.pedestrianProfile_ ==
                           api::PedestrianProfileEnum::WHEELCHAIR,
                       std::chrono::seconds{query.maxPostTransitTime_},
-                      query.maxMatchingDistance_, gbfs_rd);
+                      query.maxMatchingDistance_, gbfs_rd, stats);
                 }},
             dest),
         .td_start_ =
@@ -575,14 +592,6 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
       raptor_state.reset(new n::routing::raptor_state{});
     }
 
-    auto const query_stats =
-        stats_map_t{{"direct", UTL_TIMING_MS(direct)},
-                    {"query_preparation", UTL_TIMING_MS(query_preparation)},
-                    {"n_start_offsets", q.start_.size()},
-                    {"n_dest_offsets", q.destination_.size()},
-                    {"n_td_start_offsets", q.td_start_.size()},
-                    {"n_td_dest_offsets", q.td_dest_.size()}};
-
     auto const r = n::routing::raptor_search(
         *tt_, rtt, *search_state, *raptor_state, std::move(q),
         query.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
@@ -591,8 +600,15 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             : std::nullopt);
 
     return {
-        .debugOutput_ = join(std::move(query_stats), r.search_stats_.to_map(),
-                             r.algo_stats_.to_map()),
+        .debugOutput_ = join(
+            stats,
+            stats_map_t{{"direct", UTL_TIMING_MS(direct)},
+                        {"query_preparation", UTL_TIMING_MS(query_preparation)},
+                        {"n_start_offsets", q.start_.size()},
+                        {"n_dest_offsets", q.destination_.size()},
+                        {"n_td_start_offsets", q.td_start_.size()},
+                        {"n_td_dest_offsets", q.td_dest_.size()}},
+            r.search_stats_.to_map(), r.algo_stats_.to_map()),
         .from_ = from_p,
         .to_ = to_p,
         .direct_ = std::move(direct),
@@ -603,7 +619,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
                   query.pedestrianProfile_ ==
                       api::PedestrianProfileEnum::WHEELCHAIR,
-                  j, start, dest, cache, *blocked);
+                  j, start, dest, cache, blocked.get());
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

@@ -16,6 +16,8 @@
 
 namespace motis::ep {
 
+using stats_map_t = std::map<std::string, std::uint64_t>;
+
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
 
@@ -29,7 +31,8 @@ struct routing {
       bool wheelchair,
       std::chrono::seconds max,
       unsigned max_matching_distance,
-      gbfs::gbfs_routing_data&) const;
+      gbfs::gbfs_routing_data&,
+      stats_map_t&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
