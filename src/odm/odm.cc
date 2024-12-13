@@ -42,15 +42,12 @@ n::interval<n::unixtime_t> get_dest_intvl(
                                           start_intvl.to_ - 30min};
 }
 
-void inflate(std::vector<n::routing::offset>& offsets) {
+void inflate(n::duration_t& d) {
   static constexpr auto const kInflationFactor = 1.5;
   static constexpr auto const kMinInflation = n::duration_t{10};
 
-  for (auto& o : offsets) {
-    o.duration_ = std::max(std::chrono::duration_cast<n::duration_t>(
-                               o.duration_ * kInflationFactor),
-                           o.duration_ + kMinInflation);
-  }
+  d = std::max(std::chrono::duration_cast<n::duration_t>(d * kInflationFactor),
+               d + kMinInflation);
 }
 
 std::vector<n::routing::offset> get_offsets(
@@ -65,13 +62,10 @@ std::vector<n::routing::offset> get_offsets(
     stats_map_t& stats) {
   auto offsets = r.get_offsets(pos, dir, modes, wheelchair, max,
                                max_matching_distance, gbfs, stats);
-  inflate(offsets);
+  for (auto& o : offsets) {
+    inflate(o.duration_);
+  }
   return offsets;
-}
-
-bool comp_starts(n::routing::start const& a, n::routing::start const& b) {
-  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
-         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
 }
 
 std::vector<n::routing::start> get_events(
@@ -86,24 +80,42 @@ std::vector<n::routing::start> get_events(
     n::routing::transfer_time_settings const& tts) {
   static auto const kNoTdOffsets =
       hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
-
   auto events = std::vector<n::routing::start>{};
   events.reserve(offsets.size() * 2);
   n::routing::get_starts(search_dir, tt, rtt, time, offsets, kNoTdOffsets,
                          max_start_offset, mode, false, events, true, prf_idx,
                          tts);
-  utl::sort(events, comp_starts);
+  utl::sort(events, [](auto&& a, auto&& b) {
+    return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+           std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+  });
   return events;
 }
 
-void populate_direct(
-    n::interval<n::unixtime_t> itvl,
-    n::duration_t dur,
-    std::vector<std::pair<n::unixtime_t, n::unixtime_t>>& direct_events) {
+std::vector<std::pair<n::unixtime_t, n::unixtime_t>> populate_direct(
+    n::interval<n::unixtime_t> itvl, n::duration_t dur) {
+  auto direct_events = std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
   for (auto dep = std::chrono::ceil<std::chrono::hours>(itvl.from_);
        itvl.contains(dep); dep += 1h) {
     direct_events.emplace_back(dep, dep + dur);
   }
+  return direct_events;
+}
+
+std::vector<std::pair<n::unixtime_t, n::unixtime_t>> get_direct_events(
+    routing const& r,
+    elevators const* e,
+    gbfs::gbfs_data const* gbfs,
+    api::Place const& from,
+    api::Place const& to,
+    n::interval<n::unixtime_t> const start_intvl,
+    bool wheelchair,
+    std::chrono::seconds max) {
+  auto [direct, duration] =
+      r.route_direct(e, gbfs, from, to, {api::ModeEnum::CAR}, start_intvl.from_,
+                     wheelchair, max);
+  inflate(duration);
+  return populate_direct(start_intvl, duration);
 }
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
@@ -116,12 +128,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
     std::variant<osr::location, tt_location> const& to,
     api::Place const& from_p,
     api::Place const& to_p,
-    std::variant<osr::location, tt_location> const& start,
-    std::variant<osr::location, tt_location> const& dest,
-    std::vector<api::ModeEnum> const& start_modes,
-    std::vector<api::ModeEnum> const& dest_modes,
-    n::routing::query const& start_time,
-    std::optional<n::unixtime_t> const& t) {
+    n::routing::query const& start_time) {
   auto const tt = r.tt_;
   auto const rt = r.rt_;
   auto const rtt = rt->rtt_.get();
@@ -137,8 +144,6 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   auto const odm_post_transit =
       std::find(begin(post_transit_modes), end(post_transit_modes),
                 api::ModeEnum::ODM) != end(post_transit_modes);
-  auto const odm_start = query.arriveBy_ ? odm_post_transit : odm_pre_transit;
-  auto const odm_dest = query.arriveBy_ ? odm_pre_transit : odm_post_transit;
   auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
                                     api::ModeEnum::ODM) != end(direct_modes);
   auto const odm_any = odm_pre_transit || odm_post_transit || odm_direct;
@@ -197,13 +202,12 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
                        start_time.prf_idx_, start_time.transfer_time_settings_)
           : std::vector<n::routing::start>{};
 
-  auto direct_events = std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
-  if (odm_direct && r.w_ && r.l_) {
-    auto const [direct, duration] = r.route_direct(
-        e, gbfs.get(), from_p, to_p, {api::ModeEnum::CAR}, start_intvl.from_,
-        query.wheelchair_, std::chrono::seconds{query.maxDirectTime_});
-    populate_direct(start_intvl, duration, direct_events);
-  }
+  auto const direct_events =
+      (odm_direct && r.w_ && r.l_)
+          ? get_direct_events(r, e, gbfs.get(), from_p, to_p, start_intvl,
+                              query.wheelchair_,
+                              std::chrono::seconds{query.maxDirectTime_})
+          : std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
 
   // TODO blacklist request
 
