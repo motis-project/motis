@@ -31,11 +31,6 @@ std::optional<std::vector<nigiri::routing::journey>> odm_routing(
     std::variant<osr::location, tt_location> const& to,
     api::Place const& from_p,
     api::Place const& to_p,
-    std::variant<osr::location, tt_location> const& start,
-    std::variant<osr::location, tt_location> const& dest,
-    std::vector<api::ModeEnum> const& start_modes,
-    std::vector<api::ModeEnum> const& dest_modes,
-    nigiri::routing::query const& start_time,
-    std::optional<nigiri::unixtime_t> const& t);
+    nigiri::routing::query const& start_time);
 
 }  // namespace motis::ep
