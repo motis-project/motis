@@ -21,6 +21,9 @@ namespace motis::ep {
 namespace n = nigiri;
 using namespace std::chrono_literals;
 
+// TODO or should each thread rather use its thread-specifics while executing
+// the fiber?
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::fibers::fiber_specific_ptr<n::routing::search_state> search_state;
 
@@ -41,6 +44,13 @@ n::interval<n::unixtime_t> get_dest_intvl(
              : n::interval<n::unixtime_t>{start_intvl.from_ - 24h,
                                           start_intvl.to_ - 30min};
 }
+
+template <n::direction Dir>
+void populate_direct(
+    n::interval<n::unixtime_t> itvl,
+    n::duration_t dur,
+    std::vector<std::pair<n::unixtime_t, n::unixtime_t>> const& direct_events) {
+  for (auto dep = itvl.from_) }
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
     routing const& r,
@@ -140,19 +150,25 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   }
 
   // TODO ODM direct
-  auto const path = r.route_direct(e, )
+  auto direct_events = std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
+  if (odm_direct && r.w_ && r.l_) {
+    auto const direct_car = r.route_direct(
+        e, gbfs.get(), from_p, to_p, {api::ModeEnum::CAR}, start_intvl.from_,
+        query.wheelchair_, std::chrono::seconds{query.maxDirectTime_});
+    populate_direct(direct_events, );
+  }
 
-                    // TODO blacklist request
+  // TODO blacklist request
 
-                    // TODO remove blacklisted offsets
+  // TODO remove blacklisted offsets
 
-                    // TODO start fibers to do the ODM routing
+  // TODO start fibers to do the ODM routing
 
-                    // TODO whitelist request for ODM rides used in journeys
+  // TODO whitelist request for ODM rides used in journeys
 
-                    // TODO remove journeys with non-whitelisted ODM rides
+  // TODO remove journeys with non-whitelisted ODM rides
 
-                    return std::vector<nigiri::routing::journey>{};
+  return std::vector<nigiri::routing::journey>{};
 }
 
 }  // namespace motis::ep
