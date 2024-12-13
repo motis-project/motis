@@ -7,11 +7,13 @@
 #include "nigiri/routing/query.h"
 #include "nigiri/timetable.h"
 
+#include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
 #include "motis/point_rtree.h"
 
 #include "./flags.h"
+#include "motis/place.h"
 
 namespace n = nigiri;
 namespace fs = std::filesystem;
@@ -56,13 +58,12 @@ n::location_idx_t random_stop(n::timetable const& tt,
 
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
-  auto n_queries = 1000U;
+  auto n = 1000U;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("n", po::value(&n_queries)->default_value(n_queries),
-       "number of queries");
+      ("n", po::value(&n)->default_value(n), "number of queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -79,6 +80,17 @@ int generate(int ac, char** av) {
 
   auto const d = data{data_path, c};
   utl::verify(d.tt_, "timetable required");
+
+  auto stops = std::vector<n::location_idx_t>{};
+  stops.resize(d.tt_->n_locations());
+  for (auto i = 0U; i != stops.size(); ++i) {
+    stops[i] = n::location_idx_t{i};
+  }
+
+  auto const p = api::plan_params{};
+  for (auto i = 0U; i != n; ++i) {
+    p.fromPlace_ = to_place(random_stop(*d.tt_, stops));
+  }
 
   auto u = boost::urls::url{"/"};
   u.params().append({"A", "B"});
