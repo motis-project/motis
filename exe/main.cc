@@ -22,6 +22,10 @@ namespace po = boost::program_options;
 using namespace std::string_view_literals;
 namespace fs = std::filesystem;
 
+namespace motis {
+int generate(int, char**);
+}
+
 using namespace motis;
 
 int main(int ac, char** av) {
@@ -32,9 +36,10 @@ int main(int ac, char** av) {
         "  --help    print this help message\n"
         "  --version print program version\n\n"
         "Commands:\n"
-        "  config    generate a config file from a list of input files\n"
-        "  import    prepare input data, creates the data directory\n"
-        "  server    starts a web server serving the API\n",
+        "  generate   generate random queries for benchmarking\n"
+        "  config     generate a config file from a list of input files\n"
+        "  import     prepare input data, creates the data directory\n"
+        "  server     starts a web server serving the API\n",
         MOTIS_VERSION);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
@@ -51,6 +56,8 @@ int main(int ac, char** av) {
   --ac;
   ++av;
   switch (cista::hash(cmd)) {
+    case cista::hash("generate"): return generate(ac, av);
+
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
       for (auto i = 0; i != ac; ++i) {
