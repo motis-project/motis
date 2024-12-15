@@ -24,7 +24,9 @@ namespace fs = std::filesystem;
 
 namespace motis {
 int generate(int, char**);
-}
+int batch(int, char**);
+int compare(int, char**);
+}  // namespace motis
 
 using namespace motis;
 
@@ -36,7 +38,9 @@ int main(int ac, char** av) {
         "  --help    print this help message\n"
         "  --version print program version\n\n"
         "Commands:\n"
-        "  generate   generate random queries for benchmarking\n"
+        "  generate   generate random queries and write them to a file\n"
+        "  batch      run queries from a file\n"
+        "  compare    compare results from different batch runs\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n",
@@ -53,10 +57,10 @@ int main(int ac, char** av) {
 
   // Execute command.
   auto const cmd = std::string_view{av[0]};
-  --ac;
-  ++av;
   switch (cista::hash(cmd)) {
     case cista::hash("generate"): return generate(ac, av);
+    case cista::hash("batch"): return batch(ac, av);
+    case cista::hash("compare"): return compare(ac, av);
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
