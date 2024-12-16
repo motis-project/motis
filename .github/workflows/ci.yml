@@ -291,6 +291,18 @@ jobs:
       - name: Run Integration Tests
         run: ${{ matrix.config.emulator }} build/motis-test
 
+
+      # ==== TESTS ====
+      - name: Test Full Dataset
+        run: |
+          wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
+          wget https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
+          ${{ matrix.config.emulator }} ./build/motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+          ${{ matrix.config.emulator }} ./build/motis import
+          ${{ matrix.config.emulator }} ./build/motis generate
+          ${{ matrix.config.emulator }} ./build/motis batch
+          ${{ matrix.config.emulator }} ./build/motis compare -q queries.txt -r responses.txt responses.txt
+
       # ==== DISTRIBUTION ====
       - name: Create Distribution
         if: matrix.config.artifact
@@ -319,17 +331,6 @@ jobs:
           asset_path: ./motis-${{ matrix.config.artifact }}.tar.bz2
           asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
           asset_content_type: application/x-
-
-      # ==== TESTS ====
-      - name: Test Full Dataset
-        run: |
-          wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
-          wget https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
-          ${{ matrix.config.emulator }} ./motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
-          ${{ matrix.config.emulator }} ./motis import
-          ${{ matrix.config.emulator }} ./motis generate
-          ${{ matrix.config.emulator }} ./motis batch
-          ${{ matrix.config.emulator }} ./motis compare -q queries.txt -r responses.txt responses.txt
 
   docker:
     runs-on: ubuntu-20.04
