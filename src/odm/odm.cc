@@ -16,7 +16,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/place.h"
 
-namespace motis::ep {
+namespace motis::odm {
 
 namespace n = nigiri;
 using namespace std::chrono_literals;
@@ -51,7 +51,7 @@ void inflate(n::duration_t& d) {
 }
 
 std::vector<n::routing::offset> get_offsets(
-    routing const& r,
+    ep::routing const& r,
     osr::location const& pos,
     osr::direction const dir,
     std::vector<api::ModeEnum> const& modes,
@@ -59,7 +59,7 @@ std::vector<n::routing::offset> get_offsets(
     std::chrono::seconds const max,
     unsigned const max_matching_distance,
     gbfs::gbfs_data const* gbfs,
-    stats_map_t& stats) {
+    ep::stats_map_t& stats) {
   auto offsets = r.get_offsets(pos, dir, modes, wheelchair, max,
                                max_matching_distance, gbfs, stats);
   for (auto& o : offsets) {
@@ -103,7 +103,7 @@ std::vector<std::pair<n::unixtime_t, n::unixtime_t>> populate_direct(
 }
 
 std::vector<std::pair<n::unixtime_t, n::unixtime_t>> get_direct_events(
-    routing const& r,
+    ep::routing const& r,
     elevators const* e,
     gbfs::gbfs_data const* gbfs,
     api::Place const& from,
@@ -119,7 +119,7 @@ std::vector<std::pair<n::unixtime_t, n::unixtime_t>> get_direct_events(
 }
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
-    routing const& r,
+    ep::routing const& r,
     api::plan_params const& query,
     std::vector<api::ModeEnum> const& pre_transit_modes,
     std::vector<api::ModeEnum> const& post_transit_modes,
@@ -222,4 +222,4 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   return std::vector<nigiri::routing::journey>{};
 }
 
-}  // namespace motis::ep
+}  // namespace motis::odm

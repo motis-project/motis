@@ -18,11 +18,13 @@ struct journey;
 }  // namespace nigiri::routing
 
 namespace motis::ep {
-
 struct routing;
+}
+
+namespace motis::odm {
 
 std::optional<std::vector<nigiri::routing::journey>> odm_routing(
-    routing const& r,
+    ep::routing const& r,
     api::plan_params const& query,
     std::vector<api::ModeEnum> const& pre_transit_modes,
     std::vector<api::ModeEnum> const& post_transit_modes,
@@ -33,4 +35,4 @@ std::optional<std::vector<nigiri::routing::journey>> odm_routing(
     api::Place const& to_p,
     nigiri::routing::query const& start_time);
 
-}  // namespace motis::ep
+}  // namespace motis::odm
