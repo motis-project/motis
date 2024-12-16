@@ -24,7 +24,7 @@ struct capacities {
   std::uint16_t luggage_;
 };
 
-struct prima_req {
+struct prima_state {
   pos from_;
   pos to_;
   stop_times from_stops_;

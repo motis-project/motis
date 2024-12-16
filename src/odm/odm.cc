@@ -1,6 +1,6 @@
 #include "motis/odm/odm.h"
 
-#include "boost/fiber/fss.hpp"
+#include "boost/thread/tss.hpp"
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
@@ -14,6 +14,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
+#include "motis/odm/prima.h"
 #include "motis/place.h"
 
 namespace motis::odm {
@@ -21,17 +22,8 @@ namespace motis::odm {
 namespace n = nigiri;
 using namespace std::chrono_literals;
 
-// TODO or should each thread rather use its thread-specifics while executing
-// the fiber?
-
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::fibers::fiber_specific_ptr<n::routing::search_state> search_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::fibers::fiber_specific_ptr<n::routing::raptor_state> raptor_state;
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::fibers::fiber_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
+static boost::thread_specific_ptr<prima_state> ps;
 
 n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
@@ -118,24 +110,30 @@ std::vector<std::pair<n::unixtime_t, n::unixtime_t>> get_direct_events(
   return populate_direct(start_intvl, duration);
 }
 
-std::optional<std::vector<n::routing::journey>> odm_routing(
-    ep::routing const& r,
-    api::plan_params const& query,
-    std::vector<api::ModeEnum> const& pre_transit_modes,
-    std::vector<api::ModeEnum> const& post_transit_modes,
-    std::vector<api::ModeEnum> const& direct_modes,
-    std::variant<osr::location, tt_location> const& from,
-    std::variant<osr::location, tt_location> const& to,
-    api::Place const& from_p,
-    api::Place const& to_p,
-    n::routing::query const& start_time) {
+void prima_init(prima_state& ps,
+                api::Place const& from,
+                api::Place const& to,
+                std::vector<n::routing::start> const& from_events,
+                std::vector<n::routing::start> const& to_events, )
+
+    std::optional<std::vector<n::routing::journey>> odm_routing(
+        ep::routing const& r,
+        api::plan_params const& query,
+        std::vector<api::ModeEnum> const& pre_transit_modes,
+        std::vector<api::ModeEnum> const& post_transit_modes,
+        std::vector<api::ModeEnum> const& direct_modes,
+        std::variant<osr::location, tt_location> const& from,
+        std::variant<osr::location, tt_location> const& to,
+        api::Place const& from_p,
+        api::Place const& to_p,
+        n::routing::query const& start_time) {
   auto const tt = r.tt_;
   auto const rt = r.rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = r.rt_->e_.get();
   auto const gbfs = r.gbfs_;
-  if (blocked.get() == nullptr && r.w_ != nullptr) {
-    blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
+  if (ep::blocked.get() == nullptr && r.w_ != nullptr) {
+    ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
   }
 
   auto const odm_pre_transit =
@@ -208,6 +206,10 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
                               query.wheelchair_,
                               std::chrono::seconds{query.maxDirectTime_})
           : std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
+
+  if (ps.get() == nullptr) {
+    ps.reset(new prima_state{});
+  }
 
   // TODO blacklist request
 

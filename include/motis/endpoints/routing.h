@@ -4,10 +4,14 @@
 #include <utility>
 #include <vector>
 
+#include "boost/thread/tss.hpp"
+
 #include "osr/location.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/clasz_mask.h"
+#include "nigiri/routing/raptor/raptor_state.h"
+#include "nigiri/routing/raptor_search.h"
 
 #include "motis-api/motis-api.h"
 #include "motis/elevators/elevators.h"
@@ -15,6 +19,15 @@
 #include "motis/match_platforms.h"
 
 namespace motis::ep {
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern boost::thread_specific_ptr<nigiri::routing::search_state> search_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern boost::thread_specific_ptr<nigiri::routing::raptor_state> raptor_state;
+
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
 
