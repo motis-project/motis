@@ -293,6 +293,7 @@ jobs:
 
       # ==== FULL DATASET TEST ====
       - name: Test Full Dataset
+        if: matrix.config.preset != 'linux-debug'
         run: |
           ln -s deps/tiles/profile tiles-profiles
           wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
