@@ -44,13 +44,13 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<n::routing::search_state> search_state;
+boost::thread_specific_ptr<n::routing::search_state> search_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
+boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
+boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 stats_map_t join(auto&&... maps) {
   auto ret = std::map<std::string, std::uint64_t>{};
