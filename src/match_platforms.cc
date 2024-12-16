@@ -101,20 +101,20 @@ double get_match_bonus(Collection&& names,
   auto bonus = 0U;
   auto const size = static_cast<double>(name.size());
   if (has_exact_match(names, ref)) {
-    bonus += 200.0 - size;
+    bonus += std::max(0.0, 200.0 - size);
   }
   if (has_number_match(names, name)) {
-    bonus += 140.0 - size;
+    bonus += std::max(0.0, 140.0 - size);
   }
   if (auto const track = get_track(ref);
       track.has_value() && has_number_match(names, *track)) {
-    bonus += 60.0 - size;
+    bonus += std::max(0.0, 60.0 - size);
   }
   if (has_exact_match(names, name)) {
-    bonus += 15.0 - size;
+    bonus += std::max(0.0, 15.0 - size);
   }
   if (has_contains_match(names, ref)) {
-    bonus += 5.0 - size;
+    bonus += std::max(0.0, 5.0 - size);
   }
   return bonus;
 }
