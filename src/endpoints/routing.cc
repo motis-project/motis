@@ -472,8 +472,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
 
   auto odm_task = boost::fibers::packaged_task<
       std::optional<std::vector<n::routing::journey>>()>{[&]() {
-    return odm_routing(*this, query, pre_transit_modes, post_transit_modes,
-                       direct_modes, from, to, from_p, to_p, start_time);
+    return odm::odm_routing(*this, query, pre_transit_modes, post_transit_modes,
+                            direct_modes, from, to, from_p, to_p, start_time);
   }};
   auto odm_journeys = odm_task.get_future();
   boost::fibers::fiber{std::move(odm_task)}.detach();
