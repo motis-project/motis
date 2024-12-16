@@ -294,6 +294,7 @@ jobs:
       # ==== FULL DATASET TEST ====
       - name: Test Full Dataset
         run: |
+          ln -s deps/tiles/profile tiles-profiles
           wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
           wget https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
           ${{ matrix.config.emulator }} ./build/motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
