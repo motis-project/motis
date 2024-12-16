@@ -142,7 +142,8 @@ int batch(int ac, char** av) {
 
   auto queries = std::vector<api::plan_params>{};
   {
-    auto f = cista::mmap{queries_path.c_str(), cista::mmap::protection::READ};
+    auto f = cista::mmap{queries_path.generic_string().c_str(),
+                         cista::mmap::protection::READ};
     utl::for_each_token(utl::cstr{f.view()}, '\n', [&](utl::cstr s) {
       queries.push_back(api::plan_params{boost::urls::url{s.view()}.params()});
     });
@@ -266,7 +267,7 @@ int compare(int ac, char** av) {
           [&](api::Itinerary const&, api::Itinerary const&) {
             return false;  // always call for equal
           },
-          utl::overloaded(
+          utl::overloaded{
               [&](utl::op op, api::Itinerary const& j) {
                 if (op == utl::op::kAdd) {
                   print_none();
@@ -285,7 +286,7 @@ int compare(int ac, char** av) {
                 std::cout << "\t\t\t";
                 print_params(b);
                 std::cout << "\n";
-              }));
+              }});
       std::cout << "\n\n";
     }
   };
