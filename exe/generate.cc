@@ -86,7 +86,7 @@ int generate(int ac, char** av) {
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("n", po::value(&n)->default_value(n), "number of queries");
+      ("n,n", po::value(&n)->default_value(n), "number of queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
