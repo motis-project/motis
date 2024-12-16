@@ -291,8 +291,7 @@ jobs:
       - name: Run Integration Tests
         run: ${{ matrix.config.emulator }} build/motis-test
 
-
-      # ==== TESTS ====
+      # ==== FULL DATASET TEST ====
       - name: Test Full Dataset
         run: |
           wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
