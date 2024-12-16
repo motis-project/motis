@@ -168,7 +168,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                               cache, blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
-                                  std::chrono::minutes{5})
+                                  std::chrono::minutes{10})
                       : dummy_itinerary(from, to, api::ModeEnum::WALK,
                                         j_leg.dep_time_, j_leg.arr_time_));
             },
