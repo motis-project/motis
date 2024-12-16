@@ -269,6 +269,8 @@ jobs:
       BUILDCACHE_DIRECT_MODE: true
       BUILDCACHE_MAX_CACHE_SIZE: 26843545600
       BUILDCACHE_LUA_PATH: ${{ github.workspace }}/tools
+      UBSAN_OPTIONS: halt_on_error=1:abort_on_error=1
+      ASAN_OPTIONS: alloc_dealloc_mismatch=0
     steps:
       - uses: actions/checkout@v4
 
@@ -290,6 +292,19 @@ jobs:
       # ==== TESTS ====
       - name: Run Integration Tests
         run: ${{ matrix.config.emulator }} build/motis-test
+
+      # ==== FULL DATASET TEST ====
+      - name: Test Full Dataset
+        if: matrix.config.preset != 'linux-debug'
+        run: |
+          ln -s deps/tiles/profile tiles-profiles
+          wget https://github.com/motis-project/test-data/raw/aachen/aachen.osm.pbf
+          wget https://github.com/motis-project/test-data/raw/aachen/AVV_GTFS_Masten_mit_SPNV.zip
+          ${{ matrix.config.emulator }} ./build/motis config aachen.osm.pbf AVV_GTFS_Masten_mit_SPNV.zip
+          ${{ matrix.config.emulator }} ./build/motis import
+          ${{ matrix.config.emulator }} ./build/motis generate -n 10
+          ${{ matrix.config.emulator }} ./build/motis batch
+          ${{ matrix.config.emulator }} ./build/motis compare -q queries.txt -r responses.txt responses.txt
 
       # ==== DISTRIBUTION ====
       - name: Create Distribution
@@ -318,7 +333,7 @@ jobs:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./motis-${{ matrix.config.artifact }}.tar.bz2
           asset_name: motis-${{ matrix.config.artifact }}.tar.bz2
-          asset_content_type: application/x-tar
+          asset_content_type: application/x-
 
   docker:
     runs-on: ubuntu-20.04
