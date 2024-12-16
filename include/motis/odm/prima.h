@@ -27,8 +27,8 @@ struct capacities {
 struct prima_state {
   pos from_;
   pos to_;
-  stop_times from_stops_;
-  stop_times to_stops_;
+  std::vector<stop_times> from_stops_;
+  std::vector<stop_times> to_stops_;
   std::vector<unixtime_t> direct_;
   bool start_fixed_;
   capacities cap_;

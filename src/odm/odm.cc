@@ -23,7 +23,7 @@ namespace n = nigiri;
 using namespace std::chrono_literals;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<prima_state> ps;
+static boost::thread_specific_ptr<prima_state> odm_state;
 
 n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
@@ -110,23 +110,56 @@ std::vector<std::pair<n::unixtime_t, n::unixtime_t>> get_direct_events(
   return populate_direct(start_intvl, duration);
 }
 
-void prima_init(prima_state& ps,
-                api::Place const& from,
-                api::Place const& to,
-                std::vector<n::routing::start> const& from_events,
-                std::vector<n::routing::start> const& to_events, )
+void prima_init(
+    n::timetable const& tt,
+    prima_state& ps,
+    api::Place const& from,
+    api::Place const& to,
+    std::vector<n::routing::start> const& from_events,
+    std::vector<n::routing::start> const& to_events,
+    std::vector<std::pair<n::unixtime_t, n::unixtime_t>> const& direct_events,
+    bool start_fixed) {
+  ps.from_ = pos{from.lat_, from.lon_};
+  ps.to_ = pos{to.lat_, to.lon_};
 
-    std::optional<std::vector<n::routing::journey>> odm_routing(
-        ep::routing const& r,
-        api::plan_params const& query,
-        std::vector<api::ModeEnum> const& pre_transit_modes,
-        std::vector<api::ModeEnum> const& post_transit_modes,
-        std::vector<api::ModeEnum> const& direct_modes,
-        std::variant<osr::location, tt_location> const& from,
-        std::variant<osr::location, tt_location> const& to,
-        api::Place const& from_p,
-        api::Place const& to_p,
-        n::routing::query const& start_time) {
+  auto const stop_times_linear = [&](auto const& events, auto& st) {
+    utl::equal_ranges_linear(
+        events, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
+        [&](auto&& from_it, auto&& to_it) {
+          st.emplace_back(stop_times{
+              .pos_ = {tt.locations_.coordinates_[from_it->stop_].lat_,
+                       tt.locations_.coordinates_[from_it->stop_].lng_},
+              .times_ = std::vector<unixtime_t>{}});
+          for (auto const& s : n::it_range{from_it, to_it}) {
+            st.back().times_.emplace_back(s.time_at_stop_);
+          }
+        });
+  };
+  ps.from_stops_.clear();
+  stop_times_linear(from_events, ps.from_stops_);
+  ps.to_stops_.clear();
+  stop_times_linear(to_events, ps.to_stops_);
+
+  ps.direct_.clear();
+  for (auto const& p : direct_events) {
+    ps.direct_.emplace_back(p.first);
+  }
+
+  ps.start_fixed_ = start_fixed;
+  ps.cap_ =
+}
+
+std::optional<std::vector<n::routing::journey>> odm_routing(
+    ep::routing const& r,
+    api::plan_params const& query,
+    std::vector<api::ModeEnum> const& pre_transit_modes,
+    std::vector<api::ModeEnum> const& post_transit_modes,
+    std::vector<api::ModeEnum> const& direct_modes,
+    std::variant<osr::location, tt_location> const& from,
+    std::variant<osr::location, tt_location> const& to,
+    api::Place const& from_p,
+    api::Place const& to_p,
+    n::routing::query const& start_time) {
   auto const tt = r.tt_;
   auto const rt = r.rt_;
   auto const rtt = rt->rtt_.get();
@@ -207,9 +240,12 @@ void prima_init(prima_state& ps,
                               std::chrono::seconds{query.maxDirectTime_})
           : std::vector<std::pair<n::unixtime_t, n::unixtime_t>>{};
 
-  if (ps.get() == nullptr) {
-    ps.reset(new prima_state{});
+  if (odm_state.get() == nullptr) {
+    odm_state.reset(new prima_state{});
   }
+  bool start_fixed = true;
+  prima_init(*tt, *odm_state.get(), from_p, to_p, from_events, to_events,
+             direct_events, start_fixed);
 
   // TODO blacklist request
 
