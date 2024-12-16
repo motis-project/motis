@@ -64,7 +64,7 @@ int main(int ac, char** av) {
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
-      for (auto i = 0; i != ac; ++i) {
+      for (auto i = 1; i != ac; ++i) {
         paths.push_back(std::string{av[i]});
       }
       if (paths.empty() || paths.front() == "--help") {
