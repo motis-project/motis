@@ -24,6 +24,14 @@ inline boost::json::value json(stop_times const& s) {
   return {{"coordinates", json(s.pos_)}, {"times", json(s.times_)}};
 }
 
+inline boost::json::array json(std::vector<stop_times> const& v) {
+  auto a = boost::json::array{};
+  for (auto const& s : v) {
+    a.emplace_back(json(s));
+  }
+  return a;
+}
+
 inline boost::json::value json(capacities const& c) {
   return {{"wheelchairs", c.wheelchairs_},
           {"bikes", c.bikes_},
@@ -31,7 +39,7 @@ inline boost::json::value json(capacities const& c) {
           {"luggage", c.luggage_}};
 }
 
-inline boost::json::value json(prima_req const& p) {
+inline boost::json::value json(prima_state const& p) {
   return {{"start", json(p.from_)},
           {"target", json(p.to_)},
           {"startBusStops", json(p.from_stops_)},
@@ -41,7 +49,7 @@ inline boost::json::value json(prima_req const& p) {
           {"capacities", json(p.cap_)}};
 }
 
-std::string string(prima_req const& p) {
+std::string string(prima_state const& p) {
   return boost::json::serialize(json(p));
 }
 
