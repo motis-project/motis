@@ -14,6 +14,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
+#include "motis/http_req.h"
 #include "motis/odm/json.h"
 #include "motis/odm/prima.h"
 #include "motis/place.h"
@@ -25,6 +26,10 @@ using namespace std::chrono_literals;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima_state> odm_state;
+
+static auto const kPrimaUrl = boost::urls::url{""};
+static auto const kPrimaHeaders = std::map<std::string, std::string>{
+    {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
 n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
@@ -257,6 +262,8 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   auto const blacklist_payload = json_string(*odm_state.get());
 
   // TODO blacklist request
+  auto bl_response =
+      http_POST(kPrimaUrl, kPrimaHeaders, blacklist_payload, 10s);
 
   // TODO remove blacklisted offsets
 

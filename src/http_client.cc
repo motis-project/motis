@@ -69,12 +69,15 @@ struct http_client::request {
   template <typename Executor>
   request(boost::urls::url&& url,
           std::map<std::string, std::string>&& headers,
+          request_method method,
           Executor const& executor)
       : url_{std::move(url)},
+        method_{method},
         headers_{std::move(headers)},
         response_channel_{executor} {}
 
   boost::urls::url url_{};
+  request_method method_;
   std::map<std::string, std::string> headers_{};
   asio::experimental::channel<void(boost::system::error_code,
                                    http::response<http::dynamic_body>)>
@@ -161,6 +164,7 @@ struct http_client::connection
     try {
       auto const send_request =
           [&](std::shared_ptr<request> request) -> asio::awaitable<void> {
+        switch (req.method_) { case request_method::GET: }
         auto req = http::request<http::string_body>{
             http::verb::get, request->url_.encoded_target(), 11};
         req.set(http::field::host, request->url_.host());
@@ -359,5 +363,10 @@ void http_client::set_proxy(boost::urls::url const& url) {
   proxy_.host_ = url.host();
   proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
 }
+
+asio::awaitable<http_response> http_client::post(
+    boost::urls::url,
+    std::map<std::string, std::string> const& headers,
+    std::string_view body) {}
 
 }  // namespace motis
