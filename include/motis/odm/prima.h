@@ -18,10 +18,10 @@ struct stop_times {
 };
 
 struct capacities {
-  std::uint16_t wheelchairs_;
-  std::uint16_t bikes_;
-  std::uint16_t passengers_;
-  std::uint16_t luggage_;
+  std::uint8_t wheelchairs_;
+  std::uint8_t bikes_;
+  std::uint8_t passengers_;
+  std::uint8_t luggage_;
 };
 
 struct prima_state {
