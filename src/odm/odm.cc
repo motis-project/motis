@@ -161,6 +161,8 @@ void prima_init(
       .luggage_ = 0U};
 }
 
+void prima_update(prima_state& ps, std::string_view s) {}
+
 std::optional<std::vector<n::routing::journey>> odm_routing(
     ep::routing const& r,
     api::plan_params const& query,
@@ -256,15 +258,17 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
     odm_state.reset(new prima_state{});
   }
   auto const start_fixed = true;
-  prima_init(*odm_state.get(), *tt, from_p, to_p, from_events, to_events,
+  prima_init(*odm_state, *tt, from_p, to_p, from_events, to_events,
              direct_events, start_fixed, query);
 
-  auto const blacklist_payload = json_string(*odm_state.get());
-
-  // TODO blacklist request
-  auto bl_response =
-      http_POST(kPrimaUrl, kPrimaHeaders, blacklist_payload, 10s);
-
+  try {
+    auto const bl_response = co_await http_POST(kPrimaUrl, kPrimaHeaders,
+                                                json_string(*odm_state), 10s);
+    prima_update(*odm_state, get_http_body(bl_response));
+  } catch (std::exception const& e) {
+    std::cout << "prima blacklisting failed: " << e.what();
+    co_return std::nullopt;
+  }
   // TODO remove blacklisted offsets
 
   // TODO start fibers to do the ODM routing

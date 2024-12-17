@@ -25,13 +25,16 @@ namespace asio = boost::asio;
 namespace ssl = asio::ssl;
 
 template <typename Stream>
-asio::awaitable<http_response> req(Stream&&,
-                                   boost::urls::url const&,
-                                   std::map<std::string, std::string> const&);
+asio::awaitable<http_response> req(
+    Stream&&,
+    boost::urls::url const&,
+    std::map<std::string, std::string> const&,
+    std::optional<std::string> const& body = std::nullopt);
 
 asio::awaitable<http_response> req_no_tls(
     boost::urls::url const& url,
     std::map<std::string, std::string> const& headers,
+    std::optional<std::string> const& body,
     std::chrono::seconds const timeout) {
   auto executor = co_await asio::this_coro::executor;
   auto resolver = asio::ip::tcp::resolver{executor};
@@ -43,12 +46,13 @@ asio::awaitable<http_response> req_no_tls(
   stream.expires_after(timeout);
 
   co_await stream.async_connect(results);
-  co_return co_await req(std::move(stream), url, headers);
+  co_return co_await req(std::move(stream), url, headers, body);
 }
 
 asio::awaitable<http_response> req_tls(
     boost::urls::url const& url,
     std::map<std::string, std::string> const& headers,
+    std::optional<std::string> const& body,
     std::chrono::seconds const timeout) {
   auto ssl_ctx = ssl::context{ssl::context::tlsv12_client};
   ssl_ctx.set_default_verify_paths();
@@ -75,16 +79,19 @@ asio::awaitable<http_response> req_tls(
       url.host(), url.has_port() ? url.port() : "443");
   co_await beast::get_lowest_layer(stream).async_connect(results);
   co_await stream.async_handshake(ssl::stream_base::client);
-  co_return co_await req(std::move(stream), url, headers);
+  co_return co_await req(std::move(stream), url, headers, body);
 }
 
 template <typename Stream>
 asio::awaitable<http_response> req(
     Stream&& stream,
     boost::urls::url const& url,
-    std::map<std::string, std::string> const& headers) {
-  auto req = http::request<http::string_body>{http::verb::get,
-                                              url.encoded_target(), 11};
+    std::map<std::string, std::string> const& headers,
+    std::optional<std::string> const& body) {
+  auto req = body ? http::request<http::string_body>{http::verb::post,
+                                                     body.value(), 11}
+                  : http::request<http::string_body>{http::verb::get,
+                                                     url.encoded_target(), 11};
   req.set(http::field::host, url.host());
   req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
   req.set(http::field::accept_encoding, "gzip");
@@ -113,8 +120,8 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
   while (n_redirects < 3U) {
     auto const res =
         co_await (next_url.scheme_id() == boost::urls::scheme::https
-                      ? req_tls(next_url, headers, timeout)
-                      : req_no_tls(next_url, headers, timeout));
+                      ? req_tls(next_url, headers, std::nullopt, timeout)
+                      : req_no_tls(next_url, headers, std::nullopt, timeout));
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};
@@ -130,15 +137,15 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
 asio::awaitable<http::response<http::dynamic_body>> http_POST(
     boost::urls::url url,
     std::map<std::string, std::string> const& headers,
-    std::string_view body,
+    std::string const& body,
     std::chrono::seconds timeout) {
   auto n_redirects = 0U;
   auto next_url = url;
   while (n_redirects < 3U) {
     auto const res =
         co_await (next_url.scheme_id() == boost::urls::scheme::https
-                      ? req_tls(next_url, headers, timeout)
-                      : req_no_tls(next_url, headers, timeout));
+                      ? req_tls(next_url, headers, body, timeout)
+                      : req_no_tls(next_url, headers, body, timeout));
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};
