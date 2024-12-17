@@ -161,7 +161,10 @@ void prima_init(
       .luggage_ = 0U};
 }
 
-void prima_update(prima_state& ps, std::string_view s) {}
+void prima_update(prima_state& ps, std::string_view s) {
+  error_code ec;
+  auto const jv = boost::json::parse(s);
+}
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
     ep::routing const& r,
@@ -262,13 +265,15 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
              direct_events, start_fixed, query);
 
   try {
-    auto const bl_response = co_await http_POST(kPrimaUrl, kPrimaHeaders,
-                                                json_string(*odm_state), 10s);
+    // TODO the fiber should yield until network response arrives?
+    auto const bl_response =
+        http_POST(kPrimaUrl, kPrimaHeaders, json_string(*odm_state), 10s);
     prima_update(*odm_state, get_http_body(bl_response));
   } catch (std::exception const& e) {
     std::cout << "prima blacklisting failed: " << e.what();
-    co_return std::nullopt;
+    return std::nullopt;
   }
+
   // TODO remove blacklisted offsets
 
   // TODO start fibers to do the ODM routing
