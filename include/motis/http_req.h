@@ -22,7 +22,7 @@ boost::asio::awaitable<http_response> http_GET(
 boost::asio::awaitable<http_response> http_POST(
     boost::urls::url,
     std::map<std::string, std::string> const& headers,
-    std::string_view body,
+    std::string const& body,
     std::chrono::seconds timeout);
 
 std::string get_http_body(http_response const&);
