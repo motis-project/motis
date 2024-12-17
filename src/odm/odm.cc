@@ -14,6 +14,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
+#include "motis/odm/json.h"
 #include "motis/odm/prima.h"
 #include "motis/place.h"
 
@@ -111,14 +112,15 @@ std::vector<std::pair<n::unixtime_t, n::unixtime_t>> get_direct_events(
 }
 
 void prima_init(
-    n::timetable const& tt,
     prima_state& ps,
+    n::timetable const& tt,
     api::Place const& from,
     api::Place const& to,
     std::vector<n::routing::start> const& from_events,
     std::vector<n::routing::start> const& to_events,
     std::vector<std::pair<n::unixtime_t, n::unixtime_t>> const& direct_events,
-    bool start_fixed) {
+    bool start_fixed,
+    api::plan_params const& query) {
   ps.from_ = pos{from.lat_, from.lon_};
   ps.to_ = pos{to.lat_, to.lon_};
 
@@ -146,7 +148,12 @@ void prima_init(
   }
 
   ps.start_fixed_ = start_fixed;
-  ps.cap_ =
+  ps.cap_ = {
+      .wheelchairs_ = static_cast<std::uint8_t>(query.wheelchair_ ? 1U : 0U),
+      .bikes_ =
+          static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1U : 0U),
+      .passengers_ = 1U,
+      .luggage_ = 0U};
 }
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
@@ -243,9 +250,11 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   if (odm_state.get() == nullptr) {
     odm_state.reset(new prima_state{});
   }
-  bool start_fixed = true;
-  prima_init(*tt, *odm_state.get(), from_p, to_p, from_events, to_events,
-             direct_events, start_fixed);
+  auto const start_fixed = true;
+  prima_init(*odm_state.get(), *tt, from_p, to_p, from_events, to_events,
+             direct_events, start_fixed, query);
+
+  auto const blacklist_payload = json_string(*odm_state.get());
 
   // TODO blacklist request
 
