@@ -20,6 +20,8 @@ namespace motis {
 constexpr auto const kUnlimitedHttpPipelining =
     std::numeric_limits<std::size_t>::max();
 
+enum request_method { GET, POST };
+
 struct http_client {
   enum class error { success = 0, too_many_redirects, request_failed };
 

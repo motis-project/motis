@@ -127,6 +127,30 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
                   fmt::streamed(url), fmt::streamed(next_url));
 }
 
+asio::awaitable<http::response<http::dynamic_body>> http_POST(
+    boost::urls::url url,
+    std::map<std::string, std::string> const& headers,
+    std::string_view body,
+    std::chrono::seconds timeout) {
+  auto n_redirects = 0U;
+  auto next_url = url;
+  while (n_redirects < 3U) {
+    auto const res =
+        co_await (next_url.scheme_id() == boost::urls::scheme::https
+                      ? req_tls(next_url, headers, timeout)
+                      : req_no_tls(next_url, headers, timeout));
+    auto const code = res.base().result_int();
+    if (code >= 300 && code < 400) {
+      next_url = boost::urls::url{res.base()["Location"]};
+      continue;
+    } else {
+      co_return res;
+    }
+  }
+  throw utl::fail(R"(too many redirects: "{}", latest="{}")",
+                  fmt::streamed(url), fmt::streamed(next_url));
+}
+
 std::string get_http_body(http_response const& res) {
   auto body = beast::buffers_to_string(res.body().data());
   if (res[http::field::content_encoding] == "gzip") {
