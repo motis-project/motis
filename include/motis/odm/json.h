@@ -8,6 +8,8 @@
 
 namespace motis::odm {
 
-std::string json_string(prima_state const&);
+std::string serialize(prima_state const&);
+
+void update(prima_state&, std::string_view);
 
 }  // namespace motis::odm

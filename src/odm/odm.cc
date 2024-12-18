@@ -161,11 +161,6 @@ void prima_init(
       .luggage_ = 0U};
 }
 
-void prima_update(prima_state& ps, std::string_view s) {
-  error_code ec;
-  auto const jv = boost::json::parse(s);
-}
-
 std::optional<std::vector<n::routing::journey>> odm_routing(
     ep::routing const& r,
     api::plan_params const& query,
@@ -267,8 +262,8 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   try {
     // TODO the fiber should yield until network response arrives?
     auto const bl_response =
-        http_POST(kPrimaUrl, kPrimaHeaders, json_string(*odm_state), 10s);
-    prima_update(*odm_state, get_http_body(bl_response));
+        http_POST(kPrimaUrl, kPrimaHeaders, serialize(*odm_state), 10s);
+    // update(*odm_state, get_http_body(bl_response));
   } catch (std::exception const& e) {
     std::cout << "prima blacklisting failed: " << e.what();
     return std::nullopt;
