@@ -3,18 +3,36 @@
 #include <chrono>
 #include <vector>
 
+#include "nigiri/routing/start_times.h"
+
+#include "motis-api/motis-api.h"
+
+namespace motis::ep {
+struct routing;
+}  // namespace motis::ep
+
 namespace motis::odm {
 
+namespace n = nigiri;
 using unixtime_t = std::chrono::sys_time<std::chrono::minutes>;
+
+enum fixed { kArr, kDep };
 
 struct pos {
   double lat_;
   double lon_;
 };
 
-struct stop_times {
+struct pt_ride {
+  n::location_idx_t loc_;
   pos pos_;
-  std::vector<unixtime_t> times_;
+  unixtime_t dep_;
+  unixtime_t arr_;
+};
+
+struct direct_ride {
+  unixtime_t dep_;
+  unixtime_t arr_;
 };
 
 struct capacities {
@@ -27,10 +45,10 @@ struct capacities {
 struct prima_state {
   pos from_;
   pos to_;
-  std::vector<stop_times> from_stops_;
-  std::vector<stop_times> to_stops_;
-  std::vector<unixtime_t> direct_;
-  bool start_fixed_;
+  std::vector<pt_ride> from_rides_;
+  std::vector<pt_ride> to_rides_;
+  std::vector<direct_ride> direct_rides_;
+  fixed fixed_;
   capacities cap_;
 };
 
