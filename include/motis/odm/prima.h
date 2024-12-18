@@ -22,12 +22,6 @@ struct pos {
   double lon_;
 };
 
-struct pt_ride {
-  n::location_idx_t loc_;
-  n::unixtime_t dep_;
-  n::unixtime_t arr_;
-};
-
 struct direct_ride {
   n::unixtime_t dep_;
   n::unixtime_t arr_;
@@ -43,8 +37,8 @@ struct capacities {
 struct prima_state {
   pos from_;
   pos to_;
-  std::vector<pt_ride> from_rides_;
-  std::vector<pt_ride> to_rides_;
+  std::vector<n::routing::start> from_rides_;
+  std::vector<n::routing::start> to_rides_;
   std::vector<direct_ride> direct_rides_;
   fixed fixed_;
   capacities cap_;

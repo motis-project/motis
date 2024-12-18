@@ -108,7 +108,7 @@ void init(prima_state& ps,
       .luggage_ = 0U};
 }
 
-void init_pt(std::vector<pt_ride>& rides,
+void init_pt(std::vector<n::routing::start>& rides,
              ep::routing const& r,
              osr::location const& l,
              osr::direction dir,
@@ -120,22 +120,26 @@ void init_pt(std::vector<pt_ride>& rides,
              n::interval<n::unixtime_t> const& intvl,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode) {
-  auto const fwd = dir == osr::direction::kForward;
+  static auto const kNoTdOffsets =
+      hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
 
   auto const offsets =
       get_offsets(r, l, dir, {api::ModeEnum::CAR}, query.wheelchair_,
                   std::chrono::seconds{query.maxPreTransitTime_},
                   query.maxMatchingDistance_, gbfs, odm_stats);
 
-  auto const events = get_events(
-      fwd ? n::direction::kForward : n::direction::kBackward, tt, rtt, intvl,
-      offsets, n::routing::kMaxTravelTime, location_match_mode,
-      start_time.prf_idx_, start_time.transfer_time_settings_);
+  rides.reserve(offsets.size() * 2);
 
-  for (auto const& e : events) {
-    rides.emplace_back(e.stop_, fwd ? e.time_at_start_ : e.time_at_stop_,
-                       fwd ? e.time_at_stop_ : e.time_at_start_);
-  }
+  n::routing::get_starts(
+      dir == osr::direction::kForward ? n::direction::kForward
+                                      : n::direction::kBackward,
+      tt, rtt, intvl, offsets, kNoTdOffsets, n::routing::kMaxTravelTime,
+      location_match_mode, false, rides, true, start_time.prf_idx_,
+      start_time.transfer_time_settings_);
+  utl::sort(rides, [](auto&& a, auto&& b) {
+    return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+           std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+  });
 }
 
 void init_direct(std::vector<direct_ride>& direct_rides,
