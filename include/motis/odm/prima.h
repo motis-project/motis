@@ -14,7 +14,6 @@ struct routing;
 namespace motis::odm {
 
 namespace n = nigiri;
-using unixtime_t = std::chrono::sys_time<std::chrono::minutes>;
 
 enum fixed { kArr, kDep };
 
@@ -25,14 +24,13 @@ struct pos {
 
 struct pt_ride {
   n::location_idx_t loc_;
-  pos pos_;
-  unixtime_t dep_;
-  unixtime_t arr_;
+  n::unixtime_t dep_;
+  n::unixtime_t arr_;
 };
 
 struct direct_ride {
-  unixtime_t dep_;
-  unixtime_t arr_;
+  n::unixtime_t dep_;
+  n::unixtime_t arr_;
 };
 
 struct capacities {
