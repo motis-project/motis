@@ -14,6 +14,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/endpoints/routing.h"
+#include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/odm/json.h"
 #include "motis/odm/prima.h"
@@ -56,10 +57,11 @@ std::vector<n::routing::offset> get_offsets(
     bool const wheelchair,
     std::chrono::seconds const max,
     unsigned const max_matching_distance,
-    gbfs::gbfs_data const* gbfs,
+    gbfs::gbfs_routing_data& gbfs,
     ep::stats_map_t& stats) {
-  auto offsets = r.get_offsets(pos, dir, modes, wheelchair, max,
-                               max_matching_distance, gbfs, stats);
+  auto offsets =
+      r.get_offsets(pos, dir, modes, std::nullopt, std::nullopt, std::nullopt,
+                    wheelchair, max, max_matching_distance, gbfs, stats);
   for (auto& o : offsets) {
     inflate(o.duration_);
   }
@@ -94,14 +96,14 @@ void init(prima_state& ps,
           api::Place const& from,
           api::Place const& to,
           api::plan_params const& query) {
-  ps.from_ = pos{from.lat_, from.lon_};
-  ps.to_ = pos{to.lat_, to.lon_};
-  ps.from_rides_.clear();
-  ps.to_rides_.clear();
-  ps.direct_rides_.clear();
+  ps.from_ = geo::latlng{from.lat_, from.lon_};
+  ps.to_ = geo::latlng{to.lat_, to.lon_};
   ps.fixed_ = query.arriveBy_ ? kArr : kDep;
   ps.cap_ = {
-      .wheelchairs_ = static_cast<std::uint8_t>(query.wheelchair_ ? 1U : 0U),
+      .wheelchairs_ = static_cast<std::uint8_t>(
+          query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
+              ? 1U
+              : 0U),
       .bikes_ =
           static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1U : 0U),
       .passengers_ = 1U,
@@ -113,7 +115,7 @@ void init_pt(std::vector<n::routing::start>& rides,
              osr::location const& l,
              osr::direction dir,
              api::plan_params const& query,
-             gbfs::gbfs_data const* gbfs,
+             gbfs::gbfs_routing_data& gbfs,
              motis::ep::stats_map_t& odm_stats,
              n::timetable const& tt,
              n::rt_timetable const* rtt,
@@ -123,11 +125,13 @@ void init_pt(std::vector<n::routing::start>& rides,
   static auto const kNoTdOffsets =
       hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
 
-  auto const offsets =
-      get_offsets(r, l, dir, {api::ModeEnum::CAR}, query.wheelchair_,
-                  std::chrono::seconds{query.maxPreTransitTime_},
-                  query.maxMatchingDistance_, gbfs, odm_stats);
+  auto const offsets = get_offsets(
+      r, l, dir, {api::ModeEnum::CAR},
+      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
+      std::chrono::seconds{query.maxPreTransitTime_},
+      query.maxMatchingDistance_, gbfs, odm_stats);
 
+  rides.clear();
   rides.reserve(offsets.size() * 2);
 
   n::routing::get_starts(
@@ -145,15 +149,18 @@ void init_pt(std::vector<n::routing::start>& rides,
 void init_direct(std::vector<direct_ride>& direct_rides,
                  ep::routing const& r,
                  elevators const* e,
-                 gbfs::gbfs_data const* gbfs,
+                 gbfs::gbfs_routing_data& gbfs,
                  api::Place const& from_p,
                  api::Place const& to_p,
                  n::interval<n::unixtime_t> const intvl,
                  api::plan_params const& query) {
   auto [direct, duration] = r.route_direct(
-      e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, intvl.from_,
-      query.wheelchair_, std::chrono::seconds{query.maxDirectTime_});
+      e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
+      std::nullopt, intvl.from_,
+      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
+      std::chrono::seconds{query.maxDirectTime_});
   inflate(duration);
+  direct_rides.clear();
   if (query.arriveBy_) {
     for (auto arr =
              std::chrono::floor<std::chrono::hours>(intvl.to_ - duration) +
@@ -187,7 +194,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   auto const rt = r.rt_;
   auto const rtt = rt->rtt_.get();
   auto const e = r.rt_->e_.get();
-  auto const gbfs = r.gbfs_;
+  auto gbfs_rd = gbfs::gbfs_routing_data{r.w_, r.l_, r.gbfs_};
   if (ep::blocked.get() == nullptr && r.w_ != nullptr) {
     ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
   }
@@ -227,7 +234,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
 
   if (odm_pre_transit && holds_alternative<osr::location>(from)) {
     init_pt(odm_state->from_rides_, r, std::get<osr::location>(from),
-            osr::direction::kForward, query, gbfs.get(), odm_stats, *tt, rtt,
+            osr::direction::kForward, query, gbfs_rd, odm_stats, *tt, rtt,
             from_intvl, start_time,
             query.arriveBy_ ? start_time.dest_match_mode_
                             : start_time.start_match_mode_);
@@ -235,21 +242,21 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
 
   if (odm_post_transit && holds_alternative<osr::location>(to)) {
     init_pt(odm_state->to_rides_, r, std::get<osr::location>(to),
-            osr::direction::kBackward, query, gbfs.get(), odm_stats, *tt, rtt,
+            osr::direction::kBackward, query, gbfs_rd, odm_stats, *tt, rtt,
             to_intvl, start_time,
             query.arriveBy_ ? start_time.start_match_mode_
                             : start_time.dest_match_mode_);
   }
 
   if (odm_direct && r.w_ && r.l_) {
-    init_direct(odm_state->direct_rides_, r, e, gbfs.get(), from_p, to_p,
-                to_intvl, query);
+    init_direct(odm_state->direct_rides_, r, e, gbfs_rd, from_p, to_p, to_intvl,
+                query);
   }
 
   try {
     // TODO the fiber should yield until network response arrives?
     auto const bl_response =
-        http_POST(kPrimaUrl, kPrimaHeaders, serialize(*odm_state), 10s);
+        http_POST(kPrimaUrl, kPrimaHeaders, serialize(*odm_state, *tt), 10s);
     // update(*odm_state, get_http_body(bl_response));
   } catch (std::exception const& e) {
     std::cout << "prima blacklisting failed: " << e.what();
