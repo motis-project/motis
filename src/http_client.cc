@@ -366,12 +366,6 @@ asio::awaitable<http_response> http_client::get(
   co_return response;
 }
 
-void http_client::set_proxy(boost::urls::url const& url) {
-  proxy_.ssl_ = url.scheme_id() == boost::urls::scheme::https;
-  proxy_.host_ = url.host();
-  proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
-}
-
 asio::awaitable<http_response> http_client::post(
     boost::urls::url url,
     std::map<std::string, std::string> headers,
@@ -394,6 +388,12 @@ asio::awaitable<http_response> http_client::post(
       boost::system::error_code{}, req);
   auto response = co_await req->response_channel_.async_receive();
   co_return response;
+}
+
+void http_client::set_proxy(boost::urls::url const& url) {
+  proxy_.ssl_ = url.scheme_id() == boost::urls::scheme::https;
+  proxy_.host_ = url.host();
+  proxy_.port_ = url.has_port() ? url.port() : (proxy_.ssl_ ? "443" : "80");
 }
 
 }  // namespace motis
