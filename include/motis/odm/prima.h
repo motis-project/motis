@@ -3,6 +3,8 @@
 #include <chrono>
 #include <vector>
 
+#include "geo/latlng.h"
+
 #include "nigiri/routing/start_times.h"
 
 #include "motis-api/motis-api.h"
@@ -17,11 +19,6 @@ namespace n = nigiri;
 
 enum fixed { kArr, kDep };
 
-struct pos {
-  double lat_;
-  double lon_;
-};
-
 struct direct_ride {
   n::unixtime_t dep_;
   n::unixtime_t arr_;
@@ -35,13 +32,17 @@ struct capacities {
 };
 
 struct prima_state {
-  pos from_;
-  pos to_;
+  geo::latlng from_;
+  geo::latlng to_;
   std::vector<n::routing::start> from_rides_;
   std::vector<n::routing::start> to_rides_;
   std::vector<direct_ride> direct_rides_;
   fixed fixed_;
   capacities cap_;
+
+  std::vector<n::routing::start> prev_from_rides_;
+  std::vector<n::routing::start> prev_to_rides_;
+  std::vector<direct_ride> prev_direct_rides_;
 };
 
 }  // namespace motis::odm

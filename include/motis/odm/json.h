@@ -8,7 +8,7 @@
 
 namespace motis::odm {
 
-std::string serialize(prima_state const&);
+std::string serialize(prima_state const&, n::timetable const&);
 
 void update(prima_state&, std::string_view);
 
