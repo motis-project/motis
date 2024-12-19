@@ -34,8 +34,9 @@ boost::json::array json(std::vector<n::routing::start> const& v,
         a.emplace_back(boost::json::value{
             {"coordinates", json(tt.locations_.coordinates_[from_it->stop_])},
             {"times", boost::json::array{}}});
+        auto& times = a.back().at("times").as_array();
         for (auto const& s : n::it_range{from_it, to_it}) {
-          a.back().at("times").as_array().emplace_back(json(s));
+          times.emplace_back(json(s));
         }
       });
   return a;
@@ -72,11 +73,6 @@ std::string serialize(prima_state const& p, n::timetable const& tt) {
 
 void update(prima_state& ps, std::string_view json) {
 
-  auto const get_pos = [](auto const& v) {
-    return geo::latlng{.lat_ = v.at("lat").as_double(),
-                       .lng_ = v.at("lng").as_double()};
-  };
-
   auto const get_time = [](auto const& v) {
     auto ss = std::stringstream{v.as_string().data()};
     auto time = n::unixtime_t{};
@@ -84,12 +80,15 @@ void update(prima_state& ps, std::string_view json) {
     return time;
   };
 
-  auto const update_pt_rides = [&](auto& rides, auto const& v) {
-    for (auto const& x : v.as_array()) {
-      rides.emplace_back(get_pos(x.at("coordinates")),
-                         std::vector<n::unixtime_t>{});
-      for (auto const& y : x.at("times").as_array()) {
-        stops.back().times_.emplace_back(get_time(y));
+  auto const update_pt_rides = [](auto& rides, auto& prev_rides,
+                                  auto const& v) {
+    std::swap(rides, prev_rides);
+    rides.clear();
+    auto prev_it = std::begin(prev_rides);
+    for (auto const& stop : v) {
+      for (auto const& time : stop.at("times").as_array()) {
+
+        ++prev_it;
       }
     }
   };
@@ -97,10 +96,13 @@ void update(prima_state& ps, std::string_view json) {
   try {
     auto const& o = boost::json::parse(json).as_object();
     if (o.contains("startBusStops")) {
-      update_pt_rides(ps.from_rides_, o.at("startBusStops"));
+
+      update_pt_rides(ps.from_rides_, ps.prev_from_rides_,
+                      o.at("startBusStops").as_array());
     }
     if (o.contains("targetBusStops")) {
-      update_pt_rides(ps.to_rides_, o.at("targetBusStops"));
+      update_pt_rides(ps.to_rides_, ps.prev_to_rides_,
+                      o.at("targetBusStops").as_array());
     }
     if (o.contains("times")) {
       ps.direct_rides_.clear();
