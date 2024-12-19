@@ -1,5 +1,6 @@
 #include "motis/odm/odm.h"
 
+#include "boost/asio/co_spawn.hpp"
 #include "boost/thread/tss.hpp"
 
 #include "nigiri/routing/journey.h"
@@ -254,16 +255,19 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   }
 
   try {
-    // TODO the fiber should yield until network response arrives?
-    auto const bl_response =
-        http_POST(kPrimaUrl, kPrimaHeaders, serialize(*odm_state, *tt), 10s);
-    // update(*odm_state, get_http_body(bl_response));
+    // TODO the fiber/thread should yield until network response arrives?
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          auto const bl_response = co_await http_POST(
+              kPrimaUrl, kPrimaHeaders, serialize(*odm_state, *tt), 10s);
+          update(*odm_state, get_http_body(bl_response));
+        },
+        boost::asio::deferred);
   } catch (std::exception const& e) {
     std::cout << "prima blacklisting failed: " << e.what();
     return std::nullopt;
   }
-
-  // TODO remove blacklisted offsets
 
   // TODO start fibers to do the ODM routing
 
