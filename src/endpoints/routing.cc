@@ -28,7 +28,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/mode_to_profile.h"
-#include "motis/odm/odm.h"
+#include "motis/odm/meta_router.h"
 #include "motis/parse_location.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"

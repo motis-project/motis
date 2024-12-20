@@ -4,7 +4,7 @@
 
 #include "boost/json.hpp"
 
-#include "motis/odm/prima.h"
+#include "motis/odm/prima_state.h"
 
 namespace motis::odm {
 

@@ -1,4 +1,4 @@
-#include "motis/odm/odm.h"
+#include "motis/odm/meta_router.h"
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/thread/tss.hpp"
@@ -18,7 +18,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/odm/json.h"
-#include "motis/odm/prima.h"
+#include "motis/odm/prima_state.h"
 #include "motis/place.h"
 
 namespace motis::odm {
@@ -27,7 +27,7 @@ namespace n = nigiri;
 using namespace std::chrono_literals;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<prima_state> odm_state;
+static boost::thread_specific_ptr<prima_state> p_state;
 
 static auto const kPrimaUrl = boost::urls::url{""};
 static auto const kPrimaHeaders = std::map<std::string, std::string>{
@@ -67,30 +67,6 @@ std::vector<n::routing::offset> get_offsets(
     inflate(o.duration_);
   }
   return offsets;
-}
-
-std::vector<n::routing::start> get_events(
-    n::direction const search_dir,
-    n::timetable const& tt,
-    n::rt_timetable const* rtt,
-    n::routing::start_time_t const& time,
-    std::vector<n::routing::offset> const& offsets,
-    n::duration_t const max_start_offset,
-    n::routing::location_match_mode const mode,
-    n::profile_idx_t const prf_idx,
-    n::routing::transfer_time_settings const& tts) {
-  static auto const kNoTdOffsets =
-      hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
-  auto events = std::vector<n::routing::start>{};
-  events.reserve(offsets.size() * 2);
-  n::routing::get_starts(search_dir, tt, rtt, time, offsets, kNoTdOffsets,
-                         max_start_offset, mode, false, events, true, prf_idx,
-                         tts);
-  utl::sort(events, [](auto&& a, auto&& b) {
-    return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
-           std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
-  });
-  return events;
 }
 
 void init(prima_state& ps,
@@ -177,23 +153,17 @@ void init_direct(std::vector<direct_ride>& direct_rides,
   }
 }
 
-template <typename T>
-auto half_views(std::vector<T> v) {
-  auto const half = v.size() / 2;
-  return std::pair{v | std::views::take(half), v | std::views::drop(half)};
-}
-
-auto ride_time_bins(std::vector<n::routing::start>& pt_rides) {
-  utl::sort(pt_rides, [](auto&& a, auto&& b) {
-    auto const ride_time = [](auto&& ride) {
+auto ride_time_bins(std::vector<n::routing::start>& rides) {
+  utl::sort(rides, [](auto const& a, auto const& b) {
+    auto const ride_time = [](auto const& ride) {
       return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
     };
     return ride_time(a) < ride_time(b);
   });
-  return half_views(pt_rides);
+  auto const half = rides.size() / 2;
+  return std::pair{rides | std::views::take(half),
+                   rides | std::views::drop(half)};
 }
-
-auto ride_time_bins(std::vector<direct_ride>& rides) {}
 
 std::optional<std::vector<n::routing::journey>> odm_routing(
     ep::routing const& r,
@@ -245,14 +215,14 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   auto const& from_intvl = query.arriveBy_ ? dest_intvl : start_intvl;
   auto const& to_intvl = query.arriveBy_ ? start_intvl : dest_intvl;
 
-  if (odm_state.get() == nullptr) {
-    odm_state.reset(new prima_state{});
+  if (p_state.get() == nullptr) {
+    p_state.reset(new prima_state{});
   }
 
-  init(*odm_state, from_p, to_p, query);
+  init(*p_state, from_p, to_p, query);
 
   if (odm_pre_transit && holds_alternative<osr::location>(from)) {
-    init_pt(odm_state->from_rides_, r, std::get<osr::location>(from),
+    init_pt(p_state->from_rides_, r, std::get<osr::location>(from),
             osr::direction::kForward, query, gbfs_rd, odm_stats, *tt, rtt,
             from_intvl, start_time,
             query.arriveBy_ ? start_time.dest_match_mode_
@@ -260,7 +230,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   }
 
   if (odm_post_transit && holds_alternative<osr::location>(to)) {
-    init_pt(odm_state->to_rides_, r, std::get<osr::location>(to),
+    init_pt(p_state->to_rides_, r, std::get<osr::location>(to),
             osr::direction::kBackward, query, gbfs_rd, odm_stats, *tt, rtt,
             to_intvl, start_time,
             query.arriveBy_ ? start_time.start_match_mode_
@@ -268,7 +238,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   }
 
   if (odm_direct && r.w_ && r.l_) {
-    init_direct(odm_state->direct_rides_, r, e, gbfs_rd, from_p, to_p, to_intvl,
+    init_direct(p_state->direct_rides_, r, e, gbfs_rd, from_p, to_p, to_intvl,
                 query);
   }
 
@@ -278,19 +248,19 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const bl_response = co_await http_POST(
-              kPrimaUrl, kPrimaHeaders, serialize(*odm_state, *tt), 10s);
-          update(*odm_state, get_http_body(bl_response));
+              kPrimaUrl, kPrimaHeaders, serialize(*p_state, *tt), 10s);
+          update(*p_state, get_http_body(bl_response));
         },
         boost::asio::deferred);
   } catch (std::exception const& e) {
-    std::cout << "prima blacklisting failed: " << e.what();
+    std::cout << "prima_state blacklisting failed: " << e.what();
     return std::nullopt;
   }
 
   auto const [from_rides_short, from_rides_long] =
-      ride_time_bins(odm_state->from_rides_);
+      ride_time_bins(p_state->from_rides_);
   auto const [to_rides_short, to_rides_long] =
-      ride_time_bins(odm_state->to_rides_);
+      ride_time_bins(p_state->to_rides_);
 
   // TODO start fibers to do the ODM routing
 
