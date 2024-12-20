@@ -177,6 +177,24 @@ void init_direct(std::vector<direct_ride>& direct_rides,
   }
 }
 
+template <typename T>
+auto half_views(std::vector<T> v) {
+  auto const half = v.size() / 2;
+  return std::pair{v | std::views::take(half), v | std::views::drop(half)};
+}
+
+auto ride_time_bins(std::vector<n::routing::start>& pt_rides) {
+  utl::sort(pt_rides, [](auto&& a, auto&& b) {
+    auto const ride_time = [](auto&& ride) {
+      return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
+    };
+    return ride_time(a) < ride_time(b);
+  });
+  return half_views(pt_rides);
+}
+
+auto ride_time_bins(std::vector<direct_ride>& rides) {}
+
 std::optional<std::vector<n::routing::journey>> odm_routing(
     ep::routing const& r,
     api::plan_params const& query,
@@ -268,6 +286,11 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
     std::cout << "prima blacklisting failed: " << e.what();
     return std::nullopt;
   }
+
+  auto const [from_rides_short, from_rides_long] =
+      ride_time_bins(odm_state->from_rides_);
+  auto const [to_rides_short, to_rides_long] =
+      ride_time_bins(odm_state->to_rides_);
 
   // TODO start fibers to do the ODM routing
 
