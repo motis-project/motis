@@ -36,18 +36,10 @@ static auto const kPrimaHeaders = std::map<std::string, std::string>{
 n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
   return dir == n::direction::kForward
-             ? n::interval<n::unixtime_t>{start_intvl.from_ + 30min,
+             ? n::interval<n::unixtime_t>{start_intvl.from_,
                                           start_intvl.to_ + 24h}
              : n::interval<n::unixtime_t>{start_intvl.from_ - 24h,
-                                          start_intvl.to_ - 30min};
-}
-
-void inflate(n::duration_t& d) {
-  static constexpr auto const kInflationFactor = 1.5;
-  static constexpr auto const kMinInflation = n::duration_t{10};
-
-  d = std::max(std::chrono::duration_cast<n::duration_t>(d * kInflationFactor),
-               d + kMinInflation);
+                                          start_intvl.to_};
 }
 
 std::vector<n::routing::offset> get_offsets(
@@ -60,13 +52,9 @@ std::vector<n::routing::offset> get_offsets(
     unsigned const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs,
     ep::stats_map_t& stats) {
-  auto offsets =
-      r.get_offsets(pos, dir, modes, std::nullopt, std::nullopt, std::nullopt,
-                    wheelchair, max, max_matching_distance, gbfs, stats);
-  for (auto& o : offsets) {
-    inflate(o.duration_);
-  }
-  return offsets;
+  return r.get_offsets(pos, dir, modes, std::nullopt, std::nullopt,
+                       std::nullopt, wheelchair, max, max_matching_distance,
+                       gbfs, stats);
 }
 
 void init(prima_state& ps,
@@ -136,7 +124,6 @@ void init_direct(std::vector<direct_ride>& direct_rides,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
       std::chrono::seconds{query.maxDirectTime_});
-  inflate(duration);
   direct_rides.clear();
   if (query.arriveBy_) {
     for (auto arr =

@@ -125,6 +125,7 @@ asio::awaitable<http::response<http::dynamic_body>> http_GET(
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};
+      ++n_redirects;
       continue;
     } else {
       co_return res;
@@ -149,6 +150,7 @@ asio::awaitable<http::response<http::dynamic_body>> http_POST(
     auto const code = res.base().result_int();
     if (code >= 300 && code < 400) {
       next_url = boost::urls::url{res.base()["Location"]};
+      ++n_redirects;
       continue;
     } else {
       co_return res;
