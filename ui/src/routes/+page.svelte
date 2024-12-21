@@ -101,7 +101,7 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived(['WALK', ...(bikeRental ? ['BIKE_RENTAL'] : [])] as Mode[]);
+	let modes = $derived(['WALK', ...(bikeRental ? ['RENTAL'] : [])] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -111,7 +111,7 @@
 						toPlace: toPlaceString(to),
 						arriveBy: timeType === 'arrival',
 						timetableView: true,
-						wheelchair,
+						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
 						preTransitModes: modes,
 						postTransitModes: modes,
 						directModes: modes
@@ -119,15 +119,20 @@
 				} as PlanData)
 			: undefined
 	);
+
+	let searchDebounceTimer: number;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
 	$effect(() => {
 		if (baseQuery) {
-			const base = plan<true>(baseQuery).then((response) => response.data);
-			baseResponse = base;
-			routingResponses = [base];
-			selectedItinerary = undefined;
-			selectedStop = undefined;
+			clearTimeout(searchDebounceTimer);
+			searchDebounceTimer = setTimeout(() => {
+				const base = plan<true>(baseQuery).then((response) => response.data);
+				baseResponse = base;
+				routingResponses = [base];
+				selectedItinerary = undefined;
+				selectedStop = undefined;
+			}, 400);
 		}
 	});
 

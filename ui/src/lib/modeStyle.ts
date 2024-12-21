@@ -1,4 +1,4 @@
-import type { Mode } from './openapi';
+import type { Mode, Rental } from './openapi';
 
 export type Colorable = {
 	routeColor?: string;
@@ -11,16 +11,37 @@ export type TripInfo = {
 	routeShortName?: string;
 };
 
-export type LegLike = Colorable & TripInfo;
+export type RentalInfo = {
+	rental?: Rental;
+};
 
-export const getModeStyle = (mode: Mode): [string, string, string] => {
-	switch (mode) {
+export type LegLike = Colorable & TripInfo & RentalInfo;
+
+export const getModeStyle = (l: LegLike): [string, string, string] => {
+	switch (l.mode) {
 		case 'WALK':
 			return ['walk', 'hsl(var(--foreground) / 1)', 'hsl(var(--background) / 1)'];
 
 		case 'BIKE':
-		case 'BIKE_RENTAL':
 			return ['bike', '#075985', 'white'];
+
+		case 'RENTAL':
+			switch (l.rental?.formFactor) {
+				case 'BICYCLE':
+					return ['bike', '#075985', 'white'];
+				case 'CARGO_BICYCLE':
+					return ['cargo_bike', '#075985', 'white'];
+				case 'CAR':
+					return ['car', '#333333', 'white'];
+				case 'MOPED':
+					return ['moped', '#075985', 'white'];
+				case 'SCOOTER_SEATED':
+				case 'SCOOTER_STANDING':
+					return ['scooter', '#075985', 'white'];
+				case 'OTHER':
+				default:
+					return ['bike', '#075985', 'white'];
+			}
 
 		case 'CAR':
 		case 'CAR_PARKING':
@@ -66,7 +87,7 @@ export const getModeStyle = (mode: Mode): [string, string, string] => {
 };
 
 export const getColor = (l: Colorable): [string, string] => {
-	const [_, defaultColor, defaultTextColor] = getModeStyle(l.mode);
+	const [_, defaultColor, defaultTextColor] = getModeStyle(l);
 	return !l.routeColor || l.routeColor === '000000'
 		? [defaultColor, defaultTextColor]
 		: ['#' + l.routeColor, '#' + l.routeTextColor];
