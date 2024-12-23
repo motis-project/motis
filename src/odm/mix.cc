@@ -4,12 +4,19 @@
 
 namespace motis::odm {
 
+// journey cost
 static auto const kWalkCost = std::vector<cost_threshold>{{0, 1}, {15, 11}};
 static auto const kTaxiCost = std::vector<cost_threshold>{{0, 59}, {1, 13}};
 static auto const kTransferCost = std::vector<cost_threshold>{{0, 15}};
 static constexpr auto const kDirectTaxiFactor = 1.3;
 static constexpr auto const kDirectTaxiConstant = 27;
+
+// cost domination
+static constexpr auto const kTravelTimeWeight = 1.5;
+static constexpr auto const kDistanceWeight = 0.07;
 static constexpr auto const kDistanceExponent = 1.5;
+
+// productivity domination
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
@@ -95,8 +102,17 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
                      .count();
   };
 
-  for (auto const& pt_journey : pt_journeys) {
-  }
+  auto const cost_dominates = [&](n::routing::journey const& a,
+                                  n::routing::journey const& b) {
+    auto const protection = ;
+    return cost(a) + protection < cost(b);
+  };
+
+  auto const is_cost_dominated =
+      [](n::pareto_set<n::routing::journey> const& pt_journeys,
+         n::routing::journey const& odm_journey) {
+
+      };
 }
 
 void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {}
