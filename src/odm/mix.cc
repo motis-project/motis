@@ -11,12 +11,10 @@ static auto const kTransferCost = std::vector<cost_threshold>{{0, 15}};
 static constexpr auto const kDirectTaxiFactor = 1.3;
 static constexpr auto const kDirectTaxiConstant = 27;
 
-// cost domination
+// domination
 static constexpr auto const kTravelTimeWeight = 1.5;
 static constexpr auto const kDistanceWeight = 0.07;
 static constexpr auto const kDistanceExponent = 1.5;
-
-// productivity domination
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
@@ -30,14 +28,31 @@ std::int32_t tally(std::int32_t const x,
   return acc;
 }
 
+auto transfer_cost(auto const& j) {
+  return tally(j.transfers_, kTransferCost);
+};
+
+auto distance(auto const& a, auto const& b) {
+  auto const overtakes = [](auto const& x, auto const& y) {
+    return x.departure_time() > y.departure_time() &&
+           x.arrival_time() < y.arrival_time();
+  };
+
+  return overtakes(a, b) || overtakes(b, a)
+             ? 0
+             : std::min(
+                   std::chrono::abs(a.departure_time() - b.departure_time()),
+                   std::chrono::abs(a.arrival_time() - b.arrival_time()))
+                   .count();
+};
+
 void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
                      std::vector<n::routing::journey>& odm_journeys) {
 
-  auto const leg_cost = [](n::routing::journey::leg const& leg) {
+  auto const leg_cost = [](auto const& leg) {
     return std::visit(
-        utl::overloaded{[](n::routing::journey::run_enter_exit const& ree) {
-                          return std::int32_t{0};
-                        },
+        utl::overloaded{[](n::routing::journey::run_enter_exit const& ree
+                           [[maybe_unused]]) { return std::int32_t{0}; },
                         [](n::footpath const& fp) {
                           return tally(fp.duration().count(), kWalkCost);
                         },
@@ -49,73 +64,89 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
         leg.uses_);
   };
 
-  auto const transfer_cost = [](n::routing::journey const& j) {
-    return tally(j.transfers_, kTransferCost);
-  };
-
-  auto const pt_time = [](n::routing::journey const& j) {
-    auto const leg_duration = [](n::routing::journey::leg const& l) {
+  auto const pt_time = [](auto const& j) {
+    auto const leg_duration = [](auto const& l) {
       return std::visit(
           utl::overloaded{
-              [](n::routing::journey::run_enter_exit const& ree) {
-                return n::duration_t{0};
-              },
+              [](n::routing::journey::run_enter_exit const& ree
+                 [[maybe_unused]]) { return n::duration_t{0}; },
               [](n::footpath const& fp) { return fp.duration(); },
               [](n::routing::offset const& o) { return o.duration(); }},
           l.uses_);
     };
-    return (j.arrival_time() - j.departure_time()) -
-           leg_duration(j.legs_.front()) -
+    return j.travel_time() - leg_duration(j.legs_.front()) -
            ((j.legs_.size() > 1) ? leg_duration(j.legs_.back())
                                  : n::duration_t{0});
   };
 
-  auto const is_direct_taxi = [](n::routing::journey const& j) {
+  auto const is_direct_taxi = [](auto const& j) {
     return j.legs_.size() == 1 &&
            std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
            std::get<n::routing::offset>(j.legs_.front().uses_)
                    .transport_mode_id_ == offset_mode::kTaxi;
   };
 
-  auto const cost = [&](n::routing::journey const& j) {
-    auto const direct_taxi = is_direct_taxi(j);
+  auto const cost = [&](auto const& j) {
     return (leg_cost(j.legs_.front()) +
             (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
             pt_time(j).count() + transfer_cost(j)) *
-               (direct_taxi ? kDirectTaxiFactor : 1) +
-           (direct_taxi ? kDirectTaxiConstant : 0);
+               (is_direct_taxi(j) ? kDirectTaxiFactor : 1) +
+           (is_direct_taxi(j) ? kDirectTaxiConstant : 0);
   };
 
-  auto const distance = [](n::routing::journey const& a,
-                           n::routing::journey const& b) {
-    auto const overtakes = [](n::routing::journey const& x,
-                              n::routing::journey const& y) {
-      return x.departure_time() > y.departure_time() &&
-             x.arrival_time() < y.arrival_time();
+  auto const is_dominated = [&](auto const& odm_journey) {
+    auto const dominates = [&](auto const& pt_journey) {
+      auto const protection =
+          kTravelTimeWeight *
+              (static_cast<double>(pt_journey.travel_time().count()) /
+               static_cast<double>(pt_journey.travel_time().count())) +
+          kDistanceWeight *
+              std::pow(distance(pt_journey, odm_journey), kDistanceExponent);
+      return cost(pt_journey) + protection < cost(odm_journey);
     };
 
-    return overtakes(a, b) || overtakes(b, a)
-               ? 0
-               : std::min(
-                     std::chrono::abs(a.departure_time() - b.departure_time()),
-                     std::chrono::abs(a.arrival_time() - b.arrival_time()))
-                     .count();
+    return std::any_of(begin(pt_journeys), end(pt_journeys), dominates);
   };
 
-  auto const cost_dominates = [&](n::routing::journey const& a,
-                                  n::routing::journey const& b) {
-    auto const protection = ;
-    return cost(a) + protection < cost(b);
-  };
-
-  auto const is_cost_dominated =
-      [](n::pareto_set<n::routing::journey> const& pt_journeys,
-         n::routing::journey const& odm_journey) {
-
-      };
+  std::erase_if(odm_journeys, is_dominated);
 }
 
-void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {}
+void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {
+  auto const cost = [](auto const& j) -> double {
+    return j.travel_time().count() + transfer_cost(j);
+  };
+
+  auto const taxi_time = [](n::routing::journey const& j) -> double {
+    auto const is_taxi_leg = [](auto const& l) {
+      return std::holds_alternative<n::routing::offset>(l.uses_) &&
+             std::get<n::routing::offset>(l.uses_).transport_mode_id_ ==
+                 offset_mode::kTaxi;
+    };
+
+    return (is_taxi_leg(j.legs_.front())
+                ? std::get<n::routing::offset>(j.legs_.front().uses_)
+                      .duration()
+                      .count()
+                : 0) +
+           ((j.legs_.size() > 1 && is_taxi_leg(j.legs_.back()))
+                ? std::get<n::routing::offset>(j.legs_.back().uses_)
+                      .duration()
+                      .count()
+                : 0);
+  };
+
+  auto const is_dominated = [&](auto const& b) {
+    auto const dominates = [&](auto const& a) {
+      auto const protection =
+          kDistanceWeight * std::pow(distance(a, b), kDistanceExponent);
+      return cost(b) / taxi_time(a) > (cost(a) + protection) / taxi_time(b);
+    };
+
+    return std::any_of(begin(odm_journeys), end(odm_journeys), dominates);
+  };
+
+  std::erase_if(odm_journeys, is_dominated);
+}
 
 void mix(n::pareto_set<n::routing::journey> const& base_journeys,
          std::vector<n::routing::journey>& odm_journeys) {
