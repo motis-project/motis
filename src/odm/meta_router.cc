@@ -1,6 +1,8 @@
 #include "motis/odm/meta_router.h"
 
 #include "boost/asio/co_spawn.hpp"
+#include "boost/asio/detached.hpp"
+#include "boost/asio/io_context.hpp"
 #include "boost/thread/tss.hpp"
 
 #include "nigiri/routing/journey.h"
@@ -231,6 +233,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
 
   try {
     // TODO the fiber/thread should yield until network response arrives?
+    auto ioc = boost::asio::io_context{};
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
@@ -238,7 +241,8 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
               kPrimaUrl, kPrimaHeaders, serialize(*p_state, *tt), 10s);
           update(*p_state, get_http_body(bl_response));
         },
-        boost::asio::deferred);
+        boost::asio::detached);
+    ioc.run();
   } catch (std::exception const& e) {
     std::cout << "prima_state blacklisting failed: " << e.what();
     return std::nullopt;
