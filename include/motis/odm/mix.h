@@ -2,10 +2,13 @@
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/pareto_set.h"
+#include "nigiri/types.h"
 
 namespace motis::odm {
 
 namespace n = nigiri;
+
+enum offset_mode : n::transport_mode_id_t { kWalk, kTaxi };
 
 struct cost_threshold {
   std::int32_t threshold_;
