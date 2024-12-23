@@ -253,6 +253,8 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   auto const [to_rides_short, to_rides_long] =
       ride_time_bins(p_state->to_rides_);
 
+  // TODO encode rides as td_offsets
+
   // TODO start fibers to do the ODM routing
 
   // TODO whitelist request for ODM rides used in journeys
