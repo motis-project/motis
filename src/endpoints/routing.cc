@@ -28,7 +28,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/mode_to_profile.h"
-#include "motis/odm/meta_router.h"
+#include "motis/odm/meta_routing.h"
 #include "motis/odm/mix.h"
 #include "motis/parse_location.h"
 #include "motis/street_routing.h"
@@ -471,17 +471,24 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
-  auto odm_task = boost::fibers::packaged_task<
-      std::optional<std::vector<n::routing::journey>>()>{[&]() {
-    return odm::odm_routing(*this, query, pre_transit_modes, post_transit_modes,
-                            direct_modes, from, to, from_p, to_p, start_time);
-  }};
-  auto odm_result = odm_task.get_future();
-  boost::fibers::fiber{std::move(odm_task)}.detach();
-
   if (!query.transitModes_.empty() && fastest_direct > 5min) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
+
+    auto const odm_pre_transit =
+        std::find(begin(pre_transit_modes), end(pre_transit_modes),
+                  api::ModeEnum::ODM) != end(pre_transit_modes);
+    auto const odm_post_transit =
+        std::find(begin(post_transit_modes), end(post_transit_modes),
+                  api::ModeEnum::ODM) != end(post_transit_modes);
+    auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
+                                      api::ModeEnum::ODM) != end(direct_modes);
+    if (odm_pre_transit || odm_post_transit || odm_direct) {
+      return odm::meta_routing(*this, query, pre_transit_modes,
+                               post_transit_modes, direct_modes, from, to,
+                               from_p, to_p, start_time, odm_pre_transit,
+                               odm_post_transit, odm_direct);
+    }
 
     UTL_START_TIMING(query_preparation);
     auto stats = stats_map_t{};
@@ -610,46 +617,32 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             ? std::optional<std::chrono::seconds>{*query.timeout_}
             : std::nullopt);
 
-    auto const to_response = [&](auto const& journeys) -> api::plan_response {
-      return {
-          .debugOutput_ =
-              join(stats,
-                   stats_map_t{
-                       {"direct", UTL_TIMING_MS(direct)},
-                       {"query_preparation", UTL_TIMING_MS(query_preparation)},
-                       {"n_start_offsets", q.start_.size()},
-                       {"n_dest_offsets", q.destination_.size()},
-                       {"n_td_start_offsets", q.td_start_.size()},
-                       {"n_td_dest_offsets", q.td_dest_.size()}},
-                   r.search_stats_.to_map(), r.algo_stats_.to_map()),
-          .from_ = from_p,
-          .to_ = to_p,
-          .direct_ = std::move(direct),
-          .itineraries_ = utl::to_vec(
-              journeys,
-              [&, cache = street_routing_cache_t{}](auto&& j) mutable {
-                return journey_to_response(
-                    w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_,
-                    gbfs_rd,
-                    query.pedestrianProfile_ ==
-                        api::PedestrianProfileEnum::WHEELCHAIR,
-                    j, start, dest, cache, blocked.get());
-              }),
-          .previousPageCursor_ =
-              fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),
-          .nextPageCursor_ =
-              fmt::format("LATER|{}", to_seconds(r.interval_.to_)),
-      };
+    return {
+        .debugOutput_ = join(
+            stats,
+            stats_map_t{{"direct", UTL_TIMING_MS(direct)},
+                        {"query_preparation", UTL_TIMING_MS(query_preparation)},
+                        {"n_start_offsets", q.start_.size()},
+                        {"n_dest_offsets", q.destination_.size()},
+                        {"n_td_start_offsets", q.td_start_.size()},
+                        {"n_td_dest_offsets", q.td_dest_.size()}},
+            r.search_stats_.to_map(), r.algo_stats_.to_map()),
+        .from_ = from_p,
+        .to_ = to_p,
+        .direct_ = std::move(direct),
+        .itineraries_ = utl::to_vec(
+            *r.journeys_,
+            [&, cache = street_routing_cache_t{}](auto&& j) mutable {
+              return journey_to_response(
+                  w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
+                  query.pedestrianProfile_ ==
+                      api::PedestrianProfileEnum::WHEELCHAIR,
+                  j, start, dest, cache, blocked.get());
+            }),
+        .previousPageCursor_ =
+            fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),
+        .nextPageCursor_ = fmt::format("LATER|{}", to_seconds(r.interval_.to_)),
     };
-
-    odm_result.wait();
-    if (odm_result.valid() && odm_result.get().has_value()) {
-      auto odm_journeys = odm_result.get().value();
-      odm::mix(*r.journeys_, odm_journeys);
-      return to_response(odm_journeys);
-    }
-
-    return to_response(*r.journeys_);
   }
 
   return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),

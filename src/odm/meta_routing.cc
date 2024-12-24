@@ -1,4 +1,4 @@
-#include "motis/odm/meta_router.h"
+#include "motis/odm/meta_routing.h"
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
@@ -34,6 +34,8 @@ static boost::thread_specific_ptr<prima_state> p_state;
 static auto const kPrimaUrl = boost::urls::url{""};
 static auto const kPrimaHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
+
+static auto const kTransportModeIdODM = n::transport_mode_id_t{23};
 
 n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
@@ -142,7 +144,7 @@ void init_direct(std::vector<direct_ride>& direct_rides,
   }
 }
 
-auto ride_time_bins(std::vector<n::routing::start>& rides) {
+auto ride_time_halves(std::vector<n::routing::start>& rides) {
   utl::sort(rides, [](auto const& a, auto const& b) {
     auto const ride_time = [](auto const& ride) {
       return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
@@ -150,11 +152,41 @@ auto ride_time_bins(std::vector<n::routing::start>& rides) {
     return ride_time(a) < ride_time(b);
   });
   auto const half = rides.size() / 2;
-  return std::pair{rides | std::views::take(half),
-                   rides | std::views::drop(half)};
+  auto lo = rides | std::views::take(half);
+  auto hi = rides | std::views::drop(half);
+  auto const stop_comp = [](auto const& a, auto const& b) {
+    return a.stop_ < b.stop_;
+  };
+  std::ranges::sort(lo, stop_comp);
+  std::ranges::sort(hi, stop_comp);
+  return std::pair{lo, hi};
 }
 
-std::optional<std::vector<n::routing::journey>> odm_routing(
+enum offset_event_type { kTimeAtStart, kTimeAtStop };
+auto get_td_offsets(auto const& rides, offset_event_type const oet) {
+  auto td_offsets =
+      hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
+  utl::equal_ranges_linear(
+      rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
+      [&](auto&& from_it, auto&& to_it) {
+        td_offsets.emplace(from_it->stop_,
+                           std::vector<n::routing::td_offset>{});
+        for (auto const& r : n::it_range{from_it, to_it}) {
+          td_offsets.at(from_it->stop_)
+              .emplace_back(
+                  oet == kTimeAtStart ? r.time_at_start_ : r.time_at_stop_,
+                  std::chrono::abs(r.time_at_start_ - r.time_at_stop_),
+                  kTransportModeIdODM);
+          td_offsets.at(from_it->stop_)
+              .emplace_back(oet == kTimeAtStart ? r.time_at_start_ + 1min
+                                                : r.time_at_stop_ + 1min,
+                            n::kInfeasible, kTransportModeIdODM);
+        }
+      });
+  return td_offsets;
+}
+
+api::plan_response meta_routing(
     ep::routing const& r,
     api::plan_params const& query,
     std::vector<api::ModeEnum> const& pre_transit_modes,
@@ -164,7 +196,10 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
     std::variant<osr::location, tt_location> const& to,
     api::Place const& from_p,
     api::Place const& to_p,
-    n::routing::query const& start_time) {
+    const nigiri::routing::query& start_time,
+    bool odm_pre_transit,
+    bool odm_post_transit,
+    bool odm_direct) {
   utl::verify(r.tt_ != nullptr && r.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
 
@@ -175,19 +210,6 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
   auto gbfs_rd = gbfs::gbfs_routing_data{r.w_, r.l_, r.gbfs_};
   if (ep::blocked.get() == nullptr && r.w_ != nullptr) {
     ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
-  }
-
-  auto const odm_pre_transit =
-      std::find(begin(pre_transit_modes), end(pre_transit_modes),
-                api::ModeEnum::ODM) != end(pre_transit_modes);
-  auto const odm_post_transit =
-      std::find(begin(post_transit_modes), end(post_transit_modes),
-                api::ModeEnum::ODM) != end(post_transit_modes);
-  auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
-                                    api::ModeEnum::ODM) != end(direct_modes);
-  auto const odm_any = odm_pre_transit || odm_post_transit || odm_direct;
-  if (!odm_any) {
-    return std::nullopt;
   }
 
   auto odm_stats = motis::ep::stats_map_t{};
@@ -231,6 +253,7 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
                 query);
   }
 
+  auto odm_networking = true;
   try {
     // TODO the fiber/thread should yield until network response arrives?
     auto ioc = boost::asio::io_context{};
@@ -244,16 +267,27 @@ std::optional<std::vector<n::routing::journey>> odm_routing(
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
-    std::cout << "prima_state blacklisting failed: " << e.what();
-    return std::nullopt;
+    std::cout << "blacklisting failed: " << e.what();
+    odm_networking = false;
   }
 
   auto const [from_rides_short, from_rides_long] =
-      ride_time_bins(p_state->from_rides_);
+      ride_time_halves(p_state->from_rides_);
   auto const [to_rides_short, to_rides_long] =
-      ride_time_bins(p_state->to_rides_);
+      ride_time_halves(p_state->to_rides_);
 
-  // TODO encode rides as td_offsets
+  auto const td_offsets_from_short = get_td_offsets(
+      from_rides_short, query.arriveBy_ ? offset_event_type::kTimeAtStop
+                                        : offset_event_type::kTimeAtStart);
+  auto const td_offsets_from_long = get_td_offsets(
+      from_rides_long, query.arriveBy_ ? offset_event_type::kTimeAtStop
+                                       : offset_event_type::kTimeAtStart);
+  auto const td_offsets_to_short = get_td_offsets(
+      to_rides_short, query.arriveBy_ ? offset_event_type::kTimeAtStart
+                                      : offset_event_type::kTimeAtStop);
+  auto const td_offsets_to_long = get_td_offsets(
+      to_rides_long, query.arriveBy_ ? offset_event_type::kTimeAtStart
+                                     : offset_event_type::kTimeAtStop);
 
   // TODO start fibers to do the ODM routing
 
