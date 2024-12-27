@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include "boost/fiber/future.hpp"
 #include "boost/thread/tss.hpp"
 
 #include "utl/erase_duplicates.h"
@@ -484,10 +483,20 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
                                       api::ModeEnum::ODM) != end(direct_modes);
     if (odm_pre_transit || odm_post_transit || odm_direct) {
-      return odm::meta_routing(*this, query, pre_transit_modes,
-                               post_transit_modes, direct_modes, from, to,
-                               from_p, to_p, start_time, odm_pre_transit,
-                               odm_post_transit, odm_direct);
+      return odm::meta_router{*this,
+                              query,
+                              pre_transit_modes,
+                              post_transit_modes,
+                              direct_modes,
+                              from,
+                              to,
+                              from_p,
+                              to_p,
+                              start_time,
+                              odm_pre_transit,
+                              odm_post_transit,
+                              odm_direct}
+          .run();
     }
 
     UTL_START_TIMING(query_preparation);
