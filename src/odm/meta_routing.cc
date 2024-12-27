@@ -186,6 +186,19 @@ auto get_td_offsets(auto const& rides, offset_event_type const oet) {
   return td_offsets;
 }
 
+bool is_intermodal(place_t const& p) {
+  return std::holds_alternative<osr::location>(p);
+}
+
+n::routing::location_match_mode get_match_mode(place_t const& p) {
+  return is_intermodal(p) ? n::routing::location_match_mode::kIntermodal
+                          : n::routing::location_match_mode::kEquivalent;
+}
+
+std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
+  return {{l, n::duration_t{0U}, 0U}};
+}
+
 api::plan_response meta_routing(
     ep::routing const& r,
     api::plan_params const& query,
@@ -212,7 +225,32 @@ api::plan_response meta_routing(
     ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
   }
 
-  auto odm_stats = motis::ep::stats_map_t{};
+  auto const& start = query.arriveBy_ ? to : from;
+  auto const& dest = query.arriveBy_ ? from : to;
+  auto const& start_modes =
+      query.arriveBy_ ? post_transit_modes : pre_transit_modes;
+  auto const& dest_modes =
+      query.arriveBy_ ? pre_transit_modes : post_transit_modes;
+  auto const& start_form_factors = query.arriveBy_
+                                       ? query.postTransitRentalFormFactors_
+                                       : query.preTransitRentalFormFactors_;
+  auto const& dest_form_factors = query.arriveBy_
+                                      ? query.preTransitRentalFormFactors_
+                                      : query.postTransitRentalFormFactors_;
+  auto const& start_propulsion_types =
+      query.arriveBy_ ? query.postTransitRentalPropulsionTypes_
+                      : query.preTransitRentalPropulsionTypes_;
+  auto const& dest_propulsion_types =
+      query.arriveBy_ ? query.postTransitRentalPropulsionTypes_
+                      : query.preTransitRentalPropulsionTypes_;
+  auto const& start_rental_providers = query.arriveBy_
+                                           ? query.postTransitRentalProviders_
+                                           : query.preTransitRentalProviders_;
+  auto const& dest_rental_providers = query.arriveBy_
+                                          ? query.preTransitRentalProviders_
+                                          : query.postTransitRentalProviders_;
+
+  auto stats = motis::ep::stats_map_t{};
 
   auto const start_intvl = std::visit(
       utl::overloaded{[](n::interval<n::unixtime_t> const i) { return i; },
@@ -234,7 +272,7 @@ api::plan_response meta_routing(
 
   if (odm_pre_transit && holds_alternative<osr::location>(from)) {
     init_pt(p_state->from_rides_, r, std::get<osr::location>(from),
-            osr::direction::kForward, query, gbfs_rd, odm_stats, *tt, rtt,
+            osr::direction::kForward, query, gbfs_rd, stats, *tt, rtt,
             from_intvl, start_time,
             query.arriveBy_ ? start_time.dest_match_mode_
                             : start_time.start_match_mode_);
@@ -242,7 +280,7 @@ api::plan_response meta_routing(
 
   if (odm_post_transit && holds_alternative<osr::location>(to)) {
     init_pt(p_state->to_rides_, r, std::get<osr::location>(to),
-            osr::direction::kBackward, query, gbfs_rd, odm_stats, *tt, rtt,
+            osr::direction::kBackward, query, gbfs_rd, stats, *tt, rtt,
             to_intvl, start_time,
             query.arriveBy_ ? start_time.start_match_mode_
                             : start_time.dest_match_mode_);
@@ -270,6 +308,37 @@ api::plan_response meta_routing(
     std::cout << "blacklisting failed: " << e.what();
     odm_networking = false;
   }
+
+  auto const walk_start = std::visit(
+      utl::overloaded{
+          [&](tt_location const l) { return station_start(l.l_); },
+          [&](osr::location const& pos) {
+            auto const dir = query.arriveBy_ ? osr::direction::kBackward
+                                             : osr::direction::kForward;
+            return r.get_offsets(pos, dir, start_modes, start_form_factors,
+                                 start_propulsion_types, start_rental_providers,
+                                 query.pedestrianProfile_ ==
+                                     api::PedestrianProfileEnum::WHEELCHAIR,
+                                 std::chrono::seconds{query.maxPreTransitTime_},
+                                 query.maxMatchingDistance_, gbfs_rd, stats);
+          }},
+      start);
+
+  auto const walk_dest = std::visit(
+      utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
+                      [&](osr::location const& pos) {
+                        auto const dir = query.arriveBy_
+                                             ? osr::direction::kForward
+                                             : osr::direction::kBackward;
+                        return r.get_offsets(
+                            pos, dir, dest_modes, dest_form_factors,
+                            dest_propulsion_types, dest_rental_providers,
+                            query.pedestrianProfile_ ==
+                                api::PedestrianProfileEnum::WHEELCHAIR,
+                            std::chrono::seconds{query.maxPostTransitTime_},
+                            query.maxMatchingDistance_, gbfs_rd, stats);
+                      }},
+      dest);
 
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p_state->from_rides_);
