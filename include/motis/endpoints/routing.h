@@ -33,13 +33,18 @@ extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 using stats_map_t = std::map<std::string, std::uint64_t>;
 
 bool is_intermodal(place_t const&);
+
 nigiri::routing::location_match_mode get_match_mode(place_t const&);
+
 std::vector<nigiri::routing::offset> station_start(nigiri::location_idx_t);
+
 std::vector<nigiri::routing::via_stop> get_via_stops(
     nigiri::timetable const&,
     tag_lookup const&,
     std::optional<std::vector<std::string>> const& vias,
     std::vector<std::int64_t> const& times);
+
+void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;

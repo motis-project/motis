@@ -471,7 +471,15 @@ api::plan_response meta_router::run() {
   tasks.emplace_back(make_task(qf.long_short()));
   tasks.emplace_back(make_task(qf.long_long()));
 
-  // TODO start fibers to do the ODM routing
+  auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
+
+  for (auto& t : tasks) {
+    boost::fibers::fiber(std::move(t)).detach();
+  }
+
+  for (auto const& f : futures) {
+    f.wait();
+  }
 
   // TODO whitelist request for ODM rides used in journeys
 
