@@ -70,18 +70,4 @@ n::routing::query query_factory::long_long() const {
   return make(kEmpty, odm_start_long_, kEmpty, odm_dest_long_);
 }
 
-std::vector<n::routing::query> query_factory::get_meta_routing_queries() const {
-  auto queries = std::vector<n::routing::query>{};
-  queries.emplace_back(walk_walk());
-  queries.emplace_back(walk_short());
-  queries.emplace_back(walk_long());
-  queries.emplace_back(short_walk());
-  queries.emplace_back(long_walk());
-  queries.emplace_back(short_short());
-  queries.emplace_back(short_long());
-  queries.emplace_back(long_short());
-  queries.emplace_back(long_long());
-  return queries;
-}
-
 }  // namespace motis::odm

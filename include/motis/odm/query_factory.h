@@ -7,7 +7,15 @@
 namespace motis::odm {
 
 struct query_factory {
-  std::vector<nigiri::routing::query> get_meta_routing_queries() const;
+  nigiri::routing::query walk_walk() const;
+  nigiri::routing::query walk_short() const;
+  nigiri::routing::query walk_long() const;
+  nigiri::routing::query short_walk() const;
+  nigiri::routing::query long_walk() const;
+  nigiri::routing::query short_short() const;
+  nigiri::routing::query short_long() const;
+  nigiri::routing::query long_short() const;
+  nigiri::routing::query long_long() const;
 
   // invariants
   nigiri::routing::start_time_t start_time_;
@@ -57,15 +65,6 @@ private:
       nigiri::hash_map<nigiri::location_idx_t,
                        std::vector<nigiri::routing::td_offset>> const& td_dest)
       const;
-  nigiri::routing::query walk_walk() const;
-  nigiri::routing::query walk_short() const;
-  nigiri::routing::query walk_long() const;
-  nigiri::routing::query short_walk() const;
-  nigiri::routing::query long_walk() const;
-  nigiri::routing::query short_short() const;
-  nigiri::routing::query short_long() const;
-  nigiri::routing::query long_short() const;
-  nigiri::routing::query long_long() const;
 };
 
 }  // namespace motis::odm

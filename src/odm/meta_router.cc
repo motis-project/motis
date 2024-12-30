@@ -447,8 +447,29 @@ api::plan_response meta_router::run() {
                             ? get_td_offsets(from_rides_long, kTimeAtStop)
                             : get_td_offsets(to_rides_long, kTimeAtStop)};
 
+  auto const make_task = [&](n::routing::query&& q) {
+    return boost::fibers::packaged_task<
+        n::routing::routing_result<n::routing::raptor_stats>()>{[&]() {
+      return route(
+          *tt_, rtt_, q,
+          query_.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
+          query_.timeout_.has_value()
+              ? std::optional<std::chrono::seconds>{*query_.timeout_}
+              : std::nullopt);
+    }};
+  };
+
   auto tasks = std::vector<boost::fibers::packaged_task<
       n::routing::routing_result<n::routing::raptor_stats>()>>{};
+  tasks.emplace_back(make_task(qf.walk_walk()));
+  tasks.emplace_back(make_task(qf.walk_short()));
+  tasks.emplace_back(make_task(qf.walk_long()));
+  tasks.emplace_back(make_task(qf.short_walk()));
+  tasks.emplace_back(make_task(qf.long_walk()));
+  tasks.emplace_back(make_task(qf.short_short()));
+  tasks.emplace_back(make_task(qf.short_long()));
+  tasks.emplace_back(make_task(qf.long_short()));
+  tasks.emplace_back(make_task(qf.long_long()));
 
   // TODO start fibers to do the ODM routing
 
