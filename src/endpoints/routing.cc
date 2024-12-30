@@ -27,7 +27,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/mode_to_profile.h"
-#include "motis/odm/meta_routing.h"
+#include "motis/odm/meta_router.h"
 #include "motis/odm/mix.h"
 #include "motis/parse_location.h"
 #include "motis/street_routing.h"
@@ -493,6 +493,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               from_p,
                               to_p,
                               start_time,
+                              direct,
+                              fastest_direct,
                               odm_pre_transit,
                               odm_post_transit,
                               odm_direct}

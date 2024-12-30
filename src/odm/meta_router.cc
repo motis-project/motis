@@ -1,4 +1,4 @@
-#include "motis/odm/meta_routing.h"
+#include "motis/odm/meta_router.h"
 
 #include <vector>
 
@@ -24,7 +24,7 @@
 #include "motis/http_req.h"
 #include "motis/odm/json.h"
 #include "motis/odm/prima_state.h"
-#include "motis/odm/routing_fiber.h"
+#include "motis/odm/raptor_wrapper.h"
 #include "motis/place.h"
 
 namespace motis::odm {
@@ -226,6 +226,8 @@ meta_router::meta_router(ep::routing const& r,
                          api::Place const& from_p,
                          api::Place const& to_p,
                          nigiri::routing::query const& start_time,
+                         std::vector<api::Itinerary> const& direct,
+                         nigiri::duration_t const fastest_direct,
                          bool const odm_pre_transit,
                          bool const odm_post_transit,
                          bool const odm_direct)
@@ -239,14 +241,16 @@ meta_router::meta_router(ep::routing const& r,
       from_p_{from_p},
       to_p_{to_p},
       start_time_{start_time},
+      direct_{direct},
+      fastest_direct_{fastest_direct},
       odm_pre_transit_{odm_pre_transit},
       odm_post_transit_{odm_post_transit},
       odm_direct_{odm_direct},
       tt_{r_.tt_},
-      rt_{r_.rt_},
+      rt_{r.rt_},
       rtt_{rt_->rtt_.get()},
       e_{rt_->e_.get()},
-      gbfs_rd_{r_.w_, r_.l_, r_.gbfs_},
+      gbfs_rd_{r.w_, r.l_, r.gbfs_},
       start_{query_.arriveBy_ ? to_ : from_},
       dest_{query_.arriveBy_ ? from_ : to_},
       start_modes_{query_.arriveBy_ ? post_transit_modes_ : pre_transit_modes_},
@@ -269,8 +273,8 @@ meta_router::meta_router(ep::routing const& r,
       dest_rental_providers_{query_.arriveBy_
                                  ? query_.preTransitRentalProviders_
                                  : query_.postTransitRentalProviders_} {
-  if (ep::blocked.get() == nullptr && r_.w_ != nullptr) {
-    ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r_.w_->n_nodes()});
+  if (ep::blocked.get() == nullptr && r.w_ != nullptr) {
+    ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
   }
 }
 
@@ -336,6 +340,8 @@ api::plan_response meta_router::run() {
     std::cout << "blacklisting failed: " << e.what();
     odm_networking = false;
   }
+
+  // TODO use query factory
 
   auto const start_walk = std::visit(
       utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
@@ -436,7 +442,7 @@ api::plan_response meta_router::run() {
 
   return {.from_ = to_place(tt_, r_.tags_, r_.w_, r_.pl_, r_.matches_, from_),
           .to_ = to_place(tt_, r_.tags_, r_.w_, r_.pl_, r_.matches_, to_),
-          .direct_ = std::move(direct),
+          .direct_ = std::move(direct_),
           .itineraries_ = {}};
 }
 

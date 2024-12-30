@@ -41,6 +41,8 @@ struct meta_router {
               api::Place const& from_p,
               api::Place const& to_p,
               nigiri::routing::query const& start_time,
+              std::vector<api::Itinerary> const& direct,
+              nigiri::duration_t fastest_direct_,
               bool odm_pre_transit,
               bool odm_post_transit,
               bool odm_direct);
@@ -60,6 +62,8 @@ private:
   api::Place const& from_p_;
   api::Place const& to_p_;
   nigiri::routing::query const& start_time_;
+  std::vector<api::Itinerary> const& direct_;
+  nigiri::duration_t fastest_direct_;
   bool odm_pre_transit_;
   bool odm_post_transit_;
   bool odm_direct_;
