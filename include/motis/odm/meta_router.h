@@ -50,8 +50,6 @@ struct meta_router {
   api::plan_response run();
 
 private:
-  std::vector<nigiri::routing::query> get_queries();
-
   ep::routing const& r_;
   api::plan_params const& query_;
   std::vector<api::ModeEnum> const& pre_transit_modes_;
