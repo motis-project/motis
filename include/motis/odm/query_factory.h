@@ -37,18 +37,26 @@ struct query_factory {
       td_dest_walk_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_from_short_;
+      odm_start_short_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_from_long_;
+      odm_start_long_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_to_short_;
+      odm_dest_short_;
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-      odm_to_long_;
+      odm_dest_long_;
 
 private:
+  nigiri::routing::query make(
+      std::vector<nigiri::routing::offset> const& start,
+      nigiri::hash_map<nigiri::location_idx_t,
+                       std::vector<nigiri::routing::td_offset>> const& td_start,
+      std::vector<nigiri::routing::offset> const& dest,
+      nigiri::hash_map<nigiri::location_idx_t,
+                       std::vector<nigiri::routing::td_offset>> const& td_dest)
+      const;
   nigiri::routing::query walk_walk() const;
   nigiri::routing::query walk_short() const;
   nigiri::routing::query walk_long() const;
