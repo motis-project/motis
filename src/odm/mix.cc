@@ -2,7 +2,12 @@
 
 #include "utl/overloaded.h"
 
+#include "motis-api/motis-api.h"
+
 namespace motis::odm {
+
+static constexpr auto const kODM =
+    static_cast<n::transport_mode_id_t>(api::ModeEnum::ODM);
 
 // journey cost
 static auto const kWalkCost = std::vector<cost_threshold>{{0, 1}, {15, 11}};
@@ -57,7 +62,7 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
                           return tally(fp.duration().count(), kWalkCost);
                         },
                         [](n::routing::offset const& o) {
-                          return o.transport_mode_id_ == offset_mode::kTaxi
+                          return o.transport_mode_id_ == kODM
                                      ? tally(o.duration().count(), kTaxiCost)
                                      : std::int32_t{0};
                         }},
@@ -83,7 +88,7 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
     return j.legs_.size() == 1 &&
            std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
            std::get<n::routing::offset>(j.legs_.front().uses_)
-                   .transport_mode_id_ == offset_mode::kTaxi;
+                   .transport_mode_id_ == kODM;
   };
 
   auto const cost = [&](auto const& j) {
@@ -119,8 +124,7 @@ void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {
   auto const taxi_time = [](n::routing::journey const& j) -> double {
     auto const is_taxi_leg = [](auto const& l) {
       return std::holds_alternative<n::routing::offset>(l.uses_) &&
-             std::get<n::routing::offset>(l.uses_).transport_mode_id_ ==
-                 offset_mode::kTaxi;
+             std::get<n::routing::offset>(l.uses_).transport_mode_id_ == kODM;
     };
 
     return (is_taxi_leg(j.legs_.front())

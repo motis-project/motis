@@ -458,7 +458,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
-  auto const [direct, fastest_direct] =
+  auto [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes,
                          query.directRentalFormFactors_,
@@ -652,8 +652,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),
-        .nextPageCursor_ = fmt::format("LATER|{}", to_seconds(r.interval_.to_)),
-    };
+        .nextPageCursor_ =
+            fmt::format("LATER|{}", to_seconds(r.interval_.to_))};
   }
 
   return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, from),
