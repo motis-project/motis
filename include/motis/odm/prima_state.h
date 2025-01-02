@@ -5,6 +5,7 @@
 
 #include "geo/latlng.h"
 
+#include "nigiri/routing/journey.h"
 #include "nigiri/routing/start_times.h"
 
 #include "motis-api/motis-api.h"
@@ -43,6 +44,9 @@ struct prima_state {
   std::vector<n::routing::start> prev_from_rides_;
   std::vector<n::routing::start> prev_to_rides_;
   std::vector<direct_ride> prev_direct_rides_;
+
+  std::vector<n::routing::journey> odm_journeys_;
+  std::vector<n::routing::journey> prev_odm_journeys_;
 };
 
 }  // namespace motis::odm

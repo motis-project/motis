@@ -23,6 +23,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/odm/json.h"
+#include "motis/odm/mix.h"
 #include "motis/odm/prima_state.h"
 #include "motis/odm/query_factory.h"
 #include "motis/odm/raptor_wrapper.h"
@@ -37,7 +38,8 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima_state> p_state;
 
-static auto const kPrimaUrl = boost::urls::url{""};
+static auto const kBlacklistingUrl = boost::urls::url{""};
+static auto const kWhitelistingUrl = boost::urls::url{""};
 static auto const kPrimaHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
@@ -71,6 +73,13 @@ std::vector<n::routing::offset> get_offsets(
   return r.get_offsets(pos, dir, modes, std::nullopt, std::nullopt,
                        std::nullopt, wheelchair, max, max_matching_distance,
                        gbfs_rd, stats);
+}
+
+void sort(std::vector<n::routing::start>& rides) {
+  utl::sort(rides, [](auto&& a, auto&& b) {
+    return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+           std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
+  });
 }
 
 void init(prima_state& ps,
@@ -121,10 +130,8 @@ void init_pt(std::vector<n::routing::start>& rides,
       tt, rtt, intvl, offsets, kNoTdOffsets, n::routing::kMaxTravelTime,
       location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
-  utl::sort(rides, [](auto&& a, auto&& b) {
-    return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
-           std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
-  });
+
+  sort(rides);
 }
 
 void init_direct(std::vector<direct_ride>& direct_rides,
@@ -195,6 +202,59 @@ auto get_td_offsets(auto const& rides, offset_event_type const oet) {
         }
       });
   return td_offsets;
+}
+
+auto collect_odm_journeys(auto& futures) {
+  p_state->odm_journeys_.clear();
+  for (auto& f : futures | std::views::drop(1)) {
+    p_state->odm_journeys_.append_range(*f.get().journeys_);
+  }
+}
+
+auto extract_rides() {
+  p_state->from_rides_.clear();
+  p_state->to_rides_.clear();
+  for (auto const& j : p_state->odm_journeys_) {
+    if (j.legs_.size() > 0) {
+      if (std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
+          std::get<n::routing::offset>(j.legs_.front().uses_)
+                  .transport_mode_id_ == kTransportModeIdODM) {
+        p_state->from_rides_.emplace_back(j.legs_.front().dep_time_,
+                                          j.legs_.front().arr_time_,
+                                          j.legs_.front().to_);
+      }
+    }
+    if (j.legs_.size() > 1) {
+      if (std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
+          std::get<n::routing::offset>(j.legs_.back().uses_)
+                  .transport_mode_id_ == kTransportModeIdODM) {
+        p_state->to_rides_.emplace_back(j.legs_.back().arr_time_,
+                                        j.legs_.back().dep_time_,
+                                        j.legs_.back().from_);
+      }
+    }
+  }
+
+  auto const remove_dupes = [&](auto& rides) {
+    sort(rides);
+    rides.erase(std::unique(begin(rides), end(rides),
+                            [](auto&& a, auto&& b) {
+                              return std::tie(a.stop_, a.time_at_start_,
+                                              a.time_at_stop_) ==
+                                     std::tie(b.stop_, b.time_at_start_,
+                                              b.time_at_stop_);
+                            }),
+                end(rides));
+  };
+
+  remove_dupes(p_state->from_rides_);
+  remove_dupes(p_state->to_rides_);
+}
+
+void remove_not_whitelisted() {
+  std::erase_if(p_state->odm_journeys_, [&](auto const& j) {
+
+  });
 }
 
 meta_router::meta_router(ep::routing const& r,
@@ -305,15 +365,15 @@ api::plan_response meta_router::run() {
   }
 
   auto odm_networking = true;
+  auto ioc = boost::asio::io_context{};
   try {
     // TODO the fiber/thread should yield until network response arrives?
-    auto ioc = boost::asio::io_context{};
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const bl_response = co_await http_POST(
-              kPrimaUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
-          update(*p_state, get_http_body(bl_response));
+          auto const blacklisting_response = co_await http_POST(
+              kBlacklistingUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
+          update(*p_state, get_http_body(blacklisting_response));
         },
         boost::asio::detached);
     ioc.run();
@@ -462,14 +522,16 @@ api::plan_response meta_router::run() {
   auto tasks = std::vector<boost::fibers::packaged_task<
       n::routing::routing_result<n::routing::raptor_stats>()>>{};
   tasks.emplace_back(make_task(qf.walk_walk()));
-  tasks.emplace_back(make_task(qf.walk_short()));
-  tasks.emplace_back(make_task(qf.walk_long()));
-  tasks.emplace_back(make_task(qf.short_walk()));
-  tasks.emplace_back(make_task(qf.long_walk()));
-  tasks.emplace_back(make_task(qf.short_short()));
-  tasks.emplace_back(make_task(qf.short_long()));
-  tasks.emplace_back(make_task(qf.long_short()));
-  tasks.emplace_back(make_task(qf.long_long()));
+  if (odm_networking) {
+    tasks.emplace_back(make_task(qf.walk_short()));
+    tasks.emplace_back(make_task(qf.walk_long()));
+    tasks.emplace_back(make_task(qf.short_walk()));
+    tasks.emplace_back(make_task(qf.long_walk()));
+    tasks.emplace_back(make_task(qf.short_short()));
+    tasks.emplace_back(make_task(qf.short_long()));
+    tasks.emplace_back(make_task(qf.long_short()));
+    tasks.emplace_back(make_task(qf.long_long()));
+  }
 
   auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
 
@@ -481,9 +543,35 @@ api::plan_response meta_router::run() {
     f.wait();
   }
 
-  // TODO whitelist request for ODM rides used in journeys
+  auto const pt_journeys = *futures.front().get().journeys_;
+  collect_odm_journeys(futures);
+  extract_rides();
 
-  // TODO remove journeys with non-whitelisted ODM rides
+  try {
+    // TODO the fiber/thread should yield until network response arrives?
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          auto const whitelisting_response = co_await http_POST(
+              kWhitelistingUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
+          update(*p_state, get_http_body(whitelisting_response));
+        },
+        boost::asio::detached);
+    ioc.run();
+  } catch (std::exception const& e) {
+    std::cout << "whitelisting failed: " << e.what();
+    odm_networking = false;
+  }
+
+  // TODO direct rides?
+
+  if (odm_networking) {
+    remove_not_whitelisted();
+  } else {
+    p_state->odm_journeys_.clear();
+  }
+
+  mix(pt_journeys, p_state->odm_journeys_);
 
   return {.from_ = to_place(tt_, r_.tags_, r_.w_, r_.pl_, r_.matches_, from_),
           .to_ = to_place(tt_, r_.tags_, r_.w_, r_.pl_, r_.matches_, to_),

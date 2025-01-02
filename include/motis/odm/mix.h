@@ -17,7 +17,7 @@ struct cost_threshold {
 
 std::int32_t tally(std::int32_t, std::vector<cost_threshold> const&);
 
-void mix(n::pareto_set<n::routing::journey> const&,
-         std::vector<n::routing::journey>&);
+void mix(n::pareto_set<n::routing::journey> const& pt_journeys,
+         std::vector<n::routing::journey>& odm_journeys);
 
 }  // namespace motis::odm

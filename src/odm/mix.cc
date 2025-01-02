@@ -148,11 +148,11 @@ void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {
   std::erase_if(odm_journeys, is_dominated);
 }
 
-void mix(n::pareto_set<n::routing::journey> const& base_journeys,
+void mix(n::pareto_set<n::routing::journey> const& pt_journeys,
          std::vector<n::routing::journey>& odm_journeys) {
-  cost_domination(base_journeys, odm_journeys);
+  cost_domination(pt_journeys, odm_journeys);
   productivity_domination(odm_journeys);
-  odm_journeys.append_range(base_journeys);
+  odm_journeys.append_range(pt_journeys);
 }
 
 }  // namespace motis::odm
