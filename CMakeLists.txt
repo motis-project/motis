@@ -200,3 +200,9 @@ add_custom_target(motis-web-ui
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/ui"
         VERBATIM
 )
+
+foreach(t mimalloc adr osr nigiri gtfsrt
+        geo tiles tiles-import-library
+        motis motis-api motislib)
+    target_compile_options(${t} PUBLIC ${MOTIS_TARGET_FLAGS})
+endforeach()

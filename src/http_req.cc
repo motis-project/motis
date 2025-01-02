@@ -24,6 +24,8 @@ namespace http = beast::http;
 namespace asio = boost::asio;
 namespace ssl = asio::ssl;
 
+constexpr auto const kBodySizeLimit = 128U * 1024U * 1024U;  // 128 M
+
 template <typename Stream>
 asio::awaitable<http_response> req(
     Stream&&,
@@ -101,14 +103,17 @@ asio::awaitable<http_response> req(
 
   co_await http::async_write(stream, req);
 
+  auto p = http::response_parser<http::dynamic_body>{};
+  p.eager(true);
+  p.body_limit(kBodySizeLimit);
+
   auto buffer = beast::flat_buffer{};
-  auto res = http::response<http::dynamic_body>{};
-  co_await http::async_read(stream, buffer, res);
+  co_await http::async_read(stream, buffer, p);
 
   auto ec = beast::error_code{};
   beast::get_lowest_layer(stream).socket().shutdown(
       asio::ip::tcp::socket::shutdown_both, ec);
-  co_return res;
+  co_return p.release();
 }
 
 asio::awaitable<http::response<http::dynamic_body>> http_GET(
