@@ -91,6 +91,7 @@
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
 	let bikeRental = $state(false);
+	let onDemandTaxi = $state(false);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -101,7 +102,7 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived(['WALK', ...(bikeRental ? ['RENTAL'] : [])] as Mode[]);
+	let modes = $derived(['WALK', ...(bikeRental ? ['RENTAL'] : []), ...(onDemandTaxi ? ['ODM'] : [])] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -229,7 +230,7 @@
 
 	<Control position="top-left">
 		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
+			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental bind:onDemandTaxi />
 		</Card>
 	</Control>
 

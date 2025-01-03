@@ -2,6 +2,7 @@
 	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
 	import Accessibility from 'lucide-svelte/icons/accessibility';
 	import Bike from 'lucide-svelte/icons/bike';
+	import CarTaxiFront from 'lucide-svelte/icons/car-taxi-front';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
@@ -17,7 +18,8 @@
 		time = $bindable(),
 		timeType = $bindable(),
 		wheelchair = $bindable(),
-		bikeRental = $bindable()
+		bikeRental = $bindable(),
+		onDemandTaxi = $bindable()
 	}: {
 		from: Location;
 		to: Location;
@@ -25,6 +27,7 @@
 		timeType: string;
 		wheelchair: boolean;
 		bikeRental: boolean;
+		onDemandTaxi: boolean;
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -73,6 +76,9 @@
 		</Toggle>
 		<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
 			<Bike class="h-6 w-6" />
+		</Toggle>
+		<Toggle aria-label="toggle bold" bind:pressed={onDemandTaxi}>
+			<CarTaxiFront class="h-6 w-6" />
 		</Toggle>
 	</div>
 </div>

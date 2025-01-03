@@ -101,6 +101,10 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
 
   auto ret = hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
   for (auto const m : modes) {
+    if (m == api::ModeEnum::ODM) {
+      continue;
+    }
+
     auto const profile = to_profile(m, wheelchair);
 
     if (profile != osr::search_profile::kWheelchair) {
@@ -150,6 +154,10 @@ std::vector<n::routing::offset> routing::get_offsets(
   auto ignore_walk = false;
 
   auto const handle_mode = [&](api::ModeEnum const m) {
+    if (m == api::ModeEnum::ODM) {
+      return;
+    }
+
     auto const profile = to_profile(m, wheelchair);
 
     if (rt_->e_ && profile == osr::search_profile::kWheelchair) {
