@@ -4,9 +4,16 @@
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/types.h"
 
+#include "motis-api/motis-api.h"
+
 namespace motis::odm {
 
 namespace n = nigiri;
+
+constexpr auto const kODM =
+    static_cast<n::transport_mode_id_t>(api::ModeEnum::ODM);
+constexpr auto const kWalk =
+    static_cast<n::transport_mode_id_t>(api::ModeEnum::WALK);
 
 struct cost_threshold {
   std::int32_t threshold_;

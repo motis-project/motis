@@ -49,9 +49,6 @@ static auto const kPrimaHeaders = std::map<std::string, std::string>{
 constexpr auto const kInfinityDuration =
     n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
-static constexpr auto const kODM =
-    static_cast<n::transport_mode_id_t>(api::ModeEnum::ODM);
-
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 

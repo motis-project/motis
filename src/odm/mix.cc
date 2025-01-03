@@ -2,12 +2,9 @@
 
 #include "utl/overloaded.h"
 
-#include "motis-api/motis-api.h"
+#include "nigiri/special_stations.h"
 
 namespace motis::odm {
-
-static constexpr auto const kODM =
-    static_cast<n::transport_mode_id_t>(api::ModeEnum::ODM);
 
 // journey cost
 static auto const kWalkCost = std::vector<cost_threshold>{{0, 1}, {15, 11}};
@@ -62,9 +59,15 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
                           return tally(fp.duration().count(), kWalkCost);
                         },
                         [](n::routing::offset const& o) {
-                          return o.transport_mode_id_ == kODM
-                                     ? tally(o.duration().count(), kTaxiCost)
-                                     : std::int32_t{0};
+                          if (o.transport_mode_id_ == kODM) {
+                            return tally(o.duration().count(), kTaxiCost);
+                          } else if (o.transport_mode_id_ == kWalk) {
+                            return tally(o.duration().count(), kWalkCost);
+                          }
+                          utl::verify(o.transport_mode_id_ == kODM ||
+                                          o.transport_mode_id_ == kWalk,
+                                      "unknown transport mode");
+                          return std::int32_t{0};
                         }},
         leg.uses_);
   };
@@ -86,6 +89,10 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
 
   auto const is_direct_taxi = [](auto const& j) {
     return j.legs_.size() == 1 &&
+           j.legs_.front().from_ ==
+               get_special_station(n::special_station::kStart) &&
+           j.legs_.front().to_ ==
+               get_special_station(n::special_station::kEnd) &&
            std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
            std::get<n::routing::offset>(j.legs_.front().uses_)
                    .transport_mode_id_ == kODM;
