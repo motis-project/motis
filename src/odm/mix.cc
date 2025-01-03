@@ -6,6 +6,8 @@
 
 namespace motis::odm {
 
+namespace n = nigiri;
+
 // journey cost
 static auto const kWalkCost = std::vector<cost_threshold>{{0, 1}, {15, 11}};
 static auto const kTaxiCost = std::vector<cost_threshold>{{0, 59}, {1, 13}};
@@ -30,11 +32,12 @@ std::int32_t tally(std::int32_t const x,
   return acc;
 }
 
-auto transfer_cost(auto const& j) {
+std::int32_t mixer::transfer_cost(n::routing::journey const& j) const {
   return tally(j.transfers_, kTransferCost);
 };
 
-auto distance(auto const& a, auto const& b) {
+std::int32_t mixer::distance(n::routing::journey const& a,
+                             n::routing::journey const& b) const {
   auto const overtakes = [](auto const& x, auto const& y) {
     return x.departure_time() > y.departure_time() &&
            x.arrival_time() < y.arrival_time();
@@ -48,8 +51,9 @@ auto distance(auto const& a, auto const& b) {
                    .count();
 };
 
-void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
-                     std::vector<n::routing::journey>& odm_journeys) {
+void mixer::cost_domination(
+    n::pareto_set<n::routing::journey> const& pt_journeys,
+    std::vector<n::routing::journey>& odm_journeys) const {
 
   auto const leg_cost = [](auto const& leg) {
     return std::visit(
@@ -123,8 +127,9 @@ void cost_domination(n::pareto_set<n::routing::journey> const& pt_journeys,
   std::erase_if(odm_journeys, is_dominated);
 }
 
-void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {
-  auto const cost = [](auto const& j) -> double {
+void mixer::productivity_domination(
+    std::vector<n::routing::journey>& odm_journeys) const {
+  auto const cost = [&](auto const& j) -> double {
     return j.travel_time().count() + transfer_cost(j);
   };
 
@@ -159,8 +164,8 @@ void productivity_domination(std::vector<n::routing::journey>& odm_journeys) {
   std::erase_if(odm_journeys, is_dominated);
 }
 
-void mix(n::pareto_set<n::routing::journey> const& pt_journeys,
-         std::vector<n::routing::journey>& odm_journeys) {
+void mixer::mix(n::pareto_set<n::routing::journey> const& pt_journeys,
+                std::vector<n::routing::journey>& odm_journeys) const {
   cost_domination(pt_journeys, odm_journeys);
   productivity_domination(odm_journeys);
   odm_journeys.append_range(pt_journeys);

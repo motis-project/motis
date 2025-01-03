@@ -14,6 +14,15 @@ namespace n = nigiri;
 using namespace motis::odm;
 using namespace std::chrono_literals;
 
+static auto const kOdmMixer = mixer{.walk_cost_ = {{0, 1}, {15, 11}},
+                                    .taxi_cost_ = {{0, 59}, {1, 13}},
+                                    .transfer_cost_ = {{0, 15}},
+                                    .direct_taxi_factor_ = 1.3,
+                                    .direct_taxi_constant_ = 27,
+                                    .travel_time_weight_ = 1.5,
+                                    .distance_weight_ = 0.07,
+                                    .distance_exponent_ = 1.5};
+
 TEST(mix, tally) {
   auto const ct = std::vector<cost_threshold>{{0, 30}, {1, 1}, {10, 2}};
   EXPECT_EQ(0, tally(0, ct));
@@ -58,7 +67,7 @@ bool equal(n::routing::journey const& a, n::routing::journey const& b) {
 }
 
 TEST(mix, pt_taxi_no_direct) {
-  auto oev = n::routing::journey{
+  auto pt = n::routing::journey{
       .legs_ = {n::routing::journey::leg{
           n::direction::kForward,
           get_special_station(n::special_station::kStart),
@@ -71,9 +80,9 @@ TEST(mix, pt_taxi_no_direct) {
       .transfers_ = 0U};
 
   auto pt_journeys = n::pareto_set<n::routing::journey>{};
-  pt_journeys.add(n::routing::journey{oev});
+  pt_journeys.add(n::routing::journey{pt});
 
-  auto oev_taxi = n::routing::journey{
+  auto pt_taxi = n::routing::journey{
       .legs_ = {n::routing::journey::leg{
           n::direction::kForward,
           get_special_station(n::special_station::kStart),
@@ -86,20 +95,90 @@ TEST(mix, pt_taxi_no_direct) {
       .transfers_ = 0U};
 
   auto odm_journeys = std::vector<n::routing::journey>{
-      oev_taxi,
+      pt_taxi,
       direct_taxi(n::unixtime_t{10h + 17min}, n::unixtime_t{10h + 27min}),
       direct_taxi(n::unixtime_t{10h + 43min}, n::unixtime_t{10h + 53min}),
       direct_taxi(n::unixtime_t{10h + 50min}, n::unixtime_t{11h + 00min}),
       direct_taxi(n::unixtime_t{10h + 00min}, n::unixtime_t{10h + 10min}),
       direct_taxi(n::unixtime_t{11h + 00min}, n::unixtime_t{10h + 10min})};
 
-  mix(pt_journeys, odm_journeys);
+  kOdmMixer.mix(pt_journeys, odm_journeys);
 
   ASSERT_EQ(odm_journeys.size(), 2U);
   EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return equal(j, oev); }),
+                         [&](auto const& j) { return equal(j, pt); }),
             end(odm_journeys));
   EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return equal(j, oev_taxi); }),
+                         [&](auto const& j) { return equal(j, pt_taxi); }),
+            end(odm_journeys));
+}
+
+TEST(mix, taxi_saves_transfers) {
+  auto pt = n::routing::journey{
+      .legs_ = {n::routing::journey::leg{
+                    n::direction::kForward,
+                    get_special_station(n::special_station::kStart),
+                    n::location_idx_t{23U}, n::unixtime_t{10h},
+                    n::unixtime_t{10h + 5min},
+                    n::routing::offset{n::location_idx_t{23U}, 5min, kWalk}},
+                n::routing::journey::leg{
+                    n::direction::kForward, n::location_idx_t{42U},
+                    get_special_station(n::special_station::kEnd),
+                    n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
+                    n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
+      .start_time_ = n::unixtime_t{10h},
+      .dest_time_ = n::unixtime_t{11h},
+      .dest_ = get_special_station(n::special_station::kEnd),
+      .transfers_ = 4U};
+
+  auto pt_journeys = n::pareto_set<n::routing::journey>{};
+  pt_journeys.add(n::routing::journey{pt});
+
+  auto odm_journeys = std::vector<n::routing::journey>{
+      {.legs_ = {{n::direction::kForward,
+                  get_special_station(n::special_station::kStart),
+                  n::location_idx_t{24U}, n::unixtime_t{10h + 14min},
+                  n::unixtime_t{10h + 20min},
+                  n::routing::offset{n::location_idx_t{24U}, 6min, kODM}},
+                 {n::direction::kForward, n::location_idx_t{42U},
+                  get_special_station(n::special_station::kEnd),
+                  n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
+                  n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
+       .start_time_ = n::unixtime_t{10h + 14min},
+       .dest_time_ = n::unixtime_t{11h},
+       .dest_ = get_special_station(n::special_station::kEnd),
+       .transfers_ = 2U},
+      {.legs_ = {{n::direction::kForward,
+                  get_special_station(n::special_station::kStart),
+                  n::location_idx_t{25U}, n::unixtime_t{10h + 20min},
+                  n::unixtime_t{10h + 30min},
+                  n::routing::offset{n::location_idx_t{25U}, 10min, kODM}},
+                 {n::direction::kForward, n::location_idx_t{42U},
+                  get_special_station(n::special_station::kEnd),
+                  n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
+                  n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
+       .start_time_ = n::unixtime_t{10h + 20min},
+       .dest_time_ = n::unixtime_t{11h},
+       .dest_ = get_special_station(n::special_station::kEnd),
+       .transfers_ = 1U},
+      {.legs_ = {{n::direction::kForward,
+                  get_special_station(n::special_station::kStart),
+                  n::location_idx_t{26U}, n::unixtime_t{10h + 30min},
+                  n::unixtime_t{10h + 45min},
+                  n::routing::offset{n::location_idx_t{26U}, 15min, kODM}},
+                 {n::direction::kForward, n::location_idx_t{42U},
+                  get_special_station(n::special_station::kEnd),
+                  n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
+                  n::routing::offset{n::location_idx_t{42U}, 5min, kWalk}}},
+       .start_time_ = n::unixtime_t{10h + 30min},
+       .dest_time_ = n::unixtime_t{11h},
+       .dest_ = get_special_station(n::special_station::kEnd),
+       .transfers_ = 0U}};
+
+  kOdmMixer.mix(pt_journeys, odm_journeys);
+
+  ASSERT_EQ(odm_journeys.size(), 1U);
+  EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
+                         [&](auto const& j) { return equal(j, pt); }),
             end(odm_journeys));
 }

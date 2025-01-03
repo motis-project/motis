@@ -49,6 +49,15 @@ static auto const kPrimaHeaders = std::map<std::string, std::string>{
 constexpr auto const kInfinityDuration =
     n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
+static auto const kOdmMixer = mixer{.walk_cost_ = {{0, 1}, {15, 11}},
+                                    .taxi_cost_ = {{0, 59}, {1, 13}},
+                                    .transfer_cost_ = {{0, 15}},
+                                    .direct_taxi_factor_ = 1.3,
+                                    .direct_taxi_constant_ = 27,
+                                    .travel_time_weight_ = 1.5,
+                                    .distance_weight_ = 0.07,
+                                    .distance_exponent_ = 1.5};
+
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
@@ -623,7 +632,7 @@ api::plan_response meta_router::run() {
     p_state->odm_journeys_.clear();
   }
 
-  mix(*pt_result.journeys_, p_state->odm_journeys_);
+  kOdmMixer.mix(*pt_result.journeys_, p_state->odm_journeys_);
 
   extract_direct();
 
