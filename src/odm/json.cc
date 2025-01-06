@@ -3,6 +3,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "boost/json.hpp"
+
 #include "date/date.h"
 
 #include "nigiri/common/it_range.h"
@@ -71,7 +73,7 @@ std::string serialize(prima_state const& p, n::timetable const& tt) {
   return boost::json::serialize(json(p, tt));
 }
 
-void update(prima_state& ps, std::string_view json) {
+void blacklist_update(prima_state& ps, std::string_view json) {
 
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
@@ -119,6 +121,10 @@ void update(prima_state& ps, std::string_view json) {
   } catch (std::exception const& e) {
     std::cout << e.what();
   }
+}
+
+void whitelist_update(prima_state& ps, std::string_view json) {
+  // TODO
 }
 
 }  // namespace motis::odm

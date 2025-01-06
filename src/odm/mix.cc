@@ -4,6 +4,8 @@
 
 #include "nigiri/special_stations.h"
 
+#include "motis/odm/odm.h"
+
 namespace motis::odm {
 
 namespace n = nigiri;

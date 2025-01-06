@@ -435,7 +435,7 @@ api::plan_response meta_router::run() {
         [&]() -> boost::asio::awaitable<void> {
           auto const blacklisting_response = co_await http_POST(
               kBlacklistingUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
-          update(*p_state, get_http_body(blacklisting_response));
+          blacklist_update(*p_state, get_http_body(blacklisting_response));
         },
         boost::asio::detached);
     ioc.run();
@@ -616,7 +616,7 @@ api::plan_response meta_router::run() {
         [&]() -> boost::asio::awaitable<void> {
           auto const whitelisting_response = co_await http_POST(
               kWhitelistingUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
-          update(*p_state, get_http_body(whitelisting_response));
+          whitelist_update(*p_state, get_http_body(whitelisting_response));
         },
         boost::asio::detached);
     ioc.run();
