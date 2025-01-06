@@ -1,8 +1,7 @@
 #include "motis/odm/calibration/json.h"
 
+#include <chrono>
 #include <sstream>
-
-#include "date/date.h"
 
 #include "boost/json.hpp"
 
@@ -18,24 +17,32 @@ constexpr auto const kIntermediateDummyStation =
     n::get_special_station(n::special_station::kVia0);
 
 n::unixtime_t read_time(boost::json::value const& v) {
-  auto ss = std::istringstream{v.as_string().c_str()};
-  auto t = n::unixtime_t{};
-  ss >> date::parse("%H:%M", t);
-  return t;
+  auto ss = std::stringstream{};
+  ss << v;
+  unsigned h, m;
+  ss.get();
+  ss >> h;
+  ss.get();
+  ss >> m;
+  return n::unixtime_t{n::duration_t{h * 60 + m}};
 }
 
-n::routing::journey read_journey(boost::json::value const& v) {
+n::routing::journey read_journey(boost::json::object const& o) {  // FIXME
   auto j = n::routing::journey{};
   try {
-    j.start_time_ = read_time(v.at("departure"));
-    j.dest_time_ = read_time(v.at("arrival"));
-    j.dest_ = n::get_special_station(n::special_station::kEnd);
-    j.transfers_ = static_cast<std::uint8_t>(v.at("transfers").as_uint64());
+    j.start_time_ = read_time(o.at("departure"));
+    j.dest_time_ = read_time(o.at("arrival"));
 
-    auto const start_length = n::duration_t{v.at("startLength").as_uint64()};
-    auto const end_length = n::duration_t{v.at("endLength").as_uint64()};
-    auto const start_mode_str = v.at("startMode").as_string();
-    auto const end_mode_str = v.at("endMode").as_string();
+    std::cout << "start_time: " << j.start_time_
+              << ", dest_time: " << j.dest_time_ << std::endl;
+
+    j.dest_ = n::get_special_station(n::special_station::kEnd);
+    j.transfers_ = static_cast<std::uint8_t>(o.at("transfers").as_uint64());
+
+    auto const start_length = n::duration_t{o.at("startLength").as_uint64()};
+    auto const end_length = n::duration_t{o.at("endLength").as_uint64()};
+    auto const start_mode_str = o.at("startMode").as_string();
+    auto const end_mode_str = o.at("endMode").as_string();
 
     auto const parse_mode = [](std::string_view s) {
       return s == "taxi" ? kODM : kWalk;
@@ -96,21 +103,16 @@ std::vector<requirement> read_requirements(std::string_view json) {
   auto reqs = std::vector<requirement>{};
 
   try {
-    auto const& o = boost::json::parse(json).as_object();
-
-    std::cout << "keys:\n";
-    for (auto const& k : o) {
-      std::cout << k.key() << "\n";
-    }
+    auto const o = boost::json::parse(json).as_object();
 
     for (auto const& cs : o.at("conSets").as_array()) {
       reqs.emplace_back();
       for (auto const& c : cs.as_array()) {
-        auto j = read_journey(c);
+        auto j = read_journey(c.as_object());
         if (uses_odm(j)) {
           reqs.back().odm_.push_back(std::move(j));
           reqs.back().odm_to_dom_.set(reqs.back().odm_.size() - 1,
-                                      c.at("toDom").as_bool());
+                                      c.as_object().at("toDom").as_bool());
         } else {
           reqs.back().pt_.add(std::move(j));
         }

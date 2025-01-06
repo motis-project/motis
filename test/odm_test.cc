@@ -1,7 +1,5 @@
 #include "gtest/gtest.h"
 
-#include <algorithm>
-
 #include "utl/zip.h"
 
 #include "nigiri/routing/journey.h"
@@ -252,7 +250,7 @@ constexpr auto const requirements_json = R"(
 )";
 
 TEST(odm_calibration, read_requirements) {
-  auto const reqs = read_requirements(requirements_json);  // FIXME
+  auto const reqs = read_requirements(requirements_json);
   ASSERT_EQ(reqs.size(), 2);
   ASSERT_EQ(reqs[0].pt_.size(), 1);
   ASSERT_EQ(reqs[0].odm_.size(), 2);
