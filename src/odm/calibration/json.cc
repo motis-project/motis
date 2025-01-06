@@ -92,17 +92,23 @@ bool uses_odm(n::routing::journey const& j) {
   return false;
 }
 
-std::vector<requirement> read(std::string_view json) {
+std::vector<requirement> read_requirements(std::string_view json) {
   auto reqs = std::vector<requirement>{};
 
   try {
     auto const& o = boost::json::parse(json).as_object();
+
+    std::cout << "keys:\n";
+    for (auto const& k : o) {
+      std::cout << k.key() << "\n";
+    }
+
     for (auto const& cs : o.at("conSets").as_array()) {
       reqs.emplace_back();
       for (auto const& c : cs.as_array()) {
         auto j = read_journey(c);
         if (uses_odm(j)) {
-          reqs.back().odm_.push_back(j);
+          reqs.back().odm_.push_back(std::move(j));
           reqs.back().odm_to_dom_.set(reqs.back().odm_.size() - 1,
                                       c.at("toDom").as_bool());
         } else {

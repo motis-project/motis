@@ -123,7 +123,8 @@ void blacklist_update(prima_state& ps, std::string_view json) {
   }
 }
 
-void whitelist_update(prima_state& ps, std::string_view json) {
+void whitelist_update(prima_state& ps [[maybe_unused]],
+                      std::string_view json [[maybe_unused]]) {
   // TODO
 }
 

@@ -8,7 +8,9 @@
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
+#include "motis/odm/calibration/json.h"
 #include "motis/odm/mix.h"
+#include "motis/odm/odm.h"
 
 namespace n = nigiri;
 using namespace motis::odm;
@@ -181,4 +183,79 @@ TEST(mix, taxi_saves_transfers) {
   EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
                          [&](auto const& j) { return equal(j, pt); }),
             end(odm_journeys));
+}
+
+constexpr auto const requirements_json = R"(
+{
+    "conSets": [
+        [
+            {
+                "name": "ÖV",
+                "departure": "10:17",
+                "arrival": "11:00",
+                "transfers": 0,
+                "startMode": "walk",
+                "startLength": 30,
+                "endMode": "walk",
+                "endLength": 0,
+                "toDom": ""
+            },
+            {
+                "name": "ÖV+Taxi",
+                "departure": "10:43",
+                "arrival": "11:00",
+                "transfers": 0,
+                "startMode": "taxi",
+                "startLength": 4,
+                "endMode": "walk",
+                "endLength": 0,
+                "toDom": ""
+            },
+            {
+                "name": "Direkt-Taxi Überholt 1",
+                "departure": "10:17",
+                "arrival": "10:27",
+                "transfers": 0,
+                "startMode": "taxi",
+                "startLength": 10,
+                "endMode": "walk",
+                "endLength": 0,
+                "toDom": true
+            }
+        ],
+        [
+            {
+                "name": "ÖV",
+                "departure": "10:00",
+                "arrival": "11:00",
+                "transfers": 4,
+                "startMode": "walk",
+                "startLength": 5,
+                "endMode": "walk",
+                "endLength": 5,
+                "toDom": ""
+            },
+            {
+                "name": "ÖV+Taxi 1",
+                "departure": "10:14",
+                "arrival": "11:00",
+                "transfers": 2,
+                "startMode": "taxi",
+                "startLength": 6,
+                "endMode": "walk",
+                "endLength": 5,
+                "toDom": true
+            }
+        ]
+    ]
+}
+)";
+
+TEST(odm_calibration, read_requirements) {
+  auto const reqs = read_requirements(requirements_json);  // FIXME
+  ASSERT_EQ(reqs.size(), 2);
+  ASSERT_EQ(reqs[0].pt_.size(), 1);
+  ASSERT_EQ(reqs[0].odm_.size(), 2);
+  ASSERT_EQ(reqs[1].pt_.size(), 1);
+  ASSERT_EQ(reqs[1].odm_.size(), 1);
 }

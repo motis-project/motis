@@ -4,6 +4,6 @@
 
 namespace motis::odm {
 
-std::vector<requirement> read(std::string_view json);
+std::vector<requirement> read_requirements(std::string_view json);
 
 }  // namespace motis::odm

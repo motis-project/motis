@@ -25,6 +25,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/odm/json.h"
 #include "motis/odm/mix.h"
+#include "motis/odm/odm.h"
 #include "motis/odm/prima_state.h"
 #include "motis/odm/query_factory.h"
 #include "motis/odm/raptor_wrapper.h"
