@@ -13,6 +13,8 @@ std::vector<nigiri::routing::journey> requirement::get_expected() const {
     }
   }
 
+  exp_mix.append_range(pt_);
+
   return exp_mix;
 }
 

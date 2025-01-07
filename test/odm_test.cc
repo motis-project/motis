@@ -1,12 +1,11 @@
 #include "gtest/gtest.h"
 
-#include "utl/zip.h"
-
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
 #include "motis/odm/calibration/json.h"
+#include "motis/odm/equal_journeys.h"
 #include "motis/odm/mix.h"
 #include "motis/odm/odm.h"
 
@@ -42,23 +41,6 @@ n::routing::journey direct_taxi(n::unixtime_t const dep,
           .dest_time_ = arr,
           .dest_ = get_special_station(n::special_station::kEnd),
           .transfers_ = 0U};
-}
-
-bool equal(n::routing::journey const& a, n::routing::journey const& b) {
-  if (std::tie(a.start_time_, a.dest_time_, a.dest_, a.transfers_) !=
-          std::tie(b.start_time_, b.dest_time_, b.dest_, b.transfers_) ||
-      a.legs_.size() != b.legs_.size()) {
-    return false;
-  }
-
-  auto const zip_legs = utl::zip(a.legs_, b.legs_);
-  return std::all_of(begin(zip_legs), end(zip_legs), [&](auto const& t) {
-    auto const& l1 = std::get<0>(t);
-    auto const& l2 = std::get<1>(t);
-    return std::tie(l1.from_, l1.to_, l1.dep_time_, l1.arr_time_) ==
-               std::tie(l2.from_, l2.to_, l2.dep_time_, l2.arr_time_) &&
-           l1.uses_.index() == l2.uses_.index();
-  });
 }
 
 TEST(mix, pt_taxi_no_direct) {
@@ -101,10 +83,10 @@ TEST(mix, pt_taxi_no_direct) {
 
   ASSERT_EQ(odm_journeys.size(), 2U);
   EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return equal(j, pt); }),
+                         [&](auto const& j) { return j == pt; }),
             end(odm_journeys));
   EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return equal(j, pt_taxi); }),
+                         [&](auto const& j) { return j == pt_taxi; }),
             end(odm_journeys));
 }
 
@@ -174,7 +156,7 @@ TEST(mix, taxi_saves_transfers) {
 
   ASSERT_EQ(odm_journeys.size(), 1U);
   EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return equal(j, pt); }),
+                         [&](auto const& j) { return j == pt; }),
             end(odm_journeys));
 }
 
