@@ -51,19 +51,14 @@ bool equal(n::routing::journey const& a, n::routing::journey const& b) {
     return false;
   }
 
-  auto const equal_leg = [](auto const& l1, auto& l2) {
+  auto const zip_legs = utl::zip(a.legs_, b.legs_);
+  return std::all_of(begin(zip_legs), end(zip_legs), [&](auto const& t) {
+    auto const& l1 = std::get<0>(t);
+    auto const& l2 = std::get<1>(t);
     return std::tie(l1.from_, l1.to_, l1.dep_time_, l1.arr_time_) ==
                std::tie(l2.from_, l2.to_, l2.dep_time_, l2.arr_time_) &&
            l1.uses_.index() == l2.uses_.index();
-  };
-
-  for (auto const [x, y] : utl::zip(a.legs_, b.legs_)) {
-    if (!equal_leg(x, y)) {
-      return false;
-    }
-  }
-
-  return true;
+  });
 }
 
 TEST(mix, pt_taxi_no_direct) {
@@ -251,9 +246,48 @@ constexpr auto const requirements_json = R"(
 
 TEST(odm_calibration, read_requirements) {
   auto const reqs = read_requirements(requirements_json);
+
   ASSERT_EQ(reqs.size(), 2);
   ASSERT_EQ(reqs[0].pt_.size(), 1);
   ASSERT_EQ(reqs[0].odm_.size(), 2);
   ASSERT_EQ(reqs[1].pt_.size(), 1);
   ASSERT_EQ(reqs[1].odm_.size(), 1);
+
+  for (auto const& j : reqs[0].pt_) {
+    EXPECT_EQ(j.start_time_, n::unixtime_t{10h + 17min});
+    EXPECT_EQ(j.dest_time_, n::unixtime_t{11h});
+    ASSERT_EQ(j.legs_.size(), 1);
+    ASSERT_TRUE(
+        std::holds_alternative<n::routing::offset>(j.legs_.front().uses_));
+    EXPECT_EQ(std::get<n::routing::offset>(j.legs_.front().uses_).duration_,
+              30min);
+    EXPECT_EQ(
+        std::get<n::routing::offset>(j.legs_.front().uses_).transport_mode_id_,
+        kWalk);
+  }
+
+  EXPECT_EQ(reqs[1].odm_[0].start_time_, n::unixtime_t{10h + 14min});
+  EXPECT_EQ(reqs[1].odm_[0].dest_time_, n::unixtime_t{11h});
+  EXPECT_EQ(reqs[1].odm_[0].transfers_, 2);
+  ASSERT_EQ(reqs[1].odm_[0].legs_.size(), 2);
+  ASSERT_TRUE(std::holds_alternative<n::routing::offset>(
+      reqs[1].odm_[0].legs_[0].uses_));
+  EXPECT_EQ(
+      std::get<n::routing::offset>(reqs[1].odm_[0].legs_[0].uses_).duration_,
+      6min);
+  EXPECT_EQ(std::get<n::routing::offset>(reqs[1].odm_[0].legs_[0].uses_)
+                .transport_mode_id_,
+            kODM);
+  ASSERT_TRUE(std::holds_alternative<n::routing::offset>(
+      reqs[1].odm_[0].legs_[1].uses_));
+  EXPECT_EQ(
+      std::get<n::routing::offset>(reqs[1].odm_[0].legs_[1].uses_).duration_,
+      5min);
+  EXPECT_EQ(std::get<n::routing::offset>(reqs[1].odm_[0].legs_[1].uses_)
+                .transport_mode_id_,
+            kWalk);
+
+  EXPECT_FALSE(reqs[0].odm_to_dom_.test(0));
+  EXPECT_TRUE(reqs[0].odm_to_dom_.test(1));
+  EXPECT_TRUE(reqs[1].odm_to_dom_.test(0));
 }
