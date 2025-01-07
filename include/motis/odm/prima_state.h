@@ -33,6 +33,9 @@ struct capacities {
 };
 
 struct prima_state {
+  void blacklist_update(std::string_view json);
+  void whitelist_update(std::string_view json);
+
   geo::latlng from_;
   geo::latlng to_;
   std::vector<n::routing::start> from_rides_;

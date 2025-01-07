@@ -1,11 +1,8 @@
 #include "motis/odm/json.h"
 
 #include <iostream>
-#include <sstream>
 
 #include "boost/json.hpp"
-
-#include "date/date.h"
 
 #include "nigiri/common/it_range.h"
 #include "nigiri/timetable.h"
@@ -71,61 +68,6 @@ boost::json::value json(prima_state const& p, n::timetable const& tt) {
 
 std::string serialize(prima_state const& p, n::timetable const& tt) {
   return boost::json::serialize(json(p, tt));
-}
-
-void blacklist_update(prima_state& ps, std::string_view json) {
-
-  auto const update_pt_rides = [](auto& rides, auto& prev_rides,
-                                  auto const& update) {
-    std::swap(rides, prev_rides);
-    rides.clear();
-    auto prev_it = std::begin(prev_rides);
-    for (auto const& stop : update) {
-      for (auto const& time : stop.as_array()) {
-        if (time.as_bool()) {
-          rides.emplace_back(*prev_it);
-        }
-        ++prev_it;
-        if (prev_it == end(prev_rides)) {
-          return;
-        }
-      }
-    }
-  };
-
-  auto const update_direct_rides = [](auto& rides, auto& prev_rides,
-                                      auto const& update) {
-    std::swap(rides, prev_rides);
-    rides.clear();
-    for (auto const& [prev, time] : utl::zip(prev_rides, update)) {
-      if (time.as_bool()) {
-        rides.emplace_back(prev);
-      }
-    }
-  };
-
-  try {
-    auto const& o = boost::json::parse(json).as_object();
-    if (o.contains("startBusStops")) {
-      update_pt_rides(ps.from_rides_, ps.prev_from_rides_,
-                      o.at("startBusStops").as_array());
-    }
-    if (o.contains("targetBusStops")) {
-      update_pt_rides(ps.to_rides_, ps.prev_to_rides_,
-                      o.at("targetBusStops").as_array());
-    }
-    if (o.contains("times")) {
-      update_direct_rides(ps.direct_rides_, ps.prev_direct_rides_,
-                          o.at("times").as_array());
-    }
-  } catch (std::exception const& e) {
-    std::cout << e.what();
-  }
-}
-
-void whitelist_update(prima_state& ps [[maybe_unused]],
-                      std::string_view json [[maybe_unused]]) {
-  // TODO
 }
 
 }  // namespace motis::odm
