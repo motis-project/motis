@@ -16,6 +16,28 @@ namespace n = nigiri;
 constexpr auto const kIntermediateDummyStation =
     n::get_special_station(n::special_station::kVia0);
 
+mixer read_parameters(std::string_view json) {
+  auto const read_cost = [](auto const& v) {
+    auto ret = std::vector<cost_threshold>{};
+    for (auto const& ct : v.as_array()) {
+      ret.emplace_back(value_to<std::int32_t>(ct.as_object().at("threshold")),
+                       value_to<std::int32_t>(ct.as_object().at("cost")));
+    }
+    return ret;
+  };
+
+  auto const o = boost::json::parse(json).as_object().at("params").as_object();
+
+  return {.walk_cost_ = read_cost(o.at("costWalk")),
+          .taxi_cost_ = read_cost(o.at("costTaxi")),
+          .transfer_cost_ = read_cost(o.at("costTransfer")),
+          .direct_taxi_factor_ = value_to<double>(o.at("factorDirectTaxi")),
+          .direct_taxi_constant_ = value_to<double>(o.at("constantDirectTaxi")),
+          .travel_time_weight_ = value_to<double>(o.at("weightTravelTime")),
+          .distance_weight_ = value_to<double>(o.at("weightTimeDistance")),
+          .distance_exponent_ = value_to<double>(o.at("exponentTimeDistance"))};
+}
+
 n::unixtime_t read_time(std::string_view s) {
   auto ss = std::stringstream{};
   ss << s;
@@ -107,7 +129,7 @@ std::vector<requirement> read_requirements(std::string_view json) {
       }
     }
   }
-  
+
   return reqs;
 }
 

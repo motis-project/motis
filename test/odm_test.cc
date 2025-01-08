@@ -160,6 +160,49 @@ TEST(mix, taxi_saves_transfers) {
             end(odm_journeys));
 }
 
+constexpr auto const parameters_json = R"(
+{
+  "params": {
+    "weightTravelTime": 1.5,
+    "weightTimeDistance": 0.07,
+    "exponentTimeDistance": 1.5,
+    "costWalk": [
+      { "threshold": 0, "cost": 1 },
+      { "threshold": 15, "cost": 11 }
+    ],
+    "costTaxi": [
+      { "threshold": 0, "cost": 59 },
+      { "threshold": 1, "cost": 13 }
+    ],
+    "costTransfer": [{ "threshold": 0, "cost": 15 }],
+    "factorDirectTaxi": 1.3,
+    "constantDirectTaxi": 27
+  }
+}
+)";
+
+TEST(odm_calibration, read_parameters) {
+  auto const m = read_parameters(parameters_json);
+  EXPECT_EQ(m.travel_time_weight_, 1.5);
+  EXPECT_EQ(m.distance_weight_, 0.07);
+  EXPECT_EQ(m.distance_exponent_, 1.5);
+  ASSERT_EQ(m.walk_cost_.size(), 2);
+  EXPECT_EQ(m.walk_cost_[0].threshold_, 0);
+  EXPECT_EQ(m.walk_cost_[0].cost_, 1);
+  EXPECT_EQ(m.walk_cost_[1].threshold_, 15);
+  EXPECT_EQ(m.walk_cost_[1].cost_, 11);
+  ASSERT_EQ(m.taxi_cost_.size(), 2);
+  EXPECT_EQ(m.taxi_cost_[0].threshold_, 0);
+  EXPECT_EQ(m.taxi_cost_[0].cost_, 59);
+  EXPECT_EQ(m.taxi_cost_[1].threshold_, 1);
+  EXPECT_EQ(m.taxi_cost_[1].cost_, 13);
+  ASSERT_EQ(m.transfer_cost_.size(), 1);
+  EXPECT_EQ(m.transfer_cost_[0].threshold_, 0);
+  EXPECT_EQ(m.transfer_cost_[0].cost_, 15);
+  EXPECT_EQ(m.direct_taxi_factor_, 1.3);
+  EXPECT_EQ(m.direct_taxi_constant_, 27);
+}
+
 constexpr auto const requirements_json = R"(
 {
     "conSets": [
