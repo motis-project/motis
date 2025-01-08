@@ -2,6 +2,7 @@ import { browser } from '$app/environment';
 import en from './en';
 import de from './de';
 import fr from './fr';
+import pl from './pl';
 
 export type Translations = {
 	journeyDetails: string;
@@ -33,6 +34,7 @@ export type Translations = {
 
 const translations: Map<string, Translations> = new Map(
 	Object.entries({
+		pl,
 		en,
 		de,
 		fr
