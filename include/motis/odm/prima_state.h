@@ -33,6 +33,7 @@ struct capacities {
 };
 
 struct prima_state {
+  std::string serialize(n::timetable const&) const;
   void blacklist_update(std::string_view json);
   void whitelist_update(std::string_view json);
 

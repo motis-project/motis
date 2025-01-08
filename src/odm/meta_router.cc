@@ -23,7 +23,6 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/journey_to_response.h"
-#include "motis/odm/json.h"
 #include "motis/odm/mix.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima_state.h"
@@ -435,7 +434,7 @@ api::plan_response meta_router::run() {
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const blacklisting_response = co_await http_POST(
-              kBlacklistingUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
+              kBlacklistingUrl, kPrimaHeaders, p_state->serialize(*tt_), 10s);
           p_state->blacklist_update(get_http_body(blacklisting_response));
         },
         boost::asio::detached);
@@ -616,7 +615,7 @@ api::plan_response meta_router::run() {
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const whitelisting_response = co_await http_POST(
-              kWhitelistingUrl, kPrimaHeaders, serialize(*p_state, *tt_), 10s);
+              kWhitelistingUrl, kPrimaHeaders, p_state->serialize(*tt_), 10s);
           p_state->whitelist_update(get_http_body(whitelisting_response));
         },
         boost::asio::detached);

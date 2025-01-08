@@ -96,7 +96,9 @@ void search(std::vector<requirement> const& reqs,
                       for (auto const& r : reqs) {
                         odm_journeys = r.odm_;
                         m.mix(r.pt_, odm_journeys);
-                        if (odm_journeys == e) }
+                        if (expected == odm_journeys) {
+                        }
+                      }
                     }
                   }
                 }
