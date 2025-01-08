@@ -322,7 +322,9 @@ auto extract_rides() {
   remove_dupes(p_state->to_rides_);
 }
 
-void remove_not_whitelisted() {
+void adjust_to_whitelisting() {
+  // TODO not only remove but also adjust times where applicable
+
   std::erase_if(p_state->odm_journeys_, [&](auto const& j) {
     return (j.legs_.size() > 0 &&
             std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
@@ -626,7 +628,7 @@ api::plan_response meta_router::run() {
   }
 
   if (odm_networking) {
-    remove_not_whitelisted();
+    adjust_to_whitelisting();
     add_direct();
   } else {
     p_state->odm_journeys_.clear();

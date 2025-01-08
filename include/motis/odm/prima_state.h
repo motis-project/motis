@@ -50,7 +50,6 @@ struct prima_state {
   std::vector<direct_ride> prev_direct_rides_;
 
   std::vector<n::routing::journey> odm_journeys_;
-  std::vector<n::routing::journey> prev_odm_journeys_;
 };
 
 }  // namespace motis::odm
