@@ -18,6 +18,8 @@ namespace motis::odm {
 
 namespace n = nigiri;
 
+constexpr auto const kPrimaTimeFormat = "%Y-%m-%dT%H:%M%z";
+
 enum fixed { kArr, kDep };
 
 struct direct_ride {

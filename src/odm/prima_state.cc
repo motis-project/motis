@@ -32,7 +32,7 @@ boost::json::value json(geo::latlng const& p) {
 }
 
 boost::json::value json(n::unixtime_t const t) {
-  return {std::format("{:%Y-%m-%dT%H:%M%z}", t)};
+  return {date::format(kPrimaTimeFormat, t)};
 }
 
 boost::json::value json(n::routing::start const& s) {
@@ -118,27 +118,20 @@ void prima_state::blacklist_update(std::string_view json) {
     }
   };
 
-  auto const o = boost::json::parse(json).as_object();
-  if (o.contains("startBusStops")) {
+  try {
+    auto const o = boost::json::parse(json).as_object();
     update_pt_rides(from_rides_, prev_from_rides_,
                     o.at("startBusStops").as_array());
-  }
-  if (o.contains("targetBusStops")) {
     update_pt_rides(to_rides_, prev_to_rides_,
                     o.at("targetBusStops").as_array());
-  }
-  if (o.contains("times")) {
     update_direct_rides(direct_rides_, prev_direct_rides_,
                         o.at("times").as_array());
+  } catch (std::exception const& e) {
+    std::cout << e.what() << "\n";
   }
 }
 
-void prima_state::whitelist_update(std::string_view json [[maybe_unused]]) {
-  auto const parse_time = [](std::string_view s) {
-    n::unixtime_t parsed;
-    auto ss = std::stringstream{str};
-  };
-
+void prima_state::whitelist_update(std::string_view json) {
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -146,9 +139,11 @@ void prima_state::whitelist_update(std::string_view json [[maybe_unused]]) {
     auto prev_it = std::begin(prev_rides);
     for (auto const& stop : update) {
       for (auto const& time : stop.as_array()) {
-        if (value_to<bool>(time)) {
-          rides.emplace_back(*prev_it);
-        }
+        // TODO Shift time at start based on delta
+        rides.emplace_back(
+            prev_it->time_at_start_,
+            n::parse_time(value_to<std::string>(time), kPrimaTimeFormat),
+            prev_it->stop_);
         ++prev_it;
         if (prev_it == end(prev_rides)) {
           return;
@@ -162,24 +157,23 @@ void prima_state::whitelist_update(std::string_view json [[maybe_unused]]) {
     std::swap(rides, prev_rides);
     rides.clear();
     for (auto const& [prev, time] : utl::zip(prev_rides, update)) {
+      // TODO update direct time depending on search direction
       if (value_to<bool>(time)) {
         rides.emplace_back(prev);
       }
     }
   };
 
-  auto const o = boost::json::parse(json).as_object();
-  if (o.contains("startBusStops")) {
+  try {
+    auto const o = boost::json::parse(json).as_object();
     update_pt_rides(from_rides_, prev_from_rides_,
                     o.at("startBusStops").as_array());
-  }
-  if (o.contains("targetBusStops")) {
     update_pt_rides(to_rides_, prev_to_rides_,
                     o.at("targetBusStops").as_array());
-  }
-  if (o.contains("times")) {
     update_direct_rides(direct_rides_, prev_direct_rides_,
                         o.at("times").as_array());
+  } catch (std::exception const& e) {
+    std::cout << e.what() << "\n";
   }
 }
 

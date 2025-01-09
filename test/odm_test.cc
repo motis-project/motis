@@ -347,11 +347,11 @@ constexpr auto const blacklisting_response = R"(
 constexpr auto const prima_state_blacklist =
     R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T11:00+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:00+0000"]}],"times":["1970-01-01T11:00+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
-constexpr auto const whitelisting_response [[maybe_unused]] = R"(
+constexpr auto const whitelisting_response = R"(
 {
-  "startBusStops": [["1970-01-01T10:45+0000"],[1970-01-01T12:00+0000]],
-  "targetBusStops": [[1970-01-01T13:05+0000]],
-  "times": [1970-01-01T11:30+0000]
+  "startBusStops": [["1970-01-01T10:45+0000"],["1970-01-01T12:00+0000"]],
+  "targetBusStops": [["1970-01-01T13:05+0000"]],
+  "times": ["1970-01-01T11:30+0000"]
 }
 )";
 
@@ -400,5 +400,8 @@ TEST(odm, prima_update) {
   p.blacklist_update(blacklisting_response);
   EXPECT_EQ(prima_state_blacklist, p.get_msg_str(tt));
 
+  std::cout << "before whitelisting" << std::endl;
   p.whitelist_update(whitelisting_response);
+
+  std::cout << p.get_msg_str(tt) << "\n";
 }
