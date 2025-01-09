@@ -10,6 +10,22 @@
 
 namespace motis::odm {
 
+void prima_state::init(api::Place const& from,
+                       api::Place const& to,
+                       api::plan_params const& query) {
+  from_ = geo::latlng{from.lat_, from.lon_};
+  to_ = geo::latlng{to.lat_, to.lon_};
+  fixed_ = query.arriveBy_ ? kArr : kDep;
+  cap_ = {.wheelchairs_ = static_cast<std::uint8_t>(
+              query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
+                  ? 1U
+                  : 0U),
+          .bikes_ =
+              static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1U : 0U),
+          .passengers_ = 1U,
+          .luggage_ = 0U};
+}
+
 boost::json::value json(geo::latlng const& p) {
   return {{"lat", p.lat_}, {"lon", p.lng_}};
 }
@@ -78,8 +94,8 @@ void prima_state::blacklist_update(std::string_view json) {
     rides.clear();
     auto prev_it = std::begin(prev_rides);
     for (auto const& stop : update) {
-      for (auto const& time : stop.as_array()) {
-        if (value_to<bool>(time)) {
+      for (auto const& feasible : stop.as_array()) {
+        if (value_to<bool>(feasible)) {
           rides.emplace_back(*prev_it);
         }
         ++prev_it;
@@ -101,7 +117,7 @@ void prima_state::blacklist_update(std::string_view json) {
     }
   };
 
-  auto const& o = boost::json::parse(json).as_object();
+  auto const o = boost::json::parse(json).as_object();
   if (o.contains("startBusStops")) {
     update_pt_rides(from_rides_, prev_from_rides_,
                     o.at("startBusStops").as_array());
@@ -148,7 +164,7 @@ void prima_state::whitelist_update(std::string_view json [[maybe_unused]]) {
     }
   };
 
-  auto const& o = boost::json::parse(json).as_object();
+  auto const o = boost::json::parse(json).as_object();
   if (o.contains("startBusStops")) {
     update_pt_rides(from_rides_, prev_from_rides_,
                     o.at("startBusStops").as_array());

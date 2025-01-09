@@ -405,7 +405,7 @@ api::plan_response meta_router::run() {
     p_state.reset(new prima_state{});
   }
 
-  init(*p_state, from_p_, to_p_, query_);
+  p_state->init(from_p_, to_p_, query_);
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p_state->from_rides_, r_, std::get<osr::location>(from_),

@@ -1,5 +1,8 @@
 #include "gtest/gtest.h"
 
+#include "nigiri/loader/dir.h"
+#include "nigiri/loader/gtfs/load_timetable.h"
+#include "nigiri/loader/init_finish.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
@@ -8,6 +11,7 @@
 #include "motis/odm/equal_journeys.h"
 #include "motis/odm/mix.h"
 #include "motis/odm/odm.h"
+#include "motis/odm/prima_state.h"
 
 namespace n = nigiri;
 using namespace motis::odm;
@@ -315,4 +319,77 @@ TEST(odm_calibration, read_requirements) {
   EXPECT_FALSE(reqs[0].odm_to_dom_.test(0));
   EXPECT_TRUE(reqs[0].odm_to_dom_.test(1));
   EXPECT_TRUE(reqs[1].odm_to_dom_.test(0));
+}
+
+n::loader::mem_dir tt_files() {
+  return n::loader::mem_dir::read(R"__(
+"(
+# stops.txt
+stop_id,stop_name,stop_desc,stop_lat,stop_lon,stop_url,location_type,parent_station
+A,A,A,0.1,0.1,,,,
+B,B,B,0.2,0.2,,,,
+C,C,C,0.3,0.3,,,,
+D,D,D,0.4,0.4,,,,
+)__");
+}
+
+constexpr auto const prima_state_serialized [[maybe_unused]] =
+    R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T11:00+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:00+0000"]},{"coordinates":{"lat":4E-1,"lon":4E-1},"times":["1970-01-01T14:00+0000"]}],"times":["1970-01-01T10:00+0000","1970-01-01T11:00+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+
+constexpr auto const blacklisting_response = R"(
+{
+  "startBusStops": [[true,false],[true]],
+  "targetBusStops": [[true],[false]],
+  "times": [false,true]
+}
+)";
+
+constexpr auto const whitelisting_response [[maybe_unused]] = R"(
+
+)";
+
+TEST(odm, prima_update) {
+  using namespace nigiri;
+  using namespace nigiri::loader;
+  using namespace nigiri::loader::gtfs;
+
+  timetable tt;
+  tt.date_range_ = {2017y / std::chrono::January / 1,
+                    2017y / std::chrono::January / 2};
+  register_special_stations(tt);
+  auto const src = source_idx_t{0};
+  gtfs::load_timetable({}, src, tt_files(), tt);
+  finalize(tt);
+
+  auto const get_loc_idx = [&](auto&& s) {
+    return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
+  };
+
+  auto p = prima_state{
+      .from_ = {0.0, 0.0},
+      .to_ = {1.0, 1.0},
+      .fixed_ = fixed::kDep,
+      .cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0},
+      .from_rides_ = {{.time_at_start_ = n::unixtime_t{10h},
+                       .time_at_stop_ = n::unixtime_t{11h},
+                       .stop_ = get_loc_idx("A")},
+                      {.time_at_start_ = n::unixtime_t{11h},
+                       .time_at_stop_ = n::unixtime_t{12h},
+                       .stop_ = get_loc_idx("A")},
+                      {.time_at_start_ = n::unixtime_t{11h},
+                       .time_at_stop_ = n::unixtime_t{12h},
+                       .stop_ = get_loc_idx("B")}},
+      .to_rides_ = {{.time_at_start_ = n::unixtime_t{14h},
+                     .time_at_stop_ = n::unixtime_t{13h},
+                     .stop_ = get_loc_idx("C")},
+                    {.time_at_start_ = n::unixtime_t{15h},
+                     .time_at_stop_ = n::unixtime_t{14h},
+                     .stop_ = get_loc_idx("D")}},
+      .direct_rides_ = {
+          {.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
+          {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}}};
+
+  std::cout << p.serialize(tt) << std::endl;
+  p.blacklist_update(blacklisting_response);
+  std::cout << p.serialize(tt);
 }
