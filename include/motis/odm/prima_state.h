@@ -36,7 +36,7 @@ struct prima_state {
   void init(api::Place const& from,
             api::Place const& to,
             api::plan_params const& query);
-  std::string serialize(n::timetable const&) const;
+  std::string get_msg_str(n::timetable const&) const;
   void blacklist_update(std::string_view json);
   void whitelist_update(std::string_view json);
 
@@ -44,7 +44,7 @@ struct prima_state {
   geo::latlng to_;
   fixed fixed_;
   capacities cap_;
-  
+
   std::vector<n::routing::start> from_rides_{};
   std::vector<n::routing::start> to_rides_{};
   std::vector<direct_ride> direct_rides_{};

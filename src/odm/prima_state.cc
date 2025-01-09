@@ -6,6 +6,7 @@
 
 #include "utl/zip.h"
 
+#include "nigiri/common/parse_time.h"
 #include "nigiri/timetable.h"
 
 namespace motis::odm {
@@ -83,7 +84,7 @@ boost::json::value json(prima_state const& p, n::timetable const& tt) {
           {"capacities", json(p.cap_)}};
 }
 
-std::string prima_state::serialize(n::timetable const& tt) const {
+std::string prima_state::get_msg_str(n::timetable const& tt) const {
   return boost::json::serialize(json(*this, tt));
 }
 
@@ -110,8 +111,8 @@ void prima_state::blacklist_update(std::string_view json) {
                                       auto const& update) {
     std::swap(rides, prev_rides);
     rides.clear();
-    for (auto const& [prev, time] : utl::zip(prev_rides, update)) {
-      if (value_to<bool>(time)) {
+    for (auto const& [prev, feasible] : utl::zip(prev_rides, update)) {
+      if (value_to<bool>(feasible)) {
         rides.emplace_back(prev);
       }
     }
@@ -133,7 +134,10 @@ void prima_state::blacklist_update(std::string_view json) {
 }
 
 void prima_state::whitelist_update(std::string_view json [[maybe_unused]]) {
-  // TODO
+  auto const parse_time = [](std::string_view s) {
+    n::unixtime_t parsed;
+    auto ss = std::stringstream{str};
+  };
 
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {

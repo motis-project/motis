@@ -38,7 +38,7 @@ mixer read_parameters(std::string_view json) {
           .distance_exponent_ = value_to<double>(o.at("exponentTimeDistance"))};
 }
 
-n::unixtime_t read_time(std::string_view s) {
+n::unixtime_t parse_time_of_day(std::string_view s) {
   auto ss = std::stringstream{};
   ss << s;
   unsigned h, m;
@@ -51,8 +51,9 @@ n::unixtime_t read_time(std::string_view s) {
 n::routing::journey read_journey(boost::json::object const& o) {
   auto j = n::routing::journey{};
 
-  j.start_time_ = read_time(value_to<std::string_view>(o.at("departure")));
-  j.dest_time_ = read_time(value_to<std::string_view>(o.at("arrival")));
+  j.start_time_ =
+      parse_time_of_day(value_to<std::string_view>(o.at("departure")));
+  j.dest_time_ = parse_time_of_day(value_to<std::string_view>(o.at("arrival")));
   j.dest_ = n::get_special_station(n::special_station::kEnd);
   j.transfers_ = value_to<std::uint8_t>(o.at("transfers"));
 
