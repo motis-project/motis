@@ -8,7 +8,7 @@
 
 #include "motis/odm/calibration/json.h"
 #include "motis/odm/equal_journeys.h"
-#include "motis/odm/mix.h"
+#include "motis/odm/mixer.h"
 
 using namespace std::string_view_literals;
 

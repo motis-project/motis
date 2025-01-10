@@ -9,9 +9,9 @@
 
 #include "motis/odm/calibration/json.h"
 #include "motis/odm/equal_journeys.h"
-#include "motis/odm/mix.h"
+#include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
-#include "motis/odm/prima_state.h"
+#include "motis/odm/prima_interface.h"
 
 namespace n = nigiri;
 using namespace motis::odm;
@@ -375,7 +375,7 @@ TEST(odm, prima_update) {
     return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
   };
 
-  auto p = prima_state{
+  auto p = prima_interface{
       .from_ = {0.0, 0.0},
       .to_ = {1.0, 1.0},
       .fixed_ = fixed::kDep,

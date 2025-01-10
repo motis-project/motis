@@ -34,7 +34,7 @@ struct capacities {
   std::uint8_t luggage_;
 };
 
-struct prima_state {
+struct prima_interface {
   void init(api::Place const& from,
             api::Place const& to,
             api::plan_params const& query);

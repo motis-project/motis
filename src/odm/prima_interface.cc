@@ -1,4 +1,4 @@
-#include "motis/odm/prima_state.h"
+#include "motis/odm/prima_interface.h"
 
 #include <ranges>
 
@@ -11,9 +11,9 @@
 
 namespace motis::odm {
 
-void prima_state::init(api::Place const& from,
-                       api::Place const& to,
-                       api::plan_params const& query) {
+void prima_interface::init(api::Place const& from,
+                           api::Place const& to,
+                           api::plan_params const& query) {
   from_ = geo::latlng{from.lat_, from.lon_};
   to_ = geo::latlng{to.lat_, to.lon_};
   fixed_ = query.arriveBy_ ? kArr : kDep;
@@ -74,7 +74,7 @@ boost::json::value json(capacities const& c) {
           {"luggage", c.luggage_}};
 }
 
-boost::json::value json(prima_state const& p, n::timetable const& tt) {
+boost::json::value json(prima_interface const& p, n::timetable const& tt) {
   return {{"start", json(p.from_)},
           {"target", json(p.to_)},
           {"startBusStops", json(p.from_rides_, tt)},
@@ -84,11 +84,11 @@ boost::json::value json(prima_state const& p, n::timetable const& tt) {
           {"capacities", json(p.cap_)}};
 }
 
-std::string prima_state::get_msg_str(n::timetable const& tt) const {
+std::string prima_interface::get_msg_str(n::timetable const& tt) const {
   return boost::json::serialize(json(*this, tt));
 }
 
-void prima_state::blacklist_update(std::string_view json) {
+void prima_interface::blacklist_update(std::string_view json) {
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -131,7 +131,7 @@ void prima_state::blacklist_update(std::string_view json) {
   }
 }
 
-void prima_state::whitelist_update(std::string_view json) {
+void prima_interface::whitelist_update(std::string_view json) {
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
