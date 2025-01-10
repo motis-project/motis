@@ -322,25 +322,49 @@ auto extract_rides() {
   remove_dupes(prima_intfc->to_rides_);
 }
 
-void adjust_to_whitelisting() {
-  // TODO not only remove but also adjust times where applicable
-
-  for (auto const [from, prev_from] :
-       utl::zip(prima_intfc->from_rides_, prima_intfc->prev_from_rides_)) {
-    if (from == prev_from) {
+enum end { kFrom, kTo };
+template <end Which>
+auto adjust_journeys(auto const& rides, auto const& prev_rides) {
+  for (auto const [ride, prev_ride] : utl::zip(rides, prev_rides)) {
+    if (ride == prev_ride) {
       continue;
     }
     for (auto& j : prima_intfc->odm_journeys_) {
-      if (j.legs_.size() > 1 &&
-          j.legs_.front().dep_time_ == prev_from.time_at_start_ &&
-          j.legs_.front().arr_time_ == prev_from.time_at_stop_ &&
-          j.legs_.front().to_ == prev_from.stop_ &&
-          std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
-          std::get<n::routing::offset>(j.legs_.front().uses_)
-                  .transport_mode_id_ == kODM) {
+      if constexpr (Which == kFrom) {
+        if (j.legs_.size() > 1 &&
+            j.legs_.front().dep_time_ == prev_ride.time_at_start_ &&
+            j.legs_.front().arr_time_ == prev_ride.time_at_stop_ &&
+            j.legs_.front().to_ == prev_ride.stop_ &&
+            std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
+            std::get<n::routing::offset>(j.legs_.front().uses_)
+                    .transport_mode_id_ == kODM) {
+          j.legs_.front().dep_time_ = ride.time_at_start_;
+          j.legs_.front().arr_time_ = ride.time_at_stop_;
+          std::get<n::routing::offset>(j.legs_.front().uses_).duration_ =
+              std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
+        }
+      } else {
+        if (j.legs_.size() > 1 &&
+            j.legs_.back().dep_time_ == prev_ride.time_at_stop_ &&
+            j.legs_.back().arr_time_ == prev_ride.time_at_start_ &&
+            j.legs_.back().from_ == prev_ride.stop_ &&
+            std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
+            std::get<n::routing::offset>(j.legs_.back().uses_)
+                    .transport_mode_id_ == kODM) {
+          j.legs_.back().dep_time_ = ride.time_at_stop_;
+          j.legs_.back().arr_time_ = ride.time_at_start_;
+          std::get<n::routing::offset>(j.legs_.back().uses_).duration_ =
+              std::chrono::abs(ride.time_at_start_ - ride.time_at_stop_);
+        }
       }
     }
   }
+}
+
+void adjust_to_whitelisting() {
+  adjust_journeys<kFrom>(prima_intfc->from_rides_,
+                         prima_intfc->prev_from_rides_);
+  adjust_journeys<kTo>(prima_intfc->to_rides_, prima_intfc->prev_to_rides_);
 }
 
 void add_direct() {
