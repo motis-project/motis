@@ -139,7 +139,6 @@ void prima_state::whitelist_update(std::string_view json) {
     auto prev_it = std::begin(prev_rides);
     for (auto const& stop : update) {
       for (auto const& time : stop.as_array()) {
-        // TODO Shift time at start based on delta
         rides.emplace_back(
             prev_it->time_at_start_,
             n::parse_time(value_to<std::string>(time), kPrimaTimeFormat),
@@ -152,15 +151,16 @@ void prima_state::whitelist_update(std::string_view json) {
     }
   };
 
-  auto const update_direct_rides = [](auto& rides, auto& prev_rides,
-                                      auto const& update) {
+  auto const update_direct_rides = [&](auto& rides, auto& prev_rides,
+                                       auto const& update) {
     std::swap(rides, prev_rides);
     rides.clear();
-    for (auto const& [prev, time] : utl::zip(prev_rides, update)) {
-      // TODO update direct time depending on search direction
-      if (value_to<bool>(time)) {
-        rides.emplace_back(prev);
-      }
+    for (auto const& [prev, time_str] : utl::zip(prev_rides, update)) {
+      auto const old_time = fixed_ == kDep ? prev.dep_ : prev.arr_;
+      auto const new_time =
+          n::parse_time(value_to<std::string>(time_str), kPrimaTimeFormat);
+      auto const delta = new_time - old_time;
+      rides.emplace_back(prev.dep_ + delta, prev.arr_ + delta);
     }
   };
 

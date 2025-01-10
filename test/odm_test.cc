@@ -355,6 +355,9 @@ constexpr auto const whitelisting_response = R"(
 }
 )";
 
+constexpr auto const prima_state_whitelisting =
+    R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T10:45+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:05+0000"]}],"times":["1970-01-01T11:30+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+
 TEST(odm, prima_update) {
   using namespace nigiri;
   using namespace nigiri::loader;
@@ -399,9 +402,6 @@ TEST(odm, prima_update) {
   EXPECT_EQ(prima_state_init, p.get_msg_str(tt));
   p.blacklist_update(blacklisting_response);
   EXPECT_EQ(prima_state_blacklist, p.get_msg_str(tt));
-
-  std::cout << "before whitelisting" << std::endl;
   p.whitelist_update(whitelisting_response);
-
-  std::cout << p.get_msg_str(tt) << "\n";
+  EXPECT_EQ(prima_state_whitelisting, p.get_msg_str(tt));
 }
