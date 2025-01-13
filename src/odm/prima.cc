@@ -1,4 +1,4 @@
-#include "motis/odm/prima_interface.h"
+#include "motis/odm/prima.h"
 
 #include <ranges>
 
@@ -9,11 +9,13 @@
 #include "nigiri/common/parse_time.h"
 #include "nigiri/timetable.h"
 
+#include "motis/odm/odm.h"
+
 namespace motis::odm {
 
-void prima_interface::init(api::Place const& from,
-                           api::Place const& to,
-                           api::plan_params const& query) {
+void prima::init(api::Place const& from,
+                 api::Place const& to,
+                 api::plan_params const& query) {
   from_ = geo::latlng{from.lat_, from.lon_};
   to_ = geo::latlng{to.lat_, to.lon_};
   fixed_ = query.arriveBy_ ? kArr : kDep;
@@ -74,7 +76,7 @@ boost::json::value json(capacities const& c) {
           {"luggage", c.luggage_}};
 }
 
-boost::json::value json(prima_interface const& p, n::timetable const& tt) {
+boost::json::value json(prima const& p, n::timetable const& tt) {
   return {{"start", json(p.from_)},
           {"target", json(p.to_)},
           {"startBusStops", json(p.from_rides_, tt)},
@@ -84,11 +86,11 @@ boost::json::value json(prima_interface const& p, n::timetable const& tt) {
           {"capacities", json(p.cap_)}};
 }
 
-std::string prima_interface::get_msg_str(n::timetable const& tt) const {
+std::string prima::get_msg_str(n::timetable const& tt) const {
   return boost::json::serialize(json(*this, tt));
 }
 
-void prima_interface::blacklist_update(std::string_view json) {
+void prima::blacklist_update(std::string_view json) {
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -131,7 +133,7 @@ void prima_interface::blacklist_update(std::string_view json) {
   }
 }
 
-void prima_interface::whitelist_update(std::string_view json) {
+void prima::whitelist_update(std::string_view json) {
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -139,10 +141,11 @@ void prima_interface::whitelist_update(std::string_view json) {
     auto prev_it = std::begin(prev_rides);
     for (auto const& stop : update) {
       for (auto const& time : stop.as_array()) {
-        rides.emplace_back(
-            prev_it->time_at_start_,
-            n::parse_time(value_to<std::string>(time), kPrimaTimeFormat),
-            prev_it->stop_);
+        auto const delta =
+            n::parse_time(value_to<std::string>(time), kPrimaTimeFormat) -
+            prev_it->time_at_stop_;
+        rides.emplace_back(prev_it->time_at_start_ + delta,
+                           prev_it->time_at_stop_ + delta, prev_it->stop_);
         ++prev_it;
         if (prev_it == end(prev_rides)) {
           return;
@@ -174,6 +177,53 @@ void prima_interface::whitelist_update(std::string_view json) {
                         o.at("times").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\n";
+  }
+}
+
+void prima::adjust_to_whitelisting() {
+  for (auto const [from_ride, prev_from_ride] :
+       utl::zip(from_rides_, prev_from_rides_)) {
+    if (from_ride == prev_from_ride) {
+      continue;
+    }
+    for (auto& j : odm_journeys_) {
+      if (j.legs_.size() > 1 &&
+          j.legs_.front().dep_time_ == prev_from_ride.time_at_start_ &&
+          j.legs_.front().arr_time_ == prev_from_ride.time_at_stop_ &&
+          j.legs_.front().to_ == prev_from_ride.stop_ &&
+          std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
+          std::get<n::routing::offset>(j.legs_.front().uses_)
+                  .transport_mode_id_ == kODM) {
+        j.legs_.front().dep_time_ = from_ride.time_at_start_;
+        j.legs_.front().arr_time_ = from_ride.time_at_stop_;
+        std::get<n::routing::offset>(j.legs_.front().uses_).duration_ =
+            std::chrono::abs(from_ride.time_at_stop_ -
+                             from_ride.time_at_start_);
+        j.start_time_ = j.legs_.front().dep_time_;
+      }
+    }
+  }
+
+  for (auto const [to_ride, prev_to_ride] :
+       utl::zip(to_rides_, prev_to_rides_)) {
+    if (to_ride == prev_to_ride) {
+      continue;
+    }
+    for (auto& j : odm_journeys_) {
+      if (j.legs_.size() > 1 &&
+          j.legs_.back().dep_time_ == prev_to_ride.time_at_stop_ &&
+          j.legs_.back().arr_time_ == prev_to_ride.time_at_start_ &&
+          j.legs_.back().from_ == prev_to_ride.stop_ &&
+          std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
+          std::get<n::routing::offset>(j.legs_.back().uses_)
+                  .transport_mode_id_ == kODM) {
+        j.legs_.back().dep_time_ = to_ride.time_at_stop_;
+        j.legs_.back().arr_time_ = to_ride.time_at_start_;
+        std::get<n::routing::offset>(j.legs_.back().uses_).duration_ =
+            std::chrono::abs(to_ride.time_at_start_ - to_ride.time_at_stop_);
+        j.dest_time_ = j.legs_.back().arr_time_;
+      }
+    }
   }
 }
 

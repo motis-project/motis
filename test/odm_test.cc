@@ -11,7 +11,7 @@
 #include "motis/odm/equal_journeys.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
-#include "motis/odm/prima_interface.h"
+#include "motis/odm/prima.h"
 
 namespace n = nigiri;
 using namespace motis::odm;
@@ -26,7 +26,7 @@ static auto const kOdmMixer = mixer{.walk_cost_ = {{0, 1}, {15, 11}},
                                     .distance_weight_ = 0.07,
                                     .distance_exponent_ = 1.5};
 
-TEST(mix, tally) {
+TEST(odm, tally) {
   auto const ct = std::vector<cost_threshold>{{0, 30}, {1, 1}, {10, 2}};
   EXPECT_EQ(0, tally(0, ct));
   EXPECT_EQ(30, tally(1, ct));
@@ -47,7 +47,7 @@ n::routing::journey direct_taxi(n::unixtime_t const dep,
           .transfers_ = 0U};
 }
 
-TEST(mix, pt_taxi_no_direct) {
+TEST(odm, pt_taxi_no_direct) {
   auto pt = n::routing::journey{
       .legs_ = {n::routing::journey::leg{
           n::direction::kForward,
@@ -94,7 +94,7 @@ TEST(mix, pt_taxi_no_direct) {
             end(odm_journeys));
 }
 
-TEST(mix, taxi_saves_transfers) {
+TEST(odm, taxi_saves_transfers) {
   auto pt = n::routing::journey{
       .legs_ = {n::routing::journey::leg{
                     n::direction::kForward,
@@ -185,7 +185,7 @@ constexpr auto const parameters_json = R"(
 }
 )";
 
-TEST(odm_calibration, read_parameters) {
+TEST(odm, read_parameters) {
   auto const m = read_parameters(parameters_json);
   EXPECT_EQ(m.travel_time_weight_, 1.5);
   EXPECT_EQ(m.distance_weight_, 0.07);
@@ -273,7 +273,7 @@ constexpr auto const requirements_json = R"(
 }
 )";
 
-TEST(odm_calibration, read_requirements) {
+TEST(odm, read_requirements) {
   auto const reqs = read_requirements(requirements_json);
 
   ASSERT_EQ(reqs.size(), 2);
@@ -333,7 +333,7 @@ D,D,D,0.4,0.4,,,,
 )__");
 }
 
-constexpr auto const prima_state_init =
+constexpr auto const initial =
     R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T11:00+0000","1970-01-01T12:00+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:00+0000"]},{"coordinates":{"lat":4E-1,"lon":4E-1},"times":["1970-01-01T14:00+0000"]}],"times":["1970-01-01T10:00+0000","1970-01-01T11:00+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const blacklisting_response = R"(
@@ -344,7 +344,7 @@ constexpr auto const blacklisting_response = R"(
 }
 )";
 
-constexpr auto const prima_state_blacklist =
+constexpr auto const blacklisted =
     R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T11:00+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:00+0000"]}],"times":["1970-01-01T11:00+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const whitelisting_response = R"(
@@ -355,8 +355,40 @@ constexpr auto const whitelisting_response = R"(
 }
 )";
 
-constexpr auto const prima_state_whitelisting =
+constexpr auto const whitelisted =
     R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T10:45+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:05+0000"]}],"times":["1970-01-01T11:30+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+
+constexpr auto const adjusted_to_whitelisting = R"(
+[1970-01-01 09:45, 1970-01-01 12:00]
+TRANSFERS: 0
+     FROM: (START, START) [1970-01-01 09:45]
+       TO: (END, END) [1970-01-01 12:00]
+leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:45]
+  MUMO (id=5, duration=60)
+leg 1: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
+  MUMO (id=0, duration=60)
+
+[1970-01-01 11:00, 1970-01-01 13:00]
+TRANSFERS: 0
+     FROM: (START, START) [1970-01-01 11:00]
+       TO: (END, END) [1970-01-01 13:00]
+leg 0: (START, START) [1970-01-01 11:00] -> (A, A) [1970-01-01 12:00]
+  MUMO (id=5, duration=60)
+leg 1: (A, A) [1970-01-01 12:00] -> (END, END) [1970-01-01 13:00]
+  MUMO (id=0, duration=60)
+
+[1970-01-01 09:45, 1970-01-01 14:05]
+TRANSFERS: 0
+     FROM: (START, START) [1970-01-01 09:45]
+       TO: (END, END) [1970-01-01 14:05]
+leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:45]
+  MUMO (id=5, duration=60)
+leg 1: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
+  FOOTPATH (duration=120)
+leg 2: (C, C) [1970-01-01 13:05] -> (END, END) [1970-01-01 14:05]
+  MUMO (id=5, duration=60)
+
+)";
 
 TEST(odm, prima_update) {
   using namespace nigiri;
@@ -375,7 +407,7 @@ TEST(odm, prima_update) {
     return tt.locations_.location_id_to_idx_.at({.id_ = s, .src_ = src});
   };
 
-  auto p = prima_interface{
+  auto p = prima{
       .from_ = {0.0, 0.0},
       .to_ = {1.0, 1.0},
       .fixed_ = fixed::kDep,
@@ -399,9 +431,62 @@ TEST(odm, prima_update) {
           {.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
           {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}}};
 
-  EXPECT_EQ(prima_state_init, p.get_msg_str(tt));
+  EXPECT_EQ(initial, p.get_msg_str(tt));
   p.blacklist_update(blacklisting_response);
-  EXPECT_EQ(prima_state_blacklist, p.get_msg_str(tt));
+  EXPECT_EQ(blacklisted, p.get_msg_str(tt));
   p.whitelist_update(whitelisting_response);
-  EXPECT_EQ(prima_state_whitelisting, p.get_msg_str(tt));
+  EXPECT_EQ(whitelisted, p.get_msg_str(tt));
+
+  p.odm_journeys_.push_back(
+      {.legs_ = {{n::direction::kForward,
+                  get_special_station(special_station::kStart),
+                  get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
+                  n::routing::offset{get_loc_idx("A"), 1h, kODM}},
+                 {n::direction::kForward, get_loc_idx("A"),
+                  get_special_station(special_station::kEnd),
+                  n::unixtime_t{11h}, n::unixtime_t{12h},
+                  n::routing::offset{get_loc_idx("A"), 1h, kWalk}}},
+       .start_time_ = n::unixtime_t{10h},
+       .dest_time_ = n::unixtime_t{12h},
+       .dest_ = get_special_station(special_station::kEnd)});
+
+  p.odm_journeys_.push_back(
+      {.legs_ = {{n::direction::kForward,
+                  get_special_station(special_station::kStart),
+                  get_loc_idx("A"), n::unixtime_t{11h}, n::unixtime_t{12h},
+                  n::routing::offset{get_loc_idx("A"), 1h, kODM}},
+                 {n::direction::kForward, get_loc_idx("A"),
+                  get_special_station(special_station::kEnd),
+                  n::unixtime_t{12h}, n::unixtime_t{13h},
+                  n::routing::offset{get_loc_idx("A"), 1h, kWalk}}},
+       .start_time_ = n::unixtime_t{11h},
+       .dest_time_ = n::unixtime_t{13h},
+       .dest_ = get_special_station(special_station::kEnd)});
+
+  p.odm_journeys_.push_back(
+      {.legs_ = {{n::direction::kForward,
+                  get_special_station(special_station::kStart),
+                  get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
+                  n::routing::offset{get_loc_idx("A"), 1h, kODM}},
+                 {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
+                  n::unixtime_t{11h}, n::unixtime_t{13h},
+                  n::footpath{get_loc_idx("C"), 2h}},
+                 {n::direction::kForward, get_loc_idx("C"),
+                  get_special_station(special_station::kEnd),
+                  n::unixtime_t{13h}, n::unixtime_t{14h},
+                  n::routing::offset{get_loc_idx("C"), 1h, kODM}}},
+       .start_time_ = n::unixtime_t{10h},
+       .dest_time_ = n::unixtime_t{14h},
+       .dest_ = get_special_station(special_station::kEnd)});
+
+  p.adjust_to_whitelisting();
+
+  auto ss = std::stringstream{};
+  ss << "\n";
+  for (auto const& j : p.odm_journeys_) {
+    j.print(ss, tt, nullptr);
+    ss << "\n";
+  }
+
+  EXPECT_EQ(adjusted_to_whitelisting, ss.str());
 }

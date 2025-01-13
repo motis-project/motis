@@ -59,8 +59,8 @@ private:
   std::vector<api::ModeEnum> const& direct_modes_;
   std::variant<osr::location, tt_location> const& from_;
   std::variant<osr::location, tt_location> const& to_;
-  api::Place const& from_p_;
-  api::Place const& to_p_;
+  api::Place const& from_place_;
+  api::Place const& to_place_;
   nigiri::routing::query const& start_time_;
   std::vector<api::Itinerary>& direct_;
   nigiri::duration_t fastest_direct_;

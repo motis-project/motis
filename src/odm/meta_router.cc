@@ -25,7 +25,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
-#include "motis/odm/prima_interface.h"
+#include "motis/odm/prima.h"
 #include "motis/odm/query_factory.h"
 #include "motis/odm/raptor_wrapper.h"
 #include "motis/place.h"
@@ -39,7 +39,7 @@ namespace n = nigiri;
 using namespace std::chrono_literals;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<prima_interface> prima_intfc;
+static boost::thread_specific_ptr<prima> p;
 
 static auto const kBlacklistingUrl = boost::urls::url{""};
 static auto const kWhitelistingUrl = boost::urls::url{""};
@@ -83,8 +83,8 @@ meta_router::meta_router(ep::routing const& r,
       direct_modes_{direct_modes},
       from_{from},
       to_{to},
-      from_p_{from_p},
-      to_p_{to_p},
+      from_place_{from_p},
+      to_place_{to_p},
       start_time_{start_time},
       direct_{direct},
       fastest_direct_{fastest_direct},
@@ -132,7 +132,7 @@ n::interval<n::unixtime_t> get_dest_intvl(
                                           start_intvl.to_};
 }
 
-void init(prima_interface& ps,
+void init(prima& ps,
           api::Place const& from,
           api::Place const& to,
           api::plan_params const& query) {
@@ -276,32 +276,32 @@ auto get_td_offsets(auto const& rides, offset_event_type const oet) {
 }
 
 auto collect_odm_journeys(auto& futures) {
-  prima_intfc->odm_journeys_.clear();
+  p->odm_journeys_.clear();
   for (auto& f : futures | std::views::drop(1)) {
-    prima_intfc->odm_journeys_.append_range(*f.get().journeys_);
+    p->odm_journeys_.append_range(*f.get().journeys_);
   }
 }
 
 auto extract_rides() {
-  prima_intfc->from_rides_.clear();
-  prima_intfc->to_rides_.clear();
-  for (auto const& j : prima_intfc->odm_journeys_) {
+  p->from_rides_.clear();
+  p->to_rides_.clear();
+  for (auto const& j : p->odm_journeys_) {
     if (j.legs_.size() > 0) {
       if (std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
           std::get<n::routing::offset>(j.legs_.front().uses_)
                   .transport_mode_id_ == kODM) {
-        prima_intfc->from_rides_.emplace_back(j.legs_.front().dep_time_,
-                                              j.legs_.front().arr_time_,
-                                              j.legs_.front().to_);
+        p->from_rides_.emplace_back(j.legs_.front().dep_time_,
+                                    j.legs_.front().arr_time_,
+                                    j.legs_.front().to_);
       }
     }
     if (j.legs_.size() > 1) {
       if (std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
           std::get<n::routing::offset>(j.legs_.back().uses_)
                   .transport_mode_id_ == kODM) {
-        prima_intfc->to_rides_.emplace_back(j.legs_.back().arr_time_,
-                                            j.legs_.back().dep_time_,
-                                            j.legs_.back().from_);
+        p->to_rides_.emplace_back(j.legs_.back().arr_time_,
+                                  j.legs_.back().dep_time_,
+                                  j.legs_.back().from_);
       }
     }
   }
@@ -318,58 +318,13 @@ auto extract_rides() {
                 end(rides));
   };
 
-  remove_dupes(prima_intfc->from_rides_);
-  remove_dupes(prima_intfc->to_rides_);
-}
-
-enum end { kFrom, kTo };
-template <end Which>
-auto adjust_journeys(auto const& rides, auto const& prev_rides) {
-  for (auto const [ride, prev_ride] : utl::zip(rides, prev_rides)) {
-    if (ride == prev_ride) {
-      continue;
-    }
-    for (auto& j : prima_intfc->odm_journeys_) {
-      if constexpr (Which == kFrom) {
-        if (j.legs_.size() > 1 &&
-            j.legs_.front().dep_time_ == prev_ride.time_at_start_ &&
-            j.legs_.front().arr_time_ == prev_ride.time_at_stop_ &&
-            j.legs_.front().to_ == prev_ride.stop_ &&
-            std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
-            std::get<n::routing::offset>(j.legs_.front().uses_)
-                    .transport_mode_id_ == kODM) {
-          j.legs_.front().dep_time_ = ride.time_at_start_;
-          j.legs_.front().arr_time_ = ride.time_at_stop_;
-          std::get<n::routing::offset>(j.legs_.front().uses_).duration_ =
-              std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
-        }
-      } else {
-        if (j.legs_.size() > 1 &&
-            j.legs_.back().dep_time_ == prev_ride.time_at_stop_ &&
-            j.legs_.back().arr_time_ == prev_ride.time_at_start_ &&
-            j.legs_.back().from_ == prev_ride.stop_ &&
-            std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
-            std::get<n::routing::offset>(j.legs_.back().uses_)
-                    .transport_mode_id_ == kODM) {
-          j.legs_.back().dep_time_ = ride.time_at_stop_;
-          j.legs_.back().arr_time_ = ride.time_at_start_;
-          std::get<n::routing::offset>(j.legs_.back().uses_).duration_ =
-              std::chrono::abs(ride.time_at_start_ - ride.time_at_stop_);
-        }
-      }
-    }
-  }
-}
-
-void adjust_to_whitelisting() {
-  adjust_journeys<kFrom>(prima_intfc->from_rides_,
-                         prima_intfc->prev_from_rides_);
-  adjust_journeys<kTo>(prima_intfc->to_rides_, prima_intfc->prev_to_rides_);
+  remove_dupes(p->from_rides_);
+  remove_dupes(p->to_rides_);
 }
 
 void add_direct() {
-  for (auto const& d : prima_intfc->direct_rides_) {
-    prima_intfc->odm_journeys_.push_back(n::routing::journey{
+  for (auto const& d : p->direct_rides_) {
+    p->odm_journeys_.push_back(n::routing::journey{
         .legs_ = {n::routing::journey::leg{
             n::direction::kForward,
             get_special_station(n::special_station::kStart),
@@ -384,13 +339,14 @@ void add_direct() {
 }
 
 void meta_router::extract_direct() {
-  std::erase_if(prima_intfc->odm_journeys_, [&](auto const& j) {
+  std::erase_if(p->odm_journeys_, [&](auto const& j) {
     if (j.legs_.size() == 1 &&
         std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
         std::get<n::routing::offset>(j.legs_.front().uses_)
                 .transport_mode_id_ == kODM) {
-      direct_.push_back(dummy_itinerary(from_p_, to_p_, api::ModeEnum::ODM,
-                                        j.start_time_, j.dest_time_));
+      direct_.push_back(dummy_itinerary(from_place_, to_place_,
+                                        api::ModeEnum::ODM, j.start_time_,
+                                        j.dest_time_));
       return true;
     }
     return false;
@@ -415,14 +371,14 @@ api::plan_response meta_router::run() {
   auto const& from_intvl = query_.arriveBy_ ? dest_intvl : start_intvl;
   auto const& to_intvl = query_.arriveBy_ ? start_intvl : dest_intvl;
 
-  if (prima_intfc.get() == nullptr) {
-    prima_intfc.reset(new prima_interface{});
+  if (p.get() == nullptr) {
+    p.reset(new prima{});
   }
 
-  prima_intfc->init(from_p_, to_p_, query_);
+  p->init(from_place_, to_place_, query_);
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
-    init_pt(prima_intfc->from_rides_, r_, std::get<osr::location>(from_),
+    init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
             osr::direction::kForward, query_, gbfs_rd_, stats, *tt_, rtt_,
             from_intvl, start_time_,
             query_.arriveBy_ ? start_time_.dest_match_mode_
@@ -430,7 +386,7 @@ api::plan_response meta_router::run() {
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
-    init_pt(prima_intfc->to_rides_, r_, std::get<osr::location>(to_),
+    init_pt(p->to_rides_, r_, std::get<osr::location>(to_),
             osr::direction::kBackward, query_, gbfs_rd_, stats, *tt_, rtt_,
             to_intvl, start_time_,
             query_.arriveBy_ ? start_time_.start_match_mode_
@@ -438,7 +394,7 @@ api::plan_response meta_router::run() {
   }
 
   if (odm_direct_ && r_.w_ && r_.l_) {
-    init_direct(prima_intfc->direct_rides_, r_, e_, gbfs_rd_, from_p_, to_p_,
+    init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
                 to_intvl, query_);
   }
 
@@ -449,10 +405,9 @@ api::plan_response meta_router::run() {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const blacklisting_response =
-              co_await http_POST(kBlacklistingUrl, kPrimaHeaders,
-                                 prima_intfc->get_msg_str(*tt_), 10s);
-          prima_intfc->blacklist_update(get_http_body(blacklisting_response));
+          auto const blacklisting_response = co_await http_POST(
+              kBlacklistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+          p->blacklist_update(get_http_body(blacklisting_response));
         },
         boost::asio::detached);
     ioc.run();
@@ -462,9 +417,8 @@ api::plan_response meta_router::run() {
   }
 
   auto const [from_rides_short, from_rides_long] =
-      ride_time_halves(prima_intfc->from_rides_);
-  auto const [to_rides_short, to_rides_long] =
-      ride_time_halves(prima_intfc->to_rides_);
+      ride_time_halves(p->from_rides_);
+  auto const [to_rides_short, to_rides_long] = ride_time_halves(p->to_rides_);
 
   auto const qf = query_factory{
       .start_time_ = start_time_.start_time_,
@@ -631,10 +585,9 @@ api::plan_response meta_router::run() {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const whitelisting_response =
-              co_await http_POST(kWhitelistingUrl, kPrimaHeaders,
-                                 prima_intfc->get_msg_str(*tt_), 10s);
-          prima_intfc->whitelist_update(get_http_body(whitelisting_response));
+          auto const whitelisting_response = co_await http_POST(
+              kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+          p->whitelist_update(get_http_body(whitelisting_response));
         },
         boost::asio::detached);
     ioc.run();
@@ -644,21 +597,21 @@ api::plan_response meta_router::run() {
   }
 
   if (odm_networking) {
-    adjust_to_whitelisting();
+    p->adjust_to_whitelisting();
     add_direct();
   } else {
-    prima_intfc->odm_journeys_.clear();
+    p->odm_journeys_.clear();
   }
 
-  kOdmMixer.mix(*pt_result.journeys_, prima_intfc->odm_journeys_);
+  kOdmMixer.mix(*pt_result.journeys_, p->odm_journeys_);
 
   extract_direct();
 
-  return {.from_ = from_p_,
-          .to_ = to_p_,
+  return {.from_ = from_place_,
+          .to_ = to_place_,
           .direct_ = std::move(direct_),
           .itineraries_ = utl::to_vec(
-              prima_intfc->odm_journeys_,
+              p->odm_journeys_,
               [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                 return journey_to_response(
                     r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_, rtt_,

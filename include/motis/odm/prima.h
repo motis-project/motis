@@ -34,13 +34,14 @@ struct capacities {
   std::uint8_t luggage_;
 };
 
-struct prima_interface {
+struct prima {
   void init(api::Place const& from,
             api::Place const& to,
             api::plan_params const& query);
   std::string get_msg_str(n::timetable const&) const;
   void blacklist_update(std::string_view json);
   void whitelist_update(std::string_view json);
+  void adjust_to_whitelisting();
 
   geo::latlng from_;
   geo::latlng to_;
