@@ -334,7 +334,7 @@ D,D,D,0.4,0.4,,,,
 }
 
 constexpr auto const initial =
-    R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T11:00+0000","1970-01-01T12:00+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:00+0000"]},{"coordinates":{"lat":4E-1,"lon":4E-1},"times":["1970-01-01T14:00+0000"]}],"times":["1970-01-01T10:00+0000","1970-01-01T11:00+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T11:00:00Z","1970-01-01T12:00:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:00:00Z"]},{"coordinates":{"lat":4E-1,"lng":4E-1},"times":["1970-01-01T14:00:00Z"]}],"times":["1970-01-01T10:00:00Z","1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const blacklisting_response = R"(
 {
@@ -345,18 +345,18 @@ constexpr auto const blacklisting_response = R"(
 )";
 
 constexpr auto const blacklisted =
-    R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T11:00+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:00+0000"]}],"times":["1970-01-01T11:00+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T11:00:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:00:00Z"]}],"times":["1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const whitelisting_response = R"(
 {
-  "startBusStops": [["1970-01-01T10:45+0000"],["1970-01-01T12:00+0000"]],
-  "targetBusStops": [["1970-01-01T13:05+0000"]],
-  "times": ["1970-01-01T11:30+0000"]
+  "startBusStops": [["1970-01-01T10:45:00Z"],["1970-01-01T12:00:00Z"]],
+  "targetBusStops": [["1970-01-01T13:05:00Z"]],
+  "times": ["1970-01-01T11:30:00Z"]
 }
 )";
 
 constexpr auto const whitelisted =
-    R"({"start":{"lat":0E0,"lon":0E0},"target":{"lat":1E0,"lon":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lon":1E-1},"times":["1970-01-01T10:45+0000"]},{"coordinates":{"lat":2E-1,"lon":2E-1},"times":["1970-01-01T12:00+0000"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lon":3.0000000000000004E-1},"times":["1970-01-01T13:05+0000"]}],"times":["1970-01-01T11:30+0000"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T10:45:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:05:00Z"]}],"times":["1970-01-01T11:30:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const adjusted_to_whitelisting = R"(
 [1970-01-01 09:45, 1970-01-01 12:00]

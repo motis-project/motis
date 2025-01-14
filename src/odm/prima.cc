@@ -30,7 +30,7 @@ void prima::init(api::Place const& from,
 }
 
 boost::json::value json(geo::latlng const& p) {
-  return {{"lat", p.lat_}, {"lon", p.lng_}};
+  return {{"lat", p.lat_}, {"lng", p.lng_}};
 }
 
 boost::json::value json(n::unixtime_t const t) {

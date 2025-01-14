@@ -18,7 +18,7 @@ namespace motis::odm {
 
 namespace n = nigiri;
 
-constexpr auto const kPrimaTimeFormat = "%Y-%m-%dT%H:%M%z";
+constexpr auto const kPrimaTimeFormat = "%Y-%m-%dT%H:%M:%SZ";
 
 enum fixed { kArr, kDep };
 
