@@ -1,7 +1,7 @@
 [nigiri]
-  url=git@github.com:mority/nigiri.git
-  branch=parse-time
-  commit=08fad165e84633037999abf8ea972ff17ce3554e
+  url=git@github.com:motis-project/nigiri.git
+  branch=master
+  commit=0861ed983e0b84062f49e82c416b2e4aa000e972
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
