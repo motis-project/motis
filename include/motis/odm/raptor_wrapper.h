@@ -9,7 +9,7 @@
 
 namespace motis::odm {
 
-nigiri::routing::routing_result<nigiri::routing::raptor_stats> route(
+nigiri::routing::routing_result<nigiri::routing::raptor_stats> raptor_wrapper(
     nigiri::timetable const&,
     nigiri::rt_timetable const*,
     nigiri::routing::query,

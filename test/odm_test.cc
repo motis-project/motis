@@ -338,9 +338,9 @@ constexpr auto const initial =
 
 constexpr auto const blacklisting_response = R"(
 {
-  "startBusStops": [[true,false],[true]],
-  "targetBusStops": [[true],[false]],
-  "times": [false,true]
+  "start": [[true,false],[true]],
+  "target": [[true],[false]],
+  "direct": [false,true]
 }
 )";
 
@@ -349,9 +349,9 @@ constexpr auto const blacklisted =
 
 constexpr auto const whitelisting_response = R"(
 {
-  "startBusStops": [["1970-01-01T10:45:00Z"],["1970-01-01T12:00:00Z"]],
-  "targetBusStops": [["1970-01-01T13:05:00Z"]],
-  "times": ["1970-01-01T11:30:00Z"]
+  "start": [["1970-01-01T10:45:00Z"],["1970-01-01T12:00:00Z"]],
+  "target": [["1970-01-01T13:05:00Z"]],
+  "direct": ["1970-01-01T11:30:00Z"]
 }
 )";
 

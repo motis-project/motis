@@ -4,6 +4,8 @@
 
 #include "fmt/printf.h"
 
+#include "utl/zip.h"
+
 #include "nigiri/routing/journey.h"
 
 #include "motis/odm/calibration/json.h"
@@ -93,10 +95,10 @@ void search(std::vector<requirement> const& reqs,
                     for (m.distance_exponent_ = distance_exponent.start_;
                          m.distance_exponent_ < distance_exponent.end_;
                          m.distance_exponent_ += distance_exponent.step_) {
-                      for (auto const& r : reqs) {
+                      for (auto const [r, e] : utl::zip(reqs, expected)) {
                         odm_journeys = r.odm_;
                         m.mix(r.pt_, odm_journeys);
-                        if (expected == odm_journeys) {
+                        if (e == odm_journeys) {
                         }
                       }
                     }

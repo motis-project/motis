@@ -41,8 +41,10 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima> p;
 
-static auto const kBlacklistingUrl = boost::urls::url{""};
-static auto const kWhitelistingUrl = boost::urls::url{""};
+static auto const kBlacklistingUrl =
+    boost::urls::url{"http://127.0.0.1:5173/api/blacklist"};
+static auto const kWhitelistingUrl =
+    boost::urls::url{"http://127.0.0.1:5173/api/whitelist"};
 static auto const kPrimaHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
@@ -398,23 +400,26 @@ api::plan_response meta_router::run() {
                 to_intvl, query_);
   }
 
-  auto odm_networking = true;
+  auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
   try {
     // TODO the fiber/thread should yield until network response arrives?
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const blacklisting_response = co_await http_POST(
+          auto const prima_msg = co_await http_POST(
               kBlacklistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
-          p->blacklist_update(get_http_body(blacklisting_response));
+          blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
     std::cout << "blacklisting failed: " << e.what();
-    odm_networking = false;
+    blacklist_response = std::nullopt;
   }
+
+  auto const blacklisted =
+      blacklist_response && p->blacklist_update(*blacklist_response);
 
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p->from_rides_);
@@ -540,11 +545,27 @@ api::plan_response meta_router::run() {
                             ? get_td_offsets(from_rides_long, kTimeAtStop)
                             : get_td_offsets(to_rides_long, kTimeAtStop)};
 
-  auto const make_task = [&](n::routing::query&& q) {
+  auto const make_task = [&](n::routing::query q) {
     return boost::fibers::packaged_task<
         n::routing::routing_result<n::routing::raptor_stats>()>{[&]() {
-      return route(
-          *tt_, rtt_, q,
+      auto const start_time_str = [](auto const& t) {
+        return std::visit(
+            utl::overloaded{[](n::unixtime_t const& u) {
+                              auto ss = std::stringstream{};
+                              ss << u;
+                              return ss.str();
+                            },
+                            [](n::interval<n::unixtime_t> const& i) {
+                              auto ss = std::stringstream{};
+                              ss << i;
+                              return ss.str();
+                            }},
+            t);
+      };
+      std::cout << "packaged_task start time: " << start_time_str(q.start_time_)
+                << "\n";
+      return raptor_wrapper(
+          *tt_, rtt_, std::move(q),
           query_.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
           query_.timeout_.has_value()
               ? std::optional<std::chrono::seconds>{*query_.timeout_}
@@ -555,7 +576,7 @@ api::plan_response meta_router::run() {
   auto tasks = std::vector<boost::fibers::packaged_task<
       n::routing::routing_result<n::routing::raptor_stats>()>>{};
   tasks.emplace_back(make_task(qf.walk_walk()));
-  if (odm_networking) {
+  if (blacklisted) {
     tasks.emplace_back(make_task(qf.walk_short()));
     tasks.emplace_back(make_task(qf.walk_long()));
     tasks.emplace_back(make_task(qf.short_walk()));
@@ -577,26 +598,37 @@ api::plan_response meta_router::run() {
   }
 
   auto const pt_result = futures.front().get();
+
+  std::cout << "base PT routing results, interval: " << pt_result.interval_
+            << "\n";
+  for (auto const& j : *pt_result.journeys_) {
+    j.print(std::cout, *tt_, nullptr);
+  }
+
   collect_odm_journeys(futures);
   extract_rides();
 
+  auto whitelist_response = std::optional<std::string>{};
   try {
     // TODO the fiber/thread should yield until network response arrives?
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
-          auto const whitelisting_response = co_await http_POST(
+          auto const prima_msg = co_await http_POST(
               kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
-          p->whitelist_update(get_http_body(whitelisting_response));
+          whitelist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
     std::cout << "whitelisting failed: " << e.what();
-    odm_networking = false;
+    whitelist_response = std::nullopt;
   }
 
-  if (odm_networking) {
+  auto const whitelisted =
+      whitelist_response && p->whitelist_update(*whitelist_response);
+
+  if (whitelisted) {
     p->adjust_to_whitelisting();
     add_direct();
   } else {

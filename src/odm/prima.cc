@@ -90,7 +90,11 @@ std::string prima::get_msg_str(n::timetable const& tt) const {
   return boost::json::serialize(json(*this, tt));
 }
 
-void prima::blacklist_update(std::string_view json) {
+bool prima::blacklist_update(std::string_view json) {
+  auto success = true;
+
+  std::cout << "\nblacklist_update:\n" << json << "\n" << std::endl;
+
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -122,18 +126,20 @@ void prima::blacklist_update(std::string_view json) {
 
   try {
     auto const o = boost::json::parse(json).as_object();
-    update_pt_rides(from_rides_, prev_from_rides_,
-                    o.at("startBusStops").as_array());
-    update_pt_rides(to_rides_, prev_to_rides_,
-                    o.at("targetBusStops").as_array());
+    update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array());
+    update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
     update_direct_rides(direct_rides_, prev_direct_rides_,
-                        o.at("times").as_array());
+                        o.at("direct").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\n";
+    success = false;
   }
+  return success;
 }
 
-void prima::whitelist_update(std::string_view json) {
+bool prima::whitelist_update(std::string_view json) {
+  auto success = true;
+
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -169,15 +175,15 @@ void prima::whitelist_update(std::string_view json) {
 
   try {
     auto const o = boost::json::parse(json).as_object();
-    update_pt_rides(from_rides_, prev_from_rides_,
-                    o.at("startBusStops").as_array());
-    update_pt_rides(to_rides_, prev_to_rides_,
-                    o.at("targetBusStops").as_array());
+    update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array());
+    update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
     update_direct_rides(direct_rides_, prev_direct_rides_,
-                        o.at("times").as_array());
+                        o.at("direct").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\n";
+    success = false;
   }
+  return success;
 }
 
 void prima::adjust_to_whitelisting() {
