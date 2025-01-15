@@ -375,7 +375,6 @@ api::Itinerary route(osr::ways const& w,
             itinerary.legs_.back().endTime_ =
                 itinerary.legs_.back().scheduledEndTime_ = *end_time;
     for (auto& leg : itinerary.legs_) {
-      auto const before = leg.duration_;
       leg.duration_ = (leg.endTime_.time_ - leg.startTime_.time_).count();
     }
   }
