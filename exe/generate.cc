@@ -126,13 +126,14 @@ int generate(int ac, char** av) {
                   "start not a location");
       utl::verify(std::holds_alternative<n::location_idx_t>(q->dest_),
                   "dest not a location");
-      utl::verify(std::holds_alternative<n::unixtime_t>(q->q_.start_time_),
-                  "start time not time point");
+      utl::verify(
+          std::holds_alternative<n::interval<n::unixtime_t>>(q->q_.start_time_),
+          "start time not time point");
       auto p = api::plan_params{};
       p.fromPlace_ =
           d.tags_->id(*d.tt_, std::get<n::location_idx_t>(q->start_));
       p.toPlace_ = d.tags_->id(*d.tt_, std::get<n::location_idx_t>(q->dest_));
-      p.time_ = std::get<n::unixtime_t>(q->q_.start_time_);
+      p.time_ = std::get<n::interval<n::unixtime_t>>(q->q_.start_time_).from_;
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
