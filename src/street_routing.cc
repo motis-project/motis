@@ -295,7 +295,8 @@ api::Itinerary route(osr::ways const& w,
                                   .count()
                             : path->cost_,
       .startTime_ = start_time,
-      .endTime_ = start_time + std::chrono::seconds{path->cost_},
+      .endTime_ =
+          end_time ? *end_time : start_time + std::chrono::seconds{path->cost_},
       .transfers_ = 0};
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
@@ -367,6 +368,23 @@ api::Itinerary route(osr::ways const& w,
         pred_place = next_place;
         pred_end_time = t;
       });
+
+  if (end_time && !itinerary.legs_.empty()) {
+    itinerary.legs_.back().to_.arrival_ =
+        itinerary.legs_.back().to_.scheduledArrival_ =
+            itinerary.legs_.back().endTime_ =
+                itinerary.legs_.back().scheduledEndTime_ = *end_time;
+    for (auto& leg : itinerary.legs_) {
+      auto const before = leg.duration_;
+      leg.duration_ = (leg.endTime_.time_ - leg.startTime_.time_).count();
+      if (leg.duration_ != before) {
+        std::cout << "leg duration: before=" << before
+                  << ", after=" << leg.duration_
+                  << ", start_time=" << leg.startTime_
+                  << ", end_time=" << leg.endTime_ << "\n";
+      }
+    }
+  }
 
   return itinerary;
 }
