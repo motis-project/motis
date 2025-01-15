@@ -108,7 +108,7 @@
 											<Time
 												isRealtime={it.legs[it.legs.length - 1].realTime}
 												timestamp={it.endTime}
-												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledStartTime}
+												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant={'realtime-show-always'}
 											/>
 										</div>

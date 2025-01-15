@@ -603,7 +603,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
                   query.pedestrianProfile_ ==
                       api::PedestrianProfileEnum::WHEELCHAIR,
-                  j, start, dest, cache, *blocked);
+                  j, start, dest, cache, *blocked, query.detailedTransfers_);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

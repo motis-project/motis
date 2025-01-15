@@ -226,7 +226,12 @@ api::Itinerary route(osr::ways const& w,
                      gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
-                     std::chrono::seconds const max) {
+                     std::chrono::seconds const max,
+                     bool const dummy) {
+  if (dummy) {
+    return dummy_itinerary(from, to, mode, start_time, *end_time);
+  }
+
   auto const profile = to_profile(mode, wheelchair);
   utl::verify(
       profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),

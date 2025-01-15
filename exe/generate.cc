@@ -23,6 +23,7 @@
 #include "utl/sorted_diff.h"
 #include "utl/timing.h"
 
+#include "nigiri/query_generator/generator.h"
 #include "nigiri/routing/query.h"
 #include "nigiri/timetable.h"
 
@@ -108,11 +109,30 @@ int generate(int ac, char** av) {
   }
 
   {
+    auto gen = n::query_generation::generator{
+        *d.tt_,
+        {.interval_size_ = n::duration_t{0U},
+         .bbox_ = {},
+         .start_match_mode_ = n::routing::location_match_mode::kEquivalent,
+         .dest_match_mode_ = n::routing::location_match_mode::kEquivalent,
+         .start_ = {},
+         .dest_ = {}},
+        0U};
     auto out = std::ofstream{"queries.txt"};
     for (auto i = 0U; i != n; ++i) {
+      auto const q = gen.random_query();
+      utl::verify(q.has_value(), "no query found");
+      utl::verify(std::holds_alternative<n::location_idx_t>(q->start_),
+                  "start not a location");
+      utl::verify(std::holds_alternative<n::location_idx_t>(q->dest_),
+                  "dest not a location");
+      utl::verify(std::holds_alternative<n::unixtime_t>(q->q_.start_time_),
+                  "start time not time point");
       auto p = api::plan_params{};
-      p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
-      p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      p.fromPlace_ =
+          d.tags_->id(*d.tt_, std::get<n::location_idx_t>(q->start_));
+      p.toPlace_ = d.tags_->id(*d.tt_, std::get<n::location_idx_t>(q->dest_));
+      p.time_ = std::get<n::unixtime_t>(q->q_.start_time_);
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
@@ -290,11 +310,13 @@ int compare(int ac, char** av) {
       std::cout << "\n\n";
     }
   };
+  auto n_empty = 0U;
   auto n_consumed = 0U;
   auto const consume_if_finished = [&](info const& x) {
     if (!is_finished(x)) {
       return;
     }
+    n_empty += (x.responses_[0]->itineraries_.size() == 0U);
     print_differences(x);
     response_buf.erase(x.id_);
     ++n_consumed;
@@ -331,6 +353,7 @@ int compare(int ac, char** av) {
     }
   }
 
+  std::cout << "empty ref: " << n_empty << "\n";
   std::cout << "consumed: " << n_consumed << "\n";
   std::cout << "buffered: " << response_buf.size() << "\n";
   std::cout << "   equal: " << n_equal << "\n";

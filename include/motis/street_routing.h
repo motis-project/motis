@@ -38,6 +38,7 @@ api::Itinerary route(osr::ways const&,
                      gbfs::gbfs_products_ref,
                      street_routing_cache_t&,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
-                     std::chrono::seconds max = std::chrono::seconds{3600});
+                     std::chrono::seconds max = std::chrono::seconds{3600},
+                     bool dummy = false);
 
 }  // namespace motis
