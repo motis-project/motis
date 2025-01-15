@@ -414,7 +414,7 @@ api::plan_response meta_router::run() {
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
-    std::cout << "blacklisting failed: " << e.what();
+    std::cout << "blacklist networking failed: " << e.what();
     blacklist_response = std::nullopt;
   }
 
@@ -546,8 +546,7 @@ api::plan_response meta_router::run() {
                             : get_td_offsets(to_rides_long, kTimeAtStop)};
 
   auto const make_task = [&](n::routing::query q) {
-    return boost::fibers::packaged_task<
-        n::routing::routing_result<n::routing::raptor_stats>()>{[&]() {
+    return boost::fibers::packaged_task<raptor_result()>{[&]() {
       auto const start_time_str = [](auto const& t) {
         return std::visit(
             utl::overloaded{[](n::unixtime_t const& u) {
@@ -573,39 +572,48 @@ api::plan_response meta_router::run() {
     }};
   };
 
-  auto tasks = std::vector<boost::fibers::packaged_task<
-      n::routing::routing_result<n::routing::raptor_stats>()>>{};
-  tasks.emplace_back(make_task(qf.walk_walk()));
+  //  auto tasks = std::vector<boost::fibers::packaged_task<
+  //      n::routing::routing_result<n::routing::raptor_stats>()>>{};
+  //  tasks.emplace_back(make_task(qf.walk_walk()));
   if (blacklisted) {
-    tasks.emplace_back(make_task(qf.walk_short()));
-    tasks.emplace_back(make_task(qf.walk_long()));
-    tasks.emplace_back(make_task(qf.short_walk()));
-    tasks.emplace_back(make_task(qf.long_walk()));
-    tasks.emplace_back(make_task(qf.short_short()));
-    tasks.emplace_back(make_task(qf.short_long()));
-    tasks.emplace_back(make_task(qf.long_short()));
-    tasks.emplace_back(make_task(qf.long_long()));
+    //      tasks.emplace_back(make_task(qf.walk_short()));
+    //      tasks.emplace_back(make_task(qf.walk_long()));
+    //      tasks.emplace_back(make_task(qf.short_walk()));
+    //      tasks.emplace_back(make_task(qf.long_walk()));
+    //      tasks.emplace_back(make_task(qf.short_short()));
+    //      tasks.emplace_back(make_task(qf.short_long()));
+    //      tasks.emplace_back(make_task(qf.long_short()));
+    //      tasks.emplace_back(make_task(qf.long_long()));
+  } else {
+    std::cout << "blacklisting failed, omitting ODM routing\n";
   }
+  //
+  //  auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
+  //
+  //  std::cout << "constructed futures" << std::endl;
+  //
+  //  for (auto t = begin(tasks); t != end(tasks); ++t) {
+  //    boost::fibers::fiber(std::move(*t)).detach();
+  //  }
+  //
+  //  std::cout << "detached fibers, waiting for results" << std::endl;
+  //
+  //  for (auto const& f : futures) {
+  //    f.wait();
+  //  }
+  //
+  //  std::cout << "pt routing future valid: "
+  //            << (futures.front().valid() ? "true" : "false") << std::endl;
+  //
+  //  auto const pt_result = futures.front().get();
 
-  auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
+  auto pt = make_task(qf.walk_walk());
+  auto fi = pt.get_future();
+  boost::fibers::fiber(std::move(pt)).detach();
+  fi.wait();
+  auto const pt_result = fi.get();
 
-  for (auto& t : tasks) {
-    boost::fibers::fiber(std::move(t)).detach();
-  }
-
-  for (auto const& f : futures) {
-    f.wait();
-  }
-
-  auto const pt_result = futures.front().get();
-
-  std::cout << "base PT routing results, interval: " << pt_result.interval_
-            << "\n";
-  for (auto const& j : *pt_result.journeys_) {
-    j.print(std::cout, *tt_, nullptr);
-  }
-
-  collect_odm_journeys(futures);
+  // collect_odm_journeys(futures);
   extract_rides();
 
   auto whitelist_response = std::optional<std::string>{};
@@ -635,7 +643,7 @@ api::plan_response meta_router::run() {
     p->odm_journeys_.clear();
   }
 
-  kOdmMixer.mix(*pt_result.journeys_, p->odm_journeys_);
+  kOdmMixer.mix(pt_result.journeys_, p->odm_journeys_);
 
   extract_direct();
 

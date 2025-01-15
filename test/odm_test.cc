@@ -336,6 +336,8 @@ D,D,D,0.4,0.4,,,,
 constexpr auto const initial =
     R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T11:00:00Z","1970-01-01T12:00:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:00:00Z"]},{"coordinates":{"lat":4E-1,"lng":4E-1},"times":["1970-01-01T14:00:00Z"]}],"times":["1970-01-01T10:00:00Z","1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
+constexpr auto const invalid_response = R"({"message":"Internal Error"})";
+
 constexpr auto const blacklisting_response = R"(
 {
   "start": [[true,false],[true]],
@@ -432,6 +434,7 @@ TEST(odm, prima_update) {
           {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}}};
 
   EXPECT_EQ(initial, p.get_msg_str(tt));
+  EXPECT_FALSE(p.blacklist_update(invalid_response));
   p.blacklist_update(blacklisting_response);
   EXPECT_EQ(blacklisted, p.get_msg_str(tt));
   p.whitelist_update(whitelisting_response);

@@ -93,8 +93,6 @@ std::string prima::get_msg_str(n::timetable const& tt) const {
 bool prima::blacklist_update(std::string_view json) {
   auto success = true;
 
-  std::cout << "\nblacklist_update:\n" << json << "\n" << std::endl;
-
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,
                                   auto const& update) {
     std::swap(rides, prev_rides);
@@ -131,7 +129,7 @@ bool prima::blacklist_update(std::string_view json) {
     update_direct_rides(direct_rides_, prev_direct_rides_,
                         o.at("direct").as_array());
   } catch (std::exception const& e) {
-    std::cout << e.what() << "\n";
+    std::cout << e.what() << "\nInvalid blacklist response: " << json << "\n";
     success = false;
   }
   return success;
@@ -180,7 +178,7 @@ bool prima::whitelist_update(std::string_view json) {
     update_direct_rides(direct_rides_, prev_direct_rides_,
                         o.at("direct").as_array());
   } catch (std::exception const& e) {
-    std::cout << e.what() << "\n";
+    std::cout << e.what() << "\nInvalid whitelist response: " << json << "\n";
     success = false;
   }
   return success;
