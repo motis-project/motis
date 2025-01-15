@@ -90,15 +90,18 @@ asio::awaitable<http_response> req(
     boost::urls::url const& url,
     std::map<std::string, std::string> const& headers,
     std::optional<std::string> const& body) {
-  auto req = body ? http::request<http::string_body>{http::verb::post,
-                                                     body.value(), 11}
-                  : http::request<http::string_body>{http::verb::get,
-                                                     url.encoded_target(), 11};
+  auto req = http::request<http::string_body>{
+      body ? http::verb::post : http::verb::get, url.encoded_target(), 11};
   req.set(http::field::host, url.host());
   req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
   req.set(http::field::accept_encoding, "gzip");
   for (auto const& [k, v] : headers) {
     req.set(k, v);
+  }
+
+  if (body) {
+    req.body() = *body;
+    req.prepare_payload();
   }
 
   co_await http::async_write(stream, req);
