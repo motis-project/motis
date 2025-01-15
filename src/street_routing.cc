@@ -377,12 +377,6 @@ api::Itinerary route(osr::ways const& w,
     for (auto& leg : itinerary.legs_) {
       auto const before = leg.duration_;
       leg.duration_ = (leg.endTime_.time_ - leg.startTime_.time_).count();
-      if (leg.duration_ != before) {
-        std::cout << "leg duration: before=" << before
-                  << ", after=" << leg.duration_
-                  << ", start_time=" << leg.startTime_
-                  << ", end_time=" << leg.endTime_ << "\n";
-      }
     }
   }
 
