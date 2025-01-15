@@ -128,7 +128,7 @@ int generate(int ac, char** av) {
                   "dest not a location");
       utl::verify(
           std::holds_alternative<n::interval<n::unixtime_t>>(q->q_.start_time_),
-          "start time not time point");
+          "start time not interval");
       auto p = api::plan_params{};
       p.fromPlace_ =
           d.tags_->id(*d.tt_, std::get<n::location_idx_t>(q->start_));
