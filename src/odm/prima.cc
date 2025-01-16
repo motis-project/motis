@@ -91,6 +91,8 @@ std::string prima::get_msg_str(n::timetable const& tt) const {
 }
 
 bool prima::blacklist_update(std::string_view json) {
+  std::cout << "blacklist_response: " << json << "\n";
+
   auto success = true;
 
   auto const update_pt_rides = [](auto& rides, auto& prev_rides,

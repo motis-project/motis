@@ -12,6 +12,7 @@
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
+#include "nigiri/routing/raptor_search.h"
 #include "nigiri/routing/start_times.h"
 #include "nigiri/types.h"
 
@@ -27,7 +28,6 @@
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
 #include "motis/odm/query_factory.h"
-#include "motis/odm/raptor_wrapper.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -132,24 +132,6 @@ n::interval<n::unixtime_t> get_dest_intvl(
                                           start_intvl.to_ + 24h}
              : n::interval<n::unixtime_t>{start_intvl.from_ - 24h,
                                           start_intvl.to_};
-}
-
-void init(prima& ps,
-          api::Place const& from,
-          api::Place const& to,
-          api::plan_params const& query) {
-  ps.from_ = geo::latlng{from.lat_, from.lon_};
-  ps.to_ = geo::latlng{to.lat_, to.lon_};
-  ps.fixed_ = query.arriveBy_ ? kArr : kDep;
-  ps.cap_ = {
-      .wheelchairs_ = static_cast<std::uint8_t>(
-          query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
-              ? 1U
-              : 0U),
-      .bikes_ =
-          static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1U : 0U),
-      .passengers_ = 1U,
-      .luggage_ = 0U};
 }
 
 void sort(std::vector<n::routing::start>& rides) {
@@ -288,7 +270,7 @@ auto extract_rides() {
   p->from_rides_.clear();
   p->to_rides_.clear();
   for (auto const& j : p->odm_journeys_) {
-    if (j.legs_.size() > 0) {
+    if (!j.legs_.empty()) {
       if (std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
           std::get<n::routing::offset>(j.legs_.front().uses_)
                   .transport_mode_id_ == kODM) {
@@ -546,91 +528,73 @@ api::plan_response meta_router::run() {
                             : get_td_offsets(to_rides_long, kTimeAtStop)};
 
   auto const make_task = [&](n::routing::query q) {
-    return boost::fibers::packaged_task<raptor_result()>{[&]() {
-      auto const start_time_str = [](auto const& t) {
-        return std::visit(
-            utl::overloaded{[](n::unixtime_t const& u) {
-                              auto ss = std::stringstream{};
-                              ss << u;
-                              return ss.str();
-                            },
-                            [](n::interval<n::unixtime_t> const& i) {
-                              auto ss = std::stringstream{};
-                              ss << i;
-                              return ss.str();
-                            }},
-            t);
-      };
-      std::cout << "packaged_task start time: " << start_time_str(q.start_time_)
-                << "\n";
-      return raptor_wrapper(
-          *tt_, rtt_, std::move(q),
-          query_.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-          query_.timeout_.has_value()
-              ? std::optional<std::chrono::seconds>{*query_.timeout_}
-              : std::nullopt);
-    }};
+    return boost::fibers::packaged_task<
+        n::routing::routing_result<n::routing::raptor_stats>()>{
+        [&, q = std::move(q)]() mutable {
+          if (ep::search_state.get() == nullptr) {
+            ep::search_state.reset(new n::routing::search_state{});
+          }
+          if (ep::raptor_state.get() == nullptr) {
+            ep::raptor_state.reset(new n::routing::raptor_state{});
+          }
+          return raptor_search(
+              *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
+              query_.arriveBy_ ? n::direction::kBackward
+                               : n::direction::kForward,
+              query_.timeout_.has_value()
+                  ? std::optional<std::chrono::seconds>{*query_.timeout_}
+                  : std::nullopt);
+        }};
   };
 
-  //  auto tasks = std::vector<boost::fibers::packaged_task<
-  //      n::routing::routing_result<n::routing::raptor_stats>()>>{};
-  //  tasks.emplace_back(make_task(qf.walk_walk()));
+  auto tasks = std::vector<boost::fibers::packaged_task<
+      n::routing::routing_result<n::routing::raptor_stats>()>>{};
+  tasks.emplace_back(make_task(qf.walk_walk()));
   if (blacklisted) {
-    //      tasks.emplace_back(make_task(qf.walk_short()));
-    //      tasks.emplace_back(make_task(qf.walk_long()));
-    //      tasks.emplace_back(make_task(qf.short_walk()));
-    //      tasks.emplace_back(make_task(qf.long_walk()));
-    //      tasks.emplace_back(make_task(qf.short_short()));
-    //      tasks.emplace_back(make_task(qf.short_long()));
-    //      tasks.emplace_back(make_task(qf.long_short()));
-    //      tasks.emplace_back(make_task(qf.long_long()));
+    tasks.emplace_back(make_task(qf.walk_short()));
+    tasks.emplace_back(make_task(qf.walk_long()));
+    tasks.emplace_back(make_task(qf.short_walk()));
+    tasks.emplace_back(make_task(qf.long_walk()));
+    tasks.emplace_back(make_task(qf.short_short()));
+    tasks.emplace_back(make_task(qf.short_long()));
+    tasks.emplace_back(make_task(qf.long_short()));
+    tasks.emplace_back(make_task(qf.long_long()));
   } else {
     std::cout << "blacklisting failed, omitting ODM routing\n";
   }
-  //
-  //  auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
-  //
-  //  std::cout << "constructed futures" << std::endl;
-  //
-  //  for (auto t = begin(tasks); t != end(tasks); ++t) {
-  //    boost::fibers::fiber(std::move(*t)).detach();
-  //  }
-  //
-  //  std::cout << "detached fibers, waiting for results" << std::endl;
-  //
-  //  for (auto const& f : futures) {
-  //    f.wait();
-  //  }
-  //
-  //  std::cout << "pt routing future valid: "
-  //            << (futures.front().valid() ? "true" : "false") << std::endl;
-  //
-  //  auto const pt_result = futures.front().get();
 
-  auto pt = make_task(qf.walk_walk());
-  auto fi = pt.get_future();
-  boost::fibers::fiber(std::move(pt)).detach();
-  fi.wait();
-  auto const pt_result = fi.get();
+  auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
+  for (auto& task : tasks) {
+    boost::fibers::fiber(std::move(task)).detach();
+  }
+  for (auto const& f : futures) {
+    f.wait();
+  }
 
-  // collect_odm_journeys(futures);
-  extract_rides();
+  auto const pt_result = futures.front().get();
 
   auto whitelist_response = std::optional<std::string>{};
-  try {
-    // TODO the fiber/thread should yield until network response arrives?
-    boost::asio::co_spawn(
-        ioc,
-        [&]() -> boost::asio::awaitable<void> {
-          auto const prima_msg = co_await http_POST(
-              kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
-          whitelist_response = get_http_body(prima_msg);
-        },
-        boost::asio::detached);
-    ioc.run();
-  } catch (std::exception const& e) {
-    std::cout << "whitelisting failed: " << e.what();
-    whitelist_response = std::nullopt;
+  if (blacklisted) {
+    collect_odm_journeys(futures);
+    extract_rides();
+    try {
+      // TODO the fiber/thread should yield until network response arrives?
+      std::cout << "Sending whitelist request: " << p->get_msg_str(*tt_)
+                << "\n";
+
+      boost::asio::co_spawn(
+          ioc,
+          [&]() -> boost::asio::awaitable<void> {
+            auto const prima_msg = co_await http_POST(
+                kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+            whitelist_response = get_http_body(prima_msg);
+          },
+          boost::asio::detached);
+      ioc.run();
+    } catch (std::exception const& e) {
+      std::cout << "whitelisting failed: " << e.what();
+      whitelist_response = std::nullopt;
+    }
   }
 
   auto const whitelisted =
@@ -643,7 +607,7 @@ api::plan_response meta_router::run() {
     p->odm_journeys_.clear();
   }
 
-  kOdmMixer.mix(pt_result.journeys_, p->odm_journeys_);
+  kOdmMixer.mix(*pt_result.journeys_, p->odm_journeys_);
 
   extract_direct();
 
