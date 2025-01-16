@@ -41,6 +41,7 @@ boost::json::value json(n::routing::start const& s) {
   return json(s.time_at_stop_);
 }
 
+template <>
 boost::json::array json(std::vector<n::routing::start> const& v,
                         n::timetable const& tt) {
   auto a = boost::json::array{};
@@ -147,11 +148,15 @@ bool prima::whitelist_update(std::string_view json) {
     auto prev_it = std::begin(prev_rides);
     for (auto const& stop : update) {
       for (auto const& time : stop.as_array()) {
-        auto const delta =
-            n::parse_time(value_to<std::string>(time), kPrimaTimeFormat) -
-            prev_it->time_at_stop_;
-        rides.emplace_back(prev_it->time_at_start_ + delta,
-                           prev_it->time_at_stop_ + delta, prev_it->stop_);
+        if (time.is_null()) {
+
+        } else {
+          auto const delta =
+              n::parse_time(value_to<std::string>(time), kPrimaTimeFormat) -
+              prev_it->time_at_stop_;
+          rides.emplace_back(prev_it->time_at_start_ + delta,
+                             prev_it->time_at_stop_ + delta, prev_it->stop_);
+        }
         ++prev_it;
         if (prev_it == end(prev_rides)) {
           return;
@@ -165,11 +170,13 @@ bool prima::whitelist_update(std::string_view json) {
     std::swap(rides, prev_rides);
     rides.clear();
     for (auto const& [prev, time_str] : utl::zip(prev_rides, update)) {
-      auto const old_time = fixed_ == kDep ? prev.dep_ : prev.arr_;
-      auto const new_time =
-          n::parse_time(value_to<std::string>(time_str), kPrimaTimeFormat);
-      auto const delta = new_time - old_time;
-      rides.emplace_back(prev.dep_ + delta, prev.arr_ + delta);
+      if (!time_str.is_null()) {
+        auto const old_time = fixed_ == kDep ? prev.dep_ : prev.arr_;
+        auto const new_time =
+            n::parse_time(value_to<std::string>(time_str), kPrimaTimeFormat);
+        auto const delta = new_time - old_time;
+        rides.emplace_back(prev.dep_ + delta, prev.arr_ + delta);
+      }
     }
   };
 
