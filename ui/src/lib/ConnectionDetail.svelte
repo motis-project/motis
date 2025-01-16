@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import type { Itinerary, Leg } from '$lib/openapi';
-	import Time from '../lib/Time.svelte';
+	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
 	import { Button } from '$lib/components/ui/button';

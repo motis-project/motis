@@ -3,7 +3,7 @@
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
-	import SearchMask from './SearchMask.svelte';
+	import SearchMask from '$lib/SearchMask.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
 	import { Card } from '$lib/components/ui/card';
 	import {
@@ -16,22 +16,22 @@
 		type Mode,
 		type PlanData
 	} from '$lib/openapi';
-	import ItineraryList from './ItineraryList.svelte';
-	import ConnectionDetail from './ConnectionDetail.svelte';
+	import ItineraryList from '$lib/ItineraryList.svelte';
+	import ConnectionDetail from '$lib/ConnectionDetail.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import ItineraryGeoJson from './ItineraryGeoJSON.svelte';
+	import ItineraryGeoJson from '$lib/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
 	import { cn } from '$lib/utils';
-	import Debug from './Debug.svelte';
+	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
-	import LevelSelect from './LevelSelect.svelte';
+	import LevelSelect from '$lib/LevelSelect.svelte';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/openapi';
-	import StopTimes from './StopTimes.svelte';
+	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount } from 'svelte';
-	import RailViz from './RailViz.svelte';
+	import RailViz from '$lib/RailViz.svelte';
 	import { t } from '$lib/i18n/translation';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
