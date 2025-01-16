@@ -92,8 +92,8 @@
 								}}
 							>
 								<Card class="p-4">
-									<div class="text-base h-8 flex justify-between items-center space-x-4 w-full">
-										<div>
+									<div class="text-base h-8 flex justify-around items-center space-x-1 w-full">
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
 												isRealtime={it.legs[0].realTime}
@@ -103,7 +103,7 @@
 											/>
 										</div>
 										<Separator orientation="vertical" />
-										<div>
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
 												isRealtime={it.legs[it.legs.length - 1].realTime}
@@ -113,14 +113,14 @@
 											/>
 										</div>
 										<Separator orientation="vertical" />
-										<div>
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.transfers}</div>
-											<div class="flex justify-center w-full">{it.transfers}</div>
+											<div class="text-center">{it.transfers}</div>
 										</div>
 										<Separator orientation="vertical" />
-										<div>
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.duration}</div>
-											<div class="flex justify-center w-full">
+											<div class="text-center text-nowrap">
 												{formatDurationSec(it.duration)}
 											</div>
 										</div>

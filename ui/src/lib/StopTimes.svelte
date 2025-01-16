@@ -80,14 +80,14 @@
 					{onClickTrip}
 				/>
 				<Time
-					class="ml-1"
+					class="ml-1 w-16"
 					variant="schedule"
 					isRealtime={t.realTime}
 					{timestamp}
 					{scheduledTimestamp}
 				/>
 				<Time
-					class="ml-2"
+					class="ml-2 w-16"
 					variant="realtime"
 					isRealtime={t.realTime}
 					{timestamp}

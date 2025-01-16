@@ -42,7 +42,7 @@
 
 <div
 	class:hidden={!initialized}
-	class={cn('clear-both pointer-events-auto pt-4 px-4', className)}
+	class={cn('clear-both pointer-events-auto pt-4 px-4 max-w-full', className)}
 	bind:this={el}
 >
 	{#if children}

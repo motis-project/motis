@@ -31,15 +31,15 @@
 )}
 	<Time
 		variant="schedule"
-		class="font-semibold mr-2"
+		class="font-semibold mr-2 w-16"
 		{isRealtime}
 		{timestamp}
 		{scheduledTimestamp}
 	/>
-	<Time variant="realtime" class="font-semibold" {isRealtime} {timestamp} {scheduledTimestamp} />
+	<Time variant="realtime" class="font-semibold w-16" {isRealtime} {timestamp} {scheduledTimestamp} />
 	{#if stopId}
 		<Button
-			class="col-span-5 mr-6 text-lg justify-normal text-wrap text-left"
+			class="col-span-5 mr-6 text-lg leading-tight justify-normal text-wrap text-left"
 			variant="link"
 			onclick={() => {
 				onClickStop(name, stopId, new Date(timestamp));
@@ -120,12 +120,12 @@
 					<span class="ml-1">{l.headsign}</span>
 				</div>
 				{#if l.intermediateStops?.length === 0}
-					<div class="py-12 pl-8 flex items-center text-muted-foreground">
+					<div class="py-6 pl-8 flex items-center text-muted-foreground text-sm">
 						{t.tripIntermediateStops(0)}
 					</div>
 				{:else}
 					<details class="[&_svg]:open:-rotate-180">
-						<summary class="py-12 pl-8 flex items-center text-muted-foreground">
+						<summary class="py-6 pl-8 flex items-center text-muted-foreground">
 							<svg
 								class="rotate-0 transform transition-all duration-300"
 								fill="none"
@@ -144,7 +144,7 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div class="mb-6 grid gap-y-6 grid-cols-7 items-center">
+						<div class="mb-3 grid gap-y-3 grid-cols-7 items-center">
 							{#each l.intermediateStops! as s}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s.name!, s.stopId)}
 							{/each}
@@ -190,9 +190,9 @@
 			</div>
 		{/if}
 	{/each}
-	<div class="flex">
-		<div class="relative left-[13px] w-3 h-3 rounded-full" style={routeColor(lastLeg!)}></div>
-		<div class="relative left-3 bottom-[7px] pl-6 grid gap-y-6 grid-cols-7 items-center">
+	<div class="relative pl-6 left-4">
+		<div class="absolute left-[-6px] top-[0px] w-[15px] h-[15px] rounded-full" style={routeColor(lastLeg!)}></div>
+		<div class="relative left-[4px] bottom-[7px] grid gap-y-6 grid-cols-7 items-center">
 			{@render stopTimes(
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,

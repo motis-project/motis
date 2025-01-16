@@ -97,3 +97,11 @@
 .maplibregl-popup-content {
 	background-color: hsl(var(--background)) !important;
 }
+
+.maplibregl-control-container .maplibregl-ctrl-top-left {
+	max-width: 100%;
+	bottom: 1rem;
+	display: flex;
+	flex-direction: column;
+	z-index: 3;
+}

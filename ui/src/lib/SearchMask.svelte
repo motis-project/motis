@@ -50,9 +50,9 @@
 	>
 		<ArrowUpDown class="w-5 h-5" />
 	</Button>
-	<div class="flex flex-row space-x-2 justify-between">
+	<div class="flex flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
-		<RadioGroup.Root class="flex space-x-1" bind:value={timeType}>
+		<RadioGroup.Root class="flex" bind:value={timeType}>
 			<Label
 				for="departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
@@ -68,11 +68,13 @@
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
-		<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
-			<Accessibility class="h-6 w-6" />
-		</Toggle>
-		<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
-			<Bike class="h-6 w-6" />
-		</Toggle>
+		<div>
+			<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
+				<Accessibility class="h-6 w-6" />
+			</Toggle>
+			<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
+				<Bike class="h-6 w-6" />
+			</Toggle>
+		</div>
 	</div>
 </div>

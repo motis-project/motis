@@ -236,9 +236,9 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	{#if !selectedItinerary && routingResponses.length !== 0}
-		<Control position="top-left">
+		<Control position="top-left" class="min-h-0">
 			<Card
-				class="w-[500px] max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				class="w-[500px] h-full max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
 				<ItineraryList {baseResponse} {routingResponses} {baseQuery} bind:selectedItinerary />
 			</Card>
@@ -246,8 +246,8 @@
 	{/if}
 
 	{#if selectedItinerary && !selectedStop}
-		<Control position="top-left">
-			<Card class="w-[500px] bg-background rounded-lg">
+		<Control position="top-left" class="min-h-0">
+			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
 					<Button
@@ -259,7 +259,7 @@
 						<X />
 					</Button>
 				</div>
-				<div class="p-4 overflow-y-auto overflow-x-hidden max-h-[70vh]">
+				<div class="p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
 					<ConnectionDetail
 						itinerary={selectedItinerary}
 						onClickStop={(name: string, stopId: string, time: Date) => {
