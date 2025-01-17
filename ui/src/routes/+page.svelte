@@ -127,7 +127,10 @@
 		if (baseQuery) {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
-				const base = plan<true>(baseQuery).then((response) => response.data);
+				const base = plan(baseQuery).then((response) => {
+					if (response.error) throw new Error(String(response.error));
+					return response.data!;
+				});
 				baseResponse = base;
 				routingResponses = [base];
 				selectedItinerary = undefined;

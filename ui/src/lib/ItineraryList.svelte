@@ -1,13 +1,22 @@
 <script lang="ts">
 	import { Card } from '$lib/components/ui/card';
+	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import { Separator } from '$lib/components/ui/separator';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import { getModeStyle, routeColor } from '$lib/modeStyle';
-	import { plan, type Itinerary, type Leg, type PlanData, type PlanResponse } from '$lib/openapi';
+	import {
+		plan,
+		type Itinerary,
+		type Leg,
+		type PlanData,
+		type PlanError,
+		type PlanResponse
+	} from '$lib/openapi';
 	import Time from '$lib/Time.svelte';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
+	import type { RequestResult } from '@hey-api/client-fetch';
 
 	let {
 		routingResponses,
@@ -20,6 +29,12 @@
 		baseQuery: PlanData | undefined;
 		selectedItinerary: Itinerary | undefined;
 	} = $props();
+
+	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
+		promise.then((response) => {
+			if (response.error) throw new Error(String(response.error));
+			return response.data!;
+		});
 </script>
 
 {#snippet legSummary(l: Leg)}
@@ -73,9 +88,11 @@
 										routingResponses.splice(
 											0,
 											0,
-											plan({
-												query: { ...baseQuery.query, pageCursor: r.previousPageCursor }
-											}).then((x) => x.data!)
+											throwOnError(
+												plan({
+													query: { ...baseQuery.query, pageCursor: r.previousPageCursor }
+												})
+											)
 										);
 									}}
 									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg text-nowrap"
@@ -140,8 +157,10 @@
 								<button
 									onclick={() => {
 										routingResponses.push(
-											plan({ query: { ...baseQuery.query, pageCursor: r.nextPageCursor } }).then(
-												(x) => x.data!
+											throwOnError(
+												plan({
+													query: { ...baseQuery.query, pageCursor: r.nextPageCursor }
+												})
 											)
 										);
 									}}
@@ -153,10 +172,14 @@
 							</div>
 						{/if}
 					{:catch e}
-						<div>Error: {e}</div>
+						<ErrorMessage {e} />
 					{/await}
 				{/each}
 			</div>
+		{:else if r.direct.length === 0}
+			<ErrorMessage e={t.noItinerariesFound} />
 		{/if}
+	{:catch e}
+		<ErrorMessage {e} />
 	{/await}
 {/if}

@@ -10,7 +10,7 @@
 	import { formatTime } from '$lib/toDateTime';
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import maplibregl from 'maplibre-gl';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import Control from '$lib/map/Control.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import Palette from 'lucide-svelte/icons/palette';
@@ -29,6 +29,7 @@
 	} = $props();
 
 	let colorMode = $state<'rt' | 'route'>('route');
+	let railvizError = $state();
 
 	type RGBA = [number, number, number, number];
 
@@ -203,7 +204,6 @@
 		});
 	};
 
-	let railvizError = $state();
 	let animation: number | null = null;
 	const updateRailvizLayer = async () => {
 		try {
@@ -272,14 +272,16 @@
 			map.addControl(overlay);
 
 			console.log('updateRailviz: init');
-			updateRailviz();
+			untrack(() => updateRailviz());
 		}
 	});
 
 	$effect(() => {
 		if (overlay && bounds && zoom && colorMode) {
-			console.log(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
-			updateRailviz();
+			untrack(() => {
+				console.log(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
+				updateRailviz();
+			});
 		}
 	});
 
