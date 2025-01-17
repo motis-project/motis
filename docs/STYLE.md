@@ -128,7 +128,7 @@ Only use shortened version of the variable name if it's still obvious what the v
 - Output = `out`
 - Request = `req`
 - Response = `res`
-- Initialization = `init
+- Initialization = `init`
 - ... etc.
 
 If the context in which the variable is used is short, you can make variable names even shorter. For example `for (auto const& e : events) { /* ... */ }` or `auto const& b = get_buffer()`.
