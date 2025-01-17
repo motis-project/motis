@@ -123,12 +123,12 @@ for (auto i = 0u; i < 10; ++i) {
 
 Only use shortened version of the variable name if it's still obvious what the variable holds.
 
-- Index = `_idx`
+- Index = `idx`
 - Input = `in`
 - Output = `out`
 - Request = `req`
 - Response = `res`
-- Initialization = `init
+- Initialization = `init`
 - ... etc.
 
 If the context in which the variable is used is short, you can make variable names even shorter. For example `for (auto const& e : events) { /* ... */ }` or `auto const& b = get_buffer()`.
@@ -224,6 +224,10 @@ This means we do not want `new` or `delete` - except for placement new or placem
 
 If there is no tool available in the C++ Standard Library please check first if we already have something in our [utl](https://github.com/motis-project/utl) library.
 
+# Use `strong` types
+
+Use `cista::strong` to define types, that cannot be converted implicitly. Using a `strong` type will ensure, that parameters cannot be mismatched, unlike `int` or `std::size_t`. This also makes function parameters clearer.
+
 # `const`
 
 Make everything (variables, loop variables, member functions, etc.) as `const` as possible. This indicates thread-safety (as long as only `const` methods are used) and helps to catch bugs when our mental model doesn't match the reality (the compiler will tell us).
@@ -307,9 +311,16 @@ Our go-to data structure is `std::vector`. (Hash-)maps and (hash-)sets are very 
 
 Never use `std::unordered_map`. We have better alternatives in all projects (e.g. unordered_dense).
 
+## `vecvec` and `vector_map`
+
+- Use `vector_map` for mappings with a `strong` key type and a continuous domain.
+- Prefer using `vecvec<T>` instead of `vector<vector<T>>`, as data is stored and accessed more efficient. To store data, that may appear in any order, you may consider `paged_vecvec` instead.
+
 # Tooling
 
 - Always develop with Address Sanitizer (ASan) and Undefined Behaviour Sanitizer (UBSan) enabled if performance allows it (it's usually worth it to use small data sets to be able to develop with sanitizers enabled!): `CXXFLAGS=-fno-omit-frame-pointer -fsanitizer=address,undefined`.
+    - **Notice**: Some checks can cause false positive and should be disabled if necessary (compare `ci.yml`).  
+      Example: `ASAN_OPTIONS=alloc_dealloc_mismatch=0`
 - Check your code with `valgrind`.
 
 # Spirit
