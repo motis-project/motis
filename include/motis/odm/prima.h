@@ -42,6 +42,7 @@ struct prima {
   bool blacklist_update(std::string_view json);
   bool whitelist_update(std::string_view json);
   void adjust_to_whitelisting();
+  void insert_transfer_buffer_legs();
 
   geo::latlng from_;
   geo::latlng to_;

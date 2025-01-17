@@ -204,9 +204,7 @@ void prima::adjust_to_whitelisting() {
           j.legs_.front().dep_time_ == prev_from_ride.time_at_start_ &&
           j.legs_.front().arr_time_ == prev_from_ride.time_at_stop_ &&
           j.legs_.front().to_ == prev_from_ride.stop_ &&
-          std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
-          std::get<n::routing::offset>(j.legs_.front().uses_)
-                  .transport_mode_id_ == kODM) {
+          is_odm_leg(j.legs_.front())) {
         j.legs_.front().dep_time_ = from_ride.time_at_start_;
         j.legs_.front().arr_time_ = from_ride.time_at_stop_;
         std::get<n::routing::offset>(j.legs_.front().uses_).duration_ =
@@ -227,9 +225,7 @@ void prima::adjust_to_whitelisting() {
           j.legs_.back().dep_time_ == prev_to_ride.time_at_stop_ &&
           j.legs_.back().arr_time_ == prev_to_ride.time_at_start_ &&
           j.legs_.back().from_ == prev_to_ride.stop_ &&
-          std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
-          std::get<n::routing::offset>(j.legs_.back().uses_)
-                  .transport_mode_id_ == kODM) {
+          is_odm_leg(j.legs_.back())) {
         j.legs_.back().dep_time_ = to_ride.time_at_stop_;
         j.legs_.back().arr_time_ = to_ride.time_at_start_;
         std::get<n::routing::offset>(j.legs_.back().uses_).duration_ =

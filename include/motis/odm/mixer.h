@@ -18,18 +18,13 @@ std::int32_t tally(std::int32_t, std::vector<cost_threshold> const&);
 struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
            std::vector<nigiri::routing::journey>& odm_journeys) const;
-
-private:
   std::int32_t transfer_cost(nigiri::routing::journey const&) const;
-  std::int32_t distance(nigiri::routing::journey const&,
-                        nigiri::routing::journey const&) const;
   void cost_domination(
       nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
       std::vector<nigiri::routing::journey>& odm_journeys) const;
   void productivity_domination(
       std::vector<nigiri::routing::journey>& odm_journeys) const;
 
-public:
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;
