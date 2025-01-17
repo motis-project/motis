@@ -171,11 +171,15 @@ void init_pt(std::vector<n::routing::start>& rides,
   static auto const kNoTdOffsets =
       hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
 
-  auto const offsets = get_offsets(
+  auto offsets = get_offsets(
       r, l, dir, {api::ModeEnum::CAR},
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
       std::chrono::seconds{query.maxPreTransitTime_},
       query.maxMatchingDistance_, gbfs_rd, odm_stats);
+
+  for (auto& o : offsets) {
+    o.duration_ += kODMTransferBuffer;
+  }
 
   rides.clear();
   rides.reserve(offsets.size() * 2);

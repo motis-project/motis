@@ -1,5 +1,6 @@
 #pragma once
 
+#include "nigiri/routing/journey.h"
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
@@ -11,6 +12,8 @@ constexpr auto const kODM =
     static_cast<nigiri::transport_mode_id_t>(api::ModeEnum::ODM);
 constexpr auto const kWalk =
     static_cast<nigiri::transport_mode_id_t>(api::ModeEnum::WALK);
+
+enum which_mile { kFirstMile, kLastMile };
 
 bool is_odm_leg(nigiri::routing::journey::leg const&);
 

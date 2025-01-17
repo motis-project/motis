@@ -16,15 +16,13 @@ struct routing;
 
 namespace motis::odm {
 
-namespace n = nigiri;
-
 constexpr auto const kPrimaTimeFormat = "%Y-%m-%dT%H:%M:%SZ";
 
 enum fixed { kArr, kDep };
 
 struct direct_ride {
-  n::unixtime_t dep_;
-  n::unixtime_t arr_;
+  nigiri::unixtime_t dep_;
+  nigiri::unixtime_t arr_;
 };
 
 struct capacities {
@@ -38,26 +36,25 @@ struct prima {
   void init(api::Place const& from,
             api::Place const& to,
             api::plan_params const& query);
-  std::string get_msg_str(n::timetable const&) const;
+  std::string get_msg_str(nigiri::timetable const&) const;
   bool blacklist_update(std::string_view json);
   bool whitelist_update(std::string_view json);
   void adjust_to_whitelisting();
-  void insert_transfer_buffer_legs();
 
   geo::latlng from_;
   geo::latlng to_;
   fixed fixed_;
   capacities cap_;
 
-  std::vector<n::routing::start> from_rides_{};
-  std::vector<n::routing::start> to_rides_{};
+  std::vector<nigiri::routing::start> from_rides_{};
+  std::vector<nigiri::routing::start> to_rides_{};
   std::vector<direct_ride> direct_rides_{};
 
-  std::vector<n::routing::start> prev_from_rides_{};
-  std::vector<n::routing::start> prev_to_rides_{};
+  std::vector<nigiri::routing::start> prev_from_rides_{};
+  std::vector<nigiri::routing::start> prev_to_rides_{};
   std::vector<direct_ride> prev_direct_rides_{};
 
-  std::vector<n::routing::journey> odm_journeys_{};
+  std::vector<nigiri::routing::journey> odm_journeys_{};
 };
 
 }  // namespace motis::odm

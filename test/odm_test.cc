@@ -334,7 +334,7 @@ D,D,D,0.4,0.4,,,,
 }
 
 constexpr auto const initial =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T11:00:00Z","1970-01-01T12:00:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:00:00Z"]},{"coordinates":{"lat":4E-1,"lng":4E-1},"times":["1970-01-01T14:00:00Z"]}],"times":["1970-01-01T10:00:00Z","1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T10:55:00Z","1970-01-01T11:55:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T11:55:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:05:00Z"]},{"coordinates":{"lat":4E-1,"lng":4E-1},"times":["1970-01-01T14:05:00Z"]}],"times":["1970-01-01T10:00:00Z","1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const invalid_response = R"({"message":"Internal Error"})";
 
@@ -347,47 +347,41 @@ constexpr auto const blacklisting_response = R"(
 )";
 
 constexpr auto const blacklisted =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T11:00:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:00:00Z"]}],"times":["1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T10:55:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T11:55:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:05:00Z"]}],"times":["1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const whitelisting_response = R"(
 {
-  "start": [["1970-01-01T10:45:00Z"],["1970-01-01T12:00:00Z"]],
-  "target": [["1970-01-01T13:05:00Z"]],
-  "direct": ["1970-01-01T11:30:00Z"]
+  "start": [["1970-01-01T09:45:00Z"],[null]],
+  "target": [["1970-01-01T14:05:00Z"]],
+  "direct": ["1970-01-01T12:30:00Z"]
 }
 )";
-
-constexpr auto const whitelisted =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T10:45:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T12:00:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:05:00Z"]}],"times":["1970-01-01T11:30:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const adjusted_to_whitelisting = R"(
 [1970-01-01 09:45, 1970-01-01 12:00]
 TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:45]
        TO: (END, END) [1970-01-01 12:00]
-leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:45]
-  MUMO (id=5, duration=60)
-leg 1: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
-  MUMO (id=0, duration=60)
-
-[1970-01-01 11:00, 1970-01-01 13:00]
-TRANSFERS: 0
-     FROM: (START, START) [1970-01-01 11:00]
-       TO: (END, END) [1970-01-01 13:00]
-leg 0: (START, START) [1970-01-01 11:00] -> (A, A) [1970-01-01 12:00]
-  MUMO (id=5, duration=60)
-leg 1: (A, A) [1970-01-01 12:00] -> (END, END) [1970-01-01 13:00]
+leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:55]
+  MUMO (id=5, duration=70)
+leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
+  FOOTPATH (duration=5)
+leg 2: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
   MUMO (id=0, duration=60)
 
 [1970-01-01 09:45, 1970-01-01 14:05]
 TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:45]
        TO: (END, END) [1970-01-01 14:05]
-leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:45]
-  MUMO (id=5, duration=60)
-leg 1: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
+leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:55]
+  MUMO (id=5, duration=70)
+leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
+  FOOTPATH (duration=5)
+leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
   FOOTPATH (duration=120)
-leg 2: (C, C) [1970-01-01 13:05] -> (END, END) [1970-01-01 14:05]
+leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 13:05]
+  FOOTPATH (duration=5)
+leg 4: (C, C) [1970-01-01 13:05] -> (END, END) [1970-01-01 14:05]
   MUMO (id=5, duration=60)
 
 )";
@@ -437,8 +431,9 @@ TEST(odm, prima_update) {
   EXPECT_FALSE(p.blacklist_update(invalid_response));
   p.blacklist_update(blacklisting_response);
   EXPECT_EQ(blacklisted, p.get_msg_str(tt));
+  EXPECT_FALSE(p.whitelist_update(invalid_response));
   p.whitelist_update(whitelisting_response);
-  EXPECT_EQ(whitelisted, p.get_msg_str(tt));
+  EXPECT_EQ(blacklisted, p.get_msg_str(tt));
 
   p.odm_journeys_.push_back(
       {.legs_ = {{n::direction::kForward,
@@ -456,12 +451,12 @@ TEST(odm, prima_update) {
   p.odm_journeys_.push_back(
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
-                  get_loc_idx("A"), n::unixtime_t{11h}, n::unixtime_t{12h},
-                  n::routing::offset{get_loc_idx("A"), 1h, kODM}},
-                 {n::direction::kForward, get_loc_idx("A"),
+                  get_loc_idx("B"), n::unixtime_t{11h}, n::unixtime_t{12h},
+                  n::routing::offset{get_loc_idx("B"), 1h, kODM}},
+                 {n::direction::kForward, get_loc_idx("B"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{12h}, n::unixtime_t{13h},
-                  n::routing::offset{get_loc_idx("A"), 1h, kWalk}}},
+                  n::routing::offset{get_loc_idx("B"), 1h, kWalk}}},
        .start_time_ = n::unixtime_t{11h},
        .dest_time_ = n::unixtime_t{13h},
        .dest_ = get_special_station(special_station::kEnd)});
