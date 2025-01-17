@@ -31,11 +31,11 @@
 	let toItems = $state<Array<Location>>([]);
 </script>
 
-<div class="flex flex-col space-y-4 p-4">
+<div class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead name="from" placeholder={t.from} bind:selected={from} bind:items={fromItems} />
 	<AddressTypeahead name="to" placeholder={t.to} bind:selected={to} bind:items={toItems} />
 	<Button
-		class="absolute z-10 right-12 top-10"
+		class="absolute z-10 right-12 top-6"
 		variant="outline"
 		size="icon"
 		onclick={() => {

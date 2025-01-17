@@ -218,7 +218,7 @@
 		}
 	}}
 	{center}
-	class={cn('h-screen overflow-clip', theme)}
+	class={cn('h-dvh overflow-clip', theme)}
 	style={getStyle(theme, level)}
 >
 	{#if hasDebug}
@@ -259,7 +259,7 @@
 						<X />
 					</Button>
 				</div>
-				<div class="p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
+				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
 					<ConnectionDetail
 						itinerary={selectedItinerary}
 						onClickStop={(name: string, stopId: string, time: Date) => {
@@ -275,8 +275,8 @@
 	{/if}
 
 	{#if selectedStop}
-		<Control position="top-left">
-			<Card class="w-[500px] bg-background rounded-lg">
+		<Control position="top-left" class="min-h-0">
+			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if stopArriveBy}
@@ -296,7 +296,7 @@
 						<X />
 					</Button>
 				</div>
-				<div class="p-6 overflow-y-auto overflow-x-hidden max-h-[70vh]">
+				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
 					<StopTimes
 						stopId={selectedStop.stopId}
 						time={selectedStop.time}

@@ -26,7 +26,7 @@
 	});
 </script>
 
-<div class="text-base grid gap-y-2 grid-cols-10 auto-rows-fr items-center">
+<div class="text-base grid gap-y-2 gap-x-2 grid-cols-[repeat(3,max-content)_auto] auto-rows-fr items-center">
 	<div class="col-span-full w-full flex items-center justify-center">
 		<Button
 			class="font-bold"
@@ -75,27 +75,25 @@
 					? t.place.scheduledArrival!
 					: t.place.scheduledDeparture!}
 				<Route
-					class="col-span-3 w-fit max-w-28 text-ellipsis overflow-hidden"
+					class="w-fit max-w-32 text-ellipsis overflow-hidden"
 					l={t}
 					{onClickTrip}
 				/>
 				<Time
-					class="ml-1 w-16"
 					variant="schedule"
 					isRealtime={t.realTime}
 					{timestamp}
 					{scheduledTimestamp}
 				/>
 				<Time
-					class="ml-2 w-16"
 					variant="realtime"
 					isRealtime={t.realTime}
 					{timestamp}
 					{scheduledTimestamp}
 				/>
-				<div class="ml-4 col-span-5 flex items-center text-muted-foreground">
+				<div class="flex items-center text-muted-foreground min-w-0">
 					<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
-					<span class="ml-1 text-nowrap text-ellipsis overflow-hidden">{t.headsign}</span>
+					<span class="ml-1 leading-tight text-ellipsis overflow-hidden">{t.headsign}</span>
 				</div>
 			{/each}
 
