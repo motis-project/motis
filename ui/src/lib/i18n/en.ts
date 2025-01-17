@@ -30,7 +30,7 @@ const translations: Translations = {
 			case 1:
 				return '1 intermediate stop';
 			default:
-				return `${n}  intermediate stops`;
+				return `${n} intermediate stops`;
 		}
 	},
 	sharingProvider: 'Provider',

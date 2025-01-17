@@ -78,7 +78,7 @@
 											}).then((x) => x.data!)
 										);
 									}}
-									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg"
+									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg text-nowrap"
 								>
 									{t.earlier}
 								</button>
@@ -145,7 +145,7 @@
 											)
 										);
 									}}
-									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg"
+									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg text-nowrap"
 								>
 									{t.later}
 								</button>
