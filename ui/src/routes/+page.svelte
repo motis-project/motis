@@ -37,6 +37,7 @@
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
+	const isSmallScreen = browser && window.innerWidth < 600;
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : undefined) ??
@@ -164,7 +165,7 @@
 					box.extend(x);
 				});
 			});
-			const padding = { top: 96, right: 96, bottom: 96, left: 640 };
+			const padding = { top: 96, right: 96, bottom: 96, left: isSmallScreen ? 96 : 640 };
 			map.flyTo({ ...map.cameraForBounds(box), padding });
 		}
 	});
@@ -230,11 +231,13 @@
 		</Control>
 	{/if}
 
-	<Control position="top-left">
-		<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
-		</Card>
-	</Control>
+	{#if !isSmallScreen || !selectedItinerary && !selectedStop}
+		<Control position="top-left">
+			<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+				<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
+			</Card>
+		</Control>
+	{/if}
 
 	<LevelSelect {bounds} {zoom} bind:level />
 

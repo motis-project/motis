@@ -15,6 +15,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import Palette from 'lucide-svelte/icons/palette';
 	import Rss from 'lucide-svelte/icons/rss';
+	import { browser } from '$app/environment'
 
 	let {
 		map,
@@ -296,7 +297,7 @@
 	});
 </script>
 
-<Control position="top-right">
+<Control position={browser && window.innerWidth < 600 ? 'bottom-left' : 'top-right'} class="pb-2">
 	<Button
 		size="icon"
 		variant={colorMode ? 'default' : 'outline'}

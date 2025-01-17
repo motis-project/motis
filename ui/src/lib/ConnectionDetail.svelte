@@ -39,7 +39,7 @@
 	<Time variant="realtime" class="font-semibold w-16" {isRealtime} {timestamp} {scheduledTimestamp} />
 	{#if stopId}
 		<Button
-			class="text-[length:inherit] leading-tight justify-normal text-wrap text-left"
+			class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
 			variant="link"
 			onclick={() => {
 				onClickStop(name, stopId, new Date(timestamp));
@@ -115,7 +115,7 @@
 						l.from.stopId
 					)}
 				</div>
-				<div class="mt-2 flex items-center text-muted-foreground">
+				<div class="mt-2 flex items-center text-muted-foreground leading-none">
 					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
 					<span class="ml-1">{l.headsign}</span>
 				</div>
@@ -124,7 +124,7 @@
 						{t.tripIntermediateStops(0)}
 					</div>
 				{:else}
-					<details class="[&_svg]:open:-rotate-180">
+					<details class="[&_svg]:open:-rotate-180 my-2">
 						<summary class="py-3 pl-8 flex items-center text-muted-foreground">
 							<svg
 								class="rotate-0 transform transition-all duration-300"

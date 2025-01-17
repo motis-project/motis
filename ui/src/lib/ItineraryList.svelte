@@ -73,7 +73,7 @@
 		{/if}
 
 		{#if r.itineraries.length !== 0}
-			<div class="flex flex-col space-y-8 px-4 py-8">
+			<div class="flex flex-col space-y-6 px-4 py-8">
 				{#each routingResponses as r, rI}
 					{#await r}
 						<div class="flex items-center justify-center w-full">
