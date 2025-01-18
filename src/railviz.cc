@@ -370,7 +370,7 @@ api::trips_response get_trains(tag_lookup const& tags,
                             [&](auto&& p) { enc.push(p); });
 
     return {.trips_ = {api::TripInfo{
-                .tripId_ = tags.id(tt, from),
+                .tripId_ = tags.id(tt, from, n::event_type::kDep),
                 .routeShortName_ =
                     std::string{from.trip_display_name(n::event_type::kDep)}}},
             .routeColor_ =

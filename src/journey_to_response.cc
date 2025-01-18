@@ -123,7 +123,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .agencyName_ = {std::string{agency.long_name_}},
                   .agencyUrl_ = {std::string{agency.url_}},
                   .agencyId_ = {std::string{agency.short_name_}},
-                  .tripId_ = tags.id(tt, enter_stop),
+                  .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
                   .source_ = fmt::to_string(fr.dbg())});
