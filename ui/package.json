@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "vite dev --host 0.0.0.0 --port 3000",
 		"build": "vite build",
 		"preview": "vite preview",
 		"test": "npm run test:integration && npm run test:unit",
@@ -18,7 +18,7 @@
 		"@hey-api/openapi-ts": "^0.53.11",
 		"@playwright/test": "^1.28.1",
 		"@sveltejs/adapter-static": "^3.0.5",
-		"@sveltejs/kit": "^2.7.2",
+		"@sveltejs/kit": "^2.12.0",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0-next.6",
 		"@types/eslint": "^8.56.0",
 		"@types/polyline": "^0.1.32",

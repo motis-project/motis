@@ -12,12 +12,16 @@
 	let {
 		stopId,
 		time: queryTime,
-		arriveBy = $bindable(),
+		stopNameFromResponse = $bindable(),
+		arriveBy,
+		setArriveBy,
 		onClickTrip
 	}: {
 		stopId: string;
 		time: Date;
 		arriveBy?: boolean;
+		stopNameFromResponse: string;
+		setArriveBy: (arriveBy: boolean) => void;
 		onClickTrip: (tripId: string) => void;
 	} = $props();
 
@@ -33,8 +37,11 @@
 				console.log(response.error);
 				throw new Error('HTTP ' + response.response?.status);
 			}
+			stopNameFromResponse =
+				(response.data?.stopTimes.length && response.data?.stopTimes[0].place?.name) || '';
 			return response.data!;
 		});
+	stop;
 </script>
 
 <div
@@ -45,7 +52,7 @@
 			class="font-bold"
 			variant="outline"
 			onclick={() => {
-				arriveBy = !arriveBy;
+				setArriveBy(!arriveBy);
 			}}
 		>
 			{#if arriveBy}

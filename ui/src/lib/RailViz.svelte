@@ -15,7 +15,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import Palette from 'lucide-svelte/icons/palette';
 	import Rss from 'lucide-svelte/icons/rss';
-	import { browser } from '$app/environment'
+	import { browser } from '$app/environment';
 
 	let {
 		map,

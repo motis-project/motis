@@ -36,7 +36,13 @@
 		{timestamp}
 		{scheduledTimestamp}
 	/>
-	<Time variant="realtime" class="font-semibold w-16" {isRealtime} {timestamp} {scheduledTimestamp} />
+	<Time
+		variant="realtime"
+		class="font-semibold w-16"
+		{isRealtime}
+		{timestamp}
+		{scheduledTimestamp}
+	/>
 	{#if stopId}
 		<Button
 			class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
@@ -144,7 +150,9 @@
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div class="mb-1 grid gap-y-1 grid-cols-[max-content_max-content_auto] items-center text-sm">
+						<div
+							class="mb-1 grid gap-y-1 grid-cols-[max-content_max-content_auto] items-center text-sm"
+						>
 							{#each l.intermediateStops! as s}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s.name!, s.stopId)}
 							{/each}
@@ -153,7 +161,9 @@
 				{/if}
 
 				{#if !isLast && !(isLastPred && next!.duration === 0)}
-					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3 text-lg">
+					<div
+						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3 text-lg"
+					>
 						{@render stopTimes(
 							l.endTime!,
 							l.scheduledEndTime!,
@@ -183,7 +193,9 @@
 				</div>
 				{@render streetLeg(l)}
 				{#if !isLast}
-					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4 text-lg">
+					<div
+						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4 text-lg"
+					>
 						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to.name, l.to.stopId)}
 					</div>
 				{/if}
@@ -191,8 +203,13 @@
 		{/if}
 	{/each}
 	<div class="relative pl-6 left-4">
-		<div class="absolute left-[-6px] top-[0px] w-[15px] h-[15px] rounded-full" style={routeColor(lastLeg!)}></div>
-		<div class="relative left-[4px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center text-lg">
+		<div
+			class="absolute left-[-6px] top-[0px] w-[15px] h-[15px] rounded-full"
+			style={routeColor(lastLeg!)}
+		></div>
+		<div
+			class="relative left-[4px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center text-lg"
+		>
 			{@render stopTimes(
 				lastLeg!.endTime,
 				lastLeg!.scheduledEndTime,

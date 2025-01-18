@@ -8,7 +8,6 @@
 	import { Card } from '$lib/components/ui/card';
 	import {
 		initial,
-		type Itinerary,
 		type Match,
 		plan,
 		type PlanResponse,
@@ -30,9 +29,11 @@
 	import { lngLatToStr } from '$lib/lngLatToStr';
 	import { client } from '$lib/openapi';
 	import StopTimes from '$lib/StopTimes.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';
 	import { t } from '$lib/i18n/translation';
+	import { pushState, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -54,7 +55,7 @@
 	let bounds = $state<maplibregl.LngLatBoundsLike>();
 	let map = $state<maplibregl.Map>();
 
-	onMount(() => {
+	onMount(async () => {
 		initial().then((d) => {
 			const r = d.data;
 			if (r) {
@@ -62,7 +63,27 @@
 				zoom = r.zoom;
 			}
 		});
+		await tick();
+		applyPageStateFromURL();
 	});
+
+	const applyPageStateFromURL = () => {
+		if (browser && urlParams) {
+			if (urlParams.has('tripId')) {
+				onClickTrip(urlParams.get('tripId')!, true);
+			}
+			if (urlParams.has('stopId')) {
+				const time = urlParams.has('time') ? new Date(urlParams.get('time')!) : new Date();
+				onClickStop(
+					'',
+					urlParams.get('stopId')!,
+					time,
+					urlParams.get('stopArriveBy') == 'true',
+					true
+				);
+			}
+		}
+	};
 
 	let fromParam: Match | undefined = undefined;
 	let toParam: Match | undefined = undefined;
@@ -124,6 +145,7 @@
 	let searchDebounceTimer: number;
 	let baseResponse = $state<Promise<PlanResponse>>();
 	let routingResponses = $state<Array<Promise<PlanResponse>>>([]);
+	let stopNameFromResponse = $state<string>('');
 	$effect(() => {
 		if (baseQuery) {
 			clearTimeout(searchDebounceTimer);
@@ -134,8 +156,7 @@
 				});
 				baseResponse = base;
 				routingResponses = [base];
-				selectedItinerary = undefined;
-				selectedStop = undefined;
+				replaceState('?', {});
 			}, 400);
 		}
 	});
@@ -153,12 +174,11 @@
 		});
 	}
 
-	let selectedItinerary = $state<Itinerary>();
 	$effect(() => {
-		if (selectedItinerary && map) {
-			const start = maplibregl.LngLat.convert(selectedItinerary.legs[0].from);
+		if (page.state.selectedItinerary && map) {
+			const start = maplibregl.LngLat.convert(page.state.selectedItinerary.legs[0].from);
 			const box = new maplibregl.LngLatBounds(start, start);
-			selectedItinerary.legs.forEach((l) => {
+			page.state.selectedItinerary.legs.forEach((l) => {
 				box.extend(l.from);
 				box.extend(l.to);
 				l.intermediateStops?.forEach((x) => {
@@ -170,17 +190,44 @@
 		}
 	});
 
-	let stopArriveBy = $state<boolean>();
-	let selectedStop = $state<{ name: string; stopId: string; time: Date }>();
+	const pushStateWithQueryString = (
+		// eslint-disable-next-line
+		queryParams: Record<string, any>,
+		// eslint-disable-next-line
+		newState: App.PageState,
+		replace: boolean = false
+	) => {
+		const params = new URLSearchParams(queryParams);
+		const updateState = replace ? replaceState : pushState;
+		updateState('?' + params.toString(), newState);
+	};
 
-	const onClickTrip = async (tripId: string) => {
+	const onClickStop = (
+		name: string,
+		stopId: string,
+		time: Date,
+		arriveBy: boolean = false,
+		replace: boolean = false
+	) => {
+		pushStateWithQueryString(
+			{ stopArriveBy: arriveBy, stopId, time: time.toISOString() },
+			{
+				stopArriveBy: arriveBy,
+				selectedStop: { name, stopId, time },
+				selectedItinerary: page.state.selectedItinerary,
+				tripId: page.state.tripId
+			},
+			replace
+		);
+	};
+
+	const onClickTrip = async (tripId: string, replace: boolean = false) => {
 		const { data: itinerary, error } = await trip({ query: { tripId } });
 		if (error) {
 			alert(error);
 			return;
 		}
-		selectedItinerary = itinerary;
-		selectedStop = undefined;
+		pushStateWithQueryString({ tripId }, { selectedItinerary: itinerary, tripId: tripId }, replace);
 	};
 
 	type CloseFn = () => void;
@@ -231,7 +278,7 @@
 		</Control>
 	{/if}
 
-	{#if !isSmallScreen || !selectedItinerary && !selectedStop}
+	{#if !isSmallScreen || (!page.state.selectedItinerary && !page.state.selectedStop)}
 		<Control position="top-left">
 			<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 				<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
@@ -241,17 +288,22 @@
 
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if !selectedItinerary && routingResponses.length !== 0}
+	{#if !page.state.selectedItinerary && routingResponses.length !== 0}
 		<Control position="top-left" class="min-h-0">
 			<Card
 				class="w-[500px] h-full max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
-				<ItineraryList {baseResponse} {routingResponses} {baseQuery} bind:selectedItinerary />
+				<ItineraryList
+					{baseResponse}
+					{routingResponses}
+					{baseQuery}
+					selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
+				/>
 			</Card>
 		</Control>
 	{/if}
 
-	{#if selectedItinerary && !selectedStop}
+	{#if page.state.selectedItinerary && !page.state.selectedStop}
 		<Control position="top-left" class="min-h-0">
 			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -259,44 +311,40 @@
 					<Button
 						variant="ghost"
 						onclick={() => {
-							selectedItinerary = undefined;
+							pushStateWithQueryString({}, {});
 						}}
 					>
 						<X />
 					</Button>
 				</div>
 				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
-					<ConnectionDetail
-						itinerary={selectedItinerary}
-						onClickStop={(name: string, stopId: string, time: Date) => {
-							stopArriveBy = false;
-							selectedStop = { name, stopId, time };
-						}}
-						{onClickTrip}
-					/>
+					<ConnectionDetail itinerary={page.state.selectedItinerary} {onClickStop} {onClickTrip} />
 				</div>
 			</Card>
 		</Control>
-		<ItineraryGeoJson itinerary={selectedItinerary} {level} />
+		<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
 	{/if}
 
-	{#if selectedStop}
+	{#if page.state.selectedStop}
 		<Control position="top-left" class="min-h-0">
 			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
-						{#if stopArriveBy}
+						{#if page.state.stopArriveBy}
 							{t.arrivals}
 						{:else}
 							{t.departures}
 						{/if}
 						in
-						{selectedStop.name}
+						{stopNameFromResponse}
 					</h2>
 					<Button
 						variant="ghost"
 						onclick={() => {
-							selectedStop = undefined;
+							pushStateWithQueryString(
+								{ tripId: page.state.tripId },
+								{ selectedItinerary: page.state.selectedItinerary }
+							); // TODO
 						}}
 					>
 						<X />
@@ -304,9 +352,17 @@
 				</div>
 				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
 					<StopTimes
-						stopId={selectedStop.stopId}
-						time={selectedStop.time}
-						bind:arriveBy={stopArriveBy}
+						stopId={page.state.selectedStop.stopId}
+						time={page.state.selectedStop.time}
+						bind:stopNameFromResponse
+						arriveBy={page.state.stopArriveBy}
+						setArriveBy={(arriveBy) =>
+							onClickStop(
+								page.state.selectedStop!.name,
+								page.state.selectedStop!.stopId,
+								page.state.selectedStop!.time,
+								arriveBy
+							)}
 						{onClickTrip}
 					/>
 				</div>

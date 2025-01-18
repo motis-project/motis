@@ -22,12 +22,12 @@
 		routingResponses,
 		baseResponse,
 		baseQuery,
-		selectedItinerary = $bindable()
+		selectItinerary
 	}: {
 		routingResponses: Array<Promise<PlanResponse>>;
 		baseResponse: Promise<PlanResponse> | undefined;
 		baseQuery: PlanData | undefined;
-		selectedItinerary: Itinerary | undefined;
+		selectItinerary: (it: Itinerary) => void;
 	} = $props();
 
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
@@ -65,7 +65,7 @@
 					<DirectConnection
 						{d}
 						onclick={() => {
-							selectedItinerary = d;
+							selectItinerary(d);
 						}}
 					/>
 				{/each}
@@ -105,7 +105,7 @@
 						{#each r.itineraries as it}
 							<button
 								onclick={() => {
-									selectedItinerary = it;
+									selectItinerary(it);
 								}}
 							>
 								<Card class="p-4">
