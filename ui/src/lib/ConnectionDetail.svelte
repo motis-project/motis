@@ -89,8 +89,8 @@
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
 				{#if pred && (pred.from.track || pred.duration !== 0)}
-					<div class="border-t w-full h-0"></div>
-					<div class="text-sm text-muted-foreground text-nowrap px-2">
+					<div class="border-t h-0 grow shrink"></div>
+					<div class="text-sm text-muted-foreground leading-none px-2">
 						{#if pred.from.track}
 							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
@@ -102,7 +102,7 @@
 						{/if}
 					</div>
 				{/if}
-				<div class="border-t w-full h-0"></div>
+				<div class="border-t h-0 grow shrink"></div>
 				{#if l.from.track}
 					<div class="text-nowrap border rounded-xl px-2">
 						{t.track}

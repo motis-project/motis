@@ -32,7 +32,11 @@
 
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
 		promise.then((response) => {
-			if (response.error) throw new Error(String(response.error));
+			console.log(response.error);
+			if (response.error)
+				throw new Error(
+					String((response.error as Record<string, unknown>).error ?? response.error)
+				);
 			return response.data!;
 		});
 </script>

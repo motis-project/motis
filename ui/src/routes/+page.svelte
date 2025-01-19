@@ -224,7 +224,8 @@
 	const onClickTrip = async (tripId: string, replace: boolean = false) => {
 		const { data: itinerary, error } = await trip({ query: { tripId } });
 		if (error) {
-			alert(error);
+			console.log(error);
+			alert(String((error as Record<string, unknown>).error ?? error));
 			return;
 		}
 		pushStateWithQueryString({ tripId }, { selectedItinerary: itinerary, tripId: tripId }, replace);
