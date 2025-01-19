@@ -34,7 +34,8 @@ const translations: Translations = {
 		}
 	},
 	sharingProvider: 'Dostawca',
-	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.'
+	roundtripStationReturnConstraint: 'Pojazd musi zostać zwrócony do stacji początkowej.',
+	noItinerariesFound: 'No itineraries found.'
 };
 
 export default translations;

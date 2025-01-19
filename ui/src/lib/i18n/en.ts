@@ -30,11 +30,12 @@ const translations: Translations = {
 			case 1:
 				return '1 intermediate stop';
 			default:
-				return `${n}  intermediate stops`;
+				return `${n} intermediate stops`;
 		}
 	},
 	sharingProvider: 'Provider',
-	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.'
+	roundtripStationReturnConstraint: 'The vehicle must be returned to the departure station.',
+	noItinerariesFound: 'No itineraries found.'
 };
 
 export default translations;

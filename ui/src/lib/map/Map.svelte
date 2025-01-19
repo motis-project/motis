@@ -64,8 +64,9 @@
 		});
 
 		tmp.on('moveend', async () => {
-			bounds = tmp.getBounds();
 			zoom = tmp.getZoom();
+			currentZoom = zoom;
+			bounds = tmp.getBounds();
 		});
 
 		return {
