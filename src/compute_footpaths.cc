@@ -4,6 +4,7 @@
 #include "cista/serialization.h"
 
 #include "utl/parallel_for.h"
+#include "utl/sorted_diff.h"
 
 #include "osr/routing/profiles/foot.h"
 #include "osr/routing/route.h"
@@ -51,6 +52,7 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
                                           osr::lookup const& lookup,
                                           osr::platforms const& pl,
                                           nigiri::timetable& tt,
+                                          tag_lookup const& tags,
                                           bool const update_coordinates) {
   fmt::println(std::clog, "  -> creating matches");
   auto const matches = get_matches(tt, pl, w);
@@ -110,6 +112,10 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
                                  : wheelchair_candidates;
     utl::parallel_for_run(tt.n_locations(), [&](auto const i) {
       auto const l = n::location_idx_t{i};
+      if (tt.location_routes_.at(l).empty()) {
+        return;
+      }
+
       auto& footpaths =
           (mode == osr::search_profile::kFoot ? footpaths_out_foot[l]
                                               : footpaths_out_wheelchair[l]);
@@ -148,6 +154,49 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
       pt->update_monotonic(
           (mode == osr::search_profile::kFoot ? 0U : tt.n_locations()) + i);
     });
+  }
+
+  // Add missing footpaths for foot profile.
+  auto sorted_tt_fps = std::vector<n::footpath>{};
+  auto missing = std::vector<n::footpath>{};
+  auto l_idx = n::location_idx_t{0U};
+  for (auto const [osr_fps, tt_fps] :
+       utl::zip(footpaths_out_foot, tt.locations_.footpaths_out_[0])) {
+    missing.clear();
+
+    sorted_tt_fps.resize(tt_fps.size());
+    std::copy(begin(tt_fps), end(tt_fps), begin(sorted_tt_fps));
+    utl::sort(sorted_tt_fps);
+
+    utl::sorted_diff(
+        sorted_tt_fps, osr_fps,
+        [](auto&& a, auto&& b) { return a.target() < b.target(); },
+        [](auto&& a, auto&& b) { return a.target() == b.target(); },
+        utl::overloaded{[](n::footpath, n::footpath) { assert(false); },
+                        [&](utl::op const op, n::footpath const x) {
+                          if (op == utl::op::kDel &&
+                              !tt.location_routes_.at(l_idx).empty() &&
+                              !tt.location_routes_.at(x.target()).empty()) {
+                            missing.emplace_back(x);
+                          }
+                        }});
+
+    if (!missing.empty()) {
+      fmt::println(std::clog, "STOP {}  [{}]",
+                   tt.locations_.names_.at(l_idx).view(), tags.id(tt, l_idx));
+      fmt::println(std::clog, "  default footpaths: {}", tt_fps);
+      fmt::println(std::clog, "      osr footpaths: {}", osr_fps);
+      for (auto const& miss : missing) {
+        fmt::println(std::clog, "  missing footpath: {} [{}]  {} -> {}: {}",
+                     tt.locations_.names_[miss.target()].view(),
+                     tags.id(tt, miss.target()),
+                     fmt::streamed(get_loc(tt, w, pl, matches, l_idx)),
+                     fmt::streamed(get_loc(tt, w, pl, matches, miss.target())),
+                     miss.duration());
+      }
+    }
+
+    ++l_idx;
   }
 
   fmt::println(std::clog, "  -> create ingoing footpaths");

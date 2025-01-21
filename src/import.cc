@@ -368,10 +368,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto osr_footpath = task{
       "osr_footpath",
       [&]() { return c.osr_footpath_; },
-      [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
+      [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
       [&]() {
         auto const elevator_footpath_map =
-            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
+            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, *d.tags_, true);
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",

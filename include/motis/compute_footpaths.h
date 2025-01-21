@@ -7,6 +7,8 @@
 #include "motis/fwd.h"
 #include "motis/types.h"
 
+#include "motis/tag_lookup.h"
+
 namespace motis {
 
 using elevator_footpath_map_t = hash_map<
@@ -17,6 +19,7 @@ elevator_footpath_map_t compute_footpaths(osr::ways const&,
                                           osr::lookup const&,
                                           osr::platforms const&,
                                           nigiri::timetable&,
+                                          tag_lookup const&,
                                           bool update_coordinates);
 
 }  // namespace motis
