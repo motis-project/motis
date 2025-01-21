@@ -506,11 +506,17 @@ export type Footpath = {
      */
     default?: number;
     /**
-     * optional; missing if no path was found with the foot profile
+     * optional; missing if no path was found (timetable / osr)
      * footpath duration in minutes for the foot profile
      *
      */
     foot?: number;
+    /**
+     * optional; missing if no path was found with foot routing
+     * footpath duration in minutes for the foot profile
+     *
+     */
+    footRouted?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
      * footpath duration in minutes for the wheelchair profile
@@ -708,6 +714,12 @@ export type PlanData = {
          *
          */
         arriveBy?: boolean;
+        /**
+         * - true: Compute transfer polylines and step instructions.
+         * - false: Only return basic information (start time, end time, duration) for transfers.
+         *
+         */
+        detailedTransfers: boolean;
         /**
          * Optional. Default is `WALK` which will compute walking routes as direct connections.
          *
@@ -940,6 +952,10 @@ export type PlanData = {
          *
          */
         time?: string;
+        /**
+         * Optional. Query timeout in seconds.
+         */
+        timeout?: number;
         /**
          * Optional. Default is `true`.
          *

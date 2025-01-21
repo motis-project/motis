@@ -373,6 +373,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         auto const elevator_footpath_map = compute_footpaths(
             *d.w_, *d.l_, *d.pl_, *d.tt_, *d.tags_,
             c.timetable_->use_osm_stop_coordinates_,
+            c.timetable_->extend_missing_footpaths_,
             std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U});
 
         if (write) {
