@@ -20,7 +20,6 @@ elevator_footpath_map_t compute_footpaths(
     osr::lookup const&,
     osr::platforms const&,
     nigiri::timetable&,
-    tag_lookup const&,
     bool const update_coordinates,
     bool const extend_missing,
     std::chrono::seconds const max_duration);

@@ -57,14 +57,13 @@ elevator_footpath_map_t compute_footpaths(
     osr::lookup const& lookup,
     osr::platforms const& pl,
     nigiri::timetable& tt,
-    tag_lookup const& tags,
     bool const update_coordinates,
     bool const extend_missing,
     std::chrono::seconds const max_duration) {
-  utl::log_info("motis.compute_footpaths", "creating matches");
+  fmt::println(std::clog, "creating matches");
   auto const matches = get_matches(tt, pl, w);
 
-  utl::log_info("motis.compute_footpaths", "creating r-tree");
+  fmt::println(std::clog, "creating r-tree");
   auto const loc_rtree = [&]() {
     auto t = point_rtree<n::location_idx_t>{};
     for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
@@ -174,6 +173,7 @@ elevator_footpath_map_t compute_footpaths(
                         [](auto&& x) { return get<1>(x).has_value(); })  //
                   | std::views::transform([](auto&& x) -> n::footpath {
                       auto const& [n, r] = x;
+                      utl::verify(r.has_value(), "bad");
                       auto const duration = n::duration_t{r->cost_ / 60U};
                       return {n, duration};
                     }),
@@ -206,16 +206,6 @@ elevator_footpath_map_t compute_footpaths(
                                  0.8) /
                                 60.0))};
                         if (duration < max_duration) {
-                          utl::log_info(
-                              "motis.compute_footpaths",
-                              "missing footpath: {} [{}]  {} -> {}: {} updated "
-                              "to {}",
-                              tt.locations_.names_[x.target()].view(),
-                              tags.id(tt, x.target()),
-                              fmt::streamed(get_loc(tt, w, pl, matches, l)),
-                              fmt::streamed(
-                                  get_loc(tt, w, pl, matches, x.target())),
-                              x.duration(), duration);
                           missing.emplace_back(x.target(), duration);
                         }
                       }
@@ -231,7 +221,7 @@ elevator_footpath_map_t compute_footpaths(
         });
   }
 
-  utl::log_info("motis.compute_footpaths", "create ingoing footpaths");
+  fmt::println(std::clog, "create ingoing footpaths");
   auto footpaths_in_foot =
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_in_foot.resize(tt.n_locations());
@@ -256,7 +246,7 @@ elevator_footpath_map_t compute_footpaths(
     }
   }
 
-  utl::log_info("motis.compute_footpaths", "copy footpaths");
+  fmt::println(std::clog, "copy footpaths");
   for (auto const& x : footpaths_out_foot) {
     tt.locations_.footpaths_out_[1].emplace_back(x);
   }
