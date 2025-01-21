@@ -15,11 +15,13 @@ using elevator_footpath_map_t = hash_map<
     osr::node_idx_t,
     hash_set<std::pair<nigiri::location_idx_t, nigiri::location_idx_t>>>;
 
-elevator_footpath_map_t compute_footpaths(osr::ways const&,
-                                          osr::lookup const&,
-                                          osr::platforms const&,
-                                          nigiri::timetable&,
-                                          tag_lookup const&,
-                                          bool update_coordinates);
+elevator_footpath_map_t compute_footpaths(
+    osr::ways const&,
+    osr::lookup const&,
+    osr::platforms const&,
+    nigiri::timetable&,
+    tag_lookup const&,
+    bool const update_coordinates,
+    std::chrono::seconds const max_duration);
 
 }  // namespace motis

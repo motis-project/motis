@@ -3,6 +3,8 @@
 #include "cista/mmap.h"
 #include "cista/serialization.h"
 
+#include "utl/concat.h"
+#include "utl/logging.h"
 #include "utl/parallel_for.h"
 #include "utl/sorted_diff.h"
 
@@ -14,6 +16,7 @@
 #include "motis/constants.h"
 #include "motis/get_loc.h"
 #include "motis/match_platforms.h"
+#include "motis/max_distance.h"
 #include "motis/point_rtree.h"
 
 namespace n = nigiri;
@@ -48,16 +51,18 @@ vector_map<n::location_idx_t, osr::match_t> lookup_locations(
   return ret;
 }
 
-elevator_footpath_map_t compute_footpaths(osr::ways const& w,
-                                          osr::lookup const& lookup,
-                                          osr::platforms const& pl,
-                                          nigiri::timetable& tt,
-                                          tag_lookup const& tags,
-                                          bool const update_coordinates) {
-  fmt::println(std::clog, "  -> creating matches");
+elevator_footpath_map_t compute_footpaths(
+    osr::ways const& w,
+    osr::lookup const& lookup,
+    osr::platforms const& pl,
+    nigiri::timetable& tt,
+    tag_lookup const& tags,
+    bool const update_coordinates,
+    std::chrono::seconds const max_duration) {
+  utl::log_info("motis.compute_footpaths", "creating matches");
   auto const matches = get_matches(tt, pl, w);
 
-  fmt::println(std::clog, "  -> creating r-tree");
+  utl::log_info("motis.compute_footpaths", "creating r-tree");
   auto const loc_rtree = [&]() {
     auto t = point_rtree<n::location_idx_t>{};
     for (auto i = n::location_idx_t{0U}; i != tt.n_locations(); ++i) {
@@ -120,7 +125,8 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
           (mode == osr::search_profile::kFoot ? footpaths_out_foot[l]
                                               : footpaths_out_wheelchair[l]);
       auto neighbors = std::vector<n::location_idx_t>{};
-      loc_rtree.in_radius(tt.locations_.coordinates_[l], kMaxDistance,
+      loc_rtree.in_radius(tt.locations_.coordinates_[l],
+                          get_max_distance(mode, max_duration),
                           [&](n::location_idx_t const x) {
                             if (x != l) {
                               neighbors.emplace_back(x);
@@ -182,24 +188,48 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
                         }});
 
     if (!missing.empty()) {
-      fmt::println(std::clog, "STOP {}  [{}]",
-                   tt.locations_.names_.at(l_idx).view(), tags.id(tt, l_idx));
-      fmt::println(std::clog, "  default footpaths: {}", tt_fps);
-      fmt::println(std::clog, "      osr footpaths: {}", osr_fps);
-      for (auto const& miss : missing) {
-        fmt::println(std::clog, "  missing footpath: {} [{}]  {} -> {}: {}",
-                     tt.locations_.names_[miss.target()].view(),
-                     tags.id(tt, miss.target()),
-                     fmt::streamed(get_loc(tt, w, pl, matches, l_idx)),
-                     fmt::streamed(get_loc(tt, w, pl, matches, miss.target())),
-                     miss.duration());
+      utl::log_info("motis.compute_footpaths", "STOP {}  [{}]",
+                    tt.locations_.names_.at(l_idx).view(), tags.id(tt, l_idx));
+      utl::log_info("motis.compute_footpaths", "default footpaths: {}", tt_fps);
+      utl::log_info("motis.compute_footpaths", "osr footpaths: {}", osr_fps);
+
+      // Adjust footpath length based on direct line distance.
+      // Filter for max_duration.
+      for (auto it = begin(missing); it != end(missing);) {
+        auto& miss = *it;
+
+        auto const new_duration = std::ceil(
+            (geo::distance(
+                 tt.locations_.coordinates_[l_idx],
+                 tt.locations_.coordinates_[miss.target()]) /* meters */
+             / 0.8 /* divided by meters per second = seconds */) /
+            60.0 /* convert to minutes */);
+        utl::log_info(
+            "motis.compute_footpaths",
+            "missing footpath: {} [{}]  {} -> {}: {} updated to {}min",
+            tt.locations_.names_[miss.target()].view(),
+            tags.id(tt, miss.target()),
+            fmt::streamed(get_loc(tt, w, pl, matches, l_idx)),
+            fmt::streamed(get_loc(tt, w, pl, matches, miss.target())),
+            miss.duration(), new_duration);
+        miss.duration_ = static_cast<n::location_idx_t::value_t>(new_duration);
+
+        if (miss.duration() > max_duration) {
+          it = missing.erase(it);
+        } else {
+          ++it;
+        }
       }
+
+      utl::concat(osr_fps, missing);
+      utl::sort(osr_fps,
+                [](auto&& a, auto&& b) { return a.duration() < b.duration(); });
     }
 
     ++l_idx;
   }
 
-  fmt::println(std::clog, "  -> create ingoing footpaths");
+  utl::log_info("motis.compute_footpaths", "create ingoing footpaths");
   auto footpaths_in_foot =
       n::vector_map<n::location_idx_t, std::vector<n::footpath>>{};
   footpaths_in_foot.resize(tt.n_locations());
@@ -224,7 +254,7 @@ elevator_footpath_map_t compute_footpaths(osr::ways const& w,
     }
   }
 
-  fmt::println(std::clog, "  -> copy footpaths");
+  utl::log_info("motis.compute_footpaths", "copy footpaths");
   for (auto const& x : footpaths_out_foot) {
     tt.locations_.footpaths_out_[1].emplace_back(x);
   }

@@ -87,6 +87,7 @@ struct config {
     unsigned update_interval_{60};
     unsigned http_timeout_{10};
     bool incremental_rt_update_{false};
+    bool use_osm_stop_coordinates_{false};
     std::uint16_t max_footpath_length_{15};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
