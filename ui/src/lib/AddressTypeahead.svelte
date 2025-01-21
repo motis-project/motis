@@ -148,9 +148,6 @@
 				align="start"
 				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-10 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
-				{#snippet child({ props, open })}
-					{#if open}
-						<div {...props}>
 							{#each items as item (item.value)}
 								<Combobox.Item
 									class="flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
@@ -174,9 +171,6 @@
 									</span>
 								</Combobox.Item>
 							{/each}
-						</div>
-					{/if}
-				{/snippet}
 			</Combobox.Content>
 		</Combobox.Portal>
 	{/if}
