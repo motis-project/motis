@@ -209,7 +209,7 @@ elevator_footpath_map_t compute_footpaths(
                           utl::log_info(
                               "motis.compute_footpaths",
                               "missing footpath: {} [{}]  {} -> {}: {} updated "
-                              "to {}min",
+                              "to {}",
                               tt.locations_.names_[x.target()].view(),
                               tags.id(tt, x.target()),
                               fmt::streamed(get_loc(tt, w, pl, matches, l)),
