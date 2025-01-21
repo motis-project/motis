@@ -6,4 +6,4 @@
 	} = $props();
 </script>
 
-<div class="m-4 text-red-600"><div class="min-w-0">{e}</div></div>
+<div class="m-4 text-destructive"><div class="min-w-0">{e}</div></div>

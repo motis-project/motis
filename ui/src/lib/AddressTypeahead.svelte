@@ -133,7 +133,6 @@
 
 <Combobox.Root
 	type="single"
-	controlledValue
 	allowDeselect={false}
 	{value}
 	onValueChange={(e: string) => {
