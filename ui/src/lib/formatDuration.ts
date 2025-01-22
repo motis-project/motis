@@ -3,7 +3,7 @@ export const formatDurationSec = (t: number): string => {
 	const minutes = Math.ceil((t - hours * 3600) / 60);
 	const str = [
 		hours !== 0 ? hours + ' h' : '',
-		minutes !== 0 || hours === 0 ? minutes + ' min' : '',
+		minutes !== 0 || hours === 0 ? minutes + ' min' : ''
 	]
 		.join(' ')
 		.trim();
