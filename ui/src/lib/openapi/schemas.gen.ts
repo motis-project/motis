@@ -647,7 +647,13 @@ footpath duration in minutes according to GTFS (+heuristics)
         },
         foot: {
             type: 'number',
-            description: `optional; missing if no path was found with the foot profile
+            description: `optional; missing if no path was found (timetable / osr)
+footpath duration in minutes for the foot profile
+`
+        },
+        footRouted: {
+            type: 'number',
+            description: `optional; missing if no path was found with foot routing
 footpath duration in minutes for the foot profile
 `
         },

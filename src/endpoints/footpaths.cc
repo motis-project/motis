@@ -31,11 +31,14 @@ api::footpaths_response footpaths::operator()(
 
   auto footpaths = hash_map<n::location_idx_t, api::Footpath>{};
 
-  for (auto const fp : tt_.locations_.footpaths_out_[0][l]) {
-    if (tt_.location_routes_[fp.target()].empty()) {
-      continue;
-    }
+  for (auto const fp : tt_.locations_.footpaths_out_[0].at(l)) {
     footpaths[fp.target()].default_ = fp.duration().count();
+  }
+
+  if (!tt_.locations_.footpaths_out_[1].empty()) {
+    for (auto const fp : tt_.locations_.footpaths_out_[1].at(l)) {
+      footpaths[fp.target()].foot_ = fp.duration().count();
+    }
   }
 
   auto const loc = get_loc(tt_, w_, pl_, matches_, l);
@@ -57,7 +60,7 @@ api::footpaths_response footpaths::operator()(
             std::ceil(r->cost_ * kTransferTimeMultiplier / 60U);
         if (duration < n::footpath::kMaxDuration.count()) {
           switch (mode) {
-            case osr::search_profile::kFoot: fp.foot_ = duration; break;
+            case osr::search_profile::kFoot: fp.footRouted_ = duration; break;
             case osr::search_profile::kWheelchair:
               fp.wheelchair_ = duration;
               fp.wheelchairUsesElevator_ = r->uses_elevator_;

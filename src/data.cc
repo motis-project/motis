@@ -98,7 +98,7 @@ data::data(std::filesystem::path p, config const& c)
 
   auto tt = std::async(std::launch::async, [&]() {
     if (c.timetable_) {
-      load_tt();
+      load_tt(config_.osr_footpath_ ? "tt_ext.bin" : "tt.bin");
       if (c.timetable_->with_shapes_) {
         load_shapes();
       }
@@ -189,9 +189,9 @@ void data::load_osr() {
   pl_->build_rtree(*w_);
 }
 
-void data::load_tt() {
+void data::load_tt(fs::path const& p) {
   tags_ = tag_lookup::read(path_ / "tags.bin");
-  tt_ = n::timetable::read(path_ / "tt.bin");
+  tt_ = n::timetable::read(path_ / p);
   tt_->locations_.resolve_timezones();
   location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
