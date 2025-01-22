@@ -2,10 +2,10 @@ export const formatDurationSec = (t: number): string => {
 	const hours = Math.floor(t / 3600);
 	const minutes = Math.ceil((t - hours * 3600) / 60);
 	const str = [
-		hours !== 0 ? hours + " h" : "",
-		minutes !== 0 || hours === 0 ? minutes + " min" : "",
+		hours !== 0 ? hours + ' h' : '',
+		minutes !== 0 || hours === 0 ? minutes + ' min' : '',
 	]
-		.join(" ")
+		.join(' ')
 		.trim();
 	return str;
 };
