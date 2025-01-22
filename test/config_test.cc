@@ -51,6 +51,8 @@ timetable:
   update_interval: 60
   http_timeout: 10
   incremental_rt_update: false
+  use_osm_stop_coordinates: false
+  extend_missing_footpaths: false
   max_footpath_length: 15
   datasets:
     de:
