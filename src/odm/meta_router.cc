@@ -129,8 +129,8 @@ n::interval<n::unixtime_t> get_dest_intvl(
     n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
   return dir == n::direction::kForward
              ? n::interval<n::unixtime_t>{start_intvl.from_,
-                                          start_intvl.to_ + 24h}
-             : n::interval<n::unixtime_t>{start_intvl.from_ - 24h,
+                                          start_intvl.to_ + 12h}
+             : n::interval<n::unixtime_t>{start_intvl.from_ - 12h,
                                           start_intvl.to_};
 }
 
@@ -393,6 +393,7 @@ api::plan_response meta_router::run() {
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
+          std::cout << p->get_msg_str(*tt_) << "\n";
           auto const prima_msg = co_await http_POST(
               kBlacklistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
           blacklist_response = get_http_body(prima_msg);
