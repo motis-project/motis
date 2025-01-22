@@ -87,6 +87,7 @@
 			shown.add(entry);
 			return true;
 		});
+		preventClickthrough(!!items.length && comboOpen);
 	};
 
 	const deserialize = (s: string): Location => {
@@ -118,11 +119,20 @@
 			}, 150);
 		}
 	});
+
+	let comboOpen = false;
+	const preventClickthrough = (prevent: boolean) => {
+		const ctr = document.getElementById('searchmask-container')!;
+		if (prevent) {
+			ctr.style.pointerEvents = 'none';
+		} else {
+			window.setTimeout(() => (ctr.style.pointerEvents = 'auto'), 1);
+		}
+	};
 </script>
 
 <Combobox.Root
 	type="single"
-	controlledValue
 	allowDeselect={false}
 	{value}
 	onValueChange={(e: string) => {
@@ -130,6 +140,10 @@
 			selected = deserialize(e);
 			inputValue = selected.label!;
 		}
+	}}
+	onOpenChange={(open) => {
+		comboOpen = open;
+		preventClickthrough(open);
 	}}
 >
 	<Combobox.Input
@@ -148,35 +162,27 @@
 				align="start"
 				class="absolute top-2 w-[var(--bits-combobox-anchor-width)] z-10 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md outline-none"
 			>
-				{#snippet child({ props, open })}
-					{#if open}
-						<div {...props}>
-							{#each items as item (item.value)}
-								<Combobox.Item
-									class="flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
-									value={JSON.stringify(item.value)}
-									label={item.label}
-								>
-									{#if item.value.match?.type == 'STOP'}
-										<Bus />
-									{:else if item.value.match?.type == 'ADDRESS'}
-										<House />
-									{:else if item.value.match?.type == 'PLACE'}
-										<Place />
-									{/if}
-									<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
-										{item.value.match?.name}
-									</span>
-									<span
-										class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden"
-									>
-										{getDisplayArea(item.value.match)}
-									</span>
-								</Combobox.Item>
-							{/each}
-						</div>
-					{/if}
-				{/snippet}
+				{#each items as item (item.value)}
+					<Combobox.Item
+						class="flex w-full cursor-default select-none items-center rounded-sm py-4 pl-4 pr-2 text-sm outline-none data-[disabled]:pointer-events-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
+						value={JSON.stringify(item.value)}
+						label={item.label}
+					>
+						{#if item.value.match?.type == 'STOP'}
+							<Bus />
+						{:else if item.value.match?.type == 'ADDRESS'}
+							<House />
+						{:else if item.value.match?.type == 'PLACE'}
+							<Place />
+						{/if}
+						<span class="ml-4 font-semibold text-nowrap text-ellipsis overflow-hidden">
+							{item.value.match?.name}
+						</span>
+						<span class="ml-2 text-muted-foreground text-nowrap text-ellipsis overflow-hidden">
+							{getDisplayArea(item.value.match)}
+						</span>
+					</Combobox.Item>
+				{/each}
 			</Combobox.Content>
 		</Combobox.Portal>
 	{/if}
