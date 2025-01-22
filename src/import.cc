@@ -262,7 +262,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -297,7 +297,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
       },
       [&]() {
-        d.load_tt();
+        d.load_tt("tt.bin");
         if (c.timetable_->with_shapes_) {
           d.load_shapes();
         }
@@ -379,10 +379,10 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",
                        elevator_footpath_map);
-          d.tt_->write(data_path / "tt.bin");
+          d.tt_->write(data_path / "tt_ext.bin");
         }
       },
-      [&]() {},
+      [&]() { d.load_tt("tt_ext.bin"); },
       {tt_hash, osm_hash, osr_version(), osr_footpath_version(), n_version()}};
 
   auto matches =

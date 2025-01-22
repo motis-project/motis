@@ -50,7 +50,7 @@ struct data {
   friend std::ostream& operator<<(std::ostream&, data const&);
 
   void load_osr();
-  void load_tt();
+  void load_tt(std::filesystem::path const&);
   void load_shapes();
   void load_railviz();
   void load_geocoder();

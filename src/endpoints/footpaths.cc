@@ -31,12 +31,12 @@ api::footpaths_response footpaths::operator()(
 
   auto footpaths = hash_map<n::location_idx_t, api::Footpath>{};
 
-  for (auto const fp : tt_.locations_.footpaths_out_[0][l]) {
+  for (auto const fp : tt_.locations_.footpaths_out_[0].at(l)) {
     footpaths[fp.target()].default_ = fp.duration().count();
   }
 
   if (!tt_.locations_.footpaths_out_[1].empty()) {
-    for (auto const fp : tt_.locations_.footpaths_out_[1][l]) {
+    for (auto const fp : tt_.locations_.footpaths_out_[1].at(l)) {
       footpaths[fp.target()].foot_ = fp.duration().count();
     }
   }
