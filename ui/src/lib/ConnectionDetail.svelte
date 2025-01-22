@@ -112,7 +112,7 @@
 			</div>
 
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center text-lg">
+				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
 					{@render stopTimes(
 						l.startTime,
 						l.scheduledStartTime,
@@ -126,12 +126,12 @@
 					<span class="ml-1">{l.headsign}</span>
 				</div>
 				{#if l.intermediateStops?.length === 0}
-					<div class="py-3 pl-8 flex items-center text-muted-foreground text-sm">
+					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
 					</div>
 				{:else}
 					<details class="[&_svg]:open:-rotate-180 my-2">
-						<summary class="py-3 pl-8 flex items-center text-muted-foreground">
+						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
 								class="rotate-0 transform transition-all duration-300"
 								fill="none"
@@ -145,14 +145,12 @@
 							>
 								<polyline points="6 9 12 15 18 9"></polyline>
 							</svg>
-							<span class="ml-2 cursor-pointer text-sm">
+							<span class="ml-2 cursor-pointer">
 								{t.tripIntermediateStops(l.intermediateStops?.length ?? 0)}
 								({formatDurationSec(l.duration)})
 							</span>
 						</summary>
-						<div
-							class="mb-1 grid gap-y-1 grid-cols-[max-content_max-content_auto] items-center text-sm"
-						>
+						<div class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-center">
 							{#each l.intermediateStops! as s}
 								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s.name!, s.stopId)}
 							{/each}
@@ -161,9 +159,7 @@
 				{/if}
 
 				{#if !isLast && !(isLastPred && next!.duration === 0)}
-					<div
-						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3 text-lg"
-					>
+					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-3">
 						{@render stopTimes(
 							l.endTime!,
 							l.scheduledEndTime!,
@@ -174,15 +170,15 @@
 					</div>
 				{/if}
 
-				{#if isLast}
+				{#if isLast || (isLastPred && next!.duration === 0)}
 					<!-- fill visual gap -->
-					<div class="pb-1"></div>
+					<div class="pb-2"></div>
 				{/if}
 			</div>
 		{:else if !(isLast && l.duration === 0) && ((i == 0 && l.duration !== 0) || !next || !next.routeShortName || l.mode != 'WALK' || (pred && (pred.mode == 'BIKE' || pred.mode == 'RENTAL')))}
 			<Route {onClickTrip} {l} />
 			<div class="pt-4 pl-6 border-l-4 left-4 relative" style={routeBorderColor(l)}>
-				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center text-lg">
+				<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center">
 					{@render stopTimes(
 						l.startTime,
 						l.scheduledStartTime,
@@ -193,9 +189,7 @@
 				</div>
 				{@render streetLeg(l)}
 				{#if !isLast}
-					<div
-						class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4 text-lg"
-					>
+					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4">
 						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to.name, l.to.stopId)}
 					</div>
 				{/if}
@@ -208,7 +202,7 @@
 			style={routeColor(lastLeg!)}
 		></div>
 		<div
-			class="relative left-[4px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center text-lg"
+			class="relative left-[2.5px] bottom-[7px] grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center"
 		>
 			{@render stopTimes(
 				lastLeg!.endTime,
