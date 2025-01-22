@@ -31,7 +31,7 @@
 	let toItems = $state<Array<Location>>([]);
 </script>
 
-<div class="flex flex-col space-y-4 p-4 relative">
+<div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead name="from" placeholder={t.from} bind:selected={from} bind:items={fromItems} />
 	<AddressTypeahead name="to" placeholder={t.to} bind:selected={to} bind:items={toItems} />
 	<Button
