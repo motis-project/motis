@@ -10,6 +10,7 @@
 
 #include "motis-api/motis-api.h"
 
+#include "motis/endpoints/routing.h"
 #include "motis/fwd.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/place.h"
@@ -23,10 +24,6 @@ namespace nigiri::routing {
 struct query;
 struct journey;
 }  // namespace nigiri::routing
-
-namespace motis::ep {
-struct routing;
-}
 
 namespace motis::odm {
 
@@ -50,6 +47,9 @@ struct meta_router {
   api::plan_response run();
 
 private:
+  void init_prima(nigiri::interval<nigiri::unixtime_t> const& from_intvl,
+                  nigiri::interval<nigiri::unixtime_t> const& to_intvl,
+                  motis::ep::stats_map_t&);
   void extract_direct();
 
   ep::routing const& r_;

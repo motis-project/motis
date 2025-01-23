@@ -167,14 +167,14 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::rt_timetable const* rtt,
              n::interval<n::unixtime_t> const& intvl,
              n::routing::query const& start_time,
-             n::routing::location_match_mode location_match_mode) {
+             n::routing::location_match_mode location_match_mode,
+             std::chrono::seconds const max) {
   static auto const kNoTdOffsets =
       hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
 
   auto offsets = get_offsets(
       r, l, dir, {api::ModeEnum::CAR},
-      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      std::chrono::seconds{query.maxPreTransitTime_},
+      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,
       query.maxMatchingDistance_, gbfs_rd, odm_stats);
 
   for (auto& o : offsets) {
@@ -194,7 +194,7 @@ void init_pt(std::vector<n::routing::start>& rides,
   sort(rides);
 }
 
-void init_direct(std::vector<direct_ride>& direct_rides,
+auto init_direct(std::vector<direct_ride>& direct_rides,
                  ep::routing const& r,
                  elevators const* e,
                  gbfs::gbfs_routing_data& gbfs,
@@ -220,6 +220,49 @@ void init_direct(std::vector<direct_ride>& direct_rides,
          intvl.contains(dep); dep += 1h) {
       direct_rides.emplace_back(dep, dep + duration);
     }
+  }
+
+  return duration;
+}
+
+void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
+                             n::interval<n::unixtime_t> const& to_intvl,
+                             motis::ep::stats_map_t& stats) {
+  if (p.get() == nullptr) {
+    p.reset(new prima{});
+  }
+
+  p->init(from_place_, to_place_, query_);
+
+  auto direct_duration = std::optional<std::chrono::duration<int64_t>>{};
+
+  if (odm_direct_ && r_.w_ && r_.l_) {
+    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
+                                  from_place_, to_place_, to_intvl, query_);
+  }
+
+  if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
+    init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
+            osr::direction::kForward, query_, gbfs_rd_, stats, *tt_, rtt_,
+            from_intvl, start_time_,
+            query_.arriveBy_ ? start_time_.dest_match_mode_
+                             : start_time_.start_match_mode_,
+            std::chrono::seconds{direct_duration
+                                     ? std::min(direct_duration->count(),
+                                                query_.maxPreTransitTime_)
+                                     : query_.maxPreTransitTime_});
+  }
+
+  if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
+    init_pt(p->to_rides_, r_, std::get<osr::location>(to_),
+            osr::direction::kBackward, query_, gbfs_rd_, stats, *tt_, rtt_,
+            to_intvl, start_time_,
+            query_.arriveBy_ ? start_time_.start_match_mode_
+                             : start_time_.dest_match_mode_,
+            std::chrono::seconds{direct_duration
+                                     ? std::min(direct_duration->count(),
+                                                query_.maxPostTransitTime_)
+                                     : query_.maxPostTransitTime_});
   }
 }
 
@@ -359,32 +402,7 @@ api::plan_response meta_router::run() {
   auto const& from_intvl = query_.arriveBy_ ? dest_intvl : start_intvl;
   auto const& to_intvl = query_.arriveBy_ ? start_intvl : dest_intvl;
 
-  if (p.get() == nullptr) {
-    p.reset(new prima{});
-  }
-
-  p->init(from_place_, to_place_, query_);
-
-  if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
-    init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
-            osr::direction::kForward, query_, gbfs_rd_, stats, *tt_, rtt_,
-            from_intvl, start_time_,
-            query_.arriveBy_ ? start_time_.dest_match_mode_
-                             : start_time_.start_match_mode_);
-  }
-
-  if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
-    init_pt(p->to_rides_, r_, std::get<osr::location>(to_),
-            osr::direction::kBackward, query_, gbfs_rd_, stats, *tt_, rtt_,
-            to_intvl, start_time_,
-            query_.arriveBy_ ? start_time_.start_match_mode_
-                             : start_time_.dest_match_mode_);
-  }
-
-  if (odm_direct_ && r_.w_ && r_.l_) {
-    init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
-                to_intvl, query_);
-  }
+  init_prima(from_intvl, to_intvl, stats);
 
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
@@ -593,6 +611,7 @@ api::plan_response meta_router::run() {
             auto const prima_msg = co_await http_POST(
                 kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
             whitelist_response = get_http_body(prima_msg);
+            std::cout << *whitelist_response << "\n";
           },
           boost::asio::detached);
       ioc.run();
