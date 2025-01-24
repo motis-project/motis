@@ -263,26 +263,19 @@ void init_pt(std::vector<n::routing::start>& rides,
       tt, rtt, intvl, offsets, kNoTdOffsets, n::routing::kMaxTravelTime,
       location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
-}
 
-void n_nearest(geo::latlng const& c,
-               n::timetable const& tt,
-               unsigned n,
-               std::vector<n::routing::start>& rides,
-               std::vector<n::routing::start>& prev_rides) {
-  auto const by_distance = [&](auto const& a, auto const& b) {
-    auto const distance_a =
-        geo::distance(c, tt.locations_.coordinates_[a.stop_]);
-    auto const distance_b =
-        geo::distance(c, tt.locations_.coordinates_[b.stop_]);
-    return std::tie(distance_a, a.stop_, a.time_at_start_, a.time_at_stop_) <
-           std::tie(distance_b, b.stop_, b.time_at_start_, b.time_at_stop_);
-  };
-
-  utl::sort(rides, by_distance);
-  std::swap(rides, prev_rides);
-  rides.clear();
-  rides.append_range(prev_rides | std::views::take(n));
+  if (rides.size() > kMaxODMEvents) {
+    auto const by_distance = [&](auto const& a, auto const& b) {
+      auto const distance_a =
+          geo::distance(l.pos_, tt.locations_.coordinates_[a.stop_]);
+      auto const distance_b =
+          geo::distance(l.pos_, tt.locations_.coordinates_[b.stop_]);
+      return std::tie(distance_a, a.stop_, a.time_at_start_, a.time_at_stop_) <
+             std::tie(distance_b, b.stop_, b.time_at_start_, b.time_at_stop_);
+    };
+    utl::sort(rides, by_distance);
+    rides.resize(kMaxODMEvents);
+  }
 }
 
 void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
@@ -313,8 +306,6 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
                                      ? std::min(direct_duration->count(),
                                                 query_.maxPreTransitTime_)
                                      : query_.maxPreTransitTime_});
-    n_nearest(p->from_, *tt_, kMaxODMEvents, p->from_rides_,
-              p->prev_from_rides_);
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
@@ -327,9 +318,13 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
                                      ? std::min(direct_duration->count(),
                                                 query_.maxPostTransitTime_)
                                      : query_.maxPostTransitTime_});
-    n_nearest(p->to_, *tt_, kMaxODMEvents, p->to_rides_, p->prev_to_rides_);
   }
   print_time(init_pt_start, "init ODM-PT rides");
+}
+
+bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
+  return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
+         std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
 }
 
 auto ride_time_halves(std::vector<n::routing::start>& rides) {
@@ -342,16 +337,12 @@ auto ride_time_halves(std::vector<n::routing::start>& rides) {
   auto const half = rides.size() / 2;
   auto lo = rides | std::views::take(half);
   auto hi = rides | std::views::drop(half);
-  auto const stop_comp = [](auto const& a, auto const& b) {
-    return a.stop_ < b.stop_;
-  };
-  std::ranges::sort(lo, stop_comp);
-  std::ranges::sort(hi, stop_comp);
+  std::ranges::sort(lo, ride_comp);
+  std::ranges::sort(hi, ride_comp);
   return std::pair{lo, hi};
 }
 
-enum offset_event_type { kTimeAtStart, kTimeAtStop };
-auto get_td_offsets(auto const& rides, offset_event_type const oet) {
+auto get_td_offsets(auto const& rides) {
   auto td_offsets = td_offsets_t{};
   utl::equal_ranges_linear(
       rides, [](auto const& a, auto const& b) { return a.stop_ == b.stop_; },
@@ -359,14 +350,25 @@ auto get_td_offsets(auto const& rides, offset_event_type const oet) {
         td_offsets.emplace(from_it->stop_,
                            std::vector<n::routing::td_offset>{});
         for (auto const& r : n::it_range{from_it, to_it}) {
-          td_offsets.at(from_it->stop_)
-              .emplace_back(
-                  oet == kTimeAtStart ? r.time_at_start_ : r.time_at_stop_,
-                  std::chrono::abs(r.time_at_start_ - r.time_at_stop_), kODM);
-          td_offsets.at(from_it->stop_)
-              .emplace_back(oet == kTimeAtStart ? r.time_at_start_ + 1min
-                                                : r.time_at_stop_ + 1min,
-                            n::kInfeasible, kODM);
+          if (td_offsets.at(from_it->stop_).size() > 1 &&
+              rbegin(td_offsets.at(from_it->stop_))[1].valid_from_ ==
+                  r.time_at_stop_) {
+            // taxi ride is already encoded
+            continue;
+          } else if (!td_offsets.at(from_it->stop_).empty() &&
+                     td_offsets.at(from_it->stop_).back().valid_from_ ==
+                         r.time_at_stop_) {
+            // increase validity of last offset
+            td_offsets.at(from_it->stop_).back().valid_from_ += 1min;
+          } else {
+            // add new offset
+            td_offsets.at(from_it->stop_)
+                .emplace_back(
+                    r.time_at_stop_,
+                    std::chrono::abs(r.time_at_start_ - r.time_at_stop_), kODM);
+            td_offsets.at(from_it->stop_)
+                .emplace_back(r.time_at_stop_ + 1min, n::kInfeasible, kODM);
+          }
         }
       });
   return td_offsets;
@@ -406,10 +408,7 @@ auto extract_rides() {
   }
 
   auto const remove_dupes = [&](auto& rides) {
-    utl::sort(rides, [](auto&& a, auto&& b) {
-      return std::tie(a.stop_, a.time_at_start_, a.time_at_stop_) <
-             std::tie(b.stop_, b.time_at_start_, b.time_at_stop_);
-    });
+    utl::sort(rides, ride_comp);
     rides.erase(std::unique(begin(rides), end(rides),
                             [](auto&& a, auto&& b) {
                               return std::tie(a.stop_, a.time_at_start_,
@@ -517,7 +516,7 @@ api::plan_response meta_router::run() {
   auto const prep_queries_start = std::chrono::steady_clock::now();
 
   auto const blacklisted =
-      blacklist_response && p->blacklist_update(*blacklist_response);
+      blacklist_response && true /*p->blacklist_update(*blacklist_response)*/;
 
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p->from_rides_);
@@ -630,18 +629,27 @@ api::plan_response meta_router::run() {
                         }},
                     dest_)
               : td_offsets_t{},
-      .odm_start_short_ = query_.arriveBy_
-                              ? get_td_offsets(to_rides_short, kTimeAtStart)
-                              : get_td_offsets(from_rides_short, kTimeAtStart),
-      .odm_start_long_ = query_.arriveBy_
-                             ? get_td_offsets(to_rides_long, kTimeAtStart)
-                             : get_td_offsets(from_rides_long, kTimeAtStart),
-      .odm_dest_short_ = query_.arriveBy_
-                             ? get_td_offsets(from_rides_short, kTimeAtStop)
-                             : get_td_offsets(to_rides_short, kTimeAtStop),
-      .odm_dest_long_ = query_.arriveBy_
-                            ? get_td_offsets(from_rides_long, kTimeAtStop)
-                            : get_td_offsets(to_rides_long, kTimeAtStop)};
+      .odm_start_short_ = query_.arriveBy_ ? get_td_offsets(to_rides_short)
+                                           : get_td_offsets(from_rides_short),
+      .odm_start_long_ = query_.arriveBy_ ? get_td_offsets(to_rides_long)
+                                          : get_td_offsets(from_rides_long),
+      .odm_dest_short_ = query_.arriveBy_ ? get_td_offsets(from_rides_short)
+                                          : get_td_offsets(to_rides_short),
+      .odm_dest_long_ = query_.arriveBy_ ? get_td_offsets(from_rides_long)
+                                         : get_td_offsets(to_rides_long)};
+
+  auto const td_str = [&](auto const& tds) {
+    auto ss = std::stringstream{};
+    for (auto const& [k, td_offsets] : tds) {
+      auto const loc = tt_->locations_.get(k);
+      ss << loc.name_ << "@" << loc.pos_ << " offsets:\n";
+      for (auto const& o : td_offsets) {
+        ss << o.valid_from_ << ", " << o.duration_ << ", "
+           << o.transport_mode_id_ << "\n";
+      }
+    }
+    return ss.str();
+  };
 
   auto const make_task = [&](n::routing::query q) {
     return boost::fibers::packaged_task<routing_result()>{
@@ -652,6 +660,12 @@ api::plan_response meta_router::run() {
           if (ep::raptor_state.get() == nullptr) {
             ep::raptor_state.reset(new n::routing::raptor_state{});
           }
+
+          std::cout << "offsets@start: " << q.start_.size() << "\n";
+          std::cout << "offsets@dest: " << q.destination_.size() << "\n";
+          std::cout << "td_offsets@start: " << td_str(q.td_start_) << "\n";
+          std::cout << "td_offsets@dest: " << td_str(q.td_dest_) << "\n";
+
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
               query_.arriveBy_ ? n::direction::kBackward
@@ -663,12 +677,12 @@ api::plan_response meta_router::run() {
   };
 
   auto tasks = std::vector<boost::fibers::packaged_task<routing_result()>>{};
-  tasks.emplace_back(make_task(qf.walk_walk()));
+  // tasks.emplace_back(make_task(qf.walk_walk()));
   if (blacklisted) {
     std::cout << "blacklisting successful\n";
-    tasks.emplace_back(make_task(qf.walk_short()));
+    // tasks.emplace_back(make_task(qf.walk_short()));
     //    tasks.emplace_back(make_task(qf.walk_long()));
-    //    tasks.emplace_back(make_task(qf.short_walk()));
+    tasks.emplace_back(make_task(qf.short_walk()));
     //    tasks.emplace_back(make_task(qf.long_walk()));
     //    tasks.emplace_back(make_task(qf.short_short()));
     //    tasks.emplace_back(make_task(qf.short_long()));
