@@ -101,6 +101,10 @@ std::string prima::get_msg_str(n::timetable const& tt) const {
   return boost::json::serialize(json(*this, tt));
 }
 
+size_t prima::n_events() const {
+  return from_rides_.size() + to_rides_.size() + direct_rides_.size();
+}
+
 bool prima::blacklist_update(std::string_view json) {
   auto success = true;
 

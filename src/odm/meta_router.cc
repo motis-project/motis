@@ -66,6 +66,13 @@ static auto const kOdmMixer = mixer{.walk_cost_ = {{0, 1}, {15, 11}},
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
+void print_time(auto const& start, std::string_view name) {
+  std::cout << name << ": "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - start)
+            << "\n";
+};
+
 meta_router::meta_router(ep::routing const& r,
                          api::plan_params const& query,
                          std::vector<api::ModeEnum> const& pre_transit_modes,
@@ -240,12 +247,8 @@ void init_pt(std::vector<n::routing::start>& rides,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,
       query.maxMatchingDistance_, gbfs_rd, odm_stats);
 
-  std::cout << "#initial_offsets: " << offsets.size() << "\n";
-
   std::erase_if(
       offsets, [](auto const& o) { return o.duration_ < kMinODMOffsetLength; });
-
-  std::cout << "#offsets_not_too_short: " << offsets.size() << "\n";
 
   for (auto& o : offsets) {
     o.duration_ += kODMTransferBuffer;
@@ -291,12 +294,15 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
 
   p->init(from_place_, to_place_, query_);
 
+  auto init_direct_start = std::chrono::steady_clock::now();
   auto direct_duration = std::optional<std::chrono::duration<int64_t>>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
     direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
                                   from_place_, to_place_, to_intvl, query_);
   }
+  print_time(init_direct_start, "init direct");
 
+  auto init_pt_start = std::chrono::steady_clock::now();
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
             osr::direction::kForward, query_, gbfs_rd_, stats, *tt_, rtt_,
@@ -323,6 +329,7 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
                                      : query_.maxPostTransitTime_});
     n_nearest(p->to_, *tt_, kMaxODMEvents, p->to_rides_, p->prev_to_rides_);
   }
+  print_time(init_pt_start, "init ODM-PT rides");
 }
 
 auto ride_time_halves(std::vector<n::routing::start>& rides) {
@@ -368,8 +375,10 @@ auto get_td_offsets(auto const& rides, offset_event_type const oet) {
 auto collect_odm_journeys(auto& futures) {
   p->odm_journeys_.clear();
   for (auto& f : futures | std::views::drop(1)) {
-    p->odm_journeys_.append_range(*f.get().journeys_);
+    p->odm_journeys_.append_range(f.get().journeys_);
   }
+  std::cout << std::format("collected {} ODM-PT journeys\n",
+                           p->odm_journeys_.size());
 }
 
 auto extract_rides() {
@@ -446,7 +455,23 @@ void meta_router::extract_direct() {
   });
 }
 
+struct routing_result {
+  explicit routing_result(
+      n::routing::routing_result<n::routing::raptor_stats> rr)
+      : journeys_{*rr.journeys_},
+        interval_{rr.interval_},
+        search_stats_{rr.search_stats_},
+        algo_stats_{rr.algo_stats_} {}
+
+  n::pareto_set<n::routing::journey> journeys_;
+  n::interval<n::unixtime_t> interval_;
+  n::routing::search_stats search_stats_;
+  n::routing::raptor_stats algo_stats_;
+};
+
 api::plan_response meta_router::run() {
+  auto const init_start = std::chrono::steady_clock::now();
+
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
               "mode=TRANSIT requires timetable to be loaded");
 
@@ -466,11 +491,12 @@ api::plan_response meta_router::run() {
 
   init_prima(from_intvl, to_intvl, stats);
 
-  dump_coords(*tt_);
-
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
 
+  print_time(init_start, "init total");
+  std::cout << std::format("requesting blacklisting of {} events\n",
+                           p->n_events());
   auto const bl_start = std::chrono::steady_clock::now();
   try {
     // TODO the fiber/thread should yield until network response arrives?
@@ -487,11 +513,8 @@ api::plan_response meta_router::run() {
     std::cout << "blacklist networking failed: " << e.what();
     blacklist_response = std::nullopt;
   }
-  auto const bl_time = std::chrono::steady_clock::now() - bl_start;
-  std::cout << "bl_time: "
-            << std::chrono::duration_cast<std::chrono::duration<double>>(
-                   bl_time)
-            << "\n";
+  print_time(bl_start, "waited for blacklisting response");
+  auto const prep_queries_start = std::chrono::steady_clock::now();
 
   auto const blacklisted =
       blacklist_response && p->blacklist_update(*blacklist_response);
@@ -621,8 +644,7 @@ api::plan_response meta_router::run() {
                             : get_td_offsets(to_rides_long, kTimeAtStop)};
 
   auto const make_task = [&](n::routing::query q) {
-    return boost::fibers::packaged_task<
-        n::routing::routing_result<n::routing::raptor_stats>()>{
+    return boost::fibers::packaged_task<routing_result()>{
         [&, q = std::move(q)]() mutable {
           if (ep::search_state.get() == nullptr) {
             ep::search_state.reset(new n::routing::search_state{});
@@ -630,32 +652,34 @@ api::plan_response meta_router::run() {
           if (ep::raptor_state.get() == nullptr) {
             ep::raptor_state.reset(new n::routing::raptor_state{});
           }
-          return raptor_search(
+          return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
               query_.arriveBy_ ? n::direction::kBackward
                                : n::direction::kForward,
               query_.timeout_.has_value()
                   ? std::optional<std::chrono::seconds>{*query_.timeout_}
-                  : std::nullopt);
+                  : std::nullopt)};
         }};
   };
 
-  auto tasks = std::vector<boost::fibers::packaged_task<
-      n::routing::routing_result<n::routing::raptor_stats>()>>{};
+  auto tasks = std::vector<boost::fibers::packaged_task<routing_result()>>{};
   tasks.emplace_back(make_task(qf.walk_walk()));
   if (blacklisted) {
     std::cout << "blacklisting successful\n";
     tasks.emplace_back(make_task(qf.walk_short()));
-    tasks.emplace_back(make_task(qf.walk_long()));
-    tasks.emplace_back(make_task(qf.short_walk()));
-    tasks.emplace_back(make_task(qf.long_walk()));
-    tasks.emplace_back(make_task(qf.short_short()));
-    tasks.emplace_back(make_task(qf.short_long()));
-    tasks.emplace_back(make_task(qf.long_short()));
-    tasks.emplace_back(make_task(qf.long_long()));
+    //    tasks.emplace_back(make_task(qf.walk_long()));
+    //    tasks.emplace_back(make_task(qf.short_walk()));
+    //    tasks.emplace_back(make_task(qf.long_walk()));
+    //    tasks.emplace_back(make_task(qf.short_short()));
+    //    tasks.emplace_back(make_task(qf.short_long()));
+    //    tasks.emplace_back(make_task(qf.long_short()));
+    //    tasks.emplace_back(make_task(qf.long_long()));
   } else {
     std::cout << "blacklisting failed, omitting ODM routing\n";
   }
+
+  print_time(prep_queries_start, "prep queries");
+  auto const routing_start = std::chrono::steady_clock::now();
 
   auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
   for (auto& task : tasks) {
@@ -667,6 +691,10 @@ api::plan_response meta_router::run() {
 
   auto const pt_result = futures.front().get();
 
+  print_time(routing_start, "routing");
+  std::cout << std::format("Requesting whitelisting of {} events\n",
+                           p->n_events());
+  auto const wl_start = std::chrono::steady_clock::now();
   auto whitelist_response = std::optional<std::string>{};
   if (blacklisted) {
     collect_odm_journeys(futures);
@@ -688,6 +716,8 @@ api::plan_response meta_router::run() {
       whitelist_response = std::nullopt;
     }
   }
+  print_time(wl_start, "waited for whitelisting response");
+  auto const mixing_start = std::chrono::steady_clock::now();
 
   auto const whitelisted =
       whitelist_response && p->whitelist_update(*whitelist_response);
@@ -700,10 +730,13 @@ api::plan_response meta_router::run() {
     std::cout << "whitelisting failed, discarding ODM journeys\n";
   }
 
-  kOdmMixer.mix(*pt_result.journeys_, p->odm_journeys_);
+  std::cout << std::format("Mixing {} PT journeys and {} ODM journeys\n",
+                           pt_result.journeys_.size(), p->odm_journeys_.size());
+  kOdmMixer.mix(pt_result.journeys_, p->odm_journeys_);
 
   extract_direct();
 
+  print_time(mixing_start, "mixing journeys took");
   return {.from_ = from_place_,
           .to_ = to_place_,
           .direct_ = std::move(direct_),

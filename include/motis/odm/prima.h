@@ -37,6 +37,7 @@ struct prima {
             api::Place const& to,
             api::plan_params const& query);
   std::string get_msg_str(nigiri::timetable const&) const;
+  size_t n_events() const;
   bool blacklist_update(std::string_view json);
   bool whitelist_update(std::string_view json);
   void adjust_to_whitelisting();
