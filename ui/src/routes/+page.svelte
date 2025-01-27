@@ -31,6 +31,7 @@
 	import StopTimes from '$lib/StopTimes.svelte';
 	import { onMount, tick } from 'svelte';
 	import RailViz from '$lib/RailViz.svelte';
+	import MapIcon from 'lucide-svelte/icons/map';
 	import { t } from '$lib/i18n/translation';
 	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
@@ -38,7 +39,8 @@
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
-	const isSmallScreen = browser && window.innerWidth < 600;
+	const isSmallScreen = browser && window.innerWidth < 768;
+	let showMap = $state(!isSmallScreen);
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : undefined) ??
@@ -174,7 +176,7 @@
 		});
 	}
 
-	$effect(() => {
+	const flyToSelectedItinerary = () => {
 		if (page.state.selectedItinerary && map) {
 			const start = maplibregl.LngLat.convert(page.state.selectedItinerary.legs[0].from);
 			const box = new maplibregl.LngLatBounds(start, start);
@@ -185,9 +187,18 @@
 					box.extend(x);
 				});
 			});
-			const padding = { top: 96, right: 96, bottom: 96, left: isSmallScreen ? 96 : 640 };
+			const padding = {
+				top: isSmallScreen ? Math.max(window.innerHeight / 2, 400) : 96,
+				right: 96,
+				bottom: 96,
+				left: isSmallScreen ? 96 : 640
+			};
 			map.flyTo({ ...map.cameraForBounds(box), padding });
 		}
+	};
+
+	$effect(() => {
+		flyToSelectedItinerary();
 	});
 
 	const pushStateWithQueryString = (
@@ -271,7 +282,8 @@
 	}}
 	{center}
 	class={cn('h-dvh overflow-clip', theme)}
-	style={getStyle(theme, level)}
+	style={showMap ? getStyle(theme, level) : undefined}
+	attribution={"&copy; <a href='http://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>"}
 >
 	{#if hasDebug}
 		<Control position="top-right">
@@ -290,9 +302,9 @@
 	<LevelSelect {bounds} {zoom} bind:level />
 
 	{#if !page.state.selectedItinerary && routingResponses.length !== 0}
-		<Control position="top-left" class="min-h-0">
+		<Control position="top-left" class="min-h-0 md:mb-2">
 			<Card
-				class="w-[500px] h-full max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				class="w-[500px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
 				<ItineraryList
 					{baseResponse}
@@ -305,7 +317,7 @@
 	{/if}
 
 	{#if page.state.selectedItinerary && !page.state.selectedStop}
-		<Control position="top-left" class="min-h-0">
+		<Control position="top-left" class="min-h-0 mb-12 md:mb-2">
 			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
@@ -318,16 +330,21 @@
 						<X />
 					</Button>
 				</div>
-				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
+				<div
+					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
+						(showMap ? 'max-h-[40vh] md:max-h-[70vh]' : '')}
+				>
 					<ConnectionDetail itinerary={page.state.selectedItinerary} {onClickStop} {onClickTrip} />
 				</div>
 			</Card>
 		</Control>
-		<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+		{#if showMap}
+			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+		{/if}
 	{/if}
 
 	{#if page.state.selectedStop}
-		<Control position="top-left" class="min-h-0">
+		<Control position="top-left" class="min-h-0 md:mb-2">
 			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
@@ -351,7 +368,7 @@
 						<X />
 					</Button>
 				</div>
-				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 max-h-[70vh]">
+				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
 					<StopTimes
 						stopId={page.state.selectedStop.stopId}
 						time={page.state.selectedStop.time}
@@ -371,15 +388,36 @@
 		</Control>
 	{/if}
 
-	<RailViz {map} {bounds} {zoom} {onClickTrip} />
+	{#if showMap}
+		<RailViz {map} {bounds} {zoom} {onClickTrip} />
 
-	<Popup trigger="contextmenu" children={contextMenu} />
+		<Popup trigger="contextmenu" children={contextMenu} />
 
-	{#if from}
-		<Marker color="green" draggable={true} {level} bind:location={from} bind:marker={fromMarker} />
-	{/if}
+		{#if from}
+			<Marker
+				color="green"
+				draggable={true}
+				{level}
+				bind:location={from}
+				bind:marker={fromMarker}
+			/>
+		{/if}
 
-	{#if to}
-		<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
+		{#if to}
+			<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
+		{/if}
+	{:else}
+		<Control position="bottom-left" class="pb-4">
+			<Button
+				size="icon"
+				variant="default"
+				onclick={() => {
+					showMap = true;
+					flyToSelectedItinerary();
+				}}
+			>
+				<MapIcon class="h-[1.2rem] w-[1.2rem]" />
+			</Button>
+		</Control>
 	{/if}
 </Map>

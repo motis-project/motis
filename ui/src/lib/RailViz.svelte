@@ -297,7 +297,7 @@
 	});
 </script>
 
-<Control position={browser && window.innerWidth < 600 ? 'bottom-left' : 'top-right'} class="pb-2">
+<Control position={browser && window.innerWidth < 768 ? 'bottom-left' : 'top-right'} class="pb-4">
 	<Button
 		size="icon"
 		variant={colorMode ? 'default' : 'outline'}
@@ -306,9 +306,9 @@
 		}}
 	>
 		{#if colorMode == 'rt'}
-			<Rss size="icon" class="h-[1.2rem] w-[1.2rem]" />
+			<Rss class="h-[1.2rem] w-[1.2rem]" />
 		{:else}
-			<Palette size="icon" class="h-[1.2rem] w-[1.2rem]" />
+			<Palette class="h-[1.2rem] w-[1.2rem]" />
 		{/if}
 	</Button>
 </Control>
