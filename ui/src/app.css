@@ -70,7 +70,7 @@
 		@apply border-border;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-secondary text-foreground;
 	}
 }
 
@@ -100,7 +100,7 @@
 
 .maplibregl-control-container .maplibregl-ctrl-top-left {
 	max-width: 100%;
-	bottom: 1rem;
+	bottom: 0.5rem;
 	display: flex;
 	flex-direction: column;
 	z-index: 3;
