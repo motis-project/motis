@@ -367,7 +367,8 @@ auto get_td_offsets(auto const& rides) {
                     r.time_at_stop_,
                     std::chrono::abs(r.time_at_start_ - r.time_at_stop_), kODM);
             td_offsets.at(from_it->stop_)
-                .emplace_back(r.time_at_stop_ + 1min, n::kInfeasible, kODM);
+                .emplace_back(r.time_at_stop_ + 1min, n::footpath::kMaxDuration,
+                              kODM);
           }
         }
       });
