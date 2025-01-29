@@ -207,9 +207,11 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                                                     start_time)
                        .count(),
       .startTime_ = start_time,
-      .endTime_ = end_time});
-  leg.from_.departure_ = leg.startTime_;
-  leg.to_.arrival_ = leg.endTime_;
+      .endTime_ = end_time,
+      .scheduledStartTime_ = start_time,
+      .scheduledEndTime_ = end_time});
+  leg.from_.departure_ = leg.from_.scheduledDeparture_ = leg.startTime_;
+  leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.endTime_;
   return itinerary;
 }
 
