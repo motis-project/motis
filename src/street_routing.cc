@@ -30,7 +30,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   nigiri::unixtime_t const start_time,
                                   osr::cost_t const max,
                                   street_routing_cache_t& cache,
-                                  osr::bitvec<osr::node_idx_t>* blocked_mem) {
+                                  osr::bitvec<osr::node_idx_t>& blocked_mem) {
   auto const s = e ? get_states_at(w, l, *e, start_time, from.pos_)
                    : std::optional{std::pair<nodes_t, states_t>{}};
   auto const& [e_nodes, e_states] = *s;
@@ -40,12 +40,11 @@ std::optional<osr::path> get_path(osr::ways const& w,
   auto const path =
       it != end(cache)
           ? it->second
-          : osr::route(w, l, profile, from, to, max, osr::direction::kForward,
-                       kMaxMatchingDistance,
-                       s && blocked_mem
-                           ? &set_blocked(e_nodes, e_states, *blocked_mem)
-                           : nullptr,
-                       sharing);
+          : osr::route(
+                w, l, profile, from, to, max, osr::direction::kForward,
+                kMaxMatchingDistance,
+                s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
+                sharing);
   if (it == end(cache)) {
     cache.emplace(std::pair{key, path});
   }
@@ -208,9 +207,11 @@ api::Itinerary dummy_itinerary(api::Place const& from,
                                                                     start_time)
                        .count(),
       .startTime_ = start_time,
-      .endTime_ = end_time});
-  leg.from_.departure_ = leg.startTime_;
-  leg.to_.arrival_ = leg.endTime_;
+      .endTime_ = end_time,
+      .scheduledStartTime_ = start_time,
+      .scheduledEndTime_ = end_time});
+  leg.from_.departure_ = leg.from_.scheduledDeparture_ = leg.startTime_;
+  leg.to_.arrival_ = leg.to_.scheduledArrival_ = leg.endTime_;
   return itinerary;
 }
 
@@ -226,8 +227,13 @@ api::Itinerary route(osr::ways const& w,
                      std::optional<n::unixtime_t> const end_time,
                      gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
-                     osr::bitvec<osr::node_idx_t>* blocked_mem,
-                     std::chrono::seconds const max) {
+                     osr::bitvec<osr::node_idx_t>& blocked_mem,
+                     std::chrono::seconds const max,
+                     bool const dummy) {
+  if (dummy) {
+    return dummy_itinerary(from, to, mode, start_time, *end_time);
+  }
+
   auto const profile = to_profile(mode, wheelchair);
   utl::verify(
       profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
@@ -291,7 +297,8 @@ api::Itinerary route(osr::ways const& w,
                                   .count()
                             : path->cost_,
       .startTime_ = start_time,
-      .endTime_ = start_time + std::chrono::seconds{path->cost_},
+      .endTime_ =
+          end_time ? *end_time : start_time + std::chrono::seconds{path->cost_},
       .transfers_ = 0};
 
   auto t = std::chrono::time_point_cast<std::chrono::seconds>(start_time);
@@ -363,6 +370,16 @@ api::Itinerary route(osr::ways const& w,
         pred_place = next_place;
         pred_end_time = t;
       });
+
+  if (end_time && !itinerary.legs_.empty()) {
+    itinerary.legs_.back().to_.arrival_ =
+        itinerary.legs_.back().to_.scheduledArrival_ =
+            itinerary.legs_.back().endTime_ =
+                itinerary.legs_.back().scheduledEndTime_ = *end_time;
+    for (auto& leg : itinerary.legs_) {
+      leg.duration_ = (leg.endTime_.time_ - leg.startTime_.time_).count();
+    }
+  }
 
   return itinerary;
 }

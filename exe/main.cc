@@ -82,7 +82,7 @@ int main(int ac, char** av) {
             "\n\n"
             "Example: motis config germany-latest.osm.pbf "
             "germany.gtfs.zip\n");
-        return paths.front() == "--help" ? 0 : 1;
+        return paths.empty() ? 1 : 0;
       }
       std::ofstream{"config.yml"} << config::read_simple(paths) << "\n";
       return 0;

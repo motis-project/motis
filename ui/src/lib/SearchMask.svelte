@@ -34,11 +34,11 @@
 	let toItems = $state<Array<Location>>([]);
 </script>
 
-<div class="flex flex-col space-y-4 p-4">
+<div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead name="from" placeholder={t.from} bind:selected={from} bind:items={fromItems} />
 	<AddressTypeahead name="to" placeholder={t.to} bind:selected={to} bind:items={toItems} />
 	<Button
-		class="absolute z-10 right-12 top-10"
+		class="absolute z-10 right-12 top-6"
 		variant="outline"
 		size="icon"
 		onclick={() => {
@@ -53,9 +53,9 @@
 	>
 		<ArrowUpDown class="w-5 h-5" />
 	</Button>
-	<div class="flex flex-row space-x-2 justify-between">
+	<div class="flex flex-row gap-2 flex-wrap">
 		<DateInput bind:value={time} />
-		<RadioGroup.Root class="flex space-x-1" bind:value={timeType}>
+		<RadioGroup.Root class="flex" bind:value={timeType}>
 			<Label
 				for="departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
@@ -71,14 +71,16 @@
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
-		<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
-			<Accessibility class="h-6 w-6" />
-		</Toggle>
-		<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
-			<Bike class="h-6 w-6" />
-		</Toggle>
-		<Toggle aria-label="toggle bold" bind:pressed={onDemandTaxi}>
-			<CarTaxiFront class="h-6 w-6" />
-		</Toggle>
+		<div>
+			<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
+				<Accessibility class="h-6 w-6" />
+			</Toggle>
+			<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
+				<Bike class="h-6 w-6" />
+			</Toggle>
+            <Toggle aria-label="toggle bold" bind:pressed={onDemandTaxi}>
+                <CarTaxiFront class="h-6 w-6" />
+            </Toggle>
+		</div>
 	</div>
 </div>

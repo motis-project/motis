@@ -297,7 +297,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
         }
       },
       [&]() {
-        d.load_tt();
+        d.load_tt("tt.bin");
         if (c.timetable_->with_shapes_) {
           d.load_shapes();
         }
@@ -367,19 +367,22 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
   auto osr_footpath = task{
       "osr_footpath",
-      [&]() { return c.osr_footpath_; },
-      [&]() { return d.tt_ && d.w_ && d.l_ && d.pl_; },
+      [&]() { return c.osr_footpath_ && c.timetable_; },
+      [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
       [&]() {
-        auto const elevator_footpath_map =
-            compute_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, true);
+        auto const elevator_footpath_map = compute_footpaths(
+            *d.w_, *d.l_, *d.pl_, *d.tt_,
+            c.timetable_->use_osm_stop_coordinates_,
+            c.timetable_->extend_missing_footpaths_,
+            std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U});
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",
                        elevator_footpath_map);
-          d.tt_->write(data_path / "tt.bin");
+          d.tt_->write(data_path / "tt_ext.bin");
         }
       },
-      [&]() {},
+      [&]() { d.load_tt("tt_ext.bin"); },
       {tt_hash, osm_hash, osr_version(), osr_footpath_version(), n_version()}};
 
   auto matches =

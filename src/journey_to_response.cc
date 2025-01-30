@@ -58,7 +58,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    place_t const& start,
                                    place_t const& dest,
                                    street_routing_cache_t& cache,
-                                   osr::bitvec<osr::node_idx_t>* blocked_mem) {
+                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
+                                   bool const detailed_transfers) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto itinerary = api::Itinerary{
@@ -123,7 +124,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .agencyName_ = {std::string{agency.long_name_}},
                   .agencyUrl_ = {std::string{agency.url_}},
                   .agencyId_ = {std::string{agency.short_name_}},
-                  .tripId_ = tags.id(tt, enter_stop),
+                  .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
                   .source_ = fmt::to_string(fr.dbg())});
@@ -169,7 +170,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                               cache, blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
-                                  std::chrono::minutes{10})
+                                  std::chrono::minutes{10},
+                              !detailed_transfers)
                       : dummy_itinerary(from, to, api::ModeEnum::WALK,
                                         j_leg.dep_time_, j_leg.arr_time_));
             },

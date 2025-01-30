@@ -90,7 +90,7 @@ export const getColor = (l: Colorable): [string, string] => {
 	const [_, defaultColor, defaultTextColor] = getModeStyle(l);
 	return !l.routeColor || l.routeColor === '000000'
 		? [defaultColor, defaultTextColor]
-		: ['#' + l.routeColor, '#' + l.routeTextColor];
+		: ['#' + l.routeColor, '#' + l.routeTextColor || '000000'];
 };
 
 export const routeBorderColor = (l: Colorable) => {

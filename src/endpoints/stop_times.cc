@@ -356,7 +356,7 @@ api::stoptimes_response stop_times::operator()(
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),
-                .tripId_ = tags_.id(tt_, s),
+                .tripId_ = tags_.id(tt_, s, ev_type),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),

@@ -157,6 +157,7 @@
 									<TableHead>Station</TableHead>
 									<TableHead>Default</TableHead>
 									<TableHead>Foot</TableHead>
+									<TableHead>Foot Routed</TableHead>
 									<TableHead>Wheelchair</TableHead>
 								</TableRow>
 							</TableHeader>
@@ -189,6 +190,20 @@
 													}}
 												>
 													{x.foot}
+												</Button>
+											{/if}
+										</TableCell>
+										<TableCell>
+											{#if x.footRouted !== undefined}
+												<Button
+													variant="outline"
+													onclick={() => {
+														start = posToLocation(f.place, f.place.level);
+														destination = posToLocation(x.to, x.to.level);
+														profile = 'foot';
+													}}
+												>
+													{x.footRouted}
 												</Button>
 											{/if}
 										</TableCell>

@@ -1,25 +1,44 @@
 <script lang="ts">
 	import { Card } from '$lib/components/ui/card';
+	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import { Separator } from '$lib/components/ui/separator';
 	import { formatDurationSec } from '$lib/formatDuration';
 	import { getModeStyle, routeColor } from '$lib/modeStyle';
-	import { plan, type Itinerary, type Leg, type PlanData, type PlanResponse } from '$lib/openapi';
+	import {
+		plan,
+		type Itinerary,
+		type Leg,
+		type PlanData,
+		type PlanError,
+		type PlanResponse
+	} from '$lib/openapi';
 	import Time from '$lib/Time.svelte';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import { t } from '$lib/i18n/translation';
 	import DirectConnection from '$lib/DirectConnection.svelte';
+	import type { RequestResult } from '@hey-api/client-fetch';
 
 	let {
 		routingResponses,
 		baseResponse,
 		baseQuery,
-		selectedItinerary = $bindable()
+		selectItinerary
 	}: {
 		routingResponses: Array<Promise<PlanResponse>>;
 		baseResponse: Promise<PlanResponse> | undefined;
 		baseQuery: PlanData | undefined;
-		selectedItinerary: Itinerary | undefined;
+		selectItinerary: (it: Itinerary) => void;
 	} = $props();
+
+	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
+		promise.then((response) => {
+			console.log(response.error);
+			if (response.error)
+				throw new Error(
+					String((response.error as Record<string, unknown>).error ?? response.error)
+				);
+			return response.data!;
+		});
 </script>
 
 {#snippet legSummary(l: Leg)}
@@ -50,7 +69,7 @@
 					<DirectConnection
 						{d}
 						onclick={() => {
-							selectedItinerary = d;
+							selectItinerary(d);
 						}}
 					/>
 				{/each}
@@ -58,7 +77,7 @@
 		{/if}
 
 		{#if r.itineraries.length !== 0}
-			<div class="flex flex-col space-y-8 px-4 py-8">
+			<div class="flex flex-col space-y-6 px-4 py-8">
 				{#each routingResponses as r, rI}
 					{#await r}
 						<div class="flex items-center justify-center w-full">
@@ -73,12 +92,14 @@
 										routingResponses.splice(
 											0,
 											0,
-											plan({
-												query: { ...baseQuery.query, pageCursor: r.previousPageCursor }
-											}).then((x) => x.data!)
+											throwOnError(
+												plan({
+													query: { ...baseQuery.query, pageCursor: r.previousPageCursor }
+												})
+											)
 										);
 									}}
-									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg"
+									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg text-nowrap"
 								>
 									{t.earlier}
 								</button>
@@ -88,12 +109,12 @@
 						{#each r.itineraries as it}
 							<button
 								onclick={() => {
-									selectedItinerary = it;
+									selectItinerary(it);
 								}}
 							>
 								<Card class="p-4">
-									<div class="text-base h-8 flex justify-between items-center space-x-4 w-full">
-										<div>
+									<div class="text-base h-8 flex justify-around items-center space-x-1 w-full">
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.departure}</div>
 											<Time
 												isRealtime={it.legs[0].realTime}
@@ -103,24 +124,24 @@
 											/>
 										</div>
 										<Separator orientation="vertical" />
-										<div>
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.arrival}</div>
 											<Time
 												isRealtime={it.legs[it.legs.length - 1].realTime}
 												timestamp={it.endTime}
-												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledStartTime}
+												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant={'realtime-show-always'}
 											/>
 										</div>
 										<Separator orientation="vertical" />
-										<div>
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.transfers}</div>
-											<div class="flex justify-center w-full">{it.transfers}</div>
+											<div class="text-center">{it.transfers}</div>
 										</div>
 										<Separator orientation="vertical" />
-										<div>
+										<div class="overflow-hidden basis-1/4">
 											<div class="text-xs font-bold uppercase text-slate-400">{t.duration}</div>
-											<div class="flex justify-center w-full">
+											<div class="text-center text-nowrap">
 												{formatDurationSec(it.duration)}
 											</div>
 										</div>
@@ -140,12 +161,14 @@
 								<button
 									onclick={() => {
 										routingResponses.push(
-											plan({ query: { ...baseQuery.query, pageCursor: r.nextPageCursor } }).then(
-												(x) => x.data!
+											throwOnError(
+												plan({
+													query: { ...baseQuery.query, pageCursor: r.nextPageCursor }
+												})
 											)
 										);
 									}}
-									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg"
+									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg text-nowrap"
 								>
 									{t.later}
 								</button>
@@ -153,10 +176,14 @@
 							</div>
 						{/if}
 					{:catch e}
-						<div>Error: {e}</div>
+						<ErrorMessage {e} />
 					{/await}
 				{/each}
 			</div>
+		{:else if r.direct.length === 0}
+			<ErrorMessage e={t.noItinerariesFound} />
 		{/if}
+	{:catch e}
+		<ErrorMessage {e} />
 	{/await}
 {/if}

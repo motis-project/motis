@@ -10,13 +10,15 @@
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		bounds = $bindable(),
 		style,
+		attribution,
 		transformRequest,
 		center,
 		children,
 		class: className
 	}: {
 		map?: maplibregl.Map;
-		style: maplibregl.StyleSpecification;
+		style: maplibregl.StyleSpecification | undefined;
+		attribution: string;
 		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
 		bounds?: maplibregl.LngLatBoundsLike | undefined;
@@ -25,7 +27,7 @@
 		class: string;
 	} = $props();
 
-	let currStyle: maplibregl.StyleSpecification | null = null;
+	let currStyle: maplibregl.StyleSpecification | undefined = undefined;
 	let ctx = $state<{ map: maplibregl.Map | undefined }>({ map: undefined });
 	setContext('map', ctx);
 
@@ -33,7 +35,15 @@
 	let currentCenter: maplibregl.LngLatLike | undefined = undefined;
 
 	const createMap = (container: HTMLElement) => {
-		let tmp = new maplibregl.Map({ container, zoom, bounds, center, style, transformRequest });
+		let tmp = new maplibregl.Map({
+			container,
+			zoom,
+			bounds,
+			center,
+			style,
+			transformRequest,
+			attributionControl: { customAttribution: attribution }
+		});
 
 		tmp.addImage(
 			'shield',
@@ -64,8 +74,9 @@
 		});
 
 		tmp.on('moveend', async () => {
-			bounds = tmp.getBounds();
 			zoom = tmp.getZoom();
+			currentZoom = zoom;
+			bounds = tmp.getBounds();
 		});
 
 		return {
@@ -78,7 +89,7 @@
 
 	$effect(() => {
 		if (style != currStyle && ctx.map) {
-			ctx.map.setStyle(style);
+			ctx.map.setStyle(style || null);
 		}
 	});
 

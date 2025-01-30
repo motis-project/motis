@@ -34,6 +34,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const start_time = from_l.time(n::event_type::kDep);
   auto const dest_time = to_l.time(n::event_type::kArr);
   auto cache = street_routing_cache_t{};
+  auto blocked = osr::bitvec<osr::node_idx_t>{};
   auto gbfs_rd = gbfs::gbfs_routing_data{};
 
   return journey_to_response(
@@ -50,7 +51,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
        .transfers_ = 0U},
       tt_location{from_l.get_location_idx(),
                   from_l.get_scheduled_location_idx()},
-      tt_location{to_l.get_location_idx()}, cache, nullptr);
+      tt_location{to_l.get_location_idx()}, cache, blocked, false);
 }
 
 }  // namespace motis::ep

@@ -49,10 +49,11 @@ std::string tag_lookup::id(nigiri::timetable const& tt,
 }
 
 std::string tag_lookup::id(nigiri::timetable const& tt,
-                           n::rt::run_stop s) const {
+                           n::rt::run_stop s,
+                           n::event_type const ev_type) const {
   if (s.fr_->is_scheduled()) {
     // trip id
-    auto const t = s.get_trip_idx(n::event_type::kDep);
+    auto const t = s.get_trip_idx(ev_type);
     auto const id_idx = tt.trip_ids_[t].front();
     auto const id = tt.trip_id_strings_[id_idx].view();
     auto const src = tt.trip_id_src_[id_idx];
