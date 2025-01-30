@@ -62,7 +62,6 @@ int main(int ac, char** av) {
     case cista::hash("generate"): return generate(ac, av);
     case cista::hash("batch"): return batch(ac, av);
     case cista::hash("compare"): return compare(ac, av);
-    case cista::hash("odm_calibrate"): return odm_calibrate(ac, av);
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
