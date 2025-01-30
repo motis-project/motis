@@ -16,14 +16,11 @@ namespace n = nigiri;
 using namespace motis::odm;
 using namespace std::chrono_literals;
 
-static auto const kOdmMixer = mixer{.walk_cost_ = {{0, 1}, {15, 11}},
-                                    .taxi_cost_ = {{0, 59}, {1, 13}},
-                                    .transfer_cost_ = {{0, 15}},
-                                    .direct_taxi_factor_ = 1.3,
-                                    .direct_taxi_constant_ = 27,
-                                    .travel_time_weight_ = 1.5,
-                                    .distance_weight_ = 0.07,
-                                    .distance_exponent_ = 1.5};
+static auto const kOdmMixer = mixer{.alpha_ = 1.5,
+                                    .beta_ = 0.1,
+                                    .walk_cost_ = {{0, 1}, {15, 10}},
+                                    .taxi_cost_ = {{0, 35}, {1, 12}},
+                                    .transfer_cost_ = {{0, 10}}};
 
 TEST(odm, tally) {
   auto const ct = std::vector<cost_threshold>{{0, 30}, {1, 1}, {10, 2}};

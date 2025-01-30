@@ -47,8 +47,9 @@ void mixer::cost_domination(
 
   auto const leg_cost = [&](auto const& leg) {
     return std::visit(
-        utl::overloaded{[](n::routing::journey::run_enter_exit const& ree
-                           [[maybe_unused]]) { return std::int32_t{0}; },
+        utl::overloaded{[](n::routing::journey::run_enter_exit const&) {
+                          return std::int32_t{0};
+                        },
                         [&](n::footpath const& fp) {
                           return tally(fp.duration().count(), walk_cost_);
                         },
@@ -81,32 +82,20 @@ void mixer::cost_domination(
                                  : n::duration_t{0});
   };
 
-  auto const is_direct_taxi = [](auto const& j) {
-    return j.legs_.size() == 1 &&
-           j.legs_.front().from_ ==
-               get_special_station(n::special_station::kStart) &&
-           j.legs_.front().to_ ==
-               get_special_station(n::special_station::kEnd) &&
-           is_odm_leg(j.legs_.front());
-  };
-
   auto const cost = [&](auto const& j) {
     return (leg_cost(j.legs_.front()) +
             (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
-            pt_time(j).count() + transfer_cost(j)) *
-               (is_direct_taxi(j) ? direct_taxi_factor_ : 1) +
-           (is_direct_taxi(j) ? direct_taxi_constant_ : 0);
+            pt_time(j).count() + transfer_cost(j));
   };
 
   auto const is_dominated = [&](auto const& odm_journey) {
     auto const dominates = [&](auto const& pt_journey) {
-      auto const protection =
-          travel_time_weight_ *
-              (static_cast<double>(pt_journey.travel_time().count()) /
-               static_cast<double>(pt_journey.travel_time().count())) +
-          distance_weight_ *
-              std::pow(distance(pt_journey, odm_journey), distance_exponent_);
-      return cost(pt_journey) + protection < cost(odm_journey);
+      auto const alpha_term =
+          alpha_ *
+          (static_cast<double>(pt_journey.travel_time().count()) /
+           static_cast<double>(odm_journey.travel_time().count())) *
+          distance(pt_journey, odm_journey);
+      return cost(pt_journey) + alpha_term < cost(odm_journey);
     };
 
     return std::any_of(begin(pt_journeys), end(pt_journeys), dominates);
@@ -136,9 +125,9 @@ void mixer::productivity_domination(
 
   auto const is_dominated = [&](auto const& b) {
     auto const dominates = [&](auto const& a) {
-      auto const protection =
-          distance_weight_ * std::pow(distance(a, b), distance_exponent_);
-      return cost(b) / taxi_time(a) > (cost(a) + protection) / taxi_time(b);
+      auto const prod_a = cost(b) / taxi_time(a);
+      auto const prod_b = (cost(a) + beta_ * distance(a, b)) / taxi_time(b);
+      return prod_a > prod_b;
     };
 
     return std::any_of(begin(odm_journeys), end(odm_journeys), dominates);

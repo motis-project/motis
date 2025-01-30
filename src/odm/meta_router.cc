@@ -54,14 +54,11 @@ static auto const kPrimaHeaders = std::map<std::string, std::string>{
 constexpr auto const kInfinityDuration =
     n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
-static auto const kOdmMixer = mixer{.walk_cost_ = {{0, 1}, {15, 11}},
-                                    .taxi_cost_ = {{0, 59}, {1, 13}},
-                                    .transfer_cost_ = {{0, 15}},
-                                    .direct_taxi_factor_ = 1.3,
-                                    .direct_taxi_constant_ = 27,
-                                    .travel_time_weight_ = 1.5,
-                                    .distance_weight_ = 0.07,
-                                    .distance_exponent_ = 1.5};
+static auto const kOdmMixer = mixer{.alpha_ = 1.5,
+                                    .beta_ = 0.1,
+                                    .walk_cost_ = {{0, 1}, {15, 10}},
+                                    .taxi_cost_ = {{0, 35}, {1, 12}},
+                                    .transfer_cost_ = {{0, 10}}};
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;

@@ -25,16 +25,11 @@ struct mixer {
   void productivity_domination(
       std::vector<nigiri::routing::journey>& odm_journeys) const;
 
+  double alpha_;
+  double beta_;
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;
-
-  double direct_taxi_factor_;
-  double direct_taxi_constant_;
-
-  double travel_time_weight_;
-  double distance_weight_;
-  double distance_exponent_;
 };
 
 }  // namespace motis::odm
