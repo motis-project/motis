@@ -48,8 +48,7 @@ struct meta_router {
 
 private:
   void init_prima(nigiri::interval<nigiri::unixtime_t> const& from_intvl,
-                  nigiri::interval<nigiri::unixtime_t> const& to_intvl,
-                  motis::ep::stats_map_t&);
+                  nigiri::interval<nigiri::unixtime_t> const& to_intvl);
   void extract_direct();
 
   ep::routing const& r_;

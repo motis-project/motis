@@ -59,8 +59,7 @@ struct routing {
       bool wheelchair,
       std::chrono::seconds max,
       unsigned max_matching_distance,
-      gbfs::gbfs_routing_data&,
-      stats_map_t&) const;
+      gbfs::gbfs_routing_data&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>

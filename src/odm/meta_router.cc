@@ -182,11 +182,10 @@ std::vector<n::routing::offset> get_offsets(
     bool const wheelchair,
     std::chrono::seconds const max,
     unsigned const max_matching_distance,
-    gbfs::gbfs_routing_data& gbfs_rd,
-    ep::stats_map_t& stats) {
+    gbfs::gbfs_routing_data& gbfs_rd) {
   return r.get_offsets(pos, dir, modes, std::nullopt, std::nullopt,
                        std::nullopt, wheelchair, max, max_matching_distance,
-                       gbfs_rd, stats);
+                       gbfs_rd);
 }
 
 auto dump_coords(n::timetable const& tt) {
@@ -232,7 +231,6 @@ void init_pt(std::vector<n::routing::start>& rides,
              osr::direction dir,
              api::plan_params const& query,
              gbfs::gbfs_routing_data& gbfs_rd,
-             motis::ep::stats_map_t& odm_stats,
              n::timetable const& tt,
              n::rt_timetable const* rtt,
              n::interval<n::unixtime_t> const& intvl,
@@ -245,7 +243,7 @@ void init_pt(std::vector<n::routing::start>& rides,
   auto offsets = get_offsets(
       r, l, dir, {api::ModeEnum::CAR},
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,
-      query.maxMatchingDistance_, gbfs_rd, odm_stats);
+      query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(
       offsets, [](auto const& o) { return o.duration_ < kMinODMOffsetLength; });
@@ -279,8 +277,7 @@ void init_pt(std::vector<n::routing::start>& rides,
 }
 
 void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
-                             n::interval<n::unixtime_t> const& to_intvl,
-                             motis::ep::stats_map_t& stats) {
+                             n::interval<n::unixtime_t> const& to_intvl) {
   if (p.get() == nullptr) {
     p.reset(new prima{});
   }
@@ -298,8 +295,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
   auto init_pt_start = std::chrono::steady_clock::now();
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
-            osr::direction::kForward, query_, gbfs_rd_, stats, *tt_, rtt_,
-            from_intvl, start_time_,
+            osr::direction::kForward, query_, gbfs_rd_, *tt_, rtt_, from_intvl,
+            start_time_,
             query_.arriveBy_ ? start_time_.dest_match_mode_
                              : start_time_.start_match_mode_,
             std::chrono::seconds{direct_duration
@@ -310,8 +307,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
     init_pt(p->to_rides_, r_, std::get<osr::location>(to_),
-            osr::direction::kBackward, query_, gbfs_rd_, stats, *tt_, rtt_,
-            to_intvl, start_time_,
+            osr::direction::kBackward, query_, gbfs_rd_, *tt_, rtt_, to_intvl,
+            start_time_,
             query_.arriveBy_ ? start_time_.start_match_mode_
                              : start_time_.dest_match_mode_,
             std::chrono::seconds{direct_duration
@@ -485,7 +482,7 @@ api::plan_response meta_router::run() {
   auto const& from_intvl = query_.arriveBy_ ? dest_intvl : start_intvl;
   auto const& to_intvl = query_.arriveBy_ ? start_intvl : dest_intvl;
 
-  init_prima(from_intvl, to_intvl, stats);
+  init_prima(from_intvl, to_intvl);
 
   auto blacklist_response = std::optional<std::string>{};
   auto ioc = boost::asio::io_context{};
@@ -572,7 +569,7 @@ api::plan_response meta_router::run() {
                                 query_.pedestrianProfile_ ==
                                     api::PedestrianProfileEnum::WHEELCHAIR,
                                 std::chrono::seconds{query_.maxPreTransitTime_},
-                                query_.maxMatchingDistance_, gbfs_rd_, stats);
+                                query_.maxMatchingDistance_, gbfs_rd_);
                           }},
           start_),
       .dest_walk_ = std::visit(
@@ -589,7 +586,7 @@ api::plan_response meta_router::run() {
                     query_.pedestrianProfile_ ==
                         api::PedestrianProfileEnum::WHEELCHAIR,
                     std::chrono::seconds{query_.maxPostTransitTime_},
-                    query_.maxMatchingDistance_, gbfs_rd_, stats);
+                    query_.maxMatchingDistance_, gbfs_rd_);
               }},
           dest_),
       .td_start_walk_ =
@@ -759,7 +756,8 @@ api::plan_response meta_router::run() {
                     r_.matches_, r_.shapes_, gbfs_rd_,
                     query_.pedestrianProfile_ ==
                         api::PedestrianProfileEnum::WHEELCHAIR,
-                    j, start_, dest_, cache, ep::blocked.get());
+                    j, start_, dest_, cache, *ep::blocked,
+                    query_.detailedTransfers_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

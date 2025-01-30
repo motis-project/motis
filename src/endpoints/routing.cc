@@ -56,15 +56,6 @@ boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
-stats_map_t join(auto&&... maps) {
-  auto ret = std::map<std::string, std::uint64_t>{};
-  auto const add = [&](std::map<std::string, std::uint64_t> const& x) {
-    ret.insert(begin(x), end(x));
-  };
-  (add(maps), ...);
-  return ret;
-}
-
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
                   std::string_view s) {
@@ -459,7 +450,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
-  auto const [direct, fastest_direct] =
+  auto [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes,
                          query.directRentalFormFactors_,

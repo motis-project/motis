@@ -44,16 +44,14 @@ api::footpaths_response footpaths::operator()(
   auto const loc = get_loc(tt_, w_, pl_, matches_, l);
   for (auto const mode :
        {osr::search_profile::kFoot, osr::search_profile::kWheelchair}) {
-    auto const results =
-        osr::route(w_, l_, mode, loc,
-                   utl::to_vec(neighbors,
-                               [&](auto&& l) {
-                                 return get_loc(tt_, w_, pl_, matches_, l);
-                               }),
-                   kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
-                   e == nullptr ? nullptr : &e->blocked_, nullptr,
-                   [](osr::path const& p) { return p.uses_elevator_; })
-            .paths_;
+    auto const results = osr::route(
+        w_, l_, mode, loc,
+        utl::to_vec(
+            neighbors,
+            [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
+        kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
+        e == nullptr ? nullptr : &e->blocked_, nullptr,
+        [](osr::path const& p) { return p.uses_elevator_; });
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
