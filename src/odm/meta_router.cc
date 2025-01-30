@@ -350,26 +350,22 @@ auto get_td_offsets(auto const& rides) {
         td_offsets.emplace(from_it->stop_,
                            std::vector<n::routing::td_offset>{});
         for (auto const& r : n::it_range{from_it, to_it}) {
-          if (td_offsets.at(from_it->stop_).size() > 1 &&
-              rbegin(td_offsets.at(from_it->stop_))[1].valid_from_ ==
-                  r.time_at_stop_) {
-            // taxi ride is already encoded
-            continue;
-          } else if (!td_offsets.at(from_it->stop_).empty() &&
-                     td_offsets.at(from_it->stop_).back().valid_from_ ==
-                         r.time_at_stop_) {
-            // increase validity of last offset
-            td_offsets.at(from_it->stop_).back().valid_from_ += 1min;
-          } else {
-            // add new offset
-            td_offsets.at(from_it->stop_)
-                .emplace_back(
-                    r.time_at_stop_,
-                    std::chrono::abs(r.time_at_start_ - r.time_at_stop_), kODM);
-            td_offsets.at(from_it->stop_)
-                .emplace_back(r.time_at_stop_ + 1min, n::footpath::kMaxDuration,
-                              kODM);
+          auto const dep = std::min(r.time_at_stop_, r.time_at_start_);
+          auto const dur = std::chrono::abs(r.time_at_stop_ - r.time_at_start_);
+          if (td_offsets.at(from_it->stop_).size() > 1) {
+            auto last = rbegin(td_offsets.at(from_it->stop_));
+            auto const second_last = std::next(last);
+            if (dep ==
+                std::clamp(dep, second_last->valid_from_, last->valid_from_)) {
+              // increase validity interval of last offset
+              last->valid_from_ = dep + dur;
+              continue;
+            }
           }
+          // add new offset
+          td_offsets.at(from_it->stop_).emplace_back(dep, dur, kODM);
+          td_offsets.at(from_it->stop_)
+              .emplace_back(dep + dur, n::footpath::kMaxDuration, kODM);
         }
       });
   return td_offsets;
@@ -664,8 +660,8 @@ api::plan_response meta_router::run() {
 
           std::cout << "offsets@start: " << q.start_.size() << "\n";
           std::cout << "offsets@dest: " << q.destination_.size() << "\n";
-          std::cout << "td_offsets@start: " << td_str(q.td_start_) << "\n";
-          std::cout << "td_offsets@dest: " << td_str(q.td_dest_) << "\n";
+          std::cout << "td_offsets@start:\n" << td_str(q.td_start_) << "\n";
+          std::cout << "td_offsets@dest:\n" << td_str(q.td_dest_) << "\n";
 
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
