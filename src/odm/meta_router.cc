@@ -487,11 +487,14 @@ api::plan_response meta_router::run() {
   try {
     std::cout << std::format("requesting blacklisting of {} events\n",
                              p->n_events());
-    (void)boost::asio::co_spawn(ioc, [&]() -> boost::asio::awaitable<void> {
-      auto const prima_msg = co_await http_POST(kBlacklistingUrl, kPrimaHeaders,
-                                                p->get_msg_str(*tt_), 10s);
-      blacklist_response = get_http_body(prima_msg);
-    });
+    boost::asio::co_spawn(
+        ioc,
+        [&]() -> boost::asio::awaitable<void> {
+          auto const prima_msg = co_await http_POST(
+              kBlacklistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+          blacklist_response = get_http_body(prima_msg);
+        },
+        boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
     std::cout << "blacklist networking failed: " << e.what();
@@ -698,12 +701,15 @@ api::plan_response meta_router::run() {
     try {
       std::cout << std::format("Requesting whitelisting of {} events\n",
                                p->n_events());
-      (void)boost::asio::co_spawn(ioc, [&]() -> boost::asio::awaitable<void> {
-        auto const prima_msg = co_await http_POST(
-            kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
-        whitelist_response = get_http_body(prima_msg);
-        std::cout << *whitelist_response << "\n";
-      });
+      boost::asio::co_spawn(
+          ioc,
+          [&]() -> boost::asio::awaitable<void> {
+            auto const prima_msg = co_await http_POST(
+                kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+            whitelist_response = get_http_body(prima_msg);
+            std::cout << *whitelist_response << "\n";
+          },
+          boost::asio::detached);
       ioc.run();
     } catch (std::exception const& e) {
       std::cout << "whitelisting failed: " << e.what();
