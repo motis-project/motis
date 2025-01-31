@@ -625,7 +625,7 @@ api::plan_response meta_router::run() {
       .odm_dest_long_ = query_.arriveBy_ ? get_td_offsets(from_rides_long)
                                          : get_td_offsets(to_rides_long)};
 
-  auto const td_str = [&](auto const& tds) {
+  auto const td_str [[maybe_unused]] = [&](auto const& tds) {
     auto ss = std::stringstream{};
     for (auto const& [k, td_offsets] : tds) {
       auto const loc = tt_->locations_.get(k);
@@ -648,11 +648,6 @@ api::plan_response meta_router::run() {
             ep::raptor_state.reset(new n::routing::raptor_state{});
           }
 
-          std::cout << "offsets@start: " << q.start_.size() << "\n";
-          std::cout << "offsets@dest: " << q.destination_.size() << "\n";
-          std::cout << "td_offsets@start:\n" << td_str(q.td_start_) << "\n";
-          std::cout << "td_offsets@dest:\n" << td_str(q.td_dest_) << "\n";
-
           return routing_result{raptor_search(
               *tt_, rtt_, *ep::search_state, *ep::raptor_state, std::move(q),
               query_.arriveBy_ ? n::direction::kBackward
@@ -667,14 +662,14 @@ api::plan_response meta_router::run() {
   tasks.emplace_back(make_task(qf.walk_walk()));
   if (blacklisted) {
     std::cout << "blacklisting successful\n";
-    // tasks.emplace_back(make_task(qf.walk_short()));
-    //    tasks.emplace_back(make_task(qf.walk_long()));
+    tasks.emplace_back(make_task(qf.walk_short()));
+    tasks.emplace_back(make_task(qf.walk_long()));
     tasks.emplace_back(make_task(qf.short_walk()));
-    //    tasks.emplace_back(make_task(qf.long_walk()));
-    //    tasks.emplace_back(make_task(qf.short_short()));
-    //    tasks.emplace_back(make_task(qf.short_long()));
-    //    tasks.emplace_back(make_task(qf.long_short()));
-    //    tasks.emplace_back(make_task(qf.long_long()));
+    tasks.emplace_back(make_task(qf.long_walk()));
+    tasks.emplace_back(make_task(qf.short_short()));
+    tasks.emplace_back(make_task(qf.short_long()));
+    tasks.emplace_back(make_task(qf.long_short()));
+    tasks.emplace_back(make_task(qf.long_long()));
   } else {
     std::cout << "blacklisting failed, omitting ODM routing\n";
   }
@@ -694,6 +689,7 @@ api::plan_response meta_router::run() {
 
   // whitelisting
   auto whitelist_response = std::optional<std::string>{};
+  auto ioc2 = boost::asio::io_context{};
   if (blacklisted) {
     auto const wl_start = std::chrono::steady_clock::now();
     collect_odm_journeys(futures);
@@ -702,21 +698,23 @@ api::plan_response meta_router::run() {
       std::cout << std::format("Requesting whitelisting of {} events\n",
                                p->n_events());
       boost::asio::co_spawn(
-          ioc,
+          ioc2,
           [&]() -> boost::asio::awaitable<void> {
             auto const prima_msg = co_await http_POST(
                 kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
             whitelist_response = get_http_body(prima_msg);
-            std::cout << *whitelist_response << "\n";
           },
           boost::asio::detached);
-      ioc.run();
+      ioc2.run();
     } catch (std::exception const& e) {
       std::cout << "whitelisting failed: " << e.what();
       whitelist_response = std::nullopt;
     }
     print_time(wl_start, "waited for whitelisting response");
   }
+
+  std::cout << "whitelist response has value: " << std::boolalpha
+            << whitelist_response.has_value() << "\n";
 
   // mixing
   auto const mixing_start = std::chrono::steady_clock::now();

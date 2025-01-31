@@ -150,57 +150,72 @@ bool prima::blacklist_update(std::string_view json) {
   return success;
 }
 
+auto const parse_time = [](std::string_view s) {
+  std::stringstream in;
+  in.exceptions(std::ios::badbit | std::ios::failbit);
+  in << s;
+
+  std::cout << "trying to parse time: " << s;
+
+  std::chrono::sys_time<std::chrono::duration<double>> d;
+  in >> date::parse(kPrimaTimeFormat, d);
+
+  std::cout << " ...success\n";
+
+  return std::chrono::time_point_cast<n::unixtime_t::duration>(d);
+};
+
+template <which_mile Wm>
+auto update_pt_rides(auto& rides, auto& prev_rides, auto const& update) {
+  std::swap(rides, prev_rides);
+  rides.clear();
+  auto prev_it = std::begin(prev_rides);
+  for (auto const& stop : update) {
+    for (auto const& event : stop.as_array()) {
+      if (event.is_null()) {
+        rides.emplace_back(kInfeasible, kInfeasible, prev_it->stop_);
+      } else {
+        auto const time_at_coord_str =
+            Wm == kFirstMile
+                ? value_to<std::string>(event.as_object().at("pickupTime"))
+                : value_to<std::string>(event.as_object().at("dropoffTime"));
+        auto const time_at_stop_str =
+            Wm == kFirstMile
+                ? value_to<std::string>(event.as_object().at("dropoffTime"))
+                : value_to<std::string>(event.as_object().at("pickupTime"));
+        rides.emplace_back(parse_time(time_at_coord_str),
+                           parse_time(time_at_stop_str), prev_it->stop_);
+      }
+      ++prev_it;
+      if (prev_it == end(prev_rides)) {
+        return;
+      }
+    }
+  }
+}
+
+auto update_direct_rides(auto& rides, auto const& update) {
+  rides.clear();
+  for (auto const& ride : update) {
+    if (ride.is_null()) {
+      continue;
+    }
+    rides.emplace_back(
+        parse_time(value_to<std::string>(ride.as_object().at("pickupTime"))),
+        parse_time(value_to<std::string>(ride.as_object().at("dropoffTime"))));
+  }
+};
+
 bool prima::whitelist_update(std::string_view json) {
   auto success = true;
 
-  auto const update_pt_rides = [](auto& rides, auto& prev_rides,
-                                  auto const& update) {
-    std::swap(rides, prev_rides);
-    rides.clear();
-    auto prev_it = std::begin(prev_rides);
-    for (auto const& stop : update) {
-      for (auto const& time : stop.as_array()) {
-        if (time.is_null()) {
-          rides.emplace_back(kInfeasible, prev_it->time_at_stop_,
-                             prev_it->stop_);
-        } else {
-          rides.emplace_back(
-              n::parse_time(value_to<std::string>(time), kPrimaTimeFormat),
-              prev_it->time_at_stop_, prev_it->stop_);
-        }
-        ++prev_it;
-        if (prev_it == end(prev_rides)) {
-          return;
-        }
-      }
-    }
-  };
-
-  auto const update_direct_rides = [&](auto& rides, auto& prev_rides,
-                                       auto const& update) {
-    std::swap(rides, prev_rides);
-    rides.clear();
-    for (auto const& [prev, time_str] : utl::zip(prev_rides, update)) {
-      if (!time_str.is_null()) {
-        if (fixed_ == kDep) {
-          rides.emplace_back(
-              prev.dep_,
-              n::parse_time(value_to<std::string>(time_str), kPrimaTimeFormat));
-        } else {
-          rides.emplace_back(
-              n::parse_time(value_to<std::string>(time_str), kPrimaTimeFormat),
-              prev.arr_);
-        }
-      }
-    }
-  };
-
   try {
     auto const o = boost::json::parse(json).as_object();
-    update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array());
-    update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
-    update_direct_rides(direct_rides_, prev_direct_rides_,
-                        o.at("direct").as_array());
+    update_pt_rides<kFirstMile>(from_rides_, prev_from_rides_,
+                                o.at("start").as_array());
+    update_pt_rides<kLastMile>(to_rides_, prev_to_rides_,
+                               o.at("target").as_array());
+    update_direct_rides(direct_rides_, o.at("direct").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\nInvalid whitelist response: " << json << "\n";
     success = false;
@@ -228,13 +243,15 @@ void prima::adjust_to_whitelisting() {
         if (uses_prev_from(j)) {
           auto const l = begin(j.legs_);
           l->dep_time_ = from_ride.time_at_start_;
-          l->arr_time_ = from_ride.time_at_stop_ - kODMTransferBuffer;
+          l->arr_time_ = from_ride.time_at_stop_;
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
           j.start_time_ = l->dep_time_;
-          j.legs_.emplace(std::next(l), n::direction::kForward, l->to_, l->to_,
-                          l->arr_time_, l->arr_time_ + kODMTransferBuffer,
-                          n::footpath{l->to_, kODMTransferBuffer});
+          // fill gap (transfer/waiting) with footpath
+          j.legs_.emplace(
+              std::next(l), n::direction::kForward, l->to_, l->to_,
+              l->arr_time_, std::next(l)->dep_time_,
+              n::footpath{l->to_, std::next(l)->dep_time_ - l->arr_time_});
         }
       }
     }
@@ -257,14 +274,16 @@ void prima::adjust_to_whitelisting() {
       for (auto& j : odm_journeys_) {
         if (uses_prev_to(j)) {
           auto const l = std::prev(end(j.legs_));
-          l->dep_time_ = to_ride.time_at_stop_ + kODMTransferBuffer;
+          l->dep_time_ = to_ride.time_at_stop_;
           l->arr_time_ = to_ride.time_at_start_;
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
           j.dest_time_ = l->arr_time_;
-          j.legs_.emplace(l, n::direction::kForward, l->from_, l->from_,
-                          l->dep_time_ - kODMTransferBuffer, l->dep_time_,
-                          n::footpath{l->from_, kODMTransferBuffer});
+          // fill gap (transfer/waiting) with footpath
+          j.legs_.emplace(
+              l, n::direction::kForward, l->from_, l->from_,
+              std::prev(l)->arr_time_, l->dep_time_,
+              n::footpath{l->from_, l->dep_time_ - std::prev(l)->arr_time_});
         }
       }
     }
