@@ -144,10 +144,6 @@ std::vector<n::routing::offset> routing::get_offsets(
   auto ignore_walk = false;
 
   auto const handle_mode = [&](api::ModeEnum const m) {
-    if (m == api::ModeEnum::ODM) {
-      return;
-    }
-
     auto const profile = to_profile(m, wheelchair);
 
     if (rt_->e_ && profile == osr::search_profile::kWheelchair) {

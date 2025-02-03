@@ -74,8 +74,8 @@ private:
   gbfs::gbfs_routing_data gbfs_rd_;
   std::variant<osr::location, tt_location> const& start_;
   std::variant<osr::location, tt_location> const& dest_;
-  std::vector<api::ModeEnum> const& start_modes_;
-  std::vector<api::ModeEnum> const& dest_modes_;
+  std::vector<api::ModeEnum> start_modes_;
+  std::vector<api::ModeEnum> dest_modes_;
 
   std::optional<std::vector<api::RentalFormFactorEnum>> const&
       start_form_factors_;
