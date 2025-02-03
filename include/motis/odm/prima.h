@@ -16,7 +16,9 @@ struct routing;
 
 namespace motis::odm {
 
-constexpr auto const kPrimaTimeFormat = "%Y-%m-%dT%H:%M:%SZ";
+constexpr auto const kPrimaTimeFormat = "%FT%TZ";
+
+nigiri::unixtime_t parse_time(std::string_view);
 
 enum fixed { kArr, kDep };
 

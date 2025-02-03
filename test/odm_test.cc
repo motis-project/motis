@@ -3,6 +3,7 @@
 #include "nigiri/loader/dir.h"
 #include "nigiri/loader/gtfs/load_timetable.h"
 #include "nigiri/loader/init_finish.h"
+#include "nigiri/common/parse_time.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
@@ -15,6 +16,7 @@
 namespace n = nigiri;
 using namespace motis::odm;
 using namespace std::chrono_literals;
+using namespace date;
 
 static auto const kOdmMixer = mixer{.alpha_ = 1.5,
                                     .beta_ = 0.1,
@@ -190,38 +192,38 @@ constexpr auto const blacklisted =
 
 constexpr auto const whitelisting_response = R"(
 {
-  "start": [["1970-01-01T09:45:00Z"],[null]],
-  "target": [["1970-01-01T14:05:00Z"]],
-  "direct": ["1970-01-01T12:30:00Z"]
+  "start": [[{"pickupTime": "1970-01-01T09:57:00Z", "dropoffTime": "1970-01-01T10:55:00Z"}],[null]],
+  "target": [[{"pickupTime": "1970-01-01T14:07:00Z", "dropoffTime": "1970-01-01T14:46:00Z"}]],
+  "direct": [{"pickupTime": "1970-01-01T11:30:00Z","dropoffTime": "1970-01-01T12:30:00Z"}]
 }
 )";
 
 constexpr auto const adjusted_to_whitelisting = R"(
-[1970-01-01 09:45, 1970-01-01 12:00]
+[1970-01-01 09:57, 1970-01-01 12:00]
 TRANSFERS: 0
-     FROM: (START, START) [1970-01-01 09:45]
+     FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 12:00]
-leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=5, duration=70)
+leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
+  MUMO (id=5, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
   MUMO (id=0, duration=60)
 
-[1970-01-01 09:45, 1970-01-01 14:05]
+[1970-01-01 09:57, 1970-01-01 14:46]
 TRANSFERS: 0
-     FROM: (START, START) [1970-01-01 09:45]
-       TO: (END, END) [1970-01-01 14:05]
-leg 0: (START, START) [1970-01-01 09:45] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=5, duration=70)
+     FROM: (START, START) [1970-01-01 09:57]
+       TO: (END, END) [1970-01-01 14:46]
+leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
+  MUMO (id=5, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
   FOOTPATH (duration=120)
-leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 13:05]
-  FOOTPATH (duration=5)
-leg 4: (C, C) [1970-01-01 13:05] -> (END, END) [1970-01-01 14:05]
-  MUMO (id=5, duration=60)
+leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 14:07]
+  FOOTPATH (duration=67)
+leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
+  MUMO (id=5, duration=39)
 
 )";
 
@@ -268,11 +270,10 @@ TEST(odm, prima_update) {
 
   EXPECT_EQ(initial, p.get_msg_str(tt));
   EXPECT_FALSE(p.blacklist_update(invalid_response));
-  p.blacklist_update(blacklisting_response);
+  EXPECT_TRUE(p.blacklist_update(blacklisting_response));
   EXPECT_EQ(blacklisted, p.get_msg_str(tt));
   EXPECT_FALSE(p.whitelist_update(invalid_response));
-  p.whitelist_update(whitelisting_response);
-  EXPECT_EQ(blacklisted, p.get_msg_str(tt));
+  EXPECT_TRUE(p.whitelist_update(whitelisting_response));
 
   p.odm_journeys_.push_back(
       {.legs_ = {{n::direction::kForward,
@@ -326,4 +327,11 @@ TEST(odm, prima_update) {
   }
 
   EXPECT_EQ(adjusted_to_whitelisting, ss.str());
+}
+
+TEST(odm, parse_time) {
+  EXPECT_EQ(n::unixtime_t{sys_days{2020_y / April / 2}} + 7h + 3min,
+            parse_time("2020-04-2T07:03:22.456Z"));
+  EXPECT_EQ(n::unixtime_t{sys_days{2020_y / April / 2}} + 7h + 4min,
+            parse_time("2020-04-2T07:03:44.456Z"));
 }

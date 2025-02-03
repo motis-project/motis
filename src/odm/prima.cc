@@ -150,19 +150,15 @@ bool prima::blacklist_update(std::string_view json) {
   return success;
 }
 
-auto const parse_time = [](std::string_view s) {
+n::unixtime_t parse_time(std::string_view s) {
   std::stringstream in;
   in.exceptions(std::ios::badbit | std::ios::failbit);
   in << s;
 
-  std::cout << "trying to parse time: " << s;
+  std::chrono::system_clock::time_point tp;
+  in >> date::parse(kPrimaTimeFormat, tp);
 
-  std::chrono::sys_time<std::chrono::duration<double>> d;
-  in >> date::parse(kPrimaTimeFormat, d);
-
-  std::cout << " ...success\n";
-
-  return std::chrono::time_point_cast<n::unixtime_t::duration>(d);
+  return std::chrono::round<n::unixtime_t::duration>(tp);
 };
 
 template <which_mile Wm>
