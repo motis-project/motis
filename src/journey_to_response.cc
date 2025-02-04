@@ -35,7 +35,6 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kCarParking: return api::ModeEnum::CAR_PARKING;
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
-    case osr::search_profile::kODM: return api::ModeEnum::ODM;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
     case osr::search_profile::kBikeSharing: return api::ModeEnum::RENTAL;
@@ -180,6 +179,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   *w, *l, gbfs_rd, e, from, to,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? api::ModeEnum::RENTAL
+                  : api::ModeEnum{x.transport_mode_id_} == api::ModeEnum::ODM
+                      ? api::ModeEnum::ODM
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,

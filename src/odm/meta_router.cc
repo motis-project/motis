@@ -666,7 +666,7 @@ api::plan_response meta_router::run() {
   kOdmMixer.mix(pt_result.journeys_, p->odm_journeys_);
   extract_direct();
   print_time(mixing_start, "[mixing]");
-
+  
   return {.from_ = from_place_,
           .to_ = to_place_,
           .direct_ = std::move(direct_),

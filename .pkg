@@ -7,9 +7,9 @@
   branch=master
   commit=6362f3ad8c3133a0abf64e5d8c9ea3e21f531ee8
 [osr]
-  url=git@github.com:mority/osr.git
-  branch=odm
-  commit=08abf628ad36d3816f0e213cf2f690ea9b1ce5b0
+  url=git@github.com:motis-project/osr.git
+  branch=master
+  commit=650e05c5dc59598f84a5e9bae2db75d5cc3433b8
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
