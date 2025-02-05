@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
+	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import Accessibility from 'lucide-svelte/icons/accessibility';
 	import Bike from 'lucide-svelte/icons/bike';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
@@ -7,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import DateInput from '$lib/DateInput.svelte';
-	import { type Location } from '$lib/Location';
+	import { posToLocation, type Location } from '$lib/Location';
 	import { Toggle } from '$lib/components/ui/toggle';
 	import { t } from '$lib/i18n/translation';
 
@@ -29,13 +30,33 @@
 
 	let fromItems = $state<Array<Location>>([]);
 	let toItems = $state<Array<Location>>([]);
+
+	const getLocation = () => {
+		if (navigator && navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(applyPosition, (e) => console.log(e), {
+				enableHighAccuracy: true
+			});
+		}
+	};
+
+	const applyPosition = (position: GeolocationPosition) => {
+		from = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
+	};
 </script>
 
 <div id="searchmask-container" class="flex flex-col space-y-4 p-4 relative">
 	<AddressTypeahead name="from" placeholder={t.from} bind:selected={from} bind:items={fromItems} />
 	<AddressTypeahead name="to" placeholder={t.to} bind:selected={to} bind:items={toItems} />
 	<Button
-		class="absolute z-10 right-12 top-6"
+		variant="ghost"
+		class="absolute z-10 right-4 top-0"
+		size="icon"
+		onclick={() => getLocation()}
+	>
+		<LocateFixed class="w-5 h-5" />
+	</Button>
+	<Button
+		class="absolute z-10 right-14 top-6"
 		variant="outline"
 		size="icon"
 		onclick={() => {

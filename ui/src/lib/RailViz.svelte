@@ -15,6 +15,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import Palette from 'lucide-svelte/icons/palette';
 	import Rss from 'lucide-svelte/icons/rss';
+	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import { browser } from '$app/environment';
 
 	let {
@@ -248,6 +249,17 @@
 		}, 60000);
 	};
 
+	const geolocate = new maplibregl.GeolocateControl({
+		positionOptions: {
+			enableHighAccuracy: true
+		},
+		showAccuracyCircle: false
+	});
+
+	const getLocation = () => {
+		geolocate.trigger();
+	};
+
 	$effect(() => {
 		if (map && !overlay) {
 			overlay = new MapboxOverlay({
@@ -270,6 +282,7 @@
 					onClickTrip(object.trips[0].tripId);
 				}
 			});
+			map.addControl(geolocate);
 			map.addControl(overlay);
 
 			console.log('updateRailviz: init');
@@ -310,6 +323,9 @@
 		{:else}
 			<Palette class="h-[1.2rem] w-[1.2rem]" />
 		{/if}
+	</Button>
+	<Button size="icon" onclick={() => getLocation()}>
+		<LocateFixed class="w-5 h-5" />
 	</Button>
 </Control>
 
