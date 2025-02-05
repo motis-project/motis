@@ -28,6 +28,7 @@ struct config {
 
   bool requires_rt_timetable_updates() const;
   bool has_gbfs_feeds() const;
+  bool has_odm_providers() const;
 
   bool operator==(config const&) const = default;
 
@@ -120,6 +121,19 @@ struct config {
     std::optional<std::string> proxy_{};
   };
   std::optional<gbfs> gbfs_{};
+
+  struct odm {
+    bool operator==(odm const&) const = default;
+
+    struct provider {
+      bool operator==(provider const&) const = default;
+      std::optional<std::string> blacklist_url_;
+      std::string whitelist_url_;
+      std::string booking_url_;
+    };
+    std::map<std::string, provider> providers_{};
+  };
+  std::optional<odm> odm_{};
 
   bool street_routing_{false};
   bool osr_footpath_{false};

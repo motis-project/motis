@@ -107,12 +107,10 @@ void mixer::cost_domination(
 void mixer::productivity_domination(
     std::vector<n::routing::journey>& odm_journeys) const {
   auto const cost = [&](auto const& j) -> double {
-    std::cout << "in cost\n";
     return j.travel_time().count() + transfer_cost(j);
   };
 
   auto const taxi_time = [](n::routing::journey const& j) -> double {
-    std::cout << "in taxi_time\n";
     return (is_odm_leg(j.legs_.front())
                 ? std::get<n::routing::offset>(j.legs_.front().uses_)
                       .duration()
@@ -140,7 +138,7 @@ void mixer::productivity_domination(
 
 void mixer::mix(n::pareto_set<n::routing::journey> const& pt_journeys,
                 std::vector<n::routing::journey>& odm_journeys) const {
-  // cost_domination(pt_journeys, odm_journeys);
+  cost_domination(pt_journeys, odm_journeys);
   // productivity_domination(odm_journeys);
   odm_journeys.append_range(pt_journeys);
   utl::sort(odm_journeys, [](auto const& a, auto const& b) {
