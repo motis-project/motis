@@ -4,6 +4,7 @@
 
 #include "boost/json.hpp"
 
+#include "utl/pipes.h"
 #include "utl/zip.h"
 
 #include "nigiri/common/parse_time.h"
@@ -14,6 +15,7 @@
 namespace motis::odm {
 
 namespace n = nigiri;
+namespace json = boost::json;
 
 static constexpr auto const kInfeasible =
     std::numeric_limits<n::unixtime_t>::min();
@@ -24,81 +26,75 @@ void prima::init(api::Place const& from,
   from_ = geo::latlng{from.lat_, from.lon_};
   to_ = geo::latlng{to.lat_, to.lon_};
   fixed_ = query.arriveBy_ ? kArr : kDep;
-  cap_ = {.wheelchairs_ = static_cast<std::uint8_t>(
-              query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
-                  ? 1U
-                  : 0U),
-          .bikes_ =
-              static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1U : 0U),
-          .passengers_ = 1U,
-          .luggage_ = 0U};
+  cap_ = {
+      .wheelchairs_ = static_cast<std::uint8_t>(
+          query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
+              ? 1
+              : 0),
+      .bikes_ = static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1 : 0),
+      .passengers_ = 1U,
+      .luggage_ = 0U};
 }
 
-boost::json::value json(geo::latlng const& p) {
-  return {{"lat", p.lat_}, {"lng", p.lng_}};
-}
-
-boost::json::value json(n::unixtime_t const t) {
-  return {date::format(kPrimaTimeFormat, t)};
-}
-
-template <which_mile Wm>
-boost::json::value json(n::routing::start const& s) {
-  if constexpr (Wm == which_mile::kFirstMile) {
-    return json(s.time_at_stop_ - kODMTransferBuffer);
-  } else {
-    return json(s.time_at_stop_ + kODMTransferBuffer);
-  }
+std::uint64_t to_millis(n::unixtime_t const t) {
+  return std::chrono::duration_cast<std::chrono::milliseconds>(
+             t.time_since_epoch())
+      .count();
 }
 
 template <which_mile Wm>
-boost::json::array json(std::vector<n::routing::start> const& v,
-                        n::timetable const& tt) {
-  auto a = boost::json::array{};
+json::array to_json(std::vector<n::routing::start> const& v,
+                    n::timetable const& tt) {
+  auto a = json::array{};
   utl::equal_ranges_linear(
       v,
       [](n::routing::start const& a, n::routing::start const& b) {
         return a.stop_ == b.stop_;
       },
       [&](auto&& from_it, auto&& to_it) {
-        a.emplace_back(boost::json::value{
-            {"coordinates", json(tt.locations_.coordinates_[from_it->stop_])},
-            {"times", boost::json::array{}}});
-        auto& times = a.back().at("times").as_array();
-        for (auto const& s : n::it_range{from_it, to_it}) {
-          times.emplace_back(json<Wm>(s));
-        }
+        auto const& pos = tt.locations_.coordinates_[from_it->stop_];
+        a.emplace_back(json::value{
+            {"lat", pos.lat_},
+            {"lng", pos.lng_},
+            {"times",
+             utl::all(from_it, to_it) |
+                 utl::transform([](n::routing::start const& s) {
+                   return Wm == which_mile::kFirstMile
+                              ? to_millis(s.time_at_stop_ - kODMTransferBuffer)
+                              : to_millis(s.time_at_stop_ + kODMTransferBuffer);
+                 }) |
+                 utl::emplace_back_to<json::array>()}});
       });
   return a;
 }
 
-boost::json::array json(std::vector<direct_ride> const& v, fixed const f) {
-  auto a = boost::json::array{};
-  for (auto const& r : v) {
-    a.emplace_back(json(f == kDep ? r.dep_ : r.arr_));
-  }
-  return a;
+json::array to_json(std::vector<direct_ride> const& v, fixed const f) {
+  return utl::all(v)  //
+         | utl::transform([&](direct_ride const& r) {
+             return to_millis(f == kDep ? r.dep_ : r.arr_);
+           })  //
+         | utl::emplace_back_to<json::array>();
 }
 
-boost::json::value json(capacities const& c) {
+json::value to_json(capacities const& c) {
   return {{"wheelchairs", c.wheelchairs_},
           {"bikes", c.bikes_},
           {"passengers", c.passengers_},
           {"luggage", c.luggage_}};
 }
 
-boost::json::value json(prima const& p, n::timetable const& tt) {
-  return {{"start", json(p.from_)},
-          {"target", json(p.to_)},
-          {"startBusStops", json<kFirstMile>(p.from_rides_, tt)},
-          {"targetBusStops", json<kLastMile>(p.to_rides_, tt)},
-          {"times", json(p.direct_rides_, p.fixed_)},
+json::value to_json(prima const& p, n::timetable const& tt) {
+  return {{"start", {{"lat", p.from_.lat_}, {"lng", p.from_.lng_}}},
+          {"target", {{"lat", p.to_.lat_}, {"lng", p.to_.lng_}}},
+          {"startBusStops", to_json<kFirstMile>(p.from_rides_, tt)},
+          {"targetBusStops", to_json<kLastMile>(p.to_rides_, tt)},
+          {"directTimes", to_json(p.direct_rides_, p.fixed_)},
           {"startFixed", p.fixed_ == fixed::kDep},
-          {"capacities", json(p.cap_)}};
+          {"capacities", to_json(p.cap_)}};
 }
 
 std::string prima::get_msg_str(n::timetable const& tt) const {
-  return boost::json::serialize(json(*this, tt));
+  return json::serialize(to_json(*this, tt));
 }
 
 size_t prima::n_events() const {
@@ -126,19 +122,20 @@ bool prima::blacklist_update(std::string_view json) {
     }
   };
 
-  auto const update_direct_rides = [](auto& rides, auto& prev_rides,
-                                      auto const& update) {
+  auto const update_direct_rides = [](std::vector<direct_ride>& rides,
+                                      std::vector<direct_ride>& prev_rides,
+                                      json::array const& update) {
     std::swap(rides, prev_rides);
     rides.clear();
     for (auto const& [prev, feasible] : utl::zip(prev_rides, update)) {
-      if (value_to<bool>(feasible)) {
+      if (feasible.as_bool()) {
         rides.emplace_back(prev);
       }
     }
   };
 
   try {
-    auto const o = boost::json::parse(json).as_object();
+    auto const o = json::parse(json).as_object();
     update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array());
     update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
     update_direct_rides(direct_rides_, prev_direct_rides_,
@@ -162,7 +159,9 @@ n::unixtime_t parse_time(std::string_view s) {
 };
 
 template <which_mile Wm>
-auto update_pt_rides(auto& rides, auto& prev_rides, auto const& update) {
+void update_pt_rides(std::vector<nigiri::routing::start>& rides,
+                     std::vector<nigiri::routing::start>& prev_rides,
+                     json::array const& update) {
   std::swap(rides, prev_rides);
   rides.clear();
   auto prev_it = std::begin(prev_rides);
@@ -190,7 +189,7 @@ auto update_pt_rides(auto& rides, auto& prev_rides, auto const& update) {
   }
 }
 
-auto update_direct_rides(auto& rides, auto const& update) {
+void update_direct_rides(auto& rides, auto const& update) {
   rides.clear();
   for (auto const& ride : update) {
     if (ride.is_null()) {
@@ -200,13 +199,13 @@ auto update_direct_rides(auto& rides, auto const& update) {
         parse_time(value_to<std::string>(ride.as_object().at("pickupTime"))),
         parse_time(value_to<std::string>(ride.as_object().at("dropoffTime"))));
   }
-};
+}
 
 bool prima::whitelist_update(std::string_view json) {
   auto success = true;
 
   try {
-    auto const o = boost::json::parse(json).as_object();
+    auto const o = json::parse(json).as_object();
     update_pt_rides<kFirstMile>(from_rides_, prev_from_rides_,
                                 o.at("start").as_array());
     update_pt_rides<kLastMile>(to_rides_, prev_to_rides_,

@@ -124,13 +124,12 @@ void mixer::productivity_domination(
   };
 
   auto const is_dominated = [&](auto const& b) {
-    auto const dominates = [&](auto const& a) {
+    auto const dominates_b = [&](auto const& a) {
       auto const prod_a = cost(b) / taxi_time(a);
       auto const prod_b = (cost(a) + beta_ * distance(a, b)) / taxi_time(b);
       return prod_a > prod_b;
     };
-
-    return std::any_of(begin(odm_journeys), end(odm_journeys), dominates);
+    return utl::any_of(odm_journeys, dominates_b);
   };
 
   std::erase_if(odm_journeys, is_dominated);

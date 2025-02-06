@@ -9,6 +9,8 @@
 #include "boost/fiber/future/packaged_task.hpp"
 #include "boost/thread/tss.hpp"
 
+#include "utl/erase_duplicates.h"
+
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
@@ -183,8 +185,6 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
-  static auto const kNoTdOffsets =
-      hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
 
   auto offsets = r.get_offsets(
       l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt, std::nullopt,
@@ -204,7 +204,7 @@ void init_pt(std::vector<n::routing::start>& rides,
   n::routing::get_starts(
       dir == osr::direction::kForward ? n::direction::kForward
                                       : n::direction::kBackward,
-      tt, rtt, intvl, offsets, kNoTdOffsets, n::routing::kMaxTravelTime,
+      tt, rtt, intvl, offsets, {}, n::routing::kMaxTravelTime,
       location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
 
@@ -323,7 +323,7 @@ auto collect_odm_journeys(auto& futures) {
                            p->odm_journeys_.size());
 }
 
-auto extract_rides() {
+void extract_rides() {
   p->from_rides_.clear();
   p->to_rides_.clear();
   for (auto const& j : p->odm_journeys_) {
@@ -347,35 +347,23 @@ auto extract_rides() {
     }
   }
 
-  auto const remove_dupes = [&](auto& rides) {
-    utl::sort(rides, ride_comp);
-    rides.erase(std::unique(begin(rides), end(rides),
-                            [](auto&& a, auto&& b) {
-                              return std::tie(a.stop_, a.time_at_start_,
-                                              a.time_at_stop_) ==
-                                     std::tie(b.stop_, b.time_at_start_,
-                                              b.time_at_stop_);
-                            }),
-                end(rides));
-  };
-
-  remove_dupes(p->from_rides_);
-  remove_dupes(p->to_rides_);
+  utl::erase_duplicates(p->from_rides_, ride_comp, std::equal_to<>{});
+  utl::erase_duplicates(p->to_rides_, ride_comp, std::equal_to<>{});
 }
 
 void add_direct() {
   for (auto const& d : p->direct_rides_) {
-    p->odm_journeys_.push_back(n::routing::journey{
-        .legs_ = {n::routing::journey::leg{
-            n::direction::kForward,
-            get_special_station(n::special_station::kStart),
-            get_special_station(n::special_station::kEnd), d.dep_, d.arr_,
-            n::routing::offset{get_special_station(n::special_station::kEnd),
-                               std::chrono::abs(d.arr_ - d.dep_), kODM}}},
-        .start_time_ = d.dep_,
-        .dest_time_ = d.arr_,
-        .dest_ = get_special_station(n::special_station::kEnd),
-        .transfers_ = 0U});
+    p->odm_journeys_.push_back(
+        {.legs_ =
+             {{n::direction::kForward,
+               get_special_station(n::special_station::kStart),
+               get_special_station(n::special_station::kEnd), d.dep_, d.arr_,
+               n::routing::offset{get_special_station(n::special_station::kEnd),
+                                  std::chrono::abs(d.arr_ - d.dep_), kODM}}},
+         .start_time_ = d.dep_,
+         .dest_time_ = d.arr_,
+         .dest_ = get_special_station(n::special_station::kEnd),
+         .transfers_ = 0U});
   }
   std::cout << "[whitelisting] added " << p->direct_rides_.size()
             << " direct rides\n";

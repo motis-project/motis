@@ -462,15 +462,16 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
 
-    auto const odm_pre_transit =
-        std::find(begin(pre_transit_modes), end(pre_transit_modes),
-                  api::ModeEnum::ODM) != end(pre_transit_modes);
-    auto const odm_post_transit =
-        std::find(begin(post_transit_modes), end(post_transit_modes),
-                  api::ModeEnum::ODM) != end(post_transit_modes);
-    auto const odm_direct = std::find(begin(direct_modes), end(direct_modes),
-                                      api::ModeEnum::ODM) != end(direct_modes);
-    if (odm_pre_transit || odm_post_transit || odm_direct) {
+    auto const with_odm_pre_transit =
+        utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
+        end(pre_transit_modes);
+    auto const with_odm_post_transit =
+        utl::find(post_transit_modes, api::ModeEnum::ODM) !=
+        end(post_transit_modes);
+    auto const with_odm_direct =
+        utl::find(direct_modes, api::ModeEnum::ODM) != end(direct_modes);
+
+    if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct) {
       return odm::meta_router{*this,
                               query,
                               pre_transit_modes,
@@ -483,9 +484,9 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                               start_time,
                               direct,
                               fastest_direct,
-                              odm_pre_transit,
-                              odm_post_transit,
-                              odm_direct}
+                              with_odm_pre_transit,
+                              with_odm_post_transit,
+                              with_odm_direct}
           .run();
     }
 
