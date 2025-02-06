@@ -126,7 +126,11 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived(['WALK', ...(bikeRental ? ['RENTAL'] : []), ...(onDemandTaxi ? ['ODM'] : [])] as Mode[]);
+	let modes = $derived([
+		'WALK',
+		...(bikeRental ? ['RENTAL'] : []),
+		...(onDemandTaxi ? ['ODM'] : [])
+	] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -292,13 +296,21 @@
 		</Control>
 	{/if}
 
-    {#if !isSmallScreen || (!page.state.selectedItinerary && !page.state.selectedStop)}
-        <Control position="top-left">
-            <Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-                <SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental bind:onDemandTaxi />
-            </Card>
-        </Control>
-    {/if}
+	{#if !isSmallScreen || (!page.state.selectedItinerary && !page.state.selectedStop)}
+		<Control position="top-left">
+			<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+				<SearchMask
+					bind:from
+					bind:to
+					bind:time
+					bind:timeType
+					bind:wheelchair
+					bind:bikeRental
+					bind:onDemandTaxi
+				/>
+			</Card>
+		</Control>
+	{/if}
 
 	<LevelSelect {bounds} {zoom} bind:level />
 

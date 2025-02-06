@@ -103,7 +103,7 @@
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
-				{#if (pred && (pred.from.track || pred.duration !== 0))}
+				{#if pred && (pred.from.track || pred.duration !== 0)}
 					{@render transferNote(pred)}
 				{/if}
 				<div class="border-t h-0 grow shrink"></div>

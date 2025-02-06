@@ -78,9 +78,9 @@
 			<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
 				<Bike class="h-6 w-6" />
 			</Toggle>
-            <Toggle aria-label="toggle bold" bind:pressed={onDemandTaxi}>
-                <CarTaxiFront class="h-6 w-6" />
-            </Toggle>
+			<Toggle aria-label="toggle bold" bind:pressed={onDemandTaxi}>
+				<CarTaxiFront class="h-6 w-6" />
+			</Toggle>
 		</div>
 	</div>
 </div>
