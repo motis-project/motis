@@ -233,8 +233,8 @@ TEST(odm, prima_update) {
   using namespace nigiri::loader::gtfs;
 
   timetable tt;
-  tt.date_range_ = {2017y / std::chrono::January / 1,
-                    2017y / std::chrono::January / 2};
+  tt.date_range_ = {date::sys_days{2017_y / January / 1},
+                    date::sys_days{2017_y / January / 2}};
   register_special_stations(tt);
   auto const src = source_idx_t{0};
   gtfs::load_timetable({}, src, tt_files(), tt);
