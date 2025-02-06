@@ -6,8 +6,6 @@ namespace motis::odm {
 
 namespace n = nigiri;
 
-static constexpr auto const kEmpty = std::vector<n::routing::offset>{};
-
 n::routing::query query_factory::make(
     std::vector<n::routing::offset> const& start,
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>> const&
@@ -44,35 +42,35 @@ n::routing::query query_factory::walk_walk() const {
 }
 
 n::routing::query query_factory::walk_short() const {
-  return make(start_walk_, td_start_walk_, kEmpty, odm_dest_short_);
+  return make(start_walk_, td_start_walk_, {}, odm_dest_short_);
 }
 
 n::routing::query query_factory::walk_long() const {
-  return make(start_walk_, td_start_walk_, kEmpty, odm_dest_long_);
+  return make(start_walk_, td_start_walk_, {}, odm_dest_long_);
 }
 
 n::routing::query query_factory::short_walk() const {
-  return make(kEmpty, odm_start_short_, dest_walk_, td_dest_walk_);
+  return make({}, odm_start_short_, dest_walk_, td_dest_walk_);
 }
 
 n::routing::query query_factory::long_walk() const {
-  return make(kEmpty, odm_start_long_, dest_walk_, td_dest_walk_);
+  return make({}, odm_start_long_, dest_walk_, td_dest_walk_);
 }
 
 n::routing::query query_factory::short_short() const {
-  return make(kEmpty, odm_start_short_, kEmpty, odm_dest_short_);
+  return make({}, odm_start_short_, {}, odm_dest_short_);
 }
 
 n::routing::query query_factory::short_long() const {
-  return make(kEmpty, odm_start_short_, kEmpty, odm_dest_long_);
+  return make({}, odm_start_short_, {}, odm_dest_long_);
 }
 
 n::routing::query query_factory::long_short() const {
-  return make(kEmpty, odm_start_long_, kEmpty, odm_dest_short_);
+  return make({}, odm_start_long_, {}, odm_dest_short_);
 }
 
 n::routing::query query_factory::long_long() const {
-  return make(kEmpty, odm_start_long_, kEmpty, odm_dest_long_);
+  return make({}, odm_start_long_, {}, odm_dest_long_);
 }
 
 }  // namespace motis::odm
