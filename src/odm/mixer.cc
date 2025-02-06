@@ -140,7 +140,9 @@ void mixer::mix(n::pareto_set<n::routing::journey> const& pt_journeys,
                 std::vector<n::routing::journey>& odm_journeys) const {
   cost_domination(pt_journeys, odm_journeys);
   productivity_domination(odm_journeys);
-  odm_journeys.append_range(pt_journeys);
+  for (auto const& j : pt_journeys) {
+    odm_journeys.emplace_back(j);
+  }
   utl::sort(odm_journeys, [](auto const& a, auto const& b) {
     return a.departure_time() < b.departure_time();
   });

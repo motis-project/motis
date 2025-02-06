@@ -315,7 +315,9 @@ auto get_td_offsets(auto const& rides) {
 auto collect_odm_journeys(auto& futures) {
   p->odm_journeys_.clear();
   for (auto& f : futures | std::views::drop(1)) {
-    p->odm_journeys_.append_range(f.get().journeys_);
+    for (auto& j : f.get().journeys_) {
+      p->odm_journeys_.emplace_back(std::move(j));
+    }
   }
   std::cout << std::format("[whitelisting] collected {} ODM-PT journeys\n",
                            p->odm_journeys_.size());
