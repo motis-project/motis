@@ -26,7 +26,6 @@ namespace motis {
 int generate(int, char**);
 int batch(int, char**);
 int compare(int, char**);
-int odm_calibrate(int, char**);
 }  // namespace motis
 
 using namespace motis;
