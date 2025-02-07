@@ -175,7 +175,9 @@ void update_pt_rides(std::vector<nigiri::routing::start>& rides,
             wm == kFirstMile
                 ? to_unix(event.as_object().at("dropoffTime").as_int64())
                 : to_unix(event.as_object().at("pickupTime").as_int64());
-        rides.emplace_back(time_at_coord_str, time_at_stop_str, prev_it->stop_);
+        rides.push_back({.time_at_start_ = time_at_coord_str,
+                         .time_at_stop_ = time_at_stop_str,
+                         .stop_ = prev_it->stop_});
       }
       ++prev_it;
       if (prev_it == end(prev_rides)) {
