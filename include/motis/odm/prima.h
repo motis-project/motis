@@ -16,8 +16,6 @@ struct routing;
 
 namespace motis::odm {
 
-enum fixed { kArr, kDep };
-
 struct direct_ride {
   nigiri::unixtime_t dep_;
   nigiri::unixtime_t arr_;

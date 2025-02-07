@@ -190,7 +190,6 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
-
   auto offsets = r.get_offsets(
       l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt, std::nullopt,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,

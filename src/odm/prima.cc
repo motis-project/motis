@@ -26,7 +26,7 @@ void prima::init(api::Place const& from,
                  api::plan_params const& query) {
   from_ = geo::latlng{from.lat_, from.lon_};
   to_ = geo::latlng{to.lat_, to.lon_};
-  fixed_ = query.arriveBy_ ? kArr : kDep;
+  fixed_ = query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep;
   cap_ = {
       .wheelchairs_ = static_cast<std::uint8_t>(
           query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
@@ -74,10 +74,11 @@ json::array to_json(std::vector<n::routing::start> const& v,
   return a;
 }
 
-json::array to_json(std::vector<direct_ride> const& v, fixed const f) {
+json::array to_json(std::vector<direct_ride> const& v,
+                    n::event_type const fixed) {
   return utl::all(v)  //
          | utl::transform([&](direct_ride const& r) {
-             return to_millis(f == kDep ? r.dep_ : r.arr_);
+             return to_millis(fixed == n::event_type::kDep ? r.dep_ : r.arr_);
            })  //
          | utl::emplace_back_to<json::array>();
 }
@@ -95,7 +96,7 @@ json::value to_json(prima const& p, n::timetable const& tt) {
           {"startBusStops", to_json<kFirstMile>(p.from_rides_, tt)},
           {"targetBusStops", to_json<kLastMile>(p.to_rides_, tt)},
           {"directTimes", to_json(p.direct_rides_, p.fixed_)},
-          {"startFixed", p.fixed_ == fixed::kDep},
+          {"startFixed", p.fixed_ == n::event_type::kDep},
           {"capacities", to_json(p.cap_)}};
 }
 
@@ -199,8 +200,6 @@ void update_direct_rides(std::vector<direct_ride>& rides,
 }
 
 bool prima::whitelist_update(std::string_view json) {
-  auto success = true;
-
   try {
     auto const o = json::parse(json).as_object();
     update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array(),
@@ -210,9 +209,9 @@ bool prima::whitelist_update(std::string_view json) {
     update_direct_rides(direct_rides_, o.at("direct").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\nInvalid whitelist response: " << json << "\n";
-    success = false;
+    return false;
   }
-  return success;
+  return true;
 }
 
 void prima::adjust_to_whitelisting() {
