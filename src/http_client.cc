@@ -180,7 +180,7 @@ struct http_client::connection
           req.set(k, v);
         }
         req.keep_alive(true);
-        if (request->method_ == POST && request->body_.has_value()) {
+        if (request->body_.has_value()) {
           req.body() = request->body_.value();
         }
 
