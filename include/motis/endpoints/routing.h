@@ -83,6 +83,7 @@ struct routing {
       bool wheelchair,
       std::chrono::seconds max) const;
 
+  config const& config_;
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;

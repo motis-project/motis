@@ -471,6 +471,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
         utl::find(direct_modes, api::ModeEnum::ODM) != end(direct_modes);
 
     if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct) {
+      utl::verify(config_.has_odm(), "ODM not configured");
       return odm::meta_router{*this,
                               query,
                               pre_transit_modes,

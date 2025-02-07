@@ -48,14 +48,12 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima> p;
 
-static constexpr auto const kMinODMOffsetLength = n::duration_t{3};
-static constexpr auto const kMaxODMEvents = 3000U;
+constexpr auto const kMinODMOffsetLength = n::duration_t{3};
+constexpr auto const kMaxODMEvents = 3000U;
 
-static auto const kBlacklistingUrl =
-    boost::urls::url{"http://127.0.0.1:5173/api/blacklist"};
-static auto const kWhitelistingUrl =
-    boost::urls::url{"http://127.0.0.1:5173/api/whitelist"};
-static auto const kPrimaHeaders = std::map<std::string, std::string>{
+constexpr auto const kBlacklistPath = "/api/blacklist";
+constexpr auto const kWhitelistPath = "/api/whitelist";
+static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
 constexpr auto const kInfinityDuration =
@@ -438,7 +436,9 @@ api::plan_response meta_router::run() {
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              kBlacklistingUrl, kPrimaHeaders, p->get_prima_request(*tt_), 10s);
+              boost::urls::url{
+                  fmt::format("{}/{}", *r_.config_.odm_, kBlacklistPath)},
+              kReqHeaders, p->get_prima_request(*tt_), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
@@ -634,9 +634,10 @@ api::plan_response meta_router::run() {
       boost::asio::co_spawn(
           ioc2,
           [&]() -> boost::asio::awaitable<void> {
-            auto const prima_msg =
-                co_await http_POST(kWhitelistingUrl, kPrimaHeaders,
-                                   p->get_prima_request(*tt_), 10s);
+            auto const prima_msg = co_await http_POST(
+                boost::urls::url{
+                    fmt::format("{}/{}", *r_.config_.odm_, kWhitelistPath)},
+                kReqHeaders, p->get_prima_request(*tt_), 10s);
             whitelist_response = get_http_body(prima_msg);
           },
           boost::asio::detached);
