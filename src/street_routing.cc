@@ -344,7 +344,9 @@ api::Itinerary route(osr::ways const& w,
         }
 
         auto& leg = itinerary.legs_.emplace_back(api::Leg{
-            .mode_ = is_rental ? api::ModeEnum::RENTAL : to_mode(lb->mode_),
+            .mode_ = is_rental                    ? api::ModeEnum::RENTAL
+                     : mode == api::ModeEnum::ODM ? mode
+                                                  : to_mode(lb->mode_),
             .from_ = pred_place,
             .to_ = next_place,
             .duration_ = std::chrono::duration_cast<std::chrono::seconds>(

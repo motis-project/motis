@@ -8,6 +8,7 @@ const translations: Translations = {
 	scooterStanding: 'Trottinette',
 	scooterSeated: 'Trottinette avec siège',
 	car: 'Voiture',
+	taxi: 'Taxi',
 	moped: 'Mobylette',
 	from: 'De',
 	to: 'À',

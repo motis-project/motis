@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(motis)
+project(motis LANGUAGES C CXX ASM)
 
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 
@@ -81,6 +81,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-shadow-uncaptured-local
             -Wno-documentation-deprecated-sync
             -Wno-float-equal
+            -Wno-deprecated-declarations
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
@@ -113,6 +114,7 @@ target_link_libraries(motislib
     osr
     adr
     boost-json
+    Boost::fiber
     motis-api
     reflectcpp
     web-server

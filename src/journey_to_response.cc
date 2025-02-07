@@ -24,6 +24,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/timetable/clasz_to_mode.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/transport_mode_ids.h"
 
 namespace n = nigiri;
 
@@ -179,6 +180,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   *w, *l, gbfs_rd, e, from, to,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? api::ModeEnum::RENTAL
+                  : x.transport_mode_id_ == kOdmTransportModeId
+                      ? api::ModeEnum::ODM
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,

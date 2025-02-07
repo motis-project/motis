@@ -191,7 +191,8 @@ jobs:
             buildcache-${{ matrix.config.preset }}-
 
       - name: Dependencies Cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
+        id: restore-deps
         with:
           path: ${{ github.workspace }}/deps
           key: deps-${{ hashFiles('.pkg') }}
@@ -219,6 +220,13 @@ jobs:
         with:
           path: ${{ github.workspace }}/.buildcache
           key: ${{ steps.restore-buildcache.outputs.cache-primary-key }}
+
+      - name: Save deps cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ github.workspace }}/deps
+          key: ${{ steps.restore-deps.outputs.cache-primary-key }}
 
       # ==== DISTRIBUTION ====
       - name: Create Distribution

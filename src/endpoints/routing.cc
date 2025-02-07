@@ -27,6 +27,7 @@
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
 #include "motis/mode_to_profile.h"
+#include "motis/odm/meta_router.h"
 #include "motis/parse_location.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
@@ -46,13 +47,13 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<n::routing::search_state> search_state;
+boost::thread_specific_ptr<n::routing::search_state> search_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
+boost::thread_specific_ptr<n::routing::raptor_state> raptor_state;
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
+boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
@@ -90,6 +91,10 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
 
   auto ret = hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>{};
   for (auto const m : modes) {
+    if (m == api::ModeEnum::ODM) {
+      continue;
+    }
+
     auto const profile = to_profile(m, wheelchair);
 
     if (profile != osr::search_profile::kWheelchair) {
@@ -440,7 +445,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
-  auto const [direct, fastest_direct] =
+  auto [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes,
                          query.directRentalFormFactors_,
@@ -455,6 +460,35 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   if (!query.transitModes_.empty() && fastest_direct > 5min) {
     utl::verify(tt_ != nullptr && tags_ != nullptr,
                 "mode=TRANSIT requires timetable to be loaded");
+
+    auto const with_odm_pre_transit =
+        utl::find(pre_transit_modes, api::ModeEnum::ODM) !=
+        end(pre_transit_modes);
+    auto const with_odm_post_transit =
+        utl::find(post_transit_modes, api::ModeEnum::ODM) !=
+        end(post_transit_modes);
+    auto const with_odm_direct =
+        utl::find(direct_modes, api::ModeEnum::ODM) != end(direct_modes);
+
+    if (with_odm_pre_transit || with_odm_post_transit || with_odm_direct) {
+      utl::verify(config_.has_odm(), "ODM not configured");
+      return odm::meta_router{*this,
+                              query,
+                              pre_transit_modes,
+                              post_transit_modes,
+                              direct_modes,
+                              from,
+                              to,
+                              from_p,
+                              to_p,
+                              start_time,
+                              direct,
+                              fastest_direct,
+                              with_odm_pre_transit,
+                              with_odm_post_transit,
+                              with_odm_direct}
+          .run();
+    }
 
     UTL_START_TIMING(query_preparation);
     auto q = n::routing::query{

@@ -110,6 +110,8 @@ void config::verify() const {
       "TIMETABLE");
   utl::verify(!has_gbfs_feeds() || street_routing_,
               "feature GBFS requires feature STREET_ROUTING");
+  utl::verify(!has_odm() || (street_routing_ && timetable_),
+              "feature ODM requires feature STREET_ROUTING");
 
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {
@@ -165,6 +167,8 @@ bool config::requires_rt_timetable_updates() const {
 bool config::has_gbfs_feeds() const {
   return gbfs_.has_value() && !gbfs_->feeds_.empty();
 }
+
+bool config::has_odm() const { return odm_.has_value(); }
 
 }  // namespace motis
 

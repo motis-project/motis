@@ -11,6 +11,7 @@
 #include "motis/constants.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/osr_mapping.h"
+#include "motis/transport_mode_ids.h"
 
 namespace motis::gbfs {
 
