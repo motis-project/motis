@@ -43,6 +43,8 @@ namespace motis {
 #define MOTIS_VERSION "unknown"
 #endif
 
+enum request_method { GET, POST };
+
 constexpr auto const kMotisUserAgent =
     "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
 

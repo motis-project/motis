@@ -250,7 +250,7 @@ TEST(odm, prima_update) {
   auto p = prima{
       .from_ = {0.0, 0.0},
       .to_ = {1.0, 1.0},
-      .fixed_ = fixed::kDep,
+      .fixed_ = n::event_type::kDep,
       .cap_ = {.wheelchairs_ = 1, .bikes_ = 0, .passengers_ = 1, .luggage_ = 0},
       .from_rides_ = {{.time_at_start_ = n::unixtime_t{10h},
                        .time_at_stop_ = n::unixtime_t{11h},

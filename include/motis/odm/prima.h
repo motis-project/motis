@@ -40,7 +40,7 @@ struct prima {
 
   geo::latlng from_;
   geo::latlng to_;
-  fixed fixed_;
+  nigiri::event_type fixed_;
   capacities cap_;
 
   std::vector<nigiri::routing::start> from_rides_{};
