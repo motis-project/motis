@@ -116,6 +116,7 @@ export type PedestrianProfile = 'FOOT' | 'WHEELCHAIR';
  * - `RENTAL` Experimental. Expect unannounced breaking changes (without version bumps).
  * - `CAR`
  * - `CAR_PARKING`
+ * - `ODM`
  *
  * # Transit modes
  *
@@ -386,6 +387,43 @@ export type Rental = {
     returnConstraint?: RentalReturnConstraint;
 };
 
+export type ODMType = 'TAXI' | 'RIDE_SHARING';
+
+/**
+ * Vehicle with driver, e.g., taxi
+ */
+export type ODM = {
+    /**
+     * ODM system ID
+     */
+    systemId: string;
+    /**
+     * ODM system name
+     */
+    systemName?: string;
+    /**
+     * URL of the ODM system
+     */
+    url?: string;
+    /**
+     * Name of company that offers the service
+     */
+    companyName?: string;
+    /**
+     * ODM URI for Android (deep link to the specific station or vehicle)
+     */
+    odmUriAndroid?: string;
+    /**
+     * ODM URI for iOS (deep link to the specific station or vehicle)
+     */
+    odmUriIOS?: string;
+    /**
+     * ODM URI for web (deep link to the specific station or vehicle)
+     */
+    odmUriWeb?: string;
+    odmType?: ODMType;
+};
+
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -469,6 +507,7 @@ export type Leg = {
      */
     steps?: Array<StepInstruction>;
     rental?: Rental;
+    odm?: ODM;
 };
 
 export type Itinerary = {

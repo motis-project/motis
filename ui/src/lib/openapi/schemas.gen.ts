@@ -127,6 +127,7 @@ export const ModeSchema = {
   - \`RENTAL\` Experimental. Expect unannounced breaking changes (without version bumps).
   - \`CAR\`
   - \`CAR_PARKING\`
+  - \`ODM\`
 
 # Transit modes
 
@@ -146,7 +147,7 @@ export const ModeSchema = {
   - \`REGIONAL_RAIL\`: regional train
 `,
     type: 'string',
-    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
+    enum: ['WALK', 'BIKE', 'RENTAL', 'CAR', 'CAR_PARKING', 'ODM', 'TRANSIT', 'TRAM', 'SUBWAY', 'FERRY', 'AIRPLANE', 'METRO', 'BUS', 'COACH', 'RAIL', 'HIGHSPEED_RAIL', 'LONG_DISTANCE', 'NIGHT_RAIL', 'REGIONAL_FAST_RAIL', 'REGIONAL_RAIL', 'OTHER']
 } as const;
 
 export const VertexTypeSchema = {
@@ -476,6 +477,50 @@ export const RentalSchema = {
     }
 } as const;
 
+export const ODMTypeSchema = {
+    type: 'string',
+    enum: ['TAXI', 'RIDE_SHARING']
+} as const;
+
+export const ODMSchema = {
+    description: 'Vehicle with driver, e.g., taxi',
+    type: 'object',
+    required: ['systemId'],
+    properties: {
+        systemId: {
+            type: 'string',
+            description: 'ODM system ID'
+        },
+        systemName: {
+            type: 'string',
+            description: 'ODM system name'
+        },
+        url: {
+            type: 'string',
+            description: 'URL of the ODM system'
+        },
+        companyName: {
+            type: 'string',
+            description: 'Name of company that offers the service'
+        },
+        odmUriAndroid: {
+            type: 'string',
+            description: 'ODM URI for Android (deep link to the specific station or vehicle)'
+        },
+        odmUriIOS: {
+            type: 'string',
+            description: 'ODM URI for iOS (deep link to the specific station or vehicle)'
+        },
+        odmUriWeb: {
+            type: 'string',
+            description: 'ODM URI for web (deep link to the specific station or vehicle)'
+        },
+        odmType: {
+            '$ref': '#/components/schemas/ODMType'
+        }
+    }
+} as const;
+
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'duration', 'from', 'to', 'legGeometry'],
@@ -595,6 +640,9 @@ used for walking, biking and driving.
         },
         rental: {
             '$ref': '#/components/schemas/Rental'
+        },
+        odm: {
+            '$ref': '#/components/schemas/ODM'
         }
     }
 } as const;
