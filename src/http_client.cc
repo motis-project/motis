@@ -43,8 +43,6 @@ namespace motis {
 #define MOTIS_VERSION "unknown"
 #endif
 
-enum request_method { GET, POST };
-
 constexpr auto const kMotisUserAgent =
     "MOTIS/" MOTIS_VERSION " " BOOST_BEAST_VERSION_STRING;
 
@@ -70,20 +68,14 @@ boost::system::error_code make_error_code(http_client::error e) {
 struct http_client::request {
   template <typename Executor>
   request(boost::urls::url&& url,
-          request_method method,
           std::map<std::string, std::string>&& headers,
-          std::optional<std::string>&& body,
           Executor const& executor)
       : url_{std::move(url)},
-        method_{method},
         headers_{std::move(headers)},
-        body_{std::move(body)},
         response_channel_{executor} {}
 
   boost::urls::url url_{};
-  request_method method_;
   std::map<std::string, std::string> headers_{};
-  std::optional<std::string> body_{};
   asio::experimental::channel<void(boost::system::error_code,
                                    http::response<http::dynamic_body>)>
       response_channel_;
@@ -170,9 +162,7 @@ struct http_client::connection
       auto const send_request =
           [&](std::shared_ptr<request> request) -> asio::awaitable<void> {
         auto req = http::request<http::string_body>{
-            request->method_ == request_method::GET ? http::verb::get
-                                                    : http::verb::post,
-            request->url_.encoded_target(), 11};
+            http::verb::get, request->url_.encoded_target(), 11};
         req.set(http::field::host, request->url_.host());
         req.set(http::field::user_agent, kMotisUserAgent);
         req.set(http::field::accept_encoding, "gzip");
@@ -180,10 +170,6 @@ struct http_client::connection
           req.set(k, v);
         }
         req.keep_alive(true);
-        if (request->body_.has_value()) {
-          req.body() = request->body_.value();
-          req.prepare_payload();
-        }
 
         if (!unlimited_pipelining_) {
           co_await requests_in_flight_->async_send(boost::system::error_code{});
@@ -361,33 +347,7 @@ asio::awaitable<http_response> http_client::get(
   }
 
   auto req =
-      std::make_shared<request>(std::move(url), request_method::GET,
-                                std::move(headers), std::nullopt, executor);
-  co_await connections_[key]->request_channel_.async_send(
-      boost::system::error_code{}, req);
-  auto response = co_await req->response_channel_.async_receive();
-  co_return response;
-}
-
-asio::awaitable<http_response> http_client::post(
-    boost::urls::url url,
-    std::map<std::string, std::string> headers,
-    std::string body) {
-  auto const https = url.scheme_id() == boost::urls::scheme::https;
-  auto const key = connection_key{
-      url.host(), url.has_port() ? url.port() : (https ? "443" : "80"), https};
-
-  auto executor = co_await asio::this_coro::executor;
-  if (auto const it = connections_.find(key); it == connections_.end()) {
-    auto conn =
-        std::make_shared<connection>(executor, key, timeout_, proxy_, 1);
-    connections_[key] = conn;
-    asio::co_spawn(executor, conn->run(), asio::detached);
-  }
-
-  auto req =
-      std::make_shared<request>(std::move(url), request_method::POST,
-                                std::move(headers), std::move(body), executor);
+      std::make_shared<request>(std::move(url), std::move(headers), executor);
   co_await connections_[key]->request_channel_.async_send(
       boost::system::error_code{}, req);
   auto response = co_await req->response_channel_.async_receive();
