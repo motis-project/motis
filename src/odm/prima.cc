@@ -4,6 +4,7 @@
 
 #include "boost/json.hpp"
 
+#include "utl/erase_if.h"
 #include "utl/pipes.h"
 #include "utl/zip.h"
 
@@ -162,7 +163,9 @@ void update_pt_rides(std::vector<nigiri::routing::start>& rides,
   for (auto const& stop : update) {
     for (auto const& event : stop.as_array()) {
       if (event.is_null()) {
-        rides.emplace_back(kInfeasible, kInfeasible, prev_it->stop_);
+        rides.push_back({.time_at_start_ = kInfeasible,
+                         .time_at_stop_ = kInfeasible,
+                         .stop_ = prev_it->stop_});
       } else {
         auto const time_at_coord_str =
             wm == kFirstMile
@@ -214,16 +217,18 @@ void prima::adjust_to_whitelisting() {
   for (auto const [from_ride, prev_from_ride] :
        utl::zip(from_rides_, prev_from_rides_)) {
 
-    auto const uses_prev_from = [&](auto const& j) {
-      return j.legs_.size() > 1 &&
-             j.legs_.front().dep_time_ == prev_from_ride.time_at_start_ &&
-             j.legs_.front().arr_time_ == prev_from_ride.time_at_stop_ &&
-             j.legs_.front().to_ == prev_from_ride.stop_ &&
-             is_odm_leg(j.legs_.front());
-    };
+    auto const uses_prev_from =
+        [&, prev_from = prev_from_ride /* hack for MacOS - fixed with 16 */](
+            nigiri::routing::journey const& j) {
+          return j.legs_.size() > 1 &&
+                 j.legs_.front().dep_time_ == prev_from.time_at_start_ &&
+                 j.legs_.front().arr_time_ == prev_from.time_at_stop_ &&
+                 j.legs_.front().to_ == prev_from.stop_ &&
+                 is_odm_leg(j.legs_.front());
+        };
 
     if (from_ride.time_at_start_ == kInfeasible) {
-      std::erase_if(odm_journeys_, uses_prev_from);
+      utl::erase_if(odm_journeys_, uses_prev_from);
     } else {
       for (auto& j : odm_journeys_) {
         if (uses_prev_from(j)) {
@@ -235,9 +240,11 @@ void prima::adjust_to_whitelisting() {
           j.start_time_ = l->dep_time_;
           // fill gap (transfer/waiting) with footpath
           j.legs_.emplace(
-              std::next(l), n::direction::kForward, l->to_, l->to_,
-              l->arr_time_, std::next(l)->dep_time_,
-              n::footpath{l->to_, std::next(l)->dep_time_ - l->arr_time_});
+              std::next(l),
+              n::routing::journey::leg{
+                  n::direction::kForward, l->to_, l->to_, l->arr_time_,
+                  std::next(l)->dep_time_,
+                  n::footpath{l->to_, std::next(l)->dep_time_ - l->arr_time_}});
         }
       }
     }
@@ -255,7 +262,7 @@ void prima::adjust_to_whitelisting() {
     };
 
     if (to_ride.time_at_start_ == kInfeasible) {
-      std::erase_if(odm_journeys_, uses_prev_to);
+      utl::erase_if(odm_journeys_, uses_prev_to);
     } else {
       for (auto& j : odm_journeys_) {
         if (uses_prev_to(j)) {
@@ -267,9 +274,11 @@ void prima::adjust_to_whitelisting() {
           j.dest_time_ = l->arr_time_;
           // fill gap (transfer/waiting) with footpath
           j.legs_.emplace(
-              l, n::direction::kForward, l->from_, l->from_,
-              std::prev(l)->arr_time_, l->dep_time_,
-              n::footpath{l->from_, l->dep_time_ - std::prev(l)->arr_time_});
+              l, n::routing::journey::leg{
+                     n::direction::kForward, l->from_, l->from_,
+                     std::prev(l)->arr_time_, l->dep_time_,
+                     n::footpath{l->from_,
+                                 l->dep_time_ - std::prev(l)->arr_time_}});
         }
       }
     }
