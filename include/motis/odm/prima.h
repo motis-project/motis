@@ -16,10 +16,6 @@ struct routing;
 
 namespace motis::odm {
 
-constexpr auto const kPrimaTimeFormat = "%FT%TZ";
-
-nigiri::unixtime_t parse_time(std::string_view);
-
 enum fixed { kArr, kDep };
 
 struct direct_ride {
@@ -38,7 +34,7 @@ struct prima {
   void init(api::Place const& from,
             api::Place const& to,
             api::plan_params const& query);
-  std::string get_msg_str(nigiri::timetable const&) const;
+  std::string get_prima_request(nigiri::timetable const&) const;
   size_t n_events() const;
   bool blacklist_update(std::string_view json);
   bool whitelist_update(std::string_view json);

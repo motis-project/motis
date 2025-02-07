@@ -174,8 +174,8 @@ D,D,D,0.4,0.4,,,,
 )__");
 }
 
-constexpr auto const initial =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T10:55:00Z","1970-01-01T11:55:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T11:55:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:05:00Z"]},{"coordinates":{"lat":4E-1,"lng":4E-1},"times":["1970-01-01T14:05:00Z"]}],"times":["1970-01-01T10:00:00Z","1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+constexpr auto const kExpectedInitial =
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"lat":1E-1,"lng":1E-1,"times":[39300000,42900000]},{"lat":2E-1,"lng":2E-1,"times":[42900000]}],"targetBusStops":[{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1,"times":[47100000]},{"lat":4E-1,"lng":4E-1,"times":[50700000]}],"directTimes":[36000000,39600000],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
 constexpr auto const invalid_response = R"({"message":"Internal Error"})";
 
@@ -188,13 +188,16 @@ constexpr auto const blacklisting_response = R"(
 )";
 
 constexpr auto const blacklisted =
-    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"coordinates":{"lat":1E-1,"lng":1E-1},"times":["1970-01-01T10:55:00Z"]},{"coordinates":{"lat":2E-1,"lng":2E-1},"times":["1970-01-01T11:55:00Z"]}],"targetBusStops":[{"coordinates":{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1},"times":["1970-01-01T13:05:00Z"]}],"times":["1970-01-01T11:00:00Z"],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
+    R"({"start":{"lat":0E0,"lng":0E0},"target":{"lat":1E0,"lng":1E0},"startBusStops":[{"lat":1E-1,"lng":1E-1,"times":[39300000]},{"lat":2E-1,"lng":2E-1,"times":[42900000]}],"targetBusStops":[{"lat":3.0000000000000004E-1,"lng":3.0000000000000004E-1,"times":[47100000]}],"directTimes":[39600000],"startFixed":true,"capacities":{"wheelchairs":1,"bikes":0,"passengers":1,"luggage":0}})";
 
+// 1970-01-01T09:57:00Z, 1970-01-01T10:55:00Z
+// 1970-01-01T14:07:00Z, 1970-01-01T14:46:00Z
+// 1970-01-01T11:30:00Z, 1970-01-01T12:30:00Z
 constexpr auto const whitelisting_response = R"(
 {
-  "start": [[{"pickupTime": "1970-01-01T09:57:00Z", "dropoffTime": "1970-01-01T10:55:00Z"}],[null]],
-  "target": [[{"pickupTime": "1970-01-01T14:07:00Z", "dropoffTime": "1970-01-01T14:46:00Z"}]],
-  "direct": [{"pickupTime": "1970-01-01T11:30:00Z","dropoffTime": "1970-01-01T12:30:00Z"}]
+  "start": [[{"pickupTime": 35820000, "dropoffTime": 39300000}],[null]],
+  "target": [[{"pickupTime": 50820000, "dropoffTime": 53160000}]],
+  "direct": [{"pickupTime": 41400000,"dropoffTime": 45000000}]
 }
 )";
 
@@ -268,10 +271,10 @@ TEST(odm, prima_update) {
           {.dep_ = n::unixtime_t{10h}, .arr_ = n::unixtime_t{11h}},
           {.dep_ = n::unixtime_t{11h}, .arr_ = n::unixtime_t{12h}}}};
 
-  EXPECT_EQ(initial, p.get_msg_str(tt));
+  EXPECT_EQ(kExpectedInitial, p.get_prima_request(tt));
   EXPECT_FALSE(p.blacklist_update(invalid_response));
   EXPECT_TRUE(p.blacklist_update(blacklisting_response));
-  EXPECT_EQ(blacklisted, p.get_msg_str(tt));
+  EXPECT_EQ(blacklisted, p.get_prima_request(tt));
   EXPECT_FALSE(p.whitelist_update(invalid_response));
   EXPECT_TRUE(p.whitelist_update(whitelisting_response));
 
@@ -327,11 +330,4 @@ TEST(odm, prima_update) {
   }
 
   EXPECT_EQ(adjusted_to_whitelisting, ss.str());
-}
-
-TEST(odm, parse_time) {
-  EXPECT_EQ(n::unixtime_t{sys_days{2020_y / April / 2}} + 7h + 3min,
-            parse_time("2020-04-2T07:03:22.456Z"));
-  EXPECT_EQ(n::unixtime_t{sys_days{2020_y / April / 2}} + 7h + 4min,
-            parse_time("2020-04-2T07:03:44.456Z"));
 }

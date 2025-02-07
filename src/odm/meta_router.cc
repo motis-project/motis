@@ -430,7 +430,7 @@ api::plan_response meta_router::run() {
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              kBlacklistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+              kBlacklistingUrl, kPrimaHeaders, p->get_prima_request(*tt_), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
@@ -626,8 +626,9 @@ api::plan_response meta_router::run() {
       boost::asio::co_spawn(
           ioc2,
           [&]() -> boost::asio::awaitable<void> {
-            auto const prima_msg = co_await http_POST(
-                kWhitelistingUrl, kPrimaHeaders, p->get_msg_str(*tt_), 10s);
+            auto const prima_msg =
+                co_await http_POST(kWhitelistingUrl, kPrimaHeaders,
+                                   p->get_prima_request(*tt_), 10s);
             whitelist_response = get_http_body(prima_msg);
           },
           boost::asio::detached);

@@ -36,10 +36,15 @@ void prima::init(api::Place const& from,
       .luggage_ = 0U};
 }
 
-std::uint64_t to_millis(n::unixtime_t const t) {
+std::int64_t to_millis(n::unixtime_t const t) {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
              t.time_since_epoch())
       .count();
+}
+
+n::unixtime_t to_unix(std::int64_t const t) {
+  return n::unixtime_t{
+      std::chrono::duration_cast<n::i32_minutes>(std::chrono::milliseconds{t})};
 }
 
 template <which_mile Wm>
@@ -93,7 +98,7 @@ json::value to_json(prima const& p, n::timetable const& tt) {
           {"capacities", to_json(p.cap_)}};
 }
 
-std::string prima::get_msg_str(n::timetable const& tt) const {
+std::string prima::get_prima_request(n::timetable const& tt) const {
   return json::serialize(to_json(*this, tt));
 }
 
@@ -102,32 +107,32 @@ size_t prima::n_events() const {
 }
 
 bool prima::blacklist_update(std::string_view json) {
-  auto success = true;
-
-  auto const update_pt_rides = [](auto& rides, auto& prev_rides,
-                                  auto const& update) {
-    std::swap(rides, prev_rides);
-    rides.clear();
-    auto prev_it = std::begin(prev_rides);
-    for (auto const& stop : update) {
-      for (auto const& feasible : stop.as_array()) {
-        if (value_to<bool>(feasible)) {
-          rides.emplace_back(*prev_it);
+  auto const update_pt_rides =
+      [](std::vector<nigiri::routing::start>& rides,
+         std::vector<nigiri::routing::start>& prev_rides,
+         json::array const& update) {
+        std::swap(rides, prev_rides);
+        rides.clear();
+        auto prev_it = std::begin(prev_rides);
+        for (auto const& stop : update) {
+          for (auto const& feasible : stop.as_array()) {
+            if (feasible.as_bool()) {
+              rides.emplace_back(*prev_it);
+            }
+            ++prev_it;
+            if (prev_it == end(prev_rides)) {
+              return;
+            }
+          }
         }
-        ++prev_it;
-        if (prev_it == end(prev_rides)) {
-          return;
-        }
-      }
-    }
-  };
+      };
 
   auto const update_direct_rides = [](std::vector<direct_ride>& rides,
                                       std::vector<direct_ride>& prev_rides,
                                       json::array const& update) {
     std::swap(rides, prev_rides);
     rides.clear();
-    for (auto const& [prev, feasible] : utl::zip(prev_rides, update)) {
+    for (auto const [prev, feasible] : utl::zip(prev_rides, update)) {
       if (feasible.as_bool()) {
         rides.emplace_back(prev);
       }
@@ -142,26 +147,15 @@ bool prima::blacklist_update(std::string_view json) {
                         o.at("direct").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\nInvalid blacklist response: " << json << "\n";
-    success = false;
+    return false;
   }
-  return success;
+  return true;
 }
 
-n::unixtime_t parse_time(std::string_view s) {
-  std::stringstream in;
-  in.exceptions(std::ios::badbit | std::ios::failbit);
-  in << s;
-
-  std::chrono::system_clock::time_point tp;
-  in >> date::parse(kPrimaTimeFormat, tp);
-
-  return std::chrono::round<n::unixtime_t::duration>(tp);
-};
-
-template <which_mile Wm>
 void update_pt_rides(std::vector<nigiri::routing::start>& rides,
                      std::vector<nigiri::routing::start>& prev_rides,
-                     json::array const& update) {
+                     json::array const& update,
+                     which_mile const wm) {
   std::swap(rides, prev_rides);
   rides.clear();
   auto prev_it = std::begin(prev_rides);
@@ -171,15 +165,14 @@ void update_pt_rides(std::vector<nigiri::routing::start>& rides,
         rides.emplace_back(kInfeasible, kInfeasible, prev_it->stop_);
       } else {
         auto const time_at_coord_str =
-            Wm == kFirstMile
-                ? value_to<std::string>(event.as_object().at("pickupTime"))
-                : value_to<std::string>(event.as_object().at("dropoffTime"));
+            wm == kFirstMile
+                ? to_unix(event.as_object().at("pickupTime").as_int64())
+                : to_unix(event.as_object().at("dropoffTime").as_int64());
         auto const time_at_stop_str =
-            Wm == kFirstMile
-                ? value_to<std::string>(event.as_object().at("dropoffTime"))
-                : value_to<std::string>(event.as_object().at("pickupTime"));
-        rides.emplace_back(parse_time(time_at_coord_str),
-                           parse_time(time_at_stop_str), prev_it->stop_);
+            wm == kFirstMile
+                ? to_unix(event.as_object().at("dropoffTime").as_int64())
+                : to_unix(event.as_object().at("pickupTime").as_int64());
+        rides.emplace_back(time_at_coord_str, time_at_stop_str, prev_it->stop_);
       }
       ++prev_it;
       if (prev_it == end(prev_rides)) {
@@ -192,12 +185,11 @@ void update_pt_rides(std::vector<nigiri::routing::start>& rides,
 void update_direct_rides(auto& rides, auto const& update) {
   rides.clear();
   for (auto const& ride : update) {
-    if (ride.is_null()) {
-      continue;
+    if (!ride.is_null()) {
+      rides.emplace_back(
+          to_unix(ride.as_object().at("pickupTime").as_int64()),
+          to_unix(ride.as_object().at("dropoffTime").as_int64()));
     }
-    rides.emplace_back(
-        parse_time(value_to<std::string>(ride.as_object().at("pickupTime"))),
-        parse_time(value_to<std::string>(ride.as_object().at("dropoffTime"))));
   }
 }
 
@@ -206,10 +198,10 @@ bool prima::whitelist_update(std::string_view json) {
 
   try {
     auto const o = json::parse(json).as_object();
-    update_pt_rides<kFirstMile>(from_rides_, prev_from_rides_,
-                                o.at("start").as_array());
-    update_pt_rides<kLastMile>(to_rides_, prev_to_rides_,
-                               o.at("target").as_array());
+    update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array(),
+                    kFirstMile);
+    update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array(),
+                    kLastMile);
     update_direct_rides(direct_rides_, o.at("direct").as_array());
   } catch (std::exception const& e) {
     std::cout << e.what() << "\nInvalid whitelist response: " << json << "\n";
@@ -219,7 +211,6 @@ bool prima::whitelist_update(std::string_view json) {
 }
 
 void prima::adjust_to_whitelisting() {
-
   for (auto const [from_ride, prev_from_ride] :
        utl::zip(from_rides_, prev_from_rides_)) {
 
