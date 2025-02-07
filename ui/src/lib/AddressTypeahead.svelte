@@ -87,7 +87,6 @@
 			shown.add(entry);
 			return true;
 		});
-		preventClickthrough(!!items.length && comboOpen);
 	};
 
 	const deserialize = (s: string): Location => {
@@ -119,16 +118,6 @@
 			}, 150);
 		}
 	});
-
-	let comboOpen = false;
-	const preventClickthrough = (prevent: boolean) => {
-		const ctr = document.getElementById('searchmask-container')!;
-		if (prevent) {
-			ctr.style.pointerEvents = 'none';
-		} else {
-			window.setTimeout(() => (ctr.style.pointerEvents = 'auto'), 1);
-		}
-	};
 </script>
 
 <Combobox.Root
@@ -140,10 +129,6 @@
 			selected = deserialize(e);
 			inputValue = selected.label!;
 		}
-	}}
-	onOpenChange={(open) => {
-		comboOpen = open;
-		preventClickthrough(open);
 	}}
 >
 	<Combobox.Input
