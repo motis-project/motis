@@ -7,6 +7,8 @@
 
 #include <vector>
 
+#include "fmt/std.h"
+
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/asio/io_context.hpp"
@@ -69,11 +71,10 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 void print_time(auto const& start, std::string_view name) {
-  std::cout << name << " "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now() - start)
-            << "\n";
-};
+  fmt::println("{}: {}", name,
+               std::chrono::duration_cast<std::chrono::milliseconds>(
+                   std::chrono::steady_clock::now() - start));
+}
 
 meta_router::meta_router(ep::routing const& r,
                          api::plan_params const& query,
@@ -146,14 +147,14 @@ n::interval<n::unixtime_t> get_dest_intvl(
                                           start_intvl.to_};
 }
 
-auto init_direct(std::vector<direct_ride>& direct_rides,
-                 ep::routing const& r,
-                 elevators const* e,
-                 gbfs::gbfs_routing_data& gbfs,
-                 api::Place const& from_p,
-                 api::Place const& to_p,
-                 n::interval<n::unixtime_t> const intvl,
-                 api::plan_params const& query) {
+n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
+                          ep::routing const& r,
+                          elevators const* e,
+                          gbfs::gbfs_routing_data& gbfs,
+                          api::Place const& from_p,
+                          api::Place const& to_p,
+                          n::interval<n::unixtime_t> const intvl,
+                          api::plan_params const& query) {
   auto [direct, duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
@@ -326,8 +327,8 @@ auto collect_odm_journeys(auto& futures) {
       p->odm_journeys_.emplace_back(std::move(j));
     }
   }
-  std::cout << std::format("[whitelisting] collected {} ODM-PT journeys\n",
-                           p->odm_journeys_.size());
+  fmt::println("[whitelisting] collected {} ODM-PT journeys",
+               p->odm_journeys_.size());
 }
 
 void extract_rides() {
@@ -372,8 +373,7 @@ void add_direct() {
          .dest_ = get_special_station(n::special_station::kEnd),
          .transfers_ = 0U});
   }
-  std::cout << "[whitelisting] added " << p->direct_rides_.size()
-            << " direct rides\n";
+  fmt::println("[whitelisting] added {} direct rides", p->direct_rides_.size());
 }
 
 void meta_router::extract_direct() {
@@ -430,21 +430,19 @@ api::plan_response meta_router::run() {
   auto ioc = boost::asio::io_context{};
   auto const bl_start = std::chrono::steady_clock::now();
   try {
-    std::cout << std::format("[blacklisting] request for {} events\n",
-                             p->n_events());
+    fmt::println("[blacklisting] request for {} events", p->n_events());
     boost::asio::co_spawn(
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              boost::urls::url{
-                  fmt::format("{}/{}", *r_.config_.odm_, kBlacklistPath)},
-              kReqHeaders, p->get_prima_request(*tt_), 10s);
+              boost::urls::url{*r_.config_.odm_ + kBlacklistPath}, kReqHeaders,
+              p->get_prima_request(*tt_), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
     ioc.run();
   } catch (std::exception const& e) {
-    std::cout << "[blacklisting] networking failed: " << e.what();
+    fmt::println("[blacklisting] networking failed: {}", e.what());
     blacklist_response = std::nullopt;
   }
   print_time(bl_start, "[blacklisting]");
@@ -603,9 +601,8 @@ api::plan_response meta_router::run() {
     tasks.emplace_back(make_task(qf.short_long()));
     tasks.emplace_back(make_task(qf.long_short()));
     tasks.emplace_back(make_task(qf.long_long()));
-    std::cout << "[blacklisting] success\n";
   } else {
-    std::cout << "[blacklisting] failed, omitting ODM routing\n";
+    fmt::println("[blacklisting] failed, omitting ODM routing");
   }
   print_time(prep_queries_start, "[prepare queries]");
 
@@ -629,21 +626,19 @@ api::plan_response meta_router::run() {
     collect_odm_journeys(futures);
     extract_rides();
     try {
-      std::cout << std::format("[whitelisting] request for {} events\n",
-                               p->n_events());
+      fmt::println("[whitelisting] request for {} events", p->n_events());
       boost::asio::co_spawn(
           ioc2,
           [&]() -> boost::asio::awaitable<void> {
             auto const prima_msg = co_await http_POST(
-                boost::urls::url{
-                    fmt::format("{}/{}", *r_.config_.odm_, kWhitelistPath)},
+                boost::urls::url{*r_.config_.odm_ + kWhitelistPath},
                 kReqHeaders, p->get_prima_request(*tt_), 10s);
             whitelist_response = get_http_body(prima_msg);
           },
           boost::asio::detached);
       ioc2.run();
     } catch (std::exception const& e) {
-      std::cout << "[whitelisting] networking failed: " << e.what();
+      fmt::println("[whitelisting] networking failed: {}", e.what());
       whitelist_response = std::nullopt;
     }
     print_time(wl_start, "[whitelisting]");
@@ -656,13 +651,13 @@ api::plan_response meta_router::run() {
   if (whitelisted) {
     p->adjust_to_whitelisting();
     add_direct();
-    std::cout << "[whitelisting] success\n";
+    fmt::println("[whitelisting] success");
   } else {
     p->odm_journeys_.clear();
-    std::cout << "[whitelisting] failed, discarding ODM journeys\n";
+    fmt::println("[whitelisting] failed, discarding ODM journeys");
   }
-  std::cout << std::format("[mixing] {} PT journeys and {} ODM journeys\n",
-                           pt_result.journeys_.size(), p->odm_journeys_.size());
+  fmt::println("[mixing] {} PT journeys and {} ODM journeys",
+               pt_result.journeys_.size(), p->odm_journeys_.size());
   kOdmMixer.mix(pt_result.journeys_, p->odm_journeys_);
   extract_direct();
   print_time(mixing_start, "[mixing]");

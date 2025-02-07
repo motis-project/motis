@@ -8,7 +8,6 @@
 #include "nigiri/routing/pareto_set.h"
 #include "nigiri/special_stations.h"
 
-#include "motis/odm/equal_journeys.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
@@ -84,12 +83,8 @@ TEST(odm, pt_taxi_no_direct) {
   kOdmMixer.mix(pt_journeys, odm_journeys);
 
   ASSERT_EQ(odm_journeys.size(), 2U);
-  EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return j == pt; }),
-            end(odm_journeys));
-  EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return j == pt_taxi; }),
-            end(odm_journeys));
+  EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
+  EXPECT_NE(utl::find(odm_journeys, pt_taxi), end(odm_journeys));
 }
 
 TEST(odm, taxi_saves_transfers) {
@@ -157,9 +152,7 @@ TEST(odm, taxi_saves_transfers) {
   kOdmMixer.mix(pt_journeys, odm_journeys);
 
   ASSERT_EQ(odm_journeys.size(), 1U);
-  EXPECT_NE(std::find_if(begin(odm_journeys), end(odm_journeys),
-                         [&](auto const& j) { return j == pt; }),
-            end(odm_journeys));
+  EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
 }
 
 n::loader::mem_dir tt_files() {
