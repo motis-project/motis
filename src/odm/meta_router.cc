@@ -344,18 +344,18 @@ void extract_rides() {
 
 void add_direct() {
   for (auto const& d : p->direct_rides_) {
-    p->odm_journeys_.push_back(
-        {.legs_ =
-             {{n::direction::kForward,
-               get_special_station(n::special_station::kStart),
-               get_special_station(n::special_station::kEnd), d.dep_, d.arr_,
-               n::routing::offset{get_special_station(n::special_station::kEnd),
-                                  std::chrono::abs(d.arr_ - d.dep_),
-                                  kOdmTransportModeId}}},
-         .start_time_ = d.dep_,
-         .dest_time_ = d.arr_,
-         .dest_ = get_special_station(n::special_station::kEnd),
-         .transfers_ = 0U});
+    p->odm_journeys_.push_back(n::routing::journey{
+        .legs_ =
+            {{n::direction::kForward,
+              get_special_station(n::special_station::kStart),
+              get_special_station(n::special_station::kEnd), d.dep_, d.arr_,
+              n::routing::offset{get_special_station(n::special_station::kEnd),
+                                 std::chrono::abs(d.arr_ - d.dep_),
+                                 kOdmTransportModeId}}},
+        .start_time_ = d.dep_,
+        .dest_time_ = d.arr_,
+        .dest_ = get_special_station(n::special_station::kEnd),
+        .transfers_ = 0U});
   }
   fmt::println("[whitelisting] added {} direct rides", p->direct_rides_.size());
 }
