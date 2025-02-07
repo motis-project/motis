@@ -167,12 +167,12 @@ auto init_direct(std::vector<direct_ride>& direct_rides,
              std::chrono::floor<std::chrono::hours>(intvl.to_ - duration) +
              duration;
          intvl.contains(arr); arr -= 1h) {
-      direct_rides.emplace_back(arr - duration, arr);
+      direct_rides.push_back({.dep_ = arr - duration, .arr_ = arr});
     }
   } else {
     for (auto dep = std::chrono::ceil<std::chrono::hours>(intvl.from_);
          intvl.contains(dep); dep += 1h) {
-      direct_rides.emplace_back(dep, dep + duration);
+      direct_rides.push_back({.dep_ = dep, .arr_ = dep + duration});
     }
   }
   return duration;
@@ -309,9 +309,14 @@ auto get_td_offsets(auto const& rides) {
             }
           }
           // add new offset
-          td_offsets.at(from_it->stop_).emplace_back(dep, dur, kODM);
           td_offsets.at(from_it->stop_)
-              .emplace_back(dep + dur, n::footpath::kMaxDuration, kODM);
+              .push_back({.valid_from_ = dep,
+                          .duration_ = dur,
+                          .transport_mode_id_ = kODM});
+          td_offsets.at(from_it->stop_)
+              .push_back({.valid_from_ = dep + dur,
+                          .duration_ = n::footpath::kMaxDuration,
+                          .transport_mode_id_ = kODM});
         }
       });
   return td_offsets;
@@ -336,18 +341,18 @@ void extract_rides() {
       if (std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
           std::get<n::routing::offset>(j.legs_.front().uses_)
                   .transport_mode_id_ == kODM) {
-        p->from_rides_.emplace_back(j.legs_.front().dep_time_,
-                                    j.legs_.front().arr_time_,
-                                    j.legs_.front().to_);
+        p->from_rides_.push_back({.time_at_start_ = j.legs_.front().dep_time_,
+                                  .time_at_stop_ = j.legs_.front().arr_time_,
+                                  .stop_ = j.legs_.front().to_});
       }
     }
     if (j.legs_.size() > 1) {
       if (std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
           std::get<n::routing::offset>(j.legs_.back().uses_)
                   .transport_mode_id_ == kODM) {
-        p->to_rides_.emplace_back(j.legs_.back().arr_time_,
-                                  j.legs_.back().dep_time_,
-                                  j.legs_.back().from_);
+        p->to_rides_.push_back({.time_at_start_ = j.legs_.back().arr_time_,
+                                .time_at_stop_ = j.legs_.back().dep_time_,
+                                .stop_ = j.legs_.back().from_});
       }
     }
   }
