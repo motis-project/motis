@@ -192,9 +192,8 @@ void update_direct_rides(std::vector<direct_ride>& rides,
   rides.clear();
   for (auto const& ride : update) {
     if (!ride.is_null()) {
-      rides.emplace_back(
-          to_unix(ride.as_object().at("pickupTime").as_int64()),
-          to_unix(ride.as_object().at("dropoffTime").as_int64()));
+      rides.push_back({to_unix(ride.as_object().at("pickupTime").as_int64()),
+                       to_unix(ride.as_object().at("dropoffTime").as_int64())});
     }
   }
 }
