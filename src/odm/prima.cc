@@ -185,7 +185,8 @@ void update_pt_rides(std::vector<nigiri::routing::start>& rides,
   }
 }
 
-void update_direct_rides(auto& rides, auto const& update) {
+void update_direct_rides(std::vector<direct_ride>& rides,
+                         json::array const& update) {
   rides.clear();
   for (auto const& ride : update) {
     if (!ride.is_null()) {
