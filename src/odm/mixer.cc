@@ -98,7 +98,7 @@ void mixer::cost_domination(
       return cost(pt_journey) + alpha_term < cost(odm_journey);
     };
 
-    return std::any_of(begin(pt_journeys), end(pt_journeys), dominates);
+    return utl::any_of(pt_journeys, dominates);
   };
 
   std::erase_if(odm_journeys, is_dominated);
