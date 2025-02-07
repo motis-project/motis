@@ -1,7 +1,5 @@
 #pragma once
 
-#include "cista/serialization.h"
-
 namespace motis {
 
 // search radius for neighbors to route to [seconds]
@@ -22,8 +20,5 @@ constexpr auto const kTransferTimeMultiplier = 1.5F;
 // footpaths of public transport locations around this distance
 // are updated on elevator status changes [meters]
 constexpr auto const kElevatorUpdateRadius = 1000.;
-
-// first nigiri::transport_mode_id_t used for GBFS
-constexpr auto const kGbfsTransportModeIdOffset = 10;
 
 }  // namespace motis

@@ -5,6 +5,7 @@
 #include "nigiri/special_stations.h"
 
 #include "motis/odm/odm.h"
+#include "motis/transport_mode_ids.h"
 
 namespace motis::odm {
 
@@ -54,14 +55,15 @@ void mixer::cost_domination(
                           return tally(fp.duration().count(), walk_cost_);
                         },
                         [&](n::routing::offset const& o) {
-                          if (o.transport_mode_id_ == kODM) {
+                          if (o.transport_mode_id_ == kOdmTransportModeId) {
                             return tally(o.duration().count(), taxi_cost_);
                           } else if (o.transport_mode_id_ == kWalk) {
                             return tally(o.duration().count(), walk_cost_);
                           }
-                          utl::verify(o.transport_mode_id_ == kODM ||
-                                          o.transport_mode_id_ == kWalk,
-                                      "unknown transport mode");
+                          utl::verify(
+                              o.transport_mode_id_ == kOdmTransportModeId ||
+                                  o.transport_mode_id_ == kWalk,
+                              "unknown transport mode");
                           return std::int32_t{0};
                         }},
         leg.uses_);

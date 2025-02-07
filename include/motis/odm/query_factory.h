@@ -18,21 +18,7 @@ struct query_factory {
   nigiri::routing::query long_long() const;
 
   // invariants
-  nigiri::routing::start_time_t start_time_;
-  nigiri::routing::location_match_mode start_match_mode_;
-  nigiri::routing::location_match_mode dest_match_mode_;
-  bool use_start_footpaths_;
-  std::uint8_t max_transfers_;
-  nigiri::duration_t max_travel_time_;
-  unsigned min_connection_count_;
-  bool extend_interval_earlier_;
-  bool extend_interval_later_;
-  nigiri::profile_idx_t prf_idx_;
-  nigiri::routing::clasz_mask_t allowed_claszes_;
-  bool require_bike_transport_;
-  nigiri::routing::transfer_time_settings transfer_time_settings_;
-  std::vector<nigiri::routing::via_stop> via_stops_;
-  std::optional<nigiri::duration_t> fastest_direct_;
+  nigiri::routing::query base_query_;
 
   // offsets
   std::vector<nigiri::routing::offset> start_walk_;

@@ -28,6 +28,7 @@
 #include "osr/routing/route.h"
 
 #include "motis-api/motis-api.h"
+#include "motis/constants.h"
 #include "motis/elevators/elevators.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
@@ -41,6 +42,7 @@
 #include "motis/street_routing.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 #include "motis/timetable/time_conv.h"
+#include "motis/transport_mode_ids.h"
 
 namespace motis::odm {
 
@@ -310,11 +312,11 @@ auto get_td_offsets(auto const& rides) {
           td_offsets.at(from_it->stop_)
               .push_back({.valid_from_ = dep,
                           .duration_ = dur,
-                          .transport_mode_id_ = kODM});
+                          .transport_mode_id_ = kOdmTransportModeId});
           td_offsets.at(from_it->stop_)
               .push_back({.valid_from_ = dep + dur,
                           .duration_ = n::footpath::kMaxDuration,
-                          .transport_mode_id_ = kODM});
+                          .transport_mode_id_ = kOdmTransportModeId});
         }
       });
   return td_offsets;
@@ -338,7 +340,7 @@ void extract_rides() {
     if (!j.legs_.empty()) {
       if (std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
           std::get<n::routing::offset>(j.legs_.front().uses_)
-                  .transport_mode_id_ == kODM) {
+                  .transport_mode_id_ == kOdmTransportModeId) {
         p->from_rides_.push_back({.time_at_start_ = j.legs_.front().dep_time_,
                                   .time_at_stop_ = j.legs_.front().arr_time_,
                                   .stop_ = j.legs_.front().to_});
@@ -347,7 +349,7 @@ void extract_rides() {
     if (j.legs_.size() > 1) {
       if (std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
           std::get<n::routing::offset>(j.legs_.back().uses_)
-                  .transport_mode_id_ == kODM) {
+                  .transport_mode_id_ == kOdmTransportModeId) {
         p->to_rides_.push_back({.time_at_start_ = j.legs_.back().arr_time_,
                                 .time_at_stop_ = j.legs_.back().dep_time_,
                                 .stop_ = j.legs_.back().from_});
@@ -367,7 +369,8 @@ void add_direct() {
                get_special_station(n::special_station::kStart),
                get_special_station(n::special_station::kEnd), d.dep_, d.arr_,
                n::routing::offset{get_special_station(n::special_station::kEnd),
-                                  std::chrono::abs(d.arr_ - d.dep_), kODM}}},
+                                  std::chrono::abs(d.arr_ - d.dep_),
+                                  kOdmTransportModeId}}},
          .start_time_ = d.dep_,
          .dest_time_ = d.arr_,
          .dest_ = get_special_station(n::special_station::kEnd),
@@ -381,7 +384,7 @@ void meta_router::extract_direct() {
     if (j.legs_.size() == 1 &&
         std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
         std::get<n::routing::offset>(j.legs_.front().uses_)
-                .transport_mode_id_ == kODM) {
+                .transport_mode_id_ == kOdmTransportModeId) {
       direct_.push_back(dummy_itinerary(from_place_, to_place_,
                                         api::ModeEnum::ODM, j.start_time_,
                                         j.dest_time_));
@@ -454,7 +457,8 @@ api::plan_response meta_router::run() {
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p->from_rides_);
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p->to_rides_);
-  auto const qf = query_factory{
+
+  auto q = n::routing::query{
       .start_time_ = start_time_.start_time_,
       .start_match_mode_ = motis::ep::get_match_mode(start_),
       .dest_match_mode_ = motis::ep::get_match_mode(dest_),
@@ -491,7 +495,10 @@ api::plan_response meta_router::run() {
                                              query_.viaMinimumStay_),
       .fastest_direct_ = fastest_direct_ == kInfinityDuration
                              ? std::nullopt
-                             : std::optional{fastest_direct_},
+                             : std::optional{fastest_direct_}};
+
+  auto const qf = query_factory{
+      .base_query_ = std::move(q),
       .start_walk_ = std::visit(
           utl::overloaded{[&](tt_location const l) {
                             return motis::ep::station_start(l.l_);

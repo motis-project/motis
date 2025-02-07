@@ -11,6 +11,7 @@
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
+#include "motis/transport_mode_ids.h"
 
 namespace n = nigiri;
 using namespace motis::odm;
@@ -37,7 +38,7 @@ n::routing::journey direct_taxi(n::unixtime_t const dep,
               get_special_station(n::special_station::kStart),
               get_special_station(n::special_station::kEnd), dep, arr,
               n::routing::offset{get_special_station(n::special_station::kEnd),
-                                 arr - dep, kODM}}},
+                                 arr - dep, motis::kOdmTransportModeId}}},
           .start_time_ = dep,
           .dest_time_ = arr,
           .dest_ = get_special_station(n::special_station::kEnd),
@@ -66,7 +67,8 @@ TEST(odm, pt_taxi_no_direct) {
           get_special_station(n::special_station::kStart),
           n::location_idx_t{23U}, n::unixtime_t{10h + 43min},
           n::unixtime_t{10h + 47min},
-          n::routing::offset{n::location_idx_t{23U}, 4min, kODM}}},
+          n::routing::offset{n::location_idx_t{23U}, 4min,
+                             motis::kOdmTransportModeId}}},
       .start_time_ = n::unixtime_t{10h + 43min},
       .dest_time_ = n::unixtime_t{11h},
       .dest_ = get_special_station(n::special_station::kEnd),
@@ -113,7 +115,8 @@ TEST(odm, taxi_saves_transfers) {
                   get_special_station(n::special_station::kStart),
                   n::location_idx_t{24U}, n::unixtime_t{10h + 14min},
                   n::unixtime_t{10h + 20min},
-                  n::routing::offset{n::location_idx_t{24U}, 6min, kODM}},
+                  n::routing::offset{n::location_idx_t{24U}, 6min,
+                                     motis::kOdmTransportModeId}},
                  {n::direction::kForward, n::location_idx_t{42U},
                   get_special_station(n::special_station::kEnd),
                   n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
@@ -126,7 +129,8 @@ TEST(odm, taxi_saves_transfers) {
                   get_special_station(n::special_station::kStart),
                   n::location_idx_t{25U}, n::unixtime_t{10h + 20min},
                   n::unixtime_t{10h + 30min},
-                  n::routing::offset{n::location_idx_t{25U}, 10min, kODM}},
+                  n::routing::offset{n::location_idx_t{25U}, 10min,
+                                     motis::kOdmTransportModeId}},
                  {n::direction::kForward, n::location_idx_t{42U},
                   get_special_station(n::special_station::kEnd),
                   n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
@@ -139,7 +143,8 @@ TEST(odm, taxi_saves_transfers) {
                   get_special_station(n::special_station::kStart),
                   n::location_idx_t{26U}, n::unixtime_t{10h + 30min},
                   n::unixtime_t{10h + 45min},
-                  n::routing::offset{n::location_idx_t{26U}, 15min, kODM}},
+                  n::routing::offset{n::location_idx_t{26U}, 15min,
+                                     motis::kOdmTransportModeId}},
                  {n::direction::kForward, n::location_idx_t{42U},
                   get_special_station(n::special_station::kEnd),
                   n::unixtime_t{10h + 55min}, n::unixtime_t{11h},
@@ -200,7 +205,7 @@ TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 12:00]
 leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=5, duration=58)
+  MUMO (id=7, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (END, END) [1970-01-01 12:00]
@@ -211,7 +216,7 @@ TRANSFERS: 0
      FROM: (START, START) [1970-01-01 09:57]
        TO: (END, END) [1970-01-01 14:46]
 leg 0: (START, START) [1970-01-01 09:57] -> (A, A) [1970-01-01 10:55]
-  MUMO (id=5, duration=58)
+  MUMO (id=7, duration=58)
 leg 1: (A, A) [1970-01-01 10:55] -> (A, A) [1970-01-01 11:00]
   FOOTPATH (duration=5)
 leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
@@ -219,7 +224,7 @@ leg 2: (A, A) [1970-01-01 11:00] -> (C, C) [1970-01-01 13:00]
 leg 3: (C, C) [1970-01-01 13:00] -> (C, C) [1970-01-01 14:07]
   FOOTPATH (duration=67)
 leg 4: (C, C) [1970-01-01 14:07] -> (END, END) [1970-01-01 14:46]
-  MUMO (id=5, duration=39)
+  MUMO (id=7, duration=39)
 
 )";
 
@@ -275,7 +280,8 @@ TEST(odm, prima_update) {
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
-                  n::routing::offset{get_loc_idx("A"), 1h, kODM}},
+                  n::routing::offset{get_loc_idx("A"), 1h,
+                                     motis::kOdmTransportModeId}},
                  {n::direction::kForward, get_loc_idx("A"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{11h}, n::unixtime_t{12h},
@@ -288,7 +294,8 @@ TEST(odm, prima_update) {
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
                   get_loc_idx("B"), n::unixtime_t{11h}, n::unixtime_t{12h},
-                  n::routing::offset{get_loc_idx("B"), 1h, kODM}},
+                  n::routing::offset{get_loc_idx("B"), 1h,
+                                     motis::kOdmTransportModeId}},
                  {n::direction::kForward, get_loc_idx("B"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{12h}, n::unixtime_t{13h},
@@ -301,14 +308,16 @@ TEST(odm, prima_update) {
       {.legs_ = {{n::direction::kForward,
                   get_special_station(special_station::kStart),
                   get_loc_idx("A"), n::unixtime_t{10h}, n::unixtime_t{11h},
-                  n::routing::offset{get_loc_idx("A"), 1h, kODM}},
+                  n::routing::offset{get_loc_idx("A"), 1h,
+                                     motis::kOdmTransportModeId}},
                  {n::direction::kForward, get_loc_idx("A"), get_loc_idx("C"),
                   n::unixtime_t{11h}, n::unixtime_t{13h},
                   n::footpath{get_loc_idx("C"), 2h}},
                  {n::direction::kForward, get_loc_idx("C"),
                   get_special_station(special_station::kEnd),
                   n::unixtime_t{13h}, n::unixtime_t{14h},
-                  n::routing::offset{get_loc_idx("C"), 1h, kODM}}},
+                  n::routing::offset{get_loc_idx("C"), 1h,
+                                     motis::kOdmTransportModeId}}},
        .start_time_ = n::unixtime_t{10h},
        .dest_time_ = n::unixtime_t{14h},
        .dest_ = get_special_station(special_station::kEnd)});
