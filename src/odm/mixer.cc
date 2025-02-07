@@ -10,6 +10,7 @@
 namespace motis::odm {
 
 namespace n = nigiri;
+using n::routing::journey;
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
@@ -23,12 +24,11 @@ std::int32_t tally(std::int32_t const x,
   return acc;
 }
 
-std::int32_t mixer::transfer_cost(n::routing::journey const& j) const {
+std::int32_t mixer::transfer_cost(journey const& j) const {
   return tally(j.transfers_, transfer_cost_);
 }
 
-std::int32_t distance(n::routing::journey const& a,
-                      n::routing::journey const& b) {
+std::int32_t distance(journey const& a, journey const& b) {
   auto const overtakes = [](auto const& x, auto const& y) {
     return x.departure_time() > y.departure_time() &&
            x.arrival_time() < y.arrival_time();
@@ -42,39 +42,36 @@ std::int32_t distance(n::routing::journey const& a,
                    .count();
 }
 
-void mixer::cost_domination(
-    n::pareto_set<n::routing::journey> const& pt_journeys,
-    std::vector<n::routing::journey>& odm_journeys) const {
-
-  auto const leg_cost = [&](auto const& leg) {
+void mixer::cost_domination(n::pareto_set<journey> const& pt_journeys,
+                            std::vector<journey>& odm_journeys) const {
+  auto const leg_cost = [&](journey::leg const& leg) {
     return std::visit(
-        utl::overloaded{[](n::routing::journey::run_enter_exit const&) {
-                          return std::int32_t{0};
-                        },
-                        [&](n::footpath const& fp) {
-                          return tally(fp.duration().count(), walk_cost_);
-                        },
-                        [&](n::routing::offset const& o) {
-                          if (o.transport_mode_id_ == kOdmTransportModeId) {
-                            return tally(o.duration().count(), taxi_cost_);
-                          } else if (o.transport_mode_id_ == kWalk) {
-                            return tally(o.duration().count(), walk_cost_);
-                          }
-                          utl::verify(
-                              o.transport_mode_id_ == kOdmTransportModeId ||
-                                  o.transport_mode_id_ == kWalk,
-                              "unknown transport mode");
-                          return std::int32_t{0};
-                        }},
+        utl::overloaded{
+            [](journey::run_enter_exit const&) { return std::int32_t{0}; },
+            [&](n::footpath const& fp) {
+              return tally(fp.duration().count(), walk_cost_);
+            },
+            [&](n::routing::offset const& o) {
+              if (o.transport_mode_id_ == kOdmTransportModeId) {
+                return tally(o.duration().count(), taxi_cost_);
+              } else if (o.transport_mode_id_ == kWalk) {
+                return tally(o.duration().count(), walk_cost_);
+              }
+              utl::verify(o.transport_mode_id_ == kOdmTransportModeId ||
+                              o.transport_mode_id_ == kWalk,
+                          "unknown transport mode");
+              return std::int32_t{0};
+            }},
         leg.uses_);
   };
 
-  auto const pt_time = [](auto const& j) {
-    auto const leg_duration = [](auto const& l) {
+  auto const pt_time = [](journey const& j) {
+    auto const leg_duration = [](journey::leg const& l) {
       return std::visit(
           utl::overloaded{
-              [](n::routing::journey::run_enter_exit const& ree
-                 [[maybe_unused]]) { return n::duration_t{0}; },
+              [](journey::run_enter_exit const& ree [[maybe_unused]]) {
+                return n::duration_t{0};
+              },
               [](n::footpath const& fp) { return fp.duration(); },
               [](n::routing::offset const& o) { return o.duration(); }},
           l.uses_);
@@ -84,14 +81,14 @@ void mixer::cost_domination(
                                  : n::duration_t{0});
   };
 
-  auto const cost = [&](auto const& j) {
+  auto const cost = [&](journey const& j) {
     return (leg_cost(j.legs_.front()) +
             (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
             pt_time(j).count() + transfer_cost(j));
   };
 
-  auto const is_dominated = [&](auto const& odm_journey) {
-    auto const dominates = [&](auto const& pt_journey) {
+  auto const is_dominated = [&](journey const& odm_journey) {
+    auto const dominates = [&](journey const& pt_journey) {
       auto const alpha_term =
           alpha_ *
           (static_cast<double>(pt_journey.travel_time().count()) /
@@ -103,17 +100,27 @@ void mixer::cost_domination(
     return utl::any_of(pt_journeys, dominates);
   };
 
-  std::erase_if(odm_journeys, is_dominated);
+  for (auto it = begin(odm_journeys); it != end(odm_journeys);) {
+    if (is_dominated(*it)) {
+      it = odm_journeys.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
-void mixer::productivity_domination(
-    std::vector<n::routing::journey>& odm_journeys) const {
+void mixer::productivity_domination(std::vector<journey>& odm_journeys) const {
   auto const cost = [&](auto const& j) -> double {
     return j.travel_time().count() + transfer_cost(j);
   };
 
-  auto const taxi_time = [](n::routing::journey const& j) -> double {
-    return (is_odm_leg(j.legs_.front())
+  auto const taxi_time = [&](journey const& j) -> double {
+    if (j.legs_.empty()) {
+      std::cout << "TAXI TIME: NO LEGS\n";
+      j.print(std::cout, tt_, nullptr, false);
+    }
+    return (j.legs_.empty() ? 0
+            : is_odm_leg(j.legs_.front())
                 ? std::get<n::routing::offset>(j.legs_.front().uses_)
                       .duration()
                       .count()
@@ -125,8 +132,8 @@ void mixer::productivity_domination(
                 : 0);
   };
 
-  auto const is_dominated = [&](auto const& b) {
-    auto const dominates_b = [&](auto const& a) {
+  auto const is_dominated = [&](journey const& b) {
+    auto const dominates_b = [&](journey const& a) {
       auto const prod_a = cost(b) / taxi_time(a);
       auto const prod_b = (cost(a) + beta_ * distance(a, b)) / taxi_time(b);
       return prod_a > prod_b;
@@ -134,13 +141,49 @@ void mixer::productivity_domination(
     return utl::any_of(odm_journeys, dominates_b);
   };
 
-  std::erase_if(odm_journeys, is_dominated);
+  for (auto it = begin(odm_journeys); it != end(odm_journeys);) {
+    if (is_dominated(*it)) {
+      it = odm_journeys.erase(it);
+    } else {
+      ++it;
+    }
+  }
 }
 
-void mixer::mix(n::pareto_set<n::routing::journey> const& pt_journeys,
-                std::vector<n::routing::journey>& odm_journeys) const {
+void mixer::mix(n::pareto_set<journey> const& pt_journeys,
+                std::vector<journey>& odm_journeys) const {
+  std::cout << "ODM JOURNEYS:\n";
+  for (auto const& j : odm_journeys) {
+    if (j.legs_.empty()) {
+      std::cout << "NO LEGS\n";
+    }
+    j.print(std::cout, tt_, nullptr, false);
+    std::cout << "\n\n";
+  }
+  std::cout << "-----\n";
+
   cost_domination(pt_journeys, odm_journeys);
+  std::cout << "COST DOMINATION:\n";
+  for (auto const& j : odm_journeys) {
+    if (j.legs_.empty()) {
+      std::cout << "NO LEGS\n";
+    }
+    j.print(std::cout, tt_, nullptr, false);
+    std::cout << "\n\n";
+  }
+  std::cout << "-----\n";
+
   productivity_domination(odm_journeys);
+  std::cout << "PRODUCTIVITY DOMINATION:\n";
+  for (auto const& j : odm_journeys) {
+    if (j.legs_.empty()) {
+      std::cout << "NO LEGS\n";
+    }
+    j.print(std::cout, tt_, nullptr, false);
+    std::cout << "\n\n";
+  }
+  std::cout << "-----\n";
+
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
   }
