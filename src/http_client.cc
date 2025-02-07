@@ -182,6 +182,7 @@ struct http_client::connection
         req.keep_alive(true);
         if (request->body_.has_value()) {
           req.body() = request->body_.value();
+          req.prepare_payload();
         }
 
         if (!unlimited_pipelining_) {
