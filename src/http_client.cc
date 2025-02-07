@@ -169,13 +169,10 @@ struct http_client::connection
     try {
       auto const send_request =
           [&](std::shared_ptr<request> request) -> asio::awaitable<void> {
-        auto req = request->method_ == request_method::GET
-                       ? http::request<http::string_body>{http::verb::get,
-                                                          request->url_
-                                                              .encoded_target(),
-                                                          11}
-                       : http::request<http::string_body>{
-                             http::verb::post, request->body_.value(), 11};
+        auto req = http::request<http::string_body>{
+            request->method_ == request_method::GET ? http::verb::get
+                                                    : http::verb::post,
+            request->url_.encoded_target(), 11};
         req.set(http::field::host, request->url_.host());
         req.set(http::field::user_agent, kMotisUserAgent);
         req.set(http::field::accept_encoding, "gzip");
@@ -183,6 +180,9 @@ struct http_client::connection
           req.set(k, v);
         }
         req.keep_alive(true);
+        if (request->method_ == POST && request->body_.has_value()) {
+          req.body() = request->body_.value();
+        }
 
         if (!unlimited_pipelining_) {
           co_await requests_in_flight_->async_send(boost::system::error_code{});

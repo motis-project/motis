@@ -408,7 +408,6 @@ struct routing_result {
 };
 
 api::plan_response meta_router::run() {
-
   // init
   auto const init_start = std::chrono::steady_clock::now();
   utl::verify(r_.tt_ != nullptr && r_.tags_ != nullptr,
