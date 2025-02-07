@@ -53,8 +53,6 @@ using namespace std::chrono_literals;
 static boost::thread_specific_ptr<prima> p;
 
 constexpr auto const kMinODMOffsetLength = n::duration_t{3};
-constexpr auto const kMaxODMEvents = 3000U;
-
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
@@ -212,19 +210,6 @@ void init_pt(std::vector<n::routing::start>& rides,
       tt, rtt, intvl, offsets, {}, n::routing::kMaxTravelTime,
       location_match_mode, false, rides, true, start_time.prf_idx_,
       start_time.transfer_time_settings_);
-
-  if (rides.size() > kMaxODMEvents) {
-    auto const by_distance = [&](auto const& a, auto const& b) {
-      auto const distance_a =
-          geo::distance(l.pos_, tt.locations_.coordinates_[a.stop_]);
-      auto const distance_b =
-          geo::distance(l.pos_, tt.locations_.coordinates_[b.stop_]);
-      return std::tie(distance_a, a.stop_, a.time_at_start_, a.time_at_stop_) <
-             std::tie(distance_b, b.stop_, b.time_at_start_, b.time_at_stop_);
-    };
-    utl::sort(rides, by_distance);
-    rides.resize(kMaxODMEvents);
-  }
 }
 
 void meta_router::init_prima(n::interval<n::unixtime_t> const& from_intvl,
@@ -338,18 +323,14 @@ void extract_rides() {
   p->to_rides_.clear();
   for (auto const& j : p->odm_journeys_) {
     if (!j.legs_.empty()) {
-      if (std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
-          std::get<n::routing::offset>(j.legs_.front().uses_)
-                  .transport_mode_id_ == kOdmTransportModeId) {
+      if (is_odm_leg(j.legs_.front())) {
         p->from_rides_.push_back({.time_at_start_ = j.legs_.front().dep_time_,
                                   .time_at_stop_ = j.legs_.front().arr_time_,
                                   .stop_ = j.legs_.front().to_});
       }
     }
     if (j.legs_.size() > 1) {
-      if (std::holds_alternative<n::routing::offset>(j.legs_.back().uses_) &&
-          std::get<n::routing::offset>(j.legs_.back().uses_)
-                  .transport_mode_id_ == kOdmTransportModeId) {
+      if (is_odm_leg(j.legs_.back())) {
         p->to_rides_.push_back({.time_at_start_ = j.legs_.back().arr_time_,
                                 .time_at_stop_ = j.legs_.back().dep_time_,
                                 .stop_ = j.legs_.back().from_});
@@ -377,21 +358,6 @@ void add_direct() {
          .transfers_ = 0U});
   }
   fmt::println("[whitelisting] added {} direct rides", p->direct_rides_.size());
-}
-
-void meta_router::extract_direct() {
-  std::erase_if(p->odm_journeys_, [&](auto const& j) {
-    if (j.legs_.size() == 1 &&
-        std::holds_alternative<n::routing::offset>(j.legs_.front().uses_) &&
-        std::get<n::routing::offset>(j.legs_.front().uses_)
-                .transport_mode_id_ == kOdmTransportModeId) {
-      direct_.push_back(dummy_itinerary(from_place_, to_place_,
-                                        api::ModeEnum::ODM, j.start_time_,
-                                        j.dest_time_));
-      return true;
-    }
-    return false;
-  });
 }
 
 struct routing_result {
@@ -666,7 +632,6 @@ api::plan_response meta_router::run() {
   fmt::println("[mixing] {} PT journeys and {} ODM journeys",
                pt_result.journeys_.size(), p->odm_journeys_.size());
   kOdmMixer.mix(pt_result.journeys_, p->odm_journeys_);
-  extract_direct();
   print_time(mixing_start, "[mixing]");
 
   return {.from_ = from_place_,

@@ -48,9 +48,9 @@ n::unixtime_t to_unix(std::int64_t const t) {
       std::chrono::duration_cast<n::i32_minutes>(std::chrono::milliseconds{t})};
 }
 
-template <which_mile Wm>
 json::array to_json(std::vector<n::routing::start> const& v,
-                    n::timetable const& tt) {
+                    n::timetable const& tt,
+                    which_mile const wm) {
   auto a = json::array{};
   utl::equal_ranges_linear(
       v,
@@ -64,8 +64,8 @@ json::array to_json(std::vector<n::routing::start> const& v,
             {"lng", pos.lng_},
             {"times",
              utl::all(from_it, to_it) |
-                 utl::transform([](n::routing::start const& s) {
-                   return Wm == which_mile::kFirstMile
+                 utl::transform([&](n::routing::start const& s) {
+                   return wm == which_mile::kFirstMile
                               ? to_millis(s.time_at_stop_ - kODMTransferBuffer)
                               : to_millis(s.time_at_stop_ + kODMTransferBuffer);
                  }) |
@@ -93,8 +93,8 @@ json::value to_json(capacities const& c) {
 json::value to_json(prima const& p, n::timetable const& tt) {
   return {{"start", {{"lat", p.from_.lat_}, {"lng", p.from_.lng_}}},
           {"target", {{"lat", p.to_.lat_}, {"lng", p.to_.lng_}}},
-          {"startBusStops", to_json<kFirstMile>(p.from_rides_, tt)},
-          {"targetBusStops", to_json<kLastMile>(p.to_rides_, tt)},
+          {"startBusStops", to_json(p.from_rides_, tt, kFirstMile)},
+          {"targetBusStops", to_json(p.to_rides_, tt, kLastMile)},
           {"directTimes", to_json(p.direct_rides_, p.fixed_)},
           {"startFixed", p.fixed_ == n::event_type::kDep},
           {"capacities", to_json(p.cap_)}};
@@ -104,7 +104,7 @@ std::string prima::get_prima_request(n::timetable const& tt) const {
   return json::serialize(to_json(*this, tt));
 }
 
-size_t prima::n_events() const {
+std::size_t prima::n_events() const {
   return from_rides_.size() + to_rides_.size() + direct_rides_.size();
 }
 
