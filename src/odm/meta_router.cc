@@ -57,7 +57,7 @@ constexpr auto const kInfinityDuration =
     n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
 static auto const kOdmMixer = mixer{.alpha_ = 1.5,
-                                    .beta_ = 0.1,
+                                    .beta_ = 0.39,
                                     .walk_cost_ = {{0, 1}, {15, 10}},
                                     .taxi_cost_ = {{0, 35}, {1, 12}},
                                     .transfer_cost_ = {{0, 10}}};
