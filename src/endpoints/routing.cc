@@ -445,7 +445,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const [start_time, t] = get_start_time(query);
 
   UTL_START_TIMING(direct);
-  auto [direct, fastest_direct] =
+  auto const [direct, fastest_direct] =
       t.has_value() && !direct_modes.empty() && w_ && l_
           ? route_direct(e, gbfs_rd, from_p, to_p, direct_modes,
                          query.directRentalFormFactors_,
