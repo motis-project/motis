@@ -253,12 +253,11 @@ void prima::adjust_to_whitelisting() {
   for (auto const [to_ride, prev_to_ride] :
        utl::zip(to_rides_, prev_to_rides_)) {
 
-    auto const uses_prev_to = [&](auto const& j) {
+    auto const uses_prev_to = [&, prev = prev_to_ride](auto const& j) {
       return j.legs_.size() > 1 &&
-             j.legs_.back().dep_time_ == prev_to_ride.time_at_stop_ &&
-             j.legs_.back().arr_time_ == prev_to_ride.time_at_start_ &&
-             j.legs_.back().from_ == prev_to_ride.stop_ &&
-             is_odm_leg(j.legs_.back());
+             j.legs_.back().dep_time_ == prev.time_at_stop_ &&
+             j.legs_.back().arr_time_ == prev.time_at_start_ &&
+             j.legs_.back().from_ == prev.stop_ && is_odm_leg(j.legs_.back());
     };
 
     if (to_ride.time_at_start_ == kInfeasible) {
