@@ -1,16 +1,14 @@
 <script lang="ts">
 	import ArrowUpDown from 'lucide-svelte/icons/arrow-up-down';
 	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
-	import Accessibility from 'lucide-svelte/icons/accessibility';
-	import Bike from 'lucide-svelte/icons/bike';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import DateInput from '$lib/DateInput.svelte';
 	import { posToLocation, type Location } from '$lib/Location';
-	import { Toggle } from '$lib/components/ui/toggle';
 	import { t } from '$lib/i18n/translation';
+	import AdvancedOptions from './AdvancedOptions.svelte';
 
 	let {
 		from = $bindable(),
@@ -18,7 +16,9 @@
 		time = $bindable(),
 		timeType = $bindable(),
 		wheelchair = $bindable(),
-		bikeRental = $bindable()
+		bikeRental = $bindable(),
+		bikeCarriage = $bindable(),
+		selectedModes = $bindable()
 	}: {
 		from: Location;
 		to: Location;
@@ -26,6 +26,8 @@
 		timeType: string;
 		wheelchair: boolean;
 		bikeRental: boolean;
+		bikeCarriage: boolean;
+		selectedModes: string[];
 	} = $props();
 
 	let fromItems = $state<Array<Location>>([]);
@@ -39,7 +41,7 @@
 		}
 	};
 
-	const applyPosition = (position: GeolocationPosition) => {
+	const applyPosition = (position: { coords: { latitude: number; longitude: number } }) => {
 		from = posToLocation({ lat: position.coords.latitude, lon: position.coords.longitude }, 0);
 	};
 </script>
@@ -78,24 +80,22 @@
 				for="departure"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
-				<RadioGroup.Item value="departure" id="departure" class="sr-only" aria-label="Abfahrt" />
+				<RadioGroup.Item
+					value="departure"
+					id="departure"
+					class="sr-only"
+					aria-label={t.departure}
+				/>
 				<span>{t.departure}</span>
 			</Label>
 			<Label
 				for="arrival"
 				class="flex items-center rounded-md border-2 border-muted bg-popover p-1 px-2 hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-blue-600 hover:cursor-pointer"
 			>
-				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label="Ankunft" />
+				<RadioGroup.Item value="arrival" id="arrival" class="sr-only" aria-label={t.arrival} />
 				<span>{t.arrival}</span>
 			</Label>
 		</RadioGroup.Root>
-		<div>
-			<Toggle aria-label="toggle bold" bind:pressed={wheelchair}>
-				<Accessibility class="h-6 w-6" />
-			</Toggle>
-			<Toggle aria-label="toggle bold" bind:pressed={bikeRental}>
-				<Bike class="h-6 w-6" />
-			</Toggle>
-		</div>
+		<AdvancedOptions bind:wheelchair bind:bikeRental bind:bikeCarriage bind:selectedModes />
 	</div>
 </div>

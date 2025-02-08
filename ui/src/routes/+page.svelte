@@ -115,6 +115,8 @@
 	let timeType = $state<string>('departure');
 	let wheelchair = $state(false);
 	let bikeRental = $state(false);
+	let bikeCarriage = $state(false);
+	let selectedTransitModes = $state<Mode[]>([]);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -125,7 +127,11 @@
 			return `${lngLatToStr(l.value.match!)},0`;
 		}
 	};
-	let modes = $derived(['WALK', ...(bikeRental ? ['RENTAL'] : [])] as Mode[]);
+	let modes = $derived([
+		'WALK',
+		...(bikeRental ? ['RENTAL'] : []),
+		...(bikeCarriage ? ['BIKE'] : [])
+	] as Mode[]);
 	let baseQuery = $derived(
 		from.value.match && to.value.match
 			? ({
@@ -138,7 +144,9 @@
 						pedestrianProfile: wheelchair ? 'WHEELCHAIR' : 'FOOT',
 						preTransitModes: modes,
 						postTransitModes: modes,
-						directModes: modes
+						directModes: modes,
+						requireBikeTransport: bikeCarriage,
+						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined
 					}
 				} as PlanData)
 			: undefined
@@ -293,8 +301,17 @@
 
 	{#if !isSmallScreen || (!page.state.selectedItinerary && !page.state.selectedStop)}
 		<Control position="top-left">
-			<Card class="w-[500px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-				<SearchMask bind:from bind:to bind:time bind:timeType bind:wheelchair bind:bikeRental />
+			<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+				<SearchMask
+					bind:from
+					bind:to
+					bind:time
+					bind:timeType
+					bind:wheelchair
+					bind:bikeRental
+					bind:bikeCarriage
+					bind:selectedModes={selectedTransitModes}
+				/>
 			</Card>
 		</Control>
 	{/if}
@@ -304,7 +321,7 @@
 	{#if !page.state.selectedItinerary && routingResponses.length !== 0}
 		<Control position="top-left" class="min-h-0 md:mb-2">
 			<Card
-				class="w-[500px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+				class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
 				<ItineraryList
 					{baseResponse}
@@ -318,7 +335,7 @@
 
 	{#if page.state.selectedItinerary && !page.state.selectedStop}
 		<Control position="top-left" class="min-h-0 mb-12 md:mb-2">
-			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
+			<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
 					<Button
@@ -345,7 +362,7 @@
 
 	{#if page.state.selectedStop}
 		<Control position="top-left" class="min-h-0 md:mb-2">
-			<Card class="w-[500px] h-full bg-background rounded-lg flex flex-col">
+			<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 					<h2 class="ml-2 text-base font-semibold">
 						{#if page.state.stopArriveBy}

@@ -37,7 +37,34 @@ const translations: Translations = {
 	sharingProvider: 'Anbieter',
 	roundtripStationReturnConstraint:
 		'Das Fahrzeug muss wieder an der Abfahrtsstation abgestellt werden.',
-	noItinerariesFound: 'Keine Verbindungen gefunden.'
+	noItinerariesFound: 'Keine Verbindungen gefunden.',
+	advancedSearchOptions: 'Optionen',
+	selectModes: 'Öffentliche Verkehrsmittel auswählen',
+	defaultSelectedModes: 'Alle Verkehrsmittel',
+	wheelchair: 'Barrierfreie Umstiege',
+	bikeRental: 'Sharing-Fahrzeuge zulassen',
+	bikeCarriage: 'Fahrradmitnahme',
+	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
+	WALK: 'Zu Fuß',
+	BIKE: 'Fahrrad',
+	RENTAL: 'Sharing',
+	CAR: 'Auto',
+	CAR_PARKING: 'Car parking',
+	TRANSIT: 'ÖPV',
+	TRAM: 'Tram',
+	SUBWAY: 'U-Bahn',
+	FERRY: 'Fähre',
+	AIRPLANE: 'Flugzeug',
+	METRO: 'S-Bahn',
+	BUS: 'Bus',
+	COACH: 'Reisebus',
+	RAIL: 'Zug',
+	HIGHSPEED_RAIL: 'Hochgeschwindigkeitszug',
+	LONG_DISTANCE: 'Intercityzug',
+	NIGHT_RAIL: 'Nachtzug',
+	REGIONAL_FAST_RAIL: 'Regionalexpresszug',
+	REGIONAL_RAIL: 'Regionalzug',
+	OTHER: 'Andere'
 };
 
 export default translations;
