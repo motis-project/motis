@@ -40,7 +40,7 @@ const translations: Translations = {
 	advancedSearchOptions: 'Options',
 	selectModes: 'Select transit modes',
 	defaultSelectedModes: 'All transit modes',
-	wheelchair: 'Barrier-free transfers',
+	wheelchair: 'Accessible transfers',
 	bikeRental: 'Allow usage of sharing vehicles',
 	bikeCarriage: 'Bike carriage',
 	unreliableOptions: 'Depending on data availability, these options may be unreliable.',

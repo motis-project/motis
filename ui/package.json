@@ -47,9 +47,9 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"@deck.gl/core": "^9.1.0",
-		"@deck.gl/layers": "^9.1.0",
-		"@deck.gl/mapbox": "^9.1.0",
+		"@deck.gl/core": "^9.0.33",
+		"@deck.gl/layers": "^9.0.33",
+		"@deck.gl/mapbox": "^9.0.33",
 		"@hey-api/client-fetch": "^0.4.4",
 		"@turf/rhumb-bearing": "^7.2.0",
 		"@turf/rhumb-distance": "^7.2.0",

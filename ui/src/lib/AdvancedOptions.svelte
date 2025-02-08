@@ -94,7 +94,7 @@
 								value={mode.value}
 								label={mode.label}
 							>
-								{#snippet children({ selected })}
+								{#snippet children({ selected }: { selected: boolean })}
 									{mode.label}
 									{#if selected}
 										<div class="ml-auto">
