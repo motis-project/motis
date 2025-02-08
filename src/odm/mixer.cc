@@ -115,10 +115,6 @@ void mixer::productivity_domination(std::vector<journey>& odm_journeys) const {
   };
 
   auto const taxi_time = [&](journey const& j) -> double {
-    if (j.legs_.empty()) {
-      std::cout << "TAXI TIME: NO LEGS\n";
-      j.print(std::cout, tt_, nullptr, false);
-    }
     return (j.legs_.empty() ? 0
             : is_odm_leg(j.legs_.front())
                 ? std::get<n::routing::offset>(j.legs_.front().uses_)
@@ -152,38 +148,8 @@ void mixer::productivity_domination(std::vector<journey>& odm_journeys) const {
 
 void mixer::mix(n::pareto_set<journey> const& pt_journeys,
                 std::vector<journey>& odm_journeys) const {
-  std::cout << "ODM JOURNEYS:\n";
-  for (auto const& j : odm_journeys) {
-    if (j.legs_.empty()) {
-      std::cout << "NO LEGS\n";
-    }
-    j.print(std::cout, tt_, nullptr, false);
-    std::cout << "\n\n";
-  }
-  std::cout << "-----\n";
-
   cost_domination(pt_journeys, odm_journeys);
-  std::cout << "COST DOMINATION:\n";
-  for (auto const& j : odm_journeys) {
-    if (j.legs_.empty()) {
-      std::cout << "NO LEGS\n";
-    }
-    j.print(std::cout, tt_, nullptr, false);
-    std::cout << "\n\n";
-  }
-  std::cout << "-----\n";
-
   productivity_domination(odm_journeys);
-  std::cout << "PRODUCTIVITY DOMINATION:\n";
-  for (auto const& j : odm_journeys) {
-    if (j.legs_.empty()) {
-      std::cout << "NO LEGS\n";
-    }
-    j.print(std::cout, tt_, nullptr, false);
-    std::cout << "\n\n";
-  }
-  std::cout << "-----\n";
-
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
   }

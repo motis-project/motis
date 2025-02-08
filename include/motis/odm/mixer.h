@@ -30,7 +30,6 @@ struct mixer {
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;
-  nigiri::timetable const& tt_;
 };
 
 }  // namespace motis::odm
