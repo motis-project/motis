@@ -105,3 +105,7 @@
 	flex-direction: column;
 	z-index: 3;
 }
+
+.maplibregl-ctrl-group .maplibregl-ctrl-geolocate {
+	display: none;
+}

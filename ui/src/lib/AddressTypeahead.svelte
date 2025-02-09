@@ -87,7 +87,6 @@
 			shown.add(entry);
 			return true;
 		});
-		preventClickthrough(!!items.length && comboOpen);
 	};
 
 	const deserialize = (s: string): Location => {
@@ -119,16 +118,6 @@
 			}, 150);
 		}
 	});
-
-	let comboOpen = false;
-	const preventClickthrough = (prevent: boolean) => {
-		const ctr = document.getElementById('searchmask-container')!;
-		if (prevent) {
-			ctr.style.pointerEvents = 'none';
-		} else {
-			window.setTimeout(() => (ctr.style.pointerEvents = 'auto'), 1);
-		}
-	};
 </script>
 
 <Combobox.Root
@@ -141,10 +130,6 @@
 			inputValue = selected.label!;
 		}
 	}}
-	onOpenChange={(open) => {
-		comboOpen = open;
-		preventClickthrough(open);
-	}}
 >
 	<Combobox.Input
 		{placeholder}
@@ -152,7 +137,7 @@
 		bind:ref
 		class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 		autocomplete="off"
-		oninput={(e) => (inputValue = e.currentTarget.value)}
+		oninput={(e: Event) => (inputValue = (e.currentTarget as HTMLInputElement).value)}
 		aria-label={placeholder}
 		data-combobox-input={inputValue}
 	/>

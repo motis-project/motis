@@ -32,6 +32,33 @@ export type Translations = {
 	sharingProvider: string;
 	roundtripStationReturnConstraint: string;
 	noItinerariesFound: string;
+	advancedSearchOptions: string;
+	selectModes: string;
+	defaultSelectedModes: string;
+	wheelchair: string;
+	bikeRental: string;
+	bikeCarriage: string;
+	unreliableOptions: string;
+	WALK: string;
+	BIKE: string;
+	RENTAL: string;
+	CAR: string;
+	CAR_PARKING: string;
+	TRANSIT: string;
+	TRAM: string;
+	SUBWAY: string;
+	FERRY: string;
+	AIRPLANE: string;
+	METRO: string;
+	BUS: string;
+	COACH: string;
+	RAIL: string;
+	HIGHSPEED_RAIL: string;
+	LONG_DISTANCE: string;
+	NIGHT_RAIL: string;
+	REGIONAL_FAST_RAIL: string;
+	REGIONAL_RAIL: string;
+	OTHER: string;
 };
 
 const translations: Map<string, Translations> = new Map(

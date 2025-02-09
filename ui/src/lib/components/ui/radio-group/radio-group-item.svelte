@@ -20,7 +20,7 @@
 	)}
 	{...restProps}
 >
-	{#snippet children({ checked })}
+	{#snippet children({ checked } : {checked: boolean})}
 		<div class="flex items-center justify-center">
 			{#if checked}
 				<Circle class="fill-primary size-3.5" />
