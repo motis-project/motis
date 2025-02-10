@@ -13,6 +13,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/fwd.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/odm/query_factory.h"
 #include "motis/place.h"
 
 namespace nigiri {
@@ -47,8 +48,8 @@ struct meta_router {
   api::plan_response run();
 
 private:
-  void init_prima(nigiri::interval<nigiri::unixtime_t> const& from_intvl,
-                  nigiri::interval<nigiri::unixtime_t> const& to_intvl);
+  void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
+  void search_interval(query_factory const& qf);
 
   ep::routing const& r_;
   api::plan_params const& query_;
