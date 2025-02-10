@@ -86,7 +86,7 @@ struct config {
     bool merge_dupes_inter_src_{false};
     unsigned link_stop_distance_{100U};
     unsigned update_interval_{60};
-    unsigned http_timeout_{10};
+    unsigned http_timeout_{30};
     bool incremental_rt_update_{false};
     bool use_osm_stop_coordinates_{false};
     bool extend_missing_footpaths_{false};
@@ -116,7 +116,7 @@ struct config {
     std::map<std::string, feed> feeds_{};
     std::map<std::string, restrictions> default_restrictions_{};
     unsigned update_interval_{60};
-    unsigned http_timeout_{10};
+    unsigned http_timeout_{30};
     unsigned cache_size_{50};
     std::optional<std::string> proxy_{};
   };

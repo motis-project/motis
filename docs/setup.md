@@ -51,7 +51,7 @@ timetable:                          # if not set, no timetable will be loaded
   merge_dupes_inter_src: false      # duplicates withing different datasets will be merged
   link_stop_distance: 100           # stops will be linked by footpaths if they're less than X meters (default=100m) apart
   update_interval: 60               # real-time updates are polled every `update_interval` seconds
-  http_timeout: 10                  # timeout for the HTTP server to respond with a package
+  http_timeout: 30                  # maximum time in seconds the real-time feed download may take
   incremental_rt_update: false      # false = real-time updates are applied to a clean slate, true = no data will be dropped
   max_footpath_length: 15           # maximum footpath length when transitively connecting stops or for routing footpaths if `osr_footpath` is set to true
   datasets:                         # map of tag -> dataset
