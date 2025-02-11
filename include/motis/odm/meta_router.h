@@ -49,7 +49,21 @@ struct meta_router {
 
 private:
   void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
-  void search_interval(query_factory const& qf);
+
+  struct routing_result {
+    explicit routing_result(
+        nigiri::routing::routing_result<nigiri::routing::raptor_stats> rr)
+        : journeys_{*rr.journeys_},
+          interval_{rr.interval_},
+          search_stats_{rr.search_stats_},
+          algo_stats_{rr.algo_stats_} {}
+
+    nigiri::pareto_set<nigiri::routing::journey> journeys_;
+    nigiri::interval<nigiri::unixtime_t> interval_;
+    nigiri::routing::search_stats search_stats_;
+    nigiri::routing::raptor_stats algo_stats_;
+  };
+  routing_result search_interval(query_factory const&, bool blacklisted);
 
   ep::routing const& r_;
   api::plan_params const& query_;
