@@ -309,9 +309,8 @@ auto get_td_offsets(auto const& rides) {
   return td_offsets;
 }
 
-meta_router::routing_result meta_router::search_interval(
+std::vector<meta_router::routing_result> meta_router::search_interval(
     query_factory const& qf, bool const blacklisted) {
-  auto const routing_start = std::chrono::steady_clock::now();
 
   auto const make_task = [&](n::routing::query q) {
     return boost::fibers::packaged_task<routing_result()>{
@@ -333,17 +332,13 @@ meta_router::routing_result meta_router::search_interval(
         }};
   };
 
+  auto const queries = qf.make_queries();
   auto tasks = std::vector<boost::fibers::packaged_task<routing_result()>>{};
-  tasks.emplace_back(make_task(qf.walk_walk()));
+  tasks.emplace_back(make_task(queries.front()));
   if (blacklisted) {
-    tasks.emplace_back(make_task(qf.walk_short()));
-    tasks.emplace_back(make_task(qf.walk_long()));
-    tasks.emplace_back(make_task(qf.short_walk()));
-    tasks.emplace_back(make_task(qf.long_walk()));
-    tasks.emplace_back(make_task(qf.short_short()));
-    tasks.emplace_back(make_task(qf.short_long()));
-    tasks.emplace_back(make_task(qf.long_short()));
-    tasks.emplace_back(make_task(qf.long_long()));
+    for (auto const& q : queries | std::views::drop(1)) {
+      tasks.emplace_back(make_task(std::move(q)));
+    }
   } else {
     fmt::println("[blacklisting] failed, omitting ODM routing");
   }
@@ -355,18 +350,25 @@ meta_router::routing_result meta_router::search_interval(
   for (auto const& f : futures) {
     f.wait();
   }
-  print_time(routing_start, "[routing]");
 
+  auto results = std::vector<meta_router::routing_result>{};
+  for (auto& f : futures) {
+    results.push_back(f.get());
+  }
+
+  return results;
+}
+
+void collect_odm_journeys(
+    std::vector<meta_router::routing_result> const& results) {
   p->odm_journeys_.clear();
-  for (auto& f : futures | std::views::drop(1)) {
-    for (auto& j : f.get().journeys_) {
-      p->odm_journeys_.emplace_back(std::move(j));
+  for (auto& r : results | std::views::drop(1)) {
+    for (auto& j : r.journeys_) {
+      p->odm_journeys_.push_back(std::move(j));
     }
   }
   fmt::println("[routing] collected {} ODM-PT journeys",
                p->odm_journeys_.size());
-
-  return futures.front().get();
 }
 
 void extract_rides() {
@@ -473,8 +475,9 @@ api::plan_response meta_router::run() {
                               })
                               .value_or(kInfinityDuration),
       .min_connection_count_ = 0U,
-      .extend_interval_earlier_ = false,
+      .extend_interval_earlier_ = false,  // TODO should be like in routing.cc
       .extend_interval_later_ = false,
+      .max_interval_ = odm_intvl,
       .prf_idx_ = static_cast<n::profile_idx_t>(
           query_.useRoutedTransfers_
               ? (query_.pedestrianProfile_ ==
@@ -579,14 +582,16 @@ api::plan_response meta_router::run() {
                                          : get_td_offsets(to_rides_long)};
   print_time(prep_queries_start, "[prepare queries]");
 
-  auto const pt_result = search_interval(qf, blacklisted);
+  auto const routing_start = std::chrono::steady_clock::now();
+  auto result = search_interval(qf, blacklisted);
+
+  print_time(routing_start, "[routing]");
 
   // whitelisting
   auto whitelist_response = std::optional<std::string>{};
   auto ioc2 = boost::asio::io_context{};
   if (blacklisted) {
     auto const wl_start = std::chrono::steady_clock::now();
-    collect_odm_journeys(futures);
     extract_rides();
     try {
       fmt::println("[whitelisting] request for {} events", p->n_events());

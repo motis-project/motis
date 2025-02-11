@@ -47,9 +47,6 @@ struct meta_router {
 
   api::plan_response run();
 
-private:
-  void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
-
   struct routing_result {
     explicit routing_result(
         nigiri::routing::routing_result<nigiri::routing::raptor_stats> rr)
@@ -63,6 +60,9 @@ private:
     nigiri::routing::search_stats search_stats_;
     nigiri::routing::raptor_stats algo_stats_;
   };
+
+private:
+  void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
   routing_result search_interval(query_factory const&, bool blacklisted);
 
   ep::routing const& r_;
