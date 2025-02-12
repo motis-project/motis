@@ -346,6 +346,7 @@ struct gbfs_update {
     if (!vehicle_types_updated && prev_provider != nullptr) {
       provider.vehicle_types_ = prev_provider->vehicle_types_;
       provider.vehicle_types_map_ = prev_provider->vehicle_types_map_;
+      provider.temp_vehicle_types_ = prev_provider->temp_vehicle_types_;
     }
 
     auto const stations_updated = co_await update(
@@ -403,7 +404,6 @@ struct gbfs_update {
 
   void partition_provider(gbfs_provider& provider) {
     if (provider.vehicle_types_.empty()) {
-      // providers without vehicle types only need one product segment
       auto& prod = provider.products_.emplace_back();
       prod.idx_ = gbfs_products_idx_t{0};
       prod.has_vehicles_to_rent_ =

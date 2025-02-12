@@ -10,6 +10,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -65,7 +66,7 @@ enum class propulsion_type : std::uint8_t {
 };
 
 enum class return_constraint : std::uint8_t {
-  kNone = 0,  // includes free_floating + hybrid
+  kFreeFloating = 0,  // includes hybrid
   kAnyStation = 1,
   kRoundtripStation = 2
 };
@@ -76,6 +77,17 @@ struct vehicle_type {
   vehicle_form_factor form_factor_{};
   propulsion_type propulsion_type_{};
   return_constraint return_constraint_{};
+};
+
+struct temp_vehicle_type {
+  std::string id_;
+  vehicle_form_factor form_factor_{};
+  propulsion_type propulsion_type_{};
+};
+
+enum class vehicle_start_type : std::uint8_t {
+  kStation = 0,
+  kFreeFloating = 1
 };
 
 struct system_information {
@@ -317,7 +329,7 @@ struct provider_products {
   std::vector<vehicle_type_idx_t> vehicle_types_;
   vehicle_form_factor form_factor_{vehicle_form_factor::kBicycle};
   propulsion_type propulsion_type_{propulsion_type::kHuman};
-  return_constraint return_constraint_{return_constraint::kNone};
+  return_constraint return_constraint_{};
 
   bool has_vehicles_to_rent_{};
 };
@@ -343,7 +355,9 @@ struct gbfs_provider {
   system_information sys_info_{};
   std::map<std::string, station> stations_{};
   vector_map<vehicle_type_idx_t, vehicle_type> vehicle_types_{};
-  hash_map<std::string, vehicle_type_idx_t> vehicle_types_map_{};
+  hash_map<std::pair<std::string, vehicle_start_type>, vehicle_type_idx_t>
+      vehicle_types_map_{};
+  hash_map<std::string, temp_vehicle_type> temp_vehicle_types_{};
   std::vector<vehicle_status> vehicle_status_;
   geofencing_zones geofencing_zones_{};
   geofencing_restrictions default_restrictions_{};

@@ -1,3 +1,4 @@
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -143,6 +144,41 @@ rental_uris parse_rental_uris(json::object const& parent) {
   return uris;
 }
 
+std::optional<vehicle_type_idx_t> get_vehicle_type(
+    gbfs_provider& provider,
+    std::string const& vehicle_type_id,
+    vehicle_start_type const start_type) {
+  auto const add_vehicle_type = [&](vehicle_form_factor const ff,
+                                    propulsion_type const pt) {
+    auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
+    provider.vehicle_types_.emplace_back(vehicle_type{
+        .id_ = vehicle_type_id,
+        .idx_ = idx,
+        .form_factor_ = ff,
+        .propulsion_type_ = pt,
+        .return_constraint_ = start_type == vehicle_start_type::kStation
+                                  ? return_constraint::kAnyStation
+                                  : return_constraint::kFreeFloating});
+    provider.vehicle_types_map_[{vehicle_type_id, start_type}] = idx;
+    return idx;
+  };
+
+  if (auto const it =
+          provider.vehicle_types_map_.find({vehicle_type_id, start_type});
+      it != end(provider.vehicle_types_map_)) {
+    return it->second;
+  } else if (auto const it = provider.temp_vehicle_types_.find(vehicle_type_id);
+             it != end(provider.temp_vehicle_types_)) {
+    return add_vehicle_type(it->second.form_factor_,
+                            it->second.propulsion_type_);
+  } else if (vehicle_type_id.empty()) {
+    // providers that don't use vehicle types
+    return add_vehicle_type(vehicle_form_factor::kBicycle,
+                            propulsion_type::kHuman);
+  }
+  return {};
+}
+
 void load_system_information(gbfs_provider& provider, json::value const& root) {
   auto const version = get_version(root);
   auto const& data = root.at("data").as_object();
@@ -231,14 +267,14 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
         auto const vehicle_type_id =
             static_cast<std::string>(vt.at("vehicle_type_id").as_string());
         auto const count = vt.at("count").to_number<unsigned>();
-        if (auto const vt_it =
-                provider.vehicle_types_map_.find(vehicle_type_id);
-            vt_it != end(provider.vehicle_types_map_)) {
-          auto const vehicle_type_idx = vt_it->second;
-          station.status_.vehicle_types_available_[vehicle_type_idx] = count;
-          switch (
-              provider.vehicle_types_[vehicle_type_idx].return_constraint_) {
-            case return_constraint::kNone: ++unrestricted_available; break;
+        if (auto const vt_idx = get_vehicle_type(provider, vehicle_type_id,
+                                                 vehicle_start_type::kStation);
+            vt_idx) {
+          station.status_.vehicle_types_available_[*vt_idx] = count;
+          switch (provider.vehicle_types_[*vt_idx].return_constraint_) {
+            case return_constraint::kFreeFloating:
+              ++unrestricted_available;
+              break;
             case return_constraint::kAnyStation: ++any_station_available; break;
             case return_constraint::kRoundtripStation:
               ++roundtrip_available;
@@ -248,6 +284,13 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
       }
       station.status_.num_vehicles_available_ =
           unrestricted_available + any_station_available + roundtrip_available;
+    } else {
+      if (auto const vt_idx =
+              get_vehicle_type(provider, "", vehicle_start_type::kStation);
+          vt_idx) {
+        station.status_.vehicle_types_available_[*vt_idx] =
+            station.status_.num_vehicles_available_;
+      }
     }
 
     if (station_obj.contains("vehicle_docks_available")) {
@@ -258,11 +301,10 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
           for (auto const& vti : vto.at("vehicle_type_ids").as_array()) {
             auto const vehicle_type_id =
                 static_cast<std::string>(vti.as_string());
-            if (auto const vt_it =
-                    provider.vehicle_types_map_.find(vehicle_type_id);
-                vt_it != end(provider.vehicle_types_map_)) {
-              auto const vehicle_type_idx = vt_it->second;
-              station.status_.vehicle_docks_available_[vehicle_type_idx] =
+            if (auto const vt_idx = get_vehicle_type(
+                    provider, vehicle_type_id, vehicle_start_type::kStation);
+                vt_idx) {
+              station.status_.vehicle_docks_available_[*vt_idx] =
                   vto.at("count").to_number<unsigned>();
             }
           }
@@ -306,7 +348,8 @@ propulsion_type parse_propulsion_type(std::string_view const s) {
   }
 }
 
-return_constraint parse_return_constraint(json::object const& vt) {
+std::optional<return_constraint> parse_return_constraint(
+    json::object const& vt) {
   if (vt.contains("return_constraint")) {
     switch (cista::hash(static_cast<std::string_view>(
         vt.at("return_constraint").as_string()))) {
@@ -315,28 +358,42 @@ return_constraint parse_return_constraint(json::object const& vt) {
         return return_constraint::kRoundtripStation;
       case cista::hash("free_floating"):
       case cista::hash("hybrid"):
-      default: return return_constraint::kNone;
+      default: return return_constraint::kFreeFloating;
     }
   }
-  return return_constraint::kNone;
+  return {};
 }
 
 void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
   provider.vehicle_types_.clear();
   provider.vehicle_types_map_.clear();
+  provider.temp_vehicle_types_.clear();
   for (auto const& v : root.at("data").at("vehicle_types").as_array()) {
     auto const id =
         static_cast<std::string>(v.at("vehicle_type_id").as_string());
-    auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
-    provider.vehicle_types_.emplace_back(vehicle_type{
-        .id_ = id,
-        .idx_ = idx,
-        .form_factor_ = parse_form_factor(
-            static_cast<std::string_view>(v.at("form_factor").as_string())),
-        .propulsion_type_ = parse_propulsion_type(
-            static_cast<std::string_view>(v.at("propulsion_type").as_string())),
-        .return_constraint_ = parse_return_constraint(v.as_object())});
-    provider.vehicle_types_map_[id] = idx;
+    auto const rc = parse_return_constraint(v.as_object());
+    auto const form_factor = parse_form_factor(
+        static_cast<std::string_view>(v.at("form_factor").as_string()));
+    auto const propulsion_type = parse_propulsion_type(
+        static_cast<std::string_view>(v.at("propulsion_type").as_string()));
+    if (rc) {
+      auto const idx = vehicle_type_idx_t{provider.vehicle_types_.size()};
+      provider.vehicle_types_.emplace_back(
+          vehicle_type{.id_ = id,
+                       .idx_ = idx,
+                       .form_factor_ = form_factor,
+                       .propulsion_type_ = propulsion_type,
+                       .return_constraint_ = *rc});
+      provider.vehicle_types_map_[{id, vehicle_start_type::kStation}] = idx;
+      provider.vehicle_types_map_[{id, vehicle_start_type::kFreeFloating}] =
+          idx;
+    } else {
+      provider.temp_vehicle_types_[id] = temp_vehicle_type{
+          .id_ = id,
+          .form_factor_ = form_factor,
+          .propulsion_type_ = propulsion_type,
+      };
+    }
   }
 }
 
@@ -351,9 +408,20 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
   for (auto const& v : vehicles_arr) {
     auto const& vehicle_obj = v.as_object();
 
-    if (!vehicle_obj.contains("lat") || !vehicle_obj.contains("lon") ||
-        vehicle_obj.contains("station_id")) {
-      // we only care about free-floating vehicles here
+    auto pos = geo::latlng{};
+    if (vehicle_obj.contains("lat") && vehicle_obj.contains("lon")) {
+      pos = geo::latlng{vehicle_obj.at("lat").as_double(),
+                        vehicle_obj.at("lon").as_double()};
+    } else if (vehicle_obj.contains("station_id")) {
+      auto const station_id =
+          static_cast<std::string>(vehicle_obj.at("station_id").as_string());
+      if (auto const it = provider.stations_.find(station_id);
+          it != end(provider.stations_)) {
+        pos = it->second.info_.pos_;
+      } else {
+        continue;
+      }
+    } else {
       continue;
     }
 
@@ -364,15 +432,15 @@ void load_vehicle_status(gbfs_provider& provider, json::value const& root) {
     auto const type_id = optional_str(vehicle_obj, "vehicle_type_id");
     auto type_idx = vehicle_type_idx_t::invalid();
 
-    if (auto const it = provider.vehicle_types_map_.find(type_id);
-        it != end(provider.vehicle_types_map_)) {
-      type_idx = it->second;
+    if (auto const vt_idx = get_vehicle_type(provider, type_id,
+                                             vehicle_start_type::kFreeFloating);
+        vt_idx) {
+      type_idx = *vt_idx;
     }
 
     provider.vehicle_status_.emplace_back(vehicle_status{
         .id_ = id,
-        .pos_ = geo::latlng{vehicle_obj.at("lat").as_double(),
-                            vehicle_obj.at("lon").as_double()},
+        .pos_ = pos,
         .is_reserved_ = get_bool(version, vehicle_obj, "is_reserved"),
         .is_disabled_ = get_bool(version, vehicle_obj, "is_disabled"),
         .vehicle_type_idx_ = type_idx,
@@ -394,8 +462,14 @@ rule parse_rule(gbfs_provider& provider,
   auto vehicle_type_idxs = std::vector<vehicle_type_idx_t>{};
   if (rule_obj.contains(vti_key)) {
     for (auto const& vt : rule_obj.at(vti_key).as_array()) {
+      auto const vt_id = static_cast<std::string>(vt.as_string());
       if (auto const it = provider.vehicle_types_map_.find(
-              static_cast<std::string>(vt.as_string()));
+              {vt_id, vehicle_start_type::kStation});
+          it != end(provider.vehicle_types_map_)) {
+        vehicle_type_idxs.emplace_back(it->second);
+      }
+      if (auto const it = provider.vehicle_types_map_.find(
+              {vt_id, vehicle_start_type::kFreeFloating});
           it != end(provider.vehicle_types_map_)) {
         vehicle_type_idxs.emplace_back(it->second);
       }

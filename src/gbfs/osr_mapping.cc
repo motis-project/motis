@@ -245,9 +245,7 @@ struct osr_mapping {
           w_.n_nodes() + rd.additional_nodes_.size());
       for (auto const [vehicle_idx, vs] :
            utl::enumerate(provider_.vehicle_status_)) {
-        if (vs.is_disabled_ || vs.is_reserved_ || !vs.station_id_.empty() ||
-            (!vs.home_station_id_.empty() &&
-             prod.return_constraint_ != return_constraint::kRoundtripStation) ||
+        if (vs.is_disabled_ || vs.is_reserved_ ||
             !prod.includes_vehicle_type(vs.vehicle_type_idx_)) {
           continue;
         }
