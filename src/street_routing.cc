@@ -117,6 +117,10 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
+bool is_additional_node(osr::ways const& w, osr::node_idx_t const n) {
+  return n != osr::node_idx_t::invalid() && n >= w.n_nodes();
+}
+
 struct sharing {
   sharing(osr::ways const& w,
           gbfs::gbfs_routing_data& gbfs_rd,
@@ -160,6 +164,23 @@ struct sharing {
             }},
         prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n))
             .data_);
+  }
+
+  std::string get_node_name(osr::node_idx_t const n) const {
+    if (!is_additional_node(w_, n)) {
+      return provider_.sys_info_.name_;
+    }
+    auto const& an =
+        prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
+    return std::visit(
+        utl::overloaded{[&](gbfs::additional_node::station const& s) {
+                          auto const& st = provider_.stations_.at(s.id_);
+                          return st.info_.name_;
+                        },
+                        [&](gbfs::additional_node::vehicle const&) {
+                          return provider_.sys_info_.name_;
+                        }},
+        an.data_);
   }
 
   std::size_t get_additional_node_idx(osr::node_idx_t const n) const {
@@ -239,10 +260,6 @@ api::Itinerary route(osr::ways const& w,
       profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
       "sharing mobility not configured");
 
-  auto const is_additional_node = [&](osr::node_idx_t const n) {
-    return n >= w.n_nodes();
-  };
-
   auto const sharing_data = profile == osr::search_profile::kBikeSharing
                                 ? std::optional{sharing(w, gbfs_rd, prod_ref)}
                                 : std::nullopt;
@@ -250,7 +267,7 @@ api::Itinerary route(osr::ways const& w,
   auto const get_node_pos = [&](osr::node_idx_t const n) -> geo::latlng {
     if (n == osr::node_idx_t::invalid()) {
       return {};
-    } else if (!is_additional_node(n)) {
+    } else if (!is_additional_node(w, n)) {
       return w.get_node_pos(n).as_latlng();
     } else {
       return sharing_data.value().get_node_pos(n);
@@ -311,8 +328,8 @@ api::Itinerary route(osr::ways const& w,
         auto const is_last_leg = ub == end(path->segments_);
         auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
         auto const from_additional_node =
-            is_additional_node(range.front().from_);
-        auto const to_additional_node = is_additional_node(range.back().to_);
+            is_additional_node(w, range.front().from_);
+        auto const to_additional_node = is_additional_node(w, range.back().to_);
         auto const is_rental =
             (profile == osr::search_profile::kBikeSharing && is_bike_leg &&
              (from_additional_node || to_additional_node));
@@ -325,7 +342,7 @@ api::Itinerary route(osr::ways const& w,
             // -> This is not the last leg = it has to be sharing mobility.
             : profile == osr::search_profile::kBikeSharing
                 ? api::Place{.name_ =
-                                 sharing_data.value().provider_.sys_info_.name_,
+                                 sharing_data->get_node_name(range.back().to_),
                              .lat_ = to_pos.lat_,
                              .lon_ = to_pos.lng_,
                              .vertexType_ = api::VertexTypeEnum::BIKESHARE}
