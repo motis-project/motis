@@ -7,11 +7,11 @@ namespace motis::odm {
 namespace n = nigiri;
 
 std::vector<n::routing::query> query_factory::make_queries(
-    bool const blacklisted) const {
+    bool const with_odm) const {
   auto queries = std::vector<n::routing::query>{};
   queries.push_back(
       make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_));
-  if (blacklisted) {
+  if (with_odm) {
     queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_short_));
     queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_long_));
     queries.push_back(make({}, odm_start_short_, dest_walk_, td_dest_walk_));
