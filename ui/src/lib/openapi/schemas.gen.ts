@@ -429,7 +429,7 @@ export const RentalPropulsionTypeSchema = {
 
 export const RentalReturnConstraintSchema = {
     type: 'string',
-    enum: ['NONE', 'ANY_STATION', 'ROUNDTRIP_STATION']
+    enum: ['FREE_FLOATING', 'ANY_STATION', 'ROUNDTRIP_STATION']
 } as const;
 
 export const RentalSchema = {
@@ -449,9 +449,13 @@ export const RentalSchema = {
             type: 'string',
             description: 'URL of the vehicle share system'
         },
-        stationName: {
+        fromStationName: {
             type: 'string',
-            description: 'Name of the station'
+            description: 'Name of the station where the vehicle is picked up (empty for free floating vehicles)'
+        },
+        toStationName: {
+            type: 'string',
+            description: 'Name of the station where the vehicle is returned (empty for free floating vehicles)'
         },
         rentalUriAndroid: {
             type: 'string',

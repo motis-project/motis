@@ -348,7 +348,7 @@ export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | '
 
 export type RentalPropulsionType = 'HUMAN' | 'ELECTRIC_ASSIST' | 'ELECTRIC' | 'COMBUSTION' | 'COMBUSTION_DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'HYDROGEN_FUEL_CELL';
 
-export type RentalReturnConstraint = 'NONE' | 'ANY_STATION' | 'ROUNDTRIP_STATION';
+export type RentalReturnConstraint = 'FREE_FLOATING' | 'ANY_STATION' | 'ROUNDTRIP_STATION';
 
 /**
  * Vehicle rental
@@ -367,9 +367,13 @@ export type Rental = {
      */
     url?: string;
     /**
-     * Name of the station
+     * Name of the station where the vehicle is picked up (empty for free floating vehicles)
      */
-    stationName?: string;
+    fromStationName?: string;
+    /**
+     * Name of the station where the vehicle is returned (empty for free floating vehicles)
+     */
+    toStationName?: string;
     /**
      * Rental URI for Android (deep link to the specific station or vehicle)
      */
