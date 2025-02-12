@@ -348,7 +348,7 @@ export type RentalFormFactor = 'BICYCLE' | 'CARGO_BICYCLE' | 'CAR' | 'MOPED' | '
 
 export type RentalPropulsionType = 'HUMAN' | 'ELECTRIC_ASSIST' | 'ELECTRIC' | 'COMBUSTION' | 'COMBUSTION_DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'HYDROGEN_FUEL_CELL';
 
-export type RentalReturnConstraint = 'FREE_FLOATING' | 'ANY_STATION' | 'ROUNDTRIP_STATION';
+export type RentalReturnConstraint = 'NONE' | 'ANY_STATION' | 'ROUNDTRIP_STATION';
 
 /**
  * Vehicle rental
@@ -366,6 +366,10 @@ export type Rental = {
      * URL of the vehicle share system
      */
     url?: string;
+    /**
+     * Name of the station
+     */
+    stationName?: string;
     /**
      * Name of the station where the vehicle is picked up (empty for free floating vehicles)
      */

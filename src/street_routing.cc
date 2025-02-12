@@ -142,6 +142,7 @@ struct sharing {
               [&](gbfs::additional_node::station const& s) {
                 auto const& st = provider_.stations_.at(s.id_);
                 ret.fromStationName_ = st.info_.name_;
+                ret.stationName_ = st.info_.name_;
                 ret.rentalUriAndroid_ = st.info_.rental_uris_.android_;
                 ret.rentalUriIOS_ = st.info_.rental_uris_.ios_;
                 ret.rentalUriWeb_ = st.info_.rental_uris_.web_;
@@ -166,6 +167,9 @@ struct sharing {
               [&](gbfs::additional_node::station const& s) {
                 auto const& st = provider_.stations_.at(s.id_);
                 ret.toStationName_ = st.info_.name_;
+                if (!ret.stationName_) {
+                  ret.stationName_ = ret.toStationName_;
+                }
               },
               [&](gbfs::additional_node::vehicle const& v) {
                 auto const& vs = provider_.vehicle_status_.at(v.idx_);
