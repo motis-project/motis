@@ -168,10 +168,11 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
           provider.vehicle_types_map_.find({vehicle_type_id, start_type});
       it != end(provider.vehicle_types_map_)) {
     return it->second;
-  } else if (auto const it = provider.temp_vehicle_types_.find(vehicle_type_id);
-             it != end(provider.temp_vehicle_types_)) {
-    return add_vehicle_type(it->second.form_factor_,
-                            it->second.propulsion_type_);
+  } else if (auto const temp_it =
+                 provider.temp_vehicle_types_.find(vehicle_type_id);
+             temp_it != end(provider.temp_vehicle_types_)) {
+    return add_vehicle_type(temp_it->second.form_factor_,
+                            temp_it->second.propulsion_type_);
   } else if (vehicle_type_id.empty()) {
     // providers that don't use vehicle types
     return add_vehicle_type(vehicle_form_factor::kBicycle,
