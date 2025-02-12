@@ -77,6 +77,7 @@ struct vehicle_type {
   vehicle_form_factor form_factor_{};
   propulsion_type propulsion_type_{};
   return_constraint return_constraint_{};
+  bool known_return_constraint_{};  // true if taken from feed, false if guessed
 };
 
 struct temp_vehicle_type {
@@ -330,6 +331,7 @@ struct provider_products {
   vehicle_form_factor form_factor_{vehicle_form_factor::kBicycle};
   propulsion_type propulsion_type_{propulsion_type::kHuman};
   return_constraint return_constraint_{};
+  bool known_return_constraint_{};  // true if taken from feed, false if guessed
 
   bool has_vehicles_to_rent_{};
 };

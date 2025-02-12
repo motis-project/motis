@@ -69,7 +69,8 @@ struct osr_mapping {
         break;
       }
 
-      if (prod.return_constraint_ == return_constraint::kAnyStation) {
+      if (prod.known_return_constraint_ &&
+          prod.return_constraint_ == return_constraint::kAnyStation) {
         default_restrictions.station_parking_ = true;
       }
 

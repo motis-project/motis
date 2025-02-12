@@ -440,6 +440,19 @@ struct gbfs_update {
         part.refine(vt_indices);
       }
 
+      // refine by known vs. guessed return constraints
+      auto known_return_constraints = std::vector<vehicle_type_idx_t>{};
+      auto guessed_return_constraints = std::vector<vehicle_type_idx_t>{};
+      for (auto const& vt : provider.vehicle_types_) {
+        if (vt.known_return_constraint_) {
+          known_return_constraints.push_back(vt.idx_);
+        } else {
+          guessed_return_constraints.push_back(vt.idx_);
+        }
+      }
+      part.refine(known_return_constraints);
+      part.refine(guessed_return_constraints);
+
       // refine by return stations
       // TODO: only do this if the station is not in a zone where vehicles
       //   can be returned anywhere
@@ -471,6 +484,7 @@ struct gbfs_update {
         prod.form_factor_ = first_vt.form_factor_;
         prod.propulsion_type_ = first_vt.propulsion_type_;
         prod.return_constraint_ = first_vt.return_constraint_;
+        prod.known_return_constraint_ = first_vt.known_return_constraint_;
         prod.has_vehicles_to_rent_ =
             utl::any_of(provider.stations_,
                         [&](auto const& st) {

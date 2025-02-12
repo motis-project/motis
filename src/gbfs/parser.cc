@@ -158,7 +158,8 @@ std::optional<vehicle_type_idx_t> get_vehicle_type(
         .propulsion_type_ = pt,
         .return_constraint_ = start_type == vehicle_start_type::kStation
                                   ? return_constraint::kAnyStation
-                                  : return_constraint::kFreeFloating});
+                                  : return_constraint::kFreeFloating,
+        .known_return_constraint_ = false});
     provider.vehicle_types_map_[{vehicle_type_id, start_type}] = idx;
     return idx;
   };
@@ -383,7 +384,8 @@ void load_vehicle_types(gbfs_provider& provider, json::value const& root) {
                        .idx_ = idx,
                        .form_factor_ = form_factor,
                        .propulsion_type_ = propulsion_type,
-                       .return_constraint_ = *rc});
+                       .return_constraint_ = *rc,
+                       .known_return_constraint_ = true});
       provider.vehicle_types_map_[{id, vehicle_start_type::kStation}] = idx;
       provider.vehicle_types_map_[{id, vehicle_start_type::kFreeFloating}] =
           idx;
