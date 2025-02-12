@@ -1464,7 +1464,7 @@ components:
     RentalReturnConstraint:
       type: string
       enum:
-        - FREE_FLOATING
+        - NONE
         - ANY_STATION
         - ROUNDTRIP_STATION
 
@@ -1483,6 +1483,9 @@ components:
         url:
           type: string
           description: URL of the vehicle share system
+        stationName:
+          type: string
+          description: Name of the station
         fromStationName:
           type: string
           description: Name of the station where the vehicle is picked up (empty for free floating vehicles)
