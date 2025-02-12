@@ -7,7 +7,9 @@
 namespace motis::odm {
 
 struct query_factory {
-  std::vector<nigiri::routing::query> make_queries() const;
+  static constexpr auto const kMaxSubQueries = 9U;
+
+  std::vector<nigiri::routing::query> make_queries(bool blacklisted) const;
 
 private:
   nigiri::routing::query make(

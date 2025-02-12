@@ -55,15 +55,25 @@ struct meta_router {
           search_stats_{rr.search_stats_},
           algo_stats_{rr.algo_stats_} {}
 
-    nigiri::pareto_set<nigiri::routing::journey> journeys_;
-    nigiri::interval<nigiri::unixtime_t> interval_;
-    nigiri::routing::search_stats search_stats_;
-    nigiri::routing::raptor_stats algo_stats_;
+    nigiri::pareto_set<nigiri::routing::journey> journeys_{};
+    nigiri::interval<nigiri::unixtime_t> interval_{};
+    nigiri::routing::search_stats search_stats_{};
+    nigiri::routing::raptor_stats algo_stats_{};
   };
 
 private:
   void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
-  routing_result search_interval(query_factory const&, bool blacklisted);
+  nigiri::routing::query get_base_query(
+      nigiri::interval<nigiri::unixtime_t> const&) const;
+  void search_interval(std::vector<nigiri::routing::query> const&,
+                       std::vector<std::optional<routing_result>>&,
+                       std::bitset<query_factory::kMaxSubQueries> to_run =
+                           ~std::bitset<query_factory::kMaxSubQueries>{}) const;
+  std::vector<std::optional<routing_result>> first_pass(
+      std::vector<nigiri::routing::query> const&) const;
+  void second_pass(
+      std::vector<nigiri::routing::query>&,
+      std::vector<std::optional<meta_router::routing_result>>&) const;
 
   ep::routing const& r_;
   api::plan_params const& query_;

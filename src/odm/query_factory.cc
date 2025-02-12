@@ -6,18 +6,21 @@ namespace motis::odm {
 
 namespace n = nigiri;
 
-std::vector<n::routing::query> query_factory::make_queries() const {
+std::vector<n::routing::query> query_factory::make_queries(
+    bool const blacklisted) const {
   auto queries = std::vector<n::routing::query>{};
   queries.push_back(
       make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_));
-  queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_short_));
-  queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_long_));
-  queries.push_back(make({}, odm_start_short_, dest_walk_, td_dest_walk_));
-  queries.push_back(make({}, odm_start_long_, dest_walk_, td_dest_walk_));
-  queries.push_back(make({}, odm_start_short_, {}, odm_dest_short_));
-  queries.push_back(make({}, odm_start_short_, {}, odm_dest_long_));
-  queries.push_back(make({}, odm_start_long_, {}, odm_dest_short_));
-  queries.push_back(make({}, odm_start_long_, {}, odm_dest_long_));
+  if (blacklisted) {
+    queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_short_));
+    queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_long_));
+    queries.push_back(make({}, odm_start_short_, dest_walk_, td_dest_walk_));
+    queries.push_back(make({}, odm_start_long_, dest_walk_, td_dest_walk_));
+    queries.push_back(make({}, odm_start_short_, {}, odm_dest_short_));
+    queries.push_back(make({}, odm_start_short_, {}, odm_dest_long_));
+    queries.push_back(make({}, odm_start_long_, {}, odm_dest_short_));
+    queries.push_back(make({}, odm_start_long_, {}, odm_dest_long_));
+  }
   return queries;
 }
 

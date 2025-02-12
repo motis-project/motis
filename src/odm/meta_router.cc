@@ -17,6 +17,7 @@
 #include "boost/thread/tss.hpp"
 
 #include "utl/erase_duplicates.h"
+#include "utl/for_each_bit_set.h"
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
@@ -74,7 +75,7 @@ using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
 void print_time(auto const& start, std::string_view name) {
-  fmt::println("{}: {}", name,
+  fmt::println("{} {}", name,
                std::chrono::duration_cast<std::chrono::milliseconds>(
                    std::chrono::steady_clock::now() - start));
 }
@@ -309,8 +310,53 @@ auto get_td_offsets(auto const& rides) {
   return td_offsets;
 }
 
-std::vector<meta_router::routing_result> meta_router::search_interval(
-    query_factory const& qf, bool const blacklisted) {
+n::routing::query meta_router::get_base_query(
+    n::interval<n::unixtime_t> const& max_interval) const {
+  return {
+      .start_time_ = start_time_.start_time_,
+      .start_match_mode_ = motis::ep::get_match_mode(start_),
+      .dest_match_mode_ = motis::ep::get_match_mode(dest_),
+      .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
+      .max_transfers_ = static_cast<std::uint8_t>(
+          query_.maxTransfers_.has_value() ? *query_.maxTransfers_
+                                           : n::routing::kMaxTransfers),
+      .max_travel_time_ = query_.maxTravelTime_
+                              .and_then([](std::int64_t const dur) {
+                                return std::optional{n::duration_t{dur}};
+                              })
+                              .value_or(kInfinityDuration),
+      .min_connection_count_ = static_cast<unsigned>(query_.numItineraries_),
+      .extend_interval_earlier_ = query_.arriveBy_,
+      .extend_interval_later_ = !query_.arriveBy_,
+      .max_interval_ = max_interval,
+      .prf_idx_ = static_cast<n::profile_idx_t>(
+          query_.useRoutedTransfers_
+              ? (query_.pedestrianProfile_ ==
+                         api::PedestrianProfileEnum::WHEELCHAIR
+                     ? 2U
+                     : 1U)
+              : 0U),
+      .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
+      .require_bike_transport_ = query_.requireBikeTransport_,
+      .transfer_time_settings_ =
+          n::routing::transfer_time_settings{
+              .default_ = (query_.minTransferTime_ == 0 &&
+                           query_.additionalTransferTime_ == 0 &&
+                           query_.transferTimeFactor_ == 1.0),
+              .min_transfer_time_ = n::duration_t{query_.minTransferTime_},
+              .additional_time_ = n::duration_t{query_.additionalTransferTime_},
+              .factor_ = static_cast<float>(query_.transferTimeFactor_)},
+      .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
+                                             query_.viaMinimumStay_),
+      .fastest_direct_ = fastest_direct_ == kInfinityDuration
+                             ? std::nullopt
+                             : std::optional{fastest_direct_}};
+}
+
+void meta_router::search_interval(
+    std::vector<n::routing::query> const& sub_queries,
+    std::vector<std::optional<meta_router::routing_result>>& results,
+    std::bitset<query_factory::kMaxSubQueries> to_run) const {
 
   auto const make_task = [&](n::routing::query q) {
     return boost::fibers::packaged_task<routing_result()>{
@@ -332,38 +378,70 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
         }};
   };
 
-  auto const queries = qf.make_queries();
   auto tasks = std::vector<boost::fibers::packaged_task<routing_result()>>{};
-  tasks.emplace_back(make_task(queries.front()));
-  if (blacklisted) {
-    for (auto const& q : queries | std::views::drop(1)) {
-      tasks.emplace_back(make_task(std::move(q)));
+  for (auto const [i, q] : utl::enumerate(sub_queries)) {
+    if (to_run.test(i)) {
+      tasks.push_back(make_task(q));
     }
-  } else {
-    fmt::println("[blacklisting] failed, omitting ODM routing");
   }
 
   auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
+
   for (auto& task : tasks) {
     boost::fibers::fiber(std::move(task)).detach();
   }
-  for (auto const& f : futures) {
-    f.wait();
-  }
 
-  auto results = std::vector<meta_router::routing_result>{};
-  for (auto& f : futures) {
-    results.push_back(f.get());
-  }
+  fmt::println("[routing] running {} subqueries", to_run.count());
 
+  auto f = begin(futures);
+  for (auto const [i, q] : utl::enumerate(sub_queries)) {
+    if (to_run.test(i)) {
+      f->wait();
+      results[i] = f->get();
+      ++f;
+    }
+  }
+}
+
+std::vector<std::optional<meta_router::routing_result>> meta_router::first_pass(
+    std::vector<n::routing::query> const& sub_queries) const {
+  auto results = std::vector<std::optional<meta_router::routing_result>>{};
+  results.resize(sub_queries.size());
+  search_interval(sub_queries, results);
   return results;
 }
 
+void meta_router::second_pass(
+    std::vector<n::routing::query>& sub_queries,
+    std::vector<std::optional<meta_router::routing_result>>& results) const {
+  auto max_intvl_searched = results.front()->interval_;
+  for (auto const& r : results) {
+    max_intvl_searched.from_ =
+        std::min(max_intvl_searched.from_, r->interval_.from_);
+    max_intvl_searched.to_ = std::max(max_intvl_searched.to_, r->interval_.to_);
+  }
+
+  auto needs_rerun = std::bitset<query_factory::kMaxSubQueries>{};
+  for (auto const [i, r] : utl::enumerate(results)) {
+    needs_rerun.set(i, max_intvl_searched.from_ < r->interval_.from_ ||
+                           r->interval_.to_ < max_intvl_searched.to_);
+  }
+
+  for (auto const [i, q] : utl::enumerate(sub_queries)) {
+    if (needs_rerun.test(i)) {
+      q.start_time_ = max_intvl_searched;
+      q.extend_interval_earlier_ = false;
+      q.extend_interval_later_ = false;
+    }
+  }
+  search_interval(sub_queries, results, needs_rerun);
+}
+
 void collect_odm_journeys(
-    std::vector<meta_router::routing_result> const& results) {
+    std::vector<std::optional<meta_router::routing_result>> const& results) {
   p->odm_journeys_.clear();
   for (auto& r : results | std::views::drop(1)) {
-    for (auto& j : r.journeys_) {
+    for (auto& j : r->journeys_) {
       p->odm_journeys_.push_back(std::move(j));
     }
   }
@@ -451,58 +529,21 @@ api::plan_response meta_router::run() {
     fmt::println("[blacklisting] networking failed: {}", e.what());
     blacklist_response = std::nullopt;
   }
+  auto const blacklisted =
+      blacklist_response && p->blacklist_update(*blacklist_response);
+  fmt::println("[blacklisting] ODM events after blacklisting: {}",
+               p->n_events());
   print_time(bl_start, "[blacklisting]");
 
   // prepare queries
   auto const prep_queries_start = std::chrono::steady_clock::now();
-  auto const blacklisted =
-      blacklist_response && p->blacklist_update(*blacklist_response);
+
   auto const [from_rides_short, from_rides_long] =
       ride_time_halves(p->from_rides_);
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p->to_rides_);
 
-  auto q = n::routing::query{
-      .start_time_ = start_time_.start_time_,
-      .start_match_mode_ = motis::ep::get_match_mode(start_),
-      .dest_match_mode_ = motis::ep::get_match_mode(dest_),
-      .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
-      .max_transfers_ = static_cast<std::uint8_t>(
-          query_.maxTransfers_.has_value() ? *query_.maxTransfers_
-                                           : n::routing::kMaxTransfers),
-      .max_travel_time_ = query_.maxTravelTime_
-                              .and_then([](std::int64_t const dur) {
-                                return std::optional{n::duration_t{dur}};
-                              })
-                              .value_or(kInfinityDuration),
-      .min_connection_count_ = 0U,
-      .extend_interval_earlier_ = false,  // TODO should be like in routing.cc
-      .extend_interval_later_ = false,
-      .max_interval_ = odm_intvl,
-      .prf_idx_ = static_cast<n::profile_idx_t>(
-          query_.useRoutedTransfers_
-              ? (query_.pedestrianProfile_ ==
-                         api::PedestrianProfileEnum::WHEELCHAIR
-                     ? 2U
-                     : 1U)
-              : 0U),
-      .allowed_claszes_ = to_clasz_mask(query_.transitModes_),
-      .require_bike_transport_ = query_.requireBikeTransport_,
-      .transfer_time_settings_ =
-          n::routing::transfer_time_settings{
-              .default_ = (query_.minTransferTime_ == 0 &&
-                           query_.additionalTransferTime_ == 0 &&
-                           query_.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = n::duration_t{query_.minTransferTime_},
-              .additional_time_ = n::duration_t{query_.additionalTransferTime_},
-              .factor_ = static_cast<float>(query_.transferTimeFactor_)},
-      .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
-                                             query_.viaMinimumStay_),
-      .fastest_direct_ = fastest_direct_ == kInfinityDuration
-                             ? std::nullopt
-                             : std::optional{fastest_direct_}};
-
   auto const qf = query_factory{
-      .base_query_ = std::move(q),
+      .base_query_ = get_base_query(odm_intvl),
       .start_walk_ = std::visit(
           utl::overloaded{[&](tt_location const l) {
                             return motis::ep::station_start(l.l_);
@@ -583,8 +624,11 @@ api::plan_response meta_router::run() {
   print_time(prep_queries_start, "[prepare queries]");
 
   auto const routing_start = std::chrono::steady_clock::now();
-  auto result = search_interval(qf, blacklisted);
-
+  auto sub_queries = qf.make_queries(blacklisted);
+  auto results = first_pass(sub_queries);
+  second_pass(sub_queries, results);
+  auto const& pt_result = *results.front();
+  collect_odm_journeys(results);
   print_time(routing_start, "[routing]");
 
   // whitelisting
