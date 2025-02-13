@@ -628,6 +628,8 @@ api::plan_response meta_router::run() {
   second_pass(sub_queries, results);
   auto const& pt_result = *results.front();
   collect_odm_journeys(results);
+  fmt::println("[routing] size of interval searched: {}",
+               pt_result.interval_.size());
   print_time(routing_start, "[routing]");
 
   // whitelisting
