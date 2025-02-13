@@ -117,6 +117,10 @@ std::vector<api::StepInstruction> get_step_instructions(
   return steps;
 }
 
+bool is_additional_node(osr::ways const& w, osr::node_idx_t const n) {
+  return n != osr::node_idx_t::invalid() && n >= w.n_nodes();
+}
+
 struct sharing {
   sharing(osr::ways const& w,
           gbfs::gbfs_routing_data& gbfs_rd,
@@ -127,25 +131,55 @@ struct sharing {
         products_{provider_.products_.at(prod_ref.products_)},
         prod_rd_{gbfs_rd_.get_products_routing_data(prod_ref)} {}
 
-  api::Rental get_rental(osr::node_idx_t const n) const {
+  api::Rental get_rental(osr::node_idx_t const from_node,
+                         osr::node_idx_t const to_node) const {
     auto ret = rental_;
-    auto const& an =
-        prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
-    std::visit(utl::overloaded{
-                   [&](gbfs::additional_node::station const& s) {
-                     auto const& st = provider_.stations_.at(s.id_);
-                     ret.stationName_ = st.info_.name_;
-                     ret.rentalUriAndroid_ = st.info_.rental_uris_.android_;
-                     ret.rentalUriIOS_ = st.info_.rental_uris_.ios_;
-                     ret.rentalUriWeb_ = st.info_.rental_uris_.web_;
-                   },
-                   [&](gbfs::additional_node::vehicle const& v) {
-                     auto const& vi = provider_.vehicle_status_.at(v.idx_);
-                     ret.rentalUriAndroid_ = vi.rental_uris_.android_;
-                     ret.rentalUriIOS_ = vi.rental_uris_.ios_;
-                     ret.rentalUriWeb_ = vi.rental_uris_.web_;
-                   }},
-               an.data_);
+    if (is_additional_node(w_, from_node)) {
+      auto const& an = prod_rd_->compressed_.additional_nodes_.at(
+          get_additional_node_idx(from_node));
+      std::visit(
+          utl::overloaded{
+              [&](gbfs::additional_node::station const& s) {
+                auto const& st = provider_.stations_.at(s.id_);
+                ret.fromStationName_ = st.info_.name_;
+                ret.stationName_ = st.info_.name_;
+                ret.rentalUriAndroid_ = st.info_.rental_uris_.android_;
+                ret.rentalUriIOS_ = st.info_.rental_uris_.ios_;
+                ret.rentalUriWeb_ = st.info_.rental_uris_.web_;
+              },
+              [&](gbfs::additional_node::vehicle const& v) {
+                auto const& vs = provider_.vehicle_status_.at(v.idx_);
+                if (auto const st = provider_.stations_.find(vs.station_id_);
+                    st != end(provider_.stations_)) {
+                  ret.fromStationName_ = st->second.info_.name_;
+                }
+                ret.rentalUriAndroid_ = vs.rental_uris_.android_;
+                ret.rentalUriIOS_ = vs.rental_uris_.ios_;
+                ret.rentalUriWeb_ = vs.rental_uris_.web_;
+              }},
+          an.data_);
+    }
+    if (is_additional_node(w_, to_node)) {
+      auto const& an = prod_rd_->compressed_.additional_nodes_.at(
+          get_additional_node_idx(to_node));
+      std::visit(
+          utl::overloaded{
+              [&](gbfs::additional_node::station const& s) {
+                auto const& st = provider_.stations_.at(s.id_);
+                ret.toStationName_ = st.info_.name_;
+                if (!ret.stationName_) {
+                  ret.stationName_ = ret.toStationName_;
+                }
+              },
+              [&](gbfs::additional_node::vehicle const& v) {
+                auto const& vs = provider_.vehicle_status_.at(v.idx_);
+                if (auto const st = provider_.stations_.find(vs.station_id_);
+                    st != end(provider_.stations_)) {
+                  ret.toStationName_ = st->second.info_.name_;
+                }
+              }},
+          an.data_);
+    }
     return ret;
   }
 
@@ -160,6 +194,29 @@ struct sharing {
             }},
         prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n))
             .data_);
+  }
+
+  std::string get_node_name(osr::node_idx_t const n) const {
+    if (!is_additional_node(w_, n)) {
+      return provider_.sys_info_.name_;
+    }
+    auto const& an =
+        prod_rd_->compressed_.additional_nodes_.at(get_additional_node_idx(n));
+    return std::visit(
+        utl::overloaded{[&](gbfs::additional_node::station const& s) {
+                          auto const& st = provider_.stations_.at(s.id_);
+                          return st.info_.name_;
+                        },
+                        [&](gbfs::additional_node::vehicle const& v) {
+                          auto const& vs = provider_.vehicle_status_.at(v.idx_);
+                          if (auto const st =
+                                  provider_.stations_.find(vs.station_id_);
+                              st != end(provider_.stations_)) {
+                            return st->second.info_.name_;
+                          }
+                          return provider_.sys_info_.name_;
+                        }},
+        an.data_);
   }
 
   std::size_t get_additional_node_idx(osr::node_idx_t const n) const {
@@ -239,10 +296,6 @@ api::Itinerary route(osr::ways const& w,
       profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
       "sharing mobility not configured");
 
-  auto const is_additional_node = [&](osr::node_idx_t const n) {
-    return n >= w.n_nodes();
-  };
-
   auto const sharing_data = profile == osr::search_profile::kBikeSharing
                                 ? std::optional{sharing(w, gbfs_rd, prod_ref)}
                                 : std::nullopt;
@@ -250,7 +303,7 @@ api::Itinerary route(osr::ways const& w,
   auto const get_node_pos = [&](osr::node_idx_t const n) -> geo::latlng {
     if (n == osr::node_idx_t::invalid()) {
       return {};
-    } else if (!is_additional_node(n)) {
+    } else if (!is_additional_node(w, n)) {
       return w.get_node_pos(n).as_latlng();
     } else {
       return sharing_data.value().get_node_pos(n);
@@ -310,22 +363,21 @@ api::Itinerary route(osr::ways const& w,
         auto const range = std::span{lb, ub};
         auto const is_last_leg = ub == end(path->segments_);
         auto const is_bike_leg = lb->mode_ == osr::mode::kBike;
-        auto const from_additional_node =
-            is_additional_node(range.front().from_);
-        auto const to_additional_node = is_additional_node(range.back().to_);
+        auto const from_node = range.front().from_;
+        auto const from_additional_node = is_additional_node(w, from_node);
+        auto const to_node = range.back().to_;
+        auto const to_additional_node = is_additional_node(w, to_node);
         auto const is_rental =
             (profile == osr::search_profile::kBikeSharing && is_bike_leg &&
              (from_additional_node || to_additional_node));
 
-        auto const to_node = range.back().to_;
         auto const to_pos = get_node_pos(to_node);
         auto const next_place =
             is_last_leg ? to
             // All modes except sharing mobility have only one leg.
             // -> This is not the last leg = it has to be sharing mobility.
             : profile == osr::search_profile::kBikeSharing
-                ? api::Place{.name_ =
-                                 sharing_data.value().provider_.sys_info_.name_,
+                ? api::Place{.name_ = sharing_data->get_node_name(to_node),
                              .lat_ = to_pos.lat_,
                              .lon_ = to_pos.lng_,
                              .vertexType_ = api::VertexTypeEnum::BIKESHARE}
@@ -358,11 +410,9 @@ api::Itinerary route(osr::ways const& w,
             .legGeometry_ = to_polyline<7>(concat),
             .steps_ = get_step_instructions(w, get_location(from),
                                             get_location(to), range),
-            .rental_ = is_rental
-                           ? std::optional{sharing_data->get_rental(
-                                 from_additional_node ? range.front().from_
-                                                      : range.back().to_)}
-                           : std::nullopt});
+            .rental_ = is_rental ? std::optional{sharing_data->get_rental(
+                                       from_node, to_node)}
+                                 : std::nullopt});
 
         leg.from_.departure_ = leg.from_.scheduledDeparture_ =
             leg.scheduledStartTime_ = leg.startTime_;

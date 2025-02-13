@@ -346,6 +346,7 @@ struct gbfs_update {
     if (!vehicle_types_updated && prev_provider != nullptr) {
       provider.vehicle_types_ = prev_provider->vehicle_types_;
       provider.vehicle_types_map_ = prev_provider->vehicle_types_map_;
+      provider.temp_vehicle_types_ = prev_provider->temp_vehicle_types_;
     }
 
     auto const stations_updated = co_await update(
@@ -403,7 +404,6 @@ struct gbfs_update {
 
   void partition_provider(gbfs_provider& provider) {
     if (provider.vehicle_types_.empty()) {
-      // providers without vehicle types only need one product segment
       auto& prod = provider.products_.emplace_back();
       prod.idx_ = gbfs_products_idx_t{0};
       prod.has_vehicles_to_rent_ =
@@ -440,6 +440,19 @@ struct gbfs_update {
         part.refine(vt_indices);
       }
 
+      // refine by known vs. guessed return constraints
+      auto known_return_constraints = std::vector<vehicle_type_idx_t>{};
+      auto guessed_return_constraints = std::vector<vehicle_type_idx_t>{};
+      for (auto const& vt : provider.vehicle_types_) {
+        if (vt.known_return_constraint_) {
+          known_return_constraints.push_back(vt.idx_);
+        } else {
+          guessed_return_constraints.push_back(vt.idx_);
+        }
+      }
+      part.refine(known_return_constraints);
+      part.refine(guessed_return_constraints);
+
       // refine by return stations
       // TODO: only do this if the station is not in a zone where vehicles
       //   can be returned anywhere
@@ -471,6 +484,7 @@ struct gbfs_update {
         prod.form_factor_ = first_vt.form_factor_;
         prod.propulsion_type_ = first_vt.propulsion_type_;
         prod.return_constraint_ = first_vt.return_constraint_;
+        prod.known_return_constraint_ = first_vt.known_return_constraint_;
         prod.has_vehicles_to_rent_ =
             utl::any_of(provider.stations_,
                         [&](auto const& st) {

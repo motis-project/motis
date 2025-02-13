@@ -371,6 +371,14 @@ export type Rental = {
      */
     stationName?: string;
     /**
+     * Name of the station where the vehicle is picked up (empty for free floating vehicles)
+     */
+    fromStationName?: string;
+    /**
+     * Name of the station where the vehicle is returned (empty for free floating vehicles)
+     */
+    toStationName?: string;
+    /**
      * Rental URI for Android (deep link to the specific station or vehicle)
      */
     rentalUriAndroid?: string;

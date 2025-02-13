@@ -1486,6 +1486,12 @@ components:
         stationName:
           type: string
           description: Name of the station
+        fromStationName:
+          type: string
+          description: Name of the station where the vehicle is picked up (empty for free floating vehicles)
+        toStationName:
+          type: string
+          description: Name of the station where the vehicle is returned (empty for free floating vehicles)
         rentalUriAndroid:
           type: string
           description: Rental URI for Android (deep link to the specific station or vehicle)
