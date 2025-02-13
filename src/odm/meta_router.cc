@@ -378,7 +378,7 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
 
   auto tasks = std::vector<boost::fibers::packaged_task<routing_result()>>{};
   for (auto& q : sub_queries) {
-    tasks.push_back(make_task(std::move(q)));
+    tasks.push_back(make_task(q));
   }
 
   auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
