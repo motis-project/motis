@@ -51,7 +51,8 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima> p;
 
-constexpr auto const kODMLookAhead = 24h;
+constexpr auto const kODMLookAhead = 27h;
+constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kMinODMOffsetLength = n::duration_t{3};
 constexpr auto const kBlacklistPath = "/api/blacklist";
@@ -310,9 +311,9 @@ auto get_td_offsets(auto const& rides) {
 }
 
 n::routing::query meta_router::get_base_query(
-    n::interval<n::unixtime_t> const& max_interval) const {
+    n::interval<n::unixtime_t> const& intvl) const {
   return {
-      .start_time_ = max_interval,
+      .start_time_ = intvl,
       .start_match_mode_ = motis::ep::get_match_mode(start_),
       .dest_match_mode_ = motis::ep::get_match_mode(dest_),
       .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
@@ -464,9 +465,19 @@ api::plan_response meta_router::run() {
                         return n::interval<n::unixtime_t>{t, t};
                       }},
       start_time_.start_time_);
-  auto const odm_intvl = get_odm_intvl(
-      query_.arriveBy_ ? n::direction::kBackward : n::direction::kForward,
-      start_intvl);
+  auto const odm_intvl =
+      query_.arriveBy_
+          ? n::interval<n::unixtime_t>{start_intvl.to_ - kODMLookAhead,
+                                       start_intvl.to_}
+          : n::interval<n::unixtime_t>{start_intvl.from_,
+                                       start_intvl.from_ + kODMLookAhead};
+  auto const search_intvl =
+      query_.arriveBy_
+          ? n::interval<n::unixtime_t>{start_intvl.to_ - kSearchIntervalSize,
+                                       start_intvl.to_}
+          : n::interval<n::unixtime_t>{start_intvl.from_,
+                                       start_intvl.from_ + kSearchIntervalSize};
+
   init_prima(odm_intvl);
   print_time(init_start, "[init]");
 
@@ -504,7 +515,7 @@ api::plan_response meta_router::run() {
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p->to_rides_);
 
   auto const qf = query_factory{
-      .base_query_ = get_base_query(odm_intvl),
+      .base_query_ = get_base_query(search_intvl),
       .start_walk_ = std::visit(
           utl::overloaded{[&](tt_location const l) {
                             return motis::ep::station_start(l.l_);
@@ -589,8 +600,7 @@ api::plan_response meta_router::run() {
   auto const results = search_interval(sub_queries);
   auto const& pt_result = results.front();
   collect_odm_journeys(results);
-  fmt::println("[routing] size of interval searched: {}",
-               pt_result.interval_.size());
+  fmt::println("[routing] interval searched: {}", pt_result.interval_);
   print_time(routing_start, "[routing]");
 
   // whitelisting
