@@ -65,15 +65,8 @@ private:
   void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
   nigiri::routing::query get_base_query(
       nigiri::interval<nigiri::unixtime_t> const&) const;
-  void search_interval(std::vector<nigiri::routing::query> const&,
-                       std::vector<std::optional<routing_result>>&,
-                       std::bitset<query_factory::kMaxSubQueries> to_run =
-                           ~std::bitset<query_factory::kMaxSubQueries>{}) const;
-  std::vector<std::optional<routing_result>> first_pass(
+  std::vector<routing_result> search_interval(
       std::vector<nigiri::routing::query> const&) const;
-  void second_pass(
-      std::vector<nigiri::routing::query>&,
-      std::vector<std::optional<meta_router::routing_result>>&) const;
 
   ep::routing const& r_;
   api::plan_params const& query_;

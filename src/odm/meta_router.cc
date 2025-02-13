@@ -312,7 +312,7 @@ auto get_td_offsets(auto const& rides) {
 n::routing::query meta_router::get_base_query(
     n::interval<n::unixtime_t> const& max_interval) const {
   return {
-      .start_time_ = start_time_.start_time_,
+      .start_time_ = max_interval,
       .start_match_mode_ = motis::ep::get_match_mode(start_),
       .dest_match_mode_ = motis::ep::get_match_mode(dest_),
       .use_start_footpaths_ = !motis::ep::is_intermodal(start_),
@@ -324,10 +324,10 @@ n::routing::query meta_router::get_base_query(
                                 return std::optional{n::duration_t{dur}};
                               })
                               .value_or(kInfinityDuration),
-      .min_connection_count_ = static_cast<unsigned>(query_.numItineraries_),
-      .extend_interval_earlier_ = query_.arriveBy_,
-      .extend_interval_later_ = !query_.arriveBy_,
-      .max_interval_ = max_interval,
+      .min_connection_count_ = 0U,
+      .extend_interval_earlier_ = false,
+      .extend_interval_later_ = false,
+      .max_interval_ = std::nullopt,
       .prf_idx_ = static_cast<n::profile_idx_t>(
           query_.useRoutedTransfers_
               ? (query_.pedestrianProfile_ ==
@@ -352,10 +352,8 @@ n::routing::query meta_router::get_base_query(
                              : std::optional{fastest_direct_}};
 }
 
-void meta_router::search_interval(
-    std::vector<n::routing::query> const& sub_queries,
-    std::vector<std::optional<meta_router::routing_result>>& results,
-    std::bitset<query_factory::kMaxSubQueries> to_run) const {
+std::vector<meta_router::routing_result> meta_router::search_interval(
+    std::vector<n::routing::query> const& sub_queries) const {
 
   auto const make_task = [&](n::routing::query q) {
     return boost::fibers::packaged_task<routing_result()>{
@@ -378,10 +376,8 @@ void meta_router::search_interval(
   };
 
   auto tasks = std::vector<boost::fibers::packaged_task<routing_result()>>{};
-  for (auto const [i, q] : utl::enumerate(sub_queries)) {
-    if (to_run.test(i)) {
-      tasks.push_back(make_task(q));
-    }
+  for (auto& q : sub_queries) {
+    tasks.push_back(make_task(std::move(q)));
   }
 
   auto futures = utl::to_vec(tasks, [](auto& t) { return t.get_future(); });
@@ -390,57 +386,23 @@ void meta_router::search_interval(
     boost::fibers::fiber(std::move(task)).detach();
   }
 
-  fmt::println("[routing] running {} subqueries", to_run.count());
-
-  auto f = begin(futures);
-  for (auto const [i, q] : utl::enumerate(sub_queries)) {
-    if (to_run.test(i)) {
-      f->wait();
-      results[i] = f->get();
-      ++f;
-    }
+  for (auto const& f : futures) {
+    f.wait();
   }
-}
 
-std::vector<std::optional<meta_router::routing_result>> meta_router::first_pass(
-    std::vector<n::routing::query> const& sub_queries) const {
-  auto results = std::vector<std::optional<meta_router::routing_result>>{};
-  results.resize(sub_queries.size());
-  search_interval(sub_queries, results);
+  auto results = std::vector<meta_router::routing_result>{};
+  for (auto& f : futures) {
+    results.push_back(f.get());
+  }
+
   return results;
 }
 
-void meta_router::second_pass(
-    std::vector<n::routing::query>& sub_queries,
-    std::vector<std::optional<meta_router::routing_result>>& results) const {
-  auto max_intvl_searched = results.front()->interval_;
-  for (auto const& r : results) {
-    max_intvl_searched.from_ =
-        std::min(max_intvl_searched.from_, r->interval_.from_);
-    max_intvl_searched.to_ = std::max(max_intvl_searched.to_, r->interval_.to_);
-  }
-
-  auto needs_rerun = std::bitset<query_factory::kMaxSubQueries>{};
-  for (auto const [i, r] : utl::enumerate(results)) {
-    needs_rerun.set(i, max_intvl_searched.from_ < r->interval_.from_ ||
-                           r->interval_.to_ < max_intvl_searched.to_);
-  }
-
-  for (auto const [i, q] : utl::enumerate(sub_queries)) {
-    if (needs_rerun.test(i)) {
-      q.start_time_ = max_intvl_searched;
-      q.extend_interval_earlier_ = false;
-      q.extend_interval_later_ = false;
-    }
-  }
-  search_interval(sub_queries, results, needs_rerun);
-}
-
 void collect_odm_journeys(
-    std::vector<std::optional<meta_router::routing_result>> const& results) {
+    std::vector<meta_router::routing_result> const& results) {
   p->odm_journeys_.clear();
   for (auto& r : results | std::views::drop(1)) {
-    for (auto& j : r->journeys_) {
+    for (auto& j : r.journeys_) {
       p->odm_journeys_.push_back(std::move(j));
     }
   }
@@ -624,10 +586,11 @@ api::plan_response meta_router::run() {
 
   auto const routing_start = std::chrono::steady_clock::now();
   auto sub_queries = qf.make_queries(blacklisted);
-  auto results = first_pass(sub_queries);
-  second_pass(sub_queries, results);
-  auto const& pt_result = *results.front();
+  auto const results = search_interval(sub_queries);
+  auto const& pt_result = results.front();
   collect_odm_journeys(results);
+  fmt::println("[routing] size of interval searched: {}",
+               pt_result.interval_.size());
   print_time(routing_start, "[routing]");
 
   // whitelisting
