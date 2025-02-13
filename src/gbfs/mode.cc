@@ -87,7 +87,8 @@ propulsion_type from_api_propulsion_type(
 api::RentalReturnConstraintEnum to_api_return_constraint(
     return_constraint const rc) {
   switch (rc) {
-    case return_constraint::kNone: return api::RentalReturnConstraintEnum::NONE;
+    case return_constraint::kFreeFloating:
+      return api::RentalReturnConstraintEnum::NONE;
     case return_constraint::kAnyStation:
       return api::RentalReturnConstraintEnum::ANY_STATION;
     case return_constraint::kRoundtripStation:

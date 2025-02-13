@@ -49,7 +49,7 @@ timetable:
   merge_dupes_inter_src: false
   link_stop_distance: 100
   update_interval: 60
-  http_timeout: 10
+  http_timeout: 30
   incremental_rt_update: false
   use_osm_stop_coordinates: false
   extend_missing_footpaths: false
