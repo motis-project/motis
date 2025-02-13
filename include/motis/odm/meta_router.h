@@ -13,6 +13,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/fwd.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/odm/query_factory.h"
 #include "motis/place.h"
 
 namespace nigiri {
@@ -46,9 +47,26 @@ struct meta_router {
 
   api::plan_response run();
 
+  struct routing_result {
+    explicit routing_result(
+        nigiri::routing::routing_result<nigiri::routing::raptor_stats> rr)
+        : journeys_{*rr.journeys_},
+          interval_{rr.interval_},
+          search_stats_{rr.search_stats_},
+          algo_stats_{rr.algo_stats_} {}
+
+    nigiri::pareto_set<nigiri::routing::journey> journeys_{};
+    nigiri::interval<nigiri::unixtime_t> interval_{};
+    nigiri::routing::search_stats search_stats_{};
+    nigiri::routing::raptor_stats algo_stats_{};
+  };
+
 private:
-  void init_prima(nigiri::interval<nigiri::unixtime_t> const& from_intvl,
-                  nigiri::interval<nigiri::unixtime_t> const& to_intvl);
+  void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
+  nigiri::routing::query get_base_query(
+      nigiri::interval<nigiri::unixtime_t> const&) const;
+  std::vector<routing_result> search_interval(
+      std::vector<nigiri::routing::query> const&) const;
 
   ep::routing const& r_;
   api::plan_params const& query_;

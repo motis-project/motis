@@ -6,6 +6,24 @@ namespace motis::odm {
 
 namespace n = nigiri;
 
+std::vector<n::routing::query> query_factory::make_queries(
+    bool const with_odm) const {
+  auto queries = std::vector<n::routing::query>{};
+  queries.push_back(
+      make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_));
+  if (with_odm) {
+    queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_short_));
+    queries.push_back(make(start_walk_, td_start_walk_, {}, odm_dest_long_));
+    queries.push_back(make({}, odm_start_short_, dest_walk_, td_dest_walk_));
+    queries.push_back(make({}, odm_start_long_, dest_walk_, td_dest_walk_));
+    //    queries.push_back(make({}, odm_start_short_, {}, odm_dest_short_));
+    //    queries.push_back(make({}, odm_start_short_, {}, odm_dest_long_));
+    //    queries.push_back(make({}, odm_start_long_, {}, odm_dest_short_));
+    //    queries.push_back(make({}, odm_start_long_, {}, odm_dest_long_));
+  }
+  return queries;
+}
+
 n::routing::query query_factory::make(
     std::vector<n::routing::offset> const& start,
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>> const&
@@ -20,42 +38,6 @@ n::routing::query query_factory::make(
   q.td_dest_ = td_dest;
   motis::ep::remove_slower_than_fastest_direct(q);
   return q;
-}
-
-n::routing::query query_factory::walk_walk() const {
-  return make(start_walk_, td_start_walk_, dest_walk_, td_dest_walk_);
-}
-
-n::routing::query query_factory::walk_short() const {
-  return make(start_walk_, td_start_walk_, {}, odm_dest_short_);
-}
-
-n::routing::query query_factory::walk_long() const {
-  return make(start_walk_, td_start_walk_, {}, odm_dest_long_);
-}
-
-n::routing::query query_factory::short_walk() const {
-  return make({}, odm_start_short_, dest_walk_, td_dest_walk_);
-}
-
-n::routing::query query_factory::long_walk() const {
-  return make({}, odm_start_long_, dest_walk_, td_dest_walk_);
-}
-
-n::routing::query query_factory::short_short() const {
-  return make({}, odm_start_short_, {}, odm_dest_short_);
-}
-
-n::routing::query query_factory::short_long() const {
-  return make({}, odm_start_short_, {}, odm_dest_long_);
-}
-
-n::routing::query query_factory::long_short() const {
-  return make({}, odm_start_long_, {}, odm_dest_short_);
-}
-
-n::routing::query query_factory::long_long() const {
-  return make({}, odm_start_long_, {}, odm_dest_long_);
 }
 
 }  // namespace motis::odm
