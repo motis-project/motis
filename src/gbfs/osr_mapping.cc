@@ -69,8 +69,9 @@ struct osr_mapping {
         break;
       }
 
-      if (prod.known_return_constraint_ &&
-          prod.return_constraint_ == return_constraint::kAnyStation) {
+      if (prod.return_constraint_ == return_constraint::kAnyStation &&
+          (prod.known_return_constraint_ ||
+           provider_.geofencing_zones_.zones_.empty())) {
         default_restrictions.station_parking_ = true;
       }
 
