@@ -12,20 +12,6 @@
 #include "nigiri/timetable.h"
 
 #include "motis/odm/odm.h"
-#include "motis/odm/prima.h"
-
-#include <ranges>
-
-#include "boost/json.hpp"
-
-#include "utl/erase_if.h"
-#include "utl/pipes.h"
-#include "utl/zip.h"
-
-#include "nigiri/common/parse_time.h"
-#include "nigiri/timetable.h"
-
-#include "motis/odm/odm.h"
 
 namespace motis::odm {
 

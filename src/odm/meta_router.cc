@@ -17,7 +17,6 @@
 #include "boost/thread/tss.hpp"
 
 #include "utl/erase_duplicates.h"
-#include "utl/for_each_bit_set.h"
 
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
