@@ -435,19 +435,28 @@ void extract_rides() {
   utl::erase_duplicates(p->to_rides_, ride_comp, std::equal_to<>{});
 }
 
-void add_direct() {
+void meta_router::add_direct() const {
+  auto const from_l = std::visit(
+      utl::overloaded{[](osr::location const&) {
+                        return get_special_station(n::special_station::kStart);
+                      },
+                      [](tt_location const& tt_l) { return tt_l.l_; }},
+      from_);
+  auto const to_l = std::visit(
+      utl::overloaded{[](osr::location const&) {
+                        return get_special_station(n::special_station::kEnd);
+                      },
+                      [](tt_location const& tt_l) { return tt_l.l_; }},
+      to_);
+
   for (auto const& d : p->direct_rides_) {
     p->odm_journeys_.push_back(n::routing::journey{
-        .legs_ =
-            {{n::direction::kForward,
-              get_special_station(n::special_station::kStart),
-              get_special_station(n::special_station::kEnd), d.dep_, d.arr_,
-              n::routing::offset{get_special_station(n::special_station::kEnd),
-                                 std::chrono::abs(d.arr_ - d.dep_),
-                                 kOdmTransportModeId}}},
+        .legs_ = {{n::direction::kForward, from_l, to_l, d.dep_, d.arr_,
+                   n::routing::offset{to_l, std::chrono::abs(d.arr_ - d.dep_),
+                                      kOdmTransportModeId}}},
         .start_time_ = d.dep_,
         .dest_time_ = d.arr_,
-        .dest_ = get_special_station(n::special_station::kEnd),
+        .dest_ = to_l,
         .transfers_ = 0U});
   }
   fmt::println("[whitelisting] added {} direct rides", p->direct_rides_.size());
