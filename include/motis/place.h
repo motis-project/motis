@@ -16,6 +16,10 @@ struct tt_location {
       nigiri::location_idx_t l,
       nigiri::location_idx_t scheduled = nigiri::location_idx_t::invalid());
 
+  friend std::ostream& operator<<(std::ostream& out, tt_location const& l) {
+    return out << "{ l=" << l.l_ << ", scheduled=" << l.scheduled_ << " }";
+  }
+
   nigiri::location_idx_t l_;
   nigiri::location_idx_t scheduled_;
 };
