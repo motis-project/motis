@@ -84,6 +84,8 @@ struct routing {
       std::chrono::seconds max) const;
 
   config const& config_;
+  adr::typeahead const& t_;
+  adr::reverse const* r_;
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;

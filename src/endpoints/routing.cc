@@ -634,7 +634,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
+                  &t_, r_, w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_,
+                  gbfs_rd,
                   query.pedestrianProfile_ ==
                       api::PedestrianProfileEnum::WHEELCHAIR,
                   j, start, dest, cache, *blocked, query.detailedTransfers_);

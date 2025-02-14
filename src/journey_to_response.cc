@@ -16,7 +16,10 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
+#include "adr/reverse.h"
+
 #include "motis/constants.h"
+#include "motis/endpoints/adr/suggestions_to_response.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/place.h"
@@ -44,6 +47,30 @@ api::ModeEnum to_mode(osr::search_profile const m) {
 }
 
 api::Itinerary journey_to_response(osr::ways const* w,
+                                   osr::lookup const* l,
+                                   osr::platforms const* pl,
+                                   n::timetable const& tt,
+                                   tag_lookup const& tags,
+                                   elevators const* e,
+                                   n::rt_timetable const* rtt,
+                                   platform_matches_t const* matches,
+                                   n::shapes_storage const* shapes,
+                                   gbfs::gbfs_routing_data& gbfs_rd,
+                                   bool const wheelchair,
+                                   n::routing::journey const& j,
+                                   place_t const& start,
+                                   place_t const& dest,
+                                   street_routing_cache_t& cache,
+                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
+                                   bool const detailed_transfers) {
+  return journey_to_response(nullptr, nullptr, w, l, pl, tt, tags, e, rtt,
+                             matches, shapes, gbfs_rd, wheelchair, j, start,
+                             dest, cache, blocked_mem, detailed_transfers);
+}
+
+api::Itinerary journey_to_response(adr::typeahead const* t,
+                                   adr::reverse const* r,
+                                   osr::ways const* w,
                                    osr::lookup const* l,
                                    osr::platforms const* pl,
                                    n::timetable const& tt,
@@ -195,6 +222,29 @@ api::Itinerary journey_to_response(osr::ways const* w,
             }},
         j_leg.uses_);
   }
+
+  auto const resolve_intermodal = [&](auto& p) {
+    if (p.name_ != "START" && p.name_ != "END") {
+      return;
+    }
+
+    p.name_ = fmt::format("{:.5f}, {:.5f}", p.lat_, p.lon_);
+
+    if (!r || !t) {
+      return;
+    }
+
+    auto const sug_res =
+        suggestions_to_response(*t, &tt, &tags, w, pl, matches, {}, {},
+                                r->lookup(*t, {p.lat_, p.lon_}, 1U));
+    if (sug_res.empty()) {
+      return;
+    }
+    p.name_ = sug_res.front().name_;
+  };
+
+  resolve_intermodal(itinerary.legs_.front().from_);
+  resolve_intermodal(itinerary.legs_.back().to_);
 
   return itinerary;
 }

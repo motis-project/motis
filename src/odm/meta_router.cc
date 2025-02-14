@@ -661,8 +661,8 @@ api::plan_response meta_router::run() {
               p->odm_journeys_,
               [&, cache = street_routing_cache_t{}](auto&& j) mutable {
                 return journey_to_response(
-                    r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_, rtt_,
-                    r_.matches_, r_.shapes_, gbfs_rd_,
+                    &r_.t_, r_.r_, r_.w_, r_.l_, r_.pl_, *tt_, *r_.tags_, e_,
+                    rtt_, r_.matches_, r_.shapes_, gbfs_rd_,
                     query_.pedestrianProfile_ ==
                         api::PedestrianProfileEnum::WHEELCHAIR,
                     j, start_, dest_, cache, *ep::blocked,

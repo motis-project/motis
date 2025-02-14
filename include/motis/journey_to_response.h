@@ -44,4 +44,24 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    osr::bitvec<osr::node_idx_t>& blocked_mem,
                                    bool detailed_transfers);
 
+api::Itinerary journey_to_response(adr::typeahead const*,
+                                   adr::reverse const*,
+                                   osr::ways const*,
+                                   osr::lookup const*,
+                                   osr::platforms const*,
+                                   nigiri::timetable const&,
+                                   tag_lookup const&,
+                                   elevators const* e,
+                                   nigiri::rt_timetable const*,
+                                   platform_matches_t const* matches,
+                                   nigiri::shapes_storage const*,
+                                   gbfs::gbfs_routing_data&,
+                                   bool const wheelchair,
+                                   nigiri::routing::journey const&,
+                                   place_t const& start,
+                                   place_t const& dest,
+                                   street_routing_cache_t&,
+                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
+                                   bool detailed_transfers);
+
 }  // namespace motis
