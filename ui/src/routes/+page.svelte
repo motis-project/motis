@@ -201,7 +201,7 @@
 				bottom: 96,
 				left: isSmallScreen ? 96 : 640
 			};
-			map.flyTo({ ...map.cameraForBounds(box), padding });
+			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
 		}
 	};
 
@@ -299,27 +299,31 @@
 		</Control>
 	{/if}
 
-	{#if !isSmallScreen || (!page.state.selectedItinerary && !page.state.selectedStop)}
-		<Control position="top-left">
-			<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-				<SearchMask
-					bind:from
-					bind:to
-					bind:time
-					bind:timeType
-					bind:wheelchair
-					bind:bikeRental
-					bind:bikeCarriage
-					bind:selectedModes={selectedTransitModes}
-				/>
-			</Card>
-		</Control>
-	{/if}
+	<Control
+		position="top-left"
+		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop) ? 'hide' : ''}
+	>
+		<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+			<SearchMask
+				bind:from
+				bind:to
+				bind:time
+				bind:timeType
+				bind:wheelchair
+				bind:bikeRental
+				bind:bikeCarriage
+				bind:selectedModes={selectedTransitModes}
+			/>
+		</Card>
+	</Control>
 
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if !page.state.selectedItinerary && routingResponses.length !== 0}
-		<Control position="top-left" class="min-h-0 md:mb-2">
+	{#if routingResponses.length !== 0}
+		<Control
+			position="top-left"
+			class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}"
+		>
 			<Card
 				class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 			>
