@@ -201,7 +201,7 @@
 				bottom: 96,
 				left: isSmallScreen ? 96 : 640
 			};
-			map.flyTo({ ...map.cameraForBounds(box), padding });
+			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
 		}
 	};
 
