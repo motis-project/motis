@@ -264,7 +264,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     std::optional<std::vector<std::string>> const& rental_providers,
     n::unixtime_t const start_time,
     bool wheelchair,
-    std::chrono::seconds max) const {
+    std::chrono::seconds max,
+    double const max_matching_distance) const {
   if (!w_ || !l_) {
     return {};
   }
@@ -279,7 +280,7 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         (!omit_walk && m == api::ModeEnum::WALK)) {
       auto itinerary =
           route(*w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
-                std::nullopt, {}, cache, *blocked, max);
+                std::nullopt, max_matching_distance, {}, cache, *blocked, max);
       if (itinerary.legs_.empty()) {
         continue;
       }
@@ -307,10 +308,11 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
-          auto itinerary = route(
-              *w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
-              std::nullopt, gbfs::gbfs_products_ref{provider->idx_, prod.idx_},
-              cache, *blocked, max);
+          auto itinerary =
+              route(*w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
+                    std::nullopt, max_matching_distance,
+                    gbfs::gbfs_products_ref{provider->idx_, prod.idx_}, cache,
+                    *blocked, max);
           if (itinerary.legs_.empty()) {
             continue;
           }
@@ -453,7 +455,8 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.directRentalProviders_, *t,
                          query.pedestrianProfile_ ==
                              api::PedestrianProfileEnum::WHEELCHAIR,
-                         std::chrono::seconds{query.maxDirectTime_})
+                         std::chrono::seconds{query.maxDirectTime_},
+                         query.maxMatchingDistance_)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
@@ -637,7 +640,13 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
                   query.pedestrianProfile_ ==
                       api::PedestrianProfileEnum::WHEELCHAIR,
-                  j, start, dest, cache, *blocked, query.detailedTransfers_);
+                  j, start, dest, cache, *blocked, query.detailedTransfers_,
+                  config_.timetable_
+                      .and_then([](config::timetable const& x) {
+                        return std::optional{x.max_matching_distance_};
+                      })
+                      .value_or(kMaxMatchingDistance),
+                  query.maxMatchingDistance_);
             }),
         .previousPageCursor_ =
             fmt::format("EARLIER|{}", to_seconds(r.interval_.from_)),

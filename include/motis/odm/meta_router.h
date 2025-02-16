@@ -28,6 +28,8 @@ struct journey;
 
 namespace motis::odm {
 
+struct mixer;
+
 struct meta_router {
   meta_router(ep::routing const&,
               api::plan_params const&,

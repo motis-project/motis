@@ -19,6 +19,7 @@ elevator_footpath_map_t compute_footpaths(osr::ways const&,
                                           nigiri::timetable&,
                                           bool update_coordinates,
                                           bool extend_missing,
-                                          std::chrono::seconds max_duration);
+                                          std::chrono::seconds max_duration,
+                                          double max_matching_distance);
 
 }  // namespace motis

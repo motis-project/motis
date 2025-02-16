@@ -91,6 +91,7 @@ struct config {
     bool use_osm_stop_coordinates_{false};
     bool extend_missing_footpaths_{false};
     std::uint16_t max_footpath_length_{15};
+    double max_matching_distance_{25.0};
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};

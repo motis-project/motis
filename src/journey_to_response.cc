@@ -59,7 +59,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    place_t const& dest,
                                    street_routing_cache_t& cache,
                                    osr::bitvec<osr::node_idx_t>& blocked_mem,
-                                   bool const detailed_transfers) {
+                                   bool const detailed_transfers,
+                                   double const timetable_max_matching_distance,
+                                   double const max_matching_distance) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto itinerary = api::Itinerary{
@@ -166,8 +168,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
               append(
                   w && l
                       ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
-                              wheelchair, j_leg.dep_time_, j_leg.arr_time_, {},
-                              cache, blocked_mem,
+                              wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                              timetable_max_matching_distance, {}, cache,
+                              blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
                                   std::chrono::minutes{10},
@@ -185,6 +188,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                  max_matching_distance,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs_rd.get_products_ref(x.transport_mode_id_)
                       : gbfs::gbfs_products_ref{},
