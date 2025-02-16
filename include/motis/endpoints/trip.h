@@ -12,6 +12,7 @@ namespace motis::ep {
 struct trip {
   api::Itinerary operator()(boost::urls::url_view const&) const;
 
+  config const& config_;
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;

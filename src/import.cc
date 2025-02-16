@@ -374,7 +374,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             *d.w_, *d.l_, *d.pl_, *d.tt_,
             c.timetable_->use_osm_stop_coordinates_,
             c.timetable_->extend_missing_footpaths_,
-            std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U});
+            std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U},
+            c.timetable_->max_matching_distance_);
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",

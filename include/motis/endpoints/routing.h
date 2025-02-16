@@ -81,7 +81,8 @@ struct routing {
       std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
       bool wheelchair,
-      std::chrono::seconds max) const;
+      std::chrono::seconds max,
+      double max_matching_distance) const;
 
   config const& config_;
   osr::ways const* w_;
