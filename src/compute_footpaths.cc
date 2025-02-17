@@ -56,6 +56,7 @@ elevator_footpath_map_t compute_footpaths(
     osr::lookup const& lookup,
     osr::platforms const& pl,
     nigiri::timetable& tt,
+    osr::elevation_storage const* elevations,
     bool const update_coordinates,
     bool const extend_missing,
     std::chrono::seconds const max_duration,
@@ -145,7 +146,7 @@ elevator_footpath_map_t compute_footpaths(
               utl::transform_to(s.neighbors_, s.neighbor_candidates_,
                                 [&](auto&& x) { return candidates[x]; }),
               kMaxDuration, osr::direction::kForward, nullptr, nullptr,
-              [](osr::path const& p) { return p.uses_elevator_; });
+              elevations, [](osr::path const& p) { return p.uses_elevator_; });
           for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
             if (r.has_value()) {
               auto const duration = n::duration_t{r->cost_ / 60U};
