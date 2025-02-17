@@ -43,6 +43,15 @@ api::ModeEnum to_mode(osr::search_profile const m) {
   std::unreachable();
 }
 
+void cleanup_intermodal(api::Itinerary& i) {
+  if (i.legs_.front().from_.name_ == "END") {
+    i.legs_.front().from_.name_ = "START";
+  }
+  if (i.legs_.back().to_.name_ == "START") {
+    i.legs_.back().to_.name_ = "END";
+  }
+}
+
 api::Itinerary journey_to_response(osr::ways const* w,
                                    osr::lookup const* l,
                                    osr::platforms const* pl,
@@ -199,6 +208,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
             }},
         j_leg.uses_);
   }
+
+  cleanup_intermodal(itinerary);
 
   return itinerary;
 }
