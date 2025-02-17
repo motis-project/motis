@@ -4,6 +4,7 @@
 
 #include "nigiri/types.h"
 
+#include "osr/elevation_storage.h"
 #include "osr/types.h"
 
 #include "motis-api/motis-api.h"
@@ -22,6 +23,7 @@ struct footpaths {
   osr::ways const& w_;
   osr::lookup const& l_;
   osr::platforms const& pl_;
+  osr::elevation_storage const* elevations_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   platform_matches_t const& matches_;
   std::shared_ptr<rt> rt_;
