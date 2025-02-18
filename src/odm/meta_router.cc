@@ -239,7 +239,6 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
                                      ? std::min(direct_duration->count(),
                                                 query_.maxPreTransitTime_)
                                      : query_.maxPreTransitTime_});
-    std::erase(start_modes_, api::ModeEnum::ODM);
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
@@ -252,8 +251,10 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
                                      ? std::min(direct_duration->count(),
                                                 query_.maxPostTransitTime_)
                                      : query_.maxPostTransitTime_});
-    std::erase(dest_modes_, api::ModeEnum::ODM);
   }
+
+  std::erase(start_modes_, api::ModeEnum::ODM);
+  std::erase(dest_modes_, api::ModeEnum::ODM);
 }
 
 bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
