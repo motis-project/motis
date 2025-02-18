@@ -131,6 +131,10 @@ int main(int ac, char** av) {
         return 1;
       }
     }
+
+    default:
+      fmt::println("Invalid command. Type motis --help for a list of commands.");
+      return 1;
   }
 
   google::protobuf::ShutdownProtobufLibrary();
