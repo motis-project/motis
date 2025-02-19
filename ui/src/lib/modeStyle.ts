@@ -54,7 +54,7 @@ export const getModeStyle = (l: LegLike): [string, string, string] => {
 		case 'BUS':
 			return ['bus', '#ff9800', 'white'];
 		case 'COACH':
-			return ['bus', '#9ccc65', 'white'];
+			return ['bus', '#9ccc65', 'black'];
 
 		case 'TRAM':
 			return ['tram', '#ff9800', 'white'];
