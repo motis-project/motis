@@ -22,10 +22,10 @@ struct direct_ride {
 };
 
 struct capacities {
-  std::uint8_t wheelchairs_;
-  std::uint8_t bikes_;
-  std::uint8_t passengers_;
-  std::uint8_t luggage_;
+  std::int64_t wheelchairs_;
+  std::int64_t bikes_;
+  std::int64_t passengers_;
+  std::int64_t luggage_;
 };
 
 struct prima {

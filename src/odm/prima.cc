@@ -30,11 +30,11 @@ void prima::init(api::Place const& from,
   cap_ = {
       .wheelchairs_ = static_cast<std::uint8_t>(
           query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
-              ? 1
-              : 0),
+              ? 1U
+              : 0U),
       .bikes_ = static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1 : 0),
-      .passengers_ = 1U,
-      .luggage_ = 0U};
+      .passengers_ = query.passengers_.value_or(1U),
+      .luggage_ = query.luggage_.value_or(0U)};
 }
 
 std::int64_t to_millis(n::unixtime_t const t) {
