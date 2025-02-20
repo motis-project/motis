@@ -110,7 +110,7 @@ std::size_t prima::n_events() const {
 
 std::size_t n_pt_updates(json::array const& update) {
   return std::accumulate(
-      update.begin(), update.end(), 0U,
+      update.begin(), update.end(), std::size_t{0U},
       [](auto const& a, auto const& b) { return a + b.as_array().size(); });
 }
 
