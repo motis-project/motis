@@ -82,7 +82,8 @@ struct routing {
       nigiri::unixtime_t start_time,
       bool wheelchair,
       std::chrono::seconds max,
-      double max_matching_distance) const;
+      double max_matching_distance,
+      double fastest_direct_factor) const;
 
   config const& config_;
   osr::ways const* w_;

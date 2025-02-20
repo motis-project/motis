@@ -265,7 +265,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
     n::unixtime_t const start_time,
     bool wheelchair,
     std::chrono::seconds max,
-    double const max_matching_distance) const {
+    double const max_matching_distance,
+    double const fastest_direct_factor) const {
   if (!w_ || !l_) {
     return {};
   }
@@ -326,7 +327,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       }
     }
   }
-  return {itineraries, fastest_direct};
+  return {itineraries, fastest_direct != kInfinityDuration
+                           ? std::chrono::round<n::duration_t>(
+                                 fastest_direct * fastest_direct_factor)
+                           : fastest_direct};
 }
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
@@ -456,7 +460,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.pedestrianProfile_ ==
                              api::PedestrianProfileEnum::WHEELCHAIR,
                          std::chrono::seconds{query.maxDirectTime_},
-                         query.maxMatchingDistance_)
+                         query.maxMatchingDistance_, query.fastestDirectFactor_)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};
   UTL_STOP_TIMING(direct);
 
