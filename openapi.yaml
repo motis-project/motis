@@ -785,6 +785,18 @@ paths:
             default: 1800
             minimum: 0
 
+        - name: fastestDirectFactor
+          in: query
+          required: false
+          description: |
+            Optional. Experimental. Default is `1.0`.
+            Factor with which the duration of the fastest direct connection is multiplied.
+            Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+          schema:
+            type: number
+            default: 1.0
+            minimum: 0
+
         - name: timeout
           in: query
           required: false
