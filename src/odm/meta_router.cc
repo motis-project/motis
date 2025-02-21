@@ -404,9 +404,9 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
 void collect_odm_journeys(
     std::vector<meta_router::routing_result> const& results) {
   p->odm_journeys_.clear();
-  for (auto& r : results | std::views::drop(1)) {
-    for (auto& j : r.journeys_) {
-      p->odm_journeys_.push_back(std::move(j));
+  for (auto const& r : results | std::views::drop(1)) {
+    for (auto const& j : r.journeys_) {
+      p->odm_journeys_.push_back(j);
     }
   }
   fmt::println("[routing] collected {} ODM-PT journeys",
