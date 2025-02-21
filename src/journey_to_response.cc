@@ -19,6 +19,7 @@
 #include "motis/constants.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/odm/odm.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
@@ -84,7 +85,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               decltype(j.legs_)::iterator>::difference_type>(0),
           utl::count_if(j.legs_, [](auto&& leg) {
             return holds_alternative<n::routing::journey::run_enter_exit>(
-                leg.uses_);
+                       leg.uses_) ||
+                   odm::is_odm_leg(leg);
           }) - 1)};
 
   auto const append = [&](api::Itinerary&& x) {
