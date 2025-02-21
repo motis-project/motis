@@ -40,9 +40,6 @@ using namespace std::chrono_literals;
 
 namespace motis::ep {
 
-constexpr auto const kInfinityDuration =
-    n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
-
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
