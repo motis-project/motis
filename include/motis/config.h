@@ -122,7 +122,13 @@ struct config {
     std::optional<std::string> proxy_{};
   };
   std::optional<gbfs> gbfs_{};
-  std::optional<std::string> odm_{};
+
+  struct odm {
+    bool operator==(odm const&) const = default;
+    std::string url_{};
+    std::optional<std::string> bounds_{};
+  };
+  std::optional<odm> odm_{};
 
   bool street_routing_{false};
   bool osr_footpath_{false};

@@ -67,7 +67,7 @@ struct data {
     // !!! Remember to add all new members !!!
     return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
                     location_rtee_, elevator_nodes_, shapes_, railviz_static_,
-                    matches_, rt_, gbfs_);
+                    matches_, rt_, gbfs_, odm_bounds_);
   }
 
   std::filesystem::path path_;
@@ -90,6 +90,7 @@ struct data {
   ptr<tiles_data> tiles_;
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
+  ptr<odm::bounds> odm_bounds_;
 };
 
 }  // namespace motis

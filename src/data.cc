@@ -6,6 +6,7 @@
 #include "cista/io.h"
 
 #include "utl/read_file.h"
+#include "utl/verify.h"
 
 #include "adr/adr.h"
 #include "adr/cache.h"
@@ -24,13 +25,13 @@
 #include "motis/constants.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
+#include "motis/odm/bounds.h"
 #include "motis/point_rtree.h"
 #include "motis/railviz.h"
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
 #include "motis/update_rtt_td_footpaths.h"
-#include "utl/verify.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -86,6 +87,10 @@ data::data(std::filesystem::path p, config const& c)
   verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
 
   rt_ = std::make_shared<rt>();
+
+  if (c.odm_.has_value() && c.odm_->bounds_.has_value()) {
+    odm_bounds_ = std::make_unique<odm::bounds>(*c.odm_->bounds_);
+  }
 
   auto geocoder = std::async(std::launch::async, [&]() {
     if (c.geocoding_) {
