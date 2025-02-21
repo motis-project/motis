@@ -54,15 +54,13 @@ static boost::thread_specific_ptr<prima> p;
 
 constexpr auto const kODMLookAhead = 27h;
 constexpr auto const kSearchIntervalSize = 24h;
+constexpr auto const kODMDirectImprovement = 4.0;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kMinODMOffsetLength = n::duration_t{3};
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
-
-constexpr auto const kInfinityDuration =
-    n::duration_t{std::numeric_limits<n::duration_t::rep>::max()};
 
 mixer get_odm_mixer() {
   return mixer{.alpha_ = 1.5,
@@ -159,35 +157,53 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& from_p,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
-                          api::plan_params const& query) {
+                          api::plan_params const& query,
+                          n::duration_t const fastest_direct) {
+  direct_rides.clear();
+
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
   auto const to_pos = geo::latlng{to_p.lat_, to_p.lon_};
   if (r.odm_bounds_ != nullptr && (!r.odm_bounds_->contains(from_pos) ||
                                    !r.odm_bounds_->contains(to_pos))) {
     fmt::println("No direct connection, from: {}, to: {}", from_pos, to_pos);
-    return kInfinityDuration;
+    return ep::kInfinityDuration;
   }
 
-  auto [_, duration] = r.route_direct(
+  auto [_, taxi_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      std::chrono::seconds{query.maxDirectTime_});
-  direct_rides.clear();
+      std::chrono::seconds{query.maxDirectTime_}, query.maxMatchingDistance_,
+      query.fastestDirectFactor_);
+
+  if (kODMDirectImprovement * taxi_duration > fastest_direct) {
+    fmt::println(
+        "[init] direct rides prohibited, improvement factor {} (taxi: "
+        "{}, walk: {})",
+        kODMDirectImprovement, taxi_duration, fastest_direct);
+    return taxi_duration;
+  }
+
+  fmt::println(
+      "[init] allowing direct rides, improvement factor {} (taxi: {}, "
+      "walk: {})",
+      kODMDirectImprovement, taxi_duration, fastest_direct);
+
   if (query.arriveBy_) {
     for (auto arr =
-             std::chrono::floor<std::chrono::hours>(intvl.to_ - duration) +
-             duration;
+             std::chrono::floor<std::chrono::hours>(intvl.to_ - taxi_duration) +
+             taxi_duration;
          intvl.contains(arr); arr -= kODMDirectPeriod) {
-      direct_rides.push_back({.dep_ = arr - duration, .arr_ = arr});
+      direct_rides.push_back({.dep_ = arr - taxi_duration, .arr_ = arr});
     }
   } else {
     for (auto dep = std::chrono::ceil<std::chrono::hours>(intvl.from_);
          intvl.contains(dep); dep += kODMDirectPeriod) {
-      direct_rides.push_back({.dep_ = dep, .arr_ = dep + duration});
+      direct_rides.push_back({.dep_ = dep, .arr_ = dep + taxi_duration});
     }
   }
-  return duration;
+
+  return taxi_duration;
 }
 
 void init_pt(std::vector<n::routing::start>& rides,
@@ -249,8 +265,9 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
 
   auto direct_duration = std::optional<std::chrono::duration<int64_t>>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
-                                  from_place_, to_place_, odm_intvl, query_);
+    direct_duration =
+        init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
+                    odm_intvl, query_, fastest_direct_);
   }
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
@@ -263,7 +280,6 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
                                      ? std::min(direct_duration->count(),
                                                 query_.maxPreTransitTime_)
                                      : query_.maxPreTransitTime_});
-    std::erase(start_modes_, api::ModeEnum::ODM);
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
@@ -276,8 +292,10 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
                                      ? std::min(direct_duration->count(),
                                                 query_.maxPostTransitTime_)
                                      : query_.maxPostTransitTime_});
-    std::erase(dest_modes_, api::ModeEnum::ODM);
   }
+
+  std::erase(start_modes_, api::ModeEnum::ODM);
+  std::erase(dest_modes_, api::ModeEnum::ODM);
 }
 
 bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
@@ -348,7 +366,7 @@ n::routing::query meta_router::get_base_query(
                               .and_then([](std::int64_t const dur) {
                                 return std::optional{n::duration_t{dur}};
                               })
-                              .value_or(kInfinityDuration),
+                              .value_or(ep::kInfinityDuration),
       .min_connection_count_ = 0U,
       .extend_interval_earlier_ = false,
       .extend_interval_later_ = false,
@@ -372,7 +390,7 @@ n::routing::query meta_router::get_base_query(
               .factor_ = static_cast<float>(query_.transferTimeFactor_)},
       .via_stops_ = motis::ep::get_via_stops(*tt_, *r_.tags_, query_.via_,
                                              query_.viaMinimumStay_),
-      .fastest_direct_ = fastest_direct_ == kInfinityDuration
+      .fastest_direct_ = fastest_direct_ == ep::kInfinityDuration
                              ? std::nullopt
                              : std::optional{fastest_direct_}};
 }
@@ -426,9 +444,9 @@ std::vector<meta_router::routing_result> meta_router::search_interval(
 void collect_odm_journeys(
     std::vector<meta_router::routing_result> const& results) {
   p->odm_journeys_.clear();
-  for (auto& r : results | std::views::drop(1)) {
-    for (auto& j : r.journeys_) {
-      p->odm_journeys_.push_back(std::move(j));
+  for (auto const& r : results | std::views::drop(1)) {
+    for (auto const& j : r.journeys_) {
+      p->odm_journeys_.push_back(j);
     }
   }
   fmt::println("[routing] collected {} ODM-PT journeys",
@@ -637,10 +655,10 @@ api::plan_response meta_router::run() {
   print_time(routing_start, "[routing]");
 
   // whitelisting
+  auto const wl_start = std::chrono::steady_clock::now();
   auto whitelist_response = std::optional<std::string>{};
   auto ioc2 = boost::asio::io_context{};
   if (blacklisted) {
-    auto const wl_start = std::chrono::steady_clock::now();
     extract_rides();
     try {
       fmt::println("[whitelisting] request for {} events", p->n_events());
@@ -658,7 +676,6 @@ api::plan_response meta_router::run() {
       fmt::println("[whitelisting] networking failed: {}", e.what());
       whitelist_response = std::nullopt;
     }
-    print_time(wl_start, "[whitelisting]");
   }
 
   // mixing
@@ -668,11 +685,12 @@ api::plan_response meta_router::run() {
   if (whitelisted) {
     p->adjust_to_whitelisting();
     add_direct();
-    fmt::println("[whitelisting] success");
   } else {
     p->odm_journeys_.clear();
     fmt::println("[whitelisting] failed, discarding ODM journeys");
   }
+  print_time(wl_start, "[whitelisting]");
+
   fmt::println("[mixing] {} PT journeys and {} ODM journeys",
                pt_result.journeys_.size(), p->odm_journeys_.size());
   get_odm_mixer().mix(pt_result.journeys_, p->odm_journeys_);
@@ -690,7 +708,9 @@ api::plan_response meta_router::run() {
                     query_.pedestrianProfile_ ==
                         api::PedestrianProfileEnum::WHEELCHAIR,
                     j, start_, dest_, cache, *ep::blocked,
-                    query_.detailedTransfers_);
+                    query_.detailedTransfers_,
+                    r_.config_.timetable_->max_matching_distance_,
+                    query_.maxMatchingDistance_);
               }),
           .previousPageCursor_ =
               fmt::format("EARLIER|{}", to_seconds(pt_result.interval_.from_)),

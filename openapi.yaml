@@ -785,6 +785,18 @@ paths:
             default: 1800
             minimum: 0
 
+        - name: fastestDirectFactor
+          in: query
+          required: false
+          description: |
+            Optional. Experimental. Default is `1.0`.
+            Factor with which the duration of the fastest direct connection is multiplied.
+            Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+          schema:
+            type: number
+            default: 1.0
+            minimum: 0
+
         - name: timeout
           in: query
           required: false
@@ -792,6 +804,23 @@ paths:
           schema:
             type: integer
             minimum: 0
+
+        - name: passengers
+          in: query
+          required: false
+          description: Optional. Experimental. Number of passengers (e.g. for ODM or price calculation)
+          schema:
+            type: integer
+            minimum: 1
+
+        - name: luggage
+          in: query
+          required: false
+          description: |
+            Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '200':
           description: routing result
@@ -1508,42 +1537,6 @@ components:
         returnConstraint:
           $ref: '#/components/schemas/RentalReturnConstraint'
 
-    ODMType:
-      type: string
-      enum:
-        - TAXI
-        - RIDE_SHARING
-
-    ODM:
-      description: Vehicle with driver, e.g., taxi
-      type: object
-      required:
-        - systemId
-      properties:
-        systemId:
-          type: string
-          description: ODM system ID
-        systemName:
-          type: string
-          description: ODM system name
-        url:
-          type: string
-          description: URL of the ODM system
-        companyName:
-          type: string
-          description: Name of company that offers the service
-        odmUriAndroid:
-          type: string
-          description: ODM URI for Android (deep link to the specific station or vehicle)
-        odmUriIOS:
-          type: string
-          description: ODM URI for iOS (deep link to the specific station or vehicle)
-        odmUriWeb:
-          type: string
-          description: ODM URI for web (deep link to the specific station or vehicle)
-        odmType:
-          $ref: '#/components/schemas/ODMType'
-
     Leg:
       type: object
       required:
@@ -1647,8 +1640,6 @@ components:
             $ref: '#/components/schemas/StepInstruction'
         rental:
           $ref: '#/components/schemas/Rental'
-        odm:
-          $ref: '#/components/schemas/ODM'
 
     Itinerary:
       type: object

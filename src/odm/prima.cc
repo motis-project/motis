@@ -30,11 +30,11 @@ void prima::init(api::Place const& from,
   cap_ = {
       .wheelchairs_ = static_cast<std::uint8_t>(
           query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR
-              ? 1
-              : 0),
+              ? 1U
+              : 0U),
       .bikes_ = static_cast<std::uint8_t>(query.requireBikeTransport_ ? 1 : 0),
-      .passengers_ = 1U,
-      .luggage_ = 0U};
+      .passengers_ = query.passengers_.value_or(1U),
+      .luggage_ = query.luggage_.value_or(0U)};
 }
 
 std::int64_t to_millis(n::unixtime_t const t) {
@@ -108,58 +108,122 @@ std::size_t prima::n_events() const {
   return from_rides_.size() + to_rides_.size() + direct_rides_.size();
 }
 
+std::size_t n_pt_updates(json::array const& update) {
+  return std::accumulate(
+      update.begin(), update.end(), std::size_t{0U},
+      [](auto const& a, auto const& b) { return a + b.as_array().size(); });
+}
+
 bool prima::blacklist_update(std::string_view json) {
+
   auto const update_pt_rides =
       [](std::vector<nigiri::routing::start>& rides,
          std::vector<nigiri::routing::start>& prev_rides,
          json::array const& update) {
+        auto with_errors = false;
         std::swap(rides, prev_rides);
         rides.clear();
         auto prev_it = std::begin(prev_rides);
         for (auto const& stop : update) {
-          for (auto const& feasible : stop.as_array()) {
-            if (feasible.as_bool()) {
-              rides.emplace_back(*prev_it);
+          for (auto const& ride_upd : stop.as_array()) {
+            if (auto const feasible = ride_upd.try_as_bool()) {
+              if (*feasible) {
+                rides.emplace_back(*prev_it);
+              }
+            } else {
+              with_errors = true;
             }
             ++prev_it;
             if (prev_it == end(prev_rides)) {
-              return;
+              return with_errors;
             }
           }
         }
+        return with_errors;
       };
 
   auto const update_direct_rides = [](std::vector<direct_ride>& rides,
                                       std::vector<direct_ride>& prev_rides,
                                       json::array const& update) {
+    auto with_errors = false;
     std::swap(rides, prev_rides);
     rides.clear();
-    for (auto const [prev, feasible] : utl::zip(prev_rides, update)) {
-      if (feasible.as_bool()) {
-        rides.emplace_back(prev);
+    for (auto const [prev, ride_upd] : utl::zip(prev_rides, update)) {
+      if (auto const feasible = ride_upd.try_as_bool()) {
+        if (*feasible) {
+          rides.emplace_back(prev);
+        }
+      } else {
+        with_errors = true;
       }
     }
+    return with_errors;
   };
 
+  auto with_errors = false;
   try {
     auto const o = json::parse(json).as_object();
-    update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array());
-    update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
-    update_direct_rides(direct_rides_, prev_direct_rides_,
-                        o.at("direct").as_array());
-  } catch (std::exception const& e) {
-    std::cout << e.what() << "\nInvalid blacklist response: " << json << "\n";
+
+    auto const n_pt_updates_from = n_pt_updates(o.at("start").as_array());
+    if (from_rides_.size() == n_pt_updates_from) {
+      with_errors |= update_pt_rides(from_rides_, prev_from_rides_,
+                                     o.at("start").as_array());
+    } else {
+      fmt::println(
+          "[blacklisting] from_rides_.size() != n_pt_updates_from ({} != {})",
+          from_rides_.size(), n_pt_updates_from);
+      with_errors = true;
+      from_rides_.clear();
+    }
+
+    auto const n_pt_updates_to = n_pt_updates(o.at("target").as_array());
+    if (to_rides_.size() == n_pt_updates_to) {
+      with_errors |=
+          update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array());
+    } else {
+      fmt::println(
+          "[blacklisting] to_rides_.size() != n_pt_updates_to ({} != {})",
+          to_rides_.size(), n_pt_updates_to);
+      with_errors = true;
+      to_rides_.clear();
+    }
+
+    if (direct_rides_.size() == o.at("direct").as_array().size()) {
+      with_errors |= update_direct_rides(direct_rides_, prev_direct_rides_,
+                                         o.at("direct").as_array());
+    } else {
+      fmt::println(
+          "[blacklisting] direct_rides_.size() != n_direct_updates ({} != {})",
+          direct_rides_.size(), o.at("direct").as_array().size());
+      with_errors = true;
+      direct_rides_.clear();
+    }
+
+  } catch (std::exception const&) {
+    fmt::println("[blacklisting] could not parse response: {}", json);
     return false;
+  }
+  if (with_errors) {
+    fmt::println("[blacklisting] parsed response with invalid values: {}",
+                 json);
   }
   return true;
 }
 
-void update_pt_rides(std::vector<nigiri::routing::start>& rides,
+bool update_pt_rides(std::vector<nigiri::routing::start>& rides,
                      std::vector<nigiri::routing::start>& prev_rides,
                      json::array const& update,
                      which_mile const wm) {
   std::swap(rides, prev_rides);
   rides.clear();
+
+  auto const n_pt_udpates = n_pt_updates(update);
+  if (prev_rides.size() != n_pt_udpates) {
+    fmt::println("[whitelisting] #rides != #updates ({} != {})",
+                 prev_rides.size(), n_pt_udpates);
+    return true;
+  }
+
   auto prev_it = std::begin(prev_rides);
   for (auto const& stop : update) {
     for (auto const& event : stop.as_array()) {
@@ -182,14 +246,22 @@ void update_pt_rides(std::vector<nigiri::routing::start>& rides,
       }
       ++prev_it;
       if (prev_it == end(prev_rides)) {
-        return;
+        return false;
       }
     }
   }
+  return false;
 }
 
-void update_direct_rides(std::vector<direct_ride>& rides,
+bool update_direct_rides(std::vector<direct_ride>& rides,
                          json::array const& update) {
+  if (rides.size() != update.size()) {
+    fmt::println("[whitelisting] #rides != #updates ({} != {})", rides.size(),
+                 update.size());
+    rides.clear();
+    return true;
+  }
+
   rides.clear();
   for (auto const& ride : update) {
     if (!ride.is_null()) {
@@ -197,19 +269,26 @@ void update_direct_rides(std::vector<direct_ride>& rides,
                        to_unix(ride.as_object().at("dropoffTime").as_int64())});
     }
   }
+
+  return false;
 }
 
 bool prima::whitelist_update(std::string_view json) {
+  auto with_errors = false;
   try {
     auto const o = json::parse(json).as_object();
-    update_pt_rides(from_rides_, prev_from_rides_, o.at("start").as_array(),
-                    kFirstMile);
-    update_pt_rides(to_rides_, prev_to_rides_, o.at("target").as_array(),
-                    kLastMile);
-    update_direct_rides(direct_rides_, o.at("direct").as_array());
-  } catch (std::exception const& e) {
-    std::cout << e.what() << "\nInvalid whitelist response: " << json << "\n";
+    with_errors |= update_pt_rides(from_rides_, prev_from_rides_,
+                                   o.at("start").as_array(), kFirstMile);
+    with_errors |= update_pt_rides(to_rides_, prev_to_rides_,
+                                   o.at("target").as_array(), kLastMile);
+    with_errors |=
+        update_direct_rides(direct_rides_, o.at("direct").as_array());
+  } catch (std::exception const&) {
+    fmt::println("[whitelisting] could not parse response: {}", json);
     return false;
+  }
+  if (with_errors) {
+    fmt::println("[whitelisting] parsed response with errors: {}", json);
   }
   return true;
 }

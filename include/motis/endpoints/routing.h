@@ -21,6 +21,9 @@
 
 namespace motis::ep {
 
+constexpr auto const kInfinityDuration =
+    nigiri::duration_t{std::numeric_limits<nigiri::duration_t::rep>::max()};
+
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern boost::thread_specific_ptr<nigiri::routing::search_state> search_state;
 
@@ -81,7 +84,9 @@ struct routing {
       std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
       bool wheelchair,
-      std::chrono::seconds max) const;
+      std::chrono::seconds max,
+      double max_matching_distance,
+      double fastest_direct_factor) const;
 
   config const& config_;
   osr::ways const* w_;

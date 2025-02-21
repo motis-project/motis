@@ -63,7 +63,7 @@
 		<span class="ml-6">
 			{formatDurationSec(l.duration)}
 			{getModeName(l)}
-			{formatDistanceMeters(Math.round(l.distance!))}
+			{formatDistanceMeters(l.distance)}
 		</span>
 		{#if l.rental && l.rental.systemName}
 			<span class="ml-6">
@@ -88,7 +88,7 @@
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
 				<Route {onClickTrip} {l} />
-				{#if pred && (pred.from.track || pred.duration !== 0)}
+				{#if pred && (pred.from.track || pred.duration !== 0) && (i != 1 || pred.routeShortName)}
 					<div class="border-t h-0 grow shrink"></div>
 					<div class="text-sm text-muted-foreground leading-none px-2">
 						{#if pred.from.track}

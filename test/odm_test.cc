@@ -179,7 +179,7 @@ constexpr auto const invalid_response = R"({"message":"Internal Error"})";
 
 constexpr auto const blacklisting_response = R"(
 {
-  "start": [[true,false],[true]],
+  "start": [[true,null],[true]],
   "target": [[true],[false]],
   "direct": [false,true]
 }

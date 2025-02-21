@@ -36,6 +36,7 @@ n::routing::clasz_mask_t to_clasz_mask(std::vector<api::ModeEnum> const& mode) {
         allow(n::clasz::kRegionalFast);
         break;
       case api::ModeEnum::REGIONAL_RAIL: allow(n::clasz::kRegional); break;
+      case api::ModeEnum::METRO: allow(n::clasz::kMetro); break;
       default: continue;
     }
   }

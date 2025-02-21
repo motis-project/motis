@@ -28,6 +28,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   transport_mode_t const transport_mode,
                                   osr::search_profile const profile,
                                   nigiri::unixtime_t const start_time,
+                                  double const max_matching_distance,
                                   osr::cost_t const max,
                                   street_routing_cache_t& cache,
                                   osr::bitvec<osr::node_idx_t>& blocked_mem) {
@@ -42,7 +43,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
           ? it->second
           : osr::route(
                 w, l, profile, from, to, max, osr::direction::kForward,
-                kMaxMatchingDistance,
+                max_matching_distance,
                 s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
                 sharing);
   if (it == end(cache)) {
@@ -282,6 +283,7 @@ api::Itinerary route(osr::ways const& w,
                      bool const wheelchair,
                      n::unixtime_t const start_time,
                      std::optional<n::unixtime_t> const end_time,
+                     double const max_matching_distance,
                      gbfs::gbfs_products_ref const prod_ref,
                      street_routing_cache_t& cache,
                      osr::bitvec<osr::node_idx_t>& blocked_mem,
@@ -315,7 +317,7 @@ api::Itinerary route(osr::ways const& w,
         w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
         get_location(from), get_location(to),
         static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref)),
-        to_profile(mode, wheelchair), start_time,
+        to_profile(mode, wheelchair), start_time, max_matching_distance,
         static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
     if (p.has_value() && profile == osr::search_profile::kBikeSharing) {

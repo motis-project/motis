@@ -175,7 +175,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
                   [&]() { return c.street_routing_; },
                   [&]() { return true; },
                   [&]() {
-                    osr::extract(true, fs::path{*c.osm_}, data_path / "osr");
+                    osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
+                                 fs::path{});
                     d.load_osr();
                   },
                   [&]() { d.load_osr(); },
@@ -371,10 +372,11 @@ data import(config const& c, fs::path const& data_path, bool const write) {
       [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
       [&]() {
         auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_,
+            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
             c.timetable_->use_osm_stop_coordinates_,
             c.timetable_->extend_missing_footpaths_,
-            std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U});
+            std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U},
+            c.timetable_->max_matching_distance_);
 
         if (write) {
           cista::write(data_path / "elevator_footpath_map.bin",

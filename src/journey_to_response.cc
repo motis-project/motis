@@ -19,6 +19,7 @@
 #include "motis/constants.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/odm/odm.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/tag_lookup.h"
@@ -37,10 +38,21 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kFoot: [[fallthrough]];
     case osr::search_profile::kWheelchair: return api::ModeEnum::WALK;
     case osr::search_profile::kCar: return api::ModeEnum::CAR;
+    case osr::search_profile::kBikeElevationLow:
+    case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
     case osr::search_profile::kBikeSharing: return api::ModeEnum::RENTAL;
   }
   std::unreachable();
+}
+
+void cleanup_intermodal(api::Itinerary& i) {
+  if (i.legs_.front().from_.name_ == "END") {
+    i.legs_.front().from_.name_ = "START";
+  }
+  if (i.legs_.back().to_.name_ == "START") {
+    i.legs_.back().to_.name_ = "END";
+  }
 }
 
 api::Itinerary journey_to_response(osr::ways const* w,
@@ -59,7 +71,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    place_t const& dest,
                                    street_routing_cache_t& cache,
                                    osr::bitvec<osr::node_idx_t>& blocked_mem,
-                                   bool const detailed_transfers) {
+                                   bool const detailed_transfers,
+                                   double const timetable_max_matching_distance,
+                                   double const max_matching_distance) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto itinerary = api::Itinerary{
@@ -71,7 +85,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               decltype(j.legs_)::iterator>::difference_type>(0),
           utl::count_if(j.legs_, [](auto&& leg) {
             return holds_alternative<n::routing::journey::run_enter_exit>(
-                leg.uses_);
+                       leg.uses_) ||
+                   odm::is_odm_leg(leg);
           }) - 1)};
 
   auto const append = [&](api::Itinerary&& x) {
@@ -166,8 +181,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
               append(
                   w && l
                       ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
-                              wheelchair, j_leg.dep_time_, j_leg.arr_time_, {},
-                              cache, blocked_mem,
+                              wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                              timetable_max_matching_distance, {}, cache,
+                              blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
                                   j_leg.arr_time_ - j_leg.dep_time_) +
                                   std::chrono::minutes{10},
@@ -185,6 +201,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
                   wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                  max_matching_distance,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs_rd.get_products_ref(x.transport_mode_id_)
                       : gbfs::gbfs_products_ref{},
@@ -195,6 +212,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
             }},
         j_leg.uses_);
   }
+
+  cleanup_intermodal(itinerary);
 
   return itinerary;
 }

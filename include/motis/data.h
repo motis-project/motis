@@ -8,6 +8,7 @@
 
 #include "nigiri/types.h"
 
+#include "osr/elevation_storage.h"
 #include "osr/types.h"
 
 #include "motis/compute_footpaths.h"
@@ -64,7 +65,7 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(config_, t_, r_, tc_, w_, pl_, l_, tt_, tags_,
+    return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
                     location_rtee_, elevator_nodes_, shapes_, railviz_static_,
                     matches_, rt_, gbfs_, odm_bounds_);
   }
@@ -78,6 +79,7 @@ struct data {
   ptr<osr::ways> w_;
   ptr<osr::platforms> pl_;
   ptr<osr::lookup> l_;
+  ptr<osr::elevation_storage> elevations_;
   cista::wrapped<nigiri::timetable> tt_;
   cista::wrapped<tag_lookup> tags_;
   ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
