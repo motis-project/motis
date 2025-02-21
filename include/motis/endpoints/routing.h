@@ -94,6 +94,7 @@ struct routing {
   std::shared_ptr<rt> const& rt_;
   nigiri::shapes_storage const* shapes_;
   std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  odm::bounds const* odm_bounds_;
 };
 
 }  // namespace motis::ep

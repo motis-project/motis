@@ -34,6 +34,7 @@
 #include "motis/gbfs/routing_data.h"
 #include "motis/http_req.h"
 #include "motis/journey_to_response.h"
+#include "motis/odm/bounds.h"
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
@@ -159,7 +160,15 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
                           api::plan_params const& query) {
-  auto [direct, duration] = r.route_direct(
+  auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
+  auto const to_pos = geo::latlng{to_p.lat_, to_p.lon_};
+  if (r.odm_bounds_ != nullptr && (!r.odm_bounds_->contains(from_pos) ||
+                                   !r.odm_bounds_->contains(to_pos))) {
+    fmt::println("No direct connection, from: {}, to: {}", from_pos, to_pos);
+    return kInfinityDuration;
+  }
+
+  auto [_, duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
@@ -193,13 +202,28 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::routing::query const& start_time,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
+  if (r.odm_bounds_ != nullptr && !r.odm_bounds_->contains(l.pos_)) {
+    fmt::println("no PT connection: {}", l.pos_);
+    return;
+  }
+
   auto offsets = r.get_offsets(
       l, dir, {api::ModeEnum::ODM}, std::nullopt, std::nullopt, std::nullopt,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,
       query.maxMatchingDistance_, gbfs_rd);
 
-  std::erase_if(
-      offsets, [](auto const& o) { return o.duration_ < kMinODMOffsetLength; });
+  std::erase_if(offsets, [&](n::routing::offset const& o) {
+    if (o.duration_ < kMinODMOffsetLength) {
+      return true;
+    }
+    auto const out_of_bounds =
+        (r.odm_bounds_ != nullptr &&
+         !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
+    if (out_of_bounds) {
+      fmt::println("Bounds filtered: {}", n::location{*r.tt_, o.target_});
+    }
+    return out_of_bounds;
+  });
 
   for (auto& o : offsets) {
     o.duration_ += kODMTransferBuffer;
@@ -500,8 +524,8 @@ api::plan_response meta_router::run() {
         ioc,
         [&]() -> boost::asio::awaitable<void> {
           auto const prima_msg = co_await http_POST(
-              boost::urls::url{*r_.config_.odm_ + kBlacklistPath}, kReqHeaders,
-              p->get_prima_request(*tt_), 10s);
+              boost::urls::url{r_.config_.odm_->url_ + kBlacklistPath},
+              kReqHeaders, p->get_prima_request(*tt_), 10s);
           blacklist_response = get_http_body(prima_msg);
         },
         boost::asio::detached);
@@ -624,7 +648,7 @@ api::plan_response meta_router::run() {
           ioc2,
           [&]() -> boost::asio::awaitable<void> {
             auto const prima_msg = co_await http_POST(
-                boost::urls::url{*r_.config_.odm_ + kWhitelistPath},
+                boost::urls::url{r_.config_.odm_->url_ + kWhitelistPath},
                 kReqHeaders, p->get_prima_request(*tt_), 10s);
             whitelist_response = get_http_body(prima_msg);
           },
