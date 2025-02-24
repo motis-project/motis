@@ -15,4 +15,6 @@ enum which_mile { kFirstMile, kLastMile };
 
 bool is_odm_leg(nigiri::routing::journey::leg const&);
 
+nigiri::duration_t odm_time(nigiri::routing::journey const&);
+
 }  // namespace motis::odm

@@ -8,7 +8,7 @@
 
 namespace motis::odm {
 
-static constexpr auto const kMixerTracing = false;
+static constexpr auto const kMixerTracing = true;
 
 struct cost_threshold {
   std::int32_t threshold_;
@@ -22,7 +22,9 @@ struct mixer {
            std::vector<nigiri::routing::journey>& odm_journeys) const;
   std::int32_t transfer_cost(nigiri::routing::journey const&) const;
   void cost_domination(
-      nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
+      auto& journeys,
+      std::vector<nigiri::routing::journey>& odm_journeys) const;
+  void pareto_domination(
       std::vector<nigiri::routing::journey>& odm_journeys) const;
   void productivity_domination(
       std::vector<nigiri::routing::journey>& odm_journeys) const;
