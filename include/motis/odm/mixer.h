@@ -8,6 +8,8 @@
 
 namespace motis::odm {
 
+static constexpr auto const kMixerTracing = false;
+
 struct cost_threshold {
   std::int32_t threshold_;
   std::int32_t cost_;
