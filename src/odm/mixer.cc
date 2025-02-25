@@ -12,6 +12,8 @@ namespace motis::odm {
 namespace n = nigiri;
 using n::routing::journey;
 
+static constexpr auto const kMixerTracing = false;
+
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
   auto acc = std::int32_t{0};
