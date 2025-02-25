@@ -44,7 +44,7 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
                    .count();
 }
 
-std::string journey_label(nr::journey const& j) {
+std::string label(nr::journey const& j) {
   return std::format("[dep: {}, arr: {}, dur: {}, transfers: {}]",
                      j.departure_time(), j.arrival_time(), j.travel_time(),
                      std::uint32_t{j.transfers_});
@@ -108,9 +108,9 @@ void mixer::cost_dominance(
       fmt::println(
           "{} cost-dominates {}\ntime_ratio: {} / {} = {}, distance: {}, "
           "alpha_term: {} * {} * {} = {}, {} + {} < {}",
-          journey_label(journey), journey_label(odm_journey),
-          journey.travel_time(), odm_journey.travel_time(), time_ratio, dist,
-          alpha_, time_ratio, dist, alpha_term, cost_pt, alpha_term, cost_odm);
+          label(journey), label(odm_journey), journey.travel_time(),
+          odm_journey.travel_time(), time_ratio, dist, alpha_, time_ratio, dist,
+          alpha_term, cost_pt, alpha_term, cost_odm);
     }
     return ret;
   };
@@ -141,9 +141,8 @@ void mixer::pareto_dominance(
       auto const odm_time_b = odm_time(b);
       auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
       if (kMixerTracing && ret) {
-        fmt::println("{} pareto-dominates {}\nodm_time: {} < {}",
-                     journey_label(a), journey_label(b), odm_time_a,
-                     odm_time_b);
+        fmt::println("{} pareto-dominates {}\nodm_time: {} < {}", label(a),
+                     label(b), odm_time_a, odm_time_b);
       }
       return ret;
     };
@@ -176,8 +175,8 @@ void mixer::productivity_dominance(
             "{}, prod_b = (cost(a) + beta * distance(a,b)) / taxi_time(b) = "
             "({} + {} * {}) / {} = {}, "
             "prod_a > prod_b <=> {} > {}",
-            journey_label(a), journey_label(b), cost_b, taxi_time_a, prod_a,
-            cost_a, beta_, dist, taxi_time_b, prod_b, prod_a, prod_b);
+            label(a), label(b), cost_b, taxi_time_a, prod_a, cost_a, beta_,
+            dist, taxi_time_b, prod_b, prod_a, prod_b);
       }
       return ret;
     };
