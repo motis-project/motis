@@ -12,7 +12,7 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 
-static constexpr auto const kMixerTracing = true;
+static constexpr auto const kMixerTracing = false;
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
@@ -50,9 +50,8 @@ std::string label(nr::journey const& j) {
                      std::uint32_t{j.transfers_});
 }
 
-void mixer::cost_dominance(
-    const nigiri::pareto_set<nigiri::routing::journey>& pt_journeys,
-    std::vector<nigiri::routing::journey>& odm_journeys) const {
+double mixer::cost(nr::journey const& j) const {
+
   auto const leg_cost = [&](nr::journey::leg const& leg) {
     return std::visit(
         utl::overloaded{
@@ -89,33 +88,36 @@ void mixer::cost_dominance(
                                  : n::duration_t{0});
   };
 
-  auto const cost = [&](nr::journey const& j) {
-    return (leg_cost(j.legs_.front()) +
-            (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
-            pt_time(j).count() + transfer_cost(j)) +
-           (is_direct_odm(j) ? direct_taxi_penalty_ : 0);
-  };
+  return (leg_cost(j.legs_.front()) +
+          (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
+          pt_time(j).count() + transfer_cost(j)) +
+         (is_direct_odm(j) ? direct_taxi_penalty_ : 0);
+};
 
+bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
+  auto const cost_odm = cost(b);
+  auto const cost_pt = cost(a);
+  auto const time_ratio = static_cast<double>(a.travel_time().count()) /
+                          static_cast<double>(b.travel_time().count());
+  auto const dist = distance(a, b);
+  auto const alpha_term = alpha_ * time_ratio * dist;
+  auto const ret = cost_pt + alpha_term < cost_odm;
+  if (kMixerTracing && ret) {
+    fmt::println(
+        "{} cost-dominates {}\ntime_ratio: {} / {} = {}, distance: {}, "
+        "alpha_term: {} * {} * {} = {}, {} + {} < {}",
+        label(a), label(b), a.travel_time(), b.travel_time(), time_ratio, dist,
+        alpha_, time_ratio, dist, alpha_term, cost_pt, alpha_term, cost_odm);
+  }
+  return ret;
+}
+
+void mixer::cost_dominance(
+    const nigiri::pareto_set<nigiri::routing::journey>& pt_journeys,
+    std::vector<nigiri::routing::journey>& odm_journeys) const {
   auto const is_dominated = [&](nr::journey const& odm_journey) {
-    auto const cost_odm = cost(odm_journey);
-
     auto const dominates = [&](nr::journey const& pt_journey) -> bool {
-      auto const cost_pt = cost(pt_journey);
-      auto const time_ratio =
-          static_cast<double>(pt_journey.travel_time().count()) /
-          static_cast<double>(odm_journey.travel_time().count());
-      auto const dist = distance(pt_journey, odm_journey);
-      auto const alpha_term = alpha_ * time_ratio * dist;
-      auto const ret = cost_pt + alpha_term < cost_odm;
-      if (kMixerTracing && ret) {
-        fmt::println(
-            "{} cost-dominates {}\ntime_ratio: {} / {} = {}, distance: {}, "
-            "alpha_term: {} * {} * {} = {}, {} + {} < {}",
-            label(pt_journey), label(odm_journey), pt_journey.travel_time(),
-            odm_journey.travel_time(), time_ratio, dist, alpha_, time_ratio,
-            dist, alpha_term, cost_pt, alpha_term, cost_odm);
-      }
-      return ret;
+      return cost_dominates(pt_journey, odm_journey);
     };
 
     return utl::any_of(pt_journeys, dominates);
@@ -146,35 +148,13 @@ void mixer::pareto_dominance(
   std::erase_if(odm_journeys, is_dominated);
 }
 
-void mixer::productivity_dominance(
-    std::vector<nigiri::routing::journey>& odm_journeys) const {
-  auto const cost = [&](auto const& j) -> double {
-    return j.travel_time().count() + transfer_cost(j);
-  };
-
+void mixer::reduce_direct_odm(std::vector<nr::journey>& odm_journeys) const {
   auto const is_dominated = [&](nr::journey const& b) {
-    auto const cost_b = cost(b);
-    auto const taxi_time_b = static_cast<double>(odm_time(b).count());
-
-    auto const dominates = [&](nr::journey const& a) {
-      auto const cost_a = cost(a);
-      auto const taxi_time_a = static_cast<double>(odm_time(a).count());
-      auto const prod_a = cost_b / taxi_time_a;
-      auto const dist = distance(a, b);
-      auto const prod_b = (cost(a) + beta_ * dist) / taxi_time_b;
-      auto const ret = prod_a > prod_b;
-      if (kMixerTracing && ret) {
-        fmt::println(
-            "{} prod-dominates {}\nprod_a = cost(b) / taxi_time(a) = {} / {} = "
-            "{}, prod_b = (cost(a) + beta * distance(a,b)) / taxi_time(b) = "
-            "({} + {} * {}) / {} = {}, "
-            "prod_a > prod_b <=> {} > {}",
-            label(a), label(b), cost_b, taxi_time_a, prod_a, cost_a, beta_,
-            dist, taxi_time_b, prod_b, prod_a, prod_b);
-      }
-      return ret;
+    auto const dominates = [&](nr::journey const& a) -> bool {
+      return cost_dominates(a, b);
     };
-    return utl::any_of(odm_journeys, dominates);
+
+    return is_direct_odm(b) && utl::any_of(odm_journeys, dominates);
   };
 
   std::erase_if(odm_journeys, is_dominated);
@@ -184,7 +164,7 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys) const {
   cost_dominance(pt_journeys, odm_journeys);
   pareto_dominance(odm_journeys);
-  // productivity_domination(odm_journeys);
+  reduce_direct_odm(odm_journeys);
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
   }
