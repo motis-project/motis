@@ -12,7 +12,7 @@ namespace motis::odm {
 namespace n = nigiri;
 namespace nr = nigiri::routing;
 
-static constexpr auto const kMixerTracing = false;
+static constexpr auto const kMixerTracing = true;
 
 std::int32_t tally(std::int32_t const x,
                    std::vector<cost_threshold> const& ct) {
@@ -92,7 +92,8 @@ void mixer::cost_dominance(
   auto const cost = [&](nr::journey const& j) {
     return (leg_cost(j.legs_.front()) +
             (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
-            pt_time(j).count() + transfer_cost(j));
+            pt_time(j).count() + transfer_cost(j)) +
+           (is_direct_odm(j) ? direct_taxi_penalty_ : 0);
   };
 
   auto const is_dominated = [&](nr::journey const& odm_journey) {
@@ -128,7 +129,7 @@ void mixer::pareto_dominance(
 
   auto const is_dominated = [&](nr::journey const& b) {
     auto const odm_time_b = odm_time(b);
-    
+
     auto const dominates = [&](nr::journey const& a) {
       auto const odm_time_a = odm_time(a);
       auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
@@ -190,6 +191,15 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
   utl::sort(odm_journeys, [](auto const& a, auto const& b) {
     return a.departure_time() < b.departure_time();
   });
+}
+
+mixer get_default_mixer() {
+  return mixer{.alpha_ = 1.5,
+               .beta_ = 0.39,
+               .direct_taxi_penalty_ = 200,
+               .walk_cost_ = {{0, 1}, {15, 10}},
+               .taxi_cost_ = {{0, 35}, {1, 12}},
+               .transfer_cost_ = {{0, 10}}};
 }
 
 }  // namespace motis::odm
