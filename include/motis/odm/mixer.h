@@ -19,12 +19,12 @@ struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
            std::vector<nigiri::routing::journey>& odm_journeys) const;
   std::int32_t transfer_cost(nigiri::routing::journey const&) const;
-  void cost_domination(
-      auto& journeys,
+  void cost_dominance(
+      nigiri::pareto_set<nigiri::routing::journey> const& journeys,
       std::vector<nigiri::routing::journey>& odm_journeys) const;
-  void pareto_domination(
+  void pareto_dominance(
       std::vector<nigiri::routing::journey>& odm_journeys) const;
-  void productivity_domination(
+  void productivity_dominance(
       std::vector<nigiri::routing::journey>& odm_journeys) const;
 
   double alpha_;
