@@ -317,7 +317,6 @@ void prima::adjust_to_whitelisting() {
           l->arr_time_ = from_ride.time_at_stop_;
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
-          j.start_time_ = l->dep_time_;
           // fill gap (transfer/waiting) with footpath
           j.legs_.emplace(
               std::next(l),
@@ -350,7 +349,6 @@ void prima::adjust_to_whitelisting() {
           l->arr_time_ = to_ride.time_at_start_;
           std::get<n::routing::offset>(l->uses_).duration_ =
               l->arr_time_ - l->dep_time_;
-          j.dest_time_ = l->arr_time_;
           // fill gap (transfer/waiting) with footpath
           j.legs_.emplace(
               l, n::routing::journey::leg{
@@ -360,6 +358,14 @@ void prima::adjust_to_whitelisting() {
                                  l->dep_time_ - std::prev(l)->arr_time_}});
         }
       }
+    }
+  }
+
+  // adjust journey start/dest times after adjusting legs
+  for (auto& j : odm_journeys_) {
+    if (!j.legs_.empty()) {
+      j.start_time_ = j.legs_.front().dep_time_;
+      j.dest_time_ = j.legs_.back().arr_time_;
     }
   }
 }
