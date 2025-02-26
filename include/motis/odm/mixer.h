@@ -27,11 +27,9 @@ struct mixer {
       std::vector<nigiri::routing::journey>& odm_journeys) const;
   static void pareto_dominance(
       std::vector<nigiri::routing::journey>& odm_journeys);
-  void reduce_direct_odm(
-      std::vector<nigiri::routing::journey>& odm_journeys) const;
+  void reduce_odm(std::vector<nigiri::routing::journey>& odm_journeys) const;
 
   double alpha_;
-  double beta_;
   double direct_taxi_penalty_;
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;

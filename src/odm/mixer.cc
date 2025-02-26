@@ -95,19 +95,17 @@ double mixer::cost(nr::journey const& j) const {
 };
 
 bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
-  auto const cost_odm = cost(b);
-  auto const cost_pt = cost(a);
+  auto const cost_a = cost(a);
+  auto const cost_b = cost(b);
   auto const time_ratio = static_cast<double>(a.travel_time().count()) /
                           static_cast<double>(b.travel_time().count());
   auto const dist = distance(a, b);
   auto const alpha_term = alpha_ * time_ratio * dist;
-  auto const ret = cost_pt + alpha_term < cost_odm;
+  auto const ret = cost_a + alpha_term < cost_b;
   if (kMixerTracing && ret) {
-    fmt::println(
-        "{} cost-dominates {}\ntime_ratio: {} / {} = {}, distance: {}, "
-        "alpha_term: {} * {} * {} = {}, {} + {} < {}",
-        label(a), label(b), a.travel_time(), b.travel_time(), time_ratio, dist,
-        alpha_, time_ratio, dist, alpha_term, cost_pt, alpha_term, cost_odm);
+    fmt::println("{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {}",
+                 label(a), label(b), time_ratio, dist, cost_a, alpha_term,
+                 cost_b);
   }
   return ret;
 }
@@ -126,45 +124,57 @@ void mixer::cost_dominance(
   std::erase_if(odm_journeys, is_dominated);
 }
 
+void establish_dominance(
+    std::vector<nr::journey>& journeys,
+    std::function<bool(nr::journey const&, nr::journey const&)> const&
+        dominates) {
+  for (auto a = begin(journeys); a != end(journeys); ++a) {
+    for (auto b = begin(journeys); b != end(journeys);) {
+      if (a == b) {
+        continue;
+      }
+      if (dominates(*a, *b)) {
+        b = journeys.erase(b);
+      } else {
+        ++b;
+      }
+    }
+  }
+}
+
 void mixer::pareto_dominance(
     std::vector<nigiri::routing::journey>& odm_journeys) {
 
-  auto const is_dominated = [&](nr::journey const& b) {
+  auto const pareto_dom = [](nr::journey const& a,
+                             nr::journey const& b) -> bool {
+    auto const odm_time_a = odm_time(a);
     auto const odm_time_b = odm_time(b);
-
-    auto const dominates = [&](nr::journey const& a) {
-      auto const odm_time_a = odm_time(a);
-      auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
-      if (kMixerTracing && ret) {
-        fmt::println("{} pareto-dominates {}\nodm_time: {} < {}", label(a),
-                     label(b), odm_time_a, odm_time_b);
-      }
-      return ret;
-    };
-
-    return utl::any_of(odm_journeys, dominates);
+    auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
+    if (kMixerTracing && ret) {
+      fmt::println("{} pareto-dominates {}, odm_time: {} < {}", label(a),
+                   label(b), odm_time_a, odm_time_b);
+    }
+    return ret;
   };
 
-  std::erase_if(odm_journeys, is_dominated);
+  establish_dominance(odm_journeys, pareto_dom);
 }
 
-void mixer::reduce_direct_odm(std::vector<nr::journey>& odm_journeys) const {
-  auto const is_dominated = [&](nr::journey const& b) {
-    auto const dominates = [&](nr::journey const& a) -> bool {
-      return cost_dominates(a, b);
-    };
+void mixer::reduce_odm(std::vector<nr::journey>& odm_journeys) const {
 
-    return is_direct_odm(b) && utl::any_of(odm_journeys, dominates);
+  auto const dom = [this](nr::journey const& a, nr::journey const& b) -> bool {
+    return (is_direct_odm(b) || odm_time(a) < odm_time(b)) &&
+           cost_dominates(a, b);
   };
 
-  std::erase_if(odm_journeys, is_dominated);
+  establish_dominance(odm_journeys, dom);
 }
 
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys) const {
-  cost_dominance(pt_journeys, odm_journeys);
   pareto_dominance(odm_journeys);
-  reduce_direct_odm(odm_journeys);
+  cost_dominance(pt_journeys, odm_journeys);
+  reduce_odm(odm_journeys);
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
   }
@@ -175,7 +185,6 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 
 mixer get_default_mixer() {
   return mixer{.alpha_ = 1.5,
-               .beta_ = 0.39,
                .direct_taxi_penalty_ = 200,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
