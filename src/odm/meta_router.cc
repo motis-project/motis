@@ -62,14 +62,6 @@ constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
 
-mixer get_odm_mixer() {
-  return mixer{.alpha_ = 1.5,
-               .beta_ = 0.39,
-               .walk_cost_ = {{0, 1}, {15, 10}},
-               .taxi_cost_ = {{0, 35}, {1, 12}},
-               .transfer_cost_ = {{0, 10}}};
-}
-
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
 
@@ -699,7 +691,7 @@ api::plan_response meta_router::run() {
 
   fmt::println("[mixing] {} PT journeys and {} ODM journeys",
                pt_result.journeys_.size(), p->odm_journeys_.size());
-  get_odm_mixer().mix(pt_result.journeys_, p->odm_journeys_);
+  get_default_mixer().mix(pt_result.journeys_, p->odm_journeys_);
   print_time(mixing_start, "[mixing]");
 
   return {.from_ = from_place_,

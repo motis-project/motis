@@ -18,12 +18,6 @@ using namespace motis::odm;
 using namespace std::chrono_literals;
 using namespace date;
 
-static auto const kOdmMixer = mixer{.alpha_ = 1.5,
-                                    .beta_ = 0.1,
-                                    .walk_cost_ = {{0, 1}, {15, 10}},
-                                    .taxi_cost_ = {{0, 35}, {1, 12}},
-                                    .transfer_cost_ = {{0, 10}}};
-
 TEST(odm, tally) {
   auto const ct = std::vector<cost_threshold>{{0, 30}, {1, 1}, {10, 2}};
   EXPECT_EQ(0, tally(0, ct));
@@ -62,13 +56,17 @@ TEST(odm, pt_taxi_no_direct) {
   pt_journeys.add(n::routing::journey{pt});
 
   auto pt_taxi = n::routing::journey{
-      .legs_ = {n::routing::journey::leg{
-          n::direction::kForward,
-          get_special_station(n::special_station::kStart),
-          n::location_idx_t{23U}, n::unixtime_t{10h + 43min},
-          n::unixtime_t{10h + 47min},
-          n::routing::offset{n::location_idx_t{23U}, 4min,
-                             motis::kOdmTransportModeId}}},
+      .legs_ = {{n::direction::kForward,
+                 get_special_station(n::special_station::kStart),
+                 n::location_idx_t{23U}, n::unixtime_t{10h + 43min},
+                 n::unixtime_t{10h + 47min},
+                 n::routing::offset{n::location_idx_t{23U}, 4min,
+                                    motis::kOdmTransportModeId}},
+                {n::direction::kForward, n::location_idx_t{23U},
+                 get_special_station(n::special_station::kEnd),
+                 n::unixtime_t{10h + 47min}, n::unixtime_t{11h},
+                 n::routing::journey::run_enter_exit{
+                     n::rt::run{}, n::stop_idx_t{0}, n::stop_idx_t{1}}}},
       .start_time_ = n::unixtime_t{10h + 43min},
       .dest_time_ = n::unixtime_t{11h},
       .dest_ = get_special_station(n::special_station::kEnd),
@@ -76,13 +74,13 @@ TEST(odm, pt_taxi_no_direct) {
 
   auto odm_journeys = std::vector<n::routing::journey>{
       pt_taxi,
+      direct_taxi(n::unixtime_t{10h + 00min}, n::unixtime_t{10h + 10min}),
       direct_taxi(n::unixtime_t{10h + 17min}, n::unixtime_t{10h + 27min}),
       direct_taxi(n::unixtime_t{10h + 43min}, n::unixtime_t{10h + 53min}),
       direct_taxi(n::unixtime_t{10h + 50min}, n::unixtime_t{11h + 00min}),
-      direct_taxi(n::unixtime_t{10h + 00min}, n::unixtime_t{10h + 10min}),
-      direct_taxi(n::unixtime_t{11h + 00min}, n::unixtime_t{10h + 10min})};
+      direct_taxi(n::unixtime_t{11h + 00min}, n::unixtime_t{11h + 10min})};
 
-  kOdmMixer.mix(pt_journeys, odm_journeys);
+  get_default_mixer().mix(pt_journeys, odm_journeys);
 
   ASSERT_EQ(odm_journeys.size(), 2U);
   EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
@@ -154,7 +152,7 @@ TEST(odm, taxi_saves_transfers) {
        .dest_ = get_special_station(n::special_station::kEnd),
        .transfers_ = 0U}};
 
-  kOdmMixer.mix(pt_journeys, odm_journeys);
+  get_default_mixer().mix(pt_journeys, odm_journeys);
 
   ASSERT_EQ(odm_journeys.size(), 1U);
   EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
