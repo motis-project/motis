@@ -130,10 +130,7 @@ void establish_dominance(
         dominates) {
   for (auto a = begin(journeys); a != end(journeys); ++a) {
     for (auto b = begin(journeys); b != end(journeys);) {
-      if (a == b) {
-        continue;
-      }
-      if (dominates(*a, *b)) {
+      if (a != b && dominates(*a, *b)) {
         b = journeys.erase(b);
       } else {
         ++b;
