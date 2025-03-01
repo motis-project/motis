@@ -821,6 +821,14 @@ paths:
           schema:
             type: integer
             minimum: 1
+
+        - name: computeFares
+          in: query
+          required: false
+          description: Optional. Experimental. If set to true, the response will contain fare information.
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: routing result
@@ -1053,7 +1061,6 @@ components:
     Duration:
       description: Object containing duration if a path was found or none if no path was found
       type: object
-      required: [ ]
       properties:
         duration:
           type: number
@@ -1641,6 +1648,66 @@ components:
         rental:
           $ref: '#/components/schemas/Rental'
 
+    FareProduct:
+      type: object
+      required:
+        - name
+        - amount
+        - currency
+      properties:
+        name:
+          description: The name of the fare product as displayed to riders.
+          type: string
+        amount:
+          description: The cost of the fare product. May be negative to represent transfer discounts. May be zero to represent a fare product that is free.
+          type: number
+        currency:
+          description: ISO 4217 currency code. The currency of the cost of the fare product.
+          type: string
+
+    FareTransferRule:
+      type: string
+      enum:
+        - A_AB
+        - A_AB_B
+        - AB
+
+    FareTransfer:
+      type: object
+      description: |
+        The concept is derived from: https://gtfs.org/documentation/schedule/reference/#fare_transfer_rulestxt
+
+        Terminology:
+          - **Leg**: An itinerary leg as described by the `Leg` type of this API description.
+          - **Effective Fare Leg**: Itinerary legs can be joined together to form one *effective fare leg*.
+          - **Fare Transfer**: A fare transfer groups two or more effective fare legs.
+          - **A** is the first *effective fare leg* of potentially multiple consecutive legs contained in a fare transfer
+          - **B** is any *effective fare leg* following the first *effective fare leg* in this transfer
+          - **AB** are all changes between *effective fare legs* contained in this transfer
+
+        The fare transfer rule is used to derive the final set of products of the itinerary legs contained in this transfer:
+          - A_AB means that any product from the first effective fare leg combined with the product attached to the transfer itself (AB) which can be empty (= free). Note that all subsequent effective fare leg products need to be ignored in this case.
+          - A_AB_B mean that a product for each effective fare leg needs to be purchased in a addition to the product attached to the transfer itself (AB) which can be empty (= free)
+          - AB only the transfer product itself has to be purchased. Note that all fare products attached to the contained effective fare legs need to be ignored in this case.
+
+        An itineraray `Leg` references the index of the fare transfer and the index of the effective fare leg in this transfer it belongs to.
+      required:
+        - rule
+        - effectiveFareLegProducts
+      properties:
+        rule:
+          $ref: '#/components/schemas/FareTransferRule'
+        transferProduct:
+          $ref: '#/components/schemas/FareProduct'
+        effectiveFareLegProducts:
+          description: |
+            Lists all valid fare products for the effective fare legs.
+          type: array
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/FareProduct'
+
     Itinerary:
       type: object
       required:
@@ -1669,6 +1736,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Leg'
+        fareTransfers:
+          description: Fare information
+          type: array
+          items:
+            $ref: '#/components/schemas/FareTransfer'
 
     Footpath:
       description: footpath from one location to another
