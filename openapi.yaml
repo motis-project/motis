@@ -1647,6 +1647,16 @@ components:
             $ref: '#/components/schemas/StepInstruction'
         rental:
           $ref: '#/components/schemas/Rental'
+        fareTransferIndex:
+          type: integer
+          description: |
+            Index into `Itinerary.fareTransfers` array
+            to identify which fare transfer this leg belongs to
+        effectiveFareLegIndex:
+          type: integer
+          description: |
+            Index into the `Itinerary.fareTransfers[fareTransferIndex].effectiveFareLegProducts` array
+            to identify which effective fare leg this itinerary leg belongs to
 
     FareProduct:
       type: object
