@@ -55,6 +55,33 @@ void cleanup_intermodal(api::Itinerary& i) {
   }
 }
 
+struct fare_indices {
+  std::int64_t transfer_idx_;
+  std::int64_t effective_fare_leg_idx_;
+};
+
+std::optional<fare_indices> get_fare_indices(
+    std::optional<std::vector<n::fare_transfer>> const& fares,
+    n::routing::journey::leg const& l) {
+  if (!fares.has_value()) {
+    return std::nullopt;
+  }
+
+  for (auto const [transfer_idx, transfer] : utl::enumerate(*fares)) {
+    for (auto const [eff_fare_leg_idx, eff_fare_leg] :
+         utl::enumerate(transfer.legs_)) {
+      for (auto const* x : eff_fare_leg.joined_leg_) {
+        if (x == &l) {
+          return fare_indices{static_cast<std::int64_t>(transfer_idx),
+                              static_cast<std::int64_t>(eff_fare_leg_idx)};
+        }
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
 api::Itinerary journey_to_response(osr::ways const* w,
                                    osr::lookup const* l,
                                    osr::platforms const* pl,
@@ -72,9 +99,31 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                    street_routing_cache_t& cache,
                                    osr::bitvec<osr::node_idx_t>& blocked_mem,
                                    bool const detailed_transfers,
+                                   bool const with_fares,
                                    double const timetable_max_matching_distance,
                                    double const max_matching_distance) {
   utl::verify(!j.legs_.empty(), "journey without legs");
+
+  auto const fares =
+      with_fares ? std::optional{n::get_fares(tt, j)} : std::nullopt;
+  auto const to_product =
+      [&](n::fares const& f,
+          n::fare_product_idx_t const x) -> api::FareProduct {
+    auto const& p = f.fare_products_[x];
+    return {.name_ = std::string{tt.strings_.get(p.name_)},
+            .amount_ = p.amount_,
+            .currency_ = std::string{tt.strings_.get(p.currency_code_)}};
+  };
+  auto const to_rule = [](n::fares::fare_transfer_rule const& x) {
+    switch (x.fare_transfer_type_) {
+      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAB:
+        return api::FareTransferRuleEnum::AB;
+      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusAB:
+        return api::FareTransferRuleEnum::A_AB;
+      case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusABPlusB:
+        return api::FareTransferRuleEnum::A_AB_B;
+    }
+  };
 
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
@@ -83,11 +132,37 @@ api::Itinerary journey_to_response(osr::ways const* w,
       .transfers_ = std::max(
           static_cast<std::iterator_traits<
               decltype(j.legs_)::iterator>::difference_type>(0),
-          utl::count_if(j.legs_, [](auto&& leg) {
-            return holds_alternative<n::routing::journey::run_enter_exit>(
-                       leg.uses_) ||
-                   odm::is_odm_leg(leg);
-          }) - 1)};
+          utl::count_if(
+              j.legs_,
+              [](auto&& leg) {
+                return holds_alternative<n::routing::journey::run_enter_exit>(
+                           leg.uses_) ||
+                       odm::is_odm_leg(leg);
+              }) -
+              1),
+      .fareTransfers_ =
+          fares.and_then([&](std::vector<n::fare_transfer> const& transfers) {
+            return std::optional{utl::to_vec(
+                transfers, [&](n::fare_transfer const& t) -> api::FareTransfer {
+                  return {
+                      .rule_ = t.rule_.and_then(
+                          [&](auto&& r) { return std::optional{to_rule(r)}; }),
+                      .transferProduct_ = t.rule_.and_then([&](auto&& r) {
+                        return t.legs_.empty()
+                                   ? std::nullopt
+                                   : std::optional{to_product(
+                                         tt.fares_[t.legs_.front().src_],
+                                         r.fare_product_)};
+                      }),
+                      .effectiveFareLegProducts_ =
+                          utl::to_vec(t.legs_, [&](auto&& l) {
+                            return utl::to_vec(l.rule_, [&](auto&& r) {
+                              return to_product(tt.fares_[t.legs_.front().src_],
+                                                r.fare_product_id_);
+                            });
+                          })};
+                })};
+          })};
 
   auto const append = [&](api::Itinerary&& x) {
     itinerary.legs_.insert(end(itinerary.legs_),
@@ -118,6 +193,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto const exit_stop = fr[t.stop_range_.to_ - 1U];
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
+              auto const fare_indices = get_fare_indices(fares, j_leg);
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
                   .mode_ = to_mode(enter_stop.get_clasz()),
@@ -142,7 +218,12 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
-                  .source_ = fmt::to_string(fr.dbg())});
+                  .source_ = fmt::to_string(fr.dbg()),
+                  .fareTransferIndex_ = fare_indices.and_then(
+                      [](auto&& x) { return std::optional{x.transfer_idx_}; }),
+                  .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
+                    return std::optional{x.effective_fare_leg_idx_};
+                  })});
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
               leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;

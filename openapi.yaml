@@ -822,7 +822,7 @@ paths:
             type: integer
             minimum: 1
 
-        - name: computeFares
+        - name: withFares
           in: query
           required: false
           description: Optional. Experimental. If set to true, the response will contain fare information.
@@ -1700,9 +1700,8 @@ components:
           - A_AB_B mean that a product for each effective fare leg needs to be purchased in a addition to the product attached to the transfer itself (AB) which can be empty (= free)
           - AB only the transfer product itself has to be purchased. Note that all fare products attached to the contained effective fare legs need to be ignored in this case.
 
-        An itineraray `Leg` references the index of the fare transfer and the index of the effective fare leg in this transfer it belongs to.
+        An itinerary `Leg` references the index of the fare transfer and the index of the effective fare leg in this transfer it belongs to.
       required:
-        - rule
         - effectiveFareLegProducts
       properties:
         rule:
@@ -1712,6 +1711,12 @@ components:
         effectiveFareLegProducts:
           description: |
             Lists all valid fare products for the effective fare legs.
+            This is an `array<array<FareProduct>>` where the inner array
+            lists all possible fare products that would cover this effective fare leg.
+            Each "effective fare leg" can have multiple options for adult/child/weekly/monthly/day/one-way tickets etc.
+            You can see the outer array as AND (you need one ticket for each effective fare leg (`A_AB_B`), the first effective fare leg (`A_AB`) or no fare leg at all but only the transfer product (`AB`)
+            and the inner array as OR (you can choose which ticket to buy)
+
           type: array
           items:
             type: array

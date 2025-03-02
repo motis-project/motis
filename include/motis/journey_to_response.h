@@ -43,6 +43,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    street_routing_cache_t&,
                                    osr::bitvec<osr::node_idx_t>& blocked_mem,
                                    bool detailed_transfers,
+                                   bool with_fares,
                                    double timetable_max_matching_distance,
                                    double max_matching_distance);
 

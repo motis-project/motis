@@ -714,7 +714,7 @@ api::plan_response meta_router::run() {
                     query_.pedestrianProfile_ ==
                         api::PedestrianProfileEnum::WHEELCHAIR,
                     j, start_, dest_, cache, *ep::blocked,
-                    query_.detailedTransfers_,
+                    query_.detailedTransfers_, query_.withFares_,
                     r_.config_.timetable_->max_matching_distance_,
                     query_.maxMatchingDistance_);
               }),
