@@ -78,6 +78,39 @@
 	</div>
 {/snippet}
 
+{#snippet ticketInfo(prevTransitLeg: Leg | undefined, l: Leg)}
+	{#if itinerary.fareTransfers != undefined && l.fareTransferIndex != undefined && l.effectiveFareLegIndex != undefined}
+		{@const fareTransfer = itinerary.fareTransfers[l.fareTransferIndex]}
+		{@const includedInTransfer =
+			fareTransfer.rule == 'AB' || (fareTransfer.rule == 'A_AB' && l.effectiveFareLegIndex !== 0)}
+		<div class="list-inside pl-1 md:pl-4 my-8 text-xs font-bold">
+			{#if includedInTransfer || (prevTransitLeg && prevTransitLeg.fareTransferIndex === l.fareTransferIndex && prevTransitLeg.effectiveFareLegIndex === l.effectiveFareLegIndex)}
+				{t.includedInTicket}
+			{:else}
+				{@const productOptions = fareTransfer.effectiveFareLegProducts[l.effectiveFareLegIndex]}
+				{#if productOptions.length > 1}
+					<div class="mb-1">{t.ticketOptions}:</div>
+				{/if}
+				<ul
+					class:list-disc={productOptions.length > 1}
+					class:list-inside={productOptions.length > 1}
+				>
+					{#each productOptions as product}
+						<li>
+							{#if productOptions.length == 1}
+								{t.ticket}
+							{/if}
+							{product.name}
+							({product.amount}
+							{product.currency})
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+	{/if}
+{/snippet}
+
 <div class="text-lg">
 	{#each itinerary.legs as l, i}
 		{@const isLast = i == itinerary.legs.length - 1}
@@ -91,7 +124,7 @@
 				<Route {onClickTrip} {l} />
 				{#if pred && (pred.from.track || pred.duration !== 0) && (i != 1 || pred.routeShortName)}
 					<div class="border-t h-0 grow shrink"></div>
-					<div class="text-sm text-muted-foreground leading-none px-2">
+					<div class="text-sm text-muted-foreground leading-none px-2 text-center">
 						{#if pred.from.track}
 							{t.arrivalOnTrack} {pred.from.track}{pred.duration ? ',' : ''}
 						{/if}
@@ -100,6 +133,19 @@
 						{/if}
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)
+						{/if}
+						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct}
+							{@const transferProduct =
+								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct!}
+							{#if prevTransitLeg.effectiveFareLegIndex === 0 && l.effectiveFareLegIndex === 1}
+								<br />
+								<span class="text-xs font-bold text-foreground">
+									Ticket: {pred.effectiveFareLegIndex}
+									{transferProduct.name}
+									({transferProduct.amount}
+									{transferProduct.currency})
+								</span>
+							{/if}
 						{/if}
 					</div>
 				{/if}
@@ -130,32 +176,9 @@
 					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
 					</div>
-					{#if itinerary.fareTransfers != undefined && l.fareTransferIndex != undefined && l.effectiveFareLegIndex != undefined}
-						{@const fareTransfer = itinerary.fareTransfers[l.fareTransferIndex]}
-						{@const includedInTransfer =
-							fareTransfer.rule == 'AB' ||
-							(fareTransfer.rule == 'A_AB' && l.effectiveFareLegIndex !== 0)}
-						<div class="list-inside pl-1 md:pl-4 mb-8 text-xs font-bold">
-							{#if includedInTransfer || (prevTransitLeg && prevTransitLeg.fareTransferIndex === l.fareTransferIndex && prevTransitLeg.effectiveFareLegIndex === l.effectiveFareLegIndex)}
-								Included in ticket.
-							{:else}
-								{@const productOptions =
-									fareTransfer.effectiveFareLegProducts[l.effectiveFareLegIndex]}
-								{#if productOptions.length > 1}
-									<div class="mb-1">Ticket options:</div>
-								{/if}
-								<ul
-									class:list-disc={productOptions.length > 1}
-									class:list-inside={productOptions.length > 1}
-								>
-									{#each productOptions as product}
-										<li>{product.name}</li>
-									{/each}
-								</ul>
-							{/if}
-						</div>
-					{/if}
+					{@render ticketInfo(prevTransitLeg, l)}
 				{:else}
+					{@render ticketInfo(prevTransitLeg, l)}
 					<details class="[&_svg]:open:-rotate-180 my-2">
 						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 							<svg
