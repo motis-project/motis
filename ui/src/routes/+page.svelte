@@ -146,7 +146,8 @@
 						postTransitModes: modes,
 						directModes: modes,
 						requireBikeTransport: bikeCarriage,
-						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined
+						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
+						withFares: true
 					}
 				} as PlanData)
 			: undefined

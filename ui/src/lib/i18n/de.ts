@@ -1,6 +1,9 @@
 import type { Translations } from './translation';
 
 const translations: Translations = {
+	ticket: 'Fahrschein',
+	ticketOptions: 'Fahrscheinoptionen',
+	includedInTicket: 'Im Fahrschein enthalten',
 	journeyDetails: 'Verbindungsdetails',
 	transfers: 'Umstiege',
 	walk: 'Fußweg',

@@ -642,6 +642,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                   query.pedestrianProfile_ ==
                       api::PedestrianProfileEnum::WHEELCHAIR,
                   j, start, dest, cache, *blocked, query.detailedTransfers_,
+                  query.withFares_,
                   config_.timetable_
                       .and_then([](config::timetable const& x) {
                         return std::optional{x.max_matching_distance_};

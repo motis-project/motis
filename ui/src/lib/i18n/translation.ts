@@ -5,6 +5,9 @@ import fr from './fr';
 import pl from './pl';
 
 export type Translations = {
+	ticket: string;
+	ticketOptions: string;
+	includedInTicket: string;
 	journeyDetails: string;
 	transfers: string;
 	walk: string;
