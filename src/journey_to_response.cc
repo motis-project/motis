@@ -145,23 +145,23 @@ api::Itinerary journey_to_response(osr::ways const* w,
           fares.and_then([&](std::vector<n::fare_transfer> const& transfers) {
             return std::optional{utl::to_vec(
                 transfers, [&](n::fare_transfer const& t) -> api::FareTransfer {
-                  return {
-                      .rule_ = t.rule_.and_then(
-                          [&](auto&& r) { return std::optional{to_rule(r)}; }),
-                      .transferProduct_ = t.rule_.and_then([&](auto&& r) {
-                        return t.legs_.empty()
-                                   ? std::nullopt
-                                   : std::optional{to_product(
-                                         tt.fares_[t.legs_.front().src_],
-                                         r.fare_product_)};
-                      }),
-                      .effectiveFareLegProducts_ =
-                          utl::to_vec(t.legs_, [&](auto&& l) {
-                            return utl::to_vec(l.rule_, [&](auto&& r) {
-                              return to_product(tt.fares_[t.legs_.front().src_],
-                                                r.fare_product_id_);
-                            });
-                          })};
+                  return {.rule_ = t.rule_.and_then([&](auto&& r) {
+                            return std::optional{to_rule(r)};
+                          }),
+                          .transferProduct_ = t.rule_.and_then([&](auto&& r) {
+                            return t.legs_.empty()
+                                       ? std::nullopt
+                                       : std::optional{to_product(
+                                             tt.fares_[t.legs_.front().src_],
+                                             r.fare_product_)};
+                          }),
+                          .effectiveFareLegProducts_ =
+                              utl::to_vec(t.legs_, [&](auto&& l) {
+                                return utl::to_vec(l.rule_, [&](auto&& r) {
+                                  return to_product(tt.fares_[l.src_],
+                                                    r.fare_product_id_);
+                                });
+                              })};
                 })};
           })};
 
