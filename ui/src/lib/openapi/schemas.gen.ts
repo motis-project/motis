@@ -3,7 +3,6 @@
 export const DurationSchema = {
     description: 'Object containing duration if a path was found or none if no path was found',
     type: 'object',
-    required: [],
     properties: {
         duration: {
             type: 'number',
@@ -485,50 +484,6 @@ export const RentalSchema = {
     }
 } as const;
 
-export const ODMTypeSchema = {
-    type: 'string',
-    enum: ['TAXI', 'RIDE_SHARING']
-} as const;
-
-export const ODMSchema = {
-    description: 'Vehicle with driver, e.g., taxi',
-    type: 'object',
-    required: ['systemId'],
-    properties: {
-        systemId: {
-            type: 'string',
-            description: 'ODM system ID'
-        },
-        systemName: {
-            type: 'string',
-            description: 'ODM system name'
-        },
-        url: {
-            type: 'string',
-            description: 'URL of the ODM system'
-        },
-        companyName: {
-            type: 'string',
-            description: 'Name of company that offers the service'
-        },
-        odmUriAndroid: {
-            type: 'string',
-            description: 'ODM URI for Android (deep link to the specific station or vehicle)'
-        },
-        odmUriIOS: {
-            type: 'string',
-            description: 'ODM URI for iOS (deep link to the specific station or vehicle)'
-        },
-        odmUriWeb: {
-            type: 'string',
-            description: 'ODM URI for web (deep link to the specific station or vehicle)'
-        },
-        odmType: {
-            '$ref': '#/components/schemas/ODMType'
-        }
-    }
-} as const;
-
 export const LegSchema = {
     type: 'object',
     required: ['mode', 'startTime', 'endTime', 'scheduledStartTime', 'scheduledEndTime', 'realTime', 'duration', 'from', 'to', 'legGeometry'],
@@ -649,8 +604,87 @@ used for walking, biking and driving.
         rental: {
             '$ref': '#/components/schemas/Rental'
         },
-        odm: {
-            '$ref': '#/components/schemas/ODM'
+        fareTransferIndex: {
+            type: 'integer',
+            description: `Index into \`Itinerary.fareTransfers\` array
+to identify which fare transfer this leg belongs to
+`
+        },
+        effectiveFareLegIndex: {
+            type: 'integer',
+            description: `Index into the \`Itinerary.fareTransfers[fareTransferIndex].effectiveFareLegProducts\` array
+to identify which effective fare leg this itinerary leg belongs to
+`
+        }
+    }
+} as const;
+
+export const FareProductSchema = {
+    type: 'object',
+    required: ['name', 'amount', 'currency'],
+    properties: {
+        name: {
+            description: 'The name of the fare product as displayed to riders.',
+            type: 'string'
+        },
+        amount: {
+            description: 'The cost of the fare product. May be negative to represent transfer discounts. May be zero to represent a fare product that is free.',
+            type: 'number'
+        },
+        currency: {
+            description: 'ISO 4217 currency code. The currency of the cost of the fare product.',
+            type: 'string'
+        }
+    }
+} as const;
+
+export const FareTransferRuleSchema = {
+    type: 'string',
+    enum: ['A_AB', 'A_AB_B', 'AB']
+} as const;
+
+export const FareTransferSchema = {
+    type: 'object',
+    description: `The concept is derived from: https://gtfs.org/documentation/schedule/reference/#fare_transfer_rulestxt
+
+Terminology:
+  - **Leg**: An itinerary leg as described by the \`Leg\` type of this API description.
+  - **Effective Fare Leg**: Itinerary legs can be joined together to form one *effective fare leg*.
+  - **Fare Transfer**: A fare transfer groups two or more effective fare legs.
+  - **A** is the first *effective fare leg* of potentially multiple consecutive legs contained in a fare transfer
+  - **B** is any *effective fare leg* following the first *effective fare leg* in this transfer
+  - **AB** are all changes between *effective fare legs* contained in this transfer
+
+The fare transfer rule is used to derive the final set of products of the itinerary legs contained in this transfer:
+  - A_AB means that any product from the first effective fare leg combined with the product attached to the transfer itself (AB) which can be empty (= free). Note that all subsequent effective fare leg products need to be ignored in this case.
+  - A_AB_B mean that a product for each effective fare leg needs to be purchased in a addition to the product attached to the transfer itself (AB) which can be empty (= free)
+  - AB only the transfer product itself has to be purchased. Note that all fare products attached to the contained effective fare legs need to be ignored in this case.
+
+An itinerary \`Leg\` references the index of the fare transfer and the index of the effective fare leg in this transfer it belongs to.
+`,
+    required: ['effectiveFareLegProducts'],
+    properties: {
+        rule: {
+            '$ref': '#/components/schemas/FareTransferRule'
+        },
+        transferProduct: {
+            '$ref': '#/components/schemas/FareProduct'
+        },
+        effectiveFareLegProducts: {
+            description: `Lists all valid fare products for the effective fare legs.
+This is an \`array<array<FareProduct>>\` where the inner array
+lists all possible fare products that would cover this effective fare leg.
+Each "effective fare leg" can have multiple options for adult/child/weekly/monthly/day/one-way tickets etc.
+You can see the outer array as AND (you need one ticket for each effective fare leg (\`A_AB_B\`), the first effective fare leg (\`A_AB\`) or no fare leg at all but only the transfer product (\`AB\`)
+and the inner array as OR (you can choose which ticket to buy)
+`,
+            type: 'array',
+            items: {
+                type: 'array',
+                items: {
+                    '$ref': '#/components/schemas/FareProduct'
+                }
+            }
         }
     }
 } as const;
@@ -682,6 +716,13 @@ export const ItinerarySchema = {
             type: 'array',
             items: {
                 '$ref': '#/components/schemas/Leg'
+            }
+        },
+        fareTransfers: {
+            description: 'Fare information',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/FareTransfer'
             }
         }
     }

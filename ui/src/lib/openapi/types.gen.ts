@@ -395,43 +395,6 @@ export type Rental = {
     returnConstraint?: RentalReturnConstraint;
 };
 
-export type ODMType = 'TAXI' | 'RIDE_SHARING';
-
-/**
- * Vehicle with driver, e.g., taxi
- */
-export type ODM = {
-    /**
-     * ODM system ID
-     */
-    systemId: string;
-    /**
-     * ODM system name
-     */
-    systemName?: string;
-    /**
-     * URL of the ODM system
-     */
-    url?: string;
-    /**
-     * Name of company that offers the service
-     */
-    companyName?: string;
-    /**
-     * ODM URI for Android (deep link to the specific station or vehicle)
-     */
-    odmUriAndroid?: string;
-    /**
-     * ODM URI for iOS (deep link to the specific station or vehicle)
-     */
-    odmUriIOS?: string;
-    /**
-     * ODM URI for web (deep link to the specific station or vehicle)
-     */
-    odmUriWeb?: string;
-    odmType?: ODMType;
-};
-
 export type Leg = {
     /**
      * Transport mode for this leg
@@ -515,7 +478,69 @@ export type Leg = {
      */
     steps?: Array<StepInstruction>;
     rental?: Rental;
-    odm?: ODM;
+    /**
+     * Index into `Itinerary.fareTransfers` array
+     * to identify which fare transfer this leg belongs to
+     *
+     */
+    fareTransferIndex?: number;
+    /**
+     * Index into the `Itinerary.fareTransfers[fareTransferIndex].effectiveFareLegProducts` array
+     * to identify which effective fare leg this itinerary leg belongs to
+     *
+     */
+    effectiveFareLegIndex?: number;
+};
+
+export type FareProduct = {
+    /**
+     * The name of the fare product as displayed to riders.
+     */
+    name: string;
+    /**
+     * The cost of the fare product. May be negative to represent transfer discounts. May be zero to represent a fare product that is free.
+     */
+    amount: number;
+    /**
+     * ISO 4217 currency code. The currency of the cost of the fare product.
+     */
+    currency: string;
+};
+
+export type FareTransferRule = 'A_AB' | 'A_AB_B' | 'AB';
+
+/**
+ * The concept is derived from: https://gtfs.org/documentation/schedule/reference/#fare_transfer_rulestxt
+ *
+ * Terminology:
+ * - **Leg**: An itinerary leg as described by the `Leg` type of this API description.
+ * - **Effective Fare Leg**: Itinerary legs can be joined together to form one *effective fare leg*.
+ * - **Fare Transfer**: A fare transfer groups two or more effective fare legs.
+ * - **A** is the first *effective fare leg* of potentially multiple consecutive legs contained in a fare transfer
+ * - **B** is any *effective fare leg* following the first *effective fare leg* in this transfer
+ * - **AB** are all changes between *effective fare legs* contained in this transfer
+ *
+ * The fare transfer rule is used to derive the final set of products of the itinerary legs contained in this transfer:
+ * - A_AB means that any product from the first effective fare leg combined with the product attached to the transfer itself (AB) which can be empty (= free). Note that all subsequent effective fare leg products need to be ignored in this case.
+ * - A_AB_B mean that a product for each effective fare leg needs to be purchased in a addition to the product attached to the transfer itself (AB) which can be empty (= free)
+ * - AB only the transfer product itself has to be purchased. Note that all fare products attached to the contained effective fare legs need to be ignored in this case.
+ *
+ * An itinerary `Leg` references the index of the fare transfer and the index of the effective fare leg in this transfer it belongs to.
+ *
+ */
+export type FareTransfer = {
+    rule?: FareTransferRule;
+    transferProduct?: FareProduct;
+    /**
+     * Lists all valid fare products for the effective fare legs.
+     * This is an `array<array<FareProduct>>` where the inner array
+     * lists all possible fare products that would cover this effective fare leg.
+     * Each "effective fare leg" can have multiple options for adult/child/weekly/monthly/day/one-way tickets etc.
+     * You can see the outer array as AND (you need one ticket for each effective fare leg (`A_AB_B`), the first effective fare leg (`A_AB`) or no fare leg at all but only the transfer product (`AB`)
+     * and the inner array as OR (you can choose which ticket to buy)
+     *
+     */
+    effectiveFareLegProducts: Array<Array<FareProduct>>;
 };
 
 export type Itinerary = {
@@ -539,6 +564,10 @@ export type Itinerary = {
      * Journey legs
      */
     legs: Array<Leg>;
+    /**
+     * Fare information
+     */
+    fareTransfers?: Array<FareTransfer>;
 };
 
 /**
@@ -816,9 +845,21 @@ export type PlanData = {
          */
         directRentalProviders?: Array<(string)>;
         /**
+         * Optional. Experimental. Default is `1.0`.
+         * Factor with which the duration of the fastest direct connection is multiplied.
+         * Values > 1.0 allow connections that are slower than the fastest direct connection to be found.
+         *
+         */
+        fastestDirectFactor?: number;
+        /**
          * \`latitude,longitude,level\` tuple in degrees OR stop id
          */
         fromPlace: string;
+        /**
+         * Optional. Experimental. Number of luggage pieces; base unit: airline cabin luggage (e.g. for ODM or price calculation)
+         *
+         */
+        luggage?: number;
         /**
          * Optional. Default is 30min which is `1800`.
          * Maximum time in seconds for direct connections.
@@ -889,6 +930,10 @@ export type PlanData = {
          *
          */
         pageCursor?: string;
+        /**
+         * Optional. Experimental. Number of passengers (e.g. for ODM or price calculation)
+         */
+        passengers?: number;
         /**
          * Optional. Default is `FOOT`.
          *
@@ -1068,6 +1113,10 @@ export type PlanData = {
          *
          */
         viaMinimumStay?: Array<(number)>;
+        /**
+         * Optional. Experimental. If set to true, the response will contain fare information.
+         */
+        withFares?: boolean;
     };
 };
 
