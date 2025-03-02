@@ -84,6 +84,7 @@
 		{@const isLastPred = i == itinerary.legs.length - 2}
 		{@const pred = i == 0 ? undefined : itinerary.legs[i - 1]}
 		{@const next = isLast ? undefined : itinerary.legs[i + 1]}
+		{@const prevTransitLeg = itinerary.legs.slice(0, i).find((l) => l.tripId)}
 
 		{#if l.routeShortName}
 			<div class="w-full flex justify-between items-center space-x-1">
@@ -129,6 +130,31 @@
 					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
 					</div>
+					{#if itinerary.fareTransfers != undefined && l.fareTransferIndex != undefined && l.effectiveFareLegIndex != undefined}
+						{@const fareTransfer = itinerary.fareTransfers[l.fareTransferIndex]}
+						{@const includedInTransfer =
+							fareTransfer.rule == 'AB' ||
+							(fareTransfer.rule == 'A_AB' && l.effectiveFareLegIndex !== 0)}
+						<div class="list-inside pl-1 md:pl-4 mb-8 text-xs font-bold">
+							{#if includedInTransfer || (prevTransitLeg && prevTransitLeg.fareTransferIndex === l.fareTransferIndex && prevTransitLeg.effectiveFareLegIndex === l.effectiveFareLegIndex)}
+								Included in ticket.
+							{:else}
+								{@const productOptions =
+									fareTransfer.effectiveFareLegProducts[l.effectiveFareLegIndex]}
+								{#if productOptions.length > 1}
+									<div class="mb-1">Ticket options:</div>
+								{/if}
+								<ul
+									class:list-disc={productOptions.length > 1}
+									class:list-inside={productOptions.length > 1}
+								>
+									{#each productOptions as product}
+										<li>{product.name}</li>
+									{/each}
+								</ul>
+							{/if}
+						</div>
+					{/if}
 				{:else}
 					<details class="[&_svg]:open:-rotate-180 my-2">
 						<summary class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
