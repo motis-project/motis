@@ -123,6 +123,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
       case nigiri::fares::fare_transfer_rule::fare_transfer_type::kAPlusABPlusB:
         return api::FareTransferRuleEnum::A_AB_B;
     }
+    std::unreachable();
   };
 
   auto itinerary = api::Itinerary{
