@@ -19,17 +19,23 @@ struct mixer {
   void mix(nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
            std::vector<nigiri::routing::journey>& odm_journeys) const;
   std::int32_t transfer_cost(nigiri::routing::journey const&) const;
-  void cost_domination(
-      nigiri::pareto_set<nigiri::routing::journey> const& pt_journeys,
+  double cost(nigiri::routing::journey const& j) const;
+  bool cost_dominates(nigiri::routing::journey const&,
+                      nigiri::routing::journey const&) const;
+  void cost_dominance(
+      nigiri::pareto_set<nigiri::routing::journey> const& pt_journey,
       std::vector<nigiri::routing::journey>& odm_journeys) const;
-  void productivity_domination(
-      std::vector<nigiri::routing::journey>& odm_journeys) const;
+  static void pareto_dominance(
+      std::vector<nigiri::routing::journey>& odm_journeys);
+  void reduce_odm(std::vector<nigiri::routing::journey>& odm_journeys) const;
 
   double alpha_;
-  double beta_;
+  double direct_taxi_penalty_;
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;
 };
+
+mixer get_default_mixer();
 
 }  // namespace motis::odm
