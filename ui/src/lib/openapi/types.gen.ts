@@ -492,6 +492,34 @@ export type Leg = {
     effectiveFareLegIndex?: number;
 };
 
+export type RiderCategory = {
+    /**
+     * Rider category name as displayed to the rider.
+     */
+    riderCategoryName: string;
+    /**
+     * Specifies if this category should be considered the default (i.e. the main category displayed to riders).
+     */
+    isDefaultFareCategory: boolean;
+    /**
+     * URL to a web page providing detailed information about the rider category and/or its eligibility criteria.
+     */
+    eligibilityUrl?: string;
+};
+
+export type FareMediaType = 'NONE' | 'PAPER_TICKET' | 'TRANSIT_CARD' | 'CONTACTLESS_EMV' | 'MOBILE_APP';
+
+export type FareMedia = {
+    /**
+     * Name of the fare media. Required for transit cards and mobile apps.
+     */
+    fareMediaName?: string;
+    /**
+     * The type of fare media.
+     */
+    fareMediaType: FareMediaType;
+};
+
 export type FareProduct = {
     /**
      * The name of the fare product as displayed to riders.
@@ -505,6 +533,8 @@ export type FareProduct = {
      * ISO 4217 currency code. The currency of the cost of the fare product.
      */
     currency: string;
+    riderCategory?: RiderCategory;
+    media?: FareMedia;
 };
 
 export type FareTransferRule = 'A_AB' | 'A_AB_B' | 'AB';

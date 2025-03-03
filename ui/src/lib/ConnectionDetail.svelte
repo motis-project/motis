@@ -1,6 +1,6 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import type { Itinerary, Leg } from '$lib/openapi';
+	import type { FareProduct, Itinerary, Leg } from '$lib/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -78,6 +78,36 @@
 	</div>
 {/snippet}
 
+{#snippet productInfo(product: FareProduct)}
+	{product.name}
+	({product.amount}
+	{product.currency})
+	{#if product.riderCategory}
+		for
+		{#if product.riderCategory.eligibilityUrl}
+			<a
+				class:italic={product.riderCategory.isDefaultFareCategory}
+				class="underline"
+				href={product.riderCategory.eligibilityUrl}
+			>
+				{product.riderCategory.riderCategoryName}
+			</a>
+		{:else}
+			<span class:italic={product.riderCategory.isDefaultFareCategory}>
+				{product.riderCategory.riderCategoryName}
+			</span>
+		{/if}
+	{/if}
+	{#if product.media}
+		as
+		{#if product.media.fareMediaName}
+			{product.media.fareMediaName}
+		{:else}
+			{product.media.fareMediaType}
+		{/if}
+	{/if}
+{/snippet}
+
 {#snippet ticketInfo(prevTransitLeg: Leg | undefined, l: Leg)}
 	{#if itinerary.fareTransfers != undefined && l.fareTransferIndex != undefined && l.effectiveFareLegIndex != undefined}
 		{@const fareTransfer = itinerary.fareTransfers[l.fareTransferIndex]}
@@ -100,9 +130,7 @@
 							{#if productOptions.length == 1}
 								{t.ticket}
 							{/if}
-							{product.name}
-							({product.amount}
-							{product.currency})
+							{@render productInfo(product)}
 						</li>
 					{/each}
 				</ul>
@@ -141,9 +169,7 @@
 								<br />
 								<span class="text-xs font-bold text-foreground">
 									Ticket: {pred.effectiveFareLegIndex}
-									{transferProduct.name}
-									({transferProduct.amount}
-									{transferProduct.currency})
+									{@render productInfo(transferProduct)}
 								</span>
 							{/if}
 						{/if}

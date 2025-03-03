@@ -130,13 +130,12 @@ api::Itinerary journey_to_response(osr::ways const* w,
   };
   auto const to_rider_category =
       [&](n::fares::rider_category const& r) -> api::RiderCategory {
-    return {
-        .riderCategoryName_ = std::string{tt.strings_.get(r.eligibility_url_)},
-        .isDefaultFareCategory_ = r.is_default_fare_category_,
-        .eligibilityUrl_ = tt.strings_.try_get(r.eligibility_url_)
-                               .and_then([](std::string_view s) {
-                                 return std::optional{std::string{s}};
-                               })};
+    return {.riderCategoryName_ = std::string{tt.strings_.get(r.name_)},
+            .isDefaultFareCategory_ = r.is_default_fare_category_,
+            .eligibilityUrl_ = tt.strings_.try_get(r.eligibility_url_)
+                                   .and_then([](std::string_view s) {
+                                     return std::optional{std::string{s}};
+                                   })};
   };
   auto const to_product =
       [&](n::fares const& f,

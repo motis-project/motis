@@ -619,6 +619,52 @@ to identify which effective fare leg this itinerary leg belongs to
     }
 } as const;
 
+export const RiderCategorySchema = {
+    type: 'object',
+    required: ['riderCategoryName', 'isDefaultFareCategory'],
+    properties: {
+        riderCategoryName: {
+            description: 'Rider category name as displayed to the rider.',
+            type: 'string'
+        },
+        isDefaultFareCategory: {
+            description: 'Specifies if this category should be considered the default (i.e. the main category displayed to riders).',
+            type: 'boolean'
+        },
+        eligibilityUrl: {
+            description: 'URL to a web page providing detailed information about the rider category and/or its eligibility criteria.',
+            type: 'string'
+        }
+    }
+} as const;
+
+export const FareMediaTypeSchema = {
+    type: 'string',
+    enum: ['NONE', 'PAPER_TICKET', 'TRANSIT_CARD', 'CONTACTLESS_EMV', 'MOBILE_APP'],
+    enumDescriptions: {
+        NONE: 'No fare media involved (e.g., cash payment)',
+        PAPER_TICKET: 'Physical paper ticket',
+        TRANSIT_CARD: 'Physical transit card with stored value',
+        CONTACTLESS_EMV: 'cEMV (contactless payment)',
+        MOBILE_APP: 'Mobile app with virtual transit cards/passes'
+    }
+} as const;
+
+export const FareMediaSchema = {
+    type: 'object',
+    required: ['fareMediaType'],
+    properties: {
+        fareMediaName: {
+            description: 'Name of the fare media. Required for transit cards and mobile apps.',
+            type: 'string'
+        },
+        fareMediaType: {
+            description: 'The type of fare media.',
+            '$ref': '#/components/schemas/FareMediaType'
+        }
+    }
+} as const;
+
 export const FareProductSchema = {
     type: 'object',
     required: ['name', 'amount', 'currency'],
@@ -634,6 +680,12 @@ export const FareProductSchema = {
         currency: {
             description: 'ISO 4217 currency code. The currency of the cost of the fare product.',
             type: 'string'
+        },
+        riderCategory: {
+            '$ref': '#/components/schemas/RiderCategory'
+        },
+        media: {
+            '$ref': '#/components/schemas/FareMedia'
         }
     }
 } as const;
