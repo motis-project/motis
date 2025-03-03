@@ -106,13 +106,53 @@ api::Itinerary journey_to_response(osr::ways const* w,
 
   auto const fares =
       with_fares ? std::optional{n::get_fares(tt, j)} : std::nullopt;
+  auto const to_fare_media_type =
+      [](n::fares::fare_media::fare_media_type const t) {
+        using fare_media_type = n::fares::fare_media::fare_media_type;
+        switch (t) {
+          case fare_media_type::kNone: return api::FareMediaTypeEnum::NONE;
+          case fare_media_type::kPaper:
+            return api::FareMediaTypeEnum::PAPER_TICKET;
+          case fare_media_type::kCard:
+            return api::FareMediaTypeEnum::TRANSIT_CARD;
+          case fare_media_type::kContactless:
+            return api::FareMediaTypeEnum::CONTACTLESS_EMV;
+          case fare_media_type::kApp: return api::FareMediaTypeEnum::MOBILE_APP;
+        }
+        std::unreachable();
+      };
+  auto const to_media = [&](n::fares::fare_media const& m) -> api::FareMedia {
+    return {.fareMediaName_ =
+                m.name_ == n::string_idx_t::invalid()
+                    ? std::nullopt
+                    : std::optional{std::string{tt.strings_.get(m.name_)}},
+            .fareMediaType_ = to_fare_media_type(m.type_)};
+  };
+  auto const to_rider_category =
+      [&](n::fares::rider_category const& r) -> api::RiderCategory {
+    return {
+        .riderCategoryName_ = std::string{tt.strings_.get(r.eligibility_url_)},
+        .isDefaultFareCategory_ = r.is_default_fare_category_,
+        .eligibilityUrl_ = tt.strings_.try_get(r.eligibility_url_)
+                               .and_then([](std::string_view s) {
+                                 return std::optional{std::string{s}};
+                               })};
+  };
   auto const to_product =
       [&](n::fares const& f,
           n::fare_product_idx_t const x) -> api::FareProduct {
     auto const& p = f.fare_products_[x];
     return {.name_ = std::string{tt.strings_.get(p.name_)},
             .amount_ = p.amount_,
-            .currency_ = std::string{tt.strings_.get(p.currency_code_)}};
+            .currency_ = std::string{tt.strings_.get(p.currency_code_)},
+            .riderCategory_ =
+                p.rider_category_ == n::rider_category_idx_t::invalid()
+                    ? std::nullopt
+                    : std::optional{to_rider_category(
+                          f.rider_categories_[p.rider_category_])},
+            .media_ = p.media_ == n::fare_media_idx_t::invalid()
+                          ? std::nullopt
+                          : std::optional{to_media(f.fare_media_[p.media_])}};
   };
   auto const to_rule = [](n::fares::fare_transfer_rule const& x) {
     switch (x.fare_transfer_type_) {
@@ -159,7 +199,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                               utl::to_vec(t.legs_, [&](auto&& l) {
                                 return utl::to_vec(l.rule_, [&](auto&& r) {
                                   return to_product(tt.fares_[l.src_],
-                                                    r.fare_product_id_);
+                                                    r.fare_product_);
                                 });
                               })};
                 })};
