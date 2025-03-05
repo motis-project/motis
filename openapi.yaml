@@ -26,7 +26,7 @@ paths:
         - name: one
           in: query
           required: true
-          description: geo location as latitude,longitude
+          description: geo location as latitude;longitude
           schema:
             type: string
         - name: many
