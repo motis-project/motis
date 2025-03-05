@@ -46,7 +46,7 @@ api::geocode_response geocode::operator()(
       t_, geo::latlng{0, 0}, params.text_, 10U, lang_indices, ctx);
 
   return suggestions_to_response(t_, tt_, tags_, w_, pl_, matches_,
-                                 lang_indices, token_pos, ctx.suggestions_);
+                                 lang_indices, token_pos, ctx.suggestions_, params.filterType_);
 }
 
 }  // namespace motis::ep

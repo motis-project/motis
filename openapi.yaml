@@ -121,6 +121,16 @@ paths:
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
             type: string
+        - name: filterType
+          in: query
+          required: false
+          description: |
+            Optional. Default is all types.
+            
+            Only return results of the given types.
+            For example, this can be used to allow only `ADDRESS` and `STOP` results.
+          schema:
+            $ref: '#/components/schemas/LocationType'
 
       responses:
         200:
@@ -1097,6 +1107,14 @@ components:
       items:
         type: number
 
+    LocationType:
+      description: location type
+      type: string
+      enum:
+        - ADDRESS
+        - PLACE
+        - STOP
+
     Match:
       description: GeoCoding match
       type: object
@@ -1111,12 +1129,7 @@ components:
         - score
       properties:
         type:
-          description: location type
-          type: string
-          enum:
-            - ADDRESS
-            - PLACE
-            - STOP
+          $ref: '#/components/schemas/LocationType'
         tokens:
           description: list of non-overlapping tokens that were matched
           type: array
