@@ -22,6 +22,7 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
@@ -44,6 +45,8 @@ template <typename T, typename From>
 void GET(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
     r.get(std::move(target), std::move(*x));
+  } else {
+    std::cout << "Failed to setup endpoint: '" << typeid(T).name() << "'\n";
   }
 }
 
@@ -78,6 +81,7 @@ int server(data d, config const& c) {
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
+  GET<ep::one_to_all>(qr, "/api/v1/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {

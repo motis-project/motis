@@ -12,8 +12,109 @@ externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
 servers:
-  - url: https://europe.motis-project.de
+  # - url: https://europe.motis-project.de
+  - url: http://localhost:8015
 paths:
+  /api/v1/one-to-all:
+    get:
+      tags:
+        - geocode
+      summary: |
+        TODO One-to-All routing
+        Street routing from one to many places or many to one.
+        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+      operationId: oneToAll
+      parameters:
+        - name: one
+          in: query
+          required: true
+          description: \`latitude,longitude,level\` tuple in degrees OR stop id
+          # description: geo location as latitude;longitude
+          schema:
+            type: string
+        - name: mode
+          in: query
+          required: true
+          description: |
+            routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+          schema:
+            $ref: '#/components/schemas/Mode'
+        - name: max
+          in: query
+          required: true
+          description: maximum travel time in minutes
+          schema:
+            type: integer
+        - name: maxMatchingDistance
+          in: query
+          required: true
+          description: maximum matching distance in meters to match geo coordinates to the street network
+          schema:
+            type: number
+        - name: arriveBy
+          in: query
+          required: true
+          description: |
+            true = all to one
+            false = one to all
+          schema:
+            type: boolean
+        - name: time
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current time.
+            
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+          schema:
+            type: string
+            format: date-time
+        - name: maxTransfers
+          in: query
+          required: false
+          description: |
+            The maximum number of allowed transfers.
+            If not provided, the routing uses the server-side default value
+            which is hardcoded and very high to cover all use cases.
+            
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the fastest) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+        - name: pedestrianProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `FOOT`.
+            
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections, on the first mile, and last mile.
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+        - name: maxPreTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the first street leg.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+      responses:
+        200:
+          description: |
+            TODO Reachable locations
+            A list of durations.
+            If no path was found, the object is empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reachable'
+
   /api/v1/one-to-many:
     get:
       tags:
@@ -1277,6 +1378,35 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+
+    ReachablePlace:
+      description: TODO Place reachable by One-to-All
+      type: object
+      properties:
+        place:
+          $ref: "#/components/schemas/Place"
+          description: TODO Transport mode for this leg
+        duration:
+          type: integer
+          description: TODO Duration in minutes
+        transfers:
+          type: integer
+          description: TODO Number of transfers
+
+    Reachable:
+      description: TODO Object containing duration if a path was found or none if no path was found
+      type: object
+      properties:
+        one:
+          $ref: "#/components/schemas/Place"
+          description: TODO One location for One-to-All search
+        all:
+          description: |
+            TODO For transit legs, intermediate stops between the Place where the leg originates
+            and the Place where the leg ends. For non-transit legs, null.
+          type: array
+          items:
+            $ref: "#/components/schemas/ReachablePlace"
 
     StopTime:
       description: departure or arrival event at a stop
