@@ -111,12 +111,16 @@
 		label: toParam ? toParam['name'] : '',
 		value: toParam ? toMatch : {}
 	});
-	let time = $state<Date>(new Date());
-	let timeType = $state<string>('departure');
-	let wheelchair = $state(false);
-	let bikeRental = $state(false);
-	let bikeCarriage = $state(false);
-	let selectedTransitModes = $state<Mode[]>([]);
+	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
+	let timeType = $state<string>(urlParams?.get('arriveBy') == 'true' ? 'arrival' : 'departure');
+	let wheelchair = $state(urlParams?.get('wheelchair') == 'true');
+	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
+	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
+	let selectedTransitModes = $state<Mode[]>(
+		(urlParams?.get('selectedTransitModes') &&
+			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
+			[]
+	);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -167,7 +171,20 @@
 				});
 				baseResponse = base;
 				routingResponses = [base];
-				replaceState('?', {});
+				pushStateWithQueryString(
+					{
+						from: JSON.stringify(from?.value?.match),
+						to: JSON.stringify(to?.value?.match),
+						time: time,
+						arriveBy: timeType === 'arrival',
+						wheelchair: wheelchair,
+						bikeRental: bikeRental,
+						bikeCarriage: bikeCarriage,
+						selectedTransitModes: selectedTransitModes.join(',')
+					},
+					{},
+					true
+				);
 			}, 400);
 		}
 	});
@@ -210,6 +227,16 @@
 		flyToSelectedItinerary();
 	});
 
+	const preserveFromUrl = (
+		// eslint-disable-next-line
+		queryParams: Record<string, any>,
+		field: string
+	) => {
+		if (urlParams?.has(field)) {
+			queryParams[field] = urlParams.get(field);
+		}
+	};
+
 	const pushStateWithQueryString = (
 		// eslint-disable-next-line
 		queryParams: Record<string, any>,
@@ -217,6 +244,9 @@
 		newState: App.PageState,
 		replace: boolean = false
 	) => {
+		preserveFromUrl(queryParams, 'debug');
+		preserveFromUrl(queryParams, 'dark');
+		preserveFromUrl(queryParams, 'motis');
 		const params = new URLSearchParams(queryParams);
 		const updateState = replace ? replaceState : pushState;
 		updateState('?' + params.toString(), newState);
@@ -384,7 +414,7 @@
 							pushStateWithQueryString(
 								{ tripId: page.state.tripId },
 								{ selectedItinerary: page.state.selectedItinerary }
-							); // TODO
+							);
 						}}
 					>
 						<X />
