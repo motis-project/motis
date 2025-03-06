@@ -28,8 +28,7 @@ a::guess_context& get_guess_context(a::typeahead const& t, a::cache& cache) {
   return *ctx;
 }
 
-api::geocode_response geocode::operator()(
-    boost::urls::url_view const& url) const {
+api::geocode_response geocode::operator()(boost::urls::url_view const& url) const {
   auto const params = api::geocode_params{url.params()};
 
   auto& ctx = get_guess_context(t_, cache_);
@@ -41,9 +40,23 @@ api::geocode_response geocode::operator()(
       lang_indices.push_back(l_idx);
     }
   }
+  auto filter = a::filter_type::kNone;
+  if (params.filterType_.has_value()) {
+        switch (*params.filterType_) {
+          case api::LocationTypeEnum::ADDRESS:
+                filter = a::filter_type::kAddress;
+                break;
+          case api::LocationTypeEnum::PLACE:
+                filter = a::filter_type::kPlace;
+                break;
+          case api::LocationTypeEnum::STOP:
+                filter = a::filter_type::kExtra;
+                break;
+        }
+  }
 
   auto const token_pos = a::get_suggestions<false>(
-      t_, geo::latlng{0, 0}, params.text_, 10U, lang_indices, ctx);
+      t_, geo::latlng{0, 0}, params.text_, 10U, lang_indices, ctx, filter);
 
   return suggestions_to_response(t_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_, params.filterType_);
