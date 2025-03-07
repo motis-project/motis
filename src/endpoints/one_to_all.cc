@@ -12,6 +12,7 @@
 #include "adr/guess_context.h"
 
 #include "nigiri/common/delta_t.h"
+#include "nigiri/for_each_meta.h"
 #include "nigiri/location_match_mode.h"
 #include "nigiri/routing/one_to_all.h"
 #include "nigiri/routing/query.h"
@@ -95,13 +96,23 @@ api::Reachable one_to_all::operator()(
     .departure_ = time,
   };
   auto count = 0;
+  auto parents = nigiri::bitvec{tt_->n_locations()};
+  parents.zero_out();
+  auto const unreachable = query.arriveBy_ ? nigiri::kInvalidDelta<nigiri::direction::kBackward> : nigiri::kInvalidDelta<nigiri::direction::kForward>;
   for (auto i = 0U; i < tt_->n_locations(); ++i) {
-    if (state.get_best<0>()[i][0] != nigiri::kInvalidDelta<nigiri::direction::kForward>) {
+    if (state.get_best<0>()[i][0] != unreachable) {
       std::cout << "Reachable: " << i << " (" << tt_->locations_.names_[nigiri::location_idx_t{i}].view() << ")\n";
       ++count;
     }
+
+    nigiri::routing::for_each_meta(*tt_, nigiri::routing::location_match_mode::kIntermodal, tt_->locations_.parents_[nigiri::location_idx_t{i}], [&](nigiri::location_idx_t const l) {
+      if (state.get_best<0>()[to_idx(l)][0] != unreachable) {
+        parents.set(to_idx(l), true);
+      }
+    });
   }
   std::cout << "Counted: " << count << "\n";
+  std::cout << "Reachable parents: " << parents.count() << "\n";
     return {
       .one_ = std::move(p),
     };
