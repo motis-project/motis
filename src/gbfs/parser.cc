@@ -519,7 +519,8 @@ void load_geofencing_zones(gbfs_provider& provider, json::value const& root) {
 
   //  required in 3.0, but some feeds don't have it
   auto global_rules =
-      root.at("data").as_object().contains("global_rules")
+      root.at("data").as_object().contains("global_rules") &&
+              root.at("data").at("global_rules").is_array()
           ? utl::to_vec(
                 root.at("data").at("global_rules").as_array(),
                 [&](auto const& r) { return parse_rule(provider, version, r); })
