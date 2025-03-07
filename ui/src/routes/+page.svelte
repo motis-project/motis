@@ -35,6 +35,7 @@
 	import { t } from '$lib/i18n/translation';
 	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { updateStartDest } from '$lib/updateStartDest';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -165,10 +166,7 @@
 		if (baseQuery) {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
-				const base = plan(baseQuery).then((response) => {
-					if (response.error) throw new Error(String(response.error));
-					return response.data!;
-				});
+				const base = plan(baseQuery).then(updateStartDest(from, to));
 				baseResponse = base;
 				routingResponses = [base];
 				pushStateWithQueryString(
@@ -363,6 +361,7 @@
 					{routingResponses}
 					{baseQuery}
 					selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
+					updateStartDest={updateStartDest(from, to)}
 				/>
 			</Card>
 		</Control>

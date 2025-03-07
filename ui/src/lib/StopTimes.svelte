@@ -93,7 +93,13 @@
 					? t.place.scheduledArrival!
 					: t.place.scheduledDeparture!}
 				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={t} {onClickTrip} />
-				<Time variant="schedule" isRealtime={t.realTime} {timestamp} {scheduledTimestamp} />
+				<Time
+					variant="schedule"
+					isRealtime={t.realTime}
+					{timestamp}
+					{scheduledTimestamp}
+					queriedTime={queryTime.toISOString()}
+				/>
 				<Time variant="realtime" isRealtime={t.realTime} {timestamp} {scheduledTimestamp} />
 				<div class="flex items-center text-muted-foreground min-w-0">
 					<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
