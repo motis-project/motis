@@ -1,6 +1,10 @@
 #pragma once
 
 #include "boost/url/url_view.hpp"
+
+#include "adr/reverse.h"
+#include "adr/typeahead.h"
+
 #include "nigiri/rt/rt_timetable.h"
 
 // #include "motis/endpoints/routing.h"
@@ -40,6 +44,9 @@ struct one_to_all {
   // // platform_matches_t const* matches_;
   // // std::shared_ptr<rt> const& rt_;
   // // nigiri::shapes_storage const* shapes_;
+
+  adr::typeahead const& t_;
+  adr::reverse const& r_;
 };
 
 }  // namespace motis::ep

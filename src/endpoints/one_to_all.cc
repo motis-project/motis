@@ -2,16 +2,22 @@
 
 #include <chrono>
 #include <iostream>  // TODO Remove
+#include <variant>
+#include <vector>
 
-#include "motis-api/motis-api.h"
+#include "utl/erase_if.h"
 #include "utl/verify.h"
 
+#include "adr/types.h"
+#include "adr/guess_context.h"
+
 #include "nigiri/common/delta_t.h"
+#include "nigiri/location_match_mode.h"
 #include "nigiri/routing/one_to_all.h"
 #include "nigiri/routing/query.h"
 #include "nigiri/types.h"
 
-#include "motis/endpoints/routing.h"
+#include "motis-api/motis-api.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/parse_location.h"
 
@@ -27,31 +33,47 @@ api::Reachable one_to_all::operator()(
   auto const one = parse_location(query.one_, ';');
   utl::verify(one.has_value(), "{} is not a valid geo coordinate", query.one_);
 
-  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
-  // auto gbfs_rd = gbfs::gbfs_routing_data{&w_, &l_, gbfs_};
+  auto suggestions = r_.lookup(t_, one->pos_, /*Unused*/ 0U);
+  std::cout << "Before: " << suggestions.size() << "\n";
+  utl::erase_if(suggestions, [&](adr::suggestion const& s){
+    return !(std::holds_alternative<adr::place_idx_t>(s.location_) && t_.place_type_[std::get<adr::place_idx_t>(s.location_)] == adr::place_type::kExtra); });
+  // utl::erase_if(suggestions, [&](adr::suggestion const& s){
+  //   return !std::holds_alternative<adr::place_idx_t>(s.location_); });
+  std::cout << "After : " << suggestions.size() << "\n";
+  // utl::erase_if(suggestions, [&](adr::suggestion const& s){
+  //   return nigiri::location_idx_t{t_.place_osm_ids_[std::get<adr::place_idx_t>(s.location_)]} == nigiri::location_idx_t::invalid(); });
+  // std::cout << "After(2) : " << suggestions.size() << "\n";
+  utl::verify(!suggestions.empty(), "No station nearby");
+  auto const l = nigiri::location_idx_t{t_.place_osm_ids_[std::get<adr::place_idx_t>(suggestions[0].location_)]};
+  // auto const l = nigiri::location_idx_t{165928};
+  utl::verify(l < tt_->n_locations(), "location_idx_t >= n_location: {} >= {}", l, tt_->n_locations());
+  // auto const l = nigiri::location_idx_t{t_.place_osm_ids_[std::get<adr::place_idx_t>(suggestions[0].location_)]};
+// std::cout << "Location: " << l << "; " << tt_->n_locations() << "\n";
+// t_.place_osm_ids_
 
-  // auto const dir = query.arriveBy_ ? osr::direction::kBackward
-  //                                                  : osr::direction::kForward;
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(*query.time_.value_or(openapi::now()));
-  auto const start = [&](osr::location const& pos) {
+  // auto const start = [&](osr::location const& pos) {
 
-                  auto const dir = query.arriveBy_ ? osr::direction::kBackward
-                                                   : osr::direction::kForward;
-                  // return routing::get_offsets(
-                  auto const r = routing{config_, w_, l_, pl_, tt_, tags_, loc_tree_, matches_, rt_, shapes_, gbfs_, odm_bounds_};
-                  return r.get_offsets(
-                      pos, dir, /*start_modes*/ {}, /*start_form_factors*/ {},
-                      /*start_propulsion_types*/ {}, /*start_rental_providers*/ {},
-                      query.pedestrianProfile_ ==
-                          api::PedestrianProfileEnum::WHEELCHAIR,
-                      std::chrono::seconds{query.maxPreTransitTime_},
-                      query.maxMatchingDistance_, gbfs_rd);
-  }(*one);
+  //                 auto const dir = query.arriveBy_ ? osr::direction::kBackward
+  //                                                  : osr::direction::kForward;
+  //                 // return routing::get_offsets(
+  //                 auto const r = routing{config_, w_, l_, pl_, tt_, tags_, loc_tree_, matches_, rt_, shapes_, gbfs_, odm_bounds_};
+  //                 return r.get_offsets(
+  //                     pos, dir, /*start_modes*/ {}, /*start_form_factors*/ {},
+  //                     /*start_propulsion_types*/ {}, /*start_rental_providers*/ {},
+  //                     query.pedestrianProfile_ ==
+  //                         api::PedestrianProfileEnum::WHEELCHAIR,
+  //                     std::chrono::seconds{query.maxPreTransitTime_},
+  //                     query.maxMatchingDistance_, gbfs_rd);
+  // }(*one);
+  auto const start = std::vector<nigiri::routing::offset>{{{l, nigiri::duration_t{}, nigiri::transport_mode_id_t{0U}}}};
   for (auto const s : start) {
     std::cout << "Start: " << s.target() << ", " << s.duration() << "\n";
   }
   auto const q = nigiri::routing::query{
     .start_time_ = time,
+      // .start_match_mode_ = nigiri::routing::location_match_mode::kExact,
+      .start_match_mode_ = nigiri::routing::location_match_mode::kEquivalent,
       .start_ = std::move(start),
       .max_travel_time_ = nigiri::duration_t{query.max_},
   };
@@ -74,7 +96,10 @@ api::Reachable one_to_all::operator()(
   };
   auto count = 0;
   for (auto i = 0U; i < tt_->n_locations(); ++i) {
-    if (state.get_best<0>()[i][0] != nigiri::kInvalidDelta<nigiri::direction::kForward>) ++count;
+    if (state.get_best<0>()[i][0] != nigiri::kInvalidDelta<nigiri::direction::kForward>) {
+      std::cout << "Reachable: " << i << " (" << tt_->locations_.names_[nigiri::location_idx_t{i}].view() << ")\n";
+      ++count;
+    }
   }
   std::cout << "Counted: " << count << "\n";
     return {
