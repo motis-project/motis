@@ -35,6 +35,7 @@
 	import { t } from '$lib/i18n/translation';
 	import { pushState, replaceState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { updateStartDest } from '$lib/updateStartDest';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -111,12 +112,16 @@
 		label: toParam ? toParam['name'] : '',
 		value: toParam ? toMatch : {}
 	});
-	let time = $state<Date>(new Date());
-	let timeType = $state<string>('departure');
-	let wheelchair = $state(false);
-	let bikeRental = $state(false);
-	let bikeCarriage = $state(false);
-	let selectedTransitModes = $state<Mode[]>([]);
+	let time = $state<Date>(new Date(urlParams?.get('time') || Date.now()));
+	let timeType = $state<string>(urlParams?.get('arriveBy') == 'true' ? 'arrival' : 'departure');
+	let wheelchair = $state(urlParams?.get('wheelchair') == 'true');
+	let bikeRental = $state(urlParams?.get('bikeRental') == 'true');
+	let bikeCarriage = $state(urlParams?.get('bikeCarriage') == 'true');
+	let selectedTransitModes = $state<Mode[]>(
+		(urlParams?.get('selectedTransitModes') &&
+			(urlParams?.get('selectedTransitModes')?.split(',') as Mode[])) ||
+			[]
+	);
 
 	const toPlaceString = (l: Location) => {
 		if (l.value.match?.type === 'STOP') {
@@ -161,13 +166,23 @@
 		if (baseQuery) {
 			clearTimeout(searchDebounceTimer);
 			searchDebounceTimer = setTimeout(() => {
-				const base = plan(baseQuery).then((response) => {
-					if (response.error) throw new Error(String(response.error));
-					return response.data!;
-				});
+				const base = plan(baseQuery).then(updateStartDest(from, to));
 				baseResponse = base;
 				routingResponses = [base];
-				replaceState('?', {});
+				pushStateWithQueryString(
+					{
+						from: JSON.stringify(from?.value?.match),
+						to: JSON.stringify(to?.value?.match),
+						time: time,
+						arriveBy: timeType === 'arrival',
+						wheelchair: wheelchair,
+						bikeRental: bikeRental,
+						bikeCarriage: bikeCarriage,
+						selectedTransitModes: selectedTransitModes.join(',')
+					},
+					{},
+					true
+				);
 			}, 400);
 		}
 	});
@@ -210,6 +225,16 @@
 		flyToSelectedItinerary();
 	});
 
+	const preserveFromUrl = (
+		// eslint-disable-next-line
+		queryParams: Record<string, any>,
+		field: string
+	) => {
+		if (urlParams?.has(field)) {
+			queryParams[field] = urlParams.get(field);
+		}
+	};
+
 	const pushStateWithQueryString = (
 		// eslint-disable-next-line
 		queryParams: Record<string, any>,
@@ -217,6 +242,9 @@
 		newState: App.PageState,
 		replace: boolean = false
 	) => {
+		preserveFromUrl(queryParams, 'debug');
+		preserveFromUrl(queryParams, 'dark');
+		preserveFromUrl(queryParams, 'motis');
 		const params = new URLSearchParams(queryParams);
 		const updateState = replace ? replaceState : pushState;
 		updateState('?' + params.toString(), newState);
@@ -300,115 +328,122 @@
 		</Control>
 	{/if}
 
-	<Control
-		position="top-left"
-		class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop) ? 'hide' : ''}
-	>
-		<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-			<SearchMask
-				bind:from
-				bind:to
-				bind:time
-				bind:timeType
-				bind:wheelchair
-				bind:bikeRental
-				bind:bikeCarriage
-				bind:selectedModes={selectedTransitModes}
-			/>
-		</Card>
-	</Control>
-
 	<LevelSelect {bounds} {zoom} bind:level />
 
-	{#if routingResponses.length !== 0}
-		<Control
-			position="top-left"
-			class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}"
-		>
-			<Card
-				class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+	<div class="maplibregl-control-container">
+		<div class="maplibregl-ctrl-top-left">
+			<Control
+				class={isSmallScreen && (page.state.selectedItinerary || page.state.selectedStop)
+					? 'hide'
+					: ''}
 			>
-				<ItineraryList
-					{baseResponse}
-					{routingResponses}
-					{baseQuery}
-					selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
-				/>
-			</Card>
-		</Control>
-	{/if}
-
-	{#if page.state.selectedItinerary && !page.state.selectedStop}
-		<Control position="top-left" class="min-h-0 mb-12 md:mb-2">
-			<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
-				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-					<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
-					<Button
-						variant="ghost"
-						onclick={() => {
-							pushStateWithQueryString({}, {});
-						}}
-					>
-						<X />
-					</Button>
-				</div>
-				<div
-					class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
-						(showMap ? 'max-h-[40vh] md:max-h-[70vh]' : '')}
-				>
-					<ConnectionDetail itinerary={page.state.selectedItinerary} {onClickStop} {onClickTrip} />
-				</div>
-			</Card>
-		</Control>
-		{#if showMap}
-			<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
-		{/if}
-	{/if}
-
-	{#if page.state.selectedStop}
-		<Control position="top-left" class="min-h-0 md:mb-2">
-			<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
-				<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
-					<h2 class="ml-2 text-base font-semibold">
-						{#if page.state.stopArriveBy}
-							{t.arrivals}
-						{:else}
-							{t.departures}
-						{/if}
-						in
-						{stopNameFromResponse}
-					</h2>
-					<Button
-						variant="ghost"
-						onclick={() => {
-							pushStateWithQueryString(
-								{ tripId: page.state.tripId },
-								{ selectedItinerary: page.state.selectedItinerary }
-							); // TODO
-						}}
-					>
-						<X />
-					</Button>
-				</div>
-				<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
-					<StopTimes
-						stopId={page.state.selectedStop.stopId}
-						time={page.state.selectedStop.time}
-						bind:stopNameFromResponse
-						arriveBy={page.state.stopArriveBy}
-						setArriveBy={(arriveBy) =>
-							onClickStop(
-								page.state.selectedStop!.name,
-								page.state.selectedStop!.stopId,
-								page.state.selectedStop!.time,
-								arriveBy
-							)}
-						{onClickTrip}
+				<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+					<SearchMask
+						bind:from
+						bind:to
+						bind:time
+						bind:timeType
+						bind:wheelchair
+						bind:bikeRental
+						bind:bikeCarriage
+						bind:selectedModes={selectedTransitModes}
 					/>
-				</div>
-			</Card>
-		</Control>
-	{/if}
+				</Card>
+			</Control>
+
+			{#if routingResponses.length !== 0}
+				<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
+					<Card
+						class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
+					>
+						<ItineraryList
+							{baseResponse}
+							{routingResponses}
+							{baseQuery}
+							selectItinerary={(selectedItinerary) => pushState('', { selectedItinerary })}
+							updateStartDest={updateStartDest(from, to)}
+						/>
+					</Card>
+				</Control>
+			{/if}
+
+			{#if page.state.selectedItinerary && !page.state.selectedStop}
+				<Control class="min-h-0 mb-12 md:mb-2">
+					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
+						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
+							<h2 class="ml-2 text-base font-semibold">{t.journeyDetails}</h2>
+							<Button
+								variant="ghost"
+								onclick={() => {
+									pushStateWithQueryString({}, {});
+								}}
+							>
+								<X />
+							</Button>
+						</div>
+						<div
+							class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
+								(showMap ? 'max-h-[40vh] md:max-h-[70vh]' : '')}
+						>
+							<ConnectionDetail
+								itinerary={page.state.selectedItinerary}
+								{onClickStop}
+								{onClickTrip}
+							/>
+						</div>
+					</Card>
+				</Control>
+				{#if showMap}
+					<ItineraryGeoJson itinerary={page.state.selectedItinerary} {level} />
+				{/if}
+			{/if}
+
+			{#if page.state.selectedStop}
+				<Control class="min-h-0 md:mb-2">
+					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
+						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
+							<h2 class="ml-2 text-base font-semibold">
+								{#if page.state.stopArriveBy}
+									{t.arrivals}
+								{:else}
+									{t.departures}
+								{/if}
+								in
+								{stopNameFromResponse}
+							</h2>
+							<Button
+								variant="ghost"
+								onclick={() => {
+									pushStateWithQueryString(
+										{ tripId: page.state.tripId },
+										{ selectedItinerary: page.state.selectedItinerary }
+									);
+								}}
+							>
+								<X />
+							</Button>
+						</div>
+						<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
+							<StopTimes
+								stopId={page.state.selectedStop.stopId}
+								time={page.state.selectedStop.time}
+								bind:stopNameFromResponse
+								arriveBy={page.state.stopArriveBy}
+								setArriveBy={(arriveBy) =>
+									onClickStop(
+										page.state.selectedStop!.name,
+										page.state.selectedStop!.stopId,
+										page.state.selectedStop!.time,
+										arriveBy
+									)}
+								{onClickTrip}
+							/>
+						</div>
+					</Card>
+				</Control>
+			{/if}
+		</div>
+	</div>
 
 	{#if showMap}
 		<RailViz {map} {bounds} {zoom} {onClickTrip} />
@@ -429,17 +464,21 @@
 			<Marker color="red" draggable={true} {level} bind:location={to} bind:marker={toMarker} />
 		{/if}
 	{:else}
-		<Control position="bottom-left" class="pb-4">
-			<Button
-				size="icon"
-				variant="default"
-				onclick={() => {
-					showMap = true;
-					flyToSelectedItinerary();
-				}}
-			>
-				<MapIcon class="h-[1.2rem] w-[1.2rem]" />
-			</Button>
-		</Control>
+		<div class="maplibregl-control-container">
+			<div class="maplibregl-ctrl-bottom-left">
+				<Control class="pb-4">
+					<Button
+						size="icon"
+						variant="default"
+						onclick={() => {
+							showMap = true;
+							flyToSelectedItinerary();
+						}}
+					>
+						<MapIcon class="h-[1.2rem] w-[1.2rem]" />
+					</Button>
+				</Control>
+			</div>
+		</div>
 	{/if}
 </Map>
