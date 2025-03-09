@@ -97,8 +97,16 @@ Invoke-WebRequest https://github.com/motis-project/test-data/archive/refs/heads/
 
 # Documentation
 
-- Developer Setup
-  - [for Linux](docs/linux-dev-setup.md)
-  - [for Windows](docs/windows-dev-setup.md)
-  - [for macOS](docs/macos-dev-setup.md)
+## Developer Setup
+
+Build MOTIS from source:
+- [for Linux](docs/linux-dev-setup.md)
+- [for Windows](docs/windows-dev-setup.md)
+- [for macOS](docs/macos-dev-setup.md)
+
+MOTIS uses [pkg](https://github.com/motis-project/pkg) for dependency management.
+See its [README](https://github.com/motis-project/pkg/blob/master/README.md) for how to work with it.
+
+## Configuration
+
 - [Advanced Setups](docs/setup.md)
