@@ -149,8 +149,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     }
 
     h = cista::build_hash(
-        h, t.first_day_, t.num_days_, t.with_shapes_, t.ignore_errors_,
-        t.adjust_footpaths_, t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
+        h, t.first_day_, t.num_days_, t.with_shapes_, t.adjust_footpaths_,
+        t.merge_dupes_intra_src_, t.merge_dupes_inter_src_,
         t.link_stop_distance_, t.update_interval_, t.incremental_rt_update_,
         t.max_footpath_length_, t.default_timezone_, t.assistance_times_);
   }
