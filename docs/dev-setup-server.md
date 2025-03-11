@@ -1,9 +1,9 @@
 # Setting up a server from a development build
 
 1. Build `motis`. Refer to the respective documentation if necessary:
-   - Linux: https://github.com/motis-project/motis/blob/master/docs/linux-dev-setup.md
-   - Windows: https://github.com/motis-project/motis/blob/master/docs/windows-dev-setup.md
-   - MacOS: https://github.com/motis-project/motis/blob/master/docs/macos-dev-setup.md
+   - [for Linux](linux-dev-setup.md)
+   - [for Windows](windows-dev-setup.md)
+   - [for macOS](macos-dev-setup.md)
 
 
 2. Build the UI:
