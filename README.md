@@ -104,6 +104,9 @@ Build MOTIS from source:
 - [for Windows](docs/windows-dev-setup.md)
 - [for macOS](docs/macos-dev-setup.md)
 
+Set up a server using your build:
+- [for Linux](docs/dev-setup-server.md)
+
 MOTIS uses [pkg](https://github.com/motis-project/pkg) for dependency management.
 See its [README](https://github.com/motis-project/pkg/blob/master/README.md) for how to work with it.
 
