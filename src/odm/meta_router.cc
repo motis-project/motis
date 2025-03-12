@@ -166,8 +166,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      std::chrono::seconds{kODMMaxDuration}, query.maxMatchingDistance_,
-      query.fastestDirectFactor_);
+      kODMMaxDuration, query.maxMatchingDistance_, query.fastestDirectFactor_);
 
   if (kODMDirectImprovement * taxi_duration > fastest_direct) {
     fmt::println(
