@@ -56,6 +56,7 @@ constexpr auto const kODMLookAhead = 27h;
 constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectImprovement = 4.0;
 constexpr auto const kODMDirectPeriod = 1h;
+constexpr auto const kODMMaxDuration = 3600s;
 constexpr auto const kMinODMOffsetLength = n::duration_t{3};
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
@@ -165,7 +166,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      std::chrono::seconds{query.maxDirectTime_}, query.maxMatchingDistance_,
+      std::chrono::seconds{kODMMaxDuration}, query.maxMatchingDistance_,
       query.fastestDirectFactor_);
 
   if (kODMDirectImprovement * taxi_duration > fastest_direct) {
@@ -255,7 +256,7 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
 
   p->init(from_place_, to_place_, query_);
 
-  auto direct_duration = std::optional<std::chrono::duration<int64_t>>{};
+  auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
     direct_duration =
         init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
@@ -268,10 +269,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
             start_time_,
             query_.arriveBy_ ? start_time_.dest_match_mode_
                              : start_time_.start_match_mode_,
-            std::chrono::seconds{direct_duration
-                                     ? std::min(direct_duration->count(),
-                                                query_.maxPreTransitTime_)
-                                     : query_.maxPreTransitTime_});
+            direct_duration ? std::min(*direct_duration, kODMMaxDuration)
+                            : kODMMaxDuration);
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
@@ -280,10 +279,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
             start_time_,
             query_.arriveBy_ ? start_time_.start_match_mode_
                              : start_time_.dest_match_mode_,
-            std::chrono::seconds{direct_duration
-                                     ? std::min(direct_duration->count(),
-                                                query_.maxPostTransitTime_)
-                                     : query_.maxPostTransitTime_});
+            direct_duration ? std::min(*direct_duration, kODMMaxDuration)
+                            : kODMMaxDuration);
   }
 
   std::erase(start_modes_, api::ModeEnum::ODM);
