@@ -6,7 +6,7 @@ In the following, we list requirements and a download link. There may be other s
 - Ninja: [ninja-build.org](https://ninja-build.org/)
 
 > [!CAUTION]
-> Motis' dependency management `pkg` requires that the project is cloned via SSH using a SSH key without a passphrase.
+> Motis' dependency management `pkg` requires that the project is cloned via SSH using an SSH key without a passphrase.
 > See:
 > - [GitHub Docs: Generate new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
 > - [GitHub Docs: Add a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
