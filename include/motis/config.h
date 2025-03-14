@@ -19,7 +19,6 @@ using headers_t = std::map<std::string, std::string>;
 struct config {
   friend std::ostream& operator<<(std::ostream&, config const&);
   static config read_simple(std::vector<std::string> const& args);
-  static config read_legacy(std::filesystem::path const&);
   static config read(std::filesystem::path const&);
   static config read(std::string const&);
 
@@ -76,6 +75,7 @@ struct config {
     };
 
     bool operator==(timetable const&) const = default;
+
     std::string first_day_{"TODAY"};
     std::uint16_t num_days_{365U};
     bool railviz_{true};
@@ -129,9 +129,16 @@ struct config {
   };
   std::optional<odm> odm_{};
 
+  struct elevators {
+    bool operator==(elevators const&) const = default;
+    unsigned http_timeout_{10};
+    std::optional<headers_t> headers_{};
+    std::string url_;
+  };
+  std::optional<elevators> elevators_;
+
   bool street_routing_{false};
   bool osr_footpath_{false};
-  bool elevators_{false};
   bool geocoding_{false};
   bool reverse_geocoding_{false};
 };

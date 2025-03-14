@@ -14,7 +14,10 @@
 #include "nigiri/rt/rt_timetable.h"
 
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/data.h"
+#include "motis/elevators/elevators.h"
+#include "motis/elevators/parse_fasta.h"
 #include "motis/http_req.h"
 #include "motis/railviz.h"
 #include "motis/tag_lookup.h"
@@ -24,6 +27,66 @@ namespace asio = boost::asio;
 using asio::awaitable;
 
 namespace motis {
+
+using elevator_map_t = hash_map<std::int64_t, elevator_idx_t>;
+
+elevator_map_t to_map(vector_map<elevator_idx_t, elevator> const& elevators) {
+  auto m = elevator_map_t{};
+  for (auto const [i, e] : utl::enumerate(elevators)) {
+    m.emplace(e.id_, elevator_idx_t{i});
+  }
+  return m;
+}
+
+asio::awaitable<ptr<elevators>> update_elevators(
+    point_rtree<nigiri::location_idx_t> const& loc_rtree,
+    config::elevators const& c,
+    elevators const& old_e) {
+  auto const res = co_await http_GET(boost::urls::url{c.url_},
+                                     c.headers_.value_or(headers_t{}),
+                                     std::chrono::seconds{c.http_timeout_});
+  auto const body = get_http_body(res);
+  auto const new_e = parse_fasta(std::string_view{body});
+
+  auto const old_map = to_map(old_e.elevators_);
+  auto const new_map = to_map(new_e);
+
+  auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
+  auto const add_tasks = [&](geo::latlng const& l) {
+    loc_rtree.in_radius(l, kElevatorUpdateRadius,
+                        [&](n::location_idx_t const l) {
+                          tasks.emplace(l, osr::direction::kForward);
+                          tasks.emplace(l, osr::direction::kBackward);
+                        });
+  };
+
+  for (auto const [id, e_idx] : old_map) {
+    auto const it = new_map.find(id);
+    if (it == end(new_map)) {
+      // Elevator got removed.
+      // Not listed in new => default status = ACTIVE
+      // Update if INACTIVE before (= status changed)
+      if (old_e.elevators_[e_idx].status_ == false) {
+        add_tasks(old_e.elevators_[e_idx].pos_);
+      }
+    } else {
+      // Elevator remained. Update if status changed.
+      if (new_e[it->second].status_ != old_e.elevators_[e_idx].status_) {
+        add_tasks(new_e[it->second].pos_);
+      }
+    }
+  }
+
+  for (auto const [id, e_idx] : new_map) {
+    auto const it = old_map.find(id);
+    if (it == end(old_map)) {
+      // New elevator not seen before. Update.
+      add_tasks(new_e[e_idx].pos_);
+    }
+  }
+
+  co_return std::make_unique<elevators>(e);
+}
 
 void run_rt_update(boost::asio::io_context& ioc,
                    config const& c,
@@ -113,7 +176,11 @@ void run_rt_update(boost::asio::io_context& ioc,
 
             // Update real-time timetable shared pointer.
             auto railviz_rt = std::make_unique<railviz_rt_index>(tt, *rtt);
-            r = std::make_shared<rt>(std::move(rtt), std::move(r->e_),
+            auto elevators =
+                c.elevators_.has_value()
+                    ? co_await update_elevators(*c.elevators_, *r->e_)
+                    : std::move(r->e_);
+            r = std::make_shared<rt>(std::move(rtt), std::move(elevators),
                                      std::move(railviz_rt));
           }
 
