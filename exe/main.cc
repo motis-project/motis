@@ -128,8 +128,7 @@ int main(int ac, char** av) {
           break;
         }
 
-        c = config_path.extension() == ".ini" ? config::read_legacy(config_path)
-                                              : config::read(config_path);
+        c = config::read(config_path);
         auto const bars = utl::global_progress_bars{false};
         import(c, std::move(data_path));
         return_value = 0;
@@ -143,7 +142,8 @@ int main(int ac, char** av) {
     }
 
     default:
-      fmt::println("Invalid command. Type motis --help for a list of commands.");
+      fmt::println(
+          "Invalid command. Type motis --help for a list of commands.");
       return_value = 1;
       break;
   }
