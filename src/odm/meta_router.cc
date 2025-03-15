@@ -57,7 +57,7 @@ constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectImprovement = 4.0;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kODMMaxDuration = 3600s;
-constexpr auto const kMinODMOffsetLength = n::duration_t{3};
+constexpr auto const kMinODMOffsetLength = n::duration_t{2};
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
@@ -222,6 +222,9 @@ void init_pt(std::vector<n::routing::start>& rides,
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     if (o.duration_ < kMinODMOffsetLength) {
+      fmt::println("Remove for {} < kMinODMOffsetLength={}",
+                   fmt::streamed(n::location{*r.tt_, o.target_}), o.duration_,
+                   kMinODMOffsetLength);
       return true;
     }
     auto const out_of_bounds =
