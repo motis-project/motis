@@ -222,7 +222,7 @@ void init_pt(std::vector<n::routing::start>& rides,
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
     if (o.duration_ < kMinODMOffsetLength) {
-      fmt::println("Remove for {} < kMinODMOffsetLength={}",
+      fmt::println("Remove for {}: {} < kMinODMOffsetLength={}",
                    fmt::streamed(n::location{*r.tt_, o.target_}), o.duration_,
                    kMinODMOffsetLength);
       return true;
@@ -295,7 +295,6 @@ bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
 }
 
 auto ride_time_halves(std::vector<n::routing::start>& rides) {
-
   auto const by_duration = [](auto const& a, auto const& b) {
     auto const duration = [](auto const& ride) {
       return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
@@ -304,9 +303,12 @@ auto ride_time_halves(std::vector<n::routing::start>& rides) {
   };
 
   utl::sort(rides, by_duration);
-  auto const split = std::distance(
-      begin(rides), std::upper_bound(begin(rides), end(rides),
-                                     rides[rides.size() / 2], by_duration));
+  auto const split =
+      rides.empty() ? 0
+                    : std::distance(begin(rides),
+                                    std::upper_bound(begin(rides), end(rides),
+                                                     rides[rides.size() / 2],
+                                                     by_duration));
 
   auto lo = rides | std::views::take(split);
   auto hi = rides | std::views::drop(split);
