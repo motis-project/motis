@@ -20,16 +20,14 @@ paths:
       tags:
         - routing
       summary: |
-        TODO One-to-All routing
-        Street routing from one to many places or many to one.
-        The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
+        Computes all reachable locations from a given stop within a set duration.
+        Each result entry will contain the fastest travel duration and the number of connections used.
       operationId: oneToAll
       parameters:
         - name: one
           in: query
           required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
-          # description: geo location as latitude;longitude
+          description: stop id of the starting or ending stop
           schema:
             type: string
         - name: mode
@@ -39,26 +37,6 @@ paths:
             routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
           schema:
             $ref: '#/components/schemas/Mode'
-        - name: max
-          in: query
-          required: true
-          description: maximum travel time in minutes
-          schema:
-            type: integer
-        - name: maxMatchingDistance
-          in: query
-          required: true
-          description: maximum matching distance in meters to match geo coordinates to the street network
-          schema:
-            type: number
-        - name: arriveBy
-          in: query
-          required: true
-          description: |
-            true = all to one
-            false = one to all
-          schema:
-            type: boolean
         - name: time
           in: query
           required: false
@@ -69,6 +47,21 @@ paths:
           schema:
             type: string
             format: date-time
+        - name: max
+          in: query
+          required: true
+          description: maximum travel time in minutes
+          schema:
+            type: integer
+        - name: arriveBy
+          in: query
+          required: false
+          description: |
+            true = all to one
+            false = one to all
+          schema:
+            type: boolean
+            default: false
         - name: maxTransfers
           in: query
           required: false
@@ -90,7 +83,7 @@ paths:
             Optional. Default is `FOOT`.
 
             Accessibility profile to use for pedestrian routing in transfers
-            between transit connections, on the first mile, and last mile.
+            between transit connections and the first and last mile respectively.
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
