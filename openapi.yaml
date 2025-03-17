@@ -18,7 +18,7 @@ paths:
   /api/v1/one-to-all:
     get:
       tags:
-        - geocode
+        - routing
       summary: |
         TODO One-to-All routing
         Street routing from one to many places or many to one.
