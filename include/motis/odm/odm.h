@@ -21,6 +21,8 @@ bool is_pure_pt(nigiri::routing::journey const&);
 
 bool is_direct_odm(nigiri::routing::journey const&);
 
+nigiri::duration_t odm_time(nigiri::routing::journey::leg const&);
+
 nigiri::duration_t odm_time(nigiri::routing::journey const&);
 
 }  // namespace motis::odm
