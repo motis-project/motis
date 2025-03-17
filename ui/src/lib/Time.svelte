@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { language } from '$lib/i18n/translation';
 	import { formatTime } from './toDateTime';
 	import { cn } from './utils';
 
@@ -7,13 +8,15 @@
 		timestamp,
 		scheduledTimestamp,
 		isRealtime,
-		variant
+		variant,
+		queriedTime
 	}: {
 		class?: string;
 		timestamp: string;
 		scheduledTimestamp: string;
 		isRealtime: boolean;
 		variant: 'schedule' | 'realtime' | 'realtime-show-always';
+		queriedTime?: string | undefined;
 	} = $props();
 
 	const t = $derived(new Date(timestamp));
@@ -21,14 +24,29 @@
 	const delayMinutes = $derived((t.getTime() - scheduled.getTime()) / 60000);
 	const highDelay = $derived(isRealtime && delayMinutes > 3);
 	const lowDelay = $derived(isRealtime && delayMinutes <= 3);
+
+	function weekday(time: Date) {
+		if (variant === 'realtime') {
+			return '';
+		}
+		if (queriedTime === undefined) {
+			return time.toLocaleDateString(language);
+		}
+		const base = new Date(queriedTime);
+		return base.toLocaleDateString() === time.toLocaleDateString()
+			? ''
+			: `(${time.toLocaleString(language, { weekday: 'short' })})`;
+	}
 </script>
 
 <div class={cn('text-nowrap', className)}>
 	{#if variant == 'schedule'}
 		{formatTime(scheduled)}
+		{weekday(scheduled)}
 	{:else if variant === 'realtime-show-always' || (variant === 'realtime' && isRealtime)}
-		<div class:text-destructive={highDelay} class:text-green-600={lowDelay}>
+		<span class:text-destructive={highDelay} class:text-green-600={lowDelay}>
 			{formatTime(t)}
-		</div>
+		</span>
+		{weekday(t)}
 	{/if}
 </div>

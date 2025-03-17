@@ -32,6 +32,7 @@
 	<Time
 		variant="schedule"
 		class="font-semibold w-16"
+		queriedTime={timestamp}
 		{isRealtime}
 		{timestamp}
 		{scheduledTimestamp}

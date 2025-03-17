@@ -45,9 +45,9 @@ std::int32_t distance(nr::journey const& a, nr::journey const& b) {
 }
 
 std::string label(nr::journey const& j) {
-  return std::format("[dep: {}, arr: {}, dur: {}, transfers: {}]",
+  return std::format("[dep: {}, arr: {}, dur: {}, transfers: {}, odm_time: {}]",
                      j.departure_time(), j.arrival_time(), j.travel_time(),
-                     std::uint32_t{j.transfers_});
+                     std::uint32_t{j.transfers_}, odm_time(j));
 }
 
 double mixer::cost(nr::journey const& j) const {
@@ -101,7 +101,7 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
                           static_cast<double>(b.travel_time().count());
   auto const dist = distance(a, b);
   auto const alpha_term = alpha_ * time_ratio * dist;
-  auto const ret = cost_a + alpha_term < cost_b;
+  auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing && ret) {
     fmt::println("{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {}",
                  label(a), label(b), time_ratio, dist, cost_a, alpha_term,
@@ -181,8 +181,9 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 }
 
 mixer get_default_mixer() {
-  return mixer{.alpha_ = 1.5,
+  return mixer{.alpha_ = 5.3,
                .direct_taxi_penalty_ = 200,
+               .max_distance_ = 90,
                .walk_cost_ = {{0, 1}, {15, 10}},
                .taxi_cost_ = {{0, 35}, {1, 12}},
                .transfer_cost_ = {{0, 10}}};

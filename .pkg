@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=8d0534163972cf4480269794a355611d35cad3df
+  commit=4bd637c4bb7c2a9fb40fc20c9f6066ce682f2846
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,11 +9,11 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=48b0f599173cd821004ff11bab2b78ec9ce47909
+  commit=e1fa2a66719cbfe6925507cd399523da247484e8
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
-  commit=659d088d61718255547f83709f5cebc868c60708
+  commit=afa4b1787c83f24fe7e11fa84902d3d51727e08b
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
@@ -21,27 +21,27 @@
 [googletest]
   url=git@github.com:motis-project/googletest.git
   branch=master
-  commit=34a46558609e05865c197f0260ab36daa7cbbb6e
+  commit=7b64fca6ea0833628d6f86255a81424365f7cc0c
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=43423bb08c636c9dd91e4d58b5b557c6d2f25efe
+  commit=6fdf6f519483aee7bba6c0756834defe4a806dfd
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
-  commit=688d45bd96addb26eaccc5d264761030e5ef43f9
+  commit=efd83cf208b982ef6aff403caa5c245eabc4a057
 [unordered_dense]
   url=git@github.com:motis-project/unordered_dense.git
-  branch=master
-  commit=b33b037377ca966bbdd9cccc3417e46e88f83bfb
+  branch=main
+  commit=2c7230ae7f9c30849a5b089fb4a5d11896b45dcf
 [reflect-cpp]
   url=git@github.com:motis-project/reflect-cpp.git
   branch=main
-  commit=c54fe66de4650b60c23aadd4a06d9db4ffeda22f
+  commit=165b617ac54400bf34f261b07376437157f19a63
 [tiles]
   url=git@github.com:motis-project/tiles.git
   branch=master
-  commit=ab6c4b13544570f893c2d64434c613d8fd7d2ceb
+  commit=5de1295f15cd01d504f1953697ccd02159ab3f32
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=boost-1.86.0
@@ -57,4 +57,4 @@
 [lz4]
   url=git@github.com:motis-project/lz4.git
   branch=dev
-  commit=c4765545ebb14b0a56c663e21923166923f8280e
+  commit=ff69dbd1ad10852104257d5306874a07b76f0dbd

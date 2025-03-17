@@ -5,7 +5,7 @@
 
 	let {
 		children,
-		position = 'top-right',
+		position,
 		class: className
 	}: {
 		children?: Snippet;
@@ -31,7 +31,7 @@
 	let ctx: { map: Map | null } = getContext('map');
 
 	$effect(() => {
-		if (ctx.map && el) {
+		if (ctx.map && el && position != undefined) {
 			ctx.map.addControl(ctrl, position);
 			initialized = true;
 		}
@@ -41,7 +41,7 @@
 </script>
 
 <div
-	class:hidden={!initialized}
+	class:hidden={!initialized && position != undefined}
 	class={cn('clear-both pointer-events-auto pt-2 md:pt-4 px-2 md:px-4 max-w-full', className)}
 	bind:this={el}
 >

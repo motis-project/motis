@@ -31,6 +31,7 @@ struct mixer {
 
   double alpha_;
   double direct_taxi_penalty_;
+  std::int32_t max_distance_;
   std::vector<cost_threshold> walk_cost_;
   std::vector<cost_threshold> taxi_cost_;
   std::vector<cost_threshold> transfer_cost_;

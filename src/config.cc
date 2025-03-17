@@ -388,7 +388,6 @@ config config::read_legacy(fs::path const& p) {
                            .first_day_ = cfg.first_day_,
                            .num_days_ = cfg.num_days_,
                            .with_shapes_ = cfg.shapes_,
-                           .ignore_errors_ = true,
                            .adjust_footpaths_ = cfg.adjust_footpaths_,
                            .merge_dupes_intra_src_ = cfg.merge_dupes_intra_src_,
                            .merge_dupes_inter_src_ = cfg.merge_dupes_inter_src_,
