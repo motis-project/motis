@@ -126,8 +126,8 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto elevators = std::async(std::launch::async, [&]() {
-    street_routing.wait();
     if (c.elevators_) {
+      street_routing.wait();
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
     }
