@@ -105,7 +105,7 @@ int server(data d, config const& c) {
     rt_update_ioc = std::make_unique<asio::io_context>();
     rt_update_thread = std::make_unique<std::thread>([&]() {
       utl::set_current_thread_name("motis rt update");
-      run_rt_update(*rt_update_ioc, c, *d.tt_, *d.tags_, d.rt_);
+      run_rt_update(*rt_update_ioc, c, d);
       rt_update_ioc->run();
     });
   }
