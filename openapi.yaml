@@ -64,7 +64,7 @@ paths:
           required: false
           description: |
             Optional. Defaults to the current time.
-            
+
             Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
           schema:
             type: string
@@ -76,7 +76,7 @@ paths:
             The maximum number of allowed transfers.
             If not provided, the routing uses the server-side default value
             which is hardcoded and very high to cover all use cases.
-            
+
             *Warning*: Use with care. Setting this too low can lead to
             optimal (e.g. the fastest) journeys not being found.
             If this value is too low to reach the destination at all,
@@ -88,7 +88,7 @@ paths:
           required: false
           description: |
             Optional. Default is `FOOT`.
-            
+
             Accessibility profile to use for pedestrian routing in transfers
             between transit connections, on the first mile, and last mile.
           schema:
