@@ -88,15 +88,15 @@ double mixer::cost(nr::journey const& j) const {
                                  : n::duration_t{0});
   };
 
-  return (leg_cost(j.legs_.front()) +
-          (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
-          pt_time(j).count() + transfer_cost(j)) +
-         (is_direct_odm(j) ? direct_taxi_penalty_ : 0);
+  return leg_cost(j.legs_.front()) +
+         (j.legs_.size() > 1 ? leg_cost(j.legs_.back()) : 0) +
+         pt_time(j).count() + transfer_cost(j);
 };
 
 bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
   auto const cost_a = cost(a);
-  auto const cost_b = cost(b);
+  auto const cost_b =
+      cost(b) + (is_pure_pt(a) && is_direct_odm(b) ? direct_taxi_penalty_ : 0);
   auto const time_ratio = static_cast<double>(a.travel_time().count()) /
                           static_cast<double>(b.travel_time().count());
   auto const dist = distance(a, b);

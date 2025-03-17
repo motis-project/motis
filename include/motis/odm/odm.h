@@ -15,6 +15,10 @@ enum which_mile { kFirstMile, kLastMile };
 
 bool is_odm_leg(nigiri::routing::journey::leg const&);
 
+bool uses_odm(nigiri::routing::journey const&);
+
+bool is_pure_pt(nigiri::routing::journey const&);
+
 bool is_direct_odm(nigiri::routing::journey const&);
 
 nigiri::duration_t odm_time(nigiri::routing::journey const&);

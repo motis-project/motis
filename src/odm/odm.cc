@@ -15,6 +15,14 @@ bool is_odm_leg(nr::journey::leg const& l) {
              kOdmTransportModeId;
 }
 
+bool uses_odm(nr::journey const& j) { return utl::any_of(j.legs_, is_odm_leg); }
+
+bool is_pure_pt(nr::journey const& j) { return !uses_odm(j); };
+
+bool is_direct_odm(nr::journey const& j) {
+  return j.legs_.size() == 1U && uses_odm(j);
+}
+
 n::duration_t odm_time(nr::journey const& j) {
   return j.legs_.empty() ? n::duration_t{0}
          : is_odm_leg(j.legs_.front())
@@ -23,13 +31,6 @@ n::duration_t odm_time(nr::journey const& j) {
                    ((j.legs_.size() > 1 && is_odm_leg(j.legs_.back()))
                         ? std::get<nr::offset>(j.legs_.back().uses_).duration()
                         : n::duration_t{0});
-}
-
-bool is_direct_odm(nr::journey const& j) {
-  return j.legs_.size() == 1U &&
-         std::holds_alternative<nr::offset>(j.legs_.front().uses_) &&
-         std::get<nr::offset>(j.legs_.front().uses_).transport_mode_id_ ==
-             kOdmTransportModeId;
 }
 
 }  // namespace motis::odm
