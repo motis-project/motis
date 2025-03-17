@@ -17,7 +17,7 @@ paths:
   /api/v1/one-to-many:
     get:
       tags:
-        - geocode
+        - routing
       summary: |
         Street routing from one to many places or many to one.
         The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
