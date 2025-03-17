@@ -126,11 +126,10 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto elevators = std::async(std::launch::async, [&]() {
-    tt.wait();
     street_routing.wait();
-    matches.wait();
     if (c.elevators_) {
-      load_elevators();
+      rt_->e_ = std::make_unique<motis::elevators>(
+          *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
     }
   });
 
@@ -232,17 +231,6 @@ void data::load_reverse_geocoder() {
 
 void data::load_matches() {
   matches_ = cista::read<platform_matches_t>(path_ / "matches.bin");
-}
-
-void data::load_elevators() {
-  rt_->e_ = std::make_unique<elevators>(*w_, *elevator_nodes_,
-                                        vector_map<elevator_idx_t, elevator>{});
-
-  auto const elevator_footpath_map =
-      cista::read<elevator_footpath_map_t>(path_ / "elevator_footpath_map.bin");
-  update_rtt_td_footpaths(*w_, *l_, *pl_, *tt_, *location_rtee_, *rt_->e_,
-                          *elevator_footpath_map, *matches_, *rt_->rtt_,
-                          std::chrono::seconds{kMaxDuration});
 }
 
 void data::load_tiles() {
