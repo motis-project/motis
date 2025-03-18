@@ -68,6 +68,39 @@ paths:
             it can lead to slow routing performance.
           schema:
             type: integer
+        - name: minTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Minimum transfer time for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: additionalTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Additional transfer time reserved for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: transferTimeFactor
+          in: query
+          required: false
+          description: |
+            Optional. Default is 1.0
+
+            Factor to multiply minimum required transfer times with.
+            Values smaller than 1.0 are not supported.
+          schema:
+            type: number
+            default: 1.0
         - name: useRoutedTransfers
           in: query
           required: false
@@ -89,6 +122,30 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+        - name: transitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+            Allowed modes for the transit part. If empty, no transit connections will be computed.
+            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+          schema:
+            default:
+              - TRANSIT
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow bike carriage.
         - name: maxPreTransitTime
           in: query
           required: false

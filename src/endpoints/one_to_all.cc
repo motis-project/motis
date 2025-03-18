@@ -15,6 +15,7 @@
 #include "motis-api/motis-api.h"
 #include "motis/place.h"
 #include "motis/tag_lookup.h"
+#include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace motis::ep {
 
@@ -50,6 +51,17 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                      ? 2U
                      : 1U)
               : 0U),
+      .allowed_claszes_ = to_clasz_mask(query.transitModes_),
+      .require_bike_transport_ = query.requireBikeTransport_,
+      .transfer_time_settings_ =
+          nigiri::routing::transfer_time_settings{
+              .default_ = (query.minTransferTime_ == 0 &&
+                           query.additionalTransferTime_ == 0 &&
+                           query.transferTimeFactor_ == 1.0),
+              .min_transfer_time_ = nigiri::duration_t{query.minTransferTime_},
+              .additional_time_ =
+                  nigiri::duration_t{query.additionalTransferTime_},
+              .factor_ = static_cast<float>(query.transferTimeFactor_)},
   };
 
   auto const state = [&]() {
