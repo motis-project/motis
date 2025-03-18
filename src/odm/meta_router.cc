@@ -55,6 +55,7 @@ static boost::thread_specific_ptr<prima> p;
 constexpr auto const kODMLookAhead = 27h;
 constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectPeriod = 1h;
+constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMMaxDuration = 3600s;
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
@@ -163,9 +164,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      kODMMaxDuration, query.maxMatchingDistance_, query.fastestDirectFactor_);
-
-  taxi_duration += kODMTransferBuffer;
+      kODMMaxDuration, query.maxMatchingDistance_, kODMDirectFactor);
 
   if (query.arriveBy_) {
     for (auto arr =
