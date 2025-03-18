@@ -14,6 +14,7 @@
 #include "motis/tag_lookup.h"
 
 namespace motis::ep {
+
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const query = api::oneToAll_params{url.params()};
 
@@ -24,7 +25,6 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
   auto const l = tags_.get_location(tt_, query.one_);
-  auto const pos = tt_.locations_.coordinates_[l];
 
   auto const q = nigiri::routing::query{
       .start_time_ = time,
@@ -43,19 +43,13 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     }
   }();
 
-  auto const one = api::Place{
-      .name_ = std::string{tt_.locations_.names_[l].view()},
-      .stopId_ = tags_.id(tt_, l),
-      .lat_ = pos.lat(),
-      .lon_ = pos.lng(),
-      .level_ = static_cast<double>(to_idx(get_lvl(w_, pl_, matches_, l))),
-      .departure_ = time,
-  };
+  auto const one = make_place(l, time,
+                              query.arriveBy_ ? nigiri::direction::kBackward
+                                              : nigiri::direction::kForward);
 
   auto all = std::vector<api::ReachablePlace>{};
   for (auto i = nigiri::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
     if (state.get_best<0>()[to_idx(i)][0] != unreachable) {
-      auto const dst = tt_.locations_.coordinates_[i];
       auto const fastest = [&]() {
         if (query.arriveBy_) {
           return nigiri::routing::get_fastest_one_to_all_offsets<
@@ -69,15 +63,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       }();
 
       all.emplace_back(
-          api::Place{
-              .name_ = std::string{tt_.locations_.names_[i].view()},
-              .stopId_ = tags_.id(tt_, i),
-              .lat_ = dst.lat(),
-              .lon_ = dst.lng(),
-              .level_ =
-                  static_cast<double>(to_idx(get_lvl(w_, pl_, matches_, i))),
-              .arrival_ = time + std::chrono::minutes{fastest.duration_},
-          },
+          make_place(i, time + std::chrono::minutes{fastest.duration_},
+                     query.arriveBy_ ? nigiri::direction::kForward
+                                     : nigiri::direction::kBackward),
           query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_);
     }
   }
@@ -85,6 +73,32 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .one_ = std::move(one),
       .all_ = std::move(all),
   };
+}
+
+api::Place one_to_all::make_place(nigiri::location_idx_t const l,
+                                  nigiri::unixtime_t const t,
+                                  nigiri::direction const dir) const {
+  auto const pos = tt_.locations_.coordinates_[l];
+
+  if (dir == nigiri::direction::kForward) {
+    return {
+        .name_ = std::string{tt_.locations_.names_[l].view()},
+        .stopId_ = tags_.id(tt_, l),
+        .lat_ = pos.lat(),
+        .lon_ = pos.lng(),
+        .level_ = static_cast<double>(to_idx(get_lvl(w_, pl_, matches_, l))),
+        .departure_ = t,
+    };
+  } else {
+    return {
+        .name_ = std::string{tt_.locations_.names_[l].view()},
+        .stopId_ = tags_.id(tt_, l),
+        .lat_ = pos.lat(),
+        .lon_ = pos.lng(),
+        .level_ = static_cast<double>(to_idx(get_lvl(w_, pl_, matches_, l))),
+        .arrival_ = t,
+    };
+  }
 }
 
 }  // namespace motis::ep
