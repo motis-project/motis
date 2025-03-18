@@ -1373,18 +1373,18 @@ components:
           $ref: '#/components/schemas/VertexType'
 
     ReachablePlace:
-      description: TODO Place reachable by One-to-All
+      description: Place reachable by One-to-All
       type: object
       properties:
         place:
           $ref: "#/components/schemas/Place"
-          description: TODO Transport mode for this leg
+          description: Place reached by One-to-All
         duration:
           type: integer
-          description: TODO Duration in minutes
-        transfers:
+          description: Total travel duration
+        connection_count:
           type: integer
-          description: TODO Number of transfers
+          description: Number of connections used
 
     Reachable:
       description: TODO Object containing duration if a path was found or none if no path was found
@@ -1392,11 +1392,10 @@ components:
       properties:
         one:
           $ref: "#/components/schemas/Place"
-          description: TODO One location for One-to-All search
+          description: One location used in One-to-All search
         all:
           description: |
-            TODO For transit legs, intermediate stops between the Place where the leg originates
-            and the Place where the leg ends. For non-transit legs, null.
+            List of locations reachable by One-to-All
           type: array
           items:
             $ref: "#/components/schemas/ReachablePlace"
