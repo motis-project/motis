@@ -146,16 +146,6 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow bike carriage.
-        - name: maxPreTransitTime
-          in: query
-          required: false
-          description: |
-            Optional. Default is 15min which is `900`.
-            Maximum time in seconds for the first street leg.
-          schema:
-            type: integer
-            default: 900
-            minimum: 0
       responses:
         200:
           description: |
