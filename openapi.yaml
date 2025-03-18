@@ -159,9 +159,8 @@ paths:
       responses:
         200:
           description: |
-            TODO Reachable locations
-            A list of durations.
-            If no path was found, the object is empty.
+            The starting position and a list of all reachable stops
+            If no paths are found, the reachable list is empty.
           content:
             application/json:
               schema:
@@ -1446,7 +1445,7 @@ components:
           description: Number of connections used
 
     Reachable:
-      description: TODO Object containing duration if a path was found or none if no path was found
+      description: Object all reachable places by One-to-All search
       type: object
       properties:
         one:
