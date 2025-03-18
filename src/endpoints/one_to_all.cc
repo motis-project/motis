@@ -43,9 +43,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     }
   }();
 
-  auto const one = make_place(l, time,
-                              query.arriveBy_ ? nigiri::direction::kBackward
-                                              : nigiri::direction::kForward);
+  auto const one = make_place(
+      l, time, query.arriveBy_ ? direction::kArrival : direction::kDeparture);
 
   auto all = std::vector<api::ReachablePlace>{};
   for (auto i = nigiri::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
@@ -63,9 +62,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       }();
 
       all.emplace_back(
-          make_place(i, time + std::chrono::minutes{fastest.duration_},
-                     query.arriveBy_ ? nigiri::direction::kForward
-                                     : nigiri::direction::kBackward),
+          make_place(
+              i, time + std::chrono::minutes{fastest.duration_},
+              query.arriveBy_ ? direction::kDeparture : direction::kArrival),
           query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_);
     }
   }
@@ -77,17 +76,17 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
 api::Place one_to_all::make_place(nigiri::location_idx_t const l,
                                   nigiri::unixtime_t const t,
-                                  nigiri::direction const dir) const {
+                                  direction const dir) const {
   auto const pos = tt_.locations_.coordinates_[l];
 
-  if (dir == nigiri::direction::kForward) {
+  if (dir == direction::kArrival) {
     return {
         .name_ = std::string{tt_.locations_.names_[l].view()},
         .stopId_ = tags_.id(tt_, l),
         .lat_ = pos.lat(),
         .lon_ = pos.lng(),
         .level_ = static_cast<double>(to_idx(get_lvl(w_, pl_, matches_, l))),
-        .departure_ = t,
+        .arrival_ = t,
     };
   } else {
     return {
@@ -96,7 +95,7 @@ api::Place one_to_all::make_place(nigiri::location_idx_t const l,
         .lat_ = pos.lat(),
         .lon_ = pos.lng(),
         .level_ = static_cast<double>(to_idx(get_lvl(w_, pl_, matches_, l))),
-        .arrival_ = t,
+        .departure_ = t,
     };
   }
 }
