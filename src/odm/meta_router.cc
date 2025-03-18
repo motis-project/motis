@@ -168,19 +168,6 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
       kODMMaxDuration, query.maxMatchingDistance_, query.fastestDirectFactor_);
 
-  if (kODMDirectImprovement * taxi_duration > fastest_direct) {
-    fmt::println(
-        "[init] direct rides prohibited, improvement factor {} (taxi: "
-        "{}, walk: {})",
-        kODMDirectImprovement, taxi_duration, fastest_direct);
-    return taxi_duration;
-  }
-
-  fmt::println(
-      "[init] allowing direct rides, improvement factor {} (taxi: {}, "
-      "walk: {})",
-      kODMDirectImprovement, taxi_duration, fastest_direct);
-
   if (query.arriveBy_) {
     for (auto arr =
              std::chrono::floor<std::chrono::hours>(intvl.to_ - taxi_duration) +
@@ -221,12 +208,6 @@ void init_pt(std::vector<n::routing::start>& rides,
       query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
-    if (o.duration_ < kMinODMOffsetLength) {
-      fmt::println("Remove for {}: {} < kMinODMOffsetLength={}",
-                   fmt::streamed(n::location{*r.tt_, o.target_}), o.duration_,
-                   kMinODMOffsetLength);
-      return true;
-    }
     auto const out_of_bounds =
         (r.odm_bounds_ != nullptr &&
          !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
