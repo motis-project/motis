@@ -3,8 +3,11 @@
 #include <chrono>
 #include <vector>
 
+#include "utl/verify.h"
+
 #include "nigiri/common/delta_t.h"
 #include "nigiri/location_match_mode.h"
+#include "nigiri/routing/limits.h"
 #include "nigiri/routing/one_to_all.h"
 #include "nigiri/routing/query.h"
 #include "nigiri/types.h"
@@ -17,6 +20,13 @@ namespace motis::ep {
 
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const query = api::oneToAll_params{url.params()};
+  if (query.maxTransfers_.has_value()) {
+    utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
+                *query.maxTransfers_);
+    utl::verify(query.maxTransfers_ <= nigiri::routing::kMaxTransfers,
+                "maxTransfers > {}: {}", nigiri::routing::kMaxTransfers,
+                *query.maxTransfers_);
+  }
 
   auto const unreachable =
       query.arriveBy_ ? nigiri::kInvalidDelta<nigiri::direction::kBackward>
@@ -30,7 +40,16 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_time_ = time,
       .start_match_mode_ = nigiri::routing::location_match_mode::kEquivalent,
       .start_ = {{l, nigiri::duration_t{}, nigiri::transport_mode_id_t{0U}}},
+      .max_transfers_ = static_cast<std::uint8_t>(
+          query.maxTransfers_.value_or(nigiri::routing::kMaxTransfers)),
       .max_travel_time_ = nigiri::duration_t{query.maxTravelTime_},
+      .prf_idx_ = static_cast<nigiri::profile_idx_t>(
+          query.useRoutedTransfers_
+              ? (query.pedestrianProfile_ ==
+                         api::PedestrianProfileEnum::WHEELCHAIR
+                     ? 2U
+                     : 1U)
+              : 0U),
   };
 
   auto const state = [&]() {
