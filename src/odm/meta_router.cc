@@ -54,10 +54,8 @@ static boost::thread_specific_ptr<prima> p;
 
 constexpr auto const kODMLookAhead = 27h;
 constexpr auto const kSearchIntervalSize = 24h;
-constexpr auto const kODMDirectImprovement = 4.0;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kODMMaxDuration = 3600s;
-constexpr auto const kMinODMOffsetLength = n::duration_t{2};
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
