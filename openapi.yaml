@@ -46,7 +46,7 @@ paths:
           schema:
             type: string
             format: date-time
-        - name: max
+        - name: maxTravelTime
           in: query
           required: true
           description: maximum travel time in minutes

@@ -30,7 +30,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .start_time_ = time,
       .start_match_mode_ = nigiri::routing::location_match_mode::kEquivalent,
       .start_ = {{l, nigiri::duration_t{}, nigiri::transport_mode_id_t{0U}}},
-      .max_travel_time_ = nigiri::duration_t{query.max_},
+      .max_travel_time_ = nigiri::duration_t{query.maxTravelTime_},
   };
 
   auto const state = [&]() {
@@ -44,7 +44,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   }();
 
   auto const one = make_place(
-      l, time, query.arriveBy_ ? direction::kArrival : direction::kDeparture);
+      l, time, query.arriveBy_ ? dir_t::kArrival : dir_t::kDeparture);
 
   auto all = std::vector<api::ReachablePlace>{};
   for (auto i = nigiri::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
@@ -62,9 +62,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       }();
 
       all.emplace_back(
-          make_place(
-              i, time + std::chrono::minutes{fastest.duration_},
-              query.arriveBy_ ? direction::kDeparture : direction::kArrival),
+          make_place(i, time + std::chrono::minutes{fastest.duration_},
+                     query.arriveBy_ ? dir_t::kDeparture : dir_t::kArrival),
           query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_);
     }
   }
@@ -76,10 +75,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
 api::Place one_to_all::make_place(nigiri::location_idx_t const l,
                                   nigiri::unixtime_t const t,
-                                  direction const dir) const {
+                                  dir_t const dir) const {
   auto const pos = tt_.locations_.coordinates_[l];
 
-  if (dir == direction::kArrival) {
+  if (dir == dir_t::kArrival) {
     return {
         .name_ = std::string{tt_.locations_.names_[l].view()},
         .stopId_ = tags_.id(tt_, l),
