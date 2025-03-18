@@ -19,32 +19,34 @@
 
 namespace motis::ep {
 
+namespace n = nigiri;
+
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const query = api::oneToAll_params{url.params()};
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
-    utl::verify(query.maxTransfers_ <= nigiri::routing::kMaxTransfers,
-                "maxTransfers > {}: {}", nigiri::routing::kMaxTransfers,
+    utl::verify(query.maxTransfers_ <= n::routing::kMaxTransfers,
+                "maxTransfers > {}: {}", n::routing::kMaxTransfers,
                 *query.maxTransfers_);
   }
 
-  auto const unreachable =
-      query.arriveBy_ ? nigiri::kInvalidDelta<nigiri::direction::kBackward>
-                      : nigiri::kInvalidDelta<nigiri::direction::kForward>;
+  auto const unreachable = query.arriveBy_
+                               ? n::kInvalidDelta<n::direction::kBackward>
+                               : n::kInvalidDelta<n::direction::kForward>;
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
   auto const l = tags_.get_location(tt_, query.one_);
 
-  auto const q = nigiri::routing::query{
+  auto const q = n::routing::query{
       .start_time_ = time,
-      .start_match_mode_ = nigiri::routing::location_match_mode::kEquivalent,
-      .start_ = {{l, nigiri::duration_t{}, nigiri::transport_mode_id_t{0U}}},
+      .start_match_mode_ = n::routing::location_match_mode::kEquivalent,
+      .start_ = {{l, n::duration_t{}, n::transport_mode_id_t{0U}}},
       .max_transfers_ = static_cast<std::uint8_t>(
-          query.maxTransfers_.value_or(nigiri::routing::kMaxTransfers)),
-      .max_travel_time_ = nigiri::duration_t{query.maxTravelTime_},
-      .prf_idx_ = static_cast<nigiri::profile_idx_t>(
+          query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
+      .max_travel_time_ = n::duration_t{query.maxTravelTime_},
+      .prf_idx_ = static_cast<n::profile_idx_t>(
           query.useRoutedTransfers_
               ? (query.pedestrianProfile_ ==
                          api::PedestrianProfileEnum::WHEELCHAIR
@@ -54,23 +56,20 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,
       .transfer_time_settings_ =
-          nigiri::routing::transfer_time_settings{
+          n::routing::transfer_time_settings{
               .default_ = (query.minTransferTime_ == 0 &&
                            query.additionalTransferTime_ == 0 &&
                            query.transferTimeFactor_ == 1.0),
-              .min_transfer_time_ = nigiri::duration_t{query.minTransferTime_},
-              .additional_time_ =
-                  nigiri::duration_t{query.additionalTransferTime_},
+              .min_transfer_time_ = n::duration_t{query.minTransferTime_},
+              .additional_time_ = n::duration_t{query.additionalTransferTime_},
               .factor_ = static_cast<float>(query.transferTimeFactor_)},
   };
 
   auto const state = [&]() {
     if (query.arriveBy_) {
-      return nigiri::routing::one_to_all<nigiri::direction::kBackward>(
-          tt_, nullptr, q);
+      return n::routing::one_to_all<n::direction::kBackward>(tt_, nullptr, q);
     } else {
-      return nigiri::routing::one_to_all<nigiri::direction::kForward>(
-          tt_, nullptr, q);
+      return n::routing::one_to_all<n::direction::kForward>(tt_, nullptr, q);
     }
   }();
 
@@ -78,17 +77,15 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       l, time, query.arriveBy_ ? dir_t::kArrival : dir_t::kDeparture);
 
   auto all = std::vector<api::ReachablePlace>{};
-  for (auto i = nigiri::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
+  for (auto i = n::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
     if (state.get_best<0>()[to_idx(i)][0] != unreachable) {
       auto const fastest = [&]() {
         if (query.arriveBy_) {
-          return nigiri::routing::get_fastest_one_to_all_offsets<
-              nigiri::direction::kBackward>(tt_, state, i, time,
-                                            q.max_transfers_);
+          return n::routing::get_fastest_one_to_all_offsets<
+              n::direction::kBackward>(tt_, state, i, time, q.max_transfers_);
         } else {
-          return nigiri::routing::get_fastest_one_to_all_offsets<
-              nigiri::direction::kForward>(tt_, state, i, time,
-                                           q.max_transfers_);
+          return n::routing::get_fastest_one_to_all_offsets<
+              n::direction::kForward>(tt_, state, i, time, q.max_transfers_);
         }
       }();
 
@@ -104,8 +101,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   };
 }
 
-api::Place one_to_all::make_place(nigiri::location_idx_t const l,
-                                  nigiri::unixtime_t const t,
+api::Place one_to_all::make_place(n::location_idx_t const l,
+                                  n::unixtime_t const t,
                                   dir_t const dir) const {
   auto const pos = tt_.locations_.coordinates_[l];
 
