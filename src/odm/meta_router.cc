@@ -165,6 +165,8 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
       kODMMaxDuration, query.maxMatchingDistance_, query.fastestDirectFactor_);
 
+  taxi_duration += kODMTransferBuffer;
+
   if (query.arriveBy_) {
     for (auto arr =
              std::chrono::floor<std::chrono::hours>(intvl.to_ - taxi_duration) +
