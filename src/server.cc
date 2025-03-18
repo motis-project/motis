@@ -45,8 +45,6 @@ template <typename T, typename From>
 void GET(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
     r.get(std::move(target), std::move(*x));
-  } else {
-    std::cout << "Failed to setup endpoint: '" << typeid(T).name() << "'\n";
   }
 }
 
