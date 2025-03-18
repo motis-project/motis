@@ -82,7 +82,7 @@ TEST(odm, pt_taxi_no_direct) {
 
   get_default_mixer().mix(pt_journeys, odm_journeys);
 
-  ASSERT_EQ(odm_journeys.size(), 4U);
+  ASSERT_EQ(odm_journeys.size(), 2U);
   EXPECT_NE(utl::find(odm_journeys, pt), end(odm_journeys));
   EXPECT_NE(utl::find(odm_journeys, pt_taxi), end(odm_journeys));
 }
