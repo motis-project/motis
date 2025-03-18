@@ -150,8 +150,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& from_p,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
-                          api::plan_params const& query,
-                          n::duration_t const fastest_direct) {
+                          api::plan_params const& query) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
@@ -241,9 +240,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
 
   auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration =
-        init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
-                    odm_intvl, query_, fastest_direct_);
+    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
+                                  from_place_, to_place_, odm_intvl, query_);
   }
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
