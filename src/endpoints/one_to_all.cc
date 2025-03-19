@@ -35,6 +35,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const unreachable = query.arriveBy_
                                ? n::kInvalidDelta<n::direction::kBackward>
                                : n::kInvalidDelta<n::direction::kForward>;
+  auto const rtt = rt_->rtt_.get();
 
   auto const make_query = [&](n::location_idx_t const l,
                               n::unixtime_t const time) {
@@ -121,8 +122,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const state =
       query.arriveBy_
-          ? n::routing::one_to_all<n::direction::kBackward>(tt_, nullptr, q)
-          : n::routing::one_to_all<n::direction::kForward>(tt_, nullptr, q);
+          ? n::routing::one_to_all<n::direction::kBackward>(tt_, rtt, q)
+          : n::routing::one_to_all<n::direction::kForward>(tt_, rtt, q);
 
   return {
       .one_ = make_place(l, time,
