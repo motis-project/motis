@@ -128,13 +128,18 @@ void establish_dominance(
     std::vector<nr::journey>& journeys,
     std::function<bool(nr::journey const&, nr::journey const&)> const&
         dominates) {
-  for (auto a = begin(journeys); a != end(journeys); ++a) {
-    for (auto b = begin(journeys); b != end(journeys);) {
+  for (auto b = begin(journeys); b != end(journeys);) {
+    auto is_dominated = false;
+    for (auto a = begin(journeys); a != end(journeys); ++a) {
       if (a != b && dominates(*a, *b)) {
-        b = journeys.erase(b);
-      } else {
-        ++b;
+        is_dominated = true;
+        break;
       }
+    }
+    if (is_dominated) {
+      b = journeys.erase(b);
+    } else {
+      ++b;
     }
   }
 }
@@ -167,11 +172,39 @@ void mixer::reduce_odm(std::vector<nr::journey>& odm_journeys) const {
   establish_dominance(odm_journeys, dom);
 }
 
+void mixer::productivity_dominance(
+    std::vector<nr::journey>& odm_journeys) const {
+
+  auto const prod_cost = [&](nr::journey const& j) {
+    return static_cast<double>(j.travel_time().count() + transfer_cost(j));
+  };
+
+  auto const prod_dom = [&](nr::journey const& a, nr::journey const& b) {
+    auto const cost_a = prod_cost(a);
+    auto const cost_b = prod_cost(b);
+    auto const odm_time_a = static_cast<double>(odm_time(a).count());
+    auto const odm_time_b = static_cast<double>(odm_time(b).count());
+    auto const dist = distance(a, b);
+    auto const alpha_term = alpha_ * dist;
+    auto const prod_a = cost_b / odm_time_a;
+    auto const prod_b = (cost_a + alpha_term) / odm_time_b;
+    auto const ret = dist < max_distance_ && prod_a > prod_b;
+    if (kMixerTracing && ret) {
+      fmt::println("{} prod-dominates {}, dist: {}, {} > {}", label(a),
+                   label(b), dist, prod_a, prod_b);
+    }
+    return ret;
+  };
+
+  establish_dominance(odm_journeys, prod_dom);
+}
+
 void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys) const {
   pareto_dominance(odm_journeys);
   cost_dominance(pt_journeys, odm_journeys);
   reduce_odm(odm_journeys);
+  productivity_dominance(odm_journeys);
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
   }
