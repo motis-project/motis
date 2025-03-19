@@ -128,13 +128,18 @@ void establish_dominance(
     std::vector<nr::journey>& journeys,
     std::function<bool(nr::journey const&, nr::journey const&)> const&
         dominates) {
-  for (auto a = begin(journeys); a != end(journeys); ++a) {
-    for (auto b = begin(journeys); b != end(journeys);) {
+  for (auto b = begin(journeys); b != end(journeys);) {
+    auto is_dominated = false;
+    for (auto a = begin(journeys); a != end(journeys); ++a) {
       if (a != b && dominates(*a, *b)) {
-        b = journeys.erase(b);
-      } else {
-        ++b;
+        is_dominated = true;
+        break;
       }
+    }
+    if (is_dominated) {
+      b = journeys.erase(b);
+    } else {
+      ++b;
     }
   }
 }
