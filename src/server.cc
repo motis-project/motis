@@ -22,6 +22,7 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
@@ -78,6 +79,7 @@ int server(data d, config const& c) {
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
+  GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {
