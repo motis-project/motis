@@ -91,13 +91,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       continue;
     }
 
-    auto const fastest = query.arriveBy_
-                             ? n::routing::get_fastest_one_to_all_offsets<
-                                   n::direction::kBackward>(tt_, state, i, time,
-                                                            q.max_transfers_)
-                             : n::routing::get_fastest_one_to_all_offsets<
-                                   n::direction::kForward>(tt_, state, i, time,
-                                                           q.max_transfers_);
+    auto const fastest = n::routing::get_fastest_one_to_all_offsets(
+        tt_, state,
+        query.arriveBy_ ? n::direction::kBackward : n::direction::kForward, i,
+        time, q.max_transfers_);
 
     all.push_back(api::ReachablePlace{
         make_place(i, time + std::chrono::minutes{fastest.duration_}, all_ev),
