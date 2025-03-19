@@ -79,7 +79,7 @@ int server(data d, config const& c) {
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
-  GET<ep::one_to_all>(qr, "/api/v1/one-to-all", d);
+  GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {
