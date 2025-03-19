@@ -108,7 +108,9 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
       all.emplace_back(
           make_place(i, time + std::chrono::minutes{fastest.duration_}, dir),
-          query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_);
+          static_cast<std::int64_t>(query.arriveBy_ ? -fastest.duration_
+                                                    : fastest.duration_),
+          static_cast<std::int64_t>(fastest.k_));
     }
 
     return all;
