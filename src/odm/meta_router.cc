@@ -423,7 +423,9 @@ void collect_odm_journeys(
   p->odm_journeys_.clear();
   for (auto const& r : results | std::views::drop(1)) {
     for (auto const& j : r.journeys_) {
-      p->odm_journeys_.push_back(j);
+      if (uses_odm(j)) {
+        p->odm_journeys_.push_back(j);
+      }
     }
   }
   fmt::println("[routing] collected {} ODM-PT journeys",
