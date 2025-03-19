@@ -1430,9 +1430,17 @@ components:
         duration:
           type: integer
           description: Total travel duration
-        connectionCount:
+        k:
           type: integer
-          description: Number of connections used
+          description: |
+            k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist.
+            You can think of k as the number of connections used.
+
+            In more detail:
+
+            k=0: No connection, e.g. for the one location
+            k=1: Direct connection
+            k=2: Connection with 1 transfer
 
     Reachable:
       description: Object containing all reachable places by One-to-All search
@@ -1442,8 +1450,7 @@ components:
           $ref: "#/components/schemas/Place"
           description: One location used in One-to-All search
         all:
-          description:
-            List of locations reachable by One-to-All
+          description: List of locations reachable by One-to-All
           type: array
           items:
             $ref: "#/components/schemas/ReachablePlace"
