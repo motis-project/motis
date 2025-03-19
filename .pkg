@@ -1,5 +1,5 @@
 [nigiri]
-  url=git@github.com:motis-project/nigiri.git
+  url=git@github.com:MichaelKutzner/nigiri.git
   branch=master
   commit=084442d5bc89ace695bfe560aef64bcd490dde16
 [cista]
