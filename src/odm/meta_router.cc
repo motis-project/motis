@@ -54,10 +54,9 @@ static boost::thread_specific_ptr<prima> p;
 
 constexpr auto const kODMLookAhead = 27h;
 constexpr auto const kSearchIntervalSize = 24h;
-constexpr auto const kODMDirectImprovement = 4.0;
 constexpr auto const kODMDirectPeriod = 1h;
+constexpr auto const kODMDirectFactor = 1.0;
 constexpr auto const kODMMaxDuration = 3600s;
-constexpr auto const kMinODMOffsetLength = n::duration_t{2};
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
@@ -150,8 +149,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& from_p,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
-                          api::plan_params const& query,
-                          n::duration_t const fastest_direct) {
+                          api::plan_params const& query) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
@@ -166,20 +164,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      kODMMaxDuration, query.maxMatchingDistance_, query.fastestDirectFactor_);
-
-  if (kODMDirectImprovement * taxi_duration > fastest_direct) {
-    fmt::println(
-        "[init] direct rides prohibited, improvement factor {} (taxi: "
-        "{}, walk: {})",
-        kODMDirectImprovement, taxi_duration, fastest_direct);
-    return taxi_duration;
-  }
-
-  fmt::println(
-      "[init] allowing direct rides, improvement factor {} (taxi: {}, "
-      "walk: {})",
-      kODMDirectImprovement, taxi_duration, fastest_direct);
+      kODMMaxDuration, query.maxMatchingDistance_, kODMDirectFactor);
 
   if (query.arriveBy_) {
     for (auto arr =
@@ -221,12 +206,6 @@ void init_pt(std::vector<n::routing::start>& rides,
       query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
-    if (o.duration_ < kMinODMOffsetLength) {
-      fmt::println("Remove for {}: {} < kMinODMOffsetLength={}",
-                   fmt::streamed(n::location{*r.tt_, o.target_}), o.duration_,
-                   kMinODMOffsetLength);
-      return true;
-    }
     auto const out_of_bounds =
         (r.odm_bounds_ != nullptr &&
          !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
@@ -260,9 +239,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
 
   auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration =
-        init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
-                    odm_intvl, query_, fastest_direct_);
+    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
+                                  from_place_, to_place_, odm_intvl, query_);
   }
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
