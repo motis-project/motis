@@ -85,27 +85,24 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
           : n::routing::one_to_all<n::direction::kForward>(tt_, rtt, q);
 
   auto all = std::vector<api::ReachablePlace>{};
-  {
-    auto const all_ev =
-        query.arriveBy_ ? n::event_type::kDep : n::event_type::kArr;
-    for (auto i = n::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
-      if (state.get_best<0>()[to_idx(i)][0] == unreachable) {
-        continue;
-      }
-
-      auto const fastest = query.arriveBy_
-                               ? n::routing::get_fastest_one_to_all_offsets<
-                                     n::direction::kBackward>(
-                                     tt_, state, i, time, q.max_transfers_)
-                               : n::routing::get_fastest_one_to_all_offsets<
-                                     n::direction::kForward>(
-                                     tt_, state, i, time, q.max_transfers_);
-
-      all.push_back(api::ReachablePlace{
-          make_place(i, time + std::chrono::minutes{fastest.duration_}, all_ev),
-          query.arriveBy_ ? -fastest.duration_ : fastest.duration_,
-          fastest.k_});
+  auto const all_ev =
+      query.arriveBy_ ? n::event_type::kDep : n::event_type::kArr;
+  for (auto i = n::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
+    if (state.get_best<0>()[to_idx(i)][0] == unreachable) {
+      continue;
     }
+
+    auto const fastest = query.arriveBy_
+                             ? n::routing::get_fastest_one_to_all_offsets<
+                                   n::direction::kBackward>(tt_, state, i, time,
+                                                            q.max_transfers_)
+                             : n::routing::get_fastest_one_to_all_offsets<
+                                   n::direction::kForward>(tt_, state, i, time,
+                                                           q.max_transfers_);
+
+    all.push_back(api::ReachablePlace{
+        make_place(i, time + std::chrono::minutes{fastest.duration_}, all_ev),
+        query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_});
   }
 
   return {
