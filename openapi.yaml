@@ -1435,14 +1435,14 @@ components:
           description: Number of connections used
 
     Reachable:
-      description: Object all reachable places by One-to-All search
+      description: Object containing all reachable places by One-to-All search
       type: object
       properties:
         one:
           $ref: "#/components/schemas/Place"
           description: One location used in One-to-All search
         all:
-          description: |
+          description:
             List of locations reachable by One-to-All
           type: array
           items:
