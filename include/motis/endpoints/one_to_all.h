@@ -12,9 +12,6 @@ struct one_to_all {
   enum class dir_t { kArrival, kDeparture };
 
   api::Reachable operator()(boost::urls::url_view const&) const;
-  api::Place make_place(nigiri::location_idx_t,
-                        nigiri::unixtime_t,
-                        dir_t) const;
 
   osr::ways const* w_;
   osr::platforms const* pl_;
