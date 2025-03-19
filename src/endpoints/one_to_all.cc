@@ -86,7 +86,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto all = std::vector<api::ReachablePlace>{};
   auto const all_ev =
       query.arriveBy_ ? n::event_type::kDep : n::event_type::kArr;
-  for (auto i = n::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
+  for (auto i = n::location_idx_t{0U}; i != tt_.n_locations(); ++i) {
     if (state.get_best<0>()[to_idx(i)][0] == unreachable) {
       continue;
     }
