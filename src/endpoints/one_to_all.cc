@@ -38,10 +38,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt_->rtt_.get();
 
   auto const make_place = [&](n::location_idx_t const l, n::unixtime_t const t,
-                              dir_t const dir) {
+                              n::event_type const ev) {
     auto place = to_place(&tt_, &tags_, w_, pl_, matches_, tt_location{l},
                           place_t{}, place_t{});
-    if (dir == dir_t::kArrival) {
+    if (ev == n::event_type::kArr) {
       place.arrival_ = t;
     } else {
       place.departure_ = t;
@@ -86,7 +86,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto all = std::vector<api::ReachablePlace>{};
   {
-    auto const dir = query.arriveBy_ ? dir_t::kDeparture : dir_t::kArrival;
+    auto const all_ev =
+        query.arriveBy_ ? n::event_type::kDep : n::event_type::kArr;
     for (auto i = n::location_idx_t{0U}; i < tt_.n_locations(); ++i) {
       if (state.get_best<0>()[to_idx(i)][0] == unreachable) {
         continue;
@@ -101,15 +102,15 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
                                      tt_, state, i, time, q.max_transfers_);
 
       all.push_back(api::ReachablePlace{
-          make_place(i, time + std::chrono::minutes{fastest.duration_}, dir),
+          make_place(i, time + std::chrono::minutes{fastest.duration_}, all_ev),
           query.arriveBy_ ? -fastest.duration_ : fastest.duration_,
           fastest.k_});
     }
   }
 
   return {
-      .one_ = make_place(l, time,
-                         query.arriveBy_ ? dir_t::kArrival : dir_t::kDeparture),
+      .one_ = make_place(
+          l, time, query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep),
       .all_ = std::move(all),
   };
 }

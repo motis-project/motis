@@ -9,8 +9,6 @@
 namespace motis::ep {
 
 struct one_to_all {
-  enum class dir_t { kArrival, kDeparture };
-
   api::Reachable operator()(boost::urls::url_view const&) const;
 
   osr::ways const* w_;
