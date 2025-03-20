@@ -102,10 +102,11 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
   auto const dist = distance(a, b);
   auto const alpha_term = cost_alpha_ * time_ratio * dist;
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
-  if (kMixerTracing && ret) {
-    fmt::println("{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {}",
-                 label(a), label(b), time_ratio, dist, cost_a, alpha_term,
-                 cost_b);
+  if (kMixerTracing) {
+    fmt::println(
+        "{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {} --> {}",
+        label(a), label(b), time_ratio, dist, cost_a, alpha_term, cost_b,
+        ret ? "true" : "false");
   }
   return ret;
 }
@@ -152,9 +153,9 @@ void mixer::pareto_dominance(
     auto const odm_time_a = odm_time(a);
     auto const odm_time_b = odm_time(b);
     auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
-    if (kMixerTracing && ret) {
-      fmt::println("{} pareto-dominates {}, odm_time: {} < {}", label(a),
-                   label(b), odm_time_a, odm_time_b);
+    if (kMixerTracing) {
+      fmt::println("{} pareto-dominates {}, odm_time: {} < {} --> {}", label(a),
+                   label(b), odm_time_a, odm_time_b, ret ? "true" : "false");
     }
     return ret;
   };
@@ -189,9 +190,9 @@ void mixer::productivity_dominance(
     auto const prod_a = cost_b / odm_time_a;
     auto const prod_b = (cost_a + alpha_term) / odm_time_b;
     auto const ret = dist < max_distance_ && prod_a > prod_b;
-    if (kMixerTracing && ret) {
-      fmt::println("{} prod-dominates {}, dist: {}, {} > {}", label(a),
-                   label(b), dist, prod_a, prod_b);
+    if (kMixerTracing) {
+      fmt::println("{} prod-dominates {}, dist: {}, {} > {} --> {}", label(a),
+                   label(b), dist, prod_a, prod_b, ret ? "true" : "false");
     }
     return ret;
   };
