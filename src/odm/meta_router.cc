@@ -133,15 +133,6 @@ meta_router::meta_router(ep::routing const& r,
   }
 }
 
-n::interval<n::unixtime_t> get_odm_intvl(
-    n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
-  return dir == n::direction::kForward
-             ? n::interval<n::unixtime_t>{start_intvl.from_,
-                                          start_intvl.to_ + kODMLookAhead}
-             : n::interval<n::unixtime_t>{start_intvl.from_ - kODMLookAhead,
-                                          start_intvl.to_};
-}
-
 n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           ep::routing const& r,
                           elevators const* e,
