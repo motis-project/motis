@@ -52,7 +52,7 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima> p;
 
-constexpr auto const kODMLookAhead = 27h;
+constexpr auto const kODMLookAhead = 48h;
 constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kODMDirectFactor = 1.0;
