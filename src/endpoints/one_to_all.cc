@@ -22,8 +22,14 @@ namespace motis::ep {
 
 namespace n = nigiri;
 
+constexpr auto const kMaxResults = 65535U;
+constexpr auto const kMaxTravelMinutes = 90U;
+
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const query = api::oneToAll_params{url.params()};
+  utl::verify(query.maxTravelTime_ <= kMaxTravelMinutes,
+              "maxTravelTime({}) > {}", query.maxTravelTime_,
+              kMaxTravelMinutes);
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
@@ -90,6 +96,8 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
     if (state.get_best<0>()[to_idx(i)][0] == unreachable) {
       continue;
     }
+
+    utl::verify(all.size() < kMaxResults, "too many results");
 
     auto const fastest = n::routing::get_fastest_one_to_all_offsets(
         tt_, state,
