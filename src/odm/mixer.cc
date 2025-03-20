@@ -214,7 +214,8 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 }
 
 mixer get_default_mixer() {
-  return mixer{.alpha_ = 1.3,
+  return mixer{.cost_alpha_ = 1.3,
+               .prod_alpha_ = 0.4,
                .direct_taxi_penalty_ = 220,
                .max_distance_ = 90,
                .walk_cost_ = {{0, 1}, {15, 10}},
