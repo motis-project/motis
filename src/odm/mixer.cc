@@ -163,16 +163,6 @@ void mixer::pareto_dominance(
   establish_dominance(odm_journeys, pareto_dom);
 }
 
-void mixer::reduce_odm(std::vector<nr::journey>& odm_journeys) const {
-
-  auto const dom = [this](nr::journey const& a, nr::journey const& b) -> bool {
-    return (is_direct_odm(b) || odm_time(a) < odm_time(b)) &&
-           cost_dominates(a, b);
-  };
-
-  establish_dominance(odm_journeys, dom);
-}
-
 void mixer::productivity_dominance(
     std::vector<nr::journey>& odm_journeys) const {
 
@@ -204,7 +194,6 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys) const {
   pareto_dominance(odm_journeys);
   cost_dominance(pt_journeys, odm_journeys);
-  reduce_odm(odm_journeys);
   productivity_dominance(odm_journeys);
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
