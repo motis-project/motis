@@ -100,12 +100,13 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
   auto const time_ratio = static_cast<double>(a.travel_time().count()) /
                           static_cast<double>(b.travel_time().count());
   auto const dist = distance(a, b);
-  auto const alpha_term = alpha_ * time_ratio * dist;
+  auto const alpha_term = cost_alpha_ * time_ratio * dist;
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
-  if (kMixerTracing && ret) {
-    fmt::println("{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {}",
-                 label(a), label(b), time_ratio, dist, cost_a, alpha_term,
-                 cost_b);
+  if (kMixerTracing) {
+    fmt::println(
+        "{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {} --> {}",
+        label(a), label(b), time_ratio, dist, cost_a, alpha_term, cost_b,
+        ret ? "true" : "false");
   }
   return ret;
 }
@@ -152,24 +153,14 @@ void mixer::pareto_dominance(
     auto const odm_time_a = odm_time(a);
     auto const odm_time_b = odm_time(b);
     auto const ret = a.dominates(b) && odm_time_a < odm_time_b;
-    if (kMixerTracing && ret) {
-      fmt::println("{} pareto-dominates {}, odm_time: {} < {}", label(a),
-                   label(b), odm_time_a, odm_time_b);
+    if (kMixerTracing) {
+      fmt::println("{} pareto-dominates {}, odm_time: {} < {} --> {}", label(a),
+                   label(b), odm_time_a, odm_time_b, ret ? "true" : "false");
     }
     return ret;
   };
 
   establish_dominance(odm_journeys, pareto_dom);
-}
-
-void mixer::reduce_odm(std::vector<nr::journey>& odm_journeys) const {
-
-  auto const dom = [this](nr::journey const& a, nr::journey const& b) -> bool {
-    return (is_direct_odm(b) || odm_time(a) < odm_time(b)) &&
-           cost_dominates(a, b);
-  };
-
-  establish_dominance(odm_journeys, dom);
 }
 
 void mixer::productivity_dominance(
@@ -185,13 +176,13 @@ void mixer::productivity_dominance(
     auto const odm_time_a = static_cast<double>(odm_time(a).count());
     auto const odm_time_b = static_cast<double>(odm_time(b).count());
     auto const dist = distance(a, b);
-    auto const alpha_term = alpha_ * dist;
+    auto const alpha_term = prod_alpha_ * dist;
     auto const prod_a = cost_b / odm_time_a;
     auto const prod_b = (cost_a + alpha_term) / odm_time_b;
     auto const ret = dist < max_distance_ && prod_a > prod_b;
-    if (kMixerTracing && ret) {
-      fmt::println("{} prod-dominates {}, dist: {}, {} > {}", label(a),
-                   label(b), dist, prod_a, prod_b);
+    if (kMixerTracing) {
+      fmt::println("{} prod-dominates {}, dist: {}, {} > {} --> {}", label(a),
+                   label(b), dist, prod_a, prod_b, ret ? "true" : "false");
     }
     return ret;
   };
@@ -203,7 +194,6 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
                 std::vector<nr::journey>& odm_journeys) const {
   pareto_dominance(odm_journeys);
   cost_dominance(pt_journeys, odm_journeys);
-  reduce_odm(odm_journeys);
   productivity_dominance(odm_journeys);
   for (auto const& j : pt_journeys) {
     odm_journeys.emplace_back(j);
@@ -214,7 +204,8 @@ void mixer::mix(n::pareto_set<nr::journey> const& pt_journeys,
 }
 
 mixer get_default_mixer() {
-  return mixer{.alpha_ = 1.3,
+  return mixer{.cost_alpha_ = 1.3,
+               .prod_alpha_ = 0.4,
                .direct_taxi_penalty_ = 220,
                .max_distance_ = 90,
                .walk_cost_ = {{0, 1}, {15, 10}},
