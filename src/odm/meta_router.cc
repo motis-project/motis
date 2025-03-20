@@ -52,7 +52,7 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima> p;
 
-constexpr auto const kODMLookAhead = 27h;
+constexpr auto const kODMLookAhead = 48h;
 constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kODMDirectFactor = 1.0;
@@ -131,15 +131,6 @@ meta_router::meta_router(ep::routing const& r,
   if (ep::blocked.get() == nullptr && r.w_ != nullptr) {
     ep::blocked.reset(new osr::bitvec<osr::node_idx_t>{r.w_->n_nodes()});
   }
-}
-
-n::interval<n::unixtime_t> get_odm_intvl(
-    n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
-  return dir == n::direction::kForward
-             ? n::interval<n::unixtime_t>{start_intvl.from_,
-                                          start_intvl.to_ + kODMLookAhead}
-             : n::interval<n::unixtime_t>{start_intvl.from_ - kODMLookAhead,
-                                          start_intvl.to_};
 }
 
 n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
