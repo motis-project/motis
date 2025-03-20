@@ -100,7 +100,7 @@ bool mixer::cost_dominates(nr::journey const& a, nr::journey const& b) const {
   auto const time_ratio = static_cast<double>(a.travel_time().count()) /
                           static_cast<double>(b.travel_time().count());
   auto const dist = distance(a, b);
-  auto const alpha_term = alpha_ * time_ratio * dist;
+  auto const alpha_term = cost_alpha_ * time_ratio * dist;
   auto const ret = dist < max_distance_ && cost_a + alpha_term < cost_b;
   if (kMixerTracing && ret) {
     fmt::println("{} cost-dominates {}, ratio: {}, dist: {}, {} + {} < {}",
@@ -185,7 +185,7 @@ void mixer::productivity_dominance(
     auto const odm_time_a = static_cast<double>(odm_time(a).count());
     auto const odm_time_b = static_cast<double>(odm_time(b).count());
     auto const dist = distance(a, b);
-    auto const alpha_term = alpha_ * dist;
+    auto const alpha_term = prod_alpha_ * dist;
     auto const prod_a = cost_b / odm_time_a;
     auto const prod_b = (cost_a + alpha_term) / odm_time_b;
     auto const ret = dist < max_distance_ && prod_a > prod_b;
