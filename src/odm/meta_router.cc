@@ -273,20 +273,28 @@ bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
 }
 
 auto ride_time_halves(std::vector<n::routing::start>& rides) {
-  auto const by_duration = [](auto const& a, auto const& b) {
-    auto const duration = [](auto const& ride) {
-      return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
-    };
+  auto const duration = [](auto const& ride) {
+    return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
+  };
+
+  auto const by_duration = [&](auto const& a, auto const& b) {
     return duration(a) < duration(b);
   };
 
   utl::sort(rides, by_duration);
   auto const split =
-      rides.empty() ? 0
-                    : std::distance(begin(rides),
-                                    std::upper_bound(begin(rides), end(rides),
-                                                     rides[rides.size() / 2],
-                                                     by_duration));
+      rides.empty()
+          ? 0
+          : std::distance(
+                begin(rides),
+                std::upper_bound(
+                    begin(rides), end(rides),
+                    n::routing::start{
+                        .time_at_start_ = n::unixtime_t{},
+                        .time_at_stop_ =
+                            n::unixtime_t{} + duration(rides.front()) + 1min,
+                        .stop_ = n::location_idx_t::invalid()},
+                    by_duration));
 
   auto lo = rides | std::views::take(split);
   auto hi = rides | std::views::drop(split);
