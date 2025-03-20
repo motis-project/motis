@@ -22,8 +22,14 @@ namespace motis::ep {
 
 namespace n = nigiri;
 
+constexpr auto const kMaxResults = 65535U;
+constexpr auto const kMaxTravelMinutes = 90U;
+
 api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const query = api::oneToAll_params{url.params()};
+  utl::verify(query.maxTravelTime_ <= kMaxTravelMinutes,
+              "maxTravelTime too large: {} > {}", query.maxTravelTime_,
+              kMaxTravelMinutes);
   if (query.maxTransfers_.has_value()) {
     utl::verify(query.maxTransfers_ >= 0U, "maxTransfers < 0: {}",
                 *query.maxTransfers_);
@@ -83,23 +89,30 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
           ? n::routing::one_to_all<n::direction::kBackward>(tt_, rtt, q)
           : n::routing::one_to_all<n::direction::kForward>(tt_, rtt, q);
 
+  auto reachable = nigiri::bitvec{tt_.n_locations()};
+  for (auto i = 0U; i != tt_.n_locations(); ++i) {
+    if (state.get_best<0>()[i][0] != unreachable) {
+      reachable.set(i);
+    }
+  }
+  utl::verify(reachable.count() <= kMaxResults, "too many results: {} > {}",
+              reachable.count(), kMaxResults);
+
   auto all = std::vector<api::ReachablePlace>{};
+  all.reserve(reachable.count());
   auto const all_ev =
       query.arriveBy_ ? n::event_type::kDep : n::event_type::kArr;
-  for (auto i = n::location_idx_t{0U}; i != tt_.n_locations(); ++i) {
-    if (state.get_best<0>()[to_idx(i)][0] == unreachable) {
-      continue;
-    }
-
+  reachable.for_each_set_bit([&](auto const i) {
+    auto const l = n::location_idx_t{i};
     auto const fastest = n::routing::get_fastest_one_to_all_offsets(
         tt_, state,
-        query.arriveBy_ ? n::direction::kBackward : n::direction::kForward, i,
+        query.arriveBy_ ? n::direction::kBackward : n::direction::kForward, l,
         time, q.max_transfers_);
 
     all.push_back(api::ReachablePlace{
-        make_place(i, time + std::chrono::minutes{fastest.duration_}, all_ev),
+        make_place(l, time + std::chrono::minutes{fastest.duration_}, all_ev),
         query.arriveBy_ ? -fastest.duration_ : fastest.duration_, fastest.k_});
-  }
+  });
 
   return {
       .one_ = make_place(
