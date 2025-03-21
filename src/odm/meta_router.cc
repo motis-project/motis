@@ -221,7 +221,8 @@ void init_pt(std::vector<n::routing::start>& rides,
       start_time.transfer_time_settings_);
 }
 
-void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
+void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
+                             n::interval<n::unixtime_t> const& odm_intvl) {
   if (p.get() == nullptr) {
     p.reset(new prima{});
   }
@@ -231,7 +232,7 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
   auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
     direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
-                                  from_place_, to_place_, odm_intvl, query_);
+                                  from_place_, to_place_, search_intvl, query_);
   }
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
@@ -499,7 +500,7 @@ api::plan_response meta_router::run() {
           : n::interval<n::unixtime_t>{start_intvl.from_,
                                        start_intvl.from_ + kSearchIntervalSize};
 
-  init_prima(odm_intvl);
+  init_prima(search_intvl, odm_intvl);
   print_time(init_start, "[init]");
 
   // blacklisting
