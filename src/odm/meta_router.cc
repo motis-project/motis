@@ -56,6 +56,7 @@ constexpr auto const kODMLookAhead = 48h;
 constexpr auto const kSearchIntervalSize = 24h;
 constexpr auto const kODMDirectPeriod = 1h;
 constexpr auto const kODMDirectFactor = 1.0;
+constexpr auto const kODMOffsetMinImprovement = 60s;
 constexpr auto const kODMMaxDuration = 3600s;
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
@@ -236,14 +237,18 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
                                   from_place_, to_place_, search_intvl, query_);
   }
 
+  auto const max_offset_duration =
+      direct_duration ? std::min(*direct_duration - kODMOffsetMinImprovement,
+                                 kODMMaxDuration)
+                      : kODMMaxDuration;
+
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
             osr::direction::kForward, query_, gbfs_rd_, *tt_, rtt_, odm_intvl,
             start_time_,
             query_.arriveBy_ ? start_time_.dest_match_mode_
                              : start_time_.start_match_mode_,
-            direct_duration ? std::min(*direct_duration, kODMMaxDuration)
-                            : kODMMaxDuration);
+            max_offset_duration);
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
@@ -252,8 +257,7 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
             start_time_,
             query_.arriveBy_ ? start_time_.start_match_mode_
                              : start_time_.dest_match_mode_,
-            direct_duration ? std::min(*direct_duration, kODMMaxDuration)
-                            : kODMMaxDuration);
+            max_offset_duration);
   }
 
   std::erase(start_modes_, api::ModeEnum::ODM);
