@@ -61,6 +61,7 @@ constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
+static auto const kMixer = get_default_mixer();
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -498,17 +499,29 @@ api::plan_response meta_router::run() {
   auto const odm_intvl =
       query_.arriveBy_
           ? n::interval<n::unixtime_t>{start_intvl.to_ - kODMLookAhead,
-                                       start_intvl.to_}
-          : n::interval<n::unixtime_t>{start_intvl.from_,
-                                       start_intvl.from_ + kODMLookAhead};
+                                       start_intvl.to_ +
+                                           std::chrono::minutes{
+                                               kMixer.max_distance_}}
+          : n::interval<n::unixtime_t>{
+                start_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
+                start_intvl.from_ + kODMLookAhead};
   auto const search_intvl =
       query_.arriveBy_
           ? n::interval<n::unixtime_t>{start_intvl.to_ - kSearchIntervalSize,
                                        start_intvl.to_}
           : n::interval<n::unixtime_t>{start_intvl.from_,
                                        start_intvl.from_ + kSearchIntervalSize};
+  auto const context_intvl =
+      query_.arriveBy_
+          ? n::interval<n::unixtime_t>{search_intvl.from_,
+                                       search_intvl.to_ +
+                                           std::chrono::minutes{
+                                               kMixer.max_distance_}}
+          : n::interval<n::unixtime_t>{
+                search_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
+                search_intvl.to_};
 
-  init_prima(search_intvl, odm_intvl);
+  init_prima(context_intvl, odm_intvl);
   print_time(init_start, "[init]");
 
   // blacklisting
@@ -545,7 +558,7 @@ api::plan_response meta_router::run() {
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p->to_rides_);
 
   auto const qf = query_factory{
-      .base_query_ = get_base_query(search_intvl),
+      .base_query_ = get_base_query(context_intvl),
       .start_walk_ = std::visit(
           utl::overloaded{[&](tt_location const l) {
                             return motis::ep::station_start(l.l_);
@@ -672,8 +685,13 @@ api::plan_response meta_router::run() {
 
   fmt::println("[mixing] {} PT journeys and {} ODM journeys",
                pt_result.journeys_.size(), p->odm_journeys_.size());
-  get_default_mixer().mix(pt_result.journeys_, p->odm_journeys_);
+  kMixer.mix(pt_result.journeys_, p->odm_journeys_);
   print_time(mixing_start, "[mixing]");
+
+  // remove journeys added for mixing context
+  std::erase_if(p->odm_journeys_, [&](auto const& j) {
+    return !search_intvl.contains(j.start_time_);
+  });
 
   return {.from_ = from_place_,
           .to_ = to_place_,
