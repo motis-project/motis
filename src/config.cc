@@ -105,7 +105,7 @@ void config::verify() const {
       !osr_footpath_ || (street_routing_ && timetable_),
       "feature OSR_FOOTPATH requires features STREET_ROUTING and TIMETABLE");
   utl::verify(
-      !elevators_ || (fasta_ && street_routing_ && timetable_),
+      !elevators_ || (street_routing_ && timetable_),
       "feature ELEVATORS requires fasta.json and features STREET_ROUTING and "
       "TIMETABLE");
   utl::verify(!has_gbfs_feeds() || street_routing_,

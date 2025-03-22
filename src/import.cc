@@ -263,7 +263,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                -> std::pair<std::string, nl::loader_config> {
+                    -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -366,26 +366,36 @@ data import(config const& c, fs::path const& data_path, bool const write) {
        {"geocoding", c.geocoding_},
        {"reverse_geocoding", c.reverse_geocoding_}}};
 
-  auto osr_footpath = task{
-      "osr_footpath",
-      [&]() { return c.osr_footpath_ && c.timetable_; },
-      [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
-      [&]() {
-        auto const elevator_footpath_map = compute_footpaths(
-            *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
-            c.timetable_->use_osm_stop_coordinates_,
-            c.timetable_->extend_missing_footpaths_,
-            std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U},
-            c.timetable_->max_matching_distance_);
+  auto osr_footpath_settings_hash =
+      meta_entry_t{"osr_footpath_settings", cista::BASE_HASH};
+  if (c.timetable_) {
+    auto& h = osr_footpath_settings_hash.second;
+    h = cista::hash_combine(h, c.timetable_->use_osm_stop_coordinates_,
+                            c.timetable_->extend_missing_footpaths_,
+                            c.timetable_->max_matching_distance_,
+                            c.timetable_->max_footpath_length_);
+  }
+  auto osr_footpath =
+      task{"osr_footpath",
+           [&]() { return c.osr_footpath_ && c.timetable_; },
+           [&]() { return d.tt_ && d.tags_ && d.w_ && d.l_ && d.pl_; },
+           [&]() {
+             auto const elevator_footpath_map = compute_footpaths(
+                 *d.w_, *d.l_, *d.pl_, *d.tt_, d.elevations_.get(),
+                 c.timetable_->use_osm_stop_coordinates_,
+                 c.timetable_->extend_missing_footpaths_,
+                 std::chrono::seconds{c.timetable_->max_footpath_length_ * 60U},
+                 c.timetable_->max_matching_distance_);
 
-        if (write) {
-          cista::write(data_path / "elevator_footpath_map.bin",
-                       elevator_footpath_map);
-          d.tt_->write(data_path / "tt_ext.bin");
-        }
-      },
-      [&]() { d.load_tt("tt_ext.bin"); },
-      {tt_hash, osm_hash, osr_version(), osr_footpath_version(), n_version()}};
+             if (write) {
+               cista::write(data_path / "elevator_footpath_map.bin",
+                            elevator_footpath_map);
+               d.tt_->write(data_path / "tt_ext.bin");
+             }
+           },
+           [&]() { d.load_tt("tt_ext.bin"); },
+           {tt_hash, osm_hash, osr_version(), osr_footpath_version(),
+            osr_footpath_settings_hash(), n_version()}};
 
   auto matches =
       task{"matches",

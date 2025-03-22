@@ -41,7 +41,6 @@ struct config {
   std::optional<server> server_{};
 
   std::optional<std::filesystem::path> osm_{};
-  std::optional<std::filesystem::path> fasta_{};
 
   struct tiles {
     bool operator==(tiles const&) const = default;
