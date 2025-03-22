@@ -152,7 +152,7 @@
 						directModes: modes,
 						requireBikeTransport: bikeCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
-						withFares: true
+						useRoutedTransfers: true
 					}
 				} as PlanData)
 			: undefined

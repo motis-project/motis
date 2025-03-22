@@ -263,7 +263,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
             utl::to_vec(
                 t.datasets_,
                 [&, src = n::source_idx_t{}](auto&& x) mutable
-                    -> std::pair<std::string, nl::loader_config> {
+                -> std::pair<std::string, nl::loader_config> {
                   auto const& [tag, dc] = x;
                   d.tags_->add(src++, tag);
                   return {dc.path_,
@@ -394,8 +394,8 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              }
            },
            [&]() { d.load_tt("tt_ext.bin"); },
-           {tt_hash, osm_hash, osr_version(), osr_footpath_version(),
-            osr_footpath_settings_hash(), n_version()}};
+           {tt_hash, osm_hash, osr_footpath_settings_hash, osr_version(),
+            osr_footpath_version(), n_version()}};
 
   auto matches =
       task{"matches",
