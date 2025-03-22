@@ -55,13 +55,14 @@ void POST(auto&& r, std::string target, From& from) {
   }
 }
 
-int server(data d, config const& c) {
+int server(data d, config const& c, std::string_view const motis_version) {
   auto const server_config = c.server_.value_or(config::server{});
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
   auto r = runner{server_config.n_threads_, 1024U};
   auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
+  qr.add_header("Server", std::format("MOTIS {}", motis_version));
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);

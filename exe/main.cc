@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <string_view>
 
 #include "google/protobuf/stubs/common.h"
 
@@ -31,6 +32,7 @@ int compare(int, char**);
 using namespace motis;
 
 int main(int ac, char** av) {
+  auto const motis_version = std::string_view{MOTIS_VERSION};
   if (ac > 1 && av[1] == "--help"sv) {
     fmt::println(
         "MOTIS {}\n\n"
@@ -44,10 +46,10 @@ int main(int ac, char** av) {
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n",
-        MOTIS_VERSION);
+        motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
-    fmt::println("{}", MOTIS_VERSION);
+    fmt::println("{}", motis_version);
     return 0;
   }
 
@@ -104,8 +106,7 @@ int main(int ac, char** av) {
         }
 
         auto const c = config::read(data_path / "config.yml");
-        return_value = server(data{data_path, c}, c);
-        break;
+        return server(data{data_path, c}, c, motis_version);
       } catch (std::exception const& e) {
         std::cerr << "unable to start server: " << e.what() << "\n";
         return_value = 1;
