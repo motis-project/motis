@@ -42,6 +42,7 @@ struct config;
 struct railviz_static_index;
 struct railviz_rt_index;
 struct elevators;
+struct data;
 
 namespace odm {
 struct bounds;
