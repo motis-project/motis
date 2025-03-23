@@ -89,13 +89,13 @@ paths:
           description: latitude, longitude in degrees
           schema:
             type: string
-        - name: filterType
+        - name: type
           in: query
           required: false
           description: |
             Optional. Default is all types.
             
-            Only return results of the given types.
+            Only return results of the given type.
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
@@ -131,7 +131,7 @@ paths:
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
             type: string
-        - name: filterType
+        - name: type
           in: query
           required: false
           description: |

@@ -17,7 +17,7 @@ api::reverseGeocode_response reverse_geocode::operator()(
   return suggestions_to_response(
       t_, tt_, tags_, w_, pl_, matches_, {}, {},
       r_.lookup(t_, parse_location((params.place_))->pos_, 5U,
-                to_filter_type(params.filterType_)));
+                to_filter_type(params.type_)));
 }
 
 }  // namespace motis::ep

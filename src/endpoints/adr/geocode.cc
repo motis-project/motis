@@ -44,7 +44,7 @@ api::geocode_response geocode::operator()(
   }
   auto const token_pos = a::get_suggestions<false>(
       t_, geo::latlng{0, 0}, params.text_, 10U, lang_indices, ctx,
-      to_filter_type(params.filterType_));
+      to_filter_type(params.type_));
   return suggestions_to_response(t_, tt_, tags_, w_, pl_, matches_,
                                  lang_indices, token_pos, ctx.suggestions_);
 }
