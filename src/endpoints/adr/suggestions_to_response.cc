@@ -39,25 +39,8 @@ api::geocode_response suggestions_to_response(
     platform_matches_t const* matches,
     std::basic_string<a::language_idx_t> const& lang_indices,
     std::vector<adr::token> const& token_pos,
-    std::vector<adr::suggestion> const& suggestions,
-    std::optional<api::LocationTypeEnum> const& ty) {
-  auto s_ = suggestions;
-  if (ty != std::nullopt) {
-    s_.erase(
-        std::remove_if(s_.begin(), s_.end(), [&](const a::suggestion& s) {
-          return ty != std::visit(utl::overloaded{
-              [&](a::place_idx_t const p) {
-                return t.place_type_[p] == a::place_type::kExtra
-                           ? api::LocationTypeEnum::STOP
-                           : api::LocationTypeEnum::PLACE;
-              },
-              [&](a::address const) { return api::LocationTypeEnum::ADDRESS; },
-          }, s.location_);
-        }),
-        s_.end());
-  }
-
-  return utl::to_vec(s_, [&](a::suggestion const& s) {
+    std::vector<adr::suggestion> const& suggestions) {
+  return utl::to_vec(suggestions, [&](a::suggestion const& s) {
     auto const areas = t.area_sets_[s.area_set_];
 
     auto const zip_it = utl::find_if(
