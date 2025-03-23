@@ -63,7 +63,7 @@ api::geocode_response suggestions_to_response(
     auto const city_idx = static_cast<std::size_t>(
         city_it == end(areas) ? -1 : std::distance(begin(areas), city_it));
 
-    auto type = api::typeEnum{};
+    auto type = api::LocationTypeEnum{};
     auto street = std::optional<std::string>{};
     auto house_number = std::optional<std::string>{};
     auto id = std::string{};
@@ -72,9 +72,9 @@ api::geocode_response suggestions_to_response(
         utl::overloaded{
             [&](a::place_idx_t const p) {
               type = t.place_type_[p] == a::place_type::kExtra
-                         ? api::typeEnum::STOP
-                         : api::typeEnum::PLACE;
-              if (type == api::typeEnum::STOP) {
+                         ? api::LocationTypeEnum::STOP
+                         : api::LocationTypeEnum::PLACE;
+              if (type == api::LocationTypeEnum::STOP) {
                 if (tt != nullptr && tags != nullptr) {
                   auto const l = n::location_idx_t{t.place_osm_ids_[p]};
                   level = get_level(w, pl, matches, l);
@@ -90,7 +90,7 @@ api::geocode_response suggestions_to_response(
               return std::string{t.strings_[s.str_].view()};
             },
             [&](a::address const addr) {
-              type = api::typeEnum::ADDRESS;
+              type = api::LocationTypeEnum::ADDRESS;
               if (addr.house_number_ != a::address::kNoHouseNumber) {
                 street = t.strings_[s.str_].view();
                 house_number = t.strings_[t.house_numbers_[addr.street_]
