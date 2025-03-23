@@ -52,15 +52,17 @@ using namespace std::chrono_literals;
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 static boost::thread_specific_ptr<prima> p;
 
-constexpr auto const kODMLookAhead = 27h;
+constexpr auto const kODMLookAhead = 48h;
 constexpr auto const kSearchIntervalSize = 24h;
-constexpr auto const kODMDirectImprovement = 4.0;
 constexpr auto const kODMDirectPeriod = 1h;
-constexpr auto const kMinODMOffsetLength = n::duration_t{3};
+constexpr auto const kODMDirectFactor = 1.0;
+constexpr auto const kODMOffsetMinImprovement = 60s;
+constexpr auto const kODMMaxDuration = 3600s;
 constexpr auto const kBlacklistPath = "/api/blacklist";
 constexpr auto const kWhitelistPath = "/api/whitelist";
 static auto const kReqHeaders = std::map<std::string, std::string>{
     {"Content-Type", "application/json"}, {"Accept", "application/json"}};
+static auto const kMixer = get_default_mixer();
 
 using td_offsets_t =
     n::hash_map<n::location_idx_t, std::vector<n::routing::td_offset>>;
@@ -133,15 +135,6 @@ meta_router::meta_router(ep::routing const& r,
   }
 }
 
-n::interval<n::unixtime_t> get_odm_intvl(
-    n::direction dir, n::interval<n::unixtime_t> const& start_intvl) {
-  return dir == n::direction::kForward
-             ? n::interval<n::unixtime_t>{start_intvl.from_,
-                                          start_intvl.to_ + kODMLookAhead}
-             : n::interval<n::unixtime_t>{start_intvl.from_ - kODMLookAhead,
-                                          start_intvl.to_};
-}
-
 n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           ep::routing const& r,
                           elevators const* e,
@@ -149,8 +142,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
                           api::Place const& from_p,
                           api::Place const& to_p,
                           n::interval<n::unixtime_t> const intvl,
-                          api::plan_params const& query,
-                          n::duration_t const fastest_direct) {
+                          api::plan_params const& query) {
   direct_rides.clear();
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
@@ -165,21 +157,7 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      std::chrono::seconds{query.maxDirectTime_}, query.maxMatchingDistance_,
-      query.fastestDirectFactor_);
-
-  if (kODMDirectImprovement * taxi_duration > fastest_direct) {
-    fmt::println(
-        "[init] direct rides prohibited, improvement factor {} (taxi: "
-        "{}, walk: {})",
-        kODMDirectImprovement, taxi_duration, fastest_direct);
-    return taxi_duration;
-  }
-
-  fmt::println(
-      "[init] allowing direct rides, improvement factor {} (taxi: {}, "
-      "walk: {})",
-      kODMDirectImprovement, taxi_duration, fastest_direct);
+      kODMMaxDuration, query.maxMatchingDistance_, kODMDirectFactor);
 
   if (query.arriveBy_) {
     for (auto arr =
@@ -221,9 +199,6 @@ void init_pt(std::vector<n::routing::start>& rides,
       query.maxMatchingDistance_, gbfs_rd);
 
   std::erase_if(offsets, [&](n::routing::offset const& o) {
-    if (o.duration_ < kMinODMOffsetLength) {
-      return true;
-    }
     auto const out_of_bounds =
         (r.odm_bounds_ != nullptr &&
          !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
@@ -248,19 +223,24 @@ void init_pt(std::vector<n::routing::start>& rides,
       start_time.transfer_time_settings_);
 }
 
-void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
+void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
+                             n::interval<n::unixtime_t> const& odm_intvl) {
   if (p.get() == nullptr) {
     p.reset(new prima{});
   }
 
   p->init(from_place_, to_place_, query_);
 
-  auto direct_duration = std::optional<std::chrono::duration<int64_t>>{};
+  auto direct_duration = std::optional<std::chrono::seconds>{};
   if (odm_direct_ && r_.w_ && r_.l_) {
-    direct_duration =
-        init_direct(p->direct_rides_, r_, e_, gbfs_rd_, from_place_, to_place_,
-                    odm_intvl, query_, fastest_direct_);
+    direct_duration = init_direct(p->direct_rides_, r_, e_, gbfs_rd_,
+                                  from_place_, to_place_, search_intvl, query_);
   }
+
+  auto const max_offset_duration =
+      direct_duration ? std::min(*direct_duration - kODMOffsetMinImprovement,
+                                 kODMMaxDuration)
+                      : kODMMaxDuration;
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
@@ -268,10 +248,7 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
             start_time_,
             query_.arriveBy_ ? start_time_.dest_match_mode_
                              : start_time_.start_match_mode_,
-            std::chrono::seconds{direct_duration
-                                     ? std::min(direct_duration->count(),
-                                                query_.maxPreTransitTime_)
-                                     : query_.maxPreTransitTime_});
+            max_offset_duration);
   }
 
   if (odm_post_transit_ && holds_alternative<osr::location>(to_)) {
@@ -280,10 +257,7 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& odm_intvl) {
             start_time_,
             query_.arriveBy_ ? start_time_.start_match_mode_
                              : start_time_.dest_match_mode_,
-            std::chrono::seconds{direct_duration
-                                     ? std::min(direct_duration->count(),
-                                                query_.maxPostTransitTime_)
-                                     : query_.maxPostTransitTime_});
+            max_offset_duration);
   }
 
   std::erase(start_modes_, api::ModeEnum::ODM);
@@ -296,18 +270,28 @@ bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
 }
 
 auto ride_time_halves(std::vector<n::routing::start>& rides) {
+  auto const duration = [](auto const& ride) {
+    return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
+  };
 
-  auto const by_duration = [](auto const& a, auto const& b) {
-    auto const duration = [](auto const& ride) {
-      return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
-    };
+  auto const by_duration = [&](auto const& a, auto const& b) {
     return duration(a) < duration(b);
   };
 
   utl::sort(rides, by_duration);
-  auto const split = std::distance(
-      begin(rides), std::upper_bound(begin(rides), end(rides),
-                                     rides[rides.size() / 2], by_duration));
+  auto const split =
+      rides.empty()
+          ? 0
+          : std::distance(
+                begin(rides),
+                std::upper_bound(
+                    begin(rides), end(rides),
+                    n::routing::start{
+                        .time_at_start_ = n::unixtime_t{},
+                        .time_at_stop_ =
+                            n::unixtime_t{} + duration(rides.front()) + 1min,
+                        .stop_ = n::location_idx_t::invalid()},
+                    by_duration));
 
   auto lo = rides | std::views::take(split);
   auto hi = rides | std::views::drop(split);
@@ -444,7 +428,9 @@ void collect_odm_journeys(
   p->odm_journeys_.clear();
   for (auto const& r : results | std::views::drop(1)) {
     for (auto const& j : r.journeys_) {
-      p->odm_journeys_.push_back(j);
+      if (uses_odm(j)) {
+        p->odm_journeys_.push_back(j);
+      }
     }
   }
   fmt::println("[routing] collected {} ODM-PT journeys",
@@ -517,17 +503,29 @@ api::plan_response meta_router::run() {
   auto const odm_intvl =
       query_.arriveBy_
           ? n::interval<n::unixtime_t>{start_intvl.to_ - kODMLookAhead,
-                                       start_intvl.to_}
-          : n::interval<n::unixtime_t>{start_intvl.from_,
-                                       start_intvl.from_ + kODMLookAhead};
+                                       start_intvl.to_ +
+                                           std::chrono::minutes{
+                                               kMixer.max_distance_}}
+          : n::interval<n::unixtime_t>{
+                start_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
+                start_intvl.from_ + kODMLookAhead};
   auto const search_intvl =
       query_.arriveBy_
           ? n::interval<n::unixtime_t>{start_intvl.to_ - kSearchIntervalSize,
                                        start_intvl.to_}
           : n::interval<n::unixtime_t>{start_intvl.from_,
                                        start_intvl.from_ + kSearchIntervalSize};
+  auto const context_intvl =
+      query_.arriveBy_
+          ? n::interval<n::unixtime_t>{search_intvl.from_,
+                                       search_intvl.to_ +
+                                           std::chrono::minutes{
+                                               kMixer.max_distance_}}
+          : n::interval<n::unixtime_t>{
+                search_intvl.from_ - std::chrono::minutes{kMixer.max_distance_},
+                search_intvl.to_};
 
-  init_prima(odm_intvl);
+  init_prima(context_intvl, odm_intvl);
   print_time(init_start, "[init]");
 
   // blacklisting
@@ -564,7 +562,7 @@ api::plan_response meta_router::run() {
   auto const [to_rides_short, to_rides_long] = ride_time_halves(p->to_rides_);
 
   auto const qf = query_factory{
-      .base_query_ = get_base_query(search_intvl),
+      .base_query_ = get_base_query(context_intvl),
       .start_walk_ = std::visit(
           utl::overloaded{[&](tt_location const l) {
                             return motis::ep::station_start(l.l_);
@@ -691,8 +689,13 @@ api::plan_response meta_router::run() {
 
   fmt::println("[mixing] {} PT journeys and {} ODM journeys",
                pt_result.journeys_.size(), p->odm_journeys_.size());
-  get_default_mixer().mix(pt_result.journeys_, p->odm_journeys_);
+  kMixer.mix(pt_result.journeys_, p->odm_journeys_);
   print_time(mixing_start, "[mixing]");
+
+  // remove journeys added for mixing context
+  std::erase_if(p->odm_journeys_, [&](auto const& j) {
+    return !search_intvl.contains(j.start_time_);
+  });
 
   return {.from_ = from_place_,
           .to_ = to_place_,

@@ -43,7 +43,6 @@ timetable:
   num_days: 2
   railviz: true
   with_shapes: true
-  ignore_errors: false
   adjust_footpaths: true
   merge_dupes_intra_src: false
   merge_dupes_inter_src: false

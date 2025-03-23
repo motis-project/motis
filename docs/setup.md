@@ -1,6 +1,6 @@
 # Advanced Configuration
 
-This is an example of how to use multiple GTFS-static datasets with multiple real-time feeds. You can also see how to set additional headers like `Authorization` to enable the usage of API keys.
+This is an example of how to use multiple GTFS-static datasets with multiple real-time feeds, as well as GBFS feeds. You can also see how to set additional headers like `Authorization` to enable the usage of API keys.
 
 ```yaml
 server:
@@ -20,6 +20,10 @@ timetable:
         - url: https://api.opentransportdata.swiss/gtfsrt2020
           headers:
             Authorization: MY_API_KEY
+gbfs:
+  feeds:
+    montreal:
+      url: https://gbfs.velobixi.com/gbfs/gbfs.json
 tiles:
   profile: tiles-profiles/full.lua
 street_routing: true
@@ -68,6 +72,10 @@ timetable:                          # if not set, no timetable will be loaded
       rt:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
+gbfs:
+  feeds:
+    montreal:
+      url: https://gbfs.velobixi.com/gbfs/gbfs.json
 street_routing: true              # enable street routing (default = false)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
 elevators: false                  # currently not supported

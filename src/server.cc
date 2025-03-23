@@ -22,6 +22,7 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/osr_routing.h"
 #include "motis/endpoints/platforms.h"
@@ -54,13 +55,14 @@ void POST(auto&& r, std::string target, From& from) {
   }
 }
 
-int server(data d, config const& c) {
+int server(data d, config const& c, std::string_view const motis_version) {
   auto const server_config = c.server_.value_or(config::server{});
 
   auto ioc = asio::io_context{};
   auto s = net::web_server{ioc};
   auto r = runner{server_config.n_threads_, 1024U};
   auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
+  qr.add_header("Server", std::format("MOTIS {}", motis_version));
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
@@ -78,6 +80,7 @@ int server(data d, config const& c) {
   GET<ep::trip>(qr, "/api/v1/trip", d);
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
+  GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
 
   if (c.tiles_) {

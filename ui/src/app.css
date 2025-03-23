@@ -74,6 +74,14 @@
 	}
 }
 
+body {
+	font:
+		12px / 20px Helvetica Neue,
+		Arial,
+		Helvetica,
+		sans-serif;
+}
+
 .maplibregl-popup-anchor-top .maplibregl-popup-tip,
 .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
 .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {

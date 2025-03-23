@@ -22,12 +22,14 @@
 		routingResponses,
 		baseResponse,
 		baseQuery,
-		selectItinerary
+		selectItinerary,
+		updateStartDest
 	}: {
 		routingResponses: Array<Promise<PlanResponse>>;
 		baseResponse: Promise<PlanResponse> | undefined;
 		baseQuery: PlanData | undefined;
 		selectItinerary: (it: Itinerary) => void;
+		updateStartDest: (r: { data: PlanResponse | undefined; error: unknown }) => PlanResponse;
 	} = $props();
 
 	const throwOnError = (promise: RequestResult<PlanResponse, PlanError, false>) =>
@@ -37,7 +39,7 @@
 				throw new Error(
 					String((response.error as Record<string, unknown>).error ?? response.error)
 				);
-			return response.data!;
+			return response;
 		});
 </script>
 
@@ -96,7 +98,7 @@
 												plan({
 													query: { ...baseQuery.query, pageCursor: r.previousPageCursor }
 												})
-											)
+											).then(updateStartDest)
 										);
 									}}
 									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white font-bold text-sm border rounded-lg text-nowrap"
@@ -121,6 +123,7 @@
 												timestamp={it.startTime}
 												scheduledTimestamp={it.legs[0].scheduledStartTime}
 												variant={'realtime-show-always'}
+												queriedTime={baseQuery?.query.time}
 											/>
 										</div>
 										<Separator orientation="vertical" />
@@ -131,6 +134,7 @@
 												timestamp={it.endTime}
 												scheduledTimestamp={it.legs[it.legs.length - 1].scheduledEndTime}
 												variant={'realtime-show-always'}
+												queriedTime={it.startTime}
 											/>
 										</div>
 										<Separator orientation="vertical" />
@@ -165,7 +169,7 @@
 												plan({
 													query: { ...baseQuery.query, pageCursor: r.nextPageCursor }
 												})
-											)
+											).then(updateStartDest)
 										);
 									}}
 									class="px-2 py-1 bg-blue-600 hover:!bg-blue-700 text-white text-sm font-bold border rounded-lg text-nowrap"

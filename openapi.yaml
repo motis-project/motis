@@ -17,7 +17,7 @@ paths:
   /api/v1/one-to-many:
     get:
       tags:
-        - geocode
+        - routing
       summary: |
         Street routing from one to many places or many to one.
         The order in the response array corresponds to the order of coordinates of the \`many\` parameter in the query.
@@ -26,7 +26,7 @@ paths:
         - name: one
           in: query
           required: true
-          description: geo location as latitude,longitude
+          description: geo location as latitude;longitude
           schema:
             type: string
         - name: many
@@ -905,6 +905,148 @@ paths:
                       The next page is a set of itineraries departing AFTER the last itinerary in this result.
                     type: string
 
+  /api/experimental/one-to-all:
+    get:
+      tags:
+        - routing
+      summary: |
+        Computes all reachable locations from a given stop within a set duration.
+        Each result entry will contain the fastest travel duration and the number of connections used.
+      operationId: oneToAll
+      parameters:
+        - name: one
+          in: query
+          required: true
+          description: stop id of the starting or ending stop
+          schema:
+            type: string
+        - name: time
+          in: query
+          required: false
+          description: |
+            Optional. Defaults to the current time.
+
+            Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+          schema:
+            type: string
+            format: date-time
+        - name: maxTravelTime
+          in: query
+          required: true
+          description: maximum travel time in minutes
+          schema:
+            type: integer
+        - name: arriveBy
+          in: query
+          required: false
+          description: |
+            true = all to one
+            false = one to all
+          schema:
+            type: boolean
+            default: false
+        - name: maxTransfers
+          in: query
+          required: false
+          description: |
+            The maximum number of allowed transfers.
+            If not provided, the routing uses the server-side default value
+            which is hardcoded and very high to cover all use cases.
+
+            *Warning*: Use with care. Setting this too low can lead to
+            optimal (e.g. the fastest) journeys not being found.
+            If this value is too low to reach the destination at all,
+            it can lead to slow routing performance.
+          schema:
+            type: integer
+        - name: minTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Minimum transfer time for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: additionalTransferTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 0 minutes.
+
+            Additional transfer time reserved for each transfer in minutes.
+          schema:
+            type: integer
+            default: 0
+
+        - name: transferTimeFactor
+          in: query
+          required: false
+          description: |
+            Optional. Default is 1.0
+
+            Factor to multiply minimum required transfer times with.
+            Values smaller than 1.0 are not supported.
+          schema:
+            type: number
+            default: 1.0
+        - name: useRoutedTransfers
+          in: query
+          required: false
+          description: |
+            Optional. Default is `false`.
+
+            Whether to use transfers routed on OpenStreetMap data.
+          schema:
+            type: boolean
+            default: false
+        - name: pedestrianProfile
+          in: query
+          required: false
+          description: |
+            Optional. Default is `FOOT`.
+
+            Accessibility profile to use for pedestrian routing in transfers
+            between transit connections and the first and last mile respectively.
+          schema:
+            $ref: '#/components/schemas/PedestrianProfile'
+            default: FOOT
+        - name: transitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+            Allowed modes for the transit part. If empty, no transit connections will be computed.
+            For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+          schema:
+            default:
+              - TRANSIT
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+        - name: requireBikeTransport
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+
+            If set to `true`, all used transit trips are required to allow bike carriage.
+      responses:
+        200:
+          description: |
+            The starting position and a list of all reachable stops
+            If no paths are found, the reachable list is empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reachable'
+
   /api/v1/map/trips:
     get:
       tags:
@@ -1300,6 +1442,41 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+
+    ReachablePlace:
+      description: Place reachable by One-to-All
+      type: object
+      properties:
+        place:
+          $ref: "#/components/schemas/Place"
+          description: Place reached by One-to-All
+        duration:
+          type: integer
+          description: Total travel duration
+        k:
+          type: integer
+          description: |
+            k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist.
+            You can think of k as the number of connections used.
+
+            In more detail:
+
+            k=0: No connection, e.g. for the one location
+            k=1: Direct connection
+            k=2: Connection with 1 transfer
+
+    Reachable:
+      description: Object containing all reachable places by One-to-All search
+      type: object
+      properties:
+        one:
+          $ref: "#/components/schemas/Place"
+          description: One location used in One-to-All search
+        all:
+          description: List of locations reachable by One-to-All
+          type: array
+          items:
+            $ref: "#/components/schemas/ReachablePlace"
 
     StopTime:
       description: departure or arrival event at a stop

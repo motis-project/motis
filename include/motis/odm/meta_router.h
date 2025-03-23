@@ -62,7 +62,8 @@ struct meta_router {
   };
 
 private:
-  void init_prima(nigiri::interval<nigiri::unixtime_t> const&);
+  void init_prima(nigiri::interval<nigiri::unixtime_t> const& search_intvl,
+                  nigiri::interval<nigiri::unixtime_t> const& odm_intvl);
   nigiri::routing::query get_base_query(
       nigiri::interval<nigiri::unixtime_t> const&) const;
   std::vector<routing_result> search_interval(

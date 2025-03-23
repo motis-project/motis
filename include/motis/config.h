@@ -80,7 +80,6 @@ struct config {
     std::uint16_t num_days_{365U};
     bool railviz_{true};
     bool with_shapes_{true};
-    bool ignore_errors_{false};
     bool adjust_footpaths_{true};
     bool merge_dupes_intra_src_{false};
     bool merge_dupes_inter_src_{false};

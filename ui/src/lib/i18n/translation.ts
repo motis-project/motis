@@ -73,5 +73,9 @@ const translations: Map<string, Translations> = new Map(
 	})
 );
 
-export const language = (browser ? navigator.languages.find((l) => l.length == 2) : 'en') ?? 'en';
-export const t = translations.get(language) ?? en;
+const translationsKey = (
+	browser ? (navigator.languages.find((l) => translations.has(l.slice(0, 2))) ?? 'en') : 'en'
+)?.slice(0, 2);
+
+export const language = translationsKey ?? (browser ? navigator.language : 'en');
+export const t = translationsKey ? translations.get(translationsKey)! : en;
