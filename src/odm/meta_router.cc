@@ -437,6 +437,80 @@ void collect_odm_journeys(
                p->odm_journeys_.size());
 }
 
+void meta_router::shorten_odm() const {
+  auto const odm_duration = [](n::routing::start const& ride) {
+    return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
+  };
+
+  auto const shorten_first_leg = [&](n::routing::journey& j) {
+    if (!is_odm_leg(j.legs_.front()) ||
+        !std::holds_alternative<n::routing::journey::run_enter_exit>(
+            begin(j.legs_)[1].uses_)) {
+      return;
+    }
+    auto& odm_leg = begin(j.legs_)[0];
+    auto& pt_leg = begin(j.legs_)[1];
+    auto run = nigiri::rt::frun(
+        *tt_, rtt_,
+        std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_).r_);
+    auto min_stop_idx = run.stop_range_.from_;
+    run.stop_range_.from_ = n::stop_idx_t{0U};
+    auto min_odm_duration =
+        j.legs_.front().arr_time_ - j.legs_.front().dep_time_;
+    auto shorter_ride = std::optional<n::routing::start>{};
+    for (auto const s : run) {
+      if (s.is_canceled() ||
+          s.in_allowed(query_.pedestrianProfile_ ==
+                       api::PedestrianProfileEnum::WHEELCHAIR) ||
+          (query_.requireBikeTransport_ &&
+           !s.bikes_allowed(n::event_type::kDep))) {
+        continue;
+      }
+      for (auto& ride : p->from_rides_) {
+        if (ride.stop_ == s.get_location_idx() &&
+            ride.time_at_stop_ == s.time(n::event_type::kDep)) {
+          auto const cur_odm_duration = odm_duration(ride);
+          if (cur_odm_duration < min_odm_duration) {
+            min_stop_idx = s.stop_idx_;
+            min_odm_duration = cur_odm_duration;
+            shorter_ride = ride;
+          }
+          break;
+        }
+      }
+    }
+    if (shorter_ride) {
+      fmt::println("Found a shorter ODM first leg: [{},{}]",
+                   tt_->locations_.get(shorter_ride->stop_).name_,
+                   min_odm_duration);
+      auto& odm_offset = std::get<n::routing::offset>(odm_leg.uses_);
+      auto& pt_run_enter_exit =
+          std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
+      j.start_time_ = odm_leg.dep_time_ = shorter_ride->time_at_start_;
+      odm_offset.duration_ = min_odm_duration;
+      odm_leg.arr_time_ = pt_leg.dep_time_ = shorter_ride->time_at_stop_;
+      odm_leg.to_ = odm_offset.target_ = pt_leg.from_ = shorter_ride->stop_;
+      pt_run_enter_exit.stop_range_.from_ =
+          pt_run_enter_exit.r_.stop_range_.from_ = min_stop_idx;
+    }
+  };
+
+  auto const shorten_last_leg = [&](n::routing::journey& j) {
+    if (!is_odm_leg(j.legs_.back())) {
+      return;
+    }
+  };
+
+  for (auto& j : p->odm_journeys_) {
+    if (j.legs_.empty()) {
+      fmt::println("shorten_odm: journey without legs");
+      continue;
+    }
+    shorten_first_leg(j);
+    shorten_last_leg(j);
+  }
+}
+
 void extract_rides() {
   p->from_rides_.clear();
   p->to_rides_.clear();
@@ -647,6 +721,7 @@ api::plan_response meta_router::run() {
   auto const results = search_interval(sub_queries);
   auto const& pt_result = results.front();
   collect_odm_journeys(results);
+  shorten_odm();
   fmt::println("[routing] interval searched: {}", pt_result.interval_);
   print_time(routing_start, "[routing]");
 
