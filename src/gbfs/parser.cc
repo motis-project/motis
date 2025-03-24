@@ -210,10 +210,7 @@ void load_station_information(gbfs_provider& provider,
     auto const& station_obj = s.as_object();
     auto const station_id =
         static_cast<std::string>(station_obj.at("station_id").as_string());
-    auto const name =
-        version == gbfs_version::k2
-            ? static_cast<std::string>(station_obj.at("name").as_string())
-            : get_localized_string(version, station_obj.at("name"));
+    auto const name = get_localized_string(version, station_obj.at("name"));
     auto const lat = station_obj.at("lat").as_double();
     auto const lon = station_obj.at("lon").as_double();
 
@@ -244,9 +241,9 @@ void load_station_status(gbfs_provider& provider, json::value const& root) {
     auto const& station_obj = s.as_object();
     auto const station_id =
         static_cast<std::string>(station_obj.at("station_id").as_string());
-    auto const num_vehicles_available_key = version == gbfs_version::k2
-                                                ? "num_bikes_available"
-                                                : "num_vehicles_available";
+    auto const num_vehicles_available_key = version == gbfs_version::k3
+                                                ? "num_vehicles_available"
+                                                : "num_bikes_available";
 
     auto const station_it = provider.stations_.find(station_id);
     if (station_it == end(provider.stations_)) {
