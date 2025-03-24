@@ -49,7 +49,12 @@ api::footpaths_response footpaths::operator()(
         utl::to_vec(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
-        kMaxDuration, osr::direction::kForward, kMaxMatchingDistance,
+        kMaxDuration, osr::direction::kForward,
+        c_.timetable_
+            .and_then([](config::timetable const& t) {
+              return std::optional{t.max_matching_distance_};
+            })
+            .value_or(kMaxMatchingDistance),
         e == nullptr ? nullptr : &e->blocked_, nullptr, elevations_,
         [](osr::path const& p) { return p.uses_elevator_; });
 

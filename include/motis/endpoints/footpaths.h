@@ -18,6 +18,7 @@ namespace motis::ep {
 struct footpaths {
   api::footpaths_response operator()(boost::urls::url_view const&) const;
 
+  config const& c_;
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;
   osr::ways const& w_;
