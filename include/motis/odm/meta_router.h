@@ -68,7 +68,6 @@ private:
       nigiri::interval<nigiri::unixtime_t> const&) const;
   std::vector<routing_result> search_interval(
       std::vector<nigiri::routing::query> const&) const;
-  void shorten_odm() const;
   void add_direct() const;
 
   ep::routing const& r_;

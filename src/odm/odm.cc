@@ -36,4 +36,8 @@ n::duration_t odm_time(nr::journey const& j) {
                                [](auto const& l) { return odm_time(l); });
 }
 
+n::duration_t duration(nr::start const& ride) {
+  return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
+};
+
 }  // namespace motis::odm
