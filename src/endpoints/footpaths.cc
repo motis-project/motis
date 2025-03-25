@@ -40,6 +40,11 @@ api::footpaths_response footpaths::operator()(
       footpaths[fp.target()].foot_ = fp.duration().count();
     }
   }
+  if (!tt_.locations_.footpaths_out_[2].empty()) {
+    for (auto const fp : tt_.locations_.footpaths_out_[2].at(l)) {
+      footpaths[fp.target()].wheelchair_ = fp.duration().count();
+    }
+  }
 
   auto const loc = get_loc(tt_, w_, pl_, matches_, l);
   for (auto const mode :
@@ -49,25 +54,20 @@ api::footpaths_response footpaths::operator()(
         utl::to_vec(
             neighbors,
             [&](auto&& l) { return get_loc(tt_, w_, pl_, matches_, l); }),
-        kMaxDuration, osr::direction::kForward,
-        c_.timetable_
-            .and_then([](config::timetable const& t) {
-              return std::optional{t.max_matching_distance_};
-            })
-            .value_or(kMaxMatchingDistance),
-        e == nullptr ? nullptr : &e->blocked_, nullptr, elevations_,
+        c_.timetable_.value().max_footpath_length_ * 60U,
+        osr::direction::kForward, c_.timetable_.value().max_matching_distance_,
+        e == nullptr ? nullptr : &e->blocked_, nullptr, nullptr,
         [](osr::path const& p) { return p.uses_elevator_; });
 
     for (auto const [n, r] : utl::zip(neighbors, results)) {
       if (r.has_value()) {
         auto& fp = footpaths[n];
-        auto const duration =
-            std::ceil(r->cost_ * kTransferTimeMultiplier / 60U);
+        auto const duration = std::ceil(r->cost_ / 60U);
         if (duration < n::footpath::kMaxDuration.count()) {
           switch (mode) {
             case osr::search_profile::kFoot: fp.footRouted_ = duration; break;
             case osr::search_profile::kWheelchair:
-              fp.wheelchair_ = duration;
+              fp.wheelchairRouted_ = duration;
               fp.wheelchairUsesElevator_ = r->uses_elevator_;
               break;
             default: std::unreachable();

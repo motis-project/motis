@@ -161,9 +161,10 @@ void config::verify_input_files_exist() const {
 
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
-         utl::any_of(timetable_->datasets_, [](auto&& d) {
-           return d.second.rt_.has_value() && !d.second.rt_->empty();
-         });
+         (elevators_.has_value() ||
+          utl::any_of(timetable_->datasets_, [](auto&& d) {
+            return d.second.rt_.has_value() && !d.second.rt_->empty();
+          }));
 }
 
 bool config::has_gbfs_feeds() const {

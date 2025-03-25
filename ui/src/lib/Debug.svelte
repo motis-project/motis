@@ -66,6 +66,10 @@
 		return await post('/api/matches', bounds.toArray().flat());
 	};
 
+	const getElevators = async (bounds: maplibregl.LngLatBounds) => {
+		return await post('/api/elevators', bounds.toArray().flat());
+	};
+
 	export const getGraph = async (bounds: maplibregl.LngLatBounds, level: number) => {
 		return await post('/api/graph', {
 			level: level,
@@ -91,10 +95,14 @@
 	);
 
 	let graph = $state<null | geojson.GeoJSON>(null);
+	let elevators = $state<null | geojson.GeoJSON>(null);
 	$effect(() => {
 		if (debug && bounds) {
 			getGraph(maplibregl.LngLatBounds.convert(bounds), level).then((response: geojson.GeoJSON) => {
 				graph = response;
+			});
+			getElevators(maplibregl.LngLatBounds.convert(bounds)).then((response: geojson.GeoJSON) => {
+				elevators = response;
 			});
 		} else {
 			graph = null;
@@ -135,7 +143,7 @@
 		{#await fps then f}
 			{#if f}
 				<Control position="bottom-right">
-					<Card class="w-[500px] h-[500px] overflow-y-auto bg-background rounded-lg">
+					<Card class="w-[600px] h-[500px] overflow-y-auto bg-background rounded-lg">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 							<h2 class="ml-2 text-base font-semibold">
 								{f.place.name}
@@ -154,17 +162,23 @@
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Station</TableHead>
-									<TableHead>Default</TableHead>
-									<TableHead>Foot</TableHead>
-									<TableHead>Foot Routed</TableHead>
-									<TableHead>Wheelchair</TableHead>
+									<TableHead class="text-center">Station</TableHead>
+									<TableHead class="text-center">Default</TableHead>
+									<TableHead class="text-center">Foot</TableHead>
+									<TableHead class="text-center">Foot Routed</TableHead>
+									<TableHead class="text-center">Wheelchair</TableHead>
+									<TableHead class="text-center">Wheelchair Routed</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{#each f.footpaths as x}
 									<TableRow>
-										<TableCell>{x.to.name}</TableCell>
+										<TableCell>
+											{x.to.name} <br />
+											<span class="text-xs text-muted-foreground font-mono">
+												{x.to.stopId}
+											</span>
+										</TableCell>
 										<TableCell>
 											{#if x.default !== undefined}
 												<Button
@@ -219,6 +233,21 @@
 													}}
 												>
 													{x.wheelchair}
+												</Button>
+											{/if}
+										</TableCell>
+										<TableCell>
+											{#if x.wheelchairRouted !== undefined}
+												<Button
+													class={x.wheelchairUsesElevator ? 'text-red-500' : 'text-green-500'}
+													variant="outline"
+													onclick={() => {
+														start = posToLocation(f.place, f.place.level);
+														destination = posToLocation(x.to, x.to.level);
+														profile = 'wheelchair';
+													}}
+												>
+													{x.wheelchairRouted}
 												</Button>
 											{/if}
 										</TableCell>
@@ -385,7 +414,39 @@
 				layout={{}}
 				paint={{
 					'circle-color': ['match', ['get', 'label'], 'unreachable', '#ff1150', '#11ffaf'],
-					'circle-radius': 6
+					'circle-radius': 5
+				}}
+			>
+				<Popup trigger="click" children={nodeDetails} />
+			</Layer>
+		</GeoJSON>
+	{/if}
+
+	{#if elevators}
+		<GeoJSON id="elevators" data={elevators}>
+			<Layer
+				id="elevators"
+				type="circle"
+				filter={['all', ['==', '$type', 'Point']]}
+				layout={{}}
+				paint={{
+					'circle-color': ['match', ['get', 'status'], 'ACTIVE', '#ffff00', '#ff00ff'],
+					'circle-radius': 8
+				}}
+			>
+				<Popup trigger="click" children={nodeDetails} />
+			</Layer>
+			<Layer
+				id="elevators-match"
+				type="line"
+				filter={['all', ['==', 'type', 'match']]}
+				layout={{
+					'line-join': 'round',
+					'line-cap': 'round'
+				}}
+				paint={{
+					'line-color': '#00ff00',
+					'line-width': 3
 				}}
 			>
 				<Popup trigger="click" children={nodeDetails} />

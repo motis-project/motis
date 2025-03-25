@@ -36,6 +36,7 @@ std::vector<nigiri::td_footpath> get_td_footpaths(
     osr::direction,
     osr::search_profile,
     std::chrono::seconds max,
+    double max_matching_distance,
     osr::bitvec<osr::node_idx_t>& blocked_mem);
 
 std::optional<std::pair<nodes_t, states_t>> get_states_at(osr::ways const&,
@@ -55,6 +56,7 @@ void update_rtt_td_footpaths(
     hash_set<std::pair<nigiri::location_idx_t, osr::direction>> const& tasks,
     nigiri::rt_timetable const* old_rtt,
     nigiri::rt_timetable&,
+    double max_matching_distance,
     std::chrono::seconds max);
 
 void update_rtt_td_footpaths(osr::ways const&,
@@ -66,6 +68,7 @@ void update_rtt_td_footpaths(osr::ways const&,
                              elevator_footpath_map_t const&,
                              platform_matches_t const&,
                              nigiri::rt_timetable&,
+                             double max_matching_distance,
                              std::chrono::seconds max);
 
 }  // namespace motis
