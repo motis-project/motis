@@ -28,7 +28,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       return;
     }
 
-    auto const& ree = std::get<nr::journey::run_enter_exit>(pt_leg.uses_);
+    auto& ree = std::get<nr::journey::run_enter_exit>(pt_leg.uses_);
     auto run = n::rt::frun(tt, rtt, ree.r_);
     run.stop_range_.to_ = ree.stop_range_.to_;
     auto min_stop_idx = ree.stop_range_.from_;
@@ -58,18 +58,27 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       }
     }
     if (shorter_ride) {
-      std::println("Found a shorter ODM first leg: [{},{}]",
-                   tt.locations_.get(shorter_ride->stop_).name_,
-                   min_odm_duration);
       auto& odm_offset = std::get<n::routing::offset>(odm_leg.uses_);
-      auto& pt_run_enter_exit =
-          std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
+
+      auto const old_odm_time = odm_offset.duration_;
+      auto const old_stop = tt.locations_.get(odm_leg.to_).name_;
+      auto const old_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
+
       j.start_time_ = odm_leg.dep_time_ = shorter_ride->time_at_start_;
       odm_offset.duration_ = min_odm_duration;
       odm_leg.arr_time_ = pt_leg.dep_time_ = shorter_ride->time_at_stop_;
       odm_leg.to_ = odm_offset.target_ = pt_leg.from_ = shorter_ride->stop_;
-      pt_run_enter_exit.stop_range_.from_ =
-          pt_run_enter_exit.r_.stop_range_.from_ = min_stop_idx;
+      ree.stop_range_.from_ = ree.r_.stop_range_.from_ = min_stop_idx;
+
+      auto const new_odm_time = odm_offset.duration_;
+      auto const new_stop = tt.locations_.get(odm_leg.to_).name_;
+      auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
+
+      fmt::println(
+          "Shortened ODM first leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
+          "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
+          old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
+          new_pt_time, old_odm_time - new_odm_time, new_pt_time - old_pt_time);
     }
   };
 
@@ -83,17 +92,13 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       return;
     }
 
-    auto const& ree =
-        std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
+    auto& ree = std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
     auto run = nigiri::rt::frun(tt, rtt, ree.r_);
     run.stop_range_.from_ = ree.stop_range_.from_ + 1U;
     auto min_stop_idx = static_cast<n::stop_idx_t>(ree.stop_range_.to_ - 1U);
     auto min_odm_duration = odm_time(odm_leg);
     auto shorter_ride = std::optional<n::routing::start>{};
-    std::println("\nmin_start: {},{}", tt.locations_.get(odm_leg.from_).name_,
-                 min_odm_duration);
     for (auto const stop : run) {
-      std::println("examining stop: {}", stop.name());
       if (stop.is_canceled() ||
           !stop.out_allowed(query.pedestrianProfile_ ==
                             api::PedestrianProfileEnum::WHEELCHAIR) ||
@@ -107,8 +112,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
                                 ride.stop_, stop.get_location_idx()) &&
             ride.time_at_stop_ == stop.time(n::event_type::kArr)) {
           auto const cur_odm_duration = duration(ride);
-          std::println("odm_duration: {}", cur_odm_duration);
-          if (cur_odm_duration <= min_odm_duration) {
+          if (cur_odm_duration < min_odm_duration) {
             min_stop_idx = stop.stop_idx_;
             min_odm_duration = cur_odm_duration;
             shorter_ride = ride;
@@ -118,18 +122,27 @@ void shorten(std::vector<nr::journey>& odm_journeys,
       }
     }
     if (shorter_ride) {
-      std::println("Found a shorter ODM last leg: [{}, {}, {}]", min_stop_idx,
-                   tt.locations_.get(shorter_ride->stop_).name_,
-                   min_odm_duration);
       auto& odm_offset = std::get<n::routing::offset>(odm_leg.uses_);
-      auto& pt_run_enter_exit =
-          std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
-      pt_run_enter_exit.stop_range_.to_ = pt_run_enter_exit.r_.stop_range_.to_ =
-          min_stop_idx + 1U;
+
+      auto const old_odm_time = odm_offset.duration_;
+      auto const old_stop = tt.locations_.get(odm_leg.from_).name_;
+      auto const old_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
+
+      ree.stop_range_.to_ = ree.r_.stop_range_.to_ = min_stop_idx + 1U;
       pt_leg.to_ = odm_leg.from_ = odm_offset.target_ = shorter_ride->stop_;
       pt_leg.arr_time_ = odm_leg.dep_time_ = shorter_ride->time_at_stop_;
       odm_offset.duration_ = min_odm_duration;
       j.dest_time_ = odm_leg.arr_time_ = shorter_ride->time_at_start_;
+
+      auto const new_odm_time = odm_offset.duration_;
+      auto const new_stop = tt.locations_.get(odm_leg.from_).name_;
+      auto const new_pt_time = pt_leg.arr_time_ - pt_leg.dep_time_;
+
+      fmt::println(
+          "Shortened ODM last leg: [ODM: {}, stop: {}, PT: {}] --> [ODM: {}, "
+          "stop: {}, PT: {}] (ODM: -{}, PT: +{})",
+          old_odm_time, old_stop, old_pt_time, new_odm_time, new_stop,
+          new_pt_time, old_odm_time - new_odm_time, new_pt_time - old_pt_time);
     }
   };
 
