@@ -130,11 +130,12 @@ struct config {
 
   struct elevators {
     bool operator==(elevators const&) const = default;
+    std::optional<std::string> url_;
+    std::optional<std::string> init_;
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
-    std::string url_;
   };
-  std::optional<elevators> elevators_;
+  std::optional<elevators> elevators_{};
 
   bool street_routing_{false};
   bool osr_footpath_{false};

@@ -18,11 +18,13 @@
 #include "osr/ways.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
+#include "nigiri/rt/rt_timetable.h"
 #include "nigiri/shapes_storage.h"
 #include "nigiri/timetable.h"
 
 #include "motis/config.h"
 #include "motis/constants.h"
+#include "motis/elevators/update_elevators.h"
 #include "motis/hashes.h"
 #include "motis/match_platforms.h"
 #include "motis/odm/bounds.h"
@@ -31,7 +33,6 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
-#include "motis/update_rtt_td_footpaths.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -130,6 +131,18 @@ data::data(std::filesystem::path p, config const& c)
       street_routing.wait();
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
+
+      if (c.elevators_->init_) {
+        tt.wait();
+        auto new_rtt = std::make_unique<n::rt_timetable>(
+            n::rt::create_rt_timetable(*tt_, rt_->rtt_->base_day_));
+        rt_->e_ = update_elevators(c, *this,
+                                   cista::mmap{c.elevators_->init_->c_str(),
+                                               cista::mmap::protection::READ}
+                                       .view(),
+                                   *new_rtt);
+        rt_->rtt_ = std::move(new_rtt);
+      }
     }
   });
 

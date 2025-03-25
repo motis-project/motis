@@ -50,6 +50,11 @@
 		direction: string;
 	};
 
+	type Elevator = {
+		id: number;
+		status: 'ACTIVE' | 'INACTIVE';
+	};
+
 	const toLocation = (l: ApiLocation): Location => {
 		return {
 			lat: l.value.match!.lat,
@@ -68,6 +73,10 @@
 
 	const getElevators = async (bounds: maplibregl.LngLatBounds) => {
 		return await post('/api/elevators', bounds.toArray().flat());
+	};
+
+	const updateElevator = async (id: number, status: string) => {
+		return await post('/api/update_elevator', { id, status });
 	};
 
 	export const getGraph = async (bounds: maplibregl.LngLatBounds, level: number) => {
@@ -370,6 +379,50 @@
 		</Table>
 	{/snippet}
 
+	{#snippet elevatorControl(_1: maplibregl.MapMouseEvent, _2: () => void, features: any)}
+		{@const elevator : Elevator = features[0].properties}
+		<Table>
+			<TableBody>
+				{#each Object.entries(features[0].properties) as [key, value]}
+					<TableRow>
+						<TableCell>{key}</TableCell>
+						<TableCell>
+							{#if key === 'osm_node_id'}
+								<a
+									href="https://www.openstreetmap.org/node/{value}"
+									class="underline bold text-blue-400"
+									target="_blank"
+								>
+									{value}
+								</a>
+							{:else if key === 'osm_way_id'}
+								<a
+									href="https://www.openstreetmap.org/way/{value}"
+									class="underline bold text-blue-400"
+									target="_blank"
+								>
+									{value}
+								</a>
+							{:else}
+								{value}
+							{/if}
+						</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+		<Button
+			onclick={async () =>
+				await updateElevator(elevator.id, elevator.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+		>
+			{#if elevator.status === 'ACTIVE'}
+				DEACTIVATE {elevator.id}
+			{:else}
+				ACTIVATE {elevator.id}
+			{/if}
+		</Button>
+	{/snippet}
+
 	{#if graph != null}
 		<GeoJSON id="graph" data={graph}>
 			<Layer
@@ -434,7 +487,7 @@
 					'circle-radius': 8
 				}}
 			>
-				<Popup trigger="click" children={nodeDetails} />
+				<Popup trigger="click" children={elevatorControl} />
 			</Layer>
 			<Layer
 				id="elevators-match"
