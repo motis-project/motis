@@ -18,7 +18,6 @@
 
 #include "utl/erase_duplicates.h"
 
-#include "nigiri/for_each_meta.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
