@@ -18,6 +18,7 @@
 
 #include "utl/erase_duplicates.h"
 
+#include "nigiri/for_each_meta.h"
 #include "nigiri/routing/journey.h"
 #include "nigiri/routing/limits.h"
 #include "nigiri/routing/query.h"
@@ -438,12 +439,12 @@ void collect_odm_journeys(
 }
 
 void meta_router::shorten_odm() const {
-  auto const odm_duration = [](n::routing::start const& ride) {
+  auto const duration = [](n::routing::start const& ride) {
     return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
   };
 
   auto const shorten_first_leg = [&](n::routing::journey& j) {
-    if (!is_odm_leg(j.legs_.front()) ||
+    if (!is_odm_leg(begin(j.legs_)[0]) ||
         !std::holds_alternative<n::routing::journey::run_enter_exit>(
             begin(j.legs_)[1].uses_)) {
       return;
@@ -455,23 +456,24 @@ void meta_router::shorten_odm() const {
         std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_).r_);
     auto min_stop_idx = run.stop_range_.from_;
     run.stop_range_.from_ = n::stop_idx_t{0U};
-    auto min_odm_duration =
-        j.legs_.front().arr_time_ - j.legs_.front().dep_time_;
+    auto min_odm_duration = odm_time(odm_leg);
     auto shorter_ride = std::optional<n::routing::start>{};
-    for (auto const s : run) {
-      if (s.is_canceled() ||
-          s.in_allowed(query_.pedestrianProfile_ ==
-                       api::PedestrianProfileEnum::WHEELCHAIR) ||
+    for (auto const stop : run) {
+      if (stop.is_canceled() ||
+          !stop.in_allowed(query_.pedestrianProfile_ ==
+                           api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query_.requireBikeTransport_ &&
-           !s.bikes_allowed(n::event_type::kDep))) {
+           !stop.bikes_allowed(n::event_type::kDep))) {
         continue;
       }
       for (auto& ride : p->from_rides_) {
-        if (ride.stop_ == s.get_location_idx() &&
-            ride.time_at_stop_ == s.time(n::event_type::kDep)) {
-          auto const cur_odm_duration = odm_duration(ride);
+        if (n::routing::matches(*tt_,
+                                n::routing::location_match_mode::kEquivalent,
+                                ride.stop_, stop.get_location_idx()) &&
+            ride.time_at_stop_ == stop.time(n::event_type::kDep)) {
+          auto const cur_odm_duration = duration(ride);
           if (cur_odm_duration < min_odm_duration) {
-            min_stop_idx = s.stop_idx_;
+            min_stop_idx = stop.stop_idx_;
             min_odm_duration = cur_odm_duration;
             shorter_ride = ride;
           }
@@ -480,7 +482,7 @@ void meta_router::shorten_odm() const {
       }
     }
     if (shorter_ride) {
-      fmt::println("Found a shorter ODM first leg: [{},{}]",
+      std::println("Found a shorter ODM first leg: [{},{}]",
                    tt_->locations_.get(shorter_ride->stop_).name_,
                    min_odm_duration);
       auto& odm_offset = std::get<n::routing::offset>(odm_leg.uses_);
@@ -496,8 +498,74 @@ void meta_router::shorten_odm() const {
   };
 
   auto const shorten_last_leg = [&](n::routing::journey& j) {
-    if (!is_odm_leg(j.legs_.back())) {
+    auto const get_max_stop_idx = [&](n::rt::frun const& r) -> n::stop_idx_t {
+      if (r.is_rt()) {
+        return static_cast<n::stop_idx_t>(
+            rtt_->rt_transport_location_seq_[r.rt_].size());
+      } else if (r.is_scheduled()) {
+        return static_cast<n::stop_idx_t>(
+            tt_->route_location_seq_[tt_->transport_route_[r.t_.t_idx_]]
+                .size());
+      } else {
+        std::unreachable();
+      }
+    };
+
+    if (!is_odm_leg(rbegin(j.legs_)[0]) ||
+        !std::holds_alternative<n::routing::journey::run_enter_exit>(
+            rbegin(j.legs_)[1].uses_)) {
       return;
+    }
+
+    auto& odm_leg = rbegin(j.legs_)[0];
+    auto& pt_leg = rbegin(j.legs_)[1];
+    auto run = nigiri::rt::frun(
+        *tt_, rtt_,
+        std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_).r_);
+    auto min_stop_idx = run.stop_range_.to_;
+    run.stop_range_.to_ = get_max_stop_idx(run);
+    auto min_odm_duration = odm_time(odm_leg);
+    auto shorter_ride = std::optional<n::routing::start>{};
+    std::println("\nmin_start: {},{}", tt_->locations_.get(odm_leg.from_).name_,
+                 min_odm_duration);
+    for (auto const stop : run) {
+      std::println("examining stop: {}", stop.name());
+      if (stop.is_canceled() ||
+          !stop.out_allowed(query_.pedestrianProfile_ ==
+                            api::PedestrianProfileEnum::WHEELCHAIR) ||
+          (query_.requireBikeTransport_ &&
+           !stop.bikes_allowed(n::event_type::kArr))) {
+        continue;
+      }
+      for (auto& ride : p->to_rides_) {
+        if (n::routing::matches(*tt_,
+                                n::routing::location_match_mode::kEquivalent,
+                                ride.stop_, stop.get_location_idx()) &&
+            ride.time_at_stop_ == stop.time(n::event_type::kArr)) {
+          auto const cur_odm_duration = duration(ride);
+          std::println("odm_duration: {}", cur_odm_duration);
+          if (cur_odm_duration <= min_odm_duration) {
+            min_stop_idx = stop.stop_idx_;
+            min_odm_duration = cur_odm_duration;
+            shorter_ride = ride;
+          }
+          break;
+        }
+      }
+    }
+    if (shorter_ride) {
+      std::println("Found a shorter ODM last leg: [{}, {}, {}]", min_stop_idx,
+                   tt_->locations_.get(shorter_ride->stop_).name_,
+                   min_odm_duration);
+      auto& odm_offset = std::get<n::routing::offset>(odm_leg.uses_);
+      auto& pt_run_enter_exit =
+          std::get<n::routing::journey::run_enter_exit>(pt_leg.uses_);
+      pt_run_enter_exit.stop_range_.to_ = pt_run_enter_exit.r_.stop_range_.to_ =
+          min_stop_idx + 1U;
+      pt_leg.to_ = odm_leg.from_ = odm_offset.target_ = shorter_ride->stop_;
+      pt_leg.arr_time_ = odm_leg.dep_time_ = shorter_ride->time_at_stop_;
+      odm_offset.duration_ = min_odm_duration;
+      j.dest_time_ = odm_leg.arr_time_ = shorter_ride->time_at_start_;
     }
   };
 
