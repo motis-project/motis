@@ -45,7 +45,7 @@ ptr<elevators> update_elevators(config const& c,
                                 });
   };
 
-  for (auto const [id, e_idx] : old_map) {
+  for (auto const& [id, e_idx] : old_map) {
     auto const it = new_map.find(id);
     if (it == end(new_map)) {
       // Elevator got removed.
@@ -63,7 +63,7 @@ ptr<elevators> update_elevators(config const& c,
     }
   }
 
-  for (auto const [id, e_idx] : new_map) {
+  for (auto const& [id, e_idx] : new_map) {
     auto const it = old_map.find(id);
     if (it == end(old_map) && new_e->elevators_[e_idx].status_ == false) {
       // New elevator not seen before, elevator is NOT working. Update.
