@@ -145,8 +145,9 @@ elevator_footpath_map_t compute_footpaths(
               candidates[l],
               utl::transform_to(s.neighbors_, s.neighbor_candidates_,
                                 [&](auto&& x) { return candidates[x]; }),
-              max_duration.count(), osr::direction::kForward, nullptr, nullptr,
-              elevations, [](osr::path const& p) { return p.uses_elevator_; });
+              static_cast<osr::cost_t>(max_duration.count()),
+              osr::direction::kForward, nullptr, nullptr, elevations,
+              [](osr::path const& p) { return p.uses_elevator_; });
           for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
             if (r.has_value()) {
               auto const duration = n::duration_t{r->cost_ / 60U};
