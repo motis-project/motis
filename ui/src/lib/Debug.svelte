@@ -14,13 +14,15 @@
 	import maplibregl from 'maplibre-gl';
 	import { footpaths } from '$lib/openapi';
 	import Control from '$lib/map/Control.svelte';
-	import { Card } from '$lib/components/ui/card';
+	import * as Card from '$lib/components/ui/card';
 	import Marker from '$lib/map/Marker.svelte';
 	import { posToLocation, type Location as ApiLocation } from '$lib/Location';
 	import geojson from 'geojson';
 	import Popup from '$lib/map/Popup.svelte';
 	import { client } from '$lib/openapi';
 	import X from 'lucide-svelte/icons/x';
+	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import DateInput from './DateInput.svelte';
 
 	const baseUrl = client.getConfig().baseUrl;
 
@@ -50,9 +52,13 @@
 		direction: string;
 	};
 
+	type ElevatorStatus = 'ACTIVE' | 'INACTIVE';
+
 	type Elevator = {
 		id: number;
-		status: 'ACTIVE' | 'INACTIVE';
+		status: ElevatorStatus;
+		desc: string;
+		outOfService: [Date, Date][];
 	};
 
 	const toLocation = (l: ApiLocation): Location => {
@@ -75,8 +81,9 @@
 		return await post('/api/elevators', bounds.toArray().flat());
 	};
 
-	const updateElevator = async (id: number, status: string) => {
-		return await post('/api/update_elevator', { id, status });
+	const updateElevator = async (e: { id: number; status: ElevatorStatus }) => {
+		console.log(JSON.stringify(e));
+		return await post('/api/update_elevator', e);
 	};
 
 	export const getGraph = async (bounds: maplibregl.LngLatBounds, level: number) => {
@@ -102,6 +109,15 @@
 	let matches = $derived(
 		bounds && debug ? getMatches(maplibregl.LngLatBounds.convert(bounds)) : undefined
 	);
+
+	const parseElevator = (e: { outOfService: string }) => {
+		return {
+			...e,
+			outOfService: JSON.parse(e.outOfService).map(([from, to]: [string, string]) => {
+				return [new Date(from), new Date(to)];
+			})
+		};
+	};
 
 	let graph = $state<null | geojson.GeoJSON>(null);
 	let elevators = $state<null | geojson.GeoJSON>(null);
@@ -135,6 +151,9 @@
 				})
 			: undefined
 	);
+
+	let elevatorUpdate = $state<Promise<Response> | null>(null);
+	let elevator = $state<Elevator | null>(null);
 </script>
 
 <Button
@@ -147,12 +166,136 @@
 	<Bug size="icon" class="h-[1.2rem] w-[1.2rem]" />
 </Button>
 
+<!-- eslint-disable-next-line -->
+{#snippet propertiesTable(_1: maplibregl.MapMouseEvent, _2: () => void, features: any)}
+	<Table>
+		<TableBody>
+			{#each Object.entries(features[0].properties) as [key, value]}
+				<TableRow>
+					<TableCell>{key}</TableCell>
+					<TableCell>
+						{#if key === 'osm_node_id'}
+							<a
+								href="https://www.openstreetmap.org/node/{value}"
+								class="underline bold text-blue-400"
+								target="_blank"
+							>
+								{value}
+							</a>
+						{:else if key === 'osm_way_id'}
+							<a
+								href="https://www.openstreetmap.org/way/{value}"
+								class="underline bold text-blue-400"
+								target="_blank"
+							>
+								{value}
+							</a>
+						{:else}
+							{value}
+						{/if}
+					</TableCell>
+				</TableRow>
+			{/each}
+		</TableBody>
+	</Table>
+{/snippet}
+
+{#if elevator}
+	<Control position="bottom-right">
+		<Card.Root class="min-w-[550px] mb-4">
+			<div class="w-full flex justify-between bg-muted items-center">
+				<h2 class="text-lg ml-2 font-bold">
+					Fahrstuhl {elevator.desc}
+					<span class="ml-2 text-sm text-muted-foreground">
+						{elevator.id}
+					</span>
+				</h2>
+				<Button variant="ghost" onclick={() => (elevator = null)}>
+					<X />
+				</Button>
+			</div>
+
+			<Card.Content class="flex flex-col gap-6">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead class="font-semibold">Not available from</TableHead>
+							<TableHead class="font-semibold">to</TableHead>
+							<TableHead></TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{#if elevator.outOfService}
+							{#each elevator.outOfService as _, i}
+								<TableRow>
+									<TableCell>
+										<DateInput bind:value={elevator.outOfService[i][0]} />
+									</TableCell>
+									<TableCell>
+										<DateInput bind:value={elevator.outOfService[i][1]} />
+									</TableCell>
+									<TableCell>
+										<Button variant="outline" onclick={() => elevator!.outOfService!.splice(i, 1)}>
+											<X />
+										</Button>
+									</TableCell>
+								</TableRow>
+							{/each}
+						{/if}
+					</TableBody>
+				</Table>
+
+				<div class="flex justify-between gap-4">
+					<Button
+						variant="outline"
+						onclick={() => elevator!.outOfService.push([new Date(), new Date()])}
+					>
+						Add Maintainance
+					</Button>
+					<Button
+						class="w-48"
+						variant="outline"
+						onclick={() => {
+							elevatorUpdate = updateElevator(elevator!);
+						}}
+					>
+						{#if elevatorUpdate != null}
+							{#await elevatorUpdate}
+								<LoaderCircle class="animate-spin w-4 h-4" />
+							{:then _}
+								Update
+							{/await}
+						{:else}
+							Update
+						{/if}
+					</Button>
+
+					<Button
+						onclick={() => {
+							elevatorUpdate = updateElevator({
+								id: elevator!.id,
+								status: elevator!.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+							});
+						}}
+					>
+						{#if elevator.status === 'ACTIVE'}
+							DEACTIVATE
+						{:else}
+							ACTIVATE
+						{/if}
+					</Button>
+				</div>
+			</Card.Content>
+		</Card.Root>
+	</Control>
+{/if}
+
 {#if debug}
 	{#if fps}
 		{#await fps then f}
 			{#if f}
 				<Control position="bottom-right">
-					<Card class="w-[600px] h-[500px] overflow-y-auto bg-background rounded-lg">
+					<Card.Root class="w-[600px] h-[500px] overflow-y-auto bg-background rounded-lg">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
 							<h2 class="ml-2 text-base font-semibold">
 								{f.place.name}
@@ -264,7 +407,7 @@
 								{/each}
 							</TableBody>
 						</Table>
-					</Card>
+					</Card.Root>
 				</Control>
 			{/if}
 		{/await}
@@ -287,7 +430,7 @@
 						'circle-radius': 5
 					}}
 				>
-					<Popup trigger="click" children={nodeDetails} />
+					<Popup trigger="click" children={propertiesTable} />
 				</Layer>
 				<Layer
 					id="match"
@@ -302,7 +445,7 @@
 						'line-width': 3
 					}}
 				>
-					<Popup trigger="click" children={nodeDetails} />
+					<Popup trigger="click" children={propertiesTable} />
 				</Layer>
 			</GeoJSON>
 		{/await}
@@ -345,84 +488,6 @@
 		{/await}
 	{/if}
 
-	<!-- eslint-disable-next-line -->
-	{#snippet nodeDetails(_1: maplibregl.MapMouseEvent, _2: () => void, features: any)}
-		<Table>
-			<TableBody>
-				{#each Object.entries(features[0].properties) as [key, value]}
-					<TableRow>
-						<TableCell>{key}</TableCell>
-						<TableCell>
-							{#if key === 'osm_node_id'}
-								<a
-									href="https://www.openstreetmap.org/node/{value}"
-									class="underline bold text-blue-400"
-									target="_blank"
-								>
-									{value}
-								</a>
-							{:else if key === 'osm_way_id'}
-								<a
-									href="https://www.openstreetmap.org/way/{value}"
-									class="underline bold text-blue-400"
-									target="_blank"
-								>
-									{value}
-								</a>
-							{:else}
-								{value}
-							{/if}
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	{/snippet}
-
-	{#snippet elevatorControl(_1: maplibregl.MapMouseEvent, _2: () => void, features: any)}
-		{@const elevator : Elevator = features[0].properties}
-		<Table>
-			<TableBody>
-				{#each Object.entries(features[0].properties) as [key, value]}
-					<TableRow>
-						<TableCell>{key}</TableCell>
-						<TableCell>
-							{#if key === 'osm_node_id'}
-								<a
-									href="https://www.openstreetmap.org/node/{value}"
-									class="underline bold text-blue-400"
-									target="_blank"
-								>
-									{value}
-								</a>
-							{:else if key === 'osm_way_id'}
-								<a
-									href="https://www.openstreetmap.org/way/{value}"
-									class="underline bold text-blue-400"
-									target="_blank"
-								>
-									{value}
-								</a>
-							{:else}
-								{value}
-							{/if}
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-		<Button
-			onclick={async () =>
-				await updateElevator(elevator.id, elevator.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
-		>
-			{#if elevator.status === 'ACTIVE'}
-				DEACTIVATE {elevator.id}
-			{:else}
-				ACTIVATE {elevator.id}
-			{/if}
-		</Button>
-	{/snippet}
-
 	{#if graph != null}
 		<GeoJSON id="graph" data={graph}>
 			<Layer
@@ -443,7 +508,7 @@
 					'line-opacity': 1
 				}}
 			>
-				<Popup trigger="click" children={nodeDetails} />
+				<Popup trigger="click" children={propertiesTable} />
 			</Layer>
 			<Layer
 				id="graph-edge"
@@ -458,7 +523,7 @@
 					'line-width': 3
 				}}
 			>
-				<Popup trigger="click" children={nodeDetails} />
+				<Popup trigger="click" children={propertiesTable} />
 			</Layer>
 			<Layer
 				id="graph-node"
@@ -470,7 +535,7 @@
 					'circle-radius': 5
 				}}
 			>
-				<Popup trigger="click" children={nodeDetails} />
+				<Popup trigger="click" children={propertiesTable} />
 			</Layer>
 		</GeoJSON>
 	{/if}
@@ -486,9 +551,11 @@
 					'circle-color': ['match', ['get', 'status'], 'ACTIVE', '#ffff00', '#ff00ff'],
 					'circle-radius': 8
 				}}
-			>
-				<Popup trigger="click" children={elevatorControl} />
-			</Layer>
+				onclick={(e) => {
+					// @ts-expect-error type mismatch
+					elevator = parseElevator(e.features![0].properties);
+				}}
+			/>
 			<Layer
 				id="elevators-match"
 				type="line"
@@ -502,7 +569,7 @@
 					'line-width': 3
 				}}
 			>
-				<Popup trigger="click" children={nodeDetails} />
+				<Popup trigger="click" children={propertiesTable} />
 			</Layer>
 		</GeoJSON>
 	{/if}
