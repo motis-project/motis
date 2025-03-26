@@ -137,7 +137,6 @@ void update_rtt_td_footpaths(
     hash_set<std::pair<n::location_idx_t, osr::direction>> const& tasks,
     nigiri::rt_timetable const* old_rtt,
     nigiri::rt_timetable& rtt,
-    double const max_matching_distance,
     std::chrono::seconds const max) {
   auto in_mutex = std::mutex{}, out_mutex = std::mutex{};
   auto out = std::map<n::location_idx_t, std::vector<n::td_footpath>>{};
@@ -149,7 +148,7 @@ void update_rtt_td_footpaths(
         auto fps = get_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, start,
                                     get_loc(tt, w, pl, matches, start), dir,
                                     osr::search_profile::kWheelchair, max,
-                                    max_matching_distance, blocked);
+                                    kMaxWheelchairMatchingDistance, blocked);
         {
           auto const lock = std::unique_lock{
               dir == osr::direction::kForward ? out_mutex : in_mutex};
@@ -201,7 +200,6 @@ void update_rtt_td_footpaths(osr::ways const& w,
                              elevator_footpath_map_t const& elevators_in_paths,
                              platform_matches_t const& matches,
                              nigiri::rt_timetable& rtt,
-                             double const max_matching_distance,
                              std::chrono::seconds const max) {
   auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
   for (auto const& [e_in_path, from_to] : elevators_in_paths) {
@@ -220,7 +218,7 @@ void update_rtt_td_footpaths(osr::ways const& w,
     }
   }
   update_rtt_td_footpaths(w, l, pl, tt, loc_rtree, e, matches, tasks, nullptr,
-                          rtt, max_matching_distance, max);
+                          rtt, max);
 }
 
 }  // namespace motis

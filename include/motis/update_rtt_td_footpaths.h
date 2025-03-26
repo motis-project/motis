@@ -56,7 +56,6 @@ void update_rtt_td_footpaths(
     hash_set<std::pair<nigiri::location_idx_t, osr::direction>> const& tasks,
     nigiri::rt_timetable const* old_rtt,
     nigiri::rt_timetable&,
-    double max_matching_distance,
     std::chrono::seconds max);
 
 void update_rtt_td_footpaths(osr::ways const&,
@@ -68,7 +67,6 @@ void update_rtt_td_footpaths(osr::ways const&,
                              elevator_footpath_map_t const&,
                              platform_matches_t const&,
                              nigiri::rt_timetable&,
-                             double max_matching_distance,
                              std::chrono::seconds max);
 
 }  // namespace motis

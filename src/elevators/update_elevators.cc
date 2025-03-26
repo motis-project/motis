@@ -74,10 +74,10 @@ ptr<elevators> update_elevators(config const& c,
   n::log(n::log_lvl::info, "motis.rt.elevators",
          "elevator update: {} routing tasks", tasks.size());
 
-  update_rtt_td_footpaths(*d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtee_,
-                          *new_e, *d.matches_, tasks, d.rt_->rtt_.get(),
-                          new_rtt, c.timetable_->max_matching_distance_,
-                          std::chrono::seconds{kMaxDuration});
+  update_rtt_td_footpaths(
+      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtee_, *new_e, *d.matches_,
+      tasks, d.rt_->rtt_.get(), new_rtt,
+      std::chrono::seconds{c.timetable_.value().max_footpath_length_});
 
   return new_e;
 }
