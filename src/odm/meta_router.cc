@@ -38,6 +38,7 @@
 #include "motis/odm/mixer.h"
 #include "motis/odm/odm.h"
 #include "motis/odm/prima.h"
+#include "motis/odm/shorten.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
@@ -270,28 +271,17 @@ bool ride_comp(n::routing::start const& a, n::routing::start const& b) {
 }
 
 auto ride_time_halves(std::vector<n::routing::start>& rides) {
-  auto const duration = [](auto const& ride) {
-    return std::chrono::abs(ride.time_at_stop_ - ride.time_at_start_);
-  };
-
   auto const by_duration = [&](auto const& a, auto const& b) {
     return duration(a) < duration(b);
   };
 
   utl::sort(rides, by_duration);
   auto const split =
-      rides.empty()
-          ? 0
-          : std::distance(
-                begin(rides),
-                std::upper_bound(
-                    begin(rides), end(rides),
-                    n::routing::start{
-                        .time_at_start_ = n::unixtime_t{},
-                        .time_at_stop_ =
-                            n::unixtime_t{} + duration(rides.front()) + 1min,
-                        .stop_ = n::location_idx_t::invalid()},
-                    by_duration));
+      rides.empty() ? 0
+                    : std::distance(begin(rides),
+                                    std::upper_bound(begin(rides), end(rides),
+                                                     rides[rides.size() / 2],
+                                                     by_duration));
 
   auto lo = rides | std::views::take(split);
   auto hi = rides | std::views::drop(split);
@@ -647,6 +637,17 @@ api::plan_response meta_router::run() {
   auto const results = search_interval(sub_queries);
   auto const& pt_result = results.front();
   collect_odm_journeys(results);
+  shorten(p->odm_journeys_, p->from_rides_, p->to_rides_, *tt_, rtt_, query_);
+  utl::erase_duplicates(
+      p->odm_journeys_,
+      [](auto const& a, auto const& b) {
+        return a.start_time_ < b.start_time_;
+      },
+      [](auto const& a, auto const& b) {
+        return a == b &&
+               odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
+               odm_time(a.legs_.back()) == odm_time(b.legs_.back());
+      });
   fmt::println("[routing] interval searched: {}", pt_result.interval_);
   print_time(routing_start, "[routing]");
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "nigiri/routing/journey.h"
+#include "nigiri/routing/start_times.h"
 #include "nigiri/types.h"
 
 #include "motis-api/motis-api.h"
@@ -24,5 +25,9 @@ bool is_direct_odm(nigiri::routing::journey const&);
 nigiri::duration_t odm_time(nigiri::routing::journey::leg const&);
 
 nigiri::duration_t odm_time(nigiri::routing::journey const&);
+
+nigiri::duration_t duration(nigiri::routing::start const&);
+
+std::string odm_label(nigiri::routing::journey const&);
 
 }  // namespace motis::odm
