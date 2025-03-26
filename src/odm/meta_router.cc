@@ -638,6 +638,16 @@ api::plan_response meta_router::run() {
   auto const& pt_result = results.front();
   collect_odm_journeys(results);
   shorten(p->odm_journeys_, p->from_rides_, p->to_rides_, *tt_, rtt_, query_);
+  utl::erase_duplicates(
+      p->odm_journeys_,
+      [](auto const& a, auto const& b) {
+        return a.start_time_ < b.start_time_;
+      },
+      [](auto const& a, auto const& b) {
+        return a == b &&
+               odm_time(a.legs_.front()) == odm_time(b.legs_.front()) &&
+               odm_time(a.legs_.back()) == odm_time(b.legs_.back());
+      });
   fmt::println("[routing] interval searched: {}", pt_result.interval_);
   print_time(routing_start, "[routing]");
 
