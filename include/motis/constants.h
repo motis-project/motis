@@ -6,7 +6,7 @@ namespace motis {
 constexpr auto const kMaxDistance = 2000;
 
 // max distance from start/destination coordinate to way segment [meters]
-constexpr auto const kMaxMatchingDistance = 300.0;
+constexpr auto const kMaxMatchingDistance = 25.0;
 
 constexpr auto const kMaxWheelchairMatchingDistance = 8.0;
 
