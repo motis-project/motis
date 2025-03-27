@@ -43,8 +43,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
         continue;
       }
       for (auto& ride : from_rides) {
-        if (n::routing::matches(tt,
-                                n::routing::location_match_mode::kEquivalent,
+        if (n::routing::matches(tt, n::routing::location_match_mode::kExact,
                                 ride.stop_, stop.get_location_idx()) &&
             ride.time_at_stop_ == stop.time(n::event_type::kDep)) {
           auto const cur_odm_duration = duration(ride);
@@ -108,8 +107,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
         continue;
       }
       for (auto& ride : to_rides) {
-        if (n::routing::matches(tt,
-                                n::routing::location_match_mode::kEquivalent,
+        if (n::routing::matches(tt, n::routing::location_match_mode::kExact,
                                 ride.stop_, stop.get_location_idx()) &&
             ride.time_at_stop_ == stop.time(n::event_type::kArr)) {
           auto const cur_odm_duration = duration(ride);
