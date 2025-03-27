@@ -44,6 +44,7 @@ namespace json = boost::json;
 namespace motis {
 
 static std::atomic_uint32_t seed{0U};
+static constexpr auto const intermodal_max_dist = 600.0;  // m
 
 std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
   auto a = ++seed;
@@ -82,11 +83,14 @@ n::location_idx_t random_stop(n::timetable const& tt,
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
+  auto intermodal = false;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("n,n", po::value(&n)->default_value(n), "number of queries");
+      ("n,n", po::value(&n)->default_value(n), "number of queries")  //
+      ("i,intermodal", po::value(&intermodal)->default_value(intermodal),
+       "generate coordinates instead of stations");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -111,8 +115,16 @@ int generate(int ac, char** av) {
     auto out = std::ofstream{"queries.txt"};
     for (auto i = 0U; i != n; ++i) {
       auto p = api::plan_params{};
-      p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
-      p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      if (intermodal) {
+        auto const random_coords = [&]() {
+          auto const coords =
+              d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)]
+        };
+
+      } else {
+        p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+        p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      }
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
