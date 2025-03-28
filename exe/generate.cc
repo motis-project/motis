@@ -84,13 +84,17 @@ int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
   auto intermodal = false;
+  auto bike = false;
+  auto car = false;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
       ("intermodal,i", po::bool_switch(&intermodal),
-       "generate intermodal queries");
+       "generate intermodal queries")  //
+      ("bike", po::bool_switch(&bike), "adds BIKE to intermodal queries")  //
+      ("car", po::bool_switch(&car), "adds CAR to intermodal queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -143,6 +147,17 @@ int generate(int ac, char** av) {
 
         p.fromPlace_ = random_coords();
         p.toPlace_ = random_coords();
+
+        if (bike) {
+          p.directModes_.emplace_back(api::ModeEnum::BIKE);
+          p.preTransitModes_.emplace_back(api::ModeEnum::BIKE);
+          p.postTransitModes_.emplace_back(api::ModeEnum::BIKE);
+        }
+        if (car) {
+          p.directModes_.emplace_back(api::ModeEnum::CAR);
+          p.preTransitModes_.emplace_back(api::ModeEnum::CAR);
+          p.postTransitModes_.emplace_back(api::ModeEnum::CAR);
+        }
       } else {
         p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
         p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
