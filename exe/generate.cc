@@ -293,8 +293,32 @@ int compare(int ac, char** av) {
     return std::tie(x.startTime_, x.endTime_, x.transfers_);
   };
   auto const print_params = [](api::Itinerary const& x) {
-    std::cout << x.startTime_ << ", " << x.endTime_
-              << ", transfers=" << x.transfers_;
+    auto const pre_transit = [&]() {
+      auto ss = std::stringstream{};
+      if (x.legs_.front().mode_ != api::ModeEnum::TRANSIT) {
+        ss << x.legs_.front().mode_ << " "
+           << std::chrono::duration_cast<std::chrono::minutes>(
+                  std::chrono::seconds{x.legs_.front().duration_})
+                  .count();
+      }
+      return ss.str();
+    };
+    auto const post_transit = [&]() {
+      auto ss = std::stringstream{};
+      if (x.legs_.back().mode_ != api::ModeEnum::TRANSIT) {
+        ss << x.legs_.back().mode_ << " "
+           << std::chrono::duration_cast<std::chrono::minutes>(
+                  std::chrono::seconds{x.legs_.back().duration_})
+                  .count();
+      }
+      return ss.str();
+    };
+    auto const time = [](auto const& t) {
+      return std::format("{0:%F}T{0:%R}", t);
+    };
+    std::cout << time(x.startTime_.time_) << ", " << time(x.endTime_.time_)
+              << ", " << x.transfers_ << ", " << pre_transit() << ", "
+              << post_transit();
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
