@@ -44,6 +44,7 @@ namespace json = boost::json;
 namespace motis {
 
 static std::atomic_uint32_t seed{0U};
+static constexpr auto const kIntermodalMaxDist = 600U;  // m
 
 std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
   auto a = ++seed;
@@ -82,11 +83,18 @@ n::location_idx_t random_stop(n::timetable const& tt,
 int generate(int ac, char** av) {
   auto data_path = fs::path{"data"};
   auto n = 100U;
+  auto intermodal = false;
+  auto bike = false;
+  auto car = false;
 
   auto desc = po::options_description{"Options"};
   desc.add_options()  //
       ("help", "Prints this help message")  //
-      ("n,n", po::value(&n)->default_value(n), "number of queries");
+      ("n,n", po::value(&n)->default_value(n), "number of queries")  //
+      ("intermodal,i", po::bool_switch(&intermodal),
+       "generate intermodal queries")  //
+      ("bike", po::bool_switch(&bike), "adds BIKE to intermodal queries")  //
+      ("car", po::bool_switch(&car), "adds CAR to intermodal queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -107,12 +115,54 @@ int generate(int ac, char** av) {
     stops[i] = n::location_idx_t{i};
   }
 
+  static auto r = std::random_device{};
+  static auto e = std::default_random_engine{r()};
+
   {
     auto out = std::ofstream{"queries.txt"};
     for (auto i = 0U; i != n; ++i) {
       auto p = api::plan_params{};
-      p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
-      p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+
+      auto const random_time = [&]() {
+        static auto time_distribution =
+            std::uniform_int_distribution<n::unixtime_t::rep>{
+                d.tt_->external_interval().from_.time_since_epoch().count(),
+                d.tt_->external_interval().to_.time_since_epoch().count() - 1};
+        return n::unixtime_t{n::unixtime_t::duration{time_distribution(e)}};
+      };
+      p.time_ = random_time();
+
+      if (intermodal) {
+        auto const random_coords = [&]() {
+          static auto distance_distribution =
+              std::uniform_int_distribution<unsigned>{0, kIntermodalMaxDist};
+          static auto bearing_distribution =
+              std::uniform_int_distribution<unsigned>{0, 359};
+          auto const coords = destination_point(
+              d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)],
+              distance_distribution(e), bearing_distribution(e));
+
+          return fmt::format("{},{},0", coords.lat_, coords.lng_);
+        };
+
+        p.fromPlace_ = random_coords();
+        p.toPlace_ = random_coords();
+
+        if (bike) {
+          p.directModes_.emplace_back(api::ModeEnum::BIKE);
+          p.preTransitModes_.emplace_back(api::ModeEnum::BIKE);
+          p.postTransitModes_.emplace_back(api::ModeEnum::BIKE);
+        }
+        if (car) {
+          p.directModes_.emplace_back(api::ModeEnum::CAR);
+          p.preTransitModes_.emplace_back(api::ModeEnum::CAR);
+          p.postTransitModes_.emplace_back(api::ModeEnum::CAR);
+        }
+      } else {
+        p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+        p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
+      }
+
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
@@ -243,8 +293,32 @@ int compare(int ac, char** av) {
     return std::tie(x.startTime_, x.endTime_, x.transfers_);
   };
   auto const print_params = [](api::Itinerary const& x) {
-    std::cout << x.startTime_ << ", " << x.endTime_
-              << ", transfers=" << x.transfers_;
+    auto const pre_transit = [&]() {
+      auto ss = std::stringstream{};
+      if (x.legs_.front().mode_ != api::ModeEnum::TRANSIT) {
+        ss << x.legs_.front().mode_ << " "
+           << std::chrono::duration_cast<std::chrono::minutes>(
+                  std::chrono::seconds{x.legs_.front().duration_})
+                  .count();
+      }
+      return ss.str();
+    };
+    auto const post_transit = [&]() {
+      auto ss = std::stringstream{};
+      if (x.legs_.back().mode_ != api::ModeEnum::TRANSIT) {
+        ss << x.legs_.back().mode_ << " "
+           << std::chrono::duration_cast<std::chrono::minutes>(
+                  std::chrono::seconds{x.legs_.back().duration_})
+                  .count();
+      }
+      return ss.str();
+    };
+    auto const time = [](auto const& t) {
+      return std::format("{0:%F}T{0:%R}", t);
+    };
+    std::cout << time(x.startTime_.time_) << ", " << time(x.endTime_.time_)
+              << ", " << x.transfers_ << ", " << pre_transit() << ", "
+              << post_transit();
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
