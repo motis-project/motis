@@ -44,7 +44,7 @@ namespace json = boost::json;
 namespace motis {
 
 static std::atomic_uint32_t seed{0U};
-static constexpr auto const intermodal_max_dist = 600.0;  // m
+static constexpr auto const intermodal_max_dist = 600U;  // m
 
 std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
   auto a = ++seed;
@@ -89,8 +89,8 @@ int generate(int ac, char** av) {
   desc.add_options()  //
       ("help", "Prints this help message")  //
       ("n,n", po::value(&n)->default_value(n), "number of queries")  //
-      ("i,intermodal", po::value(&intermodal)->default_value(intermodal),
-       "generate coordinates instead of stations");
+      ("intermodal,i", po::bool_switch(&intermodal),
+       "generate intermodal queries");
   add_data_path_opt(desc, data_path);
   auto vm = parse_opt(ac, av, desc);
 
@@ -116,11 +116,24 @@ int generate(int ac, char** av) {
     for (auto i = 0U; i != n; ++i) {
       auto p = api::plan_params{};
       if (intermodal) {
+
         auto const random_coords = [&]() {
-          auto const coords =
-              d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)]
+          static auto r = std::random_device{};
+          static auto e = std::default_random_engine{r()};
+          static auto distance_distribution =
+              std::uniform_int_distribution<unsigned>{0, intermodal_max_dist};
+          static auto bearing_distribution =
+              std::uniform_int_distribution<unsigned>{0, 359};
+
+          auto const coord = destination_point(
+              d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)],
+              distance_distribution(e), bearing_distribution(e));
+
+          return fmt::format("{},{},0", coord.lat_, coord.lng_);
         };
 
+        p.fromPlace_ = random_coords();
+        p.toPlace_ = random_coords();
       } else {
         p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
         p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
