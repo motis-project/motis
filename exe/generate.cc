@@ -111,20 +111,29 @@ int generate(int ac, char** av) {
     stops[i] = n::location_idx_t{i};
   }
 
+  static auto r = std::random_device{};
+  static auto e = std::default_random_engine{r()};
+
   {
     auto out = std::ofstream{"queries.txt"};
     for (auto i = 0U; i != n; ++i) {
       auto p = api::plan_params{};
-      if (intermodal) {
 
+      auto const random_time = [&]() {
+        static auto time_distribution =
+            std::uniform_int_distribution<n::unixtime_t::rep>{
+                d.tt_->external_interval().from_.time_since_epoch().count(),
+                d.tt_->external_interval().to_.time_since_epoch().count() - 1};
+        return n::unixtime_t{n::unixtime_t::duration{time_distribution(e)}};
+      };
+      p.time_ = random_time();
+
+      if (intermodal) {
         auto const random_coords = [&]() {
-          static auto r = std::random_device{};
-          static auto e = std::default_random_engine{r()};
           static auto distance_distribution =
               std::uniform_int_distribution<unsigned>{0, kIntermodalMaxDist};
           static auto bearing_distribution =
               std::uniform_int_distribution<unsigned>{0, 359};
-
           auto const coords = destination_point(
               d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)],
               distance_distribution(e), bearing_distribution(e));
@@ -138,6 +147,7 @@ int generate(int ac, char** av) {
         p.fromPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
         p.toPlace_ = d.tags_->id(*d.tt_, random_stop(*d.tt_, stops));
       }
+
       out << p.to_url("/api/v1/plan") << "\n";
     }
   }
