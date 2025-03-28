@@ -125,11 +125,11 @@ int generate(int ac, char** av) {
           static auto bearing_distribution =
               std::uniform_int_distribution<unsigned>{0, 359};
 
-          auto const coord = destination_point(
+          auto const coords = destination_point(
               d.tt_->locations_.coordinates_[random_stop(*d.tt_, stops)],
               distance_distribution(e), bearing_distribution(e));
 
-          return fmt::format("{},{},0", coord.lat_, coord.lng_);
+          return fmt::format("{},{},0", coords.lat_, coords.lng_);
         };
 
         p.fromPlace_ = random_coords();
