@@ -44,7 +44,7 @@ namespace json = boost::json;
 namespace motis {
 
 static std::atomic_uint32_t seed{0U};
-static constexpr auto const intermodal_max_dist = 600U;  // m
+static constexpr auto const kIntermodalMaxDist = 600U;  // m
 
 std::uint32_t rand_in(std::uint32_t const from, std::uint32_t const to) {
   auto a = ++seed;
@@ -121,7 +121,7 @@ int generate(int ac, char** av) {
           static auto r = std::random_device{};
           static auto e = std::default_random_engine{r()};
           static auto distance_distribution =
-              std::uniform_int_distribution<unsigned>{0, intermodal_max_dist};
+              std::uniform_int_distribution<unsigned>{0, kIntermodalMaxDist};
           static auto bearing_distribution =
               std::uniform_int_distribution<unsigned>{0, 359};
 
