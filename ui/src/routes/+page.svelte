@@ -152,7 +152,8 @@
 						directModes: modes,
 						requireBikeTransport: bikeCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
-						withFares: true
+						useRoutedTransfers: true,
+						maxMatchingDistance: wheelchair ? 8 : 250
 					}
 				} as PlanData)
 			: undefined

@@ -43,13 +43,15 @@ export type Token = [
 ];
 
 /**
+ * location type
+ */
+export type LocationType = 'ADDRESS' | 'PLACE' | 'STOP';
+
+/**
  * GeoCoding match
  */
 export type Match = {
-    /**
-     * location type
-     */
-    type: 'ADDRESS' | 'PLACE' | 'STOP';
+    type: LocationType;
     /**
      * list of non-overlapping tokens that were matched
      */
@@ -97,11 +99,6 @@ export type Match = {
      */
     score: number;
 };
-
-/**
- * location type
- */
-export type type = 'ADDRESS' | 'PLACE' | 'STOP';
 
 /**
  * Different accessibility profiles for pedestrians.
@@ -194,6 +191,46 @@ export type Place = {
      */
     track?: string;
     vertexType?: VertexType;
+};
+
+/**
+ * Place reachable by One-to-All
+ */
+export type ReachablePlace = {
+    /**
+     * Place reached by One-to-All
+     */
+    place?: Place;
+    /**
+     * Total travel duration
+     */
+    duration?: number;
+    /**
+     * k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist.
+     * You can think of k as the number of connections used.
+     *
+     * In more detail:
+     *
+     * k=0: No connection, e.g. for the one location
+     * k=1: Direct connection
+     * k=2: Connection with 1 transfer
+     *
+     */
+    k?: number;
+};
+
+/**
+ * Object containing all reachable places by One-to-All search
+ */
+export type Reachable = {
+    /**
+     * One location used in One-to-All search
+     */
+    one?: Place;
+    /**
+     * List of locations reachable by One-to-All
+     */
+    all?: Array<ReachablePlace>;
 };
 
 /**
@@ -631,177 +668,17 @@ export type Footpath = {
     wheelchair?: number;
     /**
      * optional; missing if no path was found with the wheelchair profile
+     * footpath duration in minutes for the wheelchair profile
+     *
+     */
+    wheelchairRouted?: number;
+    /**
+     * optional; missing if no path was found with the wheelchair profile
      * true if the wheelchair path uses an elevator
      *
      */
     wheelchairUsesElevator?: boolean;
 };
-
-export type OneToManyData = {
-    query: {
-        /**
-         * true = many to one
-         * false = one to many
-         *
-         */
-        arriveBy: boolean;
-        /**
-         * geo locations as latitude;longitude,latitude;longitude,...
-         */
-        many: Array<(string)>;
-        /**
-         * maximum travel time in seconds
-         */
-        max: number;
-        /**
-         * maximum matching distance in meters to match geo coordinates to the street network
-         */
-        maxMatchingDistance: number;
-        /**
-         * routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
-         *
-         */
-        mode: Mode;
-        /**
-         * geo location as latitude,longitude
-         */
-        one: string;
-    };
-};
-
-export type OneToManyResponse = (Array<Duration>);
-
-export type OneToManyError = unknown;
-
-export type ReverseGeocodeData = {
-    query: {
-        /**
-         * latitude, longitude in degrees
-         */
-        place: string;
-    };
-};
-
-export type ReverseGeocodeResponse = (Array<Match>);
-
-export type ReverseGeocodeError = unknown;
-
-export type GeocodeData = {
-    query: {
-        /**
-         * language tags as used in OpenStreetMap
-         * (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
-         *
-         */
-        language?: string;
-        /**
-         * the (potentially partially typed) address to resolve
-         */
-        text: string;
-    };
-};
-
-export type GeocodeResponse = (Array<Match>);
-
-export type GeocodeError = unknown;
-
-export type TripData = {
-    query: {
-        /**
-         * trip identifier (e.g. from an itinerary leg or stop event)
-         */
-        tripId: string;
-    };
-};
-
-export type TripResponse = (Itinerary);
-
-export type TripError = unknown;
-
-export type StoptimesData = {
-    query: {
-        /**
-         * Optional. Default is `false`.
-         *
-         * - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
-         * - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
-         *
-         */
-        arriveBy?: boolean;
-        /**
-         * This parameter will be ignored in case `pageCursor` is set.
-         *
-         * Optional. Default is
-         * - `LATER` for `arriveBy=false`
-         * - `EARLIER` for `arriveBy=true`
-         *
-         * The response will contain the next `n` arrivals / departures
-         * in case `EARLIER` is selected and the previous `n`
-         * arrivals / departures if `LATER` is selected.
-         *
-         */
-        direction?: 'EARLIER' | 'LATER';
-        /**
-         * Optional. Default is all transit modes.
-         *
-         * Only return arrivals/departures of the given modes.
-         *
-         */
-        mode?: Array<Mode>;
-        /**
-         * the number of events
-         */
-        n: number;
-        /**
-         * Use the cursor to go to the next "page" of stop times.
-         * Copy the cursor from the last response and keep the original request as is.
-         * This will enable you to search for stop times in the next or previous time-window.
-         *
-         */
-        pageCursor?: string;
-        /**
-         * Optional. Radius in meters.
-         *
-         * Default is that only stop times of the parent of the stop itself
-         * and all stops with the same name (+ their child stops) are returned.
-         *
-         * If set, all stops at parent stations and their child stops in the specified radius
-         * are returned.
-         *
-         */
-        radius?: number;
-        /**
-         * stop id of the stop to retrieve departures/arrivals for
-         */
-        stopId: string;
-        /**
-         * Optional. Defaults to the current time.
-         *
-         */
-        time?: string;
-    };
-};
-
-export type StoptimesResponse = ({
-    /**
-     * list of stop times
-     */
-    stopTimes: Array<StopTime>;
-    /**
-     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
-     * The previous page is a set of stop times BEFORE the first stop time in the result.
-     *
-     */
-    previousPageCursor: string;
-    /**
-     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
-     * The next page is a set of stop times AFTER the last stop time in this result.
-     *
-     */
-    nextPageCursor: string;
-});
-
-export type StoptimesError = unknown;
 
 export type PlanData = {
     query: {
@@ -1191,6 +1068,281 @@ export type PlanResponse = ({
 });
 
 export type PlanError = unknown;
+
+export type OneToManyData = {
+    query: {
+        /**
+         * true = many to one
+         * false = one to many
+         *
+         */
+        arriveBy: boolean;
+        /**
+         * geo locations as latitude;longitude,latitude;longitude,...
+         */
+        many: Array<(string)>;
+        /**
+         * maximum travel time in seconds
+         */
+        max: number;
+        /**
+         * maximum matching distance in meters to match geo coordinates to the street network
+         */
+        maxMatchingDistance: number;
+        /**
+         * routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+         *
+         */
+        mode: Mode;
+        /**
+         * geo location as latitude;longitude
+         */
+        one: string;
+    };
+};
+
+export type OneToManyResponse = (Array<Duration>);
+
+export type OneToManyError = unknown;
+
+export type OneToAllData = {
+    query: {
+        /**
+         * Optional. Default is 0 minutes.
+         *
+         * Additional transfer time reserved for each transfer in minutes.
+         *
+         */
+        additionalTransferTime?: number;
+        /**
+         * true = all to one
+         * false = one to all
+         *
+         */
+        arriveBy?: boolean;
+        /**
+         * The maximum number of allowed transfers.
+         * If not provided, the routing uses the server-side default value
+         * which is hardcoded and very high to cover all use cases.
+         *
+         * *Warning*: Use with care. Setting this too low can lead to
+         * optimal (e.g. the fastest) journeys not being found.
+         * If this value is too low to reach the destination at all,
+         * it can lead to slow routing performance.
+         *
+         */
+        maxTransfers?: number;
+        /**
+         * maximum travel time in minutes
+         */
+        maxTravelTime: number;
+        /**
+         * Optional. Default is 0 minutes.
+         *
+         * Minimum transfer time for each transfer in minutes.
+         *
+         */
+        minTransferTime?: number;
+        /**
+         * stop id of the starting or ending stop
+         */
+        one: string;
+        /**
+         * Optional. Default is `FOOT`.
+         *
+         * Accessibility profile to use for pedestrian routing in transfers
+         * between transit connections and the first and last mile respectively.
+         *
+         */
+        pedestrianProfile?: PedestrianProfile;
+        /**
+         * Optional. Default is `false`.
+         *
+         * If set to `true`, all used transit trips are required to allow bike carriage.
+         *
+         */
+        requireBikeTransport?: boolean;
+        /**
+         * Optional. Defaults to the current time.
+         *
+         * Departure time ($arriveBy=false) / arrival date ($arriveBy=true),
+         *
+         */
+        time?: string;
+        /**
+         * Optional. Default is 1.0
+         *
+         * Factor to multiply minimum required transfer times with.
+         * Values smaller than 1.0 are not supported.
+         *
+         */
+        transferTimeFactor?: number;
+        /**
+         * Optional. Default is `TRANSIT` which allows all transit modes (no restriction).
+         * Allowed modes for the transit part. If empty, no transit connections will be computed.
+         * For example, this can be used to allow only `METRO,SUBWAY,TRAM`.
+         *
+         */
+        transitModes?: Array<Mode>;
+        /**
+         * Optional. Default is `false`.
+         *
+         * Whether to use transfers routed on OpenStreetMap data.
+         *
+         */
+        useRoutedTransfers?: boolean;
+    };
+};
+
+export type OneToAllResponse = (Reachable);
+
+export type OneToAllError = unknown;
+
+export type ReverseGeocodeData = {
+    query: {
+        /**
+         * latitude, longitude in degrees
+         */
+        place: string;
+        /**
+         * Optional. Default is all types.
+         *
+         * Only return results of the given type.
+         * For example, this can be used to allow only `ADDRESS` and `STOP` results.
+         *
+         */
+        type?: LocationType;
+    };
+};
+
+export type ReverseGeocodeResponse = (Array<Match>);
+
+export type ReverseGeocodeError = unknown;
+
+export type GeocodeData = {
+    query: {
+        /**
+         * language tags as used in OpenStreetMap
+         * (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
+         *
+         */
+        language?: string;
+        /**
+         * the (potentially partially typed) address to resolve
+         */
+        text: string;
+        /**
+         * Optional. Default is all types.
+         *
+         * Only return results of the given types.
+         * For example, this can be used to allow only `ADDRESS` and `STOP` results.
+         *
+         */
+        type?: LocationType;
+    };
+};
+
+export type GeocodeResponse = (Array<Match>);
+
+export type GeocodeError = unknown;
+
+export type TripData = {
+    query: {
+        /**
+         * trip identifier (e.g. from an itinerary leg or stop event)
+         */
+        tripId: string;
+    };
+};
+
+export type TripResponse = (Itinerary);
+
+export type TripError = unknown;
+
+export type StoptimesData = {
+    query: {
+        /**
+         * Optional. Default is `false`.
+         *
+         * - `arriveBy=true`: the parameters `date` and `time` refer to the arrival time
+         * - `arriveBy=false`: the parameters `date` and `time` refer to the departure time
+         *
+         */
+        arriveBy?: boolean;
+        /**
+         * This parameter will be ignored in case `pageCursor` is set.
+         *
+         * Optional. Default is
+         * - `LATER` for `arriveBy=false`
+         * - `EARLIER` for `arriveBy=true`
+         *
+         * The response will contain the next `n` arrivals / departures
+         * in case `EARLIER` is selected and the previous `n`
+         * arrivals / departures if `LATER` is selected.
+         *
+         */
+        direction?: 'EARLIER' | 'LATER';
+        /**
+         * Optional. Default is all transit modes.
+         *
+         * Only return arrivals/departures of the given modes.
+         *
+         */
+        mode?: Array<Mode>;
+        /**
+         * the number of events
+         */
+        n: number;
+        /**
+         * Use the cursor to go to the next "page" of stop times.
+         * Copy the cursor from the last response and keep the original request as is.
+         * This will enable you to search for stop times in the next or previous time-window.
+         *
+         */
+        pageCursor?: string;
+        /**
+         * Optional. Radius in meters.
+         *
+         * Default is that only stop times of the parent of the stop itself
+         * and all stops with the same name (+ their child stops) are returned.
+         *
+         * If set, all stops at parent stations and their child stops in the specified radius
+         * are returned.
+         *
+         */
+        radius?: number;
+        /**
+         * stop id of the stop to retrieve departures/arrivals for
+         */
+        stopId: string;
+        /**
+         * Optional. Defaults to the current time.
+         *
+         */
+        time?: string;
+    };
+};
+
+export type StoptimesResponse = ({
+    /**
+     * list of stop times
+     */
+    stopTimes: Array<StopTime>;
+    /**
+     * Use the cursor to get the previous page of results. Insert the cursor into the request and post it to get the previous page.
+     * The previous page is a set of stop times BEFORE the first stop time in the result.
+     *
+     */
+    previousPageCursor: string;
+    /**
+     * Use the cursor to get the next page of results. Insert the cursor into the request and post it to get the next page.
+     * The next page is a set of stop times AFTER the last stop time in this result.
+     *
+     */
+    nextPageCursor: string;
+});
+
+export type StoptimesError = unknown;
 
 export type TripsData = {
     query: {

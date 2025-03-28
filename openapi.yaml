@@ -2027,6 +2027,11 @@ components:
           description: |
             optional; missing if no path was found with the wheelchair profile 
             footpath duration in minutes for the wheelchair profile
+        wheelchairRouted:
+          type: number
+          description: |
+            optional; missing if no path was found with the wheelchair profile
+            footpath duration in minutes for the wheelchair profile
         wheelchairUsesElevator:
           type: boolean
           description: |

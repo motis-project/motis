@@ -57,7 +57,6 @@ struct data {
   void load_geocoder();
   void load_matches();
   void load_reverse_geocoder();
-  void load_elevators();
   void load_tiles();
 
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(

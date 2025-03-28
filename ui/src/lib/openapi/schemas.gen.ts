@@ -47,15 +47,19 @@ export const TokenSchema = {
     }
 } as const;
 
+export const LocationTypeSchema = {
+    description: 'location type',
+    type: 'string',
+    enum: ['ADDRESS', 'PLACE', 'STOP']
+} as const;
+
 export const MatchSchema = {
     description: 'GeoCoding match',
     type: 'object',
     required: ['type', 'name', 'id', 'lat', 'lon', 'tokens', 'areas', 'score'],
     properties: {
         type: {
-            description: 'location type',
-            type: 'string',
-            enum: ['ADDRESS', 'PLACE', 'STOP']
+            '$ref': '#/components/schemas/LocationType'
         },
         tokens: {
             description: 'list of non-overlapping tokens that were matched',
@@ -214,6 +218,51 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
         },
         vertexType: {
             '$ref': '#/components/schemas/VertexType'
+        }
+    }
+} as const;
+
+export const ReachablePlaceSchema = {
+    description: 'Place reachable by One-to-All',
+    type: 'object',
+    properties: {
+        place: {
+            '$ref': '#/components/schemas/Place',
+            description: 'Place reached by One-to-All'
+        },
+        duration: {
+            type: 'integer',
+            description: 'Total travel duration'
+        },
+        k: {
+            type: 'integer',
+            description: `k is the smallest number, for which a journey with the shortest duration and at most k-1 transfers exist.
+You can think of k as the number of connections used.
+
+In more detail:
+
+k=0: No connection, e.g. for the one location
+k=1: Direct connection
+k=2: Connection with 1 transfer
+`
+        }
+    }
+} as const;
+
+export const ReachableSchema = {
+    description: 'Object containing all reachable places by One-to-All search',
+    type: 'object',
+    properties: {
+        one: {
+            '$ref': '#/components/schemas/Place',
+            description: 'One location used in One-to-All search'
+        },
+        all: {
+            description: 'List of locations reachable by One-to-All',
+            type: 'array',
+            items: {
+                '$ref': '#/components/schemas/ReachablePlace'
+            }
         }
     }
 } as const;
@@ -809,6 +858,12 @@ footpath duration in minutes for the foot profile
         wheelchair: {
             type: 'number',
             description: `optional; missing if no path was found with the wheelchair profile 
+footpath duration in minutes for the wheelchair profile
+`
+        },
+        wheelchairRouted: {
+            type: 'number',
+            description: `optional; missing if no path was found with the wheelchair profile
 footpath duration in minutes for the wheelchair profile
 `
         },
