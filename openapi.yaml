@@ -574,7 +574,6 @@ paths:
                 required:
                   - requestParameters
                   - debugOutput
-                  - date
                   - from
                   - to
                   - direct
