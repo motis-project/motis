@@ -69,7 +69,6 @@ int server(data d, config const& c, std::string_view const motis_version) {
   POST<ep::osr_routing>(qr, "/api/route", d);
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
-  POST<ep::update_elevator>(qr, "/api/update_elevator", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);
@@ -82,6 +81,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
+
+  if (!c.requires_rt_timetable_updates()) {
+    // Elevator updates are not compatible with RT-updates.
+    POST<ep::update_elevator>(qr, "/api/update_elevator", d);
+  }
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
