@@ -9,10 +9,6 @@
 
 namespace motis {
 
-void run_rt_update(boost::asio::io_context&,
-                   config const&,
-                   nigiri::timetable const&,
-                   tag_lookup const&,
-                   std::shared_ptr<rt>&);
+void run_rt_update(boost::asio::io_context&, config const&, data&);
 
 }

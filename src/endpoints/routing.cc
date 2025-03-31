@@ -81,6 +81,7 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
                                      osr::direction const dir,
                                      std::vector<api::ModeEnum> const& modes,
                                      bool const wheelchair,
+                                     double const max_matching_distance,
                                      std::chrono::seconds const max) const {
   if (!w_ || !l_ || !pl_ || !tt_ || !loc_tree_ || !matches_) {
     return {};
@@ -101,7 +102,7 @@ td_offsets_t routing::get_td_offsets(elevators const& e,
     utl::equal_ranges_linear(
         get_td_footpaths(*w_, *l_, *pl_, *tt_, *loc_tree_, e, *matches_,
                          n::location_idx_t::invalid(), pos, dir, profile, max,
-                         *blocked),
+                         max_matching_distance, *blocked),
         [](n::td_footpath const& a, n::td_footpath const& b) {
           return a.target_ == b.target_;
         },
@@ -130,7 +131,7 @@ std::vector<n::routing::offset> routing::get_offsets(
     std::optional<std::vector<std::string>> const& rental_providers,
     bool const wheelchair,
     std::chrono::seconds const max,
-    unsigned const max_matching_distance,
+    double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd) const {
   if (!loc_tree_ || !pl_ || !tt_ || !loc_tree_ || !matches_) {
     return {};
@@ -543,6 +544,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                 *e, pos, dir, start_modes,
                                 query.pedestrianProfile_ ==
                                     api::PedestrianProfileEnum::WHEELCHAIR,
+                                query.maxMatchingDistance_,
                                 std::chrono::seconds{query.maxPreTransitTime_});
                           }},
                       start)
@@ -560,6 +562,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                                 *e, pos, dir, dest_modes,
                                 query.pedestrianProfile_ ==
                                     api::PedestrianProfileEnum::WHEELCHAIR,
+                                query.maxMatchingDistance_,
                                 std::chrono::seconds{
                                     query.maxPostTransitTime_});
                           }},

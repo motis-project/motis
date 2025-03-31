@@ -74,7 +74,6 @@ timetable:
   assistance_times: assistance.csv
 street_routing: true
 osr_footpath: true
-elevators: false
 geocoding: true
 reverse_geocoding: false
 )",

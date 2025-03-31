@@ -61,7 +61,7 @@ struct routing {
       std::optional<std::vector<std::string>> const& rental_providers,
       bool wheelchair,
       std::chrono::seconds max,
-      unsigned max_matching_distance,
+      double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
@@ -71,6 +71,7 @@ struct routing {
                  osr::direction,
                  std::vector<api::ModeEnum> const&,
                  bool wheelchair,
+                 double max_matching_distance,
                  std::chrono::seconds max) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(

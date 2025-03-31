@@ -106,9 +106,9 @@ elevator_footpath_map_t compute_footpaths(
   auto const foot_candidates =
       lookup_locations(w, lookup, pl, tt, matches, osr::search_profile::kFoot,
                        max_matching_distance);
-  auto const wheelchair_candidates =
-      lookup_locations(w, lookup, pl, tt, matches,
-                       osr::search_profile::kWheelchair, max_matching_distance);
+  auto const wheelchair_candidates = lookup_locations(
+      w, lookup, pl, tt, matches, osr::search_profile::kWheelchair,
+      kMaxWheelchairMatchingDistance);
 
   struct state {
     std::vector<n::footpath> sorted_tt_fps_;
@@ -145,8 +145,9 @@ elevator_footpath_map_t compute_footpaths(
               candidates[l],
               utl::transform_to(s.neighbors_, s.neighbor_candidates_,
                                 [&](auto&& x) { return candidates[x]; }),
-              kMaxDuration, osr::direction::kForward, nullptr, nullptr,
-              elevations, [](osr::path const& p) { return p.uses_elevator_; });
+              static_cast<osr::cost_t>(max_duration.count()),
+              osr::direction::kForward, nullptr, nullptr, elevations,
+              [](osr::path const& p) { return p.uses_elevator_; });
           for (auto const [n, r] : utl::zip(s.neighbors_, results)) {
             if (r.has_value()) {
               auto const duration = n::duration_t{r->cost_ / 60U};

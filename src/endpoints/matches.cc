@@ -11,6 +11,8 @@ namespace n = nigiri;
 
 namespace motis::ep {
 
+constexpr auto const kLimit = 2048;
+
 std::string get_names(osr::platforms const& pl, osr::platform_idx_t const x) {
   auto ss = std::stringstream{};
   for (auto const y : pl.platform_names_[x]) {
@@ -27,9 +29,8 @@ json::value matches::operator()(json::value const& query) const {
 
   auto matches = json::array{};
 
-  auto n_items = 0U;
   pl_.find(min, max, [&](osr::platform_idx_t const p) {
-    utl::verify(n_items < 2048U, "too many items");
+    utl::verify(matches.size() < kLimit, "too many items");
 
     auto const center = get_platform_center(pl_, w_, p);
     if (!center.has_value()) {
@@ -45,7 +46,7 @@ json::value matches::operator()(json::value const& query) const {
   });
 
   loc_rtree_.find({min, max}, [&](n::location_idx_t const l) {
-    utl::verify(n_items < 2048U, "too many items");
+    utl::verify(matches.size() < kLimit, "too many items");
 
     auto const pos = tt_.locations_.coordinates_[l];
     auto const match = get_match(tt_, pl_, w_, l);
