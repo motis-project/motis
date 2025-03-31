@@ -22,8 +22,9 @@ json::value update_elevator::operator()(json::value const& query) const {
 
   auto const rt_copy = rt_;
   auto const e = rt_copy->e_.get();
-  auto const rtt = rt_copy->rtt_.get();
+  utl::verify(e != nullptr, "elevators not available");
 
+  auto const rtt = rt_copy->rtt_.get();
   auto elevators_copy = e->elevators_;
   auto const it =
       utl::find_if(elevators_copy, [&](auto&& x) { return x.id_ == id; });
