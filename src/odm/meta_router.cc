@@ -148,33 +148,52 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
 
   auto const from_pos = geo::latlng{from_p.lat_, from_p.lon_};
   auto const to_pos = geo::latlng{to_p.lat_, to_p.lon_};
-  if (r.odm_bounds_ != nullptr && (!r.odm_bounds_->contains(from_pos) ||
-                                   !r.odm_bounds_->contains(to_pos))) {
-    fmt::println("No direct connection, from: {}, to: {}", from_pos, to_pos);
-    return ep::kInfinityDuration;
+  if (r.odm_bounds_ != nullptr) {
+    auto const from_in_bounds = r.odm_bounds_->contains(from_pos);
+    auto const to_in_bounds = r.odm_bounds_->contains(to_pos);
+    if (!from_in_bounds || !to_in_bounds) {
+      fmt::println(
+          "[init] No direct ODM connection, from: {}, to: {}: from_in_bounds = "
+          "{}, "
+          "to_in_bounds = {}",
+          from_pos, to_pos, from_in_bounds ? "true" : "false",
+          to_in_bounds ? "true" : "false");
+      return ep::kInfinityDuration;
+    }
   }
 
-  auto [_, taxi_duration] = r.route_direct(
+  auto [_, odm_direct_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
       std::nullopt, intvl.from_,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
       kODMMaxDuration, query.maxMatchingDistance_, kODMDirectFactor);
 
-  if (query.arriveBy_) {
-    for (auto arr =
-             std::chrono::floor<std::chrono::hours>(intvl.to_ - taxi_duration) +
-             taxi_duration;
-         intvl.contains(arr); arr -= kODMDirectPeriod) {
-      direct_rides.push_back({.dep_ = arr - taxi_duration, .arr_ = arr});
+  if (odm_direct_duration < kODMMaxDuration) {
+    if (query.arriveBy_) {
+      for (auto arr = std::chrono::floor<std::chrono::hours>(
+                          intvl.to_ - odm_direct_duration) +
+                      odm_direct_duration;
+           intvl.contains(arr); arr -= kODMDirectPeriod) {
+        direct_rides.push_back(
+            {.dep_ = arr - odm_direct_duration, .arr_ = arr});
+      }
+    } else {
+      for (auto dep = std::chrono::ceil<std::chrono::hours>(intvl.from_);
+           intvl.contains(dep); dep += kODMDirectPeriod) {
+        direct_rides.push_back(
+            {.dep_ = dep, .arr_ = dep + odm_direct_duration});
+      }
     }
   } else {
-    for (auto dep = std::chrono::ceil<std::chrono::hours>(intvl.from_);
-         intvl.contains(dep); dep += kODMDirectPeriod) {
-      direct_rides.push_back({.dep_ = dep, .arr_ = dep + taxi_duration});
-    }
+    fmt::println(
+        "[init] No direct ODM connection, from: {}, to: {}: "
+        "odm_direct_duration >= "
+        "kODMMaxDuration ({} "
+        ">= {})",
+        from_pos, to_pos, odm_direct_duration, kODMMaxDuration);
   }
 
-  return taxi_duration;
+  return odm_direct_duration;
 }
 
 void init_pt(std::vector<n::routing::start>& rides,
@@ -190,7 +209,8 @@ void init_pt(std::vector<n::routing::start>& rides,
              n::routing::location_match_mode location_match_mode,
              std::chrono::seconds const max) {
   if (r.odm_bounds_ != nullptr && !r.odm_bounds_->contains(l.pos_)) {
-    fmt::println("no PT connection: {}", l.pos_);
+    fmt::println("[init] no ODM-PT connection at {}: terminal out of bounds",
+                 l.pos_);
     return;
   }
 
@@ -199,15 +219,15 @@ void init_pt(std::vector<n::routing::start>& rides,
       query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR, max,
       query.maxMatchingDistance_, gbfs_rd);
 
-  std::erase_if(offsets, [&](n::routing::offset const& o) {
-    auto const out_of_bounds =
-        (r.odm_bounds_ != nullptr &&
-         !r.odm_bounds_->contains(r.tt_->locations_.coordinates_[o.target_]));
-    if (out_of_bounds) {
-      fmt::println("Bounds filtered: {}", n::location{*r.tt_, o.target_});
-    }
-    return out_of_bounds;
-  });
+  if (r.odm_bounds_ != nullptr) {
+    auto const n_out_of_bounds =
+        std::erase_if(offsets, [&](n::routing::offset const& o) {
+          return !r.odm_bounds_->contains(
+              r.tt_->locations_.coordinates_[o.target_]);
+        });
+    fmt::println("[init] removed {} out-of-bounds offsets for {}",
+                 n_out_of_bounds, l.pos_);
+  }
 
   for (auto& o : offsets) {
     o.duration_ += kODMTransferBuffer;
@@ -242,6 +262,8 @@ void meta_router::init_prima(n::interval<n::unixtime_t> const& search_intvl,
       direct_duration ? std::min(*direct_duration - kODMOffsetMinImprovement,
                                  kODMMaxDuration)
                       : kODMMaxDuration;
+
+  fmt::println("[init] max_offset_duration: {}", max_offset_duration);
 
   if (odm_pre_transit_ && holds_alternative<osr::location>(from_)) {
     init_pt(p->from_rides_, r_, std::get<osr::location>(from_),
@@ -516,7 +538,10 @@ api::plan_response meta_router::run() {
                 search_intvl.to_};
 
   init_prima(context_intvl, odm_intvl);
-  print_time(init_start, "[init]");
+  print_time(init_start,
+             fmt::format("[init] (first_mile: {}, last_mile: {}, direct: {})",
+                         p->from_rides_.size(), p->to_rides_.size(),
+                         p->direct_rides_.size()));
 
   // blacklisting
   auto blacklist_response = std::optional<std::string>{};
@@ -542,7 +567,11 @@ api::plan_response meta_router::run() {
       blacklist_response && p->blacklist_update(*blacklist_response);
   fmt::println("[blacklisting] ODM events after blacklisting: {}",
                p->n_events());
-  print_time(bl_start, "[blacklisting]");
+  print_time(
+      bl_start,
+      fmt::format("[blacklisting] (first_mile: {}, last_mile: {}, direct: {})",
+                  p->from_rides_.size(), p->to_rides_.size(),
+                  p->direct_rides_.size()));
 
   // prepare queries
   auto const prep_queries_start = std::chrono::steady_clock::now();
@@ -686,7 +715,11 @@ api::plan_response meta_router::run() {
     p->odm_journeys_.clear();
     fmt::println("[whitelisting] failed, discarding ODM journeys");
   }
-  print_time(wl_start, "[whitelisting]");
+  print_time(
+      wl_start,
+      fmt::format("[whitelisting] (first_mile: {}, last_mile: {}, direct: {})",
+                  p->from_rides_.size(), p->to_rides_.size(),
+                  p->direct_rides_.size()));
 
   fmt::println("[mixing] {} PT journeys and {} ODM journeys",
                pt_result.journeys_.size(), p->odm_journeys_.size());
