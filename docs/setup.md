@@ -78,7 +78,35 @@ gbfs:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
 street_routing: true              # enable street routing (default = false)
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
-elevators: false                  # currently not supported
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
+```
+
+# Scenario with Elevators
+
+This is an example configuration for Germany which enables the real-time update of elevators from Deutsche Bahn's FaSta (Facility Status) JSON API. You need to register and obtain an API key.
+
+```yml
+server:
+  web_folder: ui
+tiles:
+  profile: tiles-profiles/full.lua
+geocoding: true
+street_routing: true
+osr_footpath: true
+elevators:
+  #  init: fasta.json   # Can be used for debugging, remove `url` key in this case
+  url: https://apis.deutschebahn.com/db-api-marketplace/apis/fasta/v2/facilities
+  headers:
+    DB-Client-ID: b5d28136ffedb73474cc7c97536554df!
+    DB-Api-Key: ef27b9ad8149cddb6b5e8ebb559ce245!
+osm: germany-latest.osm.pbf
+timetable:
+  extend_missing_footpaths: true
+  use_osm_stop_coordinates: true
+  datasets:
+    de:
+      path: 20250331_fahrplaene_gesamtdeutschland_gtfs.zip
+      rt:
+        - url: https://stc.traines.eu/mirror/german-delfi-gtfs-rt/latest.gtfs-rt.pbf
 ```
