@@ -29,7 +29,6 @@ json::value matches::operator()(json::value const& query) const {
 
   auto matches = json::array{};
 
-  auto n_items = 0U;
   pl_.find(min, max, [&](osr::platform_idx_t const p) {
     utl::verify(matches.size() < kLimit, "too many items");
 
