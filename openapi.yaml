@@ -1624,7 +1624,6 @@ components:
           description: The number of points in the string
           type: integer
           minimum: 0
-          format: int64
 
     StepInstruction:
       type: object
