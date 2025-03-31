@@ -1623,6 +1623,7 @@ components:
         length:
           description: The number of points in the string
           type: integer
+          minimum: 0
 
     StepInstruction:
       type: object
