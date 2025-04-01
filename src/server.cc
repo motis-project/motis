@@ -63,6 +63,10 @@ int server(data d, config const& c, std::string_view const motis_version) {
   auto r = runner{server_config.n_threads_, 1024U};
   auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
   qr.add_header("Server", std::format("MOTIS {}", motis_version));
+  if (c.server_->data_attribution_link_) {
+    qr.add_header("Link", std::format("<{}>; rel=\"license\"",
+                                      *c.server_->data_attribution_link_));
+  }
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);

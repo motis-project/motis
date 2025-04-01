@@ -37,6 +37,7 @@ struct config {
     std::string port_{"8080"};
     std::string web_folder_{"ui"};
     unsigned n_threads_{std::thread::hardware_concurrency()};
+    std::optional<std::string> data_attribution_link_{};
   };
   std::optional<server> server_{};
 

@@ -47,6 +47,7 @@ const translations: Translations = {
 	bikeRental: 'Utiliser véhicules partagés',
 	bikeCarriage: 'Transport vélo',
 	unreliableOptions: 'Selon la disponibilité des données, ces options peuvent ne pas être fiables.',
+	timetableSources: 'Sources des horaires',
 	WALK: 'À pied',
 	BIKE: 'Vélo',
 	RENTAL: 'Loué',
