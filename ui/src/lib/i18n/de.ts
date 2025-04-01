@@ -48,6 +48,7 @@ const translations: Translations = {
 	bikeRental: 'Sharing-Fahrzeuge berücksichtigen',
 	bikeCarriage: 'Fahrradmitnahme',
 	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
+	timetableSources: 'Fahrplandatenquellen',
 	WALK: 'Zu Fuß',
 	BIKE: 'Fahrrad',
 	RENTAL: 'Sharing',

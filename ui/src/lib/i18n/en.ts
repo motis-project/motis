@@ -47,6 +47,7 @@ const translations: Translations = {
 	bikeRental: 'Allow usage of sharing vehicles',
 	bikeCarriage: 'Bike carriage',
 	unreliableOptions: 'Depending on data availability, these options may be unreliable.',
+	timetableSources: 'Timetable sources',
 	WALK: 'Walking',
 	BIKE: 'Bike',
 	RENTAL: 'Sharing',
