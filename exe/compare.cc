@@ -74,22 +74,6 @@ int compare(int ac, char** av) {
     std::optional<api::plan_params> params_{};
     std::vector<std::optional<api::plan_response>> responses_{};
   };
-  struct stats {
-    std::uint64_t ref_n_journeys_{};
-    std::uint64_t cmp_n_journeys_{};
-    std::vector<std::chrono::minutes> ref_travel_time_{};
-    std::vector<std::chrono::minutes> cmp_travel_time_{};
-    std::vector<std::uint8_t> ref_transfers_{};
-    std::vector<std::uint8_t> cmp_transfers_{};
-    std::vector<std::chrono::minutes> ref_walk_time_{};
-    std::vector<std::chrono::minutes> cmp_walk_time_{};
-    std::vector<std::chrono::minutes> ref_bike_time_{};
-    std::vector<std::chrono::minutes> cmp_bike_time_{};
-    std::vector<std::chrono::minutes> ref_car_time_{};
-    std::vector<std::chrono::minutes> cmp_car_time_{};
-    std::vector<std::chrono::milliseconds> ref_wall_time_{};
-    std::vector<std::chrono::milliseconds> cmp_wall_time_{};
-  };
   auto response_buf = hash_map<unsigned, info>{};
   auto const get = [&](unsigned const id) -> info& {
     return utl::get_or_create(response_buf, id, [&]() {
@@ -221,6 +205,60 @@ int compare(int ac, char** av) {
   std::cout << "consumed: " << n_consumed << "\n";
   std::cout << "buffered: " << response_buf.size() << "\n";
   std::cout << "   equal: " << n_equal << "\n";
+
+  struct stats {
+    std::vector<std::chrono::milliseconds> wall_time_{};
+    std::vector<std::chrono::minutes> travel_time_{};
+    std::vector<std::uint8_t> transfers_{};
+    std::vector<std::chrono::minutes> walk_time_{};
+    std::vector<std::chrono::minutes> bike_time_{};
+    std::vector<std::chrono::minutes> car_time_{};
+  };
+  auto s = std::vector<stats>{responses_paths.size()};
+  for (auto& [_, info] : response_buf) {
+    for (auto [i, r] : utl::enumerate(info.responses_)) {
+      if (!r) {
+        continue;
+      }
+      s[i].wall_time_.emplace_back(r->debugOutput_["execute_time"]);
+      for (auto const& j : r->itineraries_) {
+        s[i].travel_time_.emplace_back(j.duration_);
+        s[i].transfers_.emplace_back(j.transfers_);
+        switch (j.legs_.front().mode_) {
+          case api::ModeEnum::WALK:
+            s[i].walk_time_.emplace_back(j.legs_.front().duration_);
+            break;
+          case api::ModeEnum::BIKE:
+            s[i].bike_time_.emplace_back(j.legs_.front().duration_);
+            break;
+          case api::ModeEnum::CAR:
+            s[i].car_time_.emplace_back(j.legs_.front().duration_);
+            break;
+          default:
+        }
+        switch (j.legs_.back().mode_) {
+          case api::ModeEnum::WALK:
+            s[i].walk_time_.emplace_back(j.legs_.back().duration_);
+            break;
+          case api::ModeEnum::BIKE:
+            s[i].bike_time_.emplace_back(j.legs_.back().duration_);
+            break;
+          case api::ModeEnum::CAR:
+            s[i].car_time_.emplace_back(j.legs_.back().duration_);
+            break;
+          default:
+        }
+      }
+    }
+  }
+  for (auto& u : s) {
+    utl::sort(u.wall_time_);
+    utl::sort(u.travel_time_);
+    utl::sort(u.transfers_);
+    utl::sort(u.walk_time_);
+    utl::sort(u.bike_time_);
+    utl::sort(u.car_time_);
+  }
 
   return 0;
 }
