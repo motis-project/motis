@@ -259,6 +259,37 @@ int compare(int ac, char** av) {
     utl::sort(u.bike_time_);
     utl::sort(u.car_time_);
   }
+  auto const cols =
+      std::vector<std::string>{"25%", "50%", "75%", "99%", "99.9%", "100%"};
+  auto const quantiles = std::vector<double>{0.25, 0.5, 0.75, 0.99, 0.999, 1.0};
+  auto const print_header = [&]() {
+    for (const auto& c : cols) {
+      std::cout << std::format("{: >{}}", c, 12);
+    }
+    std::cout << "\n";
+  };
+  auto const get_quantile = [](auto const& v, double q) {
+    q = q < 0.0 ? 0.0 : q;
+    q = 1.0 < q ? 1.0 : q;
+    if (q == 1.0) {
+      return v.back();
+    }
+    std::cout << "q = " << q << "v.size() = " << v.size() << "\n";
+    std::cout << "next is getting quantile\n";
+    return v[std::round(static_cast<double>(v.size()) * q)];
+  };
+  auto const print_quantiles = [&](auto const& v) {
+    for (auto const q : quantiles) {
+      std::cout << std::format("{:>{}}", get_quantile(v, q), 12);
+    }
+    std::cout << "\n";
+  };
+
+  fmt::println("\nWall Time");
+  print_header();
+  for (auto const& u : s) {
+    print_quantiles(u.wall_time_);
+  }
 
   return 0;
 }
