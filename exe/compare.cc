@@ -9,6 +9,8 @@
 #include "boost/json/value_to.hpp"
 #include "boost/url/url.hpp"
 
+#include "fmt/std.h"
+
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/helpers/algorithm.h"
