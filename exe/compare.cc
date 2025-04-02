@@ -246,7 +246,7 @@ int compare(int ac, char** av) {
           case api::ModeEnum::CAR:
             s[i].car_time_.emplace_back(j.legs_.back().duration_);
             break;
-          default:
+          default: break;
         }
       }
     }
