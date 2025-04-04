@@ -12,7 +12,7 @@ externalDocs:
   description: Find out more about MOTIS
   url: https://github.com/motis-project/motis
 servers:
-  - url: https://europe.motis-project.de
+  - url: https://api.transitous.org
 paths:
   /api/v1/plan:
     get:
@@ -574,7 +574,6 @@ paths:
                 required:
                   - requestParameters
                   - debugOutput
-                  - date
                   - from
                   - to
                   - direct
