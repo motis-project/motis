@@ -1441,6 +1441,12 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+        inAllowed:
+          description: Whether entry is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.
+          type: boolean
+        outAllowed:
+          description: Whether exit is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.
+          type: boolean
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -1490,6 +1496,7 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
+        - inOutAllowed
         - source
       properties:
         place:
@@ -1520,6 +1527,9 @@ components:
           type: string
         routeShortName:
           type: string
+        inOutAllowed:
+          description: Whether entry (for departures) or exit (for arrivals) is allowed, either due to schedule, skipped stops or cancellations
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -1826,6 +1836,9 @@ components:
           type: string
         routeShortName:
           type: string
+        cancelled:
+          description: Whether this trip is cancelled
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string

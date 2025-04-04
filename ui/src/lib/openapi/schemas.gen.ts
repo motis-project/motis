@@ -218,6 +218,14 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
         },
         vertexType: {
             '$ref': '#/components/schemas/VertexType'
+        },
+        inAllowed: {
+            description: 'Whether entry is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.',
+            type: 'boolean'
+        },
+        outAllowed: {
+            description: 'Whether exit is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.',
+            type: 'boolean'
         }
     }
 } as const;
@@ -270,7 +278,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'inOutAllowed', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -310,6 +318,10 @@ For non-transit legs, null
         },
         routeShortName: {
             type: 'string'
+        },
+        inOutAllowed: {
+            description: 'Whether entry (for departures) or exit (for arrivals) is allowed, either due to schedule, skipped stops or cancellations',
+            type: 'boolean'
         },
         source: {
             description: 'Filename and line number where this trip is from',
@@ -408,7 +420,8 @@ export const EncodedPolylineSchema = {
         },
         length: {
             description: 'The number of points in the string',
-            type: 'integer'
+            type: 'integer',
+            minimum: 0
         }
     }
 } as const;
@@ -624,6 +637,10 @@ For non-transit legs, null
         },
         routeShortName: {
             type: 'string'
+        },
+        cancelled: {
+            description: 'Whether this trip is cancelled',
+            type: 'boolean'
         },
         source: {
             description: 'Filename and line number where this trip is from',

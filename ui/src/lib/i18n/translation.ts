@@ -43,6 +43,10 @@ export type Translations = {
 	bikeCarriage: string;
 	unreliableOptions: string;
 	timetableSources: string;
+	tripCancelled: string;
+	inOutDisallowed: string;
+	inDisallowed: string;
+	outDisallowed: string;
 	WALK: string;
 	BIKE: string;
 	RENTAL: string;

@@ -2,6 +2,7 @@
 	import { stoptimes, type StoptimesError, type StoptimesResponse } from '$lib/openapi';
 	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
+	import CircleX from 'lucide-svelte/icons/circle-x';
 	import ErrorMessage from '$lib/ErrorMessage.svelte';
 	import Time from '$lib/Time.svelte';
 	import Route from '$lib/Route.svelte';
@@ -87,24 +88,32 @@
 				</div>
 			{/if}
 
-			{#each r.stopTimes as t}
-				{@const timestamp = arriveBy ? t.place.arrival! : t.place.departure!}
+			{#each r.stopTimes as trip}
+				{@const timestamp = arriveBy ? trip.place.arrival! : trip.place.departure!}
 				{@const scheduledTimestamp = arriveBy
-					? t.place.scheduledArrival!
-					: t.place.scheduledDeparture!}
-				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={t} {onClickTrip} />
+					? trip.place.scheduledArrival!
+					: trip.place.scheduledDeparture!}
+				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={trip} {onClickTrip} />
 				<Time
 					variant="schedule"
-					isRealtime={t.realTime}
+					isRealtime={trip.realTime}
 					{timestamp}
 					{scheduledTimestamp}
 					queriedTime={queryTime.toISOString()}
 				/>
-				<Time variant="realtime" isRealtime={t.realTime} {timestamp} {scheduledTimestamp} />
-				<div class="flex items-center text-muted-foreground min-w-0">
-					<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
-					<span class="ml-1 leading-tight text-ellipsis overflow-hidden">{t.headsign}</span>
-				</div>
+				<Time variant="realtime" isRealtime={trip.realTime} {timestamp} {scheduledTimestamp} />
+				<span>
+					<div class="flex items-center text-muted-foreground min-w-0">
+						<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
+						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">{trip.headsign}</span>
+					</div>
+					{#if !trip.inOutAllowed}
+						<div class="flex items-center text-destructive text-sm">
+							<CircleX class="stroke-destructive h-4 w-4" />
+							<span class="ml-1 leading-none">{arriveBy ? t.outDisallowed : t.inDisallowed}</span>
+						</div>
+					{/if}
+				</span>
 			{/each}
 
 			{#if rI === responses.length - 1}
