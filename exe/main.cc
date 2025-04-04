@@ -27,6 +27,7 @@ namespace motis {
 int generate(int, char**);
 int batch(int, char**);
 int compare(int, char**);
+int stats(int, char**);
 }  // namespace motis
 
 using namespace motis;
@@ -43,6 +44,7 @@ int main(int ac, char** av) {
         "  generate   generate random queries and write them to a file\n"
         "  batch      run queries from a file\n"
         "  compare    compare results from different batch runs\n"
+        "  stats      statistics for batch run results\n"
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n",
@@ -65,6 +67,7 @@ int main(int ac, char** av) {
     case cista::hash("generate"): return_value = generate(ac, av); break;
     case cista::hash("batch"): return_value = batch(ac, av); break;
     case cista::hash("compare"): return_value = compare(ac, av); break;
+    case cista::hash("stats"): return_value = stats(ac, av); break;
 
     case cista::hash("config"): {
       auto paths = std::vector<std::string>{};
@@ -144,7 +147,8 @@ int main(int ac, char** av) {
     }
 
     default:
-      fmt::println("Invalid command. Type motis --help for a list of commands.");
+      fmt::println(
+          "Invalid command. Type motis --help for a list of commands.");
       return_value = 1;
       break;
   }
