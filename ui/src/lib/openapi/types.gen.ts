@@ -191,6 +191,14 @@ export type Place = {
      */
     track?: string;
     vertexType?: VertexType;
+    /**
+     * Whether entry is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.
+     */
+    inAllowed?: boolean;
+    /**
+     * Whether exit is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.
+     */
+    outAllowed?: boolean;
 };
 
 /**
@@ -262,6 +270,10 @@ export type StopTime = {
     routeTextColor?: string;
     tripId: string;
     routeShortName: string;
+    /**
+     * Whether entry (for departures) or exit (for arrivals) is allowed, either due to schedule, skipped stops or cancellations
+     */
+    inOutAllowed: boolean;
     /**
      * Filename and line number where this trip is from
      */
@@ -497,6 +509,10 @@ export type Leg = {
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;
+    /**
+     * Whether this trip is cancelled
+     */
+    cancelled?: boolean;
     /**
      * Filename and line number where this trip is from
      */

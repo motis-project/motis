@@ -45,7 +45,8 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
            to_l.get_location_idx(), start_time, dest_time,
            n::routing::journey::run_enter_exit{
                fr,  // NOLINT(cppcoreguidelines-slicing)
-               fr.first_valid(), fr.last_valid()}}},
+               fr.stop_range_.from_,
+               static_cast<n::stop_idx_t>(fr.stop_range_.to_ - 1U)}}},
        .start_time_ = start_time,
        .dest_time_ = dest_time,
        .dest_ = to_l.get_location_idx(),
