@@ -86,36 +86,55 @@ int compare(int ac, char** av) {
     return x.params_.has_value() &&
            utl::all_of(x.responses_, [](auto&& r) { return r.has_value(); });
   };
-  auto const params = [](api::Itinerary const& x) {
-    return std::tie(x.startTime_, x.endTime_, x.transfers_);
+  struct intermodal {
+    std::string to_str() const {
+      auto ss = std::stringstream{};
+      ss << mode_ << " " << std::chrono::round<std::chrono::minutes>(duration_);
+      return ss.str();
+    }
+
+    bool operator<(intermodal const& b) const {
+      return std::tie(mode_, duration_) < std::tie(b.mode_, b.duration_);
+    }
+
+    bool operator==(intermodal const& b) const {
+      return std::tie(mode_, duration_) == std::tie(b.mode_, b.duration_);
+    }
+
+    api::ModeEnum mode_;
+    std::chrono::seconds duration_;
   };
-  auto const print_params = [](api::Itinerary const& x) {
-    auto const pre_transit = [&]() {
-      auto ss = std::stringstream{};
+
+  auto const params = [](api::Itinerary const& x) {
+    auto const pre_transit = [&]() -> std::optional<intermodal> {
       if (x.legs_.front().mode_ != api::ModeEnum::TRANSIT) {
-        ss << x.legs_.front().mode_ << " "
-           << std::chrono::duration_cast<std::chrono::minutes>(
-                  std::chrono::seconds{x.legs_.front().duration_})
-                  .count();
+        return intermodal{x.legs_.front().mode_,
+                          std::chrono::seconds{x.legs_.front().duration_}};
+      } else {
+        return std::nullopt;
       }
-      return ss.str();
     };
-    auto const post_transit = [&]() {
-      auto ss = std::stringstream{};
+    auto const post_transit = [&]() -> std::optional<intermodal> {
       if (x.legs_.back().mode_ != api::ModeEnum::TRANSIT) {
-        ss << x.legs_.back().mode_ << " "
-           << std::chrono::duration_cast<std::chrono::minutes>(
-                  std::chrono::seconds{x.legs_.back().duration_})
-                  .count();
+        return intermodal{x.legs_.back().mode_,
+                          std::chrono::seconds{x.legs_.back().duration_}};
+      } else {
+        return std::nullopt;
       }
-      return ss.str();
     };
+    return std::tuple(x.startTime_, x.endTime_, x.transfers_, pre_transit(),
+                      post_transit());
+  };
+  auto const print_params = [&](api::Itinerary const& x) {
     auto const time = [](auto const& t) {
       return std::format("{0:%F}T{0:%R}", t);
     };
-    std::cout << time(x.startTime_.time_) << ", " << time(x.endTime_.time_)
-              << ", " << x.transfers_ << ", " << pre_transit() << ", "
-              << post_transit();
+    auto const p = params(x);
+    std::cout << time(std::get<0>(p).time_) << ", "
+              << time(std::get<1>(p).time_) << ", " << std::get<2>(p) << ", "
+              << (std::get<3>(p) ? std::get<3>(p).value().to_str() : "NULL")
+              << ", "
+              << (std::get<4>(p) ? std::get<4>(p).value().to_str() : "NULL");
   };
   auto const print_none = []() { std::cout << "\t\t\t\t\t\t"; };
   auto n_equal = 0U;
@@ -181,6 +200,7 @@ int compare(int ac, char** av) {
     done = true;
 
     if (auto const q = read_line(query_file); q.has_value()) {
+      std::cout << "query_id: " << query_id << "\n";
       auto& info = get(query_id++);
       info.params_ = api::plan_params{boost::urls::url{*q}.params()};
       consume_if_finished(info);
@@ -188,6 +208,7 @@ int compare(int ac, char** av) {
     }
 
     for (auto const [i, res_file] : utl::enumerate(responses_files)) {
+
       if (auto const r = read_line(res_file); r.has_value()) {
         auto res =
             boost::json::value_to<api::plan_response>(boost::json::parse(*r));
@@ -205,7 +226,7 @@ int compare(int ac, char** av) {
   std::cout << "consumed: " << n_consumed << "\n";
   std::cout << "buffered: " << response_buf.size() << "\n";
   std::cout << "   equal: " << n_equal << "\n";
-  
+
   return 0;
 }
 
