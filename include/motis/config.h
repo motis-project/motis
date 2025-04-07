@@ -138,6 +138,13 @@ struct config {
   };
   std::optional<elevators> elevators_{};
 
+  struct vdv_rt {
+    std::string client_name_{};
+    std::string server_name_{};
+    std::string server_url_{};
+  };
+  std::optional<vdv_rt> vdv_rt_;
+
   bool street_routing_{false};
   bool osr_footpath_{false};
   bool geocoding_{false};
