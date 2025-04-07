@@ -61,13 +61,13 @@
 			{#if !inAllowed || !outAllowed}
 				<div class="ml-4 flex items-center text-destructive text-sm">
 					<CircleX class="stroke-destructive h-4 w-4" />
-					<span class="ml-1 leading-none"
-						>{!inAllowed && !outAllowed
+					<span class="ml-1 leading-none">
+						{!inAllowed && !outAllowed
 							? t.inOutDisallowed
 							: !inAllowed
 								? t.inDisallowed
-								: t.outDisallowed}</span
-					>
+								: t.outDisallowed}
+					</span>
 				</div>
 			{/if}
 		{:else}
