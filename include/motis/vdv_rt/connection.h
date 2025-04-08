@@ -5,6 +5,9 @@
 
 namespace motis::vdv_rt {
 
+static auto const kHeaders = std::map<std::string, std::string>{
+    {"Content-Type", "text/xml"}, {"Accept", "text/xml"}};
+
 struct connection {
   explicit connection(motis::config::vdv_rt const&);
 
@@ -12,9 +15,9 @@ struct connection {
   std::string client_status_path_;
   std::string data_ready_path_;
   std::string server_status_addr_;
-  std::string manage_subscription_addr_;
+  std::string subscription_addr_;
   std::string fetch_data_addr_;
-  sys_time start_;
+  std::atomic<sys_time> start_;
 };
 
 }  // namespace motis::vdv_rt

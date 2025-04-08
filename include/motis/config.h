@@ -143,6 +143,9 @@ struct config {
     std::string client_name_{};
     std::string server_name_{};
     std::string server_url_{};
+    unsigned subscription_renewal_{3600U};
+    unsigned subscription_duration_{25 * 3600U};
+    unsigned timeout_{10U};
   };
   std::optional<vdv_rt> vdv_rt_{};
 

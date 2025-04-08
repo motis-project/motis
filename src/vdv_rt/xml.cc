@@ -31,6 +31,14 @@ void add_ack_node(pugi::xml_node& node) {
   ack_node.append_attribute("Fehlernummer") = "0";
 }
 
+pugi::xml_node add_subscription_node(pugi::xml_node& node,
+                                     std::string const& sender) {
+  auto subscription_node = node.append_child("AboAnfrage");
+  node.append_attribute("Sender") = sender.c_str();
+  node.append_attribute("Zst") = timestamp(now()).c_str();
+  return subscription_node;
+}
+
 std::string xml_to_str(pugi::xml_document const& doc) {
   std::stringstream ss{};
   doc.save(ss, "  ", pugi::format_default, pugi::xml_encoding::encoding_latin1);

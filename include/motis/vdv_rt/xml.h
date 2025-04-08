@@ -14,6 +14,9 @@ void add_start_time_node(pugi::xml_node&, sys_time start);
 
 void add_ack_node(pugi::xml_node& node);
 
+pugi::xml_node add_subscription_node(pugi::xml_node& node,
+                                     std::string const& sender);
+
 std::string xml_to_str(pugi::xml_document const& doc);
 
 }  // namespace motis::vdv_rt
