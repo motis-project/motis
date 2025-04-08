@@ -1392,6 +1392,15 @@ components:
         - BIKESHARE
         - TRANSIT
 
+    PickupDropoffType:
+      type: string
+      description: |
+        - `NORMAL` - entry/exit is possible normally
+        - `NOT_ALLOWED` - entry/exit is not allowed
+      enum:
+        - NORMAL
+        - NOT_ALLOWED
+
     Place:
       type: object
       required:
@@ -1441,11 +1450,14 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
-        inAllowed:
-          description: Whether entry is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.
-          type: boolean
-        outAllowed:
-          description: Whether exit is allowed at this stop. It could be disallowed due to schedule, skipped stops or cancellations.
+        pickupType:
+          description: Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        dropoffType:
+          description: Type of dropoff. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether this stop is cancelled due to the realtime situation.
           type: boolean
 
     ReachablePlace:
@@ -1496,7 +1508,8 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
-        - inOutAllowed
+        - pickupDropoffType
+        - cancelled
         - source
       properties:
         place:
@@ -1527,8 +1540,11 @@ components:
           type: string
         routeShortName:
           type: string
-        inOutAllowed:
-          description: Whether entry (for departures) or exit (for arrivals) is allowed, either due to schedule, skipped stops or cancellations
+        pickupDropoffType:
+          description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether the departure/arrival is cancelled due to the realtime situation.
           type: boolean
         source:
           description: Filename and line number where this trip is from

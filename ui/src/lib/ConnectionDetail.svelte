@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
 	import CircleX from 'lucide-svelte/icons/circle-x';
-	import type { FareProduct, Itinerary, Leg } from '$lib/openapi';
+	import { type FareProduct, type Itinerary, type Leg, type PickupDropoffType } from '$lib/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -29,8 +29,8 @@
 	isRealtime: boolean,
 	name: string,
 	stopId?: string,
-	inAllowed?: boolean,
-	outAllowed?: boolean
+	pickupType?: PickupDropoffType,
+	dropoffType?: PickupDropoffType
 )}
 	<Time
 		variant="schedule"
@@ -58,13 +58,13 @@
 			>
 				{name}
 			</Button>
-			{#if !inAllowed || !outAllowed}
+			{#if pickupType == 'NOT_ALLOWED' || dropoffType == 'NOT_ALLOWED'}
 				<div class="ml-4 flex items-center text-destructive text-sm">
 					<CircleX class="stroke-destructive h-4 w-4" />
 					<span class="ml-1 leading-none">
-						{!inAllowed && !outAllowed
+						{pickupType == 'NOT_ALLOWED' && dropoffType == 'NOT_ALLOWED'
 							? t.inOutDisallowed
-							: !inAllowed
+							: pickupType == 'NOT_ALLOWED'
 								? t.inDisallowed
 								: t.outDisallowed}
 					</span>
@@ -210,8 +210,8 @@
 						l.realTime,
 						l.from.name,
 						l.from.stopId,
-						l.from.inAllowed,
-						l.from.outAllowed
+						l.from.pickupType,
+						l.from.dropoffType
 					)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
@@ -259,8 +259,8 @@
 									l.realTime,
 									s.name!,
 									s.stopId,
-									s.inAllowed,
-									s.outAllowed
+									s.pickupType,
+									s.dropoffType
 								)}
 							{/each}
 						</div>
@@ -275,8 +275,8 @@
 							l.realTime!,
 							l.to.name,
 							l.to.stopId,
-							l.to.inAllowed,
-							l.to.outAllowed
+							l.to.pickupType,
+							l.to.dropoffType
 						)}
 					</div>
 				{/if}
@@ -296,8 +296,8 @@
 						l.realTime,
 						l.from.name,
 						l.from.stopId,
-						l.from.inAllowed,
-						l.from.outAllowed
+						l.from.pickupType,
+						l.from.dropoffType
 					)}
 				</div>
 				{@render streetLeg(l)}
@@ -309,8 +309,8 @@
 							l.realTime,
 							l.to.name,
 							l.to.stopId,
-							l.to.inAllowed,
-							l.to.outAllowed
+							l.to.pickupType,
+							l.to.dropoffType
 						)}
 					</div>
 				{/if}
@@ -331,8 +331,8 @@
 				lastLeg!.realTime,
 				lastLeg!.to.name,
 				lastLeg!.to.stopId,
-				lastLeg!.to.inAllowed,
-				lastLeg!.to.outAllowed
+				lastLeg!.to.pickupType,
+				lastLeg!.to.dropoffType
 			)}
 		</div>
 	</div>

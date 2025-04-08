@@ -50,6 +50,7 @@ const translations: Translations = {
 	unreliableOptions: 'Je nach Datenverfügbarkeit können diese Optionen unzuverlässig sein.',
 	timetableSources: 'Fahrplandatenquellen',
 	tripCancelled: 'Fahrt entfällt',
+	stopCancelled: 'Halt entfällt',
 	inOutDisallowed: 'Ein-/Ausstieg nicht möglich',
 	inDisallowed: 'Einstieg nicht möglich',
 	outDisallowed: 'Ausstieg nicht möglich',

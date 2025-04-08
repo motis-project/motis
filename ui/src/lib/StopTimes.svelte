@@ -88,29 +88,36 @@
 				</div>
 			{/if}
 
-			{#each r.stopTimes as trip}
-				{@const timestamp = arriveBy ? trip.place.arrival! : trip.place.departure!}
+			{#each r.stopTimes as stopTime}
+				{@const timestamp = arriveBy ? stopTime.place.arrival! : stopTime.place.departure!}
 				{@const scheduledTimestamp = arriveBy
-					? trip.place.scheduledArrival!
-					: trip.place.scheduledDeparture!}
-				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={trip} {onClickTrip} />
+					? stopTime.place.scheduledArrival!
+					: stopTime.place.scheduledDeparture!}
+				<Route class="w-fit max-w-32 text-ellipsis overflow-hidden" l={stopTime} {onClickTrip} />
 				<Time
 					variant="schedule"
-					isRealtime={trip.realTime}
+					isRealtime={stopTime.realTime}
 					{timestamp}
 					{scheduledTimestamp}
 					queriedTime={queryTime.toISOString()}
 				/>
-				<Time variant="realtime" isRealtime={trip.realTime} {timestamp} {scheduledTimestamp} />
+				<Time variant="realtime" isRealtime={stopTime.realTime} {timestamp} {scheduledTimestamp} />
 				<span>
 					<div class="flex items-center text-muted-foreground min-w-0">
 						<div><ArrowRight class="stroke-muted-foreground h-4 w-4" /></div>
-						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">{trip.headsign}</span>
+						<span class="ml-1 leading-tight text-ellipsis overflow-hidden">{stopTime.headsign}</span
+						>
 					</div>
-					{#if !trip.inOutAllowed}
+					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
 							<CircleX class="stroke-destructive h-4 w-4" />
-							<span class="ml-1 leading-none">{arriveBy ? t.outDisallowed : t.inDisallowed}</span>
+							<span class="ml-1 leading-none"
+								>{stopTime.cancelled
+									? t.stopCancelled
+									: arriveBy
+										? t.outDisallowed
+										: t.inDisallowed}</span
+							>
 						</div>
 					{/if}
 				</span>

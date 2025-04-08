@@ -44,6 +44,7 @@ export type Translations = {
 	unreliableOptions: string;
 	timetableSources: string;
 	tripCancelled: string;
+	stopCancelled: string;
 	inOutDisallowed: string;
 	inDisallowed: string;
 	outDisallowed: string;

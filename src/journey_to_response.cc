@@ -4,6 +4,7 @@
 #include <iostream>
 #include <span>
 
+#include "motis-api/motis-api.h"
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
 
@@ -223,8 +224,15 @@ api::Itinerary journey_to_response(osr::ways const* w,
     auto const to_place = [&](auto&& s, bool run_cancelled) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
-      p.inAllowed_ = s.in_allowed() && !run_cancelled;
-      p.outAllowed_ = s.out_allowed() && !run_cancelled;
+      p.pickupType_ = !run_cancelled && s.in_allowed()
+                          ? api::PickupDropoffTypeEnum::NORMAL
+                          : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+      p.dropoffType_ = !run_cancelled && s.out_allowed()
+                           ? api::PickupDropoffTypeEnum::NORMAL
+                           : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+      p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
+                                       (s.get_scheduled_stop().in_allowed() ||
+                                        s.get_scheduled_stop().out_allowed()));
       return p;
     };
 

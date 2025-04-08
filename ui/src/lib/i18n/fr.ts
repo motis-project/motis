@@ -49,6 +49,7 @@ const translations: Translations = {
 	unreliableOptions: 'Selon la disponibilité des données, ces options peuvent ne pas être fiables.',
 	timetableSources: 'Sources des horaires',
 	tripCancelled: 'Voyage annulé',
+	stopCancelled: 'Arrêt supprimé',
 	inOutDisallowed: 'Impossible de monter/descendre',
 	inDisallowed: 'Impossible de monter',
 	outDisallowed: 'Impossible de descendre',

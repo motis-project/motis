@@ -125,9 +125,11 @@ private:
     auto const in_static =
         tt_.bitfields_[tt_.transport_traffic_days_[x.t_idx_]].test(
             to_idx(x.day_));
-    return rtt_ == nullptr ? in_static
-                           : in_static && rtt_->resolve_rt(x) ==
-                                              n::rt_transport_idx_t::invalid();
+    return rtt_ == nullptr
+               ? in_static
+               : in_static &&
+                     rtt_->resolve_rt(x) ==  // only when no RT/cancelled
+                         n::rt_transport_idx_t::invalid();
   }
 
   n::transport t() const {
@@ -349,6 +351,12 @@ api::stoptimes_response stop_times::operator()(
                 !fr.is_cancelled() &&
                 (ev_type == n::event_type::kArr ? s.out_allowed()
                                                 : s.in_allowed());
+            auto const stop_cancelled =
+                fr.is_cancelled() ||
+                (ev_type == n::event_type::kArr
+                     ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
+                     : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
+
             return {
                 .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type)),
@@ -362,7 +370,10 @@ api::stoptimes_response stop_times::operator()(
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = tags_.id(tt_, s, ev_type),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
-                .inOutAllowed_ = in_out_allowed,
+                .pickupDropoffType_ =
+                    in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
+                                   : api::PickupDropoffTypeEnum::NOT_ALLOWED,
+                .cancelled_ = stop_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
       .previousPageCursor_ =
