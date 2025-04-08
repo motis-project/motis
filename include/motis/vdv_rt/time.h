@@ -8,7 +8,7 @@ using sys_time = std::chrono::time_point<std::chrono::system_clock>;
 
 sys_time now();
 
-std::string timestamp(const sys_time);
+std::string timestamp(sys_time);
 
 sys_time parse_timestamp(std::string const&);
 
