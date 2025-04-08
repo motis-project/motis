@@ -4,7 +4,6 @@
 #include <iostream>
 #include <span>
 
-#include "motis-api/motis-api.h"
 #include "utl/enumerate.h"
 #include "utl/overloaded.h"
 
@@ -17,6 +16,7 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
+#include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/routing_data.h"

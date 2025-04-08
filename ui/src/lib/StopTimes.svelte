@@ -111,13 +111,9 @@
 					{#if stopTime.pickupDropoffType == 'NOT_ALLOWED'}
 						<div class="flex items-center text-destructive text-sm">
 							<CircleX class="stroke-destructive h-4 w-4" />
-							<span class="ml-1 leading-none"
-								>{stopTime.cancelled
-									? t.stopCancelled
-									: arriveBy
-										? t.outDisallowed
-										: t.inDisallowed}</span
-							>
+							<span class="ml-1 leading-none">
+								{stopTime.cancelled ? t.stopCancelled : arriveBy ? t.outDisallowed : t.inDisallowed}
+							</span>
 						</div>
 					{/if}
 				</span>
