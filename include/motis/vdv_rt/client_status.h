@@ -9,7 +9,7 @@
 namespace motis::vdv_rt {
 
 struct client_status {
-  std::string operator()(boost::urls::url_view const&) const;
+  std::string operator()(std::string_view) const;
 
   vdv_rt::connection const* con_;
 };
