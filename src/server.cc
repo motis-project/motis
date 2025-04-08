@@ -118,6 +118,17 @@ int server(data d, config const& c, std::string_view const motis_version) {
     return 1;
   }
 
+  auto vdv_rt_subscription_thread = std::unique_ptr<std::thread>{};
+  auto vdv_rt_subscription_ioc = std::unique_ptr<asio::io_context>{};
+  if (c.vdv_rt_) {
+    vdv_rt_subscription_ioc = std::make_unique<asio::io_context>();
+    vdv_rt_subscription_thread = std::make_unique<std::thread>([&]() {
+      utl::set_current_thread_name("motis vdv_rt subscription");
+      // subscribe
+      vdv_rt_subscription_ioc->run();
+    });
+  }
+
   auto rt_update_thread = std::unique_ptr<std::thread>{};
   auto rt_update_ioc = std::unique_ptr<asio::io_context>{};
   if (c.requires_rt_timetable_updates()) {
