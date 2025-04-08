@@ -124,7 +124,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     vdv_rt_subscription_ioc = std::make_unique<asio::io_context>();
     vdv_rt_subscription_thread = std::make_unique<std::thread>([&]() {
       utl::set_current_thread_name("motis vdv_rt subscription");
-      // subscribe
+      // TODO subscribe
       vdv_rt_subscription_ioc->run();
     });
   }
@@ -163,6 +163,10 @@ int server(data d, config const& c, std::string_view const motis_version) {
     s.stop();
     ioc.stop();
 
+    if (vdv_rt_subscription_ioc != nullptr) {
+      // TODO unsubscribe
+      vdv_rt_subscription_ioc->stop();
+    }
     if (rt_update_ioc != nullptr) {
       rt_update_ioc->stop();
     }
@@ -177,6 +181,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   for (auto& t : threads) {
     t.join();
+  }
+  if (vdv_rt_subscription_thread != nullptr) {
+    vdv_rt_subscription_thread->join();
   }
   if (rt_update_thread != nullptr) {
     rt_update_thread->join();
