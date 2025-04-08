@@ -58,7 +58,7 @@
   url=git@github.com:motis-project/lz4.git
   branch=dev
   commit=ff69dbd1ad10852104257d5306874a07b76f0dbd
-[vdv]
-  url=git@github.com:motis-project/vdv.git
+[pugixml]
+  url=git@github.com:motis-project/pugixml.git
   branch=master
-  commit=d2a02aabc427f1be86da29c9c649dcf24e8e60d5
+  commit=60175e80e2f5e97e027ac78f7e14c5acc009ce50

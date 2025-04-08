@@ -125,6 +125,7 @@ target_link_libraries(motislib
     crypto
     tg
     lz4_static
+    pugixml
 )
 
 

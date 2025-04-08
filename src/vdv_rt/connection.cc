@@ -16,6 +16,8 @@ connection::connection(const motis::config::vdv_rt& vdv_rt_cfg)
                                             vdv_rt_cfg_.client_name_)},
       fetch_data_addr_{fmt::format("{}/{}/aus/datenabrufen.xml",
                                    vdv_rt_cfg_.server_url_,
-                                   vdv_rt_cfg_.client_name_)} {}
+                                   vdv_rt_cfg_.client_name_)},
+      start_{std::chrono::round<std::chrono::seconds>(
+          std::chrono::system_clock::now())} {}
 
 }  // namespace motis::vdv_rt
