@@ -21,6 +21,8 @@ std::string unsubscribe_body(config const& c) {
   return xml_to_str(doc);
 }
 
+std::string subscribe_body(config const& c) { auto }
+
 void subscribe(boost::asio::io_context& ioc,
                config const& c,
                vdv_rt::connection& con) {
@@ -38,8 +40,8 @@ void subscribe(boost::asio::io_context& ioc,
               executor, [&c, &con]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{con.subscription_addr_},
-                      vdv_rt::kHeaders, unsubscribe_body(c),
+                      boost::urls::url{con.subscription_addr_}, kHeaders,
+                      unsubscribe_body(c),
                       std::chrono::seconds{c.vdv_rt_->timeout_});
                   if (res.result_int() != 200U) {
                     fmt::println("[vdv_rt] unsubscribe failed: {}",
@@ -52,6 +54,15 @@ void subscribe(boost::asio::io_context& ioc,
               });
 
           // subscribe
+          co_await boost::asio::co_spawn(
+              executor, [&c, &con]() -> boost::asio::awaitable<void> {
+                try {
+                  auto const res = co_await http_POST(
+                      boost::urls::url{con.subscription_addr_}, kHeaders,
+                      subscribe_body(),
+                      std::chrono::seconds{c.vdv_rt_->timeout_});
+                }
+              });
 
           timer.expires_at(
               start + std::chrono::seconds{c.vdv_rt_->subscription_renewal_});
