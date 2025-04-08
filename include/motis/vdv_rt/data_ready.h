@@ -10,8 +10,6 @@ namespace motis::vdv_rt {
 
 struct data_ready {
   std::string operator()(std::string_view) const;
-
-  vdv_rt::connection const* con_;
 };
 
 }  // namespace motis::vdv_rt

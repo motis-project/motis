@@ -1,9 +1,6 @@
 #include "motis/vdv_rt/client_status.h"
 
-#include "fmt/format.h"
-
 #include "motis/vdv_rt/connection.h"
-#include "motis/vdv_rt/time.h"
 #include "motis/vdv_rt/xml.h"
 
 namespace motis::vdv_rt {
