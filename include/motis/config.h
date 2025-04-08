@@ -139,6 +139,7 @@ struct config {
   std::optional<elevators> elevators_{};
 
   struct vdv_rt {
+    bool operator==(vdv_rt const&) const = default;
     std::string client_name_{};
     std::string server_name_{};
     std::string server_url_{};

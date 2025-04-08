@@ -33,6 +33,7 @@
 #include "motis/tag_lookup.h"
 #include "motis/tiles_data.h"
 #include "motis/tt_location_rtree.h"
+#include "motis/vdv_rt/connection.h"
 
 namespace fs = std::filesystem;
 namespace n = nigiri;
@@ -91,6 +92,10 @@ data::data(std::filesystem::path p, config const& c)
 
   if (c.odm_.has_value() && c.odm_->bounds_.has_value()) {
     odm_bounds_ = std::make_unique<odm::bounds>(*c.odm_->bounds_);
+  }
+
+  if (c.vdv_rt_.has_value()) {
+    vdv_rt_con_ = std::make_unique<vdv_rt::connection>(*c.vdv_rt_);
   }
 
   auto geocoder = std::async(std::launch::async, [&]() {

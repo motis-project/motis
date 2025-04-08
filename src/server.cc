@@ -35,6 +35,9 @@
 #include "motis/rt_update.h"
 #include "motis/scheduler/runner.h"
 #include "motis/scheduler/scheduler_algo.h"
+#include "motis/vdv_rt/client_status.h"
+#include "motis/vdv_rt/connection.h"
+#include "motis/vdv_rt/data_ready.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
@@ -97,6 +100,8 @@ int server(data d, config const& c, std::string_view const motis_version) {
   }
 
   if (c.vdv_rt_) {
+    POST<vdv_rt::client_status>(qr, d.vdv_rt_con_->client_status_path_, d);
+    POST<vdv_rt::data_ready>(qr, d.vdv_rt_con_->data_ready_path_, d);
   }
 
   qr.serve_files(server_config.web_folder_);
