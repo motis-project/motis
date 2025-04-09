@@ -693,7 +693,7 @@ paths:
         - name: one
           in: query
           required: true
-          description: stop id of the starting or ending stop
+          description: \`latitude,longitude[,level]\` tuple with latitude and longitude in degrees OR stop id
           schema:
             type: string
         - name: time
@@ -768,6 +768,18 @@ paths:
           schema:
             type: number
             default: 1.0
+
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is 25 meters.
+
+            Maximum matching distance in meters to match geo coordinates to the street network.
+          schema:
+            type: number
+            default: 25
+
         - name: useRoutedTransfers
           in: query
           required: false
@@ -803,6 +815,22 @@ paths:
             items:
               $ref: '#/components/schemas/Mode'
           explode: false
+
+        - name: oneTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. Only applies if the `one` place is a coordinate (not a transit stop).
+
+            A list of modes that are allowed to be used at the `one` coordinate to the first or final transit stop. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
         - name: requireBikeTransport
           in: query
           required: false
@@ -813,6 +841,18 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow bike carriage.
+
+        - name: oneTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+            Maximum time in seconds for the street leg at `one` location.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
       responses:
         200:
           description: |

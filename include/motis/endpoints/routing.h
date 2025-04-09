@@ -35,7 +35,13 @@ extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
 
+place_t get_place(nigiri::timetable const* tt,
+                  tag_lookup const* tags,
+                  std::string_view s);
+
 bool is_intermodal(place_t const&);
+
+bool is_wheelchair(api::PedestrianProfileEnum);
 
 nigiri::routing::location_match_mode get_match_mode(place_t const&);
 
@@ -46,6 +52,8 @@ std::vector<nigiri::routing::via_stop> get_via_stops(
     tag_lookup const&,
     std::optional<std::vector<std::string>> const& vias,
     std::vector<std::int64_t> const& times);
+
+std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum>);
 
 void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
@@ -63,6 +71,17 @@ struct routing {
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
+  std::vector<nigiri::routing::offset> get_offsets(
+      place_t const&,
+      bool arrive_by,
+      std::vector<api::ModeEnum> const&,
+      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
+      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
+      std::optional<std::vector<std::string>> const& rental_providers,
+      api::PedestrianProfileEnum,
+      std::int64_t const max_secs,
+      double max_matching_distance,
+      gbfs::gbfs_routing_data&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
@@ -73,6 +92,15 @@ struct routing {
                  bool wheelchair,
                  double max_matching_distance,
                  std::chrono::seconds max) const;
+  nigiri::hash_map<nigiri::location_idx_t,
+                   std::vector<nigiri::routing::td_offset>>
+  get_td_offsets(elevators const*,
+                 place_t const&,
+                 bool arrive_by,
+                 std::vector<api::ModeEnum> const&,
+                 api::PedestrianProfileEnum,
+                 double max_matching_distance,
+                 std::int64_t max_secs) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,

@@ -1,5 +1,9 @@
 #include "gtest/gtest.h"
 
+#include <chrono>
+// #include <ranges>
+#include <sstream>
+
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
 #include "boost/json.hpp"
@@ -13,8 +17,10 @@
 
 #include "nigiri/rt/gtfsrt_update.h"
 
+#include "motis-api/motis-api.h"
 #include "motis/config.h"
 #include "motis/data.h"
+#include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/update.h"
@@ -314,6 +320,22 @@ transit_realtime::FeedMessage to_feed_msg(
   return msg;
 }
 
+std::string print_itineraries(api::plan_response const& plan_response) {
+  auto ss = std::stringstream{};
+  for (auto const& j : plan_response.itineraries_) {
+    print_short(ss, j);
+  }
+  return ss.str();
+}
+
+std::string print_direct(api::plan_response const& plan_response) {
+  auto ss = std::stringstream{};
+  for (auto const& j : plan_response.direct_) {
+    print_short(ss, j);
+  }
+  return ss.str();
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -377,18 +399,13 @@ TEST(motis, routing) {
         "&timetableView=false"
         "&directModes=WALK,RENTAL");
 
-    auto ss = std::stringstream{};
-    for (auto const& j : plan_response.direct_) {
-      print_short(ss, j);
-    }
-
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=01:38, duration=00:13, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="RENTAL", trip="-", end=2019-05-01 01:29),
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:38)
 ])",
-        ss.str());
+        print_direct(plan_response));
   }
 
   // Route with GBFS.
@@ -401,11 +418,6 @@ TEST(motis, routing) {
         "&useRoutedTransfers=true"
         "&preTransitModes=WALK,RENTAL");
 
-    auto ss = std::stringstream{};
-    for (auto const& j : plan_response.itineraries_) {
-      print_short(ss, j);
-    }
-
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=03:14, duration=01:49, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
@@ -416,7 +428,284 @@ TEST(motis, routing) {
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 03:05, mode="SUBWAY", trip="U4", end=2019-05-01 03:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:10, mode="WALK", trip="-", end=2019-05-01 03:14)
 ])",
-        ss.str());
+        print_itineraries(plan_response));
+  }
+
+  // Routing with temporary blocked paths due to elevator being out of service
+  // Queries will use the wheelchair profile and have a long walking path before
+  // or after the elevator, to identify possible bugs
+  {
+    // Blocked near fromPlace, arriveBy=false, pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.11347,8.67664"
+          "&time=2019-05-01T01:15Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
+                                     // when using default matching distance
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:16, end=02:28, duration=01:13, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:16, mode="WALK", trip="-", end=2019-05-01 02:15),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+])",
+          print_itineraries(plan_response));
+    }
+    // Blocked near fromPlace, arriveBy=false, temporary blocked / must wait
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.11347,8.67664"
+          "&time=2019-05-01T01:20Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
+                                     // when using default matching distance
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=03:01, end=03:28, duration=02:08, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:01, mode="WALK", trip="-", end=2019-05-01 03:15),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
+])",
+          print_itineraries(plan_response));
+    }
+    // Blocked near fromPlace, arriveBy=true, must pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.11347,8.67664"
+          "&time=2019-05-01T02:30Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
+                                     // when using default matching distance
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:16, end=02:28, duration=01:14, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 01:16, mode="WALK", trip="-", end=2019-05-01 01:30),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
+])",
+          print_itineraries(plan_response));
+    }
+    // Blocked near fromPlace, arriveBy=true, can pass after blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.11347,8.67664"
+          "&time=2019-05-01T03:30Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
+                                     // when using default matching distance
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=03:01, end=03:28, duration=00:29, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_FFM_101 [track=101, scheduled_track=101, level=-3], start=2019-05-01 03:01, mode="WALK", trip="-", end=2019-05-01 03:15),
+    (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
+    (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
+])",
+          print_itineraries(plan_response));
+    }
+
+    // Blocked near toPlace, arriveBy=true, must pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T02:54Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=5"  // Should match 'to' exactly
+          "&useRoutedTransfers=true");
+
+      // // Reconstruction test: All walkings legs should have steps
+      // {
+      //   auto walk_legs =
+      //       plan_response.itineraries_ |
+      //       std::views::transform([](auto const& j) { return j.legs_; }) |
+      //       std::views::join | std::views::filter([](auto const& l) {
+      //         return l.mode_ == api::ModeEnum::WALK;
+      //       });
+      //   auto const leg_count = std::ranges::fold_left(
+      //       walk_legs, 0, [](auto s, auto&) { return ++s; });
+      //   auto const legs_with_steps = std::ranges::fold_left(
+      //       walk_legs, 0,
+      //       [](auto s, auto& l) { return l.steps_.has_value() ? ++s : s; });
+      //   EXPECT_EQ(leg_count, legs_with_steps);
+      // }
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:40)
+])",
+          print_itineraries(plan_response));
+    }
+    // Blocked near toPlace, arriveBy=true, can pass after blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T02:55Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=5"  // Should match 'to' exactly
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=02:34, end=02:55, duration=00:21, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 02:34, mode="WALK", trip="-", end=2019-05-01 02:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
+])",
+          print_itineraries(plan_response));
+    }
+    //     // FIXME Reconstruction fails
+    //     // Blocked near toPlace, arriveBy=false, temporary blocked / must
+    //     wait
+    //     {
+    //       auto const plan_response = routing(
+    //           "?fromPlace=49.87336,8.62926"
+    //           "&toPlace=50.106420,8.660708,-3"
+    //           "&time=2019-05-01T01:30Z"
+    //           "&arriveBy=false"
+    //           "&preTransitModes=WALK"
+    //           "&timetableView=false"
+    //           "&pedestrianProfile=WHEELCHAIR"
+    //           "&maxMatchingDistance=5"  // Should match 'to' exactly
+    //           "&useRoutedTransfers=true");
+
+    //       EXPECT_EQ(
+    //           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10,
+    //           transfers=0, legs=[
+    //     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10
+    //     [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34,
+    //     mode="WALK", trip="-", end=2019-05-01 01:35), (from=test_DA_10
+    //     [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12,
+    //     scheduled_track=10, level=0], start=2019-05-01 01:35,
+    //     mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55),
+    //     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=-
+    //     [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:55,
+    //     mode="WALK", trip="-", end=2019-05-01 02:40)
+    // ])",
+    //           print_itineraries(plan_response));
+    //     }
+    // Blocked near toPlace, arriveBy=false, can pass after blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:40Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=5"  // Should match 'to' exactly
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=02:34, end=02:55, duration=01:15, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 02:34, mode="WALK", trip="-", end=2019-05-01 02:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
+    (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
+])",
+          print_itineraries(plan_response));
+    }
+
+    // Direct routing, arriveBy=false, pass before blocked
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:15Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:33)
+])",
+          print_direct(plan_response));
+    }
+    // Direct routing, arriveBy=false, temporary unreachable
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:29Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&useRoutedTransfers=true");
+
+      // FIXME Elevator will be out of service when arrived
+      // EXPECT_EQ(plan_response.direct_.size(), 0);
+      // EXPECT_EQ("", print_direct(plan_response));
+    }
+    // FIXME Currently not using correct direction / arriveBy
+    //     // Direct routing, arriveBy=true, pass after blocked
+    //     {
+    //       auto const plan_response = routing(
+    //           "?fromPlace=50.10411515,8.658776549999999"
+    //           "&toPlace=50.106420,8.660708,-3"
+    //           "&time=2019-05-01T02:40Z"
+    //           "&arriveBy=true"
+    //           "&preTransitModes=WALK"
+    //           "&timetableView=false"
+    //           "&pedestrianProfile=WHEELCHAIR"
+    //           "&useRoutedTransfers=true");
+
+    //       EXPECT_EQ(
+    //           R"(date=2019-05-01, start=02:22, end=02:40, duration=00:18,
+    //           transfers=0, legs=[
+    //     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-,
+    //     scheduled_track=-, level=-3], start=2019-05-01 02:22, mode="WALK",
+    //     trip="-", end=2019-05-01 02:40)
+    // ])",
+    //           print_direct(plan_response));
+    //     }
+    // Direct routing, arriveBy=false, temporary unreachable
+    {
+      auto const plan_response = routing(
+          "?fromPlace=50.10411515,8.658776549999999"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T02:31Z"
+          "&arriveBy=true"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&useRoutedTransfers=true");
+
+      // FIXME Elevator will be out of service during routing
+      // EXPECT_EQ(plan_response.direct_.size(), 0);
+      // EXPECT_EQ("", print_direct(plan_response));
+    }
   }
 
   // Route with wheelchair.
@@ -429,11 +718,6 @@ TEST(motis, routing) {
         "&useRoutedTransfers=true"
         "&timetableView=false");
 
-    auto ss = std::stringstream{};
-    for (auto const& j : plan_response.itineraries_) {
-      print_short(ss, j);
-    }
-
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:29, end=02:28, duration=01:03, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:35),
@@ -442,7 +726,7 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-        ss.str());
+        print_itineraries(plan_response));
   }
 
   // Route without wheelchair.
@@ -454,11 +738,6 @@ TEST(motis, routing) {
         "&useRoutedTransfers=true"
         "&timetableView=false");
 
-    auto ss = std::stringstream{};
-    for (auto const& j : plan_response.itineraries_) {
-      print_short(ss, j);
-    }
-
     EXPECT_EQ(
         R"(date=2019-05-01, start=01:25, end=02:14, duration=00:49, transfers=1, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:25, mode="WALK", trip="-", end=2019-05-01 01:28),
@@ -467,6 +746,6 @@ TEST(motis, routing) {
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
 ])",
-        ss.str());
+        print_itineraries(plan_response));
   }
 }
