@@ -114,6 +114,8 @@ void config::verify() const {
               "feature ODM requires feature STREET_ROUTING");
   utl::verify(!elevators_ || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
+  utl::verify(!vdv_rt_ || timetable_->incremental_rt_update_,
+              "feature VDV_RT requires feature TIMETABLE");
 
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {
@@ -125,6 +127,8 @@ void config::verify() const {
             throw utl::fail("{} is not a valid url: {}", url.url_, e.what());
           }
         }
+      }
+      if (d.vdv_rt_) {
       }
     }
   }

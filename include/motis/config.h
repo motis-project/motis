@@ -65,12 +65,24 @@ struct config {
         std::optional<headers_t> headers_{};
       };
 
+      struct vdv_rt {
+        bool operator==(vdv_rt const&) const = default;
+        std::string client_name_{};
+        std::string server_name_{};
+        std::string server_url_{};
+        unsigned subscription_renewal_{3600U};
+        unsigned subscription_duration_{25 * 3600U};
+        unsigned hyseresis_{30U};
+        unsigned timeout_{10U};
+      };
+
       bool operator==(dataset const&) const = default;
 
       std::string path_;
       bool default_bikes_allowed_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
       std::optional<std::vector<rt>> rt_{};
+      std::optional<vdv_rt> vdv_rt_{};
       std::optional<std::string> default_timezone_{};
     };
 
@@ -137,18 +149,6 @@ struct config {
     std::optional<headers_t> headers_{};
   };
   std::optional<elevators> elevators_{};
-
-  struct vdv_rt {
-    bool operator==(vdv_rt const&) const = default;
-    std::string client_name_{};
-    std::string server_name_{};
-    std::string server_url_{};
-    unsigned subscription_renewal_{3600U};
-    unsigned subscription_duration_{25 * 3600U};
-    unsigned hyseresis_{30U};
-    unsigned timeout_{10U};
-  };
-  std::optional<vdv_rt> vdv_rt_{};
 
   bool street_routing_{false};
   bool osr_footpath_{false};

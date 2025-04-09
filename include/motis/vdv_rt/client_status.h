@@ -11,7 +11,7 @@ namespace motis::vdv_rt {
 struct client_status {
   std::string operator()(std::string_view) const;
 
-  vdv_rt::connection const* con_;
+  vdv_rt const& vdv_rt_;
 };
 
 }  // namespace motis::vdv_rt

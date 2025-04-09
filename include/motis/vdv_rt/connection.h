@@ -1,5 +1,7 @@
 #pragma once
 
+#include "nigiri/rt/vdv/vdv_update.h"
+
 #include "motis/config.h"
 #include "motis/vdv_rt/time.h"
 

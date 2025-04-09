@@ -1,10 +1,7 @@
 #pragma once
 
 #include <string>
-
-#include "boost/url/url_view.hpp"
-
-#include "motis/fwd.h"
+#include <string_view>
 
 namespace motis::vdv_rt {
 

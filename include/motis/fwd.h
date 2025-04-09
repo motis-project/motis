@@ -59,6 +59,7 @@ struct products_routing_data;
 
 namespace vdv_rt {
 struct connection;
+struct vdv_rt;
 }  // namespace vdv_rt
 
 }  // namespace motis

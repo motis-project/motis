@@ -20,6 +20,7 @@
 #include "motis/http_req.h"
 #include "motis/railviz.h"
 #include "motis/tag_lookup.h"
+#include "motis/vdv_rt/vdv_rt.h"
 
 namespace n = nigiri;
 namespace asio = boost::asio;

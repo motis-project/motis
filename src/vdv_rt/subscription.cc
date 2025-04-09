@@ -9,6 +9,7 @@
 #include "motis/data.h"
 #include "motis/http_req.h"
 #include "motis/vdv_rt/connection.h"
+#include "motis/vdv_rt/vdv_rt.h"
 #include "motis/vdv_rt/xml.h"
 
 namespace motis::vdv_rt {
@@ -67,7 +68,7 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
               [&c, &d]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{d.vdv_rt_con_->subscription_addr_},
+                      boost::urls::url{d.vdv_rt_->con_.subscription_addr_},
                       kHeaders, unsubscribe_body(c),
                       std::chrono::seconds{c.vdv_rt_->timeout_});
                   if (res.result_int() != 200U) {
@@ -86,11 +87,11 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
               [&c, &d]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{d.vdv_rt_con_->subscription_addr_},
+                      boost::urls::url{d.vdv_rt_->con_.subscription_addr_},
                       kHeaders, subscribe_body(c),
                       std::chrono::seconds{c.vdv_rt_->timeout_});
                   if (res.result_int() == 200U) {
-                    d.vdv_rt_con_->start_ = now();
+                    d.vdv_rt_->con_.start_ = now();
                   } else {
                     fmt::println("[vdv_rt] subscribe failed: {}",
                                  get_http_body(res));

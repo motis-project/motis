@@ -39,6 +39,7 @@
 #include "motis/vdv_rt/connection.h"
 #include "motis/vdv_rt/data_ready.h"
 #include "motis/vdv_rt/subscription.h"
+#include "motis/vdv_rt/vdv_rt.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
@@ -108,8 +109,8 @@ int server(data d, config const& c, std::string_view const motis_version) {
   }
 
   if (c.vdv_rt_) {
-    POST_STR<vdv_rt::client_status>(qr, d.vdv_rt_con_->client_status_path_, d);
-    POST_STR<vdv_rt::data_ready>(qr, d.vdv_rt_con_->data_ready_path_, d);
+    POST_STR<vdv_rt::client_status>(qr, d.vdv_rt_->con_.client_status_path_, d);
+    POST_STR<vdv_rt::data_ready>(qr, d.vdv_rt_->con_.data_ready_path_, d);
   }
 
   qr.serve_files(server_config.web_folder_);
