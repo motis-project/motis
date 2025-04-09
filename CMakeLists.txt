@@ -120,11 +120,14 @@ target_link_libraries(motislib
     web-server
     tiles
     pbf_sdf_fonts_res
-    pbf_sdf_fonts_res-res
     ssl
     crypto
     tg
     lz4_static
+    web-server
+    prometheus-cpp::core
+    opentelemetry_trace
+    opentelemetry_exporter_otlp_http
 )
 
 
@@ -142,12 +145,6 @@ target_compile_options(motis PRIVATE ${motis-compile-options})
 set_source_files_properties(exe/main.cc PROPERTIES COMPILE_DEFINITIONS MOTIS_VERSION="${motis-git-tag}")
 target_link_libraries(motis
     motislib
-    web-server
-    adr
-    fmt::fmt
-    rtree
-    geo
-    cista
     ianatzdb-res
     pbf_sdf_fonts_res-res
     tiles_server_res-res

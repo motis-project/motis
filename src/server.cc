@@ -9,6 +9,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/init_from.h"
+#include "utl/logging.h"
 #include "utl/set_thread_name.h"
 
 #include "motis/config.h"
@@ -139,7 +140,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   }
 
   auto const stop = net::stop_handler(ioc, [&]() {
-    fmt::println("shutdown");
+    utl::log_info("motis.server", "shutdown");
     r.ch_.close();
     s.stop();
     ioc.stop();
@@ -152,8 +153,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
     }
   });
 
-  fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
-               server_config.host_, server_config.port_, server_config.port_);
+  utl::log_info("motis.server",
+                "listening on {}:{}\nlocal link: http://localhost:{}",
+                server_config.host_, server_config.port_, server_config.port_);
   net::run(ioc)();
 
   for (auto& t : threads) {

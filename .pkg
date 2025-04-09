@@ -58,3 +58,11 @@
   url=git@github.com:motis-project/lz4.git
   branch=dev
   commit=ff69dbd1ad10852104257d5306874a07b76f0dbd
+[prometheus-cpp]
+  url=git@github.com:motis-project/prometheus-cpp.git
+  branch=master
+  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[opentelemetry-cpp]
+  url=git@github.com:motis-project/opentelemetry-cpp.git
+  branch=main
+  commit=ec4aef6b17b697052edef5417825ad71947b2ed1

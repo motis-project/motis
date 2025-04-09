@@ -7,6 +7,9 @@
 #include "boost/asio/steady_timer.hpp"
 #include "boost/beast/core/buffers_to_string.hpp"
 
+#include "prometheus/counter.h"
+#include "prometheus/gauge.h"
+
 #include "utl/timer.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
@@ -24,6 +27,26 @@
 namespace n = nigiri;
 namespace asio = boost::asio;
 using asio::awaitable;
+
+struct gtfsrt_metrics {
+  prometheus::Counter& updates_requested_;
+  prometheus::Counter& updates_successful_;
+  prometheus::Counter& updates_error_;
+
+  prometheus::Counter& total_entities_;
+  prometheus::Counter& total_entities_success_;
+  prometheus::Counter& total_entities_fail_;
+  prometheus::Counter& unsupported_deleted_;
+  prometheus::Counter& unsupported_vehicle_;
+  prometheus::Counter& unsupported_alert_;
+  prometheus::Counter& unsupported_no_trip_id_;
+  prometheus::Counter& no_trip_update_;
+  prometheus::Counter& trip_update_without_trip_;
+  prometheus::Counter& trip_resolve_error_;
+  prometheus::Counter& unsupported_schedule_relationship_;
+  prometheus::Gauge& feed_timestamp_;
+  prometheus::Gauge& last_update_timestamp_;
+};
 
 namespace motis {
 
