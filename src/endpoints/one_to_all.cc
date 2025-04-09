@@ -65,14 +65,19 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(one),
-      .start_ = r.get_offsets(one, !query.arriveBy_, one_modes, std::nullopt,
-                              std::nullopt, std::nullopt,
-                              query.pedestrianProfile_, query.oneTransitTime_,
+      .start_ = r.get_offsets(one,
+                              query.arriveBy_ ? osr::direction::kBackward
+                                              : osr::direction::kForward,
+                              one_modes, std::nullopt, std::nullopt,
+                              std::nullopt, query.pedestrianProfile_,
+                              std::chrono::seconds{query.oneTransitTime_},
                               query.maxMatchingDistance_, gbfs_rd),
-      .td_start_ =
-          r.get_td_offsets(rt_->e_.get(), one, !query.arriveBy_, one_modes,
-                           query.pedestrianProfile_, query.maxMatchingDistance_,
-                           query.oneTransitTime_),
+      .td_start_ = r.get_td_offsets(
+          rt_->e_.get(), one,
+          query.arriveBy_ ? osr::direction::kBackward
+                          : osr::direction::kForward,
+          one_modes, query.pedestrianProfile_, query.maxMatchingDistance_,
+          std::chrono::seconds{query.oneTransitTime_}),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
       .max_travel_time_ = n::duration_t{query.maxTravelTime_},

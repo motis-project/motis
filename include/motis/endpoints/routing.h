@@ -1,12 +1,12 @@
 #pragma once
 
+#include <chrono>
 #include <optional>
 #include <utility>
 #include <vector>
 
 #include "boost/thread/tss.hpp"
 
-#include "osr/location.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/clasz_mask.h"
@@ -61,46 +61,26 @@ struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
 
   std::vector<nigiri::routing::offset> get_offsets(
-      osr::location const&,
+      place_t const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
-      bool wheelchair,
-      std::chrono::seconds max,
-      double max_matching_distance,
-      gbfs::gbfs_routing_data&) const;
-  std::vector<nigiri::routing::offset> get_offsets(
-      place_t const&,
-      bool forward_search,
-      std::vector<api::ModeEnum> const&,
-      std::optional<std::vector<api::RentalFormFactorEnum>> const&,
-      std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
-      std::optional<std::vector<std::string>> const& rental_providers,
       api::PedestrianProfileEnum,
-      std::int64_t const max_secs,
+      std::chrono::seconds max_secs,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-  get_td_offsets(elevators const&,
-                 osr::location const&,
-                 osr::direction,
-                 std::vector<api::ModeEnum> const&,
-                 bool wheelchair,
-                 double max_matching_distance,
-                 std::chrono::seconds max) const;
-  nigiri::hash_map<nigiri::location_idx_t,
-                   std::vector<nigiri::routing::td_offset>>
   get_td_offsets(elevators const*,
                  place_t const&,
-                 bool forward_search,
+                 osr::direction,
                  std::vector<api::ModeEnum> const&,
                  api::PedestrianProfileEnum,
                  double max_matching_distance,
-                 std::int64_t max_secs) const;
+                 std::chrono::seconds max_secs) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,
