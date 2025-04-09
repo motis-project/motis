@@ -35,9 +35,9 @@ extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
 
-place_t get_place(nigiri::timetable const* tt,
-                  tag_lookup const* tags,
-                  std::string_view s);
+place_t get_place(nigiri::timetable const*,
+                  tag_lookup const*,
+                  std::string_view);
 
 bool is_intermodal(place_t const&);
 
@@ -73,7 +73,7 @@ struct routing {
       gbfs::gbfs_routing_data&) const;
   std::vector<nigiri::routing::offset> get_offsets(
       place_t const&,
-      bool arrive_by,
+      bool forward_search,
       std::vector<api::ModeEnum> const&,
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
@@ -96,7 +96,7 @@ struct routing {
                    std::vector<nigiri::routing::td_offset>>
   get_td_offsets(elevators const*,
                  place_t const&,
-                 bool arrive_by,
+                 bool forward_search,
                  std::vector<api::ModeEnum> const&,
                  api::PedestrianProfileEnum,
                  double max_matching_distance,

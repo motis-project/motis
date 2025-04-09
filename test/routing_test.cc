@@ -534,7 +534,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match 'to' exactly
+          "&maxMatchingDistance=5"  // Should match 'toPlace' closely
           "&useRoutedTransfers=true");
 
       // // Reconstruction test: All walkings legs should have steps
@@ -571,7 +571,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match 'to' exactly
+          "&maxMatchingDistance=5"  // Should match 'toPlace' closely
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -594,7 +594,7 @@ TEST(motis, routing) {
     //           "&preTransitModes=WALK"
     //           "&timetableView=false"
     //           "&pedestrianProfile=WHEELCHAIR"
-    //           "&maxMatchingDistance=5"  // Should match 'to' exactly
+    //           "&maxMatchingDistance=5"  // Should match 'toPlace' closely
     //           "&useRoutedTransfers=true");
 
     //       EXPECT_EQ(
@@ -622,7 +622,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match 'to' exactly
+          "&maxMatchingDistance=5"  // Should match 'toPlace' closely
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -644,6 +644,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=5"  // Should match places closely
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -662,10 +663,10 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=5"  // Should match places closely
           "&useRoutedTransfers=true");
 
       // FIXME Elevator will be out of service when arrived
-      // EXPECT_EQ(plan_response.direct_.size(), 0);
       // EXPECT_EQ("", print_direct(plan_response));
     }
     // FIXME Currently not using correct direction / arriveBy
@@ -679,6 +680,7 @@ TEST(motis, routing) {
     //           "&preTransitModes=WALK"
     //           "&timetableView=false"
     //           "&pedestrianProfile=WHEELCHAIR"
+    //           "&maxMatchingDistance=5"  // Should match places closely
     //           "&useRoutedTransfers=true");
 
     //       EXPECT_EQ(
@@ -703,7 +705,6 @@ TEST(motis, routing) {
           "&useRoutedTransfers=true");
 
       // FIXME Elevator will be out of service during routing
-      // EXPECT_EQ(plan_response.direct_.size(), 0);
       // EXPECT_EQ("", print_direct(plan_response));
     }
   }

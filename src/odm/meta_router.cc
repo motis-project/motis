@@ -554,7 +554,7 @@ api::plan_response meta_router::run() {
   auto const qf = query_factory{
       .base_query_ = get_base_query(context_intvl),
       .start_walk_ = r_.get_offsets(
-          start_, query_.arriveBy_, start_modes_, start_form_factors_,
+          start_, !query_.arriveBy_, start_modes_, start_form_factors_,
           start_propulsion_types_, start_rental_providers_,
           query_.pedestrianProfile_, query_.maxPreTransitTime_,
           query_.maxMatchingDistance_, gbfs_rd_),
@@ -564,8 +564,9 @@ api::plan_response meta_router::run() {
           query_.pedestrianProfile_, query_.maxPostTransitTime_,
           query_.maxMatchingDistance_, gbfs_rd_),
       .td_start_walk_ = r_.get_td_offsets(
-          e_, start_, query_.arriveBy_, start_modes_, query_.pedestrianProfile_,
-          query_.maxMatchingDistance_, query_.maxPreTransitTime_),
+          e_, start_, !query_.arriveBy_, start_modes_,
+          query_.pedestrianProfile_, query_.maxMatchingDistance_,
+          query_.maxPreTransitTime_),
       .td_dest_walk_ = r_.get_td_offsets(
           e_, dest_, query_.arriveBy_, dest_modes_, query_.pedestrianProfile_,
           query_.maxMatchingDistance_, query_.maxPostTransitTime_),
