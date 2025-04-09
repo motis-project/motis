@@ -320,7 +320,7 @@ transit_realtime::FeedMessage to_feed_msg(
   return msg;
 }
 
-std::string print_itineraries(api::plan_response const& plan_response) {
+std::string itineraries_to_str(api::plan_response const& plan_response) {
   auto ss = std::stringstream{};
   for (auto const& j : plan_response.itineraries_) {
     print_short(ss, j);
@@ -328,7 +328,7 @@ std::string print_itineraries(api::plan_response const& plan_response) {
   return ss.str();
 }
 
-std::string print_direct(api::plan_response const& plan_response) {
+std::string direct_to_str(api::plan_response const& plan_response) {
   auto ss = std::stringstream{};
   for (auto const& j : plan_response.direct_) {
     print_short(ss, j);
@@ -405,7 +405,7 @@ TEST(motis, routing) {
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:28, mode="RENTAL", trip="-", end=2019-05-01 01:29),
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 01:29, mode="WALK", trip="-", end=2019-05-01 01:38)
 ])",
-        print_direct(plan_response));
+        direct_to_str(plan_response));
   }
 
   // Route with GBFS.
@@ -428,7 +428,7 @@ TEST(motis, routing) {
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 03:05, mode="SUBWAY", trip="U4", end=2019-05-01 03:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:10, mode="WALK", trip="-", end=2019-05-01 03:14)
 ])",
-        print_itineraries(plan_response));
+        itineraries_to_str(plan_response));
   }
 
   // Routing with temporary blocked paths due to elevator being out of service
@@ -438,15 +438,15 @@ TEST(motis, routing) {
     // Blocked near fromPlace, arriveBy=false, pass before blocked
     {
       auto const plan_response = routing(
-          "?fromPlace=50.10411515,8.658776549999999"
-          "&toPlace=50.11347,8.67664"
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T01:15Z"
           "&arriveBy=false"
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
-                                     // when using default matching distance
+          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
+                                    // when using default matching distance
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -455,20 +455,20 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
     // Blocked near fromPlace, arriveBy=false, temporary blocked / must wait
     {
       auto const plan_response = routing(
-          "?fromPlace=50.10411515,8.658776549999999"
-          "&toPlace=50.11347,8.67664"
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T01:20Z"
           "&arriveBy=false"
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
-                                     // when using default matching distance
+          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
+                                    // when using default matching distance
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -477,20 +477,20 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
     // Blocked near fromPlace, arriveBy=true, must pass before blocked
     {
       auto const plan_response = routing(
-          "?fromPlace=50.10411515,8.658776549999999"
-          "&toPlace=50.11347,8.67664"
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T02:30Z"
           "&arriveBy=true"
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
-                                     // when using default matching distance
+          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
+                                    // when using default matching distance
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -499,20 +499,20 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
     // Blocked near fromPlace, arriveBy=true, can pass after blocked
     {
       auto const plan_response = routing(
-          "?fromPlace=50.10411515,8.658776549999999"
-          "&toPlace=50.11347,8.67664"
+          "?fromPlace=50.1040763,8.6586978"
+          "&toPlace=50.1132737,8.6767235"
           "&time=2019-05-01T03:30Z"
           "&arriveBy=true"
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=20"  // FIXME Will use elevator to track 103/104
-                                     // when using default matching distance
+          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
+                                    // when using default matching distance
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -521,7 +521,7 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 03:15, mode="METRO", trip="S3", end=2019-05-01 03:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 03:20, mode="WALK", trip="-", end=2019-05-01 03:28)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
 
     // Blocked near toPlace, arriveBy=true, must pass before blocked
@@ -534,7 +534,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match 'toPlace' closely
+          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
           "&useRoutedTransfers=true");
 
       // // Reconstruction test: All walkings legs should have steps
@@ -559,7 +559,7 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 01:55),
     (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:55, mode="WALK", trip="-", end=2019-05-01 02:40)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
     // Blocked near toPlace, arriveBy=true, can pass after blocked
     {
@@ -571,7 +571,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match 'toPlace' closely
+          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -580,7 +580,7 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
     (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
     //     // FIXME Reconstruction fails
     //     // Blocked near toPlace, arriveBy=false, temporary blocked / must
@@ -594,7 +594,7 @@ TEST(motis, routing) {
     //           "&preTransitModes=WALK"
     //           "&timetableView=false"
     //           "&pedestrianProfile=WHEELCHAIR"
-    //           "&maxMatchingDistance=5"  // Should match 'toPlace' closely
+    //           "&maxMatchingDistance=8"  // Should match 'toPlace' closely
     //           "&useRoutedTransfers=true");
 
     //       EXPECT_EQ(
@@ -622,7 +622,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match 'toPlace' closely
+          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -631,7 +631,7 @@ TEST(motis, routing) {
     (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_10 [track=10, scheduled_track=10, level=0], start=2019-05-01 02:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:45),
     (from=test_FFM_10 [track=10, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:45, mode="WALK", trip="-", end=2019-05-01 02:55)
 ])",
-          print_itineraries(plan_response));
+          itineraries_to_str(plan_response));
     }
 
     // Direct routing, arriveBy=false, pass before blocked
@@ -644,14 +644,14 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match places closely
+          "&maxMatchingDistance=8"  // Should match places closely
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:15, end=01:33, duration=00:18, transfers=0, legs=[
     (from=- [track=-, scheduled_track=-, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 01:15, mode="WALK", trip="-", end=2019-05-01 01:33)
 ])",
-          print_direct(plan_response));
+          direct_to_str(plan_response));
     }
     // Direct routing, arriveBy=false, temporary unreachable
     {
@@ -663,7 +663,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=5"  // Should match places closely
+          "&maxMatchingDistance=8"  // Should match places closely
           "&useRoutedTransfers=true");
 
       // FIXME Elevator will be out of service when arrived
@@ -680,7 +680,7 @@ TEST(motis, routing) {
     //           "&preTransitModes=WALK"
     //           "&timetableView=false"
     //           "&pedestrianProfile=WHEELCHAIR"
-    //           "&maxMatchingDistance=5"  // Should match places closely
+    //           "&maxMatchingDistance=8"  // Should match places closely
     //           "&useRoutedTransfers=true");
 
     //       EXPECT_EQ(
@@ -727,7 +727,7 @@ TEST(motis, routing) {
     (from=test_FFM_101 [track=101, scheduled_track=101, level=-3], to=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:15, mode="METRO", trip="S3", end=2019-05-01 02:20),
     (from=test_FFM_HAUPT_S [track=-, scheduled_track=-, level=-3], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:20, mode="WALK", trip="-", end=2019-05-01 02:28)
 ])",
-        print_itineraries(plan_response));
+        itineraries_to_str(plan_response));
   }
 
   // Route without wheelchair.
@@ -747,6 +747,6 @@ TEST(motis, routing) {
     (from=test_de:6412:10:6:1 [track=U4, scheduled_track=U4, level=-2], to=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], start=2019-05-01 02:05, mode="SUBWAY", trip="U4", end=2019-05-01 02:10),
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:14)
 ])",
-        print_itineraries(plan_response));
+        itineraries_to_str(plan_response));
   }
 }
