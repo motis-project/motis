@@ -6,6 +6,6 @@
 
 namespace motis::vdv_rt {
 
-void subscribe(boost::asio::io_context&, config const&, vdv_rt::connection&);
+void subscription(boost::asio::io_context&, config const&, data& d);
 
 }  // namespace motis::vdv_rt

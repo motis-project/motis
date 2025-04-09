@@ -38,6 +38,7 @@
 #include "motis/vdv_rt/client_status.h"
 #include "motis/vdv_rt/connection.h"
 #include "motis/vdv_rt/data_ready.h"
+#include "motis/vdv_rt/subscription.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
@@ -131,7 +132,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     vdv_rt_subscription_ioc = std::make_unique<asio::io_context>();
     vdv_rt_subscription_thread = std::make_unique<std::thread>([&]() {
       utl::set_current_thread_name("motis vdv_rt subscription");
-      // TODO subscribe
+      vdv_rt::subscription(*vdv_rt_subscription_ioc, c, d);
       vdv_rt_subscription_ioc->run();
     });
   }
