@@ -13,6 +13,14 @@
 
 namespace motis::vdv_rt {
 
+pugi::xml_node add_sub_req_node(pugi::xml_node& node,
+                                std::string const& sender) {
+  auto sub_req_node = node.append_child("AboAnfrage");
+  sub_req_node.append_attribute("Sender") = sender.c_str();
+  sub_req_node.append_attribute("Zst") = timestamp(now()).c_str();
+  return sub_req_node;
+}
+
 std::string unsubscribe_body(config const& c) {
   auto doc = make_xml_doc();
   add_sub_req_node(doc, c.vdv_rt_->client_name_)
@@ -26,7 +34,7 @@ std::string subscribe_body(config const& c) {
   auto doc = make_xml_doc();
   auto sub_req_node = add_sub_req_node(doc, c.vdv_rt_->client_name_);
   auto sub_node = sub_req_node.append_child("AboAUS");
-  sub_node.append_attribute("AboID") = std::to_string(1U).c_str();
+  sub_node.append_attribute("AboID") = "1";
   sub_node.append_attribute("VerfallZst") =
       timestamp(now() + std::chrono::seconds{c.vdv_rt_->subscription_duration_})
           .c_str();
