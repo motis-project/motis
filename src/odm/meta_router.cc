@@ -123,8 +123,8 @@ meta_router::meta_router(ep::routing const& r,
                                   ? query_.postTransitRentalPropulsionTypes_
                                   : query_.preTransitRentalPropulsionTypes_},
       dest_propulsion_types_{query_.arriveBy_
-                                 ? query_.postTransitRentalPropulsionTypes_
-                                 : query_.preTransitRentalPropulsionTypes_},
+                                 ? query_.preTransitRentalPropulsionTypes_
+                                 : query_.postTransitRentalPropulsionTypes_},
       start_rental_providers_{query_.arriveBy_
                                   ? query_.postTransitRentalProviders_
                                   : query_.preTransitRentalProviders_},
