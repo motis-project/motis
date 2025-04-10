@@ -54,12 +54,16 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
+  auto const max_travel_time = n::duration_t{query.maxTravelTime_};
   auto const one = get_place(&tt_, &tags_, query.one_);
   auto const one_modes = query.arriveBy_ ? deduplicate(query.postTransitModes_)
                                          : deduplicate(query.preTransitModes_);
-  auto const one_time = query.arriveBy_
-                            ? std::chrono::seconds{query.maxPostTransitTime_}
-                            : std::chrono::seconds{query.maxPreTransitTime_};
+  auto const one_max_time = std::min(
+      query.arriveBy_ ? std::chrono::seconds{query.maxPostTransitTime_}
+                      : std::chrono::seconds{query.maxPreTransitTime_},
+      std::chrono::duration_cast<std::chrono::seconds>(max_travel_time));
+  auto const one_dir =
+      query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
 
   auto const r = routing{config_,   w_,       l_,  pl_,     &tt_,  &tags_,
                          loc_tree_, matches_, rt_, nullptr, gbfs_, nullptr};
@@ -68,20 +72,16 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(one),
-      .start_ = r.get_offsets(one,
-                              query.arriveBy_ ? osr::direction::kBackward
-                                              : osr::direction::kForward,
-                              one_modes, std::nullopt, std::nullopt,
-                              std::nullopt, query.pedestrianProfile_, one_time,
-                              query.maxMatchingDistance_, gbfs_rd),
-      .td_start_ = r.get_td_offsets(rt_->e_.get(), one,
-                                    query.arriveBy_ ? osr::direction::kBackward
-                                                    : osr::direction::kForward,
-                                    one_modes, query.pedestrianProfile_,
-                                    query.maxMatchingDistance_, one_time),
+      .start_ =
+          r.get_offsets(one, one_dir, one_modes, std::nullopt, std::nullopt,
+                        std::nullopt, query.pedestrianProfile_, one_max_time,
+                        query.maxMatchingDistance_, gbfs_rd),
+      .td_start_ = r.get_td_offsets(rt_->e_.get(), one, one_dir, one_modes,
+                                    query.pedestrianProfile_,
+                                    query.maxMatchingDistance_, one_max_time),
       .max_transfers_ = static_cast<std::uint8_t>(
           query.maxTransfers_.value_or(n::routing::kMaxTransfers)),
-      .max_travel_time_ = n::duration_t{query.maxTravelTime_},
+      .max_travel_time_ = max_travel_time,
       .prf_idx_ = static_cast<n::profile_idx_t>(
           query.useRoutedTransfers_
               ? (query.pedestrianProfile_ ==
