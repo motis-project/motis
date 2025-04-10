@@ -9,6 +9,7 @@
 #include "utl/verify.h"
 
 #include "adr/adr.h"
+#include "adr/area_database.h"
 #include "adr/cache.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
@@ -51,7 +52,8 @@ rt::~rt() = default;
 std::ostream& operator<<(std::ostream& out, data const& d) {
   return out << "\nt=" << d.t_.get() << "\nr=" << d.r_ << "\ntc=" << d.tc_
              << "\nw=" << d.w_ << "\npl=" << d.pl_ << "\nl=" << d.l_
-             << "\ntt=" << d.tt_.get() << "\nlocation_rtee=" << d.location_rtee_
+             << "\ntt=" << d.tt_.get()
+             << "\nlocation_rtee=" << d.location_rtree_
              << "\nelevator_nodes=" << d.elevator_nodes_
              << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
 }
@@ -210,7 +212,7 @@ void data::load_tt(fs::path const& p) {
   tags_ = tag_lookup::read(path_ / "tags.bin");
   tt_ = n::timetable::read(path_ / p);
   tt_->locations_.resolve_timezones();
-  location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
+  location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
   init_rtt();
 }
@@ -234,6 +236,8 @@ void data::load_railviz() {
 void data::load_geocoder() {
   t_ = adr::read(path_ / "adr" /
                  (config_.timetable_.has_value() ? "t_ext.bin" : "t.bin"));
+  area_db_ = std::make_unique<adr::area_database>(
+      path_ / "adr", cista::mmap::protection::READ);
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
 }
 

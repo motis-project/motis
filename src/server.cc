@@ -23,6 +23,7 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/metrics.h"
 #include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/osr_routing.h"
@@ -97,6 +98,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
+  qr.route("GET", "/metrics", ep::metrics{*d.metrics_});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});
