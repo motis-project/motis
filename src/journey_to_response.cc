@@ -16,6 +16,7 @@
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
+#include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/gbfs/mode.h"
 #include "motis/gbfs/routing_data.h"
@@ -220,8 +221,19 @@ api::Itinerary journey_to_response(osr::ways const* w,
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto const to_place = [&](auto&& l) {
-      return ::motis::to_place(&tt, &tags, w, pl, matches, l, start, dest);
+    auto const to_place = [&](auto&& s, bool run_cancelled) {
+      auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
+                                 start, dest);
+      p.pickupType_ = !run_cancelled && s.in_allowed()
+                          ? api::PickupDropoffTypeEnum::NORMAL
+                          : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+      p.dropoffType_ = !run_cancelled && s.out_allowed()
+                           ? api::PickupDropoffTypeEnum::NORMAL
+                           : api::PickupDropoffTypeEnum::NOT_ALLOWED;
+      p.cancelled_ = run_cancelled || (!s.in_allowed() && !s.out_allowed() &&
+                                       (s.get_scheduled_stop().in_allowed() ||
+                                        s.get_scheduled_stop().out_allowed()));
+      return p;
     };
 
     std::visit(
@@ -234,11 +246,12 @@ api::Itinerary journey_to_response(osr::ways const* w,
               auto const color = enter_stop.get_route_color();
               auto const agency = enter_stop.get_provider();
               auto const fare_indices = get_fare_indices(fares, j_leg);
+              auto const cancelled = fr.is_cancelled();
 
               auto& leg = itinerary.legs_.emplace_back(api::Leg{
                   .mode_ = to_mode(enter_stop.get_clasz()),
-                  .from_ = to_place(tt_location{enter_stop}),
-                  .to_ = to_place(tt_location{exit_stop}),
+                  .from_ = to_place(enter_stop, cancelled),
+                  .to_ = to_place(exit_stop, cancelled),
                   .duration_ = std::chrono::duration_cast<std::chrono::seconds>(
                                    j_leg.arr_time_ - j_leg.dep_time_)
                                    .count(),
@@ -258,6 +271,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
+                  .cancelled_ = cancelled,
                   .source_ = fmt::to_string(fr.dbg()),
                   .fareTransferIndex_ = fare_indices.and_then(
                       [](auto&& x) { return std::optional{x.transfer_idx_}; }),
@@ -286,11 +300,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               leg.intermediateStops_ = std::vector<api::Place>{};
               for (auto i = first; i < last; ++i) {
                 auto const stop = fr[i];
-                if (stop.is_canceled()) {
-                  continue;
-                }
                 auto& p = leg.intermediateStops_->emplace_back(
-                    to_place(tt_location{stop}));
+                    to_place(stop, cancelled));
                 p.departure_ = stop.time(n::event_type::kDep);
                 p.scheduledDeparture_ =
                     stop.scheduled_time(n::event_type::kDep);

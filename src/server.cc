@@ -62,14 +62,17 @@ int server(data d, config const& c, std::string_view const motis_version) {
   auto s = net::web_server{ioc};
   auto r = runner{server_config.n_threads_, 1024U};
   auto qr = net::query_router{net::fiber_exec{ioc, r.ch_}};
-  qr.add_header("Server", std::format("MOTIS {}", motis_version));
+  qr.add_header("Server", fmt::format("MOTIS {}", motis_version));
+  if (c.server_->data_attribution_link_) {
+    qr.add_header("Link", fmt::format("<{}>; rel=\"license\"",
+                                      *c.server_->data_attribution_link_));
+  }
 
   POST<ep::matches>(qr, "/api/matches", d);
   POST<ep::elevators>(qr, "/api/elevators", d);
   POST<ep::osr_routing>(qr, "/api/route", d);
   POST<ep::platforms>(qr, "/api/platforms", d);
   POST<ep::graph>(qr, "/api/graph", d);
-  POST<ep::update_elevator>(qr, "/api/update_elevator", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);
@@ -82,6 +85,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_all>(qr, "/api/experimental/one-to-all", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
+
+  if (!c.requires_rt_timetable_updates()) {
+    // Elevator updates are not compatible with RT-updates.
+    POST<ep::update_elevator>(qr, "/api/update_elevator", d);
+  }
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
@@ -108,7 +116,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     rt_update_ioc = std::make_unique<asio::io_context>();
     rt_update_thread = std::make_unique<std::thread>([&]() {
       utl::set_current_thread_name("motis rt update");
-      run_rt_update(*rt_update_ioc, c, *d.tt_, *d.tags_, d.rt_);
+      run_rt_update(*rt_update_ioc, c, d);
       rt_update_ioc->run();
     });
   }

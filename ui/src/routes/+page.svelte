@@ -41,6 +41,7 @@
 	const hasDebug = urlParams && urlParams.has('debug');
 	const hasDark = urlParams && urlParams.has('dark');
 	const isSmallScreen = browser && window.innerWidth < 768;
+	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
 
 	let theme: 'light' | 'dark' =
@@ -60,6 +61,11 @@
 
 	onMount(async () => {
 		initial().then((d) => {
+			if (d.response.headers.has('Link')) {
+				dataAttributionLink = d.response.headers
+					.get('Link')!
+					.replace(/^<(.*)>; rel="license"$/, '$1');
+			}
 			const r = d.data;
 			if (r) {
 				center = [r.lon, r.lat];
@@ -152,7 +158,8 @@
 						directModes: modes,
 						requireBikeTransport: bikeCarriage,
 						transitModes: selectedTransitModes.length ? selectedTransitModes : undefined,
-						withFares: true
+						useRoutedTransfers: true,
+						maxMatchingDistance: wheelchair ? 8 : 250
 					}
 				} as PlanData)
 			: undefined
@@ -320,7 +327,7 @@
 	{center}
 	class={cn('h-dvh overflow-clip', theme)}
 	style={showMap ? getStyle(theme, level) : undefined}
-	attribution={"&copy; <a href='http://www.openstreetmap.org/copyright' target='_blank'>OpenStreetMap</a>"}
+	attribution={false}
 >
 	{#if hasDebug}
 		<Control position="top-right">
@@ -442,6 +449,17 @@
 					</Card>
 				</Control>
 			{/if}
+		</div>
+	</div>
+
+	<div class="maplibregl-ctrl-bottom-right">
+		<div class="maplibregl-ctrl maplibregl-ctrl-attrib">
+			<div class="maplibregl-ctrl-attrib-inner">
+				&copy; <a href="http://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>
+				{#if dataAttributionLink}
+					| <a href={dataAttributionLink} target="_blank">{t.timetableSources}</a>
+				{/if}
+			</div>
 		</div>
 	</div>
 

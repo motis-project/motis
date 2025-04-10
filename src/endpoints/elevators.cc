@@ -63,12 +63,16 @@ json::value elevators::operator()(json::value const& query) const {
   auto const rt = rt_;
   auto const e = rt->e_.get();
 
+  auto matches = json::array{};
+  if (e == nullptr) {
+    return json::value{{"type", "FeatureCollection"}, {"features", matches}};
+  }
+
   auto const& q = query.as_array();
 
   auto const min = geo::latlng{q[1].as_double(), q[0].as_double()};
   auto const max = geo::latlng{q[3].as_double(), q[2].as_double()};
 
-  auto matches = json::array{};
   e->elevators_rtree_.find(geo::box{min, max}, [&](elevator_idx_t const i) {
     utl::verify(matches.size() < kLimit, "too many elevators");
     auto const& x = e->elevators_[i];

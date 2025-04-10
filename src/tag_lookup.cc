@@ -89,6 +89,9 @@ std::pair<nigiri::rt::run, nigiri::trip_idx_t> tag_lookup::get_trip(
     nigiri::timetable const& tt, std::string_view id) const {
   auto const [date, start_time, tag, trip_id] =
       utl::split<'_', utl::cstr, utl::cstr, utl::cstr, utl::cstr>(id);
+  for (auto const rev : {date, start_time, tag, trip_id}) {
+    utl::verify(rev.valid(), "invalid tripId {}", id);
+  }
   auto td = transit_realtime::TripDescriptor{};
   td.set_start_date(date.view());
   td.set_start_time(start_time.view());

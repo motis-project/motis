@@ -1392,6 +1392,15 @@ components:
         - BIKESHARE
         - TRANSIT
 
+    PickupDropoffType:
+      type: string
+      description: |
+        - `NORMAL` - entry/exit is possible normally
+        - `NOT_ALLOWED` - entry/exit is not allowed
+      enum:
+        - NORMAL
+        - NOT_ALLOWED
+
     Place:
       type: object
       required:
@@ -1441,6 +1450,15 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+        pickupType:
+          description: Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        dropoffType:
+          description: Type of dropoff. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether this stop is cancelled due to the realtime situation.
+          type: boolean
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -1490,6 +1508,8 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
+        - pickupDropoffType
+        - cancelled
         - source
       properties:
         place:
@@ -1520,6 +1540,12 @@ components:
           type: string
         routeShortName:
           type: string
+        pickupDropoffType:
+          description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether the departure/arrival is cancelled due to the realtime situation.
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -1623,6 +1649,7 @@ components:
         length:
           description: The number of points in the string
           type: integer
+          minimum: 0
 
     StepInstruction:
       type: object
@@ -1825,6 +1852,9 @@ components:
           type: string
         routeShortName:
           type: string
+        cancelled:
+          description: Whether this trip is cancelled
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -2025,6 +2055,11 @@ components:
           type: number
           description: |
             optional; missing if no path was found with the wheelchair profile 
+            footpath duration in minutes for the wheelchair profile
+        wheelchairRouted:
+          type: number
+          description: |
+            optional; missing if no path was found with the wheelchair profile
             footpath duration in minutes for the wheelchair profile
         wheelchairUsesElevator:
           type: boolean

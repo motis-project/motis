@@ -18,6 +18,7 @@ namespace motis::ep {
 struct update_elevator {
   boost::json::value operator()(boost::json::value const&) const;
 
+  config const& c_;
   nigiri::timetable const& tt_;
   osr::ways const& w_;
   osr::lookup const& l_;

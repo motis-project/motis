@@ -630,6 +630,7 @@ api::plan_response meta_router::run() {
                               *e_, pos, dir, start_modes_,
                               query_.pedestrianProfile_ ==
                                   api::PedestrianProfileEnum::WHEELCHAIR,
+                              query_.maxMatchingDistance_,
                               std::chrono::seconds{query_.maxPreTransitTime_});
                         }},
                     start_)
@@ -647,6 +648,7 @@ api::plan_response meta_router::run() {
                               *e_, pos, dir, dest_modes_,
                               query_.pedestrianProfile_ ==
                                   api::PedestrianProfileEnum::WHEELCHAIR,
+                              query_.maxMatchingDistance_,
                               std::chrono::seconds{query_.maxPostTransitTime_});
                         }},
                     dest_)

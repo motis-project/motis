@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ArrowRight from 'lucide-svelte/icons/arrow-right';
-	import type { FareProduct, Itinerary, Leg } from '$lib/openapi';
+	import CircleX from 'lucide-svelte/icons/circle-x';
+	import { type FareProduct, type Itinerary, type Leg, type PickupDropoffType } from '$lib/openapi';
 	import Time from '$lib/Time.svelte';
 	import { routeBorderColor, routeColor } from '$lib/modeStyle';
 	import { formatDurationSec, formatDistanceMeters } from '$lib/formatDuration';
@@ -27,7 +28,9 @@
 	scheduledTimestamp: string,
 	isRealtime: boolean,
 	name: string,
-	stopId?: string
+	stopId?: string,
+	pickupType?: PickupDropoffType,
+	dropoffType?: PickupDropoffType
 )}
 	<Time
 		variant="schedule"
@@ -44,19 +47,33 @@
 		{timestamp}
 		{scheduledTimestamp}
 	/>
-	{#if stopId}
-		<Button
-			class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
-			variant="link"
-			onclick={() => {
-				onClickStop(name, stopId, new Date(timestamp));
-			}}
-		>
-			{name}
-		</Button>
-	{:else}
-		<span>{name}</span>
-	{/if}
+	<span>
+		{#if stopId}
+			<Button
+				class="text-[length:inherit] leading-none justify-normal text-wrap text-left"
+				variant="link"
+				onclick={() => {
+					onClickStop(name, stopId, new Date(timestamp));
+				}}
+			>
+				{name}
+			</Button>
+			{#if pickupType == 'NOT_ALLOWED' || dropoffType == 'NOT_ALLOWED'}
+				<div class="ml-4 flex items-center text-destructive text-sm">
+					<CircleX class="stroke-destructive h-4 w-4" />
+					<span class="ml-1 leading-none">
+						{pickupType == 'NOT_ALLOWED' && dropoffType == 'NOT_ALLOWED'
+							? t.inOutDisallowed
+							: pickupType == 'NOT_ALLOWED'
+								? t.inDisallowed
+								: t.outDisallowed}
+					</span>
+				</div>
+			{/if}
+		{:else}
+			<span>{name}</span>
+		{/if}
+	</span>
 {/snippet}
 
 {#snippet streetLeg(l: Leg)}
@@ -192,13 +209,21 @@
 						l.scheduledStartTime,
 						l.realTime,
 						l.from.name,
-						l.from.stopId
+						l.from.stopId,
+						l.from.pickupType,
+						l.from.dropoffType
 					)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
 					<ArrowRight class="stroke-muted-foreground h-4 w-4" />
 					<span class="ml-1">{l.headsign}</span>
 				</div>
+				{#if l.cancelled}
+					<div class="mt-2 flex items-center text-destructive leading-none">
+						<CircleX class="stroke-destructive h-4 w-4" />
+						<span class="ml-1 font-bold">{t.tripCancelled}</span>
+					</div>
+				{/if}
 				{#if l.intermediateStops?.length === 0}
 					<div class="py-8 pl-1 md:pl-4 flex items-center text-muted-foreground">
 						{t.tripIntermediateStops(0)}
@@ -228,7 +253,15 @@
 						</summary>
 						<div class="mb-1 grid gap-y-4 grid-cols-[max-content_max-content_auto] items-center">
 							{#each l.intermediateStops! as s}
-								{@render stopTimes(s.arrival!, s.scheduledArrival!, l.realTime, s.name!, s.stopId)}
+								{@render stopTimes(
+									s.arrival!,
+									s.scheduledArrival!,
+									l.realTime,
+									s.name!,
+									s.stopId,
+									s.pickupType,
+									s.dropoffType
+								)}
 							{/each}
 						</div>
 					</details>
@@ -241,7 +274,9 @@
 							l.scheduledEndTime!,
 							l.realTime!,
 							l.to.name,
-							l.to.stopId
+							l.to.stopId,
+							l.to.pickupType,
+							l.to.dropoffType
 						)}
 					</div>
 				{/if}
@@ -260,13 +295,23 @@
 						l.scheduledStartTime,
 						l.realTime,
 						l.from.name,
-						l.from.stopId
+						l.from.stopId,
+						l.from.pickupType,
+						l.from.dropoffType
 					)}
 				</div>
 				{@render streetLeg(l)}
 				{#if !isLast}
 					<div class="grid gap-y-6 grid-cols-[max-content_max-content_auto] items-center pb-4">
-						{@render stopTimes(l.endTime, l.scheduledEndTime, l.realTime, l.to.name, l.to.stopId)}
+						{@render stopTimes(
+							l.endTime,
+							l.scheduledEndTime,
+							l.realTime,
+							l.to.name,
+							l.to.stopId,
+							l.to.pickupType,
+							l.to.dropoffType
+						)}
 					</div>
 				{/if}
 			</div>
@@ -285,7 +330,9 @@
 				lastLeg!.scheduledEndTime,
 				lastLeg!.realTime,
 				lastLeg!.to.name,
-				lastLeg!.to.stopId
+				lastLeg!.to.stopId,
+				lastLeg!.to.pickupType,
+				lastLeg!.to.dropoffType
 			)}
 		</div>
 	</div>

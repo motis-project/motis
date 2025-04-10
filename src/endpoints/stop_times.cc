@@ -122,10 +122,14 @@ struct static_ev_iterator : public ev_iterator {
 private:
   bool is_active() const {
     auto const x = t();
-    return (rtt_ == nullptr
-                ? tt_.bitfields_[tt_.transport_traffic_days_[x.t_idx_]]
-                : rtt_->bitfields_[rtt_->transport_traffic_days_[x.t_idx_]])
-        .test(to_idx(x.day_));
+    auto const in_static =
+        tt_.bitfields_[tt_.transport_traffic_days_[x.t_idx_]].test(
+            to_idx(x.day_));
+    return rtt_ == nullptr
+               ? in_static
+               : in_static &&
+                     rtt_->resolve_rt(x) ==  // only when no RT/cancelled
+                         n::rt_transport_idx_t::invalid();
   }
 
   n::transport t() const {
@@ -213,10 +217,8 @@ std::vector<n::rt::run> get_events(
         for (auto const [stop_idx, s] : utl::enumerate(location_seq)) {
           if (n::stop{s}.location_idx() == x &&
               ((ev_type == n::event_type::kDep &&
-                stop_idx != location_seq.size() - 1U &&
-                n::stop{s}.in_allowed()) ||
-               (ev_type == n::event_type::kArr && stop_idx != 0U &&
-                n::stop{s}.out_allowed()))) {
+                stop_idx != location_seq.size() - 1U) ||
+               (ev_type == n::event_type::kArr && stop_idx != 0U))) {
             iterators.emplace_back(std::make_unique<rt_ev_iterator>(
                 *rtt, rt_t, static_cast<n::stop_idx_t>(stop_idx), time, ev_type,
                 dir, allowed_clasz));
@@ -345,6 +347,16 @@ api::stoptimes_response stop_times::operator()(
               place.scheduledDeparture_ = {
                   s.scheduled_time(n::event_type::kDep)};
             }
+            auto const in_out_allowed =
+                !fr.is_cancelled() &&
+                (ev_type == n::event_type::kArr ? s.out_allowed()
+                                                : s.in_allowed());
+            auto const stop_cancelled =
+                fr.is_cancelled() ||
+                (ev_type == n::event_type::kArr
+                     ? !s.out_allowed() && s.get_scheduled_stop().out_allowed()
+                     : !s.in_allowed() && s.get_scheduled_stop().in_allowed());
+
             return {
                 .place_ = std::move(place),
                 .mode_ = to_mode(s.get_clasz(ev_type)),
@@ -358,6 +370,10 @@ api::stoptimes_response stop_times::operator()(
                     to_str(s.get_route_color(ev_type).text_color_),
                 .tripId_ = tags_.id(tt_, s, ev_type),
                 .routeShortName_ = std::string{s.trip_display_name(ev_type)},
+                .pickupDropoffType_ =
+                    in_out_allowed ? api::PickupDropoffTypeEnum::NORMAL
+                                   : api::PickupDropoffTypeEnum::NOT_ALLOWED,
+                .cancelled_ = stop_cancelled,
                 .source_ = fmt::format("{}", fmt::streamed(fr.dbg()))};
           }),
       .previousPageCursor_ =

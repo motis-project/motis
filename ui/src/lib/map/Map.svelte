@@ -18,7 +18,7 @@
 	}: {
 		map?: maplibregl.Map;
 		style: maplibregl.StyleSpecification | undefined;
-		attribution: string;
+		attribution: string | undefined | false;
 		transformRequest?: maplibregl.RequestTransformFunction;
 		center: maplibregl.LngLatLike;
 		bounds?: maplibregl.LngLatBoundsLike | undefined;
@@ -48,7 +48,10 @@
 				center,
 				style,
 				transformRequest,
-				attributionControl: { customAttribution: attribution }
+				attributionControl:
+					attribution === false || attribution === undefined
+						? attribution
+						: { customAttribution: attribution }
 			});
 
 			tmp.addImage(

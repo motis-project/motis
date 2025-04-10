@@ -18,12 +18,12 @@ namespace motis::ep {
 struct footpaths {
   api::footpaths_response operator()(boost::urls::url_view const&) const;
 
+  config const& c_;
   tag_lookup const& tags_;
   nigiri::timetable const& tt_;
   osr::ways const& w_;
   osr::lookup const& l_;
   osr::platforms const& pl_;
-  osr::elevation_storage const* elevations_;
   point_rtree<nigiri::location_idx_t> const& loc_rtree_;
   platform_matches_t const& matches_;
   std::shared_ptr<rt> rt_;
