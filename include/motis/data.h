@@ -59,6 +59,7 @@ struct data {
   void load_matches();
   void load_reverse_geocoder();
   void load_tiles();
+  void load_rt(std::string_view, config::timetable::dataset const&);
 
   void init_rtt(date::sys_days = std::chrono::time_point_cast<date::days>(
                     std::chrono::system_clock::now()));
@@ -91,7 +92,7 @@ struct data {
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
-  ptr<vdv_rt::vdv_rt> vdv_rt_;
+  ptr<std::map<std::string, vdv_rt::vdv_rt>> vdv_rt_;
 };
 
 }  // namespace motis

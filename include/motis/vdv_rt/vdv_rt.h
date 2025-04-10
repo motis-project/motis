@@ -8,7 +8,7 @@
 namespace motis::vdv_rt {
 
 struct vdv_rt {
-  explicit vdv_rt(config::vdv_rt const& vdv_rt_cfg,
+  explicit vdv_rt(config::timetable::dataset::vdv_rt const& vdv_rt_cfg,
                   nigiri::timetable const& tt,
                   nigiri::source_idx_t const src)
       : con_{vdv_rt_cfg}, upd_{tt, src} {}

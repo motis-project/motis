@@ -41,7 +41,7 @@ std::string subscribe_body(config const& c) {
           .c_str();
   auto hysteresis_node = sub_node.append_child("Hysterese");
   hysteresis_node.append_child(pugi::node_pcdata)
-      .set_value(std::to_string(c.vdv_rt_->hyseresis_).c_str());
+      .set_value(std::to_string(c.vdv_rt_->hysteresis_).c_str());
   auto lookahead_node = sub_node.append_child("Vorschauzeit");
   lookahead_node.append_child(pugi::node_pcdata)
       .set_value(std::to_string(std::chrono::round<std::chrono::minutes>(

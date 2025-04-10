@@ -114,6 +114,11 @@ data::data(std::filesystem::path p, config const& c)
       if (c.timetable_->railviz_) {
         load_railviz();
       }
+      for (auto const& [tag, d] : c.timetable_->datasets_) {
+        if (d.rt_) {
+          load_rt(tag, d);
+        }
+      }
     }
   });
 
@@ -190,11 +195,6 @@ data::data(std::filesystem::path p, config const& c)
                  matches_->size() == tt_->n_locations(),
              "mismatch: n_matches={}, n_locations={}", matches_->size(),
              tt_->n_locations());
-
-  if (c.vdv_rt_) {
-    vdv_rt_ = std::make_unique<vdv_rt::vdv_rt>(
-        *c.vdv_rt_, *tt_, tags_->get_src(c.vdv_rt_->tt_tag_));
-  }
 }
 
 data::~data() = default;
@@ -257,6 +257,22 @@ void data::load_tiles() {
   auto const db_size = config_.tiles_.value().db_size_;
   tiles_ = std::make_unique<tiles_data>(
       (path_ / "tiles" / "tiles.mdb").generic_string(), db_size);
+}
+
+void data::load_rt(std::string_view tag, config::timetable::dataset const& d) {
+  vdv_rt_ = std::make_unique<std::map<std::string, vdv_rt::vdv_rt>>();
+  for (auto const& rt : *d.rt_) {
+    std::visit(
+        utl::overloaded{[](config::timetable::dataset::gtfs_rt const&) {},
+                        [&](config::timetable::dataset::vdv_rt const& vdv_cfg) {
+                          vdv_rt_->emplace(
+                              std::piecewise_construct,
+                              std::forward_as_tuple(vdv_cfg.server_url_),
+                              std::forward_as_tuple(vdv_cfg, *tt_,
+                                                    tags_->get_src(tag)));
+                        }},
+        rt);
+  }
 }
 
 }  // namespace motis

@@ -56,8 +56,8 @@ struct config {
 
   struct timetable {
     struct dataset {
-      struct rt {
-        bool operator==(rt const&) const = default;
+      struct gtfs_rt {
+        bool operator==(gtfs_rt const&) const = default;
         cista::hash_t hash() const noexcept {
           return cista::build_hash(url_, headers_);
         }
@@ -67,12 +67,17 @@ struct config {
 
       struct vdv_rt {
         bool operator==(vdv_rt const&) const = default;
+        cista::hash_t hash() const noexcept {
+          return cista::build_hash(
+              client_name_, server_name_, server_url_, subscription_renewal_,
+              subscription_duration_, hysteresis_, timeout_);
+        }
         std::string client_name_{};
         std::string server_name_{};
         std::string server_url_{};
         unsigned subscription_renewal_{3600U};
         unsigned subscription_duration_{25 * 3600U};
-        unsigned hyseresis_{30U};
+        unsigned hysteresis_{30U};
         unsigned timeout_{10U};
       };
 
@@ -81,8 +86,7 @@ struct config {
       std::string path_;
       bool default_bikes_allowed_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
-      std::optional<std::vector<rt>> rt_{};
-      std::optional<vdv_rt> vdv_rt_{};
+      std::optional<std::vector<std::variant<gtfs_rt, vdv_rt>>> rt_{};
       std::optional<std::string> default_timezone_{};
     };
 

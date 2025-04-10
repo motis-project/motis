@@ -67,7 +67,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             auto const timeout =
                 std::chrono::seconds{c.timetable_->http_timeout_};
             auto endpoints =
-                std::vector<std::tuple<config::timetable::dataset::rt,
+                std::vector<std::tuple<config::timetable::dataset::gtfs_rt,
                                        n::source_idx_t, std::string>>{};
             for (auto const& [tag, dataset] : c.timetable_->datasets_) {
               if (dataset.rt_.has_value()) {

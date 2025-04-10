@@ -114,21 +114,25 @@ void config::verify() const {
               "feature ODM requires feature STREET_ROUTING");
   utl::verify(!elevators_ || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
-  utl::verify(!vdv_rt_ || timetable_->incremental_rt_update_,
-              "feature VDV_RT requires feature TIMETABLE");
 
   if (timetable_) {
     for (auto const& [_, d] : timetable_->datasets_) {
       if (d.rt_.has_value()) {
-        for (auto const& url : *d.rt_) {
+        for (auto const& rt_entry : *d.rt_) {
+          auto const& url = std::visit(
+              utl::overloaded{[](timetable::dataset::gtfs_rt const& gtfs) {
+                                return gtfs.url_;
+                              },
+                              [](timetable::dataset::vdv_rt const& vdv) {
+                                return vdv.server_url_;
+                              }},
+              rt_entry);
           try {
-            boost::urls::url{url.url_};
+            boost::urls::url{url};
           } catch (std::exception const& e) {
-            throw utl::fail("{} is not a valid url: {}", url.url_, e.what());
+            throw utl::fail("{} is not a valid url: {}", url, e.what());
           }
         }
-      }
-      if (d.vdv_rt_) {
       }
     }
   }
@@ -166,12 +170,9 @@ void config::verify_input_files_exist() const {
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
          ((elevators_.has_value() && elevators_->url_.has_value()) ||
-          utl::any_of(timetable_->datasets_,
-                      [](auto&& d) {
-                        return d.second.rt_.has_value() &&
-                               !d.second.rt_->empty();
-                      }) ||
-          vdv_rt_.has_value());
+          utl::any_of(timetable_->datasets_, [](auto&& d) {
+            return d.second.rt_.has_value() && !d.second.rt_->empty();
+          }));
 }
 
 bool config::has_gbfs_feeds() const {
