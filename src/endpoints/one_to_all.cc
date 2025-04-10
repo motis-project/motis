@@ -57,8 +57,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const one = get_place(&tt_, &tags_, query.one_);
   auto const one_modes = deduplicate(query.oneTransitModes_);
 
-  auto const c = config{};  // Required / Not used
-  auto const r = routing{c,         w_,       l_,  pl_,     &tt_,  &tags_,
+  auto const r = routing{config_,   w_,       l_,  pl_,     &tt_,  &tags_,
                          loc_tree_, matches_, rt_, nullptr, gbfs_, nullptr};
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 

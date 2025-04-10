@@ -37,7 +37,7 @@ using stats_map_t = std::map<std::string, std::uint64_t>;
 
 place_t get_place(nigiri::timetable const*,
                   tag_lookup const*,
-                  std::string_view);
+                  std::string_view user_input);
 
 bool is_intermodal(place_t const&);
 
@@ -68,7 +68,7 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       api::PedestrianProfileEnum,
-      std::chrono::seconds max_secs,
+      std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
 
@@ -80,7 +80,7 @@ struct routing {
                  std::vector<api::ModeEnum> const&,
                  api::PedestrianProfileEnum,
                  double max_matching_distance,
-                 std::chrono::seconds max_secs) const;
+                 std::chrono::seconds max) const;
 
   std::pair<std::vector<api::Itinerary>, nigiri::duration_t> route_direct(
       elevators const*,

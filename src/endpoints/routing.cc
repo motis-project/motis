@@ -54,13 +54,13 @@ boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 place_t get_place(n::timetable const* tt,
                   tag_lookup const* tags,
-                  std::string_view s) {
-  if (auto const location = parse_location(s); location.has_value()) {
+                  std::string_view input) {
+  if (auto const location = parse_location(input); location.has_value()) {
     return *location;
   }
   utl::verify(tt != nullptr && tags != nullptr,
-              R"(could not parse location (no timetable loaded): "{}")", s);
-  return tt_location{tags->get_location(*tt, s)};
+              R"(could not parse location (no timetable loaded): "{}")", input);
+  return tt_location{tags->get_location(*tt, input)};
 }
 
 bool is_intermodal(place_t const& p) {
@@ -80,14 +80,14 @@ std::vector<n::routing::offset> station_start(n::location_idx_t const l) {
   return {{l, n::duration_t{0U}, 0U}};
 }
 
-td_offsets_t get_route_td_offsets(routing const& r,
-                                  elevators const& e,
-                                  osr::location const& pos,
-                                  osr::direction const dir,
-                                  std::vector<api::ModeEnum> const& modes,
-                                  bool const wheelchair,
-                                  double const max_matching_distance,
-                                  std::chrono::seconds const max) {
+td_offsets_t get_td_offsets(routing const& r,
+                            elevators const& e,
+                            osr::location const& pos,
+                            osr::direction const dir,
+                            std::vector<api::ModeEnum> const& modes,
+                            bool const wheelchair,
+                            double const max_matching_distance,
+                            std::chrono::seconds const max) {
   if (!r.w_ || !r.l_ || !r.pl_ || !r.tt_ || !r.loc_tree_ || !r.matches_) {
     return {};
   }
@@ -133,21 +133,21 @@ td_offsets_t routing::get_td_offsets(
     std::vector<api::ModeEnum> const& modes,
     api::PedestrianProfileEnum const pedestrian_profile,
     double const max_matching_distance,
-    std::chrono::seconds const max_secs) const {
+    std::chrono::seconds const max) const {
   return e != nullptr
              ? std::visit(
                    utl::overloaded{[&](tt_location) { return td_offsets_t{}; },
                                    [&](osr::location const& pos) {
-                                     return get_route_td_offsets(
+                                     return ::motis::ep::get_td_offsets(
                                          *this, *e, pos, dir, modes,
                                          is_wheelchair(pedestrian_profile),
-                                         max_matching_distance, max_secs);
+                                         max_matching_distance, max);
                                    }},
                    p)
              : td_offsets_t{};
 }
 
-std::vector<n::routing::offset> get_route_offsets(
+std::vector<n::routing::offset> get_offsets(
     routing const& r,
     osr::location const& pos,
     osr::direction const dir,
@@ -267,16 +267,16 @@ std::vector<n::routing::offset> routing::get_offsets(
         propulsion_types,
     std::optional<std::vector<std::string>> const& rental_providers,
     api::PedestrianProfileEnum const pedestrian_profile,
-    std::chrono::seconds const max_secs,
+    std::chrono::seconds const max,
     double const max_matching_distance,
     gbfs::gbfs_routing_data& gbfs_rd) const {
   return std::visit(
       utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
                       [&](osr::location const& pos) {
-                        return get_route_offsets(
+                        return ::motis::ep::get_offsets(
                             *this, pos, dir, modes, form_factors,
                             propulsion_types, rental_providers,
-                            is_wheelchair(pedestrian_profile), max_secs,
+                            is_wheelchair(pedestrian_profile), max,
                             max_matching_distance, gbfs_rd);
                       }},
       p);

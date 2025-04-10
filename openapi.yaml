@@ -24,14 +24,28 @@ paths:
         - name: fromPlace
           in: query
           required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           schema:
             type: string
 
         - name: toPlace
           in: query
           required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           schema:
             type: string
 
@@ -693,7 +707,14 @@ paths:
         - name: one
           in: query
           required: true
-          description: \`latitude,longitude[,level]\` tuple with latitude and longitude in degrees OR stop id
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           schema:
             type: string
         - name: time
