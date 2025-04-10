@@ -67,10 +67,6 @@ bool is_intermodal(place_t const& p) {
   return std::holds_alternative<osr::location>(p);
 }
 
-bool is_wheelchair(api::PedestrianProfileEnum const p) {
-  return p == api::PedestrianProfileEnum::WHEELCHAIR;
-}
-
 n::routing::location_match_mode get_match_mode(place_t const& p) {
   return is_intermodal(p) ? n::routing::location_match_mode::kIntermodal
                           : n::routing::location_match_mode::kEquivalent;
@@ -135,15 +131,16 @@ td_offsets_t routing::get_td_offsets(
     double const max_matching_distance,
     std::chrono::seconds const max) const {
   return e != nullptr
-             ? std::visit(
-                   utl::overloaded{[&](tt_location) { return td_offsets_t{}; },
-                                   [&](osr::location const& pos) {
-                                     return ::motis::ep::get_td_offsets(
-                                         *this, *e, pos, dir, modes,
-                                         is_wheelchair(pedestrian_profile),
-                                         max_matching_distance, max);
-                                   }},
-                   p)
+             ? std::visit(utl::overloaded{
+                              [&](tt_location) { return td_offsets_t{}; },
+                              [&](osr::location const& pos) {
+                                return ::motis::ep::get_td_offsets(
+                                    *this, *e, pos, dir, modes,
+                                    pedestrian_profile ==
+                                        api::PedestrianProfileEnum::WHEELCHAIR,
+                                    max_matching_distance, max);
+                              }},
+                          p)
              : td_offsets_t{};
 }
 
@@ -276,8 +273,9 @@ std::vector<n::routing::offset> routing::get_offsets(
                         return ::motis::ep::get_offsets(
                             *this, pos, dir, modes, form_factors,
                             propulsion_types, rental_providers,
-                            is_wheelchair(pedestrian_profile), max,
-                            max_matching_distance, gbfs_rd);
+                            pedestrian_profile ==
+                                api::PedestrianProfileEnum::WHEELCHAIR,
+                            max, max_matching_distance, gbfs_rd);
                       }},
       p);
 }

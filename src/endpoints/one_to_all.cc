@@ -82,7 +82,10 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       .max_travel_time_ = n::duration_t{query.maxTravelTime_},
       .prf_idx_ = static_cast<n::profile_idx_t>(
           query.useRoutedTransfers_
-              ? (is_wheelchair(query.pedestrianProfile_) ? 2U : 1U)
+              ? (query.pedestrianProfile_ ==
+                         api::PedestrianProfileEnum::WHEELCHAIR
+                     ? 2U
+                     : 1U)
               : 0U),
       .allowed_claszes_ = to_clasz_mask(query.transitModes_),
       .require_bike_transport_ = query.requireBikeTransport_,

@@ -41,8 +41,6 @@ place_t get_place(nigiri::timetable const*,
 
 bool is_intermodal(place_t const&);
 
-bool is_wheelchair(api::PedestrianProfileEnum);
-
 nigiri::routing::location_match_mode get_match_mode(place_t const&);
 
 std::vector<nigiri::routing::offset> station_start(nigiri::location_idx_t);
