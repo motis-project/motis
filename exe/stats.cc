@@ -86,7 +86,7 @@ int stats(int ac, char** av) {
         travel_time[i].emplace_back(std::chrono::round<std::chrono::minutes>(
             std::chrono::seconds{j.duration_}));
         transfers[i].emplace_back(j.transfers_);
-        auto const add_intermodal = [&](auto const& l) {
+        auto const add_intermodal = [&, i](auto const& l) {
           switch (l.mode_) {
             case api::ModeEnum::WALK:
               walk_time[i].emplace_back(
