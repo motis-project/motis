@@ -65,7 +65,7 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
           auto const start = std::chrono::steady_clock::now();
 
           // unsubscribe
-          auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
+          auto unsub_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
             auto const& [_, vdv_rt] = x;
             return boost::asio::co_spawn(
                 executor,
@@ -85,14 +85,15 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
                 },
                 boost::asio::deferred);
           });
-          co_await boost::asio::experimental::make_parallel_group(awaitables)
+          co_await boost::asio::experimental::make_parallel_group(
+              unsub_awaitables)
               .async_wait(boost::asio::experimental::wait_for_all(),
                           boost::asio::use_awaitable);
 
           // subscribe
-          awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
-            auto const& [_, vdv_rt] = x;
-            return co_await boost::asio::co_spawn(
+          auto sub_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
+            auto& [_, vdv_rt] = x;
+            return boost::asio::co_spawn(
                 executor,
                 [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
                   try {
@@ -112,6 +113,10 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
                 },
                 boost::asio::deferred);
           });
+          co_await boost::asio::experimental::make_parallel_group(
+              sub_awaitables)
+              .async_wait(boost::asio::experimental::wait_for_all(),
+                          boost::asio::use_awaitable);
 
           timer.expires_at(
               start + std::chrono::seconds{c.vdv_rt_->subscription_renewal_});

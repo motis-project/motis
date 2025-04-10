@@ -75,8 +75,6 @@ struct config {
         std::string client_name_{};
         std::string server_name_{};
         std::string server_url_{};
-        unsigned subscription_renewal_{3600U};
-        unsigned subscription_duration_{25 * 3600U};
         unsigned hysteresis_{30U};
         unsigned timeout_{10U};
       };
@@ -110,6 +108,8 @@ struct config {
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
+    unsigned subscription_renewal_{3600U};
+    unsigned subscription_duration_{25 * 3600U};
   };
   std::optional<timetable> timetable_{};
 
