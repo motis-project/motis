@@ -68,15 +68,13 @@ struct config {
       struct vdv_rt {
         bool operator==(vdv_rt const&) const = default;
         cista::hash_t hash() const noexcept {
-          return cista::build_hash(
-              client_name_, server_name_, server_url_, subscription_renewal_,
-              subscription_duration_, hysteresis_, timeout_);
+          return cista::build_hash(client_name_, server_name_, server_url_,
+                                   hysteresis_);
         }
         std::string client_name_{};
         std::string server_name_{};
         std::string server_url_{};
         unsigned hysteresis_{30U};
-        unsigned timeout_{10U};
       };
 
       bool operator==(dataset const&) const = default;
@@ -108,8 +106,8 @@ struct config {
     std::optional<std::string> default_timezone_{};
     std::map<std::string, dataset> datasets_{};
     std::optional<std::filesystem::path> assistance_times_{};
-    unsigned subscription_renewal_{3600U};
-    unsigned subscription_duration_{25 * 3600U};
+    unsigned vdv_rt_subscription_renewal_{3600U};
+    unsigned vdv_rt_subscription_duration_{25 * 3600U};
   };
   std::optional<timetable> timetable_{};
 

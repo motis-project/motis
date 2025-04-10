@@ -1,4 +1,5 @@
 #include "boost/asio/io_context.hpp"
+#include <boost/thread/future.hpp>
 
 #include "fmt/format.h"
 
@@ -108,9 +109,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
-  if (c.vdv_rt_) {
-    POST_STR<vdv_rt::client_status>(qr, d.vdv_rt_->con_.client_status_path_, d);
-    POST_STR<vdv_rt::data_ready>(qr, d.vdv_rt_->con_.data_ready_path_, d);
+  if (d.vdv_rt_ != nullptr) {
+    for (auto const& [_, vdv_rt] : *d.vdv_rt_) {
+      POST_STR<vdv_rt::client_status>(qr, vdv_rt.con_.client_status_path_, d);
+      POST_STR<vdv_rt::data_ready>(qr, vdv_rt.con_.data_ready_path_, d);
+    }
   }
 
   qr.serve_files(server_config.web_folder_);
@@ -129,7 +132,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   auto vdv_rt_subscription_thread = std::unique_ptr<std::thread>{};
   auto vdv_rt_subscription_ioc = std::unique_ptr<asio::io_context>{};
-  if (c.vdv_rt_) {
+  if (d.vdv_rt_ != nullptr && !d.vdv_rt_->empty()) {
     vdv_rt_subscription_ioc = std::make_unique<asio::io_context>();
     vdv_rt_subscription_thread = std::make_unique<std::thread>([&]() {
       utl::set_current_thread_name("motis vdv_rt subscription");
@@ -174,6 +177,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
     if (vdv_rt_subscription_ioc != nullptr) {
       // TODO unsubscribe
+      auto vdv_rt_unsub = boost::packaged_task{
+          *vdv_rt_subscription_ioc, [&]() {
+            co_await motis::vdv_rt::unsubscribe(*vdv_rt_subscription_ioc, c, d)
+                .;
+          }};
       vdv_rt_subscription_ioc->stop();
     }
     if (rt_update_ioc != nullptr) {

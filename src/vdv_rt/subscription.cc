@@ -32,63 +32,73 @@ std::string unsubscribe_body(vdv_rt const& vdv_rt) {
   return xml_to_str(doc);
 }
 
-std::string subscribe_body(vdv_rt const& vdv_rt) {
+std::string subscribe_body(config const& c, vdv_rt const& vdv_rt) {
   auto doc = make_xml_doc();
   auto sub_req_node = add_sub_req_node(doc, vdv_rt.cfg_.client_name_);
   auto sub_node = sub_req_node.append_child("AboAUS");
   sub_node.append_attribute("AboID") = "1";
   sub_node.append_attribute("VerfallZst") =
-      timestamp(now() +
-                std::chrono::seconds{vdv_rt.cfg_.subscription_duration_})
+      timestamp(
+          now() +
+          std::chrono::seconds{c.timetable_->vdv_rt_subscription_duration_})
           .c_str();
   auto hysteresis_node = sub_node.append_child("Hysterese");
   hysteresis_node.append_child(pugi::node_pcdata)
       .set_value(std::to_string(vdv_rt.cfg_.hysteresis_).c_str());
   auto lookahead_node = sub_node.append_child("Vorschauzeit");
   lookahead_node.append_child(pugi::node_pcdata)
-      .set_value(std::to_string(std::chrono::round<std::chrono::minutes>(
-                                    std::chrono::seconds{
-                                        vdv_rt.cfg_.subscription_duration_})
-                                    .count())
-                     .c_str());
+      .set_value(
+          std::to_string(std::chrono::round<std::chrono::minutes>(
+                             std::chrono::seconds{
+                                 c.timetable_->vdv_rt_subscription_duration_})
+                             .count())
+              .c_str());
   return xml_to_str(doc);
+}
+
+void unsubscribe(boost::asio::io_context& ioc, config const& c, data& d) {
+  co_await boost::asio::co_spawn(
+      ioc,
+      [&c, &d]() -> boost::asio::awaitable<void> {
+        auto executor = co_await boost::asio::this_coro::executor;
+        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
+          auto const& [_, vdv_rt] = x;
+          return boost::asio::co_spawn(
+              executor,
+              [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
+                try {
+                  auto const res = co_await http_POST(
+                      boost::urls::url{vdv_rt.con_.subscription_addr_},
+                      kHeaders, unsubscribe_body(vdv_rt),
+                      std::chrono::seconds{c.timetable_->http_timeout_});
+                  if (res.result_int() != 200U) {
+                    fmt::println("[vdv_rt] unsubscribe failed: {}",
+                                 get_http_body(res));
+                  }
+                } catch (std::exception const& e) {
+                  fmt::println("[vdv_rt] unsubscribe failed: {}", e.what());
+                }
+              },
+              boost::asio::deferred);
+        });
+        co_await boost::asio::experimental::make_parallel_group(awaitables)
+            .async_wait(boost::asio::experimental::wait_for_all(),
+                        boost::asio::use_awaitable);
+      },
+      boost::asio::use_awaitable);
 }
 
 void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
-      [&c, &d]() -> boost::asio::awaitable<void> {
+      [&c, &d, &ioc]() -> boost::asio::awaitable<void> {
         auto executor = co_await boost::asio::this_coro::executor;
         auto timer = boost::asio::steady_timer{executor};
         auto ec = boost::system::error_code{};
         while (true) {
           auto const start = std::chrono::steady_clock::now();
 
-          // unsubscribe
-          auto unsub_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
-            auto const& [_, vdv_rt] = x;
-            return boost::asio::co_spawn(
-                executor,
-                [&vdv_rt]() -> boost::asio::awaitable<void> {
-                  try {
-                    auto const res = co_await http_POST(
-                        boost::urls::url{vdv_rt.con_.subscription_addr_},
-                        kHeaders, unsubscribe_body(vdv_rt),
-                        std::chrono::seconds{vdv_rt.cfg_.timeout_});
-                    if (res.result_int() != 200U) {
-                      fmt::println("[vdv_rt] unsubscribe failed: {}",
-                                   get_http_body(res));
-                    }
-                  } catch (std::exception const& e) {
-                    fmt::println("[vdv_rt] unsubscribe failed: {}", e.what());
-                  }
-                },
-                boost::asio::deferred);
-          });
-          co_await boost::asio::experimental::make_parallel_group(
-              unsub_awaitables)
-              .async_wait(boost::asio::experimental::wait_for_all(),
-                          boost::asio::use_awaitable);
+          co_await unsubscribe(ioc, c, d);
 
           // subscribe
           auto sub_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
@@ -99,7 +109,7 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
                   try {
                     auto const res = co_await http_POST(
                         boost::urls::url{vdv_rt.con_.subscription_addr_},
-                        kHeaders, subscribe_body(vdv_rt),
+                        kHeaders, subscribe_body(c, vdv_rt),
                         std::chrono::seconds{c.timetable_->http_timeout_});
                     if (res.result_int() == 200U) {
                       vdv_rt.con_.start_ = now();
@@ -119,7 +129,8 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
                           boost::asio::use_awaitable);
 
           timer.expires_at(
-              start + std::chrono::seconds{c.vdv_rt_->subscription_renewal_});
+              start +
+              std::chrono::seconds{c.timetable_->vdv_rt_subscription_renewal_});
           co_await timer.async_wait(
               boost::asio::redirect_error(boost::asio::use_awaitable, ec));
           if (ec == boost::asio::error::operation_aborted) {
