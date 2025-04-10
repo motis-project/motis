@@ -311,13 +311,15 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         propulsion_types,
     std::optional<std::vector<std::string>> const& rental_providers,
     n::unixtime_t const start_time,
-    bool wheelchair,
+    api::PedestrianProfileEnum const pedestrian_profile,
     std::chrono::seconds max,
     double const max_matching_distance,
     double const fastest_direct_factor) const {
   if (!w_ || !l_) {
     return {};
   }
+  auto const wheelchair =
+      pedestrian_profile == api::PedestrianProfileEnum::WHEELCHAIR;
   auto const omit_walk = gbfs_rd.has_data() &&
                          utl::find(modes, api::ModeEnum::RENTAL) != end(modes);
   auto fastest_direct = kInfinityDuration;
@@ -510,8 +512,7 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
                          query.directRentalFormFactors_,
                          query.directRentalPropulsionTypes_,
                          query.directRentalProviders_, *t,
-                         query.pedestrianProfile_ ==
-                             api::PedestrianProfileEnum::WHEELCHAIR,
+                         query.pedestrianProfile_,
                          std::chrono::seconds{query.maxDirectTime_},
                          query.maxMatchingDistance_, query.fastestDirectFactor_)
           : std::pair{std::vector<api::Itinerary>{}, kInfinityDuration};

@@ -90,7 +90,7 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
-      bool wheelchair,
+      api::PedestrianProfileEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor) const;

@@ -156,9 +156,8 @@ n::duration_t init_direct(std::vector<direct_ride>& direct_rides,
 
   auto [_, taxi_duration] = r.route_direct(
       e, gbfs, from_p, to_p, {api::ModeEnum::CAR}, std::nullopt, std::nullopt,
-      std::nullopt, intvl.from_,
-      query.pedestrianProfile_ == api::PedestrianProfileEnum::WHEELCHAIR,
-      kODMMaxDuration, query.maxMatchingDistance_, kODMDirectFactor);
+      std::nullopt, intvl.from_, query.pedestrianProfile_, kODMMaxDuration,
+      query.maxMatchingDistance_, kODMDirectFactor);
 
   if (query.arriveBy_) {
     for (auto arr =
