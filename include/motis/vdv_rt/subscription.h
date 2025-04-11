@@ -11,6 +11,6 @@ boost::asio::awaitable<void> unsubscribe(boost::asio::io_context&,
                                          config const&,
                                          data&);
 
-void renew_subscription(boost::asio::io_context&, config const&, data&);
+void subscription(boost::asio::io_context&, config const&, data&);
 
 }  // namespace motis::vdv_rt

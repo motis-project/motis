@@ -10,6 +10,7 @@
 
 #include "cista/hashing.h"
 
+#include "utl/overloaded.h"
 #include "utl/verify.h"
 
 namespace motis {

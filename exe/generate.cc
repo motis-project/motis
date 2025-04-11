@@ -33,6 +33,7 @@
 #include "motis/place.h"
 #include "motis/point_rtree.h"
 #include "motis/tag_lookup.h"
+#include "motis/vdv_rt/vdv_rt.h"
 
 #include "./flags.h"
 

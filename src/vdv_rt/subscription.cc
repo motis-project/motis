@@ -126,9 +126,7 @@ boost::asio::awaitable<void> subscribe(boost::asio::io_context& ioc,
       boost::asio::use_awaitable);
 }
 
-void renew_subscription(boost::asio::io_context& ioc,
-                        config const& c,
-                        data& d) {
+void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
   boost::asio::co_spawn(
       ioc,
       [&c, &d, &ioc]() -> boost::asio::awaitable<void> {

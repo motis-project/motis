@@ -176,12 +176,17 @@ int server(data d, config const& c, std::string_view const motis_version) {
     ioc.stop();
 
     if (vdv_rt_subscription_ioc != nullptr) {
-      // TODO unsubscribe
-      auto vdv_rt_unsub = boost::packaged_task{
-          *vdv_rt_subscription_ioc, [&]() {
-            co_await motis::vdv_rt::unsubscribe(*vdv_rt_subscription_ioc, c, d)
-                .;
+      auto vdv_rt_unsubscribe_thread =
+          std::thread{[&]() -> boost::asio::awaitable<void> {
+            utl::set_current_thread_name("vdv_rt unsubscribe");
+            std::println("I am thread {} and run unsubscribe now",
+                         std::this_thread::get_id());
+            co_await vdv_rt::unsubscribe(*vdv_rt_subscription_ioc, c, d);
+            std::println("I am thread {} and unsubscribe is done now",
+                         std::this_thread::get_id());
           }};
+      vdv_rt_subscription_ioc->run();
+      vdv_rt_unsubscribe_thread.join();
       vdv_rt_subscription_ioc->stop();
     }
     if (rt_update_ioc != nullptr) {
