@@ -63,8 +63,7 @@ boost::asio::awaitable<void> unsubscribe(boost::asio::io_context& ioc,
       ioc,
       [&c, &d]() -> boost::asio::awaitable<void> {
         auto executor = co_await boost::asio::this_coro::executor;
-        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
-          auto const& [_, vdv_rt] = x;
+        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& vdv_rt) {
           return boost::asio::co_spawn(
               executor,
               [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
@@ -97,8 +96,7 @@ boost::asio::awaitable<void> subscribe(boost::asio::io_context& ioc,
       ioc,
       [&c, &d]() -> boost::asio::awaitable<void> {
         auto executor = co_await boost::asio::this_coro::executor;
-        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
-          auto& [_, vdv_rt] = x;
+        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& vdv_rt) {
           return boost::asio::co_spawn(
               executor,
               [&c, &vdv_rt]() -> boost::asio::awaitable<void> {

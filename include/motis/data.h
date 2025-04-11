@@ -92,7 +92,7 @@ struct data {
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
-  ptr<std::map<std::string, vdv_rt::vdv_rt>> vdv_rt_;
+  ptr<std::vector<vdv_rt::vdv_rt>> vdv_rt_;
 };
 
 }  // namespace motis

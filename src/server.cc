@@ -110,7 +110,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   }
 
   if (d.vdv_rt_ != nullptr) {
-    for (auto const& [_, vdv_rt] : *d.vdv_rt_) {
+    for (auto const& vdv_rt : *d.vdv_rt_) {
       POST_STR<vdv_rt::client_status>(qr, vdv_rt.con_.client_status_path_, d);
       POST_STR<vdv_rt::data_ready>(qr, vdv_rt.con_.data_ready_path_, d);
     }
