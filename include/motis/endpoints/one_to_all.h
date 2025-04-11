@@ -11,12 +11,16 @@ namespace motis::ep {
 struct one_to_all {
   api::Reachable operator()(boost::urls::url_view const&) const;
 
+  config const& config_;
   osr::ways const* w_;
+  osr::lookup const* l_;
   osr::platforms const* pl_;
   nigiri::timetable const& tt_;
   std::shared_ptr<rt> const& rt_;
   tag_lookup const& tags_;
+  point_rtree<nigiri::location_idx_t> const* loc_tree_;
   platform_matches_t const* matches_;
+  std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
 };
 
 }  // namespace motis::ep
