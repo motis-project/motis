@@ -35,7 +35,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto min_odm_duration = odm_time(odm_leg);
     auto shorter_ride = std::optional<n::routing::start>{};
     for (auto const stop : run) {
-      if (stop.is_canceled() ||
+      if (stop.is_cancelled() ||
           !stop.in_allowed(query.pedestrianProfile_ ==
                            api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
@@ -99,7 +99,7 @@ void shorten(std::vector<nr::journey>& odm_journeys,
     auto min_odm_duration = odm_time(odm_leg);
     auto shorter_ride = std::optional<n::routing::start>{};
     for (auto const stop : run) {
-      if (stop.is_canceled() ||
+      if (stop.is_cancelled() ||
           !stop.out_allowed(query.pedestrianProfile_ ==
                             api::PedestrianProfileEnum::WHEELCHAIR) ||
           (query.requireBikeTransport_ &&
