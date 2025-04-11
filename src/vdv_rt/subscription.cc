@@ -56,7 +56,9 @@ std::string subscribe_body(config const& c, vdv_rt const& vdv_rt) {
   return xml_to_str(doc);
 }
 
-void unsubscribe(boost::asio::io_context& ioc, config const& c, data& d) {
+boost::asio::awaitable<void> unsubscribe(boost::asio::io_context& ioc,
+                                         config const& c,
+                                         data& d) {
   co_await boost::asio::co_spawn(
       ioc,
       [&c, &d]() -> boost::asio::awaitable<void> {
@@ -88,7 +90,45 @@ void unsubscribe(boost::asio::io_context& ioc, config const& c, data& d) {
       boost::asio::use_awaitable);
 }
 
-void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
+boost::asio::awaitable<void> subscribe(boost::asio::io_context& ioc,
+                                       config const& c,
+                                       data& d) {
+  co_await boost::asio::co_spawn(
+      ioc,
+      [&c, &d]() -> boost::asio::awaitable<void> {
+        auto executor = co_await boost::asio::this_coro::executor;
+        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
+          auto& [_, vdv_rt] = x;
+          return boost::asio::co_spawn(
+              executor,
+              [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
+                try {
+                  auto const res = co_await http_POST(
+                      boost::urls::url{vdv_rt.con_.subscription_addr_},
+                      kHeaders, subscribe_body(c, vdv_rt),
+                      std::chrono::seconds{c.timetable_->http_timeout_});
+                  if (res.result_int() == 200U) {
+                    vdv_rt.con_.start_ = now();
+                  } else {
+                    fmt::println("[vdv_rt] subscribe failed: {}",
+                                 get_http_body(res));
+                  }
+                } catch (std::exception const& e) {
+                  fmt::println("[vdv_rt] subscribe failed: {}", e.what());
+                }
+              },
+              boost::asio::deferred);
+        });
+        co_await boost::asio::experimental::make_parallel_group(awaitables)
+            .async_wait(boost::asio::experimental::wait_for_all(),
+                        boost::asio::use_awaitable);
+      },
+      boost::asio::use_awaitable);
+}
+
+void renew_subscription(boost::asio::io_context& ioc,
+                        config const& c,
+                        data& d) {
   boost::asio::co_spawn(
       ioc,
       [&c, &d, &ioc]() -> boost::asio::awaitable<void> {
@@ -99,34 +139,7 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
           auto const start = std::chrono::steady_clock::now();
 
           co_await unsubscribe(ioc, c, d);
-
-          // subscribe
-          auto sub_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& x) {
-            auto& [_, vdv_rt] = x;
-            return boost::asio::co_spawn(
-                executor,
-                [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
-                  try {
-                    auto const res = co_await http_POST(
-                        boost::urls::url{vdv_rt.con_.subscription_addr_},
-                        kHeaders, subscribe_body(c, vdv_rt),
-                        std::chrono::seconds{c.timetable_->http_timeout_});
-                    if (res.result_int() == 200U) {
-                      vdv_rt.con_.start_ = now();
-                    } else {
-                      fmt::println("[vdv_rt] subscribe failed: {}",
-                                   get_http_body(res));
-                    }
-                  } catch (std::exception const& e) {
-                    fmt::println("[vdv_rt] subscribe failed: {}", e.what());
-                  }
-                },
-                boost::asio::deferred);
-          });
-          co_await boost::asio::experimental::make_parallel_group(
-              sub_awaitables)
-              .async_wait(boost::asio::experimental::wait_for_all(),
-                          boost::asio::use_awaitable);
+          co_await subscribe(ioc, c, d);
 
           timer.expires_at(
               start +
