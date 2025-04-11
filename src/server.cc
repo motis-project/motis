@@ -9,6 +9,7 @@
 
 #include "utl/enumerate.h"
 #include "utl/init_from.h"
+#include "utl/logging.h"
 #include "utl/set_thread_name.h"
 
 #include "motis/config.h"
@@ -22,6 +23,7 @@
 #include "motis/endpoints/map/stops.h"
 #include "motis/endpoints/map/trips.h"
 #include "motis/endpoints/matches.h"
+#include "motis/endpoints/metrics.h"
 #include "motis/endpoints/one_to_all.h"
 #include "motis/endpoints/one_to_many.h"
 #include "motis/endpoints/osr_routing.h"
@@ -96,6 +98,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
     qr.route("GET", "/tiles/", ep::tiles{*d.tiles_});
   }
 
+  qr.route("GET", "/metrics", ep::metrics{*d.metrics_});
   qr.serve_files(server_config.web_folder_);
   qr.enable_cors();
   s.set_timeout(std::chrono::minutes{5});
@@ -139,7 +142,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   }
 
   auto const stop = net::stop_handler(ioc, [&]() {
-    fmt::println("shutdown");
+    utl::log_info("motis.server", "shutdown");
     r.ch_.close();
     s.stop();
     ioc.stop();
@@ -152,8 +155,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
     }
   });
 
-  fmt::println("listening on {}:{}\nlocal link: http://localhost:{}",
-               server_config.host_, server_config.port_, server_config.port_);
+  utl::log_info("motis.server",
+                "listening on {}:{}\nlocal link: http://localhost:{}",
+                server_config.host_, server_config.port_, server_config.port_);
   net::run(ioc)();
 
   for (auto& t : threads) {
