@@ -38,7 +38,8 @@ server:
   host: 0.0.0.0                     # host (default = 0.0.0.0)
   port: 8080                        # port (default = 8080)
   web_folder: ui                    # folder with static files to serve
-  n_threads: 24                     # default (if not set): number of hardware threads 
+  n_threads: 24                     # default (if not set): number of hardware threads
+  data_attribution_link: https://creativecommons.org/licenses/by/4.0/ # link to data sources or license exposed in HTTP headers and UI
 osm: netherlands-latest.osm.pbf     # required by tiles, street routing, geocoding and reverse-geocoding
 tiles:                              # tiles won't be available if this key is missing
   profile: tiles-profiles/full.lua  # currently `background.lua` (less details) and `full.lua` (more details) are available

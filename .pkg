@@ -1,7 +1,7 @@
 [nigiri]
   url=git@github.com:motis-project/nigiri.git
   branch=master
-  commit=ad58c2da4a7fc2fc7823f6cf3420bde3f2bb3297
+  commit=1b1a7ea752679f4305da96ec4ca35e135e5dafd2
 [cista]
   url=git@github.com:felixguendling/cista.git
   branch=master
@@ -9,7 +9,7 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=ba43b25b31b5137c2be83ffec15f9846f4679618
+  commit=6328e41bfd8ce22c14f18fd15ee6de68d6f4c0c3
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
@@ -25,7 +25,7 @@
 [net]
   url=git@github.com:motis-project/net.git
   branch=master
-  commit=95196095c77bc8e9c579ae050281055033d8f3a5
+  commit=c49ad6f507d8500702ecae768ee400d1de9f77f4
 [openapi-cpp]
   url=git@github.com:triptix-tech/openapi-cpp.git
   branch=master
@@ -58,3 +58,11 @@
   url=git@github.com:motis-project/lz4.git
   branch=dev
   commit=ff69dbd1ad10852104257d5306874a07b76f0dbd
+[prometheus-cpp]
+  url=git@github.com:motis-project/prometheus-cpp.git
+  branch=master
+  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[opentelemetry-cpp]
+  url=git@github.com:motis-project/opentelemetry-cpp.git
+  branch=main
+  commit=638d55a1d559cc783fd3ef005d5f48e1cbbb5ea3

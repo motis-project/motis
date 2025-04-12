@@ -279,7 +279,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
              .merge_dupes_inter_src_ = t.merge_dupes_inter_src_,
              .max_footpath_length_ = t.max_footpath_length_},
             interval, assistance.get(), d.shapes_.get(), false))};
-        d.location_rtee_ =
+        d.location_rtree_ =
             std::make_unique<point_rtree<nigiri::location_idx_t>>(
                 create_location_rtree(*d.tt_));
 

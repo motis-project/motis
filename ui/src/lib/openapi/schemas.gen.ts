@@ -162,6 +162,14 @@ export const VertexTypeSchema = {
     enum: ['NORMAL', 'BIKESHARE', 'TRANSIT']
 } as const;
 
+export const PickupDropoffTypeSchema = {
+    type: 'string',
+    description: `- \`NORMAL\` - entry/exit is possible normally
+- \`NOT_ALLOWED\` - entry/exit is not allowed
+`,
+    enum: ['NORMAL', 'NOT_ALLOWED']
+} as const;
+
 export const PlaceSchema = {
     type: 'object',
     required: ['name', 'lat', 'lon', 'level'],
@@ -218,6 +226,18 @@ Can be missing if neither real-time updates nor the schedule timetable contains 
         },
         vertexType: {
             '$ref': '#/components/schemas/VertexType'
+        },
+        pickupType: {
+            description: 'Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.',
+            '$ref': '#/components/schemas/PickupDropoffType'
+        },
+        dropoffType: {
+            description: 'Type of dropoff. It could be disallowed due to schedule, skipped stops or cancellations.',
+            '$ref': '#/components/schemas/PickupDropoffType'
+        },
+        cancelled: {
+            description: 'Whether this stop is cancelled due to the realtime situation.',
+            type: 'boolean'
         }
     }
 } as const;
@@ -270,7 +290,7 @@ export const ReachableSchema = {
 export const StopTimeSchema = {
     description: 'departure or arrival event at a stop',
     type: 'object',
-    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'source'],
+    required: ['place', 'mode', 'realTime', 'headsign', 'agencyId', 'agencyName', 'agencyUrl', 'tripId', 'routeShortName', 'pickupDropoffType', 'cancelled', 'source'],
     properties: {
         place: {
             '$ref': '#/components/schemas/Place',
@@ -310,6 +330,14 @@ For non-transit legs, null
         },
         routeShortName: {
             type: 'string'
+        },
+        pickupDropoffType: {
+            description: 'Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations',
+            '$ref': '#/components/schemas/PickupDropoffType'
+        },
+        cancelled: {
+            description: 'Whether the departure/arrival is cancelled due to the realtime situation.',
+            type: 'boolean'
         },
         source: {
             description: 'Filename and line number where this trip is from',
@@ -408,7 +436,8 @@ export const EncodedPolylineSchema = {
         },
         length: {
             description: 'The number of points in the string',
-            type: 'integer'
+            type: 'integer',
+            minimum: 0
         }
     }
 } as const;
@@ -624,6 +653,10 @@ For non-transit legs, null
         },
         routeShortName: {
             type: 'string'
+        },
+        cancelled: {
+            description: 'Whether this trip is cancelled',
+            type: 'boolean'
         },
         source: {
             description: 'Filename and line number where this trip is from',

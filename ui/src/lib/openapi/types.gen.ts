@@ -143,6 +143,13 @@ export type Mode = 'WALK' | 'BIKE' | 'RENTAL' | 'CAR' | 'CAR_PARKING' | 'ODM' | 
  */
 export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
 
+/**
+ * - `NORMAL` - entry/exit is possible normally
+ * - `NOT_ALLOWED` - entry/exit is not allowed
+ *
+ */
+export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
+
 export type Place = {
     /**
      * name of the transit stop / PoI / address
@@ -191,6 +198,18 @@ export type Place = {
      */
     track?: string;
     vertexType?: VertexType;
+    /**
+     * Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
+     */
+    pickupType?: PickupDropoffType;
+    /**
+     * Type of dropoff. It could be disallowed due to schedule, skipped stops or cancellations.
+     */
+    dropoffType?: PickupDropoffType;
+    /**
+     * Whether this stop is cancelled due to the realtime situation.
+     */
+    cancelled?: boolean;
 };
 
 /**
@@ -262,6 +281,14 @@ export type StopTime = {
     routeTextColor?: string;
     tripId: string;
     routeShortName: string;
+    /**
+     * Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
+     */
+    pickupDropoffType: PickupDropoffType;
+    /**
+     * Whether the departure/arrival is cancelled due to the realtime situation.
+     */
+    cancelled: boolean;
     /**
      * Filename and line number where this trip is from
      */
@@ -497,6 +524,10 @@ export type Leg = {
     agencyId?: string;
     tripId?: string;
     routeShortName?: string;
+    /**
+     * Whether this trip is cancelled
+     */
+    cancelled?: boolean;
     /**
      * Filename and line number where this trip is from
      */
