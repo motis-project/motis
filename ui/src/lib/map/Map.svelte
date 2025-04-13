@@ -9,10 +9,10 @@
 		zoom = $bindable(),
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		bounds = $bindable(),
+		center = $bindable(),
 		style,
 		attribution,
 		transformRequest,
-		center,
 		children,
 		class: className
 	}: {
@@ -86,6 +86,7 @@
 				zoom = tmp.getZoom();
 				currentZoom = zoom;
 				bounds = tmp.getBounds();
+				center = tmp.getCenter();
 			});
 		} catch (e) {
 			console.log(e);

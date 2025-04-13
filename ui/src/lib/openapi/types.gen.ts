@@ -29,6 +29,10 @@ export type Area = {
      */
     matched: boolean;
     /**
+     * Set if the match is ambiguous regarding address (street [+ house number]).
+     */
+    unique?: boolean;
+    /**
      * Whether this area should be displayed as default area (area with admin level closest 7)
      */
     default?: boolean;
@@ -1258,6 +1262,18 @@ export type GeocodeData = {
          *
          */
         language?: string;
+        /**
+         * Optional. Used for biasing results towards the coordinate.
+         *
+         * Format: latitude,longitude in degrees
+         *
+         */
+        place?: string;
+        /**
+         * Optional. Used for biasing results towards the coordinate. Higher number = higher bias.
+         *
+         */
+        placeBias?: number;
         /**
          * the (potentially partially typed) address to resolve
          */

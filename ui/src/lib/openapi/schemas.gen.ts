@@ -30,6 +30,10 @@ of the area
             type: 'boolean',
             description: 'Whether this area was matched by the input text'
         },
+        unique: {
+            type: 'boolean',
+            description: 'Set if the match is ambiguous regarding address (street [+ house number]).'
+        },
         default: {
             type: 'boolean',
             description: 'Whether this area should be displayed as default area (area with admin level closest 7)'
