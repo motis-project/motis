@@ -1259,6 +1259,18 @@ export type GeocodeData = {
          */
         language?: string;
         /**
+         * Optional. Used for biasing results towards the coordinate.
+         *
+         * Format: latitude,longitude in degrees
+         *
+         */
+        place?: string;
+        /**
+         * Optional. Used for biasing results towards the coordinate.
+         *
+         */
+        placeBias?: number;
+        /**
          * the (potentially partially typed) address to resolve
          */
         text: string;

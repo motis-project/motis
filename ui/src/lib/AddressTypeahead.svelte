@@ -7,6 +7,7 @@
 	import { posToLocation, type Location } from './Location';
 	import { GEOCODER_PRECISION } from './Precision';
 	import { language } from './i18n/translation';
+	import maplibregl from 'maplibre-gl';
 
 	const COORD_LVL_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
 	const COORD_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
@@ -15,12 +16,14 @@
 		items = $bindable([]),
 		selected = $bindable(),
 		placeholder,
-		name
+		name,
+		place
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
 		name?: string;
+		place?: maplibregl.LngLatLike;
 	} = $props();
 
 	let inputValue = $state('');
@@ -65,8 +68,10 @@
 			return;
 		}
 
+		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
+		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
 		const { data: matches, error } = await geocode({
-			query: { text: inputValue, language }
+			query: { ...biasPlace, text: inputValue, language }
 		});
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);

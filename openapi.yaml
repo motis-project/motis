@@ -904,10 +904,10 @@ paths:
           in: query
           required: false
           description: |
-            Optional. Used for biasing results towards the coordinate.
+            Optional. Used for biasing results towards the coordinate. Higher number = higher bias.
           schema:
             type: number
-            default: 15
+            default: 1
 
       responses:
         200:
