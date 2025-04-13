@@ -40,7 +40,18 @@
 			if (area == match.name) {
 				area = match.areas[0]!.name;
 			}
-			return area;
+
+			const areas = new Set<number>();
+			match.areas.forEach((a, i) => {
+				if (a.matched || a.unique || a.default) {
+					areas.add(i);
+				}
+			});
+
+			const sorted = Array.from(areas);
+			sorted.sort((a, b) => b - a);
+
+			return sorted.map((a) => match.areas[a].name).join(', ');
 		}
 		return '';
 	};

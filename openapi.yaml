@@ -1266,6 +1266,11 @@ components:
         matched:
           type: boolean
           description: Whether this area was matched by the input text
+        unique:
+          type: boolean
+          description: |
+            Set for the first area after the `default` area that distinguishes areas
+            if the match is ambiguous regarding (`default` area + place name / street [+ house number]).
         default:
           type: boolean
           description: Whether this area should be displayed as default area (area with admin level closest 7)
