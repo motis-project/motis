@@ -9,7 +9,7 @@
 	import { posToLocation, type Location } from '$lib/Location';
 	import { t } from '$lib/i18n/translation';
 	import AdvancedOptions from './AdvancedOptions.svelte';
-	import maplibregl from 'maplibregl';
+	import maplibregl from 'maplibre-gl';
 
 	let {
 		geocodingBiasPlace,
