@@ -6,6 +6,7 @@
 #include <optional>
 #include <set>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include "cista/hashing.h"
