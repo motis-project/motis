@@ -140,7 +140,7 @@ struct config {
 
   std::optional<elevators> const& get_elevators() const;
 
-  std::variant<bool, std::optional<elevators>> elevators_{};
+  std::variant<bool, std::optional<elevators>> elevators_{false};
 
   bool street_routing_{false};
   bool osr_footpath_{false};
