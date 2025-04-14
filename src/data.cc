@@ -9,7 +9,6 @@
 #include "utl/verify.h"
 
 #include "adr/adr.h"
-#include "adr/area_database.h"
 #include "adr/cache.h"
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
@@ -131,20 +130,21 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto elevators = std::async(std::launch::async, [&]() {
-    if (c.elevators_) {
+    if (c.has_elevators()) {
       street_routing.wait();
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
 
-      if (c.elevators_->init_) {
+      if (c.get_elevators()->init_) {
         tt.wait();
         auto new_rtt = std::make_unique<n::rt_timetable>(
             n::rt::create_rt_timetable(*tt_, rt_->rtt_->base_day_));
-        rt_->e_ = update_elevators(c, *this,
-                                   cista::mmap{c.elevators_->init_->c_str(),
-                                               cista::mmap::protection::READ}
-                                       .view(),
-                                   *new_rtt);
+        rt_->e_ =
+            update_elevators(c, *this,
+                             cista::mmap{c.get_elevators()->init_->c_str(),
+                                         cista::mmap::protection::READ}
+                                 .view(),
+                             *new_rtt);
         rt_->rtt_ = std::move(new_rtt);
       }
     }
@@ -238,8 +238,6 @@ void data::load_railviz() {
 void data::load_geocoder() {
   t_ = adr::read(path_ / "adr" /
                  (config_.timetable_.has_value() ? "t_ext.bin" : "t.bin"));
-  area_db_ = std::make_unique<adr::area_database>(
-      path_ / "adr", cista::mmap::protection::READ);
   tc_ = std::make_unique<adr::cache>(t_->strings_.size(), 100U);
 }
 

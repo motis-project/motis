@@ -104,15 +104,13 @@ void config::verify() const {
   utl::verify(
       !osr_footpath_ || (street_routing_ && timetable_),
       "feature OSR_FOOTPATH requires features STREET_ROUTING and TIMETABLE");
-  utl::verify(
-      !elevators_ || (street_routing_ && timetable_),
-      "feature ELEVATORS requires fasta.json and features STREET_ROUTING and "
-      "TIMETABLE");
+  utl::verify(!has_elevators() || (street_routing_ && timetable_),
+              "feature ELEVATORS requires STREET_ROUTING and TIMETABLE");
   utl::verify(!has_gbfs_feeds() || street_routing_,
               "feature GBFS requires feature STREET_ROUTING");
   utl::verify(!has_odm() || (street_routing_ && timetable_),
               "feature ODM requires feature STREET_ROUTING");
-  utl::verify(!elevators_ || osr_footpath_,
+  utl::verify(!has_elevators() || osr_footpath_,
               "feature ELEVATORS requires feature OSR_FOOTPATHS");
 
   if (timetable_) {
@@ -161,7 +159,7 @@ void config::verify_input_files_exist() const {
 
 bool config::requires_rt_timetable_updates() const {
   return timetable_.has_value() &&
-         ((elevators_.has_value() && elevators_->url_.has_value()) ||
+         ((has_elevators() && get_elevators()->url_.has_value()) ||
           utl::any_of(timetable_->datasets_, [](auto&& d) {
             return d.second.rt_.has_value() && !d.second.rt_->empty();
           }));
@@ -172,5 +170,22 @@ bool config::has_gbfs_feeds() const {
 }
 
 bool config::has_odm() const { return odm_.has_value(); }
+
+std::optional<config::elevators> const& config::get_elevators() const {
+  utl::verify(has_elevators(),
+              "config::get_elevators() requires config::has_elevators()");
+  return std::get<std::optional<elevators>>(elevators_);
+}
+
+bool config::has_elevators() const {
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<elevators> const& x) { return x.has_value(); },
+          [](bool const x) {
+            utl::verify(!x, "elevators=true is not supported");
+            return x;
+          }},
+      elevators_);
+}
 
 }  // namespace motis

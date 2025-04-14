@@ -66,17 +66,15 @@ struct data {
 
   auto cista_members() {
     // !!! Remember to add all new members !!!
-    return std::tie(config_, t_, area_db_, r_, tc_, w_, pl_, l_, elevations_,
-                    tt_, tags_, location_rtree_, elevator_nodes_, shapes_,
-                    railviz_static_, matches_, rt_, gbfs_, odm_bounds_,
-                    metrics_);
+    return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
+                    location_rtree_, elevator_nodes_, shapes_, railviz_static_,
+                    matches_, rt_, gbfs_, odm_bounds_, metrics_);
   }
 
   std::filesystem::path path_;
   config config_;
 
   cista::wrapped<adr::typeahead> t_;
-  ptr<adr::area_database> area_db_;
   ptr<adr::reverse> r_;
   ptr<adr::cache> tc_;
   ptr<osr::ways> w_;
