@@ -623,37 +623,6 @@ TEST(motis, routing) {
 ])",
           direct_to_str(plan_response));
     }
-    // Direct routing, arriveBy=false, temporary unreachable
-    {
-      auto const plan_response = routing(
-          "?fromPlace=50.10411515,8.658776549999999"
-          "&toPlace=50.106420,8.660708,-3"
-          "&time=2019-05-01T01:29Z"
-          "&arriveBy=false"
-          "&preTransitModes=WALK"
-          "&timetableView=false"
-          "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // Should match places closely
-          "&useRoutedTransfers=true");
-
-      // FIXME Elevator will be out of service when arrived
-      // EXPECT_EQ("", direct_to_str(plan_response));
-    }
-    // Direct routing, arriveBy=false, temporary unreachable
-    {
-      auto const plan_response = routing(
-          "?fromPlace=50.10411515,8.658776549999999"
-          "&toPlace=50.106420,8.660708,-3"
-          "&time=2019-05-01T02:31Z"
-          "&arriveBy=true"
-          "&preTransitModes=WALK"
-          "&timetableView=false"
-          "&pedestrianProfile=WHEELCHAIR"
-          "&useRoutedTransfers=true");
-
-      // FIXME Elevator will be out of service during routing
-      // EXPECT_EQ("", direct_to_str(plan_response));
-    }
   }
 
   // Route with wheelchair.
