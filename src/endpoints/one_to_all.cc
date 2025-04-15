@@ -56,11 +56,11 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
       *query.time_.value_or(openapi::now()));
   auto const max_travel_time = n::duration_t{query.maxTravelTime_};
   auto const one = get_place(&tt_, &tags_, query.one_);
-  auto const one_modes = query.arriveBy_ ? deduplicate(query.postTransitModes_)
-                                         : deduplicate(query.preTransitModes_);
+  auto const one_modes = deduplicate(query.arriveBy_ ? query.postTransitModes_
+                                                     : query.preTransitModes_);
   auto const one_max_time = std::min(
-      query.arriveBy_ ? std::chrono::seconds{query.maxPostTransitTime_}
-                      : std::chrono::seconds{query.maxPreTransitTime_},
+      std::chrono::seconds{query.arriveBy_ ? query.maxPostTransitTime_
+                                           : query.maxPreTransitTime_},
       std::chrono::duration_cast<std::chrono::seconds>(max_travel_time));
   auto const one_dir =
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward;
