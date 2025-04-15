@@ -72,6 +72,7 @@ timetable:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
   assistance_times: assistance.csv
+elevators: false
 street_routing: true
 osr_footpath: true
 geocoding: true
@@ -106,6 +107,7 @@ timetable:
         - url: https://gtfs.ovapi.nl/nl/trainUpdates.pb
         - url: https://gtfs.ovapi.nl/nl/tripUpdates.pb
   assistance_times: assistance.csv
+elevators: false
 street_routing: true
 osr_footpath: true
 geocoding: true

@@ -51,13 +51,16 @@ rt::~rt() = default;
 std::ostream& operator<<(std::ostream& out, data const& d) {
   return out << "\nt=" << d.t_.get() << "\nr=" << d.r_ << "\ntc=" << d.tc_
              << "\nw=" << d.w_ << "\npl=" << d.pl_ << "\nl=" << d.l_
-             << "\ntt=" << d.tt_.get() << "\nlocation_rtee=" << d.location_rtee_
+             << "\ntt=" << d.tt_.get()
+             << "\nlocation_rtee=" << d.location_rtree_
              << "\nelevator_nodes=" << d.elevator_nodes_
              << "\nmatches=" << d.matches_ << "\nrt=" << d.rt_ << "\n";
 }
 
 data::data(std::filesystem::path p)
-    : path_{std::move(p)}, config_{config::read(path_ / "config.yml")} {}
+    : path_{std::move(p)},
+      config_{config::read(path_ / "config.yml")},
+      metrics_{std::make_unique<prometheus::Registry>()} {}
 
 data::data(std::filesystem::path p, config const& c)
     : path_{std::move(p)}, config_{c} {
@@ -127,20 +130,21 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto elevators = std::async(std::launch::async, [&]() {
-    if (c.elevators_) {
+    if (c.has_elevators()) {
       street_routing.wait();
       rt_->e_ = std::make_unique<motis::elevators>(
           *w_, *elevator_nodes_, vector_map<elevator_idx_t, elevator>{});
 
-      if (c.elevators_->init_) {
+      if (c.get_elevators()->init_) {
         tt.wait();
         auto new_rtt = std::make_unique<n::rt_timetable>(
             n::rt::create_rt_timetable(*tt_, rt_->rtt_->base_day_));
-        rt_->e_ = update_elevators(c, *this,
-                                   cista::mmap{c.elevators_->init_->c_str(),
-                                               cista::mmap::protection::READ}
-                                       .view(),
-                                   *new_rtt);
+        rt_->e_ =
+            update_elevators(c, *this,
+                             cista::mmap{c.get_elevators()->init_->c_str(),
+                                         cista::mmap::protection::READ}
+                                 .view(),
+                             *new_rtt);
         rt_->rtt_ = std::move(new_rtt);
       }
     }
@@ -210,7 +214,7 @@ void data::load_tt(fs::path const& p) {
   tags_ = tag_lookup::read(path_ / "tags.bin");
   tt_ = n::timetable::read(path_ / p);
   tt_->locations_.resolve_timezones();
-  location_rtee_ = std::make_unique<point_rtree<n::location_idx_t>>(
+  location_rtree_ = std::make_unique<point_rtree<n::location_idx_t>>(
       create_location_rtree(*tt_));
   init_rtt();
 }

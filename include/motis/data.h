@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "prometheus/registry.h"
+
 #include "cista/memory_holder.h"
 
 #include "date/date.h"
@@ -65,8 +67,8 @@ struct data {
   auto cista_members() {
     // !!! Remember to add all new members !!!
     return std::tie(config_, t_, r_, tc_, w_, pl_, l_, elevations_, tt_, tags_,
-                    location_rtee_, elevator_nodes_, shapes_, railviz_static_,
-                    matches_, rt_, gbfs_, odm_bounds_);
+                    location_rtree_, elevator_nodes_, shapes_, railviz_static_,
+                    matches_, rt_, gbfs_, odm_bounds_, metrics_);
   }
 
   std::filesystem::path path_;
@@ -81,7 +83,7 @@ struct data {
   ptr<osr::elevation_storage> elevations_;
   cista::wrapped<nigiri::timetable> tt_;
   cista::wrapped<tag_lookup> tags_;
-  ptr<point_rtree<nigiri::location_idx_t>> location_rtee_;
+  ptr<point_rtree<nigiri::location_idx_t>> location_rtree_;
   ptr<hash_set<osr::node_idx_t>> elevator_nodes_;
   ptr<nigiri::shapes_storage> shapes_;
   ptr<railviz_static_index> railviz_static_;
@@ -90,6 +92,7 @@ struct data {
   std::shared_ptr<rt> rt_{std::make_shared<rt>()};
   std::shared_ptr<gbfs::gbfs_data> gbfs_{};
   ptr<odm::bounds> odm_bounds_;
+  ptr<prometheus::Registry> metrics_{std::make_unique<prometheus::Registry>()};
 };
 
 }  // namespace motis

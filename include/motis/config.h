@@ -6,6 +6,7 @@
 #include <optional>
 #include <set>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include "cista/hashing.h"
@@ -28,6 +29,7 @@ struct config {
   bool requires_rt_timetable_updates() const;
   bool has_gbfs_feeds() const;
   bool has_odm() const;
+  bool has_elevators() const;
 
   bool operator==(config const&) const = default;
 
@@ -136,7 +138,10 @@ struct config {
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };
-  std::optional<elevators> elevators_{};
+
+  std::optional<elevators> const& get_elevators() const;
+
+  std::variant<bool, std::optional<elevators>> elevators_{false};
 
   bool street_routing_{false};
   bool osr_footpath_{false};

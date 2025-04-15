@@ -42,27 +42,6 @@ api::geocode_response suggestions_to_response(
     std::vector<adr::suggestion> const& suggestions) {
   return utl::to_vec(suggestions, [&](a::suggestion const& s) {
     auto const areas = t.area_sets_[s.area_set_];
-
-    auto const zip_it = utl::find_if(
-        areas, [&](auto&& a) { return t.area_admin_level_[a] == 11; });
-    auto const zip =
-        zip_it == end(areas)
-            ? std::nullopt
-            : std::optional{std::string{
-                  t.strings_[t.area_names_[*zip_it][a::kDefaultLangIdx]]
-                      .view()}};
-
-    auto const city_it =
-        std::min_element(begin(areas), end(areas), [&](auto&& a, auto&& b) {
-          constexpr auto const kCloseTo = 8;
-          auto const x = to_idx(t.area_admin_level_[a]);
-          auto const y = to_idx(t.area_admin_level_[b]);
-          return (x > kCloseTo ? 10 : 1) * std::abs(x - kCloseTo) <
-                 (y > kCloseTo ? 10 : 1) * std::abs(y - kCloseTo);
-        });
-    auto const city_idx = static_cast<std::size_t>(
-        city_it == end(areas) ? -1 : std::distance(begin(areas), city_it));
-
     auto type = api::LocationTypeEnum{};
     auto street = std::optional<std::string>{};
     auto house_number = std::optional<std::string>{};
@@ -111,6 +90,10 @@ api::geocode_response suggestions_to_response(
                               static_cast<double>(token_pos[i].size_)});
     });
 
+    auto const is_matched = [&](std::size_t const i) {
+      return (((1U << i) & s.matched_areas_) != 0U);
+    };
+
     return api::Match{
         .type_ = type,
         .tokens_ = std::move(tokens),
@@ -121,14 +104,17 @@ api::geocode_response suggestions_to_response(
         .level_ = level,
         .street_ = std::move(street),
         .houseNumber_ = std::move(house_number),
-        .zip_ = std::move(zip),
+        .zip_ = s.zip_area_idx_.and_then([&](unsigned const zip_area_idx) {
+          return std::optional<std::string>{
+              t.strings_[t.area_names_[areas[zip_area_idx]][a::kDefaultLangIdx]]
+                  .view()};
+        }),
         .areas_ = utl::to_vec(
             utl::enumerate(areas),
             [&](auto&& el) {
               auto const [i, a] = el;
               auto const admin_lvl = t.area_admin_level_[a];
-              auto const is_matched = (((1U << i) & s.matched_areas_) != 0U);
-              auto const language = is_matched
+              auto const language = is_matched(i)
                                         ? s.matched_area_lang_[i]
                                         : get_area_lang_idx(t, lang_indices, a);
               auto const area_name =
@@ -140,8 +126,11 @@ api::geocode_response suggestions_to_response(
               return api::Area{
                   .name_ = std::string{area_name},
                   .adminLevel_ = static_cast<double>(to_idx(admin_lvl)),
-                  .matched_ = is_matched,
-                  .default_ = i == city_idx};
+                  .matched_ = is_matched(i),
+                  .unique_ = s.unique_area_idx_.has_value() &&
+                             *s.unique_area_idx_ == i,
+                  .default_ =
+                      s.city_area_idx_.has_value() && *s.city_area_idx_ == i};
             }),
         .score_ = s.score_};
   });

@@ -971,6 +971,7 @@ paths:
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
             type: string
+
         - name: type
           in: query
           required: false
@@ -981,6 +982,25 @@ paths:
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
+
+        - name: place
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate.
+            
+            Format: latitude,longitude in degrees
+          schema:
+            type: string
+
+        - name: placeBias
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate. Higher number = higher bias.
+          schema:
+            type: number
+            default: 1
 
       responses:
         200:
@@ -1339,6 +1359,11 @@ components:
         matched:
           type: boolean
           description: Whether this area was matched by the input text
+        unique:
+          type: boolean
+          description: |
+            Set for the first area after the `default` area that distinguishes areas
+            if the match is ambiguous regarding (`default` area + place name / street [+ house number]).
         default:
           type: boolean
           description: Whether this area should be displayed as default area (area with admin level closest 7)
