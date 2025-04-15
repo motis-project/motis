@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
 #include <chrono>
-// #include <ranges>
 #include <sstream>
 
 #include "boost/asio/co_spawn.hpp"
@@ -445,8 +444,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
-                                    // when using default matching distance
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -467,8 +465,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
-                                    // when using default matching distance
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -489,8 +486,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
-                                    // when using default matching distance
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -511,8 +507,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // FIXME Will use elevator to track 103/104
-                                    // when using default matching distance
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -534,24 +529,8 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
-
-      // // Reconstruction test: All walkings legs should have steps
-      // {
-      //   auto walk_legs =
-      //       plan_response.itineraries_ |
-      //       std::views::transform([](auto const& j) { return j.legs_; }) |
-      //       std::views::join | std::views::filter([](auto const& l) {
-      //         return l.mode_ == api::ModeEnum::WALK;
-      //       });
-      //   auto const leg_count = std::ranges::fold_left(
-      //       walk_legs, 0, [](auto s, auto&) { return ++s; });
-      //   auto const legs_with_steps = std::ranges::fold_left(
-      //       walk_legs, 0,
-      //       [](auto s, auto& l) { return l.steps_.has_value() ? ++s : s; });
-      //   EXPECT_EQ(leg_count, legs_with_steps);
-      // }
 
       EXPECT_EQ(
           R"(date=2019-05-01, start=01:34, end=02:40, duration=01:20, transfers=0, legs=[
@@ -571,7 +550,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
@@ -592,7 +571,7 @@ TEST(motis, routing) {
           "&preTransitModes=WALK"
           "&timetableView=false"
           "&pedestrianProfile=WHEELCHAIR"
-          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
+          "&maxMatchingDistance=8"  // Should match closely for wheelchair
           "&useRoutedTransfers=true");
 
       EXPECT_EQ(
