@@ -561,6 +561,27 @@ TEST(motis, routing) {
 ])",
           itineraries_to_str(plan_response));
     }
+    // Blocked near toPlace, arriveBy=false, temporary blocked / must wait
+    {
+      auto const plan_response = routing(
+          "?fromPlace=49.87336,8.62926"
+          "&toPlace=50.106420,8.660708,-3"
+          "&time=2019-05-01T01:30Z"
+          "&arriveBy=false"
+          "&preTransitModes=WALK"
+          "&timetableView=false"
+          "&pedestrianProfile=WHEELCHAIR"
+          "&maxMatchingDistance=8"  // Should match 'toPlace' closely
+          "&useRoutedTransfers=true");
+
+      EXPECT_EQ(
+          R"(date=2019-05-01, start=01:34, end=02:40, duration=01:10, transfers=0, legs=[
+    (from=- [track=-, scheduled_track=-, level=0], to=test_DA_10 [track=10, scheduled_track=10, level=-1], start=2019-05-01 01:34, mode="WALK", trip="-", end=2019-05-01 01:35),
+    (from=test_DA_10 [track=10, scheduled_track=10, level=-1], to=test_FFM_12 [track=12, scheduled_track=10, level=0], start=2019-05-01 01:35, mode="HIGHSPEED_RAIL", trip="ICE", end=2019-05-01 02:30),
+    (from=test_FFM_12 [track=12, scheduled_track=10, level=0], to=- [track=-, scheduled_track=-, level=-3], start=2019-05-01 02:30, mode="WALK", trip="-", end=2019-05-01 02:40)
+])",
+          itineraries_to_str(plan_response));
+    }
     // Blocked near toPlace, arriveBy=false, can pass after blocked
     {
       auto const plan_response = routing(
