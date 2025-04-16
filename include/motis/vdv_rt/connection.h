@@ -14,6 +14,8 @@ struct connection {
              nigiri::source_idx_t);
   connection(connection&&);
 
+  std::string make_fetch_req();
+
   config::timetable::dataset::vdv_rt const& cfg_;
   std::string client_status_path_;
   std::string data_ready_path_;

@@ -138,6 +138,10 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     executor,
                     [&con, timeout,
                      &rtt]() -> awaitable<n::rt::vdv::statistics> {
+                      try {
+                        auto const res = co_await http_POST(
+                            boost::urls::url{con.fetch_data_addr_}, );
+                      }
                       co_return con.upd_.get_stats();
                     },
                     asio::deferred);

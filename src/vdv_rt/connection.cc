@@ -1,5 +1,7 @@
 #include "motis/vdv_rt/connection.h"
 
+#include "motis/vdv_rt/xml.h"
+
 namespace motis::vdv_rt {
 
 connection::connection(config::timetable::dataset::vdv_rt const& cfg,
@@ -26,5 +28,15 @@ connection::connection(connection&& other)
       subscription_addr_{std::move(other.subscription_addr_)},
       fetch_data_addr_{std::move(other.fetch_data_addr_)},
       upd_{std::move(other.upd_)} {}
+
+std::string connection::make_fetch_req() {
+  auto doc = make_xml_doc();
+  auto fetch_data_node = doc.append_child("DatenAbrufenAnfrage");
+  fetch_data_node.append_attribute("Sender") = cfg_.client_name_.c_str();
+  fetch_data_node.append_attribute("Zst") = timestamp(now()).c_str();
+  auto all_datasets_node = fetch_data_node.append_child("DatensatzAlle");
+  all_datasets_node.append_child(pugi::node_pcdata).set_value("true");
+  return xml_to_str(doc);
+}
 
 }  // namespace motis::vdv_rt
