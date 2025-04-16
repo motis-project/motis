@@ -18,4 +18,10 @@ std::string xml_to_str(pugi::xml_document const& doc) {
   return ss.str();
 }
 
+pugi::xml_document parse(std::string const& s) {
+  auto doc = pugi::xml_document{};
+  doc.load_string(s.c_str());
+  return doc;
+}
+
 }  // namespace motis::vdv_rt

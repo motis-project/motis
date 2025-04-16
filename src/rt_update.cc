@@ -21,6 +21,7 @@
 #include "motis/railviz.h"
 #include "motis/tag_lookup.h"
 #include "motis/vdv_rt/connection.h"
+#include "motis/vdv_rt/xml.h"
 
 namespace n = nigiri;
 namespace asio = boost::asio;
@@ -99,7 +100,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                             *d.tt_, *rtt, src, tag, get_http_body(res), msg);
                       } catch (std::exception const& e) {
                         n::log(n::log_lvl::error, "motis.rt",
-                               "RT FETCH ERROR: tag={}, error={}", tag,
+                               "GTFS_RT FETCH ERROR: tag={}, error={}", tag,
                                e.what());
                         co_return n::rt::statistics{.parser_error_ = true,
                                                     .no_header_ = true};
@@ -122,11 +123,11 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                     std::rethrow_exception(ex);
                   }
                   n::log(n::log_lvl::info, "motis.rt",
-                         "rt update stats for tag={}, url={}: {}", tag, ep.url_,
-                         fmt::streamed(s));
+                         "gtfs_rt update stats for tag={}, url={}: {}", tag,
+                         ep.url_, fmt::streamed(s));
                 } catch (std::exception const& e) {
                   n::log(n::log_lvl::error, "motis.rt",
-                         "rt update failed: tag={}, url={}, error={}", tag,
+                         "gtfs_rt update failed: tag={}, url={}, error={}", tag,
                          ep.url_, e.what());
                 }
               }
@@ -136,11 +137,18 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               auto vdv_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& con) {
                 return boost::asio::co_spawn(
                     executor,
-                    [&con, timeout,
-                     &rtt]() -> awaitable<n::rt::vdv::statistics> {
+                    [&con, timeout, &rtt,
+                     &d]() -> awaitable<n::rt::vdv::statistics> {
                       try {
                         auto const res = co_await http_POST(
-                            boost::urls::url{con.fetch_data_addr_}, );
+                            boost::urls::url{con.fetch_data_addr_},
+                            vdv_rt::kHeaders, con.make_fetch_req(), timeout);
+                        con.upd_.update(*rtt,
+                                        vdv_rt::parse(get_http_body(res)));
+                      } catch (std::exception const& e) {
+                        n::log(n::log_lvl::error, "motis.rt",
+                               "VDV_RT FETCH ERROR: tag={}, error={}",
+                               d.tags_->get_tag(con.upd_.get_src()), e.what());
                       }
                       co_return con.upd_.get_stats();
                     },

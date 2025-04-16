@@ -8,6 +8,9 @@
 
 namespace motis::vdv_rt {
 
+auto const kHeaders = std::map<std::string, std::string>{
+    {"Content-Type", "text/xml"}, {"Accept", "text/xml"}};
+
 struct connection {
   connection(config::timetable::dataset::vdv_rt const&,
              nigiri::timetable const&,

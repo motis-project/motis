@@ -14,9 +14,6 @@
 
 namespace motis::vdv_rt {
 
-static auto const kHeaders = std::map<std::string, std::string>{
-    {"Content-Type", "text/xml"}, {"Accept", "text/xml"}};
-
 pugi::xml_node add_sub_req_node(pugi::xml_node& node,
                                 std::string const& sender) {
   auto sub_req_node = node.append_child("AboAnfrage");
