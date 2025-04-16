@@ -10,10 +10,12 @@
 #include "motis/data.h"
 #include "motis/http_req.h"
 #include "motis/vdv_rt/connection.h"
-#include "motis/vdv_rt/vdv_rt.h"
 #include "motis/vdv_rt/xml.h"
 
 namespace motis::vdv_rt {
+
+static auto const kHeaders = std::map<std::string, std::string>{
+    {"Content-Type", "text/xml"}, {"Accept", "text/xml"}};
 
 pugi::xml_node add_sub_req_node(pugi::xml_node& node,
                                 std::string const& sender) {
@@ -23,7 +25,7 @@ pugi::xml_node add_sub_req_node(pugi::xml_node& node,
   return sub_req_node;
 }
 
-std::string unsubscribe_body(vdv_rt const& vdv_rt) {
+std::string unsubscribe_body(connection const& vdv_rt) {
   auto doc = make_xml_doc();
   add_sub_req_node(doc, vdv_rt.cfg_.client_name_)
       .append_child("AboLoeschenAlle")
@@ -32,7 +34,7 @@ std::string unsubscribe_body(vdv_rt const& vdv_rt) {
   return xml_to_str(doc);
 }
 
-std::string subscribe_body(config const& c, vdv_rt const& vdv_rt) {
+std::string subscribe_body(config const& c, connection const& vdv_rt) {
   auto doc = make_xml_doc();
   auto sub_req_node = add_sub_req_node(doc, vdv_rt.cfg_.client_name_);
   auto sub_node = sub_req_node.append_child("AboAUS");
@@ -69,8 +71,8 @@ boost::asio::awaitable<void> unsubscribe(boost::asio::io_context& ioc,
               [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{vdv_rt.con_.subscription_addr_},
-                      kHeaders, unsubscribe_body(vdv_rt),
+                      boost::urls::url{vdv_rt.subscription_addr_}, kHeaders,
+                      unsubscribe_body(vdv_rt),
                       std::chrono::seconds{c.timetable_->http_timeout_});
                   if (res.result_int() != 200U) {
                     fmt::println("[vdv_rt] unsubscribe failed: {}",
@@ -102,11 +104,11 @@ boost::asio::awaitable<void> subscribe(boost::asio::io_context& ioc,
               [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{vdv_rt.con_.subscription_addr_},
-                      kHeaders, subscribe_body(c, vdv_rt),
+                      boost::urls::url{vdv_rt.subscription_addr_}, kHeaders,
+                      subscribe_body(c, vdv_rt),
                       std::chrono::seconds{c.timetable_->http_timeout_});
                   if (res.result_int() == 200U) {
-                    vdv_rt.con_.start_ = now();
+                    vdv_rt.start_ = now();
                   } else {
                     fmt::println("[vdv_rt] subscribe failed: {}",
                                  get_http_body(res));

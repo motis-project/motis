@@ -40,7 +40,6 @@
 #include "motis/vdv_rt/connection.h"
 #include "motis/vdv_rt/data_ready.h"
 #include "motis/vdv_rt/subscription.h"
-#include "motis/vdv_rt/vdv_rt.h"
 
 namespace fs = std::filesystem;
 namespace asio = boost::asio;
@@ -55,16 +54,9 @@ void GET(auto&& r, std::string target, From& from) {
 }
 
 template <typename T, typename From>
-void POST_JSON(auto&& r, std::string target, From& from) {
+void POST(auto&& r, std::string target, From& from) {
   if (auto const x = utl::init_from<T>(from); x.has_value()) {
     r.post(std::move(target), std::move(*x));
-  }
-}
-
-template <typename T, typename From>
-void POST_STR(auto&& r, std::string target, From& from) {
-  if (auto const x = utl::init_from<T>(from); x.has_value()) {
-    r.route("POST", std::move(target), std::move(*x));
   }
 }
 
@@ -81,11 +73,11 @@ int server(data d, config const& c, std::string_view const motis_version) {
                                       *c.server_->data_attribution_link_));
   }
 
-  POST_JSON<ep::matches>(qr, "/api/matches", d);
-  POST_JSON<ep::elevators>(qr, "/api/elevators", d);
-  POST_JSON<ep::osr_routing>(qr, "/api/route", d);
-  POST_JSON<ep::platforms>(qr, "/api/platforms", d);
-  POST_JSON<ep::graph>(qr, "/api/graph", d);
+  POST<ep::matches>(qr, "/api/matches", d);
+  POST<ep::elevators>(qr, "/api/elevators", d);
+  POST<ep::osr_routing>(qr, "/api/route", d);
+  POST<ep::platforms>(qr, "/api/platforms", d);
+  POST<ep::graph>(qr, "/api/graph", d);
   GET<ep::footpaths>(qr, "/api/debug/footpaths", d);
   GET<ep::levels>(qr, "/api/v1/map/levels", d);
   GET<ep::initial>(qr, "/api/v1/map/initial", d);
@@ -101,7 +93,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
 
   if (!c.requires_rt_timetable_updates()) {
     // Elevator updates are not compatible with RT-updates.
-    POST_JSON<ep::update_elevator>(qr, "/api/update_elevator", d);
+    POST<ep::update_elevator>(qr, "/api/update_elevator", d);
   }
 
   if (c.tiles_) {
@@ -110,9 +102,9 @@ int server(data d, config const& c, std::string_view const motis_version) {
   }
 
   if (d.vdv_rt_ != nullptr) {
-    for (auto const& vdv_rt : *d.vdv_rt_) {
-      POST_STR<vdv_rt::client_status>(qr, vdv_rt.con_.client_status_path_, d);
-      POST_STR<vdv_rt::data_ready>(qr, vdv_rt.con_.data_ready_path_, d);
+    for (auto const& con : *d.vdv_rt_) {
+      qr.route("POST", con.client_status_path_, vdv_rt::client_status{con});
+      qr.route("POST", con.data_ready_path_, vdv_rt::data_ready{});
     }
   }
 

@@ -4,15 +4,15 @@
 
 namespace motis::vdv_rt {
 
-sys_time now() { return std::chrono::system_clock::now(); }
+vdv_rt_time now() { return std::chrono::system_clock::now(); }
 
-std::string timestamp(const sys_time t) {
+std::string timestamp(const vdv_rt_time t) {
   return date::format("%FT%T",
                       std::chrono::time_point_cast<std::chrono::seconds>(t));
 }
 
-sys_time parse_timestamp(std::string const& str) {
-  sys_time parsed;
+vdv_rt_time parse_timestamp(std::string const& str) {
+  vdv_rt_time parsed;
   auto ss = std::stringstream{str};
   ss >> date::parse("%FT%T", parsed);
   return parsed;

@@ -1,6 +1,6 @@
 #include "motis/vdv_rt/client_status.h"
 
-#include "motis/vdv_rt/vdv_rt.h"
+#include "motis/vdv_rt/connection.h"
 #include "motis/vdv_rt/xml.h"
 
 namespace motis::vdv_rt {
@@ -15,7 +15,7 @@ std::string client_status::operator()(std::string_view) const {
 
   auto start_time_node = client_status_res_node.append_child("StartDienstZst");
   start_time_node.append_child(pugi::node_pcdata)
-      .set_value(timestamp(vdv_rt_.con_.start_).c_str());
+      .set_value(timestamp(vdv_rt_.start_).c_str());
 
   return xml_to_str(doc);
 }
