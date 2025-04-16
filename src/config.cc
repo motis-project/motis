@@ -92,6 +92,20 @@ config config::read(std::string const& s) {
   auto c =
       rfl::yaml::read<config, drop_trailing, rfl::DefaultIfMissing>(s).value();
   c.verify();
+  for (auto const& [_, d] : c.timetable_->datasets_) {
+    if (d.rt_) {
+      for (auto const& ep : *d.rt_) {
+        rfl::visit(
+            utl::overloaded{[](config::timetable::dataset::gtfs_rt const& g) {
+                              std::cout << "gtfs_rt: " << g.url_ << "\n";
+                            },
+                            [](config::timetable::dataset::vdv_rt const& v) {
+                              std::cout << "vdv_rt: " << v.server_url_ << "\n";
+                            }},
+            ep.variant());
+      }
+    }
+  }
   return c;
 }
 
@@ -119,14 +133,14 @@ void config::verify() const {
     for (auto const& [_, d] : timetable_->datasets_) {
       if (d.rt_.has_value()) {
         for (auto const& rt_entry : *d.rt_) {
-          auto const& url = std::visit(
+          auto const& url = rfl::visit(
               utl::overloaded{[](timetable::dataset::gtfs_rt const& gtfs) {
                                 return gtfs.url_;
                               },
                               [](timetable::dataset::vdv_rt const& vdv) {
                                 return vdv.server_url_;
                               }},
-              rt_entry);
+              rt_entry.variant());
           try {
             boost::urls::url{url};
           } catch (std::exception const& e) {

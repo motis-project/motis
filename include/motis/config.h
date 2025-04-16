@@ -10,6 +10,8 @@
 
 #include "cista/hashing.h"
 
+#include "rfl/TaggedUnion.hpp"
+
 #include "utl/overloaded.h"
 #include "utl/verify.h"
 
@@ -72,9 +74,9 @@ struct config {
           return cista::build_hash(client_name_, server_name_, server_url_,
                                    hysteresis_);
         }
-        std::string client_name_{};
-        std::string server_name_{};
-        std::string server_url_{};
+        std::string client_name_;
+        std::string server_name_;
+        std::string server_url_;
         unsigned hysteresis_{30U};
       };
 
@@ -83,7 +85,8 @@ struct config {
       std::string path_;
       bool default_bikes_allowed_{false};
       std::optional<std::map<std::string, bool>> clasz_bikes_allowed_{};
-      std::optional<std::vector<std::variant<gtfs_rt, vdv_rt>>> rt_{};
+      std::optional<std::vector<rfl::TaggedUnion<"rt_mode", gtfs_rt, vdv_rt>>>
+          rt_{};
       std::optional<std::string> default_timezone_{};
     };
 

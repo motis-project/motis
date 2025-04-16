@@ -7,6 +7,8 @@
 #include "boost/asio/steady_timer.hpp"
 #include "boost/beast/core/buffers_to_string.hpp"
 
+#include "rfl/visit.hpp"
+
 #include "utl/timer.h"
 
 #include "nigiri/rt/create_rt_timetable.h"
@@ -74,13 +76,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
               if (dataset.rt_.has_value()) {
                 auto const src = d.tags_->get_src(tag);
                 for (auto const& ep : *dataset.rt_) {
-                  std::visit(
+                  rfl::visit(
                       utl::overloaded{
                           [&](config::timetable::dataset::gtfs_rt const&
                                   gtfs_ep) {
                             gtfs_endpoints.emplace_back(gtfs_ep, src, tag);
-                          }},
-                      ep);
+                          },
+                          [&](config::timetable::dataset::vdv_rt const&) {}},
+                      ep.variant());
                 }
               }
             }
