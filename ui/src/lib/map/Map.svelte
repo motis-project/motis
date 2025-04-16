@@ -82,12 +82,14 @@
 				currentZoom = zoom;
 			});
 
-			tmp.on('moveend', () => untrack(async () => {
-				zoom = tmp.getZoom();
-				currentZoom = zoom;
-				bounds = tmp.getBounds();
-				center = tmp.getCenter();
-			}));
+			tmp.on('moveend', () =>
+				untrack(async () => {
+					zoom = tmp.getZoom();
+					currentZoom = zoom;
+					bounds = tmp.getBounds();
+					center = tmp.getCenter();
+				})
+			);
 		} catch (e) {
 			console.log(e);
 		}
