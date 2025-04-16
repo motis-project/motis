@@ -82,7 +82,16 @@
 				currentZoom = zoom;
 			});
 
-			tmp.on('moveend', async () => {
+			// Same as for 'zoomend'
+			tmp.on('dragend', async () => {
+				zoom = tmp.getZoom();
+				currentZoom = zoom;
+				bounds = tmp.getBounds();
+				center = tmp.getCenter();
+			});
+
+			// Same as for 'dragend'
+			tmp.on('zoomend', async () => {
 				zoom = tmp.getZoom();
 				currentZoom = zoom;
 				bounds = tmp.getBounds();
