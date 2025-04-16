@@ -67,7 +67,7 @@ int server(data d, config const& c, std::string_view const motis_version) {
   qr.add_header("Server", fmt::format("MOTIS {}", motis_version));
   if (server_config.data_attribution_link_) {
     qr.add_header("Link", fmt::format("<{}>; rel=\"license\"",
-                                      server_config.data_attribution_link_));
+                                      *server_config.data_attribution_link_));
   }
 
   POST<ep::matches>(qr, "/api/matches", d);
