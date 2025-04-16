@@ -66,20 +66,26 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             // Schedule updates for each real-time endpoint.
             auto const timeout =
                 std::chrono::seconds{c.timetable_->http_timeout_};
-            auto endpoints =
+            auto gtfs_endpoints =
                 std::vector<std::tuple<config::timetable::dataset::gtfs_rt,
                                        n::source_idx_t, std::string>>{};
             for (auto const& [tag, dataset] : c.timetable_->datasets_) {
               if (dataset.rt_.has_value()) {
                 auto const src = d.tags_->get_src(tag);
                 for (auto const& ep : *dataset.rt_) {
-                  endpoints.emplace_back(ep, src, tag);
+                  std::visit(
+                      utl::overloaded{
+                          [&](config::timetable::dataset::gtfs_rt const&
+                                  gtfs_ep) {
+                            gtfs_endpoints.emplace_back(gtfs_ep, src, tag);
+                          }},
+                      ep);
                 }
               }
             }
 
-            if (!endpoints.empty()) {
-              auto awaitables = utl::to_vec(endpoints, [&](auto&& x) {
+            if (!gtfs_endpoints.empty()) {
+              auto awaitables = utl::to_vec(gtfs_endpoints, [&](auto&& x) {
                 auto const& [ep, src, tag] = x;
                 return boost::asio::co_spawn(
                     executor,
@@ -110,7 +116,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
               //  Print statistics.
               for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
-                auto const [ep, src, tag] = endpoints[i];
+                auto const [ep, src, tag] = gtfs_endpoints[i];
                 try {
                   if (ex) {
                     std::rethrow_exception(ex);
@@ -122,6 +128,43 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   n::log(n::log_lvl::error, "motis.rt",
                          "rt update failed: tag={}, url={}, error={}", tag,
                          ep.url_, e.what());
+                }
+              }
+            }
+
+            if (d.vdv_rt_ != nullptr && !d.vdv_rt_->empty()) {
+              auto vdv_awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& con) {
+                return boost::asio::co_spawn(
+                    executor,
+                    [&con, timeout,
+                     &rtt]() -> awaitable<n::rt::vdv::statistics> {
+                      co_return con.upd_.get_stats();
+                    },
+                    asio::deferred);
+              });
+
+              auto [idx, exceptions, stats] =
+                  co_await asio::experimental::make_parallel_group(
+                      vdv_awaitables)
+                      .async_wait(asio::experimental::wait_for_all(),
+                                  asio::use_awaitable);
+
+              for (auto const [i, ex, s] : utl::zip(idx, exceptions, stats)) {
+                auto const& con = (*d.vdv_rt_)[i];
+                try {
+                  if (ex) {
+                    std::rethrow_exception(ex);
+                  }
+                  n::log(n::log_lvl::info, "motis.rt",
+                         "vdv_rt update stats for tag={}, server_url={}: {}",
+                         d.tags_->get_tag(con.upd_.get_src()),
+                         con.cfg_.server_url_, fmt::streamed(s));
+
+                } catch (std::exception const& e) {
+                  n::log(n::log_lvl::error, "motis.rt",
+                         "vdv_rt update failed: tag={}, url={}, error={}",
+                         d.tags_->get_tag(con.upd_.get_src()),
+                         con.cfg_.server_url_, e.what());
                 }
               }
             }

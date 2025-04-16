@@ -65,14 +65,14 @@ boost::asio::awaitable<void> unsubscribe(boost::asio::io_context& ioc,
       ioc,
       [&c, &d]() -> boost::asio::awaitable<void> {
         auto executor = co_await boost::asio::this_coro::executor;
-        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& vdv_rt) {
+        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& con) {
           return boost::asio::co_spawn(
               executor,
-              [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
+              [&c, &con]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{vdv_rt.subscription_addr_}, kHeaders,
-                      unsubscribe_body(vdv_rt),
+                      boost::urls::url{con.subscription_addr_}, kHeaders,
+                      unsubscribe_body(con),
                       std::chrono::seconds{c.timetable_->http_timeout_});
                   if (res.result_int() != 200U) {
                     fmt::println("[vdv_rt] unsubscribe failed: {}",
@@ -98,17 +98,17 @@ boost::asio::awaitable<void> subscribe(boost::asio::io_context& ioc,
       ioc,
       [&c, &d]() -> boost::asio::awaitable<void> {
         auto executor = co_await boost::asio::this_coro::executor;
-        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& vdv_rt) {
+        auto awaitables = utl::to_vec(*d.vdv_rt_, [&](auto&& con) {
           return boost::asio::co_spawn(
               executor,
-              [&c, &vdv_rt]() -> boost::asio::awaitable<void> {
+              [&c, &con]() -> boost::asio::awaitable<void> {
                 try {
                   auto const res = co_await http_POST(
-                      boost::urls::url{vdv_rt.subscription_addr_}, kHeaders,
-                      subscribe_body(c, vdv_rt),
+                      boost::urls::url{con.subscription_addr_}, kHeaders,
+                      subscribe_body(c, con),
                       std::chrono::seconds{c.timetable_->http_timeout_});
                   if (res.result_int() == 200U) {
-                    vdv_rt.start_ = now();
+                    con.start_ = now();
                   } else {
                     fmt::println("[vdv_rt] subscribe failed: {}",
                                  get_http_body(res));

@@ -21,8 +21,7 @@ struct connection {
   std::string subscription_addr_;
   std::string fetch_data_addr_;
   nigiri::rt::vdv::updater upd_;
-  std::atomic<vdv_rt_time> start_{std::chrono::round<std::chrono::seconds>(
-      std::chrono::system_clock::now())};
+  std::atomic<vdv_rt_time> start_{now()};
 };
 
 }  // namespace motis::vdv_rt
