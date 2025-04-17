@@ -180,6 +180,13 @@
 						{#if pred.distance}
 							({Math.round(pred.distance)} m)
 						{/if}
+						{#if l.alerts}
+							{#each l.alerts as alert}
+								<div class="text-destructive text-sm font-bold">
+									{alert.headerText}
+								</div>
+							{/each}
+						{/if}
 						{#if prevTransitLeg?.fareTransferIndex != undefined && itinerary.fareTransfers && itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct}
 							{@const transferProduct =
 								itinerary.fareTransfers[prevTransitLeg.fareTransferIndex].transferProduct!}
