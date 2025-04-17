@@ -312,11 +312,15 @@ api::Itinerary route(osr::ways const& w,
     }
   };
 
+  auto const transport_mode =
+      profile == osr::search_profile::kBikeSharing
+          ? static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref))
+          : static_cast<transport_mode_t>(profile);
+
   auto const path = [&]() {
     auto p = get_path(
         w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-        get_location(from), get_location(to),
-        static_cast<transport_mode_t>(gbfs_rd.get_transport_mode(prod_ref)),
+        get_location(from), get_location(to), transport_mode,
         to_profile(mode, wheelchair), start_time, max_matching_distance,
         static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
