@@ -242,7 +242,7 @@
 	let overlay = $state.raw<MapboxOverlay>();
 	const updateRailviz = async () => {
 		await updateRailvizLayer();
-		clearTimeout(timer);  // Ensure previous timer is cleared
+		clearTimeout(timer); // Ensure previous timer is cleared
 		timer = setTimeout(() => {
 			console.log('updateRailviz: timer');
 			updateRailviz();
