@@ -8,8 +8,8 @@
   commit=e03a1ff0a84d3f638bf4bff7357d19e542640288
 [osr]
   url=git@github.com:motis-project/osr.git
-  branch=master
-  commit=6328e41bfd8ce22c14f18fd15ee6de68d6f4c0c3
+  branch=car_sharing
+  commit=54fc08b7f095496dba113d8a3280851a8ba554e0
 [utl]
   url=git@github.com:motis-project/utl.git
   branch=master
