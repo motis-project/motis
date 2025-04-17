@@ -263,12 +263,13 @@ void data::load_tiles() {
 void data::load_rt(std::string_view tag, config::timetable::dataset const& d) {
   vdv_rt_ = std::make_unique<std::vector<vdv_rt::connection>>();
   for (auto const& rt : *d.rt_) {
-    rfl::visit(utl::overloaded{
-                   [](config::timetable::dataset::gtfs_rt const&) {},
-                   [&](config::timetable::dataset::vdv_rt const& vdv_cfg) {
-                     vdv_rt_->emplace_back(vdv_cfg, *tt_, tags_->get_src(tag));
-                   }},
-               rt.variant());
+    auto const rt_actual = rt();
+    std::visit(utl::overloaded{[](rt_entry::gtfs_rt const&) {},
+                               [&](rt_entry::vdv_rt const& vdv_cfg) {
+                                 vdv_rt_->emplace_back(vdv_cfg, *tt_,
+                                                       tags_->get_src(tag));
+                               }},
+               rt_actual);
   }
 }
 

@@ -53,4 +53,6 @@ struct elevator {
 
 using rtt_ptr_t = std::shared_ptr<nigiri::rt_timetable>;
 
+using headers_t = std::map<std::string, std::string>;
+
 }  // namespace motis

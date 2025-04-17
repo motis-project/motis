@@ -69,21 +69,18 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             // Schedule updates for each real-time endpoint.
             auto const timeout =
                 std::chrono::seconds{c.timetable_->http_timeout_};
-            auto gtfs_endpoints =
-                std::vector<std::tuple<config::timetable::dataset::gtfs_rt,
-                                       n::source_idx_t, std::string>>{};
+            auto gtfs_endpoints = std::vector<
+                std::tuple<rt_entry::gtfs_rt, n::source_idx_t, std::string>>{};
             for (auto const& [tag, dataset] : c.timetable_->datasets_) {
               if (dataset.rt_.has_value()) {
                 auto const src = d.tags_->get_src(tag);
-                for (auto const& ep : *dataset.rt_) {
-                  rfl::visit(
-                      utl::overloaded{
-                          [&](config::timetable::dataset::gtfs_rt const&
-                                  gtfs_ep) {
-                            gtfs_endpoints.emplace_back(gtfs_ep, src, tag);
-                          },
-                          [&](config::timetable::dataset::vdv_rt const&) {}},
-                      ep.variant());
+                for (auto const& rt_entry : *dataset.rt_) {
+                  std::visit(utl::overloaded{[&](rt_entry::gtfs_rt&& g) {
+                                               gtfs_endpoints.emplace_back(
+                                                   g, src, tag);
+                                             },
+                                             [&](rt_entry::vdv_rt const&) {}},
+                             rt_entry());
                 }
               }
             }
@@ -98,7 +95,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                       try {
                         auto const res = co_await http_GET(
                             boost::urls::url{ep.url_},
-                            ep.headers_.value_or(headers_t{}), timeout);
+                            ep.headers_ ? *ep.headers_ : headers_t{}, timeout);
                         co_return n::rt::gtfsrt_update_buf(
                             *d.tt_, *rtt, src, tag, get_http_body(res), msg);
                       } catch (std::exception const& e) {
@@ -172,14 +169,14 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                   }
                   n::log(n::log_lvl::info, "motis.rt",
                          "vdv_rt update stats for tag={}, server_url={}: {}",
-                         d.tags_->get_tag(con.upd_.get_src()),
-                         con.cfg_.server_url_, fmt::streamed(s));
+                         d.tags_->get_tag(con.upd_.get_src()), con.cfg_.url_,
+                         fmt::streamed(s));
 
                 } catch (std::exception const& e) {
                   n::log(n::log_lvl::error, "motis.rt",
                          "vdv_rt update failed: tag={}, url={}, error={}",
-                         d.tags_->get_tag(con.upd_.get_src()),
-                         con.cfg_.server_url_, e.what());
+                         d.tags_->get_tag(con.upd_.get_src()), con.cfg_.url_,
+                         e.what());
                 }
               }
             }
