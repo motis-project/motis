@@ -11,9 +11,26 @@
 #include "cista/hashing.h"
 
 #include "rfl/TaggedUnion.hpp"
+#include "rfl/visit.hpp"
 
 #include "utl/overloaded.h"
 #include "utl/verify.h"
+
+namespace cista {
+
+template <rfl::internal::StringLiteral _discriminator, class... Ts>
+struct hashing<rfl::TaggedUnion<_discriminator, Ts...>> {
+  constexpr hash_t operator()(rfl::TaggedUnion<_discriminator, Ts...> const& el,
+                              hash_t const seed = BASE_HASH) {
+    hash_t h = hash_combine(seed, el.variant().index());
+    rfl::visit(
+        [&](auto&& arg) { h = hashing<std::decay_t<decltype(arg)>>{}(arg, h); },
+        el);
+    return h;
+  }
+};
+
+}  // namespace cista
 
 namespace motis {
 
