@@ -171,16 +171,21 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
   auto d = data{data_path};
 
-  auto osr = task{"osr",
-                  [&]() { return c.street_routing_; },
-                  [&]() { return true; },
-                  [&]() {
-                    osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
-                                 fs::path{});
-                    d.load_osr();
-                  },
-                  [&]() { d.load_osr(); },
-                  {osm_hash, osr_version()}};
+  auto osr =
+      task{"osr",
+           [&]() { return c.use_street_routing(); },
+           [&]() { return true; },
+           [&]() {
+             osr::extract(true, fs::path{*c.osm_}, data_path / "osr",
+                          c.get_street_routing()
+                              .transform([](config::street_routing const& sr) {
+                                return sr.height_data_dir_.value_or(fs::path{});
+                              })
+                              .value_or(fs::path{}));
+             d.load_osr();
+           },
+           [&]() { d.load_osr(); },
+           {osm_hash, osr_version()}};
 
   auto adr =
       task{"adr",
@@ -399,7 +404,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
 
   auto matches =
       task{"matches",
-           [&]() { return c.timetable_ && c.street_routing_; },
+           [&]() { return c.timetable_ && c.use_street_routing(); },
            [&]() { return d.tt_ && d.w_ && d.pl_; },
            [&]() {
              d.matches_ = cista::wrapped<platform_matches_t>{

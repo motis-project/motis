@@ -84,8 +84,8 @@ data::data(std::filesystem::path p, config const& c)
 
   verify_version(c.timetable_.has_value(), "tt", n_version());
   verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
-  verify_version(c.street_routing_, "osr", osr_version());
-  verify_version(c.street_routing_ && c.timetable_, "matches",
+  verify_version(c.use_street_routing(), "osr", osr_version());
+  verify_version(c.use_street_routing() && c.timetable_, "matches",
                  matches_version());
   verify_version(c.tiles_.has_value(), "tiles", tiles_version());
   verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
@@ -118,13 +118,13 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto street_routing = std::async(std::launch::async, [&]() {
-    if (c.street_routing_) {
+    if (c.use_street_routing()) {
       load_osr();
     }
   });
 
   auto matches = std::async(std::launch::async, [&]() {
-    if (c.street_routing_ && c.timetable_) {
+    if (c.use_street_routing() && c.timetable_) {
       load_matches();
     }
   });
