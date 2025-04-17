@@ -23,6 +23,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/data.h"
 #include "motis/gbfs/mode.h"
+#include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/journey_to_response.h"
 #include "motis/max_distance.h"
@@ -180,7 +181,7 @@ std::vector<n::routing::offset> get_offsets(
                                r.pl_->get_level(*r.w_, (*r.matches_)[l])};
         });
 
-    if (profile == osr::search_profile::kBikeSharing) {
+    if (osr::is_rental_profile(profile)) {
       if (!gbfs_rd.has_data()) {
         return;
       }
@@ -210,10 +211,10 @@ std::vector<n::routing::offset> get_offsets(
           auto* prod_rd =
               gbfs_rd.get_products_routing_data(*provider, prod.idx_);
           auto const sharing = prod_rd->get_sharing_data(r.w_->n_nodes());
-          auto const paths =
-              osr::route(*r.w_, *r.l_, profile, pos, near_stop_locations,
-                         static_cast<osr::cost_t>(max.count()), dir,
-                         kMaxMatchingDistance, nullptr, &sharing);
+          auto const paths = osr::route(
+              *r.w_, *r.l_, gbfs::get_osr_profile(prod), pos,
+              near_stop_locations, static_cast<osr::cost_t>(max.count()), dir,
+              kMaxMatchingDistance, nullptr, &sharing);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -330,8 +331,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         m == api::ModeEnum::CAR_PARKING ||
         (!omit_walk && m == api::ModeEnum::WALK)) {
       auto itinerary =
-          route(*w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
-                std::nullopt, max_matching_distance, {}, cache, *blocked, max);
+          route(*w_, *l_, gbfs_rd, e, from, to, m, to_profile(m, wheelchair),
+                start_time, std::nullopt, max_matching_distance, {}, cache,
+                *blocked, max);
       if (itinerary.legs_.empty()) {
         continue;
       }
@@ -342,8 +344,10 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
       }
       itineraries.emplace_back(std::move(itinerary));
     } else if (m == api::ModeEnum::RENTAL && gbfs_rd.has_data()) {
+      // could be bike sharing or car sharing - car sharing has the higher max
+      // distance, so we use this here to be safe
       auto const max_dist =
-          get_max_distance(osr::search_profile::kBikeSharing, max);
+          get_max_distance(osr::search_profile::kCarSharing, max);
       auto providers = hash_set<gbfs_provider_idx_t>{};
       gbfs_rd.data_->provider_rtree_.in_radius(
           {from.lat_, from.lon_}, max_dist,
@@ -359,8 +363,9 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
+          auto const profile = gbfs::get_osr_profile(prod);
           auto itinerary =
-              route(*w_, *l_, gbfs_rd, e, from, to, m, wheelchair, start_time,
+              route(*w_, *l_, gbfs_rd, e, from, to, m, profile, start_time,
                     std::nullopt, max_matching_distance,
                     gbfs::gbfs_products_ref{provider->idx_, prod.idx_}, cache,
                     *blocked, max);
