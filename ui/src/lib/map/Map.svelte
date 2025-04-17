@@ -1,6 +1,6 @@
 <script lang="ts">
 	import maplibregl from 'maplibre-gl';
-	import { setContext, type Snippet } from 'svelte';
+	import { setContext, untrack, type Snippet } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
 
@@ -82,12 +82,14 @@
 				currentZoom = zoom;
 			});
 
-			tmp.on('moveend', async () => {
-				zoom = tmp.getZoom();
-				currentZoom = zoom;
-				bounds = tmp.getBounds();
-				center = tmp.getCenter();
-			});
+			tmp.on('moveend', () =>
+				untrack(async () => {
+					zoom = tmp.getZoom();
+					currentZoom = zoom;
+					bounds = tmp.getBounds();
+					center = tmp.getCenter();
+				})
+			);
 		} catch (e) {
 			console.log(e);
 		}
