@@ -92,6 +92,7 @@ api::Itinerary journey_to_response(
     elevators const* e,
     n::rt_timetable const* rtt,
     platform_matches_t const* matches,
+    osr::elevation_storage const* elevations,
     n::shapes_storage const* shapes,
     gbfs::gbfs_routing_data& gbfs_rd,
     api::PedestrianProfileEnum const pedestrian_profile,
@@ -314,9 +315,9 @@ api::Itinerary journey_to_response(
             [&](n::footpath) {
               append(
                   w && l
-                      ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
-                              pedestrian_profile, elevation_costs,
-                              j_leg.dep_time_, j_leg.arr_time_,
+                      ? route(*w, *l, gbfs_rd, e, elevations, from, to,
+                              api::ModeEnum::WALK, pedestrian_profile,
+                              elevation_costs, j_leg.dep_time_, j_leg.arr_time_,
                               timetable_max_matching_distance, {}, cache,
                               blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
@@ -328,7 +329,7 @@ api::Itinerary journey_to_response(
             },
             [&](n::routing::offset const x) {
               append(route(
-                  *w, *l, gbfs_rd, e, from, to,
+                  *w, *l, gbfs_rd, e, elevations, from, to,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? api::ModeEnum::RENTAL
                   : x.transport_mode_id_ == kOdmTransportModeId

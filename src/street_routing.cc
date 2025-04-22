@@ -23,6 +23,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                                   osr::lookup const& l,
                                   elevators const* e,
                                   osr::sharing_data const* sharing,
+                                  osr::elevation_storage const* elevations,
                                   osr::location const& from,
                                   osr::location const& to,
                                   transport_mode_t const transport_mode,
@@ -45,7 +46,7 @@ std::optional<osr::path> get_path(osr::ways const& w,
                 w, l, profile, from, to, max, osr::direction::kForward,
                 max_matching_distance,
                 s ? &set_blocked(e_nodes, e_states, blocked_mem) : nullptr,
-                sharing);
+                sharing, elevations);
   if (it == end(cache)) {
     cache.emplace(std::pair{key, path});
   }
@@ -277,6 +278,7 @@ api::Itinerary route(osr::ways const& w,
                      osr::lookup const& l,
                      gbfs::gbfs_routing_data& gbfs_rd,
                      elevators const* e,
+                     osr::elevation_storage const* elevations,
                      api::Place const& from,
                      api::Place const& to,
                      api::ModeEnum const mode,
@@ -321,9 +323,8 @@ api::Itinerary route(osr::ways const& w,
   auto const path = [&]() {
     auto p =
         get_path(w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-                 get_location(from), get_location(to), transport_mode,
-                 to_profile(mode, pedestrian_profile, elevation_costs),
-                 start_time, max_matching_distance,
+                 elevations, get_location(from), get_location(to),
+                 transport_mode, profile, start_time, max_matching_distance,
                  static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
     if (p.has_value() && profile == osr::search_profile::kBikeSharing) {

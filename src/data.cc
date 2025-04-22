@@ -13,6 +13,7 @@
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
+#include "osr/elevation_storage.h"
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/ways.h"
@@ -203,6 +204,7 @@ void data::load_osr() {
   w_ = std::make_unique<osr::ways>(osr_path, cista::mmap::protection::READ);
   l_ = std::make_unique<osr::lookup>(*w_, osr_path,
                                      cista::mmap::protection::READ);
+  elevations_ = osr::elevation_storage::try_open(osr_path);
   elevator_nodes_ =
       std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*w_));
   pl_ =

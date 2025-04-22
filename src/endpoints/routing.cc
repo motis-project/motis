@@ -330,8 +330,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
         m == api::ModeEnum::CAR_PARKING ||
         (!omit_walk && m == api::ModeEnum::WALK)) {
       auto itinerary =
-          route(*w_, *l_, gbfs_rd, e, from, to, m, pedestrian_profile,
-                elevation_costs, start_time, std::nullopt,
+          route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m,
+                pedestrian_profile, elevation_costs, start_time, std::nullopt,
                 max_matching_distance, {}, cache, *blocked, max);
       if (itinerary.legs_.empty()) {
         continue;
@@ -360,11 +360,12 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           if (!gbfs::products_match(prod, form_factors, propulsion_types)) {
             continue;
           }
-          auto itinerary = route(
-              *w_, *l_, gbfs_rd, e, from, to, m, pedestrian_profile,
-              elevation_costs, start_time, std::nullopt, max_matching_distance,
-              gbfs::gbfs_products_ref{provider->idx_, prod.idx_}, cache,
-              *blocked, max);
+          auto itinerary =
+              route(*w_, *l_, gbfs_rd, e, elevations_, from, to, m,
+                    pedestrian_profile, elevation_costs, start_time,
+                    std::nullopt, max_matching_distance,
+                    gbfs::gbfs_products_ref{provider->idx_, prod.idx_}, cache,
+                    *blocked, max);
           if (itinerary.legs_.empty()) {
             continue;
           }
@@ -662,10 +663,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
             *r.journeys_,
             [&, cache = street_routing_cache_t{}](auto&& j) mutable {
               return journey_to_response(
-                  w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, shapes_, gbfs_rd,
-                  query.pedestrianProfile_, query.elevationCosts_, j, start,
-                  dest, cache, *blocked, query.detailedTransfers_,
-                  query.withFares_,
+                  w_, l_, pl_, *tt_, *tags_, e, rtt, matches_, elevations_,
+                  shapes_, gbfs_rd, query.pedestrianProfile_,
+                  query.elevationCosts_, j, start, dest, cache, *blocked,
+                  query.detailedTransfers_, query.withFares_,
                   config_.timetable_
                       .and_then([](config::timetable const& x) {
                         return std::optional{x.max_matching_distance_};

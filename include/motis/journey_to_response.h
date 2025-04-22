@@ -7,6 +7,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/types.h"
 
+#include "osr/elevation_storage.h"
 #include "osr/location.h"
 #include "osr/routing/route.h"
 #include "osr/types.h"
@@ -34,6 +35,7 @@ api::Itinerary journey_to_response(osr::ways const*,
                                    elevators const* e,
                                    nigiri::rt_timetable const*,
                                    platform_matches_t const* matches,
+                                   osr::elevation_storage const*,
                                    nigiri::shapes_storage const*,
                                    gbfs::gbfs_routing_data&,
                                    api::PedestrianProfileEnum,

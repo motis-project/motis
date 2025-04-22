@@ -7,6 +7,7 @@
 
 #include "boost/thread/tss.hpp"
 
+#include "osr/elevation_storage.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/clasz_mask.h"
@@ -102,6 +103,7 @@ struct routing {
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;
+  osr::elevation_storage const* elevations_;
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;

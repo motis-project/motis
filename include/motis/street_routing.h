@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "osr/elevation_storage.h"
 #include "osr/location.h"
 #include "osr/routing/route.h"
 
@@ -29,6 +30,7 @@ api::Itinerary route(osr::ways const&,
                      osr::lookup const&,
                      gbfs::gbfs_routing_data&,
                      elevators const*,
+                     osr::elevation_storage const*,
                      api::Place const& from,
                      api::Place const& to,
                      api::ModeEnum,
