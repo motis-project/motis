@@ -140,6 +140,9 @@ void config::verify() const {
                         "VDV RT requires field: client_name");
             utl::verify(rt_entry.server_name_.has_value(),
                         "VDV RT requires field: server_name");
+            utl::verify(
+                timetable_->incremental_rt_update_,
+                "VDV RT requires setting: incremental_rt_update = true");
           }
         }
       }
