@@ -149,6 +149,7 @@ std::vector<n::routing::offset> get_offsets(
     routing const& r,
     osr::location const& pos,
     osr::direction const dir,
+    osr::elevation_storage const* elevations,
     std::vector<api::ModeEnum> const& modes,
     std::optional<std::vector<api::RentalFormFactorEnum>> const& form_factors,
     std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&
@@ -214,7 +215,7 @@ std::vector<n::routing::offset> get_offsets(
           auto const paths =
               osr::route(*r.w_, *r.l_, profile, pos, near_stop_locations,
                          static_cast<osr::cost_t>(max.count()), dir,
-                         kMaxMatchingDistance, nullptr, &sharing);
+                         kMaxMatchingDistance, nullptr, &sharing, elevations);
           ignore_walk = true;
           for (auto const [p, l] : utl::zip(paths, near_stops)) {
             if (p.has_value()) {
@@ -229,7 +230,7 @@ std::vector<n::routing::offset> get_offsets(
       auto const paths =
           osr::route(*r.w_, *r.l_, profile, pos, near_stop_locations,
                      static_cast<osr::cost_t>(max.count()), dir,
-                     max_matching_distance, nullptr, nullptr);
+                     max_matching_distance, nullptr, nullptr, elevations);
       for (auto const [p, l] : utl::zip(paths, near_stops)) {
         if (p.has_value()) {
           offsets.emplace_back(l, n::duration_t{p->cost_ / 60},
@@ -273,7 +274,7 @@ std::vector<n::routing::offset> routing::get_offsets(
       utl::overloaded{[&](tt_location const l) { return station_start(l.l_); },
                       [&](osr::location const& pos) {
                         return ::motis::ep::get_offsets(
-                            *this, pos, dir, modes, form_factors,
+                            *this, pos, dir, elevations_, modes, form_factors,
                             propulsion_types, rental_providers,
                             pedestrian_profile, elevation_costs, max,
                             max_matching_distance, gbfs_rd);
