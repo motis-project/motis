@@ -79,7 +79,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                                                gtfs_endpoints.emplace_back(
                                                    g, src, tag);
                                              },
-                                             [&](rt_entry::vdv_rt const&) {}},
+                                             [&](rt_entry::vdv_rt&&) {}},
                              rt_entry());
                 }
               }
