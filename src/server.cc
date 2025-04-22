@@ -167,25 +167,23 @@ int server(data d, config const& c, std::string_view const motis_version) {
     s.stop();
     ioc.stop();
 
-    if (vdv_rt_subscription_ioc != nullptr) {
-      auto vdv_rt_unsubscribe_thread =
-          std::thread{[&]() -> boost::asio::awaitable<void> {
-            utl::set_current_thread_name("vdv_rt unsubscribe");
-            std::println("I am thread {} and run unsubscribe now",
-                         std::this_thread::get_id());
-            co_await vdv_rt::unsubscribe(*vdv_rt_subscription_ioc, c, d);
-            std::println("I am thread {} and unsubscribe is done now",
-                         std::this_thread::get_id());
-          }};
-      vdv_rt_subscription_ioc->run();
-      vdv_rt_unsubscribe_thread.join();
-      vdv_rt_subscription_ioc->stop();
-    }
     if (rt_update_ioc != nullptr) {
       rt_update_ioc->stop();
     }
     if (gbfs_update_ioc != nullptr) {
       gbfs_update_ioc->stop();
+    }
+
+    if (vdv_rt_subscription_ioc != nullptr) {
+      vdv_rt_subscription_ioc->stop();
+      auto vdv_rt_unsubscribe_ioc = std::make_unique<asio::io_context>();
+      auto vdv_rt_unsubscribe_thread = std::thread{[&]() {
+        utl::set_current_thread_name("vdv_rt unsubscribe");
+        vdv_rt::shutdown(*vdv_rt_unsubscribe_ioc, c, d);
+        vdv_rt_unsubscribe_ioc->run();
+      }};
+      vdv_rt_unsubscribe_thread.join();
+      vdv_rt_unsubscribe_ioc->stop();
     }
   });
 

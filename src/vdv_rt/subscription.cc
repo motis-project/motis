@@ -149,4 +149,13 @@ void subscription(boost::asio::io_context& ioc, config const& c, data& d) {
       boost::asio::detached);
 }
 
+void shutdown(boost::asio::io_context& ioc, config const& c, data& d) {
+  boost::asio::co_spawn(
+      ioc,
+      [&c, &d, &ioc]() -> boost::asio::awaitable<void> {
+        co_await unsubscribe(ioc, c, d);
+      },
+      boost::asio::detached);
+}
+
 }  // namespace motis::vdv_rt

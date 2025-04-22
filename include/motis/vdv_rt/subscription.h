@@ -7,10 +7,8 @@
 
 namespace motis::vdv_rt {
 
-boost::asio::awaitable<void> unsubscribe(boost::asio::io_context&,
-                                         config const&,
-                                         data&);
-
 void subscription(boost::asio::io_context&, config const&, data&);
+
+void shutdown(boost::asio::io_context&, config const&, data&);
 
 }  // namespace motis::vdv_rt
