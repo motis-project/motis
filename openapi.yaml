@@ -180,6 +180,22 @@ paths:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
 
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            This can cause locations to become unreachable, if an elevation is too high.
+            The profile is used for routing in transfers between transit connections,
+            for direct routing, on the first mile, and last mile.
+            Setting an elevation cost profile is currently supported for following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
         - name: useRoutedTransfers
           in: query
           required: false
@@ -675,6 +691,19 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            This can cause locations to become unreachable, if an elevation is too high.
+            Setting an elevation cost profile is currently supported for following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
         - name: arriveBy
           in: query
           required: true
@@ -822,6 +851,23 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            This can cause locations to become unreachable, if an elevation is too high.
+            The profile is used for routing in transfers between transit connections,
+            for direct routing, on the first mile, and last mile.
+            Setting an elevation cost profile is currently supported for following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
         - name: transitModes
           in: query
           required: false
@@ -1438,6 +1484,14 @@ components:
         score:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
+
+    ElevationCosts:
+      description: Different elevation cost profiles for routing
+      type: string
+      enum:
+        - NONE
+        - LOW
+        - HIGH
 
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
