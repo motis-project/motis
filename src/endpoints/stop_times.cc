@@ -362,9 +362,9 @@ api::stoptimes_response stop_times::operator()(
                 .mode_ = to_mode(s.get_clasz(ev_type)),
                 .realTime_ = r.is_rt(),
                 .headsign_ = std::string{s.direction(ev_type)},
-                .agencyId_ = agency.short_name_.str(),
-                .agencyName_ = agency.long_name_.str(),
-                .agencyUrl_ = agency.url_.str(),
+                .agencyId_ = std::string{tt_.strings_.get(agency.short_name_)},
+                .agencyName_ = std::string{tt_.strings_.get(agency.long_name_)},
+                .agencyUrl_ = std::string{tt_.strings_.get(agency.url_)},
                 .routeColor_ = to_str(s.get_route_color(ev_type).color_),
                 .routeTextColor_ =
                     to_str(s.get_route_color(ev_type).text_color_),

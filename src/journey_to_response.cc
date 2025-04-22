@@ -13,6 +13,7 @@
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
+#include "nigiri/rt/service_alert.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
@@ -178,8 +179,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
   auto const convert_to_str = [](std::string_view s) {
     return std::optional{std::string{s}};
   };
-  auto const to_alert = [&](n::service_alert_idx_t const x) -> api::Alert {
-    auto const& a = rtt->service_alerts_;
+  auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
+    auto const& a = rtt->alerts_;
     auto const get_translation = [&](auto&& x) {
       return x.empty()
                  ? std::nullopt
@@ -216,6 +217,22 @@ api::Itinerary journey_to_response(osr::ways const* w,
                 : a.strings_.try_get(a.image_[x].front().media_type_)
                       .and_then(convert_to_str),
         .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
+  };
+  auto const get_alerts =
+      [&](n::trip_idx_t const x) -> std::optional<std::vector<api::Alert>> {
+    if (rtt == nullptr) {
+      return std::nullopt;
+    }
+
+    auto alerts = std::vector<api::Alert>{};
+    for (auto const& t : tt.trip_ids_[x]) {
+      auto const src = tt.trip_id_src_[t];
+      rtt->alerts_.for_each_alert(
+          tt, src, x, n::location_idx_t::invalid(),
+          [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+    }
+
+    return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
   };
 
   auto itinerary = api::Itinerary{
@@ -317,9 +334,10 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .headsign_ = std::string{enter_stop.direction()},
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),
-                  .agencyName_ = {std::string{agency.long_name_}},
-                  .agencyUrl_ = {std::string{agency.url_}},
-                  .agencyId_ = {std::string{agency.short_name_}},
+                  .agencyName_ =
+                      std::string{tt.strings_.get(agency.long_name_)},
+                  .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
+                  .agencyId_ = std::string{tt.strings_.get(agency.short_name_)},
                   .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
@@ -330,15 +348,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
                   }),
-                  .alerts_ =
-                      rtt && fr.is_rt()
-                          ? std::optional{utl::to_vec(
-                                rtt->service_alerts_.rt_service_alerts_[fr.rt_],
-                                [&](n::pair<n::service_alert_idx_t,
-                                            n::location_idx_t> const x) {
-                                  return to_alert(x.first);
-                                })}
-                          : std::nullopt});
+                  .alerts_ = get_alerts(fr.trip_idx())});
 
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
