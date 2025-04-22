@@ -39,7 +39,8 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto gbfs_rd = gbfs::gbfs_routing_data{};
 
   return journey_to_response(
-      w_, l_, pl_, tt_, tags_, nullptr, rtt, matches_, shapes_, gbfs_rd, false,
+      w_, l_, pl_, tt_, tags_, nullptr, rtt, matches_, shapes_, gbfs_rd,
+      api::PedestrianProfileEnum::FOOT, api::ElevationCostsEnum::NONE,
       {.legs_ = {n::routing::journey::leg{
            n::direction::kForward, from_l.get_location_idx(),
            to_l.get_location_idx(), start_time, dest_time,

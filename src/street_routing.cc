@@ -280,7 +280,8 @@ api::Itinerary route(osr::ways const& w,
                      api::Place const& from,
                      api::Place const& to,
                      api::ModeEnum const mode,
-                     bool const wheelchair,
+                     api::PedestrianProfileEnum const pedestrian_profile,
+                     api::ElevationCostsEnum const elevation_costs,
                      n::unixtime_t const start_time,
                      std::optional<n::unixtime_t> const end_time,
                      double const max_matching_distance,
@@ -293,7 +294,7 @@ api::Itinerary route(osr::ways const& w,
     return dummy_itinerary(from, to, mode, start_time, *end_time);
   }
 
-  auto const profile = to_profile(mode, wheelchair);
+  auto const profile = to_profile(mode, pedestrian_profile, elevation_costs);
   utl::verify(
       profile != osr::search_profile::kBikeSharing || gbfs_rd.has_data(),
       "sharing mobility not configured");
@@ -318,11 +319,12 @@ api::Itinerary route(osr::ways const& w,
           : static_cast<transport_mode_t>(profile);
 
   auto const path = [&]() {
-    auto p = get_path(
-        w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
-        get_location(from), get_location(to), transport_mode,
-        to_profile(mode, wheelchair), start_time, max_matching_distance,
-        static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
+    auto p =
+        get_path(w, l, e, sharing_data ? &sharing_data->sharing_data_ : nullptr,
+                 get_location(from), get_location(to), transport_mode,
+                 to_profile(mode, pedestrian_profile, elevation_costs),
+                 start_time, max_matching_distance,
+                 static_cast<osr::cost_t>(max.count()), cache, blocked_mem);
 
     if (p.has_value() && profile == osr::search_profile::kBikeSharing) {
       // Coordinates of additional nodes are not known to osr.

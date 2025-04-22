@@ -66,6 +66,7 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       api::PedestrianProfileEnum,
+      api::ElevationCostsEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
@@ -77,6 +78,7 @@ struct routing {
                  osr::direction,
                  std::vector<api::ModeEnum> const&,
                  api::PedestrianProfileEnum,
+                 api::ElevationCostsEnum,
                  double max_matching_distance,
                  std::chrono::seconds max) const;
 
@@ -91,6 +93,7 @@ struct routing {
       std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
       api::PedestrianProfileEnum,
+      api::ElevationCostsEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor) const;

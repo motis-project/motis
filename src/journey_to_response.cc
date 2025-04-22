@@ -83,26 +83,28 @@ std::optional<fare_indices> get_fare_indices(
   return std::nullopt;
 }
 
-api::Itinerary journey_to_response(osr::ways const* w,
-                                   osr::lookup const* l,
-                                   osr::platforms const* pl,
-                                   n::timetable const& tt,
-                                   tag_lookup const& tags,
-                                   elevators const* e,
-                                   n::rt_timetable const* rtt,
-                                   platform_matches_t const* matches,
-                                   n::shapes_storage const* shapes,
-                                   gbfs::gbfs_routing_data& gbfs_rd,
-                                   bool const wheelchair,
-                                   n::routing::journey const& j,
-                                   place_t const& start,
-                                   place_t const& dest,
-                                   street_routing_cache_t& cache,
-                                   osr::bitvec<osr::node_idx_t>& blocked_mem,
-                                   bool const detailed_transfers,
-                                   bool const with_fares,
-                                   double const timetable_max_matching_distance,
-                                   double const max_matching_distance) {
+api::Itinerary journey_to_response(
+    osr::ways const* w,
+    osr::lookup const* l,
+    osr::platforms const* pl,
+    n::timetable const& tt,
+    tag_lookup const& tags,
+    elevators const* e,
+    n::rt_timetable const* rtt,
+    platform_matches_t const* matches,
+    n::shapes_storage const* shapes,
+    gbfs::gbfs_routing_data& gbfs_rd,
+    api::PedestrianProfileEnum const pedestrian_profile,
+    api::ElevationCostsEnum const elevation_costs,
+    n::routing::journey const& j,
+    place_t const& start,
+    place_t const& dest,
+    street_routing_cache_t& cache,
+    osr::bitvec<osr::node_idx_t>& blocked_mem,
+    bool const detailed_transfers,
+    bool const with_fares,
+    double const timetable_max_matching_distance,
+    double const max_matching_distance) {
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
@@ -313,7 +315,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               append(
                   w && l
                       ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
-                              wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                              pedestrian_profile, elevation_costs,
+                              j_leg.dep_time_, j_leg.arr_time_,
                               timetable_max_matching_distance, {}, cache,
                               blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
@@ -332,8 +335,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       ? api::ModeEnum::ODM
                       : to_mode(osr::search_profile{
                             static_cast<std::uint8_t>(x.transport_mode_id_)}),
-                  wheelchair, j_leg.dep_time_, j_leg.arr_time_,
-                  max_matching_distance,
+                  pedestrian_profile, elevation_costs, j_leg.dep_time_,
+                  j_leg.arr_time_, max_matching_distance,
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
                       ? gbfs_rd.get_products_ref(x.transport_mode_id_)
                       : gbfs::gbfs_products_ref{},
