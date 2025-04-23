@@ -32,6 +32,7 @@ osr::search_profile to_profile(
         case api::ElevationCostsEnum::HIGH:
           return osr::search_profile::kBikeElevationHigh;
       }
+      return osr::search_profile::kBike;  // Fallback if invalid value is used
     case api::ModeEnum::ODM: [[fallthrough]];
     case api::ModeEnum::CAR: return osr::search_profile::kCar;
     case api::ModeEnum::CAR_PARKING:
