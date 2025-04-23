@@ -218,8 +218,9 @@ api::Itinerary journey_to_response(osr::ways const* w,
                       .and_then(convert_to_str),
         .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
   };
-  auto const get_alerts =
-      [&](n::trip_idx_t const x) -> std::optional<std::vector<api::Alert>> {
+  auto const get_alerts = [&](n::trip_idx_t const x,
+                              n::rt_transport_idx_t const rt_t)
+      -> std::optional<std::vector<api::Alert>> {
     if (rtt == nullptr) {
       return std::nullopt;
     }
@@ -228,7 +229,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
     for (auto const& t : tt.trip_ids_[x]) {
       auto const src = tt.trip_id_src_[t];
       rtt->alerts_.for_each_alert(
-          tt, src, x, n::location_idx_t::invalid(),
+          tt, src, x, rt_t, n::location_idx_t::invalid(),
           [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
     }
 
@@ -290,7 +291,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto const to_place = [&](auto&& s, bool run_cancelled) {
+    auto const to_place = [&](auto&& s, bool const run_cancelled) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
       p.pickupType_ = !run_cancelled && s.in_allowed()
@@ -348,7 +349,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
                   }),
-                  .alerts_ = get_alerts(fr.trip_idx())});
+                  .alerts_ = get_alerts(fr.trip_idx(), fr.rt_)});
 
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
