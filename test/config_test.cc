@@ -118,51 +118,49 @@ geocoding: true
   // Using street_routing struct
   {
     // Setting height_data_dir
-    auto const street_routing_config = config{
-        .osm_ = {"europe-latest.osm.pbf"},
-        .street_routing_ = config::street_routing{.height_data_dir_ = "srtm/"},
-    };
-    EXPECT_EQ(street_routing_config, config::read(R"(
+    {
+      auto const street_routing_config = config{
+          .osm_ = {"europe-latest.osm.pbf"},
+          .street_routing_ =
+              config::street_routing{.height_data_dir_ = "srtm/"},
+      };
+      EXPECT_EQ(street_routing_config, config::read(R"(
 street_routing:
   height_data_dir: srtm/
 osm: europe-latest.osm.pbf
 )"s));
-    EXPECT_TRUE(street_routing_config.use_street_routing());
+      EXPECT_TRUE(street_routing_config.use_street_routing());
+    }
 
     // Using empty street_routing map
     {
-      EXPECT_EQ((config{
-                    .osm_ = {"europe-latest.osm.pbf"},
-                    .street_routing_ = config::street_routing{},
-                }),
-                config::read(R"(
+      auto const street_routing_config = config{
+          .osm_ = {"europe-latest.osm.pbf"},
+          .street_routing_ = config::street_routing{},
+      };
+      EXPECT_EQ(street_routing_config, config::read(R"(
 street_routing: {}
 osm: europe-latest.osm.pbf
 )"s));
+      EXPECT_TRUE(street_routing_config.use_street_routing());
     }
 
     // No street_routing defined
-    {
       EXPECT_FALSE(config::read(R"(
 osm: europe-latest.osm.pbf
 )"s)
                        .use_street_routing());
-    }
 
     // street_routing disabled
-    {
       EXPECT_FALSE(config::read(R"(
 osm: europe-latest.osm.pbf
 street_routing: false
 )"s)
                        .use_street_routing());
-    }
 
-    // Will throw if osm is not set
-    {
+    // Will throw if street_routing is set but osm is not
       EXPECT_ANY_THROW(config::read(R"(
 street_routing: {}
 )"s));
-    }
   }
 }
