@@ -20,7 +20,9 @@
 #include "motis-api/motis-api.h"
 #include "motis/constants.h"
 #include "motis/gbfs/mode.h"
+#include "motis/gbfs/osr_profile.h"
 #include "motis/gbfs/routing_data.h"
+#include "motis/mode_to_profile.h"
 #include "motis/odm/odm.h"
 #include "motis/place.h"
 #include "motis/street_routing.h"
@@ -43,7 +45,8 @@ api::ModeEnum to_mode(osr::search_profile const m) {
     case osr::search_profile::kBikeElevationLow:
     case osr::search_profile::kBikeElevationHigh: [[fallthrough]];
     case osr::search_profile::kBike: return api::ModeEnum::BIKE;
-    case osr::search_profile::kBikeSharing: return api::ModeEnum::RENTAL;
+    case osr::search_profile::kBikeSharing: [[fallthrough]];
+    case osr::search_profile::kCarSharing: return api::ModeEnum::RENTAL;
   }
   std::unreachable();
 }
@@ -386,7 +389,8 @@ api::Itinerary journey_to_response(osr::ways const* w,
               append(
                   w && l
                       ? route(*w, *l, gbfs_rd, e, from, to, api::ModeEnum::WALK,
-                              wheelchair, j_leg.dep_time_, j_leg.arr_time_,
+                              to_profile(api::ModeEnum::WALK, wheelchair),
+                              j_leg.dep_time_, j_leg.arr_time_,
                               timetable_max_matching_distance, {}, cache,
                               blocked_mem,
                               std::chrono::duration_cast<std::chrono::seconds>(
@@ -397,23 +401,27 @@ api::Itinerary journey_to_response(osr::ways const* w,
                                         j_leg.dep_time_, j_leg.arr_time_));
             },
             [&](n::routing::offset const x) {
-              append(route(
-                  *w, *l, gbfs_rd, e, from, to,
+              auto const profile =
                   x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? api::ModeEnum::RENTAL
-                  : x.transport_mode_id_ == kOdmTransportModeId
-                      ? api::ModeEnum::ODM
-                      : to_mode(osr::search_profile{
-                            static_cast<std::uint8_t>(x.transport_mode_id_)}),
-                  wheelchair, j_leg.dep_time_, j_leg.arr_time_,
-                  max_matching_distance,
-                  x.transport_mode_id_ >= kGbfsTransportModeIdOffset
-                      ? gbfs_rd.get_products_ref(x.transport_mode_id_)
-                      : gbfs::gbfs_products_ref{},
-                  cache, blocked_mem,
-                  std::chrono::duration_cast<std::chrono::seconds>(
-                      j_leg.arr_time_ - j_leg.dep_time_) +
-                      std::chrono::minutes{5}));
+                      ? gbfs::get_osr_profile(gbfs_rd.get_products(
+                            gbfs_rd.get_products_ref(x.transport_mode_id_)))
+                      : osr::search_profile{
+                            static_cast<std::uint8_t>(x.transport_mode_id_)};
+              append(route(*w, *l, gbfs_rd, e, from, to,
+                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                               ? api::ModeEnum::RENTAL
+                           : x.transport_mode_id_ == kOdmTransportModeId
+                               ? api::ModeEnum::ODM
+                               : to_mode(profile),
+                           profile, j_leg.dep_time_, j_leg.arr_time_,
+                           max_matching_distance,
+                           x.transport_mode_id_ >= kGbfsTransportModeIdOffset
+                               ? gbfs_rd.get_products_ref(x.transport_mode_id_)
+                               : gbfs::gbfs_products_ref{},
+                           cache, blocked_mem,
+                           std::chrono::duration_cast<std::chrono::seconds>(
+                               j_leg.arr_time_ - j_leg.dep_time_) +
+                               std::chrono::minutes{5}));
             }},
         j_leg.uses_);
   }
