@@ -2,6 +2,8 @@
 
 #include "boost/url/url_view.hpp"
 
+#include "osr/elevation_storage.h"
+
 #include "motis-api/motis-api.h"
 #include "motis/fwd.h"
 
@@ -12,6 +14,7 @@ struct one_to_many {
 
   osr::ways const& w_;
   osr::lookup const& l_;
+  osr::elevation_storage const* elevations_;
 };
 
 }  // namespace motis::ep
