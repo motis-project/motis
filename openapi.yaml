@@ -190,7 +190,8 @@ paths:
             This can cause locations to become unreachable, if an elevation is too high.
             The profile is used for routing in transfers between transit connections,
             for direct routing, on the first mile, and last mile.
-            Setting an elevation cost profile is currently supported for following street modes:
+
+            Elevation cost profiles are currently used by following street modes:
             - `BIKE`
           schema:
             $ref: '#/components/schemas/ElevationCosts'
@@ -699,7 +700,8 @@ paths:
 
             Set an elevation cost profile, to penalize routes with incline.
             This can cause locations to become unreachable, if an elevation is too high.
-            Setting an elevation cost profile is currently supported for following street modes:
+
+            Elevation cost profiles are currently used by following street modes:
             - `BIKE`
           schema:
             $ref: '#/components/schemas/ElevationCosts'
@@ -862,7 +864,8 @@ paths:
             This can cause locations to become unreachable, if an elevation is too high.
             The profile is used for routing in transfers between transit connections,
             for direct routing, on the first mile, and last mile.
-            Setting an elevation cost profile is currently supported for following street modes:
+
+            Elevation cost profiles are currently used by following street modes:
             - `BIKE`
           schema:
             $ref: '#/components/schemas/ElevationCosts'
@@ -1486,7 +1489,7 @@ components:
           type: number
 
     ElevationCosts:
-      description: Different elevation cost profiles for routing
+      description: Different elevation cost profiles for street routing
       type: string
       enum:
         - NONE
