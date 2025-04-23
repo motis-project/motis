@@ -26,7 +26,8 @@ gbfs:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
 tiles:
   profile: tiles-profiles/full.lua
-street_routing: true
+street_routing:
+  height_data_dir: srtm/
 geocoding: true
 osr_footpath: true
 ```
@@ -77,7 +78,8 @@ gbfs:
   feeds:
     montreal:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
-street_routing: true              # enable street routing (default = false)
+street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
+  height_data_dir: srtm/          # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses
@@ -93,7 +95,7 @@ server:
 tiles:
   profile: tiles-profiles/full.lua
 geocoding: true
-street_routing: true
+street_routing: true    # Alternative notion the enable street routing
 osr_footpath: true
 elevators:
   #  init: fasta.json   # Can be used for debugging, remove `url` key in this case
