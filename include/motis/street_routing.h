@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "osr/location.h"
+#include "osr/routing/profile.h"
 #include "osr/routing/route.h"
 
 #include "motis-api/motis-api.h"
@@ -32,7 +33,7 @@ api::Itinerary route(osr::ways const&,
                      api::Place const& from,
                      api::Place const& to,
                      api::ModeEnum,
-                     bool wheelchair,
+                     osr::search_profile,
                      nigiri::unixtime_t start_time,
                      std::optional<nigiri::unixtime_t> end_time,
                      double max_matching_distance,

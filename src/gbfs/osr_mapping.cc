@@ -184,7 +184,7 @@ struct osr_mapping {
 
         auto const matches = l_.match<osr::foot<false>>(
             osr::location{st.info_.pos_, osr::level_t{}}, false,
-            osr::direction::kForward, kMaxMatchingDistance, nullptr);
+            osr::direction::kForward, kMaxGbfsMatchingDistance, nullptr);
         if (matches.empty()) {
           continue;
         }
@@ -216,7 +216,8 @@ struct osr_mapping {
 
         for (auto const& m : matches) {
           auto const handle_node = [&](osr::node_candidate const node) {
-            if (node.valid() && node.dist_to_node_ <= kMaxMatchingDistance) {
+            if (node.valid() &&
+                node.dist_to_node_ <= kMaxGbfsMatchingDistance) {
               auto const edge_to_an = osr::additional_edge{
                   additional_node_id,
                   static_cast<osr::distance_t>(node.dist_to_node_)};
@@ -260,7 +261,7 @@ struct osr_mapping {
 
         auto const matches = l_.match<osr::foot<false>>(
             osr::location{vs.pos_, osr::level_t{}}, false,
-            osr::direction::kForward, kMaxMatchingDistance, nullptr);
+            osr::direction::kForward, kMaxGbfsMatchingDistance, nullptr);
         if (matches.empty()) {
           continue;
         }
@@ -289,11 +290,11 @@ struct osr_mapping {
 
         for (auto const& m : matches) {
           if (m.left_.valid() &&
-              m.left_.dist_to_node_ <= kMaxMatchingDistance) {
+              m.left_.dist_to_node_ <= kMaxGbfsMatchingDistance) {
             add_additional_edges(m.left_);
           }
           if (m.right_.valid() &&
-              m.right_.dist_to_node_ <= kMaxMatchingDistance) {
+              m.right_.dist_to_node_ <= kMaxGbfsMatchingDistance) {
             add_additional_edges(m.right_);
           }
         }
