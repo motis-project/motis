@@ -149,6 +149,15 @@ osm: europe-latest.osm.pbf
                        .use_street_routing());
     }
 
+    // street_routing disabled
+    {
+      EXPECT_FALSE(config::read(R"(
+osm: europe-latest.osm.pbf
+street_routing: false
+)"s)
+                       .use_street_routing());
+    }
+
     // Will throw if osm is not set
     {
       EXPECT_ANY_THROW(config::read(R"(
