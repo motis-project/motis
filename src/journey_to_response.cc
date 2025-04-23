@@ -106,7 +106,7 @@ api::Itinerary journey_to_response(osr::ways const* w,
   utl::verify(!j.legs_.empty(), "journey without legs");
 
   auto const fares =
-      with_fares ? std::optional{n::get_fares(tt, j)} : std::nullopt;
+      with_fares ? std::optional{n::get_fares(tt, rtt, j)} : std::nullopt;
   auto const to_fare_media_type =
       [](n::fares::fare_media::fare_media_type const t) {
         using fare_media_type = n::fares::fare_media::fare_media_type;

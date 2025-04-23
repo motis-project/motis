@@ -1130,10 +1130,9 @@ paths:
             This will enable you to search for stop times in the next or previous time-window.
           schema:
             type: string
-
       responses:
         200:
-          description: A list of guesses to resolve the text to a location
+          description: A list of departures/arrivals
           content:
             application/json:
               schema:

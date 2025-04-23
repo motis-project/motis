@@ -23,7 +23,7 @@ api::Itinerary trip::operator()(boost::urls::url_view const& url) const {
   auto const rtt = rt->rtt_.get();
 
   auto query = api::trip_params{url.params()};
-  auto const [r, _] = tags_.get_trip(tt_, query.tripId_);
+  auto const [r, _] = tags_.get_trip(tt_, rtt, query.tripId_);
   utl::verify(r.valid(), "trip not found: tripId={}, tt={}", query.tripId_,
               tt_.external_interval());
 
