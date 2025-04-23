@@ -171,7 +171,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     auto files = std::vector<std::string>{};
     for (auto const& f : fs::recursive_directory_iterator(elevation_dir)) {
       if (f.is_regular_file()) {
-        files.emplace_back(f.path().relative_path());
+        files.emplace_back(f.path().relative_path().string());
       }
     }
     std::ranges::sort(files);
