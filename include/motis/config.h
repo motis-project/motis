@@ -153,7 +153,7 @@ struct config {
   std::optional<std::reference_wrapper<street_routing const>>
   get_street_routing() const;
 
-  std::variant<bool, street_routing> street_routing_{false};
+  std::variant<bool, std::optional<street_routing>> street_routing_{std::nullopt};
 
   bool osr_footpath_{false};
   bool geocoding_{false};

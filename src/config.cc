@@ -193,19 +193,21 @@ bool config::has_elevators() const {
 
 std::optional<std::reference_wrapper<config::street_routing const>>
 config::get_street_routing() const {
-  if (std::holds_alternative<street_routing>(street_routing_)) {
-    return std::get<street_routing>(street_routing_);
+  if (std::holds_alternative<std::optional<street_routing>>(street_routing_) &&
+      std::get<std::optional<street_routing>>(street_routing_).has_value()) {
+    return *std::get<std::optional<street_routing>>(street_routing_);
   } else {
     return {};
   }
 }
 
 bool config::use_street_routing() const {
-  return std::visit(utl::overloaded{
-                        [](street_routing const&) { return true; },
-                        [](bool const b) { return b; },
-                    },
-                    street_routing_);
+  return std::visit(
+      utl::overloaded{
+          [](std::optional<street_routing> const& o) { return o.has_value(); },
+          [](bool const b) { return b; },
+      },
+      street_routing_);
 }
 
 }  // namespace motis
