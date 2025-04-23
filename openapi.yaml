@@ -187,9 +187,11 @@ paths:
             Optional. Default is `NONE`.
 
             Set an elevation cost profile, to penalize routes with incline.
-            This can cause locations to become unreachable, if an elevation is too high.
-            The profile is used for routing in transfers between transit connections,
-            for direct routing, on the first mile, and last mile.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
+            Using an elevation costs profile can cause locations to become unreachable, if an elevation is too high.
+            The profile is used for direct routing, on the first mile, and last mile.
 
             Elevation cost profiles are currently used by following street modes:
             - `BIKE`
@@ -699,7 +701,10 @@ paths:
             Optional. Default is `NONE`.
 
             Set an elevation cost profile, to penalize routes with incline.
-            This can cause locations to become unreachable, if an elevation is too high.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
+            Using an elevation costs profile can cause locations to become unreachable, if an elevation is too high.
 
             Elevation cost profiles are currently used by following street modes:
             - `BIKE`
@@ -861,9 +866,11 @@ paths:
             Optional. Default is `NONE`.
 
             Set an elevation cost profile, to penalize routes with incline.
-            This can cause locations to become unreachable, if an elevation is too high.
-            The profile is used for routing in transfers between transit connections,
-            for direct routing, on the first mile, and last mile.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
+            Using an elevation costs profile can cause locations to become unreachable, if an elevation is too high.
+            The profile is used for direct routing, on the first mile, and last mile.
 
             Elevation cost profiles are currently used by following street modes:
             - `BIKE`
@@ -1489,7 +1496,13 @@ components:
           type: number
 
     ElevationCosts:
-      description: Different elevation cost profiles for street routing
+      description: |
+        Different elevation cost profiles for street routing.
+        Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+
+        - `NONE`: Ignore elevation data for routing. This is the default behavior
+        - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+        - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
       type: string
       enum:
         - NONE
