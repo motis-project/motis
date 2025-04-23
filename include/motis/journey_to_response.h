@@ -7,7 +7,6 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/types.h"
 
-#include "osr/elevation_storage.h"
 #include "osr/location.h"
 #include "osr/routing/route.h"
 #include "osr/types.h"

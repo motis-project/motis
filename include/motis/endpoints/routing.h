@@ -7,7 +7,6 @@
 
 #include "boost/thread/tss.hpp"
 
-#include "osr/elevation_storage.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/clasz_mask.h"

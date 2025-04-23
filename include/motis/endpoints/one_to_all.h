@@ -2,8 +2,6 @@
 
 #include "boost/url/url_view.hpp"
 
-#include "osr/elevation_storage.h"
-
 #include "motis-api/motis-api.h"
 #include "motis/data.h"
 #include "motis/fwd.h"
