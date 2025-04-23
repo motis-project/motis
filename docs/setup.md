@@ -27,7 +27,7 @@ gbfs:
 tiles:
   profile: tiles-profiles/full.lua
 street_routing:
-  height_data_dir: srtm/
+  elevation_data_dir: srtm/
 geocoding: true
 osr_footpath: true
 ```
@@ -79,7 +79,7 @@ gbfs:
     montreal:
       url: https://gbfs.velobixi.com/gbfs/gbfs.json
 street_routing:                   # enable street routing (default = false; Using boolean values true/false is supported for backward compatibility)
-  height_data_dir: srtm/          # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
+  elevation_data_dir: srtm/       # folder which contains elevation data, e.g. SRTMGL1 data tiles in HGT format
 osr_footpath: true                # enable routing footpaths instead of using transfers from timetable datasets
 geocoding: true                   # enable geocoding for place/stop name autocompletion
 reverse_geocoding: false          # enable reverse geocoding for mapping a geo coordinate to nearby places/addresses

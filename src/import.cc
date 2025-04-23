@@ -163,7 +163,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
   auto const elevation_dir =
       c.get_street_routing()
           .transform([](config::street_routing const& sr) {
-            return sr.height_data_dir_.value_or(fs::path{});
+            return sr.elevation_data_dir_.value_or(fs::path{});
           })
           .value_or(fs::path{});
   auto elevation_dir_hash = std::pair{"elevation_dir"s, cista::BASE_HASH};

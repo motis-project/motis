@@ -147,7 +147,7 @@ struct config {
 
   struct street_routing {
     bool operator==(street_routing const&) const = default;
-    std::optional<std::filesystem::path> height_data_dir_;
+    std::optional<std::filesystem::path> elevation_data_dir_;
   };
 
   std::optional<std::reference_wrapper<street_routing const>>

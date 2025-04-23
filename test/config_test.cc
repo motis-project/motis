@@ -122,11 +122,11 @@ geocoding: true
       auto const street_routing_config = config{
           .osm_ = {"europe-latest.osm.pbf"},
           .street_routing_ =
-              config::street_routing{.height_data_dir_ = "srtm/"},
+              config::street_routing{.elevation_data_dir_ = "srtm/"},
       };
       EXPECT_EQ(street_routing_config, config::read(R"(
 street_routing:
-  height_data_dir: srtm/
+  elevation_data_dir: srtm/
 osm: europe-latest.osm.pbf
 )"s));
       EXPECT_TRUE(street_routing_config.use_street_routing());
@@ -146,20 +146,20 @@ osm: europe-latest.osm.pbf
     }
 
     // No street_routing defined
-      EXPECT_FALSE(config::read(R"(
+    EXPECT_FALSE(config::read(R"(
 osm: europe-latest.osm.pbf
 )"s)
-                       .use_street_routing());
+                     .use_street_routing());
 
     // street_routing disabled
-      EXPECT_FALSE(config::read(R"(
+    EXPECT_FALSE(config::read(R"(
 osm: europe-latest.osm.pbf
 street_routing: false
 )"s)
-                       .use_street_routing());
+                     .use_street_routing());
 
     // Will throw if street_routing is set but osm is not
-      EXPECT_ANY_THROW(config::read(R"(
+    EXPECT_ANY_THROW(config::read(R"(
 street_routing: {}
 )"s));
   }
