@@ -37,6 +37,18 @@ Downloading tiles requires a free account.
 
 **Important**: HGT tiles not matching the naming convention will not be found
 
+On Unix based systems the following script can be used to extract all ZIP files into a new subdirectory `hgt`:
+
+```sh
+#!/bin/sh
+[ -d 'hgt' ] || mkdir 'hgt'  # Create directory if necessary
+for f in *.hgt.zip; do
+  [ -s "${f}" ] || continue  # Ensure file exists and is not empty
+  unzip `# Always override` -o "${f}" `# Extract into directory` -d 'hgt'
+  rm -f "${f}"  # Delete compressed file
+done
+```
+
 ### Using the SRTM elevation data
 
 Assume the extracted HGT tiles are stored at `<path>/srtm`.
