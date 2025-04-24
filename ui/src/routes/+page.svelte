@@ -338,15 +338,7 @@
               bind:selectedModes={selectedTransitModes}
             />
 					{:else}
-						<DeparturesMask
-							bind:from
-							bind:time
-							bind:timeType
-							bind:wheelchair
-							bind:bikeCarriage
-							bind:bikeRental
-							bind:selectedModes={selectedTransitModes}
-						/>
+						<DeparturesMask bind:time />
 					{/if}
 				</Card>
 			</Control>
