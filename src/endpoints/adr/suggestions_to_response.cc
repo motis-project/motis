@@ -1,5 +1,7 @@
 #include "motis/endpoints/adr/suggestions_to_response.h"
 
+#include <ranges>
+
 #include "utl/for_each_bit_set.h"
 #include "utl/helpers/algorithm.h"
 #include "utl/overloaded.h"
@@ -94,6 +96,29 @@ api::geocode_response suggestions_to_response(
       return (((1U << i) & s.matched_areas_) != 0U);
     };
 
+    auto api_areas = std::vector<api::Area>{};
+    for (auto const& [i, a] : utl::enumerate(areas)) {
+      auto const admin_lvl = t.area_admin_level_[a];
+      if (admin_lvl == a::kPostalCodeAdminLevel) {
+        continue;
+      }
+
+      auto const language = is_matched(i)
+                                ? s.matched_area_lang_[i]
+                                : get_area_lang_idx(t, lang_indices, a);
+      auto const area_name =
+          t.strings_[t.area_names_[a][language == -1
+                                          ? a::kDefaultLangIdx
+                                          : static_cast<unsigned>(language)]]
+              .view();
+      api_areas.emplace_back(api::Area{
+          .name_ = std::string{area_name},
+          .adminLevel_ = static_cast<double>(to_idx(admin_lvl)),
+          .matched_ = is_matched(i),
+          .unique_ = s.unique_area_idx_.has_value() && *s.unique_area_idx_ == i,
+          .default_ = s.city_area_idx_.has_value() && *s.city_area_idx_ == i});
+    }
+
     return api::Match{
         .type_ = type,
         .tokens_ = std::move(tokens),
@@ -109,29 +134,7 @@ api::geocode_response suggestions_to_response(
               t.strings_[t.area_names_[areas[zip_area_idx]][a::kDefaultLangIdx]]
                   .view()};
         }),
-        .areas_ = utl::to_vec(
-            utl::enumerate(areas),
-            [&](auto&& el) {
-              auto const [i, a] = el;
-              auto const admin_lvl = t.area_admin_level_[a];
-              auto const language = is_matched(i)
-                                        ? s.matched_area_lang_[i]
-                                        : get_area_lang_idx(t, lang_indices, a);
-              auto const area_name =
-                  t.strings_[t.area_names_[a][language == -1
-                                                  ? a::kDefaultLangIdx
-                                                  : static_cast<unsigned>(
-                                                        language)]]
-                      .view();
-              return api::Area{
-                  .name_ = std::string{area_name},
-                  .adminLevel_ = static_cast<double>(to_idx(admin_lvl)),
-                  .matched_ = is_matched(i),
-                  .unique_ = s.unique_area_idx_.has_value() &&
-                             *s.unique_area_idx_ == i,
-                  .default_ =
-                      s.city_area_idx_.has_value() && *s.city_area_idx_ == i};
-            }),
+        .areas_ = std::move(api_areas),
         .score_ = s.score_};
   });
 }
