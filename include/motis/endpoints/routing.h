@@ -1,12 +1,12 @@
 #pragma once
 
+#include <chrono>
 #include <optional>
 #include <utility>
 #include <vector>
 
 #include "boost/thread/tss.hpp"
 
-#include "osr/location.h"
 #include "osr/types.h"
 
 #include "nigiri/routing/clasz_mask.h"
@@ -35,6 +35,10 @@ extern boost::thread_specific_ptr<osr::bitvec<osr::node_idx_t>> blocked;
 
 using stats_map_t = std::map<std::string, std::uint64_t>;
 
+place_t get_place(nigiri::timetable const*,
+                  tag_lookup const*,
+                  std::string_view user_input);
+
 bool is_intermodal(place_t const&);
 
 nigiri::routing::location_match_mode get_match_mode(place_t const&);
@@ -47,30 +51,34 @@ std::vector<nigiri::routing::via_stop> get_via_stops(
     std::optional<std::vector<std::string>> const& vias,
     std::vector<std::int64_t> const& times);
 
+std::vector<api::ModeEnum> deduplicate(std::vector<api::ModeEnum>);
+
 void remove_slower_than_fastest_direct(nigiri::routing::query&);
 
 struct routing {
   api::plan_response operator()(boost::urls::url_view const&) const;
 
   std::vector<nigiri::routing::offset> get_offsets(
-      osr::location const&,
+      place_t const&,
       osr::direction,
       std::vector<api::ModeEnum> const&,
       std::optional<std::vector<api::RentalFormFactorEnum>> const&,
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
-      bool wheelchair,
+      api::PedestrianProfileEnum,
+      api::ElevationCostsEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       gbfs::gbfs_routing_data&) const;
 
   nigiri::hash_map<nigiri::location_idx_t,
                    std::vector<nigiri::routing::td_offset>>
-  get_td_offsets(elevators const&,
-                 osr::location const&,
+  get_td_offsets(elevators const*,
+                 place_t const&,
                  osr::direction,
                  std::vector<api::ModeEnum> const&,
-                 bool wheelchair,
+                 api::PedestrianProfileEnum,
+                 api::ElevationCostsEnum,
                  double max_matching_distance,
                  std::chrono::seconds max) const;
 
@@ -84,7 +92,8 @@ struct routing {
       std::optional<std::vector<api::RentalPropulsionTypeEnum>> const&,
       std::optional<std::vector<std::string>> const& rental_providers,
       nigiri::unixtime_t start_time,
-      bool wheelchair,
+      api::PedestrianProfileEnum,
+      api::ElevationCostsEnum,
       std::chrono::seconds max,
       double max_matching_distance,
       double fastest_direct_factor) const;
@@ -93,6 +102,7 @@ struct routing {
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;
+  osr::elevation_storage const* elevations_;
   nigiri::timetable const* tt_;
   tag_lookup const* tags_;
   point_rtree<nigiri::location_idx_t> const* loc_tree_;

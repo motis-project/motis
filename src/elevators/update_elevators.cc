@@ -38,11 +38,11 @@ ptr<elevators> update_elevators(config const& c,
 
   auto tasks = hash_set<std::pair<n::location_idx_t, osr::direction>>{};
   auto const add_tasks = [&](geo::latlng const& l) {
-    d.location_rtee_->in_radius(l, kElevatorUpdateRadius,
-                                [&](n::location_idx_t const l) {
-                                  tasks.emplace(l, osr::direction::kForward);
-                                  tasks.emplace(l, osr::direction::kBackward);
-                                });
+    d.location_rtree_->in_radius(l, kElevatorUpdateRadius,
+                                 [&](n::location_idx_t const l) {
+                                   tasks.emplace(l, osr::direction::kForward);
+                                   tasks.emplace(l, osr::direction::kBackward);
+                                 });
   };
 
   for (auto const& [id, e_idx] : old_map) {
@@ -75,7 +75,7 @@ ptr<elevators> update_elevators(config const& c,
          "elevator update: {} routing tasks", tasks.size());
 
   update_rtt_td_footpaths(
-      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtee_, *new_e, *d.matches_,
+      *d.w_, *d.l_, *d.pl_, *d.tt_, *d.location_rtree_, *new_e, *d.matches_,
       tasks, d.rt_->rtt_.get(), new_rtt,
       std::chrono::seconds{c.timetable_.value().max_footpath_length_});
 

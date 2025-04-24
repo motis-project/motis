@@ -12,6 +12,7 @@ struct one_to_many {
 
   osr::ways const& w_;
   osr::lookup const& l_;
+  osr::elevation_storage const* elevations_;
 };
 
 }  // namespace motis::ep

@@ -24,14 +24,28 @@ paths:
         - name: fromPlace
           in: query
           required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           schema:
             type: string
 
         - name: toPlace
           in: query
           required: true
-          description: \`latitude,longitude,level\` tuple in degrees OR stop id
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           schema:
             type: string
 
@@ -165,6 +179,30 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for direct routing, on the first mile, and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
 
         - name: useRoutedTransfers
           in: query
@@ -661,6 +699,27 @@ paths:
           description: maximum matching distance in meters to match geo coordinates to the street network
           schema:
             type: number
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
         - name: arriveBy
           in: query
           required: true
@@ -693,7 +752,14 @@ paths:
         - name: one
           in: query
           required: true
-          description: stop id of the starting or ending stop
+          description: |
+            \`latitude,longitude[,level]\` tuple with
+            - latitude and longitude in degrees
+            - (optional) level: the OSM level (default: 0)
+
+            OR
+
+            stop id
           schema:
             type: string
         - name: time
@@ -716,7 +782,7 @@ paths:
           in: query
           required: false
           description: |
-            true = all to one
+            true = all to one,
             false = one to all
           schema:
             type: boolean
@@ -768,6 +834,18 @@ paths:
           schema:
             type: number
             default: 1.0
+
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is 25 meters.
+
+            Maximum matching distance in meters to match geo coordinates to the street network.
+          schema:
+            type: number
+            default: 25
+
         - name: useRoutedTransfers
           in: query
           required: false
@@ -789,6 +867,31 @@ paths:
           schema:
             $ref: '#/components/schemas/PedestrianProfile'
             default: FOOT
+
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for routing on both the first and last mile.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+
         - name: transitModes
           in: query
           required: false
@@ -803,6 +906,41 @@ paths:
             items:
               $ref: '#/components/schemas/Mode'
           explode: false
+
+        - name: preTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. The behavior depends on whether `arriveBy` is set:
+              - `arriveBy=true`: Currently not used
+              - `arriveBy=false`: Only applies if the `one` place is a coordinate (not a transit stop).
+
+            A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
+        - name: postTransitModes
+          in: query
+          required: false
+          description: |
+            Optional. Default is `WALK`. The behavior depends on whether `arriveBy` is set:
+              - `arriveBy=true`: Only applies if the `one` place is a coordinate (not a transit stop).
+              - `arriveBy=false`: Currently not used
+
+            A list of modes that are allowed to be used from the last transit stop to the `to` coordinate. Example: `WALK,BIKE_SHARING`.
+          schema:
+            default:
+              - WALK
+            type: array
+            items:
+              $ref: '#/components/schemas/Mode'
+          explode: false
+
         - name: requireBikeTransport
           in: query
           required: false
@@ -813,6 +951,31 @@ paths:
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow bike carriage.
+
+        - name: maxPreTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+              - `arriveBy=true`: Currently not used
+              - `arriveBy=false`: Maximum time in seconds for the street leg at `one` location.
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
+        - name: maxPostTransitTime
+          in: query
+          required: false
+          description: |
+            Optional. Default is 15min which is `900`.
+              - `arriveBy=true`: Maximum time in seconds for the street leg at `one` location.
+              - `arriveBy=false`: Currently not used
+          schema:
+            type: integer
+            default: 900
+            minimum: 0
+
       responses:
         200:
           description: |
@@ -878,6 +1041,7 @@ paths:
             (usually ISO 639-1, or ISO 639-2 if there's no ISO 639-1)
           schema:
             type: string
+
         - name: type
           in: query
           required: false
@@ -888,6 +1052,25 @@ paths:
             For example, this can be used to allow only `ADDRESS` and `STOP` results.
           schema:
             $ref: '#/components/schemas/LocationType'
+
+        - name: place
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate.
+            
+            Format: latitude,longitude in degrees
+          schema:
+            type: string
+
+        - name: placeBias
+          in: query
+          required: false
+          description: |
+            Optional. Used for biasing results towards the coordinate. Higher number = higher bias.
+          schema:
+            type: number
+            default: 1
 
       responses:
         200:
@@ -1246,6 +1429,11 @@ components:
         matched:
           type: boolean
           description: Whether this area was matched by the input text
+        unique:
+          type: boolean
+          description: |
+            Set for the first area after the `default` area that distinguishes areas
+            if the match is ambiguous regarding (`default` area + place name / street [+ house number]).
         default:
           type: boolean
           description: Whether this area should be displayed as default area (area with admin level closest 7)
@@ -1321,6 +1509,20 @@ components:
           description: score according to the internal scoring system (the scoring algorithm might change in the future)
           type: number
 
+    ElevationCosts:
+      description: |
+        Different elevation cost profiles for street routing.
+        Using a elevation cost profile will prefer routes with a smaller incline and smaller difference in elevation, even if the routed way is longer.
+
+        - `NONE`: Ignore elevation data for routing. This is the default behavior
+        - `LOW`: Add a low penalty for inclines. This will favor longer paths, if the elevation increase and incline are smaller.
+        - `HIGH`: Add a high penalty for inclines. This will favor even longer paths, if the elevation increase and incline are smaller.
+      type: string
+      enum:
+        - NONE
+        - LOW
+        - HIGH
+
     PedestrianProfile:
       description: Different accessibility profiles for pedestrians.
       type: string
@@ -1392,6 +1594,15 @@ components:
         - BIKESHARE
         - TRANSIT
 
+    PickupDropoffType:
+      type: string
+      description: |
+        - `NORMAL` - entry/exit is possible normally
+        - `NOT_ALLOWED` - entry/exit is not allowed
+      enum:
+        - NORMAL
+        - NOT_ALLOWED
+
     Place:
       type: object
       required:
@@ -1441,6 +1652,15 @@ components:
           type: string
         vertexType:
           $ref: '#/components/schemas/VertexType'
+        pickupType:
+          description: Type of pickup. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        dropoffType:
+          description: Type of dropoff. It could be disallowed due to schedule, skipped stops or cancellations.
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether this stop is cancelled due to the realtime situation.
+          type: boolean
 
     ReachablePlace:
       description: Place reachable by One-to-All
@@ -1490,6 +1710,8 @@ components:
         - agencyUrl
         - tripId
         - routeShortName
+        - pickupDropoffType
+        - cancelled
         - source
       properties:
         place:
@@ -1520,6 +1742,12 @@ components:
           type: string
         routeShortName:
           type: string
+        pickupDropoffType:
+          description: Type of pickup (for departures) or dropoff (for arrivals), may be disallowed either due to schedule, skipped stops or cancellations
+          $ref: '#/components/schemas/PickupDropoffType'
+        cancelled:
+          description: Whether the departure/arrival is cancelled due to the realtime situation.
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string
@@ -1826,6 +2054,9 @@ components:
           type: string
         routeShortName:
           type: string
+        cancelled:
+          description: Whether this trip is cancelled
+          type: boolean
         source:
           description: Filename and line number where this trip is from
           type: string

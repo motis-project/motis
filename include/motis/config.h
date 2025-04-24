@@ -1,11 +1,13 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <iosfwd>
 #include <map>
 #include <optional>
 #include <set>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include "cista/hashing.h"
@@ -49,6 +51,8 @@ struct config {
   bool requires_rt_timetable_updates() const;
   bool has_gbfs_feeds() const;
   bool has_odm() const;
+  bool has_elevators() const;
+  bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
 
@@ -150,9 +154,21 @@ struct config {
     unsigned http_timeout_{10};
     std::optional<headers_t> headers_{};
   };
-  std::optional<elevators> elevators_{};
 
-  bool street_routing_{false};
+  std::optional<elevators> const& get_elevators() const;
+
+  std::variant<bool, std::optional<elevators>> elevators_{false};
+
+  struct street_routing {
+    bool operator==(street_routing const&) const = default;
+    std::optional<std::filesystem::path> elevation_data_dir_;
+  };
+
+  std::optional<std::reference_wrapper<street_routing const>>
+  get_street_routing() const;
+
+  std::variant<bool, std::optional<street_routing>> street_routing_{false};
+
   bool osr_footpath_{false};
   bool geocoding_{false};
   bool reverse_geocoding_{false};
