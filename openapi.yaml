@@ -188,8 +188,8 @@ paths:
 
             Set an elevation cost profile, to penalize routes with incline.
             - `NONE`: No additional costs for elevations. This is the default behavior
-            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
-            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
 
             As using an elevation costs profile will increase the travel duration,
             routing through steep terrain may exceed the maximal allowed duration,
@@ -707,8 +707,8 @@ paths:
 
             Set an elevation cost profile, to penalize routes with incline.
             - `NONE`: No additional costs for elevations. This is the default behavior
-            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
-            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
 
             As using an elevation costs profile will increase the travel duration,
             routing through steep terrain may exceed the maximal allowed duration,
@@ -876,8 +876,8 @@ paths:
 
             Set an elevation cost profile, to penalize routes with incline.
             - `NONE`: No additional costs for elevations. This is the default behavior
-            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
-            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
 
             As using an elevation costs profile will increase the travel duration,
             routing through steep terrain may exceed the maximal allowed duration,
