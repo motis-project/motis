@@ -206,12 +206,12 @@ struct gtfsrt_metrics {
 asio::awaitable<ptr<elevators>> update_elevators(config const& c,
                                                  data const& d,
                                                  n::rt_timetable& new_rtt) {
-  utl::verify(c.elevators_ && c.elevators_->url_ && c.timetable_,
+  utl::verify(c.has_elevators() && c.get_elevators()->url_ && c.timetable_,
               "elevator update requires settings for timetable + elevators");
   auto const res =
-      co_await http_GET(boost::urls::url{*c.elevators_->url_},
-                        c.elevators_->headers_.value_or(headers_t{}),
-                        std::chrono::seconds{c.elevators_->http_timeout_});
+      co_await http_GET(boost::urls::url{*c.get_elevators()->url_},
+                        c.get_elevators()->headers_.value_or(headers_t{}),
+                        std::chrono::seconds{c.get_elevators()->http_timeout_});
   co_return update_elevators(c, d, get_http_body(res), new_rtt);
 }
 
@@ -322,7 +322,7 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
 
             // Update real-time timetable shared pointer.
             auto railviz_rt = std::make_unique<railviz_rt_index>(*d.tt_, *rtt);
-            auto elevators = c.elevators_ && c.elevators_->url_
+            auto elevators = c.has_elevators() && c.get_elevators()->url_
                                  ? co_await update_elevators(c, d, *rtt)
                                  : std::move(d.rt_->e_);
             d.rt_ = std::make_shared<rt>(std::move(rtt), std::move(elevators),

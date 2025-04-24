@@ -59,6 +59,12 @@ products_routing_data* gbfs_routing_data::get_products_routing_data(
                                    prod_ref.products_);
 }
 
+provider_products const& gbfs_routing_data::get_products(
+    gbfs_products_ref const prod_ref) {
+  return data_->providers_.at(prod_ref.provider_)
+      ->products_.at(prod_ref.products_);
+}
+
 nigiri::transport_mode_id_t gbfs_routing_data::get_transport_mode(
     gbfs_products_ref const prod_ref) {
   if (auto const it = products_ref_to_transport_mode_.find(prod_ref);

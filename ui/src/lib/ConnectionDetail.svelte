@@ -208,7 +208,7 @@
 						l.from.name,
 						l.from.stopId,
 						l.from.pickupType,
-						l.from.dropoffType
+						'NORMAL'
 					)}
 				</div>
 				<div class="mt-2 flex items-center text-muted-foreground leading-none">
@@ -272,7 +272,7 @@
 							l.realTime!,
 							l.to.name,
 							l.to.stopId,
-							l.to.pickupType,
+							'NORMAL',
 							l.to.dropoffType
 						)}
 					</div>
@@ -294,7 +294,7 @@
 						l.from.name,
 						l.from.stopId,
 						l.from.pickupType,
-						l.from.dropoffType
+						'NORMAL'
 					)}
 				</div>
 				{@render streetLeg(l)}
@@ -306,7 +306,7 @@
 							l.realTime,
 							l.to.name,
 							l.to.stopId,
-							l.to.pickupType,
+							'NORMAL',
 							l.to.dropoffType
 						)}
 					</div>
@@ -328,7 +328,7 @@
 				lastLeg!.realTime,
 				lastLeg!.to.name,
 				lastLeg!.to.stopId,
-				lastLeg!.to.pickupType,
+				'NORMAL',
 				lastLeg!.to.dropoffType
 			)}
 		</div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import maplibregl from 'maplibre-gl';
-	import { setContext, type Snippet } from 'svelte';
+	import { setContext, untrack, type Snippet } from 'svelte';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import { createShield } from './shield';
 
@@ -9,10 +9,10 @@
 		zoom = $bindable(),
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		bounds = $bindable(),
+		center = $bindable(),
 		style,
 		attribution,
 		transformRequest,
-		center,
 		children,
 		class: className
 	}: {
@@ -82,11 +82,14 @@
 				currentZoom = zoom;
 			});
 
-			tmp.on('moveend', async () => {
-				zoom = tmp.getZoom();
-				currentZoom = zoom;
-				bounds = tmp.getBounds();
-			});
+			tmp.on('moveend', () =>
+				untrack(async () => {
+					zoom = tmp.getZoom();
+					currentZoom = zoom;
+					bounds = tmp.getBounds();
+					center = tmp.getCenter();
+				})
+			);
 		} catch (e) {
 			console.log(e);
 		}

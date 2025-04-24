@@ -33,9 +33,12 @@ api::oneToMany_response one_to_many::operator()(
               json::serialize(json::value_from(query.mode_)));
 
   auto const paths = osr::route(
-      w_, l_, to_profile(query.mode_, false), *one, many, query.max_,
+      w_, l_,
+      to_profile(query.mode_, api::PedestrianProfileEnum::FOOT,
+                 query.elevationCosts_),
+      *one, many, query.max_,
       query.arriveBy_ ? osr::direction::kBackward : osr::direction::kForward,
-      query.maxMatchingDistance_, nullptr);
+      query.maxMatchingDistance_, nullptr, nullptr, elevations_);
 
   return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
     return p.has_value() ? api::Duration{.duration_ = p->cost_}

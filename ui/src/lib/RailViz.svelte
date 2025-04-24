@@ -240,8 +240,8 @@
 	let timer: number | undefined;
 	let overlay = $state.raw<MapboxOverlay>();
 	const updateRailviz = async () => {
-		clearTimeout(timer);
 		await updateRailvizLayer();
+		clearTimeout(timer); // Ensure previous timer is cleared
 		timer = setTimeout(() => {
 			console.log('updateRailviz: timer');
 			updateRailviz();

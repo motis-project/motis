@@ -274,6 +274,7 @@
 	bind:map
 	bind:bounds
 	bind:zoom
+	bind:center
 	transformRequest={(url: string) => {
 		if (url.startsWith('/sprite')) {
 			return { url: `${window.location.origin}${url}` };
@@ -282,7 +283,6 @@
 			return { url: `${client.getConfig().baseUrl}/tiles${url}` };
 		}
 	}}
-	{center}
 	class={cn('h-dvh overflow-clip', theme)}
 	style={showMap ? getStyle(theme, level) : undefined}
 	attribution={false}
@@ -328,6 +328,7 @@
 					</div>
 					{#if showPage === 'timetable'}
 						<SearchMask
+							geocodingBiasPlace={center}
 							bind:from
 							bind:to
 							bind:time
