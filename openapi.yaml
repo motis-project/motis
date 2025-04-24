@@ -190,7 +190,12 @@ paths:
             - `NONE`: No additional costs for elevations. This is the default behavior
             - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
             - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
-            Using an elevation costs profile can cause locations to become unreachable, if an elevation is too high.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
             The profile is used for direct routing, on the first mile, and last mile.
 
             Elevation cost profiles are currently used by following street modes:
@@ -704,7 +709,11 @@ paths:
             - `NONE`: No additional costs for elevations. This is the default behavior
             - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
             - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
-            Using an elevation costs profile can cause locations to become unreachable, if an elevation is too high.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
 
             Elevation cost profiles are currently used by following street modes:
             - `BIKE`
@@ -869,8 +878,13 @@ paths:
             - `NONE`: No additional costs for elevations. This is the default behavior
             - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer flat routes, if small detours are required.
             - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer flat routes, if larger detours are required.
-            Using an elevation costs profile can cause locations to become unreachable, if an elevation is too high.
-            The profile is used for direct routing, on the first mile, and last mile.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            The profile is used for routing on both the first and last mile.
 
             Elevation cost profiles are currently used by following street modes:
             - `BIKE`
