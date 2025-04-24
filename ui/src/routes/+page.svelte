@@ -43,6 +43,7 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import {Label} from "$lib/components/ui/label";
 	import * as RadioGroup from '$lib/components/ui/radio-group';
+	import * as Tabs from "$lib/components/ui/tabs";
 	import DeparturesMask from "$lib/DeparturesMask.svelte";
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
@@ -301,46 +302,32 @@
 					? 'hide'
 					: ''}
 			>
-				<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-										<div class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700">
-					<RadioGroup.Root class="flex flex-wrap -mb-px" bind:value={showPage}>
-						<Label
-								for="page-timetable"
-								class="inline-block p-4 rounded-t-lg border-transparent border-b-2 hover:cursor-pointer hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 [&:has([data-state=checked])]:border-blue-600 [&:has([data-state=checked])]:text-blue-600"
-						>
-							<RadioGroup.Item
-									value="timetable"
-									id="page-timetable"
-									class="sr-only"
-									aria-label={t.timetable}
+					<Tabs.Root value="timetable" class="w-[520px] overflow-y-auto">
+						<Tabs.List class="grid w-full grid-cols-2">
+							<Tabs.Trigger value="timetable">{ t.timetable }</Tabs.Trigger>
+							<Tabs.Trigger value="departures">{ t.departures }</Tabs.Trigger>
+						</Tabs.List>
+						<Tabs.Content value="departures">
+							<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<DeparturesMask bind:time />
+							</Card>
+						</Tabs.Content>
+						<Tabs.Content value="timetable">
+							<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+							<SearchMask
+								geocodingBiasPlace={center}
+								bind:from
+								bind:to
+								bind:time
+								bind:timeType
+								bind:wheelchair
+								bind:bikeRental
+								bind:bikeCarriage
+								bind:selectedModes={selectedTransitModes}
 							/>
-							<span>{t.timetable}</span>
-						</Label>
-						<Label
-								for="page-departures"
-								class="inline-block p-4 rounded-t-lg border-transparent border-b-2 hover:cursor-pointer hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300  [&:has([data-state=checked])]:border-blue-600 [&:has([data-state=checked])]:text-blue-600"
-						>
-							<RadioGroup.Item value="departures" id="page-departures" class="sr-only" aria-label={t.departures} />
-							<span>{t.departures}</span>
-						</Label>
-					</RadioGroup.Root>
-					</div>
-					{#if showPage === 'timetable'}
-						<SearchMask
-							geocodingBiasPlace={center}
-              bind:from
-              bind:to
-              bind:time
-              bind:timeType
-              bind:wheelchair
-              bind:bikeRental
-              bind:bikeCarriage
-              bind:selectedModes={selectedTransitModes}
-            />
-					{:else}
-						<DeparturesMask bind:time />
-					{/if}
-				</Card>
+							</Card>
+						</Tabs.Content>
+					</Tabs.Root>
 			</Control>
 
 			{#if routingResponses.length !== 0 && !page.state.showDepartures}

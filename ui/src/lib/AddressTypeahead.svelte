@@ -117,8 +117,10 @@
 	};
 
 	$effect(() => {
-		value = JSON.stringify(selected.value);
-		inputValue = selected.label!;
+		if (selected) {
+			value = JSON.stringify(selected.value);
+			inputValue = selected.label!;
+		}
 	});
 
 	let ref = $state<HTMLElement | null>(null);
