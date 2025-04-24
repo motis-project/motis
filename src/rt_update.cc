@@ -220,10 +220,17 @@ asio::awaitable<ptr<elevators>> update_elevators(config const& c,
 }
 
 struct gtfs_rt_endpoint {
-  config::timetable::dataset::rt ep_;
+  rt_entry::gtfs_rt ep_;
   n::source_idx_t src_;
   std::string tag_;
   gtfsrt_metrics metrics_;
+};
+
+struct vdv_rt_endpoint {
+  rt_entry::vdv_rt ep_;
+  n::source_idx_t src_;
+  std::string tag_;
+  vdv_rt_metrics metrics_;
 };
 
 void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
@@ -242,8 +249,12 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
             if (dataset.rt_.has_value()) {
               auto const src = d.tags_->get_src(tag);
               for (auto const& ep : *dataset.rt_) {
-                endpoints.push_back(
-                    {ep, src, tag, gtfsrt_metrics{tag, metic_families}});
+                std::visit(utl::overloaded{[&](rt_entry::gtfs_rt&& gtfs_rt_ep) {
+                             endpoints.push_back(
+                                 {gtfs_rt_ep, src, tag,
+                                  gtfsrt_metrics{tag, metic_families}});
+                           }},
+                           ep());
               }
             }
           }
@@ -279,7 +290,9 @@ void run_rt_update(boost::asio::io_context& ioc, config const& c, data& d) {
                           try {
                             auto const res = co_await http_GET(
                                 boost::urls::url{x.ep_.url_},
-                                x.ep_.headers_.value_or(headers_t{}), timeout);
+                                x.ep_.headers_ != nullptr ? *x.ep_.headers_
+                                                          : headers_t{},
+                                timeout);
                             co_return n::rt::gtfsrt_update_buf(
                                 *d.tt_, *rtt, x.src_, x.tag_,
                                 get_http_body(res), msg);
