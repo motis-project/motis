@@ -11,7 +11,6 @@
 		type Match,
 		plan,
 		type PlanResponse,
-		trip,
 		type Mode,
 		type PlanData
 	} from '$lib/openapi';
@@ -21,7 +20,13 @@
 	import ItineraryGeoJson from '$lib/ItineraryGeoJSON.svelte';
 	import maplibregl from 'maplibre-gl';
 	import { browser } from '$app/environment';
-	import { cn } from '$lib/utils';
+	import {
+		closeItinerary,
+		cn,
+		onClickStop,
+		onClickTrip,
+		pushStateWithQueryString,
+	} from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
 	import Popup from '$lib/map/Popup.svelte';
@@ -33,9 +38,12 @@
 	import RailViz from '$lib/RailViz.svelte';
 	import MapIcon from 'lucide-svelte/icons/map';
 	import { t } from '$lib/i18n/translation';
-	import { pushState, replaceState } from '$app/navigation';
+	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { updateStartDest } from '$lib/updateStartDest';
+	import {Label} from "$lib/components/ui/label";
+	import * as RadioGroup from '$lib/components/ui/radio-group';
+	import DeparturesMask from "$lib/DeparturesMask.svelte";
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -96,9 +104,11 @@
 
 	let fromParam: Match | undefined = undefined;
 	let toParam: Match | undefined = undefined;
-	if (browser && urlParams && urlParams.has('from') && urlParams.has('to')) {
-		fromParam = JSON.parse(urlParams.get('from') ?? '') ?? {};
-		toParam = JSON.parse(urlParams.get('to') ?? '') ?? {};
+	let showPageParam: string = 'timetable';
+	if (browser && urlParams) {
+		fromParam = urlParams.has('from') ? JSON.parse(urlParams.get('from') ?? '') ?? {} : undefined;
+		toParam = urlParams.has('to') ? JSON.parse(urlParams.get('to') ?? '') ?? {} : undefined;
+		showPageParam = urlParams.get('page') ?? 'timetable';
 	}
 
 	let fromMatch = {
@@ -107,6 +117,7 @@
 	let toMatch = {
 		match: toParam
 	};
+	let showPage = $state(showPageParam);
 
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
@@ -232,60 +243,6 @@
 		flyToSelectedItinerary();
 	});
 
-	const preserveFromUrl = (
-		// eslint-disable-next-line
-		queryParams: Record<string, any>,
-		field: string
-	) => {
-		if (urlParams?.has(field)) {
-			queryParams[field] = urlParams.get(field);
-		}
-	};
-
-	const pushStateWithQueryString = (
-		// eslint-disable-next-line
-		queryParams: Record<string, any>,
-		// eslint-disable-next-line
-		newState: App.PageState,
-		replace: boolean = false
-	) => {
-		preserveFromUrl(queryParams, 'debug');
-		preserveFromUrl(queryParams, 'dark');
-		preserveFromUrl(queryParams, 'motis');
-		const params = new URLSearchParams(queryParams);
-		const updateState = replace ? replaceState : pushState;
-		updateState('?' + params.toString(), newState);
-	};
-
-	const onClickStop = (
-		name: string,
-		stopId: string,
-		time: Date,
-		arriveBy: boolean = false,
-		replace: boolean = false
-	) => {
-		pushStateWithQueryString(
-			{ stopArriveBy: arriveBy, stopId, time: time.toISOString() },
-			{
-				stopArriveBy: arriveBy,
-				selectedStop: { name, stopId, time },
-				selectedItinerary: page.state.selectedItinerary,
-				tripId: page.state.tripId
-			},
-			replace
-		);
-	};
-
-	const onClickTrip = async (tripId: string, replace: boolean = false) => {
-		const { data: itinerary, error } = await trip({ query: { tripId } });
-		if (error) {
-			console.log(error);
-			alert(String((error as Record<string, unknown>).error ?? error));
-			return;
-		}
-		pushStateWithQueryString({ tripId }, { selectedItinerary: itinerary, tripId: tripId }, replace);
-	};
-
 	type CloseFn = () => void;
 </script>
 
@@ -345,21 +302,56 @@
 					: ''}
 			>
 				<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
-					<SearchMask
-						geocodingBiasPlace={center}
-						bind:from
-						bind:to
-						bind:time
-						bind:timeType
-						bind:wheelchair
-						bind:bikeRental
-						bind:bikeCarriage
-						bind:selectedModes={selectedTransitModes}
-					/>
+										<div class="text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700">
+					<RadioGroup.Root class="flex flex-wrap -mb-px" bind:value={showPage}>
+						<Label
+								for="page-timetable"
+								class="inline-block p-4 rounded-t-lg border-transparent border-b-2 hover:cursor-pointer hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300 [&:has([data-state=checked])]:border-blue-600 [&:has([data-state=checked])]:text-blue-600"
+						>
+							<RadioGroup.Item
+									value="timetable"
+									id="page-timetable"
+									class="sr-only"
+									aria-label={t.timetable}
+							/>
+							<span>{t.timetable}</span>
+						</Label>
+						<Label
+								for="page-departures"
+								class="inline-block p-4 rounded-t-lg border-transparent border-b-2 hover:cursor-pointer hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300  [&:has([data-state=checked])]:border-blue-600 [&:has([data-state=checked])]:text-blue-600"
+						>
+							<RadioGroup.Item value="departures" id="page-departures" class="sr-only" aria-label={t.departures} />
+							<span>{t.departures}</span>
+						</Label>
+					</RadioGroup.Root>
+					</div>
+					{#if showPage === 'timetable'}
+						<SearchMask
+							geocodingBiasPlace={center}
+              bind:from
+              bind:to
+              bind:time
+              bind:timeType
+              bind:wheelchair
+              bind:bikeRental
+              bind:bikeCarriage
+              bind:selectedModes={selectedTransitModes}
+            />
+					{:else}
+						<DeparturesMask
+							bind:from
+							bind:time
+							bind:timeType
+							bind:wheelchair
+							bind:bikeCarriage
+							bind:bikeRental
+							bind:selectedModes={selectedTransitModes}
+						/>
+					{/if}
 				</Card>
 			</Control>
 
-			{#if routingResponses.length !== 0}
+			{#if routingResponses.length !== 0 && !page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2 {page.state.selectedItinerary ? 'hide' : ''}">
 					<Card
 						class="w-[520px] h-full md:max-h-[70vh] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
@@ -375,7 +367,7 @@
 				</Control>
 			{/if}
 
-			{#if page.state.selectedItinerary && !page.state.selectedStop}
+			{#if page.state.selectedItinerary && !page.state.showDepartures }
 				<Control class="min-h-0 mb-12 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -383,7 +375,7 @@
 							<Button
 								variant="ghost"
 								onclick={() => {
-									pushStateWithQueryString({}, {});
+									closeItinerary()
 								}}
 							>
 								<X />
@@ -395,8 +387,6 @@
 						>
 							<ConnectionDetail
 								itinerary={page.state.selectedItinerary}
-								{onClickStop}
-								{onClickTrip}
 							/>
 						</div>
 					</Card>
@@ -406,7 +396,7 @@
 				{/if}
 			{/if}
 
-			{#if page.state.selectedStop}
+			{#if page.state.selectedStop && page.state.showDepartures }
 				<Control class="min-h-0 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -434,17 +424,10 @@
 						<div class="p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 md:max-h-[70vh]">
 							<StopTimes
 								stopId={page.state.selectedStop.stopId}
+								stopName={page.state.selectedStop.name}
 								time={page.state.selectedStop.time}
 								bind:stopNameFromResponse
 								arriveBy={page.state.stopArriveBy}
-								setArriveBy={(arriveBy) =>
-									onClickStop(
-										page.state.selectedStop!.name,
-										page.state.selectedStop!.stopId,
-										page.state.selectedStop!.time,
-										arriveBy
-									)}
-								{onClickTrip}
 							/>
 						</div>
 					</Card>
@@ -465,7 +448,7 @@
 	</div>
 
 	{#if showMap}
-		<RailViz {map} {bounds} {zoom} {onClickTrip} />
+		<RailViz {map} {bounds} {zoom} />
 
 		<Popup trigger="contextmenu" children={contextMenu} />
 
