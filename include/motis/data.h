@@ -10,7 +10,6 @@
 
 #include "nigiri/types.h"
 
-#include "osr/elevation_storage.h"
 #include "osr/types.h"
 
 #include "motis/compute_footpaths.h"

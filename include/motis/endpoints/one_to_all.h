@@ -15,6 +15,7 @@ struct one_to_all {
   osr::ways const* w_;
   osr::lookup const* l_;
   osr::platforms const* pl_;
+  osr::elevation_storage const* elevations_;
   nigiri::timetable const& tt_;
   std::shared_ptr<rt> const& rt_;
   tag_lookup const& tags_;

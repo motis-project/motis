@@ -13,6 +13,7 @@
 #include "adr/reverse.h"
 #include "adr/typeahead.h"
 
+#include "osr/elevation_storage.h"
 #include "osr/lookup.h"
 #include "osr/platforms.h"
 #include "osr/ways.h"
@@ -84,8 +85,8 @@ data::data(std::filesystem::path p, config const& c)
 
   verify_version(c.timetable_.has_value(), "tt", n_version());
   verify_version(c.geocoding_ || c.reverse_geocoding_, "adr", adr_version());
-  verify_version(c.street_routing_, "osr", osr_version());
-  verify_version(c.street_routing_ && c.timetable_, "matches",
+  verify_version(c.use_street_routing(), "osr", osr_version());
+  verify_version(c.use_street_routing() && c.timetable_, "matches",
                  matches_version());
   verify_version(c.tiles_.has_value(), "tiles", tiles_version());
   verify_version(c.osr_footpath_, "osr_footpath", osr_footpath_version());
@@ -118,13 +119,13 @@ data::data(std::filesystem::path p, config const& c)
   });
 
   auto street_routing = std::async(std::launch::async, [&]() {
-    if (c.street_routing_) {
+    if (c.use_street_routing()) {
       load_osr();
     }
   });
 
   auto matches = std::async(std::launch::async, [&]() {
-    if (c.street_routing_ && c.timetable_) {
+    if (c.use_street_routing() && c.timetable_) {
       load_matches();
     }
   });
@@ -203,6 +204,7 @@ void data::load_osr() {
   w_ = std::make_unique<osr::ways>(osr_path, cista::mmap::protection::READ);
   l_ = std::make_unique<osr::lookup>(*w_, osr_path,
                                      cista::mmap::protection::READ);
+  elevations_ = osr::elevation_storage::try_open(osr_path);
   elevator_nodes_ =
       std::make_unique<hash_set<osr::node_idx_t>>(get_elevator_nodes(*w_));
   pl_ =

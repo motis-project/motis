@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <iosfwd>
 #include <map>
 #include <optional>
@@ -30,6 +31,7 @@ struct config {
   bool has_gbfs_feeds() const;
   bool has_odm() const;
   bool has_elevators() const;
+  bool use_street_routing() const;
 
   bool operator==(config const&) const = default;
 
@@ -143,7 +145,16 @@ struct config {
 
   std::variant<bool, std::optional<elevators>> elevators_{false};
 
-  bool street_routing_{false};
+  struct street_routing {
+    bool operator==(street_routing const&) const = default;
+    std::optional<std::filesystem::path> elevation_data_dir_;
+  };
+
+  std::optional<std::reference_wrapper<street_routing const>>
+  get_street_routing() const;
+
+  std::variant<bool, std::optional<street_routing>> street_routing_{false};
+
   bool osr_footpath_{false};
   bool geocoding_{false};
   bool reverse_geocoding_{false};
