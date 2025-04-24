@@ -13,6 +13,7 @@
 #include "nigiri/routing/journey.h"
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/gtfsrt_resolve_run.h"
+#include "nigiri/rt/service_alert.h"
 #include "nigiri/special_stations.h"
 #include "nigiri/types.h"
 
@@ -171,6 +172,75 @@ api::Itinerary journey_to_response(
     }
     std::unreachable();
   };
+  auto const to_time_range =
+      [&](n::interval<n::unixtime_t> const x) -> api::TimeRange {
+    return {x.from_, x.to_};
+  };
+  auto const to_cause = [](n::alert_cause const x) {
+    return api::AlertCauseEnum{static_cast<int>(x)};
+  };
+  auto const to_effect = [](n::alert_effect const x) {
+    return api::AlertEffectEnum{static_cast<int>(x)};
+  };
+  auto const convert_to_str = [](std::string_view s) {
+    return std::optional{std::string{s}};
+  };
+  auto const to_alert = [&](n::alert_idx_t const x) -> api::Alert {
+    auto const& a = rtt->alerts_;
+    auto const get_translation = [&](auto&& x) {
+      return x.empty()
+                 ? std::nullopt
+                 : a.strings_.try_get(x.front().text_).and_then(convert_to_str);
+    };
+    return {
+        .communicationPeriod_ =
+            a.communication_period_[x].empty()
+                ? std::nullopt
+                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
+                      a.communication_period_[x], to_time_range)},
+        .impactPeriod_ =
+            a.impact_period_[x].empty()
+                ? std::nullopt
+                : std::optional<std::vector<api::TimeRange>>{utl::to_vec(
+                      a.impact_period_[x], to_time_range)},
+        .cause_ = to_cause(a.cause_[x]),
+        .causeDetail_ = get_translation(a.cause_detail_[x]),
+        .effect_ = to_effect(a.effect_[x]),
+        .effectDetail_ = get_translation(a.effect_detail_[x]),
+        .url_ = get_translation(a.url_[x]),
+        .headerText_ = get_translation(a.header_text_[x]).value_or(""),
+        .descriptionText_ =
+            get_translation(a.description_text_[x]).value_or(""),
+        .ttsHeaderText_ = get_translation(a.tts_header_text_[x]),
+        .ttsDescriptionText_ = get_translation(a.tts_description_text_[x]),
+        .imageUrl_ = a.image_[x].empty()
+                         ? std::nullopt
+                         : a.strings_.try_get(a.image_[x].front().url_)
+                               .and_then(convert_to_str),
+        .imageMediaType_ =
+            a.image_[x].empty()
+                ? std::nullopt
+                : a.strings_.try_get(a.image_[x].front().media_type_)
+                      .and_then(convert_to_str),
+        .imageAlternativeText_ = get_translation(a.image_alternative_text_[x])};
+  };
+  auto const get_alerts = [&](n::trip_idx_t const x,
+                              n::rt_transport_idx_t const rt_t)
+      -> std::optional<std::vector<api::Alert>> {
+    if (rtt == nullptr) {
+      return std::nullopt;
+    }
+
+    auto alerts = std::vector<api::Alert>{};
+    for (auto const& t : tt.trip_ids_[x]) {
+      auto const src = tt.trip_id_src_[t];
+      rtt->alerts_.for_each_alert(
+          tt, src, x, rt_t, n::location_idx_t::invalid(),
+          [&](n::alert_idx_t const a) { alerts.emplace_back(to_alert(a)); });
+    }
+
+    return alerts.empty() ? std::nullopt : std::optional{std::move(alerts)};
+  };
 
   auto itinerary = api::Itinerary{
       .duration_ = to_seconds(j.arrival_time() - j.departure_time()),
@@ -227,7 +297,7 @@ api::Itinerary journey_to_response(
     auto const to = to_place(&tt, &tags, w, pl, matches, tt_location{j_leg.to_},
                              start, dest);
 
-    auto const to_place = [&](auto&& s, bool run_cancelled) {
+    auto const to_place = [&](auto&& s, bool const run_cancelled) {
       auto p = ::motis::to_place(&tt, &tags, w, pl, matches, tt_location{s},
                                  start, dest);
       p.pickupType_ = !run_cancelled && s.in_allowed()
@@ -271,9 +341,10 @@ api::Itinerary journey_to_response(
                   .headsign_ = std::string{enter_stop.direction()},
                   .routeColor_ = to_str(color.color_),
                   .routeTextColor_ = to_str(color.text_color_),
-                  .agencyName_ = {std::string{agency.long_name_}},
-                  .agencyUrl_ = {std::string{agency.url_}},
-                  .agencyId_ = {std::string{agency.short_name_}},
+                  .agencyName_ =
+                      std::string{tt.strings_.get(agency.long_name_)},
+                  .agencyUrl_ = std::string{tt.strings_.get(agency.url_)},
+                  .agencyId_ = std::string{tt.strings_.get(agency.short_name_)},
                   .tripId_ = tags.id(tt, enter_stop, n::event_type::kDep),
                   .routeShortName_ = {std::string{
                       enter_stop.trip_display_name()}},
@@ -283,7 +354,9 @@ api::Itinerary journey_to_response(
                       [](auto&& x) { return std::optional{x.transfer_idx_}; }),
                   .effectiveFareLegIndex_ = fare_indices.and_then([](auto&& x) {
                     return std::optional{x.effective_fare_leg_idx_};
-                  })});
+                  }),
+                  .alerts_ = get_alerts(fr.trip_idx(), fr.rt_)});
+
               leg.from_.vertexType_ = api::VertexTypeEnum::TRANSIT;
               leg.from_.departure_ = leg.startTime_;
               leg.from_.scheduledDeparture_ = leg.scheduledStartTime_;

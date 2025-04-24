@@ -145,7 +145,7 @@ data import(config const& c, fs::path const& data_path, bool const write) {
     for (auto const& [_, d] : t.datasets_) {
       h = cista::build_hash(h, c.osr_footpath_, hash_file(d.path_),
                             d.default_bikes_allowed_, d.clasz_bikes_allowed_,
-                            d.rt_, d.default_timezone_);
+                            d.default_timezone_);
     }
 
     h = cista::build_hash(
