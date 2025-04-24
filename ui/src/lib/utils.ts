@@ -63,8 +63,8 @@ export const onClickStop = (
 		{
 			stopArriveBy: arriveBy,
 			selectedStop: { name, stopId, time },
-			selectedItinerary: replace ? undefined : page.state.selectedItinerary,
-			tripId: replace ? undefined : page.state.tripId,
+			selectedItinerary: page.state.selectedItinerary,
+			tripId: page.state.tripId,
 			showDepartures: true
 		},
 		replace
@@ -83,7 +83,7 @@ export const onClickTrip = async (tripId: string, replace: boolean = false) => {
 		{
 			selectedItinerary: itinerary,
 			tripId: tripId,
-			selectedStop: replace ? undefined : page.state.selectedStop,
+			selectedStop: page.state.selectedStop,
 			showDepartures: false
 		},
 		replace
