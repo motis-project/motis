@@ -48,15 +48,15 @@ export const closeItinerary = () => {
 		return;
 	}
 
-	pushStateWithQueryString({}, {})
-}
+	pushStateWithQueryString({}, {});
+};
 
 export const onClickStop = (
 	name: string,
 	stopId: string,
 	time: Date,
 	arriveBy: boolean = false,
-	replace: boolean = false,
+	replace: boolean = false
 ) => {
 	pushStateWithQueryString(
 		{ stopArriveBy: arriveBy, stopId, time: time.toISOString() },

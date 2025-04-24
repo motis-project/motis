@@ -19,7 +19,7 @@
 		placeholder,
 		name,
 		place,
-		onlyStations = $bindable(false),
+		onlyStations = $bindable(false)
 	}: {
 		items?: Array<Location>;
 		selected: Location;
@@ -85,7 +85,7 @@
 		const pos = place ? maplibregl.LngLat.convert(place) : undefined;
 		const biasPlace = pos ? { place: `${pos.lat},${pos.lng}` } : {};
 		const { data: matches, error } = await geocode({
-			query: { ...biasPlace, text: inputValue, language, type: onlyStations ? 'STOP' : undefined },
+			query: { ...biasPlace, text: inputValue, language, type: onlyStations ? 'STOP' : undefined }
 		});
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);

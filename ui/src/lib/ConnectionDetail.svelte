@@ -12,7 +12,7 @@
 	import { onClickStop, onClickTrip } from '$lib/utils';
 
 	const {
-		itinerary,
+		itinerary
 	}: {
 		itinerary: Itinerary;
 	} = $props();

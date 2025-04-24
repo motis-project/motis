@@ -25,7 +25,7 @@
 		cn,
 		onClickStop,
 		onClickTrip,
-		pushStateWithQueryString,
+		pushStateWithQueryString
 	} from '$lib/utils';
 	import Debug from '$lib/Debug.svelte';
 	import Marker from '$lib/map/Marker.svelte';
@@ -41,10 +41,8 @@
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { updateStartDest } from '$lib/updateStartDest';
-	import {Label} from "$lib/components/ui/label";
-	import * as RadioGroup from '$lib/components/ui/radio-group';
-	import * as Tabs from "$lib/components/ui/tabs";
-	import DeparturesMask from "$lib/DeparturesMask.svelte";
+	import * as Tabs from '$lib/components/ui/tabs';
+	import DeparturesMask from '$lib/DeparturesMask.svelte';
 
 	const urlParams = browser ? new URLSearchParams(window.location.search) : undefined;
 	const hasDebug = urlParams && urlParams.has('debug');
@@ -105,11 +103,9 @@
 
 	let fromParam: Match | undefined = undefined;
 	let toParam: Match | undefined = undefined;
-	let showPageParam: string = 'timetable';
 	if (browser && urlParams) {
-		fromParam = urlParams.has('from') ? JSON.parse(urlParams.get('from') ?? '') ?? {} : undefined;
-		toParam = urlParams.has('to') ? JSON.parse(urlParams.get('to') ?? '') ?? {} : undefined;
-		showPageParam = urlParams.get('page') ?? 'timetable';
+		fromParam = urlParams.has('from') ? (JSON.parse(urlParams.get('from') ?? '') ?? {}) : undefined;
+		toParam = urlParams.has('to') ? (JSON.parse(urlParams.get('to') ?? '') ?? {}) : undefined;
 	}
 
 	let fromMatch = {
@@ -118,7 +114,6 @@
 	let toMatch = {
 		match: toParam
 	};
-	let showPage = $state(showPageParam);
 
 	let fromMarker = $state<maplibregl.Marker>();
 	let toMarker = $state<maplibregl.Marker>();
@@ -302,18 +297,18 @@
 					? 'hide'
 					: ''}
 			>
-					<Tabs.Root value="timetable" class="w-[520px] overflow-y-auto">
-						<Tabs.List class="grid w-full grid-cols-2">
-							<Tabs.Trigger value="timetable">{ t.timetable }</Tabs.Trigger>
-							<Tabs.Trigger value="departures">{ t.departures }</Tabs.Trigger>
-						</Tabs.List>
-						<Tabs.Content value="departures">
-							<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+				<Tabs.Root value="timetable" class="w-[520px] overflow-y-auto">
+					<Tabs.List class="grid w-full grid-cols-2">
+						<Tabs.Trigger value="timetable">{t.timetable}</Tabs.Trigger>
+						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
+					</Tabs.List>
+					<Tabs.Content value="departures">
+						<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<DeparturesMask bind:time />
-							</Card>
-						</Tabs.Content>
-						<Tabs.Content value="timetable">
-							<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
+						</Card>
+					</Tabs.Content>
+					<Tabs.Content value="timetable">
+						<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 							<SearchMask
 								geocodingBiasPlace={center}
 								bind:from
@@ -325,9 +320,9 @@
 								bind:bikeCarriage
 								bind:selectedModes={selectedTransitModes}
 							/>
-							</Card>
-						</Tabs.Content>
-					</Tabs.Root>
+						</Card>
+					</Tabs.Content>
+				</Tabs.Root>
 			</Control>
 
 			{#if routingResponses.length !== 0 && !page.state.showDepartures}
@@ -346,7 +341,7 @@
 				</Control>
 			{/if}
 
-			{#if page.state.selectedItinerary && !page.state.showDepartures }
+			{#if page.state.selectedItinerary && !page.state.showDepartures}
 				<Control class="min-h-0 mb-12 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">
@@ -354,7 +349,7 @@
 							<Button
 								variant="ghost"
 								onclick={() => {
-									closeItinerary()
+									closeItinerary();
 								}}
 							>
 								<X />
@@ -364,9 +359,7 @@
 							class={'p-2 md:p-4 overflow-y-auto overflow-x-hidden min-h-0 ' +
 								(showMap ? 'max-h-[40vh] md:max-h-[70vh]' : '')}
 						>
-							<ConnectionDetail
-								itinerary={page.state.selectedItinerary}
-							/>
+							<ConnectionDetail itinerary={page.state.selectedItinerary} />
 						</div>
 					</Card>
 				</Control>
@@ -375,7 +368,7 @@
 				{/if}
 			{/if}
 
-			{#if page.state.selectedStop && page.state.showDepartures }
+			{#if page.state.selectedStop && page.state.showDepartures}
 				<Control class="min-h-0 md:mb-2">
 					<Card class="w-[520px] h-full bg-background rounded-lg flex flex-col">
 						<div class="w-full flex justify-between items-center shadow-md pl-1 mb-1">

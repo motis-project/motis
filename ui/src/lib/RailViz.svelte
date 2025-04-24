@@ -22,7 +22,7 @@
 	let {
 		map,
 		bounds,
-		zoom,
+		zoom
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;

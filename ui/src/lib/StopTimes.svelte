@@ -16,7 +16,7 @@
 		stopName,
 		time: queryTime,
 		stopNameFromResponse = $bindable(),
-		arriveBy,
+		arriveBy
 	}: {
 		stopId: string;
 		stopName: string;
