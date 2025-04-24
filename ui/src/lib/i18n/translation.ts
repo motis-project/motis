@@ -27,6 +27,7 @@ export type Translations = {
 	earlier: string;
 	arrivals: string;
 	departures: string;
+	timetable: string;
 	switchToArrivals: string;
 	switchToDepartures: string;
 	arrivalOnTrack: string;

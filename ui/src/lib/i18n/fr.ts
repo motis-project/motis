@@ -22,6 +22,7 @@ const translations: Translations = {
 	later: 'plus tard',
 	earlier: 'plus tôt',
 	departures: 'Départs',
+	timetable: 'Horaires',
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
 	track: 'Voie',

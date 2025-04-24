@@ -7,6 +7,7 @@
 	import { posToLocation, type Location } from './Location';
 	import { GEOCODER_PRECISION } from './Precision';
 	import { language } from './i18n/translation';
+	import { onClickStop } from '$lib/utils';
 
 	const COORD_LVL_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
 	const COORD_REGEX = /^([+-]?\d+(\.\d+)?)\s*,\s*([+-]?\d+(\.\d+)?)$/;
@@ -15,12 +16,14 @@
 		items = $bindable([]),
 		selected = $bindable(),
 		placeholder,
-		name
+		name,
+		onlyStations = $bindable(false),
 	}: {
 		items?: Array<Location>;
 		selected: Location;
 		placeholder?: string;
 		name?: string;
+		onlyStations?: boolean;
 	} = $props();
 
 	let inputValue = $state('');
@@ -66,7 +69,7 @@
 		}
 
 		const { data: matches, error } = await geocode({
-			query: { text: inputValue, language }
+			query: { text: inputValue, language, type: onlyStations ? 'STOP' : undefined },
 		});
 		if (error) {
 			console.error('TYPEAHEAD ERROR: ', error);
@@ -128,6 +131,10 @@
 		if (e) {
 			selected = deserialize(e);
 			inputValue = selected.label!;
+			if (onlyStations && selected.value.match) {
+				const match = selected.value.match;
+				onClickStop(match.name, match.id, new Date(), undefined, true);
+			}
 		}
 	}}
 >

@@ -14,12 +14,12 @@
 	let {
 		selectedModes = $bindable(),
 		wheelchair = $bindable(),
-		bikeRental = $bindable(),
+		bikeRental = $bindable(null) as boolean | null,
 		bikeCarriage = $bindable()
 	}: {
 		selectedModes: string[];
 		wheelchair: boolean;
-		bikeRental: boolean;
+		bikeRental: boolean | null;
 		bikeCarriage: boolean;
 	} = $props();
 
@@ -113,7 +113,9 @@
 		</Select.Root>
 
 		<Switch bind:checked={wheelchair} label={t.wheelchair} id="wheelchair" />
-		<Switch bind:checked={bikeRental} label={t.bikeRental} id="bikeRental" />
+		{#if bikeRental !== undefined}
+			<Switch bind:checked={bikeRental} label={t.bikeRental} id="bikeRental" />
+		{/if}
 		<Switch bind:checked={bikeCarriage} label={t.bikeCarriage} id="bikeCarriage" />
 		<div class="text-muted-foreground leading-tight">{t.unreliableOptions}</div>
 	</div>

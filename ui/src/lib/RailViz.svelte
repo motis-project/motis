@@ -17,17 +17,16 @@
 	import Rss from 'lucide-svelte/icons/rss';
 	import LocateFixed from 'lucide-svelte/icons/locate-fixed';
 	import { browser } from '$app/environment';
+	import { onClickTrip } from '$lib/utils';
 
 	let {
 		map,
 		bounds,
 		zoom,
-		onClickTrip
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
-		onClickTrip: (tripId: string) => void;
 	} = $props();
 
 	let colorMode = $state<'rt' | 'route'>('route');
