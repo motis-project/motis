@@ -38,7 +38,10 @@ osr::search_profile to_profile(
     case api::ModeEnum::CAR_PARKING:
       return wheelchair ? osr::search_profile::kCarParkingWheelchair
                         : osr::search_profile::kCarParking;
-    case api::ModeEnum::RENTAL: return osr::search_profile::kBikeSharing;
+    case api::ModeEnum::RENTAL:
+      // could be kBikeSharing or kCarSharing, use gbfs::get_osr_profile()
+      // to get the correct profile for each product
+      return osr::search_profile::kBikeSharing;
     default: throw utl::fail("unsupported mode");
   }
 }

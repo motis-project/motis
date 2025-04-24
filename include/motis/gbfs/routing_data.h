@@ -25,6 +25,8 @@ struct gbfs_routing_data {
       gbfs_provider const& provider, gbfs_products_idx_t prod_idx);
   products_routing_data* get_products_routing_data(gbfs_products_ref);
 
+  provider_products const& get_products(gbfs_products_ref);
+
   nigiri::transport_mode_id_t get_transport_mode(gbfs_products_ref);
   gbfs_products_ref get_products_ref(nigiri::transport_mode_id_t) const;
 
