@@ -3,6 +3,10 @@
 This page explains how to set up elevation tiles, that are required for elevation profiles.
 
 For performance reasons, all tile data must be stored uncompressed.
+This will require roughly `350 GB` for the full SRTMGL1 data set.
+
+After the import, the elevation data requires less disk space than the
+`way_osm_nodes_index.bin` and `way_osm_nodes_data.bin` files.
 
 ## Data formats
 
