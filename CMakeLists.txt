@@ -84,7 +84,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
             -Wno-deprecated-declarations
             -Werror)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas)
+    set(motis-compile-options -Wall -Wextra -Werror -Wno-unknown-pragmas -Wno-deprecated-declarations)
 elseif (MSVC)
     set(motis-compile-options /WX /bigobj)
 else ()
